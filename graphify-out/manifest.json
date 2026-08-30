@@ -1,7 +1,7 @@
 {
   ".specs/features/crm-mvp/context.md": {
-    "mtime": 1788057380.0507643,
-    "ast_hash": "d89430865ab4bb05bc3a9e85ab0d78ed",
+    "mtime": 1788057675.5892725,
+    "ast_hash": "82935a6abdbcb035bf968591c22c3da9",
     "semantic_hash": ""
   },
   ".specs/features/crm-mvp/spec.md": {
@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "CRM-MVP-ESPECIFICACAO.md": {
-    "mtime": 1788057114.8927298,
-    "ast_hash": "59d7155d9a5619c57280fd64856586c5",
+    "mtime": 1788057669.397221,
+    "ast_hash": "28eaefe4a546b7ab1c6bae53bdbdbcec",
     "semantic_hash": ""
   },
   "FLUXO-QUALIFICACAO-GENERICO.md": {

@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer  (2026-08-30)
 
 ## Corpus Check
-- 79 files · ~47,834 words
+- 79 files · ~49,109 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 702 nodes · 745 edges · 67 communities (61 shown, 6 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.9)
+- 708 nodes · 761 edges · 67 communities (61 shown, 6 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.7)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b0c51936`
+- Built from commit: `ae9ceafd`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -90,8 +90,8 @@
 6. `compilerOptions` - 13 edges
 7. `Passagem de Produto para Tech Lead` - 12 edges
 8. `CRM Silmer MVP — Plano de Implementação` - 11 edges
-9. `Fase 5 — Orçamento, PIX, Pedido e Ficha` - 10 edges
-10. `Campos da Ficha e Jornada Conversacional — P0.1` - 10 edges
+9. `createSafeLogger()` - 10 edges
+10. `Fase 5 — Orçamento, PIX, Pedido e Ficha` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `capture()` --calls--> `createSafeLogger()`  [EXTRACTED]
@@ -100,10 +100,10 @@
   apps/api/src/app.js → modules/shared/src/observability.js
 - `createApi()` --calls--> `normalizeTraceId()`  [EXTRACTED]
   apps/api/src/app.js → modules/shared/src/observability.js
+- `createServerApi()` --calls--> `createSafeLogger()`  [EXTRACTED]
+  apps/api/src/server.js → modules/shared/src/observability.js
 - `Ficha de Pedido` --shares_data_with--> `Rose (Destinatária Ficha)`  [EXTRACTED]
   CAMPOS-FICHA-E-JORNADA-P0-1.md → CRM-MVP-ESPECIFICACAO.md
-- `validateRecoveryKit()` --calls--> `validateTopologyDocument()`  [EXTRACTED]
-  scripts/recovery-mock.mjs → scripts/validate-topology.mjs
 
 ## Import Cycles
 - None detected.
@@ -221,8 +221,8 @@ Cohesion: 0.13
 Nodes (15): @axe-core/playwright, eslint, devDependencies, @axe-core/playwright, eslint, @playwright/test, prettier, @types/node (+7 more)
 
 ### Community 28 - "observability.test.js"
-Cohesion: 0.09
-Nodes (24): createApi(), api, logger, port, WorkerRuntime, SERVICES, allowedContextFields, categoricalFields (+16 more)
+Cohesion: 0.10
+Nodes (25): createApi(), createServerApi(), WorkerRuntime, SERVICES, allowedContextFields, allowedEvents, allowedMetrics, allowedServices (+17 more)
 
 ### Community 29 - "worker/package.json"
 Cohesion: 0.20
@@ -245,8 +245,8 @@ Cohesion: 0.40
 Nodes (3): frontendPackage, root, workspacePackages
 
 ### Community 34 - "validate-phase0-decisions.mjs"
-Cohesion: 0.31
-Nodes (7): expectedDecisionSubjects, expectedRoles, invariant(), main(), validatePendingApproval(), validatePhase0Decisions(), rootUrl
+Cohesion: 0.24
+Nodes (12): expectedDecisionSubjects, expectedRoles, invariant(), isCorporateId(), isIsoDate(), isVersionedEvidence(), main(), validateApproval() (+4 more)
 
 ### Community 39 - "T00.6 — Gate de aprovação da Fase 0"
 Cohesion: 0.29
@@ -361,11 +361,11 @@ Nodes (3): Answer, Q: Where are the agent roles and contribution protocol define
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Fase 0 — Fundação e riscos técnicos`, `Fase 5 — Orçamento, PIX, Pedido e Ficha`, `Fase 2 — Caixa de Entrada, canais e confiabilidade`, `Fase 1 — Identidade, acesso e infraestrutura de domínio`, `Fase 3 — Negócio, Kanban e qualificação`, `Fase 6 — Privacidade, relatórios e operação`, `Fase 4 — Vendedor Silmer assistivo`, `TECHNICAL-DESIGN.md`, `Fase 7 — Hardening, UAT e piloto`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
+  _High betweenness centrality (0.051) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `Technical Strategy and MVP` to `TECHNICAL-DESIGN.md`?**
   _High betweenness centrality (0.036) - this node is a cross-community bridge._
 - **Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `CRM-MVP-ESPECIFICACAO.md`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
   _460 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Technical Strategy and MVP` be split into smaller, more focused modules?**

@@ -105,13 +105,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/app.js": {
-    "mtime": 1788068476.6552944,
-    "ast_hash": "2f21f5affd3cfcb735cdd036ec817def",
+    "mtime": 1788069156.030486,
+    "ast_hash": "d39c8fa14df30b2e2e1046b6d13bf31d",
     "semantic_hash": ""
   },
   "apps/api/src/server.js": {
-    "mtime": 1788068207.7670634,
-    "ast_hash": "2bc673db20ddf6a8b0c4cc8d313431c5",
+    "mtime": 1788069156.0324993,
+    "ast_hash": "21cad56c650782ffbf1c5ceced4b8013",
     "semantic_hash": ""
   },
   "apps/edge-web/package.json": {
@@ -190,8 +190,8 @@
     "semantic_hash": ""
   },
   "test/ci-images.test.js": {
-    "mtime": 1788066468.8758602,
-    "ast_hash": "908d72dda6657bf82596a2a36b61b388",
+    "mtime": 1788069158.9674048,
+    "ast_hash": "6715798617428847fc359ccab7f1d15e",
     "semantic_hash": ""
   },
   "test/e2e/foundation.spec.js": {
@@ -200,18 +200,18 @@
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1788066468.8738422,
-    "ast_hash": "2e6b22f1e7f96f8c7b734cb7cb4b7a55",
+    "mtime": 1788069158.9643493,
+    "ast_hash": "fad57e5c3b63bcc8801cc07b24bdb908",
     "semantic_hash": ""
   },
   ".github/workflows/promote-approved-sha.yml": {
-    "mtime": 1788065818.1008408,
-    "ast_hash": "af17ec2586d8fa2b5615660764c13f20",
+    "mtime": 1788069158.966392,
+    "ast_hash": "0560e501b0651e60f5c0049ce93db121",
     "semantic_hash": ""
   },
   "docs/phase0/SUPPLY-CHAIN.md": {
-    "mtime": 1788067708.9990299,
-    "ast_hash": "4f28d3c264603a38bfd64ed26364a8d1",
+    "mtime": 1788069158.9674048,
+    "ast_hash": "bb37e759c28411cbcf1ee1ecad99602b",
     "semantic_hash": ""
   },
   "ops/easypanel/topology.json": {
@@ -315,28 +315,28 @@
     "semantic_hash": ""
   },
   "docs/phase0/domain-decisions.json": {
-    "mtime": 1788068214.126224,
-    "ast_hash": "4beeaa9fc4087c5cf81247e303a6d0e6",
+    "mtime": 1788069150.0046184,
+    "ast_hash": "de7903281e126d6cbbf6970694030014",
     "semantic_hash": ""
   },
   "scripts/validate-phase0-decisions.mjs": {
-    "mtime": 1788068510.171795,
-    "ast_hash": "0258cf85c7de0237b06ca490f1e95950",
+    "mtime": 1788069263.89017,
+    "ast_hash": "b90ada3a68a576a2a1a10b84ca4e1729",
     "semantic_hash": ""
   },
   "test/phase0-decisions.test.js": {
-    "mtime": 1788068567.8340204,
-    "ast_hash": "a2ad64d164869e08984c23f1270f05ee",
+    "mtime": 1788069263.9717872,
+    "ast_hash": "b9d771078eacee127dd93e8c5e94b987",
     "semantic_hash": ""
   },
   "docs/phase0/PHASE-0-APPROVAL-GATE.md": {
-    "mtime": 1788068436.03443,
-    "ast_hash": "cf3eaeb2e6c84f7e1769703a982ca6f2",
+    "mtime": 1788069150.007129,
+    "ast_hash": "38eaf8b8e6654590a743a0f5c52b3bcd",
     "semantic_hash": ""
   },
   "modules/shared/src/observability.js": {
-    "mtime": 1788068476.748167,
-    "ast_hash": "a46ea43bc9297957f3ec75dce9d57b17",
+    "mtime": 1788069263.702461,
+    "ast_hash": "b7d5d620d502afc769d285c23882e620",
     "semantic_hash": ""
   },
   "ops/observability/alerts.json": {
@@ -350,13 +350,13 @@
     "semantic_hash": ""
   },
   "test/observability.test.js": {
-    "mtime": 1788068476.8714714,
-    "ast_hash": "f3f070cb1543b6a746327688d19c2405",
+    "mtime": 1788069263.9453602,
+    "ast_hash": "f2950db33e0aba3b3a4e69dbaeaa068a",
     "semantic_hash": ""
   },
   "docs/phase0/OBSERVABILITY-AND-HARDENING.md": {
-    "mtime": 1788068281.4104302,
-    "ast_hash": "68140c7cd4969ec78aa1011ff7a4b771",
+    "mtime": 1788069156.03451,
+    "ast_hash": "d826f7727a16bed006d1551b21655191",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend.md": {

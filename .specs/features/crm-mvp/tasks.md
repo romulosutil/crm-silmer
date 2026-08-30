@@ -100,11 +100,16 @@ gates de verificação.
 
 ### T01.1 Implementar migrations e acesso PostgreSQL
 
+- **Status em 30/08/2026:** concluída localmente; runner, readiness, imagem e
+  migrations `0001/0002` validados em PostgreSQL 17.6 efêmero.
 - Criar runner expand/contract, transações e health/readiness.
 - **Verificação:** migrate de zero, upgrade, execução concorrente e rollback de app.
 
 ### T01.2 Implementar sessão e usuários por convite
 
+- **Status em 30/08/2026:** parcial; domínio, criptografia, concorrência e
+  schema entregues. Adapter PostgreSQL, controllers HTTP e lockout estão na
+  issue `#12`.
 - Senha Argon2id, convite de uso único/expirável, cookie com token hasheado,
   rotação, expiração, CSRF, revogação, TOTP criptografado e recovery codes.
 - **Verificação:** bootstrap auditado do primeiro Admin, login/logout/revogação,
@@ -112,6 +117,9 @@ gates de verificação.
 
 ### T01.3 Implementar funções e capacidades ortogonais
 
+- **Status em 30/08/2026:** parcial; policy e cenários negativos entregues.
+  Wiring API/UI está na issue `#12`; `ACL-P07-07..11` no ciclo real de
+  Pedido/Ficha está na issue `#13`.
 - Separar `Atendimento|Vendedor`, `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e
   `TECHNICAL_PRIVACY_EXECUTOR`.
 - Impedir autoatribuição; registrar concessão/revogação.
@@ -120,16 +128,22 @@ gates de verificação.
 
 ### T01.4 Criar audit trail e idempotency records
 
+- **Status em 30/08/2026:** parcial; contratos, concorrência, replay e schema
+  entregues. Persistência transacional com o efeito real está na issue `#12`.
 - Persistir ator, ação, alvo, versão, motivo e correlação sem copiar conteúdo.
 - **Verificação:** comandos repetidos retornam o mesmo efeito observável.
 
 ### T01.5 Criar configuração versionada
 
+- **Status em 30/08/2026:** parcial; domínio, ports, auditoria e schema
+  entregues. Adapter PostgreSQL e wiring estão na issue `#15`.
 - FAB, PIX mascarado, destinatária, templates, canais e feature flags.
 - **Verificação:** alteração privilegiada auditada e segredo não exposto.
 
 ### T01.6 Implementar catálogo versionado
 
+- **Status em 30/08/2026:** parcial; domínio, ports, snapshots e schema
+  entregues. Adapter PostgreSQL e wiring estão na issue `#15`.
 - Importar/publicar tipos, modelos, malhas e técnicas autorizadas.
 - Vincular seleção à versão e copiar snapshot para o Pedido.
 - **Verificação:** atualização de catálogo não altera Negócio/Pedido histórico.

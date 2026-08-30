@@ -105,8 +105,8 @@
     "semantic_hash": ""
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788065188.835853,
-    "ast_hash": "c3bdc4dfe3a1edc598191eaa5605c954",
+    "mtime": 1788066366.021639,
+    "ast_hash": "b81c94b1a06c288b906c5603daa4136f",
     "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
@@ -130,13 +130,13 @@
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
-    "mtime": 1788064962.2269678,
-    "ast_hash": "94dd9e7b5a570a26c938e1777d371952",
+    "mtime": 1788065818.1063652,
+    "ast_hash": "5bf93f747bb9585c417edba82ac6adae",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1788064962.2249672,
-    "ast_hash": "21385011fc456b875269d75097dc2eba",
+    "mtime": 1788065818.104357,
+    "ast_hash": "59759113fd387611fb0331e8079fcca1",
     "semantic_hash": ""
   },
   ".prettierrc.json": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1788065075.0283241,
-    "ast_hash": "38b7411887fa001ce22ba66dfc35f696",
+    "mtime": 1788065902.6305115,
+    "ast_hash": "660da907f0ede820a8cfed7410ba937e",
     "semantic_hash": ""
   },
   "scripts/build.mjs": {
@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "test/bootstrap.test.js": {
-    "mtime": 1788065075.0298421,
-    "ast_hash": "f18ddc5877b863adf71a8ac264589ae5",
+    "mtime": 1788065908.3676276,
+    "ast_hash": "875689c5f44065337f2849194526ad35",
     "semantic_hash": ""
   },
   "apps/edge-web/src/index.html": {
@@ -227,6 +227,41 @@
   "graphify-out/memory/query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco.md": {
     "mtime": 1788063011.05211,
     "ast_hash": "c24a7d2140fada1b10d434728bd729cf",
+    "semantic_hash": ""
+  },
+  "playwright.config.js": {
+    "mtime": 1788065818.0882385,
+    "ast_hash": "106e4b1234da91a04f92395ffd496fce",
+    "semantic_hash": ""
+  },
+  "scripts/serve-edge.mjs": {
+    "mtime": 1788065916.3941352,
+    "ast_hash": "45d40f87bb5c524720a058cc173e1303",
+    "semantic_hash": ""
+  },
+  "test/ci-images.test.js": {
+    "mtime": 1788066179.148801,
+    "ast_hash": "07ba5b018cac63a3cc99a0cb8846aa06",
+    "semantic_hash": ""
+  },
+  "test/e2e/foundation.spec.js": {
+    "mtime": 1788065940.2949476,
+    "ast_hash": "a9e4df3cc208c2f1ef03009343ffc9b2",
+    "semantic_hash": ""
+  },
+  ".github/workflows/ci.yml": {
+    "mtime": 1788065818.0998297,
+    "ast_hash": "51de6be030125c0bba06d0d069ed3c10",
+    "semantic_hash": ""
+  },
+  ".github/workflows/promote-approved-sha.yml": {
+    "mtime": 1788065818.1008408,
+    "ast_hash": "af17ec2586d8fa2b5615660764c13f20",
+    "semantic_hash": ""
+  },
+  "docs/phase0/SUPPLY-CHAIN.md": {
+    "mtime": 1788065818.1033583,
+    "ast_hash": "72430d47c352011ec21399a906a2fd4e",
     "semantic_hash": ""
   }
 }

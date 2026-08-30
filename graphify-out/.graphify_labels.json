@@ -8,7 +8,7 @@
   "6": "Infrastructure and Deployment",
   "7": "README.md",
   "8": "CRM Silmer MVP — Requisitos Rastreáveis",
-  "9": "package.json",
+  "9": "scripts",
   "10": "Product Context and Scope",
   "11": "compilerOptions",
   "12": "Inbox and Channel Integration",
@@ -26,7 +26,7 @@
   "24": "Agentes do CRM Silmer",
   "25": "Legacy Qualification Flow",
   "26": "Passagem de Produto para Tech Lead",
-  "27": "Arquitetura — Decisões do MVP",
+  "27": "devDependencies",
   "28": "api/src/app.js",
   "29": "worker/package.json",
   "30": "shared/package.json",
@@ -37,5 +37,10 @@
   "35": "bootstrap.test.js",
   "36": ".prettierrc.json",
   "37": "edge-web/src/app.js",
-  "38": "eslint.config.js"
+  "38": "eslint.config.js",
+  "39": "Supply chain da Fase 0",
+  "40": "serve-edge.mjs",
+  "41": "ci-images.test.js",
+  "42": "playwright.config.js",
+  "43": "foundation.spec.js"
 }

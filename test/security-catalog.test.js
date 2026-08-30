@@ -82,6 +82,7 @@ test('keeps P0.6 maximum retention exact and logs operationally at 30 days', asy
     assert.ok(item.deletionPropagation.length > 0);
   }
   const logs = dataClasses.find(({ id }) => id === 'technical-log');
+  assert.ok(logs);
   assert.equal(logs.operationalRetentionDays, 30);
   assert.equal(logs.maximumRetentionDays, 90);
 });
@@ -98,6 +99,7 @@ test('rejects approval forgery and restore without tombstone propagation', async
     unsafe.dataClasses
   );
   const backup = unsafeClasses.find(({ id }) => id === 'backup');
+  assert.ok(backup);
   backup.deletionPropagation = [];
   assert.throws(() => validateDataCatalog(unsafe), /propagation/iu);
 });

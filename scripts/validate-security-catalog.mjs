@@ -105,7 +105,7 @@ export function validateDataCatalog(document) {
   );
   const ids = new Set(dataClasses.map(({ id }) => id));
   invariant(ids.size === retention.size, 'Catalog IDs must be unique');
-  for (const [id, days] of retention)
+  for (const id of retention.keys())
     invariant(ids.has(id), `Missing P0.6 class ${id}`);
   for (const item of dataClasses) {
     invariant(
@@ -135,6 +135,7 @@ export function validateDataCatalog(document) {
     'Technical logs require 30-day operational retention and 90-day legal maximum',
   );
   const backup = dataClasses.find(({ id }) => id === 'backup');
+  if (!backup) throw new Error('Backup class is missing');
   invariant(
     backup.deletionPropagation.some(
       /** @param {string} step */ (step) => /tombstone/iu.test(step),

@@ -61,6 +61,12 @@ externos e não são executados por esses comandos.
 O contrato de build único, publicação por SHA/digest, SBOM, provenance, scan e
 promoção manual está em [`docs/phase0/SUPPLY-CHAIN.md`](docs/phase0/SUPPLY-CHAIN.md).
 
+Os spikes locais de providers, a matriz de efeitos e o envelope provisório de
+carga de `T00.4` estão em
+[`docs/phase0/EXTERNAL-SPIKES.md`](docs/phase0/EXTERNAL-SPIKES.md). Execute
+`npm run validate:external-spikes` e `npm run test:external-spikes`; aprovações
+humanas e provas live continuam externas e não são simuladas por esses gates.
+
 Os processos executáveis ficam em `apps/api` e `apps/worker`; o frontend
 estático e vanilla fica em `apps/edge-web`. Contratos compartilhados começam em
 `modules/shared`.

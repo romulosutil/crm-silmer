@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.4",
+  "source": "TECHNICAL-DESIGN.md section 13",
+  "approval": {
+    "approved": false,
+    "status": "pending-human-approval",
+    "owners": ["Produto", "Operacao", "Tech Lead"]
+  },
+  "dimensions": {
+    "operators": {
+      "authenticatedSessions": 20,
+      "concurrentSseConnections": 30
+    },
+    "webhooks": {
+      "sustainedEventsPerSecond": 5,
+      "sustainedMinutes": 15,
+      "burstEventsPerSecond": 20,
+      "burstSeconds": 60
+    },
+    "workerRecovery": {
+      "backlogJobs": 1000,
+      "blindRetryOutcomeUnknown": false
+    },
+    "attachmentsAndPdf": {
+      "concurrentUploadsAtConfiguredLimit": 4,
+      "queuedPdfs": 20,
+      "chromiumConcurrency": 1
+    },
+    "referenceMass": {
+      "contacts": 50000,
+      "conversations": 100000,
+      "messages": 1000000,
+      "deals": 25000
+    }
+  },
+  "liveEvidence": {
+    "executed": false,
+    "status": "pending-T07.1-after-approval"
+  }
+}

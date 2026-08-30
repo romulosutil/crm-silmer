@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.4",
+  "capturedAt": "2026-08-30",
+  "externalApprovalGranted": false,
+  "requirements": [
+    "CHN-P04-01..14",
+    "MSG-01..04",
+    "ORD-03..05",
+    "PAY-02",
+    "PAY-05",
+    "PRV-P06-07",
+    "PRV-P06-11"
+  ],
+  "effects": [
+    {
+      "id": "meta.verify-webhook-signature",
+      "provider": "Meta WhatsApp Business Platform",
+      "effect": "Validate X-Hub-Signature-256 over the exact raw request body before persistence",
+      "idempotency": {
+        "support": "local-deduplication",
+        "key": "provider + provider_account_id + external_event_id"
+      },
+      "resultQuery": { "support": "not-applicable", "key": null },
+      "pointOfNoReturn": "none-read-only-validation",
+      "outcomeUnknown": {
+        "automaticRetry": false,
+        "strategy": "Reject invalid signatures; repeated valid events are handled by the local unique key."
+      },
+      "status": "documentation-verified",
+      "evidence": [
+        {
+          "url": "https://github.com/fbsamples/whatsapp-api-examples/blob/main/signature-validation-with-webhooks-payloads/app.js",
+          "checkedAt": "2026-08-30",
+          "status": "official-sample-reviewed"
+        }
+      ],
+      "owner": "Backend/Integracoes"
+    },
+    {
+      "id": "meta.send-message",
+      "provider": "Meta WhatsApp Business Platform",
+      "effect": "Send text, approved template, PIX instruction, Ficha, or onboarding message",
+      "idempotency": {
+        "support": "not-proven",
+        "key": "local command id only"
+      },
+      "resultQuery": {
+        "support": "not-proven-by-wamid",
+        "key": "wamid retained only for webhook correlation"
+      },
+      "pointOfNoReturn": "request accepted by Meta",
+      "outcomeUnknown": {
+        "automaticRetry": false,
+        "strategy": "Mark outcome_unknown, surface for reconciliation, and wait for a correlated status webhook or authorized human decision; never retry blindly."
+      },
+      "status": "pending-live",
+      "evidence": [
+        {
+          "url": "https://www.postman.com/meta/whatsapp-business-platform/folder/o48mro7/messages",
+          "checkedAt": "2026-08-30",
+          "status": "official-collection-reviewed-no-idempotency-or-get-by-wamid-proven"
+        }
+      ],
+      "owner": "Integracoes/Operacao"
+    },
+    {
+      "id": "meta.delivery-status",
+      "provider": "Meta WhatsApp Business Platform",
+      "effect": "Correlate sent, delivered, read, failed, and deleted status webhooks",
+      "idempotency": {
+        "support": "local-deduplication",
+        "key": "provider status event identity + wamid + status"
+      },
+      "resultQuery": { "support": "webhook-correlation-only", "key": "wamid" },
+      "pointOfNoReturn": "status event persisted",
+      "outcomeUnknown": {
+        "automaticRetry": false,
+        "strategy": "Keep the last observed provider event and do not infer unobserved delivery."
+      },
+      "status": "pending-live",
+      "evidence": [
+        {
+          "url": "https://www.postman.com/meta/whatsapp-business-platform/request/rgtfq23/message-status-update-notifications",
+          "checkedAt": "2026-08-30",
+          "status": "official-collection-reviewed"
+        }
+      ],
+      "owner": "Integracoes/QA"
+    },
+    {
+      "id": "meta.media-transfer",
+      "provider": "Meta WhatsApp Business Platform",
+      "effect": "Upload or fetch media using expiring provider URLs",
+      "idempotency": {
+        "support": "not-proven",
+        "key": "local attachment hash and command id"
+      },
+      "resultQuery": { "support": "media-id-for-download", "key": "media id" },
+      "pointOfNoReturn": "upload accepted or media bytes received",
+      "outcomeUnknown": {
+        "automaticRetry": false,
+        "strategy": "Quarantine partial downloads; reconcile upload acceptance before another upload."
+      },
+      "status": "pending-live",
+      "evidence": [
+        {
+          "url": "https://www.postman.com/meta/whatsapp-business-platform/folder/13382743-ecb27be5-4d27-4763-bbee-6a8002c04bf3",
+          "checkedAt": "2026-08-30",
+          "status": "official-collection-reviewed"
+        }
+      ],
+      "owner": "Integracoes/Seguranca"
+    },
+    {
+      "id": "openai.structured-response",
+      "provider": "OpenAI API",
+      "effect": "Generate an assistive, schema-constrained suggestion without mutating CRM state",
+      "idempotency": {
+        "support": "local-request-fencing",
+        "key": "job id + automation epoch"
+      },
+      "resultQuery": {
+        "support": "not-relied-upon",
+        "key": "local correlation id"
+      },
+      "pointOfNoReturn": "request accepted by provider",
+      "outcomeUnknown": {
+        "automaticRetry": false,
+        "strategy": "Discard stale epochs; retry only a safe generation job under policy, never emit two external messages."
+      },
+      "requestControls": {
+        "store": false,
+        "structuredOutput": "strict-json-schema"
+      },
+      "retention": {
+        "applicationTtlDays": 30,
+        "providerEligibility": "ZDR-pending",
+        "dpa": "v010126-reviewed-pending-privacy-acceptance",
+        "dataSharing": false
+      },
+      "status": "pending-human",
+      "evidence": [
+        {
+          "url": "https://developers.openai.com/api/docs/guides/your-data",
+          "checkedAt": "2026-08-30",
+          "status": "official-controls-reviewed"
+        },
+        {
+          "url": "https://cdn.openai.com/pdf/openai-data-processing-addendum.pdf",
+          "checkedAt": "2026-08-30",
+          "status": "official-dpa-v010126-reviewed"
+        },
+        {
+          "url": "https://developers.openai.com/api/docs/guides/structured-outputs",
+          "checkedAt": "2026-08-30",
+          "status": "official-schema-guidance-reviewed"
+        }
+      ],
+      "owner": "Privacidade/Tech Lead"
+    },
+    {
+      "id": "r2.put-object",
+      "provider": "Cloudflare R2",
+      "effect": "Store private attachment, PDF, backup, or append-only tombstone object",
+      "idempotency": {
+        "support": "conditional-local-contract",
+        "key": "content SHA-256 + immutable object key"
+      },
+      "resultQuery": { "support": "head-object", "key": "bucket + object key" },
+      "pointOfNoReturn": "successful S3-compatible PutObject response",
+      "outcomeUnknown": {
+        "automaticRetry": false,
+        "strategy": "HEAD the exact immutable key and compare metadata/hash before retry; otherwise reconcile."
+      },
+      "security": {
+        "publicAccess": false,
+        "bucketLockRequired": true,
+        "dataLocationApproval": "pending-privacy",
+        "separateCredentialsByDataClass": true
+      },
+      "status": "pending-human",
+      "evidence": [
+        {
+          "url": "https://developers.cloudflare.com/r2/api/s3/api/",
+          "checkedAt": "2026-08-30",
+          "status": "official-compatibility-reviewed"
+        },
+        {
+          "url": "https://developers.cloudflare.com/r2/buckets/bucket-locks/",
+          "checkedAt": "2026-08-30",
+          "status": "official-locks-reviewed"
+        },
+        {
+          "url": "https://developers.cloudflare.com/r2/reference/data-location/",
+          "checkedAt": "2026-08-30",
+          "status": "official-location-reviewed"
+        },
+        {
+          "url": "https://developers.cloudflare.com/r2/reference/data-security/",
+          "checkedAt": "2026-08-30",
+          "status": "official-security-reviewed"
+        },
+        {
+          "url": "https://cf-assets.www.cloudflare.com/slt3lc6tev37/1TTgT35GoUNlKZYGuKWBFy/4e7dfc8cf402419a9b1cf624291fc69f/cloudflare_customer_dpa-v6.4_april_3_2026.pdf",
+          "checkedAt": "2026-08-30",
+          "status": "official-dpa-v6.4-reviewed"
+        }
+      ],
+      "owner": "Privacidade/DevOps"
+    },
+    {
+      "id": "pdf.generate-ficha",
+      "provider": "Local Chromium worker",
+      "effect": "Render canonical Ficha PDF from immutable snapshot and store SHA-256",
+      "idempotency": {
+        "support": "deterministic-local-contract",
+        "key": "snapshot version + template version"
+      },
+      "resultQuery": { "support": "artifact-hash", "key": "document version" },
+      "pointOfNoReturn": "approved artifact version persisted",
+      "outcomeUnknown": {
+        "automaticRetry": false,
+        "strategy": "Regenerate only from the same snapshot/template; never reserve a second order number."
+      },
+      "status": "pending-human",
+      "evidence": [
+        {
+          "url": "CAMPOS-FICHA-E-JORNADA-P0-1.md",
+          "checkedAt": "2026-08-30",
+          "status": "local-contract-reviewed-Rose-visual-approval-pending"
+        }
+      ],
+      "owner": "Rose/Operacao"
+    }
+  ]
+}

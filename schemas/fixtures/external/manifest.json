@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "meta": {
+    "signature": {
+      "synthetic": true,
+      "appSecret": "synthetic-app-secret",
+      "rawBody": "{}",
+      "expectedHeader": "sha256=803ddd849be1f90a623deef8f743b648c6849fe7408397eb55e2407ab4219d30"
+    },
+    "messageFixture": "schemas/fixtures/external/meta-message.json",
+    "statusFixture": "schemas/fixtures/external/meta-status.json"
+  },
+  "openai": {
+    "schemaFixture": "schemas/fixtures/external/openai-suggestion-schema.json"
+  }
+}

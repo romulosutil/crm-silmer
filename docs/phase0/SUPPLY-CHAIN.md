@@ -26,10 +26,10 @@ segurança. Ela **não satisfaz** o comportamento funcional de `MSG-02` nem de
 As Actions usam o commit completo do release oficial. As bases usam o digest
 do índice OCI oficial resolvido com `docker buildx imagetools inspect`:
 
-| Componente | Referência imutável |
-|---|---|
-| Node.js | `node:24.14.0-bookworm-slim@sha256:d8e448a56fc63242f70026718378bd4b00f8c82e78d20eefb199224a4d8e33d8` |
-| Nginx | `nginx:1.31.4-alpine-slim@sha256:1870de6d59aafee152589b64404556d2535922cdd998e6dac1c4888c938ed8f9` |
+| Componente | Referência imutável                                                                                  |
+| ---------- | ---------------------------------------------------------------------------------------------------- |
+| Node.js    | `node:24.14.0-bookworm-slim@sha256:d8e448a56fc63242f70026718378bd4b00f8c82e78d20eefb199224a4d8e33d8` |
+| Nginx      | `nginx:1.31.4-alpine-slim@sha256:1870de6d59aafee152589b64404556d2535922cdd998e6dac1c4888c938ed8f9`   |
 
 Atualizar um pin exige PR próprio, nova resolução em fonte oficial, build,
 scan e registro do novo digest; aliases mutáveis não entram em deploy.

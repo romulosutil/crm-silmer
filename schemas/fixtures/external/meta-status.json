@@ -1,0 +1,24 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "synthetic-account",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "metadata": { "phone_number_id": "synthetic-phone" },
+            "statuses": [
+              {
+                "id": "wamid.synthetic-outbound-001",
+                "status": "delivered",
+                "timestamp": "1788105601",
+                "recipient_id": "5500000000000"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -45,6 +45,11 @@ e `npm run test:recovery:mocks`. O plano revisável por uma segunda pessoa é
 gerado por `npm run recovery:plan`; ele é offline e nunca substitui o
 provisionamento ou o drill autorizado.
 
+Mudanças na matriz de providers ou no envelope de carga executam
+`npm run validate:external-spikes` e `npm run test:external-spikes`. Evidência
+local não pode ser registrada como aceite de Privacidade, Operação, Rose ou
+como teste live de provider.
+
 Antes de publicar, execute também `git diff --check` e `git status --short`.
 
 ## Commits e publicação

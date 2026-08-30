@@ -1,0 +1,164 @@
+import { readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+
+const statuses = new Set([
+  'documentation-verified',
+  'pending-live',
+  'pending-human',
+]);
+
+/** @param {unknown} condition @param {string} message */
+function invariant(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+/** @param {any} document */
+export function validateExternalEffects(document) {
+  invariant(document?.task === 'T00.4', 'Matrix must trace to T00.4');
+  invariant(
+    document.externalApprovalGranted === false,
+    'Local evidence cannot claim external approval',
+  );
+  invariant(Array.isArray(document.effects), 'Effects must be an array');
+  const effects = /** @type {Array<Record<string, any>>} */ (document.effects);
+  invariant(effects.length >= 7, 'Expected all external effect classes');
+  invariant(
+    new Set(effects.map(({ id }) => id)).size === effects.length,
+    'Effect IDs must be unique',
+  );
+
+  for (const effect of effects) {
+    invariant(typeof effect.id === 'string', 'Each effect needs an id');
+    invariant(effect.idempotency?.support, `${effect.id} needs idempotency`);
+    invariant(effect.resultQuery?.support, `${effect.id} needs result query`);
+    invariant(effect.pointOfNoReturn, `${effect.id} needs point of no return`);
+    invariant(
+      effect.outcomeUnknown?.automaticRetry === false,
+      `${effect.id} must forbid blind automatic retry`,
+    );
+    invariant(
+      effect.outcomeUnknown?.strategy,
+      `${effect.id} needs outcome_unknown strategy`,
+    );
+    invariant(statuses.has(effect.status), `${effect.id} has invalid status`);
+    invariant(effect.owner, `${effect.id} needs an owner`);
+    invariant(
+      Array.isArray(effect.evidence) && effect.evidence.length > 0,
+      `${effect.id} needs evidence`,
+    );
+    for (const evidence of effect.evidence) {
+      invariant(evidence.url, `${effect.id} evidence needs URL/path`);
+      invariant(evidence.checkedAt, `${effect.id} evidence needs date`);
+      invariant(evidence.status, `${effect.id} evidence needs status`);
+    }
+  }
+
+  const metaSend = effects.find(({ id }) => id === 'meta.send-message');
+  if (!metaSend) throw new Error('Meta send-message effect is required');
+  invariant(
+    metaSend.idempotency.support === 'not-proven' &&
+      metaSend.resultQuery.support === 'not-proven-by-wamid' &&
+      metaSend.outcomeUnknown.automaticRetry === false,
+    'Meta send must remain outcome_unknown without blind retry',
+  );
+
+  const ai = effects.find(({ id }) => id === 'openai.structured-response');
+  invariant(ai?.requestControls?.store === false, 'OpenAI store must be false');
+  invariant(
+    ai?.requestControls?.structuredOutput === 'strict-json-schema',
+    'OpenAI must use strict structured output',
+  );
+  invariant(ai?.retention?.applicationTtlDays <= 30, 'AI TTL exceeds 30 days');
+
+  const storage = effects.find(({ id }) => id === 'r2.put-object');
+  invariant(storage?.security?.publicAccess === false, 'R2 must be private');
+  invariant(
+    storage?.security?.bucketLockRequired === true,
+    'R2 immutable data requires Bucket Lock',
+  );
+  invariant(
+    storage?.security?.dataLocationApproval === 'pending-privacy',
+    'R2 location must remain pending Privacy approval',
+  );
+  return document;
+}
+
+/** @param {any} document */
+export function validateLoadEnvelope(document) {
+  invariant(document?.task === 'T00.4', 'Envelope must trace to T00.4');
+  invariant(
+    document.approval?.approved === false &&
+      document.approval?.status === 'pending-human-approval',
+    'Load envelope must not claim approval',
+  );
+  const dimensions = document.dimensions;
+  invariant(
+    dimensions?.operators?.authenticatedSessions === 20 &&
+      dimensions.operators.concurrentSseConnections === 30,
+    'Operator envelope drifted from TDD section 13',
+  );
+  invariant(
+    dimensions?.webhooks?.sustainedEventsPerSecond === 5 &&
+      dimensions.webhooks.burstEventsPerSecond === 20,
+    'Webhook envelope drifted from TDD section 13',
+  );
+  invariant(
+    dimensions?.workerRecovery?.backlogJobs === 1000 &&
+      dimensions.workerRecovery.blindRetryOutcomeUnknown === false,
+    'Worker envelope must preserve outcome_unknown safety',
+  );
+  invariant(
+    dimensions?.attachmentsAndPdf?.concurrentUploadsAtConfiguredLimit === 4 &&
+      dimensions.attachmentsAndPdf.queuedPdfs === 20 &&
+      dimensions.attachmentsAndPdf.chromiumConcurrency === 1,
+    'Attachment/PDF envelope drifted from TDD section 13',
+  );
+  invariant(
+    dimensions?.referenceMass?.messages === 1_000_000,
+    'Reference mass drifted from TDD section 13',
+  );
+  return document;
+}
+
+/** @param {any} document */
+export function validateFixtures(document) {
+  invariant(document?.syntheticOnly === true, 'Fixtures must be synthetic');
+  invariant(
+    document.meta?.signature?.synthetic === true,
+    'Signature vector must be synthetic',
+  );
+  invariant(
+    document.meta.signature.expectedHeader.startsWith('sha256='),
+    'Signature header must use sha256=',
+  );
+  invariant(document.meta.messageFixture, 'Meta message fixture is required');
+  invariant(document.meta.statusFixture, 'Meta status fixture is required');
+  invariant(
+    document.openai?.schemaFixture,
+    'OpenAI schema fixture is required',
+  );
+  return document;
+}
+
+async function main() {
+  const rootUrl = new URL('../', import.meta.url);
+  /** @param {string} path */
+  const readJson = async (path) =>
+    JSON.parse(await readFile(new URL(path, rootUrl), 'utf8'));
+  validateExternalEffects(await readJson('docs/phase0/external-effects.json'));
+  validateLoadEnvelope(await readJson('docs/phase0/load-envelope.json'));
+  validateFixtures(await readJson('schemas/fixtures/external/manifest.json'));
+  console.log(
+    'External spikes valid: local evidence complete; live and human approvals remain explicit.',
+  );
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  main().catch((error) => {
+    console.error(`External spikes invalid: ${error.message}`);
+    process.exitCode = 1;
+  });
+}

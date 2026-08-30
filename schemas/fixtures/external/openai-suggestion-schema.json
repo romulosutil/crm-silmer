@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reply",
+    "fieldSuggestions",
+    "stageSuggestion",
+    "handoffRequired"
+  ],
+  "properties": {
+    "reply": { "type": "string" },
+    "fieldSuggestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "value", "source"],
+        "properties": {
+          "field": { "type": "string" },
+          "value": { "type": "string" },
+          "source": { "type": "string" }
+        }
+      }
+    },
+    "stageSuggestion": { "type": ["string", "null"] },
+    "handoffRequired": { "type": "boolean" }
+  }
+}

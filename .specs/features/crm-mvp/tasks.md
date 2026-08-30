@@ -24,7 +24,7 @@ gates de verificação.
 ### T00.2 Criar CI e imagens imutáveis
 
 - **Status:** implementação local concluída em 30/08/2026; publicação GHCR e
-  promoção dev/hml aguardam evidência do workflow e dos ambientes.
+  promoção dev/hml aguardam a issue `#1` e os ambientes.
 - **Rastreabilidade:** enabler de `MSG-02` e `MSG-03`; não satisfaz sozinho o
   comportamento funcional desses requisitos.
 - Validar lint, testes, E2E/a11y, dependências, imagens e diff.
@@ -46,6 +46,10 @@ gates de verificação.
 
 ### T00.4 Fechar spikes externos
 
+- **Status:** matriz, fixtures e validação local concluídas em 30/08/2026;
+  smokes/aprovações externos pendentes nas issues `#4` a `#8`.
+- **Rastreabilidade:** `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`,
+  `PAY-02`, `PAY-05`, `PRV-P06-07` e `PRV-P06-11`.
 - Validar WhatsApp Cloud API, assinatura, mídia, templates e status de entrega.
 - Versionar matriz por efeito externo com suporte a idempotência, consulta do
   resultado, ponto de não retorno e estratégia para `outcome_unknown`.

@@ -1,0 +1,25 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "synthetic-account",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "metadata": { "phone_number_id": "synthetic-phone" },
+            "messages": [
+              {
+                "from": "5500000000000",
+                "id": "wamid.synthetic-inbound-001",
+                "timestamp": "1788105600",
+                "type": "text",
+                "text": { "body": "fixture sem dado real" }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

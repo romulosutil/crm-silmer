@@ -1,9 +1,8 @@
 # Passagem de Produto para Tech Lead
 
 **Data:** 29/08/2026  
-**Parecer:** GO para finalizar a especificação técnica. P0.1 a P0.7 estão
-resolvidos; resta somente propagar as decisões para o PRD e os critérios de
-aceite antes de iniciar a implementação de produção.
+**Parecer:** GO integral para o Tech Lead. P0.1 a P0.7 estão resolvidos e
+propagados para o PRD, contexto, requisitos, regras e design.
 
 ## O que o Tech Lead já pode especificar
 
@@ -31,7 +30,7 @@ aceite antes de iniciar a implementação de produção.
 | 1 | Etapas definitivas e campos obrigatórios de cada passagem | **Resolvido** | Contrato aprovado em `CAMPOS-FICHA-E-JORNADA-P0-1.md` |
 | 2 | Autoridade do Vendedor Silmer sobre preço após qualificação | **Resolvido** | Comunica somente orçamento humano aprovado, versionado e vigente; não calcula nem negocia |
 | 3 | Financeiro cobre vendido ou também recebido/a receber | **Resolvido** | MVP mede vendido; recebido e saldo a receber ficam em P2 |
-| 4 | Canais do primeiro piloto além do WhatsApp | **Resolvido** | WhatsApp Business e Instagram Direct; site apenas direciona ao WhatsApp; IA não move o Kanban |
+| 4 | Canais do primeiro piloto além do WhatsApp | **Resolvido** | WhatsApp Business é obrigatório; Instagram Direct entra sem bloquear o lançamento; site apenas direciona ao WhatsApp; IA não move o Kanban no MVP |
 | 5 | Significado de FAB, sequência vigente e numeração | **Resolvido** | Contrato aprovado na seção P0.5 deste documento |
 | 6 | Regras concretas de retenção e exclusão | **Resolvido** | Contrato aprovado na seção P0.6 deste documento |
 | 7 | Permissões para revisar, editar, cancelar e reenviar Ficha | **Resolvido** | Funções Atendimento/Vendedor com role adicional `Admin`; contrato aprovado na seção P0.7 |
@@ -126,13 +125,14 @@ Critérios da decisão:
 
 ## P0.4 resolvido — canais e limite operacional da IA
 
-O primeiro piloto opera mensagens bidirecionais pela API oficial do
-**WhatsApp Business** e pela integração oficial do **Instagram Direct**. O site
-é somente uma visão de aquisição: seu CTA abre o WhatsApp Business e não cria
-um terceiro canal de atendimento no CRM. WhatsApp e Instagram possuem o mesmo
-objetivo e comportamento funcional: conduzir a conversa até concluir o fluxo
-permitido com o cliente, respeitando o mesmo sandbox da IA e os mesmos gates
-humanos.
+O primeiro piloto opera obrigatoriamente mensagens bidirecionais pela API
+oficial do **WhatsApp Business**. A integração oficial do **Instagram Direct**
+também pertence ao piloto, mas é não bloqueante: atraso de aprovação,
+credenciais ou integração do Instagram não impede o lançamento pelo WhatsApp.
+O site é somente uma visão de aquisição: seu CTA abre o WhatsApp Business e
+não cria um terceiro canal de atendimento no CRM. WhatsApp e Instagram possuem
+o mesmo comportamento funcional quando o segundo canal estiver ativo,
+respeitando o mesmo sandbox da IA e os mesmos gates humanos.
 
 Mensagens dos dois canais entram na mesma Caixa de Entrada, preservando
 `canal`, `identificador_externo`, remetente, timestamp, conteúdo, anexos e
@@ -168,11 +168,20 @@ converteria conversas em leads ou moveria cards autonomamente. A IA continua
 podendo comunicar um orçamento somente nos limites do P0.2, sem calcular,
 negociar ou aprovar preço.
 
+Depois do MVP, o CRM poderá oferecer a chave
+`vendedor_silmer_autonomia_comercial`, desativada por padrão. Quando existir e
+for ativada por `Admin`, ela poderá autorizar o agente a transformar conversas
+em lead, preencher campos oficiais e avançar etapas dentro de uma matriz de
+permissões explícita. Essa capacidade é P2: não integra o aceite, a estimativa
+nem a implementação do MVP. A ativação futura exige auditoria, rollback,
+limites de ação e desligamento imediato sem perda de estado.
+
 Critérios da decisão:
 
-1. **CHN-P04-01:** WhatsApp Business e Instagram Direct recebem e enviam
-   mensagens no piloto por integrações oficiais e permitem concluir o mesmo
-   fluxo com o cliente, com saúde, erro e reconciliação observáveis por canal.
+1. **CHN-P04-01:** WhatsApp Business recebe e envia mensagens no lançamento por
+   integração oficial; Instagram Direct, quando disponível no piloto, conclui
+   o mesmo fluxo, com saúde, erro e reconciliação observáveis por canal, sem
+   bloquear o go-live do WhatsApp.
 2. **CHN-P04-02:** o site não possui chat próprio; seu CTA abre o WhatsApp
    Business e pode registrar a origem `site` sem criar outro canal de conversa.
 3. **CHN-P04-03:** toda mensagem conhecida aparece na Caixa de Entrada ou na
@@ -204,6 +213,12 @@ Critérios da decisão:
     ao contato existente somente quando o `handoff_id`, o telefone confirmado
     ou uma decisão humana auditável comprova a identidade; sem isso, o CRM
     preserva os dois históricos separados e marca a pendência.
+13. **CHN-P04-13:** a autonomia comercial futura permanece ausente ou
+    desativada no MVP; nenhuma configuração de produção pode habilitá-la sem
+    novo aceite P2.
+14. **CHN-P04-14:** uma implementação P2 da chave de autonomia registra quem
+    ativou, quando, escopo, ações do agente e rollback e permite desligamento
+    imediato sem corromper conversa, lead ou card.
 
 ## P0.5 resolvido — identidade, FAB e numeração da Ficha
 
@@ -214,11 +229,12 @@ livre e precisa estar definido antes da aprovação da Ficha. A inclusão de out
 unidade exige ampliar explicitamente esse domínio, sem criar uma nova sequência
 de pedidos.
 
-O número do pedido pertence a uma sequência global única, crescente e sem
-reinício por ano, `FAB`, canal ou vendedor. O valor `8528` da planilha de
-exemplo não é considerado o último número vigente. No corte operacional, a
-Silmer registra e aprova o `ultimo_numero_legado`; o primeiro número emitido
-pelo CRM é exatamente o sucessor desse valor.
+O CRM inicia um namespace próprio de pedidos, sem continuidade ou dependência
+de número legado. O primeiro identificador é **`01-CRM`** e os seguintes usam o
+contador global crescente com sufixo fixo `-CRM`: `02-CRM`, `03-CRM` e assim
+por diante. A largura mínima é de dois dígitos, sem limite artificial: após
+`99-CRM`, o próximo é `100-CRM`. O contador não reinicia por ano, `FAB`, canal
+ou vendedor.
 
 Depois da ativação do CRM, ele é a única autoridade de alocação. Não pode haver
 emissão manual paralela fora desse contrato. O número é reservado de forma
@@ -238,12 +254,13 @@ Critérios da decisão:
 
 1. **ORD-P05-01:** toda Ficha aprovada no piloto registra `pedido.fab = 01`,
    obtido do domínio controlado de unidades fabris e nunca de texto livre.
-2. **ORD-P05-02:** a sequência de `pedido.numero` é global e não reinicia nem se
-   divide por ano, `FAB`, canal ou vendedor.
-3. **ORD-P05-03:** antes do corte, uma pessoa responsável registra e aprova o
-   último número legado; a primeira reserva do CRM usa exatamente o sucessor.
-4. **ORD-P05-04:** após o corte, somente o CRM aloca números e qualquer fluxo
-   externo de emissão permanece bloqueado.
+2. **ORD-P05-02:** a sequência de `pedido.numero` começa em `01-CRM`, é global,
+   usa sufixo fixo `-CRM` e não reinicia nem se divide por ano, `FAB`, canal ou
+   vendedor.
+3. **ORD-P05-03:** não existe importação, consulta ou dependência de último
+   número legado; o namespace `-CRM` separa os novos pedidos.
+4. **ORD-P05-04:** desde o primeiro pedido, somente o CRM aloca identificadores
+   desse namespace.
 5. **ORD-P05-05:** a primeira aprovação autorizada da Ficha, após confirmação
    humana do pagamento, reserva um único número em operação atômica.
 6. **ORD-P05-06:** duas aprovações concorrentes recebem números distintos e a
@@ -302,6 +319,12 @@ de titulares, autoriza exceções e decide o `legal_hold`; o **Administrador
 Técnico** executa e comprova exclusões. Atendimento e Vendedor não podem
 realizar exclusão irreversível. Uma pessoa deve ser formalmente designada para
 cada papel antes do piloto.
+
+O Responsável de Privacidade designado é **Rômulo Sutil Corrêa**. A política e
+os prazos desta seção foram validados com a assessoria jurídica consultada pela
+Silmer. O Tech Lead responde por traduzir o contrato aprovado em arquitetura,
+controles, testes e operação e por designar o Administrador Técnico executor
+antes do piloto; isso não reabre decisão de produto.
 
 O titular dispõe de canal eletrônico publicado para solicitar confirmação,
 acesso, correção, exportação, bloqueio ou exclusão. A solicitação exige
@@ -437,14 +460,11 @@ Critérios da decisão:
 
 ## Gate recomendado
 
-Os P0.1 a P0.7 estão resolvidos. O Tech Lead pode finalizar a máquina de
-estados, autorização, modelo de dados, integrações, riscos, design e tarefas. A
-especificação técnica recebe status `Aprovada` assim que as regras de canal,
-sandbox da IA, handoff, sugestão de etapa, `FAB`, numeração, retenção,
-exclusão e permissões da Ficha forem refletidas no PRD e nos critérios de
-aceite; essa sincronização é de rastreabilidade e não reabre decisão de produto.
-
-Não iniciar implementação de produção nem publicar estimativa fechada antes desse gate. Protótipos descartáveis de integração e validação da API oficial são permitidos, desde que não congelem o modelo de domínio.
+Os P0.1 a P0.7 estão resolvidos e sincronizados. O caminho está integralmente
+nas mãos do Tech Lead para finalizar máquina de estados, autorização, modelo de
+dados, integrações, riscos, design, tarefas, estimativa e implementação. Dados
+operacionais de ambiente e a nomeação do executor técnico são atividades de
+lançamento, não bloqueadores de produto.
 
 ## Registro de fechamento
 
@@ -458,5 +478,5 @@ Decisão aprovada:
 3. O ciclo de vida, versionamento, cancelamento, retry, reenvio e auditoria
    seguem o contrato P0.7 deste documento.
 
-Saída: P0.7 resolvido e autorização para o Tech Lead finalizar design e tarefas;
-PRD e critérios de aceite devem ser sincronizados antes da implementação.
+Saída: P0 completo, política de privacidade aprovada, responsável designado e
+autorização para o Tech Lead conduzir design, tarefas, estimativa e implementação.

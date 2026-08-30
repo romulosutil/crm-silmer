@@ -2,9 +2,9 @@
 
 O CRM Silmer é um produto web próprio para organizar conversas comerciais, qualificação, vendas e geração de Fichas de Pedido. Ele substitui integralmente o Datacrazy.
 
-O fluxo começa na Caixa de Entrada, tratada como backlog de conversas. Apenas oportunidades comerciais viram leads e entram no Kanban. A conversão pode ser feita por uma pessoa ou pelo agente de IA Vendedor Silmer.
+O fluxo começa na Caixa de Entrada, tratada como backlog de conversas. Apenas oportunidades comerciais viram leads e entram no Kanban. No MVP, uma pessoa confirma a conversão; o agente de IA Vendedor Silmer conversa, coleta dados e sugere o próximo passo sem alterar o estado oficial do CRM.
 
-O primeiro canal confirmado é a API oficial do WhatsApp Business. O artefato central do domínio é `ficha_exemplo.xlsx`: os dados necessários para produzir e cobrar um pedido definem as perguntas, validações e etapas da jornada.
+O canal obrigatório do piloto é a API oficial do WhatsApp Business. O Instagram Direct participa quando disponível, mas não bloqueia o lançamento. O artefato central do domínio é `ficha_exemplo.xlsx`: os dados necessários para produzir e cobrar um pedido definem as perguntas, validações e etapas da jornada.
 
 Documentos principais:
 

@@ -62,7 +62,7 @@ O produto é usado para triar conversas, acompanhar oportunidades, revisar dados
 ### Estados explícitos
 
 - Todo carregamento, vazio, erro, sucesso, indisponibilidade e falta de permissão possui tratamento próprio.
-- A automação do Vendedor Silmer sempre informa `o que fez`, `quando`, `em nome de qual regra` e `como revisar ou reverter`.
+- No MVP, a atuação do Vendedor Silmer informa `o que respondeu`, `o que sugeriu`, `quando` e `em nome de qual regra`; alterações oficiais continuam humanas.
 - Estado de sincronização e envio usa texto curto mais ícone; nunca somente uma bolinha colorida.
 
 ## 4. Temas e tokens semânticos
@@ -231,7 +231,9 @@ Cada componente precisa documentar: propósito, anatomia, variantes, estados, co
 
 - Mensagens humanas, do cliente e do agente são visualmente distintas, mas permanecem legíveis nos dois temas.
 - A área de composição mantém uma ação principal de envio e torna anexos/ações extras secundários.
-- Ações do agente aparecem em uma linha do tempo auditável, agrupada por etapa.
+- Mensagens, sugestões e handoffs do agente aparecem em uma linha do tempo auditável, agrupada por etapa.
+- Sugestões como `Transformar em lead` e `Avançar etapa` exigem confirmação humana explícita no MVP; a interface nunca representa a sugestão como ação já executada.
+- A chave pós-MVP `vendedor_silmer_autonomia_comercial` não aparece como controle operacional do MVP.
 - Handoff mostra motivo, resumo, responsável e ação para assumir; não depende de toast.
 - Reversão identifica impacto antes de confirmar.
 
@@ -323,4 +325,4 @@ Uma tela ou componente só está pronto quando:
 
 ---
 
-Este documento define a direção visual. Etapas definitivas do Kanban, permissões, campos obrigatórios da Ficha e vocabulário financeiro continuam dependentes das decisões de produto registradas no PRD.
+Este documento define a direção visual. Etapas do Kanban, permissões, campos obrigatórios da Ficha e vocabulário financeiro estão resolvidos nos documentos canônicos e prontos para especificação e implementação pelo Tech Lead.

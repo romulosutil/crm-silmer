@@ -1,8 +1,8 @@
 # CRM Silmer — Especificação de Produto do MVP
 
-> **Versão:** v5 — 29/08/2026  
-> **Status:** P0.1 resolvido; pronta para especificar a jornada, com seis bloqueadores de produto restantes  
-> **Decisão de passagem:** GO condicional para Tech Lead; NO-GO para fechar arquitetura, estimativa ou iniciar implementação antes dos itens P0 da seção 15.
+> **Versão:** v6 — 29/08/2026
+> **Status:** P0.1 a P0.7 resolvidos e rastreabilidade sincronizada
+> **Decisão de passagem:** GO integral; design técnico, tarefas, estimativa e implementação estão nas mãos do Tech Lead.
 
 ## 1. Visão do produto
 
@@ -13,14 +13,19 @@ O produto terá duas superfícies operacionais diferentes:
 1. **Caixa de Entrada:** backlog de conversas recebidas. Uma conversa ainda não é necessariamente um lead.
 2. **Kanban Comercial:** contém apenas oportunidades que já foram reconhecidas como leads e acompanha sua evolução até `Fechado` ou `Perdido`.
 
-O **Vendedor Silmer** será um agente de IA do próprio CRM. Ele deverá tentar conduzir sozinho toda a jornada permitida: analisar a conversa, retirar uma oportunidade do backlog, criar o lead, preencher dados, avançar cards e preparar a conclusão. Pessoas continuam capazes de realizar e corrigir manualmente qualquer ação.
+O **Vendedor Silmer** será um agente de IA do próprio CRM. No MVP, trabalha em
+sandbox: conversa com o cliente, lê contexto e sugere a próxima etapa, mas não
+cria lead, não altera campo oficial e não move card. Depois do MVP, uma chave
+desativada por padrão poderá liberar autonomia progressiva com permissões,
+auditoria e rollback explícitos.
 
 ## 2. Objetivos do MVP
 
 - Centralizar as conversas comerciais recebidas pela API oficial do WhatsApp Business.
 - Separar conversas pendentes de oportunidades comerciais reais.
-- Permitir conversão manual e automática de uma conversa em lead.
-- Fazer o Vendedor Silmer conduzir a qualificação e avançar o lead autonomamente.
+- Permitir conversão humana, idempotente e auditável de uma conversa em lead.
+- Fazer o Vendedor Silmer conduzir a conversa e sugerir a próxima etapa sem
+  alterar o estado comercial no MVP.
 - Produzir a Ficha de Pedido com dados suficientes para produção e cobrança.
 - Enviar a Ficha aprovada para Rose, no WhatsApp `+55 27 99901-0303`.
 - Registrar vendas e oferecer uma visão financeira comercial básica.
@@ -48,16 +53,20 @@ Pode fazer tudo que Atendimento faz e também assumir negociações, tratar valo
 
 ### Vendedor Silmer
 
-É o agente de IA operacional. Não é apenas um chatbot: ele atua no CRM por ferramentas controladas. Pode ler contexto, responder, criar lead, preencher campos, consultar regras, mover cards, gerar resumo e preparar a Ficha. Toda ação deve ser auditável e reversível.
+É o agente de IA operacional. No MVP pode ler contexto autorizado, responder,
+consultar regras, resumir e sugerir a próxima etapa. A sugestão é não
+vinculante e depende de confirmação humana. A autonomia para criar lead,
+preencher campos e mover cards pertence ao pós-MVP e só poderá existir atrás
+da chave `vendedor_silmer_autonomia_comercial`, desativada por padrão.
 
 ## 5. Caixa de Entrada como backlog
 
 Toda conversa recebida entra primeiro na Caixa de Entrada com estado próprio, por exemplo: `Nova`, `Em análise`, `Em atendimento`, `Convertida em lead`, `Encerrada sem lead` ou `Requer atenção`.
 
-Uma conversa pode sair do backlog de duas formas:
-
-- **Ação humana:** uma pessoa usa o botão `Transformar em lead`.
-- **Ação do Vendedor Silmer:** o agente reconhece intenção comercial e executa a mesma operação por ferramenta interna.
+No MVP, uma conversa sai do backlog por ação humana: Atendimento ou Vendedor
+usa o botão `Transformar em lead`. O Vendedor Silmer pode sugerir essa ação,
+mas não executá-la. A execução autônoma poderá ser habilitada somente na fase
+P2 pela chave de autonomia comercial.
 
 Converter em lead cria ou vincula um Contato e cria um novo Negócio no Kanban. Contatos recorrentes podem possuir vários negócios sem perder o histórico de relacionamento.
 
@@ -65,9 +74,16 @@ A conversão deve ser idempotente: retries do webhook, mensagens duplicadas ou c
 
 ## 6. Canal do MVP
 
-O canal confirmado para o MVP é a **API oficial do WhatsApp Business**. A verificação necessária já foi obtida.
+O canal obrigatório do MVP é a **API oficial do WhatsApp Business**. A
+verificação necessária já foi obtida. O **Instagram Direct** também entra no
+piloto por integração oficial, mas é não bloqueante: sua indisponibilidade não
+atrasa o lançamento pelo WhatsApp. O site apenas abre o WhatsApp e pode
+registrar origem `site`; não é um terceiro canal de conversa.
 
-Instagram e canal próprio do site devem ser tratados como integrações posteriores, mas a modelagem de Conversa e Mensagem não deve depender exclusivamente do WhatsApp. Cada mensagem registra canal, identificador externo, remetente, timestamp, conteúdo, anexos e estado de processamento.
+Cada mensagem registra canal, identificador externo, remetente, timestamp,
+conteúdo, anexos e estado de processamento. Identidades de Instagram e
+WhatsApp só são fundidas por correlação verificável ou decisão humana
+auditável.
 
 Se o CRM não consumir uma mensagem, ela pode continuar disponível no canal nativo. Portanto, o critério de confiabilidade não será “a mensagem desapareceu”, mas sim:
 
@@ -75,19 +91,18 @@ Se o CRM não consumir uma mensagem, ela pode continuar disponível no canal nat
 
 O produto deve exibir saúde do canal, último evento recebido e pendências de processamento. A sincronização retroativa oferecida pela API deverá ser confirmada pelo Tech Lead; o produto não deve prometer recuperação automática que o provedor não ofereça.
 
-## 7. Vendedor Silmer e autonomia
+## 7. Vendedor Silmer no MVP e autonomia futura
 
-O Vendedor Silmer tenta concluir a jornada sem intervenção humana. Ele deve:
+No MVP, o Vendedor Silmer:
 
-1. Ler a mensagem e o histórico disponível.
-2. Identificar se existe intenção comercial.
-3. Converter a conversa em lead quando aplicável.
-4. Descobrir o próximo campo necessário da jornada.
-5. Perguntar apenas o que ainda não está respondido.
-6. Registrar a resposta em dados estruturados.
-7. Validar se a etapa atual pode ser concluída.
-8. Avançar o card automaticamente.
-9. Preparar o resumo e a Ficha quando todos os requisitos estiverem presentes.
+1. Lê a mensagem e o histórico autorizado.
+2. Responde no canal e coleta informações pela conversa.
+3. Identifica intenção comercial e sugere `Transformar em lead`.
+4. Descobre o próximo campo necessário da jornada.
+5. Pergunta apenas o que ainda não foi respondido.
+6. Produz resumo e sugestão não vinculante da etapa.
+7. Aguarda uma pessoa confirmar a conversão, o campo oficial ou a mudança de
+   card.
 
 O agente interrompe e transfere para uma pessoa quando:
 
@@ -95,13 +110,21 @@ O agente interrompe e transfere para uma pessoa quando:
 - o cliente insiste em preço, promessa de prazo ou mínimo antes de concluir a jornada necessária;
 - o agente encontra um bloqueio real que não consegue resolver com os dados, catálogo e regras autorizadas, depois de registrar o motivo.
 
-O agente nunca inventa preço, prazo, disponibilidade, condição de pagamento ou regra de produção. Ao final da qualificação, ele só poderá informar valores se existir uma política aprovada e tecnicamente consultável. Até essa decisão ser fechada, o preço final continua sob responsabilidade humana.
+O agente nunca inventa preço, prazo, disponibilidade, condição de pagamento ou
+regra de produção. Após a qualificação, comunica somente uma versão vigente de
+orçamento humano aprovada por `Admin`; não calcula, negocia nem concede
+desconto.
+
+No pós-MVP, a chave `vendedor_silmer_autonomia_comercial`, desativada por
+padrão, poderá autorizar conversão em lead, escrita de campos e avanço de card.
+Essa fase exige escopo de permissão, auditoria, rollback e desligamento
+imediato e não compõe o aceite do MVP.
 
 ## 8. Papel do n8n
 
 O n8n é **opcional** e não faz parte do núcleo obrigatório do produto.
 
-A máquina de estados comercial, as permissões do agente, a idempotência, a auditoria e o avanço dos cards devem pertencer ao CRM. O Vendedor Silmer deve funcionar mesmo sem n8n.
+A máquina de estados comercial, as permissões do agente, a idempotência, a auditoria e o avanço dos cards devem pertencer ao CRM. O Vendedor Silmer deve funcionar mesmo sem n8n; no MVP, somente pessoas mutam o estado comercial.
 
 O n8n poderá ser usado depois para automações periféricas, como notificações, integrações de baixa criticidade e rotinas agendadas. O Tech Lead decidirá se há benefício suficiente para incluí-lo, sem transformar sua presença em requisito do MVP.
 
@@ -162,7 +185,7 @@ critérios `JRN-01` a `JRN-09` estão em
 
 Quando a venda estiver aprovada e o pagamento PIX tiver confirmação manual, o sistema deverá:
 
-1. Reservar um número sequencial de pedido sem colisão.
+1. Reservar um identificador sequencial sem colisão, começando em `01-CRM`.
 2. Preencher os dados estruturados da Ficha.
 3. Permitir revisão por usuário autorizado.
 4. Gerar uma versão estável em PDF ou imagem.
@@ -194,16 +217,18 @@ O MVP deve registrar:
 - quantidade de vendas e ticket médio;
 - vendas canceladas e perdidas.
 
-Há uma decisão P0 pendente: medir apenas **valor vendido** ou também **valor recebido/saldo a receber**. A segunda opção exige eventos de pagamento e aumenta o escopo.
-
-O caminho operacional inicial de pagamento já está definido como envio de
-chave PIX e confirmação humana. Essa decisão não resolve o P0.3: ele continua
-necessário para definir quais eventos entram nos relatórios e se o CRM calcula
-saldo a receber.
+O MVP mede somente **valor vendido**. Uma venda entra nos indicadores em
+`aprovado_aguardando_pix`, exatamente uma vez. Valores recebidos, saldo a
+receber, parcelamento, conciliação e estornos financeiros ficam em P2. O
+subfluxo PIX continua operacional e auditável, mas não gera métricas agregadas
+de recebido.
 
 ## 13. Privacidade e LGPD
 
-O produto adotará uma linha de base compatível com práticas correntes de mercado, que deverá ser concretizada na especificação técnica:
+O produto adota a política concreta de retenção e exclusão aprovada no
+`PRODUCT-READINESS-TECH-LEAD.md`, validada com a assessoria jurídica consultada
+pela Silmer. O Responsável de Privacidade é **Rômulo Sutil Corrêa**. O Tech Lead
+deve implementar:
 
 - minimização dos dados coletados;
 - acesso por função;
@@ -214,61 +239,61 @@ O produto adotará uma linha de base compatível com práticas correntes de merc
 - registro dos operadores e integrações que processam os dados;
 - aviso de privacidade e finalidade de uso.
 
-“Padrão de mercado” não é critério testável sozinho. Prazos, responsáveis e procedimentos precisam ser definidos antes do piloto com clientes reais.
+Prazos, classes de dado, `legal_hold`, backups, operadores e atendimento aos
+direitos do titular seguem os critérios `PRV-P06-01` a `PRV-P06-12`.
 
 ## 14. Critérios de sucesso do piloto
 
 - Toda conversa recebida pelo CRM aparece no backlog ou na fila de reconciliação.
 - Nenhuma conversa vira mais de um lead pelo mesmo evento de conversão.
-- O Vendedor Silmer consegue converter e avançar um lead sem intervenção no caminho feliz.
-- Toda ação do agente é auditável e reversível.
+- O Vendedor Silmer responde e sugere a próxima etapa sem mutar o estado do
+  domínio no MVP.
+- Toda mensagem e sugestão do agente é auditável; somente uma pessoa confirma
+  conversão e mudança de etapa.
 - Todo card termina como `Fechado` ou `Perdido`; conversas sem oportunidade terminam como `Sem lead` no backlog.
 - Toda venda fechada gera uma Ficha sem redigitação dos dados já coletados.
 - Toda Ficha aprovada possui estado de envio para Rose.
 - O CRM apresenta total vendido, quantidade de vendas e ticket médio no período.
 - Nenhum card transferido para atendimento humano fica sem responsável.
 
-Os números do piloto — volume de conversas, vendas consecutivas e tempo de observação — permanecem pendentes.
+Instagram pode entrar durante o piloto sem ser condição de lançamento. Os
+números de observação e volume são métricas operacionais definidas pelo Tech
+Lead com a operação e não reabrem P0.
 
 ## 15. Gate de produto para o Tech Lead
 
 ### Definido e liberado
 
 - Caixa de Entrada é backlog; Kanban contém leads.
-- Conversão em lead pode ser manual ou executada pelo Vendedor Silmer.
-- Vendedor Silmer é autônomo e move cards por ferramentas do CRM.
+- Conversão e mutação de card são humanas no MVP; o Vendedor Silmer apenas
+  conversa e sugere.
+- Autonomia comercial é P2 e fica atrás de chave desativada por padrão.
 - n8n não é dependência central.
-- WhatsApp usa API oficial e a verificação foi obtida.
+- WhatsApp usa API oficial e bloqueia o go-live; Instagram Direct entra no
+  piloto sem bloquear o lançamento; site abre o WhatsApp.
 - Ficha é o contrato da qualificação.
 - P0.1 está resolvido: etapas, campos obrigatórios, gates, PIX e boas-vindas
   estão definidos em `CAMPOS-FICHA-E-JORNADA-P0-1.md`.
 - Destinatária da Ficha é Rose, `+55 27 99901-0303`.
-- Financeiro comercial básico entra no escopo.
-- Princípios mínimos de LGPD entram no escopo.
+- Financeiro mede valor vendido; recebido e saldo ficam em P2.
+- Pedido começa em `01-CRM`, sem sequência legada.
+- Política de privacidade está aprovada e Rômulo Sutil Corrêa é o responsável.
+- Permissões da Ficha seguem função Atendimento/Vendedor e role adicional
+  `Admin`.
 
-### P0 — fechar antes da aprovação da especificação técnica
+### P0 concluído
 
-2. Definir se o Vendedor Silmer pode informar preço após a qualificação e qual fonte autoriza o valor.
-3. Definir se financeiro significa somente vendido ou também recebido/a receber.
-4. Confirmar o canal exato do primeiro piloto além do WhatsApp, se houver.
-5. Definir os valores de `FAB`, último número de pedido e regras de numeração.
-6. Concretizar retenção, exclusão e responsáveis de privacidade.
-7. Definir quem pode revisar, editar, cancelar e reenviar uma Ficha.
+P0.1 a P0.7 estão resolvidos no `PRODUCT-READINESS-TECH-LEAD.md` e propagados
+para os requisitos rastreáveis. Não resta decisão de produto bloqueante.
 
 ### Decisão do Product Manager
 
-**GO condicional para iniciar a especificação com o Tech Lead.** Já existe informação suficiente para desenhar contexto, limites, integrações, estados, modelo de dados e riscos.
-
-**NO-GO para aprovar o design final, fechar estimativa ou iniciar implementação.** Os seis P0 restantes alteram contratos de dados, estados e critérios de aceite; precisam ser resolvidos durante a primeira etapa conjunta de especificação.
+**GO integral.** O Tech Lead possui contexto, limites, integrações, estados,
+modelo de dados, autorização, privacidade, riscos e critérios de aceite para
+finalizar design, tarefas, estimativa e implementação.
 
 ## 16. Próximo passo recomendado
 
-Realizar uma sessão Product Manager + operação Silmer + Tech Lead com a Ficha aberta. A saída esperada é:
-
-1. Matriz de autonomia do Vendedor Silmer e fonte autorizada de preço.
-2. Limite do financeiro comercial.
-3. Canal adicional do piloto, se houver.
-4. Regra de `FAB`, sequência e numeração.
-5. Decisões de privacidade do piloto.
-6. Permissões do ciclo de vida da Ficha.
-7. Registro das decisões técnicas que pertencem ao Tech Lead, sem misturá-las ao PRD.
+O Tech Lead deve produzir a especificação técnica, decompor tarefas, estimar e
+implementar. A operação participa de UAT e fornece credenciais/configurações de
+ambiente sem reabrir as decisões de produto registradas.

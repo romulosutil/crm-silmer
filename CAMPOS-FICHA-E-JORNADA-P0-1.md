@@ -46,8 +46,8 @@ avançar o card até a pendência ser resolvida por cliente ou pessoa autorizada
 
 | ID canônico | Rótulo original | Célula/intervalo | Origem | Obrigatório para gerar a Ficha | Regra |
 |---|---|---|---|---|---|
-| `pedido.numero` | `PEDIDO N°` | `B2` | Sistema | Sim | Sequencial único; regra numérica permanece no P0.5. |
-| `pedido.fab` | `FAB` | `C2` | Configuração/operação | Sim | Valor autorizado; significado e domínio permanecem no P0.5. |
+| `pedido.numero` | `PEDIDO N°` | `B2` | Sistema | Sim | Sequência global do namespace próprio: começa em `01-CRM`, usa sufixo `-CRM`, não reinicia e não depende de número legado. |
+| `pedido.fab` | `FAB` | `C2` | Configuração/operação | Sim | Código controlado da unidade fabril; no piloto, valor fixo `01`, exibido como `FAB 01`. |
 | `pedido.vendedor` | `Vendedor:` | `F2:G2` | CRM/operação | Sim | Usuário responsável no momento do fechamento. |
 | `pedido.data` | `Data do Pedido:` | `J2:K2` | Sistema | Sim | Data da geração da versão aprovada. |
 | `pedido.nome` | `Nome` | `C3:G3` | Cliente/operação | Sim | Nome do evento, grupo ou referência reconhecível do pedido. |
@@ -158,8 +158,8 @@ do Kanban do MVP são **Produto**, **Especificação**, **Estampa**, **Logístic
 7. O negócio pode virar `Perdido` em qualquer etapa, com motivo. Conversa sem
    intenção comercial encerra no Backlog como `Sem lead`, nunca como perdida.
 8. Preço, prazo confirmado, disponibilidade e política comercial não são
-   inventados. Enquanto o P0.2 estiver aberto, somente uma pessoa autorizada
-   registra e comunica o valor final.
+   inventados. Uma pessoa autorizada registra e aprova o orçamento; o Vendedor
+   Silmer pode apenas comunicar a versão aprovada, vigente e imutável.
 
 ## 5. Roteiro conversacional por etapa
 
@@ -270,7 +270,8 @@ Regras:
 1. A chave é lida de configuração autorizada e nunca gerada pelo agente.
 2. O envio é idempotente: retry reutiliza a mesma cobrança e não cria outra.
 3. O CRM não declara pagamento confirmado apenas por receber imagem ou PDF.
-4. A definição de relatórios de recebido e saldo continua pertencendo ao P0.3.
+4. O MVP mede apenas valor vendido, quantidade de vendas e ticket médio;
+   recebido e saldo a receber ficam para P2.
 
 ## 7. Boas-vindas ao cliente após confirmação
 
@@ -295,7 +296,8 @@ auditável e não duplica pedido nem cobrança.
 3. **JRN-03:** WHEN qualquer campo obrigatório da etapa está `pendente` ou
    `divergente` THEN o CRM SHALL impedir o avanço e indicar o próximo campo.
 4. **JRN-04:** WHEN todos os campos aplicáveis de uma etapa estão `preenchido`
-   ou `nao_aplicavel` THEN o CRM SHALL registrar o gate e avançar uma etapa.
+   ou `nao_aplicavel` THEN o CRM SHALL permitir que uma pessoa registre o gate
+   e avance uma etapa; no MVP, o Vendedor Silmer apenas sugere esse avanço.
 5. **JRN-05:** WHEN a grade é informada THEN o CRM SHALL calcular o total e
    impedir passagem se ele divergir da quantidade confirmada.
 6. **JRN-06:** WHEN o cliente aprova a venda THEN o CRM SHALL iniciar uma única
@@ -310,8 +312,8 @@ auditável e não duplica pedido nem cobrança.
 
 ## 9. Decisão de fechamento
 
-O P0.1 está **resolvido** por este contrato. A equipe técnica pode especificar
-a máquina de estados e o esquema dos campos sem rediscutir quantidade ou nomes
-das etapas. Permanecem abertos preço e autoridade (P0.2), limite financeiro
-(P0.3), canais adicionais (P0.4), `FAB` e numeração (P0.5), privacidade (P0.6)
-e permissões da Ficha (P0.7).
+O contrato de jornada deste documento e os contratos P0.2 a P0.7 de
+`PRODUCT-READINESS-TECH-LEAD.md` estão **resolvidos**. O Tech Lead pode
+especificar a máquina de estados, o esquema dos campos e a implementação sem
+rediscutir etapas, preço, financeiro, canais, identidade da Ficha, privacidade
+ou permissões.

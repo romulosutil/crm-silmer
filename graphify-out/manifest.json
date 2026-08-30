@@ -1,0 +1,107 @@
+{
+  ".specs/features/crm-mvp/context.md": {
+    "mtime": 1788057380.0507643,
+    "ast_hash": "d89430865ab4bb05bc3a9e85ab0d78ed",
+    "semantic_hash": ""
+  },
+  ".specs/features/crm-mvp/spec.md": {
+    "mtime": 1788057359.0250964,
+    "ast_hash": "d9ed654bf439c2254beb8e2269e1abf2",
+    "semantic_hash": ""
+  },
+  "ABOUT.md": {
+    "mtime": 1788057414.3301044,
+    "ast_hash": "7b962183bccd89522e872b40e3eec8fb",
+    "semantic_hash": ""
+  },
+  "ARCHITECTURE.md": {
+    "mtime": 1788057415.7717638,
+    "ast_hash": "975c92ee587eb9f230caf29a29252fad",
+    "semantic_hash": ""
+  },
+  "CRM-MVP-ESPECIFICACAO.md": {
+    "mtime": 1788057114.8927298,
+    "ast_hash": "59d7155d9a5619c57280fd64856586c5",
+    "semantic_hash": ""
+  },
+  "FLUXO-QUALIFICACAO-GENERICO.md": {
+    "mtime": 1788038705.0708206,
+    "ast_hash": "6fada967b6eb7e8c24cfe54b351c65d1",
+    "semantic_hash": "6fada967b6eb7e8c24cfe54b351c65d1"
+  },
+  "PRODUCT-READINESS-TECH-LEAD.md": {
+    "mtime": 1788057041.7627208,
+    "ast_hash": "4fcb71b26fc26b60316567e16359cfec",
+    "semantic_hash": ""
+  },
+  "RULES.md": {
+    "mtime": 1788057415.054828,
+    "ast_hash": "d132c90096870275f160a1e6a64802b7",
+    "semantic_hash": ""
+  },
+  "historico-datacrazy/CRM-PROCESSO-VENDAS.md": {
+    "mtime": 1788015339.8941891,
+    "ast_hash": "c41b6c3d5202b86e3339d3c2f56021c9",
+    "semantic_hash": "c41b6c3d5202b86e3339d3c2f56021c9"
+  },
+  "historico-datacrazy/DATACRAZY-SETUP.md": {
+    "mtime": 1788015339.886427,
+    "ast_hash": "bab89465754fec136906109b92cdd665",
+    "semantic_hash": "bab89465754fec136906109b92cdd665"
+  },
+  "design.md": {
+    "mtime": 1788057455.1536317,
+    "ast_hash": "9c3173ead774205a2a7d785afb815c83",
+    "semantic_hash": ""
+  },
+  "CAMPOS-FICHA-E-JORNADA-P0-1.md": {
+    "mtime": 1788057454.4323528,
+    "ast_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend.md": {
+    "mtime": 1788040493.900389,
+    "ast_hash": "2698f39fa9dc7a412395355fa0bdc874",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines.md": {
+    "mtime": 1788049538.369232,
+    "ast_hash": "6579f487f0d2a3e9985fccffd7bcd8b8",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do.md": {
+    "mtime": 1788050295.1326635,
+    "ast_hash": "c21038a792b030b9d803d1a8be6b4988",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_004047_quais_decis\u00f5es_resolvem_o_p0_7_do_product_readines.md": {
+    "mtime": 1788050447.2879753,
+    "ast_hash": "29f68065e6a4775738607c44db623d55",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_004114_quais_decis\u00f5es_resolvem_o_p0_5_do_product_readines.md": {
+    "mtime": 1788050474.159081,
+    "ast_hash": "19e1943d593d77d6e30ab61177207f25",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu.md": {
+    "mtime": 1788050513.4838305,
+    "ast_hash": "544cb47ef0674a304dd628fb648a565c",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_012906_como_o_p0_5_define_fab__sequ\u00eancia__reserva__concor.md": {
+    "mtime": 1788053346.8666623,
+    "ast_hash": "2d01163ec211b48dca4c7e37cf2fae11",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec.md": {
+    "mtime": 1788054938.4243424,
+    "ast_hash": "0a512adee7e17efa83b1a93f5e6f0cdb",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_020836_como_o_p0_7_modela_admin__atendimento_e_vendedor.md": {
+    "mtime": 1788055716.456965,
+    "ast_hash": "55b23c765760ec50776beffaef938e6c",
+    "semantic_hash": ""
+  }
+}

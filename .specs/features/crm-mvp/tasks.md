@@ -1,6 +1,6 @@
 # CRM Silmer MVP — Plano de Implementação
 
-> **Status:** planejado  
+> **Status:** Fase 0 em execução  
 > **Design técnico:** `TECHNICAL-DESIGN.md`  
 > **Topologia:** `EASYPANEL-TOPOLOGY.md`
 
@@ -12,6 +12,9 @@ gates de verificação.
 
 ### T00.1 Estruturar o monorepo JavaScript ESM
 
+- **Status:** concluída em 30/08/2026.
+- **Rastreabilidade:** fundação técnica que habilita os 32 requisitos do MVP;
+  não satisfaz isoladamente um requisito funcional.
 - Criar diretórios `apps/edge-web`, `apps/api`, `apps/worker` e `modules/*`.
 - Fixar versões de Node, dependências e imagens.
 - Configurar JSDoc/checkJs, lint, formatação e testes nativos.

@@ -4,8 +4,8 @@ CRM web próprio da Silmer para organizar conversas comerciais, qualificação,
 vendas, PIX e geração da Ficha de Pedido. O produto substituirá integralmente o
 Datacrazy; o piloto começa pela API oficial do WhatsApp Business.
 
-> **Estado atual:** fundação e planejamento técnico concluídos. O runtime ainda
-> não foi criado; o próximo item executável é `T00.1` em
+> **Estado atual:** o bootstrap do runtime (`T00.1`) está disponível; as demais
+> tarefas da Fase 0 permanecem guiadas por
 > [`.specs/features/crm-mvp/tasks.md`](.specs/features/crm-mvp/tasks.md).
 
 ## Comece por aqui
@@ -37,10 +37,22 @@ domínio em `window` estão fora da baseline do MVP.
 
 ## Desenvolvimento
 
-O bootstrap de código, scripts e dependências pertence ao item `T00.1`. Até ele
-ser concluído, não há comando de instalação ou execução válido para documentar.
-Quando os scripts existirem, este README deve expor apenas comandos reais do
-`package.json` e o fluxo completo de desenvolvimento local.
+Pré-requisitos fixados: Node.js `24.14.0` e npm `11.9.0`. Instale e execute os
+gates oficiais a partir da raiz:
+
+```powershell
+npm ci
+npm run validate
+```
+
+Comandos individuais: `npm run typecheck`, `npm run lint`,
+`npm run format:check`, `npm run check:boundaries`, `npm test` e
+`npm run build`. O build determinístico é escrito em `dist/` e inclui um
+manifesto SHA-256 sem timestamps.
+
+Os processos executáveis ficam em `apps/api` e `apps/worker`; o frontend
+estático e vanilla fica em `apps/edge-web`. Contratos compartilhados começam em
+`modules/shared`.
 
 Toda contribuição segue [`CONTRIBUTING.md`](CONTRIBUTING.md), mantém vínculo com
 um requisito/tarefa e termina com validação, commit, push e atualização do

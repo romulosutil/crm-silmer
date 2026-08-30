@@ -1,0 +1,59 @@
+import { createHash } from 'node:crypto';
+import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, relative, resolve } from 'node:path';
+
+const root = resolve(import.meta.dirname, '..');
+const output = resolve(root, 'dist');
+const copies = [
+  ['apps/edge-web/src', 'edge-web'],
+  ['apps/api/src', 'runtime/apps/api/src'],
+  ['apps/api/package.json', 'runtime/apps/api/package.json'],
+  ['apps/worker/src', 'runtime/apps/worker/src'],
+  ['apps/worker/package.json', 'runtime/apps/worker/package.json'],
+  ['modules/shared/src', 'runtime/modules/shared/src'],
+  ['modules/shared/package.json', 'runtime/modules/shared/package.json'],
+];
+
+await rm(output, { force: true, recursive: true });
+await mkdir(output, { recursive: true });
+
+for (const [source, destination] of copies) {
+  const destinationPath = resolve(output, destination);
+  await mkdir(dirname(destinationPath), { recursive: true });
+  await cp(resolve(root, source), destinationPath, { recursive: true });
+}
+
+/**
+ * @param {string} directory
+ * @returns {Promise<string[]>}
+ */
+async function listFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await listFiles(path)));
+    } else if (entry.isFile()) {
+      files.push(path);
+    }
+  }
+
+  return files;
+}
+
+const manifest = [];
+for (const path of (await listFiles(output)).sort()) {
+  const content = await readFile(path);
+  manifest.push({
+    path: relative(output, path).replaceAll('\\', '/'),
+    sha256: createHash('sha256').update(content).digest('hex'),
+  });
+}
+
+await writeFile(
+  resolve(output, 'manifest.json'),
+  `${JSON.stringify({ files: manifest }, null, 2)}\n`,
+  'utf8',
+);

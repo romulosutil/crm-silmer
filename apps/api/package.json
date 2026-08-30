@@ -1,0 +1,13 @@
+{
+  "name": "@crm-silmer/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@crm-silmer/shared": "0.0.0",
+    "fastify": "5.12.1"
+  }
+}

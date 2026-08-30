@@ -25,17 +25,20 @@ stack ou escopo exigem aprovação explícita e atualização da fonte canônica
 
 ## Validação
 
-Execute os scripts reais definidos pelo repositório para lint, testes, build,
-E2E e acessibilidade. Enquanto o bootstrap `T00.1` não existir, a validação
-documental mínima é:
+Use Node.js `24.14.0` e npm `11.9.0`. Para instalar exatamente o lockfile e
+executar o gate local completo:
 
 ```powershell
-git diff --check
-git status --short
+npm ci
+npm run validate
 ```
 
-Não invente um comando ausente. Ao criar o bootstrap, documente aqui e no
-`README.md` a matriz oficial de comandos e seus pré-requisitos.
+O gate agrega formatação, JSDoc/checkJs, ESLint, fronteiras do monólito, testes
+`node:test` e build reproduzível. Durante a implementação, os mesmos passos
+podem ser executados separadamente pelos scripts documentados no `README.md`.
+E2E e axe-core entram em T00.2; até lá, não fazem parte deste bootstrap.
+
+Antes de publicar, execute também `git diff --check` e `git status --short`.
 
 ## Commits e publicação
 

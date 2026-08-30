@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2024",
+    "types": ["node"]
+  },
+  "include": [
+    "apps/**/*.js",
+    "modules/**/*.js",
+    "scripts/**/*.mjs",
+    "test/**/*.js",
+    "eslint.config.js"
+  ],
+  "exclude": ["dist", "graphify-out", "historico-datacrazy", "node_modules"]
+}

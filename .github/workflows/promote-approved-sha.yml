@@ -1,0 +1,72 @@
+name: Resolve approved SHA for manual promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      approved_sha:
+        description: Full 40-character SHA already approved by CI
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      approved_sha:
+        description: Full 40-character SHA already approved by CI
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  resolve:
+    name: Resolve immutable references
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate approved SHA
+        shell: bash
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+        run: |
+          if [[ ! "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'approved_sha must be a lowercase, full commit SHA' >&2
+            exit 1
+          fi
+      - name: Set up Buildx inspector
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve published digests without rebuilding
+        shell: bash
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+          REGISTRY_ROOT: ghcr.io/${{ github.repository }}
+        run: |
+          edge_tag="$REGISTRY_ROOT/edge-web:$APPROVED_SHA"
+          runtime_tag="$REGISTRY_ROOT/runtime:$APPROVED_SHA"
+          edge_digest="$(docker buildx imagetools inspect "$edge_tag" | awk '/^Digest:/ { print $2; exit }')"
+          runtime_digest="$(docker buildx imagetools inspect "$runtime_tag" | awk '/^Digest:/ { print $2; exit }')"
+
+          [[ "$edge_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$runtime_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+          edge_ref="${edge_tag}@${edge_digest}"
+          runtime_ref="${runtime_tag}@${runtime_digest}"
+          {
+            printf 'APPROVED_SHA=%s\n' "$APPROVED_SHA"
+            printf 'EDGE_WEB_DEV=%s\n' "$edge_ref"
+            printf 'EDGE_WEB_HML=%s\n' "$edge_ref"
+            printf 'RUNTIME_DEV=%s\n' "$runtime_ref"
+            printf 'RUNTIME_HML=%s\n' "$runtime_ref"
+          } | tee approved-digests.env
+      - name: Upload promotion manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: approved-digests-${{ inputs.approved_sha }}
+          path: approved-digests.env
+          if-no-files-found: error
+          retention-days: 30

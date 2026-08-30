@@ -15,14 +15,18 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "format": "prettier --write package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"scripts/**/*.mjs\" \"test/**/*.js\" eslint.config.js jsconfig.json .prettierrc.json",
-    "format:check": "prettier --check package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"scripts/**/*.mjs\" \"test/**/*.js\" eslint.config.js jsconfig.json .prettierrc.json",
+    "format": "prettier --write package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/workflows/*.yml\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
+    "format:check": "prettier --check package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/workflows/*.yml\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
     "lint": "eslint apps modules scripts test eslint.config.js",
-    "test": "node --test",
+    "preview": "node scripts/serve-edge.mjs",
+    "test": "node --test test/*.test.js",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --project jsconfig.json",
     "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm test && npm run build"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.62.1",
     "@types/node": "24.13.3",
     "@types/punycode": "2.1.4",
     "eslint": "10.9.1",

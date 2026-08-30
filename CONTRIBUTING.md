@@ -31,12 +31,14 @@ executar o gate local completo:
 ```powershell
 npm ci
 npm run validate
+npm run test:e2e
+npm audit --audit-level=high
 ```
 
 O gate agrega formatação, JSDoc/checkJs, ESLint, fronteiras do monólito, testes
-`node:test` e build reproduzível. Durante a implementação, os mesmos passos
+`node:test` e build reproduzível. E2E/axe-core e auditoria de dependências são
+gates separados e obrigatórios. Durante a implementação, os mesmos passos
 podem ser executados separadamente pelos scripts documentados no `README.md`.
-E2E e axe-core entram em T00.2; até lá, não fazem parte deste bootstrap.
 
 Antes de publicar, execute também `git diff --check` e `git status --short`.
 

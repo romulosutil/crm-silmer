@@ -1,0 +1,15 @@
+.git
+.github
+.specs
+.env
+.env.*
+coverage
+dist
+docs
+graphify-out
+historico-datacrazy
+node_modules
+playwright-report
+test-results
+test
+*.log

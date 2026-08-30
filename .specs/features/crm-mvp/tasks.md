@@ -23,6 +23,10 @@ gates de verificação.
 
 ### T00.2 Criar CI e imagens imutáveis
 
+- **Status:** implementação local concluída em 30/08/2026; publicação GHCR e
+  promoção dev/hml aguardam evidência do workflow e dos ambientes.
+- **Rastreabilidade:** enabler de `MSG-02` e `MSG-03`; não satisfaz sozinho o
+  comportamento funcional desses requisitos.
 - Validar lint, testes, E2E/a11y, dependências, imagens e diff.
 - Publicar `edge-web` e `runtime` no GHCR por SHA/digest.
 - **Verificação:** o mesmo digest sobe em dev e homologação sem rebuild.

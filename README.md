@@ -4,8 +4,8 @@ CRM web próprio da Silmer para organizar conversas comerciais, qualificação,
 vendas, PIX e geração da Ficha de Pedido. O produto substituirá integralmente o
 Datacrazy; o piloto começa pela API oficial do WhatsApp Business.
 
-> **Estado atual:** o bootstrap do runtime (`T00.1`) está disponível; as demais
-> tarefas da Fase 0 permanecem guiadas por
+> **Estado atual:** o bootstrap do runtime (`T00.1`) e a supply chain de CI e
+> imagens imutáveis (`T00.2`) estão disponíveis; as demais tarefas da Fase 0 permanecem guiadas por
 > [`.specs/features/crm-mvp/tasks.md`](.specs/features/crm-mvp/tasks.md).
 
 ## Comece por aqui
@@ -43,12 +43,17 @@ gates oficiais a partir da raiz:
 ```powershell
 npm ci
 npm run validate
+npm run test:e2e
+npm audit --audit-level=high
 ```
 
 Comandos individuais: `npm run typecheck`, `npm run lint`,
 `npm run format:check`, `npm run check:boundaries`, `npm test` e
 `npm run build`. O build determinístico é escrito em `dist/` e inclui um
 manifesto SHA-256 sem timestamps.
+
+O contrato de build único, publicação por SHA/digest, SBOM, provenance, scan e
+promoção manual está em [`docs/phase0/SUPPLY-CHAIN.md`](docs/phase0/SUPPLY-CHAIN.md).
 
 Os processos executáveis ficam em `apps/api` e `apps/worker`; o frontend
 estático e vanilla fica em `apps/edge-web`. Contratos compartilhados começam em

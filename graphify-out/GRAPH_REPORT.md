@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer  (2026-08-30)
 
 ## Corpus Check
-- 79 files · ~49,109 words
+- 119 files · ~64,250 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 708 nodes · 761 edges · 67 communities (61 shown, 6 thin omitted)
+- 976 nodes · 1215 edges · 84 communities (77 shown, 7 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.7)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ae9ceafd`
+- Built from commit: `f8210fae`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -31,12 +31,12 @@
 - Fase 5 — Orçamento, PIX, Pedido e Ficha
 - api/package.json
 - validate-security-catalog.mjs
-- README.md
+- Regras do CRM Silmer
 - Arquitetura — Decisões do MVP
 - Contribuindo com o CRM Silmer
 - T00.4 — Spikes externos
 - T00.5 — Threat model e catálogo de dados
-- TECHNICAL-DESIGN.md
+- README.md
 - Codex — Contexto do CRM Silmer
 - CRM Silmer
 - Agentes do CRM Silmer
@@ -80,30 +80,46 @@
 - Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?
 - Q: Como o P0.7 modela Admin, Atendimento e Vendedor?
 - Q: Where are the agent roles and contribution protocol defined?
+- 0002_phase1_domain.expand.sql
+- configuration-version.js
+- database/src/index.js
+- idempotency.js
+- catalog-version.js
+- identity-access/src/index.js
+- database/package.json
+- authorization.js
+- package.json
+- audit-privacy/package.json
+- catalog/package.json
+- configuration/package.json
+- identity-access/package.json
+- integration-reliability/package.json
+- Baseline de identidade e acesso da Fase 1
+- database/README.md
 
 ## God Nodes (most connected - your core abstractions)
-1. `scripts` - 22 edges
+1. `scripts` - 26 edges
 2. `TDD — CRM Silmer MVP` - 22 edges
 3. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
 4. `Design do CRM Silmer` - 16 edges
 5. `Topologia EasyPanel — CRM Silmer` - 15 edges
 6. `compilerOptions` - 13 edges
-7. `Passagem de Produto para Tech Lead` - 12 edges
-8. `CRM Silmer MVP — Plano de Implementação` - 11 edges
-9. `createSafeLogger()` - 10 edges
-10. `Fase 5 — Orçamento, PIX, Pedido e Ficha` - 10 edges
+7. `normalizeConfigurationValues()` - 12 edges
+8. `Passagem de Produto para Tech Lead` - 12 edges
+9. `loadMigrations()` - 11 edges
+10. `createSafeLogger()` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `harness()` --calls--> `createCatalogService()`  [EXTRACTED]
+  test/catalog.test.js → modules/catalog/src/application/catalog-service.js
+- `createHarness()` --calls--> `createConfigurationService()`  [EXTRACTED]
+  test/configuration.test.js → modules/configuration/src/application/configuration-service.js
 - `capture()` --calls--> `createSafeLogger()`  [EXTRACTED]
   test/observability.test.js → modules/shared/src/observability.js
 - `createApi()` --calls--> `createSafeLogger()`  [EXTRACTED]
   apps/api/src/app.js → modules/shared/src/observability.js
 - `createApi()` --calls--> `normalizeTraceId()`  [EXTRACTED]
   apps/api/src/app.js → modules/shared/src/observability.js
-- `createServerApi()` --calls--> `createSafeLogger()`  [EXTRACTED]
-  apps/api/src/server.js → modules/shared/src/observability.js
-- `Ficha de Pedido` --shares_data_with--> `Rose (Destinatária Ficha)`  [EXTRACTED]
-  CAMPOS-FICHA-E-JORNADA-P0-1.md → CRM-MVP-ESPECIFICACAO.md
 
 ## Import Cycles
 - None detected.
@@ -114,7 +130,7 @@
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 - **Migração do Datacrazy para CRM Próprio** — historico_datacrazy_crm_processo_vendas, historico_datacrazy_datacrazy_setup, specs_features_crm_mvp_context, specs_features_crm_mvp_spec [INFERRED 0.85]
 
-## Communities (67 total, 6 thin omitted)
+## Communities (84 total, 7 thin omitted)
 
 ### Community 0 - "Technical Strategy and MVP"
 Cohesion: 0.05
@@ -145,16 +161,16 @@ Cohesion: 0.09
 Nodes (22): 10. Backups e disaster recovery, 11. Observabilidade e alertas, 12. Gates antes do piloto, 13. Riscos aceitos e evolução, 14. Referências verificadas, 1. Decisão, 2. Serviços por projeto, 3. Rede e domínios (+14 more)
 
 ### Community 7 - "CRM-MVP-ESPECIFICACAO.md"
-Cohesion: 0.29
-Nodes (6): Sobre o CRM Silmer, Caixa de Entrada (Backlog), Ficha de Pedido, Kanban Comercial, Rose (Destinatária Ficha), Vendedor Silmer (Agente IA)
+Cohesion: 0.40
+Nodes (5): Caixa de Entrada (Backlog), Ficha de Pedido, Kanban Comercial, Rose (Destinatária Ficha), Vendedor Silmer (Agente IA)
 
 ### Community 8 - "CRM Silmer MVP — Requisitos Rastreáveis"
 Cohesion: 0.12
 Nodes (15): Critério de passagem, CRM Silmer MVP — Requisitos Rastreáveis, Fora do escopo, Objetivos, P1.1 Caixa de Entrada e conversão, P1.2 Atendimento assistido pelo Vendedor Silmer, P1.3 Ficha de Pedido, P1.4 Confiabilidade e canais (+7 more)
 
 ### Community 9 - "scripts"
-Cohesion: 0.06
-Nodes (33): engines, node, npm, name, packageManager, private, scripts, build (+25 more)
+Cohesion: 0.08
+Nodes (26): scripts, build, check:boundaries, db:migrate, format, format:check, lint, preview (+18 more)
 
 ### Community 10 - "Product Context and Scope"
 Cohesion: 0.20
@@ -173,15 +189,15 @@ Cohesion: 0.20
 Nodes (10): Fase 5 — Orçamento, PIX, Pedido e Ficha, T05.1 Implementar orçamento versionado, T05.2 Implementar ledger de vendido, T05.3 Implementar subfluxo PIX, T05.4 Implementar número e Pedido, T05.5 Implementar ciclo da Ficha, T05.6 Implementar PDF íntegro e reproduzível, T05.7 Implementar envio e onboarding (+2 more)
 
 ### Community 14 - "api/package.json"
-Cohesion: 0.17
-Nodes (11): dependencies, @crm-silmer/shared, fastify, @crm-silmer/shared, name, private, scripts, start (+3 more)
+Cohesion: 0.14
+Nodes (13): dependencies, @crm-silmer/database, @crm-silmer/shared, fastify, @crm-silmer/shared, name, private, scripts (+5 more)
 
 ### Community 15 - "validate-security-catalog.mjs"
 Cohesion: 0.33
 Nodes (7): invariant(), main(), requiredFamilies, retention, validateDataCatalog(), validateThreatModel(), rootUrl
 
-### Community 16 - "README.md"
-Cohesion: 0.38
+### Community 16 - "Regras do CRM Silmer"
+Cohesion: 0.67
 Nodes (3): Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
 
 ### Community 17 - "Arquitetura — Decisões do MVP"
@@ -352,22 +368,82 @@ Nodes (3): Answer, Q: Como o P0.7 modela Admin, Atendimento e Vendedor?, Source 
 Cohesion: 0.50
 Nodes (3): Answer, Q: Where are the agent roles and contribution protocol defined?, Source Nodes
 
+### Community 67 - "0002_phase1_domain.expand.sql"
+Cohesion: 0.09
+Nodes (37): crm_meta.protect_catalog_entry, crm_meta.protect_catalog_version, crm_meta.protect_idempotency_record, crm_meta.reject_immutable_change, audit_events_immutable_rows, audit_events_immutable_truncate, catalog_materials_immutable_truncate, catalog_materials_protect_rows (+29 more)
+
+### Community 68 - "configuration-version.js"
+Cohesion: 0.11
+Nodes (27): createConfigurationService(), assertChannels(), assertExactKeys(), assertFab(), assertFeatureFlags(), assertJsonValue(), assertNonEmptyString(), assertPix() (+19 more)
+
+### Community 69 - "database/src/index.js"
+Cohesion: 0.10
+Nodes (17): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+9 more)
+
+### Community 70 - "idempotency.js"
+Cohesion: 0.13
+Nodes (16): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), canonicalJson(), clone() (+8 more)
+
+### Community 71 - "catalog-version.js"
+Cohesion: 0.16
+Nodes (18): createCatalogService(), assertExactKeys(), assertNonEmptyString(), assertRecord(), createCatalogSelection(), createPublishedCatalogVersion(), deepFreeze(), immutableCatalogClone() (+10 more)
+
+### Community 72 - "identity-access/src/index.js"
+Cohesion: 0.16
+Nodes (14): constantTimeEqual(), createIdentityAccessService(), createInMemoryIdentityRepository(), DEFAULT_PASSWORD_PARAMETERS, deriveArgon2(), digest(), FUNCTIONS, hashPassword() (+6 more)
+
+### Community 73 - "database/package.json"
+Cohesion: 0.14
+Nodes (13): dependencies, pg, devDependencies, @types/pg, exports, name, private, scripts (+5 more)
+
+### Community 74 - "authorization.js"
+Cohesion: 0.24
+Nodes (9): actionCapabilities, authorize(), CAPABILITIES, createAccessControlService(), knownCapabilities, mfaRequiredCapabilities, operationalActions, harness() (+1 more)
+
+### Community 75 - "package.json"
+Cohesion: 0.17
+Nodes (11): engines, node, npm, name, packageManager, private, type, version (+3 more)
+
+### Community 76 - "audit-privacy/package.json"
+Cohesion: 0.33
+Nodes (5): exports, name, private, type, version
+
+### Community 77 - "catalog/package.json"
+Cohesion: 0.33
+Nodes (5): exports, name, private, type, version
+
+### Community 78 - "configuration/package.json"
+Cohesion: 0.33
+Nodes (5): exports, name, private, type, version
+
+### Community 79 - "identity-access/package.json"
+Cohesion: 0.33
+Nodes (5): exports, name, private, type, version
+
+### Community 80 - "integration-reliability/package.json"
+Cohesion: 0.33
+Nodes (5): exports, name, private, type, version
+
+### Community 81 - "Baseline de identidade e acesso da Fase 1"
+Cohesion: 0.40
+Nodes (4): Baseline de identidade e acesso da Fase 1, Gates, Invariantes operacionais, Parâmetros versionados
+
 ## Knowledge Gaps
-- **460 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+455 more)
+- **522 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+517 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Fase 0 — Fundação e riscos técnicos`, `Fase 5 — Orçamento, PIX, Pedido e Ficha`, `Fase 2 — Caixa de Entrada, canais e confiabilidade`, `Fase 1 — Identidade, acesso e infraestrutura de domínio`, `Fase 3 — Negócio, Kanban e qualificação`, `Fase 6 — Privacidade, relatórios e operação`, `Fase 4 — Vendedor Silmer assistivo`, `TECHNICAL-DESIGN.md`, `Fase 7 — Hardening, UAT e piloto`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
-- **Why does `TDD — CRM Silmer MVP` connect `Technical Strategy and MVP` to `TECHNICAL-DESIGN.md`?**
-  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Fase 0 — Fundação e riscos técnicos`, `Fase 5 — Orçamento, PIX, Pedido e Ficha`, `Fase 2 — Caixa de Entrada, canais e confiabilidade`, `Fase 1 — Identidade, acesso e infraestrutura de domínio`, `Fase 3 — Negócio, Kanban e qualificação`, `Fase 6 — Privacidade, relatórios e operação`, `Fase 4 — Vendedor Silmer assistivo`, `README.md`, `Fase 7 — Hardening, UAT e piloto`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
+- **Why does `TDD — CRM Silmer MVP` connect `Technical Strategy and MVP` to `README.md`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `CRM-MVP-ESPECIFICACAO.md`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _460 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _522 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Technical Strategy and MVP` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `Design System and UX` be split into smaller, more focused modules?**

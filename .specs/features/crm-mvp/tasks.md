@@ -33,6 +33,10 @@ gates de verificação.
 
 ### T00.3 Provisionar EasyPanel dev/hml/prod
 
+- **Status:** kit local/offline concluído em 30/08/2026; provisionamento e
+  drills reais pendentes nas issues `#2` e `#3`.
+- **Rastreabilidade:** suporte operacional a `MSG-03`, `MSG-04` e `PRV-01`;
+  mocks não satisfazem esses requisitos funcionais.
 - Criar projetos e serviços da topologia aprovada.
 - Aplicar redes, domínios, limites, health checks e segredos separados.
 - Criar kit off-host de recovery com topologia, digests, DNS, migrations e

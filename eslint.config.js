@@ -7,6 +7,7 @@ const nodeGlobals = {
   console: 'readonly',
   process: 'readonly',
   setTimeout: 'readonly',
+  structuredClone: 'readonly',
 };
 
 export default [

@@ -40,6 +40,11 @@ O gate agrega formatação, JSDoc/checkJs, ESLint, fronteiras do monólito, test
 gates separados e obrigatórios. Durante a implementação, os mesmos passos
 podem ser executados separadamente pelos scripts documentados no `README.md`.
 
+Mudanças de topologia ou recovery também executam `npm run validate:topology`
+e `npm run test:recovery:mocks`. O plano revisável por uma segunda pessoa é
+gerado por `npm run recovery:plan`; ele é offline e nunca substitui o
+provisionamento ou o drill autorizado.
+
 Antes de publicar, execute também `git diff --check` e `git status --short`.
 
 ## Commits e publicação

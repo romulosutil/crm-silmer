@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.3",
+  "mode": "offline-mock-plan",
+  "topology": "../easypanel/topology.json",
+  "digests": {
+    "edge-web": { "current": null, "previous": null },
+    "runtime": { "current": null, "previous": null }
+  },
+  "dns": {
+    "ttlSeconds": null,
+    "records": [
+      {
+        "environment": "dev",
+        "purpose": "primary",
+        "hostname": null,
+        "target": null,
+        "route": "/"
+      },
+      {
+        "environment": "dev",
+        "purpose": "meta-webhook",
+        "hostname": null,
+        "target": null,
+        "route": "/api/v1/webhooks/meta/*"
+      },
+      {
+        "environment": "hml",
+        "purpose": "primary",
+        "hostname": null,
+        "target": null,
+        "route": "/"
+      },
+      {
+        "environment": "hml",
+        "purpose": "meta-webhook",
+        "hostname": null,
+        "target": null,
+        "route": "/api/v1/webhooks/meta/*"
+      },
+      {
+        "environment": "prod",
+        "purpose": "primary",
+        "hostname": null,
+        "target": null,
+        "route": "/"
+      },
+      {
+        "environment": "ops",
+        "purpose": "easypanel",
+        "hostname": null,
+        "target": null,
+        "route": "/"
+      }
+    ]
+  },
+  "migrations": {
+    "strategy": "expand-contract",
+    "release": null,
+    "orderedSteps": [
+      "verify-backup-and-free-space",
+      "acquire-advisory-lock",
+      "apply-compatible-expansion",
+      "promote-api-and-worker-digests",
+      "promote-edge-web-digest",
+      "verify-live-ready-heartbeat-and-smoke",
+      "contract-only-after-rollback-window"
+    ]
+  },
+  "runbook": "RUNBOOK.md",
+  "adapters": {
+    "meta": "mock",
+    "ai": "mock",
+    "objectStorage": "mock",
+    "telemetry": "mock",
+    "tombstones": "mock"
+  },
+  "networkEgressAllowed": false,
+  "secretEscrow": {
+    "reference": null,
+    "valuesInRepository": false,
+    "minimumCustodians": 2
+  },
+  "externalExecution": {
+    "cleanHostProvisioningRequired": true,
+    "performedByThisKit": false,
+    "monthlyDatabaseRestoreRequired": true,
+    "quarterlyFullHostDrillRequired": true
+  }
+}

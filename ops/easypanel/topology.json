@@ -1,0 +1,346 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.3",
+  "mode": "offline-plan-only",
+  "projects": [
+    {
+      "name": "crm-silmer-dev",
+      "environment": "dev",
+      "domains": { "primary": null, "webhook": null, "easypanel": null },
+      "secrets": {
+        "scope": "crm-silmer-dev",
+        "valuesAllowed": false,
+        "inventory": [
+          "APP_ENV",
+          "APP_BASE_URL",
+          "DATABASE_URL",
+          "SESSION_SECRET",
+          "ENCRYPTION_KEY",
+          "META_APP_ID",
+          "META_APP_SECRET",
+          "META_VERIFY_TOKEN",
+          "META_WHATSAPP_BUSINESS_ACCOUNT_ID",
+          "META_WHATSAPP_PHONE_NUMBER_ID",
+          "META_INSTAGRAM_ACCOUNT_ID",
+          "META_ACCESS_TOKEN",
+          "AI_PROVIDER",
+          "AI_MODEL_PRIMARY",
+          "OPENAI_API_KEY",
+          "S3_ENDPOINT",
+          "S3_REGION",
+          "S3_DATA_BUCKET",
+          "S3_DATA_ACCESS_KEY_ID",
+          "S3_DATA_SECRET_ACCESS_KEY",
+          "TOMBSTONE_BUCKET",
+          "TOMBSTONE_WRITE_ACCESS_KEY_ID",
+          "TOMBSTONE_WRITE_SECRET_ACCESS_KEY",
+          "PIX_KEY_ID",
+          "PIX_KEY_VALUE",
+          "PIX_KEY_DISPLAY_MASKED",
+          "FICHA_RECIPIENT_E164",
+          "FAB_CODE"
+        ]
+      },
+      "services": [
+        {
+          "name": "edge-web",
+          "kind": "app",
+          "image": "edge-web",
+          "public": true,
+          "publicPorts": [80, 443],
+          "persistence": "none",
+          "limits": { "cpu": 0.25, "memoryMb": 128 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [{ "type": "http", "endpoint": "/healthz" }]
+          }
+        },
+        {
+          "name": "api",
+          "kind": "app",
+          "image": "runtime",
+          "public": false,
+          "publicPorts": [],
+          "persistence": "none",
+          "limits": { "cpu": 0.25, "memoryMb": 512 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [
+              { "type": "http", "endpoint": "/api/health/live" },
+              { "type": "http", "endpoint": "/api/health/ready" }
+            ]
+          }
+        },
+        {
+          "name": "worker",
+          "kind": "app",
+          "image": "runtime",
+          "public": false,
+          "publicPorts": [],
+          "persistence": "temporary-limited",
+          "limits": { "cpu": 0.25, "memoryMb": 512 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [
+              { "type": "process-loop", "externalDependencies": false },
+              { "type": "postgres-heartbeat", "maxAgeSeconds": 120 }
+            ]
+          }
+        },
+        {
+          "name": "postgres",
+          "kind": "postgresql",
+          "major": 17,
+          "public": false,
+          "publicPorts": [],
+          "persistence": "easypanel-volume-plus-external-backup",
+          "limits": { "cpu": 0.5, "memoryMb": 1024 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [{ "type": "command", "command": "pg_isready" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "crm-silmer-hml",
+      "environment": "hml",
+      "domains": { "primary": null, "webhook": null, "easypanel": null },
+      "secrets": {
+        "scope": "crm-silmer-hml",
+        "valuesAllowed": false,
+        "inventory": [
+          "APP_ENV",
+          "APP_BASE_URL",
+          "DATABASE_URL",
+          "SESSION_SECRET",
+          "ENCRYPTION_KEY",
+          "META_APP_ID",
+          "META_APP_SECRET",
+          "META_VERIFY_TOKEN",
+          "META_WHATSAPP_BUSINESS_ACCOUNT_ID",
+          "META_WHATSAPP_PHONE_NUMBER_ID",
+          "META_INSTAGRAM_ACCOUNT_ID",
+          "META_ACCESS_TOKEN",
+          "AI_PROVIDER",
+          "AI_MODEL_PRIMARY",
+          "OPENAI_API_KEY",
+          "S3_ENDPOINT",
+          "S3_REGION",
+          "S3_DATA_BUCKET",
+          "S3_DATA_ACCESS_KEY_ID",
+          "S3_DATA_SECRET_ACCESS_KEY",
+          "TOMBSTONE_BUCKET",
+          "TOMBSTONE_WRITE_ACCESS_KEY_ID",
+          "TOMBSTONE_WRITE_SECRET_ACCESS_KEY",
+          "PIX_KEY_ID",
+          "PIX_KEY_VALUE",
+          "PIX_KEY_DISPLAY_MASKED",
+          "FICHA_RECIPIENT_E164",
+          "FAB_CODE"
+        ]
+      },
+      "services": [
+        {
+          "name": "edge-web",
+          "kind": "app",
+          "image": "edge-web",
+          "public": true,
+          "publicPorts": [80, 443],
+          "persistence": "none",
+          "limits": { "cpu": 0.25, "memoryMb": 128 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [{ "type": "http", "endpoint": "/healthz" }]
+          }
+        },
+        {
+          "name": "api",
+          "kind": "app",
+          "image": "runtime",
+          "public": false,
+          "publicPorts": [],
+          "persistence": "none",
+          "limits": { "cpu": 0.5, "memoryMb": 768 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [
+              { "type": "http", "endpoint": "/api/health/live" },
+              { "type": "http", "endpoint": "/api/health/ready" }
+            ]
+          }
+        },
+        {
+          "name": "worker",
+          "kind": "app",
+          "image": "runtime",
+          "public": false,
+          "publicPorts": [],
+          "persistence": "temporary-limited",
+          "limits": { "cpu": 0.5, "memoryMb": 768 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [
+              { "type": "process-loop", "externalDependencies": false },
+              { "type": "postgres-heartbeat", "maxAgeSeconds": 120 }
+            ]
+          }
+        },
+        {
+          "name": "postgres",
+          "kind": "postgresql",
+          "major": 17,
+          "public": false,
+          "publicPorts": [],
+          "persistence": "easypanel-volume-plus-external-backup",
+          "limits": { "cpu": 0.5, "memoryMb": 1536 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [{ "type": "command", "command": "pg_isready" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "crm-silmer-prod",
+      "environment": "prod",
+      "domains": { "primary": null, "webhook": null, "easypanel": null },
+      "secrets": {
+        "scope": "crm-silmer-prod",
+        "valuesAllowed": false,
+        "inventory": [
+          "APP_ENV",
+          "APP_BASE_URL",
+          "DATABASE_URL",
+          "SESSION_SECRET",
+          "ENCRYPTION_KEY",
+          "META_APP_ID",
+          "META_APP_SECRET",
+          "META_VERIFY_TOKEN",
+          "META_WHATSAPP_BUSINESS_ACCOUNT_ID",
+          "META_WHATSAPP_PHONE_NUMBER_ID",
+          "META_INSTAGRAM_ACCOUNT_ID",
+          "META_ACCESS_TOKEN",
+          "AI_PROVIDER",
+          "AI_MODEL_PRIMARY",
+          "OPENAI_API_KEY",
+          "S3_ENDPOINT",
+          "S3_REGION",
+          "S3_DATA_BUCKET",
+          "S3_DATA_ACCESS_KEY_ID",
+          "S3_DATA_SECRET_ACCESS_KEY",
+          "TOMBSTONE_BUCKET",
+          "TOMBSTONE_WRITE_ACCESS_KEY_ID",
+          "TOMBSTONE_WRITE_SECRET_ACCESS_KEY",
+          "PIX_KEY_ID",
+          "PIX_KEY_VALUE",
+          "PIX_KEY_DISPLAY_MASKED",
+          "FICHA_RECIPIENT_E164",
+          "FAB_CODE"
+        ]
+      },
+      "services": [
+        {
+          "name": "edge-web",
+          "kind": "app",
+          "image": "edge-web",
+          "public": true,
+          "publicPorts": [80, 443],
+          "persistence": "none",
+          "limits": { "cpu": 0.25, "memoryMb": 256 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [{ "type": "http", "endpoint": "/healthz" }]
+          }
+        },
+        {
+          "name": "api",
+          "kind": "app",
+          "image": "runtime",
+          "public": false,
+          "publicPorts": [],
+          "persistence": "none",
+          "limits": { "cpu": 1, "memoryMb": 1536 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [
+              { "type": "http", "endpoint": "/api/health/live" },
+              { "type": "http", "endpoint": "/api/health/ready" }
+            ]
+          }
+        },
+        {
+          "name": "worker",
+          "kind": "app",
+          "image": "runtime",
+          "public": false,
+          "publicPorts": [],
+          "persistence": "temporary-limited",
+          "limits": { "cpu": 1.5, "memoryMb": 2048 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [
+              { "type": "process-loop", "externalDependencies": false },
+              { "type": "postgres-heartbeat", "maxAgeSeconds": 120 }
+            ]
+          }
+        },
+        {
+          "name": "postgres",
+          "kind": "postgresql",
+          "major": 17,
+          "public": false,
+          "publicPorts": [],
+          "persistence": "easypanel-volume-plus-external-backup",
+          "limits": { "cpu": 2, "memoryMb": 5120 },
+          "health": {
+            "intervalSeconds": 30,
+            "timeoutSeconds": 5,
+            "startPeriodSeconds": 20,
+            "failureThreshold": 3,
+            "checks": [{ "type": "command", "command": "pg_isready" }]
+          }
+        }
+      ]
+    }
+  ],
+  "externalExecution": {
+    "easypanelProvisioningPerformed": false,
+    "dnsChangesPerformed": false,
+    "secretValuesManaged": false,
+    "recoveryDrillPerformed": false
+  }
+}

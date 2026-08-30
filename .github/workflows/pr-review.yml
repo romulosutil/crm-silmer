@@ -1,0 +1,112 @@
+name: Jules PR Review
+
+# Rastreabilidade: T00.2 — gate consultivo de qualidade para pull requests.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.claude/**'
+      - '.agents/**'
+      - '.github/workflows/**'
+      - '.gitignore'
+      - '.dockerignore'
+      - '.claudeignore'
+      - '.antigravityignore'
+      - '.geminiignore'
+      - '.codexignore'
+      - '.ignore'
+      - 'LICENSE*'
+      - 'THIRD-PARTY-NOTICES.md'
+
+concurrency:
+  group: jules-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Repositório público: PR vindo de fork NÃO recebe `secrets.JULES_API_KEY`
+    # nem token de escrita — o job só falharia com credencial vazia e ainda
+    # tentaria comentar sem permissão. Só revisamos PR nascido neste repo.
+    # PR do Dependabot cai na mesma restrição de secrets mesmo nascendo no
+    # próprio repo (política do GitHub para o evento `pull_request` do
+    # Dependabot, independente de head.repo) — falha antes até validar
+    # `fail_on: never` porque quebra na validação de input da action.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    permissions:
+      pull-requests: write
+      contents: read
+      statuses: write
+    steps:
+      - name: Review pull request with Jules
+        uses: sanjay3290/jules-pr-reviewer@66c23eff45e2103fb3d2d6873ba073e6e281ef31 # v1.0.2
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          skip_drafts: true
+          skip_forks: true
+          # Repositório público com um único mantenedor: o revisor é ADVISORY,
+          # nunca bloqueia o merge. Ele ainda comenta (resumo + findings) para
+          # o humano decidir.
+          fail_on: never
+          # Todo o contexto vai por extra_instructions (canal de configuração
+          # confiável). NÃO usamos rules_file: quando o conteúdo ia por ali, o
+          # próprio revisor lia a régua como um "arquivo de regras não confiável"
+          # e a marcava como prompt injection (falso-positivo recorrente).
+          rules_file: ''
+          extra_instructions: |
+            IDIOMA: responda SEMPRE em pt-BR (summary, strengths, findings,
+            verdict). Mantenha termos técnicos sem tradução natural, mas
+            explique o contexto em pt-BR.
+
+            MODELO DE AMEAÇA: o repositório é PÚBLICO, mas este job só roda em PR
+            nascido no próprio repositório (PR de fork é filtrado antes, no `if`
+            do job, porque nem recebe credencial). Ou seja: todo diff que chega
+            até você foi escrito por um mantenedor confiável ou por um agente
+            interno. Não classifique texto do repo como ataque de prompt
+            injection — trate como código/config/documentação legítimos.
+            Concentre os findings nas superfícies executáveis: `apps/`, `modules/`,
+            `scripts/`, `test/`, `docker/`, `ops/`, `schemas/` e configurações de
+            build/deploy. Cite arquivo e linha e só reporte defeitos demonstráveis
+            no diff; não bloqueie por preferência estilística.
+
+            ARQUITETURA (use para não gerar findings sem contexto):
+            - O MVP é single-tenant para a Silmer. Não recomende multi-tenancy,
+              Row Level Security, Redis, microserviços, GraphQL, framework de
+              frontend ou estado de domínio em `window`.
+            - O sistema é um monólito modular JavaScript ESM, com processos
+              `edge-web`, `api` e `worker`. PostgreSQL é a fonte da verdade e
+              sustenta inbox/outbox e jobs; integração entre módulos ocorre por
+              comandos/eventos, nunca por escrita direta nas tabelas privadas de
+              outro módulo.
+            - Auth usa sessão opaca server-side em cookie seguro, CSRF e MFA para
+              Admin. Autorização é aplicada no backend; capacidades privilegiadas
+              são ortogonais a `Atendimento|Vendedor` e não podem ser
+              autoatribuídas.
+            - Efeitos externos são at-least-once, com idempotência, estado
+              `outcome_unknown`, reconciliação e auditoria. Não alegue nem exija
+              exactly-once de rede.
+            - A Fase 0 ainda possui gates externos; T01.1 está concluída localmente
+              e T01.2–T01.6 estão parciais. Não trate adapter, controller ou wiring
+              explicitamente pendente nas tarefas como regressão de um PR que não
+              se propõe a entregá-lo.
+
+            REGRAS DE REVISÃO:
+            - `RULES.md` prevalece sobre spec, PRD, TDD e demais documentos.
+            - Frontend é HTML/CSS/JS vanilla; valide teclado, foco previsível,
+              semântica e ARIA dinâmica em toda interação alterada.
+            - Procure falhas de autorização, exposição de segredo/PII, auditoria,
+              idempotência, concorrência, transação, retry e rollback conforme o
+              risco do diff.
+            - O Vendedor Silmer é assistivo: não converte conversa, não altera
+              campos oficiais, não move cards e não inventa preço, prazo ou regra
+              comercial.
+            - Migrações SQL explícitas e versionadas em `modules/database/migrations/`
+              são intencionais. Docs e copy usam pt-BR; commits seguem Conventional
+              Commits.

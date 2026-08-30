@@ -27,7 +27,7 @@
   "25": "Legacy Qualification Flow",
   "26": "openai-suggestion-schema.json",
   "27": "devDependencies",
-  "28": "api/src/app.js",
+  "28": "observability.test.js",
   "29": "worker/package.json",
   "30": "shared/package.json",
   "31": "build.mjs",
@@ -53,5 +53,17 @@
   "51": "Fase 6 — Privacidade, relatórios e operação",
   "52": "Fase 4 — Vendedor Silmer assistivo",
   "53": "Fase 7 — Hardening, UAT e piloto",
-  "54": "CRM Silmer MVP — Plano de Implementação"
+  "54": "CRM Silmer MVP — Plano de Implementação",
+  "55": "alerts.json",
+  "56": "T00.7 — Observabilidade e hardening mínimos",
+  "57": "Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?",
+  "58": "Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?",
+  "59": "Q: Como a nova decisao do P0.4 limita a autonomia do Vendedor Silmer?",
+  "60": "Q: Quais decisões resolvem o P0.7 do PRODUCT-READINESS-TECH-LEAD?",
+  "61": "Q: Quais decisões resolvem o P0.5 do PRODUCT-READINESS-TECH-LEAD?",
+  "62": "Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?",
+  "63": "Q: Como o P0.5 define FAB, sequência, reserva, concorrência e reutilização do número da Ficha?",
+  "64": "Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?",
+  "65": "Q: Como o P0.7 modela Admin, Atendimento e Vendedor?",
+  "66": "Q: Where are the agent roles and contribution protocol defined?"
 }

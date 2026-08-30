@@ -1,16 +1,16 @@
-# Graph Report - crm-silmer-graph-t006  (2026-08-30)
+# Graph Report - crm-silmer  (2026-08-30)
 
 ## Corpus Check
-- 64 files · ~44,373 words
+- 79 files · ~47,834 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 612 nodes · 632 edges · 55 communities (49 shown, 6 thin omitted)
+- 702 nodes · 745 edges · 67 communities (61 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `574df65c`
+- Built from commit: `b0c51936`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -43,7 +43,7 @@
 - Legacy Qualification Flow
 - openai-suggestion-schema.json
 - devDependencies
-- api/src/app.js
+- observability.test.js
 - worker/package.json
 - shared/package.json
 - build.mjs
@@ -68,10 +68,22 @@
 - Fase 4 — Vendedor Silmer assistivo
 - Fase 7 — Hardening, UAT e piloto
 - CRM Silmer MVP — Plano de Implementação
+- alerts.json
+- T00.7 — Observabilidade e hardening mínimos
+- Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?
+- Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?
+- Q: Como a nova decisao do P0.4 limita a autonomia do Vendedor Silmer?
+- Q: Quais decisões resolvem o P0.7 do PRODUCT-READINESS-TECH-LEAD?
+- Q: Quais decisões resolvem o P0.5 do PRODUCT-READINESS-TECH-LEAD?
+- Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?
+- Q: Como o P0.5 define FAB, sequência, reserva, concorrência e reutilização do número da Ficha?
+- Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?
+- Q: Como o P0.7 modela Admin, Atendimento e Vendedor?
+- Q: Where are the agent roles and contribution protocol defined?
 
 ## God Nodes (most connected - your core abstractions)
-1. `TDD — CRM Silmer MVP` - 22 edges
-2. `scripts` - 20 edges
+1. `scripts` - 22 edges
+2. `TDD — CRM Silmer MVP` - 22 edges
 3. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
 4. `Design do CRM Silmer` - 16 edges
 5. `Topologia EasyPanel — CRM Silmer` - 15 edges
@@ -82,6 +94,12 @@
 10. `Campos da Ficha e Jornada Conversacional — P0.1` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `capture()` --calls--> `createSafeLogger()`  [EXTRACTED]
+  test/observability.test.js → modules/shared/src/observability.js
+- `createApi()` --calls--> `createSafeLogger()`  [EXTRACTED]
+  apps/api/src/app.js → modules/shared/src/observability.js
+- `createApi()` --calls--> `normalizeTraceId()`  [EXTRACTED]
+  apps/api/src/app.js → modules/shared/src/observability.js
 - `Ficha de Pedido` --shares_data_with--> `Rose (Destinatária Ficha)`  [EXTRACTED]
   CAMPOS-FICHA-E-JORNADA-P0-1.md → CRM-MVP-ESPECIFICACAO.md
 - `validateRecoveryKit()` --calls--> `validateTopologyDocument()`  [EXTRACTED]
@@ -96,7 +114,7 @@
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 - **Migração do Datacrazy para CRM Próprio** — historico_datacrazy_crm_processo_vendas, historico_datacrazy_datacrazy_setup, specs_features_crm_mvp_context, specs_features_crm_mvp_spec [INFERRED 0.85]
 
-## Communities (55 total, 6 thin omitted)
+## Communities (67 total, 6 thin omitted)
 
 ### Community 0 - "Technical Strategy and MVP"
 Cohesion: 0.05
@@ -136,7 +154,7 @@ Nodes (15): Critério de passagem, CRM Silmer MVP — Requisitos Rastreáveis, F
 
 ### Community 9 - "scripts"
 Cohesion: 0.06
-Nodes (31): engines, node, npm, name, packageManager, private, scripts, build (+23 more)
+Nodes (33): engines, node, npm, name, packageManager, private, scripts, build (+25 more)
 
 ### Community 10 - "Product Context and Scope"
 Cohesion: 0.20
@@ -202,9 +220,9 @@ Nodes (33): field, fieldSuggestions, handoffRequired, null, reply, source, stage
 Cohesion: 0.13
 Nodes (15): @axe-core/playwright, eslint, devDependencies, @axe-core/playwright, eslint, @playwright/test, prettier, @types/node (+7 more)
 
-### Community 28 - "api/src/app.js"
-Cohesion: 0.24
-Nodes (6): createApi(), api, port, worker, WorkerRuntime, SERVICES
+### Community 28 - "observability.test.js"
+Cohesion: 0.09
+Nodes (24): createApi(), api, logger, port, WorkerRuntime, SERVICES, allowedContextFields, categoricalFields (+16 more)
 
 ### Community 29 - "worker/package.json"
 Cohesion: 0.20
@@ -286,8 +304,56 @@ Nodes (6): Fase 7 — Hardening, UAT e piloto, T07.1 Executar testes de carga e 
 Cohesion: 0.67
 Nodes (3): CRM Silmer MVP — Plano de Implementação, Definition of Done global, Dependências e caminho crítico
 
+### Community 55 - "alerts.json"
+Cohesion: 0.15
+Nodes (12): alerts, legalMaximumRetentionDays, monitorLocation, operationalRetentionDays, routing, destination, owner, status (+4 more)
+
+### Community 56 - "T00.7 — Observabilidade e hardening mínimos"
+Cohesion: 0.40
+Nodes (4): Evidência local versionada, Gate externo ainda aberto, T00.7 — Observabilidade e hardening mínimos, Verificação local
+
+### Community 57 - "Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?, Source Nodes
+
+### Community 58 - "Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
+
+### Community 59 - "Q: Como a nova decisao do P0.4 limita a autonomia do Vendedor Silmer?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como a nova decisao do P0.4 limita a autonomia do Vendedor Silmer?, Source Nodes
+
+### Community 60 - "Q: Quais decisões resolvem o P0.7 do PRODUCT-READINESS-TECH-LEAD?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Quais decisões resolvem o P0.7 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
+
+### Community 61 - "Q: Quais decisões resolvem o P0.5 do PRODUCT-READINESS-TECH-LEAD?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Quais decisões resolvem o P0.5 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
+
+### Community 62 - "Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?, Source Nodes
+
+### Community 63 - "Q: Como o P0.5 define FAB, sequência, reserva, concorrência e reutilização do número da Ficha?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como o P0.5 define FAB, sequência, reserva, concorrência e reutilização do número da Ficha?, Source Nodes
+
+### Community 64 - "Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
+
+### Community 65 - "Q: Como o P0.7 modela Admin, Atendimento e Vendedor?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como o P0.7 modela Admin, Atendimento e Vendedor?, Source Nodes
+
+### Community 66 - "Q: Where are the agent roles and contribution protocol defined?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Where are the agent roles and contribution protocol defined?, Source Nodes
+
 ## Knowledge Gaps
-- **417 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+412 more)
+- **460 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+455 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -295,13 +361,13 @@ Nodes (3): CRM Silmer MVP — Plano de Implementação, Definition of Done globa
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Fase 0 — Fundação e riscos técnicos`, `Fase 5 — Orçamento, PIX, Pedido e Ficha`, `Fase 2 — Caixa de Entrada, canais e confiabilidade`, `Fase 1 — Identidade, acesso e infraestrutura de domínio`, `Fase 3 — Negócio, Kanban e qualificação`, `Fase 6 — Privacidade, relatórios e operação`, `Fase 4 — Vendedor Silmer assistivo`, `TECHNICAL-DESIGN.md`, `Fase 7 — Hardening, UAT e piloto`?**
-  _High betweenness centrality (0.067) - this node is a cross-community bridge._
+  _High betweenness centrality (0.052) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `Technical Strategy and MVP` to `TECHNICAL-DESIGN.md`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
 - **Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `CRM-MVP-ESPECIFICACAO.md`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _417 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _460 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Technical Strategy and MVP` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `Design System and UX` be split into smaller, more focused modules?**

@@ -10,6 +10,9 @@ const copies = [
   ['apps/api/package.json', 'runtime/apps/api/package.json'],
   ['apps/worker/src', 'runtime/apps/worker/src'],
   ['apps/worker/package.json', 'runtime/apps/worker/package.json'],
+  ['modules/database/src', 'runtime/modules/database/src'],
+  ['modules/database/migrations', 'runtime/modules/database/migrations'],
+  ['modules/database/package.json', 'runtime/modules/database/package.json'],
   ['modules/shared/src', 'runtime/modules/shared/src'],
   ['modules/shared/package.json', 'runtime/modules/shared/package.json'],
 ];

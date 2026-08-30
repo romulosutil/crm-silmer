@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
 
+import { createDatabase } from '@crm-silmer/database';
 import { createApi } from './app.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
@@ -8,13 +9,20 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  * checker. Tests may inject a checker without weakening that default.
  *
  * @param {{
+ *   database?: ReturnType<typeof createDatabase>,
  *   logger?: ReturnType<typeof createSafeLogger>,
  *   readiness?: () => boolean | Promise<boolean>
  * }} [runtime]
  */
 export function createServerApi(runtime = {}) {
   const logger = runtime.logger ?? createSafeLogger({ service: SERVICES.api });
-  return createApi({}, { ...runtime, logger });
+  const readiness = runtime.readiness ?? runtime.database?.readiness;
+  const api = createApi({}, { ...runtime, logger, readiness });
+  const database = runtime.database;
+  if (database) {
+    api.addHook('onClose', () => database.close());
+  }
+  return api;
 }
 
 if (
@@ -22,11 +30,14 @@ if (
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   const logger = createSafeLogger({ service: SERVICES.api });
-  const api = createServerApi({ logger });
   const port = Number.parseInt(process.env.PORT ?? '3000', 10);
   const host = process.env.HOST ?? '0.0.0.0';
 
   try {
+    const database = createDatabase({
+      connectionString: process.env.DATABASE_URL ?? '',
+    });
+    const api = createServerApi({ database, logger });
     await api.listen({ host, port });
   } catch (error) {
     logger.error('api_start_failed', {

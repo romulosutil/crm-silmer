@@ -1,0 +1,16 @@
+{
+  "name": "@crm-silmer/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.js",
+  "scripts": {
+    "migrate": "node src/cli.js"
+  },
+  "dependencies": {
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}

@@ -46,6 +46,20 @@ test('builds minimal non-root images from immutable official bases', async () =>
   assert.match(await text('docker/edge-web.Dockerfile'), /\/healthz/u);
 });
 
+test('packages the PostgreSQL workspace and migrations in the runtime image', async () => {
+  const dockerfile = await text('docker/runtime.Dockerfile');
+  const buildScript = await text('scripts/build.mjs');
+
+  assert.equal(
+    dockerfile.match(/COPY modules\/database\/package\.json/gu)?.length,
+    2,
+    'both dependency stages need the database workspace manifest',
+  );
+  assert.match(buildScript, /modules\/database\/src/u);
+  assert.match(buildScript, /modules\/database\/migrations/u);
+  assert.match(buildScript, /modules\/database\/package\.json/u);
+});
+
 test('pins every GitHub Action and builds each publishable image once', async () => {
   const workflow = await text('.github/workflows/ci.yml');
   const actionRefs = [

@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 COPY apps/edge-web/package.json apps/edge-web/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/worker/package.json apps/worker/package.json
+COPY modules/database/package.json modules/database/package.json
 COPY modules/shared/package.json modules/shared/package.json
 RUN npm ci --ignore-scripts
 COPY apps apps
@@ -19,6 +20,7 @@ COPY package.json package-lock.json ./
 COPY apps/edge-web/package.json apps/edge-web/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/worker/package.json apps/worker/package.json
+COPY modules/database/package.json modules/database/package.json
 COPY modules/shared/package.json modules/shared/package.json
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 

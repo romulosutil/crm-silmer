@@ -1,16 +1,16 @@
 {
-  "0": "Design System e UX",
+  "0": "Design do CRM Silmer",
   "1": "Especificação do MVP",
   "2": "Mapeamento de Campos e Jornada",
-  "3": "Documentação de Arquitetura",
-  "4": "O que já está configurado",
+  "3": "Arquitetura — Decisões do MVP",
+  "4": "CHAT NA LANDING PAGE — o que existe e o que falta",
   "5": "CRM Silmer MVP — Requisitos Rastreáveis",
   "6": "CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)",
   "7": "Transferência para Tech Lead",
   "8": "CRM Silmer MVP — Contexto de Produto",
   "9": "Q: Como o P0.7 modela Admin, Atendimento e Vendedor?",
-  "10": "Integração Chat Landing Page",
-  "11": "Interface e Superfícies CRM",
+  "10": "TDD — CRM Silmer MVP",
+  "11": "CRM Silmer MVP — Plano de Implementação",
   "12": "Decisões de Autoridade de Preço",
   "13": "Resoluções de Limite Operacional",
   "14": "Autonomia do Vendedor IA",
@@ -22,5 +22,10 @@
   "20": "Gestão de Privacidade e Admin",
   "21": "Contrato de Passagem Técnica",
   "22": "Limite Financeiro Comercial",
-  "23": "Identidade e Sequenciamento Ficha"
+  "23": "Identidade e Sequenciamento Ficha",
+  "24": "Topologia EasyPanel — CRM Silmer",
+  "25": "Fase 2 — Caixa de Entrada, canais e confiabilidade",
+  "26": "Fase 1 — Identidade, acesso e infraestrutura de domínio",
+  "27": "Fase 4 — Vendedor Silmer assistivo",
+  "28": "Fase 6 — Privacidade, relatórios e operação"
 }

@@ -10,13 +10,13 @@
     "semantic_hash": ""
   },
   "ABOUT.md": {
-    "mtime": 1788057414.3301044,
-    "ast_hash": "7b962183bccd89522e872b40e3eec8fb",
+    "mtime": 1788059336.4931264,
+    "ast_hash": "887228c4384de8afed0a9c26875f7ff4",
     "semantic_hash": ""
   },
   "ARCHITECTURE.md": {
-    "mtime": 1788057415.7717638,
-    "ast_hash": "975c92ee587eb9f230caf29a29252fad",
+    "mtime": 1788059335.8309512,
+    "ast_hash": "6e28a223e0027029dc0ed6814be2002d",
     "semantic_hash": ""
   },
   "CRM-MVP-ESPECIFICACAO.md": {
@@ -102,6 +102,21 @@
   "graphify-out/memory/query_20260830_020836_como_o_p0_7_modela_admin__atendimento_e_vendedor.md": {
     "mtime": 1788055716.456965,
     "ast_hash": "55b23c765760ec50776beffaef938e6c",
+    "semantic_hash": ""
+  },
+  ".specs/features/crm-mvp/tasks.md": {
+    "mtime": 1788059733.2462275,
+    "ast_hash": "a6f141dcd9c72d7319c43abd43f4a1ce",
+    "semantic_hash": ""
+  },
+  "EASYPANEL-TOPOLOGY.md": {
+    "mtime": 1788059732.38903,
+    "ast_hash": "4b451f900798f12d1ac8d17e6f9f7bf7",
+    "semantic_hash": ""
+  },
+  "TECHNICAL-DESIGN.md": {
+    "mtime": 1788059731.7104688,
+    "ast_hash": "f74c2a32bef3b0efeafdb9e4413125a6",
     "semantic_hash": ""
   }
 }

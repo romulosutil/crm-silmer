@@ -11,8 +11,8 @@
   "9": "scripts",
   "10": "Product Context and Scope",
   "11": "compilerOptions",
-  "12": "Inbox and Channel Integration",
-  "13": "Identity and Domain Infrastructure",
+  "12": "validate-topology.mjs",
+  "13": "Fase 5 — Orçamento, PIX, Pedido e Ficha",
   "14": "api/package.json",
   "15": "AI Authority Decisions",
   "16": "Product Readiness Tech Decisions",
@@ -38,9 +38,10 @@
   "36": ".prettierrc.json",
   "37": "edge-web/src/app.js",
   "38": "eslint.config.js",
-  "39": "Supply chain da Fase 0",
+  "39": "Fase 3 — Negócio, Kanban e qualificação",
   "40": "serve-edge.mjs",
   "41": "ci-images.test.js",
   "42": "playwright.config.js",
-  "43": "foundation.spec.js"
+  "43": "foundation.spec.js",
+  "44": "Runbook de recovery off-host — T00.3"
 }

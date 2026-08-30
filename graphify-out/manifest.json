@@ -105,8 +105,8 @@
     "semantic_hash": ""
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788066366.021639,
-    "ast_hash": "b81c94b1a06c288b906c5603daa4136f",
+    "mtime": 1788067146.685508,
+    "ast_hash": "4617be5aa63ab63a4429ee41697b0a88",
     "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
@@ -130,13 +130,13 @@
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
-    "mtime": 1788065818.1063652,
-    "ast_hash": "5bf93f747bb9585c417edba82ac6adae",
+    "mtime": 1788066926.418422,
+    "ast_hash": "d31c2bbcc43eada750b3aeb2ff83e228",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1788065818.104357,
-    "ast_hash": "59759113fd387611fb0331e8079fcca1",
+    "mtime": 1788066926.417423,
+    "ast_hash": "d161b689a8dad8cb4dbc693d110d6a01",
     "semantic_hash": ""
   },
   ".prettierrc.json": {
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "eslint.config.js": {
-    "mtime": 1788065002.6765962,
-    "ast_hash": "0f213e2f92736e0f6a7fcaf94d69186c",
+    "mtime": 1788067089.1635017,
+    "ast_hash": "62f21661f8e1c6c7fc97a17a93edb667",
     "semantic_hash": ""
   },
   "jsconfig.json": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1788065902.6305115,
-    "ast_hash": "660da907f0ede820a8cfed7410ba937e",
+    "mtime": 1788066926.4164217,
+    "ast_hash": "b92f7e459ca51075fb393e87add06bea",
     "semantic_hash": ""
   },
   "scripts/build.mjs": {
@@ -262,6 +262,36 @@
   "docs/phase0/SUPPLY-CHAIN.md": {
     "mtime": 1788065818.1033583,
     "ast_hash": "72430d47c352011ec21399a906a2fd4e",
+    "semantic_hash": ""
+  },
+  "ops/easypanel/topology.json": {
+    "mtime": 1788066823.821727,
+    "ast_hash": "4fdb2a7d056a9fe97a6b088af2a63bee",
+    "semantic_hash": ""
+  },
+  "ops/recovery/off-host-kit.json": {
+    "mtime": 1788066950.3587396,
+    "ast_hash": "8b8dfaaade25d04651734a78c3172cb5",
+    "semantic_hash": ""
+  },
+  "scripts/recovery-mock.mjs": {
+    "mtime": 1788067052.663489,
+    "ast_hash": "8d1b0441dbdb3cb77565834072047425",
+    "semantic_hash": ""
+  },
+  "scripts/validate-topology.mjs": {
+    "mtime": 1788067089.161496,
+    "ast_hash": "8e976bb82b1d3537e0351689f760a03c",
+    "semantic_hash": ""
+  },
+  "test/topology-recovery.test.js": {
+    "mtime": 1788067097.990291,
+    "ast_hash": "f7f68cf4b70459dc0adefe7542ff786e",
+    "semantic_hash": ""
+  },
+  "ops/recovery/RUNBOOK.md": {
+    "mtime": 1788066926.415254,
+    "ast_hash": "f161e507d88bc64f8e871e330ebea230",
     "semantic_hash": ""
   }
 }

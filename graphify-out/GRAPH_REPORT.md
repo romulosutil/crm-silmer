@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer  (2026-08-30)
 
 ## Corpus Check
-- 50 files · ~35,487 words
+- 56 files · ~38,423 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 523 nodes · 504 edges · 44 communities (39 shown, 5 thin omitted)
+- 550 nodes · 545 edges · 45 communities (40 shown, 5 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9088c2f3`
+- Built from commit: `7424ae7e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -27,8 +27,8 @@
 - scripts
 - Product Context and Scope
 - compilerOptions
-- Inbox and Channel Integration
-- Identity and Domain Infrastructure
+- validate-topology.mjs
+- Fase 5 — Orçamento, PIX, Pedido e Ficha
 - api/package.json
 - AI Authority Decisions
 - Product Readiness Tech Decisions
@@ -54,18 +54,19 @@
 - .prettierrc.json
 - edge-web/src/app.js
 - eslint.config.js
-- Supply chain da Fase 0
+- Fase 3 — Negócio, Kanban e qualificação
 - serve-edge.mjs
 - ci-images.test.js
+- Runbook de recovery off-host — T00.3
 
 ## God Nodes (most connected - your core abstractions)
 1. `TDD — CRM Silmer MVP` - 22 edges
 2. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
 3. `Design do CRM Silmer` - 16 edges
 4. `Topologia EasyPanel — CRM Silmer` - 15 edges
-5. `compilerOptions` - 13 edges
-6. `Passagem de Produto para Tech Lead` - 12 edges
-7. `scripts` - 11 edges
+5. `scripts` - 14 edges
+6. `compilerOptions` - 13 edges
+7. `Passagem de Produto para Tech Lead` - 12 edges
 8. `CRM Silmer MVP — Plano de Implementação` - 11 edges
 9. `Fase 5 — Orçamento, PIX, Pedido e Ficha` - 10 edges
 10. `Campos da Ficha e Jornada Conversacional — P0.1` - 10 edges
@@ -73,6 +74,8 @@
 ## Surprising Connections (you probably didn't know these)
 - `Ficha de Pedido` --shares_data_with--> `Rose (Destinatária Ficha)`  [EXTRACTED]
   CAMPOS-FICHA-E-JORNADA-P0-1.md → CRM-MVP-ESPECIFICACAO.md
+- `validateRecoveryKit()` --calls--> `validateTopologyDocument()`  [EXTRACTED]
+  scripts/recovery-mock.mjs → scripts/validate-topology.mjs
 
 ## Import Cycles
 - None detected.
@@ -83,7 +86,7 @@
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 - **Migração do Datacrazy para CRM Próprio** — historico_datacrazy_crm_processo_vendas, historico_datacrazy_datacrazy_setup, specs_features_crm_mvp_context, specs_features_crm_mvp_spec [INFERRED 0.85]
 
-## Communities (44 total, 5 thin omitted)
+## Communities (45 total, 5 thin omitted)
 
 ### Community 0 - "Technical Strategy and MVP"
 Cohesion: 0.05
@@ -95,7 +98,7 @@ Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e con
 
 ### Community 2 - "CRM Silmer MVP — Plano de Implementação"
 Cohesion: 0.04
-Nodes (47): CRM Silmer MVP — Plano de Implementação, Definition of Done global, Dependências e caminho crítico, Fase 0 — Fundação e riscos técnicos, Fase 3 — Negócio, Kanban e qualificação, Fase 4 — Vendedor Silmer assistivo, Fase 5 — Orçamento, PIX, Pedido e Ficha, Fase 6 — Privacidade, relatórios e operação (+39 more)
+Nodes (45): CRM Silmer MVP — Plano de Implementação, Definition of Done global, Dependências e caminho crítico, Fase 0 — Fundação e riscos técnicos, Fase 1 — Identidade, acesso e infraestrutura de domínio, Fase 2 — Caixa de Entrada, canais e confiabilidade, Fase 4 — Vendedor Silmer assistivo, Fase 6 — Privacidade, relatórios e operação (+37 more)
 
 ### Community 3 - "CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)"
 Cohesion: 0.06
@@ -114,16 +117,16 @@ Cohesion: 0.09
 Nodes (22): 10. Backups e disaster recovery, 11. Observabilidade e alertas, 12. Gates antes do piloto, 13. Riscos aceitos e evolução, 14. Referências verificadas, 1. Decisão, 2. Serviços por projeto, 3. Rede e domínios (+14 more)
 
 ### Community 7 - "README.md"
-Cohesion: 0.06
-Nodes (31): Sobre o CRM Silmer, Aprovações ainda necessárias, Arquitetura — Decisões do MVP, Decisões confirmadas, Decisões de modelagem, Decisões técnicas propostas como baseline, Fronteiras funcionais, Projetos e documentos executáveis (+23 more)
+Cohesion: 0.05
+Nodes (37): Sobre o CRM Silmer, Aprovações ainda necessárias, Arquitetura — Decisões do MVP, Decisões confirmadas, Decisões de modelagem, Decisões técnicas propostas como baseline, Fronteiras funcionais, Projetos e documentos executáveis (+29 more)
 
 ### Community 8 - "CRM Silmer MVP — Requisitos Rastreáveis"
 Cohesion: 0.12
 Nodes (15): Critério de passagem, CRM Silmer MVP — Requisitos Rastreáveis, Fora do escopo, Objetivos, P1.1 Caixa de Entrada e conversão, P1.2 Atendimento assistido pelo Vendedor Silmer, P1.3 Ficha de Pedido, P1.4 Confiabilidade e canais (+7 more)
 
 ### Community 9 - "scripts"
-Cohesion: 0.09
-Nodes (22): engines, node, npm, name, packageManager, private, scripts, build (+14 more)
+Cohesion: 0.08
+Nodes (25): engines, node, npm, name, packageManager, private, scripts, build (+17 more)
 
 ### Community 10 - "Product Context and Scope"
 Cohesion: 0.20
@@ -133,13 +136,13 @@ Nodes (9): Backlog e lead, CRM Silmer MVP — Contexto de Produto, Decisões con
 Cohesion: 0.08
 Nodes (25): compilerOptions, allowJs, checkJs, esModuleInterop, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+17 more)
 
-### Community 12 - "Inbox and Channel Integration"
-Cohesion: 0.25
-Nodes (8): Fase 2 — Caixa de Entrada, canais e confiabilidade, T02.1 Implementar adapter canônico de canais, T02.2 Implementar webhook WhatsApp, T02.3 Implementar fila PostgreSQL e worker, T02.4 Implementar Conversa, Mensagem e Contato, T02.5 Implementar reconciliação e saúde do canal, T02.6 Implementar UI da Caixa de Entrada, T02.7 Implementar Instagram Direct feature-gated
+### Community 12 - "validate-topology.mjs"
+Cohesion: 0.18
+Nodes (15): buildRecoveryPlan(), expectedAdapterKeys, expectedDigestKeys, invariant(), main(), validateRecoveryKit(), expectedEnvironments, expectedProjects (+7 more)
 
-### Community 13 - "Identity and Domain Infrastructure"
-Cohesion: 0.29
-Nodes (7): Fase 1 — Identidade, acesso e infraestrutura de domínio, T01.1 Implementar migrations e acesso PostgreSQL, T01.2 Implementar sessão e usuários por convite, T01.3 Implementar funções e capacidades ortogonais, T01.4 Criar audit trail e idempotency records, T01.5 Criar configuração versionada, T01.6 Implementar catálogo versionado
+### Community 13 - "Fase 5 — Orçamento, PIX, Pedido e Ficha"
+Cohesion: 0.20
+Nodes (10): Fase 5 — Orçamento, PIX, Pedido e Ficha, T05.1 Implementar orçamento versionado, T05.2 Implementar ledger de vendido, T05.3 Implementar subfluxo PIX, T05.4 Implementar número e Pedido, T05.5 Implementar ciclo da Ficha, T05.6 Implementar PDF íntegro e reproduzível, T05.7 Implementar envio e onboarding (+2 more)
 
 ### Community 14 - "api/package.json"
 Cohesion: 0.17
@@ -221,9 +224,9 @@ Nodes (3): frontendPackage, root, workspacePackages
 Cohesion: 0.50
 Nodes (3): Answer, Q: Where are the agent roles and contribution protocol defined?, Source Nodes
 
-### Community 39 - "Supply chain da Fase 0"
+### Community 39 - "Fase 3 — Negócio, Kanban e qualificação"
 Cohesion: 0.29
-Nodes (6): Build e promoção, Pins verificados em 30/08/2026, Rastreabilidade e limite, Scanner, Supply chain da Fase 0, Verificação local
+Nodes (7): Fase 3 — Negócio, Kanban e qualificação, T03.1 Implementar conversão idempotente em Negócio, T03.2 Implementar máquina de estados do Deal, T03.3 Implementar campos e itens da Ficha, T03.4 Implementar Kanban acessível, T03.5 Implementar tarefas, responsável e handoff humano, T03.6 Implementar detalhe acessível do Negócio
 
 ### Community 40 - "serve-edge.mjs"
 Cohesion: 0.40
@@ -233,25 +236,29 @@ Nodes (4): contentTypes, port, root, server
 Cohesion: 0.67
 Nodes (3): json(), rootUrl, text()
 
+### Community 44 - "Runbook de recovery off-host — T00.3"
+Cohesion: 0.50
+Nodes (3): Execução externa pendente, Runbook de recovery off-host — T00.3, Uso offline por uma segunda pessoa
+
 ## Knowledge Gaps
-- **370 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+365 more)
+- **381 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+376 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Inbox and Channel Integration`, `Identity and Domain Infrastructure`, `README.md`?**
-  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+- **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Fase 5 — Orçamento, PIX, Pedido e Ficha`, `Fase 3 — Negócio, Kanban e qualificação`, `README.md`?**
+  _High betweenness centrality (0.075) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `Technical Strategy and MVP` to `README.md`?**
-  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `README.md`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _370 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _381 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Technical Strategy and MVP` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `Design System and UX` be split into smaller, more focused modules?**
   _Cohesion score 0.05263157894736842 - nodes in this community are weakly interconnected._
 - **Should `CRM Silmer MVP — Plano de Implementação` be split into smaller, more focused modules?**
-  _Cohesion score 0.0425531914893617 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.044444444444444446 - nodes in this community are weakly interconnected._

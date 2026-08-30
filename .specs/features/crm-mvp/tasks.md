@@ -72,6 +72,11 @@ gates de verificação.
 
 ### T00.6 Aprovar defaults de domínio e papéis
 
+- **Status:** gate local, defaults e separação de funções versionados em
+  30/08/2026; aprovações e designações humanas pendentes na issue `#10`,
+  com dependências externas nas issues `#7` e `#8`.
+- **Rastreabilidade:** P0.7, `PAY-02`, `FIN-01..03`, `ORD-01/02/05`,
+  `PRV-01..03`, `PRV-P06-12` e `ACL-P07-01..12`.
 - Confirmar `Admin` para pagamento, Negócio 1:0..1 Pedido, ciclo de conversa,
   PDF canônico, moeda/timezone e exceção de pagamento.
 - Confirmar o envelope de carga que qualifica sizing e SLOs.

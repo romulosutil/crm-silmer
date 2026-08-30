@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.6",
+  "generatedAt": "2026-08-30",
+  "approvalGranted": false,
+  "gate": {
+    "status": "pending-human-approval",
+    "requiredReviews": [
+      {
+        "reviewer": "Produto",
+        "status": "pending",
+        "reviewedAt": null,
+        "evidence": null
+      },
+      {
+        "reviewer": "Operacao",
+        "status": "pending",
+        "reviewedAt": null,
+        "evidence": null
+      },
+      {
+        "reviewer": "Privacidade",
+        "status": "pending",
+        "reviewedAt": null,
+        "evidence": null
+      }
+    ],
+    "blockedPhases": ["T02", "T03", "T05"]
+  },
+  "decisions": [
+    {
+      "id": "D00.6-01",
+      "subject": "payment-confirmation-authority",
+      "default": {
+        "requiredCapability": "COMMERCIAL_ADMIN",
+        "productRoleName": "Admin",
+        "humanConfirmationRequired": true
+      },
+      "basis": [
+        "TECHNICAL-DESIGN.md:246-258",
+        "PRODUCT-READINESS-TECH-LEAD.md:P0.7"
+      ],
+      "requirements": ["PAY-02", "ACL-P07-01", "ACL-P07-06"],
+      "approval": {
+        "status": "pending",
+        "approved": false,
+        "reviewers": ["Produto", "Operacao"],
+        "reviewedAt": null,
+        "evidence": null
+      }
+    },
+    {
+      "id": "D00.6-02",
+      "subject": "deal-order-cardinality",
+      "default": {
+        "dealMinimumOrders": 0,
+        "dealMaximumOrders": 1,
+        "scope": "MVP"
+      },
+      "basis": ["TECHNICAL-DESIGN.md:246-258"],
+      "requirements": ["ORD-01", "ORD-02"],
+      "approval": {
+        "status": "pending",
+        "approved": false,
+        "reviewers": ["Produto"],
+        "reviewedAt": null,
+        "evidence": null
+      }
+    },
+    {
+      "id": "D00.6-03",
+      "subject": "terminal-conversation-reentry",
+      "default": {
+        "behavior": "create-new-cycle",
+        "linkToExistingContact": true,
+        "preservePreviousRetentionTrigger": true
+      },
+      "basis": ["TECHNICAL-DESIGN.md:246-258"],
+      "requirements": ["INB-01", "PRV-03"],
+      "approval": {
+        "status": "pending",
+        "approved": false,
+        "reviewers": ["Produto", "Operacao"],
+        "reviewedAt": null,
+        "evidence": null
+      }
+    },
+    {
+      "id": "D00.6-04",
+      "subject": "canonical-order-form-artifact",
+      "default": {
+        "format": "PDF",
+        "editableXlsxInMvp": false
+      },
+      "basis": ["TECHNICAL-DESIGN.md:246-258"],
+      "requirements": ["ORD-05"],
+      "approval": {
+        "status": "pending",
+        "approved": false,
+        "reviewers": ["Rose", "Operacao"],
+        "reviewedAt": null,
+        "evidence": null
+      }
+    },
+    {
+      "id": "D00.6-05",
+      "subject": "currency-and-timezone",
+      "default": {
+        "currency": "BRL",
+        "moneyStorage": "integer-cents",
+        "operationalTimezone": "America/Sao_Paulo",
+        "timestampStorage": "UTC"
+      },
+      "basis": ["TECHNICAL-DESIGN.md:246-258"],
+      "requirements": ["FIN-01", "FIN-02", "FIN-03"],
+      "approval": {
+        "status": "pending",
+        "approved": false,
+        "reviewers": ["Produto", "Operacao"],
+        "reviewedAt": null,
+        "evidence": null
+      }
+    },
+    {
+      "id": "D00.6-06",
+      "subject": "manual-payment-exception",
+      "default": {
+        "automaticOrderFormRelease": false,
+        "requiredCapability": "COMMERCIAL_ADMIN",
+        "productRoleName": "Admin",
+        "humanDecisionRequired": true,
+        "auditRequired": true
+      },
+      "basis": [
+        "TECHNICAL-DESIGN.md:246-258",
+        "PRODUCT-READINESS-TECH-LEAD.md:FIN-P03-05"
+      ],
+      "requirements": ["PAY-02", "FIN-03", "ACL-P07-11"],
+      "approval": {
+        "status": "pending",
+        "approved": false,
+        "reviewers": ["Produto", "Operacao"],
+        "reviewedAt": null,
+        "evidence": null
+      }
+    },
+    {
+      "id": "D00.6-07",
+      "subject": "load-envelope",
+      "default": {
+        "source": "docs/phase0/load-envelope.json",
+        "operators": {
+          "authenticatedSessions": 20,
+          "concurrentSseConnections": 30
+        },
+        "webhooks": {
+          "sustainedEventsPerSecond": 5,
+          "sustainedMinutes": 15,
+          "burstEventsPerSecond": 20,
+          "burstSeconds": 60
+        },
+        "workerRecoveryBacklogJobs": 1000,
+        "blindRetryOutcomeUnknown": false,
+        "concurrentUploads": 4,
+        "queuedPdfs": 20,
+        "chromiumConcurrency": 1
+      },
+      "basis": ["TECHNICAL-DESIGN.md:483-508"],
+      "requirements": ["T07.1"],
+      "approval": {
+        "status": "pending",
+        "approved": false,
+        "reviewers": ["Produto", "Operacao", "Tech Lead"],
+        "reviewedAt": null,
+        "evidence": null
+      }
+    }
+  ],
+  "roleDesignations": [
+    {
+      "id": "ROLE-TECH-LEAD",
+      "role": "Tech Lead",
+      "status": "pending",
+      "assignees": [],
+      "reviewers": ["Silmer"],
+      "reviewedAt": null,
+      "evidence": null
+    },
+    {
+      "id": "ROLE-DELIVERY-TEAM",
+      "role": "Equipe de entrega",
+      "status": "pending",
+      "assignees": [],
+      "reviewers": ["Silmer", "Tech Lead"],
+      "reviewedAt": null,
+      "evidence": null
+    },
+    {
+      "id": "ROLE-TECHNICAL-ADMIN",
+      "role": "Administrador Tecnico",
+      "capability": "TECHNICAL_PRIVACY_EXECUTOR",
+      "status": "pending",
+      "assignees": [],
+      "reviewers": ["Silmer", "Tech Lead", "Privacidade"],
+      "reviewedAt": null,
+      "evidence": null,
+      "mustBeDistinctFrom": ["PRIVACY_OFFICER"]
+    }
+  ],
+  "separationOfDuties": {
+    "operationalFunctions": ["Atendimento", "Vendedor"],
+    "orthogonalCapabilities": [
+      "COMMERCIAL_ADMIN",
+      "PRIVACY_OFFICER",
+      "TECHNICAL_PRIVACY_EXECUTOR"
+    ],
+    "commercialAdminIsTechnicalAdmin": false,
+    "privacyAuthorizationAndDeletionExecutionMustBeDistinct": true,
+    "privacyOfficer": "Romulo Sutil Correa",
+    "rules": [
+      "Vendedor does not implicitly receive COMMERCIAL_ADMIN",
+      "COMMERCIAL_ADMIN does not imply PRIVACY_OFFICER or TECHNICAL_PRIVACY_EXECUTOR",
+      "PRIVACY_OFFICER authorizes privacy exceptions and legal holds",
+      "TECHNICAL_PRIVACY_EXECUTOR executes and proves deletion"
+    ]
+  }
+}

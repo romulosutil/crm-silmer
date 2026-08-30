@@ -73,6 +73,12 @@ Execute `npm run validate:security-catalog` e
 `npm run test:security-catalog`; as revisões de Tech Lead e do Responsável de
 Privacidade permanecem explicitamente pendentes.
 
+O gate de defaults e papéis de `T00.6` está em
+[`docs/phase0/PHASE-0-APPROVAL-GATE.md`](docs/phase0/PHASE-0-APPROVAL-GATE.md).
+Execute `npm run validate:phase0-decisions` e
+`npm run test:phase0-decisions`; T02, T03 e T05 permanecem bloqueadas até as
+aprovações e designações humanas.
+
 Os processos executáveis ficam em `apps/api` e `apps/worker`; o frontend
 estático e vanilla fica em `apps/edge-web`. Contratos compartilhados começam em
 `modules/shared`.

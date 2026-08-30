@@ -49,7 +49,13 @@ Monitora a Caixa de Entrada e o trabalho do Vendedor Silmer. Pode responder conv
 
 ### Vendedor
 
-Pode fazer tudo que Atendimento faz e também assumir negociações, tratar valores, aprovar condições, registrar o valor final, fechar ou perder uma venda, revisar a Ficha de Pedido e acompanhar o estado financeiro comercial.
+Pode fazer tudo que Atendimento faz e também assumir negociações, tratar
+valores, registrar propostas e o valor final, marcar uma oportunidade como
+`Perdido` antes da aprovação comercial, revisar o rascunho da Ficha de Pedido e
+acompanhar o estado financeiro comercial. A função Vendedor, isoladamente, não
+aprova condições, venda ou Ficha nem conclui o fechamento como venda aprovada;
+essas ações exigem uma pessoa autorizada com a role adicional `Admin`, conforme
+o P0.7.
 
 ### Vendedor Silmer
 

@@ -55,6 +55,10 @@ Mudanças no threat model, catálogo de dados ou retenção executam
 gate automatizado substitui a revisão pendente de Tech Lead e do Responsável de
 Privacidade.
 
+Mudanças nos defaults de domínio, papéis ou capacidades executam
+`npm run validate:phase0-decisions` e `npm run test:phase0-decisions`. Um gate
+local nunca substitui as aprovações de Produto, Operação e Privacidade.
+
 Antes de publicar, execute também `git diff --check` e `git status --short`.
 
 ## Commits e publicação

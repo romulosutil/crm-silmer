@@ -50,6 +50,11 @@ Mudanças na matriz de providers ou no envelope de carga executam
 local não pode ser registrada como aceite de Privacidade, Operação, Rose ou
 como teste live de provider.
 
+Mudanças no threat model, catálogo de dados ou retenção executam
+`npm run validate:security-catalog` e `npm run test:security-catalog`. Nenhum
+gate automatizado substitui a revisão pendente de Tech Lead e do Responsável de
+Privacidade.
+
 Antes de publicar, execute também `git diff --check` e `git status --short`.
 
 ## Commits e publicação

@@ -23,11 +23,13 @@
     "test": "node --test test/*.test.js",
     "test:recovery:mocks": "node --test test/topology-recovery.test.js",
     "test:external-spikes": "node --test test/external-spikes.test.js",
+    "test:security-catalog": "node --test test/security-catalog.test.js",
     "test:e2e": "playwright test",
     "typecheck": "tsc --project jsconfig.json",
     "validate:topology": "node scripts/validate-topology.mjs && node scripts/recovery-mock.mjs --check",
     "validate:external-spikes": "node scripts/validate-external-spikes.mjs",
-    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run validate:topology && npm run validate:external-spikes && npm test && npm run build"
+    "validate:security-catalog": "node scripts/validate-security-catalog.mjs",
+    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run validate:topology && npm run validate:external-spikes && npm run validate:security-catalog && npm test && npm run build"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

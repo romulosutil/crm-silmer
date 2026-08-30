@@ -1,0 +1,258 @@
+{
+  "task": "T00.5",
+  "version": 1,
+  "syntheticOnly": true,
+  "controller": "Silmer",
+  "requirements": ["PRV-01", "PRV-02", "PRV-03", "PRV-P06-01..12"],
+  "approval": { "techLead": "pending", "privacyOfficer": "pending" },
+  "dataClasses": [
+    {
+      "id": "conversation-no-lead",
+      "pii": [
+        "channel identity",
+        "contact data",
+        "message content",
+        "attachments"
+      ],
+      "purpose": "Operate and close an inbound conversation without a commercial opportunity.",
+      "systemsAndCopies": [
+        "PostgreSQL",
+        "private object storage",
+        "search/cache",
+        "channel operator copies"
+      ],
+      "actorsAndOperators": [
+        "Atendimento",
+        "Vendedor",
+        "Privacy Officer",
+        "Meta as operator"
+      ],
+      "trigger": "Conversation closed as Sem lead.",
+      "maximumRetentionDays": 90,
+      "destination": "Delete personal data and content; retain only irreversibly anonymous metrics.",
+      "legalHold": "Allowed only for minimum scoped data with basis, owner and review date; isolate from commercial and AI use.",
+      "deletionPropagation": [
+        "primary database",
+        "attachments",
+        "cache/search",
+        "applicable operator request and reconciliation"
+      ]
+    },
+    {
+      "id": "lost-deal",
+      "pii": [
+        "contact identity",
+        "qualification",
+        "deal history",
+        "loss reason"
+      ],
+      "purpose": "Operate and analyze a lost commercial opportunity.",
+      "systemsAndCopies": [
+        "PostgreSQL",
+        "private object storage",
+        "search/cache",
+        "analytics aggregates"
+      ],
+      "actorsAndOperators": [
+        "Atendimento",
+        "Vendedor",
+        "Admin",
+        "Privacy Officer",
+        "infrastructure/storage operators"
+      ],
+      "trigger": "Deal marked Perdido.",
+      "maximumRetentionDays": 365,
+      "destination": "Delete identifiable data; retain only irreversible anonymous metrics.",
+      "legalHold": "Minimum scope only, with documented basis, owner and review date.",
+      "deletionPropagation": [
+        "primary database",
+        "attachments",
+        "cache/search",
+        "controlled analytical copies"
+      ]
+    },
+    {
+      "id": "closed-sale-nondocumentary-content",
+      "pii": ["messages", "non-documentary attachments", "channel identities"],
+      "purpose": "Support the completed or cancelled sale and operational follow-up.",
+      "systemsAndCopies": [
+        "PostgreSQL",
+        "private object storage",
+        "search/cache",
+        "channel operator copies"
+      ],
+      "actorsAndOperators": [
+        "Atendimento",
+        "Vendedor",
+        "Admin",
+        "Meta and storage operators"
+      ],
+      "trigger": "Sale closing or cancellation.",
+      "maximumRetentionDays": 730,
+      "destination": "Delete content and internal copies.",
+      "legalHold": "Minimum scope only; no commercial or AI processing while held.",
+      "deletionPropagation": [
+        "primary database",
+        "attachments",
+        "cache/search",
+        "applicable operator request and reconciliation"
+      ]
+    },
+    {
+      "id": "commercial-documents",
+      "pii": [
+        "Pedido",
+        "Ficha",
+        "approved quote",
+        "commercial events",
+        "PIX evidence"
+      ],
+      "purpose": "Prove and operate the commercial transaction and approved document history.",
+      "systemsAndCopies": [
+        "PostgreSQL",
+        "private object storage",
+        "PDF snapshots",
+        "authorized recipient/channel copies"
+      ],
+      "actorsAndOperators": [
+        "Atendimento",
+        "Vendedor",
+        "Admin",
+        "Privacy Officer",
+        "storage/channel operators",
+        "authorized Ficha recipient"
+      ],
+      "trigger": "Sale closing or cancellation.",
+      "maximumRetentionDays": 1825,
+      "destination": "Delete after the maximum period unless a valid legal hold applies.",
+      "legalHold": "Supported with legal basis, minimum scope, owner, start and review date.",
+      "deletionPropagation": [
+        "primary database",
+        "private storage/PDF",
+        "cache/search",
+        "operator reconciliation; external delivered copies handled operationally"
+      ]
+    },
+    {
+      "id": "processed-webhook-payload",
+      "pii": [
+        "raw channel event",
+        "sender identity",
+        "message metadata/content when present"
+      ],
+      "purpose": "Verify, deduplicate and diagnose a successfully processed channel event.",
+      "systemsAndCopies": ["PostgreSQL inbox", "short-lived diagnostics"],
+      "actorsAndOperators": [
+        "worker",
+        "technical operators",
+        "Meta as source operator"
+      ],
+      "trigger": "Processing confirmed.",
+      "maximumRetentionDays": 30,
+      "destination": "Delete raw payload.",
+      "legalHold": "Exceptional minimum scope only; never hidden in queues.",
+      "deletionPropagation": ["inbox payload", "diagnostic copies", "cache"]
+    },
+    {
+      "id": "reconciliation-payload",
+      "pii": [
+        "failed raw channel event",
+        "diagnostic personal data",
+        "external identifiers"
+      ],
+      "purpose": "Resolve failed or outcome-unknown external processing.",
+      "systemsAndCopies": [
+        "PostgreSQL inbox/reconciliation queue",
+        "restricted diagnostics"
+      ],
+      "actorsAndOperators": [
+        "technical operators",
+        "authorized reconcilers",
+        "external provider"
+      ],
+      "trigger": "Pending item resolved.",
+      "maximumRetentionDays": 90,
+      "destination": "Delete raw payload and personal diagnostic data.",
+      "legalHold": "Minimum scoped exception with review date; no indefinite queue retention.",
+      "deletionPropagation": [
+        "reconciliation queue",
+        "diagnostics",
+        "cache",
+        "applicable operator request"
+      ]
+    },
+    {
+      "id": "technical-log",
+      "pii": [
+        "internal opaque identifiers only; no full messages, attachments, PIX evidence, prompts or secrets"
+      ],
+      "purpose": "Security, reliability and operational diagnosis.",
+      "systemsAndCopies": [
+        "runtime log stream",
+        "contracted observability operator"
+      ],
+      "actorsAndOperators": [
+        "DevOps",
+        "Security",
+        "authorized observability operator"
+      ],
+      "trigger": "Event emitted.",
+      "operationalRetentionDays": 30,
+      "maximumRetentionDays": 90,
+      "destination": "Delete; 90 days is a legal maximum, not the default configuration.",
+      "legalHold": "Only minimum relevant events, with basis and restricted access.",
+      "deletionPropagation": [
+        "runtime log store",
+        "observability indexes",
+        "operator copies"
+      ]
+    },
+    {
+      "id": "ai-technical-request-response",
+      "pii": [
+        "minimized authorized context",
+        "technical request/response",
+        "model metadata"
+      ],
+      "purpose": "Generate an assistive message and non-binding suggestion.",
+      "systemsAndCopies": ["separate technical storage", "AI operator"],
+      "actorsAndOperators": [
+        "assistant adapter",
+        "authorized technical operators",
+        "AI operator/suboperators approved by Privacy"
+      ],
+      "trigger": "Message processed.",
+      "maximumRetentionDays": 30,
+      "destination": "Delete in CRM and operator; model training is prohibited.",
+      "legalHold": "Minimum scope only; block AI/commercial reuse while held.",
+      "deletionPropagation": [
+        "CRM technical storage",
+        "AI operator deletion/expiry",
+        "suboperator reconciliation"
+      ]
+    },
+    {
+      "id": "backup",
+      "pii": ["encrypted point-in-time copies of in-scope data classes"],
+      "purpose": "Disaster recovery under the approved RPO/RTO.",
+      "systemsAndCopies": [
+        "external encrypted backup store",
+        "restore drill environment"
+      ],
+      "actorsAndOperators": [
+        "DevOps",
+        "Technical Privacy Executor",
+        "backup/storage operators"
+      ],
+      "trigger": "Backup created.",
+      "maximumRetentionDays": 35,
+      "destination": "Expire by automatic rotation; never edit backups in place.",
+      "legalHold": "Only a separately authorized minimum copy; preserve segregation and review date.",
+      "deletionPropagation": [
+        "rotate backup by 35 days",
+        "reapply isolated pseudonymous tombstone ledger before restored service becomes ready",
+        "destroy drill copies after evidence capture"
+      ]
+    }
+  ]
+}

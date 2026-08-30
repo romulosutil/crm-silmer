@@ -62,6 +62,10 @@ gates de verificação.
 
 ### T00.5 Definir threat model e catálogo de dados
 
+- **Status:** baseline local e validação executável concluídas em 30/08/2026;
+  revisões de Tech Lead e Privacidade pendentes na issue `#9`.
+- **Rastreabilidade:** `PRV-01..03` e `PRV-P06-01..12`; controles marcados
+  como `planned` permanecem nas tarefas funcionais correspondentes.
 - Mapear ativos, atores, trust boundaries, PII, operadores e abusos.
 - Ligar cada classe à retenção P0.6.
 - **Verificação:** revisão de Tech Lead e Responsável de Privacidade.

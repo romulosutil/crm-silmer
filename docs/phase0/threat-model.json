@@ -1,0 +1,181 @@
+{
+  "task": "T00.5",
+  "version": 1,
+  "syntheticOnly": true,
+  "requirements": ["PRV-01", "PRV-02", "PRV-03", "PRV-P06-01..12"],
+  "approval": { "techLead": "pending", "privacyOfficer": "pending" },
+  "assets": [
+    "customer identity and contact data",
+    "conversation content and attachments",
+    "commercial records and PIX evidence",
+    "sessions and authorization grants",
+    "audit trail and tombstone ledger",
+    "provider credentials and build artifacts"
+  ],
+  "actors": [
+    "customer/data subject",
+    "Atendimento",
+    "Vendedor",
+    "Admin",
+    "Privacy Officer",
+    "Technical Privacy Executor",
+    "external channel/storage/AI operators",
+    "unauthenticated attacker",
+    "malicious insider",
+    "compromised dependency"
+  ],
+  "trustBoundaries": [
+    "browser to same-origin edge/API",
+    "Meta webhook and media endpoints to adapters",
+    "API/worker to PostgreSQL",
+    "worker to private object storage",
+    "assistant adapter to AI operator",
+    "CI registry to EasyPanel runtime",
+    "active data plane to isolated backup/tombstone stores"
+  ],
+  "threats": [
+    {
+      "id": "TM-01",
+      "family": "idor-acl",
+      "asset": "PII and commercial records",
+      "boundary": "browser to API",
+      "mitigation": "deny-by-default backend capabilities, tenant/object scope and negative authorization tests",
+      "owner": "Backend/Security",
+      "test": "cross-role and cross-record API requests return 403/404 without disclosure",
+      "requirements": ["PRV-01"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-02",
+      "family": "csrf-session",
+      "asset": "opaque sessions and privileged commands",
+      "boundary": "browser to same-origin edge/API",
+      "mitigation": "Secure HttpOnly SameSite cookies, CSRF token, origin checks, rotation and privileged-session revocation",
+      "owner": "Backend/Security",
+      "test": "forged cross-site state change is rejected and revoked session cannot act",
+      "requirements": ["PRV-01"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-03",
+      "family": "webhook-spoof-replay",
+      "asset": "conversation and message state",
+      "boundary": "Meta webhook to channel adapter",
+      "mitigation": "raw-body signature verification, timestamp window, external-event uniqueness and idempotent inbox",
+      "owner": "Integrations",
+      "test": "invalid signature, duplicate event and stale replay have no duplicate effect",
+      "requirements": ["MSG-01", "PRV-01"],
+      "status": "partially-mitigated"
+    },
+    {
+      "id": "TM-04",
+      "family": "ssrf-media",
+      "asset": "internal network, credentials and media",
+      "boundary": "Meta media URL to worker",
+      "mitigation": "allowlisted HTTPS hosts, DNS/IP validation on every redirect, private-range block, size and timeout limits",
+      "owner": "Integrations/Security",
+      "test": "loopback, metadata endpoint, DNS rebinding and redirect chain are blocked",
+      "requirements": ["PRV-01"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-05",
+      "family": "malicious-upload",
+      "asset": "operators, storage and generated documents",
+      "boundary": "external attachment to quarantine/storage",
+      "mitigation": "quarantine, content MIME detection, size limits, hash, ClamAV freshness gate and no-store signed URLs",
+      "owner": "Integrations/Security",
+      "test": "EICAR, polyglot, MIME mismatch and oversized files remain unavailable",
+      "requirements": ["PRV-01"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-06",
+      "family": "prompt-injection-exfiltration",
+      "asset": "authorized context, PII and commercial decisions",
+      "boundary": "CRM assistant adapter to AI operator",
+      "mitigation": "minimized context, no domain mutation tools, structured schema, code-enforced commercial rules, output filtering and <=30-day TTL",
+      "owner": "Assistant/Security",
+      "test": "injected message cannot reveal other records, secrets or mutate official state",
+      "requirements": ["AGT-03", "PRV-01", "PRV-P06-07"],
+      "status": "partially-mitigated"
+    },
+    {
+      "id": "TM-07",
+      "family": "supply-chain",
+      "asset": "source, CI credentials, images and production runtime",
+      "boundary": "repository/registry to EasyPanel",
+      "mitigation": "pinned lockfile/actions, SBOM, vulnerability scan, provenance, digest-only promotion and least-privilege CI",
+      "owner": "DevOps/Security",
+      "test": "tampered artifact or high-severity dependency blocks promotion",
+      "requirements": ["PRV-01"],
+      "status": "partially-mitigated"
+    },
+    {
+      "id": "TM-08",
+      "family": "secret-log-leak",
+      "asset": "tokens, prompts, messages, PIX evidence and credentials",
+      "boundary": "runtime to logs/observability",
+      "mitigation": "allowlisted structured fields, redaction, opaque internal IDs, secret scanning and 30-day operational retention",
+      "owner": "Platform/Security",
+      "test": "synthetic canaries never appear in logs, errors or build artifacts",
+      "requirements": ["PRV-02", "PRV-P06-06"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-09",
+      "family": "insider-privilege",
+      "asset": "PII, irreversible deletion and commercial authority",
+      "boundary": "human roles to privileged commands",
+      "mitigation": "orthogonal capabilities, MFA, no self-assignment, four-eyes deletion authorization/execution and append-only audit",
+      "owner": "Tech Lead/Privacy",
+      "test": "operator cannot self-elevate, approve and execute the same deletion, or access legal hold",
+      "requirements": ["PRV-01", "PRV-02", "PRV-P06-04", "PRV-P06-12"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-10",
+      "family": "external-outcome-unknown",
+      "asset": "messages, Fichas and external side effects",
+      "boundary": "worker to external provider",
+      "mitigation": "versioned effect matrix, stable idempotency keys, explicit outcome_unknown and human reconciliation without blind retry",
+      "owner": "Integrations/Reliability",
+      "test": "crash after remote acceptance cannot silently duplicate the effect",
+      "requirements": ["MSG-03", "MSG-04", "PRV-02"],
+      "status": "partially-mitigated"
+    },
+    {
+      "id": "TM-11",
+      "family": "restore-resurrection",
+      "asset": "deleted subject data and privacy evidence",
+      "boundary": "backup/tombstone stores to restored runtime",
+      "mitigation": "isolated immutable pseudonymous tombstone ledger reapplied before readiness and retained through last related backup",
+      "owner": "DevOps/Privacy",
+      "test": "old backup restore cannot reintroduce a deleted synthetic subject",
+      "requirements": ["PRV-03", "PRV-P06-08"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-12",
+      "family": "backup-storage-exposure",
+      "asset": "database backups, attachments, Fichas and tombstones",
+      "boundary": "runtime/backup jobs to private object stores",
+      "mitigation": "separate buckets and credentials, encryption, private access, versioning/immutability, rotation and access audit",
+      "owner": "DevOps/Privacy",
+      "test": "public access and cross-bucket credentials fail; expired backup rotates at 35 days",
+      "requirements": ["PRV-01", "PRV-03", "PRV-P06-08"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-13",
+      "family": "denial-of-service",
+      "asset": "availability of webhook, API, worker and storage",
+      "boundary": "internet/providers to edge and queues",
+      "mitigation": "body/rate/concurrency limits, bounded queues, backpressure, timeouts, quotas, circuit breakers and alerting",
+      "owner": "Platform/Reliability",
+      "test": "approved burst and oversized/slow requests degrade safely without data loss or retry storm",
+      "requirements": ["MSG-03", "PRV-01"],
+      "status": "planned"
+    }
+  ]
+}

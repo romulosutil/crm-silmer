@@ -1,8 +1,8 @@
 # Passagem de Produto para Tech Lead
 
 **Data:** 29/08/2026  
-**Parecer:** GO condicional para iniciar especificação técnica. P0.1 e P0.2
-resolvidos; cinco decisões P0 continuam abertas.
+**Parecer:** GO condicional para iniciar especificação técnica. P0.1, P0.2 e
+P0.3 resolvidos; quatro decisões P0 continuam abertas.
 
 ## O que o Tech Lead já pode especificar
 
@@ -21,7 +21,7 @@ resolvidos; cinco decisões P0 continuam abertas.
 |---|---|---|---|
 | 1 | Etapas definitivas e campos obrigatórios de cada passagem | **Resolvido** | Contrato aprovado em `CAMPOS-FICHA-E-JORNADA-P0-1.md` |
 | 2 | Autoridade do Vendedor Silmer sobre preço após qualificação | **Resolvido** | Comunica somente orçamento humano aprovado, versionado e vigente; não calcula nem negocia |
-| 3 | Financeiro cobre vendido ou também recebido/a receber | Aberto | Entidades, eventos e relatórios |
+| 3 | Financeiro cobre vendido ou também recebido/a receber | **Resolvido** | MVP mede vendido; recebido e saldo a receber ficam em P2 |
 | 4 | Canais do primeiro piloto além do WhatsApp | Aberto | Integrações e identidade de contato |
 | 5 | Significado de FAB, sequência vigente e numeração | Aberto | Contrato da Ficha e concorrência |
 | 6 | Regras concretas de retenção e exclusão | Aberto | Dados, backups, logs e operação |
@@ -77,13 +77,49 @@ Precificação automática por tabela ou política comercial permanece fora do
 MVP e só pode entrar em P2 mediante política aprovada e tecnicamente
 consultável.
 
+## P0.3 resolvido — limite financeiro comercial
+
+O financeiro do MVP mede somente **valor vendido**. O estado do pagamento
+continua registrado no negócio para operar o subfluxo PIX, liberar a Ficha e
+preservar auditoria, mas não alimenta indicadores agregados de valor recebido
+ou saldo a receber.
+
+Uma venda entra nos indicadores quando o cliente aceita o orçamento humano
+aprovado, versionado e vigente e o negócio passa para
+`aprovado_aguardando_pix`. O estado terminal `Fechado` continua ocorrendo
+somente depois da confirmação humana do pagamento, geração da Ficha e registro
+do onboarding; essa passagem não reconhece a mesma venda uma segunda vez.
+
+Critérios da decisão:
+
+1. **FIN-P03-01:** a entrada em `aprovado_aguardando_pix` registra exatamente
+   uma venda com valor final, data da aprovação comercial, vendedor responsável
+   e versão do orçamento aceita.
+2. **FIN-P03-02:** os indicadores do período exibem total vendido ativo,
+   quantidade de vendas e ticket médio, usando a data da aprovação comercial e
+   o vendedor responsável naquele momento.
+3. **FIN-P03-03:** uma venda perdida antes da aprovação comercial nunca entra
+   nos indicadores de vendido.
+4. **FIN-P03-04:** cancelamento retira valor, quantidade e efeito no ticket dos
+   totais ativos, sem apagar a venda, sua aprovação ou o motivo do cancelamento;
+   cancelamentos permanecem consultáveis separadamente.
+5. **FIN-P03-05:** confirmação, rejeição ou exceção de pagamento altera o estado
+   operacional do negócio e mantém autor, horário e origem, mas não cria métrica
+   agregada de recebido ou saldo a receber no MVP.
+6. **FIN-P03-06:** a passagem posterior para `Fechado` não altera data, vendedor
+   ou valor reconhecidos na aprovação comercial e não duplica a venda.
+7. **FIN-P03-07:** valores recebidos, saldo a receber, pagamentos parciais,
+   parcelamento, conciliação bancária e estornos financeiros ficam fora do MVP
+   e só podem entrar em P2 mediante novo contrato de eventos e relatórios.
+
 ## Gate recomendado
 
 O Tech Lead pode começar com descoberta, alternativas e spikes reversíveis. A
-máquina de estados, o modelo de completude e o contrato de comunicação de preço
-já podem ser fechados com base no P0.1 e no P0.2. A especificação técnica
-completa só recebe status `Aprovada` quando os cinco P0 restantes estiverem
-resolvidos e refletidos nos critérios de aceite.
+máquina de estados, o modelo de completude, o contrato de comunicação de preço
+e o limite do financeiro comercial já podem ser fechados com base no P0.1, no
+P0.2 e no P0.3. A especificação técnica completa só recebe status `Aprovada`
+quando os quatro P0 restantes estiverem resolvidos e refletidos nos critérios
+de aceite.
 
 Não iniciar implementação de produção nem publicar estimativa fechada antes desse gate. Protótipos descartáveis de integração e validação da API oficial são permitidos, desde que não congelem o modelo de domínio.
 
@@ -95,9 +131,8 @@ Agenda:
 
 1. Validar apenas dúvidas operacionais de `FAB` e numeração ainda cobertas pelo
    P0.5; o mapa campo a campo já está concluído.
-2. Delimitar financeiro comercial.
-3. Confirmar se haverá canal adicional no piloto.
-4. Fechar permissões e privacidade do piloto.
+2. Confirmar se haverá canal adicional no piloto.
+3. Fechar permissões e privacidade do piloto.
 
-Saída: P0.3–P0.7 resolvidos, PRD atualizado e autorização para o Tech Lead
+Saída: P0.4–P0.7 resolvidos, PRD atualizado e autorização para o Tech Lead
 finalizar design e tarefas.

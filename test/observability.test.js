@@ -18,7 +18,7 @@ import {
 const rootUrl = new URL('../', import.meta.url);
 const canaries = [
   'cliente@example.test',
-  '+5527999999999',
+  '+12025550199',
   'mensagem-secreta',
   'prompt-secreto',
   'token-secreto',
@@ -36,15 +36,24 @@ function capture() {
   };
 }
 
+/** @param {string} value */
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+}
+
 /** @param {Array<Record<string, unknown>>} records */
 function assertNoCanaries(records) {
   const serialized = JSON.stringify(records);
   for (const canary of canaries)
-    assert.doesNotMatch(
-      serialized,
-      new RegExp(canary.replace(/[+]/gu, '\\+'), 'u'),
-    );
+    assert.doesNotMatch(serialized, new RegExp(escapeRegExp(canary), 'u'));
 }
+
+test('escapes every regular-expression metacharacter in log canaries', () => {
+  const pattern = new RegExp(escapeRegExp('a\\b+c.test?'), 'u');
+
+  assert.match('a\\b+c.test?', pattern);
+  assert.doesNotMatch('abccXtest', pattern);
+});
 
 test('allowlists structured fields and drops PII/content values', () => {
   const { logger, records } = capture();

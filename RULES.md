@@ -13,7 +13,8 @@
 9. Conversa sem oportunidade termina como `Sem lead`; oportunidade encerrada termina como `Fechado` ou `Perdido` com motivo.
 10. Toda Ficha aprovada registra versão, autor e estado de envio.
 11. O primeiro pedido é `01-CRM`; os seguintes usam a sequência `02-CRM`, `03-CRM` e assim por diante, sem dependência de numeração legada.
-12. O destinatário operacional da Ficha é Rose, no número `+55 27 99901-0303`.
+12. O destinatário operacional da Ficha é Rose; o telefone é resolvido pela
+    referência `secret://crm/order-recipient-phone` e nunca é versionado.
 13. A jornada definitiva é Backlog, Produto, Especificação, Estampa, Logística
     e Fechamento; Backlog não é coluna do Kanban.
 14. Campo obrigatório `pendente` ou `divergente` bloqueia passagem. Um campo

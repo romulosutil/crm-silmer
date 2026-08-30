@@ -51,7 +51,9 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 
 1. **ORD-01:** WHEN um pedido está pronto THEN o sistema SHALL validar todos os campos obrigatórios derivados da Ficha.
 2. **ORD-02:** WHEN um usuário autorizado aprova a primeira Ficha THEN o sistema SHALL reservar `01-CRM`; as seguintes SHALL usar a sequência `02-CRM`, `03-CRM` e assim por diante, sem depender de numeração legada.
-3. **ORD-03:** WHEN o envio é confirmado THEN o sistema SHALL enviar para Rose em `+55 27 99901-0303` e guardar o estado e identificador do envio.
+3. **ORD-03:** WHEN o envio é confirmado THEN o sistema SHALL enviar para Rose
+   usando o telefone resolvido por `secret://crm/order-recipient-phone`, sem
+   versionar o dado pessoal, e guardar o estado e identificador do envio.
 4. **ORD-04:** WHEN o envio falha THEN o sistema SHALL preservar a Ficha aprovada e oferecer retry auditável sem gerar novo pedido.
 5. **ORD-05:** WHEN a Ficha é gerada THEN o sistema SHALL preencher todos os campos comerciais aplicáveis do inventário aprovado, calcular o total pela grade, registrar versão, autor e horário e manter vazios os campos posteriores de produção.
 
@@ -128,15 +130,15 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 
 ## Rastreabilidade
 
-| Grupo | IDs | Status |
-|---|---|---|
-| Inbox e conversão | INB-01 a INB-04 | Pronto para especificação técnica |
-| Agente assistivo | AGT-01 a AGT-08 | Pronto para especificação técnica |
-| Pedido | ORD-01 a ORD-05 | Pronto para especificação técnica |
+| Grupo              | IDs             | Status                            |
+| ------------------ | --------------- | --------------------------------- |
+| Inbox e conversão  | INB-01 a INB-04 | Pronto para especificação técnica |
+| Agente assistivo   | AGT-01 a AGT-08 | Pronto para especificação técnica |
+| Pedido             | ORD-01 a ORD-05 | Pronto para especificação técnica |
 | Mensagens e canais | MSG-01 a MSG-04 | Pronto para especificação técnica |
-| Financeiro | FIN-01 a FIN-03 | Pronto para especificação técnica |
-| Privacidade | PRV-01 a PRV-03 | Pronto para especificação técnica |
-| PIX e boas-vindas | PAY-01 a PAY-05 | Pronto para especificação técnica |
+| Financeiro         | FIN-01 a FIN-03 | Pronto para especificação técnica |
+| Privacidade        | PRV-01 a PRV-03 | Pronto para especificação técnica |
+| PIX e boas-vindas  | PAY-01 a PAY-05 | Pronto para especificação técnica |
 
 **Cobertura:** 32 requisitos de MVP; 32 mapeados; nenhum P0 aberto. A decomposição em tarefas pertence ao Tech Lead.
 

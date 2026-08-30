@@ -2,12 +2,8 @@ name: CI and immutable images
 
 on:
   pull_request:
-    paths-ignore:
-      - graphify-out/**
   push:
     branches: [master]
-    paths-ignore:
-      - graphify-out/**
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -15,12 +11,12 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   quality:
     name: Lint, tests, E2E and dependencies
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -52,7 +48,11 @@ jobs:
   images:
     name: Build and scan ${{ matrix.image }}
     needs: quality
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -68,48 +68,54 @@ jobs:
           persist-credentials: false
       - name: Set up Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-      - name: Log in to GHCR
+        with:
+          version: v0.36.1
+          driver-opts: |
+            image=moby/buildkit@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
+      - name: Build one local OCI layout
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          provenance: ${{ github.event_name == 'push' && 'mode=max' || false }}
+          pull: true
+          sbom: ${{ github.event_name == 'push' }}
+          outputs: type=oci,dest=/tmp/${{ matrix.image }}-oci,tar=false
+          tags: crm-silmer/${{ matrix.image }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+      - name: Scan local OCI layout with Trivy
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          input: /tmp/${{ matrix.image }}-oci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL
+      - name: Log in to GHCR after the scan passes
         if: github.event_name == 'push'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build one quarantined candidate
-        id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: .
-          file: ${{ matrix.dockerfile }}
-          load: ${{ github.event_name != 'push' }}
-          platforms: linux/amd64
-          provenance: ${{ github.event_name == 'push' && 'mode=max' || false }}
-          pull: true
-          push: ${{ github.event_name == 'push' }}
-          sbom: ${{ github.event_name == 'push' }}
-          tags: ${{ github.event_name == 'push' && format('ghcr.io/{0}/candidates/{1}:{2}', github.repository, matrix.image, github.sha) || format('crm-silmer/{0}:{1}', matrix.image, github.sha) }}
-          labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-      - name: Scan built image with Trivy
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
-        with:
-          image-ref: ${{ github.event_name == 'push' && format('ghcr.io/{0}/candidates/{1}:{2}', github.repository, matrix.image, github.sha) || format('crm-silmer/{0}:{1}', matrix.image, github.sha) }}
-          format: table
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: CRITICAL
-      - name: Publish the scanned candidate without rebuilding
+      - name: Publish the scanned OCI layout without rebuilding
         if: github.event_name == 'push'
         id: release
         shell: bash
         env:
-          CANDIDATE_TAG: ghcr.io/${{ github.repository }}/candidates/${{ matrix.image }}:${{ github.sha }}
+          EXPECTED_DIGEST: ${{ steps.build.outputs.digest }}
+          OCI_LAYOUT: /tmp/${{ matrix.image }}-oci
           RELEASE_TAG: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
         run: |
-          docker buildx imagetools create --tag "$RELEASE_TAG" "$CANDIDATE_TAG"
+          [[ "$EXPECTED_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          skopeo copy --all --preserve-digests \
+            "oci:$OCI_LAYOUT" "docker://$RELEASE_TAG"
           release_digest="$(docker buildx imagetools inspect "$RELEASE_TAG" | awk '/^Digest:/ { print $2; exit }')"
-          [[ "$release_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          test "$release_digest" = "$EXPECTED_DIGEST"
           printf 'digest=%s\n' "$release_digest" >> "$GITHUB_OUTPUT"
       - name: Record immutable digest
         if: github.event_name == 'push'

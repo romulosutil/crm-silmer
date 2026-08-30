@@ -8,12 +8,12 @@
 ---
 
 Checkpoint de implementação — 12/08/2026
-CRM: https://crm.datacrazy.io — conta Silmer (romulosilmer@gmail.com)
+CRM: https://crm.datacrazy.io — conta Silmer (e-mail removido da versão pública)
 
 ## Fluxo desenhado
 
 ```
-Cliente no WhatsApp (27 99633-7374)
+Cliente no WhatsApp (número operacional removido da versão pública)
    │
    ├─ Agente IA "Vendedor Silmer" (SDR) — qualifica em 6 perguntas essenciais
    │     ├─ tool: Listar Leads / Criar Lead
@@ -22,7 +22,7 @@ Cliente no WhatsApp (27 99633-7374)
    │     └─ tool: Adicionar Tag ao Lead → "IA - Qualificado" (+ Varejo/Atacado/Precisa de Arte)
    │
    ├─ Comportamento nativo "Transferir atendente" (Aleatorizar)
-   │     └─ distribui entre DAIANA CAMPOS e Daniel; IA sai da conversa
+   │     └─ distribui entre atendentes A e B; IA sai da conversa
    │
    └─ Automação "Lead Qualificado - Briefing para Vendedor"  (gatilho: tag IA - Qualificado)
          ├─ Adiciona comentário no lead com o Resumo do Briefing
@@ -41,10 +41,10 @@ Finalidade do Pedido · Perfil de Compra · Entrega ou Retirada · Resumo do Bri
 
 ### Pipeline "Vendas Estamparia"
 Novo Contato (IA) → Qualificado pela IA → Orçamento Enviado → Negociação → Aprovado - Produção
-URL: /pipelines/f56c1d6f-b3f1-48c0-bc37-6195fc16587c
+URL operacional removida da versão pública.
 
 ### Agente "Vendedor Silmer"
-URL: /ia/ee4dd8f7-6ede-4587-b8d2-bad0757dd658
+URL operacional removida da versão pública.
 
 - **Instruções**: reescritas (5.507 chars). Persona capixaba, missão SDR, roteiro de 6 essenciais +
   6 complementares, guia técnico de estampa, passo a passo de registro no CRM, regras de transferência,
@@ -52,7 +52,7 @@ URL: /ia/ee4dd8f7-6ede-4587-b8d2-bad0757dd658
 - **Ferramentas vinculadas (11)**: Listar Leads · Criar Lead · Atualizar Informações do Lead ·
   Atualizar Notas do Lead · Definir Campo Adicional do Lead · Listar Campos Adicionais de Lead ·
   Adicionar Tag ao Lead · Listar Tags · Criar Negócio · Listar Pipelines · Listar Etapas da Pipeline
-- **Comportamentos**: Finalizar conversa ON · Transferir atendente ON (destinos: DAIANA CAMPOS + da niel,
+- **Comportamentos**: Finalizar conversa ON · Transferir atendente ON (destinos: atendentes A e B,
   modo Aleatorizar) · Follow-up automático 15 min / máx 2 · Emojis ON · Dividir mensagens longas ON
 - **Configurações**: delay 5s · 50 mensagens de contexto · limite 12 interações da IA por atendimento
   (na 13ª ela se despede e transfere) · apenas atendimento atual ON · saudação automática ON
@@ -66,7 +66,7 @@ e checklist "PENDENTE — a Silmer precisa preencher".
 
 ### Automação
 `Lead Qualificado - Briefing para Vendedor` — **ATIVA**
-URL: /flow/703c54f9-46ab-430c-a9e0-f11395549b24
+URL operacional removida da versão pública.
 Gatilho: Tag adicionada ao lead = `IA - Qualificado`
 Ações: Adicionar comentário no lead (com variável Resumo do Briefing) + Criar atividade (Tarefa, Alta)
 Limite do plano: 8 automações — 3 em uso (Boas-vindas e Vendas estão desativadas).
@@ -77,8 +77,8 @@ Limite do plano: 8 automações — 3 em uso (Boas-vindas e Vendas estão desati
    **Enquanto não houver conexão, nada roda ponta a ponta e não dá nem pra testar** — o Chat ao vivo
    não permite simular conversa sem canal.
 
-2. **3º vendedor não existe.** Só DAIANA CAMPOS (silmervendas@gmail.com) e "da niel"
-   (Danielsilmervendas1@gmail.com) estão como Atendentes. Roteamento hoje é 50/50.
+2. **3º vendedor não existe.** Só os atendentes A e B estão cadastrados. Nomes e
+   e-mails foram removidos da versão pública. Roteamento hoje é 50/50.
    Nome e telefone do terceiro ainda não definidos.
 
 3. **Aviso ao vendedor: decidido que dentro do CRM basta.** Conversa transferida para a caixa dele
@@ -95,13 +95,14 @@ Limite do plano: 8 automações — 3 em uso (Boas-vindas e Vendas estão desati
 
 ### ATENÇÃO — definir qual número vai hospedar o agente
 Há uma ambiguidade a resolver antes de escanear o QR:
-- **27 99633-7374** é o número que aparece publicamente como WhatsApp da Silmer (Instagram, guias,
-  buscadores). É pra ele que o cliente manda mensagem hoje.
-- **27 99951-6754** foi indicado como o número do agente de IA.
+- O **canal público da empresa** aparece como WhatsApp da Silmer (Instagram, guias,
+  buscadores). É para ele que o cliente manda mensagem hoje.
+- Um **canal dedicado** foi indicado para o agente de IA. Os números operacionais
+  foram removidos da versão pública.
 
 O QR precisa ser escaneado no aparelho do número que **recebe as mensagens dos clientes**.
-Se o site/Instagram/Google apontam para o 27 99633-7374, é esse que deve ser conectado — senão o
-agente fica ligado num número que ninguém aciona. Se for usar o 27 99951-6754, atualize antes os
+Se o site/Instagram/Google apontam para o canal público, é esse que deve ser conectado — senão o
+agente fica ligado num número que ninguém aciona. Se for usar o canal dedicado, atualize antes os
 links de WhatsApp do site, Instagram e Google Meu Negócio.
 
 ### Passos
@@ -228,7 +229,7 @@ briefing e transferência), **depois** reaproveite tudo no site. O contrário do
 ## Próximos passos, em ordem
 
 1. Cliente aprova os R$ 59,90/mês → contratar a Crazy API e escanear o QR (seção acima).
-   **Antes**, decidir qual número hospeda o agente: 27 99633-7374 ou 27 99951-6754.
+   **Antes**, decidir se o canal público ou o dedicado hospeda o agente.
 2. Teste ponta a ponta: mandar mensagem como cliente, conferir se o agente qualifica,
    preenche os 13 campos, cria o negócio, marca a tag e transfere.
 3. Conferir se o comentário e a tarefa chegaram com o Resumo do Briefing preenchido.

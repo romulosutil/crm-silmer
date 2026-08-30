@@ -201,7 +201,10 @@ if (connectionString) {
         fab: { code: '01', displayName: 'FAB 01' },
         featureFlags: { vendedor_silmer_autonomia_comercial: false },
         pix: { keyReference: 'secret://pix/main', maskedKey: '***1234' },
-        recipient: { name: 'Rose', phone: '+5527999010303' },
+        recipient: {
+          name: 'Rose',
+          phoneReference: 'secret://crm/order-recipient-phone',
+        },
         templates: { onboarding: { enabled: true, version: 'v1' } },
       };
       await pool.query(

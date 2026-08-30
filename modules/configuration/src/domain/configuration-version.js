@@ -9,7 +9,10 @@ const CONFIGURATION_SECTIONS = Object.freeze([
   'templates',
 ]);
 const FAB = Object.freeze({ code: '01', displayName: 'FAB 01' });
-const RECIPIENT = Object.freeze({ name: 'Rose', phone: '+5527999010303' });
+const RECIPIENT = Object.freeze({
+  name: 'Rose',
+  phoneReference: 'secret://crm/order-recipient-phone',
+});
 const SECRET_FIELD_NAMES = new Set([
   'key',
   'password',
@@ -135,13 +138,13 @@ function assertPix(pix) {
 
 /** @param {Record<string, unknown>} recipient */
 function assertRecipient(recipient) {
-  assertExactKeys(recipient, ['name', 'phone'], 'values.recipient');
+  assertExactKeys(recipient, ['name', 'phoneReference'], 'values.recipient');
   if (
     recipient.name !== RECIPIENT.name ||
-    recipient.phone !== RECIPIENT.phone
+    recipient.phoneReference !== RECIPIENT.phoneReference
   ) {
     throw new ConfigurationValidationError(
-      'values.recipient must match the approved Rose destination',
+      'values.recipient must match the approved destination reference',
     );
   }
 }

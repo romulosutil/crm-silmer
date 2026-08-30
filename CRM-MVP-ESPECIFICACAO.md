@@ -27,7 +27,8 @@ auditoria e rollback explícitos.
 - Fazer o Vendedor Silmer conduzir a conversa e sugerir a próxima etapa sem
   alterar o estado comercial no MVP.
 - Produzir a Ficha de Pedido com dados suficientes para produção e cobrança.
-- Enviar a Ficha aprovada para Rose, no WhatsApp `+55 27 99901-0303`.
+- Enviar a Ficha aprovada para Rose usando o telefone resolvido pela referência
+  `secret://crm/order-recipient-phone`, sem versionar o dado pessoal.
 - Registrar vendas e oferecer uma visão financeira comercial básica.
 - Manter intervenção humana, rastreabilidade e recuperação em caso de falha.
 
@@ -196,7 +197,8 @@ Quando a venda estiver aprovada e o pagamento PIX tiver confirmação manual, o 
 3. Permitir revisão por usuário autorizado.
 4. Gerar uma versão estável em PDF ou imagem.
 5. Registrar versão, autor da aprovação e horário.
-6. Enviar para **Rose — `+55 27 99901-0303`**.
+6. Enviar para **Rose**, resolvendo o telefone por
+   `secret://crm/order-recipient-phone`.
 7. Registrar o identificador e o estado do envio.
 
 No caminho inicial, a aprovação comercial cria uma única cobrança PIX e envia
@@ -280,7 +282,8 @@ Lead com a operação e não reabrem P0.
 - Ficha é o contrato da qualificação.
 - P0.1 está resolvido: etapas, campos obrigatórios, gates, PIX e boas-vindas
   estão definidos em `CAMPOS-FICHA-E-JORNADA-P0-1.md`.
-- Destinatária da Ficha é Rose, `+55 27 99901-0303`.
+- A destinatária da Ficha é Rose; o telefone fica fora do repositório e é
+  resolvido por `secret://crm/order-recipient-phone`.
 - Financeiro mede valor vendido; recebido e saldo ficam em P2.
 - Pedido começa em `01-CRM`, sem sequência legada.
 - Política de privacidade está aprovada e Rômulo Sutil Corrêa é o responsável.

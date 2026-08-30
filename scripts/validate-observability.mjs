@@ -70,7 +70,7 @@ export function validateAlertPolicy(document) {
 /** @param {string} dockerfile */
 export function validateRuntimeHardening(dockerfile) {
   invariant(
-    /FROM node:24\.14\.0-bookworm-slim@sha256:[a-f0-9]{64}/u.test(dockerfile),
+    /FROM node:24\.20\.0-bookworm-slim@sha256:[a-f0-9]{64}/u.test(dockerfile),
     'Runtime base must remain pinned by digest',
   );
   invariant(/\nUSER node\n/u.test(dockerfile), 'Runtime must remain non-root');

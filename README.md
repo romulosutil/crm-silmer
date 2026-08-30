@@ -37,7 +37,7 @@ domínio em `window` estão fora da baseline do MVP.
 
 ## Desenvolvimento
 
-Pré-requisitos fixados: Node.js `24.14.0` e npm `11.9.0`. Instale e execute os
+Pré-requisitos fixados: Node.js `24.20.0` e npm `11.19.0`. Instale e execute os
 gates oficiais a partir da raiz:
 
 ```powershell

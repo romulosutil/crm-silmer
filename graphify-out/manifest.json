@@ -105,8 +105,8 @@
     "semantic_hash": ""
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788067146.685508,
-    "ast_hash": "4617be5aa63ab63a4429ee41697b0a88",
+    "mtime": 1788067682.1890798,
+    "ast_hash": "9fc4f4d11f854f94b983d6077a911a63",
     "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
@@ -130,13 +130,13 @@
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
-    "mtime": 1788066926.418422,
-    "ast_hash": "d31c2bbcc43eada750b3aeb2ff83e228",
+    "mtime": 1788067483.1330366,
+    "ast_hash": "4a96ab951a92e371bc536a2f1c037546",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1788066926.417423,
-    "ast_hash": "d161b689a8dad8cb4dbc693d110d6a01",
+    "mtime": 1788067483.131049,
+    "ast_hash": "6792b099882c892f5cbed4511072a6e0",
     "semantic_hash": ""
   },
   ".prettierrc.json": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1788066926.4164217,
-    "ast_hash": "b92f7e459ca51075fb393e87add06bea",
+    "mtime": 1788067682.1880248,
+    "ast_hash": "3df62ac9a2307bd0220f9a3599a7c787",
     "semantic_hash": ""
   },
   "scripts/build.mjs": {
@@ -260,8 +260,8 @@
     "semantic_hash": ""
   },
   "docs/phase0/SUPPLY-CHAIN.md": {
-    "mtime": 1788065818.1033583,
-    "ast_hash": "72430d47c352011ec21399a906a2fd4e",
+    "mtime": 1788067708.9990299,
+    "ast_hash": "4f28d3c264603a38bfd64ed26364a8d1",
     "semantic_hash": ""
   },
   "ops/easypanel/topology.json": {
@@ -292,6 +292,51 @@
   "ops/recovery/RUNBOOK.md": {
     "mtime": 1788066926.415254,
     "ast_hash": "f161e507d88bc64f8e871e330ebea230",
+    "semantic_hash": ""
+  },
+  "docs/phase0/external-effects.json": {
+    "mtime": 1788067682.1864119,
+    "ast_hash": "419ef6044b14f27de724a4b8eafd8dc4",
+    "semantic_hash": ""
+  },
+  "docs/phase0/load-envelope.json": {
+    "mtime": 1788067491.9204073,
+    "ast_hash": "23460d5b16cced98ce73f31dc705f46f",
+    "semantic_hash": ""
+  },
+  "schemas/fixtures/external/manifest.json": {
+    "mtime": 1788067491.948436,
+    "ast_hash": "69e93c9d92b53a38a22b243e9cefba35",
+    "semantic_hash": ""
+  },
+  "schemas/fixtures/external/meta-message.json": {
+    "mtime": 1788067491.9582872,
+    "ast_hash": "a660b4866ea17128a00c9f68590a9eb7",
+    "semantic_hash": ""
+  },
+  "schemas/fixtures/external/meta-status.json": {
+    "mtime": 1788067491.9654114,
+    "ast_hash": "f660cb5acfdbdc382ca197827bde8182",
+    "semantic_hash": ""
+  },
+  "schemas/fixtures/external/openai-suggestion-schema.json": {
+    "mtime": 1788067491.9731016,
+    "ast_hash": "afe71ac592595ed2dc28decbfc4019c4",
+    "semantic_hash": ""
+  },
+  "scripts/validate-external-spikes.mjs": {
+    "mtime": 1788067564.3428874,
+    "ast_hash": "5cdd51e0db122db66fdb15923b296dd8",
+    "semantic_hash": ""
+  },
+  "test/external-spikes.test.js": {
+    "mtime": 1788067556.5909398,
+    "ast_hash": "7d7c6a5cd8900b03ab375ded16268af7",
+    "semantic_hash": ""
+  },
+  "docs/phase0/EXTERNAL-SPIKES.md": {
+    "mtime": 1788067469.764593,
+    "ast_hash": "c0620f6672be3e71fd860d0ee36a3295",
     "semantic_hash": ""
   }
 }

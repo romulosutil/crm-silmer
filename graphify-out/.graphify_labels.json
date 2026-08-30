@@ -1,9 +1,9 @@
 {
   "0": "Technical Strategy and MVP",
   "1": "Design System and UX",
-  "2": "CRM Silmer MVP — Plano de Implementação",
+  "2": "Fase 0 — Fundação e riscos técnicos",
   "3": "CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)",
-  "4": "Campos da Ficha e Jornada Conversacional — P0.1",
+  "4": "Passagem de Produto para Tech Lead",
   "5": "MVP Product Specification",
   "6": "Infrastructure and Deployment",
   "7": "README.md",
@@ -25,7 +25,7 @@
   "23": "User Role Modeling",
   "24": "Agentes do CRM Silmer",
   "25": "Legacy Qualification Flow",
-  "26": "Passagem de Produto para Tech Lead",
+  "26": "openai-suggestion-schema.json",
   "27": "devDependencies",
   "28": "api/src/app.js",
   "29": "worker/package.json",
@@ -43,5 +43,14 @@
   "41": "ci-images.test.js",
   "42": "playwright.config.js",
   "43": "foundation.spec.js",
-  "44": "Runbook de recovery off-host — T00.3"
+  "44": "Runbook de recovery off-host — T00.3",
+  "45": "signature",
+  "46": "validate-external-spikes.mjs",
+  "47": "Fase 2 — Caixa de Entrada, canais e confiabilidade",
+  "48": "Supply chain da Fase 0",
+  "49": "Fase 1 — Identidade, acesso e infraestrutura de domínio",
+  "50": "Fase 6 — Privacidade, relatórios e operação",
+  "51": "Fase 4 — Vendedor Silmer assistivo",
+  "52": "Fase 7 — Hardening, UAT e piloto",
+  "53": "CRM Silmer MVP — Plano de Implementação"
 }

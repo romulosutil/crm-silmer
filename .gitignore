@@ -1,5 +1,62 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+secrets/
+*.key
+*.pem
+
+# Dependencies and package-manager caches
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+
+# Build, test and quality outputs
+dist/
+build/
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Runtime data and logs
+*.log
+logs/
+tmp/
+temp/
+.tmp/
+var/
+*.pid
+*.pid.lock
+*.dump
+*.backup
+
+# Local tools and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
 # Graphify runtime/cache artifacts; canonical root reports remain versioned.
 graphify-out/cache/
 graphify-out/memory/
 graphify-out/converted/
 graphify-out/20*/
+graphify-out/.graphify_python
+graphify-out/.graphify_detect.json
+graphify-out/.graphify_extract.json
+graphify-out/.graphify_ast.json
+graphify-out/.graphify_semantic.json
+graphify-out/.graphify_semantic_new.json
+graphify-out/.graphify_cached.json
+graphify-out/.graphify_uncached.txt
+graphify-out/.graphify_incremental.json
+graphify-out/.graphify_chunk_*.json
+graphify-out/.graphify_old.json
+graphify-out/.graphify_step_*.py
+graphify-out/.needs_update
+graphify-out/needs_update

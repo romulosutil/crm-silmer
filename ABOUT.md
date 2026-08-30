@@ -8,6 +8,10 @@ O canal obrigatório do piloto é a API oficial do WhatsApp Business. O Instagra
 
 Documentos principais:
 
+- `README.md`: porta de entrada, estado atual e ordem de leitura.
+- `AGENTS.md`: protocolo, papéis e Definition of Done para agentes.
+- `CODEX.md`: contexto inicial e guardrails específicos do Codex.
+- `CONTRIBUTING.md`: fluxo de contribuição, validação e publicação.
 - `CRM-MVP-ESPECIFICACAO.md`: PRD e escopo canônico.
 - `.specs/features/crm-mvp/spec.md`: requisitos rastreáveis e critérios de aceite.
 - `.specs/features/crm-mvp/context.md`: decisões de produto já tomadas.

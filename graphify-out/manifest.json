@@ -10,9 +10,9 @@
     "semantic_hash": "d9ed654bf439c2254beb8e2269e1abf2"
   },
   "ABOUT.md": {
-    "mtime": 1788059336.4931264,
-    "ast_hash": "887228c4384de8afed0a9c26875f7ff4",
-    "semantic_hash": "887228c4384de8afed0a9c26875f7ff4"
+    "mtime": 1788062824.5395746,
+    "ast_hash": "0d2048a6c3780f32def03ad285bdf843",
+    "semantic_hash": ""
   },
   "ARCHITECTURE.md": {
     "mtime": 1788061838.1571133,
@@ -118,5 +118,25 @@
     "mtime": 1788061834.2355824,
     "ast_hash": "8b386cc9bfba3af3a6e92ea82b42e35b",
     "semantic_hash": "8b386cc9bfba3af3a6e92ea82b42e35b"
+  },
+  "AGENTS.md": {
+    "mtime": 1788062794.5869677,
+    "ast_hash": "0d9893538ed227a472327397b52ca90d",
+    "semantic_hash": ""
+  },
+  "CODEX.md": {
+    "mtime": 1788062793.0848713,
+    "ast_hash": "fadc8e344110fdd89f105a5036a0d90a",
+    "semantic_hash": ""
+  },
+  "CONTRIBUTING.md": {
+    "mtime": 1788062796.1139016,
+    "ast_hash": "9266108d15250605b640151d42023e7e",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1788062791.58569,
+    "ast_hash": "ca8f0d6ceded29bd417fe09d594688ce",
+    "semantic_hash": ""
   }
 }

@@ -79,6 +79,11 @@ Execute `npm run validate:phase0-decisions` e
 `npm run test:phase0-decisions`; T02, T03 e T05 permanecem bloqueadas até as
 aprovações e designações humanas.
 
+Os controles locais de observabilidade e hardening de `T00.7` estão em
+[`docs/phase0/OBSERVABILITY-AND-HARDENING.md`](docs/phase0/OBSERVABILITY-AND-HARDENING.md).
+Execute `npm run validate:observability` e `npm run test:observability`; ativação
+do monitor externo e os drills permanecem explicitamente pendentes.
+
 Os processos executáveis ficam em `apps/api` e `apps/worker`; o frontend
 estático e vanilla fica em `apps/edge-web`. Contratos compartilhados começam em
 `modules/shared`.

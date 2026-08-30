@@ -59,6 +59,10 @@ Mudanças nos defaults de domínio, papéis ou capacidades executam
 `npm run validate:phase0-decisions` e `npm run test:phase0-decisions`. Um gate
 local nunca substitui as aprovações de Produto, Operação e Privacidade.
 
+Mudanças em logs, IDs de tracing, métricas, health checks ou imagens executam
+`npm run validate:observability` e `npm run test:observability`. Use somente
+canários sintéticos e nunca inclua mensagem, prompt, telefone ou segredo.
+
 Antes de publicar, execute também `git diff --check` e `git status --short`.
 
 ## Commits e publicação

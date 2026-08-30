@@ -86,6 +86,11 @@ gates de verificação.
 
 ### T00.7 Implantar telemetria e hardening mínimos
 
+- **Status:** controles locais, testes negativos e política de alertas
+  concluídos em 30/08/2026; monitor off-host, roteamento e simulações reais
+  pendentes na issue `#11`, e digest publicado dependente da issue `#1`.
+- **Rastreabilidade:** enabler de `PRV-01`, `PRV-02` e `PRV-P06-06`; não
+  satisfaz sozinho a observabilidade completa da T06.5.
 - Logs redigidos, request/correlation IDs, métricas de API/worker e alertas live.
 - Usuário não-root, capabilities removidas, imagens por digest, filesystem
   read-only quando possível e temporários limitados.

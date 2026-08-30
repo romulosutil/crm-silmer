@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "task": "T00.7",
+  "status": "pending-external",
+  "syntheticOnly": true,
+  "monitorLocation": "outside-vps",
+  "operationalRetentionDays": 30,
+  "legalMaximumRetentionDays": 90,
+  "routing": {
+    "status": "pending-external",
+    "owner": "Tech Lead/DevOps",
+    "destination": null
+  },
+  "alerts": [
+    {
+      "id": "api-live-unavailable",
+      "signal": "GET /api/health/live",
+      "condition": "three consecutive external checks fail",
+      "threshold": 3,
+      "severity": "critical",
+      "owner": "DevOps",
+      "test": "stop the API and prove an off-host monitor fires",
+      "status": "pending-external"
+    },
+    {
+      "id": "api-5xx",
+      "signal": "api_5xx_total",
+      "condition": "counter increases within five minutes",
+      "threshold": 1,
+      "severity": "high",
+      "owner": "Backend",
+      "test": "inject a synthetic 500 and inspect the redacted alert",
+      "status": "pending-external"
+    },
+    {
+      "id": "api-latency",
+      "signal": "api_duration_ms",
+      "condition": "p95 exceeds the approved read SLO for five minutes",
+      "threshold": 1500,
+      "severity": "high",
+      "owner": "Backend",
+      "test": "inject bounded latency without customer data",
+      "status": "pending-external"
+    },
+    {
+      "id": "worker-heartbeat-stale",
+      "signal": "worker_heartbeat_unixtime_seconds",
+      "condition": "last heartbeat is older than 120 seconds",
+      "threshold": 120,
+      "severity": "critical",
+      "owner": "Backend/DevOps",
+      "test": "stop the worker and prove alert delivery",
+      "status": "pending-external"
+    },
+    {
+      "id": "worker-oldest-job",
+      "signal": "worker_oldest_job_age_seconds",
+      "condition": "oldest queued job exceeds five minutes",
+      "threshold": 300,
+      "severity": "high",
+      "owner": "Backend",
+      "test": "hold one synthetic job without retrying external effects",
+      "status": "pending-external"
+    },
+    {
+      "id": "worker-job-failures",
+      "signal": "worker_jobs_failed_total",
+      "condition": "counter increases within five minutes",
+      "threshold": 1,
+      "severity": "high",
+      "owner": "Backend",
+      "test": "fail a synthetic job and inspect the redacted event",
+      "status": "pending-external"
+    }
+  ]
+}

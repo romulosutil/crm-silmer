@@ -1,8 +1,9 @@
 # Passagem de Produto para Tech Lead
 
 **Data:** 29/08/2026  
-**Parecer:** GO condicional para iniciar especificação técnica. P0.1 a P0.6
-resolvidos; uma decisão P0 continua aberta.
+**Parecer:** GO para finalizar a especificação técnica. P0.1 a P0.7 estão
+resolvidos; resta somente propagar as decisões para o PRD e os critérios de
+aceite antes de iniciar a implementação de produção.
 
 ## O que o Tech Lead já pode especificar
 
@@ -18,10 +19,12 @@ resolvidos; uma decisão P0 continua aberta.
   comportamento sob concorrência.
 - Política de retenção e exclusão por classe de dado, incluindo backups, logs,
   operadores e atendimento aos direitos do titular.
+- Modelo de autorização da Ficha, com função operacional, role `Admin`, estados,
+  versionamento, cancelamento, retry, reenvio e trilha de auditoria.
 - Opções de backend, banco, hospedagem, runtime de IA e geração documental.
 - Riscos, spikes técnicos e plano de prova de conceito.
 
-## O que impede aprovação final e estimativa fechada
+## Decisões P0 para aprovação final e estimativa fechada
 
 | P0 | Decisão necessária | Status | Impacto técnico/evidência |
 |---|---|---|---|
@@ -31,7 +34,7 @@ resolvidos; uma decisão P0 continua aberta.
 | 4 | Canais do primeiro piloto além do WhatsApp | **Resolvido** | WhatsApp Business e Instagram Direct; site apenas direciona ao WhatsApp; IA não move o Kanban |
 | 5 | Significado de FAB, sequência vigente e numeração | **Resolvido** | Contrato aprovado na seção P0.5 deste documento |
 | 6 | Regras concretas de retenção e exclusão | **Resolvido** | Contrato aprovado na seção P0.6 deste documento |
-| 7 | Permissões para revisar, editar, cancelar e reenviar Ficha | Aberto | Autorização e auditoria |
+| 7 | Permissões para revisar, editar, cancelar e reenviar Ficha | **Resolvido** | Funções Atendimento/Vendedor com role adicional `Admin`; contrato aprovado na seção P0.7 |
 
 ## P0.1 resolvido — contrato de passagem
 
@@ -53,7 +56,9 @@ boas-vindas e os critérios `JRN-01` a `JRN-09` estão em
 ## P0.2 resolvido — autoridade sobre preço
 
 O Vendedor Silmer pode informar preço após a qualificação somente como
-comunicação fiel de um orçamento aprovado por uma pessoa com função
+comunicação fiel de um orçamento aprovado por uma pessoa com role **Admin**. A
+role `Admin` é uma autorização comercial adicional e pode ser atribuída tanto
+a uma pessoa com função **Atendimento** quanto a uma pessoa com função
 **Vendedor**. A fonte autorizada é a versão vigente do orçamento registrada no
 CRM, com `valor_final`, `condicao`, `validade`, `aprovado_por` e `aprovado_em`.
 Catálogo e dados da qualificação apoiam a preparação do pedido, mas não
@@ -66,8 +71,9 @@ Critérios da decisão:
 2. **PRC-02:** o agente reproduz exatamente valor, condição e validade da versão
    aprovada; não calcula preço, concede desconto, altera condição nem aceita
    contraproposta.
-3. **PRC-03:** somente uma pessoa com função **Vendedor** aprova a versão que
-   autoriza a comunicação do preço.
+3. **PRC-03:** somente uma pessoa com role **Admin** aprova a versão que
+   autoriza a comunicação do preço, independentemente de sua função operacional
+   ser Atendimento ou Vendedor.
 4. **PRC-04:** orçamento vencido, substituído ou sem aprovação não pode ser
    apresentado como vigente.
 5. **PRC-05:** mudança em quantidade, modelo, malha, estampa, logística ou prazo
@@ -220,13 +226,13 @@ atômica na primeira aprovação autorizada da Ficha, após a confirmação huma
 pagamento. Rascunhos não consomem número e aprovações concorrentes nunca podem
 receber o mesmo valor.
 
-Uma vez reservado, o número identifica o Pedido de forma imutável. Revisões,
-correções, geração documental e reenvios mantêm o mesmo número e incrementam a
-versão da Ficha. Retry reutiliza a reserva existente. Cancelamento, falha após
-a reserva ou invalidação não devolvem o número à sequência; o evento permanece
-auditável e um pedido comercial realmente novo recebe outro número. A sequência
-pode, portanto, conter lacunas justificadas, mas nunca duplicidade ou
-reutilização.
+Uma vez reservado, o número identifica o Pedido de forma imutável. Revisões e
+correções mantêm o mesmo número e incrementam a versão da Ficha; geração
+documental, retry e reenvio preservam a versão vigente. Retry reutiliza a
+reserva existente. Cancelamento, falha após a reserva ou invalidação não
+devolvem o número à sequência; o evento permanece auditável e um pedido
+comercial realmente novo recebe outro número. A sequência pode, portanto,
+conter lacunas justificadas, mas nunca duplicidade ou reutilização.
 
 Critérios da decisão:
 
@@ -340,25 +346,117 @@ Critérios da decisão:
     Responsável de Privacidade e Administrador Técnico, com segregação entre
     autorização e execução da exclusão.
 
+## P0.7 resolvido — permissões e auditoria da Ficha
+
+O acesso humano possui duas camadas independentes. Cada pessoa exerce uma
+função operacional, **Atendimento** ou **Vendedor**, e pode receber
+adicionalmente a role **Admin**. Atendimento atende conversas e mantém os dados
+do rascunho; Vendedor conduz negociação e informa propostas. A role `Admin` é
+o que autoriza aprovar a venda, aprovar a Ficha e executar qualquer envio para
+Rose. Assim, a autorização privilegiada não depende do nome da função
+operacional e pode ser atribuída a uma pessoa de Atendimento ou de Vendas.
+
+A role `Admin` deste contrato é comercial e não se confunde com o
+**Administrador Técnico** do P0.6, responsável por executar e comprovar
+exclusões. Ninguém recebe `Admin` implicitamente por ser Vendedor, não pode
+atribuir a role a si próprio e toda concessão ou revogação registra autor,
+destinatário, motivo e horário. O primeiro `Admin` do piloto é provisionado por
+uma pessoa autorizada pela Silmer durante a configuração inicial; depois disso,
+somente outro `Admin` pode conceder ou revogar a role.
+
+Matriz aprovada:
+
+| Ação | Atendimento | Vendedor | Atendimento ou Vendedor com `Admin` | Vendedor Silmer |
+|---|---:|---:|---:|---:|
+| Consultar e revisar rascunho | Sim | Sim | Sim | Não |
+| Editar rascunho | Sim | Sim | Sim | Não |
+| Aprovar orçamento e venda | Não | Não | Sim | Não |
+| Aprovar a Ficha | Não | Não | Sim | Não |
+| Cancelar a Ficha | Não | Não | Sim | Não |
+| Enviar a Ficha para Rose | Não | Não | Sim | Não |
+| Repetir envio falho | Não | Não | Sim | Não |
+| Reenviar após envio confirmado | Não | Não | Sim | Não |
+
+O ciclo de vida da Ficha usa os estados `rascunho`, `em_revisao`, `aprovada`,
+`envio_pendente`, `enviada`, `falha_envio`, `cancelada` e `substituida`.
+Atendimento e Vendedor podem mover um rascunho para revisão e devolvê-lo para
+edição, mas apenas uma pessoa com `Admin` conclui a aprovação. A primeira
+aprovação autorizada após a confirmação humana do pagamento reserva o número
+nos termos do P0.5 e libera o envio.
+
+Uma versão aprovada é imutável. Qualquer correção posterior cria nova versão em
+`rascunho`, preserva número, conteúdo e auditoria da anterior e exige nova
+aprovação por `Admin`. Quando a nova versão é aprovada, a anterior recebe o
+estado `substituida`; nenhuma correção dispara envio automático.
+
+Somente uma pessoa com `Admin` cancela uma Ficha, sempre com motivo e
+confirmação explícita da consequência. O cancelamento bloqueia novos envios,
+mas não apaga nem reutiliza número, versão, documento ou histórico. Se a Ficha
+já tiver sido enviada, o CRM também gera uma notificação auditável de
+cancelamento para Rose e torna falha ou confirmação desse aviso visível.
+
+Retry de uma falha reutiliza Pedido, número, versão e chave de idempotência e
+não cria novo documento ou envio lógico. Reenvio depois de uma entrega
+confirmada é uma ação intencional distinta, restrita a `Admin`, exige motivo e
+confirmação e envia a mesma versão imutável sem reservar outro número. A
+aprovação, o envio inicial, cada tentativa, a entrega, o cancelamento e o
+reenvio registram pessoa, função operacional, presença da role `Admin`, motivo,
+versão, horário, destinatário e identificador do canal.
+
+Critérios da decisão:
+
+1. **ACL-P07-01:** toda pessoa humana possui função Atendimento ou Vendedor e
+   pode receber separadamente a role `Admin`, sem promoção implícita pela
+   função operacional.
+2. **ACL-P07-02:** Atendimento e Vendedor sem `Admin` consultam, revisam e
+   editam somente rascunhos; não aprovam venda ou Ficha e não enviam, cancelam,
+   repetem nem reenviam para Rose.
+3. **ACL-P07-03:** somente uma pessoa com `Admin` aprova orçamento, venda e
+   Ficha e executa envio, cancelamento, retry ou reenvio para Rose.
+4. **ACL-P07-04:** o Vendedor Silmer não revisa, edita, aprova, cancela nem
+   envia a Ficha e não recebe `Admin`.
+5. **ACL-P07-05:** concessão ou revogação de `Admin` exige outro `Admin`, salvo
+   o provisionamento inicial autorizado pela Silmer, e registra autor,
+   destinatário, motivo e horário sem permitir autoatribuição.
+6. **ACL-P07-06:** a interface e a API aplicam os mesmos estados e permissões,
+   sem depender apenas da ocultação de botões no frontend.
+7. **ACL-P07-07:** editar uma Ficha aprovada cria nova versão em `rascunho`,
+   preserva a anterior e exige nova aprovação sem reservar outro número.
+8. **ACL-P07-08:** cancelamento exige `Admin`, motivo e confirmação, bloqueia
+   novos envios e preserva número, documento, autorizações e histórico.
+9. **ACL-P07-09:** cancelamento posterior ao envio cria aviso auditável para
+   Rose e exibe confirmação ou falha desse aviso para reconciliação.
+10. **ACL-P07-10:** retry de falha reutiliza Pedido, número, versão e chave de
+    idempotência; reenvio após sucesso exige `Admin`, motivo e confirmação e
+    não cria nova Ficha.
+11. **ACL-P07-11:** aprovação e cada tentativa de envio registram pessoa,
+    função, role, motivo, versão, horário, destinatário e identificador do
+    canal, sem duplicidade sob concorrência.
+12. **ACL-P07-12:** revogar `Admin` bloqueia imediatamente novas ações
+    privilegiadas sem alterar a autoria histórica das ações já concluídas.
+
 ## Gate recomendado
 
-O Tech Lead pode começar com descoberta, alternativas e spikes reversíveis. A
-máquina de estados, o modelo de completude, o contrato de comunicação de preço,
-o limite do financeiro comercial, a identidade da Ficha e a política de
-privacidade já podem ser fechados com base no P0.1 ao P0.6. A especificação
-técnica completa só recebe status `Aprovada` quando o P0.7 estiver resolvido e
-as regras de canal, sandbox da IA, handoff, sugestão de etapa, `FAB`, numeração,
-retenção e exclusão estiverem refletidas no PRD e nos critérios de aceite.
+Os P0.1 a P0.7 estão resolvidos. O Tech Lead pode finalizar a máquina de
+estados, autorização, modelo de dados, integrações, riscos, design e tarefas. A
+especificação técnica recebe status `Aprovada` assim que as regras de canal,
+sandbox da IA, handoff, sugestão de etapa, `FAB`, numeração, retenção,
+exclusão e permissões da Ficha forem refletidas no PRD e nos critérios de
+aceite; essa sincronização é de rastreabilidade e não reabre decisão de produto.
 
 Não iniciar implementação de produção nem publicar estimativa fechada antes desse gate. Protótipos descartáveis de integração e validação da API oficial são permitidos, desde que não congelem o modelo de domínio.
 
-## Workshop de fechamento
+## Registro de fechamento
 
 Participantes: Product Manager, responsável operacional da Silmer, pessoa que preenche a Ficha e Tech Lead.
 
-Agenda:
+Decisão aprovada:
 
-1. Fechar permissões do ciclo de vida da Ficha.
+1. Atendimento e Vendedor são funções operacionais; `Admin` é uma role
+   comercial adicional atribuível a qualquer uma delas.
+2. Somente `Admin` aprova venda e Ficha e executa qualquer envio para Rose.
+3. O ciclo de vida, versionamento, cancelamento, retry, reenvio e auditoria
+   seguem o contrato P0.7 deste documento.
 
-Saída: P0.7 resolvido, PRD atualizado e autorização para o Tech Lead finalizar
-design e tarefas.
+Saída: P0.7 resolvido e autorização para o Tech Lead finalizar design e tarefas;
+PRD e critérios de aceite devem ser sincronizados antes da implementação.

@@ -15,5 +15,11 @@ Documentos principais:
 - `CAMPOS-FICHA-E-JORNADA-P0-1.md`: inventário integral da Ficha, etapas
   definitivas, gates, PIX e boas-vindas.
 - `RULES.md`: invariantes de produto e implementação.
-- `ARCHITECTURE.md`: restrições e fronteiras já conhecidas; decisões técnicas ainda abertas.
+- `ARCHITECTURE.md`: resumo das fronteiras e decisões técnicas propostas como baseline.
+- `TECHNICAL-DESIGN.md`: TDD canônico com stack, módulos, dados, APIs,
+  segurança, SLOs, riscos e decisões técnicas do MVP.
+- `EASYPANEL-TOPOLOGY.md`: projetos, serviços, sizing, CI/CD, backups e
+  operação na VPS Hostinger/EasyPanel.
+- `.specs/features/crm-mvp/tasks.md`: plano de implementação por fases com
+  verificação e rastreabilidade.
 - `historico-datacrazy/`: arquivo histórico, sem valor normativo para o sistema novo.

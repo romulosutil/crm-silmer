@@ -1,6 +1,8 @@
-# Arquitetura — Estado e Restrições
+# Arquitetura — Decisões do MVP
 
-> **Status:** decisões P0 concluídas. Este documento registra fronteiras aprovadas e entrega ao Tech Lead a escolha de backend, banco, hospedagem e provedor de IA.
+> **Status:** baseline técnica proposta em 30/08/2026. O desenho completo está
+> em `TECHNICAL-DESIGN.md`; implantação e operação estão em
+> `EASYPANEL-TOPOLOGY.md`.
 
 ## Fronteiras funcionais
 
@@ -24,16 +26,51 @@
 - Numeração de pedidos iniciada em `01-CRM`, sem dependência legada.
 - Rômulo Sutil Corrêa como Responsável de Privacidade e política do piloto aprovada após consulta jurídica.
 
-## Decisões para o Tech Lead
+## Decisões técnicas propostas como baseline
 
-- Backend e padrão de API.
-- Banco de dados e estratégia de migração.
-- Autenticação e autorização.
-- Hospedagem, segredos, observabilidade e backups.
-- Provedor/runtime de IA e estratégia de contexto.
-- Fila, retries, idempotência e reconciliação de webhooks.
-- Armazenamento de anexos e documentos.
-- Geração e envio da Ficha respeitando as regras da API oficial.
-- Modelo de segurança e operacionalização dos requisitos de LGPD.
+- **Forma:** monólito modular em JavaScript ESM, sem microserviços no MVP.
+- **Processos:** `edge-web`, `api` e `worker`, construídos do mesmo repositório.
+- **Frontend:** HTML semântico, CSS e JavaScript vanilla; Nginx não-root serve
+  os assets e mantém web/API na mesma origem.
+- **Backend:** Node.js Active LTS, Fastify, REST `/api/v1`, OpenAPI 3.1 e SSE.
+- **Persistência:** PostgreSQL com SQL e migrações versionadas; dados oficiais
+  normalizados e JSONB limitado a payloads/snapshots apropriados.
+- **Assíncrono:** inbox/outbox e jobs no PostgreSQL, com entrega at-least-once,
+  efeito idempotente e reconciliação visível. Redis não entra no MVP.
+- **Autenticação:** sessão opaca em cookie seguro, CSRF, MFA obrigatório para
+  `Admin` e autorização aplicada no backend.
+- **Storage:** S3-compatible externo e privado; containers são stateless.
+- **Documentos:** snapshot imutável + template HTML/CSS + PDF gerado no worker.
+- **IA:** adapter próprio e OpenAI API direta como baseline, sem fine-tuning,
+  RAG ou vector database no MVP; DPA e retenção compatível são gates.
+- **Operação:** projetos EasyPanel `crm-silmer-dev`, `crm-silmer-hml` e
+  `crm-silmer-prod`, com somente `edge-web` público.
+- **Deploy:** imagens imutáveis por digest, homologação antes de produção,
+  migrations expand/contract, backup externo e rollback para digest anterior.
 
-Nenhuma decisão dessa lista deve ser inferida a partir do material arquivado do Datacrazy.
+## Decisões de modelagem
+
+- `Deal`/`Negocio` é a única raiz do funil. Lead é classificação e Card é
+  projeção visual, sem estado próprio concorrente.
+- Backlog pertence à Conversa e permanece fora do Kanban.
+- Sugestões da IA e campos oficiais são persistidos separadamente.
+- Auditoria de negócio é append-only e não se confunde com log técnico.
+- PostgreSQL é a fonte da verdade; canais, IA, storage e futuras automações
+  entram apenas por ports/adapters.
+- Venda, PIX, Pedido, Ficha, envio e onboarding usam chaves idempotentes e
+  constraints transacionais.
+
+## Projetos e documentos executáveis
+
+- `TECHNICAL-DESIGN.md`: TDD, stack, módulos, dados, APIs, segurança e SLOs.
+- `EASYPANEL-TOPOLOGY.md`: serviços, rede, sizing, segredos, CI/CD e recovery.
+- `.specs/features/crm-mvp/tasks.md`: decomposição de implementação e gates.
+
+## Aprovações ainda necessárias
+
+- Designar Tech Lead, time e Administrador Técnico.
+- Produto/Operação confirmar os defaults destacados no TDD.
+- Privacidade aprovar os operadores de IA, storage e observabilidade.
+- Operação validar o PDF da Ficha, domínios e credenciais de cada ambiente.
+
+Nenhuma decisão técnica deve ser inferida do material arquivado do Datacrazy.

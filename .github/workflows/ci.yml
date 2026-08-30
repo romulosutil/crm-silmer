@@ -75,7 +75,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build once and publish only on master
+      - name: Build one quarantined candidate
         id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
@@ -87,26 +87,38 @@ jobs:
           pull: true
           push: ${{ github.event_name == 'push' }}
           sbom: ${{ github.event_name == 'push' }}
-          tags: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+          tags: ${{ github.event_name == 'push' && format('ghcr.io/{0}/candidates/{1}:{2}', github.repository, matrix.image, github.sha) || format('crm-silmer/{0}:{1}', matrix.image, github.sha) }}
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
       - name: Scan built image with Trivy
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+          image-ref: ${{ github.event_name == 'push' && format('ghcr.io/{0}/candidates/{1}:{2}', github.repository, matrix.image, github.sha) || format('crm-silmer/{0}:{1}', matrix.image, github.sha) }}
           format: table
           exit-code: '1'
           ignore-unfixed: true
           severity: CRITICAL
+      - name: Publish the scanned candidate without rebuilding
+        if: github.event_name == 'push'
+        id: release
+        shell: bash
+        env:
+          CANDIDATE_TAG: ghcr.io/${{ github.repository }}/candidates/${{ matrix.image }}:${{ github.sha }}
+          RELEASE_TAG: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+        run: |
+          docker buildx imagetools create --tag "$RELEASE_TAG" "$CANDIDATE_TAG"
+          release_digest="$(docker buildx imagetools inspect "$RELEASE_TAG" | awk '/^Digest:/ { print $2; exit }')"
+          [[ "$release_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          printf 'digest=%s\n' "$release_digest" >> "$GITHUB_OUTPUT"
       - name: Record immutable digest
         if: github.event_name == 'push'
         shell: bash
         run: |
-          test "${{ steps.build.outputs.digest }}" != ""
+          test "${{ steps.release.outputs.digest }}" != ""
           printf '%s=%s@%s\n' '${{ matrix.image }}' \
             'ghcr.io/${{ github.repository }}/${{ matrix.image }}' \
-            '${{ steps.build.outputs.digest }}' | tee digest.env
+            '${{ steps.release.outputs.digest }}' | tee digest.env
       - name: Upload digest reference
         if: github.event_name == 'push'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

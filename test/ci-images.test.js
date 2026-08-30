@@ -71,8 +71,17 @@ test('pins every GitHub Action and builds each publishable image once', async ()
   assert.match(workflow, /aquasecurity\/trivy-action@[a-f0-9]{40}/u);
   assert.match(
     workflow,
-    /ghcr\.io\/\$\{\{ github\.repository \}\}\/\$\{\{ matrix\.image \}\}:\$\{\{ github\.sha \}\}/u,
+    /RELEASE_TAG: ghcr\.io\/\$\{\{ github\.repository \}\}\/\$\{\{ matrix\.image \}\}:\$\{\{ github\.sha \}\}/u,
   );
+  const buildIndex = workflow.indexOf('Build one quarantined candidate');
+  const scanIndex = workflow.indexOf('Scan built image with Trivy');
+  const publishIndex = workflow.indexOf(
+    'Publish the scanned candidate without rebuilding',
+  );
+  assert.ok(buildIndex >= 0 && buildIndex < scanIndex);
+  assert.ok(scanIndex < publishIndex);
+  assert.match(workflow, /\/candidates\/\$\{\{ matrix\.image \}\}/u);
+  assert.match(workflow, /docker buildx imagetools create/u);
   assert.match(workflow, /sbom:\s*\$\{\{ github\.event_name == 'push' \}\}/u);
   assert.match(
     workflow,
@@ -86,6 +95,11 @@ test('promotes one approved SHA as identical dev and hml digest references', asy
 
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /approved_sha:/u);
+  assert.match(workflow, /actions:\s*read/u);
+  assert.match(workflow, /gh api --method GET/u);
+  assert.match(workflow, /head_sha="\$APPROVED_SHA"/u);
+  assert.match(workflow, /\.conclusion == "success"/u);
+  assert.match(workflow, /\.head_branch == "master"/u);
   assert.match(workflow, /\^\[0-9a-f\]\{40\}\$/u);
   assert.match(workflow, /docker buildx imagetools inspect/u);
   assert.match(workflow, /edge_ref="\$\{edge_tag\}@\$\{edge_digest\}"/u);

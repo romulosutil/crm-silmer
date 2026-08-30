@@ -15,6 +15,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
   packages: read
 
@@ -32,6 +33,26 @@ jobs:
             echo 'approved_sha must be a lowercase, full commit SHA' >&2
             exit 1
           fi
+      - name: Require successful master CI for the exact SHA
+        shell: bash
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          runs="$(gh api --method GET \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+            -f head_sha="$APPROVED_SHA" \
+            -f branch=master \
+            -f status=completed \
+            -f per_page=100)"
+          jq -e --arg sha "$APPROVED_SHA" '
+            .workflow_runs | any(
+              .head_sha == $sha and
+              .head_branch == "master" and
+              .event == "push" and
+              .conclusion == "success"
+            )
+          ' <<< "$runs"
       - name: Set up Buildx inspector
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
       - name: Log in to GHCR

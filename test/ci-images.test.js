@@ -67,6 +67,7 @@ test('pins every GitHub Action and builds each publishable image once', async ()
   assert.match(workflow, /npm run test:e2e/u);
   assert.match(workflow, /npm audit --audit-level=high/u);
   assert.match(workflow, /git diff --check/u);
+  assert.match(workflow, /paths-ignore:\s+- graphify-out\/\*\*/u);
   assert.match(workflow, /aquasecurity\/trivy-action@[a-f0-9]{40}/u);
   assert.match(
     workflow,

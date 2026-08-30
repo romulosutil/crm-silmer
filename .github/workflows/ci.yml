@@ -2,8 +2,12 @@ name: CI and immutable images
 
 on:
   pull_request:
+    paths-ignore:
+      - graphify-out/**
   push:
     branches: [master]
+    paths-ignore:
+      - graphify-out/**
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

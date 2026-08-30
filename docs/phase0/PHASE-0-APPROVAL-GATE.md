@@ -48,13 +48,19 @@ função Vendedor não aprova venda, Ficha ou fechamento sem a role adicional
 1. O revisor confirma o valor correspondente no JSON ou registra o valor
    substituto aprovado.
 2. No bloco `approval`, altera `status` para `approved`, `approved` para `true`,
-   informa `reviewedAt` em ISO 8601 e inclui uma referência versionada em
-   `evidence`.
+   informa `reviewedAt` em ISO 8601 e inclui em `evidence` um objeto com
+   `reference` não vazio e `revision` no formato `git:<SHA completo>`.
 3. Para uma designação, registra o identificador corporativo da pessoa em
-   `assignees`, a data e a evidência; não registrar documento pessoal.
-4. Produto, Operação e Privacidade registram suas revisões no gate global.
+   `assignees` no formato `silmer:<id>`, muda `status` para `designated` e
+   registra data/evidência; não registrar documento pessoal.
+4. Produto, Operação e Privacidade alteram cada revisão global para `approved`,
+   registrando `approved: true`, data e evidência versionada.
 5. Somente quando decisões, revisões e designações estiverem completas,
-   `approvalGranted` pode ser `true` e o gate pode mudar para `approved`.
+   `approvalGranted` pode ser `true`, o gate pode mudar para `approved` e
+   `blockedPhases` pode ficar vazio.
+
+O validador aceita somente os dois estados integrais descritos acima: baseline
+pendente ou aprovação completa. Estado misto é inválido.
 
 Até esse fluxo ser concluído, o estado correto é
 `pending-human-approval` e a implementação das fases bloqueadas não deve usar

@@ -22,33 +22,86 @@ function invariant(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-/** @param {Record<string, any>} approval @param {string} owner */
-function validatePendingApproval(approval, owner) {
-  invariant(approval?.status === 'pending', `${owner} must remain pending`);
-  invariant(approval?.approved === false, `${owner} cannot claim approval`);
+/** @param {unknown} value */
+function isIsoDate(value) {
+  return (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u.test(value) &&
+    !Number.isNaN(Date.parse(value))
+  );
+}
+
+/** @param {unknown} value */
+function isVersionedEvidence(value) {
+  if (!value || typeof value !== 'object') return false;
+  const evidence = /** @type {Record<string, any>} */ (value);
+  return (
+    typeof evidence.reference === 'string' &&
+    evidence.reference.trim().length > 0 &&
+    typeof evidence.revision === 'string' &&
+    /^git:[0-9a-f]{40}$/u.test(evidence.revision)
+  );
+}
+
+/** @param {unknown} value */
+function isCorporateId(value) {
+  return (
+    typeof value === 'string' &&
+    /^silmer:[a-z0-9][a-z0-9._-]{2,63}$/u.test(value)
+  );
+}
+
+/**
+ * @param {Record<string, any>} approval
+ * @param {string} owner
+ * @param {'pending' | 'approved'} mode
+ */
+function validateApproval(approval, owner, mode) {
   invariant(
     Array.isArray(approval?.reviewers) && approval.reviewers.length > 0,
     `${owner} needs reviewers`,
   );
-  invariant(approval.reviewedAt === null, `${owner} cannot claim review date`);
-  invariant(approval.evidence === null, `${owner} cannot claim evidence`);
+  if (mode === 'pending') {
+    invariant(approval.status === 'pending', `${owner} must remain pending`);
+    invariant(approval.approved === false, `${owner} cannot claim approval`);
+    invariant(
+      approval.reviewedAt === null,
+      `${owner} cannot claim review date`,
+    );
+    invariant(approval.evidence === null, `${owner} cannot claim evidence`);
+    return;
+  }
+  invariant(approval.status === 'approved', `${owner} must be approved`);
+  invariant(approval.approved === true, `${owner} approval is incomplete`);
+  invariant(
+    isIsoDate(approval.reviewedAt),
+    `${owner} needs an ISO review date`,
+  );
+  invariant(
+    isVersionedEvidence(approval.evidence),
+    `${owner} needs versioned evidence`,
+  );
 }
 
 /** @param {any} document */
 export function validatePhase0Decisions(document) {
   invariant(document?.task === 'T00.6', 'Gate must trace to T00.6');
+  const pendingGate =
+    document.approvalGranted === false &&
+    document.gate?.status === 'pending-human-approval' &&
+    JSON.stringify(document.gate?.blockedPhases) ===
+      JSON.stringify(['T02', 'T03', 'T05']);
+  const approvedGate =
+    document.approvalGranted === true &&
+    document.gate?.status === 'approved' &&
+    Array.isArray(document.gate?.blockedPhases) &&
+    document.gate.blockedPhases.length === 0;
   invariant(
-    document.approvalGranted === false,
-    'Local gate cannot claim human approval',
+    pendingGate !== approvedGate && (pendingGate || approvedGate),
+    'Gate must be coherently pending or fully approved',
   );
-  invariant(
-    document.gate?.status === 'pending-human-approval',
-    'Gate must remain pending human approval',
-  );
-  invariant(
-    JSON.stringify(document.gate.blockedPhases) ===
-      JSON.stringify(['T02', 'T03', 'T05']),
-    'T02, T03 and T05 must remain blocked',
+  const mode = /** @type {'pending' | 'approved'} */ (
+    approvedGate ? 'approved' : 'pending'
   );
 
   const reviews = /** @type {Array<Record<string, any>>} */ (
@@ -63,9 +116,38 @@ export function validatePhase0Decisions(document) {
     'Gate needs Produto, Operacao and Privacidade reviews',
   );
   for (const review of reviews) {
-    invariant(review.status === 'pending', `${review.reviewer} review drifted`);
-    invariant(review.reviewedAt === null, `${review.reviewer} has fake date`);
-    invariant(review.evidence === null, `${review.reviewer} has fake evidence`);
+    if (mode === 'pending') {
+      invariant(
+        review.status === 'pending',
+        `${review.reviewer} review drifted`,
+      );
+      invariant(
+        review.approved === false,
+        `${review.reviewer} review is forged`,
+      );
+      invariant(review.reviewedAt === null, `${review.reviewer} has fake date`);
+      invariant(
+        review.evidence === null,
+        `${review.reviewer} has fake evidence`,
+      );
+    } else {
+      invariant(
+        review.status === 'approved',
+        `${review.reviewer} review is incomplete`,
+      );
+      invariant(
+        review.approved === true,
+        `${review.reviewer} review is incomplete`,
+      );
+      invariant(
+        isIsoDate(review.reviewedAt),
+        `${review.reviewer} needs an ISO review date`,
+      );
+      invariant(
+        isVersionedEvidence(review.evidence),
+        `${review.reviewer} needs versioned evidence`,
+      );
+    }
   }
 
   const decisions = /** @type {Array<Record<string, any>>} */ (
@@ -92,7 +174,7 @@ export function validatePhase0Decisions(document) {
       Array.isArray(decision.requirements) && decision.requirements.length > 0,
       `${id} needs requirement traceability`,
     );
-    validatePendingApproval(decision.approval, id);
+    validateApproval(decision.approval, id, mode);
   }
 
   const byId = new Map(decisions.map((decision) => [decision.id, decision]));
@@ -157,13 +239,35 @@ export function validatePhase0Decisions(document) {
   for (const roleId of expectedRoles) {
     const role = roles.find(({ id }) => id === roleId);
     if (!role) throw new Error(`${roleId} is missing`);
-    invariant(role.status === 'pending', `${roleId} must remain pending`);
     invariant(
-      Array.isArray(role.assignees) && role.assignees.length === 0,
-      `${roleId} cannot claim an assignee`,
+      Array.isArray(role.reviewers) && role.reviewers.length > 0,
+      `${roleId} needs reviewers`,
     );
-    invariant(role.reviewedAt === null, `${roleId} cannot claim review date`);
-    invariant(role.evidence === null, `${roleId} cannot claim evidence`);
+    if (mode === 'pending') {
+      invariant(role.status === 'pending', `${roleId} must remain pending`);
+      invariant(
+        Array.isArray(role.assignees) && role.assignees.length === 0,
+        `${roleId} cannot claim an assignee`,
+      );
+      invariant(role.reviewedAt === null, `${roleId} cannot claim review date`);
+      invariant(role.evidence === null, `${roleId} cannot claim evidence`);
+    } else {
+      invariant(role.status === 'designated', `${roleId} must be designated`);
+      invariant(
+        Array.isArray(role.assignees) &&
+          role.assignees.length > 0 &&
+          role.assignees.every(isCorporateId),
+        `${roleId} needs valid corporate IDs`,
+      );
+      invariant(
+        isIsoDate(role.reviewedAt),
+        `${roleId} needs an ISO review date`,
+      );
+      invariant(
+        isVersionedEvidence(role.evidence),
+        `${roleId} needs versioned evidence`,
+      );
+    }
   }
   const technicalAdmin = roles.find(({ id }) => id === 'ROLE-TECHNICAL-ADMIN');
   if (!technicalAdmin) throw new Error('ROLE-TECHNICAL-ADMIN is missing');
@@ -199,9 +303,7 @@ async function main() {
     ),
   );
   validatePhase0Decisions(document);
-  console.log(
-    'Phase 0 decisions valid: defaults recorded; human approvals and role designations remain pending.',
-  );
+  console.log(`Phase 0 decision gate valid: ${document.gate.status}.`);
 }
 
 if (

@@ -15,6 +15,41 @@ async function decisions() {
   );
 }
 
+const approvedAt = '2026-08-30T12:00:00.000Z';
+const revision = `git:${'a'.repeat(40)}`;
+
+/** @param {string} reference */
+function evidence(reference) {
+  return { reference, revision };
+}
+
+/** @param {Record<string, any>} baseline */
+function fullyApprove(baseline) {
+  const approved = structuredClone(baseline);
+  approved.approvalGranted = true;
+  approved.gate.status = 'approved';
+  approved.gate.blockedPhases = [];
+  for (const review of approved.gate.requiredReviews) {
+    review.status = 'approved';
+    review.approved = true;
+    review.reviewedAt = approvedAt;
+    review.evidence = evidence(`approvals/${review.reviewer.toLowerCase()}.md`);
+  }
+  for (const decision of approved.decisions) {
+    decision.approval.status = 'approved';
+    decision.approval.approved = true;
+    decision.approval.reviewedAt = approvedAt;
+    decision.approval.evidence = evidence(`approvals/${decision.id}.md`);
+  }
+  for (const role of approved.roleDesignations) {
+    role.status = 'designated';
+    role.assignees = [`silmer:${role.id.toLowerCase().replaceAll('_', '-')}`];
+    role.reviewedAt = approvedAt;
+    role.evidence = evidence(`approvals/${role.id}.md`);
+  }
+  return approved;
+}
+
 test('records every T00.6 default without claiming human approval', async () => {
   const document = await decisions();
 
@@ -35,6 +70,99 @@ test('requires versioned reviewer, evidence and date fields to remain pending', 
     assert.equal(decision.approval.reviewedAt, null);
     assert.equal(decision.approval.evidence, null);
   }
+});
+
+test('accepts only a complete transition to the approved state', async () => {
+  const approved = fullyApprove(await decisions());
+
+  assert.doesNotThrow(() => validatePhase0Decisions(approved));
+  assert.equal(approved.approvalGranted, true);
+  assert.equal(approved.gate.status, 'approved');
+  assert.deepEqual(approved.gate.blockedPhases, []);
+  const approvedDecisions = /** @type {Array<Record<string, any>>} */ (
+    approved.decisions
+  );
+  const approvedRoles = /** @type {Array<Record<string, any>>} */ (
+    approved.roleDesignations
+  );
+  assert.ok(
+    approvedDecisions.every(
+      ({ approval }) =>
+        approval.status === 'approved' && approval.approved === true,
+    ),
+  );
+  assert.ok(
+    approvedRoles.every(
+      ({ status, assignees }) =>
+        status === 'designated' && assignees.length > 0,
+    ),
+  );
+});
+
+test('rejects mixed gate, review, decision and designation states', async () => {
+  const baseline = await decisions();
+
+  const gateOnly = structuredClone(baseline);
+  gateOnly.approvalGranted = true;
+  gateOnly.gate.status = 'approved';
+  gateOnly.gate.blockedPhases = [];
+  assert.throws(
+    () => validatePhase0Decisions(gateOnly),
+    /review is incomplete|must be approved/iu,
+  );
+
+  const missingReview = fullyApprove(baseline);
+  missingReview.gate.requiredReviews[0].approved = false;
+  assert.throws(
+    () => validatePhase0Decisions(missingReview),
+    /review is incomplete/iu,
+  );
+
+  const missingDecision = fullyApprove(baseline);
+  missingDecision.decisions[0].approval.status = 'pending';
+  assert.throws(
+    () => validatePhase0Decisions(missingDecision),
+    /D00\.6-01 must be approved/iu,
+  );
+
+  const missingRole = fullyApprove(baseline);
+  missingRole.roleDesignations[0].status = 'pending';
+  assert.throws(
+    () => validatePhase0Decisions(missingRole),
+    /ROLE-TECH-LEAD must be designated/iu,
+  );
+});
+
+test('rejects forged approval evidence, dates and assignee identities', async () => {
+  const baseline = await decisions();
+
+  const badEvidence = fullyApprove(baseline);
+  badEvidence.decisions[0].approval.evidence.revision = 'main';
+  assert.throws(
+    () => validatePhase0Decisions(badEvidence),
+    /versioned evidence/iu,
+  );
+
+  const badDate = fullyApprove(baseline);
+  badDate.gate.requiredReviews[0].reviewedAt = 'yesterday';
+  assert.throws(() => validatePhase0Decisions(badDate), /ISO review date/iu);
+
+  const badAssignee = fullyApprove(baseline);
+  badAssignee.roleDesignations[0].assignees = ['Person Name'];
+  assert.throws(
+    () => validatePhase0Decisions(badAssignee),
+    /valid corporate IDs/iu,
+  );
+});
+
+test('preserves separation of duties after complete approval', async () => {
+  const approved = fullyApprove(await decisions());
+  approved.separationOfDuties.commercialAdminIsTechnicalAdmin = true;
+
+  assert.throws(
+    () => validatePhase0Decisions(approved),
+    /cannot be conflated/iu,
+  );
 });
 
 test('rejects a local edit that invents human approval', async () => {

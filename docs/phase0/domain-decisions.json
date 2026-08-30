@@ -9,18 +9,21 @@
       {
         "reviewer": "Produto",
         "status": "pending",
+        "approved": false,
         "reviewedAt": null,
         "evidence": null
       },
       {
         "reviewer": "Operacao",
         "status": "pending",
+        "approved": false,
         "reviewedAt": null,
         "evidence": null
       },
       {
         "reviewer": "Privacidade",
         "status": "pending",
+        "approved": false,
         "reviewedAt": null,
         "evidence": null
       }

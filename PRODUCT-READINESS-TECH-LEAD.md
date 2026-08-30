@@ -1,8 +1,8 @@
 # Passagem de Produto para Tech Lead
 
 **Data:** 29/08/2026  
-**Parecer:** GO condicional para iniciar especificação técnica. P0.1 a P0.5
-resolvidos; duas decisões P0 continuam abertas.
+**Parecer:** GO condicional para iniciar especificação técnica. P0.1 a P0.6
+resolvidos; uma decisão P0 continua aberta.
 
 ## O que o Tech Lead já pode especificar
 
@@ -16,6 +16,8 @@ resolvidos; duas decisões P0 continuam abertas.
 - Modelo inicial das entidades Conversa, Contato, Lead, Card, Pedido e Evento financeiro.
 - Contrato de identidade da Ficha, incluindo `FAB`, sequência, reserva e
   comportamento sob concorrência.
+- Política de retenção e exclusão por classe de dado, incluindo backups, logs,
+  operadores e atendimento aos direitos do titular.
 - Opções de backend, banco, hospedagem, runtime de IA e geração documental.
 - Riscos, spikes técnicos e plano de prova de conceito.
 
@@ -28,7 +30,7 @@ resolvidos; duas decisões P0 continuam abertas.
 | 3 | Financeiro cobre vendido ou também recebido/a receber | **Resolvido** | MVP mede vendido; recebido e saldo a receber ficam em P2 |
 | 4 | Canais do primeiro piloto além do WhatsApp | **Resolvido** | WhatsApp Business e Instagram Direct; site apenas direciona ao WhatsApp; IA não move o Kanban |
 | 5 | Significado de FAB, sequência vigente e numeração | **Resolvido** | Contrato aprovado na seção P0.5 deste documento |
-| 6 | Regras concretas de retenção e exclusão | Aberto | Dados, backups, logs e operação |
+| 6 | Regras concretas de retenção e exclusão | **Resolvido** | Contrato aprovado na seção P0.6 deste documento |
 | 7 | Permissões para revisar, editar, cancelar e reenviar Ficha | Aberto | Autorização e auditoria |
 
 ## P0.1 resolvido — contrato de passagem
@@ -247,15 +249,106 @@ Critérios da decisão:
 9. **ORD-P05-09:** toda reserva registra Pedido, número, `FAB`, autor, horário,
    origem e chave de idempotência para auditoria e reconciliação.
 
+## P0.6 resolvido — retenção, exclusão e responsáveis de privacidade
+
+O piloto adota retenção por finalidade e classe de dado. O prazo começa no
+evento que encerra a finalidade operacional correspondente, e não na criação
+do registro. Dados cujo prazo terminou são excluídos ou anonimizados, salvo
+quando uma obrigação legal ou um `legal_hold` ativo exigir a conservação do
+subconjunto mínimo necessário.
+
+Matriz aprovada:
+
+| Classe de dado | Gatilho | Prazo máximo | Destino |
+|---|---|---|---|
+| Conversa encerrada como `Sem lead` | Encerramento da conversa | 90 dias | Exclusão dos dados pessoais e do conteúdo |
+| Negócio marcado como `Perdido` | Registro da perda | 12 meses | Exclusão dos dados identificáveis; métricas somente anonimizadas |
+| Mensagens e anexos não documentais de venda fechada | Fechamento ou cancelamento | 24 meses | Exclusão do conteúdo e das cópias internas |
+| Pedido, Ficha, orçamento aprovado, eventos comerciais e comprovante PIX | Fechamento ou cancelamento | 5 anos | Exclusão ao final do prazo, salvo `legal_hold` |
+| Payload de webhook processado com sucesso | Processamento confirmado | 30 dias | Exclusão do payload bruto |
+| Payload com erro e item de reconciliação | Resolução da pendência | 90 dias | Exclusão do payload bruto e do diagnóstico pessoal |
+| Log técnico | Emissão do evento | 90 dias | Exclusão; o log não contém mensagem integral |
+| Requisição e resposta técnica do provedor de IA | Processamento da mensagem | 30 dias | Exclusão no CRM e no operador; uso para treinamento é proibido |
+| Backup | Criação do backup | 35 dias | Expiração por rotação automática |
+
+A exclusão alcança banco primário, anexos, caches, busca, índices vetoriais e
+demais cópias controladas pelo CRM. Os indicadores agregados podem permanecer
+somente quando a anonimização for irreversível e impedir a associação a uma
+pessoa. O registro de auditoria da solicitação conserva apenas protocolo,
+identificador pseudonimizado, decisão, fundamento, responsável e timestamps;
+ele nunca preserva uma cópia do conteúdo eliminado.
+
+Backups não são editados individualmente. Uma exclusão concluída no ambiente
+ativo entra em um registro de tombstones até todos os backups relacionados
+expirarem em no máximo 35 dias. Se um backup for restaurado, os tombstones são
+reaplicados antes que o ambiente volte a operar, impedindo a reintrodução de
+dados já eliminados.
+
+Um `legal_hold` bloqueia o descarte somente quando registra fundamento,
+escopo mínimo, responsável, início e data de revisão. O conteúdo preservado
+fica isolado do uso comercial, da IA e dos acessos operacionais comuns. O fim
+do impedimento retoma imediatamente a contagem ou a exclusão vencida.
+
+A **Silmer** é a controladora dos dados. Provedores de canal, infraestrutura,
+armazenamento e IA são operadores ou suboperadores e devem receber instruções
+compatíveis com esta política. O **Responsável de Privacidade** valida pedidos
+de titulares, autoriza exceções e decide o `legal_hold`; o **Administrador
+Técnico** executa e comprova exclusões. Atendimento e Vendedor não podem
+realizar exclusão irreversível. Uma pessoa deve ser formalmente designada para
+cada papel antes do piloto.
+
+O titular dispõe de canal eletrônico publicado para solicitar confirmação,
+acesso, correção, exportação, bloqueio ou exclusão. A solicitação exige
+verificação proporcional de identidade, é gratuita, recebe protocolo e tem
+meta interna de conclusão em até 15 dias corridos. Impossibilidade ou recusa
+registra a razão de fato ou de direito e informa o que foi preservado.
+
+O CRM propaga correção, bloqueio ou exclusão aos operadores quando aplicável e
+registra o resultado por destino. Cópias já entregues no WhatsApp, Instagram ou
+dispositivo da destinatária da Ficha não estão sob controle técnico do CRM;
+essa limitação aparece no aviso de privacidade e aciona procedimento
+operacional quando houver pedido do titular.
+
+Critérios da decisão:
+
+1. **PRV-P06-01:** cada classe de dado possui gatilho, prazo e destino
+   configuráveis segundo a matriz aprovada, sem prazo indefinido implícito.
+2. **PRV-P06-02:** conversa `Sem lead`, negócio `Perdido` e venda fechada
+   iniciam seus prazos pelos respectivos eventos de encerramento, perda,
+   fechamento ou cancelamento.
+3. **PRV-P06-03:** a rotina de retenção exclui dados pessoais do banco,
+   anexos, caches, busca e índices vetoriais e preserva somente métricas
+   irreversivelmente anonimizadas.
+4. **PRV-P06-04:** `legal_hold` só impede a exclusão com fundamento, escopo
+   mínimo, responsável e data de revisão auditáveis e bloqueia uso comercial e
+   processamento pela IA.
+5. **PRV-P06-05:** payloads brutos processados expiram em 30 dias; payloads com
+   erro expiram em 90 dias após a resolução e não permanecem ocultos em filas.
+6. **PRV-P06-06:** logs técnicos expiram em 90 dias e não registram conteúdo
+   integral de mensagens, anexos, comprovantes ou segredos.
+7. **PRV-P06-07:** requisições e respostas técnicas da IA expiram em até 30
+   dias e nenhum provedor pode usá-las para treinamento de modelo.
+8. **PRV-P06-08:** backups expiram em até 35 dias e uma restauração reaplica as
+   exclusões registradas antes da liberação do ambiente.
+9. **PRV-P06-09:** o canal do titular emite protocolo, verifica identidade e
+   conclui ou justifica a solicitação em até 15 dias corridos, sem custo.
+10. **PRV-P06-10:** toda solicitação registra decisão, fundamento, executor,
+    destinos envolvidos e timestamps sem reter o conteúdo eliminado.
+11. **PRV-P06-11:** correção, bloqueio ou exclusão é propagada aos operadores e
+    registra sucesso, falha ou limitação por destino para reconciliação.
+12. **PRV-P06-12:** antes do piloto existem pessoas formalmente designadas como
+    Responsável de Privacidade e Administrador Técnico, com segregação entre
+    autorização e execução da exclusão.
+
 ## Gate recomendado
 
 O Tech Lead pode começar com descoberta, alternativas e spikes reversíveis. A
 máquina de estados, o modelo de completude, o contrato de comunicação de preço,
-o limite do financeiro comercial e a identidade da Ficha já podem ser fechados
-com base no P0.1 ao P0.5. A especificação técnica completa só recebe status
-`Aprovada` quando os dois P0 restantes estiverem resolvidos e as regras de
-canal, sandbox da IA, handoff, sugestão de etapa, `FAB` e numeração estiverem
-refletidas no PRD e nos critérios de aceite.
+o limite do financeiro comercial, a identidade da Ficha e a política de
+privacidade já podem ser fechados com base no P0.1 ao P0.6. A especificação
+técnica completa só recebe status `Aprovada` quando o P0.7 estiver resolvido e
+as regras de canal, sandbox da IA, handoff, sugestão de etapa, `FAB`, numeração,
+retenção e exclusão estiverem refletidas no PRD e nos critérios de aceite.
 
 Não iniciar implementação de produção nem publicar estimativa fechada antes desse gate. Protótipos descartáveis de integração e validação da API oficial são permitidos, desde que não congelem o modelo de domínio.
 
@@ -265,8 +358,7 @@ Participantes: Product Manager, responsável operacional da Silmer, pessoa que p
 
 Agenda:
 
-1. Fechar retenção, exclusão e responsáveis de privacidade do piloto.
-2. Fechar permissões do ciclo de vida da Ficha.
+1. Fechar permissões do ciclo de vida da Ficha.
 
-Saída: P0.6–P0.7 resolvidos, PRD atualizado e autorização para o Tech Lead
-finalizar design e tarefas.
+Saída: P0.7 resolvido, PRD atualizado e autorização para o Tech Lead finalizar
+design e tarefas.

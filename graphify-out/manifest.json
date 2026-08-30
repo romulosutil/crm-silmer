@@ -2,27 +2,27 @@
   ".specs/features/crm-mvp/context.md": {
     "mtime": 1788057675.5892725,
     "ast_hash": "82935a6abdbcb035bf968591c22c3da9",
-    "semantic_hash": ""
+    "semantic_hash": "82935a6abdbcb035bf968591c22c3da9"
   },
   ".specs/features/crm-mvp/spec.md": {
     "mtime": 1788057359.0250964,
     "ast_hash": "d9ed654bf439c2254beb8e2269e1abf2",
-    "semantic_hash": ""
+    "semantic_hash": "d9ed654bf439c2254beb8e2269e1abf2"
   },
   "ABOUT.md": {
     "mtime": 1788059336.4931264,
     "ast_hash": "887228c4384de8afed0a9c26875f7ff4",
-    "semantic_hash": ""
+    "semantic_hash": "887228c4384de8afed0a9c26875f7ff4"
   },
   "ARCHITECTURE.md": {
-    "mtime": 1788059335.8309512,
-    "ast_hash": "6e28a223e0027029dc0ed6814be2002d",
-    "semantic_hash": ""
+    "mtime": 1788061838.1571133,
+    "ast_hash": "6a92ec747832a22102fd4d14f905c202",
+    "semantic_hash": "6a92ec747832a22102fd4d14f905c202"
   },
   "CRM-MVP-ESPECIFICACAO.md": {
     "mtime": 1788057669.397221,
     "ast_hash": "28eaefe4a546b7ab1c6bae53bdbdbcec",
-    "semantic_hash": ""
+    "semantic_hash": "28eaefe4a546b7ab1c6bae53bdbdbcec"
   },
   "FLUXO-QUALIFICACAO-GENERICO.md": {
     "mtime": 1788038705.0708206,
@@ -32,12 +32,12 @@
   "PRODUCT-READINESS-TECH-LEAD.md": {
     "mtime": 1788057041.7627208,
     "ast_hash": "4fcb71b26fc26b60316567e16359cfec",
-    "semantic_hash": ""
+    "semantic_hash": "4fcb71b26fc26b60316567e16359cfec"
   },
   "RULES.md": {
     "mtime": 1788057415.054828,
     "ast_hash": "d132c90096870275f160a1e6a64802b7",
-    "semantic_hash": ""
+    "semantic_hash": "d132c90096870275f160a1e6a64802b7"
   },
   "historico-datacrazy/CRM-PROCESSO-VENDAS.md": {
     "mtime": 1788015339.8941891,
@@ -52,12 +52,12 @@
   "design.md": {
     "mtime": 1788057455.1536317,
     "ast_hash": "9c3173ead774205a2a7d785afb815c83",
-    "semantic_hash": ""
+    "semantic_hash": "9c3173ead774205a2a7d785afb815c83"
   },
   "CAMPOS-FICHA-E-JORNADA-P0-1.md": {
     "mtime": 1788057454.4323528,
     "ast_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5",
-    "semantic_hash": ""
+    "semantic_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5"
   },
   "graphify-out/memory/query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend.md": {
     "mtime": 1788040493.900389,
@@ -105,18 +105,18 @@
     "semantic_hash": ""
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788059733.2462275,
-    "ast_hash": "a6f141dcd9c72d7319c43abd43f4a1ce",
-    "semantic_hash": ""
+    "mtime": 1788061907.2467916,
+    "ast_hash": "c5fa39edbb99fd9101924b1b53ed75bc",
+    "semantic_hash": "c5fa39edbb99fd9101924b1b53ed75bc"
   },
   "EASYPANEL-TOPOLOGY.md": {
-    "mtime": 1788059732.38903,
-    "ast_hash": "4b451f900798f12d1ac8d17e6f9f7bf7",
-    "semantic_hash": ""
+    "mtime": 1788061906.1365092,
+    "ast_hash": "eba8d2179d26488770ed3bf4e6a47e53",
+    "semantic_hash": "eba8d2179d26488770ed3bf4e6a47e53"
   },
   "TECHNICAL-DESIGN.md": {
-    "mtime": 1788059731.7104688,
-    "ast_hash": "f74c2a32bef3b0efeafdb9e4413125a6",
-    "semantic_hash": ""
+    "mtime": 1788061834.2355824,
+    "ast_hash": "8b386cc9bfba3af3a6e92ea82b42e35b",
+    "semantic_hash": "8b386cc9bfba3af3a6e92ea82b42e35b"
   }
 }

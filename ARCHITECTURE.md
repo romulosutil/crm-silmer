@@ -6,7 +6,9 @@
 
 ## Fronteiras funcionais
 
-- **Interface web:** Caixa de Entrada, Kanban, detalhe da conversa/lead, Ficha e visão financeira comercial.
+- **Interface web:** Caixa de Entrada, Kanban, detalhe da conversa/Negócio,
+  comercial/PIX/Ficha, relatórios, configuração e privacidade; cada superfície
+  possui estados completos e operação sem mouse como parte do DoD.
 - **Domínio do CRM:** contatos, conversas, leads, cards, etapas, tarefas, catálogo, pedidos, estados financeiros e auditoria.
 - **Runtime do Vendedor Silmer:** no MVP, lê contexto, envia mensagens e registra sugestões, sem mutar Contato, Lead, Card, etapa, campo oficial, preço ou pedido.
 - **Integração de canais:** recebe e envia eventos sem tornar o modelo interno dependente dos formatos do WhatsApp ou Instagram.
@@ -36,15 +38,19 @@
 - **Persistência:** PostgreSQL com SQL e migrações versionadas; dados oficiais
   normalizados e JSONB limitado a payloads/snapshots apropriados.
 - **Assíncrono:** inbox/outbox e jobs no PostgreSQL, com entrega at-least-once,
-  efeito idempotente e reconciliação visível. Redis não entra no MVP.
+  idempotência quando suportada pelo provedor e `outcome_unknown` reconciliável;
+  não há promessa de exactly-once de rede. Redis não entra no MVP.
 - **Autenticação:** sessão opaca em cookie seguro, CSRF, MFA obrigatório para
   `Admin` e autorização aplicada no backend.
-- **Storage:** S3-compatible externo e privado; containers são stateless.
+- **Storage:** S3-compatible externo e privado; dados, backups e tombstones usam
+  buckets e credenciais separados, com proteção de imutabilidade para o ledger;
+  containers são stateless.
 - **Documentos:** snapshot imutável + template HTML/CSS + PDF gerado no worker.
 - **IA:** adapter próprio e OpenAI API direta como baseline, sem fine-tuning,
   RAG ou vector database no MVP; DPA e retenção compatível são gates.
 - **Operação:** projetos EasyPanel `crm-silmer-dev`, `crm-silmer-hml` e
-  `crm-silmer-prod`, com somente `edge-web` público.
+  `crm-silmer-prod`, com somente `edge-web` público; a aceitação da VPS única
+  depende de recovery drill em host limpo.
 - **Deploy:** imagens imutáveis por digest, homologação antes de produção,
   migrations expand/contract, backup externo e rollback para digest anterior.
 
@@ -72,5 +78,7 @@
 - Produto/Operação confirmar os defaults destacados no TDD.
 - Privacidade aprovar os operadores de IA, storage e observabilidade.
 - Operação validar o PDF da Ficha, domínios e credenciais de cada ambiente.
+- Produto/Operação aprovar o envelope de carga que qualifica sizing e SLOs.
+- DevOps demonstrar RPO/RTO do CRM completo em uma VPS limpa.
 
 Nenhuma decisão técnica deve ser inferida do material arquivado do Datacrazy.

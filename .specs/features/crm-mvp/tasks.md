@@ -28,14 +28,22 @@ gates de verificação.
 
 - Criar projetos e serviços da topologia aprovada.
 - Aplicar redes, domínios, limites, health checks e segredos separados.
-- **Verificação:** somente `edge-web` possui domínio/porta pública.
+- Criar kit off-host de recovery com topologia, digests, DNS, migrations e
+  inventário de segredos, sem valores sensíveis em arquivo versionado.
+- **Verificação:** somente `edge-web` possui domínio/porta pública e uma segunda
+  pessoa consegue reconstruir a topologia usando o kit e mocks.
 
 ### T00.4 Fechar spikes externos
 
 - Validar WhatsApp Cloud API, assinatura, mídia, templates e status de entrega.
+- Versionar matriz por efeito externo com suporte a idempotência, consulta do
+  resultado, ponto de não retorno e estratégia para `outcome_unknown`.
 - Validar provedor de IA, DPA/retenção e schema estruturado.
 - Validar PDF da Ficha com Rose e object storage com Privacidade.
-- **Verificação:** evidências versionadas e nenhum bloqueador de integração aberto.
+- Levantar operadores, mensagens, bursts, anexos e massa esperada para aprovar
+  ou ajustar o envelope de carga da seção 13 do TDD.
+- **Verificação:** evidências e matriz versionadas, envelope aprovado e nenhum
+  bloqueador de integração aberto.
 
 ### T00.5 Definir threat model e catálogo de dados
 
@@ -47,6 +55,7 @@ gates de verificação.
 
 - Confirmar `Admin` para pagamento, Negócio 1:0..1 Pedido, ciclo de conversa,
   PDF canônico, moeda/timezone e exceção de pagamento.
+- Confirmar o envelope de carga que qualifica sizing e SLOs.
 - Designar Tech Lead, time e Administrador Técnico.
 - **Verificação:** aprovação versionada de Produto, Operação e Privacidade;
   T02, T03 e T05 ficam bloqueadas até este gate.
@@ -116,9 +125,11 @@ gates de verificação.
 ### T02.3 Implementar fila PostgreSQL e worker
 
 - Inbox/outbox, `available_at`, prioridade, lease/`locked_until`, claim com
-  lock, reclaim, retry, jitter, heartbeat, máximo de tentativas e dead letter.
-- **Verificação:** kill durante efeito externo e reinício não perdem nem
-  duplicam efeito; poison message termina em reconciliação.
+  lock, reclaim, retry, jitter, heartbeat, máximo de tentativas, dead letter e
+  estados `sent|failed|outcome_unknown`.
+- **Verificação:** kill antes, durante e depois do efeito respeita a matriz do
+  provider; estado incerto não sofre retry cego, fica reconciliável, e poison
+  message termina em reconciliação.
 
 ### T02.4 Implementar Conversa, Mensagem e Contato
 
@@ -128,7 +139,8 @@ gates de verificação.
 
 ### T02.5 Implementar reconciliação e saúde do canal
 
-- Mostrar pendência, erro, tentativa, último evento e retomada.
+- Mostrar pendência, erro, `outcome_unknown`, tentativa, identificador externo,
+  último evento e retomada condicionada à capacidade do provider.
 - **Verificação:** MSG-02 a MSG-04 e retry auditável.
 
 ### T02.6 Implementar UI da Caixa de Entrada
@@ -170,6 +182,13 @@ gates de verificação.
 - SLA operacional, atribuição, transferência e retomada.
 - **Verificação:** nenhum handoff fica sem responsável.
 
+### T03.6 Implementar detalhe acessível do Negócio
+
+- Exibir qualificação, itens, gates, histórico, tarefas, conflitos e ações de
+  avanço/retorno/perda sem depender do Kanban.
+- **Verificação:** loading/vazio/erro/409, foco após mutação, mensagens de erro
+  associadas e jornada completa por teclado em Playwright + axe-core.
+
 ## Fase 4 — Vendedor Silmer assistivo
 
 ### T04.1 Implementar compositor de contexto
@@ -189,9 +208,11 @@ gates de verificação.
 
 ### T04.4 Implementar takeover seguro
 
-- `automation_epoch`, cancelamento/revalidação e reativação humana.
-- **Verificação:** resposta em voo não é enviada depois do takeover;
-  CHN-P04-11/12 e kill switch funcionam imediatamente.
+- `automation_epoch`, cancelamento/revalidação, ponto de não retorno por adapter
+  e reativação humana.
+- **Verificação:** takeover impede novas tentativas antes do ponto de não
+  retorno; chamada já aceita termina em `sent|outcome_unknown` visível e
+  reconciliável; CHN-P04-11/12 e kill switch bloqueiam novos envios imediatamente.
 
 ### T04.5 Criar evals de segurança comercial
 
@@ -244,7 +265,16 @@ gates de verificação.
 
 - Quarentena, limites, MIME real, hash, ClamAV, download Meta com proteção SSRF,
   timeout/redirect e URLs assinadas `no-store`.
-- **Verificação:** malware, payload grande, MIME falso e URL interna são bloqueados.
+- **Verificação:** malware, payload grande, MIME falso e URL interna são
+  bloqueados; assinatura ClamAV acima de 36 horas mantém anexo em quarentena.
+
+### T05.9 Implementar UI comercial, PIX, Pedido e Ficha
+
+- Orçamento versionado, aprovação, PIX/comprovante, exceção, Pedido, revisão da
+  Ficha, envio, falha e reconciliação com ações autorizadas.
+- **Verificação:** todos os estados e conflitos são operáveis por teclado, foco
+  retorna ao contexto após comandos, status assíncrono é anunciado e testes
+  Playwright + axe-core cobrem caminho feliz e falhas recuperáveis.
 
 ## Fase 6 — Privacidade, relatórios e operação
 
@@ -260,8 +290,11 @@ gates de verificação.
 
 ### T06.3 Implementar tombstones de restore
 
-- Ledger externo pseudonimizado e reaplicação antes do ready.
-- **Verificação:** restore antigo não reintroduz titular excluído.
+- Ledger externo pseudonimizado, bucket e credenciais dedicados, proteção contra
+  overwrite/delete e reaplicação antes do ready.
+- **Verificação:** runtime de dados não acessa tombstones; writer não altera nem
+  exclui entrada; restore read-only reaplica o ledger e backup antigo não
+  reintroduz titular excluído.
 
 ### T06.4 Implementar relatórios comerciais
 
@@ -273,24 +306,38 @@ gates de verificação.
 - Métricas, logs redigidos, traces, custo IA, jobs, canal e backup.
 - **Verificação:** cada alerta mínimo é disparado em teste controlado.
 
+### T06.6 Implementar UI de relatórios, configuração e privacidade
+
+- Relatórios comerciais, saúde operacional, configuração permitida, solicitações
+  de titular, legal hold e evidências conforme capacidade do ator.
+- **Verificação:** autorização negativa API/UI, tabelas e filtros acessíveis,
+  estados loading/vazio/erro, confirmação destrutiva e operação completa por
+  teclado em Playwright + axe-core.
+
 ## Fase 7 — Hardening, UAT e piloto
 
 ### T07.1 Executar testes de carga e concorrência
 
-- Webhook, SSE, jobs, contador, PDF e consultas do Kanban.
-- **Verificação:** SLOs iniciais do TDD atendidos.
+- Webhook, SSE, jobs, contador, PDF e consultas do Kanban usando o envelope
+  aprovado da seção 13 do TDD.
+- **Verificação:** relatório registra dataset, duração, taxas, concorrência,
+  percentis e erros; SLOs só são considerados atendidos dentro desse envelope.
 
 ### T07.2 Executar auditoria de segurança e acessibilidade
 
 - OWASP, secrets, SBOM/scan de imagem, headers, uploads, teclado, foco, ARIA e
   contraste.
-- **Verificação:** zero finding crítico/alto aberto.
+- **Verificação:** zero finding crítico/alto aberto e matriz de superfícies
+  comprova Caixa de Entrada, Kanban, detalhe, comercial/Ficha e
+  relatórios/configuração/privacidade sem mouse.
 
 ### T07.3 Executar recovery drill
 
-- Restore em banco temporário isolado, sem UI/worker/credenciais externas,
-  tombstones, mocks de saída e rollback de digest.
-- **Verificação:** RPO até 1 h e RTO até 4 h demonstrados sem copiar produção para HML.
+- Executar restore mensal do banco isolado e drill de perda total em VPS limpa,
+  usando kit off-host, escrow de segredos, tombstones, digests, recuperação de
+  versão de objeto, troca de DNS de drill e adapters mock.
+- **Verificação:** RPO até 1 h e RTO até 4 h do CRM completo demonstrados no host
+  limpo, sem reutilizar EasyPanel de produção nem copiar produção para HML.
 
 ### T07.4 Executar UAT operacional
 
@@ -329,5 +376,8 @@ e não deve ser deixada apenas para Fase 6.
 - Logs sem PII/conteúdo proibido.
 - Observabilidade e runbook atualizados.
 - Acessibilidade por teclado validada.
+- Estados loading/vazio/erro/conflito e foco pós-mudança cobertos em cada superfície UI.
+- Efeito externo incerto termina em `outcome_unknown` visível, nunca em retry cego.
+- Teste de performance registra e respeita o envelope de carga aprovado.
 - Estado de domínio não exposto em `window`.
 - Commit atômico, push e `graphify update .` concluídos.

@@ -1,6 +1,50 @@
 {
   "communities": {
     "0": [
+      "technical_design_10_confiabilidade_e_processamento_assíncrono",
+      "technical_design_11_vendedor_silmer_e_ia",
+      "technical_design_12_segurança_e_lgpd",
+      "technical_design_13_performance_capacidade_e_slos_iniciais",
+      "technical_design_14_observabilidade",
+      "technical_design_15_estratégia_de_testes",
+      "technical_design_16_deploy_e_rollback",
+      "technical_design_17_riscos_e_mitigação",
+      "technical_design_18_alternativas_consideradas",
+      "technical_design_19_plano_de_implementação",
+      "technical_design_1_resumo_executivo",
+      "technical_design_20_questões_e_aprovações_pendentes",
+      "technical_design_21_referências_externas_verificadas_em_30_08_2026",
+      "technical_design_2_contexto_e_motivação",
+      "technical_design_3_objetivos_e_não_objetivos",
+      "technical_design_4_decisões_técnicas",
+      "technical_design_5_arquitetura_de_runtime",
+      "technical_design_6_fronteiras_do_monólito",
+      "technical_design_7_modelo_de_dados_essencial",
+      "technical_design_8_máquinas_de_estado",
+      "technical_design_9_contratos_centrais_da_api",
+      "technical_design_autenticação_e_autorização",
+      "technical_design_comando_e_outbox",
+      "technical_design_corrida_ia_versus_tomada_humana",
+      "technical_design_critérios_de_aprovação_do_tdd",
+      "technical_design_dados_e_anexos",
+      "technical_design_defaults_de_domínio_adotados",
+      "technical_design_em_escopo_no_mvp",
+      "technical_design_estado_do_pagamento",
+      "technical_design_etapa_do_negócio",
+      "technical_design_ficha",
+      "technical_design_fora_de_escopo",
+      "technical_design_impacto_de_não_resolver",
+      "technical_design_instagram_e_handoff_de_identidade",
+      "technical_design_numeração_de_pedido",
+      "technical_design_problemas_resolvidos",
+      "technical_design_processos_implantáveis",
+      "technical_design_regra_de_modelagem_do_funil",
+      "technical_design_retenção",
+      "technical_design_tdd_crm_silmer_mvp",
+      "technical_design_webhook_inbound"
+    ],
+    "1": [
+      "design",
       "design_10_interação_e_movimento",
       "design_11_acessibilidade",
       "design_12_linguagem_e_conteúdo",
@@ -15,10 +59,13 @@
       "design_6_espaçamento_forma_e_elevação",
       "design_7_estrutura_da_aplicação",
       "design_8_biblioteca_de_componentes",
+      "design_9_padrões_por_superfície_do_crm",
       "design_adaptações_intencionais",
       "design_aplicação_do_tema",
       "design_app_shell",
+      "design_caixa_de_entrada",
       "design_composição_de_domínio",
+      "design_conversa_e_atuação_do_vendedor_silmer",
       "design_cores_semânticas",
       "design_design_do_crm_silmer",
       "design_divulgação_progressiva",
@@ -26,14 +73,104 @@
       "design_elevação",
       "design_escala_de_espaçamento",
       "design_estados_explícitos",
+      "design_ficha_de_pedido",
+      "design_financeiro_comercial",
       "design_hierarquia_previsível",
+      "design_kanban_comercial",
       "design_paleta_base",
       "design_primitivos_obrigatórios",
       "design_raios",
       "design_responsividade",
       "design_uma_ação_principal_por_região"
     ],
-    "1": [
+    "2": [
+      "specs_features_crm_mvp_tasks_crm_silmer_mvp_plano_de_implementação",
+      "specs_features_crm_mvp_tasks_definition_of_done_global",
+      "specs_features_crm_mvp_tasks_dependências_e_caminho_crítico",
+      "specs_features_crm_mvp_tasks_fase_4_vendedor_silmer_assistivo",
+      "specs_features_crm_mvp_tasks_fase_5_orçamento_pix_pedido_e_ficha",
+      "specs_features_crm_mvp_tasks_fase_6_privacidade_relatórios_e_operação",
+      "specs_features_crm_mvp_tasks_fase_7_hardening_uat_e_piloto",
+      "specs_features_crm_mvp_tasks_t04_1_implementar_compositor_de_contexto",
+      "specs_features_crm_mvp_tasks_t04_2_implementar_adapter_aiprovider",
+      "specs_features_crm_mvp_tasks_t04_3_implementar_sugestões_separadas",
+      "specs_features_crm_mvp_tasks_t04_4_implementar_takeover_seguro",
+      "specs_features_crm_mvp_tasks_t04_5_criar_evals_de_segurança_comercial",
+      "specs_features_crm_mvp_tasks_t05_1_implementar_orçamento_versionado",
+      "specs_features_crm_mvp_tasks_t05_2_implementar_ledger_de_vendido",
+      "specs_features_crm_mvp_tasks_t05_3_implementar_subfluxo_pix",
+      "specs_features_crm_mvp_tasks_t05_4_implementar_número_e_pedido",
+      "specs_features_crm_mvp_tasks_t05_5_implementar_ciclo_da_ficha",
+      "specs_features_crm_mvp_tasks_t05_6_implementar_pdf_íntegro_e_reproduzível",
+      "specs_features_crm_mvp_tasks_t05_7_implementar_envio_e_onboarding",
+      "specs_features_crm_mvp_tasks_t05_8_implementar_segurança_de_anexos",
+      "specs_features_crm_mvp_tasks_t05_9_implementar_ui_comercial_pix_pedido_e_ficha",
+      "specs_features_crm_mvp_tasks_t06_1_implementar_retenção_por_classe",
+      "specs_features_crm_mvp_tasks_t06_2_implementar_legal_hold_e_solicitações",
+      "specs_features_crm_mvp_tasks_t06_3_implementar_tombstones_de_restore",
+      "specs_features_crm_mvp_tasks_t06_4_implementar_relatórios_comerciais",
+      "specs_features_crm_mvp_tasks_t06_5_implementar_observabilidade_e_alertas",
+      "specs_features_crm_mvp_tasks_t06_6_implementar_ui_de_relatórios_configuração_e_privacidade",
+      "specs_features_crm_mvp_tasks_t07_1_executar_testes_de_carga_e_concorrência",
+      "specs_features_crm_mvp_tasks_t07_2_executar_auditoria_de_segurança_e_acessibilidade",
+      "specs_features_crm_mvp_tasks_t07_3_executar_recovery_drill",
+      "specs_features_crm_mvp_tasks_t07_4_executar_uat_operacional",
+      "specs_features_crm_mvp_tasks_t07_5_fazer_go_live_controlado"
+    ],
+    "3": [
+      "historico_datacrazy_crm_processo_vendas",
+      "historico_datacrazy_crm_processo_vendas_1_visão_geral_do_fluxo",
+      "historico_datacrazy_crm_processo_vendas_2_card_rápido_de_briefing",
+      "historico_datacrazy_crm_processo_vendas_3_roteiro_completo_de_qualificação_os_13_campos",
+      "historico_datacrazy_crm_processo_vendas_4_tags_e_tipificação",
+      "historico_datacrazy_crm_processo_vendas_5_pipeline_vendas_estamparia_as_5_etapas",
+      "historico_datacrazy_crm_processo_vendas_6_transferência_da_ia_pro_vendedor_humano",
+      "historico_datacrazy_crm_processo_vendas_7_o_que_a_ia_e_o_vendedor_nunca_afirmam",
+      "historico_datacrazy_crm_processo_vendas_8_pendências_que_travam_o_processo_hoje",
+      "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualificação_e_venda_silmer",
+      "historico_datacrazy_datacrazy_setup",
+      "historico_datacrazy_datacrazy_setup_a_validar_no_primeiro_teste_real",
+      "historico_datacrazy_datacrazy_setup_ajuste_necessário_no_prompt_do_agente",
+      "historico_datacrazy_datacrazy_setup_alternativas_sem_o_custo_da_crazy_api",
+      "historico_datacrazy_datacrazy_setup_arquitetura_necessária",
+      "historico_datacrazy_datacrazy_setup_atenção_definir_qual_número_vai_hospedar_o_agente",
+      "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta",
+      "historico_datacrazy_datacrazy_setup_cuidados_com_a_crazy_api_whatsapp_não_oficial",
+      "historico_datacrazy_datacrazy_setup_esforço_estimado",
+      "historico_datacrazy_datacrazy_setup_o_que_a_conexão_universal_pede",
+      "historico_datacrazy_datacrazy_setup_passo_a_passo_conectar_a_crazy_api_quando_o_cliente_aprovar",
+      "historico_datacrazy_datacrazy_setup_passos",
+      "historico_datacrazy_datacrazy_setup_pendências_de_conteúdo_a_silmer_precisa_fornecer",
+      "historico_datacrazy_datacrazy_setup_ponto_de_atenção_do_fluxo_no_site",
+      "historico_datacrazy_datacrazy_setup_próximos_passos_em_ordem"
+    ],
+    "4": [
+      "campos_ficha_e_jornada_p0_1",
+      "campos_ficha_e_jornada_p0_1_1_leitura_técnica_do_arquivo",
+      "campos_ficha_e_jornada_p0_1_2_1_identificação_do_pedido",
+      "campos_ficha_e_jornada_p0_1_2_2_itens_partes_da_peça_e_grade",
+      "campos_ficha_e_jornada_p0_1_2_3_observações_do_pedido",
+      "campos_ficha_e_jornada_p0_1_2_4_campos_posteriores_de_produção",
+      "campos_ficha_e_jornada_p0_1_2_inventário_completo_dos_campos_da_planilha",
+      "campos_ficha_e_jornada_p0_1_3_campos_necessários_no_crm_que_não_existem_na_planilha",
+      "campos_ficha_e_jornada_p0_1_4_jornada_definitiva_e_critérios_de_passagem",
+      "campos_ficha_e_jornada_p0_1_5_1_backlog_acolhimento_e_conversão",
+      "campos_ficha_e_jornada_p0_1_5_2_produto",
+      "campos_ficha_e_jornada_p0_1_5_3_especificação",
+      "campos_ficha_e_jornada_p0_1_5_4_estampa",
+      "campos_ficha_e_jornada_p0_1_5_5_logística",
+      "campos_ficha_e_jornada_p0_1_5_6_fechamento",
+      "campos_ficha_e_jornada_p0_1_5_roteiro_conversacional_por_etapa",
+      "campos_ficha_e_jornada_p0_1_6_jornada_inicial_de_pagamento_por_pix",
+      "campos_ficha_e_jornada_p0_1_7_boas_vindas_ao_cliente_após_confirmação",
+      "campos_ficha_e_jornada_p0_1_8_critérios_de_aceite_do_p0_1",
+      "campos_ficha_e_jornada_p0_1_9_decisão_de_fechamento",
+      "campos_ficha_e_jornada_p0_1_campos_da_ficha_e_jornada_conversacional_p0_1",
+      "campos_ficha_e_jornada_p0_1_regras_transversais_da_máquina_de_estados",
+      "campos_ficha_e_jornada_p0_1_vocabulário_de_preenchimento",
+      "product_readiness_tech_lead"
+    ],
+    "5": [
       "crm_mvp_especificacao_10_jornada_comercial_aprovada",
       "crm_mvp_especificacao_11_geração_e_envio_da_ficha",
       "crm_mvp_especificacao_12_financeiro_comercial_do_mvp",
@@ -58,68 +195,54 @@
       "crm_mvp_especificacao_vendedor",
       "crm_mvp_especificacao_vendedor_silmer"
     ],
-    "2": [
-      "campos_ficha_e_jornada_p0_1_1_leitura_técnica_do_arquivo",
-      "campos_ficha_e_jornada_p0_1_2_1_identificação_do_pedido",
-      "campos_ficha_e_jornada_p0_1_2_2_itens_partes_da_peça_e_grade",
-      "campos_ficha_e_jornada_p0_1_2_3_observações_do_pedido",
-      "campos_ficha_e_jornada_p0_1_2_4_campos_posteriores_de_produção",
-      "campos_ficha_e_jornada_p0_1_2_inventário_completo_dos_campos_da_planilha",
-      "campos_ficha_e_jornada_p0_1_3_campos_necessários_no_crm_que_não_existem_na_planilha",
-      "campos_ficha_e_jornada_p0_1_4_jornada_definitiva_e_critérios_de_passagem",
-      "campos_ficha_e_jornada_p0_1_5_1_backlog_acolhimento_e_conversão",
-      "campos_ficha_e_jornada_p0_1_5_2_produto",
-      "campos_ficha_e_jornada_p0_1_5_3_especificação",
-      "campos_ficha_e_jornada_p0_1_5_4_estampa",
-      "campos_ficha_e_jornada_p0_1_5_5_logística",
-      "campos_ficha_e_jornada_p0_1_5_6_fechamento",
-      "campos_ficha_e_jornada_p0_1_5_roteiro_conversacional_por_etapa",
-      "campos_ficha_e_jornada_p0_1_6_jornada_inicial_de_pagamento_por_pix",
-      "campos_ficha_e_jornada_p0_1_7_boas_vindas_ao_cliente_após_confirmação",
-      "campos_ficha_e_jornada_p0_1_8_critérios_de_aceite_do_p0_1",
-      "campos_ficha_e_jornada_p0_1_9_decisão_de_fechamento",
-      "campos_ficha_e_jornada_p0_1_campos_da_ficha_e_jornada_conversacional_p0_1",
-      "campos_ficha_e_jornada_p0_1_regras_transversais_da_máquina_de_estados",
-      "campos_ficha_e_jornada_p0_1_vocabulário_de_preenchimento"
+    "6": [
+      "easypanel_topology_10_backups_e_disaster_recovery",
+      "easypanel_topology_11_observabilidade_e_alertas",
+      "easypanel_topology_12_gates_antes_do_piloto",
+      "easypanel_topology_13_riscos_aceitos_e_evolução",
+      "easypanel_topology_14_referências_verificadas",
+      "easypanel_topology_1_decisão",
+      "easypanel_topology_2_serviços_por_projeto",
+      "easypanel_topology_3_rede_e_domínios",
+      "easypanel_topology_4_sizing_inicial",
+      "easypanel_topology_5_object_storage",
+      "easypanel_topology_6_variáveis_e_segredos",
+      "easypanel_topology_7_health_checks",
+      "easypanel_topology_8_ci_cd",
+      "easypanel_topology_9_migração_e_rollback",
+      "easypanel_topology_drill_mensal_do_postgresql",
+      "easypanel_topology_drill_trimestral_de_perda_total_da_vps",
+      "easypanel_topology_firewall_hostinger",
+      "easypanel_topology_hardening_dos_containers",
+      "easypanel_topology_merge_e_promoção",
+      "easypanel_topology_pull_request",
+      "easypanel_topology_restore_de_desastre_real",
+      "easypanel_topology_topologia_easypanel_crm_silmer"
     ],
-    "3": [
+    "7": [
       "about",
       "about_sobre_o_crm_silmer",
       "architecture",
-      "architecture_arquitetura_estado_e_restrições",
+      "architecture_aprovações_ainda_necessárias",
+      "architecture_arquitetura_decisões_do_mvp",
       "architecture_decisões_confirmadas",
-      "architecture_decisões_para_o_tech_lead",
+      "architecture_decisões_de_modelagem",
+      "architecture_decisões_técnicas_propostas_como_baseline",
       "architecture_fronteiras_funcionais",
-      "campos_ficha_e_jornada_p0_1",
+      "architecture_projetos_e_documentos_executáveis",
+      "caixa_de_entrada",
       "crm_mvp_especificacao",
-      "design",
-      "ficha_exemplo",
-      "historico_datacrazy",
-      "jornada_pix",
-      "rules",
-      "rules_regras_de_produto",
-      "rules_regras_do_crm_silmer",
-      "rules_regras_técnicas_já_impostas"
+      "easypanel_topology",
+      "ficha_pedido",
+      "kanban_comercial",
+      "romulo_sutil_correa",
+      "rose_destinataria",
+      "specs_features_crm_mvp_tasks",
+      "technical_design",
+      "vendedor_silmer"
     ],
-    "4": [
-      "historico_datacrazy_datacrazy_setup",
-      "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer",
-      "historico_datacrazy_datacrazy_setup_alternativas_sem_o_custo_da_crazy_api",
-      "historico_datacrazy_datacrazy_setup_atenção_definir_qual_número_vai_hospedar_o_agente",
-      "historico_datacrazy_datacrazy_setup_automação",
-      "historico_datacrazy_datacrazy_setup_base_de_conhecimento",
-      "historico_datacrazy_datacrazy_setup_bloqueadores_não_resolvidos",
-      "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos",
-      "historico_datacrazy_datacrazy_setup_cuidados_com_a_crazy_api_whatsapp_não_oficial",
-      "historico_datacrazy_datacrazy_setup_datacrazy_automação_vendedor_silmer_sdr_whatsapp_vendedor_humano",
-      "historico_datacrazy_datacrazy_setup_fluxo_desenhado",
-      "historico_datacrazy_datacrazy_setup_o_que_já_está_configurado",
-      "historico_datacrazy_datacrazy_setup_passo_a_passo_conectar_a_crazy_api_quando_o_cliente_aprovar",
-      "historico_datacrazy_datacrazy_setup_passos",
-      "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia",
-      "historico_datacrazy_datacrazy_setup_tags_4_novas"
-    ],
-    "5": [
+    "8": [
+      "specs_features_crm_mvp_spec",
       "specs_features_crm_mvp_spec_critério_de_passagem",
       "specs_features_crm_mvp_spec_crm_silmer_mvp_requisitos_rastreáveis",
       "specs_features_crm_mvp_spec_fora_do_escopo",
@@ -136,167 +259,203 @@
       "specs_features_crm_mvp_spec_problema",
       "specs_features_crm_mvp_spec_rastreabilidade"
     ],
-    "6": [
-      "fluxo_qualificacao_generico",
-      "fluxo_qualificacao_generico_fluxo_de_qualificação_referência_substituída",
-      "graphify_out_converted_ficha_exemplo_fa5307e0",
-      "graphify_out_converted_ficha_exemplo_fa5307e0_sheet_os_silmer_2013",
-      "historico_datacrazy_crm_processo_vendas",
-      "historico_datacrazy_crm_processo_vendas_1_visão_geral_do_fluxo",
-      "historico_datacrazy_crm_processo_vendas_2_card_rápido_de_briefing",
-      "historico_datacrazy_crm_processo_vendas_3_roteiro_completo_de_qualificação_os_13_campos",
-      "historico_datacrazy_crm_processo_vendas_4_tags_e_tipificação",
-      "historico_datacrazy_crm_processo_vendas_5_pipeline_vendas_estamparia_as_5_etapas",
-      "historico_datacrazy_crm_processo_vendas_6_transferência_da_ia_pro_vendedor_humano",
-      "historico_datacrazy_crm_processo_vendas_7_o_que_a_ia_e_o_vendedor_nunca_afirmam",
-      "historico_datacrazy_crm_processo_vendas_8_pendências_que_travam_o_processo_hoje",
-      "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualificação_e_venda_silmer"
+    "9": [
+      "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer",
+      "historico_datacrazy_datacrazy_setup_automação",
+      "historico_datacrazy_datacrazy_setup_base_de_conhecimento",
+      "historico_datacrazy_datacrazy_setup_bloqueadores_não_resolvidos",
+      "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos",
+      "historico_datacrazy_datacrazy_setup_datacrazy_automação_vendedor_silmer_sdr_whatsapp_vendedor_humano",
+      "historico_datacrazy_datacrazy_setup_fluxo_desenhado",
+      "historico_datacrazy_datacrazy_setup_o_que_já_está_configurado",
+      "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia",
+      "historico_datacrazy_datacrazy_setup_tags_4_novas"
     ],
-    "7": [
-      "product_readiness_tech_lead",
-      "product_readiness_tech_lead_document",
-      "product_readiness_tech_lead_gate_recomendado",
-      "product_readiness_tech_lead_o_que_impede_aprovação_final_e_estimativa_fechada",
-      "product_readiness_tech_lead_o_que_o_tech_lead_já_pode_especificar",
-      "product_readiness_tech_lead_p0_1_resolvido_contrato_de_passagem",
-      "product_readiness_tech_lead_p0_2_resolvido_autoridade_sobre_preço",
-      "product_readiness_tech_lead_p0_3_resolvido_limite_financeiro_comercial",
-      "product_readiness_tech_lead_p0_4_resolvido_canais_e_limite_operacional_da_ia",
-      "product_readiness_tech_lead_p0_5_resolvido_identidade_fab_e_numeração_da_ficha",
-      "product_readiness_tech_lead_workshop_de_fechamento"
-    ],
-    "8": [
+    "10": [
       "specs_features_crm_mvp_context",
       "specs_features_crm_mvp_context_backlog_e_lead",
       "specs_features_crm_mvp_context_crm_silmer_mvp_contexto_de_produto",
       "specs_features_crm_mvp_context_decisões_confirmadas",
       "specs_features_crm_mvp_context_discrição_do_tech_lead",
-      "specs_features_crm_mvp_context_ficha_financeiro_e_privacidade",
+      "specs_features_crm_mvp_context_ficha_financeiro_privacidade_e_acesso",
       "specs_features_crm_mvp_context_ideias_adiadas",
       "specs_features_crm_mvp_context_integrações",
       "specs_features_crm_mvp_context_limite_da_feature",
       "specs_features_crm_mvp_context_vendedor_silmer"
     ],
-    "9": [
-      "caixa_de_entrada",
-      "kanban_comercial",
-      "product_readiness_tech_lead_p0_2",
-      "product_readiness_tech_lead_p0_4",
-      "product_readiness_tech_lead_p0_7",
-      "role_admin",
-      "specs_features_crm_mvp_spec",
-      "subfluxo_pix",
-      "vendedor_silmer"
-    ],
-    "10": [
-      "historico_datacrazy_datacrazy_setup_a_validar_no_primeiro_teste_real",
-      "historico_datacrazy_datacrazy_setup_ajuste_necessário_no_prompt_do_agente",
-      "historico_datacrazy_datacrazy_setup_arquitetura_necessária",
-      "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta",
-      "historico_datacrazy_datacrazy_setup_esforço_estimado",
-      "historico_datacrazy_datacrazy_setup_o_que_a_conexão_universal_pede",
-      "historico_datacrazy_datacrazy_setup_pendências_de_conteúdo_a_silmer_precisa_fornecer",
-      "historico_datacrazy_datacrazy_setup_ponto_de_atenção_do_fluxo_no_site",
-      "historico_datacrazy_datacrazy_setup_próximos_passos_em_ordem"
-    ],
     "11": [
-      "design_9_padrões_por_superfície_do_crm",
-      "design_caixa_de_entrada",
-      "design_conversa_e_atuação_do_vendedor_silmer",
-      "design_ficha_de_pedido",
-      "design_financeiro_comercial",
-      "design_kanban_comercial"
+      "specs_features_crm_mvp_tasks_fase_0_fundação_e_riscos_técnicos",
+      "specs_features_crm_mvp_tasks_t00_1_estruturar_o_monorepo_javascript_esm",
+      "specs_features_crm_mvp_tasks_t00_2_criar_ci_e_imagens_imutáveis",
+      "specs_features_crm_mvp_tasks_t00_3_provisionar_easypanel_dev_hml_prod",
+      "specs_features_crm_mvp_tasks_t00_4_fechar_spikes_externos",
+      "specs_features_crm_mvp_tasks_t00_5_definir_threat_model_e_catálogo_de_dados",
+      "specs_features_crm_mvp_tasks_t00_6_aprovar_defaults_de_domínio_e_papéis",
+      "specs_features_crm_mvp_tasks_t00_7_implantar_telemetria_e_hardening_mínimos"
     ],
     "12": [
+      "specs_features_crm_mvp_tasks_fase_2_caixa_de_entrada_canais_e_confiabilidade",
+      "specs_features_crm_mvp_tasks_t02_1_implementar_adapter_canônico_de_canais",
+      "specs_features_crm_mvp_tasks_t02_2_implementar_webhook_whatsapp",
+      "specs_features_crm_mvp_tasks_t02_3_implementar_fila_postgresql_e_worker",
+      "specs_features_crm_mvp_tasks_t02_4_implementar_conversa_mensagem_e_contato",
+      "specs_features_crm_mvp_tasks_t02_5_implementar_reconciliação_e_saúde_do_canal",
+      "specs_features_crm_mvp_tasks_t02_6_implementar_ui_da_caixa_de_entrada",
+      "specs_features_crm_mvp_tasks_t02_7_implementar_instagram_direct_feature_gated"
+    ],
+    "13": [
+      "specs_features_crm_mvp_tasks_fase_1_identidade_acesso_e_infraestrutura_de_domínio",
+      "specs_features_crm_mvp_tasks_t01_1_implementar_migrations_e_acesso_postgresql",
+      "specs_features_crm_mvp_tasks_t01_2_implementar_sessão_e_usuários_por_convite",
+      "specs_features_crm_mvp_tasks_t01_3_implementar_funções_e_capacidades_ortogonais",
+      "specs_features_crm_mvp_tasks_t01_4_criar_audit_trail_e_idempotency_records",
+      "specs_features_crm_mvp_tasks_t01_5_criar_configuração_versionada",
+      "specs_features_crm_mvp_tasks_t01_6_implementar_catálogo_versionado"
+    ],
+    "14": [
+      "specs_features_crm_mvp_tasks_fase_3_negócio_kanban_e_qualificação",
+      "specs_features_crm_mvp_tasks_t03_1_implementar_conversão_idempotente_em_negócio",
+      "specs_features_crm_mvp_tasks_t03_2_implementar_máquina_de_estados_do_deal",
+      "specs_features_crm_mvp_tasks_t03_3_implementar_campos_e_itens_da_ficha",
+      "specs_features_crm_mvp_tasks_t03_4_implementar_kanban_acessível",
+      "specs_features_crm_mvp_tasks_t03_5_implementar_tarefas_responsável_e_handoff_humano",
+      "specs_features_crm_mvp_tasks_t03_6_implementar_detalhe_acessível_do_negócio"
+    ],
+    "15": [
       "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend",
       "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend_answer",
       "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend_q_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vendedor_silmer_sobre_preco",
       "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend_source_nodes"
     ],
-    "13": [
+    "16": [
       "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines",
       "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines_answer",
       "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines_q_quais_decisoes_resolvem_o_p0_4_do_product_readiness_tech_lead",
       "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines_source_nodes"
     ],
-    "14": [
+    "17": [
       "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do",
       "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_answer",
       "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_q_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_vendedor_silmer",
       "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_source_nodes"
     ],
-    "15": [
+    "18": [
       "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines",
       "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines_answer",
       "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines_q_quais_decisões_resolvem_o_p0_7_do_product_readiness_tech_lead",
       "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines_source_nodes"
     ],
-    "16": [
+    "19": [
       "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines",
       "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines_answer",
       "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines_q_quais_decisões_resolvem_o_p0_5_do_product_readiness_tech_lead",
       "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines_source_nodes"
     ],
-    "17": [
+    "20": [
       "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu",
       "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu_answer",
       "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu_q_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclusao",
       "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu_source_nodes"
     ],
-    "18": [
+    "21": [
       "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor",
       "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor_answer",
       "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor_q_como_o_p0_5_define_fab_sequência_reserva_concorrência_e_reutilização_do_número_da_ficha",
       "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor_source_nodes"
     ],
-    "19": [
+    "22": [
       "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec",
       "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec_answer",
       "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec_q_como_foi_resolvido_o_p0_6_do_product_readiness_tech_lead",
       "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec_source_nodes"
     ],
-    "20": [
-      "administrador_tecnico",
-      "product_readiness_tech_lead_p0_6",
-      "responsavel_privacidade"
-    ],
-    "21": [
-      "product_readiness_tech_lead_p0_1"
-    ],
-    "22": [
-      "product_readiness_tech_lead_p0_3"
-    ],
     "23": [
-      "product_readiness_tech_lead_p0_5"
+      "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor",
+      "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor_answer",
+      "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor_q_como_o_p0_7_modela_admin_atendimento_e_vendedor",
+      "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor_source_nodes"
+    ],
+    "24": [
+      "rules",
+      "rules_regras_de_produto",
+      "rules_regras_do_crm_silmer",
+      "rules_regras_técnicas_já_impostas"
+    ],
+    "25": [
+      "fluxo_qualificacao_generico",
+      "fluxo_qualificacao_generico_fluxo_de_qualificação_referência_substituída"
+    ],
+    "26": [
+      "product_readiness_tech_lead_gate_recomendado"
+    ],
+    "27": [
+      "product_readiness_tech_lead_o_que_impede_aprovação_final_e_estimativa_fechada"
+    ],
+    "28": [
+      "product_readiness_tech_lead_o_que_o_tech_lead_já_pode_especificar"
+    ],
+    "29": [
+      "product_readiness_tech_lead_p0_1_resolvido_contrato_de_passagem"
+    ],
+    "30": [
+      "product_readiness_tech_lead_p0_2_resolvido_autoridade_sobre_preço"
+    ],
+    "31": [
+      "product_readiness_tech_lead_p0_3_resolvido_limite_financeiro_comercial"
+    ],
+    "32": [
+      "product_readiness_tech_lead_p0_4_resolvido_canais_e_limite_operacional_da_ia"
+    ],
+    "33": [
+      "product_readiness_tech_lead_p0_5_resolvido_identidade_fab_e_numeração_da_ficha"
+    ],
+    "34": [
+      "product_readiness_tech_lead_workshop_de_fechamento"
     ]
   },
   "cohesion": {
-    "0": 0.06451612903225806,
-    "1": 0.08695652173913043,
-    "2": 0.09090909090909091,
-    "3": 0.125,
-    "4": 0.125,
-    "5": 0.13333333333333333,
-    "6": 0.14285714285714285,
-    "7": 0.18181818181818182,
-    "8": 0.2,
-    "9": 0.25,
-    "10": 0.2222222222222222,
-    "11": 0.3333333333333333,
-    "12": 0.5,
-    "13": 0.5,
-    "14": 0.5,
+    "0": 0.04878048780487805,
+    "1": 0.05263157894736842,
+    "2": 0.0625,
+    "3": 0.08,
+    "4": 0.08333333333333333,
+    "5": 0.08695652173913043,
+    "6": 0.09090909090909091,
+    "7": 0.12105263157894737,
+    "8": 0.125,
+    "9": 0.2,
+    "10": 0.2,
+    "11": 0.25,
+    "12": 0.25,
+    "13": 0.2857142857142857,
+    "14": 0.2857142857142857,
     "15": 0.5,
     "16": 0.5,
     "17": 0.5,
     "18": 0.5,
     "19": 0.5,
-    "20": 0.6666666666666666,
-    "21": 1.0,
-    "22": 1.0,
-    "23": 1.0
+    "20": 0.5,
+    "21": 0.5,
+    "22": 0.5,
+    "23": 0.5,
+    "24": 0.5,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0,
+    "30": 1.0,
+    "31": 1.0,
+    "32": 1.0,
+    "33": 1.0,
+    "34": 1.0
   },
   "gods": [
+    {
+      "id": "technical_design_tdd_crm_silmer_mvp",
+      "label": "TDD — CRM Silmer MVP",
+      "degree": 22
+    },
     {
       "id": "crm_mvp_especificacao_crm_silmer_especificação_de_produto_do_mvp",
       "label": "CRM Silmer — Especificação de Produto do MVP",
@@ -308,13 +467,23 @@
       "degree": 16
     },
     {
-      "id": "campos_ficha_e_jornada_p0_1_campos_da_ficha_e_jornada_conversacional_p0_1",
-      "label": "Campos da Ficha e Jornada Conversacional — P0.1",
+      "id": "easypanel_topology_topologia_easypanel_crm_silmer",
+      "label": "Topologia EasyPanel — CRM Silmer",
+      "degree": 15
+    },
+    {
+      "id": "specs_features_crm_mvp_tasks_crm_silmer_mvp_plano_de_implementação",
+      "label": "CRM Silmer MVP — Plano de Implementação",
+      "degree": 11
+    },
+    {
+      "id": "specs_features_crm_mvp_tasks_fase_5_orçamento_pix_pedido_e_ficha",
+      "label": "Fase 5 — Orçamento, PIX, Pedido e Ficha",
       "degree": 10
     },
     {
-      "id": "product_readiness_tech_lead_document",
-      "label": "Passagem de Produto para Tech Lead",
+      "id": "campos_ficha_e_jornada_p0_1_campos_da_ficha_e_jornada_conversacional_p0_1",
+      "label": "Campos da Ficha e Jornada Conversacional — P0.1",
       "degree": 10
     },
     {
@@ -328,96 +497,59 @@
       "degree": 9
     },
     {
-      "id": "specs_features_crm_mvp_spec_crm_silmer_mvp_requisitos_rastreáveis",
-      "label": "CRM Silmer MVP — Requisitos Rastreáveis",
+      "id": "specs_features_crm_mvp_tasks_fase_0_fundação_e_riscos_técnicos",
+      "label": "Fase 0 — Fundação e riscos técnicos",
       "degree": 8
-    },
-    {
-      "id": "specs_features_crm_mvp_spec_p1_mvp",
-      "label": "P1 — MVP",
-      "degree": 8
-    },
-    {
-      "id": "historico_datacrazy_datacrazy_setup_o_que_já_está_configurado",
-      "label": "O que já está configurado",
-      "degree": 7
-    },
-    {
-      "id": "campos_ficha_e_jornada_p0_1_5_roteiro_conversacional_por_etapa",
-      "label": "5. Roteiro conversacional por etapa",
-      "degree": 7
     }
   ],
   "surprises": [
     {
-      "source": "Vendedor Silmer (IA)",
-      "target": "Caixa de Entrada (Backlog)",
+      "source": "Ficha de Pedido",
+      "target": "Rose (Destinatária Ficha)",
       "source_files": [
-        "PRODUCT-READINESS-TECH-LEAD.md",
+        "CAMPOS-FICHA-E-JORNADA-P0-1.md",
         "CRM-MVP-ESPECIFICACAO.md"
-      ],
-      "confidence": "INFERRED",
-      "relation": "calls",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `Caixa de Entrada (Backlog)` unexpectedly reaches hub `Vendedor Silmer (IA)`"
-    },
-    {
-      "source": "Vendedor Silmer (IA)",
-      "target": "Kanban Comercial",
-      "source_files": [
-        "PRODUCT-READINESS-TECH-LEAD.md",
-        "CRM-MVP-ESPECIFICACAO.md"
-      ],
-      "confidence": "INFERRED",
-      "relation": "calls",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `Kanban Comercial` unexpectedly reaches hub `Vendedor Silmer (IA)`"
-    },
-    {
-      "source": "CRM Silmer MVP — Requisitos Rastreáveis",
-      "target": "Vendedor Silmer (IA)",
-      "source_files": [
-        ".specs/features/crm-mvp/spec.md",
-        "PRODUCT-READINESS-TECH-LEAD.md"
       ],
       "confidence": "EXTRACTED",
-      "relation": "references",
+      "relation": "shares_data_with",
       "why": "connects across different repos/directories"
     }
   ],
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `Design do CRM Silmer` connect `Design System e UX` to `Interface e Superfícies CRM`, `Documentação de Arquitetura`?",
-      "why": "High betweenness centrality (0.153) - this node is a cross-community bridge."
+      "question": "Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Roadmap` to `Architecture and Backlog`, `Foundation and Technical Risks`, `Inbox and Channel Integration`, `Identity and Domain Infrastructure`, `Business Logic and Kanban`?",
+      "why": "High betweenness centrality (0.140) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `CRM Silmer — Especificação de Produto do MVP` connect `Especificação do MVP` to `Documentação de Arquitetura`?",
-      "why": "High betweenness centrality (0.100) - this node is a cross-community bridge."
+      "question": "Why does `TDD — CRM Silmer MVP` connect `Technical Strategy and MVP` to `Architecture and Backlog`?",
+      "why": "High betweenness centrality (0.101) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `Vendedor Silmer (IA)` connect `Funcionalidades e Permissões Comerciais` to `Documentação de Arquitetura`?",
-      "why": "High betweenness centrality (0.099) - this node is a cross-community bridge."
+      "question": "Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `Architecture and Backlog`?",
+      "why": "High betweenness centrality (0.059) - this node is a cross-community bridge."
     },
     {
       "type": "isolated_nodes",
       "question": "What connects `Limite da feature`, `Backlog e lead`, `Vendedor Silmer` to the rest of the system?",
-      "why": "158 weakly-connected nodes found - possible documentation gaps or missing edges."
+      "why": "256 weakly-connected nodes found - possible documentation gaps or missing edges."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `Design System e UX` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.06451612903225806 - nodes in this community are weakly interconnected."
+      "question": "Should `Technical Strategy and MVP` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `Especificação do MVP` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected."
+      "question": "Should `Design System and UX` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.05263157894736842 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `Mapeamento de Campos e Jornada` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected."
+      "question": "Should `Implementation Roadmap` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.0625 - nodes in this community are weakly interconnected."
     }
   ]
 }

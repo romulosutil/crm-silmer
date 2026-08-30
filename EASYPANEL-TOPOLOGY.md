@@ -96,6 +96,10 @@ desligado durante UAT pesada e dev/hml não rodam carga simultaneamente. Uma
 VPS de 8 GB só é aceitável com dev desligado, homologação sob demanda e worker
 de PDF estritamente limitado.
 
+Essa recomendação só vale para o envelope de homologação da seção 13 do TDD.
+T07.1 bloqueia o piloto se a carga aprovada não atingir os SLOs ou se a previsão
+de negócio exceder o envelope sem novo sizing.
+
 Licença EasyPanel mínima: **Hobby**, porque o plano gratuito comporta três
 projetos, mas não inclui os backups agendados necessários. Usar **Growth** se
 mais de uma pessoa precisar acessar o painel com controle por projeto.
@@ -137,7 +141,7 @@ Buckets/prefixos separados:
 Controles:
 
 - nenhuma ACL pública;
-- credencial distinta por ambiente e menor privilégio;
+- credencial distinta por ambiente, finalidade e menor privilégio;
 - chave opaca sem nome, telefone ou número de documento;
 - URL assinada com expiração curta;
 - criptografia em trânsito e repouso;
@@ -145,6 +149,23 @@ Controles:
 - lifecycle por classe de dado do P0.6;
 - cópias não correntes e backups expiram em até 35 dias;
 - produção nunca é copiada para dev/homologação.
+
+Em produção, as credenciais também são separadas por função:
+
+- `crm-silmer-prod-data`: runtime lê/escreve objetos do domínio, sem acesso a
+  backups ou tombstones;
+- `crm-silmer-prod-backups`: somente o mecanismo de backup escreve; runtime não
+  recebe credencial;
+- `crm-silmer-prod-tombstones`: o job de privacidade apenas cria novas chaves,
+  sem sobrescrever ou excluir; o restore usa credencial read-only mantida fora
+  do runtime normal.
+
+O bucket de tombstones usa versionamento e proteção WORM/Object Lock do provedor
+com retenção mínima igual à última cópia relacionada. Se esse recurso não estiver
+disponível, usa criação condicional em namespace append-only, política que nega
+delete e cópia independente sob outra credencial. O gate de Privacidade registra
+qual mecanismo fornece imutabilidade e testa overwrite e exclusão. Versionamento
+sozinho não satisfaz o contrato.
 
 O filesystem dos containers guarda apenas temporários. Nenhum anexo ou PDF
 existe somente no disco da VPS.
@@ -171,9 +192,12 @@ AI_MODEL_PRIMARY
 OPENAI_API_KEY
 S3_ENDPOINT
 S3_REGION
-S3_BUCKET
-S3_ACCESS_KEY_ID
-S3_SECRET_ACCESS_KEY
+S3_DATA_BUCKET
+S3_DATA_ACCESS_KEY_ID
+S3_DATA_SECRET_ACCESS_KEY
+TOMBSTONE_BUCKET
+TOMBSTONE_WRITE_ACCESS_KEY_ID
+TOMBSTONE_WRITE_SECRET_ACCESS_KEY
 PIX_KEY_ID
 PIX_KEY_VALUE
 PIX_KEY_DISPLAY_MASKED
@@ -215,7 +239,8 @@ restart contínuo.
 - temporários em tmpfs/volume limitado e descartável;
 - imagens-base fixadas por digest;
 - Chromium e `clamscan` com concorrência 1, timeout e limite de memória;
-- imagem do worker reconstruída diariamente para atualizar assinaturas ClamAV.
+- assinatura-base ClamAV na imagem e `freshclam` em tmpfs no startup e a cada
+  24 horas; idade acima de 36 horas bloqueia liberação do anexo e gera alerta.
 
 ## 8. CI/CD
 
@@ -284,15 +309,23 @@ Produção:
 - `pg_dump` diário, 35 cópias;
 - lifecycle apaga qualquer backup com mais de 35 dias;
 - backup manual verificado antes de mudança destrutiva;
-- restore mensal em serviço temporário `postgres-restore-drill`, isolado, sem
-  UI, worker, rota pública ou credenciais externas;
-- RPO até 1 hora e RTO até 4 horas.
+- restore mensal do banco em serviço temporário `postgres-restore-drill`,
+  isolado, sem UI, worker, rota pública ou credenciais externas;
+- drill trimestral de perda total em VPS limpa fora do host de produção;
+- RPO até 1 hora e RTO até 4 horas para o CRM completo, condicionados à
+  aprovação do drill em host limpo.
 
 O agendamento usa o backup de PostgreSQL do EasyPanel com storage remoto e
 licença compatível. O backup semanal/snapshot da Hostinger é proteção
 terciária do host, não substitui os dumps externos.
 
-### Drill mensal
+Um kit off-host versionado, sem segredos em claro, mantém o runbook, versões do
+Ubuntu/EasyPanel, topologia de projetos e serviços, regras de rede/DNS, digests,
+ordem de migrations e inventário dos segredos. Os valores dos segredos e a
+credencial read-only de tombstones ficam em escrow criptografado acessível a
+duas pessoas designadas. O kit é validado a cada mudança de topologia.
+
+### Drill mensal do PostgreSQL
 
 1. Criar `postgres-restore-drill` temporário e rede isolada.
 2. Restaurar o backup sem copiar o banco para homologação.
@@ -301,6 +334,26 @@ terciária do host, não substitui os dumps externos.
 5. Registrar RPO/RTO e destruir o serviço temporário após a evidência.
 
 O drill não interrompe produção e nunca envia WhatsApp, IA ou objetos externos.
+
+### Drill trimestral de perda total da VPS
+
+1. Provisionar uma VPS limpa, isolada e tratada como produção temporária, sem
+   reutilizar o EasyPanel do host de produção.
+2. Recriar painel, projetos, rede, domínios temporários e serviços pelo kit
+   off-host.
+3. Recuperar segredos do escrow, promover os digests registrados e manter todos
+   os adapters externos em modo mock.
+4. Restaurar PostgreSQL, aplicar migrations e reaplicar tombstones com a
+   credencial read-only.
+5. Validar acesso aos objetos existentes, recuperar uma versão apagada/corrompida
+   e confirmar que objetos sujeitos a tombstone não reaparecem.
+6. Executar smoke completo de login, inbox, Deal, PIX, Ficha e reconciliação.
+7. Testar troca de DNS em subdomínio de drill com o TTL documentado.
+8. Registrar tempos por etapa, RPO/RTO, lacunas e responsáveis pela correção.
+9. Destruir o host do drill após preservar evidências sem dados pessoais.
+
+Somente esse drill comprova o RTO do CRM. O restore mensal comprova o backup do
+banco, mas não a recuperação de uma perda do host.
 
 ### Restore de desastre real
 
@@ -346,11 +399,13 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] PostgreSQL e serviços internos sem portas públicas.
 - [ ] Backup horário/diário executado e alerta configurado.
 - [ ] Restore completo em serviço temporário isolado dentro do RTO.
-- [ ] Tombstones reaplicados depois de restore antigo.
+- [ ] Perda total da VPS recuperada em host limpo dentro do RTO.
+- [ ] Tombstones imutáveis, com credenciais separadas, reaplicados depois de restore antigo.
 - [ ] Webhook repetido sem duplicar mensagem, Negócio ou job.
 - [ ] Worker parado acumula jobs e recupera a fila ao voltar.
+- [ ] Crash durante efeito externo produz `sent`, `failed` ou `outcome_unknown`, sem retry cego.
 - [ ] Digest promovido e revertido com sucesso.
-- [ ] Takeover impede resposta da IA em voo.
+- [ ] Takeover impede novos envios até o ponto de não retorno e reconcilia resultado incerto.
 - [ ] Smoke WhatsApp oficial ponta a ponta.
 - [ ] Falha de Ficha aparece na reconciliação e retry não duplica envio.
 - [ ] Monitor externo detecta parada da VPS.
@@ -359,8 +414,8 @@ Audit trail comercial não depende de logs do EasyPanel.
 ## 13. Riscos aceitos e evolução
 
 Uma única VPS é ponto único de falha e os três ambientes competem por recurso.
-Isso é aceito para o piloto com backup externo, ambientes não produtivos sob
-demanda e RTO documentado. O primeiro gatilho de evolução é mover produção ou
+Isso só é aceito para o piloto após backup externo e recovery drill bem-sucedido
+em host limpo, com ambientes não produtivos sob demanda. O primeiro gatilho de evolução é mover produção ou
 PostgreSQL para outro domínio de falha quando qualquer condição ocorrer:
 
 - disponibilidade exigida acima de 99,5%;

@@ -379,21 +379,34 @@ por tópico para reconectar sem vazar eventos entre usuários.
 ### Comando e outbox
 
 Estado do domínio, auditoria e evento de outbox são gravados na mesma
-transação. Efeitos externos são `at-least-once`; o produto garante **efeito
-único observável** por chave estável, constraint, estado de entrega e
-reconciliação. Não se promete “exactly once” de rede.
+transação. Efeitos externos são `at-least-once`; chaves estáveis e constraints
+impedem agendamento interno duplicado, mas não criam “exactly once” de rede.
+Cada adapter declara, em uma matriz versionada, se o provedor aceita chave de
+idempotência, permite consultar o resultado e qual é o ponto de não retorno.
+
+Uma tentativa externa percorre
+`pending -> sending -> sent|failed|outcome_unknown`. Se o processo cair entre a
+chamada remota e o registro da resposta, a tentativa fica `outcome_unknown`.
+Retry automático só ocorre quando o adapter consegue provar ausência do efeito
+ou reutilizar idempotência suportada pelo provedor; nos demais casos, o item vai
+para reconciliação humana antes de qualquer nova chamada.
 
 Jobs registram `status`, `priority`, `available_at`, `locked_until`, lease,
-heartbeat, tentativas, limite, chave idempotente e último erro. Lease vencido é
-recuperável; poison message termina em dead letter visível. O worker só confirma
-o job depois de registrar o resultado/idempotência do efeito externo.
+heartbeat, tentativas, limite, chave idempotente, identificador do provedor e
+último erro. Lease vencido é recuperável; poison message termina em dead letter
+visível. O worker só confirma o job depois de registrar `sent`, `failed` ou
+`outcome_unknown`; estado incerto nunca é convertido silenciosamente em sucesso
+nem repetido às cegas.
 
 ### Corrida IA versus tomada humana
 
 Cada conversa possui `automation_epoch`. O takeover incrementa o epoch e
 cancela jobs ainda não enviados. Antes do envio, o worker revalida epoch,
 estado e responsável; resposta calculada sob epoch antigo é descartada e
-auditada.
+auditada. A garantia vale até o ponto de não retorno declarado pelo adapter. Se
+uma chamada externa já o atravessou, o takeover impede novas tentativas, expõe
+`sent` ou `outcome_unknown` e exige reconciliação; não se promete cancelar uma
+requisição que o provedor já aceitou.
 
 ## 11. Vendedor Silmer e IA
 
@@ -445,9 +458,11 @@ multi-provedor não entram antes de validar todos os suboperadores.
   de envelope na aplicação com chave externa ao banco.
 - Buckets privados, URLs assinadas curtas e chaves opacas sem PII.
 - Upload em quarentena, limite, MIME por conteúdo, hash e varredura antes de
-  disponibilizar ao operador. O worker usa `clamscan` com assinatura fixada e
-  atualizada diariamente pela imagem, concorrência 1 e timeout; download da
-  Meta bloqueia SSRF, redirects indevidos e excesso de tamanho.
+  disponibilizar ao operador. O worker usa `clamscan` com assinatura-base da
+  imagem e atualização em diretório temporário no início e a cada 24 horas,
+  concorrência 1 e timeout. Assinatura com mais de 36 horas deixa anexos em
+  quarentena e alerta a operação; download da Meta bloqueia SSRF, redirects
+  indevidos e excesso de tamanho.
 - Comprovantes e Fichas nunca são públicos nem enviados à IA por padrão.
 - Segredos vivem no EasyPanel/GitHub, nunca em arquivo versionado ou log.
 
@@ -467,7 +482,22 @@ nunca o conteúdo removido.
 
 ## 13. Performance, capacidade e SLOs iniciais
 
-Metas são revisadas depois de duas semanas de piloto real.
+Os SLOs só são válidos para o envelope de carga abaixo. Ele é um piso de
+engenharia para homologação, não uma previsão de negócio, e deve ser confirmado
+por Produto/Operação antes do teste de carga:
+
+| Dimensão | Envelope inicial de homologação |
+|---|---|
+| Operadores | 20 sessões autenticadas e 30 conexões SSE simultâneas |
+| Webhooks | 5 eventos/s por 15 min e burst de 20 eventos/s por 60 s |
+| Recuperação do worker | backlog de 1.000 jobs após restart, sem retry cego de `outcome_unknown` |
+| Anexos e PDF | 4 uploads concorrentes no limite configurado e fila de 20 PDFs com Chromium concorrência 1 |
+| Massa de referência | 50 mil contatos, 100 mil conversas, 1 milhão de mensagens e 25 mil Negócios |
+
+O relatório de carga registra dataset, duração, concorrência, taxa, percentis e
+erros. Se a previsão aprovada ou o uso real exceder qualquer dimensão, sizing e
+SLO são revistos antes do piloto. Metas são recalibradas após duas semanas de
+operação real sem apagar a baseline nem a evidência anterior.
 
 | Indicador | Meta inicial |
 |---|---|
@@ -521,7 +551,7 @@ externo contratado com retenção compatível.
 | Documento | golden PDF, snapshot e campos de produção vazios | revisão visual e hash do snapshot |
 | E2E | inbox até Ficha/onboarding | caminho feliz e falhas recuperáveis |
 | Acessibilidade | teclado, foco, ARIA, contraste e alternativa ao drag-and-drop | sem violação crítica e operação sem mouse |
-| Recuperação | restore isolado, tombstones, storage e digest anterior | RPO/RTO demonstrados sem copiar produção para homologação |
+| Recuperação | restore isolado e perda total simulada da VPS, com tombstones, storage, segredos e digests | RPO/RTO do CRM completo demonstrados em host limpo sem copiar produção para homologação |
 
 Ferramentas: `node:test`, injeção Fastify, PostgreSQL efêmero em CI, Playwright
 e axe-core. O frontend continua vanilla; Vite é apenas servidor/build tool.
@@ -545,14 +575,14 @@ Detalhes, recursos e checklist estão em `EASYPANEL-TOPOLOGY.md`.
 
 | Risco | Impacto | Probabilidade | Mitigação |
 |---|---|---|---|
-| Duplicidade sob retry/concorrência | Alto | Alta | constraints, idempotência, transação e testes concorrentes |
-| IA enviar após takeover | Alto | Média | `automation_epoch` e revalidação antes do envio |
+| Resultado externo incerto sob crash/retry | Alto | Alta | `outcome_unknown`, matriz por provedor, retry condicionado e reconciliação |
+| IA cruzar o takeover após o ponto de não retorno | Alto | Média | `automation_epoch`, fencing antes do envio e estado incerto visível |
 | Orçamento ficar obsoleto | Alto | Média | hash de dependências e invalidação automática |
 | Fonte de verdade duplicada Lead/Card/Deal | Alto | Média | Deal único; Card e Lead como projeções |
 | Falha parcial de Meta/IA/storage | Alto | Alta | outbox, retry, dead letter e reconciliação visível |
 | Restore reintroduzir dado excluído | Alto | Média | tombstones externos e gate obrigatório de restore |
 | Migração bloquear rollback | Alto | Média | expand/contract e promoção do mesmo digest |
-| Única VPS ficar indisponível | Alto | Média | backup externo, uptime externo, RTO e plano de segunda VPS |
+| Única VPS ficar indisponível | Alto | Média | kit off-host e drill em VPS limpa antes do piloto e trimestralmente |
 | Anexo malicioso | Alto | Média | quarentena, validação, scan e URL curta |
 | Crescimento do PostgreSQL por jobs/logs | Médio | Média | retenção, índices, partição futura e métricas |
 | Escopo virar ERP | Médio | Alta | módulos e fora de escopo explícitos |
@@ -600,7 +630,7 @@ engenharia e QA. O plano detalhado e os gates estão em
 | OpenAI API | Direta, sem data sharing, retenção <=30 dias e DPA/ZDR quando elegível | Privacidade/Tech Lead |
 | Formato da Ficha | PDF canônico | Rose/Operação |
 | Domínios e Meta App IDs | A fornecer por ambiente | Operação/DevOps |
-| Volumes reais do piloto | Medir na primeira semana | Produto/Tech Lead |
+| Envelope de carga | Baseline provisória da seção 13; confirmar antes de T07.1 | Produto/Operação/Tech Lead |
 
 ### Critérios de aprovação do TDD
 
@@ -609,6 +639,8 @@ engenharia e QA. O plano detalhado e os gates estão em
 - DevOps confirma sizing, licença EasyPanel e destino de backup.
 - Operação valida PDF, WhatsApp oficial e destinatário em UAT.
 - Tech Lead e time são formalmente nomeados.
+- Produto/Operação aprovam o envelope de carga usado nos SLOs.
+- Recovery drill em host limpo comprova RPO/RTO do CRM completo.
 
 ## 21. Referências externas verificadas em 30/08/2026
 

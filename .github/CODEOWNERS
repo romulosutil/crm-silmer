@@ -1,0 +1,5 @@
+# The repository owner is the only maintainer with write access.
+* @romulosutil
+
+# Protect the ownership and automation policy themselves.
+/.github/ @romulosutil

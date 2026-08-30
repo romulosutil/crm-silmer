@@ -14,7 +14,7 @@ lead é qualificado, quem faz o quê em cada etapa, e o que nunca pode ser afirm
 
 **Ele serve dois públicos ao mesmo tempo:**
 
-- **Vendedor humano** (Daiana, Daniel, Erickson) — é o roteiro de referência: o que perguntar,
+- **Vendedor humano** (atendentes A, B e C) — é o roteiro de referência: o que perguntar,
   em que ordem, e o que fazer quando o lead cai na sua caixa.
 - **Agente de IA "Vendedor Silmer"** — é a versão versionada e revisável do processo que hoje
   vive só dentro das instruções do agente no Datacrazy. Divergiu daqui? O Datacrazy é que está
@@ -33,7 +33,7 @@ Complementa, não substitui, dois documentos que já existem:
 ## 1. Visão geral do fluxo
 
 ```
-Cliente manda mensagem no WhatsApp (27) 99633-7374
+Cliente manda mensagem no WhatsApp (número operacional omitido)
         │
         ▼
 Agente IA "Vendedor Silmer" roda o roteiro de qualificação (seção 3)
@@ -104,7 +104,7 @@ depois logística e intenção (8–11), fechando com o texto livre (12–13).
 
 ## 5. Pipeline "Vendas Estamparia" — as 5 etapas
 
-URL no Datacrazy: `/pipelines/f56c1d6f-b3f1-48c0-bc37-6195fc16587c`
+URL operacional no Datacrazy removida da versão pública.
 
 | Etapa | Entra quando | Quem move | Não avança sem |
 |---|---|---|---|
@@ -117,7 +117,7 @@ URL no Datacrazy: `/pipelines/f56c1d6f-b3f1-48c0-bc37-6195fc16587c`
 ## 6. Transferência da IA pro vendedor humano
 
 - O comportamento nativo "Transferir atendente" está em modo **Aleatorizar** entre os
-  atendentes cadastrados no Datacrazy. **Hoje isso é só Daiana e Daniel** — Erickson já existe
+  atendentes cadastrados no Datacrazy. **Hoje isso é só A e B** — o atendente C já existe
   como vendedor confirmado em `business.ts` (13/08/2026), mas ainda **não foi cadastrado como
   atendente no Datacrazy**, então não entra no rodízio automático até isso ser corrigido. Trate
   como pendência operacional, não como decisão de processo.
@@ -149,8 +149,8 @@ e só depois que a política correspondente existir.
 
 ## 8. Pendências que travam o processo hoje
 
-- [ ] Cadastrar Erickson como atendente no Datacrazy e incluí-lo no rodízio de transferência
-      (hoje o rodízio é só Daiana/Daniel — ver seção 6).
+- [ ] Cadastrar o atendente C no Datacrazy e incluí-lo no rodízio de transferência
+      (hoje o rodízio é só A/B — ver seção 6).
 - [ ] Conectar o WhatsApp da loja à Crazy API — sem conexão, a IA não roda ponta a ponta
       (detalhe em `DATACRAZY-SETUP.md`, seção "BLOQUEADORES").
 - [ ] Preencher o checklist da seção 7 acima com o time da Silmer.

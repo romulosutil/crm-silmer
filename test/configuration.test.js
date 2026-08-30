@@ -31,7 +31,7 @@ function validValues() {
     },
     recipient: {
       name: 'Rose',
-      phone: '+5527999010303',
+      phoneReference: 'secret://crm/order-recipient-phone',
     },
     templates: {
       onboarding: { enabled: true, version: 'onboarding-v1' },
@@ -212,7 +212,7 @@ test('enforces controlled FAB, canonical recipient and optimistic versioning', a
   );
 
   const invalidRecipient = validValues();
-  invalidRecipient.recipient.phone = '+5500000000000';
+  invalidRecipient.recipient.phoneReference = 'raw-phone-must-not-be-stored';
   await assert.rejects(
     service.createVersion({
       actor: ADMIN_ACTOR,

@@ -55,13 +55,13 @@ test('pins the approved runtime and toolchain versions exactly', async () => {
   const packageJson = await readJson('package.json');
   const apiPackage = await readJson('apps/api/package.json');
 
-  assert.equal(await readFile(new URL('.nvmrc', rootUrl), 'utf8'), '24.14.0\n');
+  assert.equal(await readFile(new URL('.nvmrc', rootUrl), 'utf8'), '24.20.0\n');
   assert.equal(
     await readFile(new URL('.node-version', rootUrl), 'utf8'),
-    '24.14.0\n',
+    '24.20.0\n',
   );
-  assert.equal(packageJson.packageManager, 'npm@11.9.0');
-  assert.deepEqual(packageJson.engines, { node: '24.14.0', npm: '11.9.0' });
+  assert.equal(packageJson.packageManager, 'npm@11.19.0');
+  assert.deepEqual(packageJson.engines, { node: '24.20.0', npm: '11.19.0' });
   assert.equal(apiPackage.dependencies.fastify, '5.12.1');
   assert.deepEqual(packageJson.devDependencies, {
     '@axe-core/playwright': '4.13.0',

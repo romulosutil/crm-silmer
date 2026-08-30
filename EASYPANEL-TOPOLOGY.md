@@ -8,11 +8,11 @@
 
 Usar exatamente três projetos EasyPanel no MVP:
 
-| Projeto | Finalidade | Dados reais | Disponibilidade |
-|---|---|---:|---|
-| `crm-silmer-dev` | Integração compartilhada e testes técnicos | Não | Sob demanda |
-| `crm-silmer-hml` | UAT e integração com Meta App/número de teste | Não | Horário de trabalho/UAT |
-| `crm-silmer-prod` | Operação real do CRM | Sim | Contínua |
+| Projeto           | Finalidade                                    | Dados reais | Disponibilidade         |
+| ----------------- | --------------------------------------------- | ----------: | ----------------------- |
+| `crm-silmer-dev`  | Integração compartilhada e testes técnicos    |         Não | Sob demanda             |
+| `crm-silmer-hml`  | UAT e integração com Meta App/número de teste |         Não | Horário de trabalho/UAT |
+| `crm-silmer-prod` | Operação real do CRM                          |         Sim | Contínua                |
 
 O desenvolvimento diário continua local. `crm-silmer-dev` existe para
 integrações que precisam de callback público e não como ambiente pessoal.
@@ -25,12 +25,12 @@ receberá o projeto separado `crm-silmer-automation`, sem acesso direto ao banco
 
 Cada projeto contém a mesma topologia:
 
-| Serviço | Tipo EasyPanel | Imagem | Público | Persistência |
-|---|---|---|---:|---|
-| `edge-web` | App | GHCR por digest | Sim, 80/443 via domínio | Nenhuma |
-| `api` | App | GHCR por digest | Não | Nenhuma |
-| `worker` | App | Mesma imagem runtime, comando distinto | Não | Temporário descartável |
-| `postgres` | PostgreSQL Service | Major fixada | Não | Volume EasyPanel + backup externo |
+| Serviço    | Tipo EasyPanel     | Imagem                                 |                 Público | Persistência                      |
+| ---------- | ------------------ | -------------------------------------- | ----------------------: | --------------------------------- |
+| `edge-web` | App                | GHCR por digest                        | Sim, 80/443 via domínio | Nenhuma                           |
+| `api`      | App                | GHCR por digest                        |                     Não | Nenhuma                           |
+| `worker`   | App                | Mesma imagem runtime, comando distinto |                     Não | Temporário descartável            |
+| `postgres` | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo |
 
 `migrate` é um job curto executado pelo pipeline ou script salvo do EasyPanel;
 não é serviço permanente.
@@ -66,14 +66,14 @@ edge-web (único serviço público)
 
 Domínios propostos, substituindo `<dominio>` pelo domínio aprovado:
 
-| Projeto | Domínio primário | Proteção adicional |
-|---|---|---|
-| dev | `dev.crm.<dominio>` | VPN/allowlist; UI restrita |
-| webhook dev | `hooks-dev.crm.<dominio>` | Público somente na rota Meta |
-| homologação | `hml.crm.<dominio>` | VPN/allowlist; UI restrita e credenciais de teste |
-| webhook hml | `hooks-hml.crm.<dominio>` | Público somente na rota Meta |
-| produção | `crm.<dominio>` | Login da aplicação, HSTS e rate limiting |
-| EasyPanel | `ops.<dominio>` | VPN/allowlist, MFA obrigatório e contas individuais |
+| Projeto     | Domínio primário          | Proteção adicional                                  |
+| ----------- | ------------------------- | --------------------------------------------------- |
+| dev         | `dev.crm.<dominio>`       | VPN/allowlist; UI restrita                          |
+| webhook dev | `hooks-dev.crm.<dominio>` | Público somente na rota Meta                        |
+| homologação | `hml.crm.<dominio>`       | VPN/allowlist; UI restrita e credenciais de teste   |
+| webhook hml | `hooks-hml.crm.<dominio>` | Público somente na rota Meta                        |
+| produção    | `crm.<dominio>`           | Login da aplicação, HSTS e rate limiting            |
+| EasyPanel   | `ops.<dominio>`           | VPN/allowlist, MFA obrigatório e contas individuais |
 
 VPN, allowlist ou Basic Auth não podem bloquear o callback público da Meta. Os
 hosts `hooks-*` roteiam somente `/api/v1/webhooks/meta/*`; qualquer outra rota
@@ -106,12 +106,12 @@ mais de uma pessoa precisar acessar o painel com controle por projeto.
 
 Os valores abaixo são **limites máximos**, não reservas somáveis:
 
-| Serviço | Produção | Homologação | Dev |
-|---|---:|---:|---:|
-| PostgreSQL | 4–5 GB, até 2 CPU | 1–1,5 GB, 0,5 CPU | 1 GB, 0,5 CPU |
-| API | 1–1,5 GB, até 1 CPU | 768 MB, 0,5 CPU | 512 MB, 0,25 CPU |
-| Worker | 2 GB, até 1,5 CPU | 768 MB, 0,5 CPU | 512 MB, 0,25 CPU |
-| Edge | 256 MB, 0,25 CPU | 128 MB | 128 MB |
+| Serviço    |            Produção |       Homologação |              Dev |
+| ---------- | ------------------: | ----------------: | ---------------: |
+| PostgreSQL |   4–5 GB, até 2 CPU | 1–1,5 GB, 0,5 CPU |    1 GB, 0,5 CPU |
+| API        | 1–1,5 GB, até 1 CPU |   768 MB, 0,5 CPU | 512 MB, 0,25 CPU |
+| Worker     |   2 GB, até 1,5 CPU |   768 MB, 0,5 CPU | 512 MB, 0,25 CPU |
+| Edge       |    256 MB, 0,25 CPU |            128 MB |           128 MB |
 
 Regras operacionais:
 
@@ -210,6 +210,9 @@ Regras:
 - tokens Meta, buckets, banco e chaves nunca são compartilhados entre ambientes;
 - `PIX_KEY_VALUE` fica disponível somente ao runtime que monta a mensagem e
   não aparece em log, frontend ou variável de build;
+- `secret://crm/order-recipient-phone` é resolvido somente no runtime para
+  `FICHA_RECIPIENT_E164`; o telefone não aparece em código, documentação, log
+  ou artefato de build;
 - rotação trimestral e imediata após incidente ou saída de operador;
 - o GitHub Actions recebe somente credencial para publicar no GHCR; a promoção
   manual no EasyPanel não expõe segredos de runtime ao pipeline;
@@ -217,14 +220,14 @@ Regras:
 
 ## 7. Health checks
 
-| Serviço | Endpoint/check | Critério |
-|---|---|---|
-| edge | `GET /healthz` | Nginx responde 200 |
-| API live | `GET /api/health/live` | event loop/processo saudável |
-| API ready | `GET /api/health/ready` | banco acessível e schema compatível |
-| worker local | processo/loop local | processo responde sem consultar dependência externa |
-| worker operacional | heartbeat no PostgreSQL | idade inferior a 120 s |
-| postgres | `pg_isready` | conexão aceita |
+| Serviço            | Endpoint/check          | Critério                                            |
+| ------------------ | ----------------------- | --------------------------------------------------- |
+| edge               | `GET /healthz`          | Nginx responde 200                                  |
+| API live           | `GET /api/health/live`  | event loop/processo saudável                        |
+| API ready          | `GET /api/health/ready` | banco acessível e schema compatível                 |
+| worker local       | processo/loop local     | processo responde sem consultar dependência externa |
+| worker operacional | heartbeat no PostgreSQL | idade inferior a 120 s                              |
+| postgres           | `pg_isready`            | conexão aceita                                      |
 
 Dependências Meta, IA e storage possuem diagnóstico separado e não derrubam o
 container. Docker `HEALTHCHECK`: intervalo 30 s, timeout 5 s, start period 20 s

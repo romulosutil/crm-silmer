@@ -31,7 +31,8 @@ Entregar a jornada comercial desde a entrada de uma conversa no WhatsApp oficial
 - WhatsApp usa a API oficial e é o canal obrigatório para lançar o piloto; a verificação já foi obtida.
 - Instagram Direct integra o piloto quando disponível, mas não bloqueia nem adia o lançamento pelo WhatsApp.
 - No MVP, o site direciona o visitante para o WhatsApp.
-- O destinatário da Ficha é Rose, `+55 27 99901-0303`.
+- O destinatário da Ficha é Rose; o telefone é resolvido pela referência
+  `secret://crm/order-recipient-phone` e não é versionado.
 
 ### Ficha, financeiro, privacidade e acesso
 

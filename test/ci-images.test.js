@@ -50,6 +50,8 @@ test('packages the PostgreSQL workspace and migrations in the runtime image', as
   const dockerfile = await text('docker/runtime.Dockerfile');
   const buildScript = await text('scripts/build.mjs');
 
+  assert.match(dockerfile, /rm -rf \/usr\/local\/lib\/node_modules\/npm/u);
+
   assert.equal(
     dockerfile.match(/COPY modules\/database\/package\.json/gu)?.length,
     2,
@@ -60,7 +62,7 @@ test('packages the PostgreSQL workspace and migrations in the runtime image', as
   assert.match(buildScript, /modules\/database\/package\.json/u);
 });
 
-test('pins every GitHub Action and builds each publishable image once', async () => {
+test('scans each local OCI layout before its only registry publication', async () => {
   const workflow = await text('.github/workflows/ci.yml');
   const actionRefs = [
     ...workflow.matchAll(/^\s*-?\s*uses:\s*([^\s#]+)/gmu),
@@ -81,21 +83,44 @@ test('pins every GitHub Action and builds each publishable image once', async ()
   assert.match(workflow, /npm run test:e2e/u);
   assert.match(workflow, /npm audit --audit-level=high/u);
   assert.match(workflow, /git diff --check/u);
-  assert.match(workflow, /paths-ignore:\s+- graphify-out\/\*\*/u);
+  assert.doesNotMatch(
+    workflow,
+    /paths-ignore:\s+- graphify-out\/\*\*/u,
+    'Graphify-only commits must still produce required branch checks',
+  );
+  assert.match(workflow, /timeout-minutes:\s*30/u);
+  assert.match(workflow, /timeout-minutes:\s*45/u);
+  assert.equal(workflow.match(/version:\s*v0\.36\.1/gu)?.length, 1);
+  assert.match(workflow, /image=moby\/buildkit@sha256:[a-f0-9]{64}/u);
+  assert.match(
+    workflow,
+    /images:[\s\S]+permissions:\s+contents:\s+read\s+packages:\s+write/u,
+  );
   assert.match(workflow, /aquasecurity\/trivy-action@[a-f0-9]{40}/u);
   assert.match(
     workflow,
     /RELEASE_TAG: ghcr\.io\/\$\{\{ github\.repository \}\}\/\$\{\{ matrix\.image \}\}:\$\{\{ github\.sha \}\}/u,
   );
-  const buildIndex = workflow.indexOf('Build one quarantined candidate');
-  const scanIndex = workflow.indexOf('Scan built image with Trivy');
+  const buildIndex = workflow.indexOf('Build one local OCI layout');
+  const scanIndex = workflow.indexOf('Scan local OCI layout with Trivy');
   const publishIndex = workflow.indexOf(
-    'Publish the scanned candidate without rebuilding',
+    'Publish the scanned OCI layout without rebuilding',
   );
   assert.ok(buildIndex >= 0 && buildIndex < scanIndex);
   assert.ok(scanIndex < publishIndex);
-  assert.match(workflow, /\/candidates\/\$\{\{ matrix\.image \}\}/u);
-  assert.match(workflow, /docker buildx imagetools create/u);
+  assert.match(
+    workflow,
+    /outputs:\s*type=oci,dest=\/tmp\/\$\{\{ matrix\.image \}\}-oci,tar=false/u,
+  );
+  assert.match(workflow, /input:\s*\/tmp\/\$\{\{ matrix\.image \}\}-oci/u);
+  assert.doesNotMatch(workflow, /\/candidates\//u);
+  assert.match(workflow, /skopeo copy --all --preserve-digests/u);
+  assert.match(
+    workflow,
+    /EXPECTED_DIGEST:\s*\$\{\{ steps\.build\.outputs\.digest \}\}/u,
+  );
+  assert.match(workflow, /test "\$release_digest" = "\$EXPECTED_DIGEST"/u);
+  assert.match(workflow, /docker buildx imagetools inspect/u);
   assert.match(workflow, /sbom:\s*\$\{\{ github\.event_name == 'push' \}\}/u);
   assert.match(
     workflow,
@@ -109,17 +134,29 @@ test('promotes one approved SHA as identical dev and hml digest references', asy
 
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /approved_sha:/u);
+  assert.match(workflow, /environment:\s*t00-2-promotion/u);
+  assert.match(workflow, /timeout-minutes:\s*10/u);
+  assert.equal(workflow.match(/version:\s*v0\.36\.1/gu)?.length, 1);
+  assert.match(workflow, /image=moby\/buildkit@sha256:[a-f0-9]{64}/u);
   assert.match(workflow, /actions:\s*read/u);
   assert.match(workflow, /gh api --method GET/u);
   assert.match(workflow, /head_sha="\$APPROVED_SHA"/u);
   assert.match(workflow, /\.conclusion == "success"/u);
   assert.match(workflow, /\.head_branch == "master"/u);
   assert.match(workflow, /\^\[0-9a-f\]\{40\}\$/u);
-  assert.match(workflow, /docker buildx imagetools inspect/u);
-  assert.match(workflow, /edge_ref="\$\{edge_tag\}@\$\{edge_digest\}"/u);
+  assert.match(workflow, /gh run download "\$CI_RUN_ID"/u);
+  assert.match(workflow, /digest-edge-web-\$APPROVED_SHA/u);
+  assert.match(workflow, /digest-runtime-\$APPROVED_SHA/u);
+  assert.match(workflow, /test "\$edge_registry_digest" = "\$edge_digest"/u);
   assert.match(
     workflow,
-    /runtime_ref="\$\{runtime_tag\}@\$\{runtime_digest\}"/u,
+    /test "\$runtime_registry_digest" = "\$runtime_digest"/u,
+  );
+  assert.match(workflow, /docker buildx imagetools inspect/u);
+  assert.match(workflow, /edge_ref="\$REGISTRY_ROOT\/edge-web@\$edge_digest"/u);
+  assert.match(
+    workflow,
+    /runtime_ref="\$REGISTRY_ROOT\/runtime@\$runtime_digest"/u,
   );
   assert.match(workflow, /EDGE_WEB_DEV=%s.+"\$edge_ref"/u);
   assert.match(workflow, /EDGE_WEB_HML=%s.+"\$edge_ref"/u);
@@ -127,6 +164,23 @@ test('promotes one approved SHA as identical dev and hml digest references', asy
   assert.match(workflow, /RUNTIME_HML=%s.+"\$runtime_ref"/u);
   assert.doesNotMatch(workflow, /docker build(?:\s|$)|docker buildx build/u);
   assert.doesNotMatch(workflow, /:\s*latest\b|:latest\b/u);
+});
+
+test('documents single-owner governance for the public repository', async () => {
+  const codeOwners = await text('.github/CODEOWNERS');
+  const security = await text('.github/SECURITY.md');
+  const dependabot = await text('.github/dependabot.yml');
+  const contributing = await text('CONTRIBUTING.md');
+
+  assert.match(codeOwners, /^\* @romulosutil$/mu);
+  assert.match(codeOwners, /^\/\.github\/ @romulosutil$/mu);
+  assert.match(security, /Security > Report a vulnerability/u);
+  assert.match(security, /dados sint[eé]ticos/u);
+  assert.match(dependabot, /package-ecosystem:\s*npm/u);
+  assert.match(dependabot, /package-ecosystem:\s*github-actions/u);
+  assert.match(dependabot, /package-ecosystem:\s*docker/u);
+  assert.match(contributing, /@romulosutil.+único mantenedor/su);
+  assert.match(contributing, /proíbe aprovar o próprio PR/u);
 });
 
 test('documents T00.2 as supply-chain enablement, not MSG behavior', async () => {

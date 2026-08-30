@@ -3,10 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "npm@11.9.0",
+  "packageManager": "npm@11.19.0",
   "engines": {
-    "node": "24.14.0",
-    "npm": "11.9.0"
+    "node": "24.20.0",
+    "npm": "11.19.0"
   },
   "workspaces": [
     "apps/*",
@@ -16,8 +16,8 @@
     "build": "node scripts/build.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "db:migrate": "npm run migrate --workspace @crm-silmer/database --",
-    "format": "prettier --write package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/workflows/*.yml\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
-    "format:check": "prettier --check package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/workflows/*.yml\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
+    "format": "prettier --write package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/**/*.{md,yml,yaml}\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
+    "format:check": "prettier --check package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/**/*.{md,yml,yaml}\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
     "lint": "eslint apps modules scripts test eslint.config.js",
     "preview": "node scripts/serve-edge.mjs",
     "recovery:plan": "node scripts/recovery-mock.mjs --plan",

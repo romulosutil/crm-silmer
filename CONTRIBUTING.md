@@ -12,6 +12,21 @@ Uma mudança sem requisito rastreável deve ser classificada como correção de
 documentação, manutenção interna ou nova decisão. Mudanças de arquitetura,
 stack ou escopo exigem aprovação explícita e atualização da fonte canônica.
 
+## Governança do repositório público
+
+- Contribuições externas entram por fork e pull request; não há push externo na
+  branch `master`.
+- `@romulosutil` é o único mantenedor com permissão de escrita, integração e
+  administração de acessos. Somente ele adiciona colaboradores e integra PRs.
+- Pull requests do próprio mantenedor não exigem autoaprovação, porque o GitHub
+  proíbe aprovar o próprio PR; checks e resolução de conversas continuam
+  obrigatórios.
+- Workflows enviados por qualquer contribuidor externo exigem aprovação manual
+  do mantenedor antes de consumir runners.
+- Nunca publique segredo ou dado pessoal em issue, discussion, commit, log ou
+  pull request. Vulnerabilidades são reportadas pelo advisory privado descrito
+  em `.github/SECURITY.md`.
+
 ## Durante a implementação
 
 - Prefira uma fatia vertical pequena, observável e reversível.
@@ -25,7 +40,7 @@ stack ou escopo exigem aprovação explícita e atualização da fonte canônica
 
 ## Validação
 
-Use Node.js `24.14.0` e npm `11.9.0`. Para instalar exatamente o lockfile e
+Use Node.js `24.20.0` e npm `11.19.0`. Para instalar exatamente o lockfile e
 executar o gate local completo:
 
 ```powershell

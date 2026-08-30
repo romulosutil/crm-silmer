@@ -23,6 +23,8 @@ jobs:
   resolve:
     name: Resolve immutable references
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: t00-2-promotion
     steps:
       - name: Validate approved SHA
         shell: bash
@@ -34,6 +36,7 @@ jobs:
             exit 1
           fi
       - name: Require successful master CI for the exact SHA
+        id: ci
         shell: bash
         env:
           APPROVED_SHA: ${{ inputs.approved_sha }}
@@ -45,16 +48,35 @@ jobs:
             -f branch=master \
             -f status=completed \
             -f per_page=100)"
-          jq -e --arg sha "$APPROVED_SHA" '
-            .workflow_runs | any(
-              .head_sha == $sha and
-              .head_branch == "master" and
-              .event == "push" and
-              .conclusion == "success"
-            )
-          ' <<< "$runs"
+          run_id="$(jq -er --arg sha "$APPROVED_SHA" '
+            [
+              .workflow_runs[] | select(
+                .head_sha == $sha and
+                .head_branch == "master" and
+                .event == "push" and
+                .conclusion == "success"
+              )
+            ] | sort_by(.run_number, .run_attempt) | last | .id
+          ' <<< "$runs")"
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          printf 'run_id=%s\n' "$run_id" >> "$GITHUB_OUTPUT"
+      - name: Download digests recorded by the successful CI run
+        shell: bash
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+          CI_RUN_ID: ${{ steps.ci.outputs.run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "$CI_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "digest-edge-web-$APPROVED_SHA" --dir /tmp/digests/edge-web
+          gh run download "$CI_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "digest-runtime-$APPROVED_SHA" --dir /tmp/digests/runtime
       - name: Set up Buildx inspector
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        with:
+          version: v0.36.1
+          driver-opts: |
+            image=moby/buildkit@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -65,20 +87,31 @@ jobs:
         shell: bash
         env:
           APPROVED_SHA: ${{ inputs.approved_sha }}
+          CI_RUN_ID: ${{ steps.ci.outputs.run_id }}
           REGISTRY_ROOT: ghcr.io/${{ github.repository }}
         run: |
           edge_tag="$REGISTRY_ROOT/edge-web:$APPROVED_SHA"
           runtime_tag="$REGISTRY_ROOT/runtime:$APPROVED_SHA"
-          edge_digest="$(docker buildx imagetools inspect "$edge_tag" | awk '/^Digest:/ { print $2; exit }')"
-          runtime_digest="$(docker buildx imagetools inspect "$runtime_tag" | awk '/^Digest:/ { print $2; exit }')"
+          edge_record="$(< /tmp/digests/edge-web/digest.env)"
+          runtime_record="$(< /tmp/digests/runtime/digest.env)"
+          edge_digest="${edge_record##*@}"
+          runtime_digest="${runtime_record##*@}"
 
           [[ "$edge_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           [[ "$runtime_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          test "$edge_record" = "edge-web=$REGISTRY_ROOT/edge-web@$edge_digest"
+          test "$runtime_record" = "runtime=$REGISTRY_ROOT/runtime@$runtime_digest"
 
-          edge_ref="${edge_tag}@${edge_digest}"
-          runtime_ref="${runtime_tag}@${runtime_digest}"
+          edge_registry_digest="$(docker buildx imagetools inspect "$edge_tag" | awk '/^Digest:/ { print $2; exit }')"
+          runtime_registry_digest="$(docker buildx imagetools inspect "$runtime_tag" | awk '/^Digest:/ { print $2; exit }')"
+          test "$edge_registry_digest" = "$edge_digest"
+          test "$runtime_registry_digest" = "$runtime_digest"
+
+          edge_ref="$REGISTRY_ROOT/edge-web@$edge_digest"
+          runtime_ref="$REGISTRY_ROOT/runtime@$runtime_digest"
           {
             printf 'APPROVED_SHA=%s\n' "$APPROVED_SHA"
+            printf 'CI_RUN_ID=%s\n' "$CI_RUN_ID"
             printf 'EDGE_WEB_DEV=%s\n' "$edge_ref"
             printf 'EDGE_WEB_HML=%s\n' "$edge_ref"
             printf 'RUNTIME_DEV=%s\n' "$runtime_ref"

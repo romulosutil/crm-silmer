@@ -23,7 +23,7 @@ export function createApi(options = {}, runtime = {}) {
   const api = Fastify({ ...options, logger: false });
   const logger = runtime.logger ?? createSafeLogger({ service: SERVICES.api });
   const metrics = runtime.metrics ?? new MetricRegistry({ logger });
-  const readiness = runtime.readiness ?? (() => true);
+  const readiness = runtime.readiness ?? (() => false);
   /** @type {WeakMap<object, { correlationId: string, requestId: string, startedAt: number }>} */
   const requests = new WeakMap();
 

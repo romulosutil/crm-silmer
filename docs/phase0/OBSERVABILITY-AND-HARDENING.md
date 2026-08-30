@@ -3,14 +3,17 @@
 ## Evidência local versionada
 
 - A API expõe os contratos canônicos `GET /api/health/live` e
-  `GET /api/health/ready`. A readiness aceita uma verificação injetada e
-  responde 503 fechado quando a dependência falha. `/health/live` permanece
-  somente como alias temporário do bootstrap T00.1.
+  `GET /api/health/ready`. A readiness nasce indisponível e responde 503 até a
+  T01.1 injetar uma verificação PostgreSQL; verificações falsas ou com erro
+  também falham fechadas. O live continua 200 sem depender do banco.
+  `/health/live` permanece somente como alias temporário do bootstrap T00.1.
 - Cada requisição recebe `request_id` e `correlation_id` opacos. Valores de
   entrada fora do formato técnico são substituídos e nunca ecoados.
 - O logger JSON usa allowlist. Mensagem, payload, corpo, anexo, comprovante,
   telefone, e-mail, prompt, resposta, cookie, senha, segredo e token são
-  descartados; somente a contagem de campos redigidos é registrada.
+  descartados; somente a contagem de campos redigidos é registrada. Dimensões
+  categóricas também usam vocabulários fechados por campo: valor desconhecido
+  vira uma sentinela técnica, nunca o texto recebido.
 - A API emite `api_requests_total`, `api_5xx_total` e `api_duration_ms`. O worker
   emite heartbeat, falhas e idade do job mais antigo sem aceitar conteúdo do job.
 - A imagem runtime mantém base oficial por digest, usuário `node`, health check

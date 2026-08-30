@@ -33,14 +33,76 @@ const allowedContextFields = new Set([
 ]);
 const traceIdPattern =
   /^(?:[a-f0-9]{16,64}|[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})$/iu;
-const categoricalPattern = /^[A-Za-z][A-Za-z0-9_.:-]{0,79}$/u;
-const categoricalFields = new Set([
-  'error_code',
-  'job_type',
-  'metric',
-  'outcome',
-  'queue',
-  'unit',
+const allowedServices = new Set(['crm-silmer-api', 'crm-silmer-worker']);
+const allowedEvents = new Set([
+  'api_readiness_failed',
+  'api_request_completed',
+  'api_request_failed',
+  'api_request_started',
+  'api_start_failed',
+  'metric_observed',
+  'synthetic_failure',
+  'worker_job_failed',
+  'worker_started',
+  'worker_stopped',
+]);
+const allowedMetrics = new Set([
+  'api_5xx_total',
+  'api_duration_ms',
+  'api_requests_total',
+  'worker_heartbeat_unixtime_seconds',
+  'worker_jobs_failed_total',
+  'worker_oldest_job_age_seconds',
+]);
+/** @type {ReadonlyMap<string, { allowed: ReadonlySet<string>, fallback?: string }>} */
+const categoricalPolicies = new Map([
+  [
+    'error_code',
+    {
+      allowed: new Set([
+        'API_START_FAILED',
+        'JOB_FAILED',
+        'READINESS_CHECK_FAILED',
+        'SYNTHETIC_FAILURE',
+        'UNHANDLED_ERROR',
+      ]),
+      fallback: 'UNCLASSIFIED_ERROR',
+    },
+  ],
+  [
+    'job_type',
+    {
+      allowed: new Set(['outbox_delivery', 'unknown_job']),
+      fallback: 'unknown_job',
+    },
+  ],
+  ['metric', { allowed: allowedMetrics }],
+  [
+    'outcome',
+    {
+      allowed: new Set(['failure', 'outcome_unknown', 'success']),
+      fallback: 'unknown_outcome',
+    },
+  ],
+  [
+    'queue',
+    {
+      allowed: new Set(['default', 'external_effects']),
+      fallback: 'unknown_queue',
+    },
+  ],
+  [
+    'unit',
+    {
+      allowed: new Set([
+        'count',
+        'milliseconds',
+        'seconds',
+        'unixtime_seconds',
+      ]),
+      fallback: 'unknown_unit',
+    },
+  ],
 ]);
 const traceFields = new Set(['correlation_id', 'request_id']);
 
@@ -81,8 +143,8 @@ export function createSafeLogRecord(
   const record = {
     timestamp: clock().toISOString(),
     level,
-    service: categoricalPattern.test(service) ? service : 'invalid_service',
-    event: categoricalPattern.test(event) ? event : 'invalid_event',
+    service: allowedServices.has(service) ? service : 'unknown_service',
+    event: allowedEvents.has(event) ? event : 'unknown_event',
   };
   let redactedFieldCount = 0;
 
@@ -101,11 +163,13 @@ export function createSafeLogRecord(
       continue;
     }
 
-    if (categoricalFields.has(field)) {
-      if (typeof value === 'string' && categoricalPattern.test(value)) {
+    const policy = categoricalPolicies.get(field);
+    if (policy) {
+      if (typeof value === 'string' && policy.allowed.has(value)) {
         record[field] = value;
       } else {
         redactedFieldCount += 1;
+        if (policy.fallback !== undefined) record[field] = policy.fallback;
       }
       continue;
     }
@@ -167,7 +231,7 @@ export class MetricRegistry {
    * @param {Record<string, unknown>} [context]
    */
   record(metric, value, context = {}) {
-    if (!categoricalPattern.test(metric) || !isFiniteNumber(value)) {
+    if (!allowedMetrics.has(metric) || !isFiniteNumber(value)) {
       throw new TypeError(
         'Metric name and value must be bounded technical data',
       );

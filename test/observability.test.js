@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import { createApi } from '../apps/api/src/app.js';
+import { createServerApi } from '../apps/api/src/server.js';
 import { WorkerRuntime } from '../apps/worker/src/worker.js';
 import {
   createSafeLogger,
@@ -28,7 +29,7 @@ function capture() {
   const records = [];
   return {
     logger: createSafeLogger({
-      service: 'crm-silmer-test',
+      service: 'crm-silmer-api',
       sink: (record) => records.push(record),
     }),
     records,
@@ -62,21 +63,57 @@ test('allowlists structured fields and drops PII/content values', () => {
   assert.notEqual(normalizeTraceId(canaries[1]), canaries[1]);
 });
 
-test('exposes canonical live/ready contracts and fails readiness closed', async () => {
-  const successful = createApi();
+test('normalizes untrusted categorical dimensions without logging canaries', () => {
+  const { logger, records } = capture();
+  logger.error('synthetic_failure', {
+    error_code: canaries[0],
+    job_type: canaries[1],
+    outcome: canaries[2],
+    queue: canaries[3],
+  });
+
+  assert.equal(records[0].error_code, 'UNCLASSIFIED_ERROR');
+  assert.equal(records[0].job_type, 'unknown_job');
+  assert.equal(records[0].outcome, 'unknown_outcome');
+  assert.equal(records[0].queue, 'unknown_queue');
+  assert.equal(records[0].redacted_field_count, 4);
+  assertNoCanaries(records);
+});
+
+test('server wiring defaults ready to 503 while live stays 200', async () => {
+  const { logger } = capture();
+  const server = createServerApi({ logger });
   assert.equal(
-    (await successful.inject({ url: '/api/health/live' })).statusCode,
+    (await server.inject({ url: '/api/health/live' })).statusCode,
     200,
   );
   assert.equal(
-    (await successful.inject({ url: '/api/health/ready' })).statusCode,
+    (await server.inject({ url: '/api/health/ready' })).statusCode,
+    503,
+  );
+  assert.equal((await server.inject({ url: '/health/live' })).statusCode, 200);
+  await server.close();
+});
+
+test('readiness injection preserves explicit true, false and failure states', async () => {
+  const { logger: readyLogger } = capture();
+  const ready = createApi({}, { logger: readyLogger, readiness: () => true });
+  assert.equal(
+    (await ready.inject({ url: '/api/health/ready' })).statusCode,
     200,
+  );
+  await ready.close();
+
+  const { logger: unavailableLogger } = capture();
+  const unavailable = createApi(
+    {},
+    { logger: unavailableLogger, readiness: () => false },
   );
   assert.equal(
-    (await successful.inject({ url: '/health/live' })).statusCode,
-    200,
+    (await unavailable.inject({ url: '/api/health/ready' })).statusCode,
+    503,
   );
-  await successful.close();
+  await unavailable.close();
 
   const { logger, records } = capture();
   const metrics = new MetricRegistry({ logger });

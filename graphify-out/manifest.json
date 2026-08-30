@@ -105,9 +105,9 @@
     "semantic_hash": ""
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788061907.2467916,
-    "ast_hash": "c5fa39edbb99fd9101924b1b53ed75bc",
-    "semantic_hash": "c5fa39edbb99fd9101924b1b53ed75bc"
+    "mtime": 1788065188.835853,
+    "ast_hash": "c3bdc4dfe3a1edc598191eaa5605c954",
+    "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
     "mtime": 1788061906.1365092,
@@ -130,13 +130,103 @@
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
-    "mtime": 1788062796.1139016,
-    "ast_hash": "9266108d15250605b640151d42023e7e",
+    "mtime": 1788064962.2269678,
+    "ast_hash": "94dd9e7b5a570a26c938e1777d371952",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1788062791.58569,
-    "ast_hash": "ca8f0d6ceded29bd417fe09d594688ce",
+    "mtime": 1788064962.2249672,
+    "ast_hash": "21385011fc456b875269d75097dc2eba",
+    "semantic_hash": ""
+  },
+  ".prettierrc.json": {
+    "mtime": 1788064962.1933222,
+    "ast_hash": "b3013e4c88eea8951416bb45c9811105",
+    "semantic_hash": ""
+  },
+  "apps/api/package.json": {
+    "mtime": 1788064962.207012,
+    "ast_hash": "3d780e4909d3034736331a1adbde4647",
+    "semantic_hash": ""
+  },
+  "apps/api/src/app.js": {
+    "mtime": 1788064962.2095404,
+    "ast_hash": "86b8c7f83f7521e0806888520eee898d",
+    "semantic_hash": ""
+  },
+  "apps/api/src/server.js": {
+    "mtime": 1788064962.2111316,
+    "ast_hash": "f8b544f543dfcc2caef74c25fa67e8bb",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/package.json": {
+    "mtime": 1788064962.1989732,
+    "ast_hash": "dc89800cb273b32792711169f1363d0f",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/app.js": {
+    "mtime": 1788065075.030842,
+    "ast_hash": "68ab80d817f9bda9e12e54a8b5a6d83f",
+    "semantic_hash": ""
+  },
+  "apps/worker/package.json": {
+    "mtime": 1788064962.2133887,
+    "ast_hash": "22db48c750c4d6254a0bea681b60baee",
+    "semantic_hash": ""
+  },
+  "apps/worker/src/worker.js": {
+    "mtime": 1788064962.216906,
+    "ast_hash": "0c1d1b9a6c151e1ae1ee1e7d2d0ecc9f",
+    "semantic_hash": ""
+  },
+  "eslint.config.js": {
+    "mtime": 1788065002.6765962,
+    "ast_hash": "0f213e2f92736e0f6a7fcaf94d69186c",
+    "semantic_hash": ""
+  },
+  "jsconfig.json": {
+    "mtime": 1788064962.1953235,
+    "ast_hash": "542035a4885d28d89509b07427adc0cd",
+    "semantic_hash": ""
+  },
+  "modules/shared/package.json": {
+    "mtime": 1788064962.219436,
+    "ast_hash": "c7a92dc14b1bd227406a70f91965d09d",
+    "semantic_hash": ""
+  },
+  "modules/shared/src/index.js": {
+    "mtime": 1788064962.2204363,
+    "ast_hash": "ea2ed0bda0f0b669c792b16a89db4671",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1788065075.0283241,
+    "ast_hash": "38b7411887fa001ce22ba66dfc35f696",
+    "semantic_hash": ""
+  },
+  "scripts/build.mjs": {
+    "mtime": 1788065075.0323496,
+    "ast_hash": "5eb54def1a33dbaaa6127a95dae8b6a3",
+    "semantic_hash": ""
+  },
+  "scripts/check-boundaries.mjs": {
+    "mtime": 1788065075.0333579,
+    "ast_hash": "0377ca0bfe767f6e2c2d23533c76d238",
+    "semantic_hash": ""
+  },
+  "test/bootstrap.test.js": {
+    "mtime": 1788065075.0298421,
+    "ast_hash": "f18ddc5877b863adf71a8ac264589ae5",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/index.html": {
+    "mtime": 1788064962.2009745,
+    "ast_hash": "73fd58879d9d4f8c917ca804d6781fee",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco.md": {
+    "mtime": 1788063011.05211,
+    "ast_hash": "c24a7d2140fada1b10d434728bd729cf",
     "semantic_hash": ""
   }
 }

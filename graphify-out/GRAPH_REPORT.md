@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer  (2026-08-30)
 
 ## Corpus Check
-- 28 files · ~32,403 words
+- 45 files · ~33,758 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 371 nodes · 366 edges · 29 communities (28 shown, 1 thin omitted)
+- 499 nodes · 483 edges · 39 communities (34 shown, 5 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `979f4060`
+- Built from commit: `34770cff`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -18,18 +18,18 @@
 - Technical Strategy and MVP
 - Design System and UX
 - CRM Silmer MVP — Plano de Implementação
-- Sales Qualification Process
+- CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)
 - Campos da Ficha e Jornada Conversacional — P0.1
 - MVP Product Specification
 - Infrastructure and Deployment
 - README.md
 - CRM Silmer MVP — Requisitos Rastreáveis
-- AI Sales Automation
+- package.json
 - Product Context and Scope
-- Foundation and Technical Risks
+- compilerOptions
 - Inbox and Channel Integration
 - Identity and Domain Infrastructure
-- Fase 5 — Orçamento, PIX, Pedido e Ficha
+- api/package.json
 - AI Authority Decisions
 - Product Readiness Tech Decisions
 - AI Autonomy Constraints
@@ -43,23 +43,36 @@
 - Legacy Qualification Flow
 - Passagem de Produto para Tech Lead
 - Arquitetura — Decisões do MVP
-- Codex — Contexto do CRM Silmer
+- api/src/app.js
+- worker/package.json
+- shared/package.json
+- build.mjs
+- edge-web/package.json
+- check-boundaries.mjs
+- Q: Where are the agent roles and contribution protocol defined?
+- bootstrap.test.js
+- .prettierrc.json
+- edge-web/src/app.js
+- eslint.config.js
 
 ## God Nodes (most connected - your core abstractions)
 1. `TDD — CRM Silmer MVP` - 22 edges
 2. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
 3. `Design do CRM Silmer` - 16 edges
 4. `Topologia EasyPanel — CRM Silmer` - 15 edges
-5. `Passagem de Produto para Tech Lead` - 12 edges
-6. `CRM Silmer MVP — Plano de Implementação` - 11 edges
-7. `Fase 5 — Orçamento, PIX, Pedido e Ficha` - 10 edges
-8. `Campos da Ficha e Jornada Conversacional — P0.1` - 10 edges
-9. `CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)` - 9 edges
-10. `CHAT NA LANDING PAGE — o que existe e o que falta` - 9 edges
+5. `compilerOptions` - 13 edges
+6. `Passagem de Produto para Tech Lead` - 12 edges
+7. `CRM Silmer MVP — Plano de Implementação` - 11 edges
+8. `Fase 5 — Orçamento, PIX, Pedido e Ficha` - 10 edges
+9. `Campos da Ficha e Jornada Conversacional — P0.1` - 10 edges
+10. `scripts` - 9 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Ficha de Pedido` --shares_data_with--> `Rose (Destinatária Ficha)`  [EXTRACTED]
   CAMPOS-FICHA-E-JORNADA-P0-1.md → CRM-MVP-ESPECIFICACAO.md
+
+## Import Cycles
+- None detected.
 
 ## Hyperedges (group relationships)
 - **Documentação Central do MVP** — crm_mvp_especificacao, technical_design, easypanel_topology, product_readiness_tech_lead [EXTRACTED 1.00]
@@ -67,7 +80,7 @@
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 - **Migração do Datacrazy para CRM Próprio** — historico_datacrazy_crm_processo_vendas, historico_datacrazy_datacrazy_setup, specs_features_crm_mvp_context, specs_features_crm_mvp_spec [INFERRED 0.85]
 
-## Communities (29 total, 1 thin omitted)
+## Communities (39 total, 5 thin omitted)
 
 ### Community 0 - "Technical Strategy and MVP"
 Cohesion: 0.05
@@ -78,12 +91,12 @@ Cohesion: 0.05
 Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e conteúdo, 13. Arquitetura de implementação visual, 14. Critérios de aceite do design system, 15. Antipadrões proibidos, 1. Objetivo, 2. Tradução da marca para o produto (+29 more)
 
 ### Community 2 - "CRM Silmer MVP — Plano de Implementação"
-Cohesion: 0.07
-Nodes (29): CRM Silmer MVP — Plano de Implementação, Definition of Done global, Dependências e caminho crítico, Fase 3 — Negócio, Kanban e qualificação, Fase 4 — Vendedor Silmer assistivo, Fase 6 — Privacidade, relatórios e operação, Fase 7 — Hardening, UAT e piloto, T03.1 Implementar conversão idempotente em Negócio (+21 more)
+Cohesion: 0.04
+Nodes (47): CRM Silmer MVP — Plano de Implementação, Definition of Done global, Dependências e caminho crítico, Fase 0 — Fundação e riscos técnicos, Fase 3 — Negócio, Kanban e qualificação, Fase 4 — Vendedor Silmer assistivo, Fase 5 — Orçamento, PIX, Pedido e Ficha, Fase 6 — Privacidade, relatórios e operação (+39 more)
 
-### Community 3 - "Sales Qualification Process"
-Cohesion: 0.08
-Nodes (23): 1. Visão geral do fluxo, 2. Card rápido de briefing, 3. Roteiro completo de qualificação — os 13 campos, 4. Tags e tipificação, 5. Pipeline "Vendas Estamparia" — as 5 etapas, 6. Transferência da IA pro vendedor humano, 7. O que a IA e o vendedor nunca afirmam, 8. Pendências que travam o processo hoje (+15 more)
+### Community 3 - "CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)"
+Cohesion: 0.06
+Nodes (33): 1. Visão geral do fluxo, 2. Card rápido de briefing, 3. Roteiro completo de qualificação — os 13 campos, 4. Tags e tipificação, 5. Pipeline "Vendas Estamparia" — as 5 etapas, 6. Transferência da IA pro vendedor humano, 7. O que a IA e o vendedor nunca afirmam, 8. Pendências que travam o processo hoje (+25 more)
 
 ### Community 4 - "Campos da Ficha e Jornada Conversacional — P0.1"
 Cohesion: 0.09
@@ -98,24 +111,24 @@ Cohesion: 0.09
 Nodes (22): 10. Backups e disaster recovery, 11. Observabilidade e alertas, 12. Gates antes do piloto, 13. Riscos aceitos e evolução, 14. Referências verificadas, 1. Decisão, 2. Serviços por projeto, 3. Rede e domínios (+14 more)
 
 ### Community 7 - "README.md"
-Cohesion: 0.09
-Nodes (19): Sobre o CRM Silmer, Caixa de Entrada (Backlog), Antes de alterar, Commits e publicação, Contribuindo com o CRM Silmer, Durante a implementação, Validação, Ficha de Pedido (+11 more)
+Cohesion: 0.07
+Nodes (24): Sobre o CRM Silmer, Caixa de Entrada (Backlog), Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Guardrails do MVP, Inicialização obrigatória, Antes de alterar (+16 more)
 
 ### Community 8 - "CRM Silmer MVP — Requisitos Rastreáveis"
 Cohesion: 0.12
 Nodes (15): Critério de passagem, CRM Silmer MVP — Requisitos Rastreáveis, Fora do escopo, Objetivos, P1.1 Caixa de Entrada e conversão, P1.2 Atendimento assistido pelo Vendedor Silmer, P1.3 Ficha de Pedido, P1.4 Confiabilidade e canais (+7 more)
 
-### Community 9 - "AI Sales Automation"
-Cohesion: 0.20
-Nodes (10): Agente "Vendedor Silmer", Automação, Base de conhecimento, BLOQUEADORES (não resolvidos), Campos adicionais de lead (13 novos), Datacrazy — Automação "Vendedor Silmer" (SDR WhatsApp → Vendedor humano), Fluxo desenhado, O que já está configurado (+2 more)
+### Community 9 - "package.json"
+Cohesion: 0.06
+Nodes (31): eslint, devDependencies, eslint, prettier, @types/node, @types/punycode, typescript, engines (+23 more)
 
 ### Community 10 - "Product Context and Scope"
 Cohesion: 0.20
 Nodes (9): Backlog e lead, CRM Silmer MVP — Contexto de Produto, Decisões confirmadas, Discrição do Tech Lead, Ficha, financeiro, privacidade e acesso, Ideias adiadas, Integrações, Limite da feature (+1 more)
 
-### Community 11 - "Foundation and Technical Risks"
-Cohesion: 0.25
-Nodes (8): Fase 0 — Fundação e riscos técnicos, T00.1 Estruturar o monorepo JavaScript ESM, T00.2 Criar CI e imagens imutáveis, T00.3 Provisionar EasyPanel dev/hml/prod, T00.4 Fechar spikes externos, T00.5 Definir threat model e catálogo de dados, T00.6 Aprovar defaults de domínio e papéis, T00.7 Implantar telemetria e hardening mínimos
+### Community 11 - "compilerOptions"
+Cohesion: 0.08
+Nodes (25): compilerOptions, allowJs, checkJs, esModuleInterop, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+17 more)
 
 ### Community 12 - "Inbox and Channel Integration"
 Cohesion: 0.25
@@ -125,9 +138,9 @@ Nodes (8): Fase 2 — Caixa de Entrada, canais e confiabilidade, T02.1 Implement
 Cohesion: 0.29
 Nodes (7): Fase 1 — Identidade, acesso e infraestrutura de domínio, T01.1 Implementar migrations e acesso PostgreSQL, T01.2 Implementar sessão e usuários por convite, T01.3 Implementar funções e capacidades ortogonais, T01.4 Criar audit trail e idempotency records, T01.5 Criar configuração versionada, T01.6 Implementar catálogo versionado
 
-### Community 14 - "Fase 5 — Orçamento, PIX, Pedido e Ficha"
-Cohesion: 0.20
-Nodes (10): Fase 5 — Orçamento, PIX, Pedido e Ficha, T05.1 Implementar orçamento versionado, T05.2 Implementar ledger de vendido, T05.3 Implementar subfluxo PIX, T05.4 Implementar número e Pedido, T05.5 Implementar ciclo da Ficha, T05.6 Implementar PDF íntegro e reproduzível, T05.7 Implementar envio e onboarding (+2 more)
+### Community 14 - "api/package.json"
+Cohesion: 0.17
+Nodes (11): dependencies, @crm-silmer/shared, fastify, @crm-silmer/shared, name, private, scripts, start (+3 more)
 
 ### Community 15 - "AI Authority Decisions"
 Cohesion: 0.50
@@ -177,29 +190,53 @@ Nodes (12): Decisões P0 para aprovação final e estimativa fechada, Gate recom
 Cohesion: 0.29
 Nodes (7): Aprovações ainda necessárias, Arquitetura — Decisões do MVP, Decisões confirmadas, Decisões de modelagem, Decisões técnicas propostas como baseline, Fronteiras funcionais, Projetos e documentos executáveis
 
-### Community 28 - "Codex — Contexto do CRM Silmer"
+### Community 28 - "api/src/app.js"
+Cohesion: 0.24
+Nodes (6): createApi(), api, port, worker, WorkerRuntime, SERVICES
+
+### Community 29 - "worker/package.json"
+Cohesion: 0.20
+Nodes (9): dependencies, @crm-silmer/shared, @crm-silmer/shared, name, private, scripts, start, type (+1 more)
+
+### Community 30 - "shared/package.json"
+Cohesion: 0.33
+Nodes (5): exports, name, private, type, version
+
+### Community 31 - "build.mjs"
+Cohesion: 0.33
+Nodes (4): copies, manifest, output, root
+
+### Community 32 - "edge-web/package.json"
 Cohesion: 0.40
-Nodes (5): Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Guardrails do MVP, Inicialização obrigatória
+Nodes (4): name, private, type, version
+
+### Community 33 - "check-boundaries.mjs"
+Cohesion: 0.40
+Nodes (3): frontendPackage, root, workspacePackages
+
+### Community 34 - "Q: Where are the agent roles and contribution protocol defined?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Where are the agent roles and contribution protocol defined?, Source Nodes
 
 ## Knowledge Gaps
-- **274 isolated node(s):** `Limite da feature`, `Backlog e lead`, `Vendedor Silmer`, `Integrações`, `Ficha, financeiro, privacidade e acesso` (+269 more)
+- **356 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+351 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **1 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `README.md`, `Foundation and Technical Risks`, `Inbox and Channel Integration`, `Identity and Domain Infrastructure`, `Fase 5 — Orçamento, PIX, Pedido e Ficha`?**
-  _High betweenness centrality (0.160) - this node is a cross-community bridge._
+- **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Inbox and Channel Integration`, `Identity and Domain Infrastructure`, `README.md`?**
+  _High betweenness centrality (0.088) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `Technical Strategy and MVP` to `README.md`?**
-  _High betweenness centrality (0.112) - this node is a cross-community bridge._
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
 - **Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `README.md`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
-- **What connects `Limite da feature`, `Backlog e lead`, `Vendedor Silmer` to the rest of the system?**
-  _274 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
+  _356 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Technical Strategy and MVP` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `Design System and UX` be split into smaller, more focused modules?**
   _Cohesion score 0.05263157894736842 - nodes in this community are weakly interconnected._
 - **Should `CRM Silmer MVP — Plano de Implementação` be split into smaller, more focused modules?**
-  _Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0425531914893617 - nodes in this community are weakly interconnected._

@@ -84,38 +84,14 @@
       "design_uma_ação_principal_por_região"
     ],
     "2": [
-      "specs_features_crm_mvp_tasks_crm_silmer_mvp_plano_de_implementação",
-      "specs_features_crm_mvp_tasks_definition_of_done_global",
-      "specs_features_crm_mvp_tasks_dependências_e_caminho_crítico",
-      "specs_features_crm_mvp_tasks_fase_4_vendedor_silmer_assistivo",
-      "specs_features_crm_mvp_tasks_fase_5_orçamento_pix_pedido_e_ficha",
-      "specs_features_crm_mvp_tasks_fase_6_privacidade_relatórios_e_operação",
-      "specs_features_crm_mvp_tasks_fase_7_hardening_uat_e_piloto",
-      "specs_features_crm_mvp_tasks_t04_1_implementar_compositor_de_contexto",
-      "specs_features_crm_mvp_tasks_t04_2_implementar_adapter_aiprovider",
-      "specs_features_crm_mvp_tasks_t04_3_implementar_sugestões_separadas",
-      "specs_features_crm_mvp_tasks_t04_4_implementar_takeover_seguro",
-      "specs_features_crm_mvp_tasks_t04_5_criar_evals_de_segurança_comercial",
-      "specs_features_crm_mvp_tasks_t05_1_implementar_orçamento_versionado",
-      "specs_features_crm_mvp_tasks_t05_2_implementar_ledger_de_vendido",
-      "specs_features_crm_mvp_tasks_t05_3_implementar_subfluxo_pix",
-      "specs_features_crm_mvp_tasks_t05_4_implementar_número_e_pedido",
-      "specs_features_crm_mvp_tasks_t05_5_implementar_ciclo_da_ficha",
-      "specs_features_crm_mvp_tasks_t05_6_implementar_pdf_íntegro_e_reproduzível",
-      "specs_features_crm_mvp_tasks_t05_7_implementar_envio_e_onboarding",
-      "specs_features_crm_mvp_tasks_t05_8_implementar_segurança_de_anexos",
-      "specs_features_crm_mvp_tasks_t05_9_implementar_ui_comercial_pix_pedido_e_ficha",
-      "specs_features_crm_mvp_tasks_t06_1_implementar_retenção_por_classe",
-      "specs_features_crm_mvp_tasks_t06_2_implementar_legal_hold_e_solicitações",
-      "specs_features_crm_mvp_tasks_t06_3_implementar_tombstones_de_restore",
-      "specs_features_crm_mvp_tasks_t06_4_implementar_relatórios_comerciais",
-      "specs_features_crm_mvp_tasks_t06_5_implementar_observabilidade_e_alertas",
-      "specs_features_crm_mvp_tasks_t06_6_implementar_ui_de_relatórios_configuração_e_privacidade",
-      "specs_features_crm_mvp_tasks_t07_1_executar_testes_de_carga_e_concorrência",
-      "specs_features_crm_mvp_tasks_t07_2_executar_auditoria_de_segurança_e_acessibilidade",
-      "specs_features_crm_mvp_tasks_t07_3_executar_recovery_drill",
-      "specs_features_crm_mvp_tasks_t07_4_executar_uat_operacional",
-      "specs_features_crm_mvp_tasks_t07_5_fazer_go_live_controlado"
+      "specs_features_crm_mvp_tasks_fase_0_fundação_e_riscos_técnicos",
+      "specs_features_crm_mvp_tasks_t00_1_estruturar_o_monorepo_javascript_esm",
+      "specs_features_crm_mvp_tasks_t00_2_criar_ci_e_imagens_imutáveis",
+      "specs_features_crm_mvp_tasks_t00_3_provisionar_easypanel_dev_hml_prod",
+      "specs_features_crm_mvp_tasks_t00_4_fechar_spikes_externos",
+      "specs_features_crm_mvp_tasks_t00_5_definir_threat_model_e_catálogo_de_dados",
+      "specs_features_crm_mvp_tasks_t00_6_aprovar_defaults_de_domínio_e_papéis",
+      "specs_features_crm_mvp_tasks_t00_7_implantar_telemetria_e_hardening_mínimos"
     ],
     "3": [
       "historico_datacrazy_crm_processo_vendas",
@@ -130,19 +106,29 @@
       "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualificação_e_venda_silmer",
       "historico_datacrazy_datacrazy_setup",
       "historico_datacrazy_datacrazy_setup_a_validar_no_primeiro_teste_real",
+      "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer",
       "historico_datacrazy_datacrazy_setup_ajuste_necessário_no_prompt_do_agente",
       "historico_datacrazy_datacrazy_setup_alternativas_sem_o_custo_da_crazy_api",
       "historico_datacrazy_datacrazy_setup_arquitetura_necessária",
       "historico_datacrazy_datacrazy_setup_atenção_definir_qual_número_vai_hospedar_o_agente",
+      "historico_datacrazy_datacrazy_setup_automação",
+      "historico_datacrazy_datacrazy_setup_base_de_conhecimento",
+      "historico_datacrazy_datacrazy_setup_bloqueadores_não_resolvidos",
+      "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos",
       "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta",
       "historico_datacrazy_datacrazy_setup_cuidados_com_a_crazy_api_whatsapp_não_oficial",
+      "historico_datacrazy_datacrazy_setup_datacrazy_automação_vendedor_silmer_sdr_whatsapp_vendedor_humano",
       "historico_datacrazy_datacrazy_setup_esforço_estimado",
+      "historico_datacrazy_datacrazy_setup_fluxo_desenhado",
       "historico_datacrazy_datacrazy_setup_o_que_a_conexão_universal_pede",
+      "historico_datacrazy_datacrazy_setup_o_que_já_está_configurado",
       "historico_datacrazy_datacrazy_setup_passo_a_passo_conectar_a_crazy_api_quando_o_cliente_aprovar",
       "historico_datacrazy_datacrazy_setup_passos",
       "historico_datacrazy_datacrazy_setup_pendências_de_conteúdo_a_silmer_precisa_fornecer",
+      "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia",
       "historico_datacrazy_datacrazy_setup_ponto_de_atenção_do_fluxo_no_site",
-      "historico_datacrazy_datacrazy_setup_próximos_passos_em_ordem"
+      "historico_datacrazy_datacrazy_setup_próximos_passos_em_ordem",
+      "historico_datacrazy_datacrazy_setup_tags_4_novas"
     ],
     "4": [
       "campos_ficha_e_jornada_p0_1",
@@ -168,7 +154,19 @@
       "campos_ficha_e_jornada_p0_1_campos_da_ficha_e_jornada_conversacional_p0_1",
       "campos_ficha_e_jornada_p0_1_regras_transversais_da_máquina_de_estados",
       "campos_ficha_e_jornada_p0_1_vocabulário_de_preenchimento",
-      "product_readiness_tech_lead"
+      "product_readiness_tech_lead",
+      "product_readiness_tech_lead_decisões_p0_para_aprovação_final_e_estimativa_fechada",
+      "product_readiness_tech_lead_gate_recomendado",
+      "product_readiness_tech_lead_o_que_o_tech_lead_já_pode_especificar",
+      "product_readiness_tech_lead_p0_1_resolvido_contrato_de_passagem",
+      "product_readiness_tech_lead_p0_2_resolvido_autoridade_sobre_preço",
+      "product_readiness_tech_lead_p0_3_resolvido_limite_financeiro_comercial",
+      "product_readiness_tech_lead_p0_4_resolvido_canais_e_limite_operacional_da_ia",
+      "product_readiness_tech_lead_p0_5_resolvido_identidade_fab_e_numeração_da_ficha",
+      "product_readiness_tech_lead_p0_6_resolvido_retenção_exclusão_e_responsáveis_de_privacidade",
+      "product_readiness_tech_lead_p0_7_resolvido_permissões_e_auditoria_da_ficha",
+      "product_readiness_tech_lead_passagem_de_produto_para_tech_lead",
+      "product_readiness_tech_lead_registro_de_fechamento"
     ],
     "5": [
       "crm_mvp_especificacao_10_jornada_comercial_aprovada",
@@ -220,25 +218,11 @@
       "easypanel_topology_topologia_easypanel_crm_silmer"
     ],
     "7": [
-      "about",
-      "about_sobre_o_crm_silmer",
-      "architecture",
-      "architecture_aprovações_ainda_necessárias",
-      "architecture_arquitetura_decisões_do_mvp",
-      "architecture_decisões_confirmadas",
-      "architecture_decisões_de_modelagem",
-      "architecture_decisões_técnicas_propostas_como_baseline",
-      "architecture_fronteiras_funcionais",
-      "architecture_projetos_e_documentos_executáveis",
       "caixa_de_entrada",
       "crm_mvp_especificacao",
-      "easypanel_topology",
       "ficha_pedido",
       "kanban_comercial",
-      "romulo_sutil_correa",
       "rose_destinataria",
-      "specs_features_crm_mvp_tasks",
-      "technical_design",
       "vendedor_silmer"
     ],
     "8": [
@@ -248,9 +232,9 @@
       "specs_features_crm_mvp_spec_fora_do_escopo",
       "specs_features_crm_mvp_spec_objetivos",
       "specs_features_crm_mvp_spec_p1_1_caixa_de_entrada_e_conversão",
-      "specs_features_crm_mvp_spec_p1_2_qualificação_autônoma",
+      "specs_features_crm_mvp_spec_p1_2_atendimento_assistido_pelo_vendedor_silmer",
       "specs_features_crm_mvp_spec_p1_3_ficha_de_pedido",
-      "specs_features_crm_mvp_spec_p1_4_confiabilidade_e_canal",
+      "specs_features_crm_mvp_spec_p1_4_confiabilidade_e_canais",
       "specs_features_crm_mvp_spec_p1_5_financeiro_comercial",
       "specs_features_crm_mvp_spec_p1_6_privacidade_e_acesso",
       "specs_features_crm_mvp_spec_p1_7_pix_e_boas_vindas",
@@ -260,16 +244,32 @@
       "specs_features_crm_mvp_spec_rastreabilidade"
     ],
     "9": [
-      "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer",
-      "historico_datacrazy_datacrazy_setup_automação",
-      "historico_datacrazy_datacrazy_setup_base_de_conhecimento",
-      "historico_datacrazy_datacrazy_setup_bloqueadores_não_resolvidos",
-      "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos",
-      "historico_datacrazy_datacrazy_setup_datacrazy_automação_vendedor_silmer_sdr_whatsapp_vendedor_humano",
-      "historico_datacrazy_datacrazy_setup_fluxo_desenhado",
-      "historico_datacrazy_datacrazy_setup_o_que_já_está_configurado",
-      "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia",
-      "historico_datacrazy_datacrazy_setup_tags_4_novas"
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_check_boundaries",
+      "package_scripts_db_migrate",
+      "package_scripts_format",
+      "package_scripts_format_check",
+      "package_scripts_lint",
+      "package_scripts_preview",
+      "package_scripts_recovery_plan",
+      "package_scripts_test",
+      "package_scripts_test_database",
+      "package_scripts_test_database_live",
+      "package_scripts_test_e2e",
+      "package_scripts_test_external_spikes",
+      "package_scripts_test_observability",
+      "package_scripts_test_phase0_decisions",
+      "package_scripts_test_phase1_schema_live",
+      "package_scripts_test_recovery_mocks",
+      "package_scripts_test_security_catalog",
+      "package_scripts_typecheck",
+      "package_scripts_validate",
+      "package_scripts_validate_external_spikes",
+      "package_scripts_validate_observability",
+      "package_scripts_validate_phase0_decisions",
+      "package_scripts_validate_security_catalog",
+      "package_scripts_validate_topology"
     ],
     "10": [
       "specs_features_crm_mvp_context",
@@ -284,16 +284,413 @@
       "specs_features_crm_mvp_context_vendedor_silmer"
     ],
     "11": [
-      "specs_features_crm_mvp_tasks_fase_0_fundação_e_riscos_técnicos",
-      "specs_features_crm_mvp_tasks_t00_1_estruturar_o_monorepo_javascript_esm",
-      "specs_features_crm_mvp_tasks_t00_2_criar_ci_e_imagens_imutáveis",
-      "specs_features_crm_mvp_tasks_t00_3_provisionar_easypanel_dev_hml_prod",
-      "specs_features_crm_mvp_tasks_t00_4_fechar_spikes_externos",
-      "specs_features_crm_mvp_tasks_t00_5_definir_threat_model_e_catálogo_de_dados",
-      "specs_features_crm_mvp_tasks_t00_6_aprovar_defaults_de_domínio_e_papéis",
-      "specs_features_crm_mvp_tasks_t00_7_implantar_telemetria_e_hardening_mínimos"
+      "jsconfig",
+      "jsconfig_compileroptions",
+      "jsconfig_compileroptions_allowjs",
+      "jsconfig_compileroptions_checkjs",
+      "jsconfig_compileroptions_esmoduleinterop",
+      "jsconfig_compileroptions_forceconsistentcasinginfilenames",
+      "jsconfig_compileroptions_module",
+      "jsconfig_compileroptions_moduleresolution",
+      "jsconfig_compileroptions_noemit",
+      "jsconfig_compileroptions_resolvejsonmodule",
+      "jsconfig_compileroptions_skiplibcheck",
+      "jsconfig_compileroptions_strict",
+      "jsconfig_compileroptions_target",
+      "jsconfig_compileroptions_types",
+      "jsconfig_exclude",
+      "jsconfig_include",
+      "ref_apps_js",
+      "ref_dist",
+      "ref_eslint_config_js",
+      "ref_graphify_out",
+      "ref_historico_datacrazy",
+      "ref_modules_js",
+      "ref_node",
+      "ref_node_modules",
+      "ref_scripts_mjs",
+      "ref_test_js"
     ],
     "12": [
+      "scripts_recovery_mock",
+      "scripts_recovery_mock_buildrecoveryplan",
+      "scripts_recovery_mock_expectedadapterkeys",
+      "scripts_recovery_mock_expecteddigestkeys",
+      "scripts_recovery_mock_invariant",
+      "scripts_recovery_mock_main",
+      "scripts_recovery_mock_validaterecoverykit",
+      "scripts_validate_topology",
+      "scripts_validate_topology_expectedenvironments",
+      "scripts_validate_topology_expectedprojects",
+      "scripts_validate_topology_expectedservices",
+      "scripts_validate_topology_invariant",
+      "scripts_validate_topology_main",
+      "scripts_validate_topology_samearray",
+      "scripts_validate_topology_validateenvironmenttemplate",
+      "scripts_validate_topology_validatetopologydocument",
+      "test_topology_recovery_test",
+      "test_topology_recovery_test_clone",
+      "test_topology_recovery_test_json",
+      "test_topology_recovery_test_rooturl"
+    ],
+    "13": [
+      "specs_features_crm_mvp_tasks_fase_5_orçamento_pix_pedido_e_ficha",
+      "specs_features_crm_mvp_tasks_t05_1_implementar_orçamento_versionado",
+      "specs_features_crm_mvp_tasks_t05_2_implementar_ledger_de_vendido",
+      "specs_features_crm_mvp_tasks_t05_3_implementar_subfluxo_pix",
+      "specs_features_crm_mvp_tasks_t05_4_implementar_número_e_pedido",
+      "specs_features_crm_mvp_tasks_t05_5_implementar_ciclo_da_ficha",
+      "specs_features_crm_mvp_tasks_t05_6_implementar_pdf_íntegro_e_reproduzível",
+      "specs_features_crm_mvp_tasks_t05_7_implementar_envio_e_onboarding",
+      "specs_features_crm_mvp_tasks_t05_8_implementar_segurança_de_anexos",
+      "specs_features_crm_mvp_tasks_t05_9_implementar_ui_comercial_pix_pedido_e_ficha"
+    ],
+    "14": [
+      "apps_api_package",
+      "apps_api_package_dependencies",
+      "apps_api_package_dependencies_crm_silmer_database",
+      "apps_api_package_dependencies_crm_silmer_shared",
+      "apps_api_package_dependencies_fastify",
+      "apps_api_package_json_crm_silmer_shared",
+      "apps_api_package_name",
+      "apps_api_package_private",
+      "apps_api_package_scripts",
+      "apps_api_package_scripts_start",
+      "apps_api_package_type",
+      "apps_api_package_version",
+      "crm_silmer_database",
+      "fastify"
+    ],
+    "15": [
+      "scripts_validate_security_catalog",
+      "scripts_validate_security_catalog_invariant",
+      "scripts_validate_security_catalog_main",
+      "scripts_validate_security_catalog_requiredfamilies",
+      "scripts_validate_security_catalog_retention",
+      "scripts_validate_security_catalog_validatedatacatalog",
+      "scripts_validate_security_catalog_validatethreatmodel",
+      "test_security_catalog_test",
+      "test_security_catalog_test_readjson",
+      "test_security_catalog_test_rooturl"
+    ],
+    "16": [
+      "rules_regras_de_produto",
+      "rules_regras_do_crm_silmer",
+      "rules_regras_técnicas_já_impostas"
+    ],
+    "17": [
+      "architecture_aprovações_ainda_necessárias",
+      "architecture_arquitetura_decisões_do_mvp",
+      "architecture_decisões_confirmadas",
+      "architecture_decisões_de_modelagem",
+      "architecture_decisões_técnicas_propostas_como_baseline",
+      "architecture_fronteiras_funcionais",
+      "architecture_projetos_e_documentos_executáveis"
+    ],
+    "18": [
+      "contributing",
+      "contributing_antes_de_alterar",
+      "contributing_commits_e_publicação",
+      "contributing_contribuindo_com_o_crm_silmer",
+      "contributing_durante_a_implementação",
+      "contributing_governança_do_repositório_público",
+      "contributing_validação"
+    ],
+    "19": [
+      "docs_phase0_external_spikes",
+      "docs_phase0_external_spikes_decisões_seguras",
+      "docs_phase0_external_spikes_evidências_e_pendências_externas",
+      "docs_phase0_external_spikes_resultado_local",
+      "docs_phase0_external_spikes_t00_4_spikes_externos",
+      "docs_phase0_external_spikes_verificação"
+    ],
+    "20": [
+      "docs_phase0_threat_model_and_data_catalog",
+      "docs_phase0_threat_model_and_data_catalog_aprovação",
+      "docs_phase0_threat_model_and_data_catalog_catálogo_e_retenção",
+      "docs_phase0_threat_model_and_data_catalog_modelo_de_ameaças",
+      "docs_phase0_threat_model_and_data_catalog_resultado_local",
+      "docs_phase0_threat_model_and_data_catalog_t00_5_threat_model_e_catálogo_de_dados"
+    ],
+    "21": [
+      "about",
+      "about_sobre_o_crm_silmer",
+      "agents",
+      "architecture",
+      "codex",
+      "easypanel_topology",
+      "readme",
+      "romulo_sutil_correa",
+      "rules",
+      "specs_features_crm_mvp_tasks",
+      "technical_design"
+    ],
+    "22": [
+      "codex_codex_contexto_do_crm_silmer",
+      "codex_fechamento",
+      "codex_forma_de_trabalhar",
+      "codex_guardrails_do_mvp",
+      "codex_inicialização_obrigatória"
+    ],
+    "23": [
+      "readme_comece_por_aqui",
+      "readme_crm_silmer",
+      "readme_desenvolvimento",
+      "readme_stack_aprovada"
+    ],
+    "24": [
+      "agents_agentes_do_crm_silmer",
+      "agents_composição_eficiente_por_tipo_de_tarefa",
+      "agents_contrato_de_delegação_e_handoff",
+      "agents_definition_of_done_resumida",
+      "agents_equipe_por_responsabilidade",
+      "agents_escopo_e_missão",
+      "agents_precedência_das_fontes",
+      "agents_protocolo_obrigatório"
+    ],
+    "25": [
+      "fluxo_qualificacao_generico",
+      "fluxo_qualificacao_generico_fluxo_de_qualificação_referência_substituída"
+    ],
+    "26": [
+      "ref_field",
+      "ref_fieldsuggestions",
+      "ref_handoffrequired",
+      "ref_null",
+      "ref_reply",
+      "ref_source",
+      "ref_stagesuggestion",
+      "ref_string",
+      "ref_value",
+      "schemas_fixtures_external_openai_suggestion_schema",
+      "schemas_fixtures_external_openai_suggestion_schema_additionalproperties",
+      "schemas_fixtures_external_openai_suggestion_schema_field_type",
+      "schemas_fixtures_external_openai_suggestion_schema_fieldsuggestions_items",
+      "schemas_fixtures_external_openai_suggestion_schema_fieldsuggestions_type",
+      "schemas_fixtures_external_openai_suggestion_schema_handoffrequired_type",
+      "schemas_fixtures_external_openai_suggestion_schema_items_additionalproperties",
+      "schemas_fixtures_external_openai_suggestion_schema_items_properties",
+      "schemas_fixtures_external_openai_suggestion_schema_items_required",
+      "schemas_fixtures_external_openai_suggestion_schema_items_type",
+      "schemas_fixtures_external_openai_suggestion_schema_properties",
+      "schemas_fixtures_external_openai_suggestion_schema_properties_field",
+      "schemas_fixtures_external_openai_suggestion_schema_properties_fieldsuggestions",
+      "schemas_fixtures_external_openai_suggestion_schema_properties_handoffrequired",
+      "schemas_fixtures_external_openai_suggestion_schema_properties_reply",
+      "schemas_fixtures_external_openai_suggestion_schema_properties_source",
+      "schemas_fixtures_external_openai_suggestion_schema_properties_stagesuggestion",
+      "schemas_fixtures_external_openai_suggestion_schema_properties_value",
+      "schemas_fixtures_external_openai_suggestion_schema_reply_type",
+      "schemas_fixtures_external_openai_suggestion_schema_required",
+      "schemas_fixtures_external_openai_suggestion_schema_schema",
+      "schemas_fixtures_external_openai_suggestion_schema_source_type",
+      "schemas_fixtures_external_openai_suggestion_schema_stagesuggestion_type",
+      "schemas_fixtures_external_openai_suggestion_schema_type",
+      "schemas_fixtures_external_openai_suggestion_schema_value_type"
+    ],
+    "27": [
+      "axe_core_playwright",
+      "eslint",
+      "package_devdependencies",
+      "package_devdependencies_axe_core_playwright",
+      "package_devdependencies_eslint",
+      "package_devdependencies_playwright_test",
+      "package_devdependencies_prettier",
+      "package_devdependencies_types_node",
+      "package_devdependencies_types_punycode",
+      "package_devdependencies_typescript",
+      "playwright_test",
+      "prettier",
+      "types_node",
+      "types_punycode",
+      "typescript"
+    ],
+    "28": [
+      "apps_api_src_app",
+      "apps_api_src_app_createapi",
+      "apps_api_src_server",
+      "apps_api_src_server_createserverapi",
+      "apps_worker_src_worker",
+      "apps_worker_src_worker_workerruntime",
+      "apps_worker_src_worker_workerruntime_constructor",
+      "apps_worker_src_worker_workerruntime_emitheartbeat",
+      "apps_worker_src_worker_workerruntime_recordjobfailure",
+      "apps_worker_src_worker_workerruntime_start",
+      "apps_worker_src_worker_workerruntime_stop",
+      "modules_shared_src_index",
+      "modules_shared_src_index_services",
+      "modules_shared_src_observability",
+      "modules_shared_src_observability_allowedcontextfields",
+      "modules_shared_src_observability_allowedevents",
+      "modules_shared_src_observability_allowedmetrics",
+      "modules_shared_src_observability_allowedservices",
+      "modules_shared_src_observability_categoricalpolicies",
+      "modules_shared_src_observability_createsafelogger",
+      "modules_shared_src_observability_createsafelogrecord",
+      "modules_shared_src_observability_isfinitenumber",
+      "modules_shared_src_observability_metricregistry",
+      "modules_shared_src_observability_metricregistry_constructor",
+      "modules_shared_src_observability_metricregistry_increment",
+      "modules_shared_src_observability_metricregistry_record",
+      "modules_shared_src_observability_metricregistry_snapshot",
+      "modules_shared_src_observability_normalizetraceid",
+      "modules_shared_src_observability_redacted_field_names",
+      "modules_shared_src_observability_tracefields",
+      "scripts_validate_observability",
+      "scripts_validate_observability_invariant",
+      "scripts_validate_observability_main",
+      "scripts_validate_observability_requiredalerts",
+      "scripts_validate_observability_rooturl",
+      "scripts_validate_observability_validatealertpolicy",
+      "scripts_validate_observability_validateruntimehardening",
+      "test_migrations_live_test",
+      "test_observability_test",
+      "test_observability_test_assertnocanaries",
+      "test_observability_test_canaries",
+      "test_observability_test_capture",
+      "test_observability_test_escaperegexp",
+      "test_observability_test_rooturl"
+    ],
+    "29": [
+      "apps_worker_package",
+      "apps_worker_package_dependencies",
+      "apps_worker_package_dependencies_crm_silmer_shared",
+      "apps_worker_package_json_crm_silmer_shared",
+      "apps_worker_package_name",
+      "apps_worker_package_private",
+      "apps_worker_package_scripts",
+      "apps_worker_package_scripts_start",
+      "apps_worker_package_type",
+      "apps_worker_package_version"
+    ],
+    "30": [
+      "modules_shared_package",
+      "modules_shared_package_exports",
+      "modules_shared_package_name",
+      "modules_shared_package_private",
+      "modules_shared_package_type",
+      "modules_shared_package_version"
+    ],
+    "31": [
+      "scripts_build",
+      "scripts_build_copies",
+      "scripts_build_listfiles",
+      "scripts_build_manifest",
+      "scripts_build_output",
+      "scripts_build_root"
+    ],
+    "32": [
+      "apps_edge_web_package",
+      "apps_edge_web_package_name",
+      "apps_edge_web_package_private",
+      "apps_edge_web_package_type",
+      "apps_edge_web_package_version"
+    ],
+    "33": [
+      "scripts_check_boundaries",
+      "scripts_check_boundaries_frontendpackage",
+      "scripts_check_boundaries_listjavascript",
+      "scripts_check_boundaries_root",
+      "scripts_check_boundaries_workspacepackages"
+    ],
+    "34": [
+      "scripts_validate_phase0_decisions",
+      "scripts_validate_phase0_decisions_expecteddecisionsubjects",
+      "scripts_validate_phase0_decisions_expectedroles",
+      "scripts_validate_phase0_decisions_invariant",
+      "scripts_validate_phase0_decisions_iscorporateid",
+      "scripts_validate_phase0_decisions_isisodate",
+      "scripts_validate_phase0_decisions_isversionedevidence",
+      "scripts_validate_phase0_decisions_main",
+      "scripts_validate_phase0_decisions_validateapproval",
+      "scripts_validate_phase0_decisions_validatephase0decisions",
+      "test_phase0_decisions_test",
+      "test_phase0_decisions_test_decisions",
+      "test_phase0_decisions_test_evidence",
+      "test_phase0_decisions_test_fullyapprove",
+      "test_phase0_decisions_test_rooturl"
+    ],
+    "35": [
+      "test_bootstrap_test",
+      "test_bootstrap_test_digestbuild",
+      "test_bootstrap_test_readjson",
+      "test_bootstrap_test_rooturl"
+    ],
+    "36": [
+      "prettierrc",
+      "prettierrc_singlequote",
+      "prettierrc_trailingcomma"
+    ],
+    "37": [
+      "apps_edge_web_src_app",
+      "apps_edge_web_src_app_status"
+    ],
+    "38": [
+      "eslint_config",
+      "eslint_config_nodeglobals"
+    ],
+    "39": [
+      "docs_phase0_phase_0_approval_gate",
+      "docs_phase0_phase_0_approval_gate_como_registrar_uma_aprovação_real",
+      "docs_phase0_phase_0_approval_gate_defaults_aguardando_confirmação",
+      "docs_phase0_phase_0_approval_gate_papéis_e_separação_de_funções",
+      "docs_phase0_phase_0_approval_gate_resultado_local",
+      "docs_phase0_phase_0_approval_gate_t00_6_gate_de_aprovação_da_fase_0",
+      "docs_phase0_phase_0_approval_gate_verificação"
+    ],
+    "40": [
+      "scripts_serve_edge",
+      "scripts_serve_edge_contenttypes",
+      "scripts_serve_edge_port",
+      "scripts_serve_edge_root",
+      "scripts_serve_edge_server"
+    ],
+    "41": [
+      "test_ci_images_test",
+      "test_ci_images_test_json",
+      "test_ci_images_test_rooturl",
+      "test_ci_images_test_text"
+    ],
+    "42": [
+      "playwright_config"
+    ],
+    "43": [
+      "test_e2e_foundation_spec"
+    ],
+    "44": [
+      "ops_recovery_runbook",
+      "ops_recovery_runbook_execução_externa_pendente",
+      "ops_recovery_runbook_runbook_de_recovery_off_host_t00_3",
+      "ops_recovery_runbook_uso_offline_por_uma_segunda_pessoa"
+    ],
+    "45": [
+      "schemas_fixtures_external_manifest",
+      "schemas_fixtures_external_manifest_meta",
+      "schemas_fixtures_external_manifest_meta_messagefixture",
+      "schemas_fixtures_external_manifest_meta_signature",
+      "schemas_fixtures_external_manifest_meta_statusfixture",
+      "schemas_fixtures_external_manifest_openai",
+      "schemas_fixtures_external_manifest_openai_schemafixture",
+      "schemas_fixtures_external_manifest_schemaversion",
+      "schemas_fixtures_external_manifest_signature_appsecret",
+      "schemas_fixtures_external_manifest_signature_expectedheader",
+      "schemas_fixtures_external_manifest_signature_rawbody",
+      "schemas_fixtures_external_manifest_signature_synthetic",
+      "schemas_fixtures_external_manifest_syntheticonly"
+    ],
+    "46": [
+      "scripts_validate_external_spikes",
+      "scripts_validate_external_spikes_invariant",
+      "scripts_validate_external_spikes_main",
+      "scripts_validate_external_spikes_statuses",
+      "scripts_validate_external_spikes_validateexternaleffects",
+      "scripts_validate_external_spikes_validatefixtures",
+      "scripts_validate_external_spikes_validateloadenvelope",
+      "test_external_spikes_test",
+      "test_external_spikes_test_json",
+      "test_external_spikes_test_rooturl"
+    ],
+    "47": [
       "specs_features_crm_mvp_tasks_fase_2_caixa_de_entrada_canais_e_confiabilidade",
       "specs_features_crm_mvp_tasks_t02_1_implementar_adapter_canônico_de_canais",
       "specs_features_crm_mvp_tasks_t02_2_implementar_webhook_whatsapp",
@@ -303,7 +700,16 @@
       "specs_features_crm_mvp_tasks_t02_6_implementar_ui_da_caixa_de_entrada",
       "specs_features_crm_mvp_tasks_t02_7_implementar_instagram_direct_feature_gated"
     ],
-    "13": [
+    "48": [
+      "docs_phase0_supply_chain",
+      "docs_phase0_supply_chain_build_e_promoção",
+      "docs_phase0_supply_chain_pins_verificados_em_30_08_2026",
+      "docs_phase0_supply_chain_rastreabilidade_e_limite",
+      "docs_phase0_supply_chain_scanner",
+      "docs_phase0_supply_chain_supply_chain_da_fase_0",
+      "docs_phase0_supply_chain_verificação_local"
+    ],
+    "49": [
       "specs_features_crm_mvp_tasks_fase_1_identidade_acesso_e_infraestrutura_de_domínio",
       "specs_features_crm_mvp_tasks_t01_1_implementar_migrations_e_acesso_postgresql",
       "specs_features_crm_mvp_tasks_t01_2_implementar_sessão_e_usuários_por_convite",
@@ -312,7 +718,7 @@
       "specs_features_crm_mvp_tasks_t01_5_criar_configuração_versionada",
       "specs_features_crm_mvp_tasks_t01_6_implementar_catálogo_versionado"
     ],
-    "14": [
+    "50": [
       "specs_features_crm_mvp_tasks_fase_3_negócio_kanban_e_qualificação",
       "specs_features_crm_mvp_tasks_t03_1_implementar_conversão_idempotente_em_negócio",
       "specs_features_crm_mvp_tasks_t03_2_implementar_máquina_de_estados_do_deal",
@@ -321,136 +727,539 @@
       "specs_features_crm_mvp_tasks_t03_5_implementar_tarefas_responsável_e_handoff_humano",
       "specs_features_crm_mvp_tasks_t03_6_implementar_detalhe_acessível_do_negócio"
     ],
-    "15": [
+    "51": [
+      "specs_features_crm_mvp_tasks_fase_6_privacidade_relatórios_e_operação",
+      "specs_features_crm_mvp_tasks_t06_1_implementar_retenção_por_classe",
+      "specs_features_crm_mvp_tasks_t06_2_implementar_legal_hold_e_solicitações",
+      "specs_features_crm_mvp_tasks_t06_3_implementar_tombstones_de_restore",
+      "specs_features_crm_mvp_tasks_t06_4_implementar_relatórios_comerciais",
+      "specs_features_crm_mvp_tasks_t06_5_implementar_observabilidade_e_alertas",
+      "specs_features_crm_mvp_tasks_t06_6_implementar_ui_de_relatórios_configuração_e_privacidade"
+    ],
+    "52": [
+      "specs_features_crm_mvp_tasks_fase_4_vendedor_silmer_assistivo",
+      "specs_features_crm_mvp_tasks_t04_1_implementar_compositor_de_contexto",
+      "specs_features_crm_mvp_tasks_t04_2_implementar_adapter_aiprovider",
+      "specs_features_crm_mvp_tasks_t04_3_implementar_sugestões_separadas",
+      "specs_features_crm_mvp_tasks_t04_4_implementar_takeover_seguro",
+      "specs_features_crm_mvp_tasks_t04_5_criar_evals_de_segurança_comercial"
+    ],
+    "53": [
+      "specs_features_crm_mvp_tasks_fase_7_hardening_uat_e_piloto",
+      "specs_features_crm_mvp_tasks_t07_1_executar_testes_de_carga_e_concorrência",
+      "specs_features_crm_mvp_tasks_t07_2_executar_auditoria_de_segurança_e_acessibilidade",
+      "specs_features_crm_mvp_tasks_t07_3_executar_recovery_drill",
+      "specs_features_crm_mvp_tasks_t07_4_executar_uat_operacional",
+      "specs_features_crm_mvp_tasks_t07_5_fazer_go_live_controlado"
+    ],
+    "54": [
+      "specs_features_crm_mvp_tasks_crm_silmer_mvp_plano_de_implementação",
+      "specs_features_crm_mvp_tasks_definition_of_done_global",
+      "specs_features_crm_mvp_tasks_dependências_e_caminho_crítico"
+    ],
+    "55": [
+      "ops_observability_alerts",
+      "ops_observability_alerts_alerts",
+      "ops_observability_alerts_legalmaximumretentiondays",
+      "ops_observability_alerts_monitorlocation",
+      "ops_observability_alerts_operationalretentiondays",
+      "ops_observability_alerts_routing",
+      "ops_observability_alerts_routing_destination",
+      "ops_observability_alerts_routing_owner",
+      "ops_observability_alerts_routing_status",
+      "ops_observability_alerts_schema",
+      "ops_observability_alerts_status",
+      "ops_observability_alerts_syntheticonly",
+      "ops_observability_alerts_task"
+    ],
+    "56": [
+      "docs_phase0_observability_and_hardening",
+      "docs_phase0_observability_and_hardening_evidência_local_versionada",
+      "docs_phase0_observability_and_hardening_gate_externo_ainda_aberto",
+      "docs_phase0_observability_and_hardening_t00_7_observabilidade_e_hardening_mínimos",
+      "docs_phase0_observability_and_hardening_verificação_local"
+    ],
+    "57": [
       "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend",
       "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend_answer",
       "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend_q_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vendedor_silmer_sobre_preco",
       "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend_source_nodes"
     ],
-    "16": [
+    "58": [
       "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines",
       "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines_answer",
       "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines_q_quais_decisoes_resolvem_o_p0_4_do_product_readiness_tech_lead",
       "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines_source_nodes"
     ],
-    "17": [
+    "59": [
       "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do",
       "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_answer",
       "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_q_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_vendedor_silmer",
       "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_source_nodes"
     ],
-    "18": [
+    "60": [
       "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines",
       "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines_answer",
       "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines_q_quais_decisões_resolvem_o_p0_7_do_product_readiness_tech_lead",
       "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines_source_nodes"
     ],
-    "19": [
+    "61": [
       "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines",
       "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines_answer",
       "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines_q_quais_decisões_resolvem_o_p0_5_do_product_readiness_tech_lead",
       "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines_source_nodes"
     ],
-    "20": [
+    "62": [
       "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu",
       "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu_answer",
       "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu_q_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclusao",
       "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu_source_nodes"
     ],
-    "21": [
+    "63": [
       "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor",
       "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor_answer",
       "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor_q_como_o_p0_5_define_fab_sequência_reserva_concorrência_e_reutilização_do_número_da_ficha",
       "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor_source_nodes"
     ],
-    "22": [
+    "64": [
       "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec",
       "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec_answer",
       "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec_q_como_foi_resolvido_o_p0_6_do_product_readiness_tech_lead",
       "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec_source_nodes"
     ],
-    "23": [
+    "65": [
       "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor",
       "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor_answer",
       "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor_q_como_o_p0_7_modela_admin_atendimento_e_vendedor",
       "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor_source_nodes"
     ],
-    "24": [
-      "rules",
-      "rules_regras_de_produto",
-      "rules_regras_do_crm_silmer",
-      "rules_regras_técnicas_já_impostas"
+    "66": [
+      "graphify_out_memory_query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco",
+      "graphify_out_memory_query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco_answer",
+      "graphify_out_memory_query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco_q_where_are_the_agent_roles_and_contribution_protocol_defined",
+      "graphify_out_memory_query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco_source_nodes"
     ],
-    "25": [
-      "fluxo_qualificacao_generico",
-      "fluxo_qualificacao_generico_fluxo_de_qualificação_referência_substituída"
+    "67": [
+      "crm_meta_protect_catalog_entry",
+      "crm_meta_protect_catalog_version",
+      "crm_meta_protect_idempotency_record",
+      "crm_meta_reject_immutable_change",
+      "modules_database_migrations_0002_phase1_domain_expand",
+      "modules_database_migrations_0002_phase1_domain_expand_audit_events_immutable_rows",
+      "modules_database_migrations_0002_phase1_domain_expand_audit_events_immutable_truncate",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_materials_immutable_truncate",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_materials_protect_rows",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_models_immutable_truncate",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_models_protect_rows",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_products_immutable_truncate",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_products_protect_rows",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_techniques_immutable_truncate",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_techniques_protect_rows",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_versions_immutable_truncate",
+      "modules_database_migrations_0002_phase1_domain_expand_catalog_versions_protect_rows",
+      "modules_database_migrations_0002_phase1_domain_expand_configuration_versions_immutable_rows",
+      "modules_database_migrations_0002_phase1_domain_expand_configuration_versions_immutable_truncate",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_audit_events",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_catalog_materials",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_catalog_models",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_catalog_products",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_catalog_techniques",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_catalog_versions",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_configuration_versions",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_idempotency_records",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_invitations",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_meta_protect_catalog_entry",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_meta_protect_catalog_version",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_meta_protect_idempotency_record",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_meta_reject_immutable_change",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_mfa_factors",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_mfa_recovery_codes",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_sessions",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_user_capabilities",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_user_functions",
+      "modules_database_migrations_0002_phase1_domain_expand_crm_users",
+      "modules_database_migrations_0002_phase1_domain_expand_idempotency_records_immutable_truncate",
+      "modules_database_migrations_0002_phase1_domain_expand_idempotency_records_protect_rows"
     ],
-    "26": [
-      "product_readiness_tech_lead_gate_recomendado"
+    "68": [
+      "modules_configuration_src_application_configuration_service",
+      "modules_configuration_src_application_configuration_service_assertcommandmetadata",
+      "modules_configuration_src_application_configuration_service_assertprivilegedactor",
+      "modules_configuration_src_application_configuration_service_createconfigurationservice",
+      "modules_configuration_src_domain_configuration_version",
+      "modules_configuration_src_domain_configuration_version_assertchannels",
+      "modules_configuration_src_domain_configuration_version_assertexactkeys",
+      "modules_configuration_src_domain_configuration_version_assertfab",
+      "modules_configuration_src_domain_configuration_version_assertfeatureflags",
+      "modules_configuration_src_domain_configuration_version_assertjsonvalue",
+      "modules_configuration_src_domain_configuration_version_assertnonemptystring",
+      "modules_configuration_src_domain_configuration_version_assertpix",
+      "modules_configuration_src_domain_configuration_version_assertrecipient",
+      "modules_configuration_src_domain_configuration_version_assertrecord",
+      "modules_configuration_src_domain_configuration_version_asserttemplates",
+      "modules_configuration_src_domain_configuration_version_configuration_sections",
+      "modules_configuration_src_domain_configuration_version_createconfigurationversion",
+      "modules_configuration_src_domain_configuration_version_deepfreeze",
+      "modules_configuration_src_domain_configuration_version_fab",
+      "modules_configuration_src_domain_configuration_version_freezeconfigurationrecord",
+      "modules_configuration_src_domain_configuration_version_isplainrecord",
+      "modules_configuration_src_domain_configuration_version_normalizeconfigurationvalues",
+      "modules_configuration_src_domain_configuration_version_recipient",
+      "modules_configuration_src_domain_configuration_version_secret_field_names",
+      "modules_configuration_src_domain_errors",
+      "modules_configuration_src_domain_errors_configurationconflicterror",
+      "modules_configuration_src_domain_errors_configurationconflicterror_constructor",
+      "modules_configuration_src_domain_errors_configurationerror",
+      "modules_configuration_src_domain_errors_configurationerror_constructor",
+      "modules_configuration_src_domain_errors_configurationforbiddenerror",
+      "modules_configuration_src_domain_errors_configurationforbiddenerror_constructor",
+      "modules_configuration_src_domain_errors_configurationvalidationerror",
+      "modules_configuration_src_domain_errors_configurationvalidationerror_constructor",
+      "modules_configuration_src_index",
+      "modules_configuration_src_ports_contracts",
+      "modules_configuration_src_ports_contracts_assertconfigurationports",
+      "test_configuration_test",
+      "test_configuration_test_admin_actor",
+      "test_configuration_test_createharness",
+      "test_configuration_test_validvalues"
     ],
-    "27": [
-      "product_readiness_tech_lead_o_que_impede_aprovação_final_e_estimativa_fechada"
+    "69": [
+      "modules_database_src_cli",
+      "modules_database_src_cli_pool",
+      "modules_database_src_cli_readphase",
+      "modules_database_src_database",
+      "modules_database_src_database_checkdatabasereadiness",
+      "modules_database_src_database_createdatabase",
+      "modules_database_src_index",
+      "modules_database_src_migrations",
+      "modules_database_src_migrations_applymigration",
+      "modules_database_src_migrations_checksum",
+      "modules_database_src_migrations_ensuredirectoryurl",
+      "modules_database_src_migrations_loadmigrations",
+      "modules_database_src_migrations_migrate",
+      "modules_database_src_migrations_normalizemigrationplan",
+      "modules_database_src_transactions",
+      "modules_database_src_transactions_withtransaction",
+      "test_database_test",
+      "test_database_test_transactionclient",
+      "test_database_test_transactionclient_constructor",
+      "test_database_test_transactionclient_query",
+      "test_database_test_transactionclient_release",
+      "test_migrations_test",
+      "test_migrations_test_contractthree",
+      "test_migrations_test_expandone",
+      "test_migrations_test_expandtwo",
+      "test_migrations_test_migrationclient",
+      "test_migrations_test_migrationclient_constructor",
+      "test_migrations_test_migrationclient_query",
+      "test_migrations_test_migrationclient_release",
+      "test_migrations_test_migrationpool",
+      "test_migrations_test_migrationpool_connect",
+      "test_migrations_test_migrationpool_constructor",
+      "test_migrations_test_mutex",
+      "test_migrations_test_mutex_acquire",
+      "test_migrations_test_mutex_constructor",
+      "test_phase1_schema_live_test",
+      "test_phase1_schema_live_test_hash"
     ],
-    "28": [
-      "product_readiness_tech_lead_o_que_o_tech_lead_já_pode_especificar"
+    "70": [
+      "modules_audit_privacy_src_audit_trail",
+      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror",
+      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror_constructor",
+      "modules_audit_privacy_src_audit_trail_deepfreeze",
+      "modules_audit_privacy_src_audit_trail_immutableclone",
+      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail",
+      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_append",
+      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_constructor",
+      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_list",
+      "modules_audit_privacy_src_audit_trail_requirenonemptystring",
+      "modules_audit_privacy_src_audit_trail_validateauditevent",
+      "modules_audit_privacy_src_index",
+      "modules_integration_reliability_src_idempotency",
+      "modules_integration_reliability_src_idempotency_canonicaljson",
+      "modules_integration_reliability_src_idempotency_clone",
+      "modules_integration_reliability_src_idempotency_createdeferred",
+      "modules_integration_reliability_src_idempotency_createidempotentcommandexecutor",
+      "modules_integration_reliability_src_idempotency_fingerprintcommand",
+      "modules_integration_reliability_src_idempotency_idempotencyconflicterror",
+      "modules_integration_reliability_src_idempotency_idempotencyconflicterror_constructor",
+      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore",
+      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_execute",
+      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_get",
+      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_storagekey",
+      "modules_integration_reliability_src_idempotency_requirenonempty",
+      "modules_integration_reliability_src_idempotency_validatecommandrequest",
+      "modules_integration_reliability_src_index",
+      "test_audit_idempotency_test",
+      "test_audit_idempotency_test_commandmetadata",
+      "test_audit_idempotency_test_createaudittrail"
     ],
-    "29": [
-      "product_readiness_tech_lead_p0_1_resolvido_contrato_de_passagem"
+    "71": [
+      "modules_catalog_src_application_catalog_service",
+      "modules_catalog_src_application_catalog_service_assertcommandmetadata",
+      "modules_catalog_src_application_catalog_service_assertprivilegedactor",
+      "modules_catalog_src_application_catalog_service_createcatalogservice",
+      "modules_catalog_src_domain_catalog_version",
+      "modules_catalog_src_domain_catalog_version_assertexactkeys",
+      "modules_catalog_src_domain_catalog_version_assertnonemptystring",
+      "modules_catalog_src_domain_catalog_version_assertrecord",
+      "modules_catalog_src_domain_catalog_version_createcatalogselection",
+      "modules_catalog_src_domain_catalog_version_createpublishedcatalogversion",
+      "modules_catalog_src_domain_catalog_version_deepfreeze",
+      "modules_catalog_src_domain_catalog_version_immutablecatalogclone",
+      "modules_catalog_src_domain_catalog_version_isplainrecord",
+      "modules_catalog_src_domain_catalog_version_normalizecatalogvalues",
+      "modules_catalog_src_domain_catalog_version_validateentries",
+      "modules_catalog_src_domain_catalog_version_value_groups",
+      "modules_catalog_src_domain_errors",
+      "modules_catalog_src_domain_errors_catalogerror",
+      "modules_catalog_src_domain_errors_catalogerror_constructor",
+      "modules_catalog_src_domain_errors_catalogforbiddenerror",
+      "modules_catalog_src_domain_errors_catalogforbiddenerror_constructor",
+      "modules_catalog_src_domain_errors_catalogvalidationerror",
+      "modules_catalog_src_domain_errors_catalogvalidationerror_constructor",
+      "modules_catalog_src_index",
+      "modules_catalog_src_ports_contracts",
+      "modules_catalog_src_ports_contracts_assertcatalogports",
+      "test_catalog_test",
+      "test_catalog_test_admin",
+      "test_catalog_test_data",
+      "test_catalog_test_harness"
     ],
-    "30": [
-      "product_readiness_tech_lead_p0_2_resolvido_autoridade_sobre_preço"
+    "72": [
+      "modules_identity_access_src_index",
+      "modules_identity_access_src_index_constanttimeequal",
+      "modules_identity_access_src_index_createidentityaccessservice",
+      "modules_identity_access_src_index_createinmemoryidentityrepository",
+      "modules_identity_access_src_index_decryptsecret",
+      "modules_identity_access_src_index_default_password_parameters",
+      "modules_identity_access_src_index_deriveargon2",
+      "modules_identity_access_src_index_digest",
+      "modules_identity_access_src_index_encryptsecret",
+      "modules_identity_access_src_index_freezeuser",
+      "modules_identity_access_src_index_functions",
+      "modules_identity_access_src_index_hashpassword",
+      "modules_identity_access_src_index_privileged_capabilities",
+      "modules_identity_access_src_index_requirenonemptystring",
+      "modules_identity_access_src_index_totp",
+      "modules_identity_access_src_index_verifypassword",
+      "test_identity_session_test",
+      "test_identity_session_test_envelope_key",
+      "test_identity_session_test_harness",
+      "test_identity_session_test_now"
     ],
-    "31": [
-      "product_readiness_tech_lead_p0_3_resolvido_limite_financeiro_comercial"
+    "73": [
+      "modules_database_package",
+      "modules_database_package_dependencies",
+      "modules_database_package_dependencies_pg",
+      "modules_database_package_devdependencies",
+      "modules_database_package_devdependencies_types_pg",
+      "modules_database_package_exports",
+      "modules_database_package_name",
+      "modules_database_package_private",
+      "modules_database_package_scripts",
+      "modules_database_package_scripts_migrate",
+      "modules_database_package_type",
+      "modules_database_package_version",
+      "pg",
+      "types_pg"
     ],
-    "32": [
-      "product_readiness_tech_lead_p0_4_resolvido_canais_e_limite_operacional_da_ia"
+    "74": [
+      "modules_identity_access_src_authorization",
+      "modules_identity_access_src_authorization_actioncapabilities",
+      "modules_identity_access_src_authorization_authorize",
+      "modules_identity_access_src_authorization_capabilities",
+      "modules_identity_access_src_authorization_createaccesscontrolservice",
+      "modules_identity_access_src_authorization_knowncapabilities",
+      "modules_identity_access_src_authorization_mfarequiredcapabilities",
+      "modules_identity_access_src_authorization_operationalactions",
+      "modules_identity_access_src_authorization_requirenonempty",
+      "test_identity_authorization_test",
+      "test_identity_authorization_test_harness",
+      "test_identity_authorization_test_requireuser"
     ],
-    "33": [
-      "product_readiness_tech_lead_p0_5_resolvido_identidade_fab_e_numeração_da_ficha"
+    "75": [
+      "package",
+      "package_engines",
+      "package_engines_node",
+      "package_engines_npm",
+      "package_name",
+      "package_packagemanager",
+      "package_private",
+      "package_type",
+      "package_version",
+      "package_workspaces",
+      "ref_apps",
+      "ref_modules"
     ],
-    "34": [
-      "product_readiness_tech_lead_workshop_de_fechamento"
+    "76": [
+      "modules_audit_privacy_package",
+      "modules_audit_privacy_package_exports",
+      "modules_audit_privacy_package_name",
+      "modules_audit_privacy_package_private",
+      "modules_audit_privacy_package_type",
+      "modules_audit_privacy_package_version"
+    ],
+    "77": [
+      "modules_catalog_package",
+      "modules_catalog_package_exports",
+      "modules_catalog_package_name",
+      "modules_catalog_package_private",
+      "modules_catalog_package_type",
+      "modules_catalog_package_version"
+    ],
+    "78": [
+      "modules_configuration_package",
+      "modules_configuration_package_exports",
+      "modules_configuration_package_name",
+      "modules_configuration_package_private",
+      "modules_configuration_package_type",
+      "modules_configuration_package_version"
+    ],
+    "79": [
+      "modules_identity_access_package",
+      "modules_identity_access_package_exports",
+      "modules_identity_access_package_name",
+      "modules_identity_access_package_private",
+      "modules_identity_access_package_type",
+      "modules_identity_access_package_version"
+    ],
+    "80": [
+      "modules_integration_reliability_package",
+      "modules_integration_reliability_package_exports",
+      "modules_integration_reliability_package_name",
+      "modules_integration_reliability_package_private",
+      "modules_integration_reliability_package_type",
+      "modules_integration_reliability_package_version"
+    ],
+    "81": [
+      "docs_phase1_identity_access_baseline",
+      "docs_phase1_identity_access_baseline_baseline_de_identidade_e_acesso_da_fase_1",
+      "docs_phase1_identity_access_baseline_gates",
+      "docs_phase1_identity_access_baseline_invariantes_operacionais",
+      "docs_phase1_identity_access_baseline_parâmetros_versionados"
+    ],
+    "82": [
+      "modules_database_readme",
+      "modules_database_readme_database_module"
+    ],
+    "83": [
+      "modules_database_migrations_0001_database_baseline_expand"
+    ],
+    "84": [
+      "github_security",
+      "github_security_como_reportar_uma_vulnerabilidade",
+      "github_security_política_de_segurança",
+      "github_security_versões_suportadas"
+    ],
+    "85": [
+      "graphify_out_memory_query_20260830_121840_quais_requisitos_tarefas_arquivos_contratos_de",
+      "graphify_out_memory_query_20260830_121840_quais_requisitos_tarefas_arquivos_contratos_de_answer",
+      "graphify_out_memory_query_20260830_121840_quais_requisitos_tarefas_arquivos_contratos_de_q_quais_requisitos_tarefas_arquivos_contratos_de_acessibilidade_segurança_e_critérios_de_aceite_estão_relacionados_à_github_issue_1",
+      "graphify_out_memory_query_20260830_121840_quais_requisitos_tarefas_arquivos_contratos_de_source_nodes"
+    ],
+    "86": [
+      "graphify_out_memory_query_20260830_122808_quais_contratos_do_crm_silmer_governam_segurança_d",
+      "graphify_out_memory_query_20260830_122808_quais_contratos_do_crm_silmer_governam_segurança_d_answer",
+      "graphify_out_memory_query_20260830_122808_quais_contratos_do_crm_silmer_governam_segurança_d_q_quais_contratos_do_crm_silmer_governam_segurança_do_repositório_público_github_actions_imagens_imutáveis_aprovação_publicação_no_ghcr_e_fechamento_da_t00_2_issue_1",
+      "graphify_out_memory_query_20260830_122808_quais_contratos_do_crm_silmer_governam_segurança_d_source_nodes"
     ]
   },
   "cohesion": {
     "0": 0.04878048780487805,
     "1": 0.05263157894736842,
-    "2": 0.0625,
-    "3": 0.08,
-    "4": 0.08333333333333333,
+    "2": 0.25,
+    "3": 0.05714285714285714,
+    "4": 0.05555555555555555,
     "5": 0.08695652173913043,
     "6": 0.09090909090909091,
-    "7": 0.12105263157894737,
+    "7": 0.4,
     "8": 0.125,
-    "9": 0.2,
+    "9": 0.07692307692307693,
     "10": 0.2,
-    "11": 0.25,
-    "12": 0.25,
-    "13": 0.2857142857142857,
-    "14": 0.2857142857142857,
-    "15": 0.5,
-    "16": 0.5,
-    "17": 0.5,
-    "18": 0.5,
-    "19": 0.5,
-    "20": 0.5,
-    "21": 0.5,
-    "22": 0.5,
+    "11": 0.07692307692307693,
+    "12": 0.18421052631578946,
+    "13": 0.2,
+    "14": 0.14285714285714285,
+    "15": 0.3333333333333333,
+    "16": 0.6666666666666666,
+    "17": 0.2857142857142857,
+    "18": 0.2857142857142857,
+    "19": 0.3333333333333333,
+    "20": 0.3333333333333333,
+    "21": 0.3090909090909091,
+    "22": 0.4,
     "23": 0.5,
-    "24": 0.5,
+    "24": 0.25,
     "25": 1.0,
-    "26": 1.0,
-    "27": 1.0,
-    "28": 1.0,
-    "29": 1.0,
-    "30": 1.0,
-    "31": 1.0,
-    "32": 1.0,
-    "33": 1.0,
-    "34": 1.0
+    "26": 0.058823529411764705,
+    "27": 0.13333333333333333,
+    "28": 0.09302325581395349,
+    "29": 0.2,
+    "30": 0.3333333333333333,
+    "31": 0.3333333333333333,
+    "32": 0.4,
+    "33": 0.4,
+    "34": 0.23809523809523808,
+    "35": 0.5,
+    "36": 0.6666666666666666,
+    "37": 1.0,
+    "38": 1.0,
+    "39": 0.2857142857142857,
+    "40": 0.4,
+    "41": 0.6666666666666666,
+    "42": 1.0,
+    "43": 1.0,
+    "44": 0.5,
+    "45": 0.15384615384615385,
+    "46": 0.4,
+    "47": 0.25,
+    "48": 0.2857142857142857,
+    "49": 0.2857142857142857,
+    "50": 0.2857142857142857,
+    "51": 0.2857142857142857,
+    "52": 0.3333333333333333,
+    "53": 0.3333333333333333,
+    "54": 0.6666666666666666,
+    "55": 0.15384615384615385,
+    "56": 0.4,
+    "57": 0.5,
+    "58": 0.5,
+    "59": 0.5,
+    "60": 0.5,
+    "61": 0.5,
+    "62": 0.5,
+    "63": 0.5,
+    "64": 0.5,
+    "65": 0.5,
+    "66": 0.5,
+    "67": 0.08846153846153847,
+    "68": 0.1141025641025641,
+    "69": 0.0960960960960961,
+    "70": 0.1310344827586207,
+    "71": 0.15862068965517243,
+    "72": 0.1631578947368421,
+    "73": 0.14285714285714285,
+    "74": 0.24242424242424243,
+    "75": 0.16666666666666666,
+    "76": 0.3333333333333333,
+    "77": 0.3333333333333333,
+    "78": 0.3333333333333333,
+    "79": 0.3333333333333333,
+    "80": 0.3333333333333333,
+    "81": 0.4,
+    "82": 1.0,
+    "83": 1.0,
+    "84": 0.5,
+    "85": 0.5,
+    "86": 0.5
   },
   "gods": [
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "degree": 26
+    },
     {
       "id": "technical_design_tdd_crm_silmer_mvp",
       "label": "TDD — CRM Silmer MVP",
@@ -472,84 +1281,123 @@
       "degree": 15
     },
     {
-      "id": "specs_features_crm_mvp_tasks_crm_silmer_mvp_plano_de_implementação",
-      "label": "CRM Silmer MVP — Plano de Implementação",
+      "id": "jsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 13
+    },
+    {
+      "id": "modules_configuration_src_domain_configuration_version_normalizeconfigurationvalues",
+      "label": "normalizeConfigurationValues()",
+      "degree": 12
+    },
+    {
+      "id": "product_readiness_tech_lead_passagem_de_produto_para_tech_lead",
+      "label": "Passagem de Produto para Tech Lead",
+      "degree": 12
+    },
+    {
+      "id": "modules_database_src_migrations_loadmigrations",
+      "label": "loadMigrations()",
       "degree": 11
     },
     {
-      "id": "specs_features_crm_mvp_tasks_fase_5_orçamento_pix_pedido_e_ficha",
-      "label": "Fase 5 — Orçamento, PIX, Pedido e Ficha",
-      "degree": 10
-    },
-    {
-      "id": "campos_ficha_e_jornada_p0_1_campos_da_ficha_e_jornada_conversacional_p0_1",
-      "label": "Campos da Ficha e Jornada Conversacional — P0.1",
-      "degree": 10
-    },
-    {
-      "id": "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualificação_e_venda_silmer",
-      "label": "CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)",
-      "degree": 9
-    },
-    {
-      "id": "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta",
-      "label": "CHAT NA LANDING PAGE — o que existe e o que falta",
-      "degree": 9
-    },
-    {
-      "id": "specs_features_crm_mvp_tasks_fase_0_fundação_e_riscos_técnicos",
-      "label": "Fase 0 — Fundação e riscos técnicos",
-      "degree": 8
+      "id": "modules_shared_src_observability_createsafelogger",
+      "label": "createSafeLogger()",
+      "degree": 11
     }
   ],
   "surprises": [
     {
-      "source": "Ficha de Pedido",
-      "target": "Rose (Destinatária Ficha)",
+      "source": "harness()",
+      "target": "createCatalogService()",
       "source_files": [
-        "CAMPOS-FICHA-E-JORNADA-P0-1.md",
-        "CRM-MVP-ESPECIFICACAO.md"
+        "test/catalog.test.js",
+        "modules/catalog/src/application/catalog-service.js"
       ],
       "confidence": "EXTRACTED",
-      "relation": "shares_data_with",
+      "relation": "calls",
+      "why": "connects across different repos/directories; peripheral node `harness()` unexpectedly reaches hub `createCatalogService()`"
+    },
+    {
+      "source": "createHarness()",
+      "target": "createConfigurationService()",
+      "source_files": [
+        "test/configuration.test.js",
+        "modules/configuration/src/application/configuration-service.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; peripheral node `createHarness()` unexpectedly reaches hub `createConfigurationService()`"
+    },
+    {
+      "source": "capture()",
+      "target": "createSafeLogger()",
+      "source_files": [
+        "test/observability.test.js",
+        "modules/shared/src/observability.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; peripheral node `capture()` unexpectedly reaches hub `createSafeLogger()`"
+    },
+    {
+      "source": "createApi()",
+      "target": "createSafeLogger()",
+      "source_files": [
+        "apps/api/src/app.js",
+        "modules/shared/src/observability.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories"
+    },
+    {
+      "source": "createApi()",
+      "target": "normalizeTraceId()",
+      "source_files": [
+        "apps/api/src/app.js",
+        "modules/shared/src/observability.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
       "why": "connects across different repos/directories"
     }
   ],
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Roadmap` to `Architecture and Backlog`, `Foundation and Technical Risks`, `Inbox and Channel Integration`, `Identity and Domain Infrastructure`, `Business Logic and Kanban`?",
-      "why": "High betweenness centrality (0.140) - this node is a cross-community bridge."
+      "question": "Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Roadmap` to `Foundation Phase Tasks`, `Order and Payment Implementation`, `Messaging and Inbox Implementation`, `Identity and Domain Phase`, `Sales Pipeline Implementation`, `Privacy and Operations Phase`, `AI Assistant Implementation`, `Project Documentation Index`, `Hardening and Pilot Phase`?",
+      "why": "High betweenness centrality (0.026) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `TDD — CRM Silmer MVP` connect `Technical Strategy and MVP` to `Architecture and Backlog`?",
-      "why": "High betweenness centrality (0.101) - this node is a cross-community bridge."
+      "question": "Why does `TDD — CRM Silmer MVP` connect `MVP Technical Strategy` to `Project Documentation Index`?",
+      "why": "High betweenness centrality (0.018) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `Architecture and Backlog`?",
-      "why": "High betweenness centrality (0.059) - this node is a cross-community bridge."
+      "question": "Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `MVP Feature Scope`?",
+      "why": "High betweenness centrality (0.010) - this node is a cross-community bridge."
     },
     {
       "type": "isolated_nodes",
-      "question": "What connects `Limite da feature`, `Backlog e lead`, `Vendedor Silmer` to the rest of the system?",
-      "why": "256 weakly-connected nodes found - possible documentation gaps or missing edges."
+      "question": "What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?",
+      "why": "529 weakly-connected nodes found - possible documentation gaps or missing edges."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `Technical Strategy and MVP` be split into smaller, more focused modules?",
+      "question": "Should `MVP Technical Strategy` be split into smaller, more focused modules?",
       "why": "Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `Design System and UX` be split into smaller, more focused modules?",
+      "question": "Should `Design System Guidelines` be split into smaller, more focused modules?",
       "why": "Cohesion score 0.05263157894736842 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `Implementation Roadmap` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.0625 - nodes in this community are weakly interconnected."
+      "question": "Should `Sales Process Qualification` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.05714285714285714 - nodes in this community are weakly interconnected."
     }
   ]
 }

@@ -66,7 +66,6 @@
       "test_meta_sandbox_test_messagepayload",
       "test_meta_sandbox_test_signature",
       "test_meta_sandbox_test_statuspayload",
-      "test_migrations_live_test",
       "test_observability_test",
       "test_observability_test_assertnocanaries",
       "test_observability_test_canaries",
@@ -75,6 +74,81 @@
       "test_observability_test_rooturl"
     ],
     "1": [
+      "modules_audit_privacy_src_audit_trail",
+      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror",
+      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror_constructor",
+      "modules_audit_privacy_src_audit_trail_deepfreeze",
+      "modules_audit_privacy_src_audit_trail_immutableclone",
+      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail",
+      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_append",
+      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_constructor",
+      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_list",
+      "modules_audit_privacy_src_audit_trail_requirenonemptystring",
+      "modules_audit_privacy_src_audit_trail_validateauditevent",
+      "modules_audit_privacy_src_index",
+      "modules_integration_reliability_src_idempotency",
+      "modules_integration_reliability_src_idempotency_canonicaljson",
+      "modules_integration_reliability_src_idempotency_clone",
+      "modules_integration_reliability_src_idempotency_createdeferred",
+      "modules_integration_reliability_src_idempotency_createidempotentcommandexecutor",
+      "modules_integration_reliability_src_idempotency_fingerprintcommand",
+      "modules_integration_reliability_src_idempotency_idempotencyconflicterror",
+      "modules_integration_reliability_src_idempotency_idempotencyconflicterror_constructor",
+      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore",
+      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_execute",
+      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_get",
+      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_storagekey",
+      "modules_integration_reliability_src_idempotency_requirenonempty",
+      "modules_integration_reliability_src_idempotency_validatecommandrequest",
+      "test_audit_idempotency_test",
+      "test_audit_idempotency_test_commandmetadata",
+      "test_audit_idempotency_test_createaudittrail"
+    ],
+    "2": [
+      "caixa_entrada",
+      "crazy_api",
+      "crm_mvp_especificacao",
+      "datacrazy_crm",
+      "ficha_pedido",
+      "historico_datacrazy_crm_processo_vendas",
+      "historico_datacrazy_crm_processo_vendas_1_visão_geral_do_fluxo",
+      "historico_datacrazy_crm_processo_vendas_2_card_rápido_de_briefing",
+      "historico_datacrazy_crm_processo_vendas_3_roteiro_completo_de_qualificação_os_13_campos",
+      "historico_datacrazy_crm_processo_vendas_4_tags_e_tipificação",
+      "historico_datacrazy_crm_processo_vendas_5_pipeline_vendas_estamparia_as_5_etapas",
+      "historico_datacrazy_crm_processo_vendas_6_transferência_da_ia_pro_vendedor_humano",
+      "historico_datacrazy_crm_processo_vendas_7_o_que_a_ia_e_o_vendedor_nunca_afirmam",
+      "historico_datacrazy_crm_processo_vendas_8_pendências_que_travam_o_processo_hoje",
+      "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualificação_e_venda_silmer",
+      "historico_datacrazy_datacrazy_setup",
+      "historico_datacrazy_datacrazy_setup_a_validar_no_primeiro_teste_real",
+      "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer",
+      "historico_datacrazy_datacrazy_setup_ajuste_necessário_no_prompt_do_agente",
+      "historico_datacrazy_datacrazy_setup_alternativas_sem_o_custo_da_crazy_api",
+      "historico_datacrazy_datacrazy_setup_arquitetura_necessária",
+      "historico_datacrazy_datacrazy_setup_atenção_definir_qual_número_vai_hospedar_o_agente",
+      "historico_datacrazy_datacrazy_setup_automação",
+      "historico_datacrazy_datacrazy_setup_base_de_conhecimento",
+      "historico_datacrazy_datacrazy_setup_bloqueadores_não_resolvidos",
+      "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos",
+      "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta",
+      "historico_datacrazy_datacrazy_setup_cuidados_com_a_crazy_api_whatsapp_não_oficial",
+      "historico_datacrazy_datacrazy_setup_datacrazy_automação_vendedor_silmer_sdr_whatsapp_vendedor_humano",
+      "historico_datacrazy_datacrazy_setup_esforço_estimado",
+      "historico_datacrazy_datacrazy_setup_fluxo_desenhado",
+      "historico_datacrazy_datacrazy_setup_o_que_a_conexão_universal_pede",
+      "historico_datacrazy_datacrazy_setup_o_que_já_está_configurado",
+      "historico_datacrazy_datacrazy_setup_passo_a_passo_conectar_a_crazy_api_quando_o_cliente_aprovar",
+      "historico_datacrazy_datacrazy_setup_passos",
+      "historico_datacrazy_datacrazy_setup_pendências_de_conteúdo_a_silmer_precisa_fornecer",
+      "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia",
+      "historico_datacrazy_datacrazy_setup_ponto_de_atenção_do_fluxo_no_site",
+      "historico_datacrazy_datacrazy_setup_próximos_passos_em_ordem",
+      "historico_datacrazy_datacrazy_setup_tags_4_novas",
+      "kanban_comercial",
+      "vendedor_silmer"
+    ],
+    "3": [
       "technical_design_10_confiabilidade_e_processamento_assíncrono",
       "technical_design_11_vendedor_silmer_e_ia",
       "technical_design_12_segurança_e_lgpd",
@@ -117,7 +191,7 @@
       "technical_design_tdd_crm_silmer_mvp",
       "technical_design_webhook_inbound"
     ],
-    "2": [
+    "4": [
       "crm_meta_protect_catalog_entry",
       "crm_meta_protect_catalog_version",
       "crm_meta_protect_idempotency_record",
@@ -159,7 +233,7 @@
       "modules_database_migrations_0002_phase1_domain_expand_idempotency_records_immutable_truncate",
       "modules_database_migrations_0002_phase1_domain_expand_idempotency_records_protect_rows"
     ],
-    "3": [
+    "5": [
       "modules_configuration_src_application_configuration_service",
       "modules_configuration_src_application_configuration_service_assertcommandmetadata",
       "modules_configuration_src_application_configuration_service_assertprivilegedactor",
@@ -201,7 +275,7 @@
       "test_configuration_test_createharness",
       "test_configuration_test_validvalues"
     ],
-    "4": [
+    "6": [
       "design",
       "design_10_interação_e_movimento",
       "design_11_acessibilidade",
@@ -241,46 +315,7 @@
       "design_responsividade",
       "design_uma_ação_principal_por_região"
     ],
-    "5": [
-      "apps_api",
-      "apps_edge_web",
-      "apps_worker",
-      "caixa_entrada",
-      "crm_mvp_especificacao",
-      "crm_mvp_especificacao_10_jornada_comercial_aprovada",
-      "crm_mvp_especificacao_11_geração_e_envio_da_ficha",
-      "crm_mvp_especificacao_12_financeiro_comercial_do_mvp",
-      "crm_mvp_especificacao_13_privacidade_e_lgpd",
-      "crm_mvp_especificacao_14_critérios_de_sucesso_do_piloto",
-      "crm_mvp_especificacao_15_gate_de_produto_para_o_tech_lead",
-      "crm_mvp_especificacao_16_próximo_passo_recomendado",
-      "crm_mvp_especificacao_1_visão_do_produto",
-      "crm_mvp_especificacao_2_objetivos_do_mvp",
-      "crm_mvp_especificacao_3_fora_do_escopo_inicial",
-      "crm_mvp_especificacao_4_personas",
-      "crm_mvp_especificacao_5_caixa_de_entrada_como_backlog",
-      "crm_mvp_especificacao_6_canal_do_mvp",
-      "crm_mvp_especificacao_7_vendedor_silmer_e_autonomia",
-      "crm_mvp_especificacao_8_papel_do_n8n",
-      "crm_mvp_especificacao_9_ficha_de_pedido_como_contrato_da_jornada",
-      "crm_mvp_especificacao_atendimento",
-      "crm_mvp_especificacao_crm_silmer_especificação_de_produto_do_mvp",
-      "crm_mvp_especificacao_decisão_do_product_manager",
-      "crm_mvp_especificacao_definido_e_liberado",
-      "crm_mvp_especificacao_p0_fechar_antes_da_aprovação_da_especificação_técnica",
-      "crm_mvp_especificacao_vendedor",
-      "crm_mvp_especificacao_vendedor_silmer",
-      "ficha_pedido",
-      "gemini_api",
-      "kanban_comercial",
-      "meta_whatsapp",
-      "modules_database",
-      "postgresql",
-      "s3_storage",
-      "technical_design",
-      "vendedor_silmer"
-    ],
-    "6": [
+    "7": [
       "modules_database_src_cli",
       "modules_database_src_cli_pool",
       "modules_database_src_cli_readphase",
@@ -302,6 +337,7 @@
       "test_database_test_transactionclient_constructor",
       "test_database_test_transactionclient_query",
       "test_database_test_transactionclient_release",
+      "test_migrations_live_test",
       "test_migrations_test",
       "test_migrations_test_contractthree",
       "test_migrations_test_expandone",
@@ -319,7 +355,45 @@
       "test_phase1_schema_live_test",
       "test_phase1_schema_live_test_hash"
     ],
-    "7": [
+    "8": [
+      "apps_api",
+      "apps_edge_web",
+      "apps_worker",
+      "architecture",
+      "architecture_aprovações_ainda_necessárias",
+      "architecture_arquitetura_decisões_do_mvp",
+      "architecture_decisões_confirmadas",
+      "architecture_decisões_de_modelagem",
+      "architecture_decisões_técnicas_propostas_como_baseline",
+      "architecture_fronteiras_funcionais",
+      "architecture_projetos_e_documentos_executáveis",
+      "easypanel_topology",
+      "easypanel_topology_10_backups_e_disaster_recovery",
+      "easypanel_topology_11_observabilidade_e_alertas",
+      "easypanel_topology_12_gates_antes_do_piloto",
+      "easypanel_topology_13_riscos_aceitos_e_evolução",
+      "easypanel_topology_14_referências_verificadas",
+      "easypanel_topology_1_decisão",
+      "easypanel_topology_2_serviços_no_projeto",
+      "easypanel_topology_3_rede_e_domínios",
+      "easypanel_topology_4_sizing_inicial",
+      "easypanel_topology_5_object_storage",
+      "easypanel_topology_6_variáveis_e_segredos",
+      "easypanel_topology_7_health_checks",
+      "easypanel_topology_8_ci_cd",
+      "easypanel_topology_9_migração_e_rollback",
+      "easypanel_topology_drill_mensal_do_postgresql",
+      "easypanel_topology_drill_trimestral_de_perda_total_da_vps",
+      "easypanel_topology_firewall_hostinger",
+      "easypanel_topology_hardening_dos_containers",
+      "easypanel_topology_merge_e_promoção",
+      "easypanel_topology_pull_request",
+      "easypanel_topology_restore_de_desastre_real",
+      "easypanel_topology_topologia_easypanel_crm_silmer",
+      "github_workflows_ci",
+      "technical_design"
+    ],
+    "9": [
       "campos_ficha_e_jornada_p0_1",
       "campos_ficha_e_jornada_p0_1_1_leitura_técnica_do_arquivo",
       "campos_ficha_e_jornada_p0_1_2_1_identificação_do_pedido",
@@ -357,44 +431,7 @@
       "product_readiness_tech_lead_passagem_de_produto_para_tech_lead",
       "product_readiness_tech_lead_registro_de_fechamento"
     ],
-    "8": [
-      "historico_datacrazy_crm_processo_vendas",
-      "historico_datacrazy_crm_processo_vendas_1_visão_geral_do_fluxo",
-      "historico_datacrazy_crm_processo_vendas_2_card_rápido_de_briefing",
-      "historico_datacrazy_crm_processo_vendas_3_roteiro_completo_de_qualificação_os_13_campos",
-      "historico_datacrazy_crm_processo_vendas_4_tags_e_tipificação",
-      "historico_datacrazy_crm_processo_vendas_5_pipeline_vendas_estamparia_as_5_etapas",
-      "historico_datacrazy_crm_processo_vendas_6_transferência_da_ia_pro_vendedor_humano",
-      "historico_datacrazy_crm_processo_vendas_7_o_que_a_ia_e_o_vendedor_nunca_afirmam",
-      "historico_datacrazy_crm_processo_vendas_8_pendências_que_travam_o_processo_hoje",
-      "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualificação_e_venda_silmer",
-      "historico_datacrazy_datacrazy_setup",
-      "historico_datacrazy_datacrazy_setup_a_validar_no_primeiro_teste_real",
-      "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer",
-      "historico_datacrazy_datacrazy_setup_ajuste_necessário_no_prompt_do_agente",
-      "historico_datacrazy_datacrazy_setup_alternativas_sem_o_custo_da_crazy_api",
-      "historico_datacrazy_datacrazy_setup_arquitetura_necessária",
-      "historico_datacrazy_datacrazy_setup_atenção_definir_qual_número_vai_hospedar_o_agente",
-      "historico_datacrazy_datacrazy_setup_automação",
-      "historico_datacrazy_datacrazy_setup_base_de_conhecimento",
-      "historico_datacrazy_datacrazy_setup_bloqueadores_não_resolvidos",
-      "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos",
-      "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta",
-      "historico_datacrazy_datacrazy_setup_cuidados_com_a_crazy_api_whatsapp_não_oficial",
-      "historico_datacrazy_datacrazy_setup_datacrazy_automação_vendedor_silmer_sdr_whatsapp_vendedor_humano",
-      "historico_datacrazy_datacrazy_setup_esforço_estimado",
-      "historico_datacrazy_datacrazy_setup_fluxo_desenhado",
-      "historico_datacrazy_datacrazy_setup_o_que_a_conexão_universal_pede",
-      "historico_datacrazy_datacrazy_setup_o_que_já_está_configurado",
-      "historico_datacrazy_datacrazy_setup_passo_a_passo_conectar_a_crazy_api_quando_o_cliente_aprovar",
-      "historico_datacrazy_datacrazy_setup_passos",
-      "historico_datacrazy_datacrazy_setup_pendências_de_conteúdo_a_silmer_precisa_fornecer",
-      "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia",
-      "historico_datacrazy_datacrazy_setup_ponto_de_atenção_do_fluxo_no_site",
-      "historico_datacrazy_datacrazy_setup_próximos_passos_em_ordem",
-      "historico_datacrazy_datacrazy_setup_tags_4_novas"
-    ],
-    "9": [
+    "10": [
       "scripts_recovery_mock",
       "scripts_recovery_mock_buildrecoveryplan",
       "scripts_recovery_mock_expectedadapterkeys",
@@ -427,39 +464,6 @@
       "test_topology_recovery_test_completerecoverydrillgate",
       "test_topology_recovery_test_json",
       "test_topology_recovery_test_rooturl"
-    ],
-    "10": [
-      "architecture",
-      "architecture_aprovações_ainda_necessárias",
-      "architecture_arquitetura_decisões_do_mvp",
-      "architecture_decisões_confirmadas",
-      "architecture_decisões_de_modelagem",
-      "architecture_decisões_técnicas_propostas_como_baseline",
-      "architecture_fronteiras_funcionais",
-      "architecture_projetos_e_documentos_executáveis",
-      "easypanel_topology",
-      "easypanel_topology_10_backups_e_disaster_recovery",
-      "easypanel_topology_11_observabilidade_e_alertas",
-      "easypanel_topology_12_gates_antes_do_piloto",
-      "easypanel_topology_13_riscos_aceitos_e_evolução",
-      "easypanel_topology_14_referências_verificadas",
-      "easypanel_topology_1_decisão",
-      "easypanel_topology_2_serviços_no_projeto",
-      "easypanel_topology_3_rede_e_domínios",
-      "easypanel_topology_4_sizing_inicial",
-      "easypanel_topology_5_object_storage",
-      "easypanel_topology_6_variáveis_e_segredos",
-      "easypanel_topology_7_health_checks",
-      "easypanel_topology_8_ci_cd",
-      "easypanel_topology_9_migração_e_rollback",
-      "easypanel_topology_drill_mensal_do_postgresql",
-      "easypanel_topology_drill_trimestral_de_perda_total_da_vps",
-      "easypanel_topology_firewall_hostinger",
-      "easypanel_topology_hardening_dos_containers",
-      "easypanel_topology_merge_e_promoção",
-      "easypanel_topology_pull_request",
-      "easypanel_topology_restore_de_desastre_real",
-      "easypanel_topology_topologia_easypanel_crm_silmer"
     ],
     "11": [
       "modules_catalog_src_application_catalog_service",
@@ -494,37 +498,6 @@
       "test_catalog_test_harness"
     ],
     "12": [
-      "modules_audit_privacy_src_audit_trail",
-      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror",
-      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror_constructor",
-      "modules_audit_privacy_src_audit_trail_deepfreeze",
-      "modules_audit_privacy_src_audit_trail_immutableclone",
-      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail",
-      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_append",
-      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_constructor",
-      "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_list",
-      "modules_audit_privacy_src_audit_trail_requirenonemptystring",
-      "modules_audit_privacy_src_audit_trail_validateauditevent",
-      "modules_audit_privacy_src_index",
-      "modules_integration_reliability_src_idempotency",
-      "modules_integration_reliability_src_idempotency_canonicaljson",
-      "modules_integration_reliability_src_idempotency_clone",
-      "modules_integration_reliability_src_idempotency_createdeferred",
-      "modules_integration_reliability_src_idempotency_createidempotentcommandexecutor",
-      "modules_integration_reliability_src_idempotency_fingerprintcommand",
-      "modules_integration_reliability_src_idempotency_idempotencyconflicterror",
-      "modules_integration_reliability_src_idempotency_idempotencyconflicterror_constructor",
-      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore",
-      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_execute",
-      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_get",
-      "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_storagekey",
-      "modules_integration_reliability_src_idempotency_requirenonempty",
-      "modules_integration_reliability_src_idempotency_validatecommandrequest",
-      "test_audit_idempotency_test",
-      "test_audit_idempotency_test_commandmetadata",
-      "test_audit_idempotency_test_createaudittrail"
-    ],
-    "13": [
       "package_scripts",
       "package_scripts_build",
       "package_scripts_check_boundaries",
@@ -555,7 +528,7 @@
       "package_scripts_validate_security_catalog",
       "package_scripts_validate_topology"
     ],
-    "14": [
+    "13": [
       "jsconfig",
       "jsconfig_compileroptions",
       "jsconfig_compileroptions_allowjs",
@@ -583,7 +556,7 @@
       "ref_scripts_mjs",
       "ref_test_js"
     ],
-    "15": [
+    "14": [
       "apps_api_package",
       "apps_api_package_dependencies",
       "apps_api_package_dependencies_crm_silmer_database",
@@ -600,6 +573,31 @@
       "crm_silmer_database",
       "crm_silmer_integration_reliability",
       "fastify"
+    ],
+    "15": [
+      "crm_mvp_especificacao_10_jornada_comercial_aprovada",
+      "crm_mvp_especificacao_11_geração_e_envio_da_ficha",
+      "crm_mvp_especificacao_12_financeiro_comercial_do_mvp",
+      "crm_mvp_especificacao_13_privacidade_e_lgpd",
+      "crm_mvp_especificacao_14_critérios_de_sucesso_do_piloto",
+      "crm_mvp_especificacao_15_gate_de_produto_para_o_tech_lead",
+      "crm_mvp_especificacao_16_próximo_passo_recomendado",
+      "crm_mvp_especificacao_1_visão_do_produto",
+      "crm_mvp_especificacao_2_objetivos_do_mvp",
+      "crm_mvp_especificacao_3_fora_do_escopo_inicial",
+      "crm_mvp_especificacao_4_personas",
+      "crm_mvp_especificacao_5_caixa_de_entrada_como_backlog",
+      "crm_mvp_especificacao_6_canal_do_mvp",
+      "crm_mvp_especificacao_7_vendedor_silmer_e_autonomia",
+      "crm_mvp_especificacao_8_papel_do_n8n",
+      "crm_mvp_especificacao_9_ficha_de_pedido_como_contrato_da_jornada",
+      "crm_mvp_especificacao_atendimento",
+      "crm_mvp_especificacao_crm_silmer_especificação_de_produto_do_mvp",
+      "crm_mvp_especificacao_decisão_do_product_manager",
+      "crm_mvp_especificacao_definido_e_liberado",
+      "crm_mvp_especificacao_p0_fechar_antes_da_aprovação_da_especificação_técnica",
+      "crm_mvp_especificacao_vendedor",
+      "crm_mvp_especificacao_vendedor_silmer"
     ],
     "16": [
       "modules_identity_access_src_index",
@@ -773,19 +771,6 @@
       "ref_modules"
     ],
     "26": [
-      "about",
-      "about_sobre_o_crm_silmer",
-      "agents",
-      "codex",
-      "docs_phase0_external_spikes",
-      "docs_phase0_meta_sandbox",
-      "readme",
-      "rules",
-      "rules_regras_de_produto",
-      "rules_regras_do_crm_silmer",
-      "rules_regras_técnicas_já_impostas"
-    ],
-    "27": [
       "scripts_validate_external_spikes",
       "scripts_validate_external_spikes_invariant",
       "scripts_validate_external_spikes_main",
@@ -798,7 +783,31 @@
       "test_external_spikes_test_rooturl",
       "test_external_spikes_test_text"
     ],
+    "27": [
+      "about",
+      "about_sobre_o_crm_silmer",
+      "agents",
+      "codex",
+      "historico_datacrazy",
+      "readme",
+      "rules",
+      "rules_regras_de_produto",
+      "rules_regras_do_crm_silmer",
+      "rules_regras_técnicas_já_impostas"
+    ],
     "28": [
+      "cloudflare_r2",
+      "docs_phase0_external_spikes",
+      "docs_phase0_external_spikes_decisões_seguras",
+      "docs_phase0_external_spikes_evidências_e_pendências_externas",
+      "docs_phase0_external_spikes_resultado_local",
+      "docs_phase0_external_spikes_t00_4_spikes_externos",
+      "docs_phase0_external_spikes_verificação",
+      "docs_phase0_meta_sandbox",
+      "google_gemini_api",
+      "meta_whatsapp_api"
+    ],
+    "29": [
       "scripts_validate_security_catalog",
       "scripts_validate_security_catalog_invariant",
       "scripts_validate_security_catalog_main",
@@ -810,7 +819,7 @@
       "test_security_catalog_test_readjson",
       "test_security_catalog_test_rooturl"
     ],
-    "29": [
+    "30": [
       "specs_features_crm_mvp_context",
       "specs_features_crm_mvp_context_backlog_e_lead",
       "specs_features_crm_mvp_context_crm_silmer_mvp_contexto_de_produto",
@@ -822,7 +831,7 @@
       "specs_features_crm_mvp_context_limite_da_feature",
       "specs_features_crm_mvp_context_vendedor_silmer"
     ],
-    "30": [
+    "31": [
       "specs_features_crm_mvp_tasks_fase_5_orçamento_pix_pedido_e_ficha",
       "specs_features_crm_mvp_tasks_t05_1_implementar_orçamento_versionado",
       "specs_features_crm_mvp_tasks_t05_2_implementar_ledger_de_vendido",
@@ -834,7 +843,7 @@
       "specs_features_crm_mvp_tasks_t05_8_implementar_segurança_de_anexos",
       "specs_features_crm_mvp_tasks_t05_9_implementar_ui_comercial_pix_pedido_e_ficha"
     ],
-    "31": [
+    "32": [
       "agents_agentes_do_crm_silmer",
       "agents_composição_eficiente_por_tipo_de_tarefa",
       "agents_contrato_de_delegação_e_handoff",
@@ -844,7 +853,7 @@
       "agents_precedência_das_fontes",
       "agents_protocolo_obrigatório"
     ],
-    "32": [
+    "33": [
       "ops_recovery_runbook",
       "ops_recovery_runbook_execução_externa_pendente",
       "ops_recovery_runbook_lacunas_donos_e_prazo_gate",
@@ -854,7 +863,7 @@
       "ops_recovery_runbook_uso_offline_por_uma_segunda_pessoa",
       "t06_3_ledger"
     ],
-    "33": [
+    "34": [
       "specs_features_crm_mvp_tasks_fase_0_fundação_e_riscos_técnicos",
       "specs_features_crm_mvp_tasks_t00_1_estruturar_o_monorepo_javascript_esm",
       "specs_features_crm_mvp_tasks_t00_2_criar_ci_e_imagens_imutáveis",
@@ -864,7 +873,7 @@
       "specs_features_crm_mvp_tasks_t00_6_aprovar_defaults_de_domínio_e_papéis",
       "specs_features_crm_mvp_tasks_t00_7_implantar_telemetria_e_hardening_mínimos"
     ],
-    "34": [
+    "35": [
       "specs_features_crm_mvp_tasks_fase_2_caixa_de_entrada_canais_e_confiabilidade",
       "specs_features_crm_mvp_tasks_t02_1_implementar_adapter_canônico_de_canais",
       "specs_features_crm_mvp_tasks_t02_2_implementar_webhook_whatsapp",
@@ -874,7 +883,7 @@
       "specs_features_crm_mvp_tasks_t02_6_implementar_ui_da_caixa_de_entrada",
       "specs_features_crm_mvp_tasks_t02_7_implementar_instagram_direct_feature_gated"
     ],
-    "35": [
+    "36": [
       "contributing",
       "contributing_antes_de_alterar",
       "contributing_commits_e_publicação",
@@ -883,7 +892,7 @@
       "contributing_governança_do_repositório_público",
       "contributing_validação"
     ],
-    "36": [
+    "37": [
       "docs_phase0_phase_0_approval_gate",
       "docs_phase0_phase_0_approval_gate_como_registrar_uma_aprovação_real",
       "docs_phase0_phase_0_approval_gate_defaults_aguardando_confirmação",
@@ -892,7 +901,7 @@
       "docs_phase0_phase_0_approval_gate_t00_6_gate_de_aprovação_da_fase_0",
       "docs_phase0_phase_0_approval_gate_verificação"
     ],
-    "37": [
+    "38": [
       "docs_phase0_supply_chain",
       "docs_phase0_supply_chain_build_e_promoção",
       "docs_phase0_supply_chain_pins_verificados_em_30_08_2026",
@@ -901,7 +910,7 @@
       "docs_phase0_supply_chain_supply_chain_da_fase_0",
       "docs_phase0_supply_chain_verificação_local"
     ],
-    "38": [
+    "39": [
       "specs_features_crm_mvp_tasks_fase_1_identidade_acesso_e_infraestrutura_de_domínio",
       "specs_features_crm_mvp_tasks_t01_1_implementar_migrations_e_acesso_postgresql",
       "specs_features_crm_mvp_tasks_t01_2_implementar_sessão_e_usuários_por_convite",
@@ -910,7 +919,7 @@
       "specs_features_crm_mvp_tasks_t01_5_criar_configuração_versionada",
       "specs_features_crm_mvp_tasks_t01_6_implementar_catálogo_versionado"
     ],
-    "39": [
+    "40": [
       "specs_features_crm_mvp_tasks_fase_3_negócio_kanban_e_qualificação",
       "specs_features_crm_mvp_tasks_t03_1_implementar_conversão_idempotente_em_negócio",
       "specs_features_crm_mvp_tasks_t03_2_implementar_máquina_de_estados_do_deal",
@@ -919,7 +928,7 @@
       "specs_features_crm_mvp_tasks_t03_5_implementar_tarefas_responsável_e_handoff_humano",
       "specs_features_crm_mvp_tasks_t03_6_implementar_detalhe_acessível_do_negócio"
     ],
-    "40": [
+    "41": [
       "specs_features_crm_mvp_tasks_fase_6_privacidade_relatórios_e_operação",
       "specs_features_crm_mvp_tasks_t06_1_implementar_retenção_por_classe",
       "specs_features_crm_mvp_tasks_t06_2_implementar_legal_hold_e_solicitações",
@@ -928,7 +937,7 @@
       "specs_features_crm_mvp_tasks_t06_5_implementar_observabilidade_e_alertas",
       "specs_features_crm_mvp_tasks_t06_6_implementar_ui_de_relatórios_configuração_e_privacidade"
     ],
-    "41": [
+    "42": [
       "docs_phase0_meta_sandbox_ativos_selecionados",
       "docs_phase0_meta_sandbox_escopo_e_limite",
       "docs_phase0_meta_sandbox_evidência_de_fechamento",
@@ -936,7 +945,7 @@
       "docs_phase0_meta_sandbox_sequência_operacional",
       "docs_phase0_meta_sandbox_t00_4_sandbox_da_meta"
     ],
-    "42": [
+    "43": [
       "docs_phase0_threat_model_and_data_catalog",
       "docs_phase0_threat_model_and_data_catalog_aprovação",
       "docs_phase0_threat_model_and_data_catalog_catálogo_e_retenção",
@@ -944,7 +953,7 @@
       "docs_phase0_threat_model_and_data_catalog_resultado_local",
       "docs_phase0_threat_model_and_data_catalog_t00_5_threat_model_e_catálogo_de_dados"
     ],
-    "43": [
+    "44": [
       "modules_audit_privacy_package",
       "modules_audit_privacy_package_exports",
       "modules_audit_privacy_package_name",
@@ -952,7 +961,7 @@
       "modules_audit_privacy_package_type",
       "modules_audit_privacy_package_version"
     ],
-    "44": [
+    "45": [
       "modules_catalog_package",
       "modules_catalog_package_exports",
       "modules_catalog_package_name",
@@ -960,7 +969,7 @@
       "modules_catalog_package_type",
       "modules_catalog_package_version"
     ],
-    "45": [
+    "46": [
       "modules_configuration_package",
       "modules_configuration_package_exports",
       "modules_configuration_package_name",
@@ -968,7 +977,7 @@
       "modules_configuration_package_type",
       "modules_configuration_package_version"
     ],
-    "46": [
+    "47": [
       "modules_identity_access_package",
       "modules_identity_access_package_exports",
       "modules_identity_access_package_name",
@@ -976,7 +985,7 @@
       "modules_identity_access_package_type",
       "modules_identity_access_package_version"
     ],
-    "47": [
+    "48": [
       "modules_integration_reliability_package",
       "modules_integration_reliability_package_exports",
       "modules_integration_reliability_package_name",
@@ -984,7 +993,7 @@
       "modules_integration_reliability_package_type",
       "modules_integration_reliability_package_version"
     ],
-    "48": [
+    "49": [
       "modules_shared_package",
       "modules_shared_package_exports",
       "modules_shared_package_name",
@@ -992,7 +1001,7 @@
       "modules_shared_package_type",
       "modules_shared_package_version"
     ],
-    "49": [
+    "50": [
       "scripts_build",
       "scripts_build_copies",
       "scripts_build_listfiles",
@@ -1000,7 +1009,7 @@
       "scripts_build_output",
       "scripts_build_root"
     ],
-    "50": [
+    "51": [
       "specs_features_crm_mvp_tasks_fase_4_vendedor_silmer_assistivo",
       "specs_features_crm_mvp_tasks_t04_1_implementar_compositor_de_contexto",
       "specs_features_crm_mvp_tasks_t04_2_implementar_adapter_aiprovider",
@@ -1008,7 +1017,7 @@
       "specs_features_crm_mvp_tasks_t04_4_implementar_takeover_seguro",
       "specs_features_crm_mvp_tasks_t04_5_criar_evals_de_segurança_comercial"
     ],
-    "51": [
+    "52": [
       "specs_features_crm_mvp_tasks_fase_7_hardening_uat_e_piloto",
       "specs_features_crm_mvp_tasks_t07_1_executar_testes_de_carga_e_concorrência",
       "specs_features_crm_mvp_tasks_t07_2_executar_auditoria_de_segurança_e_acessibilidade",
@@ -1016,26 +1025,19 @@
       "specs_features_crm_mvp_tasks_t07_4_executar_uat_operacional",
       "specs_features_crm_mvp_tasks_t07_5_fazer_go_live_controlado"
     ],
-    "52": [
+    "53": [
       "apps_edge_web_package",
       "apps_edge_web_package_name",
       "apps_edge_web_package_private",
       "apps_edge_web_package_type",
       "apps_edge_web_package_version"
     ],
-    "53": [
+    "54": [
       "codex_codex_contexto_do_crm_silmer",
       "codex_fechamento",
       "codex_forma_de_trabalhar",
       "codex_guardrails_do_mvp",
       "codex_inicialização_obrigatória"
-    ],
-    "54": [
-      "docs_phase0_external_spikes_decisões_seguras",
-      "docs_phase0_external_spikes_evidências_e_pendências_externas",
-      "docs_phase0_external_spikes_resultado_local",
-      "docs_phase0_external_spikes_t00_4_spikes_externos",
-      "docs_phase0_external_spikes_verificação"
     ],
     "55": [
       "docs_phase0_observability_and_hardening",
@@ -1052,197 +1054,117 @@
       "docs_phase1_identity_access_baseline_parâmetros_versionados"
     ],
     "57": [
+      "github_dependabot",
+      "github_security",
+      "github_security_como_reportar_uma_vulnerabilidade",
+      "github_security_política_de_segurança",
+      "github_security_versões_suportadas"
+    ],
+    "58": [
       "scripts_check_boundaries",
       "scripts_check_boundaries_frontendpackage",
       "scripts_check_boundaries_listjavascript",
       "scripts_check_boundaries_root",
       "scripts_check_boundaries_workspacepackages"
     ],
-    "58": [
+    "59": [
       "scripts_serve_edge",
       "scripts_serve_edge_contenttypes",
       "scripts_serve_edge_port",
       "scripts_serve_edge_root",
       "scripts_serve_edge_server"
     ],
-    "59": [
-      "github_security",
-      "github_security_como_reportar_uma_vulnerabilidade",
-      "github_security_política_de_segurança",
-      "github_security_versões_suportadas"
-    ],
     "60": [
-      "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend",
-      "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend_answer",
-      "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend_q_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vendedor_silmer_sobre_preco",
-      "graphify_out_memory_query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend_source_nodes"
-    ],
-    "61": [
-      "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines",
-      "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines_answer",
-      "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines_q_quais_decisoes_resolvem_o_p0_4_do_product_readiness_tech_lead",
-      "graphify_out_memory_query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines_source_nodes"
-    ],
-    "62": [
-      "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do",
-      "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_answer",
-      "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_q_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_vendedor_silmer",
-      "graphify_out_memory_query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do_source_nodes"
-    ],
-    "63": [
-      "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines",
-      "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines_answer",
-      "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines_q_quais_decisões_resolvem_o_p0_7_do_product_readiness_tech_lead",
-      "graphify_out_memory_query_20260830_004047_quais_decisões_resolvem_o_p0_7_do_product_readines_source_nodes"
-    ],
-    "64": [
-      "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines",
-      "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines_answer",
-      "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines_q_quais_decisões_resolvem_o_p0_5_do_product_readiness_tech_lead",
-      "graphify_out_memory_query_20260830_004114_quais_decisões_resolvem_o_p0_5_do_product_readines_source_nodes"
-    ],
-    "65": [
-      "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu",
-      "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu_answer",
-      "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu_q_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclusao",
-      "graphify_out_memory_query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu_source_nodes"
-    ],
-    "66": [
-      "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor",
-      "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor_answer",
-      "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor_q_como_o_p0_5_define_fab_sequência_reserva_concorrência_e_reutilização_do_número_da_ficha",
-      "graphify_out_memory_query_20260830_012906_como_o_p0_5_define_fab_sequência_reserva_concor_source_nodes"
-    ],
-    "67": [
-      "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec",
-      "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec_answer",
-      "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec_q_como_foi_resolvido_o_p0_6_do_product_readiness_tech_lead",
-      "graphify_out_memory_query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec_source_nodes"
-    ],
-    "68": [
-      "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor",
-      "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor_answer",
-      "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor_q_como_o_p0_7_modela_admin_atendimento_e_vendedor",
-      "graphify_out_memory_query_20260830_020836_como_o_p0_7_modela_admin_atendimento_e_vendedor_source_nodes"
-    ],
-    "69": [
-      "graphify_out_memory_query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco",
-      "graphify_out_memory_query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco_answer",
-      "graphify_out_memory_query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco_q_where_are_the_agent_roles_and_contribution_protocol_defined",
-      "graphify_out_memory_query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco_source_nodes"
-    ],
-    "70": [
-      "graphify_out_memory_query_20260830_121840_quais_requisitos_tarefas_arquivos_contratos_de",
-      "graphify_out_memory_query_20260830_121840_quais_requisitos_tarefas_arquivos_contratos_de_answer",
-      "graphify_out_memory_query_20260830_121840_quais_requisitos_tarefas_arquivos_contratos_de_q_quais_requisitos_tarefas_arquivos_contratos_de_acessibilidade_segurança_e_critérios_de_aceite_estão_relacionados_à_github_issue_1",
-      "graphify_out_memory_query_20260830_121840_quais_requisitos_tarefas_arquivos_contratos_de_source_nodes"
-    ],
-    "71": [
-      "graphify_out_memory_query_20260830_122808_quais_contratos_do_crm_silmer_governam_segurança_d",
-      "graphify_out_memory_query_20260830_122808_quais_contratos_do_crm_silmer_governam_segurança_d_answer",
-      "graphify_out_memory_query_20260830_122808_quais_contratos_do_crm_silmer_governam_segurança_d_q_quais_contratos_do_crm_silmer_governam_segurança_do_repositório_público_github_actions_imagens_imutáveis_aprovação_publicação_no_ghcr_e_fechamento_da_t00_2_issue_1",
-      "graphify_out_memory_query_20260830_122808_quais_contratos_do_crm_silmer_governam_segurança_d_source_nodes"
-    ],
-    "72": [
-      "graphify_out_memory_query_20260830_212356_como_integrar_o_arquivo_pr_review_yml_para_que_o_g",
-      "graphify_out_memory_query_20260830_212356_como_integrar_o_arquivo_pr_review_yml_para_que_o_g_answer",
-      "graphify_out_memory_query_20260830_212356_como_integrar_o_arquivo_pr_review_yml_para_que_o_g_q_como_integrar_o_arquivo_pr_review_yml_para_que_o_google_jules_valide_pull_requests_respeitando_requisitos_tarefas_e_automacoes_github_existentes",
-      "graphify_out_memory_query_20260830_212356_como_integrar_o_arquivo_pr_review_yml_para_que_o_g_source_nodes"
-    ],
-    "73": [
-      "graphify_out_memory_query_20260831_004150_qual_requisito_tarefa_arquivos_e_critérios_de_ac",
-      "graphify_out_memory_query_20260831_004150_qual_requisito_tarefa_arquivos_e_critérios_de_ac_answer",
-      "graphify_out_memory_query_20260831_004150_qual_requisito_tarefa_arquivos_e_critérios_de_ac_q_qual_requisito_tarefa_arquivos_e_critérios_de_aceite_correspondem_à_issue_github_2_deste_repositório",
-      "graphify_out_memory_query_20260831_004150_qual_requisito_tarefa_arquivos_e_critérios_de_ac_source_nodes"
-    ],
-    "74": [
-      "graphify_out_memory_query_20260831_025424_como_o_gate_da_issue_3_impede_falso_passed_e_disti",
-      "graphify_out_memory_query_20260831_025424_como_o_gate_da_issue_3_impede_falso_passed_e_disti_answer",
-      "graphify_out_memory_query_20260831_025424_como_o_gate_da_issue_3_impede_falso_passed_e_disti_q_como_o_gate_da_issue_3_impede_falso_passed_e_distingue_t00_3_de_t07_3",
-      "graphify_out_memory_query_20260831_025424_como_o_gate_da_issue_3_impede_falso_passed_e_disti_source_nodes"
-    ],
-    "75": [
-      "graphify_out_memory_query_20260831_213816_quais_dependências_e_critérios_verificáveis_da_iss",
-      "graphify_out_memory_query_20260831_213816_quais_dependências_e_critérios_verificáveis_da_iss_answer",
-      "graphify_out_memory_query_20260831_213816_quais_dependências_e_critérios_verificáveis_da_iss_q_quais_dependências_e_critérios_verificáveis_da_issue_5_ainda_podem_ser_concluídos_sem_aceite_humano_credenciais_openai_ou_designação_do_tech_lead",
-      "graphify_out_memory_query_20260831_213816_quais_dependências_e_critérios_verificáveis_da_iss_source_nodes"
-    ],
-    "76": [
-      "graphify_out_memory_query_20260831_214807_qual_modelo_gemini_oferece_o_melhor_custo_benefici",
-      "graphify_out_memory_query_20260831_214807_qual_modelo_gemini_oferece_o_melhor_custo_benefici_answer",
-      "graphify_out_memory_query_20260831_214807_qual_modelo_gemini_oferece_o_melhor_custo_benefici_q_qual_modelo_gemini_oferece_o_melhor_custo_beneficio_para_os_chats_do_crm_silmer_na_issue_5",
-      "graphify_out_memory_query_20260831_214807_qual_modelo_gemini_oferece_o_melhor_custo_benefici_source_nodes"
-    ],
-    "77": [
       "readme_comece_por_aqui",
       "readme_crm_silmer",
       "readme_desenvolvimento",
       "readme_stack_aprovada"
     ],
-    "78": [
+    "61": [
       "specs_features_crm_mvp_tasks",
       "specs_features_crm_mvp_tasks_crm_silmer_mvp_plano_de_implementação",
       "specs_features_crm_mvp_tasks_definition_of_done_global",
       "specs_features_crm_mvp_tasks_dependências_e_caminho_crítico"
     ],
-    "79": [
+    "62": [
       "test_bootstrap_test",
       "test_bootstrap_test_digestbuild",
       "test_bootstrap_test_readjson",
       "test_bootstrap_test_rooturl"
     ],
-    "80": [
+    "63": [
       "test_ci_images_test",
       "test_ci_images_test_json",
       "test_ci_images_test_rooturl",
       "test_ci_images_test_text"
     ],
-    "81": [
+    "64": [
+      "gemini_baseline",
+      "memory_query_20260831",
+      "t00_4_meta_sandbox"
+    ],
+    "65": [
       "prettierrc",
       "prettierrc_singlequote",
       "prettierrc_trailingcomma"
     ],
-    "82": [
+    "66": [
       "apps_edge_web_src_app",
       "apps_edge_web_src_app_status"
     ],
-    "83": [
+    "67": [
       "eslint_config",
       "eslint_config_nodeglobals"
     ],
-    "84": [
+    "68": [
       "fluxo_qualificacao_generico",
       "fluxo_qualificacao_generico_fluxo_de_qualificação_referência_substituída"
     ],
-    "85": [
+    "69": [
+      "modules_database",
+      "postgresql"
+    ],
+    "70": [
       "modules_database_readme",
       "modules_database_readme_database_module"
     ],
-    "86": [
+    "71": [
       "espectro_mvp"
     ],
-    "87": [
+    "72": [
+      "github_workflows_pr_review"
+    ],
+    "73": [
+      "github_workflows_promote_approved_sha"
+    ],
+    "74": [
       "modules_database_migrations_0001_database_baseline_expand"
     ],
-    "88": [
+    "75": [
+      "modules_shared"
+    ],
+    "76": [
       "playwright_config"
     ],
-    "89": [
+    "77": [
+      "s3_storage"
+    ],
+    "78": [
       "silmer_api"
     ],
-    "90": [
+    "79": [
       "silmer_edge_web"
     ],
-    "91": [
+    "80": [
       "silmer_postgres"
     ],
-    "92": [
+    "81": [
       "silmer_worker"
     ],
-    "93": [
+    "82": [
       "test_e2e_foundation_spec"
     ],
-    "94": [
+    "83": [
       "apps_worker_package",
       "apps_worker_package_dependencies",
       "apps_worker_package_dependencies_crm_silmer_shared",
@@ -1253,31 +1175,25 @@
       "apps_worker_package_scripts_start",
       "apps_worker_package_type",
       "apps_worker_package_version"
-    ],
-    "95": [
-      "graphify_out_memory_query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co",
-      "graphify_out_memory_query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co_answer",
-      "graphify_out_memory_query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co_q_como_a_baseline_gemini_developer_api_da_issue_5_controla_modelo_tier_pago_zdr_pii_persistencia_e_saida_estruturada",
-      "graphify_out_memory_query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co_source_nodes"
     ]
   },
   "cohesion": {
-    "0": 0.06142410015649452,
-    "1": 0.04878048780487805,
-    "2": 0.08846153846153847,
-    "3": 0.1141025641025641,
-    "4": 0.05263157894736842,
-    "5": 0.06006006006006006,
-    "6": 0.0960960960960961,
-    "7": 0.05555555555555555,
+    "0": 0.061569416498993966,
+    "1": 0.12561576354679804,
+    "2": 0.05226480836236934,
+    "3": 0.04878048780487805,
+    "4": 0.08846153846153847,
+    "5": 0.1141025641025641,
+    "6": 0.05263157894736842,
+    "7": 0.09672830725462304,
     "8": 0.05714285714285714,
-    "9": 0.12701612903225806,
-    "10": 0.06451612903225806,
+    "9": 0.05555555555555555,
+    "10": 0.12701612903225806,
     "11": 0.15862068965517243,
-    "12": 0.12561576354679804,
-    "13": 0.06896551724137931,
-    "14": 0.07692307692307693,
-    "15": 0.125,
+    "12": 0.06896551724137931,
+    "13": 0.07692307692307693,
+    "14": 0.125,
+    "15": 0.08695652173913043,
     "16": 0.1631578947368421,
     "17": 0.22105263157894736,
     "18": 0.11764705882352941,
@@ -1288,22 +1204,22 @@
     "23": 0.15384615384615385,
     "24": 0.24242424242424243,
     "25": 0.16666666666666666,
-    "26": 0.23636363636363636,
-    "27": 0.34545454545454546,
-    "28": 0.3333333333333333,
-    "29": 0.2,
+    "26": 0.34545454545454546,
+    "27": 0.24444444444444444,
+    "28": 0.2,
+    "29": 0.3333333333333333,
     "30": 0.2,
-    "31": 0.25,
+    "31": 0.2,
     "32": 0.25,
     "33": 0.25,
     "34": 0.25,
-    "35": 0.2857142857142857,
+    "35": 0.25,
     "36": 0.2857142857142857,
     "37": 0.2857142857142857,
     "38": 0.2857142857142857,
     "39": 0.2857142857142857,
     "40": 0.2857142857142857,
-    "41": 0.3333333333333333,
+    "41": 0.2857142857142857,
     "42": 0.3333333333333333,
     "43": 0.3333333333333333,
     "44": 0.3333333333333333,
@@ -1314,50 +1230,38 @@
     "49": 0.3333333333333333,
     "50": 0.3333333333333333,
     "51": 0.3333333333333333,
-    "52": 0.4,
+    "52": 0.3333333333333333,
     "53": 0.4,
     "54": 0.4,
     "55": 0.4,
     "56": 0.4,
     "57": 0.4,
     "58": 0.4,
-    "59": 0.5,
+    "59": 0.4,
     "60": 0.5,
     "61": 0.5,
     "62": 0.5,
-    "63": 0.5,
-    "64": 0.5,
-    "65": 0.5,
-    "66": 0.5,
-    "67": 0.5,
-    "68": 0.5,
-    "69": 0.5,
-    "70": 0.5,
-    "71": 0.5,
-    "72": 0.5,
-    "73": 0.5,
-    "74": 0.5,
-    "75": 0.5,
-    "76": 0.5,
-    "77": 0.5,
-    "78": 0.5,
-    "79": 0.5,
-    "80": 0.6666666666666666,
-    "81": 0.6666666666666666,
+    "63": 0.6666666666666666,
+    "64": 0.6666666666666666,
+    "65": 0.6666666666666666,
+    "66": 1.0,
+    "67": 1.0,
+    "68": 1.0,
+    "69": 1.0,
+    "70": 1.0,
+    "71": 1.0,
+    "72": 1.0,
+    "73": 1.0,
+    "74": 1.0,
+    "75": 1.0,
+    "76": 1.0,
+    "77": 1.0,
+    "78": 1.0,
+    "79": 1.0,
+    "80": 1.0,
+    "81": 1.0,
     "82": 1.0,
-    "83": 1.0,
-    "84": 1.0,
-    "85": 1.0,
-    "86": 1.0,
-    "87": 1.0,
-    "88": 1.0,
-    "89": 1.0,
-    "90": 1.0,
-    "91": 1.0,
-    "92": 1.0,
-    "93": 1.0,
-    "94": 0.2,
-    "95": 0.5
+    "83": 0.2
   },
   "gods": [
     {
@@ -1416,12 +1320,34 @@
       "source": "Vendedor Silmer (AI Agent)",
       "target": "Kanban Comercial",
       "source_files": [
-        "TECHNICAL-DESIGN.md",
+        ".specs/features/crm-mvp/context.md",
         "CRM-MVP-ESPECIFICACAO.md"
       ],
       "confidence": "AMBIGUOUS",
       "relation": "calls",
-      "why": "ambiguous connection - not explicitly stated in source; connects across different repos/directories"
+      "why": "ambiguous connection - not explicitly stated in source; connects across different repos/directories; peripheral node `Kanban Comercial` unexpectedly reaches hub `Vendedor Silmer (AI Agent)`"
+    },
+    {
+      "source": "Vendedor Silmer (AI Agent)",
+      "target": "Caixa de Entrada (Backlog)",
+      "source_files": [
+        ".specs/features/crm-mvp/context.md",
+        "CRM-MVP-ESPECIFICACAO.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `Caixa de Entrada (Backlog)` unexpectedly reaches hub `Vendedor Silmer (AI Agent)`"
+    },
+    {
+      "source": "Vendedor Silmer (AI Agent)",
+      "target": "Crazy API (WhatsApp)",
+      "source_files": [
+        ".specs/features/crm-mvp/context.md",
+        "historico-datacrazy/DATACRAZY-SETUP.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "references",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `Crazy API (WhatsApp)` unexpectedly reaches hub `Vendedor Silmer (AI Agent)`"
     },
     {
       "source": "harness()",
@@ -1444,28 +1370,6 @@
       "confidence": "EXTRACTED",
       "relation": "calls",
       "why": "connects across different repos/directories; peripheral node `createHarness()` unexpectedly reaches hub `createConfigurationService()`"
-    },
-    {
-      "source": "capture()",
-      "target": "createSafeLogger()",
-      "source_files": [
-        "test/observability.test.js",
-        "modules/shared/src/observability.js"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "connects across different repos/directories; peripheral node `capture()` unexpectedly reaches hub `createSafeLogger()`"
-    },
-    {
-      "source": "Vendedor Silmer (AI Agent)",
-      "target": "Caixa de Entrada (Backlog)",
-      "source_files": [
-        "TECHNICAL-DESIGN.md",
-        "CRM-MVP-ESPECIFICACAO.md"
-      ],
-      "confidence": "INFERRED",
-      "relation": "calls",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
     }
   ],
   "questions": [
@@ -1476,33 +1380,33 @@
     },
     {
       "type": "bridge_node",
-      "question": "Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Plan Tasks` to `Phase 0: Technical Foundation`, `Phase 2: Communication Channels`, `Phase 1: Domain Infrastructure`, `Phase 3: CRM Business Logic`, `Phase 6: Privacy and Ops`, `Phase 4: AI Assistant`, `Phase 7: Hardening and UAT`, `Phase 5: Financial Workflow`?",
-      "why": "High betweenness centrality (0.019) - this node is a cross-community bridge."
+      "question": "Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Task List` to `Phase 0: Technical Foundation`, `Phase 2: Inbox and Channels`, `Phase 1: Domain Infrastructure`, `Phase 3: Kanban and Deals`, `Phase 6: Privacy and Ops`, `Phase 4: AI Assistant`, `Phase 7: Hardening and UAT`, `Phase 5: Payments and Orders`?",
+      "why": "High betweenness centrality (0.030) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `TDD — CRM Silmer MVP` connect `MVP Implementation Strategy` to `MVP Product Specification`?",
-      "why": "High betweenness centrality (0.012) - this node is a cross-community bridge."
+      "question": "Why does `TDD — CRM Silmer MVP` connect `MVP Implementation Strategy` to `System Architecture Decisions`?",
+      "why": "High betweenness centrality (0.027) - this node is a cross-community bridge."
     },
     {
       "type": "isolated_nodes",
       "question": "What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?",
-      "why": "552 weakly-connected nodes found - possible documentation gaps or missing edges."
+      "why": "525 weakly-connected nodes found - possible documentation gaps or missing edges."
     },
     {
       "type": "low_cohesion",
       "question": "Should `Server and Worker Runtime` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.06142410015649452 - nodes in this community are weakly interconnected."
+      "why": "Cohesion score 0.061569416498993966 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `MVP Implementation Strategy` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected."
+      "question": "Should `Audit Trail and Idempotency` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.12561576354679804 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `Database Security Policies` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.08846153846153847 - nodes in this community are weakly interconnected."
+      "question": "Should `CRM Sales Process` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.05226480836236934 - nodes in this community are weakly interconnected."
     }
   ]
 }

@@ -680,14 +680,14 @@
     "semantic_hash": "7f68e351044b0200b93983177601b1c3"
   },
   "scripts/gemini-privacy-smoke.mjs": {
-    "mtime": 1788213864.5865166,
-    "ast_hash": "476e5c13f89ba7054e14c67dbeda1423",
-    "semantic_hash": "476e5c13f89ba7054e14c67dbeda1423"
+    "mtime": 1788214712.1055403,
+    "ast_hash": "9680a8de1aa6fa492ca16ee7d81e41c0",
+    "semantic_hash": ""
   },
   "test/gemini-privacy-smoke.test.js": {
-    "mtime": 1788213734.0320106,
-    "ast_hash": "14a26e664dbcbbf8b03cff635c95343c",
-    "semantic_hash": "14a26e664dbcbbf8b03cff635c95343c"
+    "mtime": 1788214698.8929687,
+    "ast_hash": "83cbee721d06652b905e5f30bf2532e0",
+    "semantic_hash": ""
   },
   "graphify-out/memory/query_20260831_213816_quais_depend\u00eancias_e_crit\u00e9rios_verific\u00e1veis_da_iss.md": {
     "mtime": 1788212296.7077365,
@@ -697,6 +697,11 @@
   "graphify-out/memory/query_20260831_214807_qual_modelo_gemini_oferece_o_melhor_custo_benefici.md": {
     "mtime": 1788212887.6252408,
     "ast_hash": "8448af341e27f6129e01360bb491972d",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co.md": {
+    "mtime": 1788214291.98542,
+    "ast_hash": "251834810a34448e06c378d8f4348987",
     "semantic_hash": ""
   }
 }

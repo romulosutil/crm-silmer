@@ -590,24 +590,15 @@
       "apps_api_package_dependencies_crm_silmer_integration_reliability",
       "apps_api_package_dependencies_crm_silmer_shared",
       "apps_api_package_dependencies_fastify",
+      "apps_api_package_json_crm_silmer_shared",
       "apps_api_package_name",
       "apps_api_package_private",
       "apps_api_package_scripts",
       "apps_api_package_scripts_start",
       "apps_api_package_type",
       "apps_api_package_version",
-      "apps_worker_package",
-      "apps_worker_package_dependencies",
-      "apps_worker_package_dependencies_crm_silmer_shared",
-      "apps_worker_package_name",
-      "apps_worker_package_private",
-      "apps_worker_package_scripts",
-      "apps_worker_package_scripts_start",
-      "apps_worker_package_type",
-      "apps_worker_package_version",
       "crm_silmer_database",
       "crm_silmer_integration_reliability",
-      "crm_silmer_shared",
       "fastify"
     ],
     "16": [
@@ -636,6 +627,7 @@
       "scripts_gemini_privacy_smoke",
       "scripts_gemini_privacy_smoke_approved_model",
       "scripts_gemini_privacy_smoke_approved_provider",
+      "scripts_gemini_privacy_smoke_approved_suggestion_schema",
       "scripts_gemini_privacy_smoke_buildendpoint",
       "scripts_gemini_privacy_smoke_buildrequest",
       "scripts_gemini_privacy_smoke_containspii",
@@ -645,6 +637,7 @@
       "scripts_gemini_privacy_smoke_piipatterns",
       "scripts_gemini_privacy_smoke_rungeminiprivacysmoke",
       "scripts_gemini_privacy_smoke_synthetic_contents",
+      "scripts_gemini_privacy_smoke_validateschemafixture",
       "scripts_gemini_privacy_smoke_validatesuggestion",
       "test_gemini_privacy_smoke_test",
       "test_gemini_privacy_smoke_test_schema",
@@ -1248,10 +1241,28 @@
     ],
     "93": [
       "test_e2e_foundation_spec"
+    ],
+    "94": [
+      "apps_worker_package",
+      "apps_worker_package_dependencies",
+      "apps_worker_package_dependencies_crm_silmer_shared",
+      "apps_worker_package_json_crm_silmer_shared",
+      "apps_worker_package_name",
+      "apps_worker_package_private",
+      "apps_worker_package_scripts",
+      "apps_worker_package_scripts_start",
+      "apps_worker_package_type",
+      "apps_worker_package_version"
+    ],
+    "95": [
+      "graphify_out_memory_query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co",
+      "graphify_out_memory_query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co_answer",
+      "graphify_out_memory_query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co_q_como_a_baseline_gemini_developer_api_da_issue_5_controla_modelo_tier_pago_zdr_pii_persistencia_e_saida_estruturada",
+      "graphify_out_memory_query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co_source_nodes"
     ]
   },
   "cohesion": {
-    "0": 0.05868544600938967,
+    "0": 0.06142410015649452,
     "1": 0.04878048780487805,
     "2": 0.08846153846153847,
     "3": 0.1141025641025641,
@@ -1266,9 +1277,9 @@
     "12": 0.12561576354679804,
     "13": 0.06896551724137931,
     "14": 0.07692307692307693,
-    "15": 0.08,
+    "15": 0.125,
     "16": 0.1631578947368421,
-    "17": 0.23529411764705882,
+    "17": 0.22105263157894736,
     "18": 0.11764705882352941,
     "19": 0.13333333333333333,
     "20": 0.23809523809523808,
@@ -1344,7 +1355,9 @@
     "90": 1.0,
     "91": 1.0,
     "92": 1.0,
-    "93": 1.0
+    "93": 1.0,
+    "94": 0.2,
+    "95": 0.5
   },
   "gods": [
     {
@@ -1393,8 +1406,8 @@
       "degree": 11
     },
     {
-      "id": "specs_features_crm_mvp_tasks_crm_silmer_mvp_plano_de_implementação",
-      "label": "CRM Silmer MVP — Plano de Implementação",
+      "id": "modules_shared_src_observability_createsafelogger",
+      "label": "createSafeLogger()",
       "degree": 11
     }
   ],
@@ -1463,33 +1476,33 @@
     },
     {
       "type": "bridge_node",
-      "question": "Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Plan Tasks` to `Phase 0: Technical Foundation`, `Phase 2: Messaging Channels`, `Phase 1: Identity and Domain`, `Phase 3: CRM Business Logic`, `Phase 6: Privacy and Reporting`, `Phase 4: AI Sales Assistant`, `Phase 7: Hardening and Pilot`, `Phase 5: Orders and Payments`?",
-      "why": "High betweenness centrality (0.029) - this node is a cross-community bridge."
+      "question": "Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Plan Tasks` to `Phase 0: Technical Foundation`, `Phase 2: Communication Channels`, `Phase 1: Domain Infrastructure`, `Phase 3: CRM Business Logic`, `Phase 6: Privacy and Ops`, `Phase 4: AI Assistant`, `Phase 7: Hardening and UAT`, `Phase 5: Financial Workflow`?",
+      "why": "High betweenness centrality (0.019) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `TDD — CRM Silmer MVP` connect `MVP Reliability and Strategy` to `MVP Product Specification`?",
-      "why": "High betweenness centrality (0.015) - this node is a cross-community bridge."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `CRM MVP - Traceable Requirements` connect `MVP Implementation Roadmap` to `Project Documentation and Rules`?",
-      "why": "High betweenness centrality (0.013) - this node is a cross-community bridge."
+      "question": "Why does `TDD — CRM Silmer MVP` connect `MVP Implementation Strategy` to `MVP Product Specification`?",
+      "why": "High betweenness centrality (0.012) - this node is a cross-community bridge."
     },
     {
       "type": "isolated_nodes",
       "question": "What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?",
-      "why": "547 weakly-connected nodes found - possible documentation gaps or missing edges."
+      "why": "552 weakly-connected nodes found - possible documentation gaps or missing edges."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `API and Worker Runtime` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.05868544600938967 - nodes in this community are weakly interconnected."
+      "question": "Should `Server and Worker Runtime` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.06142410015649452 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `MVP Reliability and Strategy` be split into smaller, more focused modules?",
+      "question": "Should `MVP Implementation Strategy` be split into smaller, more focused modules?",
       "why": "Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Database Security Policies` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08846153846153847 - nodes in this community are weakly interconnected."
     }
   ]
 }

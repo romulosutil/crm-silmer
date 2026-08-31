@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.4",
+  "issue": 6,
+  "provider": "Cloudflare R2",
+  "capturedAt": "2026-08-31",
+  "requirements": ["PRV-P06-07", "PRV-P06-11", "ORD-04", "ORD-05"],
+  "approval": {
+    "status": "pending-human-approval",
+    "approved": false,
+    "dpaVersion": "6.4",
+    "dpaAccepted": false,
+    "subprocessorsAccepted": false,
+    "dataLocationAccepted": false,
+    "privacyReviewer": "Rômulo Sutil Corrêa",
+    "techLeadReviewer": null,
+    "decidedAt": null,
+    "evidenceRef": null
+  },
+  "dataLocation": {
+    "status": "pending-privacy",
+    "jurisdiction": null,
+    "locationHint": null,
+    "locationHintIsResidencyGuarantee": false,
+    "jurisdictionCannotChangeAfterCreation": true,
+    "fallbackIfBrazilResidencyRequired": "AWS S3 sa-east-1"
+  },
+  "buckets": [
+    {
+      "class": "data",
+      "name": "crm-silmer-data",
+      "publicAccess": false,
+      "runtimeAccess": true,
+      "credentialRefs": [
+        "secret://crm/r2/data-access-key-id",
+        "secret://crm/r2/data-secret-access-key"
+      ],
+      "lifecycle": {
+        "status": "pending-live",
+        "policyRef": "P0.6 data catalog",
+        "applicationManaged": true,
+        "providerDeleteRulesExpected": 0
+      }
+    },
+    {
+      "class": "backups",
+      "name": "crm-silmer-backups",
+      "publicAccess": false,
+      "runtimeAccess": false,
+      "credentialRefs": [
+        "secret://crm/r2/backup-access-key-id",
+        "secret://crm/r2/backup-secret-access-key"
+      ],
+      "lifecycle": {
+        "status": "pending-live",
+        "deleteAfterDaysMaximum": 35
+      }
+    },
+    {
+      "class": "tombstones",
+      "name": "crm-silmer-tombstones",
+      "publicAccess": false,
+      "runtimeAccess": false,
+      "credentialRefs": [
+        "secret://crm/r2/tombstone-write-access-key-id",
+        "secret://crm/r2/tombstone-write-secret-access-key",
+        "secret://crm/r2/tombstone-read-access-key-id",
+        "secret://crm/r2/tombstone-read-secret-access-key"
+      ],
+      "immutablePrefix": "tombstones/",
+      "conditionalCreateRequired": true,
+      "lifecycle": {
+        "applicationManaged": true,
+        "providerDeleteRulesExpected": 0
+      },
+      "bucketLock": {
+        "providerControl": "cloudflare-r2-bucket-lock",
+        "required": true,
+        "ruleId": "crm-silmer-tombstones-retention",
+        "minimumRetentionSeconds": 3110400,
+        "retention": "at-least-36-days-and-until-last-related-copy-expires",
+        "configurationAdminOutsideRuntime": true,
+        "changeRequiresApprovalAndAudit": true
+      }
+    }
+  ],
+  "credentials": {
+    "separateByDataClass": true,
+    "crossBucketAccessMustFail": true,
+    "tombstoneRestoreReadOnly": true,
+    "configurationAdminOutsideRuntime": true,
+    "valuesAllowedInEvidence": false
+  },
+  "s3Compatibility": {
+    "region": "auto",
+    "providerNativeBucketLockRequired": true,
+    "s3ObjectLockSupported": false,
+    "s3ObjectLockHeadersAllowed": false,
+    "bucketVersioningSupported": false
+  },
+  "signedUrls": {
+    "maximumTtlSeconds": 300,
+    "bearerToken": true,
+    "rawUrlAllowedInLogsOrEvidence": false,
+    "applicationCacheControl": "no-store"
+  },
+  "outcomeUnknown": {
+    "automaticRetry": false,
+    "reconcileOperation": "HeadObject",
+    "confirmationMetadata": "sha256",
+    "etagIsSufficient": false,
+    "matchingSha256Outcome": "sent",
+    "notFoundOutcome": "retry-same-immutable-key-with-if-none-match",
+    "ambiguousOutcome": "human-reconciliation"
+  },
+  "liveEvidence": {
+    "status": "not-executed",
+    "executed": false,
+    "humanApproved": false,
+    "localOutputPath": "var/r2-live-evidence.json",
+    "versioned": false
+  },
+  "officialSources": [
+    "https://developers.cloudflare.com/r2/api/s3/api/",
+    "https://developers.cloudflare.com/r2/buckets/bucket-locks/",
+    "https://developers.cloudflare.com/r2/buckets/object-lifecycles/",
+    "https://developers.cloudflare.com/r2/api/s3/presigned-urls/",
+    "https://developers.cloudflare.com/r2/reference/data-location/",
+    "https://developers.cloudflare.com/r2/reference/data-security/",
+    "https://www.cloudflare.com/cloudflare-customer-dpa/",
+    "https://www.cloudflare.com/gdpr/subprocessors/"
+  ]
+}

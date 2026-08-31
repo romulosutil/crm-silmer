@@ -96,7 +96,71 @@ test('requires Gemini minimization controls and private R2 posture', async () =>
   assert.equal(ai.retention.productionWithPiiAllowed, false);
   assert.equal(storage.security.publicAccess, false);
   assert.equal(storage.security.bucketLockRequired, true);
+  assert.equal(
+    storage.security.bucketLockProviderControl,
+    'cloudflare-r2-bucket-lock',
+  );
+  assert.equal(storage.security.bucketLockPrefix, 'tombstones/');
+  assert.equal(storage.security.s3ObjectLockSupported, false);
+  assert.equal(storage.security.s3ObjectLockHeadersAllowed, false);
+  assert.equal(storage.security.bucketVersioningSupported, false);
   assert.equal(storage.security.dataLocationApproval, 'pending-privacy');
+  assert.equal(storage.security.locationHintIsResidencyGuarantee, false);
+  assert.equal(storage.security.separateCredentialsByDataClass, true);
+  assert.equal(storage.security.crossBucketAccessMustFail, true);
+  assert.equal(storage.security.signedUrlMaximumTtlSeconds, 300);
+  assert.equal(storage.security.rawSignedUrlAllowedInEvidence, false);
+  assert.deepEqual(storage.buckets, [
+    'crm-silmer-data',
+    'crm-silmer-backups',
+    'crm-silmer-tombstones',
+  ]);
+});
+
+test('documents an executable, fail-closed R2 gate without secret values', async () => {
+  const guide = await text('docs/phase0/R2-VALIDATION.md');
+  const gate = await json('docs/phase0/r2-control-plane.json');
+  const environment = await text('docs/phase0/r2-live.env.example');
+  const topology = await text('EASYPANEL-TOPOLOGY.md');
+  const packageJson = await json('package.json');
+
+  assert.equal(gate.task, 'T00.4');
+  assert.equal(gate.issue, 6);
+  assert.equal(gate.approval.status, 'pending-human-approval');
+  assert.equal(gate.approval.approved, false);
+  assert.equal(gate.liveEvidence.executed, false);
+  assert.equal(gate.s3Compatibility.s3ObjectLockSupported, false);
+  assert.equal(gate.s3Compatibility.bucketVersioningSupported, false);
+  assert.equal(gate.signedUrls.maximumTtlSeconds, 300);
+  assert.match(guide, /HEAD.*SHA-256/iu);
+  assert.match(guide, /não[\s\S]*S3\s+Object Lock/iu);
+  assert.match(guide, /não há[\s\S]*controles live/iu);
+  assert.match(topology, /Cloudflare R2 Bucket Lock/u);
+  assert.match(topology, /R2 não implementa S3[\s\S]*Object Lock/iu);
+  assert.equal(
+    packageJson.scripts['smoke:r2:live'],
+    'node scripts/r2-live-smoke.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['validate:r2'],
+    'node scripts/validate-r2.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['test:r2'],
+    'node --test test/r2-live-smoke.test.js',
+  );
+  for (const name of [
+    'CLOUDFLARE_ACCOUNT_ID',
+    'CLOUDFLARE_API_TOKEN',
+    'R2_BACKUP_ACCESS_KEY_ID',
+    'R2_TOMBSTONE_READ_ACCESS_KEY_ID',
+  ]) {
+    assert.match(environment, new RegExp(`^${name}=$`, 'mu'));
+  }
+  assert.doesNotMatch(
+    `${JSON.stringify(gate)}\n${environment}`,
+    /AKIA[A-Z0-9]{16}|X-Amz-Signature=|Bearer\s+[A-Za-z0-9._-]+/u,
+  );
 });
 
 test('does not convert sandbox evidence into external approval claims', async () => {

@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 const statuses = new Set([
   'documentation-verified',
+  'sandbox-verified',
   'pending-live',
   'pending-human',
 ]);

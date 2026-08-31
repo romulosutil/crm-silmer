@@ -18,8 +18,11 @@ Rastreabilidade: `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`, `PAY-02`,
   vira `outcome_unknown`, sem retry cego.
 - Status Meta: `wamid` serve para correlação dos webhooks observados. Ausência
   de evento não autoriza afirmar entrega, falha ou recuperação.
-- Mídia/templates: ficam cobertos pela coleção oficial e fixtures locais, mas
-  upload/download, template aprovado e status exigem conta sandbox/live.
+- Mídia/templates Meta: o sandbox aceitou texto, template, documento e imagem
+  com `wamid`; `sent`, `delivered`, `read` e `failed` foram observados. Texto,
+  documento e imagem terminaram em `failed` por janela de 24 horas (`131047`),
+  sem inferência de entrega. A evidência sanitizada está em
+  `meta-sandbox-live-evidence.json`.
 - Gemini Developer API: tier pago e `gemini-2.5-flash-lite` foram aprovados
   condicionalmente em 31/08/2026. A chamada usa `models.generateContent`
   stateless com JSON Schema estrito, sem Interactions, grounding, File API,
@@ -40,8 +43,9 @@ Rastreabilidade: `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`, `PAY-02`,
 A fonte, data, status e owner de cada efeito ficam em
 `external-effects.json`. Permanecem bloqueadores externos explícitos:
 
-1. Operação/Integrações: executar sandbox/live Meta para assinatura real,
-   mensagens, mídia, template aprovado e todos os status.
+1. Operação/Integrações: antes da produção, registrar o número real, criar token
+   de usuário do sistema, configurar pagamento e substituir a deduplicação em
+   memória pela inbox PostgreSQL de `T02.2`; o sandbox de T00.4 está concluído.
 2. Privacidade/Tech Lead: registrar responsáveis nominais e a confirmação live
    do ZDR da Gemini Developer API; Cloudflare R2 DPA/localização/controles ainda
    exigem aceite separado.

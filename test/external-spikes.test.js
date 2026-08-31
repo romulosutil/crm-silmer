@@ -99,7 +99,7 @@ test('requires Gemini minimization controls and private R2 posture', async () =>
   assert.equal(storage.security.dataLocationApproval, 'pending-privacy');
 });
 
-test('does not convert local evidence into external approval claims', async () => {
+test('does not convert sandbox evidence into external approval claims', async () => {
   const effects = await json('docs/phase0/external-effects.json');
   const envelope = await json('docs/phase0/load-envelope.json');
   const effectList = /** @type {Array<Record<string, any>>} */ (
@@ -108,12 +108,14 @@ test('does not convert local evidence into external approval claims', async () =
 
   assert.equal(effects.externalApprovalGranted, false);
   assert.equal(envelope.approval.approved, false);
-  assert.ok(effectList.some(({ status }) => status === 'pending-live'));
+  assert.ok(effectList.some(({ status }) => status === 'sandbox-verified'));
   assert.ok(effectList.some(({ status }) => status === 'pending-human'));
 });
 
 test('documents a secret-free, non-production Meta sandbox procedure', async () => {
   const guide = await text('docs/phase0/META-SANDBOX.md');
+  const evidence = await json('docs/phase0/meta-sandbox-live-evidence.json');
+  const effects = await json('docs/phase0/external-effects.json');
   const packageJson = await json('package.json');
   const environment = await text('docs/phase0/meta-sandbox.env.example');
 
@@ -123,6 +125,25 @@ test('documents a secret-free, non-production Meta sandbox procedure', async () 
   assert.match(guide, /PostgreSQL inbox|T02\.2/u);
   assert.match(guide, /não.*produção|non-production/iu);
   assert.doesNotMatch(guide, /\+55\s?\d{10,11}/u);
+  assert.equal(evidence.task, 'T00.4');
+  assert.equal(evidence.adapterSmoke.acceptedRequests, 4);
+  assert.equal(evidence.tokenLifecycle.invalidatedAfterSmoke, true);
+  const statusCoverage = /** @type {Array<{status: string}>} */ (
+    evidence.statusCoverage
+  );
+  assert.deepEqual(
+    statusCoverage.map(({ status }) => status),
+    ['sent', 'delivered', 'read', 'failed'],
+  );
+  assert.doesNotMatch(
+    JSON.stringify(evidence),
+    /EAA[A-Za-z0-9_.-]+|wamid\.|\+55\s?\d{10,11}|5527998447589/u,
+  );
+  const metaEffects = /** @type {Array<{id: string, status: string}>} */ (
+    effects.effects
+  ).filter(({ id }) => id.startsWith('meta.'));
+  assert.equal(metaEffects.length, 4);
+  assert.ok(metaEffects.every(({ status }) => status === 'sandbox-verified'));
   assert.equal(
     packageJson.scripts['smoke:meta:sandbox'],
     'node scripts/meta-sandbox-smoke.mjs',

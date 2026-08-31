@@ -72,7 +72,6 @@ export async function runMetaSandboxSmoke(options = {}) {
     const result = await client.send({ ...message, to: recipient });
     acceptedMessages.push({
       apiAccepted: true,
-      providerMessageId: result.providerMessageId,
       providerMessageIdSha256: sha256(result.providerMessageId),
       type: message.type,
     });

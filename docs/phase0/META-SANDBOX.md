@@ -18,11 +18,17 @@ garantia de deduplicação durável.
 
 ## Ativos selecionados
 
-- App Meta: `Silmer CRM`, ID `2260627114698047`, em modo desenvolvimento.
-- Portfólio empresarial verificado: ID `203195957172732`.
-- WABA de sandbox: `Silmer`, ID `104737395571183`.
+- App Meta: `Silmer CRM Zap Sandbox`, ID `2027929314498563`, em modo
+  desenvolvimento.
+- Portfólio empresarial verificado: `Silmer Oficial`, ID
+  `203195957172732`.
+- WABA de sandbox: conta `Silmer`, nome comercial `Silmer Oficial`, ID
+  `104737395571183`.
+- Número de teste fornecido pela Meta: Phone Number ID
+  `1200626523143665`; o número e o destinatário não são versionados.
 - Graph API validada na referência oficial: `v25.0` em 31/08/2026.
-- Callback: `https://<dominio-edge>/api/v1/webhooks/meta/whatsapp`.
+- Callback:
+  `https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host/api/v1/webhooks/meta/whatsapp`.
 
 IDs acima identificam ativos, mas não concedem acesso. App secret, verify token,
 access token, telefone e evidência com `wamid` ficam fora do Git.
@@ -43,13 +49,14 @@ do EasyPanel e não recebe variáveis exclusivas do smoke:
   `var/meta-sandbox-evidence.json`, diretório ignorado.
 
 O smoke nunca imprime token, telefone, payload ou `wamid`. O arquivo local
-guarda os `wamid` aceitos e seus hashes para correlação; somente hashes, tipos,
-datas e status podem entrar na evidência versionada.
+guarda somente hashes SHA-256 dos `wamid` aceitos; apenas hashes, tipos, datas
+e status podem entrar na evidência versionada.
 
 ## Sequência operacional
 
-1. No app `Silmer CRM`, adicionar o caso de uso **Conectar-se com clientes pelo
-   WhatsApp** e vinculá-lo à WABA `Silmer`.
+1. No app `Silmer CRM Zap Sandbox`, adicionar o caso de uso **Conectar-se com
+   clientes pelo WhatsApp** e vinculá-lo à WABA `Silmer` do portfólio
+   `Silmer Oficial`.
 2. Usar o número de teste fornecido pela Meta como remetente. Cadastrar o número
    informado pelo operador apenas como destinatário de teste. Migrar ou
    registrar um número real como remetente fica fora desta issue.
@@ -79,16 +86,24 @@ datas e status podem entrar na evidência versionada.
 
 ## Evidência de fechamento
 
-| Critério                                     | Evidência exigida                                    | Estado                            |
-| -------------------------------------------- | ---------------------------------------------------- | --------------------------------- |
-| App, WABA, número de teste, token e template | IDs não secretos + captura sanitizada                | Pendente de ação Meta             |
-| Challenge e assinatura real                  | resposta do callback + rejeição `401`                | Pendente de deploy                |
-| Replay sem efeito duplicado                  | contadores do receiver                               | Coberto localmente; live pendente |
-| Texto, template, documento e imagem          | quatro `wamid` no arquivo local + hashes versionados | Pendente de token                 |
-| `sent/delivered/read/failed`                 | webhooks observados, sem inferência                  | Pendente de live                  |
-| Crash/timeout e `outcome_unknown`            | testes automatizados + smoke sanitizado              | Coberto localmente                |
-| Ausência de PII/token                        | gates e inspeção do diff/evidência                   | Em validação                      |
+| Critério                                     | Evidência exigida                                 | Estado                            |
+| -------------------------------------------- | ------------------------------------------------- | --------------------------------- |
+| App, WABA, número de teste, token e template | IDs não secretos + token temporário invalidado    | Concluído em sandbox              |
+| Challenge e assinatura real                  | callback verificado + assinatura inválida `401`   | Concluído em sandbox              |
+| Replay sem efeito duplicado                  | primeiro `accepted: 1`; replay `duplicates: 1`    | Concluído em sandbox              |
+| Texto, template, documento e imagem          | quatro aceites + hashes SHA-256 dos `wamid`       | Concluído com limitação observada |
+| `sent/delivered/read/failed`                 | webhooks correlacionados, sem inferência          | Concluído em sandbox              |
+| Crash/timeout e `outcome_unknown`            | smoke: `outcome_unknown`, sem retry cego          | Concluído                         |
+| Ausência de PII/token                        | evidência sem telefone, token, payload ou `wamid` | Concluído                         |
 
-Enquanto os itens live estiverem pendentes, `externalApprovalGranted` permanece
-`false` e os efeitos Meta continuam `pending-live` em
-`external-effects.json`.
+A evidência sanitizada está em
+[`meta-sandbox-live-evidence.json`](./meta-sandbox-live-evidence.json). A Meta
+aceitou texto, documento e imagem e devolveu `wamid`, mas os três estados
+terminaram em `failed` com o código `131047` porque o número de teste não tinha
+uma janela de conversa iniciada pelo cliente reconhecida. Isso comprova o
+adapter e o tratamento do estado observado; não comprova entrega desses três
+tipos. O template `hello_world` produziu `sent`, `delivered` e `read`.
+
+`externalApprovalGranted` permanece `false`: sandbox não é aprovação de
+produção. Número real, token de usuário do sistema, pagamento e inbox
+PostgreSQL durável continuam fora de T00.4.

@@ -447,6 +447,18 @@ test('runs the four-message smoke and writes local evidence without secrets or p
   assert.equal(result.accepted, 4);
   assert.ok(writtenEvidence);
   assert.equal(writtenEvidence.messages.length, 4);
+  const evidenceMessages =
+    /** @type {Array<{
+     *   providerMessageId?: string,
+     *   providerMessageIdSha256: string,
+     * }>} */ (writtenEvidence.messages);
+  assert.ok(
+    evidenceMessages.every(
+      (message) =>
+        !Object.hasOwn(message, 'providerMessageId') &&
+        /^[a-f0-9]{64}$/u.test(message.providerMessageIdSha256),
+    ),
+  );
   assert.deepEqual(writtenEvidence.failureScenarios, {
     afterAcceptance: 'outcome_unknown',
     beforeDispatch: 'failed',
@@ -454,6 +466,6 @@ test('runs the four-message smoke and writes local evidence without secrets or p
   });
   assert.doesNotMatch(
     JSON.stringify(writtenEvidence),
-    /synthetic-access-token-never-copy|5500000000000|sandbox text/u,
+    /synthetic-access-token-never-copy|5500000000000|sandbox text|wamid\./u,
   );
 });

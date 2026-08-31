@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.4",
+  "capturedAt": "2026-08-31T21:55:33.781Z",
+  "syntheticOnly": true,
+  "environment": "Meta development app with a Meta-provided test number",
+  "assets": {
+    "appName": "Silmer CRM Zap Sandbox",
+    "appId": "2027929314498563",
+    "businessPortfolioName": "Silmer Oficial",
+    "businessPortfolioId": "203195957172732",
+    "wabaName": "Silmer",
+    "wabaBusinessName": "Silmer Oficial",
+    "wabaId": "104737395571183",
+    "testPhoneNumberId": "1200626523143665",
+    "graphApiVersion": "v25.0",
+    "callbackUrl": "https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host/api/v1/webhooks/meta/whatsapp"
+  },
+  "webhook": {
+    "challengeVerified": true,
+    "messagesSubscribed": true,
+    "signedReplay": {
+      "first": {
+        "httpStatus": 200,
+        "accepted": 1,
+        "duplicates": 0,
+        "received": 1
+      },
+      "replay": {
+        "httpStatus": 200,
+        "accepted": 0,
+        "duplicates": 1,
+        "received": 1
+      }
+    },
+    "invalidSignature": {
+      "httpStatus": 401
+    }
+  },
+  "adapterSmoke": {
+    "entrypoint": "scripts/meta-sandbox-smoke.mjs:runMetaSandboxSmoke",
+    "acceptedRequests": 4,
+    "messages": [
+      {
+        "type": "text",
+        "wamidSha256": "bf7de4cb932b6f51370ad074403852045760411f34a8fe49372549285a5545f1",
+        "observedStatuses": ["failed"],
+        "providerFailureCode": 131047
+      },
+      {
+        "type": "template",
+        "wamidSha256": "b46ccc020d4f31e1c9de80a4fea475e81c02d91f5e99af6bfc867c4a0f10d47d",
+        "observedStatuses": ["sent", "delivered"]
+      },
+      {
+        "type": "document",
+        "wamidSha256": "c59610edaec24affb807605f612c800c4cad917ae58820d400b72b662d6333da",
+        "observedStatuses": ["failed"],
+        "providerFailureCode": 131047
+      },
+      {
+        "type": "image",
+        "wamidSha256": "3d3a4e591dd6c45e401d9f630132b9db9fad8ea0fc34b92c806d13b4a4708e39",
+        "observedStatuses": ["failed"],
+        "providerFailureCode": 131047
+      }
+    ],
+    "failureScenarios": {
+      "beforeDispatch": "failed",
+      "afterAcceptance": "outcome_unknown",
+      "timeout": "outcome_unknown",
+      "blindAutomaticRetry": false
+    }
+  },
+  "statusCoverage": [
+    {
+      "status": "sent",
+      "wamidSha256": "b46ccc020d4f31e1c9de80a4fea475e81c02d91f5e99af6bfc867c4a0f10d47d"
+    },
+    {
+      "status": "delivered",
+      "wamidSha256": "b46ccc020d4f31e1c9de80a4fea475e81c02d91f5e99af6bfc867c4a0f10d47d"
+    },
+    {
+      "status": "read",
+      "wamidSha256": "be2a1714ed7cbbd6376957dbf8445a92b7e206a8b8c5d9d407ad6c25ed26b9ff"
+    },
+    {
+      "status": "failed",
+      "wamidSha256": "bf7de4cb932b6f51370ad074403852045760411f34a8fe49372549285a5545f1",
+      "providerFailureCode": 131047
+    }
+  ],
+  "tokenLifecycle": {
+    "temporary": true,
+    "invalidatedAfterSmoke": true,
+    "verificationErrorCode": 190
+  },
+  "limitations": [
+    "The Meta test number did not establish a customer-initiated 24-hour window in this run.",
+    "Text, document and image requests were accepted and returned wamid, then failed with provider code 131047; this is not delivery evidence.",
+    "No customer phone number, access token, app secret, verify token, raw webhook payload or raw wamid is versioned."
+  ]
+}

@@ -42,6 +42,11 @@ A fonte, data, status e owner de cada efeito ficam em
 4. Produto/Operação/Tech Lead: confirmar ou ajustar `load-envelope.json`.
 5. T07.1: medir carga somente depois da aprovação do envelope.
 
+O procedimento executável e a matriz de fechamento da Meta estão em
+[`META-SANDBOX.md`](META-SANDBOX.md). O receiver e o smoke ali descritos são
+deliberadamente não produtivos: a deduplicação durável e a criação transacional
+de mensagem/job continuam em `T02.2`.
+
 Até essas ações, T00.4 não deve ser marcada como concluída integralmente. As
 pendências precisam virar issues GitHub com owners e evidência de aceite.
 
@@ -50,5 +55,6 @@ pendências precisam virar issues GitHub com owners e evidência de aceite.
 ```powershell
 npm run validate:external-spikes
 npm run test:external-spikes
+npm run smoke:meta:sandbox # somente com credenciais locais autorizadas
 npm run validate
 ```

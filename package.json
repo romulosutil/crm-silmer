@@ -21,6 +21,7 @@
     "lint": "eslint apps modules scripts test eslint.config.js",
     "preview": "node scripts/serve-edge.mjs",
     "recovery:plan": "node scripts/recovery-mock.mjs --plan",
+    "smoke:meta:sandbox": "node scripts/meta-sandbox-smoke.mjs",
     "test": "node --test test/*.test.js",
     "test:database": "node --test test/database.test.js test/migrations.test.js",
     "test:database:live": "node --test test/migrations-live.test.js",

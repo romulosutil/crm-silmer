@@ -1,13 +1,18 @@
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-const expectedProjects = [
-  'crm-silmer-dev',
-  'crm-silmer-hml',
-  'crm-silmer-prod',
+const expectedProjects = ['espectro-mvp'];
+const expectedEnvironments = ['pilot'];
+const expectedServices = [
+  'silmer-edge-web',
+  'silmer-api',
+  'silmer-worker',
+  'silmer-postgres',
 ];
-const expectedEnvironments = ['dev', 'hml', 'prod'];
-const expectedServices = ['edge-web', 'api', 'worker', 'postgres'];
+const imageReferencePattern =
+  /^ghcr\.io\/romulosutil\/crm-silmer\/(edge-web|runtime)@sha256:[0-9a-f]{64}$/u;
+const evidenceReferencePattern =
+  /^(easypanel-audit|github-actions):\/\/[a-zA-Z0-9._/-]+$/u;
 
 /**
  * @param {unknown} condition
@@ -38,8 +43,8 @@ export function validateTopologyDocument(document) {
   );
   invariant(document.task === 'T00.3', 'Topology must be traced to T00.3');
   invariant(
-    document.mode === 'offline-plan-only',
-    'Topology must remain an offline plan',
+    document.mode === 'shared-project-approved',
+    'Topology must use the approved shared project',
   );
   invariant(
     Array.isArray(document.projects),
@@ -87,7 +92,7 @@ export function validateTopologyDocument(document) {
     );
 
     for (const service of services) {
-      const shouldBePublic = service.name === 'edge-web';
+      const shouldBePublic = service.name === 'silmer-edge-web';
       invariant(
         service.public === shouldBePublic,
         `${service.name} must ${shouldBePublic ? 'be public' : 'remain private'}`,
@@ -120,11 +125,25 @@ export function validateTopologyDocument(document) {
           service.health.checks.length > 0,
         `${service.name} must declare the approved health checks`,
       );
+      if (service.kind === 'app') {
+        invariant(
+          imageReferencePattern.test(service.imageRef),
+          `${service.name} must use an immutable GHCR digest`,
+        );
+        invariant(
+          service.image === 'edge-web' || service.image === 'runtime',
+          `${service.name} must use an approved image role`,
+        );
+        invariant(
+          service.imageRef.includes(`/crm-silmer/${service.image}@sha256:`),
+          `${service.name} image reference must match its image role`,
+        );
+      }
     }
 
     invariant(
-      project.secrets?.scope === project.name,
-      `${project.name} secrets must use project scope`,
+      project.secrets?.scope === 'silmer',
+      `${project.name} secrets must use the Silmer scope`,
     );
     invariant(
       project.secrets?.valuesAllowed === false,
@@ -149,19 +168,208 @@ export function validateTopologyDocument(document) {
     canonicalSecretInventory ??= secretInventory;
     invariant(
       sameArray(secretInventory, canonicalSecretInventory),
-      'Secret names must be consistent while values remain separated by environment',
+      'Secret names must remain consistent without storing values',
     );
   }
 
   invariant(
-    document.externalExecution &&
-      Object.values(document.externalExecution).every(
-        (value) => value === false,
-      ),
-    'Versioned topology must not claim external provisioning or drills',
+    document.externalExecution?.easypanelProvisioningPerformed === true &&
+      document.externalExecution?.sourceDigestsConfigured === true &&
+      document.externalExecution?.dnsChangesPerformed === false &&
+      document.externalExecution?.secretValuesManaged === false &&
+      document.externalExecution?.recoveryDrillPerformed === false,
+    'Topology must report provisioning truthfully without claiming pending external controls',
   );
 
   return document;
+}
+
+/** @param {unknown} value */
+function rejectSensitiveMaterial(value) {
+  if (Array.isArray(value)) {
+    value.forEach(rejectSensitiveMaterial);
+    return;
+  }
+  if (!value || typeof value !== 'object') {
+    return;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    invariant(
+      !/^(credential|password|privateKey|secret|token)$/iu.test(key),
+      `Operational evidence contains sensitive field ${key}`,
+    );
+    rejectSensitiveMaterial(child);
+  }
+}
+
+/**
+ * @param {any} gate
+ * @param {any} topology
+ */
+export function validateProvisioningGate(gate, topology) {
+  validateTopologyDocument(topology);
+  invariant(
+    gate && typeof gate === 'object',
+    'Provisioning gate must be an object',
+  );
+  rejectSensitiveMaterial(gate);
+  invariant(gate.task === 'T00.3', 'Provisioning gate must be traced to T00.3');
+  invariant(gate.issue === 2, 'Provisioning gate must reference issue 2');
+  invariant(
+    gate.mode === 'operational-evidence',
+    'Provisioning gate must contain operational evidence only',
+  );
+  invariant(
+    ['accepted-with-follow-ups', 'passed'].includes(gate.status),
+    'Provisioning gate has an invalid status',
+  );
+  invariant(
+    gate.decision === 'shared-project-long-lived',
+    'Provisioning gate must record the approved long-lived shared project',
+  );
+  invariant(
+    /^[0-9a-f]{40}$/u.test(gate.approvedRelease?.sourceSha),
+    'Approved release must contain a full source SHA',
+  );
+  invariant(
+    Number.isSafeInteger(gate.approvedRelease?.workflowRunId),
+    'Approved release must reference a workflow run',
+  );
+  for (const [image, reference] of Object.entries(
+    gate.approvedRelease?.images ?? {},
+  )) {
+    invariant(
+      imageReferencePattern.test(/** @type {string} */ (reference)),
+      `${image} must use an immutable digest`,
+    );
+    invariant(
+      reference.includes(`/crm-silmer/${image}@sha256:`),
+      `${image} reference must match its image role`,
+    );
+  }
+  invariant(
+    sameArray(Object.keys(gate.approvedRelease.images), [
+      'edge-web',
+      'runtime',
+    ]),
+    'Approved release must contain edge-web and runtime images only',
+  );
+  invariant(
+    gate.evidencePolicy?.referencesOnly === true &&
+      gate.evidencePolicy?.piiAllowed === false &&
+      gate.evidencePolicy?.secretValuesAllowed === false,
+    'Evidence policy must forbid PII and secret values',
+  );
+  invariant(
+    Array.isArray(gate.projects) && gate.projects.length === 1,
+    'Provisioning gate must contain the shared project only',
+  );
+
+  const gateProject = gate.projects[0];
+  const topologyProject = topology.projects[0];
+  invariant(
+    gateProject.name === topologyProject.name,
+    'Provisioning gate project must match topology',
+  );
+  invariant(
+    gateProject.status === gate.status,
+    'Provisioning gate project status must match the gate status',
+  );
+  const gateServices = /** @type {Array<Record<string, any>>} */ (
+    gateProject.services
+  );
+  invariant(
+    sameArray(
+      gateServices.map(({ name }) => name),
+      expectedServices,
+    ),
+    'Provisioning gate services must match the approved topology',
+  );
+  const expectedServiceStatuses = [
+    'source-pinned',
+    'source-pinned',
+    'source-pinned',
+    'created',
+  ];
+  for (const [index, service] of gateServices.entries()) {
+    invariant(
+      service.status === expectedServiceStatuses[index],
+      `${service.name} must have the expected operational status`,
+    );
+    invariant(
+      sameArray(
+        service.publicPorts,
+        topologyProject.services[index].publicPorts,
+      ),
+      `${service.name} has invalid public port exposure`,
+    );
+  }
+
+  const topologyServices = /** @type {Array<Record<string, any>>} */ (
+    topologyProject.services
+  );
+  for (const service of topologyServices.filter(({ kind }) => kind === 'app')) {
+    invariant(
+      service.imageRef === gate.approvedRelease.images[service.image],
+      `${service.name} digest must match the approved release`,
+    );
+  }
+
+  const expectedCheckNames = [
+    'projectAndServices',
+    'networkExposure',
+    'secretsSeparated',
+    'healthAndLimits',
+    'dnsSslFirewall',
+    'externalBackup',
+    'offHostUptime',
+    'panelMfa',
+  ];
+  invariant(
+    sameArray(Object.keys(gateProject.checks ?? {}), expectedCheckNames),
+    'Provisioning gate must contain every operational check exactly once',
+  );
+  const checkValues = Object.values(gateProject.checks);
+  invariant(
+    checkValues.length > 0 &&
+      checkValues.every((status) =>
+        ['passed', 'pending', 'blocked'].includes(status),
+      ),
+    'Operational checks must use passed, pending, or blocked',
+  );
+  invariant(
+    gateProject.checks.projectAndServices === 'passed' &&
+      gateProject.checks.networkExposure === 'passed',
+    'Provisioning and network exposure must pass before issue 2 closes',
+  );
+  const allEvidenceReferences = [
+    ...(gate.evidenceRefs ?? []),
+    ...(gateProject.evidenceRefs ?? []),
+  ];
+  invariant(
+    allEvidenceReferences.length > 0 &&
+      allEvidenceReferences.every((reference) =>
+        evidenceReferencePattern.test(reference),
+      ),
+    'Operational evidence must use opaque references without hosts or PII',
+  );
+  invariant(
+    Array.isArray(gate.acceptedRisks),
+    'Provisioning gate must declare accepted risks',
+  );
+  if (gate.status === 'passed') {
+    invariant(
+      gate.acceptedRisks.length === 0 &&
+        checkValues.every((status) => status === 'passed'),
+      'Provisioning gate cannot be passed while blockers or accepted risks remain',
+    );
+  } else {
+    invariant(
+      gate.acceptedRisks.length > 0,
+      'Accepted follow-ups require explicit accepted risks',
+    );
+  }
+  return gate;
 }
 
 /**
@@ -204,11 +412,18 @@ async function main() {
     new URL('.env.example', rootUrl),
     'utf8',
   );
+  const provisioningGate = JSON.parse(
+    await readFile(
+      new URL('ops/easypanel/provisioning-gate.json', rootUrl),
+      'utf8',
+    ),
+  );
 
   validateTopologyDocument(topology);
   validateEnvironmentTemplate(environmentTemplate, topology);
+  validateProvisioningGate(provisioningGate, topology);
   console.log(
-    'Topology valid: 3 isolated projects, edge-web only public, no values stored.',
+    'Topology valid: shared project, prefixed services, immutable images, no secret values.',
   );
 }
 

@@ -1,36 +1,34 @@
 # Topologia EasyPanel — CRM Silmer
 
-> **Status:** baseline operacional para aprovação  
-> **Data:** 30/08/2026  
+> **Status:** baseline operacional aprovada
+>
+> **Data:** 31/08/2026
+>
 > **Host:** Hostinger VPS com Ubuntu 24.04 e EasyPanel
 
 ## 1. Decisão
 
-Usar exatamente três projetos EasyPanel no MVP:
+Usar o projeto EasyPanel compartilhado e duradouro `espectro-mvp`. Os serviços
+do CRM recebem o prefixo `silmer-`, que define sua fronteira operacional dentro
+do projeto. O desenvolvimento e os testes técnicos continuam locais ou no CI.
 
-| Projeto           | Finalidade                                    | Dados reais | Disponibilidade         |
-| ----------------- | --------------------------------------------- | ----------: | ----------------------- |
-| `crm-silmer-dev`  | Integração compartilhada e testes técnicos    |         Não | Sob demanda             |
-| `crm-silmer-hml`  | UAT e integração com Meta App/número de teste |         Não | Horário de trabalho/UAT |
-| `crm-silmer-prod` | Operação real do CRM                          |         Sim | Contínua                |
-
-O desenvolvimento diário continua local. `crm-silmer-dev` existe para
-integrações que precisam de callback público e não como ambiente pessoal.
+A decisão elimina projetos separados de desenvolvimento, homologação e produção.
+O risco de isolamento reduzido e de competição com serviços não relacionados foi
+aceito para o piloto. A evolução para projeto ou host próprio passa a ser exigida
+quando os gatilhos da seção 13 forem atingidos.
 
 Não criar projeto de observabilidade dentro da mesma VPS: o monitor de uptime
 precisa estar fora do domínio de falha do host. n8n, se aprovado depois do MVP,
 receberá o projeto separado `crm-silmer-automation`, sem acesso direto ao banco.
 
-## 2. Serviços por projeto
+## 2. Serviços no projeto
 
-Cada projeto contém a mesma topologia:
-
-| Serviço    | Tipo EasyPanel     | Imagem                                 |                 Público | Persistência                      |
-| ---------- | ------------------ | -------------------------------------- | ----------------------: | --------------------------------- |
-| `edge-web` | App                | GHCR por digest                        | Sim, 80/443 via domínio | Nenhuma                           |
-| `api`      | App                | GHCR por digest                        |                     Não | Nenhuma                           |
-| `worker`   | App                | Mesma imagem runtime, comando distinto |                     Não | Temporário descartável            |
-| `postgres` | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo |
+| Serviço           | Tipo EasyPanel     | Imagem                                 |                 Público | Persistência                      |
+| ----------------- | ------------------ | -------------------------------------- | ----------------------: | --------------------------------- |
+| `silmer-edge-web` | App                | GHCR por digest                        | Sim, 80/443 via domínio | Nenhuma                           |
+| `silmer-api`      | App                | GHCR por digest                        |                     Não | Nenhuma                           |
+| `silmer-worker`   | App                | Mesma imagem runtime, comando distinto |                     Não | Temporário descartável            |
+| `silmer-postgres` | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo |
 
 `migrate` é um job curto executado pelo pipeline ou script salvo do EasyPanel;
 não é serviço permanente.
@@ -51,32 +49,29 @@ Internet e Meta
       |
    HTTPS 443
       |
-edge-web (único serviço público)
+silmer-edge-web (único serviço público)
    |-- /                         arquivos vanilla
-   |-- /api/*                    api:8000
-   |-- /api/v1/webhooks/meta/*   api:8000
-   `-- /api/v1/events            api:8000 (SSE)
+   |-- /api/*                    silmer-api:8000
+   |-- /api/v1/webhooks/meta/*   silmer-api:8000
+   `-- /api/v1/events            silmer-api:8000 (SSE)
                                       |
-                               PostgreSQL privado
+                               silmer-postgres privado
                                       |
-                                  worker privado
+                               silmer-worker privado
                                       |
                           Meta / IA / storage externo
 ```
 
 Domínios propostos, substituindo `<dominio>` pelo domínio aprovado:
 
-| Projeto     | Domínio primário          | Proteção adicional                                  |
-| ----------- | ------------------------- | --------------------------------------------------- |
-| dev         | `dev.crm.<dominio>`       | VPN/allowlist; UI restrita                          |
-| webhook dev | `hooks-dev.crm.<dominio>` | Público somente na rota Meta                        |
-| homologação | `hml.crm.<dominio>`       | VPN/allowlist; UI restrita e credenciais de teste   |
-| webhook hml | `hooks-hml.crm.<dominio>` | Público somente na rota Meta                        |
-| produção    | `crm.<dominio>`           | Login da aplicação, HSTS e rate limiting            |
-| EasyPanel   | `ops.<dominio>`           | VPN/allowlist, MFA obrigatório e contas individuais |
+| Finalidade   | Domínio               | Proteção adicional                                  |
+| ------------ | --------------------- | --------------------------------------------------- |
+| CRM          | `crm.<dominio>`       | Login da aplicação, HSTS e rate limiting            |
+| webhook Meta | `hooks.crm.<dominio>` | Público somente na rota Meta                        |
+| EasyPanel    | `ops.<dominio>`       | VPN/allowlist, MFA obrigatório e contas individuais |
 
-VPN, allowlist ou Basic Auth não podem bloquear o callback público da Meta. Os
-hosts `hooks-*` roteiam somente `/api/v1/webhooks/meta/*`; qualquer outra rota
+VPN, allowlist ou Basic Auth não podem bloquear o callback público da Meta. O
+host `hooks.crm.<dominio>` roteia somente `/api/v1/webhooks/meta/*`; qualquer outra rota
 retorna `404`. Assinatura, verify token, limite de corpo e rate limit permanecem
 na aplicação.
 
@@ -91,37 +86,35 @@ na aplicação.
 ## 4. Sizing inicial
 
 Baseline recomendada: **Hostinger KVM 4, com 4 vCPU, 16 GB RAM e 200 GB NVMe**.
-Ela acomoda produção e um ambiente não produtivo ativo por vez. Dev fica
-desligado durante UAT pesada e dev/hml não rodam carga simultaneamente. Uma
-VPS de 8 GB só é aceitável com dev desligado, homologação sob demanda e worker
-de PDF estritamente limitado.
+Ela acomoda o piloto do CRM junto dos demais serviços já existentes no projeto,
+desde que o envelope agregado do host seja acompanhado e o worker de PDF tenha
+concorrência estritamente limitada.
 
-Essa recomendação só vale para o envelope de homologação da seção 13 do TDD.
+Essa recomendação só vale para o envelope de carga da seção 13 do TDD.
 T07.1 bloqueia o piloto se a carga aprovada não atingir os SLOs ou se a previsão
 de negócio exceder o envelope sem novo sizing.
 
-Licença EasyPanel mínima: **Hobby**, porque o plano gratuito comporta três
-projetos, mas não inclui os backups agendados necessários. Usar **Growth** se
-mais de uma pessoa precisar acessar o painel com controle por projeto.
+Licença EasyPanel mínima: **Hobby**, porque backups agendados e domínio próprio
+são controles operacionais do piloto. Usar **Growth** se mais de uma pessoa
+precisar acessar o painel com controles adicionais.
 
 Os valores abaixo são **limites máximos**, não reservas somáveis:
 
-| Serviço    |            Produção |       Homologação |              Dev |
-| ---------- | ------------------: | ----------------: | ---------------: |
-| PostgreSQL |   4–5 GB, até 2 CPU | 1–1,5 GB, 0,5 CPU |    1 GB, 0,5 CPU |
-| API        | 1–1,5 GB, até 1 CPU |   768 MB, 0,5 CPU | 512 MB, 0,25 CPU |
-| Worker     |   2 GB, até 1,5 CPU |   768 MB, 0,5 CPU | 512 MB, 0,25 CPU |
-| Edge       |    256 MB, 0,25 CPU |            128 MB |           128 MB |
+| Serviço           | Limite máximo do piloto |
+| ----------------- | ----------------------: |
+| `silmer-postgres` |       4–5 GB, até 2 CPU |
+| `silmer-api`      |     1–1,5 GB, até 1 CPU |
+| `silmer-worker`   |       2 GB, até 1,5 CPU |
+| `silmer-edge-web` |        256 MB, 0,25 CPU |
 
 Regras operacionais:
 
 - manter ao menos 30% do disco livre;
 - construir imagens no GitHub, nunca na VPS;
 - limitar concorrência do Chromium no worker;
-- parar dev fora de uso e homologação fora das janelas de UAT;
 - reservar 3 GB para Ubuntu, EasyPanel, Traefik, logs, métricas, backup e
   manutenção do PostgreSQL;
-- usar KVM 8 se dev, hml e prod precisarem ficar ativos simultaneamente.
+- incluir os serviços não relacionados no orçamento agregado de CPU, RAM e disco.
 
 ## 5. Object storage
 
@@ -130,33 +123,31 @@ Baseline: Cloudflare R2 Standard após aprovação do DPA/suboperadores pelo
 Responsável de Privacidade. Fallback com residência explícita no Brasil: AWS
 S3 `sa-east-1`.
 
-Buckets/prefixos separados:
+Buckets/prefixos separados por finalidade:
 
-- `crm-silmer-dev-data`;
-- `crm-silmer-hml-data`;
-- `crm-silmer-prod-data`;
-- `crm-silmer-prod-backups`;
-- `crm-silmer-prod-tombstones`.
+- `crm-silmer-data`;
+- `crm-silmer-backups`;
+- `crm-silmer-tombstones`.
 
 Controles:
 
 - nenhuma ACL pública;
-- credencial distinta por ambiente, finalidade e menor privilégio;
+- credencial distinta por finalidade e menor privilégio;
 - chave opaca sem nome, telefone ou número de documento;
 - URL assinada com expiração curta;
 - criptografia em trânsito e repouso;
 - metadados e autorização no PostgreSQL;
 - lifecycle por classe de dado do P0.6;
 - cópias não correntes e backups expiram em até 35 dias;
-- produção nunca é copiada para dev/homologação.
+- dados reais nunca entram em teste local, CI ou drill não autorizado.
 
-Em produção, as credenciais também são separadas por função:
+As credenciais são separadas por função:
 
-- `crm-silmer-prod-data`: runtime lê/escreve objetos do domínio, sem acesso a
+- `crm-silmer-data`: runtime lê/escreve objetos do domínio, sem acesso a
   backups ou tombstones;
-- `crm-silmer-prod-backups`: somente o mecanismo de backup escreve; runtime não
+- `crm-silmer-backups`: somente o mecanismo de backup escreve; runtime não
   recebe credencial;
-- `crm-silmer-prod-tombstones`: o job de privacidade apenas cria novas chaves,
+- `crm-silmer-tombstones`: o job de privacidade apenas cria novas chaves,
   sem sobrescrever ou excluir; o restore usa credencial read-only mantida fora
   do runtime normal.
 
@@ -172,7 +163,7 @@ existe somente no disco da VPS.
 
 ## 6. Variáveis e segredos
 
-Segredos são separados por projeto e não entram em `.env` versionado:
+Segredos usam o escopo `silmer` no projeto e não entram em `.env` versionado:
 
 ```text
 APP_ENV
@@ -207,7 +198,8 @@ FAB_CODE
 
 Regras:
 
-- tokens Meta, buckets, banco e chaves nunca são compartilhados entre ambientes;
+- tokens Meta, buckets, banco e chaves não são compartilhados com outros
+  serviços do projeto;
 - `PIX_KEY_VALUE` fica disponível somente ao runtime que monta a mensagem e
   não aparece em log, frontend ou variável de build;
 - `secret://crm/order-recipient-phone` é resolvido somente no runtime para
@@ -265,19 +257,18 @@ O branch canônico atual é `master`.
 2. Publica `edge-web` e `runtime` no GHCR com SHA e digest.
 3. Operador autorizado acessa EasyPanel por VPN e verifica backup/espaço.
 4. Executa `migrate` como script salvo, usando a imagem runtime e advisory lock.
-5. Troca API/worker e depois edge para os digests em homologação.
-6. Executa smoke; UAT aprova o release candidate.
-7. Repete backup, migration e promoção dos mesmos digests em produção.
-8. Auto-deploy direto em produção permanece desabilitado.
+5. Troca `silmer-api` e `silmer-worker` e depois `silmer-edge-web` para os
+   digests aprovados no projeto estável.
+6. Executa smoke e registra a aprovação operacional.
+7. Auto-deploy direto no projeto permanece desabilitado.
 
 No piloto, GitHub Actions testa, escaneia e publica; não acessa a API
 administrativa do EasyPanel. A promoção é manual e auditada no painel. Automação
 futura exige runner privado/VPN; a API administrativa não será publicada.
 
-Dev usa `workflow_dispatch` para escolher qualquer SHA aprovado. O operador
-promove o digest manualmente, sem branch permanente, aplica TTL/autostop e nunca
-usa dados ou credenciais de produção. Nunca usar `latest`; a configuração
-registra o digest atual e o anterior.
+`workflow_dispatch` pode validar qualquer SHA aprovado sem promover o runtime.
+O operador promove o digest manualmente no projeto estável. Nunca usar `latest`;
+a configuração registra o digest atual e o anterior.
 
 ## 9. Migração e rollback
 
@@ -342,7 +333,7 @@ O drill não interrompe produção e nunca envia WhatsApp, IA ou objetos externo
 
 1. Provisionar uma VPS limpa, isolada e tratada como produção temporária, sem
    reutilizar o EasyPanel do host de produção.
-2. Recriar painel, projetos, rede, domínios temporários e serviços pelo kit
+2. Recriar painel, projeto, rede, domínios temporários e serviços pelo kit
    off-host.
 3. Recuperar segredos do escrow, promover os digests registrados e manter todos
    os adapters externos em modo mock.
@@ -416,10 +407,12 @@ Audit trail comercial não depende de logs do EasyPanel.
 
 ## 13. Riscos aceitos e evolução
 
-Uma única VPS é ponto único de falha e os três ambientes competem por recurso.
-Isso só é aceito para o piloto após backup externo e recovery drill bem-sucedido
-em host limpo, com ambientes não produtivos sob demanda. O primeiro gatilho de evolução é mover produção ou
-PostgreSQL para outro domínio de falha quando qualquer condição ocorrer:
+Uma única VPS é ponto único de falha. O CRM compartilha projeto e host com
+serviços não relacionados, sem isolamento de desenvolvimento, homologação e
+produção. Essa estrutura foi aceita como duradoura para o piloto, mas não altera
+os gates de backup externo, monitoramento e recovery drill em host limpo. O
+primeiro gatilho de evolução é mover o CRM ou o PostgreSQL para projeto ou
+domínio de falha próprio quando qualquer condição ocorrer:
 
 - disponibilidade exigida acima de 99,5%;
 - uso sustentado acima de 70% de CPU/RAM/disco;

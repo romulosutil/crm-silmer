@@ -12,23 +12,26 @@ por esta entrega.
 2. Execute `npm run validate:topology`.
 3. Execute `npm run test:recovery:mocks`.
 4. Execute `npm run recovery:plan` e preserve a saída como checklist preliminar.
-5. Confirme que todos os domínios, DNS, digests e referências de escrow continuam
-   `null`; preencha valores somente no cofre e nos sistemas operacionais aprovados.
+5. Confirme o projeto `espectro-mvp`, os quatro serviços `silmer-*` e o gate em
+   `ops/easypanel/provisioning-gate.json`; domínios definitivos, DNS e referências
+   de escrow continuam `null` e valores permanecem apenas nos sistemas aprovados.
 6. Pare aqui se não houver duas pessoas custodiando o escrow ou autorização para
    o drill externo.
 
-Os validadores falham se API/PostgreSQL forem públicos, se um domínio, digest,
-DNS ou segredo ganhar valor no repositório, ou se algum adapter deixar o modo
-`mock`.
+Os validadores falham se `silmer-api`, `silmer-worker` ou `silmer-postgres` forem
+públicos, se DNS ou segredo ganhar valor no repositório, se uma imagem de
+aplicação não estiver presa ao digest aprovado ou se algum adapter deixar o
+modo `mock`.
 
 ## Execução externa pendente
 
 As etapas seguintes exigem autorização, credenciais e infraestrutura fora do
 repositório:
 
-1. Provisionar a VPS limpa e o EasyPanel compatível.
-2. Criar `crm-silmer-dev`, `crm-silmer-hml` e `crm-silmer-prod` com os quatro
-   serviços declarados em `ops/easypanel/topology.json`.
+1. Manter o EasyPanel compatível na VPS autorizada.
+2. Recriar o projeto compartilhado `espectro-mvp` com `silmer-edge-web`,
+   `silmer-api`, `silmer-worker` e `silmer-postgres` conforme
+   `ops/easypanel/topology.json`.
 3. Recuperar segredos do escrow com duas pessoas, sem registrar valores em logs.
 4. Registrar digests atual/anterior e aplicar migrations expand/contract.
 5. Manter Meta, IA, storage, telemetria e tombstones em adapters mock durante o

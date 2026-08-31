@@ -11,39 +11,18 @@
     "ttlSeconds": null,
     "records": [
       {
-        "environment": "dev",
+        "environment": "pilot",
         "purpose": "primary",
         "hostname": null,
         "target": null,
         "route": "/"
       },
       {
-        "environment": "dev",
+        "environment": "pilot",
         "purpose": "meta-webhook",
         "hostname": null,
         "target": null,
         "route": "/api/v1/webhooks/meta/*"
-      },
-      {
-        "environment": "hml",
-        "purpose": "primary",
-        "hostname": null,
-        "target": null,
-        "route": "/"
-      },
-      {
-        "environment": "hml",
-        "purpose": "meta-webhook",
-        "hostname": null,
-        "target": null,
-        "route": "/api/v1/webhooks/meta/*"
-      },
-      {
-        "environment": "prod",
-        "purpose": "primary",
-        "hostname": null,
-        "target": null,
-        "route": "/"
       },
       {
         "environment": "ops",

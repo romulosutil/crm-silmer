@@ -153,7 +153,7 @@ test('keeps the environment template as names with empty values only', async () 
   assert.throws(
     () =>
       validateEnvironmentTemplate(
-        `${template}\nOPENAI_API_KEY=real-key\n`,
+        `${template}\nGEMINI_API_KEY=real-key\n`,
         topology,
       ),
     /empty values/iu,

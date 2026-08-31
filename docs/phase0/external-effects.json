@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "task": "T00.4",
-  "capturedAt": "2026-08-30",
+  "capturedAt": "2026-08-31",
   "externalApprovalGranted": false,
   "requirements": [
     "CHN-P04-01..14",
@@ -113,8 +113,9 @@
       "owner": "Integracoes/Seguranca"
     },
     {
-      "id": "openai.structured-response",
-      "provider": "OpenAI API",
+      "id": "gemini.structured-response",
+      "provider": "Google Gemini Developer API",
+      "model": "gemini-2.5-flash-lite",
       "effect": "Generate an assistive, schema-constrained suggestion without mutating CRM state",
       "idempotency": {
         "support": "local-request-fencing",
@@ -130,31 +131,58 @@
         "strategy": "Discard stale epochs; retry only a safe generation job under policy, never emit two external messages."
       },
       "requestControls": {
-        "store": false,
-        "structuredOutput": "strict-json-schema"
+        "operation": "models.generateContent",
+        "serverManagedConversationState": false,
+        "authKeyServerSideOnly": true,
+        "structuredOutput": "strict-json-schema",
+        "grounding": false,
+        "fileApi": false,
+        "explicitCaching": false,
+        "developerLogging": false
       },
       "retention": {
         "applicationTtlDays": 30,
-        "providerEligibility": "ZDR-pending",
-        "dpa": "v010126-reviewed-pending-privacy-acceptance",
-        "dataSharing": false
+        "paidServiceRequired": true,
+        "providerAbuseMonitoringDaysWithoutZdr": 55,
+        "providerZdrApproval": "pending-live",
+        "productionWithPiiAllowed": false,
+        "dpa": "google-data-processing-addendum-approved-conditionally-2026-08-31",
+        "dataUseForProductImprovement": false,
+        "dataSharing": false,
+        "approvalCondition": "Provider-approved ZDR is required before production traffic containing PII"
       },
-      "status": "pending-human",
+      "decision": {
+        "status": "approved-conditional",
+        "approvedAt": "2026-08-31",
+        "record": "https://github.com/romulosutil/crm-silmer/issues/5",
+        "namedSignaturesRecorded": false
+      },
+      "status": "pending-live",
       "evidence": [
         {
-          "url": "https://developers.openai.com/api/docs/guides/your-data",
-          "checkedAt": "2026-08-30",
-          "status": "official-controls-reviewed"
+          "url": "https://ai.google.dev/gemini-api/terms",
+          "checkedAt": "2026-08-31",
+          "status": "official-paid-service-and-dpa-terms-reviewed"
         },
         {
-          "url": "https://cdn.openai.com/pdf/openai-data-processing-addendum.pdf",
-          "checkedAt": "2026-08-30",
-          "status": "official-dpa-v010126-reviewed"
+          "url": "https://ai.google.dev/gemini-api/docs/zdr",
+          "checkedAt": "2026-08-31",
+          "status": "official-zdr-and-retention-controls-reviewed"
         },
         {
-          "url": "https://developers.openai.com/api/docs/guides/structured-outputs",
-          "checkedAt": "2026-08-30",
+          "url": "https://ai.google.dev/gemini-api/docs/structured-output",
+          "checkedAt": "2026-08-31",
           "status": "official-schema-guidance-reviewed"
+        },
+        {
+          "url": "https://ai.google.dev/gemini-api/docs/pricing",
+          "checkedAt": "2026-08-31",
+          "status": "official-paid-tier-model-pricing-reviewed"
+        },
+        {
+          "url": "https://cloud.google.com/terms/data-processing-addendum",
+          "checkedAt": "2026-08-31",
+          "status": "official-cloud-data-processing-addendum-reviewed"
         }
       ],
       "owner": "Privacidade/Tech Lead"

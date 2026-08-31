@@ -69,20 +69,31 @@ test('verifies synthetic Meta signature and representative local fixtures', asyn
   assert.equal(vector.synthetic, true);
 });
 
-test('requires OpenAI minimization controls and private R2 posture', async () => {
+test('requires Gemini minimization controls and private R2 posture', async () => {
   const effects = await json('docs/phase0/external-effects.json');
   const effectList = /** @type {Array<Record<string, any>>} */ (
     effects.effects
   );
-  const ai = effectList.find(({ id }) => id === 'openai.structured-response');
+  const ai = effectList.find(({ id }) => id === 'gemini.structured-response');
   const storage = effectList.find(({ id }) => id === 'r2.put-object');
   assert.ok(ai);
   assert.ok(storage);
 
   assert.deepEqual(ai.requestControls, {
-    store: false,
+    operation: 'models.generateContent',
+    serverManagedConversationState: false,
+    authKeyServerSideOnly: true,
     structuredOutput: 'strict-json-schema',
+    grounding: false,
+    fileApi: false,
+    explicitCaching: false,
+    developerLogging: false,
   });
+  assert.equal(ai.model, 'gemini-2.5-flash-lite');
+  assert.equal(ai.retention.paidServiceRequired, true);
+  assert.equal(ai.retention.providerAbuseMonitoringDaysWithoutZdr, 55);
+  assert.equal(ai.retention.providerZdrApproval, 'pending-live');
+  assert.equal(ai.retention.productionWithPiiAllowed, false);
   assert.equal(storage.security.publicAccess, false);
   assert.equal(storage.security.bucketLockRequired, true);
   assert.equal(storage.security.dataLocationApproval, 'pending-privacy');

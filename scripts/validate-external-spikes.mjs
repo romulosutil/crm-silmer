@@ -62,11 +62,38 @@ export function validateExternalEffects(document) {
     'Meta send must remain outcome_unknown without blind retry',
   );
 
-  const ai = effects.find(({ id }) => id === 'openai.structured-response');
-  invariant(ai?.requestControls?.store === false, 'OpenAI store must be false');
+  const ai = effects.find(({ id }) => id === 'gemini.structured-response');
+  invariant(
+    ai?.provider === 'Google Gemini Developer API',
+    'Gemini Developer API must be the direct provider',
+  );
+  invariant(
+    ai?.model === 'gemini-2.5-flash-lite',
+    'Gemini model must remain pinned to the approved cost-benefit baseline',
+  );
+  invariant(
+    ai?.requestControls?.operation === 'models.generateContent' &&
+      ai.requestControls.serverManagedConversationState === false &&
+      ai.requestControls.authKeyServerSideOnly === true,
+    'Gemini must use stateless generateContent',
+  );
   invariant(
     ai?.requestControls?.structuredOutput === 'strict-json-schema',
-    'OpenAI must use strict structured output',
+    'Gemini must use strict structured output',
+  );
+  invariant(
+    ai?.requestControls?.grounding === false &&
+      ai.requestControls.fileApi === false &&
+      ai.requestControls.explicitCaching === false &&
+      ai.requestControls.developerLogging === false,
+    'Gemini persistence and optional data-sharing surfaces must remain disabled',
+  );
+  invariant(
+    ai?.retention?.paidServiceRequired === true &&
+      ai.retention.providerAbuseMonitoringDaysWithoutZdr === 55 &&
+      ai.retention.providerZdrApproval === 'pending-live' &&
+      ai.retention.productionWithPiiAllowed === false,
+    'Gemini must fail closed for PII until provider ZDR approval',
   );
   invariant(ai?.retention?.applicationTtlDays <= 30, 'AI TTL exceeds 30 days');
 
@@ -134,8 +161,8 @@ export function validateFixtures(document) {
   invariant(document.meta.messageFixture, 'Meta message fixture is required');
   invariant(document.meta.statusFixture, 'Meta status fixture is required');
   invariant(
-    document.openai?.schemaFixture,
-    'OpenAI schema fixture is required',
+    document.gemini?.schemaFixture,
+    'Gemini schema fixture is required',
   );
   return document;
 }

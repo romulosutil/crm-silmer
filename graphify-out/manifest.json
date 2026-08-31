@@ -15,9 +15,9 @@
     "semantic_hash": ""
   },
   "ARCHITECTURE.md": {
-    "mtime": 1788061838.1571133,
-    "ast_hash": "6a92ec747832a22102fd4d14f905c202",
-    "semantic_hash": "6a92ec747832a22102fd4d14f905c202"
+    "mtime": 1788141173.428286,
+    "ast_hash": "b9deb7f5dc5d7047181518b8d8969680",
+    "semantic_hash": ""
   },
   "CRM-MVP-ESPECIFICACAO.md": {
     "mtime": 1788093707.930228,
@@ -60,19 +60,19 @@
     "semantic_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5"
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788071513.2361724,
-    "ast_hash": "fdf11a1cd3b94b388b3c5232e0da423a",
+    "mtime": 1788138050.1978602,
+    "ast_hash": "05b76c1af4601cc80eef617ac481e196",
     "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
-    "mtime": 1788093757.2626157,
-    "ast_hash": "0cab0026c95059d59f9443b4df45aa84",
+    "mtime": 1788141173.430795,
+    "ast_hash": "2c84451e38b9afd417cb54be6be423b7",
     "semantic_hash": ""
   },
   "TECHNICAL-DESIGN.md": {
-    "mtime": 1788061834.2355824,
-    "ast_hash": "8b386cc9bfba3af3a6e92ea82b42e35b",
-    "semantic_hash": "8b386cc9bfba3af3a6e92ea82b42e35b"
+    "mtime": 1788138434.221503,
+    "ast_hash": "b8637afe78ebd2821b3cdf1e3df1e36b",
+    "semantic_hash": ""
   },
   "AGENTS.md": {
     "mtime": 1788062794.5869677,
@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1788095363.8775647,
-    "ast_hash": "3ed3d4de56f0ebfe738295c151942582",
+    "mtime": 1788137985.59881,
+    "ast_hash": "9b9a3cfcc36cc6105bf051e2f7526aac",
     "semantic_hash": ""
   },
   ".prettierrc.json": {
@@ -215,13 +215,13 @@
     "semantic_hash": ""
   },
   "ops/easypanel/topology.json": {
-    "mtime": 1788066823.821727,
-    "ast_hash": "4fdb2a7d056a9fe97a6b088af2a63bee",
+    "mtime": 1788137697.3449519,
+    "ast_hash": "3c78f0e39505ce56780f489ae588ddeb",
     "semantic_hash": ""
   },
   "ops/recovery/off-host-kit.json": {
-    "mtime": 1788066950.3587396,
-    "ast_hash": "8b8dfaaade25d04651734a78c3172cb5",
+    "mtime": 1788137773.8288994,
+    "ast_hash": "8ed9af6560971f413d509329a9d2f45d",
     "semantic_hash": ""
   },
   "scripts/recovery-mock.mjs": {
@@ -230,18 +230,18 @@
     "semantic_hash": ""
   },
   "scripts/validate-topology.mjs": {
-    "mtime": 1788067089.161496,
-    "ast_hash": "8e976bb82b1d3537e0351689f760a03c",
+    "mtime": 1788141273.7322555,
+    "ast_hash": "33fa0f8a87d081a61c1418df23f30ee2",
     "semantic_hash": ""
   },
   "test/topology-recovery.test.js": {
-    "mtime": 1788067097.990291,
-    "ast_hash": "f7f68cf4b70459dc0adefe7542ff786e",
+    "mtime": 1788141342.7527397,
+    "ast_hash": "170f1c8777bf863b59add4d9f38af2e5",
     "semantic_hash": ""
   },
   "ops/recovery/RUNBOOK.md": {
-    "mtime": 1788066926.415254,
-    "ast_hash": "f161e507d88bc64f8e871e330ebea230",
+    "mtime": 1788141239.3529923,
+    "ast_hash": "9c944a7d728b89b9891a5bbd0b9033c2",
     "semantic_hash": ""
   },
   "docs/phase0/external-effects.json": {
@@ -632,6 +632,21 @@
   "graphify-out/memory/query_20260830_122808_quais_contratos_do_crm_silmer_governam_seguran\u00e7a_d.md": {
     "mtime": 1788092888.8575592,
     "ast_hash": "dfc55a54035eee998b8a8e7cb0e506d5",
+    "semantic_hash": ""
+  },
+  "ops/easypanel/provisioning-gate.json": {
+    "mtime": 1788141053.3716545,
+    "ast_hash": "6f057ee18c16255fead3b7c061573d8b",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_212356_como_integrar_o_arquivo_pr_review_yml_para_que_o_g.md": {
+    "mtime": 1788125036.08487,
+    "ast_hash": "e2d1700246a939bf07501313baac7954",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260831_004150_qual_requisito__tarefa__arquivos_e_crit\u00e9rios_de_ac.md": {
+    "mtime": 1788136910.3900104,
+    "ast_hash": "01f02c41a60b8b191a9f592ef3944b7c",
     "semantic_hash": ""
   }
 }

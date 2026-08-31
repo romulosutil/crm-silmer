@@ -1,32 +1,33 @@
-# Graph Report - .  (2026-08-30)
+# Graph Report - crm-silmer  (2026-08-30)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 125 files · ~66,592 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 990 nodes · 1227 edges · 87 communities (80 shown, 7 thin omitted)
+- 1000 nodes · 1242 edges · 89 communities (82 shown, 7 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.7)
-- Token cost: 4,792 input · 971 output
+- Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `81b5caa8`
+- Built from commit: `2a069551`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - MVP Technical Strategy
 - Design System Guidelines
-- Foundation Phase Tasks
+- Fase 0 — Fundação e riscos técnicos
 - Sales Process Qualification
 - Product to Tech Handoff
 - MVP Product Specification
-- Infrastructure Topology
+- Topologia EasyPanel — CRM Silmer
 - MVP Feature Scope
 - MVP Traceable Requirements
 - Development Scripts
 - Product Context Backlog
 - TypeScript Configuration
-- Recovery Validation Tools
+- validate-topology.mjs
 - Order and Payment Implementation
 - API Package Definition
 - Security Catalog Validation
@@ -98,6 +99,8 @@
 - Security Policy
 - Accessibility Requirement Queries
 - Repository Security Queries
+- Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?
+- Q: Qual requisito, tarefa, arquivos e critérios de aceite correspondem à issue GitHub #2 deste repositório?
 
 ## God Nodes (most connected - your core abstractions)
 1. `scripts` - 26 edges
@@ -132,7 +135,7 @@
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 - **Migração do Datacrazy para CRM Próprio** — historico_datacrazy_crm_processo_vendas, historico_datacrazy_datacrazy_setup, specs_features_crm_mvp_context, specs_features_crm_mvp_spec [INFERRED 0.85]
 
-## Communities (87 total, 7 thin omitted)
+## Communities (89 total, 7 thin omitted)
 
 ### Community 0 - "MVP Technical Strategy"
 Cohesion: 0.05
@@ -142,9 +145,9 @@ Nodes (41): 10. Confiabilidade e processamento assíncrono, 11. Vendedor Silmer 
 Cohesion: 0.05
 Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e conteúdo, 13. Arquitetura de implementação visual, 14. Critérios de aceite do design system, 15. Antipadrões proibidos, 1. Objetivo, 2. Tradução da marca para o produto (+29 more)
 
-### Community 2 - "Foundation Phase Tasks"
+### Community 2 - "Fase 0 — Fundação e riscos técnicos"
 Cohesion: 0.25
-Nodes (8): Fase 0 — Fundação e riscos técnicos, T00.1 Estruturar o monorepo JavaScript ESM, T00.2 Criar CI e imagens imutáveis, T00.3 Provisionar EasyPanel dev/hml/prod, T00.4 Fechar spikes externos, T00.5 Definir threat model e catálogo de dados, T00.6 Aprovar defaults de domínio e papéis, T00.7 Implantar telemetria e hardening mínimos
+Nodes (8): Fase 0 — Fundação e riscos técnicos, T00.1 Estruturar o monorepo JavaScript ESM, T00.2 Criar CI e imagens imutáveis, T00.3 Provisionar serviços Silmer no EasyPanel, T00.4 Fechar spikes externos, T00.5 Definir threat model e catálogo de dados, T00.6 Aprovar defaults de domínio e papéis, T00.7 Implantar telemetria e hardening mínimos
 
 ### Community 3 - "Sales Process Qualification"
 Cohesion: 0.06
@@ -158,9 +161,9 @@ Nodes (34): 1. Leitura técnica do arquivo, 2.1 Identificação do pedido, 2.2 I
 Cohesion: 0.09
 Nodes (23): 10. Jornada comercial aprovada, 11. Geração e envio da Ficha, 12. Financeiro comercial do MVP, 13. Privacidade e LGPD, 14. Critérios de sucesso do piloto, 15. Gate de produto para o Tech Lead, 16. Próximo passo recomendado, 1. Visão do produto (+15 more)
 
-### Community 6 - "Infrastructure Topology"
+### Community 6 - "Topologia EasyPanel — CRM Silmer"
 Cohesion: 0.09
-Nodes (22): 10. Backups e disaster recovery, 11. Observabilidade e alertas, 12. Gates antes do piloto, 13. Riscos aceitos e evolução, 14. Referências verificadas, 1. Decisão, 2. Serviços por projeto, 3. Rede e domínios (+14 more)
+Nodes (22): 10. Backups e disaster recovery, 11. Observabilidade e alertas, 12. Gates antes do piloto, 13. Riscos aceitos e evolução, 14. Referências verificadas, 1. Decisão, 2. Serviços no projeto, 3. Rede e domínios (+14 more)
 
 ### Community 7 - "MVP Feature Scope"
 Cohesion: 0.40
@@ -182,9 +185,9 @@ Nodes (9): Backlog e lead, CRM Silmer MVP — Contexto de Produto, Decisões con
 Cohesion: 0.08
 Nodes (25): compilerOptions, allowJs, checkJs, esModuleInterop, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+17 more)
 
-### Community 12 - "Recovery Validation Tools"
-Cohesion: 0.18
-Nodes (15): buildRecoveryPlan(), expectedAdapterKeys, expectedDigestKeys, invariant(), main(), validateRecoveryKit(), expectedEnvironments, expectedProjects (+7 more)
+### Community 12 - "validate-topology.mjs"
+Cohesion: 0.19
+Nodes (17): buildRecoveryPlan(), expectedAdapterKeys, expectedDigestKeys, invariant(), main(), validateRecoveryKit(), expectedEnvironments, expectedProjects (+9 more)
 
 ### Community 13 - "Order and Payment Implementation"
 Cohesion: 0.20
@@ -442,22 +445,30 @@ Nodes (3): Answer, Q: Quais requisitos, tarefas, arquivos, contratos de acessibi
 Cohesion: 0.50
 Nodes (3): Answer, Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?, Source Nodes
 
+### Community 87 - "Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?, Source Nodes
+
+### Community 88 - "Q: Qual requisito, tarefa, arquivos e critérios de aceite correspondem à issue GitHub #2 deste repositório?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Qual requisito, tarefa, arquivos e critérios de aceite correspondem à issue GitHub #2 deste repositório?, Source Nodes
+
 ## Knowledge Gaps
-- **529 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+524 more)
+- **533 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+528 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Roadmap` to `Foundation Phase Tasks`, `Order and Payment Implementation`, `Messaging and Inbox Implementation`, `Identity and Domain Phase`, `Sales Pipeline Implementation`, `Privacy and Operations Phase`, `AI Assistant Implementation`, `Project Documentation Index`, `Hardening and Pilot Phase`?**
+- **Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Roadmap` to `Fase 0 — Fundação e riscos técnicos`, `Order and Payment Implementation`, `Messaging and Inbox Implementation`, `Identity and Domain Phase`, `Sales Pipeline Implementation`, `Privacy and Operations Phase`, `AI Assistant Implementation`, `Project Documentation Index`, `Hardening and Pilot Phase`?**
   _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `MVP Technical Strategy` to `Project Documentation Index`?**
   _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `MVP Feature Scope`?**
   _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _529 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _533 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `MVP Technical Strategy` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `Design System Guidelines` be split into smaller, more focused modules?**

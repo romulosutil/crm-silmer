@@ -109,7 +109,7 @@ privilegiadas que precisam de auditoria e recuperação.
 | Storage | S3-compatible externo, privado | Remove anexos do domínio de falha da VPS |
 | Documentos | Snapshot JSON + template HTML/CSS + Chromium para PDF | Snapshot determinístico; artefato íntegro, versionável e testável |
 | Autenticação | Sessão opaca no servidor em cookie seguro | Revogação simples; nenhum token no `localStorage` |
-| IA | Adapter `AIProvider`; OpenAI API direta como baseline | Evita agregador/suboperadores extras e permite DPA/controles de retenção |
+| IA | Adapter `AIProvider`; Gemini Developer API paga com `gemini-2.5-flash-lite` | Evita agregador/suboperadores extras, reduz custo e mantém DPA/controles de retenção explícitos |
 | Observabilidade | Logs JSON, métricas EasyPanel, erros/traces externos e audit trail no banco | Separa telemetria técnica de evidência de negócio |
 | Deploy | Imagens imutáveis por digest em EasyPanel | Promoção reproduzível e rollback rápido |
 
@@ -136,7 +136,7 @@ flowchart LR
     end
     subgraph external ["Operadores externos"]
         meta["Meta WhatsApp e Instagram"]
-        aiProvider["OpenAI API"]
+        aiProvider["Gemini Developer API"]
         objectStorage["Object storage S3"]
         telemetry["Erros e uptime"]
     end
@@ -147,7 +147,7 @@ flowchart LR
     worker -->|"Claim de jobs e outbox"| postgres
     meta -.->|"Meta: Webhooks"| edgeWeb
     worker -.->|"Meta: Mensagens"| meta
-    worker -.->|"OpenAI: Respostas estruturadas"| aiProvider
+    worker -.->|"Gemini: Respostas estruturadas"| aiProvider
     worker -.->|"S3: Anexos e PDFs"| objectStorage
     api -.->|"Telemetria: API"| telemetry
     worker -.->|"Telemetria: Jobs"| telemetry
@@ -429,10 +429,16 @@ correlação. Prompt/resposta com conteúdo ficam em storage técnico separado c
 TTL máximo de 30 dias; mensagens integrais não entram no log técnico. Regras de
 preço, handoff, role e tomada humana são checadas em código, fora do prompt.
 
-Baseline de provedor: OpenAI API direta, com data sharing desabilitado, DPA e
-endpoint compatível com retenção máxima de 30 dias; ZDR será solicitado quando
-elegível. Um adapter permite trocar o provedor sem mudar o domínio. Agregadores
-multi-provedor não entram antes de validar todos os suboperadores.
+Baseline de provedor: Gemini Developer API direta no tier pago, com
+`gemini-2.5-flash-lite`, data sharing desabilitado e DPA aplicável. A integração
+usa `models.generateContent` stateless, saída JSON Schema e não habilita
+Interactions, grounding, File API, cache explícito nem logging opt-in. O free
+tier é proibido para dados do CRM. A auth key criada no AI Studio fica somente
+no servidor e restrita à Gemini API. Sem ZDR aprovado, o provedor declara
+retenção de abuso por 55 dias; portanto produção com PII permanece fail-closed
+até a confirmação live do ZDR. Um adapter permite trocar o provedor sem mudar o
+domínio. Agregadores multi-provedor não entram antes de validar todos os
+suboperadores.
 
 ## 12. Segurança e LGPD
 
@@ -628,7 +634,7 @@ engenharia e QA. O plano detalhado e os gates estão em
 | Relação Negócio/Pedido | 1:0..1 no MVP | Produto |
 | Reabertura de conversa terminal | Novo ciclo ligado ao contato | Produto/Operação |
 | Storage e região | S3 privado com contrato e DPA; fornecedor no gate DevOps | Privacidade/Tech Lead |
-| OpenAI API | Direta, sem data sharing, retenção <=30 dias e DPA/ZDR quando elegível | Privacidade/Tech Lead |
+| Gemini Developer API | Tier pago, `gemini-2.5-flash-lite`, sem data sharing/logging opt-in; produção com PII somente após ZDR | Privacidade/Tech Lead |
 | Formato da Ficha | PDF canônico | Rose/Operação |
 | Domínios e Meta App IDs | A fornecer por ambiente | Operação/DevOps |
 | Envelope de carga | Baseline provisória da seção 13; confirmar antes de T07.1 | Produto/Operação/Tech Lead |
@@ -653,6 +659,10 @@ engenharia e QA. O plano detalhado e os gates estão em
   <https://easypanel.io/docs/backups/database>
 - Hostinger com template Ubuntu 24.04 + EasyPanel:
   <https://www.hostinger.com/support/8703798-how-to-use-the-easypanel-vps-template-at-hostinger/>
-- OpenAI API, treinamento e retenção:
-  <https://openai.com/enterprise-privacy/>
-  e <https://platform.openai.com/docs/models/default-usage-policies-by-endpoint>
+- Gemini Developer API, tratamento, retenção e ZDR:
+  <https://ai.google.dev/gemini-api/terms>,
+  <https://ai.google.dev/gemini-api/docs/zdr> e
+  <https://cloud.google.com/terms/data-processing-addendum>
+- Gemini Developer API, modelo, preço e saída estruturada:
+  <https://ai.google.dev/gemini-api/docs/pricing> e
+  <https://ai.google.dev/gemini-api/docs/structured-output>

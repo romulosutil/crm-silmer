@@ -46,8 +46,10 @@
   buckets e credenciais separados, com proteção de imutabilidade para o ledger;
   containers são stateless.
 - **Documentos:** snapshot imutável + template HTML/CSS + PDF gerado no worker.
-- **IA:** adapter próprio e OpenAI API direta como baseline, sem fine-tuning,
-  RAG ou vector database no MVP; DPA e retenção compatível são gates.
+- **IA:** adapter próprio e Gemini Developer API paga como baseline, fixada em
+  `gemini-2.5-flash-lite`, sem fine-tuning, RAG ou vector database no MVP. A
+  produção com PII permanece bloqueada até ZDR aprovado; DPA e retenção efetiva
+  são gates.
 - **Operação:** projeto EasyPanel compartilhado e duradouro `espectro-mvp`, com
   serviços `silmer-edge-web`, `silmer-api`, `silmer-worker` e
   `silmer-postgres`; somente `silmer-edge-web` pode ser público. O risco de não

@@ -11,7 +11,7 @@
     "messageFixture": "schemas/fixtures/external/meta-message.json",
     "statusFixture": "schemas/fixtures/external/meta-status.json"
   },
-  "openai": {
-    "schemaFixture": "schemas/fixtures/external/openai-suggestion-schema.json"
+  "gemini": {
+    "schemaFixture": "schemas/fixtures/external/gemini-suggestion-schema.json"
   }
 }

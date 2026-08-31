@@ -155,8 +155,8 @@
     "semantic_hash": "ee73cc92676a528a57f11629d9d26832"
   },
   "package.json": {
-    "mtime": 1788147105.5845227,
-    "ast_hash": "9b6c63f582856aeb7576fe39b13546bb",
+    "mtime": 1788211238.8180788,
+    "ast_hash": "4afe37e9e4f70b6193db453c00555114",
     "semantic_hash": ""
   },
   "scripts/build.mjs": {
@@ -677,6 +677,16 @@
   "graphify-out/memory/query_20260831_025424_como_o_gate_da_issue_3_impede_falso_passed_e_disti.md": {
     "mtime": 1788144864.8309681,
     "ast_hash": "5c16675369bed7b34fce616ce2d16eea",
+    "semantic_hash": ""
+  },
+  "scripts/openai-privacy-smoke.mjs": {
+    "mtime": 1788211880.5409427,
+    "ast_hash": "bcc2b745119207dd5d59a6e3ff291292",
+    "semantic_hash": ""
+  },
+  "test/openai-privacy-smoke.test.js": {
+    "mtime": 1788211737.721442,
+    "ast_hash": "78d98b87f33b2bc3da8c79f226c32353",
     "semantic_hash": ""
   }
 }

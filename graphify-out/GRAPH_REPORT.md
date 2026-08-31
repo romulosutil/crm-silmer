@@ -1,31 +1,31 @@
 # Graph Report - crm-silmer  (2026-08-31)
 
 ## Corpus Check
-- 131 files · ~72,653 words
+- 133 files · ~73,968 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1062 nodes · 1348 edges · 95 communities (84 shown, 11 thin omitted)
+- 1077 nodes · 1375 edges · 102 communities (90 shown, 12 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7ef021d9`
+- Built from commit: `e63d7593`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- integration-reliability/src/index.js
+- observability.test.js
 - MVP Implementation Strategy
 - Database Schema Protection
 - Configuration Service
 - Design System Guidelines
-- Database Migrations Utility
+- database/src/index.js
 - Product to Tech Handoff
 - Sales Qualification Process
 - AI Suggestion Schema
 - Recovery Plan Validation
-- idempotency.js
+- integration-reliability/src/index.js
 - Catalog Management Service
 - MVP Product Specification
 - TypeScript Configuration
@@ -107,9 +107,16 @@
 - CRM Silmer MVP — Requisitos Rastreáveis
 - Codex — Contexto do CRM Silmer
 - Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?
+- observability.js
+- meta-sandbox.js
+- openai-privacy-smoke.mjs
+- audit-trail.js
+- meta-sandbox.test.js
+- validate-observability.mjs
+- WorkerRuntime
 
 ## God Nodes (most connected - your core abstractions)
-1. `scripts` - 27 edges
+1. `scripts` - 29 edges
 2. `TDD — CRM Silmer MVP` - 22 edges
 3. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
 4. `Design do CRM Silmer` - 16 edges
@@ -121,6 +128,8 @@
 10. `createSafeLogger()` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `createMetaWebhookRuntime()` --calls--> `processMetaWebhook()`  [EXTRACTED]
+  apps/api/src/server.js → modules/integration-reliability/src/meta-sandbox.js
 - `harness()` --calls--> `createCatalogService()`  [EXTRACTED]
   test/catalog.test.js → modules/catalog/src/application/catalog-service.js
 - `createHarness()` --calls--> `createConfigurationService()`  [EXTRACTED]
@@ -128,8 +137,6 @@
 - `capture()` --calls--> `createSafeLogger()`  [EXTRACTED]
   test/observability.test.js → modules/shared/src/observability.js
 - `createApi()` --calls--> `createSafeLogger()`  [EXTRACTED]
-  apps/api/src/app.js → modules/shared/src/observability.js
-- `createApi()` --calls--> `normalizeTraceId()`  [EXTRACTED]
   apps/api/src/app.js → modules/shared/src/observability.js
 
 ## Import Cycles
@@ -145,11 +152,11 @@
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 - **Migração do Datacrazy para CRM Próprio** — historico_datacrazy_crm_processo_vendas, historico_datacrazy_datacrazy_setup, specs_features_crm_mvp_context, specs_features_crm_mvp_spec [INFERRED 0.85]
 
-## Communities (95 total, 11 thin omitted)
+## Communities (102 total, 12 thin omitted)
 
-### Community 0 - "integration-reliability/src/index.js"
-Cohesion: 0.06
-Nodes (43): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, createMetaMessagesClient(), deepFreeze(), extractMetaEvents(), immutableClone() (+35 more)
+### Community 0 - "observability.test.js"
+Cohesion: 0.32
+Nodes (11): createApi(), createMetaWebhookRuntime(), createServerApi(), SERVICES, createSafeLogger(), normalizeTraceId(), assertNoCanaries(), canaries (+3 more)
 
 ### Community 1 - "MVP Implementation Strategy"
 Cohesion: 0.05
@@ -167,7 +174,7 @@ Nodes (27): createConfigurationService(), assertChannels(), assertExactKeys(), a
 Cohesion: 0.05
 Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e conteúdo, 13. Arquitetura de implementação visual, 14. Critérios de aceite do design system, 15. Antipadrões proibidos, 1. Objetivo, 2. Tradução da marca para o produto (+29 more)
 
-### Community 5 - "Database Migrations Utility"
+### Community 5 - "database/src/index.js"
 Cohesion: 0.10
 Nodes (17): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+9 more)
 
@@ -187,9 +194,9 @@ Nodes (33): field, fieldSuggestions, handoffRequired, null, reply, source, stage
 Cohesion: 0.13
 Nodes (28): buildRecoveryPlan(), expectedAdapterKeys, expectedBlockerKeys, expectedCadenceEntryKeys, expectedCadenceKeys, expectedDigestKeys, expectedGateKeys, expectedRecoveryCheckKeys (+20 more)
 
-### Community 10 - "idempotency.js"
-Cohesion: 0.13
-Nodes (16): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), canonicalJson(), clone() (+8 more)
+### Community 10 - "integration-reliability/src/index.js"
+Cohesion: 0.24
+Nodes (10): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+2 more)
 
 ### Community 11 - "Catalog Management Service"
 Cohesion: 0.16
@@ -205,7 +212,7 @@ Nodes (25): compilerOptions, allowJs, checkJs, esModuleInterop, forceConsistentC
 
 ### Community 14 - "scripts"
 Cohesion: 0.07
-Nodes (27): scripts, build, check:boundaries, db:migrate, format, format:check, lint, preview (+19 more)
+Nodes (29): scripts, build, check:boundaries, db:migrate, format, format:check, lint, preview (+21 more)
 
 ### Community 15 - "api/package.json"
 Cohesion: 0.12
@@ -471,14 +478,38 @@ Nodes (5): Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Gua
 Cohesion: 0.50
 Nodes (3): Answer, Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?, Source Nodes
 
+### Community 95 - "observability.js"
+Cohesion: 0.16
+Nodes (10): allowedContextFields, allowedEvents, allowedMetrics, allowedServices, categoricalPolicies, createSafeLogRecord(), isFiniteNumber(), MetricRegistry (+2 more)
+
+### Community 96 - "meta-sandbox.js"
+Cohesion: 0.23
+Nodes (9): deepFreeze(), extractMetaEvents(), immutableClone(), InMemoryMetaEventStore, MetaApiError, MetaWebhookPayloadError, processMetaWebhook(), requireNonEmpty() (+1 more)
+
+### Community 97 - "openai-privacy-smoke.mjs"
+Cohesion: 0.32
+Nodes (11): buildRequest(), containsPii(), extractOutputText(), invariant(), main(), piiPatterns, runOpenAiPrivacySmoke(), SYNTHETIC_INPUT (+3 more)
+
+### Community 98 - "audit-trail.js"
+Cohesion: 0.27
+Nodes (6): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent()
+
+### Community 99 - "meta-sandbox.test.js"
+Cohesion: 0.27
+Nodes (6): createMetaMessagesClient(), MetaWebhookAuthenticationError, runMetaSendAttempt(), required(), runMetaSandboxSmoke(), sha256()
+
+### Community 100 - "validate-observability.mjs"
+Cohesion: 0.48
+Nodes (6): invariant(), main(), requiredAlerts, rootUrl, validateAlertPolicy(), validateRuntimeHardening()
+
 ## Ambiguous Edges - Review These
 - `Vendedor Silmer (IA Agent)` → `Kanban Comercial`  [AMBIGUOUS]
   CRM-MVP-ESPECIFICACAO.md · relation: calls
 
 ## Knowledge Gaps
-- **554 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+549 more)
+- **560 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+555 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **12 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -486,14 +517,14 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Vendedor Silmer (IA Agent)` and `Kanban Comercial`?**
   _Edge tagged AMBIGUOUS (relation: calls) - confidence is low._
 - **Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Roadmap` to `Phase 0: Foundation Tasks`, `Phase 2: Communication Channels`, `Phase 1: Domain Infrastructure`, `Phase 3: CRM Kanban`, `Phase 6: Privacy Operations`, `Phase 4: AI Assistant`, `Phase 7: Hardening Pilot`, `TECHNICAL-DESIGN.md`, `Phase 5: Financial Workflow`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `MVP Implementation Strategy` to `TECHNICAL-DESIGN.md`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
-- **Why does `Topologia EasyPanel — CRM Silmer` connect `Infrastructure and Topology` to `TECHNICAL-DESIGN.md`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
+- **Why does `Topologia EasyPanel — CRM Silmer` connect `Infrastructure and Topology` to `TECHNICAL-DESIGN.md`?**
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _554 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `integration-reliability/src/index.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.06142410015649452 - nodes in this community are weakly interconnected._
+  _560 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `MVP Implementation Strategy` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
+- **Should `Database Schema Protection` be split into smaller, more focused modules?**
+  _Cohesion score 0.08846153846153847 - nodes in this community are weakly interconnected._

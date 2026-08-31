@@ -1,15 +1,15 @@
 {
-  "0": "integration-reliability/src/index.js",
+  "0": "observability.test.js",
   "1": "MVP Implementation Strategy",
   "2": "Database Schema Protection",
   "3": "Configuration Service",
   "4": "Design System Guidelines",
-  "5": "Database Migrations Utility",
+  "5": "database/src/index.js",
   "6": "Product to Tech Handoff",
   "7": "Sales Qualification Process",
   "8": "AI Suggestion Schema",
   "9": "Recovery Plan Validation",
-  "10": "idempotency.js",
+  "10": "integration-reliability/src/index.js",
   "11": "Catalog Management Service",
   "12": "MVP Product Specification",
   "13": "TypeScript Configuration",
@@ -93,5 +93,12 @@
   "91": "worker/package.json",
   "92": "CRM Silmer MVP — Requisitos Rastreáveis",
   "93": "Codex — Contexto do CRM Silmer",
-  "94": "Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?"
+  "94": "Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?",
+  "95": "observability.js",
+  "96": "meta-sandbox.js",
+  "97": "openai-privacy-smoke.mjs",
+  "98": "audit-trail.js",
+  "99": "meta-sandbox.test.js",
+  "100": "validate-observability.mjs",
+  "101": "WorkerRuntime"
 }

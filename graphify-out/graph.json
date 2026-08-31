@@ -330,7 +330,7 @@
       "_origin": "ast",
       "id": "apps_api_src_app",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "api/src/app.js"
     },
     {
@@ -341,7 +341,7 @@
       "_origin": "ast",
       "id": "apps_api_src_app_createapi",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "createapi()"
     },
     {
@@ -352,7 +352,7 @@
       "_origin": "ast",
       "id": "apps_api_src_server",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "server.js"
     },
     {
@@ -363,7 +363,7 @@
       "_origin": "ast",
       "id": "apps_api_src_server_createserverapi",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "createserverapi()"
     },
     {
@@ -374,7 +374,7 @@
       "_origin": "ast",
       "id": "apps_api_src_server_createmetawebhookruntime",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "createmetawebhookruntime()"
     },
     {
@@ -572,7 +572,7 @@
       "_origin": "ast",
       "id": "apps_worker_src_worker",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "worker.js"
     },
     {
@@ -582,8 +582,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 101,
+      "community_name": "WorkerRuntime",
       "norm_label": "workerruntime"
     },
     {
@@ -593,8 +593,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_constructor",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 101,
+      "community_name": "WorkerRuntime",
       "norm_label": ".constructor()"
     },
     {
@@ -604,8 +604,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_start",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 101,
+      "community_name": "WorkerRuntime",
       "norm_label": ".start()"
     },
     {
@@ -615,8 +615,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_emitheartbeat",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 101,
+      "community_name": "WorkerRuntime",
       "norm_label": ".emitheartbeat()"
     },
     {
@@ -626,8 +626,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_recordjobfailure",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 101,
+      "community_name": "WorkerRuntime",
       "norm_label": ".recordjobfailure()"
     },
     {
@@ -637,8 +637,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_stop",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 101,
+      "community_name": "WorkerRuntime",
       "norm_label": ".stop()"
     },
     {
@@ -1022,8 +1022,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": "audit-trail.js"
     },
     {
@@ -1033,8 +1033,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_auditeventvalidationerror",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": "auditeventvalidationerror"
     },
     {
@@ -1044,8 +1044,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_auditeventvalidationerror_constructor",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": ".constructor()"
     },
     {
@@ -1055,8 +1055,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_immutableclone",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": "immutableclone()"
     },
     {
@@ -1066,8 +1066,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_deepfreeze",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": "deepfreeze()"
     },
     {
@@ -1077,8 +1077,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_requirenonemptystring",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": "requirenonemptystring()"
     },
     {
@@ -1088,8 +1088,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_validateauditevent",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": "validateauditevent()"
     },
     {
@@ -1099,8 +1099,8 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": "inmemoryaudittrail"
     },
     {
@@ -1110,8 +1110,8 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_constructor",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": ".constructor()"
     },
     {
@@ -1121,8 +1121,8 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_append",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": ".append()"
     },
     {
@@ -1132,8 +1132,8 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_list",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": ".list()"
     },
     {
@@ -1143,8 +1143,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_index",
-      "community": 10,
-      "community_name": "idempotency.js",
+      "community": 98,
+      "community_name": "audit-trail.js",
       "norm_label": "audit-privacy/src/index.js"
     },
     {
@@ -2574,7 +2574,7 @@
       "_origin": "ast",
       "id": "modules_database_src_cli",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "cli.js"
     },
     {
@@ -2585,7 +2585,7 @@
       "_origin": "ast",
       "id": "modules_database_src_cli_readphase",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "readphase()"
     },
     {
@@ -2596,7 +2596,7 @@
       "_origin": "ast",
       "id": "modules_database_src_cli_pool",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "pool"
     },
     {
@@ -2607,7 +2607,7 @@
       "_origin": "ast",
       "id": "modules_database_src_database",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "database.js"
     },
     {
@@ -2618,7 +2618,7 @@
       "_origin": "ast",
       "id": "modules_database_src_database_checkdatabasereadiness",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "checkdatabasereadiness()"
     },
     {
@@ -2629,7 +2629,7 @@
       "_origin": "ast",
       "id": "modules_database_src_database_createdatabase",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "createdatabase()"
     },
     {
@@ -2640,7 +2640,7 @@
       "_origin": "ast",
       "id": "modules_database_src_index",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "database/src/index.js"
     },
     {
@@ -2651,7 +2651,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "migrations.js"
     },
     {
@@ -2662,7 +2662,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_checksum",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "checksum()"
     },
     {
@@ -2673,7 +2673,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_loadmigrations",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "loadmigrations()"
     },
     {
@@ -2684,7 +2684,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_normalizemigrationplan",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "normalizemigrationplan()"
     },
     {
@@ -2695,7 +2695,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_ensuredirectoryurl",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "ensuredirectoryurl()"
     },
     {
@@ -2706,7 +2706,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_migrate",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "migrate()"
     },
     {
@@ -2717,7 +2717,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_applymigration",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "applymigration()"
     },
     {
@@ -2728,7 +2728,7 @@
       "_origin": "ast",
       "id": "modules_database_src_transactions",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "transactions.js"
     },
     {
@@ -2739,7 +2739,7 @@
       "_origin": "ast",
       "id": "modules_database_src_transactions_withtransaction",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "withtransaction()"
     },
     {
@@ -3157,7 +3157,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "idempotency.js"
     },
     {
@@ -3168,7 +3168,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "idempotencyconflicterror"
     },
     {
@@ -3179,7 +3179,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror_constructor",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3190,7 +3190,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_fingerprintcommand",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "fingerprintcommand()"
     },
     {
@@ -3201,7 +3201,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_canonicaljson",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "canonicaljson()"
     },
     {
@@ -3212,7 +3212,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_clone",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "clone()"
     },
     {
@@ -3223,7 +3223,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_createdeferred",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createdeferred()"
     },
     {
@@ -3234,7 +3234,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "inmemoryidempotencyrecordstore"
     },
     {
@@ -3245,7 +3245,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_execute",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".execute()"
     },
     {
@@ -3256,7 +3256,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_get",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".get()"
     },
     {
@@ -3267,7 +3267,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_storagekey",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".#storagekey()"
     },
     {
@@ -3278,7 +3278,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_createidempotentcommandexecutor",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createidempotentcommandexecutor()"
     },
     {
@@ -3289,7 +3289,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_validatecommandrequest",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "validatecommandrequest()"
     },
     {
@@ -3300,7 +3300,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_requirenonempty",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "requirenonempty()"
     },
     {
@@ -3310,7 +3310,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_index",
-      "community": 0,
+      "community": 10,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "integration-reliability/src/index.js"
     },
@@ -3321,8 +3321,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "meta-sandbox.js"
     },
     {
@@ -3332,8 +3332,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookauthenticationerror",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "metawebhookauthenticationerror"
     },
     {
@@ -3343,8 +3343,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookauthenticationerror_constructor",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3354,8 +3354,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookpayloaderror",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "metawebhookpayloaderror"
     },
     {
@@ -3365,8 +3365,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookpayloaderror_constructor",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3376,8 +3376,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metaapierror",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "metaapierror"
     },
     {
@@ -3387,8 +3387,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metaapierror_constructor",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3398,8 +3398,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_immutableclone",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "immutableclone()"
     },
     {
@@ -3409,8 +3409,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_deepfreeze",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "deepfreeze()"
     },
     {
@@ -3420,8 +3420,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_requirenonempty",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "requirenonempty()"
     },
     {
@@ -3431,8 +3431,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_verifymetawebhooksignature",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "verifymetawebhooksignature()"
     },
     {
@@ -3442,8 +3442,8 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_extractmetaevents",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "extractmetaevents()"
     },
     {
@@ -3453,8 +3453,8 @@
       "source_location": "L171",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_inmemorymetaeventstore",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "inmemorymetaeventstore"
     },
     {
@@ -3464,8 +3464,8 @@
       "source_location": "L176",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_inmemorymetaeventstore_accept",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": ".accept()"
     },
     {
@@ -3475,8 +3475,8 @@
       "source_location": "L182",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_inmemorymetaeventstore_list",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": ".list()"
     },
     {
@@ -3486,8 +3486,8 @@
       "source_location": "L196",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_processmetawebhook",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 96,
+      "community_name": "meta-sandbox.js",
       "norm_label": "processmetawebhook()"
     },
     {
@@ -3497,8 +3497,8 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_createmetamessagesclient",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "createmetamessagesclient()"
     },
     {
@@ -3508,8 +3508,8 @@
       "source_location": "L294",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_runmetasendattempt",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "runmetasendattempt()"
     },
     {
@@ -3586,7 +3586,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_index",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "shared/src/index.js"
     },
     {
@@ -3597,7 +3597,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_index_services",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "services"
     },
     {
@@ -3607,8 +3607,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_shared_src_observability",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "observability.js"
     },
     {
@@ -3618,8 +3618,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "modules_shared_src_observability_redacted_field_names",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "redacted_field_names"
     },
     {
@@ -3629,8 +3629,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedcontextfields",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "allowedcontextfields"
     },
     {
@@ -3640,8 +3640,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedservices",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "allowedservices"
     },
     {
@@ -3651,8 +3651,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedevents",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "allowedevents"
     },
     {
@@ -3662,8 +3662,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedmetrics",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "allowedmetrics"
     },
     {
@@ -3673,8 +3673,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "modules_shared_src_observability_categoricalpolicies",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "categoricalpolicies"
     },
     {
@@ -3684,8 +3684,8 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "modules_shared_src_observability_tracefields",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "tracefields"
     },
     {
@@ -3696,7 +3696,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_normalizetraceid",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "normalizetraceid()"
     },
     {
@@ -3706,8 +3706,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "modules_shared_src_observability_isfinitenumber",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "isfinitenumber()"
     },
     {
@@ -3717,8 +3717,8 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "modules_shared_src_observability_createsafelogrecord",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "createsafelogrecord()"
     },
     {
@@ -3729,7 +3729,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_createsafelogger",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "createsafelogger()"
     },
     {
@@ -3739,8 +3739,8 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": "metricregistry"
     },
     {
@@ -3750,8 +3750,8 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_constructor",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3761,8 +3761,8 @@
       "source_location": "L233",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_record",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": ".record()"
     },
     {
@@ -3772,8 +3772,8 @@
       "source_location": "L249",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_increment",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": ".increment()"
     },
     {
@@ -3783,8 +3783,8 @@
       "source_location": "L254",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_snapshot",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 95,
+      "community_name": "observability.js",
       "norm_label": ".snapshot()"
     },
     {
@@ -4173,10 +4173,21 @@
       "norm_label": "smoke:meta:sandbox"
     },
     {
-      "label": "test",
+      "label": "smoke:openai:privacy",
       "file_type": "code",
       "source_file": "package.json",
       "source_location": "L25",
+      "_origin": "ast",
+      "id": "package_scripts_smoke_openai_privacy",
+      "community": 14,
+      "community_name": "scripts",
+      "norm_label": "smoke:openai:privacy"
+    },
+    {
+      "label": "test",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L26",
       "_origin": "ast",
       "id": "package_scripts_test",
       "community": 14,
@@ -4187,7 +4198,7 @@
       "label": "test:database",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L26",
+      "source_location": "L27",
       "_origin": "ast",
       "id": "package_scripts_test_database",
       "community": 14,
@@ -4198,7 +4209,7 @@
       "label": "test:database:live",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L27",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "package_scripts_test_database_live",
       "community": 14,
@@ -4209,7 +4220,7 @@
       "label": "test:recovery:mocks",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L28",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "package_scripts_test_recovery_mocks",
       "community": 14,
@@ -4220,7 +4231,7 @@
       "label": "test:external-spikes",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L29",
+      "source_location": "L30",
       "_origin": "ast",
       "id": "package_scripts_test_external_spikes",
       "community": 14,
@@ -4231,7 +4242,7 @@
       "label": "test:observability",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L30",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "package_scripts_test_observability",
       "community": 14,
@@ -4239,10 +4250,21 @@
       "norm_label": "test:observability"
     },
     {
+      "label": "test:openai:privacy",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L32",
+      "_origin": "ast",
+      "id": "package_scripts_test_openai_privacy",
+      "community": 14,
+      "community_name": "scripts",
+      "norm_label": "test:openai:privacy"
+    },
+    {
       "label": "test:phase0-decisions",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L31",
+      "source_location": "L33",
       "_origin": "ast",
       "id": "package_scripts_test_phase0_decisions",
       "community": 14,
@@ -4253,7 +4275,7 @@
       "label": "test:phase1-schema:live",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L32",
+      "source_location": "L34",
       "_origin": "ast",
       "id": "package_scripts_test_phase1_schema_live",
       "community": 14,
@@ -4264,7 +4286,7 @@
       "label": "test:security-catalog",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L33",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "package_scripts_test_security_catalog",
       "community": 14,
@@ -4275,7 +4297,7 @@
       "label": "test:e2e",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L34",
+      "source_location": "L36",
       "_origin": "ast",
       "id": "package_scripts_test_e2e",
       "community": 14,
@@ -4286,7 +4308,7 @@
       "label": "typecheck",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L35",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "package_scripts_typecheck",
       "community": 14,
@@ -4297,7 +4319,7 @@
       "label": "validate:topology",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L36",
+      "source_location": "L38",
       "_origin": "ast",
       "id": "package_scripts_validate_topology",
       "community": 14,
@@ -4308,7 +4330,7 @@
       "label": "validate:external-spikes",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L37",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "package_scripts_validate_external_spikes",
       "community": 14,
@@ -4319,7 +4341,7 @@
       "label": "validate:observability",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L38",
+      "source_location": "L40",
       "_origin": "ast",
       "id": "package_scripts_validate_observability",
       "community": 14,
@@ -4330,7 +4352,7 @@
       "label": "validate:phase0-decisions",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L39",
+      "source_location": "L41",
       "_origin": "ast",
       "id": "package_scripts_validate_phase0_decisions",
       "community": 14,
@@ -4341,7 +4363,7 @@
       "label": "validate:security-catalog",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L40",
+      "source_location": "L42",
       "_origin": "ast",
       "id": "package_scripts_validate_security_catalog",
       "community": 14,
@@ -4352,7 +4374,7 @@
       "label": "validate",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L41",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "package_scripts_validate",
       "community": 14,
@@ -4363,7 +4385,7 @@
       "label": "devDependencies",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L43",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "package_devdependencies",
       "community": 18,
@@ -4374,7 +4396,7 @@
       "label": "@axe-core/playwright",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L44",
+      "source_location": "L46",
       "_origin": "ast",
       "id": "package_devdependencies_axe_core_playwright",
       "community": 18,
@@ -4385,7 +4407,7 @@
       "label": "@axe-core/playwright",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L44",
+      "source_location": "L46",
       "_origin": "ast",
       "id": "axe_core_playwright",
       "community": 18,
@@ -4396,7 +4418,7 @@
       "label": "@playwright/test",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L45",
+      "source_location": "L47",
       "_origin": "ast",
       "id": "package_devdependencies_playwright_test",
       "community": 18,
@@ -4407,7 +4429,7 @@
       "label": "@playwright/test",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L45",
+      "source_location": "L47",
       "_origin": "ast",
       "id": "playwright_test",
       "community": 18,
@@ -4418,7 +4440,7 @@
       "label": "@types/node",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L46",
+      "source_location": "L48",
       "_origin": "ast",
       "id": "package_devdependencies_types_node",
       "community": 18,
@@ -4429,7 +4451,7 @@
       "label": "@types/node",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L46",
+      "source_location": "L48",
       "_origin": "ast",
       "id": "types_node",
       "community": 18,
@@ -4440,7 +4462,7 @@
       "label": "@types/punycode",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L47",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "package_devdependencies_types_punycode",
       "community": 18,
@@ -4451,7 +4473,7 @@
       "label": "@types/punycode",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L47",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "types_punycode",
       "community": 18,
@@ -4462,7 +4484,7 @@
       "label": "eslint",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L48",
+      "source_location": "L50",
       "_origin": "ast",
       "id": "package_devdependencies_eslint",
       "community": 18,
@@ -4473,7 +4495,7 @@
       "label": "eslint",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L48",
+      "source_location": "L50",
       "_origin": "ast",
       "id": "eslint",
       "community": 18,
@@ -4484,7 +4506,7 @@
       "label": "prettier",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L49",
+      "source_location": "L51",
       "_origin": "ast",
       "id": "package_devdependencies_prettier",
       "community": 18,
@@ -4495,7 +4517,7 @@
       "label": "prettier",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L49",
+      "source_location": "L51",
       "_origin": "ast",
       "id": "prettier",
       "community": 18,
@@ -4506,7 +4528,7 @@
       "label": "typescript",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L50",
+      "source_location": "L52",
       "_origin": "ast",
       "id": "package_devdependencies_typescript",
       "community": 18,
@@ -4517,7 +4539,7 @@
       "label": "typescript",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L50",
+      "source_location": "L52",
       "_origin": "ast",
       "id": "typescript",
       "community": 18,
@@ -5180,8 +5202,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_meta_sandbox_smoke",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "meta-sandbox-smoke.mjs"
     },
     {
@@ -5191,8 +5213,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "scripts_meta_sandbox_smoke_required",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "required()"
     },
     {
@@ -5202,8 +5224,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "scripts_meta_sandbox_smoke_sha256",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "sha256()"
     },
     {
@@ -5213,9 +5235,119 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "scripts_meta_sandbox_smoke_runmetasandboxsmoke",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "runmetasandboxsmoke()"
+    },
+    {
+      "label": "openai-privacy-smoke.mjs",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "openai-privacy-smoke.mjs"
+    },
+    {
+      "label": "SYNTHETIC_INPUT",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke_synthetic_input",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "synthetic_input"
+    },
+    {
+      "label": "piiPatterns",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke_piipatterns",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "piipatterns"
+    },
+    {
+      "label": "invariant()",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L27",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke_invariant",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "invariant()"
+    },
+    {
+      "label": "containsPii()",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L32",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke_containspii",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "containspii()"
+    },
+    {
+      "label": "validateSuggestion()",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke_validatesuggestion",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "validatesuggestion()"
+    },
+    {
+      "label": "buildRequest()",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L90",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke_buildrequest",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "buildrequest()"
+    },
+    {
+      "label": "extractOutputText()",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L112",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke_extractoutputtext",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "extractoutputtext()"
+    },
+    {
+      "label": "runOpenAiPrivacySmoke()",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L140",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke_runopenaiprivacysmoke",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "runopenaiprivacysmoke()"
+    },
+    {
+      "label": "main()",
+      "file_type": "code",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L218",
+      "_origin": "ast",
+      "id": "scripts_openai_privacy_smoke_main",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "main()"
     },
     {
       "label": "recovery-mock.mjs",
@@ -5532,8 +5664,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_validate_observability",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 100,
+      "community_name": "validate-observability.mjs",
       "norm_label": "validate-observability.mjs"
     },
     {
@@ -5543,8 +5675,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "scripts_validate_observability_rooturl",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 100,
+      "community_name": "validate-observability.mjs",
       "norm_label": "rooturl"
     },
     {
@@ -5554,8 +5686,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "scripts_validate_observability_requiredalerts",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 100,
+      "community_name": "validate-observability.mjs",
       "norm_label": "requiredalerts"
     },
     {
@@ -5565,8 +5697,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "scripts_validate_observability_invariant",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 100,
+      "community_name": "validate-observability.mjs",
       "norm_label": "invariant()"
     },
     {
@@ -5576,8 +5708,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "scripts_validate_observability_validatealertpolicy",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 100,
+      "community_name": "validate-observability.mjs",
       "norm_label": "validatealertpolicy()"
     },
     {
@@ -5587,8 +5719,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "scripts_validate_observability_validateruntimehardening",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 100,
+      "community_name": "validate-observability.mjs",
       "norm_label": "validateruntimehardening()"
     },
     {
@@ -5598,8 +5730,8 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "scripts_validate_observability_main",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 100,
+      "community_name": "validate-observability.mjs",
       "norm_label": "main()"
     },
     {
@@ -5918,7 +6050,7 @@
       "_origin": "ast",
       "id": "test_audit_idempotency_test",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "audit-idempotency.test.js"
     },
     {
@@ -5929,7 +6061,7 @@
       "_origin": "ast",
       "id": "test_audit_idempotency_test_commandmetadata",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "commandmetadata"
     },
     {
@@ -5940,7 +6072,7 @@
       "_origin": "ast",
       "id": "test_audit_idempotency_test_createaudittrail",
       "community": 10,
-      "community_name": "idempotency.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createaudittrail()"
     },
     {
@@ -6127,7 +6259,7 @@
       "_origin": "ast",
       "id": "test_database_test",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "database.test.js"
     },
     {
@@ -6138,7 +6270,7 @@
       "_origin": "ast",
       "id": "test_database_test_transactionclient",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "transactionclient"
     },
     {
@@ -6149,7 +6281,7 @@
       "_origin": "ast",
       "id": "test_database_test_transactionclient_constructor",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -6160,7 +6292,7 @@
       "_origin": "ast",
       "id": "test_database_test_transactionclient_query",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".query()"
     },
     {
@@ -6171,7 +6303,7 @@
       "_origin": "ast",
       "id": "test_database_test_transactionclient_release",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".release()"
     },
     {
@@ -6313,8 +6445,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_meta_sandbox_test",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "meta-sandbox.test.js"
     },
     {
@@ -6324,8 +6456,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "test_meta_sandbox_test_signature",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "signature()"
     },
     {
@@ -6335,8 +6467,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "test_meta_sandbox_test_messagepayload",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "messagepayload()"
     },
     {
@@ -6346,8 +6478,8 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "test_meta_sandbox_test_statuspayload",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 99,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "statuspayload()"
     },
     {
@@ -6357,8 +6489,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_migrations_live_test",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 5,
+      "community_name": "database/src/index.js",
       "norm_label": "migrations-live.test.js"
     },
     {
@@ -6369,7 +6501,7 @@
       "_origin": "ast",
       "id": "test_migrations_test",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "migrations.test.js"
     },
     {
@@ -6380,7 +6512,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_mutex",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "mutex"
     },
     {
@@ -6391,7 +6523,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_mutex_constructor",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -6402,7 +6534,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_mutex_acquire",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".acquire()"
     },
     {
@@ -6413,7 +6545,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_migrationpool",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "migrationpool"
     },
     {
@@ -6424,7 +6556,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_migrationpool_constructor",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -6435,7 +6567,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_migrationpool_connect",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".connect()"
     },
     {
@@ -6446,7 +6578,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_migrationclient",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "migrationclient"
     },
     {
@@ -6457,7 +6589,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_migrationclient_constructor",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -6468,7 +6600,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_migrationclient_query",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".query()"
     },
     {
@@ -6479,7 +6611,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_migrationclient_release",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": ".release()"
     },
     {
@@ -6490,7 +6622,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_expandone",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "expandone"
     },
     {
@@ -6501,7 +6633,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_expandtwo",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "expandtwo"
     },
     {
@@ -6512,7 +6644,7 @@
       "_origin": "ast",
       "id": "test_migrations_test_contractthree",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "contractthree"
     },
     {
@@ -6523,7 +6655,7 @@
       "_origin": "ast",
       "id": "test_observability_test",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "observability.test.js"
     },
     {
@@ -6534,7 +6666,7 @@
       "_origin": "ast",
       "id": "test_observability_test_rooturl",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "rooturl"
     },
     {
@@ -6545,7 +6677,7 @@
       "_origin": "ast",
       "id": "test_observability_test_canaries",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "canaries"
     },
     {
@@ -6556,7 +6688,7 @@
       "_origin": "ast",
       "id": "test_observability_test_capture",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "capture()"
     },
     {
@@ -6567,7 +6699,7 @@
       "_origin": "ast",
       "id": "test_observability_test_escaperegexp",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "escaperegexp()"
     },
     {
@@ -6578,8 +6710,41 @@
       "_origin": "ast",
       "id": "test_observability_test_assertnocanaries",
       "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "observability.test.js",
       "norm_label": "assertnocanaries()"
+    },
+    {
+      "label": "openai-privacy-smoke.test.js",
+      "file_type": "code",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "test_openai_privacy_smoke_test",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "openai-privacy-smoke.test.js"
+    },
+    {
+      "label": "schema",
+      "file_type": "code",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "test_openai_privacy_smoke_test_schema",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "schema"
+    },
+    {
+      "label": "structuredSuggestion",
+      "file_type": "code",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L23",
+      "_origin": "ast",
+      "id": "test_openai_privacy_smoke_test_structuredsuggestion",
+      "community": 97,
+      "community_name": "openai-privacy-smoke.mjs",
+      "norm_label": "structuredsuggestion"
     },
     {
       "label": "phase0-decisions.test.js",
@@ -6644,7 +6809,7 @@
       "_origin": "ast",
       "id": "test_phase1_schema_live_test",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "phase1-schema-live.test.js"
     },
     {
@@ -6655,7 +6820,7 @@
       "_origin": "ast",
       "id": "test_phase1_schema_live_test_hash",
       "community": 5,
-      "community_name": "Database Migrations Utility",
+      "community_name": "database/src/index.js",
       "norm_label": "hash()"
     },
     {
@@ -18756,7 +18921,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L43",
+      "source_location": "L45",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package",
@@ -19004,7 +19169,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
-      "target": "package_scripts_test",
+      "target": "package_scripts_smoke_openai_privacy",
       "confidence_score": 1.0
     },
     {
@@ -19015,7 +19180,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
-      "target": "package_scripts_test_database",
+      "target": "package_scripts_test",
       "confidence_score": 1.0
     },
     {
@@ -19026,62 +19191,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
-      "target": "package_scripts_test_database_live",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L34",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_test_e2e",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L29",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_test_external_spikes",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L30",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_test_observability",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L31",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_test_phase0_decisions",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L32",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_test_phase1_schema_live",
+      "target": "package_scripts_test_database",
       "confidence_score": 1.0
     },
     {
@@ -19092,84 +19202,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
-      "target": "package_scripts_test_recovery_mocks",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L33",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_test_security_catalog",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L35",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_typecheck",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L41",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_validate",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L37",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_validate_external_spikes",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L38",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_validate_observability",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L39",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_validate_phase0_decisions",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L40",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_scripts",
-      "target": "package_scripts_validate_security_catalog",
+      "target": "package_scripts_test_database_live",
       "confidence_score": 1.0
     },
     {
@@ -19180,51 +19213,161 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
+      "target": "package_scripts_test_e2e",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L30",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_test_external_spikes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_test_observability",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_test_openai_privacy",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L33",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_test_phase0_decisions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_test_phase1_schema_live",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L29",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_test_recovery_mocks",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L35",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_test_security_catalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L37",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_typecheck",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L43",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_validate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_validate_external_spikes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L40",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_validate_observability",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_validate_phase0_decisions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L42",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_validate_security_catalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L38",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
       "target": "package_scripts_validate_topology",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L44",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_devdependencies",
-      "target": "package_devdependencies_axe_core_playwright",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L48",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_devdependencies",
-      "target": "package_devdependencies_eslint",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L45",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_devdependencies",
-      "target": "package_devdependencies_playwright_test",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L49",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_devdependencies",
-      "target": "package_devdependencies_prettier",
       "confidence_score": 1.0
     },
     {
@@ -19235,18 +19378,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
-      "target": "package_devdependencies_types_node",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L47",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_devdependencies",
-      "target": "package_devdependencies_types_punycode",
+      "target": "package_devdependencies_axe_core_playwright",
       "confidence_score": 1.0
     },
     {
@@ -19257,6 +19389,61 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
+      "target": "package_devdependencies_eslint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L47",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_playwright_test",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L51",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_prettier",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L48",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_types_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L49",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_types_punycode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L52",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_devdependencies",
       "target": "package_devdependencies_typescript",
       "confidence_score": 1.0
     },
@@ -19264,7 +19451,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L44",
+      "source_location": "L46",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -19276,7 +19463,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L45",
+      "source_location": "L47",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -19288,7 +19475,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L46",
+      "source_location": "L48",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -19300,7 +19487,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L47",
+      "source_location": "L49",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -19312,7 +19499,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L48",
+      "source_location": "L50",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -19324,7 +19511,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L49",
+      "source_location": "L51",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -19336,7 +19523,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L50",
+      "source_location": "L52",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -20026,6 +20213,273 @@
       "_origin": "ast",
       "source": "test_meta_sandbox_test",
       "target": "scripts_meta_sandbox_smoke_runmetasandboxsmoke",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L90",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke",
+      "target": "scripts_openai_privacy_smoke_buildrequest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke",
+      "target": "scripts_openai_privacy_smoke_containspii",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L112",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke",
+      "target": "scripts_openai_privacy_smoke_extractoutputtext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke",
+      "target": "scripts_openai_privacy_smoke_invariant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L218",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke",
+      "target": "scripts_openai_privacy_smoke_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke",
+      "target": "scripts_openai_privacy_smoke_piipatterns",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L140",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke",
+      "target": "scripts_openai_privacy_smoke_runopenaiprivacysmoke",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke",
+      "target": "scripts_openai_privacy_smoke_synthetic_input",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke",
+      "target": "scripts_openai_privacy_smoke_validatesuggestion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_openai_privacy_smoke_test",
+      "target": "scripts_openai_privacy_smoke",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L91",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke_buildrequest",
+      "target": "scripts_openai_privacy_smoke_invariant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L147",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke_runopenaiprivacysmoke",
+      "target": "scripts_openai_privacy_smoke_invariant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L40",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke_validatesuggestion",
+      "target": "scripts_openai_privacy_smoke_invariant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L95",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke_buildrequest",
+      "target": "scripts_openai_privacy_smoke_containspii",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L197",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke_runopenaiprivacysmoke",
+      "target": "scripts_openai_privacy_smoke_containspii",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_openai_privacy_smoke_test",
+      "target": "scripts_openai_privacy_smoke_containspii",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L196",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke_runopenaiprivacysmoke",
+      "target": "scripts_openai_privacy_smoke_validatesuggestion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_openai_privacy_smoke_test",
+      "target": "scripts_openai_privacy_smoke_validatesuggestion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L163",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke_runopenaiprivacysmoke",
+      "target": "scripts_openai_privacy_smoke_buildrequest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_openai_privacy_smoke_test",
+      "target": "scripts_openai_privacy_smoke_buildrequest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L195",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke_runopenaiprivacysmoke",
+      "target": "scripts_openai_privacy_smoke_extractoutputtext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/openai-privacy-smoke.mjs",
+      "source_location": "L219",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_openai_privacy_smoke_main",
+      "target": "scripts_openai_privacy_smoke_runopenaiprivacysmoke",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_openai_privacy_smoke_test",
+      "target": "scripts_openai_privacy_smoke_runopenaiprivacysmoke",
       "confidence_score": 1.0
     },
     {
@@ -22035,6 +22489,28 @@
       "_origin": "ast",
       "source": "test_observability_test_assertnocanaries",
       "target": "test_observability_test_escaperegexp",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_openai_privacy_smoke_test",
+      "target": "test_openai_privacy_smoke_test_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "test/openai-privacy-smoke.test.js",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_openai_privacy_smoke_test",
+      "target": "test_openai_privacy_smoke_test_structuredsuggestion",
       "confidence_score": 1.0
     },
     {
@@ -27078,5 +27554,5 @@
       "source_file": "historico-datacrazy/CRM-PROCESSO-VENDAS.md"
     }
   ],
-  "built_at_commit": "7ef021d94deaf4e3578e32357ac64bb43783787f"
+  "built_at_commit": "e63d7593473a4aff12d5640a0d39e6faacb2c2f0"
 }

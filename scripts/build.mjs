@@ -13,6 +13,14 @@ const copies = [
   ['modules/database/src', 'runtime/modules/database/src'],
   ['modules/database/migrations', 'runtime/modules/database/migrations'],
   ['modules/database/package.json', 'runtime/modules/database/package.json'],
+  [
+    'modules/integration-reliability/src',
+    'runtime/modules/integration-reliability/src',
+  ],
+  [
+    'modules/integration-reliability/package.json',
+    'runtime/modules/integration-reliability/package.json',
+  ],
   ['modules/shared/src', 'runtime/modules/shared/src'],
   ['modules/shared/package.json', 'runtime/modules/shared/package.json'],
 ];

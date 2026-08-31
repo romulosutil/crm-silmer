@@ -46,7 +46,7 @@ test('builds minimal non-root images from immutable official bases', async () =>
   assert.match(await text('docker/edge-web.Dockerfile'), /\/healthz/u);
 });
 
-test('packages the PostgreSQL workspace and migrations in the runtime image', async () => {
+test('packages every runtime workspace required by the API', async () => {
   const dockerfile = await text('docker/runtime.Dockerfile');
   const buildScript = await text('scripts/build.mjs');
 
@@ -60,6 +60,15 @@ test('packages the PostgreSQL workspace and migrations in the runtime image', as
   assert.match(buildScript, /modules\/database\/src/u);
   assert.match(buildScript, /modules\/database\/migrations/u);
   assert.match(buildScript, /modules\/database\/package\.json/u);
+
+  assert.equal(
+    dockerfile.match(/COPY modules\/integration-reliability\/package\.json/gu)
+      ?.length,
+    2,
+    'both dependency stages need the integration reliability workspace manifest',
+  );
+  assert.match(buildScript, /modules\/integration-reliability\/src/u);
+  assert.match(buildScript, /modules\/integration-reliability\/package\.json/u);
 });
 
 test('scans each local OCI layout before its only registry publication', async () => {

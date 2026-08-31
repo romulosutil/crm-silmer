@@ -46,6 +46,13 @@ test('builds minimal non-root images from immutable official bases', async () =>
   assert.match(await text('docker/edge-web.Dockerfile'), /\/healthz/u);
 });
 
+test('routes the edge proxy to the canonical API service', async () => {
+  const nginx = await text('docker/nginx.conf');
+
+  assert.match(nginx, /http:\/\/silmer-api:3000/u);
+  assert.doesNotMatch(nginx, /http:\/\/api:3000/u);
+});
+
 test('packages every runtime workspace required by the API', async () => {
   const dockerfile = await text('docker/runtime.Dockerfile');
   const buildScript = await text('scripts/build.mjs');

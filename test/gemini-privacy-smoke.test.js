@@ -8,6 +8,7 @@ import {
   buildRequest,
   containsPii,
   runGeminiPrivacySmoke,
+  validateSchemaFixture,
   validateSuggestion,
 } from '../scripts/gemini-privacy-smoke.mjs';
 
@@ -17,7 +18,19 @@ const schema = {
   required: ['reply', 'fieldSuggestions', 'stageSuggestion', 'handoffRequired'],
   properties: {
     reply: { type: 'string' },
-    fieldSuggestions: { type: 'array', items: { type: 'object' } },
+    fieldSuggestions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['field', 'value', 'source'],
+        properties: {
+          field: { type: 'string' },
+          value: { type: 'string' },
+          source: { type: 'string' },
+        },
+      },
+    },
     stageSuggestion: { type: ['string', 'null'] },
     handoffRequired: { type: 'boolean' },
   },
@@ -68,7 +81,7 @@ const validOptions = {
 };
 
 test('builds a stateless structured generateContent request', () => {
-  const body = buildRequest(schema, 7);
+  const body = buildRequest(7);
   assert.equal(
     buildEndpoint(APPROVED_MODEL),
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent',
@@ -80,6 +93,18 @@ test('builds a stateless structured generateContent request', () => {
   assert.equal(Object.hasOwn(body, 'store'), false);
   assert.equal(Object.hasOwn(body, 'cachedContent'), false);
   assert.equal(Object.hasOwn(body, 'tools'), false);
+});
+
+test('rejects schema fixture drift before building the outbound request', () => {
+  assert.doesNotThrow(() => validateSchemaFixture(schema));
+  assert.throws(
+    () =>
+      validateSchemaFixture({
+        ...schema,
+        properties: { ...schema.properties, customerEmail: { type: 'string' } },
+      }),
+    /drifted from the outbound allowlist/u,
+  );
 });
 
 test('detects representative personal-data patterns', () => {

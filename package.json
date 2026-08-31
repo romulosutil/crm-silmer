@@ -21,12 +21,14 @@
     "lint": "eslint apps modules scripts test eslint.config.js",
     "preview": "node scripts/serve-edge.mjs",
     "recovery:plan": "node scripts/recovery-mock.mjs --plan",
+    "smoke:r2:live": "node scripts/r2-live-smoke.mjs",
     "smoke:meta:sandbox": "node scripts/meta-sandbox-smoke.mjs",
     "smoke:gemini:privacy": "node scripts/gemini-privacy-smoke.mjs",
     "test": "node --test test/*.test.js",
     "test:database": "node --test test/database.test.js test/migrations.test.js",
     "test:database:live": "node --test test/migrations-live.test.js",
     "test:recovery:mocks": "node --test test/topology-recovery.test.js",
+    "test:r2": "node --test test/r2-live-smoke.test.js",
     "test:external-spikes": "node --test test/external-spikes.test.js",
     "test:observability": "node --test test/observability.test.js",
     "test:gemini:privacy": "node --test test/gemini-privacy-smoke.test.js",
@@ -36,11 +38,12 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --project jsconfig.json",
     "validate:topology": "node scripts/validate-topology.mjs && node scripts/recovery-mock.mjs --check",
+    "validate:r2": "node scripts/validate-r2.mjs",
     "validate:external-spikes": "node scripts/validate-external-spikes.mjs",
     "validate:observability": "node scripts/validate-observability.mjs",
     "validate:phase0-decisions": "node scripts/validate-phase0-decisions.mjs",
     "validate:security-catalog": "node scripts/validate-security-catalog.mjs",
-    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run validate:topology && npm run validate:external-spikes && npm run validate:security-catalog && npm run validate:phase0-decisions && npm run validate:observability && npm test && npm run build"
+    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run validate:topology && npm run validate:r2 && npm run validate:external-spikes && npm run validate:security-catalog && npm run validate:phase0-decisions && npm run validate:observability && npm test && npm run build"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

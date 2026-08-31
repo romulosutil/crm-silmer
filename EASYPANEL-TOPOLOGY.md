@@ -134,11 +134,15 @@ Controles:
 - nenhuma ACL pública;
 - credencial distinta por finalidade e menor privilégio;
 - chave opaca sem nome, telefone ou número de documento;
-- URL assinada com expiração curta;
+- URL assinada de operação/objeto único, com no máximo 300 segundos, nunca
+  registrada em log/evidência e entregue pela aplicação com
+  `Cache-Control: no-store`;
 - criptografia em trânsito e repouso;
 - metadados e autorização no PostgreSQL;
-- lifecycle por classe de dado do P0.6;
-- cópias não correntes e backups expiram em até 35 dias;
+- lifecycle destrutivo do provedor somente para backups; abort de multipart e
+  transições não destrutivas são permitidos, retenções dependentes de evento e
+  `legal_hold` ficam no worker P0.6, e tombstones ficam sob Bucket Lock;
+- backups e objetos temporários expiram em até 35 dias;
 - dados reais nunca entram em teste local, CI ou drill não autorizado.
 
 As credenciais são separadas por função:
@@ -147,16 +151,20 @@ As credenciais são separadas por função:
   backups ou tombstones;
 - `crm-silmer-backups`: somente o mecanismo de backup escreve; runtime não
   recebe credencial;
-- `crm-silmer-tombstones`: o job de privacidade apenas cria novas chaves,
-  sem sobrescrever ou excluir; o restore usa credencial read-only mantida fora
-  do runtime normal.
+- `crm-silmer-tombstones`: o token R2 de escrita é restrito ao bucket, mas como
+  o provedor não oferece permissão IAM create-only, o job também usa chave
+  imutável, `If-None-Match: *` e Bucket Lock; o restore usa credencial read-only
+  mantida fora do runtime normal.
 
-O bucket de tombstones usa versionamento e proteção WORM/Object Lock do provedor
-com retenção mínima igual à última cópia relacionada. Se esse recurso não estiver
-disponível, usa criação condicional em namespace append-only, política que nega
-delete e cópia independente sob outra credencial. O gate de Privacidade registra
-qual mecanismo fornece imutabilidade e testa overwrite e exclusão. Versionamento
-sozinho não satisfaz o contrato.
+O bucket de tombstones usa **Cloudflare R2 Bucket Lock** no prefixo
+`tombstones/`, por pelo menos 36 dias e até expirar a última cópia relacionada,
+o que for maior, com criação
+condicional e cópia independente sob outra credencial. R2 não implementa S3
+Object Lock, seus headers nem versionamento de bucket; esses mecanismos nunca
+são usados como prova de imutabilidade. A credencial que altera Bucket Lock fica
+fora do runtime, protegida por MFA e auditoria, e qualquer mudança exige
+aprovação de Privacidade/DevOps. O gate testa overwrite e exclusão, mas não
+representa Bucket Lock como equivalente a AWS Object Lock compliance mode.
 
 O filesystem dos containers guarda apenas temporários. Nenhum anexo ou PDF
 existe somente no disco da VPS.
@@ -189,9 +197,14 @@ S3_REGION
 S3_DATA_BUCKET
 S3_DATA_ACCESS_KEY_ID
 S3_DATA_SECRET_ACCESS_KEY
+S3_BACKUP_BUCKET
+S3_BACKUP_ACCESS_KEY_ID
+S3_BACKUP_SECRET_ACCESS_KEY
 TOMBSTONE_BUCKET
 TOMBSTONE_WRITE_ACCESS_KEY_ID
 TOMBSTONE_WRITE_SECRET_ACCESS_KEY
+TOMBSTONE_READ_ACCESS_KEY_ID
+TOMBSTONE_READ_SECRET_ACCESS_KEY
 PIX_KEY_ID
 PIX_KEY_VALUE
 PIX_KEY_DISPLAY_MASKED

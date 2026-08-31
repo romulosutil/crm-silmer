@@ -221,38 +221,58 @@
         "automaticRetry": false,
         "strategy": "HEAD the exact immutable key and compare metadata/hash before retry; otherwise reconcile."
       },
+      "buckets": [
+        "crm-silmer-data",
+        "crm-silmer-backups",
+        "crm-silmer-tombstones"
+      ],
       "security": {
         "publicAccess": false,
         "bucketLockRequired": true,
+        "bucketLockProviderControl": "cloudflare-r2-bucket-lock",
+        "bucketLockPrefix": "tombstones/",
+        "s3ObjectLockSupported": false,
+        "s3ObjectLockHeadersAllowed": false,
+        "bucketVersioningSupported": false,
         "dataLocationApproval": "pending-privacy",
-        "separateCredentialsByDataClass": true
+        "locationHintIsResidencyGuarantee": false,
+        "separateCredentialsByDataClass": true,
+        "crossBucketAccessMustFail": true,
+        "configurationAdminOutsideRuntime": true,
+        "signedUrlMaximumTtlSeconds": 300,
+        "rawSignedUrlAllowedInEvidence": false
       },
       "status": "pending-human",
       "evidence": [
         {
           "url": "https://developers.cloudflare.com/r2/api/s3/api/",
-          "checkedAt": "2026-08-30",
+          "checkedAt": "2026-08-31",
           "status": "official-compatibility-reviewed"
         },
         {
           "url": "https://developers.cloudflare.com/r2/buckets/bucket-locks/",
-          "checkedAt": "2026-08-30",
+          "checkedAt": "2026-08-31",
           "status": "official-locks-reviewed"
         },
         {
           "url": "https://developers.cloudflare.com/r2/reference/data-location/",
-          "checkedAt": "2026-08-30",
+          "checkedAt": "2026-08-31",
           "status": "official-location-reviewed"
         },
         {
           "url": "https://developers.cloudflare.com/r2/reference/data-security/",
-          "checkedAt": "2026-08-30",
+          "checkedAt": "2026-08-31",
           "status": "official-security-reviewed"
         },
         {
           "url": "https://cf-assets.www.cloudflare.com/slt3lc6tev37/1TTgT35GoUNlKZYGuKWBFy/4e7dfc8cf402419a9b1cf624291fc69f/cloudflare_customer_dpa-v6.4_april_3_2026.pdf",
-          "checkedAt": "2026-08-30",
+          "checkedAt": "2026-08-31",
           "status": "official-dpa-v6.4-reviewed"
+        },
+        {
+          "url": "docs/phase0/r2-control-plane.json",
+          "checkedAt": "2026-08-31",
+          "status": "local-fail-closed-gate-live-and-human-pending"
         }
       ],
       "owner": "Privacidade/DevOps"

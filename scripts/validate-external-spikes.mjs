@@ -99,14 +99,51 @@ export function validateExternalEffects(document) {
   invariant(ai?.retention?.applicationTtlDays <= 30, 'AI TTL exceeds 30 days');
 
   const storage = effects.find(({ id }) => id === 'r2.put-object');
+  if (!storage) throw new Error('R2 external effect is required');
   invariant(storage?.security?.publicAccess === false, 'R2 must be private');
   invariant(
-    storage?.security?.bucketLockRequired === true,
-    'R2 immutable data requires Bucket Lock',
+    JSON.stringify(storage?.buckets) ===
+      JSON.stringify([
+        'crm-silmer-data',
+        'crm-silmer-backups',
+        'crm-silmer-tombstones',
+      ]),
+    'R2 requires three canonical, separate buckets',
   );
   invariant(
-    storage?.security?.dataLocationApproval === 'pending-privacy',
+    storage?.security?.bucketLockRequired === true &&
+      storage.security.bucketLockProviderControl ===
+        'cloudflare-r2-bucket-lock' &&
+      storage.security.bucketLockPrefix === 'tombstones/' &&
+      storage.security.configurationAdminOutsideRuntime === true,
+    'R2 immutable tombstones require governed provider-native Bucket Lock',
+  );
+  invariant(
+    storage?.security?.s3ObjectLockSupported === false &&
+      storage.security.s3ObjectLockHeadersAllowed === false &&
+      storage.security.bucketVersioningSupported === false,
+    'R2 must not claim S3 Object Lock or bucket versioning support',
+  );
+  invariant(
+    storage?.security?.dataLocationApproval === 'pending-privacy' &&
+      storage.security.locationHintIsResidencyGuarantee === false,
     'R2 location must remain pending Privacy approval',
+  );
+  invariant(
+    storage?.security?.separateCredentialsByDataClass === true &&
+      storage.security.crossBucketAccessMustFail === true,
+    'R2 credentials must be segregated and cross-bucket access denied',
+  );
+  invariant(
+    storage?.security?.signedUrlMaximumTtlSeconds <= 300 &&
+      storage.security.rawSignedUrlAllowedInEvidence === false,
+    'R2 signed URLs must be short-lived and absent from evidence',
+  );
+  invariant(
+    storage?.resultQuery?.support === 'head-object' &&
+      storage.outcomeUnknown?.automaticRetry === false &&
+      /HEAD.*metadata\/hash/iu.test(storage.outcomeUnknown.strategy),
+    'R2 outcome_unknown must reconcile by HEAD plus metadata hash',
   );
   return document;
 }

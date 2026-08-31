@@ -50,8 +50,9 @@ gates de verificação.
 
 ### T00.4 Fechar spikes externos
 
-- **Status:** matriz, fixtures e validação local concluídas em 30/08/2026;
-  smokes/aprovações externos pendentes nas issues `#4` a `#8`.
+- **Status:** matriz, fixtures e gates locais executáveis concluídos; o gate R2
+  fail-closed da issue `#6` foi adicionado em 31/08/2026. Smokes/aprovações
+  externos permanecem pendentes nas issues `#5` a `#8`.
 - **Rastreabilidade:** `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`,
   `PAY-02`, `PAY-05`, `PRV-P06-07` e `PRV-P06-11`.
 - Validar WhatsApp Cloud API, assinatura, mídia, templates e status de entrega.

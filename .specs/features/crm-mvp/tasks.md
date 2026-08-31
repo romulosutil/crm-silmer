@@ -23,26 +23,30 @@ gates de verificação.
 
 ### T00.2 Criar CI e imagens imutáveis
 
-- **Status:** implementação local concluída em 30/08/2026; publicação GHCR e
-  promoção dev/hml aguardam a issue `#1` e os ambientes.
+- **Status:** concluída em 30/08/2026; SHA e digests aprovados foram publicados
+  pelo run `33335770692` e configurados nos serviços `silmer-*`.
 - **Rastreabilidade:** enabler de `MSG-02` e `MSG-03`; não satisfaz sozinho o
   comportamento funcional desses requisitos.
 - Validar lint, testes, E2E/a11y, dependências, imagens e diff.
 - Publicar `edge-web` e `runtime` no GHCR por SHA/digest.
-- **Verificação:** o mesmo digest sobe em dev e homologação sem rebuild.
+- **Verificação:** o digest aprovado é configurado no projeto operacional sem
+  rebuild e permanece rastreável ao SHA de origem.
 
-### T00.3 Provisionar EasyPanel dev/hml/prod
+### T00.3 Provisionar serviços Silmer no EasyPanel
 
-- **Status:** kit local/offline concluído em 30/08/2026; provisionamento e
-  drills reais pendentes nas issues `#2` e `#3`.
+- **Status:** concluída por decisão operacional em 31/08/2026 no projeto
+  compartilhado e duradouro `espectro-mvp`; riscos e follow-ups aceitos estão
+  em `ops/easypanel/provisioning-gate.json`. Drills reais permanecem na issue
+  `#3`.
 - **Rastreabilidade:** suporte operacional a `MSG-03`, `MSG-04` e `PRV-01`;
   mocks não satisfazem esses requisitos funcionais.
-- Criar projetos e serviços da topologia aprovada.
+- Manter `silmer-edge-web`, `silmer-api`, `silmer-worker` e `silmer-postgres`
+  no projeto `espectro-mvp`, com prefixo que evita colisões.
 - Aplicar redes, domínios, limites, health checks e segredos separados.
 - Criar kit off-host de recovery com topologia, digests, DNS, migrations e
   inventário de segredos, sem valores sensíveis em arquivo versionado.
-- **Verificação:** somente `edge-web` possui domínio/porta pública e uma segunda
-  pessoa consegue reconstruir a topologia usando o kit e mocks.
+- **Verificação:** somente `silmer-edge-web` possui domínio/porta pública e uma
+  segunda pessoa consegue reconstruir a topologia usando o kit e mocks.
 
 ### T00.4 Fechar spikes externos
 

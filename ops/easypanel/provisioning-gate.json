@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.3",
+  "issue": 2,
+  "mode": "operational-evidence",
+  "status": "accepted-with-follow-ups",
+  "decision": "shared-project-long-lived",
+  "approvedRelease": {
+    "sourceSha": "4384249955e72e0fbb24abbb99523803163dd69d",
+    "workflowRunId": 33335770692,
+    "images": {
+      "edge-web": "ghcr.io/romulosutil/crm-silmer/edge-web@sha256:dd9fde3ab72cd22df7d89be57a508e73e7e97461c0efb3b97cbf7bb91f7f9187",
+      "runtime": "ghcr.io/romulosutil/crm-silmer/runtime@sha256:3c29961a1a8d0271956439f4ae6891a8ec3181494224b3d063c56c6b95fd5661"
+    }
+  },
+  "evidencePolicy": {
+    "referencesOnly": true,
+    "piiAllowed": false,
+    "secretValuesAllowed": false
+  },
+  "projects": [
+    {
+      "name": "espectro-mvp",
+      "status": "accepted-with-follow-ups",
+      "services": [
+        {
+          "name": "silmer-edge-web",
+          "status": "source-pinned",
+          "publicPorts": [80, 443]
+        },
+        {
+          "name": "silmer-api",
+          "status": "source-pinned",
+          "publicPorts": []
+        },
+        {
+          "name": "silmer-worker",
+          "status": "source-pinned",
+          "publicPorts": []
+        },
+        {
+          "name": "silmer-postgres",
+          "status": "created",
+          "publicPorts": []
+        }
+      ],
+      "checks": {
+        "projectAndServices": "passed",
+        "networkExposure": "passed",
+        "secretsSeparated": "pending",
+        "healthAndLimits": "pending",
+        "dnsSslFirewall": "blocked",
+        "externalBackup": "blocked",
+        "offHostUptime": "blocked",
+        "panelMfa": "pending"
+      },
+      "evidenceRefs": ["easypanel-audit://project/espectro-mvp"]
+    }
+  ],
+  "acceptedRisks": [
+    "shared-project-with-unrelated-services",
+    "no-dev-hml-prod-project-isolation",
+    "easypanel-license-pending",
+    "domain-and-dns-pending",
+    "external-backup-pending",
+    "off-host-uptime-pending"
+  ],
+  "evidenceRefs": ["github-actions://run/33335770692"]
+}

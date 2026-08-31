@@ -48,10 +48,12 @@
 - **Documentos:** snapshot imutável + template HTML/CSS + PDF gerado no worker.
 - **IA:** adapter próprio e OpenAI API direta como baseline, sem fine-tuning,
   RAG ou vector database no MVP; DPA e retenção compatível são gates.
-- **Operação:** projetos EasyPanel `crm-silmer-dev`, `crm-silmer-hml` e
-  `crm-silmer-prod`, com somente `edge-web` público; a aceitação da VPS única
-  depende de recovery drill em host limpo.
-- **Deploy:** imagens imutáveis por digest, homologação antes de produção,
+- **Operação:** projeto EasyPanel compartilhado e duradouro `espectro-mvp`, com
+  serviços `silmer-edge-web`, `silmer-api`, `silmer-worker` e
+  `silmer-postgres`; somente `silmer-edge-web` pode ser público. O risco de não
+  haver isolamento entre ambientes foi aceito para o piloto e a aceitação da
+  VPS única continua dependente de recovery drill em host limpo.
+- **Deploy:** imagens imutáveis por digest, promoção manual no projeto estável,
   migrations expand/contract, backup externo e rollback para digest anterior.
 
 ## Decisões de modelagem

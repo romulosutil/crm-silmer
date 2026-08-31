@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   validateEnvironmentTemplate,
+  validateProvisioningGate,
   validateTopologyDocument,
 } from '../scripts/validate-topology.mjs';
 import {
@@ -30,7 +31,7 @@ function clone(value) {
   return structuredClone(value);
 }
 
-test('declares exactly the approved EasyPanel projects and services', async () => {
+test('declares the approved shared EasyPanel project and prefixed services', async () => {
   const topology = await json('ops/easypanel/topology.json');
   const projects = /** @type {Array<Record<string, any>>} */ (
     topology.projects
@@ -39,7 +40,7 @@ test('declares exactly the approved EasyPanel projects and services', async () =
   assert.doesNotThrow(() => validateTopologyDocument(topology));
   assert.deepEqual(
     projects.map(({ name }) => name),
-    ['crm-silmer-dev', 'crm-silmer-hml', 'crm-silmer-prod'],
+    ['espectro-mvp'],
   );
 
   for (const project of projects) {
@@ -48,21 +49,25 @@ test('declares exactly the approved EasyPanel projects and services', async () =
     );
     assert.deepEqual(
       services.map(({ name }) => name),
-      ['edge-web', 'api', 'worker', 'postgres'],
+      ['silmer-edge-web', 'silmer-api', 'silmer-worker', 'silmer-postgres'],
     );
     assert.deepEqual(
       services
         .filter(({ public: isPublic }) => isPublic)
         .map(({ name }) => name),
-      ['edge-web'],
+      ['silmer-edge-web'],
     );
   }
 });
 
-test('rejects public API or PostgreSQL services', async () => {
+test('rejects any public internal Silmer service', async () => {
   const topology = await json('ops/easypanel/topology.json');
 
-  for (const serviceName of ['api', 'postgres']) {
+  for (const serviceName of [
+    'silmer-api',
+    'silmer-worker',
+    'silmer-postgres',
+  ]) {
     const unsafe = clone(topology);
     const services = /** @type {Array<Record<string, any>>} */ (
       unsafe.projects[0].services
@@ -126,11 +131,7 @@ test('builds a deterministic recovery plan from local files and mocks', async ()
 
   assert.deepEqual(first, second);
   assert.equal(first.networkAccessRequired, false);
-  assert.deepEqual(first.projects, [
-    'crm-silmer-dev',
-    'crm-silmer-hml',
-    'crm-silmer-prod',
-  ]);
+  assert.deepEqual(first.projects, ['espectro-mvp']);
   assert.ok(first.steps.some(({ action }) => action === 'apply-migrations'));
   assert.ok(
     first.steps.some(({ action }) => action === 'verify-mock-adapters'),
@@ -162,5 +163,87 @@ test('rejects real recovery adapters and populated digest or DNS placeholders', 
   assert.throws(
     () => validateRecoveryKit(concreteDns, topology),
     /dns.*placeholder/iu,
+  );
+});
+
+test('accepts the long-lived shared-project gate with immutable approved images', async () => {
+  const topology = await json('ops/easypanel/topology.json');
+  const gate = await json('ops/easypanel/provisioning-gate.json');
+
+  assert.doesNotThrow(() => validateProvisioningGate(gate, topology));
+  assert.equal(gate.status, 'accepted-with-follow-ups');
+  assert.equal(gate.projects[0].name, 'espectro-mvp');
+  assert.match(gate.approvedRelease.sourceSha, /^[0-9a-f]{40}$/u);
+  assert.match(
+    gate.approvedRelease.images['edge-web'],
+    /^ghcr\.io\/romulosutil\/crm-silmer\/edge-web@sha256:[0-9a-f]{64}$/u,
+  );
+  assert.match(
+    gate.approvedRelease.images.runtime,
+    /^ghcr\.io\/romulosutil\/crm-silmer\/runtime@sha256:[0-9a-f]{64}$/u,
+  );
+});
+
+test('rejects mutable images and noncanonical service exposure in the operational gate', async () => {
+  const topology = await json('ops/easypanel/topology.json');
+  const gate = await json('ops/easypanel/provisioning-gate.json');
+  const mutableImage = clone(gate);
+  mutableImage.approvedRelease.images.runtime =
+    'ghcr.io/romulosutil/crm-silmer/runtime:latest';
+
+  assert.throws(
+    () => validateProvisioningGate(mutableImage, topology),
+    /immutable.*digest|digest.*immutable/iu,
+  );
+
+  const swappedImages = clone(gate);
+  [
+    swappedImages.approvedRelease.images['edge-web'],
+    swappedImages.approvedRelease.images.runtime,
+  ] = [
+    swappedImages.approvedRelease.images.runtime,
+    swappedImages.approvedRelease.images['edge-web'],
+  ];
+  assert.throws(
+    () => validateProvisioningGate(swappedImages, topology),
+    /image role|approved release/iu,
+  );
+
+  const publicApi = clone(gate);
+  const services = /** @type {Array<Record<string, any>>} */ (
+    publicApi.projects[0].services
+  );
+  const publicApiService = services.find(({ name }) => name === 'silmer-api');
+  assert.ok(publicApiService);
+  publicApiService.publicPorts = [8000];
+
+  assert.throws(
+    () => validateProvisioningGate(publicApi, topology),
+    /public port|exposure/iu,
+  );
+});
+
+test('rejects sensitive material in operational evidence', async () => {
+  const topology = await json('ops/easypanel/topology.json');
+  const gate = await json('ops/easypanel/provisioning-gate.json');
+  const leakedCredential = clone(gate);
+  leakedCredential.projects[0].password = 'synthetic-placeholder';
+
+  assert.throws(
+    () => validateProvisioningGate(leakedCredential, topology),
+    /sensitive|credential|secret/iu,
+  );
+});
+
+test('rejects a fully passed operational gate while accepted risks remain', async () => {
+  const topology = await json('ops/easypanel/topology.json');
+  const gate = await json('ops/easypanel/provisioning-gate.json');
+  const falseCompletion = clone(gate);
+  falseCompletion.status = 'passed';
+  falseCompletion.projects[0].status = 'passed';
+
+  assert.throws(
+    () => validateProvisioningGate(falseCompletion, topology),
+    /completed|passed|blocker/iu,
   );
 });

@@ -561,8 +561,9 @@ isoladas.
 ## 16. Deploy e rollback
 
 O CI constrói uma vez e publica imagens `edge-web` e `runtime` no GHCR por SHA
-e digest. Homologação e produção recebem exatamente os mesmos digests. Produção
-exige aprovação manual e auto-deploy fica desabilitado.
+e digest. O projeto operacional compartilhado recebe somente digests aprovados,
+com promoção manual e auto-deploy desabilitado. O rollback reaponta para o
+digest anterior registrado.
 
 Migrações seguem expand/contract: uma release adiciona estrutura compatível;
 outra passa a usar; uma terceira remove somente após o rollback anterior deixar

@@ -5,7 +5,8 @@ vendas, PIX e geração da Ficha de Pedido. O produto substituirá integralmente
 Datacrazy; o piloto começa pela API oficial do WhatsApp Business.
 
 > **Estado atual:** o bootstrap do runtime (`T00.1`), a supply chain de CI e
-> imagens imutáveis (`T00.2`) e o kit local/offline de topologia (`T00.3`) estão disponíveis; as demais tarefas da Fase 0 permanecem guiadas por
+> imagens imutáveis (`T00.2`) e a decisão operacional e o gate de provisionamento
+> (`T00.3`) estão disponíveis; as demais tarefas da Fase 0 permanecem guiadas por
 > [`.specs/features/crm-mvp/tasks.md`](.specs/features/crm-mvp/tasks.md).
 
 ## Comece por aqui
@@ -52,10 +53,11 @@ Comandos individuais: `npm run typecheck`, `npm run lint`,
 `npm run build`. O build determinístico é escrito em `dist/` e inclui um
 manifesto SHA-256 sem timestamps.
 
-O contrato local de `T00.3` fica em `ops/easypanel/topology.json` e
-`ops/recovery/off-host-kit.json`. Execute `npm run validate:topology`,
+O contrato de `T00.3` fica em `ops/easypanel/topology.json`,
+`ops/easypanel/provisioning-gate.json` e `ops/recovery/off-host-kit.json`.
+Execute `npm run validate:topology`,
 `npm run test:recovery:mocks` e `npm run recovery:plan` para validar e gerar o
-plano sem rede. Provisionamento, DNS, escrow, restore e drills reais continuam
+plano sem rede. DNS, segredos, escrow, backup, restore e drills reais continuam
 externos e não são executados por esses comandos.
 
 O contrato de build único, publicação por SHA/digest, SBOM, provenance, scan e

@@ -19,6 +19,29 @@ const SYNTHETIC_CONTENTS = Object.freeze([
     ],
   },
 ]);
+const APPROVED_SUGGESTION_SCHEMA = Object.freeze({
+  type: 'object',
+  additionalProperties: false,
+  required: ['reply', 'fieldSuggestions', 'stageSuggestion', 'handoffRequired'],
+  properties: {
+    reply: { type: 'string' },
+    fieldSuggestions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['field', 'value', 'source'],
+        properties: {
+          field: { type: 'string' },
+          value: { type: 'string' },
+          source: { type: 'string' },
+        },
+      },
+    },
+    stageSuggestion: { type: ['string', 'null'] },
+    handoffRequired: { type: 'boolean' },
+  },
+});
 
 const piiPatterns = Object.freeze([
   /\b[\w.%+-]+@[\w.-]+\.[a-z]{2,}\b/iu,
@@ -99,15 +122,25 @@ export function buildEndpoint(model) {
   return `${API_ORIGIN}/${API_VERSION}/models/${model}:generateContent`;
 }
 
-/** @param {Record<string, unknown>} schema @param {number} schemaVersion */
-export function buildRequest(schema, schemaVersion) {
+/** @param {unknown} schema */
+export function validateSchemaFixture(schema) {
+  invariant(
+    JSON.stringify(schema) === JSON.stringify(APPROVED_SUGGESTION_SCHEMA),
+    'Schema fixture drifted from the outbound allowlist',
+  );
+  invariant(!containsPii(schema), 'Schema contains a personal-data pattern');
+  return schema;
+}
+
+/** @param {number} schemaVersion */
+export function buildRequest(schemaVersion) {
   invariant(
     Number.isInteger(schemaVersion),
     'Schema version must be an integer',
   );
-  invariant(!containsPii(schema), 'Schema contains a personal-data pattern');
   invariant(
-    !containsPii(SYNTHETIC_SYSTEM_INSTRUCTION) &&
+    !containsPii(APPROVED_SUGGESTION_SCHEMA) &&
+      !containsPii(SYNTHETIC_SYSTEM_INSTRUCTION) &&
       !containsPii(SYNTHETIC_CONTENTS),
     'Synthetic input contains PII',
   );
@@ -120,7 +153,7 @@ export function buildRequest(schema, schemaVersion) {
       candidateCount: 1,
       temperature: 0.2,
       responseMimeType: 'application/json',
-      responseJsonSchema: schema,
+      responseJsonSchema: APPROVED_SUGGESTION_SCHEMA,
     },
   };
 }
@@ -207,7 +240,8 @@ export async function runGeminiPrivacySmoke({
     'utf8',
   );
   const schema = JSON.parse(schemaText);
-  const body = buildRequest(schema, manifest.schemaVersion);
+  validateSchemaFixture(schema);
+  const body = buildRequest(manifest.schemaVersion);
   const schemaName = `crm_silmer_suggestion_v${manifest.schemaVersion}`;
 
   const response = await fetchImpl(endpoint, {

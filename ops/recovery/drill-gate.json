@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "task": "T07.3",
+  "originTask": "T00.3",
+  "issue": 3,
+  "mode": "recovery-drill-evidence-gate",
+  "status": "blocked",
+  "observedAt": "2026-08-31",
+  "evidencePolicy": {
+    "referencesOnly": true,
+    "hostValuesAllowed": false,
+    "piiAllowed": false,
+    "secretValuesAllowed": false
+  },
+  "evidenceRefs": [
+    "github-issue://3",
+    "repository://ops/easypanel/provisioning-gate.json"
+  ],
+  "slo": {
+    "rpoMinutes": 60,
+    "rtoMinutes": 240,
+    "approvedAdjustmentRef": null
+  },
+  "cadence": {
+    "monthlyDatabaseRestore": {
+      "status": "blocked",
+      "startedAt": null,
+      "completedAt": null,
+      "measuredRpoMinutes": null,
+      "measuredRtoMinutes": null,
+      "temporaryResourcesDestroyed": false,
+      "evidenceRefs": []
+    },
+    "quarterlyFullHostDrill": {
+      "status": "blocked",
+      "startedAt": null,
+      "completedAt": null,
+      "measuredRpoMinutes": null,
+      "measuredRtoMinutes": null,
+      "temporaryResourcesDestroyed": false,
+      "evidenceRefs": []
+    }
+  },
+  "checks": {
+    "easypanelRestorableBackup": "blocked",
+    "externalBackup": "blocked",
+    "tombstoneLedgerT063": "blocked",
+    "twoCustodianEscrow": "blocked",
+    "cleanVpsDrill": "pending",
+    "temporaryDnsDrill": "pending",
+    "objectVersionRestore": "pending",
+    "fullSmoke": "pending"
+  },
+  "checkEvidence": {
+    "easypanelRestorableBackup": [
+      "easypanel-audit://project/espectro-mvp/postgres/silmer-postgres/backups"
+    ],
+    "externalBackup": ["repository://ops/easypanel/provisioning-gate.json"],
+    "tombstoneLedgerT063": [
+      "repository://.specs/features/crm-mvp/tasks.md#T06.3"
+    ],
+    "twoCustodianEscrow": ["repository://ops/recovery/off-host-kit.json"],
+    "cleanVpsDrill": ["github-issue://3"],
+    "temporaryDnsDrill": ["github-issue://3"],
+    "objectVersionRestore": ["github-issue://3"],
+    "fullSmoke": ["github-issue://3"]
+  },
+  "blockers": [
+    {
+      "id": "easypanel-restorable-backup-missing",
+      "summary": "No restorable EasyPanel backup is evidenced.",
+      "ownerRole": "DevOps",
+      "dueGate": "before-monthly-database-restore",
+      "evidenceRefs": [
+        "easypanel-audit://project/espectro-mvp/postgres/silmer-postgres/backups"
+      ]
+    },
+    {
+      "id": "external-backup-blocked",
+      "summary": "External backup remains blocked.",
+      "ownerRole": "DevOps",
+      "dueGate": "before-monthly-database-restore",
+      "evidenceRefs": ["repository://ops/easypanel/provisioning-gate.json"]
+    },
+    {
+      "id": "tombstone-ledger-t06-3-not-implemented-or-evidenced",
+      "summary": "The T06.3 tombstone ledger is not implemented or evidenced.",
+      "ownerRole": "Backend-Privacy",
+      "dueGate": "before-any-restore-drill",
+      "evidenceRefs": ["repository://.specs/features/crm-mvp/tasks.md#T06.3"]
+    },
+    {
+      "id": "two-custodian-escrow-not-evidenced",
+      "summary": "Secret escrow with two custodians is not evidenced.",
+      "ownerRole": "DevOps-Security",
+      "dueGate": "before-quarterly-full-host-drill",
+      "evidenceRefs": ["repository://ops/recovery/off-host-kit.json"]
+    },
+    {
+      "id": "clean-vps-drill-not-executed",
+      "summary": "The clean VPS drill was not executed.",
+      "ownerRole": "DevOps",
+      "dueGate": "quarterly-full-host-drill",
+      "evidenceRefs": ["github-issue://3"]
+    },
+    {
+      "id": "temporary-dns-drill-not-executed",
+      "summary": "The temporary DNS drill was not executed.",
+      "ownerRole": "DevOps",
+      "dueGate": "quarterly-full-host-drill",
+      "evidenceRefs": ["github-issue://3"]
+    },
+    {
+      "id": "object-version-restore-not-executed",
+      "summary": "Object version restore was not executed.",
+      "ownerRole": "DevOps-Privacy",
+      "dueGate": "quarterly-full-host-drill",
+      "evidenceRefs": ["github-issue://3"]
+    },
+    {
+      "id": "full-smoke-not-executed",
+      "summary": "The full recovery smoke was not executed.",
+      "ownerRole": "QA",
+      "dueGate": "quarterly-full-host-drill",
+      "evidenceRefs": ["github-issue://3"]
+    }
+  ]
+}

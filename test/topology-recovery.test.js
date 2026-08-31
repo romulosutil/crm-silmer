@@ -9,6 +9,7 @@ import {
 } from '../scripts/validate-topology.mjs';
 import {
   buildRecoveryPlan,
+  validateRecoveryDrillGate,
   validateRecoveryKit,
 } from '../scripts/recovery-mock.mjs';
 
@@ -29,6 +30,44 @@ async function json(path) {
  */
 function clone(value) {
   return structuredClone(value);
+}
+
+/**
+ * @param {Record<string, any>} gate
+ * @returns {Record<string, any>}
+ */
+function completeRecoveryDrillGate(gate) {
+  const completed = clone(gate);
+  completed.status = 'passed';
+  completed.checks = Object.fromEntries(
+    Object.keys(completed.checks).map((name) => [name, 'passed']),
+  );
+  completed.checkEvidence = Object.fromEntries(
+    Object.keys(completed.checks).map((name) => [
+      name,
+      [`recovery-evidence://issue-3/checks/${name}/2026-08-31`],
+    ]),
+  );
+  completed.blockers = [];
+
+  const monthly = completed.cadence.monthlyDatabaseRestore;
+  monthly.status = 'passed';
+  monthly.startedAt = '2026-08-30T20:00:00Z';
+  monthly.completedAt = '2026-08-30T21:00:00Z';
+  monthly.measuredRpoMinutes = 30;
+  monthly.measuredRtoMinutes = 60;
+  monthly.temporaryResourcesDestroyed = true;
+  monthly.evidenceRefs = ['recovery-evidence://issue-3/monthly/2026-08-31'];
+
+  const quarterly = completed.cadence.quarterlyFullHostDrill;
+  quarterly.status = 'passed';
+  quarterly.startedAt = '2026-08-30T22:00:00Z';
+  quarterly.completedAt = '2026-08-31T00:00:00Z';
+  quarterly.measuredRpoMinutes = 45;
+  quarterly.measuredRtoMinutes = 120;
+  quarterly.temporaryResourcesDestroyed = true;
+  quarterly.evidenceRefs = ['recovery-evidence://issue-3/quarterly/2026-Q3'];
+  return completed;
 }
 
 test('declares the approved shared EasyPanel project and prefixed services', async () => {
@@ -124,19 +163,166 @@ test('keeps the environment template as names with empty values only', async () 
 test('builds a deterministic recovery plan from local files and mocks', async () => {
   const topology = await json('ops/easypanel/topology.json');
   const kit = await json('ops/recovery/off-host-kit.json');
+  const drillGate = await json('ops/recovery/drill-gate.json');
 
   assert.doesNotThrow(() => validateRecoveryKit(kit, topology));
-  const first = buildRecoveryPlan(topology, kit);
-  const second = buildRecoveryPlan(topology, kit);
+  assert.doesNotThrow(() => validateRecoveryDrillGate(drillGate));
+  const first = buildRecoveryPlan(topology, kit, drillGate);
+  const second = buildRecoveryPlan(topology, kit, drillGate);
 
   assert.deepEqual(first, second);
   assert.equal(first.networkAccessRequired, false);
+  assert.equal(first.drillTask, 'T07.3');
   assert.deepEqual(first.projects, ['espectro-mvp']);
   assert.ok(first.steps.some(({ action }) => action === 'apply-migrations'));
   assert.ok(
     first.steps.some(({ action }) => action === 'verify-mock-adapters'),
   );
   assert.ok(first.steps.some(({ action }) => action === 'prepare-dns-plan'));
+  assert.deepEqual(first.readiness, {
+    status: 'blocked',
+    checks: { passed: 0, pending: 4, blocked: 4 },
+    evidencePresent: { monthly: false, quarterly: false },
+    blockerIds: [
+      'easypanel-restorable-backup-missing',
+      'external-backup-blocked',
+      'tombstone-ledger-t06-3-not-implemented-or-evidenced',
+      'two-custodian-escrow-not-evidenced',
+      'clean-vps-drill-not-executed',
+      'temporary-dns-drill-not-executed',
+      'object-version-restore-not-executed',
+      'full-smoke-not-executed',
+    ],
+  });
+  assert.doesNotMatch(JSON.stringify(first.readiness), /:\/\//u);
+});
+
+test('keeps issue 3 blocked with explicit opaque recovery evidence', async () => {
+  const gate = await json('ops/recovery/drill-gate.json');
+
+  assert.doesNotThrow(() => validateRecoveryDrillGate(gate));
+  assert.equal(gate.issue, 3);
+  assert.equal(gate.task, 'T07.3');
+  assert.equal(gate.originTask, 'T00.3');
+  assert.equal(gate.status, 'blocked');
+  assert.deepEqual(Object.values(gate.checks), [
+    'blocked',
+    'blocked',
+    'blocked',
+    'blocked',
+    'pending',
+    'pending',
+    'pending',
+    'pending',
+  ]);
+  const blockers = /** @type {Array<{ evidenceRefs: string[] }>} */ (
+    gate.blockers
+  );
+  assert.ok(
+    blockers.every(({ evidenceRefs }) =>
+      evidenceRefs.every((reference) =>
+        /^(easypanel-audit|github-issue|recovery-evidence|repository):\/\/[a-zA-Z0-9._/#-]+$/u.test(
+          reference,
+        ),
+      ),
+    ),
+  );
+});
+
+test('rejects false passed recovery gates and missing cadence evidence', async () => {
+  const gate = await json('ops/recovery/drill-gate.json');
+  const falseCompletion = completeRecoveryDrillGate(gate);
+  falseCompletion.blockers = clone(gate.blockers);
+
+  assert.throws(
+    () => validateRecoveryDrillGate(falseCompletion),
+    /passed.*blocker|blocker.*passed/iu,
+  );
+
+  falseCompletion.blockers = [];
+  falseCompletion.cadence.monthlyDatabaseRestore.evidenceRefs = [];
+  assert.throws(
+    () => validateRecoveryDrillGate(falseCompletion),
+    /monthly.*evidence|evidence.*monthly/iu,
+  );
+
+  falseCompletion.cadence.monthlyDatabaseRestore.evidenceRefs = [
+    'recovery-evidence://issue-3/monthly/attempt-1',
+  ];
+  falseCompletion.cadence.monthlyDatabaseRestore.measuredRpoMinutes = null;
+  assert.throws(
+    () => validateRecoveryDrillGate(falseCompletion),
+    /timestamp|RPO|RTO|destroyed/iu,
+  );
+});
+
+test('accepts only complete, distinct, and measurable passed evidence', async () => {
+  const gate = await json('ops/recovery/drill-gate.json');
+  const completed = completeRecoveryDrillGate(gate);
+
+  assert.doesNotThrow(() => validateRecoveryDrillGate(completed));
+
+  const duplicateCadenceEvidence = clone(completed);
+  duplicateCadenceEvidence.cadence.quarterlyFullHostDrill.evidenceRefs = [
+    completed.cadence.monthlyDatabaseRestore.evidenceRefs[0],
+  ];
+  assert.throws(
+    () => validateRecoveryDrillGate(duplicateCadenceEvidence),
+    /distinct|monthly|quarterly/iu,
+  );
+
+  const missingCheckEvidence = clone(completed);
+  missingCheckEvidence.checkEvidence.fullSmoke = [];
+  assert.throws(
+    () => validateRecoveryDrillGate(missingCheckEvidence),
+    /check.*evidence|evidence.*check/iu,
+  );
+
+  const invalidAdjustment = clone(completed);
+  invalidAdjustment.cadence.quarterlyFullHostDrill.measuredRtoMinutes = 999;
+  invalidAdjustment.slo.approvedAdjustmentRef = 'repository://README.md';
+  assert.throws(
+    () => validateRecoveryDrillGate(invalidAdjustment),
+    /approved adjustment|recovery-approval/iu,
+  );
+
+  const futureEvidence = clone(completed);
+  futureEvidence.observedAt = '9999-12-31';
+  assert.throws(
+    () => validateRecoveryDrillGate(futureEvidence),
+    /future|observation date/iu,
+  );
+});
+
+test('rejects sensitive material in the recovery drill gate', async () => {
+  const gate = await json('ops/recovery/drill-gate.json');
+  const leakedHost = clone(gate);
+  leakedHost.host = '203.0.113.8';
+
+  assert.throws(
+    () => validateRecoveryDrillGate(leakedHost),
+    /sensitive.*host|host.*sensitive/iu,
+  );
+
+  const concreteEvidence = clone(gate);
+  concreteEvidence.evidenceRefs = ['https://ops.example.com/drill/3'];
+  assert.throws(
+    () => validateRecoveryDrillGate(concreteEvidence),
+    /opaque.*reference|reference.*opaque|sensitive|concrete/iu,
+  );
+
+  for (const [field, value] of [
+    ['customerCpf', '123.456.789-00'],
+    ['apiKey', 'AKIAIOSFODNN7EXAMPLE'],
+    ['internalEndpoint', 'db.internal.example.com'],
+  ]) {
+    const extraSensitiveField = clone(gate);
+    extraSensitiveField.blockers[0][field] = value;
+    assert.throws(
+      () => validateRecoveryDrillGate(extraSensitiveField),
+      /field|schema|sensitive|concrete/iu,
+    );
+  }
 });
 
 test('rejects real recovery adapters and populated digest or DNS placeholders', async () => {

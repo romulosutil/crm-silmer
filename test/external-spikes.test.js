@@ -16,6 +16,11 @@ async function json(path) {
   return JSON.parse(await readFile(new URL(path, rootUrl), 'utf8'));
 }
 
+/** @param {string} path */
+async function text(path) {
+  return readFile(new URL(path, rootUrl), 'utf8');
+}
+
 test('validates the versioned external-effect matrix and load envelope', async () => {
   const effects = await json('docs/phase0/external-effects.json');
   const envelope = await json('docs/phase0/load-envelope.json');
@@ -94,4 +99,29 @@ test('does not convert local evidence into external approval claims', async () =
   assert.equal(envelope.approval.approved, false);
   assert.ok(effectList.some(({ status }) => status === 'pending-live'));
   assert.ok(effectList.some(({ status }) => status === 'pending-human'));
+});
+
+test('documents a secret-free, non-production Meta sandbox procedure', async () => {
+  const guide = await text('docs/phase0/META-SANDBOX.md');
+  const packageJson = await json('package.json');
+  const environment = await text('docs/phase0/meta-sandbox.env.example');
+
+  assert.match(guide, /T00\.4/u);
+  assert.match(guide, /\/api\/v1\/webhooks\/meta\/whatsapp/u);
+  assert.match(guide, /npm run smoke:meta:sandbox/u);
+  assert.match(guide, /PostgreSQL inbox|T02\.2/u);
+  assert.match(guide, /não.*produção|non-production/iu);
+  assert.doesNotMatch(guide, /\+55\s?\d{10,11}/u);
+  assert.equal(
+    packageJson.scripts['smoke:meta:sandbox'],
+    'node scripts/meta-sandbox-smoke.mjs',
+  );
+  for (const name of [
+    'META_GRAPH_API_VERSION',
+    'META_TEST_RECIPIENT_E164',
+    'META_TEST_DOCUMENT_URL',
+    'META_TEST_IMAGE_URL',
+  ]) {
+    assert.match(environment, new RegExp(`^${name}=$`, 'mu'));
+  }
 });

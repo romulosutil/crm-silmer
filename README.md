@@ -68,6 +68,8 @@ carga de `T00.4` estão em
 [`docs/phase0/EXTERNAL-SPIKES.md`](docs/phase0/EXTERNAL-SPIKES.md). Execute
 `npm run validate:external-spikes` e `npm run test:external-spikes`; aprovações
 humanas e provas live continuam externas e não são simuladas por esses gates.
+O runbook não produtivo do WhatsApp está em
+[`docs/phase0/META-SANDBOX.md`](docs/phase0/META-SANDBOX.md).
 
 O threat model e o catálogo de dados de `T00.5` estão em
 [`docs/phase0/THREAT-MODEL-AND-DATA-CATALOG.md`](docs/phase0/THREAT-MODEL-AND-DATA-CATALOG.md).

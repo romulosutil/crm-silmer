@@ -7,6 +7,10 @@ import {
   normalizeTraceId,
   SERVICES,
 } from '@crm-silmer/shared';
+import {
+  MetaWebhookAuthenticationError,
+  MetaWebhookPayloadError,
+} from '@crm-silmer/integration-reliability';
 
 /**
  * Creates the HTTP API without binding a socket, so callers and tests own its
@@ -16,7 +20,11 @@ import {
  * @param {{
  *   logger?: ReturnType<typeof createSafeLogger>,
  *   metrics?: MetricRegistry,
- *   readiness?: () => boolean | Promise<boolean>
+ *   readiness?: () => boolean | Promise<boolean>,
+ *   metaWebhook?: {
+ *     verifyToken: string,
+ *     process(input: {rawBody: Buffer, signature: unknown}): Promise<unknown>
+ *   }
  * }} [runtime]
  */
 export function createApi(options = {}, runtime = {}) {
@@ -103,6 +111,53 @@ export function createApi(options = {}, runtime = {}) {
 
     reply.code(503);
     return { service: SERVICES.api, status: 'unavailable' };
+  });
+
+  api.register(async (metaWebhookScope) => {
+    metaWebhookScope.addContentTypeParser(
+      'application/json',
+      { parseAs: 'buffer' },
+      (_request, body, done) => done(null, body),
+    );
+
+    metaWebhookScope.get(
+      '/api/v1/webhooks/meta/whatsapp',
+      async (request, reply) => {
+        const query = /** @type {Record<string, unknown>} */ (request.query);
+        const challenge = query['hub.challenge'];
+        if (
+          runtime.metaWebhook &&
+          query['hub.mode'] === 'subscribe' &&
+          query['hub.verify_token'] === runtime.metaWebhook.verifyToken &&
+          typeof challenge === 'string'
+        ) {
+          return reply.type('text/plain').send(challenge);
+        }
+        return reply.code(runtime.metaWebhook ? 403 : 503).send();
+      },
+    );
+
+    metaWebhookScope.post(
+      '/api/v1/webhooks/meta/whatsapp',
+      async (request, reply) => {
+        if (!runtime.metaWebhook) return reply.code(503).send();
+        try {
+          const result = await runtime.metaWebhook.process({
+            rawBody: /** @type {Buffer} */ (request.body),
+            signature: request.headers['x-hub-signature-256'],
+          });
+          return reply.code(200).send(result);
+        } catch (error) {
+          if (error instanceof MetaWebhookAuthenticationError) {
+            return reply.code(401).send();
+          }
+          if (error instanceof MetaWebhookPayloadError) {
+            return reply.code(400).send();
+          }
+          throw error;
+        }
+      },
+    );
   });
 
   // Temporary compatibility for the T00.1 container contract.

@@ -1,6 +1,10 @@
 import { pathToFileURL } from 'node:url';
 
 import { createDatabase } from '@crm-silmer/database';
+import {
+  InMemoryMetaEventStore,
+  processMetaWebhook,
+} from '@crm-silmer/integration-reliability';
 import { createApi } from './app.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
@@ -11,18 +15,45 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  * @param {{
  *   database?: ReturnType<typeof createDatabase>,
  *   logger?: ReturnType<typeof createSafeLogger>,
- *   readiness?: () => boolean | Promise<boolean>
+ *   readiness?: () => boolean | Promise<boolean>,
+ *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>
  * }} [runtime]
  */
 export function createServerApi(runtime = {}) {
   const logger = runtime.logger ?? createSafeLogger({ service: SERVICES.api });
   const readiness = runtime.readiness ?? runtime.database?.readiness;
-  const api = createApi({}, { ...runtime, logger, readiness });
+  const metaWebhook = runtime.metaWebhook ?? createMetaWebhookRuntime();
+  const api = createApi({}, { ...runtime, logger, metaWebhook, readiness });
   const database = runtime.database;
   if (database) {
     api.addHook('onClose', () => database.close());
   }
   return api;
+}
+
+/**
+ * The Phase 0 sandbox store proves the webhook boundary and replay behavior in
+ * one process. T02.2 replaces it with the PostgreSQL inbox before production.
+ *
+ * @param {Record<string, string|undefined>} [environment]
+ */
+export function createMetaWebhookRuntime(environment = process.env) {
+  const appSecret = environment.META_APP_SECRET;
+  const verifyToken = environment.META_VERIFY_TOKEN;
+  if (!appSecret || !verifyToken) return undefined;
+
+  const eventStore = new InMemoryMetaEventStore();
+  return Object.freeze({
+    verifyToken,
+    /** @param {{rawBody: Buffer, signature: unknown}} input */
+    process: (input) =>
+      processMetaWebhook({
+        appSecret,
+        eventStore,
+        onEvent: async () => undefined,
+        ...input,
+      }),
+  });
 }
 
 if (

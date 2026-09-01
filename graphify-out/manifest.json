@@ -155,9 +155,9 @@
     "semantic_hash": "ee73cc92676a528a57f11629d9d26832"
   },
   "package.json": {
-    "mtime": 1788229746.9550967,
-    "ast_hash": "91fd231716e55f7e62d6166e6567639d",
-    "semantic_hash": "91fd231716e55f7e62d6166e6567639d"
+    "mtime": 1788275912.9568071,
+    "ast_hash": "8cfe01c8f0a8dc6e8a723bca337a9a72",
+    "semantic_hash": ""
   },
   "scripts/build.mjs": {
     "mtime": 1788188248.1146262,
@@ -350,9 +350,9 @@
     "semantic_hash": "88171f233d4aaf5636eaf25d4553e04c"
   },
   "docs/phase0/OBSERVABILITY-AND-HARDENING.md": {
-    "mtime": 1788069156.03451,
-    "ast_hash": "d826f7727a16bed006d1551b21655191",
-    "semantic_hash": "d826f7727a16bed006d1551b21655191"
+    "mtime": 1788275948.224923,
+    "ast_hash": "33362b7b10949723961ced09cdf189f3",
+    "semantic_hash": ""
   },
   "modules/audit-privacy/package.json": {
     "mtime": 1788070634.4251494,
@@ -833,5 +833,20 @@
     "mtime": 1788275311.159694,
     "ast_hash": "5d3adf3e92b6a303b79d1e72b414dc3e",
     "semantic_hash": "5d3adf3e92b6a303b79d1e72b414dc3e"
+  },
+  "scripts/observability-live-probe.mjs": {
+    "mtime": 1788276012.3882449,
+    "ast_hash": "1f538640b60f85f497cba06829ad2fe6",
+    "semantic_hash": ""
+  },
+  "test/observability-live-probe.test.js": {
+    "mtime": 1788275862.9489682,
+    "ast_hash": "773e1cbb2dbb4644b2ec449e1bf4aeb7",
+    "semantic_hash": ""
+  },
+  "ops/observability/README.md": {
+    "mtime": 1788275925.888398,
+    "ast_hash": "7a04f711be4fa2d6ef50526450e09a72",
+    "semantic_hash": ""
   }
 }

@@ -60,9 +60,9 @@
     "semantic_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5"
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788265876.0407948,
-    "ast_hash": "81aaff794c4fba351b7064deab74b590",
-    "semantic_hash": "81aaff794c4fba351b7064deab74b590"
+    "mtime": 1788287215.873267,
+    "ast_hash": "4058b38c8bf3a3591e43203107eabb57",
+    "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
     "mtime": 1788222949.6227882,
@@ -100,19 +100,19 @@
     "semantic_hash": "b3013e4c88eea8951416bb45c9811105"
   },
   "apps/api/package.json": {
-    "mtime": 1788146943.9267347,
-    "ast_hash": "a601fa9533427376b491ac62ebd70051",
-    "semantic_hash": "a601fa9533427376b491ac62ebd70051"
+    "mtime": 1788286045.1856935,
+    "ast_hash": "a12804bfff21026c786a3d58d04b4f69",
+    "semantic_hash": ""
   },
   "apps/api/src/app.js": {
-    "mtime": 1788146943.9252186,
-    "ast_hash": "4ede8a17f27afac09270fb0b5a76720b",
-    "semantic_hash": "4ede8a17f27afac09270fb0b5a76720b"
+    "mtime": 1788285775.8252416,
+    "ast_hash": "6408f74dd72d907af1e0de2bfb1cf498",
+    "semantic_hash": ""
   },
   "apps/api/src/server.js": {
-    "mtime": 1788147215.567788,
-    "ast_hash": "972212a42458e1a83d2b62e497598494",
-    "semantic_hash": "972212a42458e1a83d2b62e497598494"
+    "mtime": 1788286087.360101,
+    "ast_hash": "3605a60e9d5b13523867d3efc38036c0",
+    "semantic_hash": ""
   },
   "apps/edge-web/package.json": {
     "mtime": 1788064962.1989732,
@@ -120,9 +120,9 @@
     "semantic_hash": "dc89800cb273b32792711169f1363d0f"
   },
   "apps/edge-web/src/app.js": {
-    "mtime": 1788065075.030842,
-    "ast_hash": "68ab80d817f9bda9e12e54a8b5a6d83f",
-    "semantic_hash": "68ab80d817f9bda9e12e54a8b5a6d83f"
+    "mtime": 1788286746.2385843,
+    "ast_hash": "8a228c18622fed5f1084c2314e9898c4",
+    "semantic_hash": ""
   },
   "apps/worker/package.json": {
     "mtime": 1788064962.2133887,
@@ -160,9 +160,9 @@
     "semantic_hash": ""
   },
   "scripts/build.mjs": {
-    "mtime": 1788188248.1146262,
-    "ast_hash": "37fb2ca0d299128022639ef04ebdecf7",
-    "semantic_hash": "37fb2ca0d299128022639ef04ebdecf7"
+    "mtime": 1788286695.6280482,
+    "ast_hash": "7cf560c661ddf0a5789c4a0ad9555d32",
+    "semantic_hash": ""
   },
   "scripts/check-boundaries.mjs": {
     "mtime": 1788065075.0333579,
@@ -175,9 +175,9 @@
     "semantic_hash": "99190e87f82d728cd04f8b838fbd57ae"
   },
   "apps/edge-web/src/index.html": {
-    "mtime": 1788064962.2009745,
-    "ast_hash": "73fd58879d9d4f8c917ca804d6781fee",
-    "semantic_hash": "73fd58879d9d4f8c917ca804d6781fee"
+    "mtime": 1788286717.6625319,
+    "ast_hash": "e4ecdc81567034500720c106fb233f2d",
+    "semantic_hash": ""
   },
   "playwright.config.js": {
     "mtime": 1788065818.0882385,
@@ -195,9 +195,9 @@
     "semantic_hash": "bbb5f239eabae3ed9885d1fe84b42460"
   },
   "test/e2e/foundation.spec.js": {
-    "mtime": 1788065940.2949476,
-    "ast_hash": "a9e4df3cc208c2f1ef03009343ffc9b2",
-    "semantic_hash": "a9e4df3cc208c2f1ef03009343ffc9b2"
+    "mtime": 1788286717.9798422,
+    "ast_hash": "d06d3cffc5b7c1d2096b336754dc1a1c",
+    "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
     "mtime": 1788265876.039289,
@@ -215,9 +215,9 @@
     "semantic_hash": "e645a9b6d312824024f23b5f020ba5fe"
   },
   "ops/easypanel/topology.json": {
-    "mtime": 1788219259.3157444,
-    "ast_hash": "b4778e5552e8f23a40e94359b89dd0df",
-    "semantic_hash": "b4778e5552e8f23a40e94359b89dd0df"
+    "mtime": 1788286970.4803016,
+    "ast_hash": "31ae6eb68ced278c63bd98cccdd33f96",
+    "semantic_hash": ""
   },
   "ops/recovery/off-host-kit.json": {
     "mtime": 1788137773.8288994,
@@ -360,14 +360,14 @@
     "semantic_hash": "6e6005c7e8fe8bf8cc261a65930d5413"
   },
   "modules/audit-privacy/src/audit-trail.js": {
-    "mtime": 1788070691.1223047,
-    "ast_hash": "1833b11843f376beb37550fdfaff12e0",
-    "semantic_hash": "1833b11843f376beb37550fdfaff12e0"
+    "mtime": 1788284568.1459641,
+    "ast_hash": "4800e78866adbcf9a919b22a1f53d1bb",
+    "semantic_hash": ""
   },
   "modules/audit-privacy/src/index.js": {
-    "mtime": 1788222409.95269,
-    "ast_hash": "6794c747337e204ec7978a5cd45da5d6",
-    "semantic_hash": "6794c747337e204ec7978a5cd45da5d6"
+    "mtime": 1788284568.148664,
+    "ast_hash": "5d60b9ee338e06345a7d151b133b75f4",
+    "semantic_hash": ""
   },
   "modules/catalog/package.json": {
     "mtime": 1788070821.1647296,
@@ -475,14 +475,14 @@
     "semantic_hash": "06477c1f686aeb6a6e1413c3ca171d59"
   },
   "modules/identity-access/src/authorization.js": {
-    "mtime": 1788071082.880687,
-    "ast_hash": "8d64e44838284600a6b141b9612fbc27",
-    "semantic_hash": "8d64e44838284600a6b141b9612fbc27"
+    "mtime": 1788285409.1830926,
+    "ast_hash": "5ec35cb3944f1172c209fc03a7afea73",
+    "semantic_hash": ""
   },
   "modules/identity-access/src/index.js": {
-    "mtime": 1788071827.0207624,
-    "ast_hash": "701548e41425ecd3236551811556b993",
-    "semantic_hash": "701548e41425ecd3236551811556b993"
+    "mtime": 1788286223.6942923,
+    "ast_hash": "dac863da6dcf96161ff55338e737c655",
+    "semantic_hash": ""
   },
   "modules/integration-reliability/package.json": {
     "mtime": 1788070634.4300582,
@@ -490,19 +490,19 @@
     "semantic_hash": "9c3ddec3305bb966982ce60079d00a75"
   },
   "modules/integration-reliability/src/idempotency.js": {
-    "mtime": 1788070827.2682736,
-    "ast_hash": "dab54ab32788d507475bc53288271aa9",
-    "semantic_hash": "dab54ab32788d507475bc53288271aa9"
+    "mtime": 1788285308.2050889,
+    "ast_hash": "6ea7ce3535ffd44440d4561c1bcf85fa",
+    "semantic_hash": ""
   },
   "modules/integration-reliability/src/index.js": {
-    "mtime": 1788146943.924713,
-    "ast_hash": "b9d07e66b1c864a5d3c1ec34d48af839",
-    "semantic_hash": "b9d07e66b1c864a5d3c1ec34d48af839"
+    "mtime": 1788284569.3163471,
+    "ast_hash": "11cb773c16bd9a177a5553762dd38363",
+    "semantic_hash": ""
   },
   "test/audit-idempotency.test.js": {
-    "mtime": 1788070808.3500013,
-    "ast_hash": "63044afbd18994db92096f2a2cd49cc0",
-    "semantic_hash": "63044afbd18994db92096f2a2cd49cc0"
+    "mtime": 1788285291.9309416,
+    "ast_hash": "2ad8f25770085845b75b0a093dd88ec6",
+    "semantic_hash": ""
   },
   "test/catalog.test.js": {
     "mtime": 1788071312.7504535,
@@ -525,9 +525,9 @@
     "semantic_hash": "6f89ce402b6a5a7dcf9b6229d931dd31"
   },
   "test/identity-session.test.js": {
-    "mtime": 1788071827.0207624,
-    "ast_hash": "5f38e8e7e7bc553987c74a0bdbb4e47a",
-    "semantic_hash": "5f38e8e7e7bc553987c74a0bdbb4e47a"
+    "mtime": 1788286223.6967916,
+    "ast_hash": "8184583d608d718be2741f5ded60afc8",
+    "semantic_hash": ""
   },
   "test/migrations-live.test.js": {
     "mtime": 1788071669.1528993,
@@ -540,14 +540,14 @@
     "semantic_hash": "64276147b62eb00ab08c4a2c68038abb"
   },
   "test/phase1-schema-live.test.js": {
-    "mtime": 1788093707.938144,
-    "ast_hash": "d8b3d06ad8b18f8afd42e7bc9d4619ad",
-    "semantic_hash": "d8b3d06ad8b18f8afd42e7bc9d4619ad"
+    "mtime": 1788284260.044448,
+    "ast_hash": "1bc10b4d5f3a2b61e0bd026e484ba578",
+    "semantic_hash": ""
   },
   "docs/phase1/IDENTITY-ACCESS-BASELINE.md": {
-    "mtime": 1788071170.8137326,
-    "ast_hash": "4cd39ce0fd2c60277051a9739c346634",
-    "semantic_hash": "4cd39ce0fd2c60277051a9739c346634"
+    "mtime": 1788287215.8742757,
+    "ast_hash": "9376f144c8a4b17f8885f2e66daa7a88",
+    "semantic_hash": ""
   },
   "modules/database/README.md": {
     "mtime": 1788071291.0091064,
@@ -847,6 +847,106 @@
   "ops/observability/README.md": {
     "mtime": 1788275925.888398,
     "ast_hash": "7a04f711be4fa2d6ef50526450e09a72",
+    "semantic_hash": ""
+  },
+  "apps/api/src/identity-routes.js": {
+    "mtime": 1788286336.2230034,
+    "ast_hash": "0bbb452172ae5c037b89f11140c6c7c7",
+    "semantic_hash": ""
+  },
+  "apps/api/src/identity-runtime.js": {
+    "mtime": 1788286977.0480354,
+    "ast_hash": "48d16bebd681bec36ff226fc9622dfc3",
+    "semantic_hash": ""
+  },
+  "modules/audit-privacy/src/postgres-audit-trail.js": {
+    "mtime": 1788285553.7241216,
+    "ast_hash": "260d110d82c29de5b66dda406c0e2857",
+    "semantic_hash": ""
+  },
+  "modules/database/migrations/0003_identity_api_hardening.expand.sql": {
+    "mtime": 1788284281.491994,
+    "ast_hash": "e088ec905a61760576b902abc065644f",
+    "semantic_hash": ""
+  },
+  "modules/identity-access/src/authentication-throttle.js": {
+    "mtime": 1788285553.7699308,
+    "ast_hash": "ed48aba40cfc0ff8c332008e8aef8d5b",
+    "semantic_hash": ""
+  },
+  "modules/identity-access/src/postgres-access.js": {
+    "mtime": 1788285409.1810853,
+    "ast_hash": "c3d7cfa8f82895d5fb1f4b3154b083a2",
+    "semantic_hash": ""
+  },
+  "modules/identity-access/src/postgres.js": {
+    "mtime": 1788284939.0947585,
+    "ast_hash": "c880700ed2e0ef5bf5ddbd2b34d18d53",
+    "semantic_hash": ""
+  },
+  "modules/integration-reliability/src/postgres-idempotency.js": {
+    "mtime": 1788285553.821098,
+    "ast_hash": "8f07e88038e5aef5debcb24884c278f4",
+    "semantic_hash": ""
+  },
+  "test/authentication-throttle.test.js": {
+    "mtime": 1788285553.842042,
+    "ast_hash": "40d1c3f478dcfd2e4865037129f48e32",
+    "semantic_hash": ""
+  },
+  "test/identity-api-live.test.js": {
+    "mtime": 1788287144.2436128,
+    "ast_hash": "f16208dbe150ad4e29ba30064e19d47a",
+    "semantic_hash": ""
+  },
+  "test/identity-api.test.js": {
+    "mtime": 1788286336.2230034,
+    "ast_hash": "e9abde337322497c88992b9ba645f0af",
+    "semantic_hash": ""
+  },
+  "test/identity-contract.test.js": {
+    "mtime": 1788286996.428714,
+    "ast_hash": "1443a4458339d36a03fe5d05ea4379c5",
+    "semantic_hash": ""
+  },
+  "test/identity-postgres-live.test.js": {
+    "mtime": 1788284946.0321274,
+    "ast_hash": "040649673e0913113a1f9bb06df3b455",
+    "semantic_hash": ""
+  },
+  "test/identity-runtime-config.test.js": {
+    "mtime": 1788286196.8898146,
+    "ast_hash": "4015eac118b25477aeff173cd68f313d",
+    "semantic_hash": ""
+  },
+  "test/postgres-access-control.test.js": {
+    "mtime": 1788285553.9188411,
+    "ast_hash": "9a1d41e626cc641c715d535f9311c5e7",
+    "semantic_hash": ""
+  },
+  "test/postgres-audit-live.test.js": {
+    "mtime": 1788284687.1431315,
+    "ast_hash": "9170eefdcc2902745683fd33895f2c64",
+    "semantic_hash": ""
+  },
+  "test/postgres-idempotency-live.test.js": {
+    "mtime": 1788285553.943119,
+    "ast_hash": "d64a42315a9055272f7e03a4ea629f41",
+    "semantic_hash": ""
+  },
+  "test/postgres-idempotency.test.js": {
+    "mtime": 1788285553.9652376,
+    "ast_hash": "c0b5093834ca011495ad323ba0e449c3",
+    "semantic_hash": ""
+  },
+  "docs/api/openapi.v1.yaml": {
+    "mtime": 1788286970.476542,
+    "ast_hash": "7a64c710e0aae0f6ce74b6a554039d71",
+    "semantic_hash": ""
+  },
+  "docs/runbooks/identity-access.md": {
+    "mtime": 1788287135.3424115,
+    "ast_hash": "7dbd0fa55230fc1ea8c04c8128a5451c",
     "semantic_hash": ""
   }
 }

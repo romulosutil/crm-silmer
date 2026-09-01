@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer  (2026-09-01)
 
 ## Corpus Check
-- 162 files · ~98,547 words
+- 181 files · ~114,322 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1343 nodes · 1739 edges · 160 communities (111 shown, 49 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.73)
+- 1480 nodes · 1992 edges · 172 communities (117 shown, 55 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.76)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `18d67536`
+- Built from commit: `c14b667b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -27,15 +27,15 @@
 - scripts
 - T00.4 — Sandbox da Meta
 - Recovery Plan Validation
-- Catalog Service and Versioning
+- catalog-version.js
 - PDF Review and Generation
 - TypeScript Configuration
 - Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?
-- api/package.json
+- dependencies
 - EasyPanel Infrastructure Topology
 - Field Mapping and Inventory
 - MVP Product Specification
-- Identity and Access Service
+- identity-access/src/index.js
 - Gemini Privacy Smoke Test
 - Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?
 - Security Catalog Validation
@@ -89,7 +89,7 @@
 - Phase 7: Hardening and UAT
 - Edge Web Package
 - Observability and Hardening Gate
-- Identity Access Baseline
+- Baseline de identidade e acesso da Fase 1
 - Security Policy and Dependabot
 - Human Approval Evidence
 - Workspace Boundary Checks
@@ -111,7 +111,7 @@
 - Technical Foundation Summary
 - Query: P0.5 Definições FAB e Numeração
 - Prettier Formatting Rules
-- Edge Web App
+- edge-web/src/app.js
 - Governance and Workflow
 - Validation and CI Workflow
 - ESLint Configuration
@@ -167,35 +167,47 @@
 - Query: P0.7 Modelagem de Roles
 - Query: Requisitos e Tarefas Issue #1
 - Query: Escopo e Requisitos Issue #6
-- idempotency.js
+- identity-routes.js
 - observability.js
 - validate-observability.mjs
 - WorkerRuntime
 - CRM Silmer
+- migrations.test.js
+- identity-runtime.js
+- Runbook de identidade e acesso
+- authentication-throttle.js
+- postgres.js
+- createPostgresAccessRepository
+- identity-api-live.test.js
+- TransactionClient
+- identity-contract.test.js
+- 0003_identity_api_hardening.expand.sql
+- RecordingQueryable
+- crm.idempotency_records
 
 ## God Nodes (most connected - your core abstractions)
 1. `scripts` - 39 edges
 2. `TDD — CRM Silmer MVP` - 22 edges
 3. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
 4. `Design do CRM Silmer` - 16 edges
-5. `Topologia EasyPanel — CRM Silmer` - 15 edges
-6. `compilerOptions` - 13 edges
-7. `runR2LiveSmoke()` - 13 edges
-8. `normalizeConfigurationValues()` - 12 edges
-9. `invariant()` - 12 edges
-10. `Passagem de Produto para Tech Lead` - 12 edges
+5. `loadMigrations()` - 15 edges
+6. `Topologia EasyPanel — CRM Silmer` - 15 edges
+7. `createSafeLogger()` - 14 edges
+8. `compilerOptions` - 13 edges
+9. `runR2LiveSmoke()` - 13 edges
+10. `normalizeConfigurationValues()` - 12 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `createMetaWebhookRuntime()` --calls--> `processMetaWebhook()`  [EXTRACTED]
-  apps/api/src/server.js → modules/integration-reliability/src/meta-sandbox.js
+- `createIdempotentCommandExecutor()` --indirect_call--> `request()`  [INFERRED]
+  modules/integration-reliability/src/idempotency.js → apps/edge-web/src/app.js
+- `createR2S3Client()` --indirect_call--> `request()`  [INFERRED]
+  scripts/r2-live-smoke.mjs → apps/edge-web/src/app.js
+- `createCatalogService()` --indirect_call--> `select()`  [INFERRED]
+  modules/catalog/src/application/catalog-service.js → apps/edge-web/src/app.js
 - `harness()` --calls--> `createCatalogService()`  [EXTRACTED]
   test/catalog.test.js → modules/catalog/src/application/catalog-service.js
 - `createHarness()` --calls--> `createConfigurationService()`  [EXTRACTED]
   test/configuration.test.js → modules/configuration/src/application/configuration-service.js
-- `capture()` --calls--> `createSafeLogger()`  [EXTRACTED]
-  test/observability.test.js → modules/shared/src/observability.js
-- `Vendedor Silmer (AI Agent)` --references--> `Crazy API (WhatsApp)`  [INFERRED]
-  .specs/features/crm-mvp/context.md → historico-datacrazy/DATACRAZY-SETUP.md
 
 ## Import Cycles
 - None detected.
@@ -213,11 +225,11 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (160 total, 49 thin omitted)
+## Communities (172 total, 55 thin omitted)
 
 ### Community 0 - "observability.test.js"
 Cohesion: 0.31
-Nodes (11): createApi(), createMetaWebhookRuntime(), createServerApi(), SERVICES, createSafeLogger(), normalizeTraceId(), assertNoCanaries(), canaries (+3 more)
+Nodes (11): createApi(), createServerApi(), SERVICES, createSafeLogger(), normalizeTraceId(), harness(), assertNoCanaries(), canaries (+3 more)
 
 ### Community 1 - "TDD and Project Strategy"
 Cohesion: 0.05
@@ -244,12 +256,12 @@ Cohesion: 0.05
 Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e conteúdo, 13. Arquitetura de implementação visual, 14. Critérios de aceite do design system, 15. Antipadrões proibidos, 1. Objetivo, 2. Tradução da marca para o produto (+29 more)
 
 ### Community 7 - "database/src/index.js"
-Cohesion: 0.10
-Nodes (17): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+9 more)
+Cohesion: 0.19
+Nodes (11): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+3 more)
 
 ### Community 8 - "audit-privacy/src/index.js"
-Cohesion: 0.19
-Nodes (11): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), isTransientMediaExpired(), resolveTransientMediaExpiresAt() (+3 more)
+Cohesion: 0.15
+Nodes (14): AuditEventValidationError, createAuditEventEnvelope(), deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), PostgresAuditTrail (+6 more)
 
 ### Community 9 - "scripts"
 Cohesion: 0.05
@@ -263,9 +275,9 @@ Nodes (6): Ativos selecionados, Escopo e limite, Evidência de fechamento, Segre
 Cohesion: 0.13
 Nodes (28): buildRecoveryPlan(), expectedAdapterKeys, expectedBlockerKeys, expectedCadenceEntryKeys, expectedCadenceKeys, expectedDigestKeys, expectedGateKeys, expectedRecoveryCheckKeys (+20 more)
 
-### Community 12 - "Catalog Service and Versioning"
-Cohesion: 0.16
-Nodes (18): createCatalogService(), assertExactKeys(), assertNonEmptyString(), assertRecord(), createCatalogSelection(), createPublishedCatalogVersion(), deepFreeze(), immutableCatalogClone() (+10 more)
+### Community 12 - "catalog-version.js"
+Cohesion: 0.15
+Nodes (19): select(), createCatalogService(), assertExactKeys(), assertNonEmptyString(), assertRecord(), createCatalogSelection(), createPublishedCatalogVersion(), deepFreeze() (+11 more)
 
 ### Community 13 - "PDF Review and Generation"
 Cohesion: 0.17
@@ -279,9 +291,9 @@ Nodes (25): compilerOptions, allowJs, checkJs, esModuleInterop, forceConsistentC
 Cohesion: 0.50
 Nodes (3): Answer, Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?, Source Nodes
 
-### Community 16 - "api/package.json"
-Cohesion: 0.12
-Nodes (15): dependencies, @crm-silmer/database, @crm-silmer/integration-reliability, @crm-silmer/shared, fastify, @crm-silmer/shared, name, private (+7 more)
+### Community 16 - "dependencies"
+Cohesion: 0.10
+Nodes (19): dependencies, @crm-silmer/audit-privacy, @crm-silmer/database, @crm-silmer/identity-access, @crm-silmer/integration-reliability, @crm-silmer/shared, fastify, @crm-silmer/shared (+11 more)
 
 ### Community 17 - "EasyPanel Infrastructure Topology"
 Cohesion: 0.08
@@ -295,8 +307,8 @@ Nodes (22): 1. Leitura técnica do arquivo, 2.1 Identificação do pedido, 2.2 I
 Cohesion: 0.09
 Nodes (23): 10. Jornada comercial aprovada, 11. Geração e envio da Ficha, 12. Financeiro comercial do MVP, 13. Privacidade e LGPD, 14. Critérios de sucesso do piloto, 15. Gate de produto para o Tech Lead, 16. Próximo passo recomendado, 1. Visão do produto (+15 more)
 
-### Community 20 - "Identity and Access Service"
-Cohesion: 0.16
+### Community 20 - "identity-access/src/index.js"
+Cohesion: 0.15
 Nodes (14): constantTimeEqual(), createIdentityAccessService(), createInMemoryIdentityRepository(), DEFAULT_PASSWORD_PARAMETERS, deriveArgon2(), digest(), FUNCTIONS, hashPassword() (+6 more)
 
 ### Community 21 - "Gemini Privacy Smoke Test"
@@ -511,9 +523,9 @@ Nodes (4): name, private, type, version
 Cohesion: 0.40
 Nodes (4): Evidência local versionada, Gate externo ainda aberto, T00.7 — Observabilidade e hardening mínimos, Verificação local
 
-### Community 74 - "Identity Access Baseline"
-Cohesion: 0.40
-Nodes (4): Baseline de identidade e acesso da Fase 1, Gates, Invariantes operacionais, Parâmetros versionados
+### Community 74 - "Baseline de identidade e acesso da Fase 1"
+Cohesion: 0.33
+Nodes (5): Baseline de identidade e acesso da Fase 1, Gates, Invariantes operacionais, Parâmetros versionados, Superfícies entregues
 
 ### Community 75 - "Security Policy and Dependabot"
 Cohesion: 0.40
@@ -587,9 +599,13 @@ Nodes (3): json(), rootUrl, text()
 Cohesion: 0.67
 Nodes (3): Technical Baseline, Phase 0: Foundation, TDD Summary
 
+### Community 96 - "edge-web/src/app.js"
+Cohesion: 0.20
+Nodes (12): announce(), clearError(), elements, publicMessage(), readCookie(), request(), restoreSession(), showError() (+4 more)
+
 ### Community 141 - "integration-reliability/src/index.js"
-Cohesion: 0.16
-Nodes (15): createMetaMessagesClient(), deepFreeze(), extractMetaEvents(), immutableClone(), InMemoryMetaEventStore, MetaApiError, MetaWebhookAuthenticationError, MetaWebhookPayloadError (+7 more)
+Cohesion: 0.06
+Nodes (42): createMetaWebhookRuntime(), canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore (+34 more)
 
 ### Community 142 - "observability-live-probe.mjs"
 Cohesion: 0.35
@@ -631,9 +647,9 @@ Nodes (3): Answer, Q: Qual modelo Gemini oferece o melhor custo-beneficio para o
 Cohesion: 0.50
 Nodes (3): Answer, Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?, Source Nodes
 
-### Community 155 - "idempotency.js"
-Cohesion: 0.22
-Nodes (10): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+2 more)
+### Community 155 - "identity-routes.js"
+Cohesion: 0.30
+Nodes (12): IdentityRequestError, parseCookies(), publicErrorCode(), readStatusCode(), registerIdentityRoutes(), requireAuthenticatedCommand(), requireBody(), requireCookie() (+4 more)
 
 ### Community 156 - "observability.js"
 Cohesion: 0.16
@@ -647,25 +663,45 @@ Nodes (11): assertNoSensitiveFields(), invariant(), isEvidenceReference(), isIso
 Cohesion: 0.50
 Nodes (4): Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada
 
+### Community 160 - "migrations.test.js"
+Cohesion: 0.15
+Nodes (6): contractThree, expandOne, expandTwo, MigrationClient, MigrationPool, Mutex
+
+### Community 161 - "identity-runtime.js"
+Cohesion: 0.22
+Nodes (8): createIdentityApiRuntime(), IdentityHttpError, readKey(), readOrigins(), requireSecret(), database, encodedKey, environment
+
+### Community 162 - "Runbook de identidade e acesso"
+Cohesion: 0.17
+Nodes (11): Chave idempotente presa em `pending`, Escopo, Gates antes de publicar, Incidentes, Primeiro bootstrap, Rollback, Runbook de identidade e acesso, Segredos obrigatórios (+3 more)
+
+### Community 163 - "authentication-throttle.js"
+Cohesion: 0.22
+Nodes (5): createPostgresAuthenticationThrottle(), POLICIES, HMAC_KEY, NOW, RecordingDatabase
+
+### Community 164 - "postgres.js"
+Cohesion: 0.31
+Nodes (7): createPostgresIdentityRepository(), decodeEncryptedSecret(), mapFactor(), mapInvitation(), mapSession(), requireIsoString(), toIsoString()
+
 ## Knowledge Gaps
-- **695 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+690 more)
+- **719 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+714 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **49 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **55 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Plan Tasks` to `Phase 4: AI Assistant`, `Phase 7: Hardening and UAT`, `Phase 5: Commercial Flow`, `Phase 0: Foundation Tasks`, `Phase 2: Inbox and Channels`, `Phase 1: Identity and Infra`, `Phase 3: Business Kanban`, `Phase 6: Privacy and Ops`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `TDD — CRM Silmer MVP` connect `TDD and Project Strategy` to `README.md`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Why does `request()` connect `edge-web/src/app.js` to `R2 Storage Smoke Tests`, `integration-reliability/src/index.js`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
+- **Why does `createIdempotentCommandExecutor()` connect `integration-reliability/src/index.js` to `edge-web/src/app.js`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+- **Why does `createR2S3Client()` connect `R2 Storage Smoke Tests` to `edge-web/src/app.js`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _695 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _719 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `TDD and Project Strategy` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `Database Immutability and Protection` be split into smaller, more focused modules?**
   _Cohesion score 0.08846153846153847 - nodes in this community are weakly interconnected._
 - **Should `Configuration Service and Validation` be split into smaller, more focused modules?**
-  _Cohesion score 0.1141025641025641 - nodes in this community are weakly interconnected._
-- **Should `R2 Storage Smoke Tests` be split into smaller, more focused modules?**
   _Cohesion score 0.1141025641025641 - nodes in this community are weakly interconnected._

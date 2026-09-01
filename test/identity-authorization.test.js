@@ -195,8 +195,8 @@ test('classifies malformed targets separately from forbidden ACL changes', async
     }),
     (error) =>
       error instanceof AccessControlError &&
-      error.statusCode === 400 &&
-      error.code === 'INVALID_REQUEST',
+      error.statusCode === 404 &&
+      error.code === 'NOT_FOUND',
   );
   await assert.rejects(
     service.grantCapability({

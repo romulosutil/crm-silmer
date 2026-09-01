@@ -25,6 +25,15 @@ function harness(options = {}) {
     /** @param {Record<string, unknown>} input */
     changeCapability: async (input) => {
       calls.push({ input, operation: 'capability' });
+      if (input.targetId === 'missing-user') {
+        const error =
+          /** @type {Error & {code: string, statusCode: number}} */ (
+            new Error('Missing capability target')
+          );
+        error.code = 'NOT_FOUND';
+        error.statusCode = 404;
+        throw error;
+      }
       return { changed: true };
     },
     /** @param {Record<string, unknown>} input */
@@ -159,6 +168,30 @@ test('authenticated commands require matching Origin, CSRF cookie and header', a
   assert.equal(calls[0].input.sessionToken, 'session');
   assert.equal(calls[0].input.csrfToken, 'csrf-one');
   assert.equal(calls[0].input.idempotencyKey, 'capability-request-1');
+  await api.close();
+});
+
+test('returns a stable 404 without leaking internals for a missing capability target', async () => {
+  const { api } = harness();
+  const response = await api.inject({
+    headers: {
+      cookie: 'crm_session=session; crm_csrf=csrf',
+      'idempotency-key': 'missing-target-request-1',
+      origin: ORIGIN,
+      'x-csrf-token': 'csrf',
+    },
+    method: 'POST',
+    payload: {
+      capability: 'PRIVACY_OFFICER',
+      reason: 'Alvo inexistente',
+      targetId: 'missing-user',
+    },
+    url: '/api/v1/capabilities/grant',
+  });
+
+  assert.equal(response.statusCode, 404);
+  assert.deepEqual(response.json(), { error: { code: 'NOT_FOUND' } });
+  assert.doesNotMatch(response.body, /missing capability target/iu);
   await api.close();
 });
 

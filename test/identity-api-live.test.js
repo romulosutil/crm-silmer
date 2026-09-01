@@ -146,9 +146,9 @@ if (connectionString) {
         },
         url: '/api/v1/capabilities/grant',
       });
-      assert.equal(missingTarget.statusCode, 400);
+      assert.equal(missingTarget.statusCode, 404);
       assert.deepEqual(missingTarget.json(), {
-        error: { code: 'INVALID_REQUEST' },
+        error: { code: 'NOT_FOUND' },
       });
 
       const selfGrant = await api.inject({

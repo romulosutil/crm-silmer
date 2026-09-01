@@ -60,9 +60,9 @@
     "semantic_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5"
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788227213.5523772,
-    "ast_hash": "ee9f0b20b86b19628e5ca4f5402c23fc",
-    "semantic_hash": "ee9f0b20b86b19628e5ca4f5402c23fc"
+    "mtime": 1788230036.0228338,
+    "ast_hash": "8f2751c08b75c0d860b287470dca6900",
+    "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
     "mtime": 1788226030.8847384,
@@ -245,9 +245,9 @@
     "semantic_hash": "d7566c119163e8b76123c0b45b566b8a"
   },
   "docs/phase0/external-effects.json": {
-    "mtime": 1788227236.330333,
-    "ast_hash": "d550039a1f88856991297d4a9707cac5",
-    "semantic_hash": "d550039a1f88856991297d4a9707cac5"
+    "mtime": 1788230036.0212278,
+    "ast_hash": "db7ce5fdbb729f86ea0f3b8d246884e9",
+    "semantic_hash": ""
   },
   "docs/phase0/load-envelope.json": {
     "mtime": 1788222462.3799722,
@@ -270,19 +270,19 @@
     "semantic_hash": "f660cb5acfdbdc382ca197827bde8182"
   },
   "scripts/validate-external-spikes.mjs": {
-    "mtime": 1788226030.9211116,
-    "ast_hash": "c53c885f3c7ebd803e51f39fb83f56c1",
-    "semantic_hash": "c53c885f3c7ebd803e51f39fb83f56c1"
+    "mtime": 1788230036.0192156,
+    "ast_hash": "df2a9bfa9f8a15f3659007e405efa20f",
+    "semantic_hash": ""
   },
   "test/external-spikes.test.js": {
-    "mtime": 1788226030.9251115,
-    "ast_hash": "72cf8c9daa9e122c242f0b33c31de003",
-    "semantic_hash": "72cf8c9daa9e122c242f0b33c31de003"
+    "mtime": 1788230123.9590738,
+    "ast_hash": "5bcea87d40f7ae5f32b4a038e7ea1c14",
+    "semantic_hash": ""
   },
   "docs/phase0/EXTERNAL-SPIKES.md": {
-    "mtime": 1788227213.5538971,
-    "ast_hash": "db83758cb9d265b456ec4cb05aeb99b1",
-    "semantic_hash": "db83758cb9d265b456ec4cb05aeb99b1"
+    "mtime": 1788230036.025139,
+    "ast_hash": "565b1cf876b7c7daf60413c387233126",
+    "semantic_hash": ""
   },
   "docs/phase0/data-catalog.json": {
     "mtime": 1788226030.8953192,
@@ -675,9 +675,9 @@
     "semantic_hash": "ac1ef685732d2a1e9594f4e62c772211"
   },
   "docs/phase0/ficha-pdf-approval.json": {
-    "mtime": 1788227236.332344,
-    "ast_hash": "6174b326b6b56015a317e8a63cf75416",
-    "semantic_hash": "6174b326b6b56015a317e8a63cf75416"
+    "mtime": 1788230036.0171363,
+    "ast_hash": "b17639809457c54161b8efe71ebfbbf4",
+    "semantic_hash": ""
   },
   "docs/phase0/ficha-pdf-synthetic.json": {
     "mtime": 1788227236.3348584,
@@ -690,14 +690,14 @@
     "semantic_hash": "45ee0ad1b364d4aa25169d4f602198c4"
   },
   "test/ficha-pdf-review.test.js": {
-    "mtime": 1788227236.3469336,
-    "ast_hash": "344d9a0b3e131506f764f25c69f5cbfc",
-    "semantic_hash": "344d9a0b3e131506f764f25c69f5cbfc"
+    "mtime": 1788229942.9088397,
+    "ast_hash": "4dd9c4a735a30158354c00e057e7b7be",
+    "semantic_hash": ""
   },
   "docs/phase0/FICHA-PDF-REVIEW.md": {
-    "mtime": 1788227236.3283129,
-    "ast_hash": "616036e0f2087a18722309ce3c14541a",
-    "semantic_hash": "616036e0f2087a18722309ce3c14541a"
+    "mtime": 1788230172.473978,
+    "ast_hash": "7fc20ce1c751b7b7f975e67f8d871ac4",
+    "semantic_hash": ""
   },
   "graphify-out/memory/query_20260901_004317_como_o_pacote_da_issue_7_valida_o_pdf_canonico_da.md": {
     "mtime": 1788223397.0527775,
@@ -718,5 +718,10 @@
     "mtime": 1788227236.3373814,
     "ast_hash": "145cdbf5bfbe1f56300c52b7431248df",
     "semantic_hash": "145cdbf5bfbe1f56300c52b7431248df"
+  },
+  "docs/phase0/ficha-pdf-approved-evidence-v2.json": {
+    "mtime": 1788230036.0161345,
+    "ast_hash": "4a93e38bc88efcd8d89ab4db2f52e5f6",
+    "semantic_hash": ""
   }
 }

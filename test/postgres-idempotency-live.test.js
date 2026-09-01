@@ -125,7 +125,20 @@ if (connectionString) {
         effects += 1;
         throw new Error('coalesced callback must not run');
       });
-      await Promise.resolve();
+      const secondState = await Promise.race([
+        second.then(
+          () => 'settled',
+          () => 'settled',
+        ),
+        new Promise((resolve) => {
+          setTimeout(() => resolve('waiting'), 50);
+        }),
+      ]);
+      assert.equal(
+        secondState,
+        'waiting',
+        'the conflicting insert must wait for the owning transaction',
+      );
       releaseEffect(undefined);
 
       const [firstResponse, secondResponse] = await Promise.all([

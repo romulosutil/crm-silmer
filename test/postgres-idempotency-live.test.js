@@ -128,7 +128,10 @@ if (connectionString) {
       await Promise.resolve();
       releaseEffect(undefined);
 
-      const [firstResponse, secondResponse] = await Promise.all([first, second]);
+      const [firstResponse, secondResponse] = await Promise.all([
+        first,
+        second,
+      ]);
       assert.deepEqual(secondResponse, firstResponse);
       assert.notEqual(secondResponse, firstResponse);
       assert.equal(effects, 1);
@@ -151,7 +154,9 @@ if (connectionString) {
       );
       assert.equal(stored.rows[0].status, 'completed');
       assert.equal(
-        stored.rows[0].response_text.includes(`encrypted-response-canary-${runId}`),
+        stored.rows[0].response_text.includes(
+          `encrypted-response-canary-${runId}`,
+        ),
         false,
       );
 

@@ -94,7 +94,10 @@ test('supports asynchronous repository ports used by PostgreSQL adapters', async
     totpCode: service.currentTotpForTesting(Buffer.alloc(20, 3)),
   });
 
-  assert.equal((await service.authenticate(login.sessionToken)).userId, user.id);
+  assert.equal(
+    (await service.authenticate(login.sessionToken)).userId,
+    user.id,
+  );
   await service.logout(login.sessionToken);
   await assert.rejects(service.authenticate(login.sessionToken), /session/iu);
 });
@@ -109,11 +112,7 @@ test('delegates active-session validation and touch to atomic repository operati
     /** @param {string} tokenHash @param {string} touchedAt @param {string} idleExpiresBefore */
     authenticateSession: async (tokenHash, touchedAt, idleExpiresBefore) => {
       calls.push('authenticate');
-      return base.authenticateSession(
-        tokenHash,
-        touchedAt,
-        idleExpiresBefore,
-      );
+      return base.authenticateSession(tokenHash, touchedAt, idleExpiresBefore);
     },
     findSession: () => {
       throw new Error('non-atomic session lookup used');

@@ -41,11 +41,7 @@ test('maps ACL users and records the grant authority', async () => {
   const grant = database.queries.find(({ sql }) =>
     sql.includes('INSERT INTO crm.user_capabilities'),
   );
-  assert.deepEqual(grant?.values, [
-    'seller-1',
-    'PRIVACY_OFFICER',
-    'admin-1',
-  ]);
+  assert.deepEqual(grant?.values, ['seller-1', 'PRIVACY_OFFICER', 'admin-1']);
 });
 
 test('revokes a capability and every active session at the supplied instant', async () => {

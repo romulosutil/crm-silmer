@@ -24,7 +24,7 @@ function requireQueryable(candidate, field) {
   if (
     candidate === null ||
     typeof candidate !== 'object' ||
-    typeof /** @type {Record<string, unknown>} */ (candidate).query !==
+    typeof (/** @type {Record<string, unknown>} */ (candidate).query) !==
       'function'
   ) {
     throw new TypeError(`${field} must implement query`);

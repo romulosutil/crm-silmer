@@ -1,8 +1,4 @@
-import {
-  createCipheriv,
-  createDecipheriv,
-  randomBytes,
-} from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 import { IdempotencyConflictError } from './idempotency.js';
 
@@ -68,10 +64,14 @@ export class PostgresIdempotencyRecordStore {
       typeof database.query !== 'function' ||
       typeof database.transaction !== 'function'
     ) {
-      throw new TypeError('A transactional PostgreSQL database port is required');
+      throw new TypeError(
+        'A transactional PostgreSQL database port is required',
+      );
     }
     if (!Buffer.isBuffer(envelopeKey) || envelopeKey.length !== 32) {
-      throw new TypeError('A 32-byte idempotency response envelope key is required');
+      throw new TypeError(
+        'A 32-byte idempotency response envelope key is required',
+      );
     }
     this.#database = database;
     this.#envelopeKey = Buffer.from(envelopeKey);

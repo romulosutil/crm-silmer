@@ -475,8 +475,8 @@
     "semantic_hash": "06477c1f686aeb6a6e1413c3ca171d59"
   },
   "modules/identity-access/src/authorization.js": {
-    "mtime": 1788287853.5166981,
-    "ast_hash": "e1fbd9156315eb5ad51c13bbdfee0b1a",
+    "mtime": 1788299854.8718495,
+    "ast_hash": "80a5e5d640cf0deff2d18e2cb4100b75",
     "semantic_hash": ""
   },
   "modules/identity-access/src/index.js": {
@@ -520,8 +520,8 @@
     "semantic_hash": "8cd9296e861cbc0bd4eee129c76cdcce"
   },
   "test/identity-authorization.test.js": {
-    "mtime": 1788287891.074442,
-    "ast_hash": "3b54a07b7768b9fbc693f10fe40d74a0",
+    "mtime": 1788299802.2143734,
+    "ast_hash": "f2c0c4887adbd85874874924e0d32d97",
     "semantic_hash": ""
   },
   "test/identity-session.test.js": {
@@ -850,8 +850,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/identity-routes.js": {
-    "mtime": 1788287853.5206983,
-    "ast_hash": "21a7ad467c32b74325724dfba12af3fd",
+    "mtime": 1788299842.0248249,
+    "ast_hash": "7d2c2ec050d937af346f946321ad1fdd",
     "semantic_hash": ""
   },
   "apps/api/src/identity-runtime.js": {
@@ -895,18 +895,18 @@
     "semantic_hash": ""
   },
   "test/identity-api-live.test.js": {
-    "mtime": 1788288133.5097418,
-    "ast_hash": "87e03715633c7dbcfcf041a85626b30e",
+    "mtime": 1788299802.2153769,
+    "ast_hash": "f499acfb92e1c53e7b320101c3dd190c",
     "semantic_hash": ""
   },
   "test/identity-api.test.js": {
-    "mtime": 1788287944.1839194,
-    "ast_hash": "62a5e1ff5dba5b0d585130c7c2dc4dfc",
+    "mtime": 1788299823.989895,
+    "ast_hash": "dce3dc6ba27870ce1a2c0c854c18a37a",
     "semantic_hash": ""
   },
   "test/identity-contract.test.js": {
-    "mtime": 1788286996.428714,
-    "ast_hash": "1443a4458339d36a03fe5d05ea4379c5",
+    "mtime": 1788299802.2173767,
+    "ast_hash": "dd4bf9f91da3b43d2b733aa3e1b1ea48",
     "semantic_hash": ""
   },
   "test/identity-postgres-live.test.js": {
@@ -930,8 +930,8 @@
     "semantic_hash": ""
   },
   "test/postgres-idempotency-live.test.js": {
-    "mtime": 1788285553.943119,
-    "ast_hash": "d64a42315a9055272f7e03a4ea629f41",
+    "mtime": 1788299929.9528728,
+    "ast_hash": "939a33c96ce5ebf17079ab3cbeca35de",
     "semantic_hash": ""
   },
   "test/postgres-idempotency.test.js": {
@@ -940,8 +940,8 @@
     "semantic_hash": ""
   },
   "docs/api/openapi.v1.yaml": {
-    "mtime": 1788286970.476542,
-    "ast_hash": "7a64c710e0aae0f6ce74b6a554039d71",
+    "mtime": 1788299864.0523639,
+    "ast_hash": "c7653ae6b369e95c9d59093085e87e36",
     "semantic_hash": ""
   },
   "docs/runbooks/identity-access.md": {

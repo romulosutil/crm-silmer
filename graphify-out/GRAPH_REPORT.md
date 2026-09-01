@@ -1,21 +1,21 @@
 # Graph Report - crm-silmer  (2026-09-01)
 
 ## Corpus Check
-- 181 files · ~115,142 words
+- 181 files · ~115,333 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1485 nodes · 2000 edges · 165 communities (114 shown, 51 thin omitted)
+- 1486 nodes · 2001 edges · 172 communities (117 shown, 55 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.76)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e333359a`
+- Built from commit: `e6e5f07d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- integration-reliability/src/index.js
+- observability.test.js
 - TDD and Project Strategy
 - Database Immutability and Protection
 - Configuration Service and Validation
@@ -153,7 +153,7 @@
 - Risks and Mitigation
 - Runtime Architecture
 - Performance and SLOs
-- postgres-idempotency.js
+- integration-reliability/src/index.js
 - observability-live-probe.mjs
 - worker/package.json
 - T00.4 — Spikes externos
@@ -168,14 +168,21 @@
 - Query: Requisitos e Tarefas Issue #1
 - Query: Escopo e Requisitos Issue #6
 - identity-routes.js
+- observability.js
+- migrations.test.js
+- validate-observability.mjs
 - CRM Silmer
+- WorkerRuntime
 - identity-runtime.js
 - Runbook de identidade e acesso
 - authentication-throttle.js
 - postgres.js
 - createPostgresAccessRepository
+- identity-api-live.test.js
+- TransactionClient
 - identity-contract.test.js
 - 0003_identity_api_hardening.expand.sql
+- RecordingQueryable
 - crm.idempotency_records
 
 ## God Nodes (most connected - your core abstractions)
@@ -197,10 +204,10 @@
   modules/integration-reliability/src/idempotency.js → apps/edge-web/src/app.js
 - `createR2S3Client()` --indirect_call--> `request()`  [INFERRED]
   scripts/r2-live-smoke.mjs → apps/edge-web/src/app.js
+- `createMetaWebhookRuntime()` --calls--> `processMetaWebhook()`  [EXTRACTED]
+  apps/api/src/server.js → modules/integration-reliability/src/meta-sandbox.js
 - `harness()` --calls--> `createCatalogService()`  [EXTRACTED]
   test/catalog.test.js → modules/catalog/src/application/catalog-service.js
-- `createHarness()` --calls--> `createConfigurationService()`  [EXTRACTED]
-  test/configuration.test.js → modules/configuration/src/application/configuration-service.js
 
 ## Import Cycles
 - None detected.
@@ -218,11 +225,11 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (165 total, 51 thin omitted)
+## Communities (172 total, 55 thin omitted)
 
-### Community 0 - "integration-reliability/src/index.js"
-Cohesion: 0.06
-Nodes (49): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, createMetaMessagesClient(), deepFreeze(), extractMetaEvents(), immutableClone() (+41 more)
+### Community 0 - "observability.test.js"
+Cohesion: 0.29
+Nodes (12): createApi(), createMetaWebhookRuntime(), createServerApi(), SERVICES, createSafeLogger(), normalizeTraceId(), harness(), assertNoCanaries() (+4 more)
 
 ### Community 1 - "TDD and Project Strategy"
 Cohesion: 0.05
@@ -249,8 +256,8 @@ Cohesion: 0.05
 Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e conteúdo, 13. Arquitetura de implementação visual, 14. Critérios de aceite do design system, 15. Antipadrões proibidos, 1. Objetivo, 2. Tradução da marca para o produto (+29 more)
 
 ### Community 7 - "database/src/index.js"
-Cohesion: 0.07
-Nodes (21): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+13 more)
+Cohesion: 0.19
+Nodes (11): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+3 more)
 
 ### Community 8 - "audit-privacy/src/index.js"
 Cohesion: 0.15
@@ -349,7 +356,7 @@ Cohesion: 0.17
 Nodes (10): Antes de alterar, Atualização de branches de pull request, Commits e publicação, Contribuindo com o CRM Silmer, Durante a implementação, Governança do repositório público, Validação, Answer (+2 more)
 
 ### Community 32 - "authorization.js"
-Cohesion: 0.18
+Cohesion: 0.17
 Nodes (11): AccessControlError, actionCapabilities, authorize(), CAPABILITIES, createAccessControlService(), forbidden(), knownCapabilities, mfaRequiredCapabilities (+3 more)
 
 ### Community 33 - "Monorepo Workspace Configuration"
@@ -596,9 +603,9 @@ Nodes (3): Technical Baseline, Phase 0: Foundation, TDD Summary
 Cohesion: 0.18
 Nodes (13): announce(), clearError(), elements, publicMessage(), readCookie(), request(), restoreSession(), select() (+5 more)
 
-### Community 141 - "postgres-idempotency.js"
-Cohesion: 0.09
-Nodes (26): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+18 more)
+### Community 141 - "integration-reliability/src/index.js"
+Cohesion: 0.06
+Nodes (41): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+33 more)
 
 ### Community 142 - "observability-live-probe.mjs"
 Cohesion: 0.35
@@ -644,6 +651,18 @@ Nodes (3): Answer, Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 a
 Cohesion: 0.30
 Nodes (12): IdentityRequestError, parseCookies(), publicErrorCode(), readStatusCode(), registerIdentityRoutes(), requireAuthenticatedCommand(), requireBody(), requireCookie() (+4 more)
 
+### Community 156 - "observability.js"
+Cohesion: 0.16
+Nodes (10): allowedContextFields, allowedEvents, allowedMetrics, allowedServices, categoricalPolicies, createSafeLogRecord(), isFiniteNumber(), MetricRegistry (+2 more)
+
+### Community 157 - "migrations.test.js"
+Cohesion: 0.15
+Nodes (6): contractThree, expandOne, expandTwo, MigrationClient, MigrationPool, Mutex
+
+### Community 158 - "validate-observability.mjs"
+Cohesion: 0.36
+Nodes (11): assertNoSensitiveFields(), invariant(), isEvidenceReference(), isIsoTimestamp(), isOpaqueReference(), main(), requiredAlerts, rootUrl (+3 more)
+
 ### Community 159 - "CRM Silmer"
 Cohesion: 0.50
 Nodes (4): Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada
@@ -667,22 +686,22 @@ Nodes (7): createPostgresIdentityRepository(), decodeEncryptedSecret(), mapFacto
 ## Knowledge Gaps
 - **720 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+715 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **51 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **55 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `request()` connect `edge-web/src/app.js` to `R2 Storage Smoke Tests`, `postgres-idempotency.js`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
-- **Why does `createIdempotentCommandExecutor()` connect `postgres-idempotency.js` to `edge-web/src/app.js`, `integration-reliability/src/index.js`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
-- **Why does `createCatalogService()` connect `catalog-version.js` to `edge-web/src/app.js`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `request()` connect `edge-web/src/app.js` to `R2 Storage Smoke Tests`, `integration-reliability/src/index.js`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `createIdempotentCommandExecutor()` connect `integration-reliability/src/index.js` to `edge-web/src/app.js`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `select()` connect `edge-web/src/app.js` to `catalog-version.js`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
   _720 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `integration-reliability/src/index.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05827505827505827 - nodes in this community are weakly interconnected._
 - **Should `TDD and Project Strategy` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `Database Immutability and Protection` be split into smaller, more focused modules?**
   _Cohesion score 0.08846153846153847 - nodes in this community are weakly interconnected._
+- **Should `Configuration Service and Validation` be split into smaller, more focused modules?**
+  _Cohesion score 0.1141025641025641 - nodes in this community are weakly interconnected._

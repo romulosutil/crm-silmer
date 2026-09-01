@@ -160,7 +160,10 @@ test('delegates active-session validation and touch to atomic repository operati
   });
 
   await service.authenticate(login.sessionToken);
-  await service.assertCsrf(login.sessionToken, login.csrfToken);
+  assert.deepEqual(
+    await service.assertCsrf(login.sessionToken, login.csrfToken),
+    { mfaVerified: true, userId: user.id },
+  );
   assert.deepEqual(calls, ['authenticate', 'csrf']);
 });
 

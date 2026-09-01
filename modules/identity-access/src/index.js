@@ -45,26 +45,26 @@ import {
  *   recoveryCodeHashes: Set<string>,
  * }} MfaFactor
  * @typedef {{
- *   consumeInvitation: (tokenHash: string, now: Date) => IdentityInvitation | null,
- *   consumeRecoveryCode: (userId: string, codeHash: string) => boolean,
- *   createInvitation: (invitation: IdentityInvitation) => void,
- *   createSession: (session: IdentitySession) => void,
- *   createUser: (user: IdentityUser) => void,
- *   enrollFactor: (userId: string, factor: {encryptedSecret: EncryptedSecret, recoveryCodeHashes: Iterable<string>}) => void,
- *   findFactor: (userId: string) => MfaFactor | null,
- *   findSession: (tokenHash: string) => IdentitySession | null,
- *   findUserByEmail: (email: string) => IdentityUser | null | undefined,
- *   findUserById: (id: string) => IdentityUser | null,
- *   hasUsers: () => boolean,
- *   insertInitialUser: (user: IdentityUser) => boolean,
+ *   consumeInvitation: (tokenHash: string, now: Date) => IdentityInvitation | null | Promise<IdentityInvitation | null>,
+ *   consumeRecoveryCode: (userId: string, codeHash: string) => boolean | Promise<boolean>,
+ *   createInvitation: (invitation: IdentityInvitation) => void | Promise<void>,
+ *   createSession: (session: IdentitySession) => void | Promise<void>,
+ *   createUser: (user: IdentityUser) => void | Promise<void>,
+ *   enrollFactor: (userId: string, factor: {encryptedSecret: EncryptedSecret, recoveryCodeHashes: Iterable<string>}) => void | Promise<void>,
+ *   findFactor: (userId: string) => MfaFactor | null | Promise<MfaFactor | null>,
+ *   findSession: (tokenHash: string) => IdentitySession | null | Promise<IdentitySession | null>,
+ *   findUserByEmail: (email: string) => IdentityUser | null | undefined | Promise<IdentityUser | null | undefined>,
+ *   findUserById: (id: string) => IdentityUser | null | Promise<IdentityUser | null>,
+ *   hasUsers: () => boolean | Promise<boolean>,
+ *   insertInitialUser: (user: IdentityUser) => boolean | Promise<boolean>,
  *   inspect: () => {
  *     factors: Array<{encryptedSecret: EncryptedSecret, recoveryCodeHashes: string[]}>,
  *     sessions: IdentitySession[],
  *     users: IdentityUser[],
  *   },
- *   revokeSession: (tokenHash: string, revokedAt: string) => void,
- *   touchSession: (tokenHash: string, touchedAt: string) => void,
- *   useTotpCounter: (userId: string, counter: number) => boolean,
+ *   revokeSession: (tokenHash: string, revokedAt: string) => void | Promise<void>,
+ *   touchSession: (tokenHash: string, touchedAt: string) => void | Promise<void>,
+ *   useTotpCounter: (userId: string, counter: number) => boolean | Promise<boolean>,
  * }} IdentityRepository
  * @typedef {{
  *   actor: string,
@@ -397,7 +397,7 @@ export function createIdentityAccessService({
       id: idFactory('user'),
       passwordHash,
     };
-    if (!repository.insertInitialUser(user)) {
+    if (!(await repository.insertInitialUser(user))) {
       throw new Error('Identity access is already initialized');
     }
     await record({
@@ -424,7 +424,7 @@ export function createIdentityAccessService({
     requireNonEmptyString(input.email, 'email');
     requireNonEmptyString(input.reason, 'reason');
     requireNonEmptyString(input.correlationId, 'correlationId');
-    const actor = repository.findUserById(input.actorId);
+    const actor = await repository.findUserById(input.actorId);
     if (!actor?.capabilities.includes('COMMERCIAL_ADMIN')) {
       throw new Error('Invitation requires COMMERCIAL_ADMIN');
     }
@@ -434,7 +434,7 @@ export function createIdentityAccessService({
     }
     const token = tokenFactory();
     const invitationId = idFactory('invitation');
-    repository.createInvitation({
+    await repository.createInvitation({
       createdBy: actor.id,
       email: input.email,
       expiresAt: input.expiresAt,
@@ -457,7 +457,7 @@ export function createIdentityAccessService({
   async function acceptInvitation(input) {
     requireNonEmptyString(input.token, 'token');
     const passwordHash = await hashPassword(input.password, passwordParameters);
-    const invitation = repository.consumeInvitation(
+    const invitation = await repository.consumeInvitation(
       digest(input.token),
       clock(),
     );
@@ -470,7 +470,7 @@ export function createIdentityAccessService({
       id: idFactory('user'),
       passwordHash,
     };
-    repository.createUser(user);
+    await repository.createUser(user);
     return freezeUser(user);
   }
 
@@ -480,12 +480,12 @@ export function createIdentityAccessService({
     if (!Buffer.isBuffer(secret) || secret.length < 20) {
       throw new TypeError('TOTP secret must contain at least 20 bytes');
     }
-    const user = repository.findUserById(actorId);
+    const user = await repository.findUserById(actorId);
     if (!user) throw new Error('User not found');
     const recoveryCodes = Array.from({ length: 8 }, () =>
       randomBytes(9).toString('base64url'),
     );
-    repository.enrollFactor(user.id, {
+    await repository.enrollFactor(user.id, {
       encryptedSecret: encryptSecret(secret, envelopeKey),
       recoveryCodeHashes: recoveryCodes.map(digest),
     });
@@ -504,11 +504,11 @@ export function createIdentityAccessService({
     ) {
       return false;
     }
-    const factor = repository.findFactor(user.id);
+    const factor = await repository.findFactor(user.id);
     if (!factor) throw new Error('MFA enrollment required');
     if (
       recoveryCode &&
-      repository.consumeRecoveryCode(user.id, digest(recoveryCode))
+      (await repository.consumeRecoveryCode(user.id, digest(recoveryCode)))
     ) {
       return true;
     }
@@ -521,7 +521,7 @@ export function createIdentityAccessService({
         );
         if (
           constantTimeEqual(totpCode, candidate.code) &&
-          repository.useTotpCounter(user.id, candidate.counter)
+          (await repository.useTotpCounter(user.id, candidate.counter))
         ) {
           return true;
         }
@@ -537,7 +537,7 @@ export function createIdentityAccessService({
    *   totpCode?: string,
    * }} input */
   async function login(input) {
-    const user = repository.findUserByEmail(input.email);
+    const user = await repository.findUserByEmail(input.email);
     if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
       throw new Error('Invalid credentials');
     }
@@ -548,7 +548,7 @@ export function createIdentityAccessService({
     const sessionToken = tokenFactory();
     const csrfToken = tokenFactory();
     const now = clock();
-    repository.createSession({
+    await repository.createSession({
       absoluteExpiresAt: new Date(
         now.getTime() + sessionAbsoluteMs,
       ).toISOString(),
@@ -569,9 +569,9 @@ export function createIdentityAccessService({
   }
 
   /** @param {string} sessionToken */
-  function requireActiveSession(sessionToken) {
+  async function requireActiveSession(sessionToken) {
     const tokenHash = digest(sessionToken);
-    const session = repository.findSession(tokenHash);
+    const session = await repository.findSession(tokenHash);
     const now = clock();
     if (
       !session ||
@@ -586,8 +586,8 @@ export function createIdentityAccessService({
 
   /** @param {string} sessionToken */
   async function authenticate(sessionToken) {
-    const { now, session, tokenHash } = requireActiveSession(sessionToken);
-    repository.touchSession(tokenHash, now.toISOString());
+    const { now, session, tokenHash } = await requireActiveSession(sessionToken);
+    await repository.touchSession(tokenHash, now.toISOString());
     return Object.freeze({
       mfaVerified: session.mfaVerified,
       userId: session.userId,
@@ -596,16 +596,16 @@ export function createIdentityAccessService({
 
   /** @param {string} sessionToken @param {string} csrfToken */
   async function assertCsrf(sessionToken, csrfToken) {
-    const { now, session, tokenHash } = requireActiveSession(sessionToken);
+    const { now, session, tokenHash } = await requireActiveSession(sessionToken);
     if (!constantTimeEqual(digest(csrfToken), session.csrfHash)) {
       throw new Error('CSRF validation failed');
     }
-    repository.touchSession(tokenHash, now.toISOString());
+    await repository.touchSession(tokenHash, now.toISOString());
   }
 
   /** @param {string} sessionToken */
   async function logout(sessionToken) {
-    repository.revokeSession(digest(sessionToken), clock().toISOString());
+    await repository.revokeSession(digest(sessionToken), clock().toISOString());
   }
 
   return Object.freeze({

@@ -85,6 +85,8 @@ const DEFAULT_PASSWORD_PARAMETERS = Object.freeze({
   passes: 2,
   tagLength: 32,
 });
+const UNKNOWN_USER_PASSWORD_HASH =
+  '$argon2id$v=19$m=19456,t=2,p=2$xMr8EkVto6XX3sYwTVTyOA$pM1ue-Zt9HInxnqVdW8WDGRrCyxnKUZm8IK-O-32cLM';
 /** @type {Set<IdentityCapability>} */
 const PRIVILEGED_CAPABILITIES = new Set([
   'COMMERCIAL_ADMIN',
@@ -377,10 +379,12 @@ export function createInMemoryIdentityRepository() {
  *   envelopeKey: Buffer,
  *   idFactory?: (prefix: string) => string,
  *   passwordParameters?: PasswordParameters,
+ *   passwordVerifier?: typeof verifyPassword,
  *   repository: IdentityRepository,
  *   sessionAbsoluteMs?: number,
  *   sessionIdleMs?: number,
  *   tokenFactory?: () => string,
+ *   unknownUserPasswordHash?: string,
  * }} options
  */
 export function createIdentityAccessService({
@@ -389,10 +393,12 @@ export function createIdentityAccessService({
   envelopeKey,
   idFactory = (prefix) => `${prefix}-${randomBytes(16).toString('hex')}`,
   passwordParameters = DEFAULT_PASSWORD_PARAMETERS,
+  passwordVerifier = verifyPassword,
   repository,
   sessionAbsoluteMs = 12 * 60 * 60 * 1000,
   sessionIdleMs = 30 * 60 * 1000,
   tokenFactory = () => randomBytes(32).toString('base64url'),
+  unknownUserPasswordHash = UNKNOWN_USER_PASSWORD_HASH,
 }) {
   if (!Buffer.isBuffer(envelopeKey) || envelopeKey.length !== 32) {
     throw new TypeError('A 32-byte envelope key is required');
@@ -405,6 +411,9 @@ export function createIdentityAccessService({
     sessionIdleMs > sessionAbsoluteMs
   ) {
     throw new TypeError('Session expiry settings are invalid');
+  }
+  if (!unknownUserPasswordHash.startsWith('$argon2id$v=19$')) {
+    throw new TypeError('Unknown-user password hash must use Argon2id');
   }
 
   /** @param {IdentityAuditEvent} event */
@@ -574,7 +583,11 @@ export function createIdentityAccessService({
    * }} input */
   async function login(input) {
     const user = await repository.findUserByEmail(input.email);
-    if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
+    const passwordMatches = await passwordVerifier(
+      input.password,
+      user?.passwordHash ?? unknownUserPasswordHash,
+    );
+    if (!user || !passwordMatches) {
       throw new Error('Invalid credentials');
     }
     const mfaRequired = user.capabilities.some((capability) =>

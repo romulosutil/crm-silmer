@@ -209,20 +209,19 @@ if (connectionString) {
       );
 
       for (const email of ['missing@example.test', 'admin@example.test']) {
-        const statuses = [];
-        for (let attempt = 0; attempt < 4; attempt += 1) {
-          statuses.push(
-            (
+        const statuses = await Promise.all(
+          Array.from({ length: 4 }, async () => {
+            return (
               await api.inject({
                 headers: { origin },
                 method: 'POST',
                 payload: { email, password: 'wrong password value' },
                 url: '/api/v1/sessions',
               })
-            ).statusCode,
-          );
-        }
-        assert.deepEqual(statuses, [401, 401, 401, 429]);
+            ).statusCode;
+          }),
+        );
+        assert.deepEqual(statuses.sort(), [401, 401, 401, 429]);
       }
 
       const persisted = await administration.query(

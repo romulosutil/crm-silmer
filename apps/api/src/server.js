@@ -6,6 +6,7 @@ import {
   processMetaWebhook,
 } from '@crm-silmer/integration-reliability';
 import { createApi } from './app.js';
+import { createIdentityApiRuntime } from './identity-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
 /**
@@ -16,7 +17,8 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   database?: ReturnType<typeof createDatabase>,
  *   logger?: ReturnType<typeof createSafeLogger>,
  *   readiness?: () => boolean | Promise<boolean>,
- *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>
+ *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>,
+ *   identity?: ReturnType<typeof createIdentityApiRuntime>
  * }} [runtime]
  */
 export function createServerApi(runtime = {}) {
@@ -68,7 +70,11 @@ if (
     const database = createDatabase({
       connectionString: process.env.DATABASE_URL ?? '',
     });
-    const api = createServerApi({ database, logger });
+    const api = createServerApi({
+      database,
+      identity: createIdentityApiRuntime(database),
+      logger,
+    });
     await api.listen({ host, port });
   } catch (error) {
     logger.error('api_start_failed', {

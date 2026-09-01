@@ -677,3 +677,5 @@ function requireNonEmptyString(value, field) {
     throw new TypeError(`${field} must be a non-empty string`);
   }
 }
+
+export { createPostgresIdentityRepository } from './postgres.js';

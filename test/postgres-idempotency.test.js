@@ -67,14 +67,18 @@ class FakeDatabase {
       return { rows: [{ inserted: true }] };
     }
     if (sql.includes("SET status = 'completed'")) {
-      const row = this.records.get(recordKey(String(values[0]), String(values[1])));
+      const row = this.records.get(
+        recordKey(String(values[0]), String(values[1])),
+      );
       assert.ok(row);
       row.status = 'completed';
       row.response = JSON.parse(String(values[2]));
       return { rows: [{ completed: true }] };
     }
     if (sql.includes('FROM crm.idempotency_records')) {
-      const row = this.records.get(recordKey(String(values[0]), String(values[1])));
+      const row = this.records.get(
+        recordKey(String(values[0]), String(values[1])),
+      );
       return { rows: row ? [structuredClone(row)] : [] };
     }
     if (sql.includes('INSERT INTO test_effects')) {
@@ -98,10 +102,15 @@ test('encrypts the persisted response and replays it without a second effect', a
     await client.query('INSERT INTO test_effects VALUES ($1)', ['effect-1']);
     return { body: { approved: true }, secret: 'response-canary' };
   });
-  const persisted = database.records.get(recordKey(identity.scope, identity.key));
+  const persisted = database.records.get(
+    recordKey(identity.scope, identity.key),
+  );
   assert.ok(persisted);
   assert.equal(persisted.status, 'completed');
-  assert.equal(JSON.stringify(persisted.response).includes('response-canary'), false);
+  assert.equal(
+    JSON.stringify(persisted.response).includes('response-canary'),
+    false,
+  );
   assert.deepEqual(Object.keys(persisted.response).sort(), [
     'algorithm',
     'ciphertext',
@@ -133,7 +142,9 @@ test('binds ciphertext to scope, key and fingerprint and reports divergent repla
   await store.execute(identity, async () => ({ ok: true }));
 
   await assert.rejects(
-    store.execute({ ...identity, fingerprint: 'b'.repeat(64) }, async () => ({ ok: false })),
+    store.execute({ ...identity, fingerprint: 'b'.repeat(64) }, async () => ({
+      ok: false,
+    })),
     (error) => {
       assert.ok(error instanceof IdempotencyConflictError);
       assert.equal(error.statusCode, 409);
@@ -159,7 +170,9 @@ test('rolls back the pending record and callback effects together', async () => 
 
   await assert.rejects(
     store.execute(identity, async (client) => {
-      await client.query('INSERT INTO test_effects VALUES ($1)', ['rolled-back']);
+      await client.query('INSERT INTO test_effects VALUES ($1)', [
+        'rolled-back',
+      ]);
       throw new Error('synthetic callback failure');
     }),
     /synthetic callback failure/iu,

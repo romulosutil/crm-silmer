@@ -98,6 +98,20 @@ test('records a bounded probe without response body, headers or URL query', asyn
   );
 });
 
+test('collapses every remote non-200 status into bounded unavailable evidence', async () => {
+  const evidence = await probeLiveEndpoint({
+    fetchImpl: async () =>
+      new Response('upstream detail must not be persisted', { status: 418 }),
+    liveUrl,
+    monotonicNow: () => 10,
+    now: () => new Date('2026-09-01T12:00:00.000Z'),
+  });
+
+  assert.equal(evidence.status, 'unavailable');
+  assert.equal(evidence.httpStatusCode, null);
+  assert.doesNotMatch(JSON.stringify(evidence), /418|upstream detail/iu);
+});
+
 test('observes an authorized healthy-unavailable-recovered transition', async () => {
   const probes = [
     {

@@ -17,6 +17,29 @@ class RecordingDatabase {
   }
 }
 
+test('locks pseudonymous subjects before checking a login attempt', async () => {
+  const database = new RecordingDatabase();
+  const throttle = createPostgresAuthenticationThrottle(database, {
+    clock: () => NOW,
+    hmacKey: HMAC_KEY,
+  });
+
+  await throttle.lock({
+    email: 'admin@example.test',
+    network: '203.0.113.42',
+  });
+
+  assert.equal(database.queries.length, 2);
+  for (const { sql, values } of database.queries) {
+    assert.match(sql, /pg_advisory_xact_lock\(hashtextextended/iu);
+    assert.match(String(values[0]), /^(?:account|network):[a-f0-9]{64}$/u);
+    assert.doesNotMatch(
+      JSON.stringify(values),
+      /admin@example\.test|203\.0\.113\.42/iu,
+    );
+  }
+});
+
 test('persists only pseudonymous account and network throttle keys', async () => {
   const database = new RecordingDatabase();
   const throttle = createPostgresAuthenticationThrottle(database, {

@@ -90,6 +90,40 @@ test('command fingerprint is canonical and sensitive to JSON value changes', () 
   assert.match(left, /^[a-f0-9]{64}$/u);
 });
 
+test('binds domain effect and audit append to the idempotency transaction', async () => {
+  const transaction = Object.freeze({ query: async () => ({ rows: [] }) });
+  /** @type {unknown[]} */
+  const auditContexts = [];
+  const execute = createIdempotentCommandExecutor({
+    auditTrail: {
+      append: async (_event, context) => {
+        auditContexts.push(context);
+      },
+    },
+    idempotencyStore: {
+      execute: async (_identity, operation) => operation(transaction),
+    },
+  });
+  /** @type {unknown[]} */
+  const effectTransactions = [];
+
+  const response = await execute(
+    {
+      ...commandMetadata,
+      key: 'idem-shared-transaction',
+      command: { orderId: 'order-01', approve: true },
+    },
+    async (effectTransaction) => {
+      effectTransactions.push(effectTransaction);
+      return { status: 200, body: { approved: true } };
+    },
+  );
+
+  assert.deepEqual(response, { status: 200, body: { approved: true } });
+  assert.deepEqual(effectTransactions, [transaction]);
+  assert.deepEqual(auditContexts, [{ transaction }]);
+});
+
 test('replay returns the original response without repeating effect or audit', async () => {
   const auditTrail = createAuditTrail();
   const idempotencyStore = new InMemoryIdempotencyRecordStore();

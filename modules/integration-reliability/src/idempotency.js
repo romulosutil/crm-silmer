@@ -221,7 +221,7 @@ export class InMemoryIdempotencyRecordStore {
  *     version: string | number,
  *     reason: string,
  *     correlationId: string,
- *   }) => Promise<unknown> },
+ *   }, context?: {transaction: unknown}) => Promise<unknown> },
  *   idempotencyStore: { execute: (
  *     identity: {
  *       scope: string,
@@ -234,7 +234,7 @@ export class InMemoryIdempotencyRecordStore {
  *       reason: string,
  *       correlationId: string,
  *     },
- *     operation: () => Promise<unknown>,
+ *     operation: (transaction?: unknown) => Promise<unknown>,
  *   ) => Promise<unknown> },
  * }} dependencies
  */
@@ -244,7 +244,7 @@ export function createIdempotentCommandExecutor(dependencies) {
   /**
    * @template T
    * @param {IdempotentCommandRequest} request
-   * @param {() => Promise<T>} effect
+   * @param {(transaction?: unknown) => Promise<T>} effect
    * @returns {Promise<T>}
    */
   return async function execute(request, effect) {
@@ -271,16 +271,19 @@ export function createIdempotentCommandExecutor(dependencies) {
           reason: request.reason,
           correlationId: request.correlationId,
         },
-        async () => {
-          const response = await effect();
-          await auditTrail.append({
-            actor: request.actor,
-            action: request.action,
-            target: request.target,
-            version: request.version,
-            reason: request.reason,
-            correlationId: request.correlationId,
-          });
+        async (transaction) => {
+          const response = await effect(transaction);
+          await auditTrail.append(
+            {
+              actor: request.actor,
+              action: request.action,
+              target: request.target,
+              version: request.version,
+              reason: request.reason,
+              correlationId: request.correlationId,
+            },
+            transaction === undefined ? undefined : { transaction },
+          );
           return response;
         },
       )

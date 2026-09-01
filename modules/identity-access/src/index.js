@@ -62,7 +62,11 @@ import {
  *     factors: Array<{encryptedSecret: EncryptedSecret, recoveryCodeHashes: string[]}>,
  *     sessions: IdentitySession[],
  *     users: IdentityUser[],
- *   },
+ *   } | Promise<{
+ *     factors: Array<{encryptedSecret: EncryptedSecret, recoveryCodeHashes: string[]}>,
+ *     sessions: IdentitySession[],
+ *     users: IdentityUser[],
+ *   }>,
  *   revokeSession: (tokenHash: string, revokedAt: string) => void | Promise<void>,
  *   touchSession: (tokenHash: string, touchedAt: string) => void | Promise<void>,
  *   useTotpCounter: (userId: string, counter: number) => boolean | Promise<boolean>,
@@ -694,3 +698,8 @@ function requireNonEmptyString(value, field) {
 export { createPostgresIdentityRepository } from './postgres.js';
 export { createPostgresAccessRepository } from './postgres-access.js';
 export { createPostgresAuthenticationThrottle } from './authentication-throttle.js';
+export {
+  CAPABILITIES,
+  authorize,
+  createAccessControlService,
+} from './authorization.js';

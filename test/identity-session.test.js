@@ -212,7 +212,10 @@ test('runs the same password verifier path for existing and missing accounts', a
 
   assert.equal(verifiedHashes.length, 2);
   assert.equal(verifiedHashes[0], unknownUserPasswordHash);
-  assert.equal(verifiedHashes[1], repository.inspect().users[0].passwordHash);
+  assert.equal(
+    verifiedHashes[1],
+    (await repository.inspect()).users[0].passwordHash,
+  );
 });
 
 test('hashes passwords with Argon2id and verifies without storing plaintext', async () => {
@@ -327,28 +330,32 @@ test('creates only hashed opaque sessions and enforces CSRF, logout and expiry',
   assert.match(login.cookie, /Secure/iu);
   assert.match(login.cookie, /SameSite=Lax/iu);
   assert.equal(Object.hasOwn(login.body, 'token'), false);
-  assert.match(repository.inspect().sessions[0].tokenHash, /^[a-f0-9]{64}$/u);
+  assert.match(
+    (await repository.inspect()).sessions[0].tokenHash,
+    /^[a-f0-9]{64}$/u,
+  );
   assert.equal(
-    repository.inspect().sessions[0].tokenHash.includes('opaque-token'),
+    (await repository.inspect()).sessions[0].tokenHash.includes('opaque-token'),
     false,
   );
   assert.equal(
     (await service.authenticate(login.sessionToken)).userId,
     user.id,
   );
-  const lastSeenBeforeInvalidCsrf = repository.inspect().sessions[0].lastSeenAt;
+  const lastSeenBeforeInvalidCsrf = (await repository.inspect()).sessions[0]
+    .lastSeenAt;
   advance(60_000);
   await assert.rejects(
     service.assertCsrf(login.sessionToken, 'invalid-csrf-token'),
     /CSRF/iu,
   );
   assert.equal(
-    repository.inspect().sessions[0].lastSeenAt,
+    (await repository.inspect()).sessions[0].lastSeenAt,
     lastSeenBeforeInvalidCsrf,
   );
   await service.assertCsrf(login.sessionToken, login.csrfToken);
   assert.notEqual(
-    repository.inspect().sessions[0].lastSeenAt,
+    (await repository.inspect()).sessions[0].lastSeenAt,
     lastSeenBeforeInvalidCsrf,
   );
   await service.logout(login.sessionToken);

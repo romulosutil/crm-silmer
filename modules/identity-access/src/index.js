@@ -650,6 +650,10 @@ export function createIdentityAccessService({
       window.idleExpiresBefore,
     );
     if (!session) throw new Error('CSRF validation failed');
+    return Object.freeze({
+      mfaVerified: session.mfaVerified,
+      userId: session.userId,
+    });
   }
 
   /** @param {string} sessionToken */

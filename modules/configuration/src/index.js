@@ -1,5 +1,9 @@
 export { createConfigurationService } from './application/configuration-service.js';
-export { createConfigurationVersion } from './domain/configuration-version.js';
+export { createPostgresConfigurationRepository } from './adapters/postgres-configuration-repository.js';
+export {
+  createChannelConfiguration,
+  createConfigurationVersion,
+} from './domain/configuration-version.js';
 export {
   ConfigurationConflictError,
   ConfigurationError,

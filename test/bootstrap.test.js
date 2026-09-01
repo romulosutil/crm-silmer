@@ -101,6 +101,36 @@ test('exposes a live API health contract', async () => {
   await api.close();
 });
 
+test('wires configuration and catalog PostgreSQL runtimes when a database is present', async () => {
+  const { createServerApi } = await import('../apps/api/src/server.js');
+  let closed = false;
+  const database = /** @type {any} */ ({
+    async close() {
+      closed = true;
+    },
+    async query() {
+      return { rows: [] };
+    },
+    /** @param {(client: any) => Promise<any>} work */
+    async transaction(work) {
+      return work(database);
+    },
+  });
+  const api = createServerApi({ database });
+  const commercial = /** @type {any} */ (api).commercial;
+
+  assert.equal(typeof commercial.configuration.createVersion, 'function');
+  assert.equal(
+    typeof commercial.configuration.readChannelConfiguration,
+    'function',
+  );
+  assert.equal(typeof commercial.catalog.publish, 'function');
+  assert.equal(typeof commercial.catalog.select, 'function');
+
+  await api.close();
+  assert.equal(closed, true);
+});
+
 test('produces byte-for-byte reproducible build output', async () => {
   assert.equal(await digestBuild(), await digestBuild());
 });

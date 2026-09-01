@@ -63,23 +63,36 @@ test('packages every runtime workspace required by the API', async () => {
 
   assert.match(dockerfile, /rm -rf \/usr\/local\/lib\/node_modules\/npm/u);
 
-  assert.equal(
-    dockerfile.match(/COPY modules\/database\/package\.json/gu)?.length,
-    2,
-    'both dependency stages need the database workspace manifest',
-  );
-  assert.match(buildScript, /modules\/database\/src/u);
-  assert.match(buildScript, /modules\/database\/migrations/u);
-  assert.match(buildScript, /modules\/database\/package\.json/u);
+  const runtimeModules = [
+    'audit-privacy',
+    'catalog',
+    'configuration',
+    'database',
+    'identity-access',
+    'integration-reliability',
+    'shared',
+  ];
+  for (const moduleName of runtimeModules) {
+    assert.equal(
+      dockerfile.match(
+        new RegExp(`COPY modules/${moduleName}/package\\.json`, 'gu'),
+      )?.length,
+      2,
+      `both dependency stages need the ${moduleName} workspace manifest`,
+    );
+    assert.match(
+      buildScript,
+      new RegExp(`modules/${moduleName}/src`, 'u'),
+      `${moduleName} sources must be copied into the runtime`,
+    );
+    assert.match(
+      buildScript,
+      new RegExp(`modules/${moduleName}/package\\.json`, 'u'),
+      `${moduleName} manifest must be copied into the runtime`,
+    );
+  }
 
-  assert.equal(
-    dockerfile.match(/COPY modules\/integration-reliability\/package\.json/gu)
-      ?.length,
-    2,
-    'both dependency stages need the integration reliability workspace manifest',
-  );
-  assert.match(buildScript, /modules\/integration-reliability\/src/u);
-  assert.match(buildScript, /modules\/integration-reliability\/package\.json/u);
+  assert.match(buildScript, /modules\/database\/migrations/u);
 });
 
 test('scans each local OCI layout before its only registry publication', async () => {

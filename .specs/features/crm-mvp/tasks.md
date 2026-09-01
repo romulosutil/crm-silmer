@@ -162,15 +162,19 @@ Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa (`gi
 
 ### T01.5 Criar configuração versionada
 
-- **Status em 30/08/2026:** parcial; domínio, ports, auditoria e schema
-  entregues. Adapter PostgreSQL e wiring estão na issue `#15`.
+- **Status em 01/09/2026:** concluída na issue `#15`; adapter PostgreSQL,
+  lock transacional para `expectedVersion`, auditoria atômica e wiring da API
+  entregues. O runtime de canais recebe somente `channels`, `featureFlags` e
+  número da versão, sem PIX, destinatário, template ou referência de segredo.
 - FAB, PIX mascarado, destinatária, templates, canais e feature flags.
 - **Verificação:** alteração privilegiada auditada e segredo não exposto.
 
 ### T01.6 Implementar catálogo versionado
 
-- **Status em 30/08/2026:** parcial; domínio, ports, snapshots e schema
-  entregues. Adapter PostgreSQL e wiring estão na issue `#15`.
+- **Status em 01/09/2026:** concluída na issue `#15`; adapter PostgreSQL publica
+  `draft`, itens e auditoria na mesma transação, valida `expectedLatestNumber`
+  sob lock e lê apenas versões publicadas. Concorrência, rollback e imutabilidade
+  histórica possuem teste PostgreSQL real.
 - Importar/publicar tipos, modelos, malhas e técnicas autorizadas.
 - Vincular seleção à versão e copiar snapshot para o Pedido.
 - **Verificação:** atualização de catálogo não altera Negócio/Pedido histórico.

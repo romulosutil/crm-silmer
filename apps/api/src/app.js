@@ -26,6 +26,7 @@ import { registerIdentityRoutes } from './identity-routes.js';
  *     verifyToken: string,
  *     process(input: {rawBody: Buffer, signature: unknown}): Promise<unknown>
  *   },
+ *   commercial?: Record<string, any>,
  *   identity?: Record<string, any>
  * }} [runtime]
  */
@@ -36,6 +37,10 @@ export function createApi(options = {}, runtime = {}) {
   const readiness = runtime.readiness ?? (() => false);
   /** @type {WeakMap<object, { correlationId: string, requestId: string, startedAt: number }>} */
   const requests = new WeakMap();
+
+  if (runtime.commercial) {
+    api.decorate('commercial', runtime.commercial);
+  }
 
   api.addHook('onRequest', async (request, reply) => {
     const requestId = normalizeTraceId(request.headers['x-request-id']);

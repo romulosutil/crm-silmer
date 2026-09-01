@@ -5,7 +5,11 @@ COPY package.json package-lock.json ./
 COPY apps/edge-web/package.json apps/edge-web/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/worker/package.json apps/worker/package.json
+COPY modules/audit-privacy/package.json modules/audit-privacy/package.json
+COPY modules/catalog/package.json modules/catalog/package.json
+COPY modules/configuration/package.json modules/configuration/package.json
 COPY modules/database/package.json modules/database/package.json
+COPY modules/identity-access/package.json modules/identity-access/package.json
 COPY modules/integration-reliability/package.json modules/integration-reliability/package.json
 COPY modules/shared/package.json modules/shared/package.json
 RUN npm ci --ignore-scripts
@@ -21,7 +25,11 @@ COPY package.json package-lock.json ./
 COPY apps/edge-web/package.json apps/edge-web/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/worker/package.json apps/worker/package.json
+COPY modules/audit-privacy/package.json modules/audit-privacy/package.json
+COPY modules/catalog/package.json modules/catalog/package.json
+COPY modules/configuration/package.json modules/configuration/package.json
 COPY modules/database/package.json modules/database/package.json
+COPY modules/identity-access/package.json modules/identity-access/package.json
 COPY modules/integration-reliability/package.json modules/integration-reliability/package.json
 COPY modules/shared/package.json modules/shared/package.json
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force

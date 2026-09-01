@@ -1,4 +1,5 @@
 import {
+  createChannelConfiguration,
   createConfigurationVersion,
   freezeConfigurationRecord,
 } from '../domain/configuration-version.js';
@@ -11,10 +12,10 @@ import { assertConfigurationPorts } from '../ports/contracts.js';
 
 /**
  * @typedef {{ capabilities: readonly string[], id: string }} ConfigurationActor
- * @typedef {{ transaction: unknown }} PortContext
+ * @typedef {{ lockCurrent?: boolean, transaction?: any }} PortContext
  * @typedef {{
  *   append(version: unknown, context: PortContext): Promise<void>,
- *   findCurrent(context: PortContext): Promise<{version: number}|null>,
+ *   findCurrent(context?: PortContext): Promise<{version: number, values: unknown}|null>,
  * }} ConfigurationRepository
  * @typedef {{ append(event: {
  *   actor: string,
@@ -24,7 +25,7 @@ import { assertConfigurationPorts } from '../ports/contracts.js';
  *   reason: string,
  *   correlationId: string,
  * }, context: PortContext): Promise<unknown> }} AuditPort
- * @typedef {{ run<T>(work: (transaction: unknown) => Promise<T>): Promise<T> }} TransactionPort
+ * @typedef {{ run<T>(work: (transaction: any) => Promise<T>): Promise<T> }} TransactionPort
  * @typedef {ReturnType<typeof createConfigurationVersion>} ConfigurationVersion
  * @typedef {{
  *   actor: ConfigurationActor,
@@ -44,7 +45,8 @@ import { assertConfigurationPorts } from '../ports/contracts.js';
  *   transactionPort: TransactionPort,
  * }} dependencies
  * @returns {Readonly<{
- *   createVersion(command: CreateConfigurationCommand): Promise<ConfigurationVersion>
+ *   createVersion(command: CreateConfigurationCommand): Promise<ConfigurationVersion>,
+ *   readChannelConfiguration(): Promise<Readonly<{channels: unknown, featureFlags: unknown, version: number}>|null>
  * }>}
  */
 export function createConfigurationService(dependencies) {
@@ -63,7 +65,10 @@ export function createConfigurationService(dependencies) {
 
       return transactionPort.run(async (transaction) => {
         const context = { transaction };
-        const current = await repository.findCurrent(context);
+        const current = await repository.findCurrent({
+          lockCurrent: true,
+          transaction,
+        });
         const currentVersion = current?.version ?? 0;
         if (command.expectedVersion !== currentVersion) {
           throw new ConfigurationConflictError(
@@ -94,6 +99,11 @@ export function createConfigurationService(dependencies) {
         await auditPort.append(auditEvent, context);
         return version;
       });
+    },
+
+    async readChannelConfiguration() {
+      const current = await repository.findCurrent();
+      return current ? createChannelConfiguration(current) : null;
     },
   });
 }

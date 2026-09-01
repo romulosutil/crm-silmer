@@ -12,7 +12,7 @@ import { assertCatalogPorts } from '../ports/contracts.js';
 /**
  * @typedef {{ id: string, capabilities: readonly string[] }} CatalogActor
  * @typedef {ReturnType<typeof createPublishedCatalogVersion>} PublishedCatalogVersion
- * @typedef {{ transaction: unknown }} PortContext
+ * @typedef {{ lockLatest?: boolean, transaction?: any }} PortContext
  * @typedef {{
  *   append(version: PublishedCatalogVersion, context: PortContext & {expectedLatestNumber: number}): Promise<unknown>,
  *   findById(id: string): Promise<unknown|null>,
@@ -26,7 +26,7 @@ import { assertCatalogPorts } from '../ports/contracts.js';
  *   reason: string,
  *   correlationId: string,
  * }, context: PortContext): Promise<unknown> }} AuditPort
- * @typedef {{ run<T>(work: (transaction: unknown) => Promise<T>): Promise<T> }} TransactionPort
+ * @typedef {{ run<T>(work: (transaction: any) => Promise<T>): Promise<T> }} TransactionPort
  * @typedef {{
  *   actor: CatalogActor,
  *   correlationId: string,
@@ -60,7 +60,10 @@ export function createCatalogService(options) {
 
     return transactionPort.run(async (transaction) => {
       const context = { transaction };
-      const existing = await repository.list(context);
+      const existing = await repository.list({
+        lockLatest: true,
+        transaction,
+      });
       const latestNumber = existing.reduce(
         (latest, version) => Math.max(latest, version.number),
         0,
@@ -70,6 +73,7 @@ export function createCatalogService(options) {
         number: latestNumber + 1,
         publishedAt: clock().toISOString(),
         publishedBy: input.actor.id,
+        reason: input.reason,
         values: input.values,
       });
       const auditEvent = immutableCatalogClone({

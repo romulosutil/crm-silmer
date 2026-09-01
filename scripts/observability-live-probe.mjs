@@ -116,7 +116,7 @@ export async function probeLiveEndpoint({
       redirect: 'error',
       signal: AbortSignal.timeout(10_000),
     });
-    httpStatusCode = response.status;
+    httpStatusCode = response.status === 200 ? 200 : null;
   } catch {
     // Network error details are intentionally discarded to keep evidence bounded.
   }
@@ -267,8 +267,8 @@ async function main() {
           status: 'baseline-observed',
           task: 'T00.7',
         });
-  const outputPath = await writeEvidence(config.evidencePath, evidence);
-  console.log(`Observability evidence written to ${outputPath}`);
+  await writeEvidence(config.evidencePath, evidence);
+  console.log('Observability evidence written below the local var directory.');
   console.log(
     'This probe does not prove provider delivery or complete the T00.7 gate.',
   );

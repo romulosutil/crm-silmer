@@ -136,6 +136,34 @@ if (connectionString) {
       assert.equal(enrollment.statusCode, 201);
       assert.equal(enrollment.json().recoveryCodes.length, 8);
 
+      const missingTarget = await api.inject({
+        headers: commandHeaders(adminCookies, 'missing-target-key-1'),
+        method: 'POST',
+        payload: {
+          capability: 'PRIVACY_OFFICER',
+          reason: 'Alvo inexistente',
+          targetId: 'missing-user',
+        },
+        url: '/api/v1/capabilities/grant',
+      });
+      assert.equal(missingTarget.statusCode, 400);
+      assert.deepEqual(missingTarget.json(), {
+        error: { code: 'INVALID_REQUEST' },
+      });
+
+      const selfGrant = await api.inject({
+        headers: commandHeaders(adminCookies, 'self-grant-key-1'),
+        method: 'POST',
+        payload: {
+          capability: 'PRIVACY_OFFICER',
+          reason: 'Autoatribuicao negada',
+          targetId: bootstrapBody.user.id,
+        },
+        url: '/api/v1/capabilities/grant',
+      });
+      assert.equal(selfGrant.statusCode, 403);
+      assert.deepEqual(selfGrant.json(), { error: { code: 'FORBIDDEN' } });
+
       const grant = await api.inject({
         headers: commandHeaders(adminCookies, 'grant-key-1'),
         method: 'POST',

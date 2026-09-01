@@ -2,10 +2,28 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  AccessControlError,
   authorize,
   CAPABILITIES,
   createAccessControlService,
 } from '../modules/identity-access/src/authorization.js';
+
+test('classifies expected ACL denials for the HTTP boundary', () => {
+  const actor = {
+    capabilities: [],
+    functionName: /** @type {const} */ ('Vendedor'),
+    id: 'seller-1',
+    mfaEnrolled: false,
+  };
+
+  assert.throws(
+    () => authorize(actor, 'sale.approve'),
+    (error) =>
+      error instanceof AccessControlError &&
+      error.statusCode === 403 &&
+      error.code === 'FORBIDDEN',
+  );
+});
 
 /**
  * @typedef {'COMMERCIAL_ADMIN'|'PRIVACY_OFFICER'|'TECHNICAL_PRIVACY_EXECUTOR'} Capability
@@ -162,6 +180,36 @@ test('prevents self-assignment and requires MFA before privileged grants', async
       targetId: 'admin-1',
     }),
     /Another Admin/iu,
+  );
+});
+
+test('classifies malformed targets separately from forbidden ACL changes', async () => {
+  const { service } = harness();
+  await assert.rejects(
+    service.grantCapability({
+      actorId: 'admin-1',
+      capability: CAPABILITIES.PRIVACY_OFFICER,
+      correlationId: 'correlation-missing-target',
+      reason: 'Alvo ausente',
+      targetId: 'missing-user',
+    }),
+    (error) =>
+      error instanceof AccessControlError &&
+      error.statusCode === 400 &&
+      error.code === 'INVALID_REQUEST',
+  );
+  await assert.rejects(
+    service.grantCapability({
+      actorId: 'admin-1',
+      capability: CAPABILITIES.PRIVACY_OFFICER,
+      correlationId: 'correlation-self-grant',
+      reason: 'Autoatribuicao negada',
+      targetId: 'admin-1',
+    }),
+    (error) =>
+      error instanceof AccessControlError &&
+      error.statusCode === 403 &&
+      error.code === 'FORBIDDEN',
   );
 });
 

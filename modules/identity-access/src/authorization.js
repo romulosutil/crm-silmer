@@ -34,6 +34,26 @@ const mfaRequiredCapabilities = new Set([
   CAPABILITIES.TECHNICAL_PRIVACY_EXECUTOR,
 ]);
 
+export class AccessControlError extends Error {
+  /** @param {number} statusCode @param {string} code @param {string} message */
+  constructor(statusCode, code, message) {
+    super(message);
+    this.name = 'AccessControlError';
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+}
+
+/** @param {string} message */
+function forbidden(message) {
+  return new AccessControlError(403, 'FORBIDDEN', message);
+}
+
+/** @param {string} message */
+function invalidRequest(message) {
+  return new AccessControlError(400, 'INVALID_REQUEST', message);
+}
+
 /**
  * @typedef {{ id: string, kind?: 'human'|'assistant', functionName: OperationalFunction, capabilities: Capability[] }} AccessActor
  */
@@ -45,7 +65,7 @@ const mfaRequiredCapabilities = new Set([
  * @param {string} action
  */
 export function authorize(actor, action) {
-  if (actor.kind === 'assistant') throw new Error('Forbidden');
+  if (actor.kind === 'assistant') throw forbidden('Forbidden');
   if (
     operationalActions.has(action) &&
     ['Atendimento', 'Vendedor'].includes(actor.functionName)
@@ -54,7 +74,7 @@ export function authorize(actor, action) {
   }
   const required = actionCapabilities.get(action);
   if (!required || !actor.capabilities.includes(required)) {
-    throw new Error('Forbidden');
+    throw forbidden('Forbidden');
   }
 }
 
@@ -95,7 +115,7 @@ export function createAccessControlService({
   /** @param {CapabilityCommand} input */
   async function validate(input) {
     if (!knownCapabilities.has(input.capability)) {
-      throw new Error('Unknown capability');
+      throw invalidRequest('Unknown capability');
     }
     requireNonEmpty(input.actorId, 'actorId');
     requireNonEmpty(input.targetId, 'targetId');
@@ -103,9 +123,9 @@ export function createAccessControlService({
     requireNonEmpty(input.correlationId, 'correlationId');
     const actor = await repository.findUser(input.actorId);
     const target = await repository.findUser(input.targetId);
-    if (!actor || !target) throw new Error('User not found');
+    if (!actor || !target) throw invalidRequest('User not found');
     if (!actor.capabilities.includes(CAPABILITIES.COMMERCIAL_ADMIN)) {
-      throw new Error('Forbidden');
+      throw forbidden('Forbidden');
     }
     return { actor, target };
   }
@@ -126,10 +146,10 @@ export function createAccessControlService({
   async function grantCapability(input) {
     const { target } = await validate(input);
     if (input.actorId === input.targetId) {
-      throw new Error('An Admin cannot self-assign capabilities');
+      throw forbidden('An Admin cannot self-assign capabilities');
     }
     if (mfaRequiredCapabilities.has(input.capability) && !target.mfaEnrolled) {
-      throw new Error('MFA enrollment is required');
+      throw forbidden('MFA enrollment is required');
     }
     await repository.grant(input.targetId, input.capability, input.actorId);
     await audit('granted', input);
@@ -142,7 +162,7 @@ export function createAccessControlService({
       input.capability === CAPABILITIES.COMMERCIAL_ADMIN &&
       input.actorId === input.targetId
     ) {
-      throw new Error('Another Admin must revoke COMMERCIAL_ADMIN');
+      throw forbidden('Another Admin must revoke COMMERCIAL_ADMIN');
     }
     await repository.revoke(input.targetId, input.capability);
     await repository.revokePrivilegedSessions(

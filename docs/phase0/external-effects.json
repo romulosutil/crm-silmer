@@ -325,6 +325,21 @@
           "url": "CAMPOS-FICHA-E-JORNADA-P0-1.md",
           "checkedAt": "2026-08-30",
           "status": "local-contract-reviewed-Rose-visual-approval-pending"
+        },
+        {
+          "url": "docs/phase0/ficha-pdf-synthetic.json",
+          "checkedAt": "2026-08-31",
+          "status": "pii-free-synthetic-snapshot-generated"
+        },
+        {
+          "url": "docs/phase0/ficha-pdf-approval.json",
+          "checkedAt": "2026-08-31",
+          "status": "fail-closed-human-review-gate-versioned"
+        },
+        {
+          "url": "output/pdf/ficha-canonica-sintetica-v1.pdf",
+          "checkedAt": "2026-08-31",
+          "status": "visual-review-artifact-Rose-Operation-approval-pending"
         }
       ],
       "owner": "Rose/Operacao"

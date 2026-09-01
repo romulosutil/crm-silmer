@@ -47,8 +47,10 @@ Rastreabilidade: `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`, `PAY-02`,
   pendentes de Privacidade/DevOps. Assinatura e provisionamento estão
   explicitamente diferidos e não bloqueiam a política de mídia interna da
   issue `#6`.
-- PDF: snapshot/template versionados e hash são o contrato local; a revisão
-  visual de Rose permanece humana.
+- PDF: o pacote sintético reproduzível, o artefato visual e o gate fail-closed
+  estão em [`FICHA-PDF-REVIEW.md`](FICHA-PDF-REVIEW.md). Snapshot/template e
+  hashes são o contrato local; a revisão visual de Rose e Operação permanece
+  humana.
 
 ## Evidências e pendências externas
 
@@ -62,7 +64,9 @@ A fonte, data, status e owner de cada efeito ficam em
    do ZDR da Gemini Developer API. Cloudflare R2 DPA, subprocessadores,
    localização e controles live foram movidos para a issue `#29`, antes de uso
    externo ou de qualquer alegação de durabilidade superior à VPS.
-3. Rose/Operação: aprovar visualmente o PDF canônico da Ficha.
+3. Rose/Operação: executar o roteiro versionado e aprovar visualmente o PDF
+   canônico da Ficha; o pacote técnico da issue `#7` está pronto, mas não infere
+   o aceite.
 4. Produto/Operação/Tech Lead: confirmar ou ajustar `load-envelope.json`.
 5. T07.1: medir carga somente depois da aprovação do envelope.
 

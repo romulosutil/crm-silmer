@@ -1,0 +1,338 @@
+openapi: 3.1.0
+info:
+  title: CRM Silmer Identity API
+  version: 1.0.0
+  description: Contrato de identidade, sessão, MFA e capacidades da issue 12.
+servers:
+  - url: /api/v1
+paths:
+  /bootstrap/identity:
+    post:
+      operationId: bootstrapIdentity
+      summary: Cria o único Admin inicial e seu MFA
+      parameters:
+        - $ref: '#/components/parameters/BootstrapToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BootstrapRequest'
+      responses:
+        '201':
+          description: Admin e material MFA emitidos uma única vez
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BootstrapResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /invitations:
+    post:
+      operationId: createInvitation
+      summary: Cria convite por Admin autenticado com MFA
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+      responses:
+        '201':
+          description: Convite criado; o token é exibido uma vez
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationResponse'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /invitations/accept:
+    post:
+      operationId: acceptInvitation
+      summary: Consome um convite e cria o usuário atomicamente
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token, password]
+              properties:
+                token: { type: string, minLength: 1 }
+                password: { type: string, minLength: 12 }
+      responses:
+        '201':
+          description: Conta ativada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /sessions:
+    post:
+      operationId: createSession
+      summary: Autentica sem enumerar contas e cria cookies separados
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Sessão criada; nenhum token integra o corpo
+          headers:
+            Set-Cookie:
+              description: crm_session HttpOnly e crm_csrf legível pelo cliente
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionView'
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '429': { $ref: '#/components/responses/Throttled' }
+  /sessions/current:
+    get:
+      operationId: getCurrentSession
+      summary: Retorna o usuário da sessão e toca a expiração ociosa
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Sessão atual
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionView' }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+    delete:
+      operationId: deleteCurrentSession
+      summary: Revoga a sessão atual
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204': { description: Sessão revogada e cookies expirados }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /mfa/enrollments:
+    post:
+      operationId: enrollMfa
+      summary: Emite segredo TOTP e oito códigos de recuperação uma vez
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1 }
+      responses:
+        '201':
+          description: Material MFA emitido uma única vez
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaEnrollment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /capabilities/{change}:
+    post:
+      operationId: changeCapability
+      summary: Concede ou revoga capacidade e audita a mudança
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+        - name: change
+          in: path
+          required: true
+          schema: { type: string, enum: [grant, revoke] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapabilityRequest'
+      responses:
+        '200':
+          description: Mudança confirmada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [changed]
+                properties:
+                  changed: { type: boolean, const: true }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: crm_session
+      description: Cookie opaco HttpOnly, Secure e SameSite=Lax.
+    csrfHeader:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: Deve corresponder ao cookie Secure crm_csrf.
+    idempotencyKey:
+      type: apiKey
+      in: header
+      name: Idempotency-Key
+  parameters:
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      schema: { type: string, format: uri }
+    BootstrapToken:
+      name: X-Bootstrap-Token
+      in: header
+      required: true
+      schema: { type: string, minLength: 32 }
+  schemas:
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, functionName, capabilities]
+      properties:
+        id: { type: string }
+        functionName: { type: string, enum: [Atendimento, Vendedor] }
+        capabilities:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Capability' }
+    Capability:
+      type: string
+      enum: [COMMERCIAL_ADMIN, PRIVACY_OFFICER, TECHNICAL_PRIVACY_EXECUTOR]
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 12 }
+        totpCode: { type: string, pattern: '^[0-9]{6}$' }
+        recoveryCode: { type: string, minLength: 1 }
+    SessionView:
+      type: object
+      additionalProperties: false
+      required: [mfaVerified, user]
+      properties:
+        mfaVerified: { type: boolean }
+        user: { $ref: '#/components/schemas/User' }
+    BootstrapRequest:
+      type: object
+      additionalProperties: false
+      required: [email, functionName, password, reason]
+      properties:
+        email: { type: string, format: email }
+        functionName: { type: string, enum: [Atendimento, Vendedor] }
+        password: { type: string, minLength: 12 }
+        reason: { type: string, minLength: 1 }
+    BootstrapResponse:
+      type: object
+      required: [user, mfa]
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        mfa: { $ref: '#/components/schemas/MfaEnrollment' }
+    MfaEnrollment:
+      type: object
+      additionalProperties: false
+      required: [algorithm, digits, period, secret, recoveryCodes]
+      properties:
+        algorithm: { type: string, const: SHA1 }
+        digits: { type: integer, const: 6 }
+        period: { type: integer, const: 30 }
+        secret: { type: string, pattern: '^[A-Z2-7]+$' }
+        recoveryCodes:
+          type: array
+          minItems: 8
+          maxItems: 8
+          items: { type: string }
+    InvitationRequest:
+      type: object
+      additionalProperties: false
+      required: [email, functionName, expiresAt, reason]
+      properties:
+        email: { type: string, format: email }
+        functionName: { type: string, enum: [Atendimento, Vendedor] }
+        expiresAt: { type: string, format: date-time }
+        reason: { type: string, minLength: 1 }
+    InvitationResponse:
+      type: object
+      additionalProperties: false
+      required: [token, expiresAt]
+      properties:
+        token: { type: string }
+        expiresAt: { type: string, format: date-time }
+    CapabilityRequest:
+      type: object
+      additionalProperties: false
+      required: [targetId, capability, reason]
+      properties:
+        targetId: { type: string, minLength: 1 }
+        capability: { $ref: '#/components/schemas/Capability' }
+        reason: { type: string, minLength: 1 }
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code]
+          properties:
+            code: { type: string }
+  responses:
+    InvalidRequest:
+      description: Entrada inválida sem eco de dados recebidos
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    InvalidCredentials:
+      description: Credenciais inválidas, sem indicar se a conta existe
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Origem, CSRF, sessão, MFA ou autorização inválidos
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Chave idempotente divergente ou bootstrap já consumido
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Throttled:
+      description: Bloqueio progressivo ativo
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

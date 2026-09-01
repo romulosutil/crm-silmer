@@ -45,6 +45,7 @@ import {
  *   recoveryCodeHashes: Set<string>,
  * }} MfaFactor
  * @typedef {{
+ *   authenticateSession: (tokenHash: string, touchedAt: string, idleExpiresBefore: string) => IdentitySession | null | Promise<IdentitySession | null>,
  *   consumeInvitation: (tokenHash: string, now: Date) => IdentityInvitation | null | Promise<IdentityInvitation | null>,
  *   consumeRecoveryCode: (userId: string, codeHash: string) => boolean | Promise<boolean>,
  *   createInvitation: (invitation: IdentityInvitation) => void | Promise<void>,
@@ -65,6 +66,7 @@ import {
  *   revokeSession: (tokenHash: string, revokedAt: string) => void | Promise<void>,
  *   touchSession: (tokenHash: string, touchedAt: string) => void | Promise<void>,
  *   useTotpCounter: (userId: string, counter: number) => boolean | Promise<boolean>,
+ *   validateCsrfSession: (tokenHash: string, csrfHash: string, touchedAt: string, idleExpiresBefore: string) => IdentitySession | null | Promise<IdentitySession | null>,
  * }} IdentityRepository
  * @typedef {{
  *   actor: string,
@@ -232,7 +234,32 @@ export function createInMemoryIdentityRepository() {
   /** @type {Map<string, MfaFactor>} */
   const factors = new Map();
 
+  /**
+   * @param {string} tokenHash
+   * @param {string} touchedAt
+   * @param {string} idleExpiresBefore
+   */
+  function activeSession(tokenHash, touchedAt, idleExpiresBefore) {
+    const session = sessions.get(tokenHash);
+    if (
+      !session ||
+      session.revokedAt ||
+      new Date(session.absoluteExpiresAt) <= new Date(touchedAt) ||
+      new Date(session.lastSeenAt) <= new Date(idleExpiresBefore)
+    ) {
+      return null;
+    }
+    return session;
+  }
+
   return Object.freeze({
+    /** @param {string} tokenHash @param {string} touchedAt @param {string} idleExpiresBefore */
+    authenticateSession(tokenHash, touchedAt, idleExpiresBefore) {
+      const session = activeSession(tokenHash, touchedAt, idleExpiresBefore);
+      if (!session) return null;
+      session.lastSeenAt = touchedAt;
+      return { ...session };
+    },
     /** @param {string} tokenHash @param {Date} now */
     consumeInvitation(tokenHash, now) {
       const invitation = invitations.get(tokenHash);
@@ -330,6 +357,15 @@ export function createInMemoryIdentityRepository() {
       if (!factor || (factor.lastCounter ?? -1) >= counter) return false;
       factor.lastCounter = counter;
       return true;
+    },
+    /** @param {string} tokenHash @param {string} csrfHash @param {string} touchedAt @param {string} idleExpiresBefore */
+    validateCsrfSession(tokenHash, csrfHash, touchedAt, idleExpiresBefore) {
+      const session = activeSession(tokenHash, touchedAt, idleExpiresBefore);
+      if (!session || !constantTimeEqual(session.csrfHash, csrfHash)) {
+        return null;
+      }
+      session.lastSeenAt = touchedAt;
+      return { ...session };
     },
   });
 }
@@ -568,26 +604,23 @@ export function createIdentityAccessService({
     });
   }
 
-  /** @param {string} sessionToken */
-  async function requireActiveSession(sessionToken) {
-    const tokenHash = digest(sessionToken);
-    const session = await repository.findSession(tokenHash);
+  function sessionWindow() {
     const now = clock();
-    if (
-      !session ||
-      session.revokedAt ||
-      new Date(session.absoluteExpiresAt) <= now ||
-      new Date(session.lastSeenAt).getTime() + sessionIdleMs <= now.getTime()
-    ) {
-      throw new Error('Invalid or expired session');
-    }
-    return { now, session, tokenHash };
+    return {
+      idleExpiresBefore: new Date(now.getTime() - sessionIdleMs).toISOString(),
+      touchedAt: now.toISOString(),
+    };
   }
 
   /** @param {string} sessionToken */
   async function authenticate(sessionToken) {
-    const { now, session, tokenHash } = await requireActiveSession(sessionToken);
-    await repository.touchSession(tokenHash, now.toISOString());
+    const window = sessionWindow();
+    const session = await repository.authenticateSession(
+      digest(sessionToken),
+      window.touchedAt,
+      window.idleExpiresBefore,
+    );
+    if (!session) throw new Error('Invalid or expired session');
     return Object.freeze({
       mfaVerified: session.mfaVerified,
       userId: session.userId,
@@ -596,11 +629,14 @@ export function createIdentityAccessService({
 
   /** @param {string} sessionToken @param {string} csrfToken */
   async function assertCsrf(sessionToken, csrfToken) {
-    const { now, session, tokenHash } = await requireActiveSession(sessionToken);
-    if (!constantTimeEqual(digest(csrfToken), session.csrfHash)) {
-      throw new Error('CSRF validation failed');
-    }
-    await repository.touchSession(tokenHash, now.toISOString());
+    const window = sessionWindow();
+    const session = await repository.validateCsrfSession(
+      digest(sessionToken),
+      digest(csrfToken),
+      window.touchedAt,
+      window.idleExpiresBefore,
+    );
+    if (!session) throw new Error('CSRF validation failed');
   }
 
   /** @param {string} sessionToken */

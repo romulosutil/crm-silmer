@@ -99,6 +99,72 @@ test('supports asynchronous repository ports used by PostgreSQL adapters', async
   await assert.rejects(service.authenticate(login.sessionToken), /session/iu);
 });
 
+test('delegates active-session validation and touch to atomic repository operations', async () => {
+  let sequence = 0;
+  const base = createInMemoryIdentityRepository();
+  /** @type {string[]} */
+  const calls = [];
+  const repository = {
+    ...base,
+    /** @param {string} tokenHash @param {string} touchedAt @param {string} idleExpiresBefore */
+    authenticateSession: async (tokenHash, touchedAt, idleExpiresBefore) => {
+      calls.push('authenticate');
+      return base.authenticateSession(
+        tokenHash,
+        touchedAt,
+        idleExpiresBefore,
+      );
+    },
+    findSession: () => {
+      throw new Error('non-atomic session lookup used');
+    },
+    touchSession: () => {
+      throw new Error('non-atomic session touch used');
+    },
+    /** @param {string} tokenHash @param {string} csrfHash @param {string} touchedAt @param {string} idleExpiresBefore */
+    validateCsrfSession: async (
+      tokenHash,
+      csrfHash,
+      touchedAt,
+      idleExpiresBefore,
+    ) => {
+      calls.push('csrf');
+      return base.validateCsrfSession(
+        tokenHash,
+        csrfHash,
+        touchedAt,
+        idleExpiresBefore,
+      );
+    },
+  };
+  const service = createIdentityAccessService({
+    auditPort: { append: async () => undefined },
+    clock: () => NOW,
+    envelopeKey: ENVELOPE_KEY,
+    idFactory: (prefix) => `${prefix}-${++sequence}`,
+    passwordParameters: { memory: 64, parallelism: 2, passes: 2 },
+    repository,
+    tokenFactory: () => `opaque-token-${++sequence}-with-enough-entropy`,
+  });
+  const { user } = await service.bootstrapAdmin({
+    correlationId: 'correlation-bootstrap-atomic',
+    email: 'admin@example.test',
+    functionName: 'Atendimento',
+    password: 'correct horse battery staple',
+    reason: 'Provisionamento inicial autorizado',
+  });
+  await service.enrollTotp({ actorId: user.id, secret: Buffer.alloc(20, 3) });
+  const login = await service.login({
+    email: 'admin@example.test',
+    password: 'correct horse battery staple',
+    totpCode: service.currentTotpForTesting(Buffer.alloc(20, 3)),
+  });
+
+  await service.authenticate(login.sessionToken);
+  await service.assertCsrf(login.sessionToken, login.csrfToken);
+  assert.deepEqual(calls, ['authenticate', 'csrf']);
+});
+
 test('hashes passwords with Argon2id and verifies without storing plaintext', async () => {
   const encoded = await hashPassword('correct horse battery staple', {
     memory: 64,

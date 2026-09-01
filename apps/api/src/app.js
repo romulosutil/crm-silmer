@@ -11,6 +11,7 @@ import {
   MetaWebhookAuthenticationError,
   MetaWebhookPayloadError,
 } from '@crm-silmer/integration-reliability';
+import { registerIdentityRoutes } from './identity-routes.js';
 
 /**
  * Creates the HTTP API without binding a socket, so callers and tests own its
@@ -24,7 +25,8 @@ import {
  *   metaWebhook?: {
  *     verifyToken: string,
  *     process(input: {rawBody: Buffer, signature: unknown}): Promise<unknown>
- *   }
+ *   },
+ *   identity?: Record<string, any>
  * }} [runtime]
  */
 export function createApi(options = {}, runtime = {}) {
@@ -159,6 +161,14 @@ export function createApi(options = {}, runtime = {}) {
       },
     );
   });
+
+  if (runtime.identity) {
+    registerIdentityRoutes(api, runtime.identity, (request) => {
+      const context = requests.get(request);
+      if (!context) throw new Error('Missing request context');
+      return context;
+    });
+  }
 
   // Temporary compatibility for the T00.1 container contract.
   api.get('/health/live', live);

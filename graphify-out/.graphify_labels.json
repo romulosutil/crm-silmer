@@ -1,6 +1,6 @@
 {
   "0": "integration-reliability/src/index.js",
-  "1": "Audit Trail and Idempotency",
+  "1": "audit-privacy/src/index.js",
   "2": "CRM Sales Process",
   "3": "MVP Implementation Strategy",
   "4": "Database Security Policies",
@@ -83,7 +83,7 @@
   "81": "Worker Container",
   "82": "Foundation Specifications",
   "83": "Worker Service Dependencies",
-  "84": "T00.4 — Aprovação e validação do Cloudflare R2",
+  "84": "Dívida #29 — Aprovação e validação futura do Cloudflare R2",
   "85": "Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?",
   "86": "Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?",
   "87": "Q: Como a nova decisao do P0.4 limita a autonomia do Vendedor Silmer?",
@@ -103,5 +103,8 @@
   "101": "Q: Qual modelo Gemini oferece o melhor custo-beneficio para os chats do CRM Silmer na issue 5?",
   "102": "Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?",
   "103": "Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?",
-  "104": "Q: Qual é o escopo, os requisitos, as dependências, os critérios de aceite e as evidências esperadas da issue 6 do CRM Silmer?"
+  "104": "Q: Qual é o escopo, os requisitos, as dependências, os critérios de aceite e as evidências esperadas da issue 6 do CRM Silmer?",
+  "105": "validate-media-retention.mjs",
+  "106": "T00.4 — Mídia transitória do piloto interno",
+  "107": "Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?"
 }

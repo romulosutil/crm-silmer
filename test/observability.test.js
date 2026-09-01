@@ -11,6 +11,7 @@ import {
   normalizeTraceId,
 } from '../modules/shared/src/index.js';
 import {
+  validateActivationGate,
   validateAlertPolicy,
   validateRuntimeHardening,
 } from '../scripts/validate-observability.mjs';
@@ -188,4 +189,116 @@ test('keeps alert routing pending and runtime hardening verifiable', async () =>
   const unsafe = structuredClone(policy);
   unsafe.status = 'active';
   assert.throws(() => validateAlertPolicy(unsafe), /pending/iu);
+});
+
+test('keeps T00.7 activation fail-closed until every live proof is coherent', async () => {
+  const policy = JSON.parse(
+    await readFile(new URL('ops/observability/alerts.json', rootUrl), 'utf8'),
+  );
+  const gate = JSON.parse(
+    await readFile(
+      new URL('ops/observability/activation-gate.json', rootUrl),
+      'utf8',
+    ),
+  );
+
+  assert.doesNotThrow(() => validateActivationGate(gate, policy));
+
+  const partial = structuredClone(gate);
+  partial.status = 'active';
+  assert.throws(
+    () => validateActivationGate(partial, policy),
+    /pending or wholly proved/iu,
+  );
+
+  const leaked = structuredClone(gate);
+  leaked.provider.apiToken = 'must-not-pass';
+  assert.throws(
+    () => validateActivationGate(leaked, policy),
+    /sensitive field/iu,
+  );
+
+  const completed = structuredClone(gate);
+  const evidence = 'docs/phase0/observability-live-evidence.json';
+  completed.status = 'proved';
+  completed.provider = {
+    dataRegion: 'br-compatible-approved-region',
+    dpaAccepted: true,
+    evidenceRef: `${evidence}#provider`,
+    name: 'approved-observability-operator',
+    privacyReviewer: 'silmer:privacy-officer',
+    retentionDays: 30,
+    reviewedAt: '2026-09-01T12:00:00.000Z',
+    status: 'approved',
+    subprocessorsAccepted: true,
+  };
+  completed.routing = {
+    criticalEscalationMinutes: 10,
+    destinations: [
+      'operator-contact://primary-on-call',
+      'operator-contact://delivery-team',
+    ],
+    evidenceRef: `${evidence}#routing`,
+    highEscalationMinutes: 15,
+    ownerIds: ['silmer:tech-lead', 'silmer:devops'],
+    status: 'configured',
+  };
+  completed.monitor = {
+    ...completed.monitor,
+    checkIntervalSeconds: 30,
+    evidenceRef: `${evidence}#api-live-unavailable`,
+    monitorId: 'operator-monitor://crm-silmer-api-live',
+    status: 'active',
+  };
+  completed.telemetry = {
+    ...completed.telemetry,
+    evidenceRef: `${evidence}#telemetry`,
+    status: 'active',
+  };
+  completed.hardening = {
+    capabilitiesRemoved: true,
+    digest:
+      'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    evidenceRef: `${evidence}#hardening`,
+    nonRoot: true,
+    readOnly: true,
+    status: 'passed',
+    temporaryStorageLimited: true,
+  };
+  completed.drills = completed.drills.map(
+    (/** @type {any} */ drill, /** @type {number} */ index) => ({
+      ...drill,
+      deliveredAt: `2026-09-01T12:0${index}:30.000Z`,
+      detectedAt: `2026-09-01T12:0${index}:20.000Z`,
+      evidenceRef: `${evidence}#${drill.alertId}`,
+      recoveredAt: `2026-09-01T12:0${index}:40.000Z`,
+      startedAt: `2026-09-01T12:0${index}:10.000Z`,
+      status: 'passed',
+    }),
+  );
+  completed.completion = {
+    approvedAt: '2026-09-01T13:00:00.000Z',
+    approvedBy: ['silmer:tech-lead', 'silmer:privacy-officer'],
+    evidenceRef: `${evidence}#approval`,
+    humanApproved: true,
+  };
+
+  const activePolicy = structuredClone(policy);
+  activePolicy.status = 'active';
+  activePolicy.routing = {
+    ...activePolicy.routing,
+    destination: 'operator-contact://primary-on-call',
+    status: 'configured',
+  };
+  activePolicy.alerts = activePolicy.alerts.map((/** @type {any} */ alert) => ({
+    ...alert,
+    status: 'active',
+  }));
+  assert.doesNotThrow(() => validateActivationGate(completed, activePolicy));
+
+  completed.drills[0].detectedAt = completed.drills[0].startedAt;
+  assert.throws(
+    () => validateActivationGate(completed, activePolicy),
+    /ordered timestamps/iu,
+  );
 });

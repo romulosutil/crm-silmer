@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "task": "T00.7",
+  "activationGateRef": "ops/observability/activation-gate.json",
   "status": "pending-external",
   "syntheticOnly": true,
   "monitorLocation": "outside-vps",

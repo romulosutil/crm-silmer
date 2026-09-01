@@ -3,9 +3,11 @@ import {
   createHmac,
   randomUUID as nodeRandomUuid,
 } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+
+import { assertR2LiveExecutionAuthorized } from './validate-r2.mjs';
 
 const { Headers, TextDecoder, TextEncoder } = globalThis;
 
@@ -670,13 +672,13 @@ export async function runR2LiveSmoke(options = {}) {
   }
 
   const dataBody = new TextEncoder().encode(
-    'CRM Silmer issue 6 synthetic object; no customer data.',
+    'CRM Silmer issue 29 synthetic object; no customer data.',
   );
   const dataSha256 = sha256Hex(dataBody);
-  const dataKey = `issue-6-smoke/${randomUuid()}`;
-  const backupKey = `issue-6-smoke/${randomUuid()}`;
-  const tombstoneKey = `tombstones/issue-6-smoke/${randomUuid()}`;
-  const restoreDeniedKey = `issue-6-smoke/restore-denied-${randomUuid()}`;
+  const dataKey = `issue-29-smoke/${randomUuid()}`;
+  const backupKey = `issue-29-smoke/${randomUuid()}`;
+  const tombstoneKey = `tombstones/issue-29-smoke/${randomUuid()}`;
+  const restoreDeniedKey = `issue-29-smoke/restore-denied-${randomUuid()}`;
   let dataCreated = false;
   let backupCreated = false;
   /** @type {Record<string, any>|undefined} */
@@ -913,7 +915,15 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  runR2LiveSmoke()
+  readFile(
+    new URL('../docs/phase0/r2-control-plane.json', import.meta.url),
+    'utf8',
+  )
+    .then((source) => JSON.parse(source))
+    .then((controlPlane) => {
+      assertR2LiveExecutionAuthorized(controlPlane);
+      return runR2LiveSmoke();
+    })
     .then(() => {
       console.log(
         'R2 live smoke completed with synthetic data; sanitized evidence saved locally.',

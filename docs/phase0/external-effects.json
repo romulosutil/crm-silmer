@@ -117,6 +117,27 @@
         "automaticRetry": false,
         "strategy": "Quarantine partial downloads; reconcile upload acceptance before another upload."
       },
+      "retention": {
+        "storageMode": "private-vps-volume",
+        "expiryRule": "earliest-of-journey-end-or-7-days",
+        "maximumAgeDays": 7,
+        "backupRequired": false,
+        "unavailableState": "lost/unavailable"
+      },
+      "validFileHandoff": {
+        "destination": "existing-dropbox-operational-repository",
+        "mode": "manual-operational",
+        "apiIntegration": false,
+        "receiptFields": [
+          "attachment-id",
+          "sha256",
+          "operator",
+          "occurred-at",
+          "outcome"
+        ],
+        "outcomes": ["success", "failure", "limitation", "archive_missed"],
+        "failureExtendsTransientExpiry": false
+      },
       "status": "sandbox-verified",
       "evidence": [
         {
@@ -210,7 +231,7 @@
     {
       "id": "r2.put-object",
       "provider": "Cloudflare R2",
-      "effect": "Store private attachment, PDF, backup, or append-only tombstone object",
+      "effect": "Future storage of durable commercial documents, backups, or append-only tombstone objects; transient channel media is excluded",
       "idempotency": {
         "support": "conditional-local-contract",
         "key": "content SHA-256 + immutable object key"
@@ -242,7 +263,14 @@
         "signedUrlMaximumTtlSeconds": 300,
         "rawSignedUrlAllowedInEvidence": false
       },
-      "status": "pending-human",
+      "activation": {
+        "status": "deferred-zero-incremental-cost",
+        "issue": 29,
+        "subscriptionAuthorized": false,
+        "provisioningAuthorized": false,
+        "transientMediaExcluded": true
+      },
+      "status": "deferred",
       "evidence": [
         {
           "url": "https://developers.cloudflare.com/r2/api/s3/api/",

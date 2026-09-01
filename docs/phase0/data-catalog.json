@@ -7,17 +7,43 @@
   "approval": { "techLead": "pending", "privacyOfficer": "pending" },
   "dataClasses": [
     {
-      "id": "conversation-no-lead",
+      "id": "transient-journey-media",
       "pii": [
-        "channel identity",
-        "contact data",
-        "message content",
-        "attachments"
+        "inbound and outbound channel images",
+        "unpromoted journey files",
+        "channel media identifiers"
       ],
+      "purpose": "Display and validate media only while the internal purchase journey needs it.",
+      "systemsAndCopies": [
+        "private VPS media volume",
+        "PostgreSQL metadata and expiry",
+        "channel operator copies"
+      ],
+      "actorsAndOperators": [
+        "Atendimento",
+        "Vendedor",
+        "Admin",
+        "Technical Privacy Executor",
+        "Meta as channel operator"
+      ],
+      "trigger": "Media received or sent; delete at journey terminal state or seven days after that media timestamp, whichever occurs first.",
+      "maximumRetentionDays": 7,
+      "destination": "Delete bytes from the private VPS volume; retain only minimum metadata, hash and outcome under the parent record retention.",
+      "legalHold": "Evidence that must survive is promoted to the applicable durable class before expiry; the transient volume never becomes an indefinite legal-hold archive.",
+      "deletionPropagation": [
+        "private VPS media volume",
+        "temporary processing files",
+        "cache",
+        "applicable channel-operator request and reconciliation"
+      ]
+    },
+    {
+      "id": "conversation-no-lead",
+      "pii": ["channel identity", "contact data", "message content"],
       "purpose": "Operate and close an inbound conversation without a commercial opportunity.",
       "systemsAndCopies": [
         "PostgreSQL",
-        "private object storage",
+        "Dropbox operational repository when a file was promoted as valid",
         "search/cache",
         "channel operator copies"
       ],
@@ -33,7 +59,7 @@
       "legalHold": "Allowed only for minimum scoped data with basis, owner and review date; isolate from commercial and AI use.",
       "deletionPropagation": [
         "primary database",
-        "attachments",
+        "promoted valid files through the operational repository",
         "cache/search",
         "applicable operator request and reconciliation"
       ]
@@ -49,7 +75,7 @@
       "purpose": "Operate and analyze a lost commercial opportunity.",
       "systemsAndCopies": [
         "PostgreSQL",
-        "private object storage",
+        "Dropbox operational repository when a file was promoted as valid",
         "search/cache",
         "analytics aggregates"
       ],
@@ -66,18 +92,18 @@
       "legalHold": "Minimum scope only, with documented basis, owner and review date.",
       "deletionPropagation": [
         "primary database",
-        "attachments",
+        "promoted valid files through the operational repository",
         "cache/search",
         "controlled analytical copies"
       ]
     },
     {
       "id": "closed-sale-nondocumentary-content",
-      "pii": ["messages", "non-documentary attachments", "channel identities"],
+      "pii": ["messages", "channel identities"],
       "purpose": "Support the completed or cancelled sale and operational follow-up.",
       "systemsAndCopies": [
         "PostgreSQL",
-        "private object storage",
+        "Dropbox operational repository for files promoted as valid",
         "search/cache",
         "channel operator copies"
       ],
@@ -93,7 +119,7 @@
       "legalHold": "Minimum scope only; no commercial or AI processing while held.",
       "deletionPropagation": [
         "primary database",
-        "attachments",
+        "promoted valid files through the operational repository",
         "cache/search",
         "applicable operator request and reconciliation"
       ]
@@ -110,7 +136,7 @@
       "purpose": "Prove and operate the commercial transaction and approved document history.",
       "systemsAndCopies": [
         "PostgreSQL",
-        "private object storage",
+        "Dropbox operational repository for approved durable files",
         "PDF snapshots",
         "authorized recipient/channel copies"
       ],
@@ -128,7 +154,7 @@
       "legalHold": "Supported with legal basis, minimum scope, owner, start and review date.",
       "deletionPropagation": [
         "primary database",
-        "private storage/PDF",
+        "Dropbox operational repository/PDF",
         "cache/search",
         "operator reconciliation; external delivered copies handled operationally"
       ]

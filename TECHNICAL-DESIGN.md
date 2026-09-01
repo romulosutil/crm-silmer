@@ -1,18 +1,18 @@
 # TDD — CRM Silmer MVP
 
-| Campo | Valor |
-|---|---|
-| Status | Baseline proposta para aprovação técnica e operacional |
-| Criado em | 30/08/2026 |
-| Última atualização | 30/08/2026 |
-| Produto | CRM Silmer |
-| Tech Lead | A designar formalmente pela Silmer |
-| Responsável de Privacidade | Rômulo Sutil Corrêa |
-| Time de implementação | A definir |
-| Epic | `crm-mvp` |
-| PRD canônico | `CRM-MVP-ESPECIFICACAO.md` |
-| Requisitos rastreáveis | `.specs/features/crm-mvp/spec.md` |
-| Topologia operacional | `EASYPANEL-TOPOLOGY.md` |
+| Campo                      | Valor                                                  |
+| -------------------------- | ------------------------------------------------------ |
+| Status                     | Baseline proposta para aprovação técnica e operacional |
+| Criado em                  | 30/08/2026                                             |
+| Última atualização         | 30/08/2026                                             |
+| Produto                    | CRM Silmer                                             |
+| Tech Lead                  | A designar formalmente pela Silmer                     |
+| Responsável de Privacidade | Rômulo Sutil Corrêa                                    |
+| Time de implementação      | A definir                                              |
+| Epic                       | `crm-mvp`                                              |
+| PRD canônico               | `CRM-MVP-ESPECIFICACAO.md`                             |
+| Requisitos rastreáveis     | `.specs/features/crm-mvp/spec.md`                      |
+| Topologia operacional      | `EASYPANEL-TOPOLOGY.md`                                |
 
 ## 1. Resumo executivo
 
@@ -24,9 +24,11 @@ implantado em três processos independentes a partir do mesmo repositório:
 3. `worker`: webhooks, IA, documentos, envios, retries, retenção e reconciliação.
 
 O PostgreSQL é a fonte de verdade e também sustenta a fila durável por meio de
-inbox/outbox e jobs transacionais. Anexos e Fichas ficam em object storage
-externo privado. Redis, MinIO, n8n, microserviços, vector database e GraphQL
-não entram no MVP.
+inbox/outbox e jobs transacionais. No piloto interno, bytes de mídia de canal
+ficam temporariamente em volume privado da VPS; arquivos válidos são arquivados
+no Dropbox pelo procedimento operacional existente. Fichas e demais documentos
+comerciais mantêm classe durável própria. Redis, MinIO, n8n, microserviços,
+vector database e GraphQL não entram no MVP.
 
 Esta solução privilegia consistência, recuperação e simplicidade operacional.
 Ela mantém os formatos da Meta, do provedor de IA e do storage fora do núcleo
@@ -96,22 +98,22 @@ privilegiadas que precisam de auditoria e recuperação.
 
 ## 4. Decisões técnicas
 
-| Área | Decisão | Razão |
-|---|---|---|
-| Forma do sistema | Monólito modular | Uma equipe e um domínio transacional; reduz custo sem perder fronteiras |
-| Linguagem | JavaScript ESM | Mantém a stack definida e compartilhamento de contratos |
-| Frontend | HTML semântico, CSS e JS vanilla | ESM/IIFE/classes isoladas; sem framework de UI ou estado de domínio em `window` |
-| Backend | Node.js Active LTS + Fastify | I/O assíncrono, JSON Schema, baixo overhead e ecossistema maduro |
-| API | REST `/api/v1` + OpenAPI 3.1 | Comandos, idempotência e autorização explícitos |
-| Tempo real | Server-Sent Events | Atualização unidirecional suficiente; menor complexidade que WebSocket |
-| Banco | PostgreSQL, SQL explícito e migrações versionadas | Transações, constraints, JSONB seletivo e locking confiável |
-| Jobs | PostgreSQL inbox/outbox + `FOR UPDATE SKIP LOCKED` | Durabilidade sem Redis e mesma transação do domínio |
-| Storage | S3-compatible externo, privado | Remove anexos do domínio de falha da VPS |
-| Documentos | Snapshot JSON + template HTML/CSS + Chromium para PDF | Snapshot determinístico; artefato íntegro, versionável e testável |
-| Autenticação | Sessão opaca no servidor em cookie seguro | Revogação simples; nenhum token no `localStorage` |
-| IA | Adapter `AIProvider`; Gemini Developer API paga com `gemini-2.5-flash-lite` | Evita agregador/suboperadores extras, reduz custo e mantém DPA/controles de retenção explícitos |
-| Observabilidade | Logs JSON, métricas EasyPanel, erros/traces externos e audit trail no banco | Separa telemetria técnica de evidência de negócio |
-| Deploy | Imagens imutáveis por digest em EasyPanel | Promoção reproduzível e rollback rápido |
+| Área             | Decisão                                                                                                 | Razão                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Forma do sistema | Monólito modular                                                                                        | Uma equipe e um domínio transacional; reduz custo sem perder fronteiras                                |
+| Linguagem        | JavaScript ESM                                                                                          | Mantém a stack definida e compartilhamento de contratos                                                |
+| Frontend         | HTML semântico, CSS e JS vanilla                                                                        | ESM/IIFE/classes isoladas; sem framework de UI ou estado de domínio em `window`                        |
+| Backend          | Node.js Active LTS + Fastify                                                                            | I/O assíncrono, JSON Schema, baixo overhead e ecossistema maduro                                       |
+| API              | REST `/api/v1` + OpenAPI 3.1                                                                            | Comandos, idempotência e autorização explícitos                                                        |
+| Tempo real       | Server-Sent Events                                                                                      | Atualização unidirecional suficiente; menor complexidade que WebSocket                                 |
+| Banco            | PostgreSQL, SQL explícito e migrações versionadas                                                       | Transações, constraints, JSONB seletivo e locking confiável                                            |
+| Jobs             | PostgreSQL inbox/outbox + `FOR UPDATE SKIP LOCKED`                                                      | Durabilidade sem Redis e mesma transação do domínio                                                    |
+| Storage          | Volume privado e descartável para mídia; Dropbox operacional para arquivos válidos; S3 externo diferido | Zero custo incremental no piloto e risco de perda transitória aceito sem reduzir a retenção documental |
+| Documentos       | Snapshot JSON + template HTML/CSS + Chromium para PDF                                                   | Snapshot determinístico; artefato íntegro, versionável e testável                                      |
+| Autenticação     | Sessão opaca no servidor em cookie seguro                                                               | Revogação simples; nenhum token no `localStorage`                                                      |
+| IA               | Adapter `AIProvider`; Gemini Developer API paga com `gemini-2.5-flash-lite`                             | Evita agregador/suboperadores extras, reduz custo e mantém DPA/controles de retenção explícitos        |
+| Observabilidade  | Logs JSON, métricas EasyPanel, erros/traces externos e audit trail no banco                             | Separa telemetria técnica de evidência de negócio                                                      |
+| Deploy           | Imagens imutáveis por digest em EasyPanel                                                               | Promoção reproduzível e rollback rápido                                                                |
 
 Versões major serão fixadas no início da implementação. A baseline recomendada
 é Node.js 24 LTS, Fastify 5 e PostgreSQL 17. Atualização de major exige teste de
@@ -133,11 +135,12 @@ flowchart LR
     end
     subgraph datastore ["Dados"]
         postgres["PostgreSQL"]
+        mediaVolume["Volume privado: mídia transitória"]
     end
     subgraph external ["Operadores externos"]
         meta["Meta WhatsApp e Instagram"]
         aiProvider["Gemini Developer API"]
-        objectStorage["Object storage S3"]
+        objectStorage["Object storage futuro: issue #29"]
         telemetry["Erros e uptime"]
     end
 
@@ -145,10 +148,12 @@ flowchart LR
     edgeWeb -->|"Proxy API, SSE e webhooks"| api
     api -->|"Transações e consultas"| postgres
     worker -->|"Claim de jobs e outbox"| postgres
+    api -->|"Leitura autorizada"| mediaVolume
+    worker -->|"Quarentena, scan e expiração"| mediaVolume
     meta -.->|"Meta: Webhooks"| edgeWeb
     worker -.->|"Meta: Mensagens"| meta
     worker -.->|"Gemini: Respostas estruturadas"| aiProvider
-    worker -.->|"S3: Anexos e PDFs"| objectStorage
+    worker -.->|"Futuro: arquivo durável/backups/tombstones"| objectStorage
     api -.->|"Telemetria: API"| telemetry
     worker -.->|"Telemetria: Jobs"| telemetry
 ```
@@ -160,31 +165,31 @@ responde rapidamente; qualquer trabalho dependente de canal, IA, PDF ou retry
 
 ### Processos implantáveis
 
-| Processo | Responsabilidades | Estado local |
-|---|---|---|
-| `edge-web` | Arquivos estáticos, TLS via proxy EasyPanel, headers e roteamento | Nenhum |
-| `api` | Sessão, REST, SSE, comandos, consultas, webhook ingress | Nenhum |
-| `worker` | Jobs, IA, Meta outbound, PDF, retenção, reconciliação, agendas | Diretório temporário descartável |
-| `postgres` | Estado oficial, auditoria, inbox/outbox, jobs e projeções | Volume persistente e backup externo |
+| Processo   | Responsabilidades                                                 | Estado local                        |
+| ---------- | ----------------------------------------------------------------- | ----------------------------------- |
+| `edge-web` | Arquivos estáticos, TLS via proxy EasyPanel, headers e roteamento | Nenhum                              |
+| `api`      | Sessão, REST, SSE, comandos, consultas, webhook ingress           | Nenhum                              |
+| `worker`   | Jobs, IA, Meta outbound, PDF, retenção, reconciliação, agendas    | Diretório temporário descartável    |
+| `postgres` | Estado oficial, auditoria, inbox/outbox, jobs e projeções         | Volume persistente e backup externo |
 
 ## 6. Fronteiras do monólito
 
-| Módulo | Fonte de verdade | Pode emitir |
-|---|---|---|
-| `identity-access` | usuários, funções, roles, sessões, MFA | autenticação, concessão e revogação |
-| `inbox-channels` | conversas, mensagens, anexos, adapters Meta | mensagem recebida, estado do canal |
-| `contacts` | contato e identidades externas verificadas | vínculo, merge e unmerge auditáveis |
-| `catalog` | tipos, modelos, malhas, técnicas e versões publicadas | item selecionado e snapshot de referência |
-| `deals-pipeline` | Negócio, etapa, gate, tarefa e histórico | avanço, retorno, perda e fechamento |
-| `qualification` | itens, grade, estampa, logística e estados de campo | campo confirmado, pendente ou divergente |
-| `quotes-sales` | versões de orçamento e ledger de vendido | orçamento aprovado, invalidado, venda reconhecida |
-| `payments` | cobrança PIX, comprovante e confirmação | comprovante recebido, pagamento confirmado |
-| `orders-documents` | Pedido, Ficha, artefato e envio | versão aprovada, cancelada, enviada ou substituída |
-| `assistant` | turnos, sugestões e handoffs | resposta, sugestão e transferência |
-| `integration-reliability` | inbox, outbox, jobs, tentativas e reconciliação | retry, dead letter e recuperação |
-| `audit-privacy` | auditoria, retenção, legal hold, solicitações e tombstones | anonimização, exclusão e propagação |
-| `reporting` | read models derivados | total vendido, quantidade, ticket médio e saúde |
-| `configuration` | FAB, PIX, destinatários, templates, canais e feature flags | configuração versionada |
+| Módulo                    | Fonte de verdade                                           | Pode emitir                                        |
+| ------------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| `identity-access`         | usuários, funções, roles, sessões, MFA                     | autenticação, concessão e revogação                |
+| `inbox-channels`          | conversas, mensagens, anexos, adapters Meta                | mensagem recebida, estado do canal                 |
+| `contacts`                | contato e identidades externas verificadas                 | vínculo, merge e unmerge auditáveis                |
+| `catalog`                 | tipos, modelos, malhas, técnicas e versões publicadas      | item selecionado e snapshot de referência          |
+| `deals-pipeline`          | Negócio, etapa, gate, tarefa e histórico                   | avanço, retorno, perda e fechamento                |
+| `qualification`           | itens, grade, estampa, logística e estados de campo        | campo confirmado, pendente ou divergente           |
+| `quotes-sales`            | versões de orçamento e ledger de vendido                   | orçamento aprovado, invalidado, venda reconhecida  |
+| `payments`                | cobrança PIX, comprovante e confirmação                    | comprovante recebido, pagamento confirmado         |
+| `orders-documents`        | Pedido, Ficha, artefato e envio                            | versão aprovada, cancelada, enviada ou substituída |
+| `assistant`               | turnos, sugestões e handoffs                               | resposta, sugestão e transferência                 |
+| `integration-reliability` | inbox, outbox, jobs, tentativas e reconciliação            | retry, dead letter e recuperação                   |
+| `audit-privacy`           | auditoria, retenção, legal hold, solicitações e tombstones | anonimização, exclusão e propagação                |
+| `reporting`               | read models derivados                                      | total vendido, quantidade, ticket médio e saúde    |
+| `configuration`           | FAB, PIX, destinatários, templates, canais e feature flags | configuração versionada                            |
 
 Cada módulo possui `domain`, `application`, `ports` e `adapters`. Um módulo não
 escreve diretamente nas tabelas privadas de outro. Integração interna acontece
@@ -211,20 +216,20 @@ do WhatsApp.
 
 ## 7. Modelo de dados essencial
 
-| Grupo | Tabelas/estruturas | Restrições críticas |
-|---|---|---|
-| Acesso | `users`, `user_functions`, `user_capabilities`, `sessions`, `mfa_factors` | função única; `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e `TECHNICAL_PRIVACY_EXECUTOR` ortogonais; sessão revogável |
-| Identidade | `contacts`, `contact_identities`, `identity_links`, `identity_handoffs` | identidade única por provedor/conta/canal; handoff verificável; merge humano reversível |
-| Inbox | `conversations`, `messages`, `attachments` | mensagem única por `(provider, provider_account_id, external_message_id)` |
-| Catálogo | `catalog_versions`, `catalog_products`, `catalog_models`, `catalog_materials`, `catalog_techniques` | versão publicada imutável; Pedido guarda snapshot |
-| Funil | `deals`, `deal_stage_history`, `tasks` | versão otimista; uma projeção Kanban por Deal |
-| Qualificação | `deal_items`, `item_fabrics`, `grade_lines`, `artwork`, `logistics`, `field_assessments` | grade positiva; soma exata; N/A exige motivo |
-| Comercial | `quote_versions`, `sale_events` | versão aprovada imutável; reconhecimento vendido único |
-| Pagamento | `payment_flows`, `payment_evidence` | comprovante não confirma pagamento; uma cobrança lógica |
-| Pedido | `order_counter`, `orders`, `order_form_versions`, `document_artifacts`, `deliveries` | número global único; versão aprovada imutável |
-| IA | `ai_turns`, `ai_suggestions`, `handoffs` | sugestão nunca ocupa campo oficial automaticamente |
-| Confiabilidade | `channel_events`, `idempotency_records`, `outbox_jobs`, `processing_attempts`, `reconciliation_items` | chave única por efeito observável |
-| Privacidade | `audit_events`, `privacy_requests`, `legal_holds`, `tombstone_receipts` | auditoria sem cópia eterna; ledger canônico externo ao backup |
+| Grupo          | Tabelas/estruturas                                                                                    | Restrições críticas                                                                                             |
+| -------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Acesso         | `users`, `user_functions`, `user_capabilities`, `sessions`, `mfa_factors`                             | função única; `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e `TECHNICAL_PRIVACY_EXECUTOR` ortogonais; sessão revogável |
+| Identidade     | `contacts`, `contact_identities`, `identity_links`, `identity_handoffs`                               | identidade única por provedor/conta/canal; handoff verificável; merge humano reversível                         |
+| Inbox          | `conversations`, `messages`, `attachments`                                                            | mensagem única por `(provider, provider_account_id, external_message_id)`                                       |
+| Catálogo       | `catalog_versions`, `catalog_products`, `catalog_models`, `catalog_materials`, `catalog_techniques`   | versão publicada imutável; Pedido guarda snapshot                                                               |
+| Funil          | `deals`, `deal_stage_history`, `tasks`                                                                | versão otimista; uma projeção Kanban por Deal                                                                   |
+| Qualificação   | `deal_items`, `item_fabrics`, `grade_lines`, `artwork`, `logistics`, `field_assessments`              | grade positiva; soma exata; N/A exige motivo                                                                    |
+| Comercial      | `quote_versions`, `sale_events`                                                                       | versão aprovada imutável; reconhecimento vendido único                                                          |
+| Pagamento      | `payment_flows`, `payment_evidence`                                                                   | comprovante não confirma pagamento; uma cobrança lógica                                                         |
+| Pedido         | `order_counter`, `orders`, `order_form_versions`, `document_artifacts`, `deliveries`                  | número global único; versão aprovada imutável                                                                   |
+| IA             | `ai_turns`, `ai_suggestions`, `handoffs`                                                              | sugestão nunca ocupa campo oficial automaticamente                                                              |
+| Confiabilidade | `channel_events`, `idempotency_records`, `outbox_jobs`, `processing_attempts`, `reconciliation_items` | chave única por efeito observável                                                                               |
+| Privacidade    | `audit_events`, `privacy_requests`, `legal_holds`, `tombstone_receipts`                               | auditoria sem cópia eterna; ledger canônico externo ao backup                                                   |
 
 Dados estáveis são normalizados. JSONB é permitido para payload bruto com
 expiração, snapshot imutável de Ficha e resposta estruturada da IA; não é
@@ -320,42 +325,42 @@ Todos os comandos aceitam `Idempotency-Key`, ator autenticado e versão
 esperada. Conflitos de versão retornam `409`; erros seguem
 `application/problem+json`. Listagens usam paginação por cursor.
 
-| Método e rota | Finalidade | Autorização principal |
-|---|---|---|
-| `GET /api/v1/webhooks/meta` | Verificação inicial do callback | Verify token Meta |
-| `POST /api/v1/webhooks/meta/whatsapp` | Validar e persistir evento | Assinatura Meta |
-| `POST /api/v1/webhooks/meta/instagram` | Validar e persistir evento | Assinatura Meta |
-| `POST /api/v1/sessions` | Criar sessão | Credencial válida |
-| `DELETE /api/v1/sessions/current` | Revogar sessão | Sessão válida |
-| `GET /api/v1/inbox/conversations` | Consultar backlog | Atendimento ou Vendedor |
-| `POST /api/v1/conversations/{id}/takeover` | Suspender IA e assumir | Atendimento ou Vendedor |
-| `POST /api/v1/conversations/{id}/reactivate-agent` | Reativar IA explicitamente | Atendimento ou Vendedor |
-| `POST /api/v1/conversations/{id}/convert` | Criar/vincular contato e Negócio | Humano autenticado |
-| `POST /api/v1/conversations/{id}/messages` | Enviar mensagem humana | Atendimento ou Vendedor |
-| `POST /api/v1/identity-handoffs` | Iniciar Instagram para WhatsApp | Atendimento, Vendedor ou sistema |
-| `POST /api/v1/identity-handoffs/{id}/confirm` | Confirmar vínculo verificável | Atendimento ou Vendedor |
-| `GET /api/v1/deals/{id}` | Detalhe e completude | Atendimento ou Vendedor |
-| `PATCH /api/v1/deals/{id}/fields` | Confirmar campo oficial | Atendimento ou Vendedor |
-| `POST /api/v1/suggestions/{id}/accept` | Aceitar sugestão como comando humano | Atendimento ou Vendedor |
-| `POST /api/v1/suggestions/{id}/reject` | Descartar sugestão com motivo | Atendimento ou Vendedor |
-| `POST /api/v1/deals/{id}/transitions` | Confirmar gate e avançar | Atendimento ou Vendedor |
-| `POST /api/v1/deals/{id}/lose` | Marcar Perdido/cancelar com motivo | Humano; `Admin` após venda aprovada |
-| `POST /api/v1/deals/{id}/quotes` | Criar versão de orçamento | Vendedor |
-| `POST /api/v1/quotes/{id}/approve` | Aprovar versão | `Admin` |
-| `POST /api/v1/deals/{id}/approve-sale` | Reconhecer vendido e iniciar PIX | `Admin` |
-| `POST /api/v1/payments/{id}/evidence` | Anexar comprovante | Canal ou humano autenticado |
-| `POST /api/v1/payments/{id}/reject` | Rejeitar comprovante com motivo | `Admin` |
-| `POST /api/v1/payments/{id}/exception` | Registrar condição excepcional | `Admin` |
-| `POST /api/v1/payments/{id}/confirm` | Confirmar pagamento humano | `Admin` |
-| `POST /api/v1/orders/{id}/forms/approve` | Aprovar versão e reservar número | `Admin` |
-| `POST /api/v1/order-forms/{id}/send` | Enviar Ficha | `Admin` |
-| `POST /api/v1/order-forms/{id}/retry` | Repetir envio falho | `Admin` |
-| `POST /api/v1/order-forms/{id}/resend` | Reenviar versão enviada com motivo | `Admin` |
-| `POST /api/v1/order-forms/{id}/cancel` | Cancelar e avisar Rose quando aplicável | `Admin` |
-| `POST /api/v1/reconciliation/{id}/retry` | Retomar falha | Atendimento, Vendedor ou Admin conforme efeito |
-| `POST /api/v1/privacy/requests` | Abrir solicitação de titular | Operador de Privacidade |
-| `POST /api/v1/privacy/legal-holds` | Criar legal hold | `PRIVACY_OFFICER` |
-| `GET /api/v1/events` | SSE de inbox, jobs e cards | Sessão válida |
+| Método e rota                                      | Finalidade                              | Autorização principal                          |
+| -------------------------------------------------- | --------------------------------------- | ---------------------------------------------- |
+| `GET /api/v1/webhooks/meta`                        | Verificação inicial do callback         | Verify token Meta                              |
+| `POST /api/v1/webhooks/meta/whatsapp`              | Validar e persistir evento              | Assinatura Meta                                |
+| `POST /api/v1/webhooks/meta/instagram`             | Validar e persistir evento              | Assinatura Meta                                |
+| `POST /api/v1/sessions`                            | Criar sessão                            | Credencial válida                              |
+| `DELETE /api/v1/sessions/current`                  | Revogar sessão                          | Sessão válida                                  |
+| `GET /api/v1/inbox/conversations`                  | Consultar backlog                       | Atendimento ou Vendedor                        |
+| `POST /api/v1/conversations/{id}/takeover`         | Suspender IA e assumir                  | Atendimento ou Vendedor                        |
+| `POST /api/v1/conversations/{id}/reactivate-agent` | Reativar IA explicitamente              | Atendimento ou Vendedor                        |
+| `POST /api/v1/conversations/{id}/convert`          | Criar/vincular contato e Negócio        | Humano autenticado                             |
+| `POST /api/v1/conversations/{id}/messages`         | Enviar mensagem humana                  | Atendimento ou Vendedor                        |
+| `POST /api/v1/identity-handoffs`                   | Iniciar Instagram para WhatsApp         | Atendimento, Vendedor ou sistema               |
+| `POST /api/v1/identity-handoffs/{id}/confirm`      | Confirmar vínculo verificável           | Atendimento ou Vendedor                        |
+| `GET /api/v1/deals/{id}`                           | Detalhe e completude                    | Atendimento ou Vendedor                        |
+| `PATCH /api/v1/deals/{id}/fields`                  | Confirmar campo oficial                 | Atendimento ou Vendedor                        |
+| `POST /api/v1/suggestions/{id}/accept`             | Aceitar sugestão como comando humano    | Atendimento ou Vendedor                        |
+| `POST /api/v1/suggestions/{id}/reject`             | Descartar sugestão com motivo           | Atendimento ou Vendedor                        |
+| `POST /api/v1/deals/{id}/transitions`              | Confirmar gate e avançar                | Atendimento ou Vendedor                        |
+| `POST /api/v1/deals/{id}/lose`                     | Marcar Perdido/cancelar com motivo      | Humano; `Admin` após venda aprovada            |
+| `POST /api/v1/deals/{id}/quotes`                   | Criar versão de orçamento               | Vendedor                                       |
+| `POST /api/v1/quotes/{id}/approve`                 | Aprovar versão                          | `Admin`                                        |
+| `POST /api/v1/deals/{id}/approve-sale`             | Reconhecer vendido e iniciar PIX        | `Admin`                                        |
+| `POST /api/v1/payments/{id}/evidence`              | Anexar comprovante                      | Canal ou humano autenticado                    |
+| `POST /api/v1/payments/{id}/reject`                | Rejeitar comprovante com motivo         | `Admin`                                        |
+| `POST /api/v1/payments/{id}/exception`             | Registrar condição excepcional          | `Admin`                                        |
+| `POST /api/v1/payments/{id}/confirm`               | Confirmar pagamento humano              | `Admin`                                        |
+| `POST /api/v1/orders/{id}/forms/approve`           | Aprovar versão e reservar número        | `Admin`                                        |
+| `POST /api/v1/order-forms/{id}/send`               | Enviar Ficha                            | `Admin`                                        |
+| `POST /api/v1/order-forms/{id}/retry`              | Repetir envio falho                     | `Admin`                                        |
+| `POST /api/v1/order-forms/{id}/resend`             | Reenviar versão enviada com motivo      | `Admin`                                        |
+| `POST /api/v1/order-forms/{id}/cancel`             | Cancelar e avisar Rose quando aplicável | `Admin`                                        |
+| `POST /api/v1/reconciliation/{id}/retry`           | Retomar falha                           | Atendimento, Vendedor ou Admin conforme efeito |
+| `POST /api/v1/privacy/requests`                    | Abrir solicitação de titular            | Operador de Privacidade                        |
+| `POST /api/v1/privacy/legal-holds`                 | Criar legal hold                        | `PRIVACY_OFFICER`                              |
+| `GET /api/v1/events`                               | SSE de inbox, jobs e cards              | Sessão válida                                  |
 
 A tabela fixa os comandos críticos, mas não substitui o OpenAPI completo que
 será criado na implementação. OpenAPI 3.1 é gerado a partir dos mesmos JSON
@@ -459,10 +464,12 @@ suboperadores.
 
 ### Dados e anexos
 
-- TLS em trânsito e SSE do object storage. Criptografia do volume PostgreSQL
-  depende de evidência do provedor; sem ela, campos sensíveis usam criptografia
-  de envelope na aplicação com chave externa ao banco.
-- Buckets privados, URLs assinadas curtas e chaves opacas sem PII.
+- TLS em trânsito. Criptografia dos volumes PostgreSQL e de mídia depende de
+  evidência do host; sem ela, campos e bytes sensíveis usam criptografia de
+  envelope na aplicação com chave externa aos volumes.
+- O volume de mídia não tem rota, domínio ou listagem pública. Chaves e caminhos
+  são opacos, sem PII, e a leitura ocorre somente por endpoint autenticado e
+  autorizado da aplicação com `Cache-Control: no-store`.
 - Upload em quarentena, limite, MIME por conteúdo, hash e varredura antes de
   disponibilizar ao operador. O worker usa `clamscan` com assinatura-base da
   imagem e atualização em diretório temporário no início e a cada 24 horas,
@@ -470,18 +477,29 @@ suboperadores.
   quarentena e alerta a operação; download da Meta bloqueia SSRF, redirects
   indevidos e excesso de tamanho.
 - Comprovantes e Fichas nunca são públicos nem enviados à IA por padrão.
+- Mídia válida gera handoff operacional ao Dropbox com hash, operador, horário
+  e resultado; mídia inválida nunca é copiada. O MVP não contém token, SDK,
+  OAuth, webhook nem promessa de exclusão automática no Dropbox.
+- Quota do volume falha fechada para novos bytes, sem interromper a jornada por
+  texto. Arquivo parcial é descartado; mídia ausente vira `lost/unavailable` e
+  não é apresentada como restaurável.
 - Segredos vivem no EasyPanel/GitHub, nunca em arquivo versionado ou log.
 
 ### Retenção
 
-A matriz P0.6 permanece canônica: 90 dias para conversa sem lead; 12 meses para
-Perdido; 24 meses para mensagens/anexos não documentais de venda; cinco anos
-para Pedido/Ficha/orçamento/eventos/comprovante; 30/90 dias para payloads; até
-90 dias para logs, configurados operacionalmente em 30; até 30 dias para dados
-técnicos de IA; 35 dias para backups.
+A matriz P0.6 permanece canônica. Bytes de mídia transitória vencem em
+`min(recebida_em|enviada_em + 7 dias, jornada_encerrada_em)`; os metadados e
+arquivos promovidos seguem a classe pai: 90 dias para conversa sem lead, 12
+meses para Perdido, 24 meses para conteúdo não documental de venda e cinco
+anos para Pedido/Ficha/orçamento/eventos/comprovante. Payloads usam 30/90 dias;
+logs até 90 dias, configurados operacionalmente em 30; dados técnicos de IA até
+30 dias; backups 35 dias.
 
-Uma rotina diária calcula vencimentos por gatilho, aplica exclusão em banco,
-storage, cache e operadores e reconcilia falhas. O ledger canônico externo de
+O evento terminal reprograma imediatamente a exclusão da mídia; um sweeper
+diário atua como rede de segurança. A rotina aplica exclusão em banco, volume,
+cache e operadores e reconcilia falhas. Pendência no handoff do Dropbox não
+estende o prazo transitório. Evidência necessária a `legal_hold` deve ser
+promovida antes do vencimento. O ledger canônico externo de
 tombstones é reaplicado antes de liberar qualquer restore. Auditoria de
 exclusão guarda protocolo pseudonimizado, decisão, executor e timestamps,
 nunca o conteúdo removido.
@@ -492,30 +510,30 @@ Os SLOs só são válidos para o envelope de carga abaixo. Ele é um piso de
 engenharia para homologação, não uma previsão de negócio, e deve ser confirmado
 por Produto/Operação antes do teste de carga:
 
-| Dimensão | Envelope inicial de homologação |
-|---|---|
-| Operadores | 20 sessões autenticadas e 30 conexões SSE simultâneas |
-| Webhooks | 5 eventos/s por 15 min e burst de 20 eventos/s por 60 s |
-| Recuperação do worker | backlog de 1.000 jobs após restart, sem retry cego de `outcome_unknown` |
-| Anexos e PDF | 4 uploads concorrentes no limite configurado e fila de 20 PDFs com Chromium concorrência 1 |
-| Massa de referência | 50 mil contatos, 100 mil conversas, 1 milhão de mensagens e 25 mil Negócios |
+| Dimensão              | Envelope inicial de homologação                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| Operadores            | 20 sessões autenticadas e 30 conexões SSE simultâneas                                      |
+| Webhooks              | 5 eventos/s por 15 min e burst de 20 eventos/s por 60 s                                    |
+| Recuperação do worker | backlog de 1.000 jobs após restart, sem retry cego de `outcome_unknown`                    |
+| Anexos e PDF          | 4 uploads concorrentes no limite configurado e fila de 20 PDFs com Chromium concorrência 1 |
+| Massa de referência   | 50 mil contatos, 100 mil conversas, 1 milhão de mensagens e 25 mil Negócios                |
 
 O relatório de carga registra dataset, duração, concorrência, taxa, percentis e
 erros. Se a previsão aprovada ou o uso real exceder qualquer dimensão, sizing e
 SLO são revistos antes do piloto. Metas são recalibradas após duas semanas de
 operação real sem apagar a baseline nem a evidência anterior.
 
-| Indicador | Meta inicial |
-|---|---|
-| Disponibilidade mensal do CRM | 99,5% |
-| API p95, sem dependência externa | abaixo de 500 ms |
-| Persistência de webhook p95 | abaixo de 2 s |
-| Webhook até visibilidade no inbox p95 | abaixo de 10 s |
-| Idade do job mais antigo em operação normal | abaixo de 60 s |
-| Erro 5xx | abaixo de 1% em 5 min |
-| RPO do PostgreSQL | até 1 hora |
-| RTO inicial | até 4 horas |
-| Geração de PDF p95 | abaixo de 20 s |
+| Indicador                                   | Meta inicial          |
+| ------------------------------------------- | --------------------- |
+| Disponibilidade mensal do CRM               | 99,5%                 |
+| API p95, sem dependência externa            | abaixo de 500 ms      |
+| Persistência de webhook p95                 | abaixo de 2 s         |
+| Webhook até visibilidade no inbox p95       | abaixo de 10 s        |
+| Idade do job mais antigo em operação normal | abaixo de 60 s        |
+| Erro 5xx                                    | abaixo de 1% em 5 min |
+| RPO do PostgreSQL                           | até 1 hora            |
+| RTO inicial                                 | até 4 horas           |
+| Geração de PDF p95                          | abaixo de 20 s        |
 
 SSE opera com uma réplica de API no piloto. Escala para múltiplas réplicas
 exigirá fan-out por PostgreSQL `LISTEN/NOTIFY` ou Redis, decidido por métrica.
@@ -547,17 +565,17 @@ externo contratado com retenção compatível.
 
 ## 15. Estratégia de testes
 
-| Tipo | Escopo | Gate |
-|---|---|---|
-| Unidade | máquinas de estado, ACL, gates, grade, preços comunicáveis | caminhos e invariantes críticos cobertos |
-| Propriedade/concorrência | conversão, contador `NN-CRM`, PIX, aprovação e cancelamento | nenhuma duplicidade sob disputa |
-| Integração | PostgreSQL real, transações, outbox, jobs e migrações | rollback lógico e constraints comprovados |
-| Contrato | fixtures assinadas da Meta e respostas de provedores | versões suportadas documentadas |
-| IA/evals | preço, prompt injection, handoff e proibição de mutação | zero violação nos casos bloqueantes |
-| Documento | golden PDF, snapshot e campos de produção vazios | revisão visual e hash do snapshot |
-| E2E | inbox até Ficha/onboarding | caminho feliz e falhas recuperáveis |
-| Acessibilidade | teclado, foco, ARIA, contraste e alternativa ao drag-and-drop | sem violação crítica e operação sem mouse |
-| Recuperação | restore isolado e perda total simulada da VPS, com tombstones, storage, segredos e digests | RPO/RTO do CRM completo demonstrados em host limpo sem copiar produção para homologação |
+| Tipo                     | Escopo                                                                                     | Gate                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Unidade                  | máquinas de estado, ACL, gates, grade, preços comunicáveis                                 | caminhos e invariantes críticos cobertos                                                |
+| Propriedade/concorrência | conversão, contador `NN-CRM`, PIX, aprovação e cancelamento                                | nenhuma duplicidade sob disputa                                                         |
+| Integração               | PostgreSQL real, transações, outbox, jobs e migrações                                      | rollback lógico e constraints comprovados                                               |
+| Contrato                 | fixtures assinadas da Meta e respostas de provedores                                       | versões suportadas documentadas                                                         |
+| IA/evals                 | preço, prompt injection, handoff e proibição de mutação                                    | zero violação nos casos bloqueantes                                                     |
+| Documento                | golden PDF, snapshot e campos de produção vazios                                           | revisão visual e hash do snapshot                                                       |
+| E2E                      | inbox até Ficha/onboarding                                                                 | caminho feliz e falhas recuperáveis                                                     |
+| Acessibilidade           | teclado, foco, ARIA, contraste e alternativa ao drag-and-drop                              | sem violação crítica e operação sem mouse                                               |
+| Recuperação              | restore isolado e perda total simulada da VPS, com tombstones, storage, segredos e digests | RPO/RTO do CRM completo demonstrados em host limpo sem copiar produção para homologação |
 
 Ferramentas: `node:test`, injeção Fastify, PostgreSQL efêmero em CI, Playwright
 e axe-core. O frontend continua vanilla; Vite é apenas servidor/build tool.
@@ -580,46 +598,47 @@ Detalhes, recursos e checklist estão em `EASYPANEL-TOPOLOGY.md`.
 
 ## 17. Riscos e mitigação
 
-| Risco | Impacto | Probabilidade | Mitigação |
-|---|---|---|---|
-| Resultado externo incerto sob crash/retry | Alto | Alta | `outcome_unknown`, matriz por provedor, retry condicionado e reconciliação |
-| IA cruzar o takeover após o ponto de não retorno | Alto | Média | `automation_epoch`, fencing antes do envio e estado incerto visível |
-| Orçamento ficar obsoleto | Alto | Média | hash de dependências e invalidação automática |
-| Fonte de verdade duplicada Lead/Card/Deal | Alto | Média | Deal único; Card e Lead como projeções |
-| Falha parcial de Meta/IA/storage | Alto | Alta | outbox, retry, dead letter e reconciliação visível |
-| Restore reintroduzir dado excluído | Alto | Média | tombstones externos e gate obrigatório de restore |
-| Migração bloquear rollback | Alto | Média | expand/contract e promoção do mesmo digest |
-| Única VPS ficar indisponível | Alto | Média | kit off-host e drill em VPS limpa antes do piloto e trimestralmente |
-| Anexo malicioso | Alto | Média | quarentena, validação, scan e URL curta |
-| Crescimento do PostgreSQL por jobs/logs | Médio | Média | retenção, índices, partição futura e métricas |
-| Escopo virar ERP | Médio | Alta | módulos e fora de escopo explícitos |
+| Risco                                              | Impacto                 | Probabilidade | Mitigação                                                                                         |
+| -------------------------------------------------- | ----------------------- | ------------- | ------------------------------------------------------------------------------------------------- |
+| Resultado externo incerto sob crash/retry          | Alto                    | Alta          | `outcome_unknown`, matriz por provedor, retry condicionado e reconciliação                        |
+| IA cruzar o takeover após o ponto de não retorno   | Alto                    | Média         | `automation_epoch`, fencing antes do envio e estado incerto visível                               |
+| Orçamento ficar obsoleto                           | Alto                    | Média         | hash de dependências e invalidação automática                                                     |
+| Fonte de verdade duplicada Lead/Card/Deal          | Alto                    | Média         | Deal único; Card e Lead como projeções                                                            |
+| Falha parcial de Meta/IA/storage                   | Alto                    | Alta          | outbox, retry, dead letter e reconciliação visível                                                |
+| Restore reintroduzir dado excluído                 | Alto                    | Média         | tombstones externos e gate obrigatório de restore                                                 |
+| Migração bloquear rollback                         | Alto                    | Média         | expand/contract e promoção do mesmo digest                                                        |
+| Única VPS ficar indisponível                       | Alto                    | Média         | kit off-host e drill em VPS limpa antes do piloto e trimestralmente                               |
+| Mídia transitória da jornada ser perdida com a VPS | Baixo no piloto interno | Média         | risco aceito, prazo máximo de sete dias, `lost/unavailable` visível e arquivos válidos no Dropbox |
+| Anexo malicioso                                    | Alto                    | Média         | quarentena, validação, scan e URL curta                                                           |
+| Crescimento do PostgreSQL por jobs/logs            | Médio                   | Média         | retenção, índices, partição futura e métricas                                                     |
+| Escopo virar ERP                                   | Médio                   | Alta          | módulos e fora de escopo explícitos                                                               |
 
 ## 18. Alternativas consideradas
 
-| Alternativa | Decisão |
-|---|---|
-| Microserviços | Rejeitado: transações distribuídas e operação sem escala/equipe que justifique |
-| Event sourcing completo | Rejeitado: audit trail append-only e modelo relacional atendem o MVP |
-| GraphQL | Rejeitado: REST/OpenAPI explicita comandos, versões e idempotência |
-| Redis/BullMQ | Adiado: PostgreSQL suporta o volume inicial com menos um serviço crítico |
-| JWT no browser | Rejeitado: pior revogação e maior superfície de exfiltração |
-| MinIO na mesma VPS | Rejeitado: preserva o mesmo domínio de falha dos dados |
-| n8n no núcleo | Rejeitado: viola a fronteira da máquina de estados e permissões |
-| RAG/pgvector imediato | Adiado: dados e regras centrais já são estruturados |
-| Agregador de modelos | Adiado: adiciona suboperadores e dificulta retenção/LGPD |
+| Alternativa             | Decisão                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| Microserviços           | Rejeitado: transações distribuídas e operação sem escala/equipe que justifique |
+| Event sourcing completo | Rejeitado: audit trail append-only e modelo relacional atendem o MVP           |
+| GraphQL                 | Rejeitado: REST/OpenAPI explicita comandos, versões e idempotência             |
+| Redis/BullMQ            | Adiado: PostgreSQL suporta o volume inicial com menos um serviço crítico       |
+| JWT no browser          | Rejeitado: pior revogação e maior superfície de exfiltração                    |
+| MinIO na mesma VPS      | Rejeitado: preserva o mesmo domínio de falha dos dados                         |
+| n8n no núcleo           | Rejeitado: viola a fronteira da máquina de estados e permissões                |
+| RAG/pgvector imediato   | Adiado: dados e regras centrais já são estruturados                            |
+| Agregador de modelos    | Adiado: adiciona suboperadores e dificulta retenção/LGPD                       |
 
 ## 19. Plano de implementação
 
-| Fase | Entrega | Estimativa inicial |
-|---|---|---:|
-| 0 | Fundação, CI, ambientes, schemas, observabilidade e threat model | 1 semana |
-| 1 | IAM, sessões, ACL, auditoria e configuração | 1–2 semanas |
-| 2 | Inbox, contatos, WhatsApp, worker e reconciliação | 2–3 semanas |
-| 3 | Deal, Kanban, qualificação, gates e tarefas | 2–3 semanas |
-| 4 | IA assistiva, takeover, sugestões e evals | 2 semanas |
-| 5 | Orçamento, vendido, PIX, Pedido, PDF e envio | 3 semanas |
-| 6 | Privacidade, retenção, relatórios e recovery drills | 2 semanas |
-| 7 | Hardening, UAT, acessibilidade e piloto | 2 semanas |
+| Fase | Entrega                                                          | Estimativa inicial |
+| ---- | ---------------------------------------------------------------- | -----------------: |
+| 0    | Fundação, CI, ambientes, schemas, observabilidade e threat model |           1 semana |
+| 1    | IAM, sessões, ACL, auditoria e configuração                      |        1–2 semanas |
+| 2    | Inbox, contatos, WhatsApp, worker e reconciliação                |        2–3 semanas |
+| 3    | Deal, Kanban, qualificação, gates e tarefas                      |        2–3 semanas |
+| 4    | IA assistiva, takeover, sugestões e evals                        |          2 semanas |
+| 5    | Orçamento, vendido, PIX, Pedido, PDF e envio                     |          3 semanas |
+| 6    | Privacidade, retenção, relatórios e recovery drills              |          2 semanas |
+| 7    | Hardening, UAT, acessibilidade e piloto                          |          2 semanas |
 
 Estimativa preliminar: 15–18 semanas para uma equipe pequena de produto,
 engenharia e QA. O plano detalhado e os gates estão em
@@ -627,17 +646,17 @@ engenharia e QA. O plano detalhado e os gates estão em
 
 ## 20. Questões e aprovações pendentes
 
-| Item | Default adotado | Quem aprova |
-|---|---|---|
-| Tech Lead, time e Administrador Técnico | Ainda não designados | Silmer |
-| Confirmação de pagamento | Exige role `Admin` | Produto/Operação |
-| Relação Negócio/Pedido | 1:0..1 no MVP | Produto |
-| Reabertura de conversa terminal | Novo ciclo ligado ao contato | Produto/Operação |
-| Storage e região | S3 privado com contrato e DPA; fornecedor no gate DevOps | Privacidade/Tech Lead |
-| Gemini Developer API | Tier pago, `gemini-2.5-flash-lite`, sem data sharing/logging opt-in; produção com PII somente após ZDR | Privacidade/Tech Lead |
-| Formato da Ficha | PDF canônico | Rose/Operação |
-| Domínios e Meta App IDs | A fornecer por ambiente | Operação/DevOps |
-| Envelope de carga | Baseline provisória da seção 13; confirmar antes de T07.1 | Produto/Operação/Tech Lead |
+| Item                                    | Default adotado                                                                                        | Quem aprova                |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------- |
+| Tech Lead, time e Administrador Técnico | Ainda não designados                                                                                   | Silmer                     |
+| Confirmação de pagamento                | Exige role `Admin`                                                                                     | Produto/Operação           |
+| Relação Negócio/Pedido                  | 1:0..1 no MVP                                                                                          | Produto                    |
+| Reabertura de conversa terminal         | Novo ciclo ligado ao contato                                                                           | Produto/Operação           |
+| Storage e região                        | S3 privado com contrato e DPA; fornecedor no gate DevOps                                               | Privacidade/Tech Lead      |
+| Gemini Developer API                    | Tier pago, `gemini-2.5-flash-lite`, sem data sharing/logging opt-in; produção com PII somente após ZDR | Privacidade/Tech Lead      |
+| Formato da Ficha                        | PDF canônico                                                                                           | Rose/Operação              |
+| Domínios e Meta App IDs                 | A fornecer por ambiente                                                                                | Operação/DevOps            |
+| Envelope de carga                       | Baseline provisória da seção 13; confirmar antes de T07.1                                              | Produto/Operação/Tech Lead |
 
 ### Critérios de aprovação do TDD
 

@@ -92,6 +92,14 @@ conteúdo, anexos e estado de processamento. Identidades de Instagram e
 WhatsApp só são fundidas por correlação verificável ou decisão humana
 auditável.
 
+Os metadados da mensagem e os bytes de mídia têm ciclos distintos. Imagens e
+arquivos de canal ficam temporariamente em volume privado da VPS e são
+eliminados no fim da jornada ou em sete dias, o que ocorrer primeiro. Arquivo
+validado como necessário à operação é preservado no Dropbox pelo procedimento
+interno da Silmer; o CRM registra o handoff, sem presumir integração automática
+com o Dropbox. Documentos comerciais válidos seguem sua classe própria de
+retenção.
+
 Se o CRM não consumir uma mensagem, ela pode continuar disponível no canal nativo. Portanto, o critério de confiabilidade não será “a mensagem desapareceu”, mas sim:
 
 > Toda mensagem conhecida pelo CRM deve estar processada ou visível em uma fila de reconciliação, com canal, erro e possibilidade de retomada.
@@ -249,6 +257,10 @@ deve implementar:
 
 Prazos, classes de dado, `legal_hold`, backups, operadores e atendimento aos
 direitos do titular seguem os critérios `PRV-P06-01` a `PRV-P06-12`.
+No piloto interno, a regra específica da mídia transitória é o menor prazo
+entre o encerramento da jornada e sete dias do recebimento/envio. Essa regra
+não alcança Pedido, Ficha, orçamento aprovado, comprovante PIX válido, eventos
+comerciais nem auditoria.
 
 ## 14. Critérios de sucesso do piloto
 

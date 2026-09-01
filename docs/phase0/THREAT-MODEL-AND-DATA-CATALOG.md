@@ -2,8 +2,8 @@
 
 ## Resultado local
 
-O baseline versionado cobre ativos, atores, trust boundaries, treze famílias de
-abuso e todas as nove classes da matriz P0.6. Não contém dados reais. Os
+O baseline versionado cobre ativos, atores, trust boundaries, quinze famílias
+de abuso e todas as dez classes da matriz P0.6. Não contém dados reais. Os
 contratos executáveis são `threat-model.json` e `data-catalog.json`, validados
 por `npm run validate:security-catalog` e `npm run test:security-catalog`.
 
@@ -15,8 +15,9 @@ controle já implantado.
 
 Ativos prioritários: identidade e contato, conversas/anexos, Pedido/Ficha/PIX,
 sessões e grants, audit trail/tombstones, segredos e artefatos de build. As
-fronteiras incluem navegador/API, webhooks e mídia Meta, banco, storage privado,
-operador de IA, supply chain e o plano isolado de backup/tombstones.
+fronteiras incluem navegador/API, webhooks e mídia Meta, banco, volume privado
+da VPS, handoff operacional ao Dropbox, operador de IA, supply chain e o plano
+isolado de backup/tombstones.
 
 Cada ameaça registra ativo, fronteira, mitigação, owner, teste, requisitos e
 status. A matriz cobre IDOR/ACL; CSRF/sessão; spoof/replay de webhook; SSRF de
@@ -27,7 +28,9 @@ exposição de backup/storage; e DoS.
 ## Catálogo e retenção
 
 Cada classe P0.6 identifica PII, finalidade, sistemas/cópias, atores/operadores,
-gatilho, prazo máximo, destino, `legal_hold` e propagação da exclusão. Logs têm
+gatilho, prazo máximo, destino, `legal_hold` e propagação da exclusão. Mídia
+transitória tem teto de sete dias e vence antes se a jornada encerrar; bytes
+ficam fora do backup e arquivos válidos usam recibo manual do Dropbox. Logs têm
 retenção operacional de 30 dias e teto jurídico de 90 dias. Backups expiram em
 35 dias e todo restore reaplica tombstones antes de ficar ready.
 

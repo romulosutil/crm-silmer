@@ -6,6 +6,7 @@ const statuses = new Set([
   'sandbox-verified',
   'pending-live',
   'pending-human',
+  'deferred',
 ]);
 
 /** @param {unknown} condition @param {string} message */
@@ -98,9 +99,36 @@ export function validateExternalEffects(document) {
   );
   invariant(ai?.retention?.applicationTtlDays <= 30, 'AI TTL exceeds 30 days');
 
+  const media = effects.find(({ id }) => id === 'meta.media-transfer');
+  invariant(
+    media?.retention?.storageMode === 'private-vps-volume' &&
+      media.retention.expiryRule === 'earliest-of-journey-end-or-7-days' &&
+      media.retention.maximumAgeDays === 7 &&
+      media.retention.backupRequired === false &&
+      media.retention.unavailableState === 'lost/unavailable',
+    'Meta media must use the approved transient VPS retention contract',
+  );
+  invariant(
+    media?.validFileHandoff?.destination ===
+      'existing-dropbox-operational-repository' &&
+      media.validFileHandoff.mode === 'manual-operational' &&
+      media.validFileHandoff.apiIntegration === false &&
+      media.validFileHandoff.failureExtendsTransientExpiry === false,
+    'Valid media handoff must remain manual and never extend transient expiry',
+  );
+
   const storage = effects.find(({ id }) => id === 'r2.put-object');
   if (!storage) throw new Error('R2 external effect is required');
   invariant(storage?.security?.publicAccess === false, 'R2 must be private');
+  invariant(
+    storage.status === 'deferred' &&
+      storage.activation?.status === 'deferred-zero-incremental-cost' &&
+      storage.activation.issue === 29 &&
+      storage.activation.subscriptionAuthorized === false &&
+      storage.activation.provisioningAuthorized === false &&
+      storage.activation.transientMediaExcluded === true,
+    'R2 must remain deferred to issue 29 and exclude transient media',
+  );
   invariant(
     JSON.stringify(storage?.buckets) ===
       JSON.stringify([

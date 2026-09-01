@@ -65,12 +65,15 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 
 **Critérios de aceite:**
 
-1. **MSG-01:** WHEN um webhook é recebido mais de uma vez THEN o sistema SHALL processá-lo idempotentemente.
-2. **MSG-02:** WHEN o processamento falha THEN o sistema SHALL colocar o evento em pendência visível com motivo e opção de retomada.
-3. **MSG-03:** WHEN o canal fica indisponível THEN o sistema SHALL exibir o estado e o último evento recebido sem afirmar que mensagens não observadas foram recuperadas.
+1. **MSG-01:** WHEN um webhook é recebido mais de uma vez THEN o sistema SHALL processá-lo idempotentemente, sem duplicar mídia, validação ou handoff operacional.
+2. **MSG-02:** WHEN o processamento falha ou a mídia temporária fica indisponível THEN o sistema SHALL colocar o evento em pendência visível com motivo e opção de retomada quando ainda possível.
+3. **MSG-03:** WHEN o canal ou o volume temporário fica indisponível THEN o sistema SHALL exibir o estado e o último evento recebido sem afirmar que mensagens ou bytes não observados foram recuperados.
 4. **MSG-04:** WHEN o piloto é iniciado THEN o WhatsApp oficial SHALL estar operacional; o Instagram Direct SHALL fazer parte do piloto quando disponível, mas sua indisponibilidade não poderá bloquear ou adiar o lançamento pelo WhatsApp.
 
-**Teste independente:** repetir webhooks, induzir falha, concluir o reprocessamento e comprovar que a indisponibilidade do Instagram não interrompe o WhatsApp.
+**Teste independente:** repetir webhooks com mídia, induzir falha e perda da
+cópia temporária, concluir o reprocessamento possível e comprovar que não há
+duplicidade nem alegação falsa de recuperação e que a indisponibilidade do
+Instagram não interrompe o WhatsApp.
 
 ### P1.5 Financeiro comercial
 
@@ -92,11 +95,13 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 
 1. **PRV-01:** WHEN um usuário acessa ou altera dados THEN o sistema SHALL aplicar as permissões de Atendimento/Vendedor ou Admin definidas no P0.7.
 2. **PRV-02:** WHEN dados pessoais são alterados, exportados, anonimizados ou excluídos THEN o sistema SHALL registrar a operação conforme a política aprovada no P0.6.
-3. **PRV-03:** WHEN o prazo de retenção é alcançado THEN o sistema SHALL aplicar a regra aprovada de descarte ou anonimização e permitir a execução pelo administrador técnico designado.
+3. **PRV-03:** WHEN o prazo de retenção é alcançado THEN o sistema SHALL aplicar a regra aprovada de descarte ou anonimização e permitir a execução pelo administrador técnico designado; para mídia transitória, o prazo SHALL ser o menor entre o encerramento da jornada e sete dias do recebimento ou envio.
 
 **Responsável de privacidade:** Rômulo Sutil Corrêa. A política do piloto foi aprovada após consulta jurídica.
 
-**Teste independente:** validar acesso por função e executar o procedimento de retenção em dados de teste.
+**Teste independente:** validar acesso por função e executar o procedimento de
+retenção em dados de teste com relógio controlado, cobrindo encerramento antes
+de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 
 ### P1.7 PIX e boas-vindas
 

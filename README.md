@@ -31,7 +31,9 @@ histórico e não define o sistema novo.
 - Runtime: monólito modular em JavaScript ESM, Node.js e Fastify.
 - Dados: PostgreSQL com SQL e migrações versionadas.
 - Processos: `edge-web`, `api` e `worker` no mesmo repositório.
-- Integrações: ports/adapters para Meta, IA e storage S3-compatible.
+- Integrações: ports/adapters para Meta e IA; mídia transitória em volume
+  privado da VPS, arquivos válidos no processo operacional Dropbox e storage
+  S3-compatible diferido para a issue `#29`.
 
 Framework de frontend, Redis, microserviços, n8n no caminho crítico e estado de
 domínio em `window` estão fora da baseline do MVP.

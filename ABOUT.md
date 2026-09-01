@@ -24,6 +24,8 @@ Documentos principais:
   segurança, SLOs, riscos e decisões técnicas do MVP.
 - `EASYPANEL-TOPOLOGY.md`: projetos, serviços, sizing, CI/CD, backups e
   operação na VPS Hostinger/EasyPanel.
+- `docs/phase0/TRANSIENT-MEDIA.md`: mídia temporária por até sete dias,
+  handoff operacional ao Dropbox e diferimento do R2.
 - `.specs/features/crm-mvp/tasks.md`: plano de implementação por fases com
   verificação e rastreabilidade.
 - `historico-datacrazy/`: arquivo histórico, sem valor normativo para o sistema novo.

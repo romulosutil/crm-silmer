@@ -23,12 +23,12 @@ receberá o projeto separado `crm-silmer-automation`, sem acesso direto ao banco
 
 ## 2. Serviços no projeto
 
-| Serviço           | Tipo EasyPanel     | Imagem                                 |                 Público | Persistência                      |
-| ----------------- | ------------------ | -------------------------------------- | ----------------------: | --------------------------------- |
-| `silmer-edge-web` | App                | GHCR por digest                        | Sim, 80/443 via domínio | Nenhuma                           |
-| `silmer-api`      | App                | GHCR por digest                        |                     Não | Nenhuma                           |
-| `silmer-worker`   | App                | Mesma imagem runtime, comando distinto |                     Não | Temporário descartável            |
-| `silmer-postgres` | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo |
+| Serviço           | Tipo EasyPanel     | Imagem                                 |                 Público | Persistência                                  |
+| ----------------- | ------------------ | -------------------------------------- | ----------------------: | --------------------------------------------- |
+| `silmer-edge-web` | App                | GHCR por digest                        | Sim, 80/443 via domínio | Nenhuma                                       |
+| `silmer-api`      | App                | GHCR por digest                        |                     Não | Volume de mídia somente leitura ao ativar T02 |
+| `silmer-worker`   | App                | Mesma imagem runtime, comando distinto |                     Não | Volume de mídia leitura/escrita ao ativar T02 |
+| `silmer-postgres` | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo             |
 
 `migrate` é um job curto executado pelo pipeline ou script salvo do EasyPanel;
 não é serviço permanente.
@@ -116,12 +116,41 @@ Regras operacionais:
   manutenção do PostgreSQL;
 - incluir os serviços não relacionados no orçamento agregado de CPU, RAM e disco.
 
-## 5. Object storage
+## 5. Armazenamento de arquivos
 
-Anexos, comprovantes e Fichas usam storage S3-compatible externo e privado.
-Baseline: Cloudflare R2 Standard após aprovação do DPA/suboperadores pelo
-Responsável de Privacidade. Fallback com residência explícita no Brasil: AWS
-S3 `sa-east-1`.
+### Piloto interno sem custo incremental
+
+Imagens e arquivos de canal ainda não promovidos a registro comercial válido
+usam um volume privado `silmer-media` na VPS. O volume não possui domínio,
+porta pública nem backup. O worker monta leitura/escrita para quarentena,
+validação e limpeza; a API monta somente leitura e entrega bytes por rota
+autenticada/autorizada, nunca como caminho de filesystem ou URL pública.
+
+Cada objeto usa chave opaca, arquivo parcial separado, hash e `expires_at` no
+PostgreSQL. O vencimento é o menor entre sete dias do recebimento/envio e o
+evento terminal da jornada. O evento agenda a limpeza imediata e um sweeper
+diário cobre falhas. A quota é configurada conforme o espaço real do host e
+falha fechada para novos uploads antes de ameaçar PostgreSQL e serviços
+compartilhados; texto e reconciliação continuam operacionais. O volume fica
+fora de backup e restore.
+
+Arquivo inválido é apagado e nunca sai da quarentena. Arquivo válido segue ao
+Dropbox já usado pela operação, com hash, operador, timestamp e resultado
+registrados no CRM. Esse é um procedimento manual: nenhum token, SDK, webhook
+ou integração automática Dropbox faz parte do MVP. Falha ou limitação fica
+visível para reconciliação, mas não prolonga o TTL da cópia transitória.
+Pedido, Ficha, orçamento aprovado, comprovante PIX válido, eventos comerciais,
+auditoria, tombstones e backups não usam essa retenção curta.
+
+Perda do volume torna a mídia transitória `lost/unavailable` e é risco aceito
+do piloto interno. Não há promessa de restauração desses bytes.
+
+### Object storage futuro
+
+O contrato S3-compatible externo permanece versionado para arquivo durável,
+backups e tombstones quando os gatilhos da issue `#29` ocorrerem. Cloudflare R2
+Standard não está autorizado nem provisionado nesta fase. O fallback com
+residência explícita no Brasil continua AWS S3 `sa-east-1`.
 
 Buckets/prefixos separados por finalidade:
 
@@ -166,8 +195,10 @@ fora do runtime, protegida por MFA e auditoria, e qualquer mudança exige
 aprovação de Privacidade/DevOps. O gate testa overwrite e exclusão, mas não
 representa Bucket Lock como equivalente a AWS Object Lock compliance mode.
 
-O filesystem dos containers guarda apenas temporários. Nenhum anexo ou PDF
-existe somente no disco da VPS.
+Os controles desta subseção são uma rota futura e não provam buckets,
+credenciais, DPA, localização ou recuperação live. Até a issue `#29`, mídia
+transitória pode existir somente no volume da VPS conforme o risco aceito;
+documentos duráveis não podem depender dele.
 
 ## 6. Variáveis e segredos
 
@@ -427,6 +458,9 @@ Uma única VPS é ponto único de falha. O CRM compartilha projeto e host com
 serviços não relacionados, sem isolamento de desenvolvimento, homologação e
 produção. Essa estrutura foi aceita como duradoura para o piloto, mas não altera
 os gates de backup externo, monitoramento e recovery drill em host limpo. O
+risco específico de perder mídia transitória de até sete dias também foi aceito
+para o uso interno; ele não amplia o RPO de PostgreSQL, Pedido, Ficha, PIX,
+auditoria, backups ou tombstones. O
 primeiro gatilho de evolução é mover o CRM ou o PostgreSQL para projeto ou
 domínio de falha próprio quando qualquer condição ocorrer:
 

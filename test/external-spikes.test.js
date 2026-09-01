@@ -45,6 +45,21 @@ test('keeps uncertain Meta sends out of blind retry', async () => {
   assert.match(send.outcomeUnknown.strategy, /reconcil/iu);
 });
 
+test('keeps Meta media transient and Dropbox operational only', async () => {
+  const effects = await json('docs/phase0/external-effects.json');
+  const effectList = /** @type {Array<Record<string, any>>} */ (
+    effects.effects
+  );
+  const media = effectList.find(({ id }) => id === 'meta.media-transfer');
+  assert.ok(media);
+  assert.equal(media.retention.maximumAgeDays, 7);
+  assert.equal(media.retention.backupRequired, false);
+  assert.equal(media.retention.unavailableState, 'lost/unavailable');
+  assert.equal(media.validFileHandoff.mode, 'manual-operational');
+  assert.equal(media.validFileHandoff.apiIntegration, false);
+  assert.equal(media.validFileHandoff.failureExtendsTransientExpiry, false);
+});
+
 test('rejects a matrix that enables blind retry for an uncertain Meta send', async () => {
   const effects = await json('docs/phase0/external-effects.json');
   const unsafe = structuredClone(effects);
@@ -110,6 +125,11 @@ test('requires Gemini minimization controls and private R2 posture', async () =>
   assert.equal(storage.security.crossBucketAccessMustFail, true);
   assert.equal(storage.security.signedUrlMaximumTtlSeconds, 300);
   assert.equal(storage.security.rawSignedUrlAllowedInEvidence, false);
+  assert.equal(storage.status, 'deferred');
+  assert.equal(storage.activation.issue, 29);
+  assert.equal(storage.activation.subscriptionAuthorized, false);
+  assert.equal(storage.activation.provisioningAuthorized, false);
+  assert.equal(storage.activation.transientMediaExcluded, true);
   assert.deepEqual(storage.buckets, [
     'crm-silmer-data',
     'crm-silmer-backups',
@@ -125,7 +145,10 @@ test('documents an executable, fail-closed R2 gate without secret values', async
   const packageJson = await json('package.json');
 
   assert.equal(gate.task, 'T00.4');
-  assert.equal(gate.issue, 6);
+  assert.equal(gate.issue, 29);
+  assert.equal(gate.activation.status, 'deferred-zero-incremental-cost');
+  assert.equal(gate.activation.subscriptionAuthorized, false);
+  assert.equal(gate.activation.provisioningAuthorized, false);
   assert.equal(gate.approval.status, 'pending-human-approval');
   assert.equal(gate.approval.approved, false);
   assert.equal(gate.liveEvidence.executed, false);

@@ -28,7 +28,9 @@
     "browser to same-origin edge/API",
     "Meta webhook and media endpoints to adapters",
     "API/worker to PostgreSQL",
-    "worker to private object storage",
+    "API/worker to private VPS media volume",
+    "operator to existing Dropbox repository",
+    "future worker/backup jobs to private object storage",
     "assistant adapter to AI operator",
     "CI registry to EasyPanel runtime",
     "active data plane to isolated backup/tombstone stores"
@@ -82,8 +84,8 @@
       "id": "TM-05",
       "family": "malicious-upload",
       "asset": "operators, storage and generated documents",
-      "boundary": "external attachment to quarantine/storage",
-      "mitigation": "quarantine, content MIME detection, size limits, hash, ClamAV freshness gate and no-store signed URLs",
+      "boundary": "external attachment to private VPS quarantine and operational Dropbox handoff",
+      "mitigation": "quarantine, content MIME detection, size limits, hash, ClamAV freshness gate, authorized no-store reads and no Dropbox handoff before validation",
       "owner": "Integrations/Security",
       "test": "EICAR, polyglot, MIME mismatch and oversized files remain unavailable",
       "requirements": ["PRV-01"],
@@ -158,7 +160,7 @@
     {
       "id": "TM-12",
       "family": "backup-storage-exposure",
-      "asset": "database backups, attachments, Fichas and tombstones",
+      "asset": "database backups, durable commercial documents, Fichas and tombstones",
       "boundary": "runtime/backup jobs to private object stores",
       "mitigation": "separate buckets and credentials, encryption, private access, versioning/immutability, rotation and access audit",
       "owner": "DevOps/Privacy",
@@ -175,6 +177,34 @@
       "owner": "Platform/Reliability",
       "test": "approved burst and oversized/slow requests degrade safely without data loss or retry storm",
       "requirements": ["MSG-03", "PRV-01"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-14",
+      "family": "local-media-volume-exposure",
+      "asset": "transient journey media and host capacity",
+      "boundary": "API/worker to private VPS media volume",
+      "mitigation": "private mount, least-privilege read/write modes, opaque paths, no public route, application authorization, quota and no backup",
+      "owner": "Backend/DevOps/Security",
+      "test": "edge and unrelated services cannot mount or list media; traversal, public access and reads without record authorization fail",
+      "requirements": ["MSG-02", "MSG-03", "PRV-01"],
+      "status": "planned"
+    },
+    {
+      "id": "TM-15",
+      "family": "transient-media-retention-drift",
+      "asset": "expired journey media and privacy evidence",
+      "boundary": "PostgreSQL expiry jobs to private VPS media volume and Dropbox receipt",
+      "mitigation": "UTC expiry set to the earliest deadline, terminal-event job, daily safety sweep, idempotent delete and visible lost/delete-failed states; Dropbox pending never extends TTL",
+      "owner": "Backend/Privacy/Operations",
+      "test": "controlled clock covers seven-day ceiling, earlier journey end, duplicate purge, missing bytes and failed operational handoff without retaining bytes",
+      "requirements": [
+        "PRV-02",
+        "PRV-03",
+        "PRV-P06-01",
+        "PRV-P06-02",
+        "PRV-P06-11"
+      ],
       "status": "planned"
     }
   ]

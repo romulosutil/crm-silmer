@@ -1,42 +1,43 @@
-# Graph Report - .  (2026-09-01)
+# Graph Report - crm-silmer  (2026-09-01)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 162 files · ~98,381 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1355 nodes · 1734 edges · 141 communities (96 shown, 45 thin omitted)
+- 1341 nodes · 1735 edges · 155 communities (107 shown, 48 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.73)
-- Token cost: 6,535 input · 1,654 output
+- Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b8020268`
+- Built from commit: `c61b9a95`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- API and Worker Runtime
+- observability.test.js
 - TDD and Project Strategy
 - Database Immutability and Protection
 - Configuration Service and Validation
 - R2 Storage Smoke Tests
 - WhatsApp Sales Process
 - Design System and UI
-- Database Migrations and CLI
-- Audit Trail and Privacy
-- Project Scripts and Tasks
-- External Integration Spikes
+- database/src/index.js
+- audit-privacy/src/index.js
+- scripts
+- T00.4 — Sandbox da Meta
 - Recovery Plan Validation
 - Catalog Service and Versioning
 - PDF Review and Generation
 - TypeScript Configuration
-- Security and LGPD Queries
-- API Package Dependencies
+- Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?
+- api/package.json
 - EasyPanel Infrastructure Topology
 - Field Mapping and Inventory
 - MVP Product Specification
 - Identity and Access Service
 - Gemini Privacy Smoke Test
-- Implementation and AI Baseline
+- Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?
 - Security Catalog Validation
 - MVP Requirements and Scope
 - Dev Dependencies and Tooling
@@ -48,18 +49,18 @@
 - Contribution and Governance
 - Authorization and Capabilities
 - Monorepo Workspace Configuration
-- Admin Roles and Permissions
-- Project Rules and Guardrails
+- Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?
+- Codex — Contexto do CRM Silmer
 - Telemetry and Health Signals
 - External Spike Validation
 - Privacy Provider Compliance
 - Product Context and Backlog
 - Phase 5: Commercial Flow
-- Project Documentation Overview
-- Disaster Recovery Drills
+- README.md
+- Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?
 - Agent Roles and Protocols
 - Architecture and Modeling Decisions
-- Cloudflare R2 Retention
+- Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?
 - Container Hardening Evidence
 - Service Monitoring Status
 - Recovery Runbook and Procedures
@@ -76,7 +77,7 @@
 - Phase 3: Business Kanban
 - Phase 6: Privacy and Ops
 - Transient Media Controls
-- Retention and Privacy Decisions
+- Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?
 - Audit Privacy Package
 - Catalog Module Package
 - Configuration Module Package
@@ -108,14 +109,14 @@
 - Bootstrap Integration Tests
 - CI Image Tests
 - Technical Foundation Summary
-- Ficha Identity and FAB
+- Query: P0.5 Definições FAB e Numeração
 - Prettier Formatting Rules
 - Edge Web App
 - Governance and Workflow
 - Validation and CI Workflow
 - ESLint Configuration
 - Qualification Workflow
-- Issue Requirements
+- Query: Requisitos Issue #2
 - Product Readiness Decisions
 - Database Documentation
 - Inbox and Channels
@@ -152,9 +153,23 @@
 - Risks and Mitigation
 - Runtime Architecture
 - Performance and SLOs
+- integration-reliability/src/index.js
+- observability-live-probe.mjs
+- worker/package.json
+- T00.4 — Spikes externos
+- T00.7 — Ativação e drills de observabilidade
+- T00.4 - Revisao do PDF canonico da Ficha
+- Dívida #29 — Aprovação e validação futura do Cloudflare R2
+- Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?
+- Q: Quais dependências e critérios verificáveis da issue 5 ainda podem ser concluídos sem aceite humano, credenciais OpenAI ou designação do Tech Lead?
+- Q: Qual modelo Gemini oferece o melhor custo-beneficio para os chats do CRM Silmer na issue 5?
+- Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?
+- Query: P0.7 Modelagem de Roles
+- Query: Requisitos e Tarefas Issue #1
+- Query: Escopo e Requisitos Issue #6
 
 ## God Nodes (most connected - your core abstractions)
-1. `scripts` - 37 edges
+1. `scripts` - 39 edges
 2. `TDD — CRM Silmer MVP` - 22 edges
 3. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
 4. `Design do CRM Silmer` - 16 edges
@@ -166,16 +181,16 @@
 10. `Passagem de Produto para Tech Lead` - 12 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Query: Baseline Gemini API Issue #5` --references--> `piiPatterns`  [EXTRACTED]
-  graphify-out/memory/query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co.md → gemini-privacy-smoke.mjs
+- `createMetaWebhookRuntime()` --calls--> `processMetaWebhook()`  [EXTRACTED]
+  apps/api/src/server.js → modules/integration-reliability/src/meta-sandbox.js
 - `harness()` --calls--> `createCatalogService()`  [EXTRACTED]
   test/catalog.test.js → modules/catalog/src/application/catalog-service.js
 - `createHarness()` --calls--> `createConfigurationService()`  [EXTRACTED]
   test/configuration.test.js → modules/configuration/src/application/configuration-service.js
+- `capture()` --calls--> `createSafeLogger()`  [EXTRACTED]
+  test/observability.test.js → modules/shared/src/observability.js
 - `Vendedor Silmer (AI Agent)` --references--> `Crazy API (WhatsApp)`  [INFERRED]
   .specs/features/crm-mvp/context.md → historico-datacrazy/DATACRAZY-SETUP.md
-- `CI Workflow` --implements--> `Validation Gates`  [INFERRED]
-  .github/workflows/ci.yml → CONTRIBUTING.md
 
 ## Import Cycles
 - None detected.
@@ -186,8 +201,6 @@
 - **Sales Funnel Logic** — architecture_modeling, technical_design_data_model, specs_features_crm_mvp_tasks_phase3, specs_features_crm_mvp_tasks_phase5 [EXTRACTED 1.00]
 - **Phase 0 Milestones** — docs_phase0_external_spikes_t00_4, docs_phase0_ficha_pdf_review_t00_4, docs_phase0_threat_model_and_data_catalog_t00_5 [EXTRACTED 1.00]
 - **CRM MVP Core Decisions** — graphify_out_memory_query_20260829_215453_p0_2, graphify_out_memory_query_20260830_002538_p0_4, graphify_out_memory_query_20260830_004047_p0_7 [INFERRED 0.85]
-- **CRM Silmer Privacy Governance** — privacidade_e_lgpd, 12_segurança_e_lgpd, responsável_de_privacidade, administrador_técnico, p0_6_resolvido_retenção_exclusão_e_responsáveis_de_privacidade [INFERRED 0.95]
-- **CRM Silmer AI Integration (Issue #5)** — openai, gemini_developer_api, gemini_privacy_smoke_mjs, critérios_de_aprovação_do_tdd, gate_externo_ainda_aberto [INFERRED 0.85]
 - **Vendedor Silmer Integration Flow** — vendedor_silmer, google_gemini_api [INFERRED 0.85]
 - **Documentation Precedence Hierarchy** — rules, specs_features_crm_mvp_spec, crm_mvp_especificacao, technical_design, architecture [EXTRACTED 1.00]
 - **Espectro MVP Recovery Services** — silmer_api, silmer_worker, silmer_postgres, silmer_edge_web [EXTRACTED 1.00]
@@ -195,11 +208,11 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (141 total, 45 thin omitted)
+## Communities (155 total, 48 thin omitted)
 
-### Community 0 - "API and Worker Runtime"
-Cohesion: 0.06
-Nodes (47): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, createMetaMessagesClient(), deepFreeze(), extractMetaEvents(), immutableClone() (+39 more)
+### Community 0 - "observability.test.js"
+Cohesion: 0.09
+Nodes (33): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, SERVICES, allowedContextFields, allowedEvents, allowedMetrics (+25 more)
 
 ### Community 1 - "TDD and Project Strategy"
 Cohesion: 0.05
@@ -225,21 +238,21 @@ Nodes (36): Crazy API (WhatsApp), Datacrazy CRM, 1. Visão geral do fluxo, 2. Ca
 Cohesion: 0.05
 Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e conteúdo, 13. Arquitetura de implementação visual, 14. Critérios de aceite do design system, 15. Antipadrões proibidos, 1. Objetivo, 2. Tradução da marca para o produto (+29 more)
 
-### Community 7 - "Database Migrations and CLI"
+### Community 7 - "database/src/index.js"
 Cohesion: 0.10
 Nodes (17): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+9 more)
 
-### Community 8 - "Audit Trail and Privacy"
-Cohesion: 0.10
-Nodes (21): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), isTransientMediaExpired(), resolveTransientMediaExpiresAt() (+13 more)
+### Community 8 - "audit-privacy/src/index.js"
+Cohesion: 0.19
+Nodes (11): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), isTransientMediaExpired(), resolveTransientMediaExpiresAt() (+3 more)
 
-### Community 9 - "Project Scripts and Tasks"
+### Community 9 - "scripts"
 Cohesion: 0.05
-Nodes (37): scripts, build, check:boundaries, db:migrate, format, format:check, generate:ficha-pdf-review, lint (+29 more)
+Nodes (39): scripts, build, check:boundaries, db:migrate, drill:observability:api, format, format:check, generate:ficha-pdf-review (+31 more)
 
-### Community 10 - "External Integration Spikes"
-Cohesion: 0.06
-Nodes (28): Cloudflare R2 Integration, Decisões seguras, Evidências e pendências externas, Gemini Developer API Integration, Meta Sandbox Validation, Resultado local, T00.4 — Spikes externos, Verificação (+20 more)
+### Community 10 - "T00.4 — Sandbox da Meta"
+Cohesion: 0.20
+Nodes (6): Ativos selecionados, Escopo e limite, Evidência de fechamento, Segredos e dados locais, Sequência operacional, T00.4 — Sandbox da Meta
 
 ### Community 11 - "Recovery Plan Validation"
 Cohesion: 0.13
@@ -257,13 +270,13 @@ Nodes (25): approvalCriteria, buildFichaHtml(), buildLegacyFichaHtml(), buildRev
 Cohesion: 0.08
 Nodes (25): compilerOptions, allowJs, checkJs, esModuleInterop, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+17 more)
 
-### Community 15 - "Security and LGPD Queries"
-Cohesion: 0.08
-Nodes (16): Query: Segurança e CI Issue #1, Answer, Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?, Source Nodes, Query: Integração pr-review.yml Jules, Answer, Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?, Source Nodes (+8 more)
+### Community 15 - "Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?, Source Nodes
 
-### Community 16 - "API Package Dependencies"
-Cohesion: 0.08
-Nodes (23): dependencies, @crm-silmer/database, @crm-silmer/integration-reliability, @crm-silmer/shared, fastify, @crm-silmer/shared, name, private (+15 more)
+### Community 16 - "api/package.json"
+Cohesion: 0.12
+Nodes (15): dependencies, @crm-silmer/database, @crm-silmer/integration-reliability, @crm-silmer/shared, fastify, @crm-silmer/shared, name, private (+7 more)
 
 ### Community 17 - "EasyPanel Infrastructure Topology"
 Cohesion: 0.08
@@ -285,9 +298,9 @@ Nodes (14): constantTimeEqual(), createIdentityAccessService(), createInMemoryId
 Cohesion: 0.22
 Nodes (17): APPROVED_MODEL, APPROVED_PROVIDER, APPROVED_SUGGESTION_SCHEMA, buildEndpoint(), buildRequest(), containsPii(), extractOutputText(), invariant() (+9 more)
 
-### Community 22 - "Implementation and AI Baseline"
-Cohesion: 0.11
-Nodes (11): Query: Requisitos e Tarefas Issue #1, Query: Baseline Gemini API Issue #5, Answer, Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?, Source Nodes, Query: Bloqueios Issue #5 Pós-PR 26, Answer, Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26? (+3 more)
+### Community 22 - "Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?, Source Nodes
 
 ### Community 23 - "Security Catalog Validation"
 Cohesion: 0.22
@@ -323,7 +336,7 @@ Nodes (12): gemini, schemaFixture, meta, messageFixture, signature, statusFixtur
 
 ### Community 31 - "Contribution and Governance"
 Cohesion: 0.17
-Nodes (11): Antes de alterar, Atualização de branches de pull request, Commits e publicação, Contribuindo com o CRM Silmer, Durante a implementação, Governança do repositório público, Validação, Query: Agent Roles and Protocols (+3 more)
+Nodes (10): Antes de alterar, Atualização de branches de pull request, Commits e publicação, Contribuindo com o CRM Silmer, Durante a implementação, Governança do repositório público, Validação, Answer (+2 more)
 
 ### Community 32 - "Authorization and Capabilities"
 Cohesion: 0.24
@@ -333,13 +346,13 @@ Nodes (9): actionCapabilities, authorize(), CAPABILITIES, createAccessControlSer
 Cohesion: 0.17
 Nodes (11): engines, node, npm, name, packageManager, private, type, version (+3 more)
 
-### Community 34 - "Admin Roles and Permissions"
-Cohesion: 0.18
-Nodes (5): Query: Resolução P0.6 Product Readiness, Answer, Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes, Query: P0.7 Modelagem de Roles
+### Community 34 - "Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
 
-### Community 35 - "Project Rules and Guardrails"
-Cohesion: 0.18
-Nodes (8): Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Guardrails do MVP, Inicialização obrigatória, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
+### Community 35 - "Codex — Contexto do CRM Silmer"
+Cohesion: 0.40
+Nodes (5): Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Guardrails do MVP, Inicialização obrigatória
 
 ### Community 36 - "Telemetry and Health Signals"
 Cohesion: 0.18
@@ -361,13 +374,13 @@ Nodes (9): Backlog e lead, CRM Silmer MVP — Contexto de Produto, Decisões con
 Cohesion: 0.20
 Nodes (10): Fase 5 — Orçamento, PIX, Pedido e Ficha, T05.1 Implementar orçamento versionado, T05.2 Implementar ledger de vendido, T05.3 Implementar subfluxo PIX, T05.4 Implementar número e Pedido, T05.5 Implementar ciclo da Ficha, T05.6 Implementar PDF íntegro e reproduzível, T05.7 Implementar envio e onboarding (+2 more)
 
-### Community 41 - "Project Documentation Overview"
-Cohesion: 0.22
-Nodes (5): Sobre o CRM Silmer, Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada
+### Community 41 - "README.md"
+Cohesion: 0.15
+Nodes (8): Sobre o CRM Silmer, Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
 
-### Community 42 - "Disaster Recovery Drills"
-Cohesion: 0.22
-Nodes (4): Query: Gate Issue #3 Recovery, Answer, Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?, Source Nodes
+### Community 42 - "Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?, Source Nodes
 
 ### Community 43 - "Agent Roles and Protocols"
 Cohesion: 0.25
@@ -377,9 +390,9 @@ Nodes (8): Agentes do CRM Silmer, Composição eficiente por tipo de tarefa, Con
 Cohesion: 0.25
 Nodes (7): Aprovações ainda necessárias, Arquitetura — Decisões do MVP, Decisões confirmadas, Decisões de modelagem, Decisões técnicas propostas como baseline, Fronteiras funcionais, Projetos e documentos executáveis
 
-### Community 45 - "Cloudflare R2 Retention"
-Cohesion: 0.25
-Nodes (4): Query: Contratos Canônicos Imagens e Retenção, Answer, Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?, Source Nodes
+### Community 45 - "Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?, Source Nodes
 
 ### Community 46 - "Container Hardening Evidence"
 Cohesion: 0.25
@@ -445,9 +458,9 @@ Nodes (7): Fase 6 — Privacidade, relatórios e operação, T06.1 Implementar r
 Cohesion: 0.33
 Nodes (5): Controles mínimos para T02/T06, Decisão em linguagem natural, Limites desta entrega, T00.4 — Mídia transitória do piloto interno, Verificação
 
-### Community 62 - "Retention and Privacy Decisions"
-Cohesion: 0.33
-Nodes (4): Query: Decisões P0.6 Retenção e Exclusão, Answer, Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?, Source Nodes
+### Community 62 - "Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?, Source Nodes
 
 ### Community 63 - "Audit Privacy Package"
 Cohesion: 0.33
@@ -535,7 +548,7 @@ Nodes (3): Answer, Q: Quais decisões resolvem o P0.7 do PRODUCT-READINESS-TECH-
 
 ### Community 84 - "Ficha Numbering Decisions"
 Cohesion: 0.50
-Nodes (4): Query: Decisões P0.5 Product Readiness, Answer, Q: Quais decisões resolvem o P0.5 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
+Nodes (3): Answer, Q: Quais decisões resolvem o P0.5 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
 
 ### Community 85 - "FAB and Sequence Logic"
 Cohesion: 0.50
@@ -569,22 +582,66 @@ Nodes (3): json(), rootUrl, text()
 Cohesion: 0.67
 Nodes (3): Technical Baseline, Phase 0: Foundation, TDD Summary
 
+### Community 141 - "integration-reliability/src/index.js"
+Cohesion: 0.10
+Nodes (25): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+17 more)
+
+### Community 142 - "observability-live-probe.mjs"
+Cohesion: 0.42
+Nodes (11): assertSafeProbeEvidence(), canonicalLiveUrl(), invariant(), main(), observeApiTransition(), positiveInteger(), probeLiveEndpoint(), required() (+3 more)
+
+### Community 143 - "worker/package.json"
+Cohesion: 0.20
+Nodes (9): dependencies, @crm-silmer/shared, @crm-silmer/shared, name, private, scripts, start, type (+1 more)
+
+### Community 144 - "T00.4 — Spikes externos"
+Cohesion: 0.25
+Nodes (8): Cloudflare R2 Integration, Decisões seguras, Evidências e pendências externas, Gemini Developer API Integration, Meta Sandbox Validation, Resultado local, T00.4 — Spikes externos, Verificação
+
+### Community 145 - "T00.7 — Ativação e drills de observabilidade"
+Cohesion: 0.25
+Nodes (7): Baseline não destrutiva, Drill controlado da API, Drills dos sinais internos, Hardening do digest promovido, Promoção da evidência, Pré-requisitos humanos e externos, T00.7 — Ativação e drills de observabilidade
+
+### Community 146 - "T00.4 - Revisao do PDF canonico da Ficha"
+Cohesion: 0.29
+Nodes (7): Estado do gate, Ficha Canonical V2, Geracao e verificacao tecnica, Pacote versionado, Registro do aceite real, Roteiro executado por Rose e Operacao, T00.4 - Revisao do PDF canonico da Ficha
+
+### Community 147 - "Dívida #29 — Aprovação e validação futura do Cloudflare R2"
+Cohesion: 0.29
+Nodes (7): Contrato candidato para implementação futura, Critérios live obrigatórios, Dívida #29 — Aprovação e validação futura do Cloudflare R2, Estado do gate, Procedimento live, Reconciliação de `PutObject` incerto, Verificação local
+
+### Community 148 - "Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?, Source Nodes
+
+### Community 149 - "Q: Quais dependências e critérios verificáveis da issue 5 ainda podem ser concluídos sem aceite humano, credenciais OpenAI ou designação do Tech Lead?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Quais dependências e critérios verificáveis da issue 5 ainda podem ser concluídos sem aceite humano, credenciais OpenAI ou designação do Tech Lead?, Source Nodes
+
+### Community 150 - "Q: Qual modelo Gemini oferece o melhor custo-beneficio para os chats do CRM Silmer na issue 5?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Qual modelo Gemini oferece o melhor custo-beneficio para os chats do CRM Silmer na issue 5?, Source Nodes
+
+### Community 151 - "Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?, Source Nodes
+
 ## Knowledge Gaps
-- **681 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+676 more)
+- **694 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+689 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **45 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **48 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Plan Tasks` to `Phase 4: AI Assistant`, `Phase 7: Hardening and UAT`, `Phase 5: Commercial Flow`, `Phase 0: Foundation Tasks`, `Phase 2: Inbox and Channels`, `Phase 1: Identity and Infra`, `Phase 3: Business Kanban`, `Phase 6: Privacy and Ops`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `TDD — CRM Silmer MVP` connect `TDD and Project Strategy` to `Project Documentation Overview`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Why does `TDD — CRM Silmer MVP` connect `TDD and Project Strategy` to `README.md`?**
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _681 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `API and Worker Runtime` be split into smaller, more focused modules?**
-  _Cohesion score 0.05754385964912281 - nodes in this community are weakly interconnected._
+  _694 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `observability.test.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.08571428571428572 - nodes in this community are weakly interconnected._
 - **Should `TDD and Project Strategy` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `Database Immutability and Protection` be split into smaller, more focused modules?**

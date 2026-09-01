@@ -835,13 +835,13 @@
     "semantic_hash": "5d3adf3e92b6a303b79d1e72b414dc3e"
   },
   "scripts/observability-live-probe.mjs": {
-    "mtime": 1788276359.6959534,
-    "ast_hash": "36c91b343ef3e5a0d5799318b9f1e3f7",
+    "mtime": 1788282484.7127783,
+    "ast_hash": "4884cdf8fef639d0026fdd2c7070366a",
     "semantic_hash": ""
   },
   "test/observability-live-probe.test.js": {
-    "mtime": 1788276339.0174012,
-    "ast_hash": "f3189a521ab2805fe1a2dd05923c0812",
+    "mtime": 1788282464.9532473,
+    "ast_hash": "1f29894c617e528fe2a5068b9e33d529",
     "semantic_hash": ""
   },
   "ops/observability/README.md": {

@@ -153,5 +153,10 @@
   "151": "Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?",
   "152": "Query: P0.7 Modelagem de Roles",
   "153": "Query: Requisitos e Tarefas Issue #1",
-  "154": "Query: Escopo e Requisitos Issue #6"
+  "154": "Query: Escopo e Requisitos Issue #6",
+  "155": "idempotency.js",
+  "156": "observability.js",
+  "157": "validate-observability.mjs",
+  "158": "WorkerRuntime",
+  "159": "CRM Silmer"
 }

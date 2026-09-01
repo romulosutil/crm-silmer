@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer  (2026-09-01)
 
 ## Corpus Check
-- 162 files · ~98,381 words
+- 162 files · ~98,547 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1341 nodes · 1735 edges · 155 communities (107 shown, 48 thin omitted)
+- 1343 nodes · 1739 edges · 160 communities (111 shown, 49 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.73)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c61b9a95`
+- Built from commit: `18d67536`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -167,6 +167,11 @@
 - Query: P0.7 Modelagem de Roles
 - Query: Requisitos e Tarefas Issue #1
 - Query: Escopo e Requisitos Issue #6
+- idempotency.js
+- observability.js
+- validate-observability.mjs
+- WorkerRuntime
+- CRM Silmer
 
 ## God Nodes (most connected - your core abstractions)
 1. `scripts` - 39 edges
@@ -208,11 +213,11 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (155 total, 48 thin omitted)
+## Communities (160 total, 49 thin omitted)
 
 ### Community 0 - "observability.test.js"
-Cohesion: 0.09
-Nodes (33): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, SERVICES, allowedContextFields, allowedEvents, allowedMetrics (+25 more)
+Cohesion: 0.31
+Nodes (11): createApi(), createMetaWebhookRuntime(), createServerApi(), SERVICES, createSafeLogger(), normalizeTraceId(), assertNoCanaries(), canaries (+3 more)
 
 ### Community 1 - "TDD and Project Strategy"
 Cohesion: 0.05
@@ -375,8 +380,8 @@ Cohesion: 0.20
 Nodes (10): Fase 5 — Orçamento, PIX, Pedido e Ficha, T05.1 Implementar orçamento versionado, T05.2 Implementar ledger de vendido, T05.3 Implementar subfluxo PIX, T05.4 Implementar número e Pedido, T05.5 Implementar ciclo da Ficha, T05.6 Implementar PDF íntegro e reproduzível, T05.7 Implementar envio e onboarding (+2 more)
 
 ### Community 41 - "README.md"
-Cohesion: 0.15
-Nodes (8): Sobre o CRM Silmer, Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
+Cohesion: 0.22
+Nodes (4): Sobre o CRM Silmer, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
 
 ### Community 42 - "Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?"
 Cohesion: 0.50
@@ -583,12 +588,12 @@ Cohesion: 0.67
 Nodes (3): Technical Baseline, Phase 0: Foundation, TDD Summary
 
 ### Community 141 - "integration-reliability/src/index.js"
-Cohesion: 0.10
-Nodes (25): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+17 more)
+Cohesion: 0.16
+Nodes (15): createMetaMessagesClient(), deepFreeze(), extractMetaEvents(), immutableClone(), InMemoryMetaEventStore, MetaApiError, MetaWebhookAuthenticationError, MetaWebhookPayloadError (+7 more)
 
 ### Community 142 - "observability-live-probe.mjs"
-Cohesion: 0.42
-Nodes (11): assertSafeProbeEvidence(), canonicalLiveUrl(), invariant(), main(), observeApiTransition(), positiveInteger(), probeLiveEndpoint(), required() (+3 more)
+Cohesion: 0.35
+Nodes (13): assertSafeProbeEvidence(), canonicalLiveUrl(), invariant(), isPathWithinDirectory(), main(), nativePathApi, observeApiTransition(), positiveInteger() (+5 more)
 
 ### Community 143 - "worker/package.json"
 Cohesion: 0.20
@@ -626,10 +631,26 @@ Nodes (3): Answer, Q: Qual modelo Gemini oferece o melhor custo-beneficio para o
 Cohesion: 0.50
 Nodes (3): Answer, Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?, Source Nodes
 
+### Community 155 - "idempotency.js"
+Cohesion: 0.22
+Nodes (10): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+2 more)
+
+### Community 156 - "observability.js"
+Cohesion: 0.16
+Nodes (10): allowedContextFields, allowedEvents, allowedMetrics, allowedServices, categoricalPolicies, createSafeLogRecord(), isFiniteNumber(), MetricRegistry (+2 more)
+
+### Community 157 - "validate-observability.mjs"
+Cohesion: 0.36
+Nodes (11): assertNoSensitiveFields(), invariant(), isEvidenceReference(), isIsoTimestamp(), isOpaqueReference(), main(), requiredAlerts, rootUrl (+3 more)
+
+### Community 159 - "CRM Silmer"
+Cohesion: 0.50
+Nodes (4): Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada
+
 ## Knowledge Gaps
-- **694 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+689 more)
+- **695 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+690 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **48 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **49 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -637,14 +658,14 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Plan Tasks` to `Phase 4: AI Assistant`, `Phase 7: Hardening and UAT`, `Phase 5: Commercial Flow`, `Phase 0: Foundation Tasks`, `Phase 2: Inbox and Channels`, `Phase 1: Identity and Infra`, `Phase 3: Business Kanban`, `Phase 6: Privacy and Ops`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `TDD and Project Strategy` to `README.md`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _694 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `observability.test.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.08571428571428572 - nodes in this community are weakly interconnected._
+  _695 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `TDD and Project Strategy` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `Database Immutability and Protection` be split into smaller, more focused modules?**
   _Cohesion score 0.08846153846153847 - nodes in this community are weakly interconnected._
 - **Should `Configuration Service and Validation` be split into smaller, more focused modules?**
+  _Cohesion score 0.1141025641025641 - nodes in this community are weakly interconnected._
+- **Should `R2 Storage Smoke Tests` be split into smaller, more focused modules?**
   _Cohesion score 0.1141025641025641 - nodes in this community are weakly interconnected._

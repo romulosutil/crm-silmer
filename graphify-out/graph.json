@@ -616,8 +616,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 158,
+      "community_name": "WorkerRuntime",
       "norm_label": "workerruntime"
     },
     {
@@ -627,8 +627,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_constructor",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 158,
+      "community_name": "WorkerRuntime",
       "norm_label": ".constructor()"
     },
     {
@@ -638,8 +638,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_start",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 158,
+      "community_name": "WorkerRuntime",
       "norm_label": ".start()"
     },
     {
@@ -649,8 +649,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_emitheartbeat",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 158,
+      "community_name": "WorkerRuntime",
       "norm_label": ".emitheartbeat()"
     },
     {
@@ -660,8 +660,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_recordjobfailure",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 158,
+      "community_name": "WorkerRuntime",
       "norm_label": ".recordjobfailure()"
     },
     {
@@ -671,8 +671,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_stop",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 158,
+      "community_name": "WorkerRuntime",
       "norm_label": ".stop()"
     },
     {
@@ -3267,8 +3267,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "idempotency.js"
     },
     {
@@ -3278,8 +3278,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "idempotencyconflicterror"
     },
     {
@@ -3289,8 +3289,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror_constructor",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3300,8 +3300,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_fingerprintcommand",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "fingerprintcommand()"
     },
     {
@@ -3311,8 +3311,8 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_canonicaljson",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "canonicaljson()"
     },
     {
@@ -3322,8 +3322,8 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_clone",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "clone()"
     },
     {
@@ -3333,8 +3333,8 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_createdeferred",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "createdeferred()"
     },
     {
@@ -3344,8 +3344,8 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "inmemoryidempotencyrecordstore"
     },
     {
@@ -3355,8 +3355,8 @@
       "source_location": "L133",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_execute",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": ".execute()"
     },
     {
@@ -3366,8 +3366,8 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_get",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": ".get()"
     },
     {
@@ -3377,8 +3377,8 @@
       "source_location": "L210",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_storagekey",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": ".#storagekey()"
     },
     {
@@ -3388,8 +3388,8 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_createidempotentcommandexecutor",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "createidempotentcommandexecutor()"
     },
     {
@@ -3399,8 +3399,8 @@
       "source_location": "L292",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_validatecommandrequest",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "validatecommandrequest()"
     },
     {
@@ -3410,8 +3410,8 @@
       "source_location": "L314",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_requirenonempty",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "requirenonempty()"
     },
     {
@@ -3718,8 +3718,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_shared_src_observability",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "observability.js"
     },
     {
@@ -3729,8 +3729,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "modules_shared_src_observability_redacted_field_names",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "redacted_field_names"
     },
     {
@@ -3740,8 +3740,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedcontextfields",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "allowedcontextfields"
     },
     {
@@ -3751,8 +3751,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedservices",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "allowedservices"
     },
     {
@@ -3762,8 +3762,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedevents",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "allowedevents"
     },
     {
@@ -3773,8 +3773,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedmetrics",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "allowedmetrics"
     },
     {
@@ -3784,8 +3784,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "modules_shared_src_observability_categoricalpolicies",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "categoricalpolicies"
     },
     {
@@ -3795,8 +3795,8 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "modules_shared_src_observability_tracefields",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "tracefields"
     },
     {
@@ -3817,8 +3817,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "modules_shared_src_observability_isfinitenumber",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "isfinitenumber()"
     },
     {
@@ -3828,8 +3828,8 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "modules_shared_src_observability_createsafelogrecord",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "createsafelogrecord()"
     },
     {
@@ -3850,8 +3850,8 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": "metricregistry"
     },
     {
@@ -3861,8 +3861,8 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_constructor",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3872,8 +3872,8 @@
       "source_location": "L233",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_record",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": ".record()"
     },
     {
@@ -3883,8 +3883,8 @@
       "source_location": "L249",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_increment",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": ".increment()"
     },
     {
@@ -3894,8 +3894,8 @@
       "source_location": "L254",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_snapshot",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 156,
+      "community_name": "observability.js",
       "norm_label": ".snapshot()"
     },
     {
@@ -6176,10 +6176,32 @@
       "norm_label": "rootpath"
     },
     {
+      "label": "nativePathApi",
+      "file_type": "code",
+      "source_file": "scripts/observability-live-probe.mjs",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "scripts_observability_live_probe_nativepathapi",
+      "community": 142,
+      "community_name": "observability-live-probe.mjs",
+      "norm_label": "nativepathapi"
+    },
+    {
+      "label": "isPathWithinDirectory()",
+      "file_type": "code",
+      "source_file": "scripts/observability-live-probe.mjs",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "scripts_observability_live_probe_ispathwithindirectory",
+      "community": 142,
+      "community_name": "observability-live-probe.mjs",
+      "norm_label": "ispathwithindirectory()"
+    },
+    {
       "label": "invariant()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L15",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_invariant",
       "community": 142,
@@ -6190,7 +6212,7 @@
       "label": "required()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L20",
+      "source_location": "L40",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_required",
       "community": 142,
@@ -6201,7 +6223,7 @@
       "label": "positiveInteger()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L31",
+      "source_location": "L51",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_positiveinteger",
       "community": 142,
@@ -6212,7 +6234,7 @@
       "label": "canonicalLiveUrl()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L40",
+      "source_location": "L60",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_canonicalliveurl",
       "community": 142,
@@ -6223,7 +6245,7 @@
       "label": "validateProbeEnvironment()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L53",
+      "source_location": "L73",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_validateprobeenvironment",
       "community": 142,
@@ -6234,7 +6256,7 @@
       "label": "probeLiveEndpoint()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L104",
+      "source_location": "L124",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_probeliveendpoint",
       "community": 142,
@@ -6245,7 +6267,7 @@
       "label": "assertSafeProbeEvidence()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L135",
+      "source_location": "L155",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_assertsafeprobeevidence",
       "community": 142,
@@ -6256,7 +6278,7 @@
       "label": "observeApiTransition()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L158",
+      "source_location": "L178",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_observeapitransition",
       "community": 142,
@@ -6267,7 +6289,7 @@
       "label": "writeEvidence()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L228",
+      "source_location": "L248",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_writeevidence",
       "community": 142,
@@ -6278,7 +6300,7 @@
       "label": "main()",
       "file_type": "code",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L244",
+      "source_location": "L263",
       "_origin": "ast",
       "id": "scripts_observability_live_probe_main",
       "community": 142,
@@ -6941,8 +6963,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_validate_observability",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "validate-observability.mjs"
     },
     {
@@ -6952,8 +6974,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "scripts_validate_observability_rooturl",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "rooturl"
     },
     {
@@ -6963,8 +6985,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "scripts_validate_observability_requiredalerts",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "requiredalerts"
     },
     {
@@ -6974,8 +6996,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "scripts_validate_observability_invariant",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "invariant()"
     },
     {
@@ -6985,8 +7007,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "scripts_validate_observability_assertnosensitivefields",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "assertnosensitivefields()"
     },
     {
@@ -6996,8 +7018,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "scripts_validate_observability_isisotimestamp",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "isisotimestamp()"
     },
     {
@@ -7007,8 +7029,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "scripts_validate_observability_isevidencereference",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "isevidencereference()"
     },
     {
@@ -7018,8 +7040,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "scripts_validate_observability_isopaquereference",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "isopaquereference()"
     },
     {
@@ -7029,8 +7051,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "scripts_validate_observability_validatealertpolicy",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "validatealertpolicy()"
     },
     {
@@ -7040,8 +7062,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "scripts_validate_observability_validateactivationgate",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "validateactivationgate()"
     },
     {
@@ -7051,8 +7073,8 @@
       "source_location": "L303",
       "_origin": "ast",
       "id": "scripts_validate_observability_validateruntimehardening",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "validateruntimehardening()"
     },
     {
@@ -7062,8 +7084,8 @@
       "source_location": "L315",
       "_origin": "ast",
       "id": "scripts_validate_observability_main",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 157,
+      "community_name": "validate-observability.mjs",
       "norm_label": "main()"
     },
     {
@@ -7546,8 +7568,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_audit_idempotency_test",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "audit-idempotency.test.js"
     },
     {
@@ -7557,8 +7579,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "test_audit_idempotency_test_commandmetadata",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "commandmetadata"
     },
     {
@@ -7568,8 +7590,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "test_audit_idempotency_test_createaudittrail",
-      "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 155,
+      "community_name": "idempotency.js",
       "norm_label": "createaudittrail()"
     },
     {
@@ -9438,8 +9460,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "readme_crm_silmer",
-      "community": 41,
-      "community_name": "README.md",
+      "community": 159,
+      "community_name": "CRM Silmer",
       "norm_label": "crm silmer"
     },
     {
@@ -9449,8 +9471,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "readme_comece_por_aqui",
-      "community": 41,
-      "community_name": "README.md",
+      "community": 159,
+      "community_name": "CRM Silmer",
       "norm_label": "comece por aqui"
     },
     {
@@ -9460,8 +9482,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "readme_stack_aprovada",
-      "community": 41,
-      "community_name": "README.md",
+      "community": 159,
+      "community_name": "CRM Silmer",
       "norm_label": "stack aprovada"
     },
     {
@@ -9471,8 +9493,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "readme_desenvolvimento",
-      "community": 41,
-      "community_name": "README.md",
+      "community": 159,
+      "community_name": "CRM Silmer",
       "norm_label": "desenvolvimento"
     },
     {
@@ -24837,7 +24859,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L135",
+      "source_location": "L155",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24848,7 +24870,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L40",
+      "source_location": "L60",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24859,7 +24881,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L15",
+      "source_location": "L35",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24870,7 +24892,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L244",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_observability_live_probe",
+      "target": "scripts_observability_live_probe_ispathwithindirectory",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/observability-live-probe.mjs",
+      "source_location": "L263",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24881,7 +24914,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L158",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_observability_live_probe",
+      "target": "scripts_observability_live_probe_nativepathapi",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/observability-live-probe.mjs",
+      "source_location": "L178",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24892,7 +24936,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L31",
+      "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24903,7 +24947,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L104",
+      "source_location": "L124",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24914,7 +24958,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L20",
+      "source_location": "L40",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24936,7 +24980,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L53",
+      "source_location": "L73",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24947,7 +24991,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L228",
+      "source_location": "L248",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe",
@@ -24959,7 +25003,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "test/observability-live-probe.test.js",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_observability_live_probe_test",
@@ -24971,7 +25015,31 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L137",
+      "source_location": "L251",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_observability_live_probe_writeevidence",
+      "target": "scripts_observability_live_probe_ispathwithindirectory",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/observability-live-probe.test.js",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_observability_live_probe_test",
+      "target": "scripts_observability_live_probe_ispathwithindirectory",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/observability-live-probe.mjs",
+      "source_location": "L157",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_assertsafeprobeevidence",
@@ -24983,7 +25051,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L42",
+      "source_location": "L62",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_canonicalliveurl",
@@ -24995,58 +25063,10 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L166",
+      "source_location": "L186",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_observeapitransition",
-      "target": "scripts_observability_live_probe_invariant",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L35",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "scripts_observability_live_probe_positiveinteger",
-      "target": "scripts_observability_live_probe_invariant",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L22",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "scripts_observability_live_probe_required",
-      "target": "scripts_observability_live_probe_invariant",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L60",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "scripts_observability_live_probe_validateprobeenvironment",
-      "target": "scripts_observability_live_probe_invariant",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L231",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "scripts_observability_live_probe_writeevidence",
       "target": "scripts_observability_live_probe_invariant",
       "confidence_score": 1.0
     },
@@ -25058,6 +25078,54 @@
       "source_location": "L55",
       "weight": 1.0,
       "_origin": "ast",
+      "source": "scripts_observability_live_probe_positiveinteger",
+      "target": "scripts_observability_live_probe_invariant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/observability-live-probe.mjs",
+      "source_location": "L42",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_observability_live_probe_required",
+      "target": "scripts_observability_live_probe_invariant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/observability-live-probe.mjs",
+      "source_location": "L80",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_observability_live_probe_validateprobeenvironment",
+      "target": "scripts_observability_live_probe_invariant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/observability-live-probe.mjs",
+      "source_location": "L250",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_observability_live_probe_writeevidence",
+      "target": "scripts_observability_live_probe_invariant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/observability-live-probe.mjs",
+      "source_location": "L75",
+      "weight": 1.0,
+      "_origin": "ast",
       "source": "scripts_observability_live_probe_validateprobeenvironment",
       "target": "scripts_observability_live_probe_required",
       "confidence_score": 1.0
@@ -25067,7 +25135,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L83",
+      "source_location": "L103",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_validateprobeenvironment",
@@ -25079,7 +25147,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L110",
+      "source_location": "L130",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_probeliveendpoint",
@@ -25091,7 +25159,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L54",
+      "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_validateprobeenvironment",
@@ -25103,7 +25171,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L248",
+      "source_location": "L267",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_main",
@@ -25115,7 +25183,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "test/observability-live-probe.test.js",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_observability_live_probe_test",
@@ -25127,7 +25195,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L252",
+      "source_location": "L271",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_main",
@@ -25139,7 +25207,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "test/observability-live-probe.test.js",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_observability_live_probe_test",
@@ -25151,7 +25219,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L261",
+      "source_location": "L280",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_main",
@@ -25163,7 +25231,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L204",
+      "source_location": "L224",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_observeapitransition",
@@ -25175,7 +25243,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L238",
+      "source_location": "L257",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_writeevidence",
@@ -25187,7 +25255,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L255",
+      "source_location": "L274",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_main",
@@ -25199,7 +25267,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "test/observability-live-probe.test.js",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_observability_live_probe_test",
@@ -25211,7 +25279,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/observability-live-probe.mjs",
-      "source_location": "L270",
+      "source_location": "L289",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_observability_live_probe_main",
@@ -34540,5 +34608,5 @@
       "confidence_score": 1.0
     }
   ],
-  "built_at_commit": "c61b9a95a9af6e7dc91cd2fd11896721e9b380cd"
+  "built_at_commit": "18d675368adc79913f8070c1bd5e941ff7b8b049"
 }

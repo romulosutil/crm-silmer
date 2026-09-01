@@ -278,10 +278,12 @@ test('bootstraps exactly one audited Admin and consumes an expiring invite once'
   });
   const acceptAttempts = await Promise.allSettled([
     service.acceptInvitation({
+      correlationId: 'correlation-accept-invitation',
       password: 'seller correct horse battery staple',
       token: invitation.token,
     }),
     service.acceptInvitation({
+      correlationId: 'correlation-accept-invitation',
       password: 'seller correct horse battery staple',
       token: invitation.token,
     }),

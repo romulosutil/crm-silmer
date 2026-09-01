@@ -111,6 +111,23 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
+  api.post('/api/v1/auth/mfa/enrollment', async (request, reply) => {
+    return respond(reply, async () => {
+      const command = requireAuthenticatedCommand(
+        request,
+        identity.allowedOrigins,
+      );
+      const body = requireBody(request.body);
+      const result = await identity.enrollMfa({
+        ...command,
+        correlationId: contextFor(request).correlationId,
+        idempotencyKey: requireHeader(request, 'idempotency-key'),
+        reason: requireString(body.reason, 'reason'),
+      });
+      return reply.code(201).send(result);
+    });
+  });
+
   for (const change of ['grant', 'revoke']) {
     api.post(`/api/v1/auth/capabilities/${change}`, async (request, reply) => {
       return respond(reply, async () => {

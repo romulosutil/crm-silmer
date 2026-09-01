@@ -532,9 +532,16 @@ export function createIdentityAccessService({
     return freezeUser(user);
   }
 
-  /** @param {{actorId: string, secret?: Buffer}} input */
-  async function enrollTotp({ actorId, secret = randomBytes(20) }) {
+  /** @param {{actorId: string, correlationId: string, reason: string, secret?: Buffer}} input */
+  async function enrollTotp({
+    actorId,
+    correlationId,
+    reason,
+    secret = randomBytes(20),
+  }) {
     requireNonEmptyString(actorId, 'actorId');
+    requireNonEmptyString(correlationId, 'correlationId');
+    requireNonEmptyString(reason, 'reason');
     if (!Buffer.isBuffer(secret) || secret.length < 20) {
       throw new TypeError('TOTP secret must contain at least 20 bytes');
     }
@@ -546,6 +553,14 @@ export function createIdentityAccessService({
     await repository.enrollFactor(user.id, {
       encryptedSecret: encryptSecret(secret, envelopeKey),
       recoveryCodeHashes: recoveryCodes.map(digest),
+    });
+    await record({
+      action: 'identity.mfa.enrolled',
+      actor: user.id,
+      correlationId,
+      reason,
+      target: { id: user.id, type: 'user' },
+      version: 1,
     });
     return Object.freeze({ recoveryCodes: Object.freeze(recoveryCodes) });
   }

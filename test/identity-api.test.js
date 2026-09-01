@@ -32,6 +32,11 @@ function harness() {
       return { expiresAt: '2026-09-02T12:00:00.000Z', token: 'invite-token' };
     },
     /** @param {Record<string, unknown>} input */
+    enrollMfa: async (input) => {
+      calls.push({ input, operation: 'mfa' });
+      return { recoveryCodes: ['recovery-code'], secret: 'BASE32SECRET' };
+    },
+    /** @param {Record<string, unknown>} input */
     current: async (input) => {
       calls.push({ input, operation: 'current' });
       return { capabilities: ['COMMERCIAL_ADMIN'], id: 'admin-1' };
@@ -171,6 +176,32 @@ test('invitation commands require an idempotency key and reject ambiguous cookie
   });
   assert.equal(duplicate.statusCode, 400);
   assert.equal(calls.length, 0);
+  await api.close();
+});
+
+test('MFA enrollment is authenticated, CSRF-protected and idempotent', async () => {
+  const { api, calls } = harness();
+  const response = await api.inject({
+    headers: {
+      cookie: 'crm_session=session; crm_csrf=csrf',
+      'idempotency-key': 'mfa-enrollment-request-1',
+      origin: ORIGIN,
+      'x-csrf-token': 'csrf',
+    },
+    method: 'POST',
+    payload: { reason: 'Habilitar acesso privilegiado' },
+    url: '/api/v1/auth/mfa/enrollment',
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.deepEqual(response.json(), {
+    recoveryCodes: ['recovery-code'],
+    secret: 'BASE32SECRET',
+  });
+  assert.equal(calls[0].operation, 'mfa');
+  assert.equal(calls[0].input.sessionToken, 'session');
+  assert.equal(calls[0].input.csrfToken, 'csrf');
+  assert.equal(calls[0].input.idempotencyKey, 'mfa-enrollment-request-1');
   await api.close();
 });
 

@@ -87,7 +87,12 @@ test('supports asynchronous repository ports used by PostgreSQL adapters', async
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });
-  await service.enrollTotp({ actorId: user.id, secret: Buffer.alloc(20, 3) });
+  await service.enrollTotp({
+    actorId: user.id,
+    correlationId: 'correlation-enroll-mfa',
+    reason: 'Enable privileged access',
+    secret: Buffer.alloc(20, 3),
+  });
   const login = await service.login({
     email: 'admin@example.test',
     password: 'correct horse battery staple',
@@ -152,7 +157,12 @@ test('delegates active-session validation and touch to atomic repository operati
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });
-  await service.enrollTotp({ actorId: user.id, secret: Buffer.alloc(20, 3) });
+  await service.enrollTotp({
+    actorId: user.id,
+    correlationId: 'correlation-enroll-mfa',
+    reason: 'Enable privileged access',
+    secret: Buffer.alloc(20, 3),
+  });
   const login = await service.login({
     email: 'admin@example.test',
     password: 'correct horse battery staple',
@@ -318,7 +328,12 @@ test('creates only hashed opaque sessions and enforces CSRF, logout and expiry',
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });
-  await service.enrollTotp({ actorId: user.id, secret: Buffer.alloc(20, 3) });
+  await service.enrollTotp({
+    actorId: user.id,
+    correlationId: 'correlation-enroll-mfa',
+    reason: 'Enable privileged access',
+    secret: Buffer.alloc(20, 3),
+  });
   const code = service.currentTotpForTesting(Buffer.alloc(20, 3));
   const login = await service.login({
     email: 'admin@example.test',
@@ -381,6 +396,8 @@ test('requires encrypted TOTP for privileged users and consumes recovery codes o
 
   const enrollment = await service.enrollTotp({
     actorId: user.id,
+    correlationId: 'correlation-enroll-mfa',
+    reason: 'Enable privileged access',
     secret: Buffer.alloc(20, 5),
   });
   assert.equal(enrollment.recoveryCodes.length, 8);

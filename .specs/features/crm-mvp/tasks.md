@@ -73,8 +73,11 @@ gates de verificação.
 
 ### T00.5 Definir threat model e catálogo de dados
 
-- **Status:** baseline local e validação executável concluídas em 30/08/2026;
-  revisões de Tech Lead e Privacidade pendentes na issue `#9`.
+- **Status:** concluída em 01/09/2026; baseline local, validação executável e
+  revisões de Tech Lead e Privacidade registradas na issue `#9` e em
+  `docs/phase0/security-review.json`. Controles `planned` continuam nas tarefas
+  funcionais correspondentes e produção Gemini com PII permanece bloqueada
+  pela issue `#5`.
 - **Rastreabilidade:** `PRV-01..03` e `PRV-P06-01..12`; controles marcados
   como `planned` permanecem nas tarefas funcionais correspondentes.
 - Mapear ativos, atores, trust boundaries, PII, operadores e abusos.

@@ -4,7 +4,10 @@
   "syntheticOnly": true,
   "controller": "Silmer",
   "requirements": ["PRV-01", "PRV-02", "PRV-03", "PRV-P06-01..12"],
-  "approval": { "techLead": "pending", "privacyOfficer": "pending" },
+  "approval": {
+    "status": "approved",
+    "reviewRecord": "docs/phase0/security-review.json"
+  },
   "dataClasses": [
     {
       "id": "transient-journey-media",

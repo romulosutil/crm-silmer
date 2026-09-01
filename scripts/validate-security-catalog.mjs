@@ -1,6 +1,16 @@
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
+const reviewRecordPath = 'docs/phase0/security-review.json';
+const approvedReview = Object.freeze({
+  reviewerName: 'Romulo Sutil Correa',
+  reviewerIdentifier: 'github:romulosutil',
+  reviewedAt: '2026-09-01T11:32:24Z',
+  evidenceReference:
+    'https://github.com/romulosutil/crm-silmer/issues/9#issuecomment-5493274558',
+  revision: 'git:a0d5d6e4fa1d4521c84cb69e66777461e6719e20',
+});
 const requiredFamilies = new Set([
   'idor-acl',
   'csrf-session',
@@ -15,6 +25,15 @@ const requiredFamilies = new Set([
   'restore-resurrection',
   'backup-storage-exposure',
   'denial-of-service',
+  'local-media-volume-exposure',
+  'transient-media-retention-drift',
+]);
+const requiredFindings = new Map([
+  ['T005-F01', 'resolved'],
+  ['T005-F02', 'resolved'],
+  ['T005-F03', 'resolved'],
+  ['T005-F04', 'accepted'],
+  ['T005-F05', 'accepted'],
 ]);
 const retention = new Map([
   ['transient-journey-media', 7],
@@ -34,6 +53,29 @@ function invariant(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+/** @param {unknown} value */
+function isIsoTimestamp(value) {
+  return (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u.test(value) &&
+    !Number.isNaN(Date.parse(value))
+  );
+}
+
+/** @param {string | Buffer} contents */
+function sha256(contents) {
+  return createHash('sha256').update(contents).digest('hex');
+}
+
+/** @param {any} document @param {string} label */
+function validateApprovalReference(document, label) {
+  invariant(
+    document.approval?.status === 'approved' &&
+      document.approval?.reviewRecord === reviewRecordPath,
+    `${label} must reference the approved T00.5 review record`,
+  );
+}
+
 /** @param {any} document */
 export function validateThreatModel(document) {
   invariant(document?.task === 'T00.5', 'Threat model must trace to T00.5');
@@ -41,11 +83,7 @@ export function validateThreatModel(document) {
     document.syntheticOnly === true,
     'Threat model must use synthetic data only',
   );
-  invariant(
-    document.approval?.techLead === 'pending' &&
-      document.approval?.privacyOfficer === 'pending',
-    'Human approvals must remain pending',
-  );
+  validateApprovalReference(document, 'Threat model');
   for (const key of ['assets', 'actors', 'trustBoundaries', 'threats'])
     invariant(
       Array.isArray(document[key]) && document[key].length > 0,
@@ -91,11 +129,7 @@ export function validateDataCatalog(document) {
     document.syntheticOnly === true,
     'Catalog must use synthetic data only',
   );
-  invariant(
-    document.approval?.techLead === 'pending' &&
-      document.approval?.privacyOfficer === 'pending',
-    'Human approvals must remain pending',
-  );
+  validateApprovalReference(document, 'Catalog');
   invariant(
     Array.isArray(document.dataClasses) &&
       document.dataClasses.length === retention.size,
@@ -158,15 +192,177 @@ export function validateDataCatalog(document) {
   return document;
 }
 
+/**
+ * @param {any} review
+ * @param {any} threatModel
+ * @param {any} dataCatalog
+ * @param {Record<string, string | Buffer>} artifactContents
+ */
+export function validateSecurityReview(
+  review,
+  threatModel,
+  dataCatalog,
+  artifactContents,
+) {
+  invariant(
+    review?.schemaVersion === 1 && review.task === 'T00.5',
+    'Security review must use the T00.5 schema',
+  );
+  invariant(review.status === 'approved', 'Security review must be approved');
+  invariant(
+    isIsoTimestamp(review.approvedAt) &&
+      review.approvedAt === approvedReview.reviewedAt,
+    'Security review approval date differs from the approved evidence',
+  );
+  invariant(
+    review.scope?.revision === approvedReview.revision,
+    'Security review baseline revision differs from the approved evidence',
+  );
+
+  const scopedArtifacts = [
+    {
+      label: 'Threat model',
+      scope: review.scope?.threatModel,
+      expectedPath: 'docs/phase0/threat-model.json',
+      countField: 'threatCount',
+      actualCount: threatModel?.threats?.length,
+    },
+    {
+      label: 'Data catalog',
+      scope: review.scope?.dataCatalog,
+      expectedPath: 'docs/phase0/data-catalog.json',
+      countField: 'dataClassCount',
+      actualCount: dataCatalog?.dataClasses?.length,
+    },
+  ];
+  for (const artifact of scopedArtifacts) {
+    invariant(
+      artifact.scope?.path === artifact.expectedPath,
+      `${artifact.label} review path is invalid`,
+    );
+    invariant(
+      artifact.scope?.[artifact.countField] === artifact.actualCount,
+      `${artifact.label} approved count drifted`,
+    );
+    invariant(
+      /^[0-9a-f]{64}$/u.test(artifact.scope?.sha256 ?? ''),
+      `${artifact.label} requires a SHA-256 digest`,
+    );
+    invariant(
+      Object.hasOwn(artifactContents, artifact.expectedPath),
+      `${artifact.label} contents are required for approval validation`,
+    );
+    invariant(
+      sha256(artifactContents[artifact.expectedPath]) === artifact.scope.sha256,
+      `${artifact.label} changed after human approval`,
+    );
+  }
+
+  invariant(
+    Array.isArray(review.reviews) && review.reviews.length === 2,
+    'Security review requires exactly two role approvals',
+  );
+  const expectedAuthorities = new Map([
+    ['Tech Lead', 'explicit-delegation-for-issue-9'],
+    ['Responsavel de Privacidade', 'named-privacy-officer'],
+  ]);
+  const reviews = /** @type {Array<Record<string, any>>} */ (review.reviews);
+  const roles = new Set(reviews.map((item) => item.role));
+  invariant(
+    roles.size === expectedAuthorities.size &&
+      [...expectedAuthorities.keys()].every((role) => roles.has(role)),
+    'Security review roles are incomplete or duplicated',
+  );
+  for (const item of reviews) {
+    invariant(
+      item.status === 'approved',
+      `${item.role} approval is incomplete`,
+    );
+    invariant(
+      item.reviewer?.name === approvedReview.reviewerName &&
+        item.reviewer?.identifier === approvedReview.reviewerIdentifier,
+      `${item.role} reviewer identity differs from the approved evidence`,
+    );
+    invariant(
+      item.reviewer?.authority === expectedAuthorities.get(item.role),
+      `${item.role} approval authority is invalid`,
+    );
+    invariant(
+      isIsoTimestamp(item.reviewedAt) &&
+        item.reviewedAt === approvedReview.reviewedAt,
+      `${item.role} review date differs from the approved evidence`,
+    );
+    invariant(
+      item.evidence?.reference === approvedReview.evidenceReference &&
+        item.evidence?.revision === approvedReview.revision,
+      `${item.role} approval evidence differs from the approved evidence`,
+    );
+  }
+
+  invariant(
+    Array.isArray(review.findings) &&
+      review.findings.length === requiredFindings.size,
+    'Security review must dispose every finding',
+  );
+  const findings = /** @type {Array<Record<string, any>>} */ (review.findings);
+  const findingIds = new Set(findings.map((item) => item.id));
+  invariant(
+    findingIds.size === requiredFindings.size,
+    'Security review finding IDs must be unique',
+  );
+  for (const [id, disposition] of requiredFindings) {
+    const finding = findings.find((item) => item.id === id);
+    if (!finding) throw new Error(`Security review is missing finding ${id}`);
+    invariant(
+      finding.disposition === disposition,
+      `${id} has an invalid disposition`,
+    );
+    invariant(
+      typeof finding.justification === 'string' &&
+        finding.justification.length >= 40,
+      `${id} requires a versioned justification`,
+    );
+    const references = finding.evidence ?? finding.tracking;
+    invariant(
+      Array.isArray(references) && references.length > 0,
+      `${id} requires evidence or tracking`,
+    );
+  }
+
+  invariant(
+    review.conditions?.plannedControlsAreOperationalEvidence === false,
+    'Planned controls cannot be represented as operational evidence',
+  );
+  invariant(
+    review.conditions?.geminiPiiProductionAllowed === false &&
+      review.conditions?.geminiPiiProductionBlockedByIssue === 5,
+    'Gemini PII processing must remain blocked by issue 5',
+  );
+  return review;
+}
+
 async function main() {
   const root = new URL('../', import.meta.url);
   /** @param {string} path */
-  const json = async (path) =>
-    JSON.parse(await readFile(new URL(path, root), 'utf8'));
-  validateThreatModel(await json('docs/phase0/threat-model.json'));
-  validateDataCatalog(await json('docs/phase0/data-catalog.json'));
+  const raw = async (path) => readFile(new URL(path, root), 'utf8');
+  const threatPath = 'docs/phase0/threat-model.json';
+  const catalogPath = 'docs/phase0/data-catalog.json';
+  const [threatRaw, catalogRaw, reviewRaw] = await Promise.all([
+    raw(threatPath),
+    raw(catalogPath),
+    raw(reviewRecordPath),
+  ]);
+  const threatModel = JSON.parse(threatRaw);
+  const dataCatalog = JSON.parse(catalogRaw);
+  const review = JSON.parse(reviewRaw);
+  validateThreatModel(threatModel);
+  validateDataCatalog(dataCatalog);
+  validateSecurityReview(review, threatModel, dataCatalog, {
+    [threatPath]: threatRaw,
+    [catalogPath]: catalogRaw,
+  });
   console.log(
-    'Security catalog valid: T00.5 local evidence complete; Tech Lead and Privacy approvals remain pending.',
+    'Security catalog valid: T00.5 approved by Tech Lead and Privacy; planned controls and Gemini PII remain fail-closed.',
   );
 }
 

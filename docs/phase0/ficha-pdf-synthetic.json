@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.4",
+  "issue": 7,
+  "syntheticOnly": true,
+  "snapshotVersion": "synthetic-order-v1",
+  "templateVersion": "ficha-canonical-v1",
+  "generatedAt": "2026-08-31T12:00:00-03:00",
+  "pedido": {
+    "numero": "01-CRM",
+    "fab": "01",
+    "vendedor": "Vendedora Exemplo",
+    "data": "31/08/2026",
+    "nome": "Equipe Horizonte - Evento Sintetico",
+    "data_entrega_confirmada": "30/09/2026",
+    "cliente": "Cliente Demonstracao",
+    "aplicacao": "SUBLIMACAO TOTAL",
+    "itens": [
+      {
+        "tipo": "CAMISA",
+        "modelo": "TRADICIONAL",
+        "malhas": ["DRY FIT 100% POLIESTER", "GRAMATURA 130"],
+        "cor_frente": "AZUL MARINHO",
+        "cor_costas": "AZUL MARINHO",
+        "cor_manga_direita": "BRANCA",
+        "cor_manga_esquerda": "BRANCA",
+        "vies_gola": "OLIMPICA - VERDE",
+        "vies_mangas": "VERDE",
+        "grade": [
+          { "tamanho": "P", "quantidade": 4 },
+          { "tamanho": "M", "quantidade": 8 },
+          { "tamanho": "G", "quantidade": 6 },
+          { "tamanho": "GG", "quantidade": 2 }
+        ]
+      },
+      {
+        "tipo": "SHORT",
+        "modelo": "ESPORTIVO",
+        "malhas": ["HELANCA LIGHT"],
+        "cor_frente": "PRETA",
+        "cor_costas": "PRETA",
+        "cor_manga_direita": "NAO APLICAVEL",
+        "cor_manga_esquerda": "NAO APLICAVEL",
+        "vies_gola": "NAO APLICAVEL",
+        "vies_mangas": "BRANCO",
+        "grade": [
+          { "tamanho": "P", "quantidade": 3 },
+          { "tamanho": "M", "quantidade": 4 },
+          { "tamanho": "G", "quantidade": 3 },
+          { "tamanho": "GG", "quantidade": 2 }
+        ]
+      }
+    ],
+    "quantidade_total": 32,
+    "observacoes": [
+      "Arte final sintetica aprovada para teste visual.",
+      "Separar os itens por tamanho e identificar cada pacote.",
+      "Nao usar este documento para producao ou cobranca."
+    ]
+  },
+  "producao": {
+    "conferido_arremate_por": "",
+    "conferido_arremate_em": "",
+    "arrematado_por": "",
+    "arrematado_em": "",
+    "observacao_arremate": "",
+    "conferido_embalado_por": "",
+    "conferido_embalado_em": "",
+    "cores_frente": "",
+    "cores_costas": "",
+    "cores_manga_direita": "",
+    "cores_manga_esquerda": "",
+    "total_cores_partes": "",
+    "observacao_cores": "",
+    "quantidade_total_cores": ""
+  }
+}

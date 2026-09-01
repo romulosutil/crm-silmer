@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.4",
+  "issue": 7,
+  "requirements": ["ORD-01", "ORD-02", "ORD-03", "ORD-04", "ORD-05"],
+  "syntheticOnly": true,
+  "snapshotVersion": "synthetic-order-v1",
+  "templateVersion": "ficha-canonical-v1",
+  "snapshotSha256": "c25e947b9573afceb726f5ff089a7c0f2fcd2da2ac1043234251e80f48ff7370",
+  "artifact": {
+    "path": "output/pdf/ficha-canonica-sintetica-v1.pdf",
+    "sha256": "8e8365f2a2222379b1a7d3b48f0b9fa8c64b8a1438ea932331f94655b0edd405",
+    "pageCount": 2
+  },
+  "approval": {
+    "status": "pending-human-approval",
+    "approved": false,
+    "reviewedBy": {
+      "rose": null,
+      "operation": null
+    },
+    "reviewedAt": null,
+    "criteria": {
+      "legibility": null,
+      "content": null,
+      "order": null,
+      "grade": null,
+      "totals": null,
+      "printing": null
+    },
+    "evidenceRef": null
+  },
+  "versioning": {
+    "overwriteApprovedVersion": false,
+    "correctionsRequireNewTemplateVersion": true,
+    "supersedesTemplateVersion": null
+  }
+}

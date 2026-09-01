@@ -100,6 +100,13 @@ test('scans each local OCI layout before its only registry publication', async (
   );
   assert.match(workflow, /npm ci/u);
   assert.match(workflow, /npm run validate/u);
+  assert.match(workflow, /postgres:17-alpine@sha256:[a-f0-9]{64}/u);
+  assert.match(workflow, /TEST_DATABASE_URL:/u);
+  assert.match(workflow, /npm run test:identity:live/u);
+  assert.match(
+    (await json('package.json')).scripts['test:identity:live'],
+    /--test-concurrency=1/u,
+  );
   assert.match(workflow, /npm run test:e2e/u);
   assert.match(workflow, /npm audit --audit-level=high/u);
   assert.match(workflow, /git diff --check/u);

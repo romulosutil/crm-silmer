@@ -5,20 +5,30 @@
   "requirements": ["ORD-01", "ORD-02", "ORD-03", "ORD-04", "ORD-05"],
   "syntheticOnly": true,
   "snapshotVersion": "synthetic-order-v1",
-  "templateVersion": "ficha-canonical-v1",
-  "snapshotSha256": "c25e947b9573afceb726f5ff089a7c0f2fcd2da2ac1043234251e80f48ff7370",
+  "templateVersion": "ficha-canonical-v2",
+  "snapshotSha256": "e9e9078aa06eb5d0268a2f3de6c3c6cfcf5e4c55723c25f4ffc961eac65e79b0",
   "artifact": {
+    "path": "output/pdf/ficha-canonica-sintetica-v2.pdf",
+    "sha256": "173c6de0bef58c8b069ebbef387aa21366efe722f1c16c1d1dc47917afbd6383",
+    "pageCount": 2,
+    "downloadLabel": "Baixar nova ficha"
+  },
+  "legacyArtifact": {
+    "templateVersion": "ficha-legacy-v1",
     "path": "output/pdf/ficha-canonica-sintetica-v1.pdf",
     "sha256": "8e8365f2a2222379b1a7d3b48f0b9fa8c64b8a1438ea932331f94655b0edd405",
-    "pageCount": 2
+    "pageCount": 2,
+    "downloadLabel": "Download ficha legada"
+  },
+  "reviewPage": {
+    "path": "output/pdf/revisao-ficha.html",
+    "primaryLabel": "Baixar nova ficha",
+    "legacyLabel": "Download ficha legada"
   },
   "approval": {
     "status": "pending-human-approval",
     "approved": false,
-    "reviewedBy": {
-      "rose": null,
-      "operation": null
-    },
+    "reviewedBy": { "rose": null, "operation": null },
     "reviewedAt": null,
     "criteria": {
       "legibility": null,
@@ -33,6 +43,6 @@
   "versioning": {
     "overwriteApprovedVersion": false,
     "correctionsRequireNewTemplateVersion": true,
-    "supersedesTemplateVersion": null
+    "supersedesTemplateVersion": "ficha-canonical-v1"
   }
 }

@@ -17,7 +17,7 @@
   "ARCHITECTURE.md": {
     "mtime": 1788234247.113154,
     "ast_hash": "cf73006d7121ef2b5c4d36a6d951356a",
-    "semantic_hash": ""
+    "semantic_hash": "cf73006d7121ef2b5c4d36a6d951356a"
   },
   "CRM-MVP-ESPECIFICACAO.md": {
     "mtime": 1788222596.9382837,
@@ -62,7 +62,7 @@
   ".specs/features/crm-mvp/tasks.md": {
     "mtime": 1788265876.0407948,
     "ast_hash": "81aaff794c4fba351b7064deab74b590",
-    "semantic_hash": ""
+    "semantic_hash": "81aaff794c4fba351b7064deab74b590"
   },
   "EASYPANEL-TOPOLOGY.md": {
     "mtime": 1788222949.6227882,
@@ -72,7 +72,7 @@
   "TECHNICAL-DESIGN.md": {
     "mtime": 1788234247.118883,
     "ast_hash": "a86be090f863364f394744cc22c51089",
-    "semantic_hash": ""
+    "semantic_hash": "a86be090f863364f394744cc22c51089"
   },
   "AGENTS.md": {
     "mtime": 1788062794.5869677,
@@ -87,7 +87,7 @@
   "CONTRIBUTING.md": {
     "mtime": 1788265876.0413704,
     "ast_hash": "950eae1086b46224b81393bde71cd290",
-    "semantic_hash": ""
+    "semantic_hash": "950eae1086b46224b81393bde71cd290"
   },
   "README.md": {
     "mtime": 1788223251.600949,
@@ -202,7 +202,7 @@
   ".github/workflows/ci.yml": {
     "mtime": 1788265876.039289,
     "ast_hash": "d7b2808758f09fe7d5ec30a61e648307",
-    "semantic_hash": ""
+    "semantic_hash": "d7b2808758f09fe7d5ec30a61e648307"
   },
   ".github/workflows/promote-approved-sha.yml": {
     "mtime": 1788094752.848164,
@@ -247,12 +247,12 @@
   "docs/phase0/external-effects.json": {
     "mtime": 1788232788.6274505,
     "ast_hash": "db7ce5fdbb729f86ea0f3b8d246884e9",
-    "semantic_hash": ""
+    "semantic_hash": "db7ce5fdbb729f86ea0f3b8d246884e9"
   },
   "docs/phase0/load-envelope.json": {
     "mtime": 1788234247.1215572,
     "ast_hash": "423664d4ffc2251eef9771d6a5fb238b",
-    "semantic_hash": ""
+    "semantic_hash": "423664d4ffc2251eef9771d6a5fb238b"
   },
   "schemas/fixtures/external/manifest.json": {
     "mtime": 1788213254.5196557,
@@ -272,42 +272,42 @@
   "scripts/validate-external-spikes.mjs": {
     "mtime": 1788234247.1463363,
     "ast_hash": "69447007d79c91dbcdd4dcbc5e3fe6be",
-    "semantic_hash": ""
+    "semantic_hash": "69447007d79c91dbcdd4dcbc5e3fe6be"
   },
   "test/external-spikes.test.js": {
     "mtime": 1788234247.1484904,
     "ast_hash": "e4c0788f500801f919ab697be5d7e30e",
-    "semantic_hash": ""
+    "semantic_hash": "e4c0788f500801f919ab697be5d7e30e"
   },
   "docs/phase0/EXTERNAL-SPIKES.md": {
     "mtime": 1788232788.6254413,
     "ast_hash": "565b1cf876b7c7daf60413c387233126",
-    "semantic_hash": ""
+    "semantic_hash": "565b1cf876b7c7daf60413c387233126"
   },
   "docs/phase0/data-catalog.json": {
     "mtime": 1788265875.945951,
     "ast_hash": "ecc605f70b94d57ea4653c1b4c2119fa",
-    "semantic_hash": ""
+    "semantic_hash": "ecc605f70b94d57ea4653c1b4c2119fa"
   },
   "docs/phase0/threat-model.json": {
     "mtime": 1788265875.9476051,
     "ast_hash": "cb3f06238c986835f7dd52912746257a",
-    "semantic_hash": ""
+    "semantic_hash": "cb3f06238c986835f7dd52912746257a"
   },
   "scripts/validate-security-catalog.mjs": {
     "mtime": 1788265875.9670403,
     "ast_hash": "387586aa3639dfdb0c0a52248b3fe30b",
-    "semantic_hash": ""
+    "semantic_hash": "387586aa3639dfdb0c0a52248b3fe30b"
   },
   "test/security-catalog.test.js": {
     "mtime": 1788265875.9690464,
     "ast_hash": "02e1318fcd9c5c5731a35749c7504257",
-    "semantic_hash": ""
+    "semantic_hash": "02e1318fcd9c5c5731a35749c7504257"
   },
   "docs/phase0/THREAT-MODEL-AND-DATA-CATALOG.md": {
     "mtime": 1788265875.9444458,
     "ast_hash": "830fcaf079a9fd37db3ead550a5e336e",
-    "semantic_hash": ""
+    "semantic_hash": "830fcaf079a9fd37db3ead550a5e336e"
   },
   "docs/phase0/domain-decisions.json": {
     "mtime": 1788069150.0046184,
@@ -335,19 +335,19 @@
     "semantic_hash": "b7d5d620d502afc769d285c23882e620"
   },
   "ops/observability/alerts.json": {
-    "mtime": 1788068281.4094217,
-    "ast_hash": "3c011db7da64ecad0033801078f9cead",
-    "semantic_hash": "3c011db7da64ecad0033801078f9cead"
+    "mtime": 1788275311.16172,
+    "ast_hash": "fd622460075e4c4d85c4b855e01660b0",
+    "semantic_hash": "fd622460075e4c4d85c4b855e01660b0"
   },
   "scripts/validate-observability.mjs": {
-    "mtime": 1788095428.3462956,
-    "ast_hash": "ac3002f2c5f9b2be659c3ff77189a9a3",
-    "semantic_hash": "ac3002f2c5f9b2be659c3ff77189a9a3"
+    "mtime": 1788275399.350232,
+    "ast_hash": "c38adecd6ee904a652409a3f798c56fe",
+    "semantic_hash": "c38adecd6ee904a652409a3f798c56fe"
   },
   "test/observability.test.js": {
-    "mtime": 1788093775.046502,
-    "ast_hash": "f0de46f8854333094b413e7f7c69c98e",
-    "semantic_hash": "f0de46f8854333094b413e7f7c69c98e"
+    "mtime": 1788275389.627812,
+    "ast_hash": "88171f233d4aaf5636eaf25d4553e04c",
+    "semantic_hash": "88171f233d4aaf5636eaf25d4553e04c"
   },
   "docs/phase0/OBSERVABILITY-AND-HARDENING.md": {
     "mtime": 1788069156.03451,
@@ -567,7 +567,7 @@
   ".github/workflows/pr-review.yml": {
     "mtime": 1788268480.0067916,
     "ast_hash": "0b1d94b1a423d0036c658042efb64eeb",
-    "semantic_hash": ""
+    "semantic_hash": "0b1d94b1a423d0036c658042efb64eeb"
   },
   "ops/easypanel/provisioning-gate.json": {
     "mtime": 1788141053.3716545,
@@ -677,7 +677,7 @@
   "docs/phase0/ficha-pdf-approval.json": {
     "mtime": 1788232788.629457,
     "ast_hash": "b17639809457c54161b8efe71ebfbbf4",
-    "semantic_hash": ""
+    "semantic_hash": "b17639809457c54161b8efe71ebfbbf4"
   },
   "docs/phase0/ficha-pdf-synthetic.json": {
     "mtime": 1788229746.9248931,
@@ -692,12 +692,12 @@
   "test/ficha-pdf-review.test.js": {
     "mtime": 1788232788.6544974,
     "ast_hash": "4dd9c4a735a30158354c00e057e7b7be",
-    "semantic_hash": ""
+    "semantic_hash": "4dd9c4a735a30158354c00e057e7b7be"
   },
   "docs/phase0/FICHA-PDF-REVIEW.md": {
     "mtime": 1788232788.6274505,
     "ast_hash": "7fc20ce1c751b7b7f975e67f8d871ac4",
-    "semantic_hash": ""
+    "semantic_hash": "7fc20ce1c751b7b7f975e67f8d871ac4"
   },
   "output/pdf/revisao-ficha.html": {
     "mtime": 1788229746.9532115,
@@ -717,116 +717,121 @@
   "docs/phase0/ficha-pdf-approved-evidence-v2.json": {
     "mtime": 1788232788.629457,
     "ast_hash": "4a93e38bc88efcd8d89ab4db2f52e5f6",
-    "semantic_hash": ""
+    "semantic_hash": "4a93e38bc88efcd8d89ab4db2f52e5f6"
   },
   "graphify-out/memory/query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend.md": {
     "mtime": 1788040493.900389,
     "ast_hash": "2698f39fa9dc7a412395355fa0bdc874",
-    "semantic_hash": ""
+    "semantic_hash": "2698f39fa9dc7a412395355fa0bdc874"
   },
   "graphify-out/memory/query_20260830_002538_quais_decisoes_resolvem_o_p0_4_do_product_readines.md": {
     "mtime": 1788049538.369232,
     "ast_hash": "6579f487f0d2a3e9985fccffd7bcd8b8",
-    "semantic_hash": ""
+    "semantic_hash": "6579f487f0d2a3e9985fccffd7bcd8b8"
   },
   "graphify-out/memory/query_20260830_003815_como_a_nova_decisao_do_p0_4_limita_a_autonomia_do.md": {
     "mtime": 1788050295.1326635,
     "ast_hash": "c21038a792b030b9d803d1a8be6b4988",
-    "semantic_hash": ""
+    "semantic_hash": "c21038a792b030b9d803d1a8be6b4988"
   },
   "graphify-out/memory/query_20260830_004047_quais_decis\u00f5es_resolvem_o_p0_7_do_product_readines.md": {
     "mtime": 1788050447.2879753,
     "ast_hash": "29f68065e6a4775738607c44db623d55",
-    "semantic_hash": ""
+    "semantic_hash": "29f68065e6a4775738607c44db623d55"
   },
   "graphify-out/memory/query_20260830_004114_quais_decis\u00f5es_resolvem_o_p0_5_do_product_readines.md": {
     "mtime": 1788050474.159081,
     "ast_hash": "19e1943d593d77d6e30ab61177207f25",
-    "semantic_hash": ""
+    "semantic_hash": "19e1943d593d77d6e30ab61177207f25"
   },
   "graphify-out/memory/query_20260830_004153_quais_decisoes_resolvem_o_p0_6_de_retencao_e_exclu.md": {
     "mtime": 1788050513.4838305,
     "ast_hash": "544cb47ef0674a304dd628fb648a565c",
-    "semantic_hash": ""
+    "semantic_hash": "544cb47ef0674a304dd628fb648a565c"
   },
   "graphify-out/memory/query_20260830_012906_como_o_p0_5_define_fab__sequ\u00eancia__reserva__concor.md": {
     "mtime": 1788053346.8666623,
     "ast_hash": "2d01163ec211b48dca4c7e37cf2fae11",
-    "semantic_hash": ""
+    "semantic_hash": "2d01163ec211b48dca4c7e37cf2fae11"
   },
   "graphify-out/memory/query_20260830_015538_como_foi_resolvido_o_p0_6_do_product_readiness_tec.md": {
     "mtime": 1788054938.4243424,
     "ast_hash": "0a512adee7e17efa83b1a93f5e6f0cdb",
-    "semantic_hash": ""
+    "semantic_hash": "0a512adee7e17efa83b1a93f5e6f0cdb"
   },
   "graphify-out/memory/query_20260830_020836_como_o_p0_7_modela_admin__atendimento_e_vendedor.md": {
     "mtime": 1788055716.456965,
     "ast_hash": "55b23c765760ec50776beffaef938e6c",
-    "semantic_hash": ""
+    "semantic_hash": "55b23c765760ec50776beffaef938e6c"
   },
   "graphify-out/memory/query_20260830_041011_where_are_the_agent_roles_and_contribution_protoco.md": {
     "mtime": 1788063011.05211,
     "ast_hash": "c24a7d2140fada1b10d434728bd729cf",
-    "semantic_hash": ""
+    "semantic_hash": "c24a7d2140fada1b10d434728bd729cf"
   },
   "graphify-out/memory/query_20260830_121840_quais_requisitos__tarefas__arquivos__contratos_de.md": {
     "mtime": 1788092320.796422,
     "ast_hash": "5e317db043c2e9b92a7e9719d08c85b1",
-    "semantic_hash": ""
+    "semantic_hash": "5e317db043c2e9b92a7e9719d08c85b1"
   },
   "graphify-out/memory/query_20260830_122808_quais_contratos_do_crm_silmer_governam_seguran\u00e7a_d.md": {
     "mtime": 1788092888.8575592,
     "ast_hash": "dfc55a54035eee998b8a8e7cb0e506d5",
-    "semantic_hash": ""
+    "semantic_hash": "dfc55a54035eee998b8a8e7cb0e506d5"
   },
   "graphify-out/memory/query_20260830_212356_como_integrar_o_arquivo_pr_review_yml_para_que_o_g.md": {
     "mtime": 1788125036.08487,
     "ast_hash": "e2d1700246a939bf07501313baac7954",
-    "semantic_hash": ""
+    "semantic_hash": "e2d1700246a939bf07501313baac7954"
   },
   "graphify-out/memory/query_20260831_004150_qual_requisito__tarefa__arquivos_e_crit\u00e9rios_de_ac.md": {
     "mtime": 1788136910.3900104,
     "ast_hash": "01f02c41a60b8b191a9f592ef3944b7c",
-    "semantic_hash": ""
+    "semantic_hash": "01f02c41a60b8b191a9f592ef3944b7c"
   },
   "graphify-out/memory/query_20260831_025424_como_o_gate_da_issue_3_impede_falso_passed_e_disti.md": {
     "mtime": 1788144864.8309681,
     "ast_hash": "5c16675369bed7b34fce616ce2d16eea",
-    "semantic_hash": ""
+    "semantic_hash": "5c16675369bed7b34fce616ce2d16eea"
   },
   "graphify-out/memory/query_20260831_213816_quais_depend\u00eancias_e_crit\u00e9rios_verific\u00e1veis_da_iss.md": {
     "mtime": 1788212296.7077365,
     "ast_hash": "ee1da783dd2747fd45e371dc46566a64",
-    "semantic_hash": ""
+    "semantic_hash": "ee1da783dd2747fd45e371dc46566a64"
   },
   "graphify-out/memory/query_20260831_214807_qual_modelo_gemini_oferece_o_melhor_custo_benefici.md": {
     "mtime": 1788212887.6252408,
     "ast_hash": "8448af341e27f6129e01360bb491972d",
-    "semantic_hash": ""
+    "semantic_hash": "8448af341e27f6129e01360bb491972d"
   },
   "graphify-out/memory/query_20260831_221131_como_a_baseline_gemini_developer_api_da_issue_5_co.md": {
     "mtime": 1788214291.98542,
     "ast_hash": "251834810a34448e06c378d8f4348987",
-    "semantic_hash": ""
+    "semantic_hash": "251834810a34448e06c378d8f4348987"
   },
   "graphify-out/memory/query_20260831_231621_quais_evidencias_ainda_bloqueiam_o_fechamento_da_i.md": {
     "mtime": 1788218181.1556718,
     "ast_hash": "fecc07ec0ac1f2abe5f5c89a2bf2284a",
-    "semantic_hash": ""
+    "semantic_hash": "fecc07ec0ac1f2abe5f5c89a2bf2284a"
   },
   "graphify-out/memory/query_20260831_235521_qual_\u00e9_o_escopo__os_requisitos__as_depend\u00eancias__o.md": {
     "mtime": 1788220521.7145786,
     "ast_hash": "7586b00652a4461ab3146a652ae377bd",
-    "semantic_hash": ""
+    "semantic_hash": "7586b00652a4461ab3146a652ae377bd"
   },
   "graphify-out/memory/query_20260901_004643_como_os_contratos_canonicos_do_crm_silmer_tratam_i.md": {
     "mtime": 1788223603.0465856,
     "ast_hash": "593e64ed9538749371ccc5bdc91c0509",
-    "semantic_hash": ""
+    "semantic_hash": "593e64ed9538749371ccc5bdc91c0509"
   },
   "docs/phase0/security-review.json": {
     "mtime": 1788265875.9476051,
     "ast_hash": "6f295b928e9b4a46decda30dd03424e3",
-    "semantic_hash": ""
+    "semantic_hash": "6f295b928e9b4a46decda30dd03424e3"
+  },
+  "ops/observability/activation-gate.json": {
+    "mtime": 1788275311.159694,
+    "ast_hash": "5d3adf3e92b6a303b79d1e72b414dc3e",
+    "semantic_hash": "5d3adf3e92b6a303b79d1e72b414dc3e"
   }
 }

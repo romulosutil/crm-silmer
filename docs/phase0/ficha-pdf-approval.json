@@ -26,19 +26,19 @@
     "legacyLabel": "Download ficha legada"
   },
   "approval": {
-    "status": "pending-human-approval",
-    "approved": false,
-    "reviewedBy": { "rose": null, "operation": null },
-    "reviewedAt": null,
+    "status": "approved",
+    "approved": true,
+    "reviewedBy": { "rose": "Rose", "operation": "Operacao Silmer" },
+    "reviewedAt": "2026-08-31T23:31:07-03:00",
     "criteria": {
-      "legibility": null,
-      "content": null,
-      "order": null,
-      "grade": null,
-      "totals": null,
-      "printing": null
+      "legibility": true,
+      "content": true,
+      "order": true,
+      "grade": true,
+      "totals": true,
+      "printing": true
     },
-    "evidenceRef": null
+    "evidenceRef": "docs/phase0/ficha-pdf-approved-evidence-v2.json"
   },
   "versioning": {
     "overwriteApprovedVersion": false,

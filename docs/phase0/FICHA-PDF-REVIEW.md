@@ -4,9 +4,9 @@ Rastreabilidade: issue `#7`; `T00.4`; `ORD-01..05`.
 
 ## Estado do gate
 
-**Pendente de aprovacao humana.** O pacote sintetico, o PDF A4 em paisagem, os
-hashes e o gate fail-closed estao versionados. Nenhuma validacao automatizada ou
-revisao do agente substitui o aceite de Rose e Operacao.
+**Aprovado por Rose e Operacao em 31/08/2026.** O pacote sintetico, o PDF A4 em
+paisagem, os hashes, os seis criterios e a evidencia sem PII estao versionados.
+O aceite preserva o artefato aprovado por hash e impede sua regeneracao.
 
 A revisao comeca em
 [`output/pdf/revisao-ficha.html`](../../output/pdf/revisao-ficha.html). A acao
@@ -37,20 +37,19 @@ manual em Arremate, Conferencia/Embalagem e Cores/Arte.
 
 ```powershell
 npm ci
-npm run generate:ficha-pdf-review
 npm run validate:ficha-pdf-review
 npm run test:ficha-pdf-review
 ```
 
-A geracao da candidata e permitida somente enquanto a versao esta
-`pending-human-approval`. Depois de aprovada, o script recusa sobrescrever o
-PDF. O validador confirma os hashes SHA-256 do snapshot e dos dois PDFs, a soma
-da grade, os campos de producao vazios, os links do seletor e a consistencia
-integral do estado humano. A deteccao de contato rejeita telefones brasileiros,
-mas nao confunde sequencias numericas internas de hashes e identificadores com
-PII.
+`npm run generate:ficha-pdf-review` foi usado somente enquanto a versao estava
+`pending-human-approval`. Como a versao esta aprovada, o script recusa
+sobrescrever o PDF. O validador confirma os hashes SHA-256 do snapshot e dos
+dois PDFs, a soma da grade, os campos de producao vazios, os links do seletor e
+a consistencia integral do estado humano. A deteccao de contato rejeita
+telefones brasileiros, mas nao confunde sequencias numericas internas de hashes
+e identificadores com PII.
 
-## Roteiro para Rose e Operacao
+## Roteiro executado por Rose e Operacao
 
 1. Abrir o seletor e baixar a nova ficha; usar a ficha legada para comparar
    conteudo e como fallback, nao como candidata principal.
@@ -64,21 +63,21 @@ PII.
 6. Se qualquer criterio falhar, manter o gate pendente e abrir uma nova versao
    de template. Nunca corrigir ou sobrescrever uma versao aprovada.
 
-## Como registrar o aceite real
+## Registro do aceite real
 
-Somente depois da revisao:
+Depois da revisao, o aceite foi registrado assim:
 
-1. Criar `docs/phase0/ficha-pdf-approved-evidence-v2.json` com `schemaVersion`,
+1. `docs/phase0/ficha-pdf-approved-evidence-v2.json` registra `schemaVersion`,
    `task`, `issue`, `syntheticOnly`, versoes e hashes copiados do gate,
    `reviewedAt`, `reviewedBy`, os seis criterios `true` e ao menos uma referencia
    visual sem PII no formato `git:<sha>` ou `silmer:<id>`.
-2. Em `ficha-pdf-approval.json`, mudar o estado inteiro para `approved`, informar
+2. `ficha-pdf-approval.json` mantem o estado inteiro como `approved`, informa
    Rose e o representante de Operacao, data ISO 8601, seis criterios `true` e a
-   referencia ao arquivo de evidencia. Estados parciais falham.
-3. Executar `npm run validate:ficha-pdf-review` e anexar o resultado a PR de
+   referencia ao arquivo de evidencia; estados parciais falham.
+3. A matriz de efeitos aponta para a evidencia e o PDF v2 permanece como golden
+   visual imutavel pelo SHA-256 registrado.
+4. `npm run validate:ficha-pdf-review` valida a transicao completa na PR de
    aprovacao.
-4. Atualizar a matriz de efeitos e o golden somente nessa nova PR, preservando
-   o PDF aprovado por hash.
 
 Nao registrar telefone, email, pedido real, assinatura manuscrita ou qualquer
 outro dado pessoal na evidencia.

@@ -33,9 +33,15 @@ async function fixture() {
     new URL(gate.reviewPage.path, rootUrl),
     'utf8',
   );
+  const evidence = gate.approval.evidenceRef
+    ? JSON.parse(
+        await readFile(new URL(gate.approval.evidenceRef, rootUrl), 'utf8'),
+      )
+    : null;
 
   return {
     artifactBytes,
+    evidence,
     gate,
     legacyArtifactBytes,
     reviewPageHtml,
@@ -139,9 +145,10 @@ test('offers the new Ficha first and the legacy Ficha as a fallback', async () =
   assert.equal(reviewPageHtml, buildReviewPageHtml(gate));
 });
 
-test('validates hashes and preserves a fail-closed human approval', async () => {
+test('validates hashes and preserves the complete human approval', async () => {
   const {
     artifactBytes,
+    evidence,
     gate,
     legacyArtifactBytes,
     reviewPageHtml,
@@ -150,6 +157,7 @@ test('validates hashes and preserves a fail-closed human approval', async () => 
 
   const validationInput = {
     artifactBytes,
+    evidence,
     legacyArtifactBytes,
     reviewPageHtml,
     snapshotBytes,
@@ -158,13 +166,15 @@ test('validates hashes and preserves a fail-closed human approval', async () => 
   assert.doesNotThrow(() =>
     validateFichaApprovalGate({ ...validationInput, gate }),
   );
-  assert.equal(gate.approval.status, 'pending-human-approval');
-  assert.equal(gate.approval.approved, false);
-  assert.equal(gate.approval.reviewedAt, null);
-  assert.equal(gate.approval.evidenceRef, null);
+  assert.equal(gate.approval.status, 'approved');
+  assert.equal(gate.approval.approved, true);
+  assert.equal(gate.approval.reviewedBy.rose, 'Rose');
+  assert.equal(gate.approval.reviewedBy.operation, 'Operacao Silmer');
+  assert.ok(Object.values(gate.approval.criteria).every(Boolean));
+  assert.doesNotThrow(() => validateFichaApprovalEvidence(evidence, gate));
 
   const partial = structuredClone(gate);
-  partial.approval.approved = true;
+  partial.approval.reviewedBy.operation = null;
   assert.throws(
     () =>
       validateFichaApprovalGate({
@@ -188,55 +198,19 @@ test('validates hashes and preserves a fail-closed human approval', async () => 
     /every canonical review criterion/iu,
   );
 
-  const approved = structuredClone(gate);
-  approved.approval = {
-    ...approved.approval,
-    approved: true,
-    status: 'approved',
-    reviewedAt: '2026-09-01T12:00:00-03:00',
-    reviewedBy: { operation: 'Operacao Silmer', rose: 'Rose' },
-    criteria: Object.fromEntries(
-      Object.keys(approved.approval.criteria).map((criterion) => [
-        criterion,
-        true,
-      ]),
-    ),
-    evidenceRef: 'docs/phase0/ficha-pdf-approved-evidence-v1.json',
-  };
-  const evidence = {
-    schemaVersion: 1,
-    task: 'T00.4',
-    issue: 7,
-    syntheticOnly: true,
-    templateVersion: approved.templateVersion,
-    snapshotVersion: approved.snapshotVersion,
-    snapshotSha256: approved.snapshotSha256,
-    artifactSha256: approved.artifact.sha256,
-    reviewedAt: approved.approval.reviewedAt,
-    reviewedBy: approved.approval.reviewedBy,
-    criteria: approved.approval.criteria,
-    visualEvidence: [{ containsPii: false, ref: 'git:abc123', type: 'git' }],
-  };
-  assert.doesNotThrow(() => validateFichaApprovalEvidence(evidence, approved));
-  assert.doesNotThrow(() =>
-    validateFichaApprovalGate({
-      ...validationInput,
-      evidence,
-      gate: approved,
-    }),
-  );
   assert.throws(
     () =>
       validateFichaApprovalGate({
         ...validationInput,
-        gate: approved,
+        evidence: null,
+        gate,
       }),
     /Approved evidence must be synthetic/iu,
   );
   const evidenceWithPii = /** @type {any} */ (structuredClone(evidence));
   evidenceWithPii.notes = 'Contato +55 11 99999-1234';
   assert.throws(
-    () => validateFichaApprovalEvidence(evidenceWithPii, approved),
+    () => validateFichaApprovalEvidence(evidenceWithPii, gate),
     /must not contain email addresses or phone numbers/iu,
   );
 

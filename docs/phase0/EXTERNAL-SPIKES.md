@@ -23,6 +23,11 @@ Rastreabilidade: `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`, `PAY-02`,
   documento e imagem terminaram em `failed` por janela de 24 horas (`131047`),
   sem inferência de entrega. A evidência sanitizada está em
   `meta-sandbox-live-evidence.json`.
+- Retenção da mídia: para o produto interno, bytes recebidos/enviados usam
+  volume privado da VPS e expiram no fim da jornada ou em sete dias, o que
+  ocorrer primeiro. Arquivos válidos seguem ao Dropbox pelo procedimento
+  operacional existente; nenhum adapter/API Dropbox é presumido. O contrato
+  executável está em [`media-retention-policy.json`](./media-retention-policy.json).
 - Gemini Developer API: tier pago e `gemini-2.5-flash-lite` foram aprovados
   condicionalmente em 31/08/2026. A chamada usa `models.generateContent`
   stateless com JSON Schema estrito, sem Interactions, grounding, File API,
@@ -32,14 +37,16 @@ Rastreabilidade: `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`, `PAY-02`,
   uma auth key criada no AI Studio, restrita à Gemini API e mantida somente no
   servidor. O smoke exige `AI_PROVIDER=google-gemini-developer-api` e
   `AI_MODEL_PRIMARY=gemini-2.5-flash-lite`.
-- Cloudflare R2: o gate local fail-closed da issue `#6` está em
+- Cloudflare R2: o gate local fail-closed foi preservado para a dívida `#29` em
   [`R2-VALIDATION.md`](./R2-VALIDATION.md) e
   [`r2-control-plane.json`](./r2-control-plane.json). Ele exige três buckets
   privados, credenciais separadas, `HEAD` + SHA-256 antes de retry de
   `PutObject` incerto e Cloudflare-native Bucket Lock no prefixo imutável. R2
   não suporta S3 Object Lock nem versionamento de bucket. DPA v6.4,
   subprocessadores, localização, provisionamento e controles live permanecem
-  pendentes de Privacidade/DevOps.
+  pendentes de Privacidade/DevOps. Assinatura e provisionamento estão
+  explicitamente diferidos e não bloqueiam a política de mídia interna da
+  issue `#6`.
 - PDF: snapshot/template versionados e hash são o contrato local; a revisão
   visual de Rose permanece humana.
 
@@ -52,9 +59,9 @@ A fonte, data, status e owner de cada efeito ficam em
    de usuário do sistema, configurar pagamento e substituir a deduplicação em
    memória pela inbox PostgreSQL de `T02.2`; o sandbox de T00.4 está concluído.
 2. Privacidade/Tech Lead: registrar responsáveis nominais e a confirmação live
-   do ZDR da Gemini Developer API; Cloudflare R2 DPA, subprocessadores,
-   localização, buckets, tokens segregados, lifecycle e Bucket Lock ainda
-   exigem aceite/evidência separados.
+   do ZDR da Gemini Developer API. Cloudflare R2 DPA, subprocessadores,
+   localização e controles live foram movidos para a issue `#29`, antes de uso
+   externo ou de qualquer alegação de durabilidade superior à VPS.
 3. Rose/Operação: aprovar visualmente o PDF canônico da Ficha.
 4. Produto/Operação/Tech Lead: confirmar ou ajustar `load-envelope.json`.
 5. T07.1: medir carga somente depois da aprovação do envelope.
@@ -72,7 +79,9 @@ pendências precisam virar issues GitHub com owners e evidência de aceite.
 ```powershell
 npm run validate:r2
 npm run test:r2
-npm run smoke:r2:live # somente após decisão de localização e provisionamento autorizado
+npm run smoke:r2:live # somente se a issue #29 autorizar custo e provisionamento
+npm run validate:media-retention
+npm run test:media-retention
 npm run validate:external-spikes
 npm run test:external-spikes
 npm run test:gemini:privacy

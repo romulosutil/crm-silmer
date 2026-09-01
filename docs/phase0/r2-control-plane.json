@@ -1,10 +1,16 @@
 {
   "schemaVersion": 1,
   "task": "T00.4",
-  "issue": 6,
+  "issue": 29,
   "provider": "Cloudflare R2",
   "capturedAt": "2026-08-31",
   "requirements": ["PRV-P06-07", "PRV-P06-11", "ORD-04", "ORD-05"],
+  "activation": {
+    "status": "deferred-zero-incremental-cost",
+    "subscriptionAuthorized": false,
+    "provisioningAuthorized": false,
+    "supersededForTransientMediaBy": "docs/phase0/media-retention-policy.json"
+  },
   "approval": {
     "status": "pending-human-approval",
     "approved": false,

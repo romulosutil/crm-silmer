@@ -32,6 +32,7 @@
     "test:external-spikes": "node --test test/external-spikes.test.js",
     "test:observability": "node --test test/observability.test.js",
     "test:gemini:privacy": "node --test test/gemini-privacy-smoke.test.js",
+    "test:media-retention": "node --test test/media-retention-policy.test.js test/transient-media-retention.test.js",
     "test:phase0-decisions": "node --test test/phase0-decisions.test.js",
     "test:phase1-schema:live": "node --test test/phase1-schema-live.test.js",
     "test:security-catalog": "node --test test/security-catalog.test.js",
@@ -40,10 +41,11 @@
     "validate:topology": "node scripts/validate-topology.mjs && node scripts/recovery-mock.mjs --check",
     "validate:r2": "node scripts/validate-r2.mjs",
     "validate:external-spikes": "node scripts/validate-external-spikes.mjs",
+    "validate:media-retention": "node scripts/validate-media-retention.mjs",
     "validate:observability": "node scripts/validate-observability.mjs",
     "validate:phase0-decisions": "node scripts/validate-phase0-decisions.mjs",
     "validate:security-catalog": "node scripts/validate-security-catalog.mjs",
-    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run validate:topology && npm run validate:r2 && npm run validate:external-spikes && npm run validate:security-catalog && npm run validate:phase0-decisions && npm run validate:observability && npm test && npm run build"
+    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run validate:topology && npm run validate:r2 && npm run validate:external-spikes && npm run validate:media-retention && npm run validate:security-catalog && npm run validate:phase0-decisions && npm run validate:observability && npm test && npm run build"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

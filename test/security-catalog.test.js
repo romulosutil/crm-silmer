@@ -63,6 +63,7 @@ test('covers every required abuse family and gives each threat an executable own
 test('keeps P0.6 maximum retention exact and logs operationally at 30 days', async () => {
   const catalog = await readJson('docs/phase0/data-catalog.json');
   const expected = new Map([
+    ['transient-journey-media', 7],
     ['conversation-no-lead', 90],
     ['lost-deal', 365],
     ['closed-sale-nondocumentary-content', 730],
@@ -85,6 +86,14 @@ test('keeps P0.6 maximum retention exact and logs operationally at 30 days', asy
   assert.ok(logs);
   assert.equal(logs.operationalRetentionDays, 30);
   assert.equal(logs.maximumRetentionDays, 90);
+  const transientMedia = dataClasses.find(
+    ({ id }) => id === 'transient-journey-media',
+  );
+  assert.ok(transientMedia);
+  assert.match(transientMedia.trigger, /whichever occurs first/iu);
+  assert.ok(
+    transientMedia.systemsAndCopies.includes('private VPS media volume'),
+  );
 });
 
 test('rejects approval forgery and restore without tombstone propagation', async () => {

@@ -15,6 +15,7 @@ import {
   validateR2LiveEnvironment,
 } from '../scripts/r2-live-smoke.mjs';
 import {
+  assertR2LiveExecutionAuthorized,
   validateR2ControlPlane,
   validateR2EnvironmentTemplate,
 } from '../scripts/validate-r2.mjs';
@@ -64,6 +65,12 @@ test('validates the fail-closed R2 control plane and empty environment template'
   assert.equal(gate.liveEvidence.executed, false);
 
   const approved = structuredClone(gate);
+  approved.activation = {
+    ...approved.activation,
+    status: 'authorized-for-live-validation',
+    subscriptionAuthorized: true,
+    provisioningAuthorized: true,
+  };
   approved.approval = {
     ...approved.approval,
     approved: true,
@@ -89,6 +96,41 @@ test('validates the fail-closed R2 control plane and empty environment template'
     evidenceRef: 'docs/phase0/r2-approved-evidence.json',
   };
   assert.doesNotThrow(() => validateR2ControlPlane(approved));
+
+  const authorizedPreflight = structuredClone(approved);
+  authorizedPreflight.liveEvidence = structuredClone(gate.liveEvidence);
+  assert.doesNotThrow(() =>
+    assertR2LiveExecutionAuthorized(authorizedPreflight),
+  );
+
+  for (const mutate of /** @type {Array<(candidate: any) => void>} */ ([
+    (candidate) => {
+      candidate.activation.subscriptionAuthorized = false;
+    },
+    (candidate) => {
+      candidate.activation.provisioningAuthorized = false;
+    },
+    (candidate) => {
+      candidate.approval.dpaAccepted = false;
+    },
+    (candidate) => {
+      candidate.approval.subprocessorsAccepted = false;
+    },
+    (candidate) => {
+      candidate.approval.dataLocationAccepted = false;
+    },
+    (candidate) => {
+      candidate.dataLocation.status = 'pending-privacy';
+      candidate.dataLocation.jurisdiction = null;
+    },
+  ])) {
+    const partialAuthorization = structuredClone(authorizedPreflight);
+    mutate(partialAuthorization);
+    assert.throws(
+      () => assertR2LiveExecutionAuthorized(partialAuthorization),
+      /transition together|complete approval|wholly pending or wholly approved|data location/iu,
+    );
+  }
 
   const partial = structuredClone(approved);
   partial.approval.subprocessorsAccepted = false;
@@ -266,7 +308,7 @@ test('creates a scoped presigned URL without unsupported headers', () => {
   });
   const url = client.presignGet({
     bucket: 'crm-silmer-data',
-    key: 'issue-6-smoke/canary',
+    key: 'issue-29-smoke/canary',
     expiresIn: 300,
   });
 
@@ -278,7 +320,7 @@ test('creates a scoped presigned URL without unsupported headers', () => {
     () =>
       client.presignGet({
         bucket: 'crm-silmer-data',
-        key: 'issue-6-smoke/canary',
+        key: 'issue-29-smoke/canary',
         expiresIn: 301,
       }),
     /1-300 seconds/u,

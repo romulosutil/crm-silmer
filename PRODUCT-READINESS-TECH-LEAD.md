@@ -25,15 +25,15 @@ propagados para o PRD, contexto, requisitos, regras e design.
 
 ## Decisões P0 para aprovação final e estimativa fechada
 
-| P0 | Decisão necessária | Status | Impacto técnico/evidência |
-|---|---|---|---|
-| 1 | Etapas definitivas e campos obrigatórios de cada passagem | **Resolvido** | Contrato aprovado em `CAMPOS-FICHA-E-JORNADA-P0-1.md` |
-| 2 | Autoridade do Vendedor Silmer sobre preço após qualificação | **Resolvido** | Comunica somente orçamento humano aprovado, versionado e vigente; não calcula nem negocia |
-| 3 | Financeiro cobre vendido ou também recebido/a receber | **Resolvido** | MVP mede vendido; recebido e saldo a receber ficam em P2 |
-| 4 | Canais do primeiro piloto além do WhatsApp | **Resolvido** | WhatsApp Business é obrigatório; Instagram Direct entra sem bloquear o lançamento; site apenas direciona ao WhatsApp; IA não move o Kanban no MVP |
-| 5 | Significado de FAB, sequência vigente e numeração | **Resolvido** | Contrato aprovado na seção P0.5 deste documento |
-| 6 | Regras concretas de retenção e exclusão | **Resolvido** | Contrato aprovado na seção P0.6 deste documento |
-| 7 | Permissões para revisar, editar, cancelar e reenviar Ficha | **Resolvido** | Funções Atendimento/Vendedor com role adicional `Admin`; contrato aprovado na seção P0.7 |
+| P0  | Decisão necessária                                          | Status        | Impacto técnico/evidência                                                                                                                         |
+| --- | ----------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Etapas definitivas e campos obrigatórios de cada passagem   | **Resolvido** | Contrato aprovado em `CAMPOS-FICHA-E-JORNADA-P0-1.md`                                                                                             |
+| 2   | Autoridade do Vendedor Silmer sobre preço após qualificação | **Resolvido** | Comunica somente orçamento humano aprovado, versionado e vigente; não calcula nem negocia                                                         |
+| 3   | Financeiro cobre vendido ou também recebido/a receber       | **Resolvido** | MVP mede vendido; recebido e saldo a receber ficam em P2                                                                                          |
+| 4   | Canais do primeiro piloto além do WhatsApp                  | **Resolvido** | WhatsApp Business é obrigatório; Instagram Direct entra sem bloquear o lançamento; site apenas direciona ao WhatsApp; IA não move o Kanban no MVP |
+| 5   | Significado de FAB, sequência vigente e numeração           | **Resolvido** | Contrato aprovado na seção P0.5 deste documento                                                                                                   |
+| 6   | Regras concretas de retenção e exclusão                     | **Resolvido** | Contrato aprovado na seção P0.6 deste documento                                                                                                   |
+| 7   | Permissões para revisar, editar, cancelar e reenviar Ficha  | **Resolvido** | Funções Atendimento/Vendedor com role adicional `Admin`; contrato aprovado na seção P0.7                                                          |
 
 ## P0.1 resolvido — contrato de passagem
 
@@ -274,25 +274,48 @@ Critérios da decisão:
 
 ## P0.6 resolvido — retenção, exclusão e responsáveis de privacidade
 
-O piloto adota retenção por finalidade e classe de dado. O prazo começa no
-evento que encerra a finalidade operacional correspondente, e não na criação
-do registro. Dados cujo prazo terminou são excluídos ou anonimizados, salvo
-quando uma obrigação legal ou um `legal_hold` ativo exigir a conservação do
-subconjunto mínimo necessário.
+O piloto adota retenção por finalidade e classe de dado. Em regra, o prazo
+começa no evento que encerra a finalidade operacional correspondente, e não na
+criação do registro. A mídia transitória tem ainda um teto próprio contado do
+recebimento ou envio e vence no primeiro dos dois eventos. Dados cujo prazo
+terminou são excluídos ou anonimizados, salvo quando uma obrigação legal ou um
+`legal_hold` ativo exigir a conservação do subconjunto mínimo necessário em
+classe durável.
 
 Matriz aprovada:
 
-| Classe de dado | Gatilho | Prazo máximo | Destino |
-|---|---|---|---|
-| Conversa encerrada como `Sem lead` | Encerramento da conversa | 90 dias | Exclusão dos dados pessoais e do conteúdo |
-| Negócio marcado como `Perdido` | Registro da perda | 12 meses | Exclusão dos dados identificáveis; métricas somente anonimizadas |
-| Mensagens e anexos não documentais de venda fechada | Fechamento ou cancelamento | 24 meses | Exclusão do conteúdo e das cópias internas |
-| Pedido, Ficha, orçamento aprovado, eventos comerciais e comprovante PIX | Fechamento ou cancelamento | 5 anos | Exclusão ao final do prazo, salvo `legal_hold` |
-| Payload de webhook processado com sucesso | Processamento confirmado | 30 dias | Exclusão do payload bruto |
-| Payload com erro e item de reconciliação | Resolução da pendência | 90 dias | Exclusão do payload bruto e do diagnóstico pessoal |
-| Log técnico | Emissão do evento | 90 dias | Exclusão; o log não contém mensagem integral |
-| Requisição e resposta técnica do provedor de IA | Processamento da mensagem | 30 dias | Exclusão no CRM e no operador; uso para treinamento é proibido |
-| Backup | Criação do backup | 35 dias | Expiração por rotação automática |
+| Classe de dado                                                                     | Gatilho                                                       | Prazo máximo                                              | Destino                                                                                        |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Imagem ou arquivo transitório recebido/enviado na jornada                          | Recebimento ou envio, combinado ao evento terminal da jornada | Encerramento da jornada ou 7 dias, o que ocorrer primeiro | Exclusão dos bytes do volume privado da VPS; metadados mínimos seguem a classe do registro pai |
+| Conversa encerrada como `Sem lead`                                                 | Encerramento da conversa                                      | 90 dias                                                   | Exclusão dos dados pessoais e do conteúdo                                                      |
+| Negócio marcado como `Perdido`                                                     | Registro da perda                                             | 12 meses                                                  | Exclusão dos dados identificáveis; métricas somente anonimizadas                               |
+| Mensagens e arquivos válidos não documentais promovidos ao repositório operacional | Fechamento ou cancelamento                                    | 24 meses                                                  | Exclusão do conteúdo e reconciliação da cópia operacional                                      |
+| Pedido, Ficha, orçamento aprovado, eventos comerciais e comprovante PIX            | Fechamento ou cancelamento                                    | 5 anos                                                    | Exclusão ao final do prazo, salvo `legal_hold`                                                 |
+| Payload de webhook processado com sucesso                                          | Processamento confirmado                                      | 30 dias                                                   | Exclusão do payload bruto                                                                      |
+| Payload com erro e item de reconciliação                                           | Resolução da pendência                                        | 90 dias                                                   | Exclusão do payload bruto e do diagnóstico pessoal                                             |
+| Log técnico                                                                        | Emissão do evento                                             | 90 dias                                                   | Exclusão; o log não contém mensagem integral                                                   |
+| Requisição e resposta técnica do provedor de IA                                    | Processamento da mensagem                                     | 30 dias                                                   | Exclusão no CRM e no operador; uso para treinamento é proibido                                 |
+| Backup                                                                             | Criação do backup                                             | 35 dias                                                   | Expiração por rotação automática                                                               |
+
+Para o piloto interno, mídia de canal ainda não classificada como arquivo
+válido usa somente um volume privado da VPS, fora dos backups. O vencimento é
+calculado por mídia: `min(recebida_em|enviada_em + 7 dias,
+jornada_encerrada_em)`. A jornada termina em `Sem lead`, `Perdido`, `Fechado`
+ou cancelamento. Perda do volume pode tornar essa mídia `lost/unavailable`; o
+CRM deve mostrar a limitação e nunca alegar recuperação.
+
+Arquivo inválido é eliminado e nunca segue ao Dropbox. Para esta política,
+arquivo válido é aquele que passou limite, MIME por conteúdo, hash e varredura
+e que uma pessoa classificou como necessário à finalidade operacional; uma só
+dessas condições não basta. O arquivo válido é copiado para o repositório Dropbox já usado pela
+Silmer, por procedimento operacional registrado, e passa a seguir o prazo da
+classe correspondente. O MVP registra hash, operador, horário e resultado do
+handoff, mas não presume API, OAuth, webhook ou sincronização automática do
+Dropbox. Pedido, Ficha versionada, orçamento aprovado, comprovante PIX válido,
+eventos comerciais e auditoria permanecem fora do prazo transitório e mantêm
+os contratos desta matriz. Se um `legal_hold` exigir os bytes, a evidência
+mínima precisa ser promovida à classe durável antes do vencimento; o volume
+transitório não ganha retenção indefinida.
 
 A exclusão alcança banco primário, anexos, caches, busca, índices vetoriais e
 demais cópias controladas pelo CRM. Os indicadores agregados podem permanecer
@@ -342,12 +365,14 @@ Critérios da decisão:
 
 1. **PRV-P06-01:** cada classe de dado possui gatilho, prazo e destino
    configuráveis segundo a matriz aprovada, sem prazo indefinido implícito.
-2. **PRV-P06-02:** conversa `Sem lead`, negócio `Perdido` e venda fechada
-   iniciam seus prazos pelos respectivos eventos de encerramento, perda,
-   fechamento ou cancelamento.
+2. **PRV-P06-02:** mídia transitória vence no menor prazo entre sete dias do
+   recebimento/envio e o evento terminal; conversa `Sem lead`, negócio
+   `Perdido` e venda fechada iniciam os demais prazos pelos respectivos eventos
+   de encerramento, perda, fechamento ou cancelamento.
 3. **PRV-P06-03:** a rotina de retenção exclui dados pessoais do banco,
-   anexos, caches, busca e índices vetoriais e preserva somente métricas
-   irreversivelmente anonimizadas.
+   bytes transitórios, anexos, caches, busca e índices vetoriais e preserva
+   somente metadados mínimos previstos e métricas irreversivelmente
+   anonimizadas.
 4. **PRV-P06-04:** `legal_hold` só impede a exclusão com fundamento, escopo
    mínimo, responsável e data de revisão auditáveis e bloqueia uso comercial e
    processamento pela IA.
@@ -364,7 +389,9 @@ Critérios da decisão:
 10. **PRV-P06-10:** toda solicitação registra decisão, fundamento, executor,
     destinos envolvidos e timestamps sem reter o conteúdo eliminado.
 11. **PRV-P06-11:** correção, bloqueio ou exclusão é propagada aos operadores e
-    registra sucesso, falha ou limitação por destino para reconciliação.
+    registra sucesso, falha ou limitação por destino para reconciliação; no
+    Dropbox operacional, essa evidência é manual enquanto não existir adapter
+    aprovado.
 12. **PRV-P06-12:** antes do piloto existem pessoas formalmente designadas como
     Responsável de Privacidade e Administrador Técnico, com segregação entre
     autorização e execução da exclusão.
@@ -389,16 +416,16 @@ somente outro `Admin` pode conceder ou revogar a role.
 
 Matriz aprovada:
 
-| Ação | Atendimento | Vendedor | Atendimento ou Vendedor com `Admin` | Vendedor Silmer |
-|---|---:|---:|---:|---:|
-| Consultar e revisar rascunho | Sim | Sim | Sim | Não |
-| Editar rascunho | Sim | Sim | Sim | Não |
-| Aprovar orçamento e venda | Não | Não | Sim | Não |
-| Aprovar a Ficha | Não | Não | Sim | Não |
-| Cancelar a Ficha | Não | Não | Sim | Não |
-| Enviar a Ficha para Rose | Não | Não | Sim | Não |
-| Repetir envio falho | Não | Não | Sim | Não |
-| Reenviar após envio confirmado | Não | Não | Sim | Não |
+| Ação                           | Atendimento | Vendedor | Atendimento ou Vendedor com `Admin` | Vendedor Silmer |
+| ------------------------------ | ----------: | -------: | ----------------------------------: | --------------: |
+| Consultar e revisar rascunho   |         Sim |      Sim |                                 Sim |             Não |
+| Editar rascunho                |         Sim |      Sim |                                 Sim |             Não |
+| Aprovar orçamento e venda      |         Não |      Não |                                 Sim |             Não |
+| Aprovar a Ficha                |         Não |      Não |                                 Sim |             Não |
+| Cancelar a Ficha               |         Não |      Não |                                 Sim |             Não |
+| Enviar a Ficha para Rose       |         Não |      Não |                                 Sim |             Não |
+| Repetir envio falho            |         Não |      Não |                                 Sim |             Não |
+| Reenviar após envio confirmado |         Não |      Não |                                 Sim |             Não |
 
 O ciclo de vida da Ficha usa os estados `rascunho`, `em_revisao`, `aprovada`,
 `envio_pendente`, `enviada`, `falha_envio`, `cancelada` e `substituida`.

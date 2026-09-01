@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.4",
+  "issue": 6,
+  "capturedAt": "2026-08-31",
+  "decision": {
+    "status": "approved-for-internal-pilot",
+    "record": "https://github.com/romulosutil/crm-silmer/issues/6",
+    "internalProductOnly": true,
+    "incrementalStorageCostAllowed": false
+  },
+  "transientMedia": {
+    "scope": [
+      "inbound channel images",
+      "outbound channel images",
+      "journey files not promoted to a valid commercial record"
+    ],
+    "expiryRule": "earliest-of",
+    "deadlines": ["journey-terminal-at", "media-at-plus-7-days"],
+    "maximumAgeDays": 7,
+    "terminalJourneyStates": ["Sem lead", "Fechado", "Perdido", "Cancelado"],
+    "deleteBytes": true,
+    "backupRequired": false
+  },
+  "storage": {
+    "mode": "private-vps-volume",
+    "publicAccess": false,
+    "servedOnlyByAuthorizedApplicationRoute": true,
+    "opaquePathsWithoutPii": true,
+    "malwareAndContentValidationBeforeUse": true,
+    "quotaRequired": true,
+    "quotaFailureMode": "reject-new-media-keep-text-journey-operational",
+    "hostLossAcceptedForTransientMedia": true,
+    "unavailableState": "lost/unavailable"
+  },
+  "validFileArchive": {
+    "destination": "existing-dropbox-operational-repository",
+    "automaticApiIntegration": false,
+    "promotionRequiresValidation": true,
+    "promotionRequires": [
+      "technical-validation-passed",
+      "operator-classified-operational-purpose"
+    ],
+    "retentionFollowsDataClass": true,
+    "recordHashAndHandoffMetadataInCrm": true,
+    "deleteTransientBytesAfterRecordedHandoff": true,
+    "archiveFailureNeverExtendsTransientExpiry": true,
+    "missedArchiveOutcome": "archive_missed",
+    "operatorDeletionIsReconciledAsOperationalLimitation": true
+  },
+  "durableDataExcludedFromTransientPolicy": [
+    "Pedido",
+    "Ficha versionada",
+    "orçamento aprovado",
+    "comprovante PIX válido",
+    "eventos comerciais",
+    "auditoria",
+    "tombstones",
+    "backups de banco"
+  ],
+  "legalHold": {
+    "transientVolumeMayIgnoreExpiry": false,
+    "requiredEvidenceMustBePromotedBeforeExpiry": true
+  },
+  "futureObjectStorage": {
+    "cloudflareR2Activation": "deferred",
+    "followUpIssue": 29,
+    "subscriptionOrProvisioningAuthorized": false,
+    "requiredBefore": [
+      "external product use",
+      "durability above the accepted single-host risk",
+      "automated durable archive replacing the operational Dropbox process"
+    ]
+  }
+}

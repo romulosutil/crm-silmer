@@ -42,9 +42,11 @@
   não há promessa de exactly-once de rede. Redis não entra no MVP.
 - **Autenticação:** sessão opaca em cookie seguro, CSRF, MFA obrigatório para
   `Admin` e autorização aplicada no backend.
-- **Storage:** S3-compatible externo e privado; dados, backups e tombstones usam
-  buckets e credenciais separados, com proteção de imutabilidade para o ledger;
-  containers são stateless.
+- **Storage:** no piloto interno, mídia de canal é transitória em volume privado
+  da VPS, sem backup, por até sete dias ou até o fim da jornada. Arquivos
+  válidos seguem ao Dropbox por procedimento operacional registrado. Object
+  storage externo para arquivo automatizado, backups e tombstones permanece
+  evolução condicionada à issue `#29`; R2 não está autorizado nem provisionado.
 - **Documentos:** snapshot imutável + template HTML/CSS + PDF gerado no worker.
 - **IA:** adapter próprio e Gemini Developer API paga como baseline, fixada em
   `gemini-2.5-flash-lite`, sem fine-tuning, RAG ou vector database no MVP. A
@@ -65,6 +67,9 @@
 - Backlog pertence à Conversa e permanece fora do Kanban.
 - Sugestões da IA e campos oficiais são persistidos separadamente.
 - Auditoria de negócio é append-only e não se confunde com log técnico.
+- A perda da única cópia de mídia transitória na VPS é risco aceito do piloto e
+  produz estado `lost/unavailable`, nunca alegação de recuperação. Documentos
+  comerciais duráveis não usam essa classe de storage.
 - PostgreSQL é a fonte da verdade; canais, IA, storage e futuras automações
   entram apenas por ports/adapters.
 - Venda, PIX, Pedido, Ficha, envio e onboarding usam chaves idempotentes e

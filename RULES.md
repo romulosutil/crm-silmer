@@ -23,6 +23,11 @@
     autorizada pode confirmar e liberar a Ficha no caminho inicial.
 16. O MVP mede vendas, não recebimentos nem saldo a receber.
 17. Rômulo Sutil Corrêa é o Responsável de Privacidade; a política do piloto foi aprovada após consulta jurídica.
+18. Imagens e arquivos de canal não promovidos a documento válido são
+    transitórios: os bytes são removidos no encerramento da jornada ou sete
+    dias após o recebimento/envio, o que ocorrer primeiro. Pedido, Ficha,
+    orçamento aprovado, comprovante PIX válido, eventos comerciais e auditoria
+    nunca herdam esse prazo curto.
 
 ## Regras técnicas já impostas
 
@@ -34,3 +39,7 @@
 6. n8n é opcional e não pode ser requisito para o núcleo do agente ou da máquina de estados.
 7. Integrações externas entram por contratos explícitos e não definem o modelo interno do domínio.
 8. Dados pessoais seguem minimização, controle de acesso, auditoria e a política de retenção aprovada no P0.6.
+9. No piloto interno, a mídia transitória usa volume privado da VPS sem backup;
+   arquivos válidos seguem ao Dropbox por procedimento operacional registrado.
+   Isso não autoriza nem presume API, token ou sincronização automática do
+   Dropbox.

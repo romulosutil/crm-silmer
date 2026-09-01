@@ -17,6 +17,7 @@ const requiredFamilies = new Set([
   'denial-of-service',
 ]);
 const retention = new Map([
+  ['transient-journey-media', 7],
   ['conversation-no-lead', 90],
   ['lost-deal', 365],
   ['closed-sale-nondocumentary-content', 730],
@@ -141,6 +142,18 @@ export function validateDataCatalog(document) {
       /** @param {string} step */ (step) => /tombstone/iu.test(step),
     ),
     'Backup deletion propagation must reapply tombstones before restore readiness',
+  );
+  const transientMedia = dataClasses.find(
+    ({ id }) => id === 'transient-journey-media',
+  );
+  invariant(
+    transientMedia?.maximumRetentionDays === 7 &&
+      /journey terminal state.*seven days.*whichever occurs first/iu.test(
+        transientMedia.trigger,
+      ) &&
+      transientMedia.systemsAndCopies.includes('private VPS media volume') &&
+      transientMedia.deletionPropagation.includes('private VPS media volume'),
+    'Transient journey media must expire at journey end or seven days on the private VPS volume',
   );
   return document;
 }

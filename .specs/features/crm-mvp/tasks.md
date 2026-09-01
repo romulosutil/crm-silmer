@@ -50,16 +50,19 @@ gates de verificação.
 
 ### T00.4 Fechar spikes externos
 
-- **Status:** matriz, fixtures e gates locais executáveis concluídos; o gate R2
-  fail-closed da issue `#6` foi adicionado em 31/08/2026. Smokes/aprovações
-  externos permanecem pendentes nas issues `#5` a `#8`.
+- **Status:** matriz, fixtures e gates locais executáveis concluídos. A issue
+  `#6` aprovou para o piloto interno mídia transitória em volume privado da VPS,
+  até o fim da jornada ou sete dias, sem custo incremental; R2 foi diferido
+  para a issue `#29`. Smokes/aprovações externos permanecem pendentes nas
+  issues `#5`, `#7` e `#8`.
 - **Rastreabilidade:** `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`,
   `PAY-02`, `PAY-05`, `PRV-P06-07` e `PRV-P06-11`.
 - Validar WhatsApp Cloud API, assinatura, mídia, templates e status de entrega.
 - Versionar matriz por efeito externo com suporte a idempotência, consulta do
   resultado, ponto de não retorno e estratégia para `outcome_unknown`.
 - Validar provedor de IA, DPA/retenção e schema estruturado.
-- Validar PDF da Ficha com Rose e object storage com Privacidade.
+- Validar PDF da Ficha com Rose; validar a política de mídia transitória e o
+  handoff operacional de arquivos válidos ao Dropbox sem presumir API.
 - Levantar operadores, mensagens, bursts, anexos e massa esperada para aprovar
   ou ajustar o envelope de carga da seção 13 do TDD.
 - **Verificação:** evidências e matriz versionadas, envelope aprovado e nenhum
@@ -167,6 +170,8 @@ gates de verificação.
 - Validar assinatura, deduplicar, persistir e responder rapidamente.
 - Preservar raw body para a assinatura e rejeitar tamanho, tipo e schema
   inválidos antes de qualquer efeito.
+- Para mídia, persistir metadados e `expires_at` idempotentes antes do download;
+  manter bytes em quarentena privada, sem tornar arquivo duplicado disponível.
 - **Verificação:** MSG-01, assinatura inválida, fuzz de payload e carga
   concorrente sem mensagens duplicadas.
 
@@ -175,6 +180,10 @@ gates de verificação.
 - Inbox/outbox, `available_at`, prioridade, lease/`locked_until`, claim com
   lock, reclaim, retry, jitter, heartbeat, máximo de tentativas, dead letter e
   estados `sent|failed|outcome_unknown`.
+- Implementar o volume privado de mídia, quota fail-closed, escrita parcial
+  segura, hash, validação, estado `lost/unavailable`, deleção no vencimento e
+  recibo manual do handoff Dropbox. Evento terminal agenda deleção imediata;
+  pendência de arquivo não estende o TTL.
 - **Verificação:** kill antes, durante e depois do efeito respeita a matriz do
   provider; estado incerto não sofre retry cego, fica reconciliável, e poison
   message termina em reconciliação.
@@ -328,12 +337,17 @@ gates de verificação.
 
 ### T06.1 Implementar retenção por classe
 
-- Scheduler diário, exclusão/anonimização e reconciliação por destino.
+- Jobs por vencimento e evento terminal, com sweeper diário de segurança,
+  exclusão/anonimização e reconciliação por destino. A mídia transitória usa o
+  menor prazo entre sete dias e encerramento; documentos duráveis ficam fora
+  desse sweep.
 - **Verificação:** PRV-02/03 e PRV-P06-01 a PRV-P06-08 com relógio controlado.
 
 ### T06.2 Implementar legal hold e solicitações
 
-- Protocolo, verificação, decisão, execução, propagação e evidência.
+- Protocolo, verificação, decisão, execução, propagação e evidência, incluindo
+  recibo operacional `success|failure|limitation` para o Dropbox enquanto não
+  houver adapter aprovado.
 - **Verificação:** PRV-01 a PRV-03 e PRV-P06-09 a PRV-P06-12.
 
 ### T06.3 Implementar tombstones de restore

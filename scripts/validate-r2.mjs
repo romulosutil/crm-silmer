@@ -82,7 +82,15 @@ function assertNoSensitiveValues(value, path = []) {
 export function validateR2ControlPlane(document) {
   invariant(document?.schemaVersion === 1, 'R2 gate schema version must be 1');
   invariant(document?.task === 'T00.4', 'R2 gate must trace to T00.4');
-  invariant(document?.issue === 6, 'R2 gate must trace to issue 6');
+  invariant(document?.issue === 29, 'R2 gate must trace to issue 29');
+  const deferredActivation =
+    document.activation?.status === 'deferred-zero-incremental-cost' &&
+    document.activation.subscriptionAuthorized === false &&
+    document.activation.provisioningAuthorized === false;
+  const authorizedActivation =
+    document.activation?.status === 'authorized-for-live-validation' &&
+    document.activation.subscriptionAuthorized === true &&
+    document.activation.provisioningAuthorized === true;
   invariant(
     document?.provider === 'Cloudflare R2',
     'R2 gate must name the selected provider',
@@ -237,11 +245,37 @@ export function validateR2ControlPlane(document) {
     /^docs\/phase0\/r2-[a-z0-9-]+-evidence\.json$/u.test(
       liveEvidence.evidenceRef,
     );
+  const deferredState =
+    deferredActivation && pendingApproval && pendingLocation && pendingLive;
+  const authorizedState =
+    authorizedActivation &&
+    completedApproval &&
+    approvedLocation &&
+    (pendingLive || completedLive);
   invariant(
-    completedApproval ? completedLive : pendingLive,
-    'R2 live evidence must match the human approval state',
+    deferredState || authorizedState,
+    'R2 activation, human approval, location and live evidence must transition together',
   );
   assertNoSensitiveValues(document);
+  return document;
+}
+
+/** @param {any} document */
+export function assertR2LiveExecutionAuthorized(document) {
+  validateR2ControlPlane(document);
+  invariant(
+    document.activation.status === 'authorized-for-live-validation' &&
+      document.activation.subscriptionAuthorized === true &&
+      document.activation.provisioningAuthorized === true &&
+      document.approval.approved === true &&
+      document.approval.dpaAccepted === true &&
+      document.approval.subprocessorsAccepted === true &&
+      document.approval.dataLocationAccepted === true &&
+      document.dataLocation.status === 'approved' &&
+      document.liveEvidence.status === 'not-executed' &&
+      document.liveEvidence.executed === false,
+    'R2 live execution requires complete approval, approved location and an unexecuted evidence slot',
+  );
   return document;
 }
 
@@ -283,7 +317,7 @@ async function main() {
   validateR2ControlPlane(controlPlane);
   validateR2EnvironmentTemplate(environment);
   console.log(
-    'R2 gate valid: local controls are fail-closed; live and human approval remain pending.',
+    'R2 gate valid: activation is deferred; live execution remains unauthorized.',
   );
 }
 

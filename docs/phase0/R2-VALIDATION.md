@@ -1,13 +1,16 @@
-# T00.4 — Aprovação e validação do Cloudflare R2
+# Dívida #29 — Aprovação e validação futura do Cloudflare R2
 
-Rastreabilidade: issue `#6`; `T00.4`; `PRV-P06-07`, `PRV-P06-11`, `ORD-04`
+Rastreabilidade: issue `#29`; histórico de `T00.4`; `PRV-P06-07`, `PRV-P06-11`, `ORD-04`
 e `ORD-05`.
 
 ## Estado do gate
 
-**Pendente.** O contrato local e o smoke fail-closed existem, mas não há nesta
-evidência autenticação Cloudflare, buckets provisionados, controles live ou
-aceite humano. Um teste local verde não fecha a issue.
+**Diferido.** O produto interno exige custo incremental zero e adotou mídia
+transitória na VPS pela issue `#6`. Não há autorização para assinatura,
+provisionamento ou smoke live do R2. O contrato local e o smoke fail-closed
+permanecem como opção futura, mas não há nesta evidência autenticação
+Cloudflare, buckets provisionados, controles live ou aceite humano. Um teste
+local verde não fecha a issue `#29` nem reabre a decisão de custo do piloto.
 
 O Responsável de Privacidade e o Tech Lead ainda precisam registrar, em
 [`r2-control-plane.json`](./r2-control-plane.json), a decisão sobre o DPA 6.4,
@@ -15,7 +18,7 @@ subprocessadores e localização. `Location Hint` é apenas best effort; não pr
 residência. Se residência brasileira explícita for obrigatória, a baseline
 passa para AWS S3 `sa-east-1` antes de criar buckets definitivos.
 
-## Contrato aprovado para implementação
+## Contrato candidato para implementação futura
 
 - Buckets privados e distintos: `crm-silmer-data`, `crm-silmer-backups` e
   `crm-silmer-tombstones`.
@@ -56,6 +59,9 @@ Esse contrato preserva número, versão e hash da Ficha; reconciliação não cr
 novo Pedido nem nova versão (`ORD-04/05`).
 
 ## Procedimento live
+
+Este procedimento só pode começar depois de Produto autorizar custo e
+Privacidade/DevOps retomarem formalmente a issue `#29`.
 
 1. Privacidade/Tech Lead aprovam ou recusam DPA, subprocessadores e localização.
 2. DevOps cria os três buckets somente depois da decisão de localização e cria

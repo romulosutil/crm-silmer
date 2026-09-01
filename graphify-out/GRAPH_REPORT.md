@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer  (2026-09-01)
 
 ## Corpus Check
-- 157 files · ~93,886 words
+- 158 files · ~95,089 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1203 nodes · 1584 edges · 116 communities (93 shown, 23 thin omitted)
+- 1210 nodes · 1599 edges · 116 communities (93 shown, 23 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.78)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9b462218`
+- Built from commit: `fa7da6a5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -300,8 +300,8 @@ Cohesion: 0.06
 Nodes (27): Cloudflare R2, Decisões seguras, Evidências e pendências externas, Resultado local, T00.4 — Spikes externos, Verificação, Estado do gate, Geracao e verificacao tecnica (+19 more)
 
 ### Community 33 - "validate-security-catalog.mjs"
-Cohesion: 0.33
-Nodes (7): invariant(), main(), requiredFamilies, retention, validateDataCatalog(), validateThreatModel(), rootUrl
+Cohesion: 0.22
+Nodes (13): approvedReview, invariant(), isIsoTimestamp(), main(), requiredFamilies, requiredFindings, retention, sha256() (+5 more)
 
 ### Community 34 - "CRM Silmer MVP — Contexto de Produto"
 Cohesion: 0.20
@@ -528,7 +528,7 @@ Cohesion: 0.50
 Nodes (3): Answer, Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?, Source Nodes
 
 ## Knowledge Gaps
-- **602 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+597 more)
+- **604 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+599 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -536,11 +536,11 @@ Nodes (3): Answer, Q: Como os contratos canonicos do CRM Silmer tratam imagens r
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Fase 5 — Orçamento, PIX, Pedido e Ficha`, `Fase 0 — Fundação e riscos técnicos`, `Fase 2 — Caixa de Entrada, canais e confiabilidade`, `Fase 1 — Identidade, acesso e infraestrutura de domínio`, `Fase 3 — Negócio, Kanban e qualificação`, `Fase 6 — Privacidade, relatórios e operação`, `Fase 4 — Vendedor Silmer assistivo`, `Fase 7 — Hardening, UAT e piloto`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `TDD — CRM Silmer MVP` to `README.md`?**
-  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+  _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _602 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _604 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `integration-reliability/src/index.js` be split into smaller, more focused modules?**
   _Cohesion score 0.06142410015649452 - nodes in this community are weakly interconnected._
 - **Should `TDD — CRM Silmer MVP` be split into smaller, more focused modules?**

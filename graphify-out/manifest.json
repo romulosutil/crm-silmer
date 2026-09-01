@@ -15,7 +15,7 @@
     "semantic_hash": "e9aee3c40ba60f20473991a2b5d292ec"
   },
   "ARCHITECTURE.md": {
-    "mtime": 1788233470.5966947,
+    "mtime": 1788234247.113154,
     "ast_hash": "cf73006d7121ef2b5c4d36a6d951356a",
     "semantic_hash": ""
   },
@@ -60,8 +60,8 @@
     "semantic_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5"
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788233509.1824546,
-    "ast_hash": "455079a4e006821c8124dd0d26364e60",
+    "mtime": 1788262595.3357637,
+    "ast_hash": "5f3c4c1f13c28082be98402795fafbee",
     "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
@@ -70,7 +70,7 @@
     "semantic_hash": "3f3e474617ceef8ba85ee50472ce5df2"
   },
   "TECHNICAL-DESIGN.md": {
-    "mtime": 1788233470.5982094,
+    "mtime": 1788234247.118883,
     "ast_hash": "a86be090f863364f394744cc22c51089",
     "semantic_hash": ""
   },
@@ -85,7 +85,7 @@
     "semantic_hash": "fadc8e344110fdd89f105a5036a0d90a"
   },
   "CONTRIBUTING.md": {
-    "mtime": 1788095363.8790865,
+    "mtime": 1788262396.9512513,
     "ast_hash": "2f01125a30993ccf37e73c5b12d1a16a",
     "semantic_hash": "2f01125a30993ccf37e73c5b12d1a16a"
   },
@@ -200,7 +200,7 @@
     "semantic_hash": "a9e4df3cc208c2f1ef03009343ffc9b2"
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1788095107.7667582,
+    "mtime": 1788262396.9485621,
     "ast_hash": "492db13854f2ff21178fd10f1021e6cc",
     "semantic_hash": "492db13854f2ff21178fd10f1021e6cc"
   },
@@ -250,7 +250,7 @@
     "semantic_hash": ""
   },
   "docs/phase0/load-envelope.json": {
-    "mtime": 1788233470.5992105,
+    "mtime": 1788234247.1215572,
     "ast_hash": "423664d4ffc2251eef9771d6a5fb238b",
     "semantic_hash": ""
   },
@@ -270,12 +270,12 @@
     "semantic_hash": "f660cb5acfdbdc382ca197827bde8182"
   },
   "scripts/validate-external-spikes.mjs": {
-    "mtime": 1788233527.5386307,
+    "mtime": 1788234247.1463363,
     "ast_hash": "69447007d79c91dbcdd4dcbc5e3fe6be",
     "semantic_hash": ""
   },
   "test/external-spikes.test.js": {
-    "mtime": 1788233527.5401466,
+    "mtime": 1788234247.1484904,
     "ast_hash": "e4c0788f500801f919ab697be5d7e30e",
     "semantic_hash": ""
   },
@@ -285,29 +285,29 @@
     "semantic_hash": ""
   },
   "docs/phase0/data-catalog.json": {
-    "mtime": 1788222514.825174,
-    "ast_hash": "bdf3c06ade89693e481a7ce72500f01a",
-    "semantic_hash": "bdf3c06ade89693e481a7ce72500f01a"
+    "mtime": 1788262473.431496,
+    "ast_hash": "ecc605f70b94d57ea4653c1b4c2119fa",
+    "semantic_hash": ""
   },
   "docs/phase0/threat-model.json": {
-    "mtime": 1788222950.2309792,
-    "ast_hash": "a952d6416d0f0dfc344c00cd725755e7",
-    "semantic_hash": "a952d6416d0f0dfc344c00cd725755e7"
+    "mtime": 1788262473.4300222,
+    "ast_hash": "cb3f06238c986835f7dd52912746257a",
+    "semantic_hash": ""
   },
   "scripts/validate-security-catalog.mjs": {
-    "mtime": 1788222514.826802,
-    "ast_hash": "a97a212957acf03075b08e7f239022e9",
-    "semantic_hash": "a97a212957acf03075b08e7f239022e9"
+    "mtime": 1788263194.2240095,
+    "ast_hash": "387586aa3639dfdb0c0a52248b3fe30b",
+    "semantic_hash": ""
   },
   "test/security-catalog.test.js": {
-    "mtime": 1788222950.72719,
-    "ast_hash": "586608e610b49fd5930dc9d1980c0376",
-    "semantic_hash": "586608e610b49fd5930dc9d1980c0376"
+    "mtime": 1788263242.2992778,
+    "ast_hash": "02e1318fcd9c5c5731a35749c7504257",
+    "semantic_hash": ""
   },
   "docs/phase0/THREAT-MODEL-AND-DATA-CATALOG.md": {
-    "mtime": 1788223439.0734198,
-    "ast_hash": "f6ab8cf15c751edfa144dec5daf0b405",
-    "semantic_hash": "f6ab8cf15c751edfa144dec5daf0b405"
+    "mtime": 1788262595.333854,
+    "ast_hash": "830fcaf079a9fd37db3ead550a5e336e",
+    "semantic_hash": ""
   },
   "docs/phase0/domain-decisions.json": {
     "mtime": 1788069150.0046184,
@@ -822,6 +822,11 @@
   "graphify-out/memory/query_20260901_004643_como_os_contratos_canonicos_do_crm_silmer_tratam_i.md": {
     "mtime": 1788223603.0465856,
     "ast_hash": "593e64ed9538749371ccc5bdc91c0509",
+    "semantic_hash": ""
+  },
+  "docs/phase0/security-review.json": {
+    "mtime": 1788262668.2744749,
+    "ast_hash": "6f295b928e9b4a46decda30dd03424e3",
     "semantic_hash": ""
   }
 }

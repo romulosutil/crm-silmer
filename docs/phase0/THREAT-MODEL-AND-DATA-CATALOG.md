@@ -4,8 +4,9 @@
 
 O baseline versionado cobre ativos, atores, trust boundaries, quinze famílias
 de abuso e todas as dez classes da matriz P0.6. Não contém dados reais. Os
-contratos executáveis são `threat-model.json` e `data-catalog.json`, validados
-por `npm run validate:security-catalog` e `npm run test:security-catalog`.
+contratos executáveis são `threat-model.json`, `data-catalog.json` e
+`security-review.json`, validados por `npm run validate:security-catalog` e
+`npm run test:security-catalog`.
 
 Rastreabilidade: `T00.5`, `PRV-01..03` e `PRV-P06-01..12`. Controles futuros
 continuam nas tarefas de implementação correspondentes; `planned` não significa
@@ -40,7 +41,17 @@ procedimento operacional, sem alegar exclusão técnica que não controla.
 
 ## Aprovação
 
-- Tech Lead: **pending**.
-- Responsável de Privacidade, Rômulo Sutil Corrêa: **pending**.
+- Tech Lead: **approved** por Rômulo Sutil Corrêa
+  (`github:romulosutil`), sob delegação explícita para a issue `#9`.
+- Responsável de Privacidade: **approved** por Rômulo Sutil Corrêa
+  (`github:romulosutil`).
+- Data: `2026-09-01T11:32:24Z`.
+- Revisão avaliada: `git:a0d5d6e4fa1d4521c84cb69e66777461e6719e20`.
+- Evidência humana: issue `#9`, comentário `5493274558`.
+- Registro executável: `docs/phase0/security-review.json`, com SHA-256 dos dois
+  artefatos, disposição versionada dos cinco findings e validação fail-closed.
 
-Nenhuma assinatura ou aprovação humana foi inferida desta evidência local.
+A aprovação valida a suficiência do modelo e do catálogo; não transforma
+controles `planned` em controles implantados ou evidência operacional. Produção
+Gemini com PII permanece bloqueada até a conclusão dos gates live da issue
+`#5`.

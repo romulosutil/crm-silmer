@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer  (2026-09-01)
 
 ## Corpus Check
-- 158 files · ~95,089 words
+- 158 files · ~95,326 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1210 nodes · 1599 edges · 116 communities (93 shown, 23 thin omitted)
+- 1211 nodes · 1600 edges · 118 communities (94 shown, 24 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.78)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3b17456f`
+- Built from commit: `08fe6004`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -128,6 +128,8 @@
 - Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?
 - Q: Qual é o escopo, os requisitos, as dependências, os critérios de aceite e as evidências esperadas da issue 6 do CRM Silmer?
 - Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?
+- CRM Silmer
+- Regras do CRM Silmer
 
 ## God Nodes (most connected - your core abstractions)
 1. `scripts` - 37 edges
@@ -165,7 +167,7 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (116 total, 23 thin omitted)
+## Communities (118 total, 24 thin omitted)
 
 ### Community 0 - "integration-reliability/src/index.js"
 Cohesion: 0.06
@@ -287,10 +289,6 @@ Nodes (9): actionCapabilities, authorize(), CAPABILITIES, createAccessControlSer
 Cohesion: 0.17
 Nodes (11): engines, node, npm, name, packageManager, private, type, version (+3 more)
 
-### Community 30 - "README.md"
-Cohesion: 0.15
-Nodes (8): Sobre o CRM Silmer, Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
-
 ### Community 31 - "validate-external-spikes.mjs"
 Cohesion: 0.35
 Nodes (7): invariant(), main(), statuses, validateExternalEffects(), validateFixtures(), validateLoadEnvelope(), rootUrl
@@ -336,8 +334,8 @@ Cohesion: 0.25
 Nodes (8): Fase 2 — Caixa de Entrada, canais e confiabilidade, T02.1 Implementar adapter canônico de canais, T02.2 Implementar webhook WhatsApp, T02.3 Implementar fila PostgreSQL e worker, T02.4 Implementar Conversa, Mensagem e Contato, T02.5 Implementar reconciliação e saúde do canal, T02.6 Implementar UI da Caixa de Entrada, T02.7 Implementar Instagram Direct feature-gated
 
 ### Community 42 - "Contribuindo com o CRM Silmer"
-Cohesion: 0.29
-Nodes (6): Antes de alterar, Commits e publicação, Contribuindo com o CRM Silmer, Durante a implementação, Governança do repositório público, Validação
+Cohesion: 0.25
+Nodes (7): Antes de alterar, Atualização de branches de pull request, Commits e publicação, Contribuindo com o CRM Silmer, Durante a implementação, Governança do repositório público, Validação
 
 ### Community 43 - "Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?"
 Cohesion: 0.50
@@ -527,10 +525,18 @@ Nodes (3): Answer, Q: Qual é o escopo, os requisitos, as dependências, os crit
 Cohesion: 0.50
 Nodes (3): Answer, Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?, Source Nodes
 
+### Community 116 - "CRM Silmer"
+Cohesion: 0.50
+Nodes (4): Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada
+
+### Community 117 - "Regras do CRM Silmer"
+Cohesion: 0.67
+Nodes (3): Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
+
 ## Knowledge Gaps
-- **604 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+599 more)
+- **605 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+600 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -538,14 +544,14 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Fase 5 — Orçamento, PIX, Pedido e Ficha`, `Fase 0 — Fundação e riscos técnicos`, `Fase 2 — Caixa de Entrada, canais e confiabilidade`, `Fase 1 — Identidade, acesso e infraestrutura de domínio`, `Fase 3 — Negócio, Kanban e qualificação`, `Fase 6 — Privacidade, relatórios e operação`, `Fase 4 — Vendedor Silmer assistivo`, `Fase 7 — Hardening, UAT e piloto`?**
   _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `TDD — CRM Silmer MVP` to `README.md`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
+  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+- **Why does `CRM Silmer — Especificação de Produto do MVP` connect `CRM Silmer — Especificação de Produto do MVP` to `README.md`?**
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _604 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _605 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `integration-reliability/src/index.js` be split into smaller, more focused modules?**
   _Cohesion score 0.06142410015649452 - nodes in this community are weakly interconnected._
 - **Should `TDD — CRM Silmer MVP` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `0002_phase1_domain.expand.sql` be split into smaller, more focused modules?**
   _Cohesion score 0.08846153846153847 - nodes in this community are weakly interconnected._
-- **Should `configuration-version.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.1141025641025641 - nodes in this community are weakly interconnected._

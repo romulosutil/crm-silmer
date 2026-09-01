@@ -114,5 +114,7 @@
   "112": "Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?",
   "113": "Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?",
   "114": "Q: Qual é o escopo, os requisitos, as dependências, os critérios de aceite e as evidências esperadas da issue 6 do CRM Silmer?",
-  "115": "Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?"
+  "115": "Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?",
+  "116": "CRM Silmer",
+  "117": "Regras do CRM Silmer"
 }

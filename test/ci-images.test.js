@@ -51,6 +51,10 @@ test('routes the edge proxy to the canonical API service', async () => {
 
   assert.match(nginx, /http:\/\/silmer-api:3000/u);
   assert.doesNotMatch(nginx, /http:\/\/api:3000/u);
+  assert.match(nginx, /Content-Security-Policy/u);
+  assert.match(nginx, /Strict-Transport-Security/u);
+  assert.match(nginx, /X-Content-Type-Options "nosniff"/u);
+  assert.match(nginx, /X-Frame-Options "DENY"/u);
 });
 
 test('packages every runtime workspace required by the API', async () => {

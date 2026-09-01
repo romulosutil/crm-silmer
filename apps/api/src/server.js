@@ -6,6 +6,7 @@ import {
   processMetaWebhook,
 } from '@crm-silmer/integration-reliability';
 import { createApi } from './app.js';
+import { createCommercialRuntime } from './commercial-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
@@ -15,6 +16,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *
  * @param {{
  *   database?: ReturnType<typeof createDatabase>,
+ *   commercial?: ReturnType<typeof createCommercialRuntime>,
  *   logger?: ReturnType<typeof createSafeLogger>,
  *   readiness?: () => boolean | Promise<boolean>,
  *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>,
@@ -26,9 +28,12 @@ export function createServerApi(runtime = {}) {
   const logger = runtime.logger ?? createSafeLogger({ service: SERVICES.api });
   const readiness = runtime.readiness ?? runtime.database?.readiness;
   const metaWebhook = runtime.metaWebhook ?? createMetaWebhookRuntime();
+  const commercial =
+    runtime.commercial ??
+    (runtime.database ? createCommercialRuntime(runtime.database) : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
-    { ...runtime, logger, metaWebhook, readiness },
+    { ...runtime, commercial, logger, metaWebhook, readiness },
   );
   const database = runtime.database;
   if (database) {

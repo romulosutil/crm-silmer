@@ -62,7 +62,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run static, unit and build gates
         run: npm run validate
-      - name: Run serialized PostgreSQL identity gates
+      - name: Run serialized PostgreSQL Phase 1 gates
         env:
           TEST_DATABASE_URL: postgresql://postgres:issue12-ci-only@127.0.0.1:5432/crm_silmer_test
         run: npm run test:identity:live

@@ -18,6 +18,13 @@ const copies = [
     'modules/audit-privacy/package.json',
     'runtime/modules/audit-privacy/package.json',
   ],
+  ['modules/catalog/src', 'runtime/modules/catalog/src'],
+  ['modules/catalog/package.json', 'runtime/modules/catalog/package.json'],
+  ['modules/configuration/src', 'runtime/modules/configuration/src'],
+  [
+    'modules/configuration/package.json',
+    'runtime/modules/configuration/package.json',
+  ],
   ['modules/identity-access/src', 'runtime/modules/identity-access/src'],
   [
     'modules/identity-access/package.json',

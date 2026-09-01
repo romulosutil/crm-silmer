@@ -61,8 +61,11 @@ function createHarness() {
         assert.deepEqual(context.transaction, { id: 'tx-1' });
         versions.push(/** @type {StoredConfigurationVersion} */ (version));
       },
-      async findCurrent(context) {
-        assert.deepEqual(context.transaction, { id: 'tx-1' });
+      async findCurrent(context = {}) {
+        if (context.transaction) {
+          assert.deepEqual(context.transaction, { id: 'tx-1' });
+          assert.equal(context.lockCurrent, true);
+        }
         return versions.at(-1) ?? null;
       },
     },
@@ -116,7 +119,7 @@ test('creates immutable configuration versions and preserves history', async () 
   assert.equal(auditEvents.length, 2);
 });
 
-test('requires COMMERCIAL_ADMIN before reading or mutating configuration', async () => {
+test('requires COMMERCIAL_ADMIN before mutating configuration', async () => {
   const { auditEvents, service, versions } = createHarness();
 
   await assert.rejects(
@@ -132,6 +135,33 @@ test('requires COMMERCIAL_ADMIN before reading or mutating configuration', async
 
   assert.equal(versions.length, 0);
   assert.equal(auditEvents.length, 0);
+});
+
+test('projects channel settings without PIX or secret references', async () => {
+  const { service } = createHarness();
+  const values = validValues();
+  values.pix.keyReference = 'secret://payments/private-pix-reference';
+  await service.createVersion({
+    actor: ADMIN_ACTOR,
+    correlationId: 'correlation-runtime-policy',
+    expectedVersion: 0,
+    reason: 'Ativar política de canais do piloto',
+    values,
+  });
+
+  const policy = await service.readChannelConfiguration();
+
+  assert.deepEqual(policy, {
+    channels: {
+      instagram: { enabled: false },
+      whatsapp: { enabled: true },
+    },
+    featureFlags: { vendedor_silmer_autonomia_comercial: false },
+    version: 1,
+  });
+  assert.ok(Object.isFrozen(policy));
+  assert.ok(Object.isFrozen(policy.channels));
+  assert.doesNotMatch(JSON.stringify(policy), /pix|secret|recipient/iu);
 });
 
 test('audits privileged changes without copying settings or PIX material', async () => {

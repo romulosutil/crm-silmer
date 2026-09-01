@@ -277,6 +277,30 @@ export function createConfigurationVersion(input) {
 }
 
 /**
+ * Projects the only configuration fields that channel runtimes may consume.
+ * PIX, recipient and template references deliberately stay behind the
+ * configuration boundary.
+ *
+ * @param {{version: number, values: unknown}} configuration
+ */
+export function createChannelConfiguration(configuration) {
+  if (
+    !Number.isSafeInteger(configuration?.version) ||
+    configuration.version < 1
+  ) {
+    throw new ConfigurationValidationError(
+      'configuration.version must be a positive integer',
+    );
+  }
+  const values = normalizeConfigurationValues(configuration.values);
+  return deepFreeze({
+    channels: structuredClone(values.channels),
+    featureFlags: structuredClone(values.featureFlags),
+    version: configuration.version,
+  });
+}
+
+/**
  * @template T
  * @param {T} value
  * @returns {T}

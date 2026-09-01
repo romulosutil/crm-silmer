@@ -21,4 +21,9 @@ database:
 ```powershell
 $env:TEST_DATABASE_URL='postgres://.../crm_silmer_test'
 npm run test:phase1-schema:live
+npm run test:configuration-catalog:live
 ```
+
+O segundo comando cobre T01.5/T01.6 com PostgreSQL real: optimistic locking,
+publicação concorrente, auditoria na mesma transação, rollback e snapshots
+históricos imutáveis. O banco dedicado é recriado durante o teste.

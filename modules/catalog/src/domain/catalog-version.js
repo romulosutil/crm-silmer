@@ -14,6 +14,7 @@ import { CatalogValidationError } from './errors.js';
  *   number: number,
  *   publishedAt: string,
  *   publishedBy: string,
+ *   reason: string,
  *   status: 'published',
  *   values: Readonly<CatalogValues>,
  * }>} PublishedCatalogVersion
@@ -171,6 +172,7 @@ export function normalizeCatalogValues(values) {
  *   number: number,
  *   publishedAt: string,
  *   publishedBy: string,
+ *   reason: string,
  *   values: unknown,
  * }} input
  * @returns {PublishedCatalogVersion}
@@ -179,6 +181,7 @@ export function createPublishedCatalogVersion(input) {
   assertNonEmptyString(input.id, 'id');
   assertNonEmptyString(input.publishedAt, 'publishedAt');
   assertNonEmptyString(input.publishedBy, 'publishedBy');
+  assertNonEmptyString(input.reason, 'reason');
   if (!Number.isSafeInteger(input.number) || input.number < 1) {
     throw new CatalogValidationError('number must be a positive integer');
   }
@@ -188,6 +191,7 @@ export function createPublishedCatalogVersion(input) {
     number: input.number,
     publishedAt: input.publishedAt,
     publishedBy: input.publishedBy,
+    reason: input.reason.trim(),
     status: /** @type {const} */ ('published'),
     values: normalizeCatalogValues(input.values),
   });

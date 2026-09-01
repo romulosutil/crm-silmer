@@ -13,6 +13,18 @@ export class CatalogForbiddenError extends CatalogError {
   }
 }
 
+export class CatalogConflictError extends CatalogError {
+  /** @param {number} expectedLatestNumber @param {number} currentLatestNumber */
+  constructor(expectedLatestNumber, currentLatestNumber) {
+    super(
+      `Expected latest catalog number ${expectedLatestNumber}, current latest number is ${currentLatestNumber}`,
+      'CATALOG_VERSION_CONFLICT',
+    );
+    this.expectedLatestNumber = expectedLatestNumber;
+    this.currentLatestNumber = currentLatestNumber;
+  }
+}
+
 export class CatalogValidationError extends CatalogError {
   /** @param {string} message */
   constructor(message) {

@@ -165,6 +165,54 @@ test('delegates active-session validation and touch to atomic repository operati
   assert.deepEqual(calls, ['authenticate', 'csrf']);
 });
 
+test('runs the same password verifier path for existing and missing accounts', async () => {
+  let sequence = 0;
+  const repository = createInMemoryIdentityRepository();
+  /** @type {string[]} */
+  const verifiedHashes = [];
+  const unknownUserPasswordHash = '$argon2id$v=19$dummy-hash';
+  const service = createIdentityAccessService({
+    auditPort: { append: async () => undefined },
+    clock: () => NOW,
+    envelopeKey: ENVELOPE_KEY,
+    idFactory: (prefix) => `${prefix}-${++sequence}`,
+    passwordParameters: { memory: 64, parallelism: 2, passes: 2 },
+    passwordVerifier: async (_password, passwordHash) => {
+      verifiedHashes.push(passwordHash);
+      return false;
+    },
+    repository,
+    tokenFactory: () => `opaque-token-${++sequence}-with-enough-entropy`,
+    unknownUserPasswordHash,
+  });
+  await service.bootstrapAdmin({
+    correlationId: 'correlation-bootstrap-enumeration',
+    email: 'admin@example.test',
+    functionName: 'Atendimento',
+    password: 'correct horse battery staple',
+    reason: 'Provisionamento inicial autorizado',
+  });
+
+  await assert.rejects(
+    service.login({
+      email: 'missing@example.test',
+      password: 'wrong password value',
+    }),
+    /invalid credentials/iu,
+  );
+  await assert.rejects(
+    service.login({
+      email: 'admin@example.test',
+      password: 'wrong password value',
+    }),
+    /invalid credentials/iu,
+  );
+
+  assert.equal(verifiedHashes.length, 2);
+  assert.equal(verifiedHashes[0], unknownUserPasswordHash);
+  assert.equal(verifiedHashes[1], repository.inspect().users[0].passwordHash);
+});
+
 test('hashes passwords with Argon2id and verifies without storing plaintext', async () => {
   const encoded = await hashPassword('correct horse battery staple', {
     memory: 64,

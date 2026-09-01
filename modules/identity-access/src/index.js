@@ -498,9 +498,10 @@ export function createIdentityAccessService({
     return Object.freeze({ expiresAt: input.expiresAt.toISOString(), token });
   }
 
-  /** @param {{password: string, token: string}} input */
+  /** @param {{correlationId: string, password: string, token: string}} input */
   async function acceptInvitation(input) {
     requireNonEmptyString(input.token, 'token');
+    requireNonEmptyString(input.correlationId, 'correlationId');
     const passwordHash = await hashPassword(input.password, passwordParameters);
     const invitation = await repository.consumeInvitation(
       digest(input.token),
@@ -516,6 +517,14 @@ export function createIdentityAccessService({
       passwordHash,
     };
     await repository.createUser(user);
+    await record({
+      action: 'identity.invitation.accepted',
+      actor: user.id,
+      correlationId: input.correlationId,
+      reason: 'Authorized invitation accepted',
+      target: { id: user.id, type: 'user' },
+      version: 1,
+    });
     return freezeUser(user);
   }
 

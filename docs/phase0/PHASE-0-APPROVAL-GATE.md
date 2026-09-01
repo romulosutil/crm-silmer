@@ -10,6 +10,14 @@ Enquanto Produto, Operação e Privacidade não registrarem as revisões exigida
 e Tech Lead, equipe e Administrador Técnico não forem designados, T02, T03 e
 T05 permanecem bloqueadas pelo critério da T00.6.
 
+## Status operacional reconciliado
+
+Em 01/09/2026, a T00.5 está concluída na issue `#9`; a T00.6 permanece `pending-human-approval` na issue `#10`, mantendo T02, T03 e T05 bloqueadas.
+
+A fonte humana do status operacional corrente é `docs/phase0/PHASE-0-APPROVAL-GATE.md`; `docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Evidência local não equivale a aprovação humana.
+
+Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa (`github:romulosutil`).
+
 ## Defaults aguardando confirmação
 
 | ID       | Default proposto                                                            | Revisão exigida               |

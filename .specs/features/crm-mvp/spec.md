@@ -145,8 +145,14 @@ de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 | Privacidade        | PRV-01 a PRV-03 | Pronto para especificação técnica |
 | PIX e boas-vindas  | PAY-01 a PAY-05 | Pronto para especificação técnica |
 
-**Cobertura:** 32 requisitos de MVP; 32 mapeados; nenhum P0 aberto. A decomposição em tarefas pertence ao Tech Lead.
+**Cobertura:** 32 requisitos de MVP; 32 mapeados; nenhuma decisão de produto P0 aberta. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.
 
 ## Critério de passagem
 
-**GO integral.** P0.1 a P0.7 estão resolvidos e rastreados em `PRODUCT-READINESS-TECH-LEAD.md`. O Tech Lead possui o caminho completo para produzir desenho técnico, tarefas, estimativas e implementação sem depender de nova decisão de produto.
+**GO de produto.** P0.1 a P0.7 estão resolvidos e rastreados em `PRODUCT-READINESS-TECH-LEAD.md`. O Tech Lead possui o caminho completo para produzir desenho técnico, tarefas e estimativas sem depender de nova decisão de produto. Esse GO não é um GO operacional e não libera fases sujeitas a gates humanos.
+
+Em 01/09/2026, a T00.5 está concluída na issue `#9`; a T00.6 permanece `pending-human-approval` na issue `#10`, mantendo T02, T03 e T05 bloqueadas.
+
+A fonte humana do status operacional corrente é `docs/phase0/PHASE-0-APPROVAL-GATE.md`; `docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Evidência local não equivale a aprovação humana.
+
+Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa (`github:romulosutil`).

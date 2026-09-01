@@ -235,3 +235,33 @@ test('product persona does not grant approval merely by being Vendedor', async (
   assert.match(persona, /função Vendedor,[\s\S]*não\s+aprova/iu);
   assert.match(persona, /role adicional `Admin`/u);
 });
+
+test('keeps product readiness distinct from the current operational gate', async () => {
+  const [specification, approvalGate, tasks, document] = await Promise.all([
+    readFile(new URL('.specs/features/crm-mvp/spec.md', rootUrl), 'utf8'),
+    readFile(new URL('docs/phase0/PHASE-0-APPROVAL-GATE.md', rootUrl), 'utf8'),
+    readFile(new URL('.specs/features/crm-mvp/tasks.md', rootUrl), 'utf8'),
+    decisions(),
+  ]);
+  const reconciledStatus =
+    'Em 01/09/2026, a T00.5 está concluída na issue `#9`; a T00.6 permanece ' +
+    '`pending-human-approval` na issue `#10`, mantendo T02, T03 e T05 bloqueadas.';
+  const operationalSource =
+    'A fonte humana do status operacional corrente é ' +
+    '`docs/phase0/PHASE-0-APPROVAL-GATE.md`';
+  const reviewer =
+    'Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa ' +
+    '(`github:romulosutil`).';
+
+  for (const source of [specification, approvalGate, tasks]) {
+    assert.match(source, /evidência local não equivale a aprovação humana/iu);
+    assert.ok(source.includes(reconciledStatus));
+    assert.ok(source.includes(operationalSource));
+    assert.ok(source.includes(reviewer));
+  }
+  assert.doesNotMatch(specification, /GO integral|nenhum P0 aberto/iu);
+  assert.match(specification, /GO de produto/iu);
+  assert.equal(document.approvalGranted, false);
+  assert.equal(document.gate.status, 'pending-human-approval');
+  assert.deepEqual(document.gate.blockedPhases, ['T02', 'T03', 'T05']);
+});

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": 1,
+  "task": "T00.7",
+  "issue": 11,
+  "status": "pending-external",
+  "provider": {
+    "status": "pending-human-approval",
+    "name": null,
+    "dataRegion": null,
+    "dpaAccepted": false,
+    "subprocessorsAccepted": false,
+    "retentionDays": null,
+    "privacyReviewer": null,
+    "reviewedAt": null,
+    "evidenceRef": null
+  },
+  "routing": {
+    "status": "pending-human-approval",
+    "ownerIds": [],
+    "destinations": [],
+    "criticalEscalationMinutes": null,
+    "highEscalationMinutes": null,
+    "evidenceRef": null
+  },
+  "monitor": {
+    "status": "pending-external",
+    "location": "outside-vps",
+    "liveUrl": "https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host/api/health/live",
+    "monitorId": null,
+    "checkIntervalSeconds": null,
+    "consecutiveFailures": 3,
+    "evidenceRef": null
+  },
+  "telemetry": {
+    "status": "pending-external",
+    "source": "allowlisted-structured-logs",
+    "signals": [
+      "api-live-unavailable",
+      "api-5xx",
+      "api-latency",
+      "worker-heartbeat-stale",
+      "worker-oldest-job",
+      "worker-job-failures"
+    ],
+    "evidenceRef": null
+  },
+  "hardening": {
+    "status": "pending-external",
+    "digest": null,
+    "nonRoot": null,
+    "capabilitiesRemoved": null,
+    "readOnly": null,
+    "temporaryStorageLimited": null,
+    "evidenceRef": null
+  },
+  "drills": [
+    {
+      "alertId": "api-live-unavailable",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    },
+    {
+      "alertId": "api-5xx",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    },
+    {
+      "alertId": "api-latency",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    },
+    {
+      "alertId": "worker-heartbeat-stale",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    },
+    {
+      "alertId": "worker-oldest-job",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    },
+    {
+      "alertId": "worker-job-failures",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    }
+  ],
+  "completion": {
+    "humanApproved": false,
+    "approvedBy": [],
+    "approvedAt": null,
+    "evidenceRef": null
+  }
+}

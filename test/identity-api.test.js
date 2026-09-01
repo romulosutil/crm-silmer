@@ -6,7 +6,8 @@ import { createSafeLogger } from '../modules/shared/src/index.js';
 
 const ORIGIN = 'https://crm.example.test';
 
-function harness() {
+/** @param {import('fastify').FastifyServerOptions} [options] */
+function harness(options = {}) {
   /** @type {Array<{operation: string, input: Record<string, unknown>}>} */
   const calls = [];
   const identity = {
@@ -57,13 +58,10 @@ function harness() {
       calls.push({ input, operation: 'logout' });
     },
   };
-  const api = createApi(
-    {},
-    {
-      identity,
-      logger: createSafeLogger({ service: 'crm-silmer-api', sink: () => {} }),
-    },
-  );
+  const api = createApi(options, {
+    identity,
+    logger: createSafeLogger({ service: 'crm-silmer-api', sink: () => {} }),
+  });
   return { api, calls };
 }
 
@@ -81,6 +79,8 @@ test('login sets separate secure session and CSRF cookies without returning toke
   });
 
   assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.equal(response.headers.pragma, 'no-cache');
   assert.deepEqual(response.json(), {
     mfaVerified: true,
     user: { id: 'admin-1' },
@@ -92,6 +92,29 @@ test('login sets separate secure session and CSRF cookies without returning toke
   assert.match(cookies[1], /crm_csrf=.*Secure.*SameSite=Lax/iu);
   assert.doesNotMatch(cookies[1], /HttpOnly/iu);
   assert.equal(calls[0].operation, 'login');
+  await api.close();
+});
+
+test('uses the client address behind a trusted private edge proxy', async () => {
+  const { api, calls } = harness({
+    trustProxy: 'loopback, linklocal, uniquelocal',
+  });
+  const response = await api.inject({
+    headers: {
+      origin: ORIGIN,
+      'x-forwarded-for': '198.51.100.9, 203.0.113.42',
+    },
+    method: 'POST',
+    payload: {
+      email: 'admin@example.test',
+      password: 'correct horse battery staple',
+    },
+    remoteAddress: '172.18.0.2',
+    url: '/api/v1/sessions',
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(calls[0].input.network, '203.0.113.42');
   await api.close();
 });
 
@@ -194,6 +217,7 @@ test('MFA enrollment is authenticated, CSRF-protected and idempotent', async () 
   });
 
   assert.equal(response.statusCode, 201);
+  assert.equal(response.headers['cache-control'], 'no-store');
   assert.deepEqual(response.json(), {
     recoveryCodes: ['recovery-code'],
     secret: 'BASE32SECRET',

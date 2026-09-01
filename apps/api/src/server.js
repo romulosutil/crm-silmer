@@ -18,14 +18,18 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   logger?: ReturnType<typeof createSafeLogger>,
  *   readiness?: () => boolean | Promise<boolean>,
  *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>,
- *   identity?: ReturnType<typeof createIdentityApiRuntime>
+ *   identity?: ReturnType<typeof createIdentityApiRuntime>,
+ *   trustProxy?: import('fastify').FastifyServerOptions['trustProxy']
  * }} [runtime]
  */
 export function createServerApi(runtime = {}) {
   const logger = runtime.logger ?? createSafeLogger({ service: SERVICES.api });
   const readiness = runtime.readiness ?? runtime.database?.readiness;
   const metaWebhook = runtime.metaWebhook ?? createMetaWebhookRuntime();
-  const api = createApi({}, { ...runtime, logger, metaWebhook, readiness });
+  const api = createApi(
+    { trustProxy: runtime.trustProxy ?? false },
+    { ...runtime, logger, metaWebhook, readiness },
+  );
   const database = runtime.database;
   if (database) {
     api.addHook('onClose', () => database.close());
@@ -74,6 +78,7 @@ if (
       database,
       identity: createIdentityApiRuntime(database),
       logger,
+      trustProxy: 'loopback, linklocal, uniquelocal',
     });
     await api.listen({ host, port });
   } catch (error) {

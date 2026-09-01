@@ -5,24 +5,24 @@
     "semantic_hash": "b5e99c89b7e491afc180f5d75bfa771d"
   },
   ".specs/features/crm-mvp/spec.md": {
-    "mtime": 1788093756.9148526,
-    "ast_hash": "d49d3d49d242b8ea191c93a880bcb694",
-    "semantic_hash": "d49d3d49d242b8ea191c93a880bcb694"
+    "mtime": 1788222596.9361286,
+    "ast_hash": "e7bebb9fc2ed4b66f435f8117c8ab301",
+    "semantic_hash": ""
   },
   "ABOUT.md": {
-    "mtime": 1788062824.5395746,
-    "ast_hash": "0d2048a6c3780f32def03ad285bdf843",
-    "semantic_hash": "0d2048a6c3780f32def03ad285bdf843"
+    "mtime": 1788223268.001114,
+    "ast_hash": "e9aee3c40ba60f20473991a2b5d292ec",
+    "semantic_hash": ""
   },
   "ARCHITECTURE.md": {
-    "mtime": 1788213341.3962793,
-    "ast_hash": "44463e87546116d77c630ba5e0732e18",
-    "semantic_hash": "44463e87546116d77c630ba5e0732e18"
+    "mtime": 1788222669.240145,
+    "ast_hash": "286e671468be8bf4c6e24f4a22ae9a44",
+    "semantic_hash": ""
   },
   "CRM-MVP-ESPECIFICACAO.md": {
-    "mtime": 1788093707.930228,
-    "ast_hash": "b7dbad0133498e7a799b0ed1a9c12b30",
-    "semantic_hash": "b7dbad0133498e7a799b0ed1a9c12b30"
+    "mtime": 1788222596.9382837,
+    "ast_hash": "e4da514a79d2a32b779a344c29856c30",
+    "semantic_hash": ""
   },
   "FLUXO-QUALIFICACAO-GENERICO.md": {
     "mtime": 1788038705.0708206,
@@ -30,14 +30,14 @@
     "semantic_hash": "6fada967b6eb7e8c24cfe54b351c65d1"
   },
   "PRODUCT-READINESS-TECH-LEAD.md": {
-    "mtime": 1788057041.7627208,
-    "ast_hash": "4fcb71b26fc26b60316567e16359cfec",
-    "semantic_hash": "4fcb71b26fc26b60316567e16359cfec"
+    "mtime": 1788223179.0331285,
+    "ast_hash": "619631e453bfc2eaf1ae8c45c8271460",
+    "semantic_hash": ""
   },
   "RULES.md": {
-    "mtime": 1788093707.9291172,
-    "ast_hash": "49748d572450c789038b027a95051a15",
-    "semantic_hash": "49748d572450c789038b027a95051a15"
+    "mtime": 1788222596.933197,
+    "ast_hash": "4e005f7d3ee429f047894cdd4d8b35d7",
+    "semantic_hash": ""
   },
   "historico-datacrazy/CRM-PROCESSO-VENDAS.md": {
     "mtime": 1788094624.3472323,
@@ -60,19 +60,19 @@
     "semantic_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5"
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788219259.3167384,
-    "ast_hash": "8c6defbf3f0bdeef2378d6628927b244",
+    "mtime": 1788222756.673933,
+    "ast_hash": "79d6f1ee4fcf7a35612e874a93725d31",
     "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
-    "mtime": 1788220417.4287975,
-    "ast_hash": "4eb14d4525873110f435fdb81a103a92",
+    "mtime": 1788222949.6227882,
+    "ast_hash": "3f3e474617ceef8ba85ee50472ce5df2",
     "semantic_hash": ""
   },
   "TECHNICAL-DESIGN.md": {
-    "mtime": 1788213978.134037,
-    "ast_hash": "e2c89a7b49ca698dbcdc739abae87a22",
-    "semantic_hash": "e2c89a7b49ca698dbcdc739abae87a22"
+    "mtime": 1788222949.9894423,
+    "ast_hash": "421323a54da7ca63cde8733ead908cbe",
+    "semantic_hash": ""
   },
   "AGENTS.md": {
     "mtime": 1788062794.5869677,
@@ -90,9 +90,9 @@
     "semantic_hash": "2f01125a30993ccf37e73c5b12d1a16a"
   },
   "README.md": {
-    "mtime": 1788147472.6129377,
-    "ast_hash": "fc453757bcfb08fb802bd3c717b4c78a",
-    "semantic_hash": "fc453757bcfb08fb802bd3c717b4c78a"
+    "mtime": 1788223251.600949,
+    "ast_hash": "4177d9137ae85e1985a11c7a23db9a36",
+    "semantic_hash": ""
   },
   ".prettierrc.json": {
     "mtime": 1788064962.1933222,
@@ -155,8 +155,8 @@
     "semantic_hash": "ee73cc92676a528a57f11629d9d26832"
   },
   "package.json": {
-    "mtime": 1788219259.3137386,
-    "ast_hash": "e60643c015ccd78ced6bf82bfa2761df",
+    "mtime": 1788222473.7410698,
+    "ast_hash": "53ac398997a790e49842256335357ca7",
     "semantic_hash": ""
   },
   "scripts/build.mjs": {
@@ -245,8 +245,8 @@
     "semantic_hash": "d7566c119163e8b76123c0b45b566b8a"
   },
   "docs/phase0/external-effects.json": {
-    "mtime": 1788219298.4504197,
-    "ast_hash": "ddbf92b025fb5be35bf3a89a51117d4d",
+    "mtime": 1788222950.1805937,
+    "ast_hash": "4018f3f0770c6b69eec0662d63b7b0d0",
     "semantic_hash": ""
   },
   "docs/phase0/load-envelope.json": {
@@ -270,44 +270,44 @@
     "semantic_hash": "f660cb5acfdbdc382ca197827bde8182"
   },
   "scripts/validate-external-spikes.mjs": {
-    "mtime": 1788219607.0959258,
-    "ast_hash": "a337b0f98b0cd9ad1467683f50cc7bbd",
+    "mtime": 1788222921.900519,
+    "ast_hash": "c53c885f3c7ebd803e51f39fb83f56c1",
     "semantic_hash": ""
   },
   "test/external-spikes.test.js": {
-    "mtime": 1788219581.672956,
-    "ast_hash": "20803c16a4f19a452320445a5aa94be1",
+    "mtime": 1788222921.9025288,
+    "ast_hash": "72cf8c9daa9e122c242f0b33c31de003",
     "semantic_hash": ""
   },
   "docs/phase0/EXTERNAL-SPIKES.md": {
-    "mtime": 1788219331.8300035,
-    "ast_hash": "108ec58704c87d9481789c0985a3e5a3",
+    "mtime": 1788222756.6761637,
+    "ast_hash": "2934b18883b7667691ec5bce5fdfc70f",
     "semantic_hash": ""
   },
   "docs/phase0/data-catalog.json": {
-    "mtime": 1788068086.1998553,
-    "ast_hash": "2438fdb3b5ee3b6d080a09560bdee25a",
-    "semantic_hash": "2438fdb3b5ee3b6d080a09560bdee25a"
+    "mtime": 1788222514.825174,
+    "ast_hash": "bdf3c06ade89693e481a7ce72500f01a",
+    "semantic_hash": ""
   },
   "docs/phase0/threat-model.json": {
-    "mtime": 1788068086.180847,
-    "ast_hash": "ac5a7ee3d83e19c12ed2f84f219dd0d0",
-    "semantic_hash": "ac5a7ee3d83e19c12ed2f84f219dd0d0"
+    "mtime": 1788222950.2309792,
+    "ast_hash": "a952d6416d0f0dfc344c00cd725755e7",
+    "semantic_hash": ""
   },
   "scripts/validate-security-catalog.mjs": {
-    "mtime": 1788068534.0505488,
-    "ast_hash": "d38f73aafe37fcfd042b1a7b2f6ab486",
-    "semantic_hash": "d38f73aafe37fcfd042b1a7b2f6ab486"
+    "mtime": 1788222514.826802,
+    "ast_hash": "a97a212957acf03075b08e7f239022e9",
+    "semantic_hash": ""
   },
   "test/security-catalog.test.js": {
-    "mtime": 1788068510.1748185,
-    "ast_hash": "c4cfff253871794500a94bfc8bfa2cc9",
-    "semantic_hash": "c4cfff253871794500a94bfc8bfa2cc9"
+    "mtime": 1788222950.72719,
+    "ast_hash": "586608e610b49fd5930dc9d1980c0376",
+    "semantic_hash": ""
   },
   "docs/phase0/THREAT-MODEL-AND-DATA-CATALOG.md": {
-    "mtime": 1788068054.7496502,
-    "ast_hash": "923405f41e63722207e1b60cef9a4382",
-    "semantic_hash": "923405f41e63722207e1b60cef9a4382"
+    "mtime": 1788223439.0734198,
+    "ast_hash": "f6ab8cf15c751edfa144dec5daf0b405",
+    "semantic_hash": ""
   },
   "docs/phase0/domain-decisions.json": {
     "mtime": 1788069150.0046184,
@@ -365,9 +365,9 @@
     "semantic_hash": "1833b11843f376beb37550fdfaff12e0"
   },
   "modules/audit-privacy/src/index.js": {
-    "mtime": 1788070634.4278574,
-    "ast_hash": "fcff12306bb942eb6bb34bfe50652978",
-    "semantic_hash": "fcff12306bb942eb6bb34bfe50652978"
+    "mtime": 1788222409.95269,
+    "ast_hash": "6794c747337e204ec7978a5cd45da5d6",
+    "semantic_hash": ""
   },
   "modules/catalog/package.json": {
     "mtime": 1788070821.1647296,
@@ -620,28 +620,28 @@
     "semantic_hash": "e6ff00b568342cfd098d359a6c1e425b"
   },
   "docs/phase0/r2-control-plane.json": {
-    "mtime": 1788220393.77767,
-    "ast_hash": "dcca294e52b6e624c924d9fc8ed60db6",
+    "mtime": 1788222772.9450085,
+    "ast_hash": "a17f93adfe71bfea71cb3088784ca667",
     "semantic_hash": ""
   },
   "scripts/r2-live-smoke.mjs": {
-    "mtime": 1788220393.7746754,
-    "ast_hash": "9ae2d439448bb70efcb9ff5d9975cb1e",
+    "mtime": 1788223386.955929,
+    "ast_hash": "2f16287dd8e0b36d8a4f04292e732014",
     "semantic_hash": ""
   },
   "scripts/validate-r2.mjs": {
-    "mtime": 1788220467.6754136,
-    "ast_hash": "11538f2910da4663dbc10f741620dd3c",
+    "mtime": 1788223386.9537218,
+    "ast_hash": "c15d2b2af3983b6e111f7585185c681d",
     "semantic_hash": ""
   },
   "test/r2-live-smoke.test.js": {
-    "mtime": 1788220467.9995143,
-    "ast_hash": "a77ea876be536e29a34dbb95a412c4b4",
+    "mtime": 1788223463.1035066,
+    "ast_hash": "aac2f015afbaf02b38930207b1324d89",
     "semantic_hash": ""
   },
   "docs/phase0/R2-VALIDATION.md": {
-    "mtime": 1788220417.4258077,
-    "ast_hash": "7e583f1cfa3eec7e975898af5b8cf00d",
+    "mtime": 1788222772.9427514,
+    "ast_hash": "7f1b13573d7985d9bb8a8d4018ea734b",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260829_215453_quais_decisoes_fecham_o_p0_2_de_autoridade_do_vend.md": {
@@ -742,6 +742,41 @@
   "graphify-out/memory/query_20260831_235521_qual_\u00e9_o_escopo__os_requisitos__as_depend\u00eancias__o.md": {
     "mtime": 1788220521.7145786,
     "ast_hash": "7586b00652a4461ab3146a652ae377bd",
+    "semantic_hash": ""
+  },
+  "docs/phase0/media-retention-policy.json": {
+    "mtime": 1788223179.0351374,
+    "ast_hash": "85b4f6a29e56d1b2c74329a441abbf78",
+    "semantic_hash": ""
+  },
+  "modules/audit-privacy/src/transient-media-retention.js": {
+    "mtime": 1788223084.546176,
+    "ast_hash": "196a6a295b277e60efb05d0f3ba8d52d",
+    "semantic_hash": ""
+  },
+  "scripts/validate-media-retention.mjs": {
+    "mtime": 1788223426.2269871,
+    "ast_hash": "ee6177c6679810b69d042024f6288492",
+    "semantic_hash": ""
+  },
+  "test/media-retention-policy.test.js": {
+    "mtime": 1788223463.1020224,
+    "ast_hash": "6be2dbd1a0d01c932f386847d50af943",
+    "semantic_hash": ""
+  },
+  "test/transient-media-retention.test.js": {
+    "mtime": 1788223090.3008225,
+    "ast_hash": "315ff6774e27a628928ee368f113e282",
+    "semantic_hash": ""
+  },
+  "docs/phase0/TRANSIENT-MEDIA.md": {
+    "mtime": 1788223179.0331285,
+    "ast_hash": "ac1ef685732d2a1e9594f4e62c772211",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260901_004643_como_os_contratos_canonicos_do_crm_silmer_tratam_i.md": {
+    "mtime": 1788223603.0465856,
+    "ast_hash": "593e64ed9538749371ccc5bdc91c0509",
     "semantic_hash": ""
   }
 }

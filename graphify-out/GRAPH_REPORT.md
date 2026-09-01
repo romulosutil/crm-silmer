@@ -1,22 +1,22 @@
 # Graph Report - crm-silmer  (2026-08-31)
 
 ## Corpus Check
-- 144 files · ~82,095 words
+- 151 files · ~86,592 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1135 nodes · 1478 edges · 105 communities (89 shown, 16 thin omitted)
+- 1163 nodes · 1521 edges · 108 communities (92 shown, 16 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d7ac367e`
+- Built from commit: `e2c53c55`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - integration-reliability/src/index.js
-- Audit Trail and Idempotency
+- audit-privacy/src/index.js
 - CRM Sales Process
 - MVP Implementation Strategy
 - Database Security Policies
@@ -96,7 +96,7 @@
 - Postgres Container
 - Worker Container
 - Worker Service Dependencies
-- T00.4 — Aprovação e validação do Cloudflare R2
+- Dívida #29 — Aprovação e validação futura do Cloudflare R2
 - Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?
 - Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?
 - Q: Como a nova decisao do P0.4 limita a autonomia do Vendedor Silmer?
@@ -117,9 +117,12 @@
 - Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?
 - Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?
 - Q: Qual é o escopo, os requisitos, as dependências, os critérios de aceite e as evidências esperadas da issue 6 do CRM Silmer?
+- validate-media-retention.mjs
+- T00.4 — Mídia transitória do piloto interno
+- Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?
 
 ## God Nodes (most connected - your core abstractions)
-1. `scripts` - 32 edges
+1. `scripts` - 34 edges
 2. `TDD — CRM Silmer MVP` - 22 edges
 3. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
 4. `Design do CRM Silmer` - 16 edges
@@ -159,15 +162,15 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (105 total, 16 thin omitted)
+## Communities (108 total, 16 thin omitted)
 
 ### Community 0 - "integration-reliability/src/index.js"
 Cohesion: 0.06
 Nodes (43): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, createMetaMessagesClient(), deepFreeze(), extractMetaEvents(), immutableClone() (+35 more)
 
-### Community 1 - "Audit Trail and Idempotency"
-Cohesion: 0.13
-Nodes (16): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), canonicalJson(), clone() (+8 more)
+### Community 1 - "audit-privacy/src/index.js"
+Cohesion: 0.10
+Nodes (21): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), isTransientMediaExpired(), resolveTransientMediaExpiresAt() (+13 more)
 
 ### Community 2 - "CRM Sales Process"
 Cohesion: 0.05
@@ -211,7 +214,7 @@ Nodes (18): createCatalogService(), assertExactKeys(), assertNonEmptyString(), a
 
 ### Community 12 - "scripts"
 Cohesion: 0.06
-Nodes (32): scripts, build, check:boundaries, db:migrate, format, format:check, lint, preview (+24 more)
+Nodes (34): scripts, build, check:boundaries, db:migrate, format, format:check, lint, preview (+26 more)
 
 ### Community 13 - "TypeScript Configuration"
 Cohesion: 0.08
@@ -415,15 +418,15 @@ Nodes (3): json(), rootUrl, text()
 
 ### Community 64 - "r2-live-smoke.mjs"
 Cohesion: 0.11
-Nodes (33): assertNoS3ObjectLockHeaders(), assertSafeR2Evidence(), awsDate(), awsEncode(), awsTimestamp(), BUCKETS, canonicalObjectPath(), canonicalQuery() (+25 more)
+Nodes (34): assertNoS3ObjectLockHeaders(), assertSafeR2Evidence(), awsDate(), awsEncode(), awsTimestamp(), BUCKETS, canonicalObjectPath(), canonicalQuery() (+26 more)
 
 ### Community 83 - "Worker Service Dependencies"
 Cohesion: 0.20
 Nodes (9): dependencies, @crm-silmer/shared, @crm-silmer/shared, name, private, scripts, start, type (+1 more)
 
-### Community 84 - "T00.4 — Aprovação e validação do Cloudflare R2"
+### Community 84 - "Dívida #29 — Aprovação e validação futura do Cloudflare R2"
 Cohesion: 0.25
-Nodes (7): Contrato aprovado para implementação, Critérios live obrigatórios, Estado do gate, Procedimento live, Reconciliação de `PutObject` incerto, T00.4 — Aprovação e validação do Cloudflare R2, Verificação local
+Nodes (7): Contrato candidato para implementação futura, Critérios live obrigatórios, Dívida #29 — Aprovação e validação futura do Cloudflare R2, Estado do gate, Procedimento live, Reconciliação de `PutObject` incerto, Verificação local
 
 ### Community 85 - "Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?"
 Cohesion: 0.50
@@ -505,12 +508,24 @@ Nodes (3): Answer, Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 a
 Cohesion: 0.50
 Nodes (3): Answer, Q: Qual é o escopo, os requisitos, as dependências, os critérios de aceite e as evidências esperadas da issue 6 do CRM Silmer?, Source Nodes
 
+### Community 105 - "validate-media-retention.mjs"
+Cohesion: 0.43
+Nodes (4): invariant(), main(), validateMediaRetentionPolicy(), policyUrl
+
+### Community 106 - "T00.4 — Mídia transitória do piloto interno"
+Cohesion: 0.33
+Nodes (5): Controles mínimos para T02/T06, Decisão em linguagem natural, Limites desta entrega, T00.4 — Mídia transitória do piloto interno, Verificação
+
+### Community 107 - "Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?"
+Cohesion: 0.50
+Nodes (3): Answer, Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?, Source Nodes
+
 ## Ambiguous Edges - Review These
 - `Vendedor Silmer (AI Agent)` → `Kanban Comercial`  [AMBIGUOUS]
   CRM-MVP-ESPECIFICACAO.md · relation: calls
 
 ## Knowledge Gaps
-- **578 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+573 more)
+- **587 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+582 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **16 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -519,15 +534,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `Vendedor Silmer (AI Agent)` and `Kanban Comercial`?**
   _Edge tagged AMBIGUOUS (relation: calls) - confidence is low._
-- **Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Task List` to `Phase 0: Technical Foundation`, `Phase 2: Inbox and Channels`, `Phase 1: Domain Infrastructure`, `Phase 3: Kanban and Deals`, `Phase 6: Privacy and Ops`, `Phase 4: AI Assistant`, `Phase 7: Hardening and UAT`, `Phase 5: Payments and Orders`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `MVP Implementation Strategy` to `System Architecture Decisions`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
-- **Why does `CRM Silmer — Especificação de Produto do MVP` connect `MVP Product Specification` to `CRM Sales Process`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `CRM Silmer MVP — Plano de Implementação` connect `Implementation Task List` to `Phase 0: Technical Foundation`, `Phase 2: Inbox and Channels`, `Phase 1: Domain Infrastructure`, `Phase 3: Kanban and Deals`, `Phase 6: Privacy and Ops`, `Phase 4: AI Assistant`, `Phase 7: Hardening and UAT`, `Phase 5: Payments and Orders`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _578 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _587 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `integration-reliability/src/index.js` be split into smaller, more focused modules?**
   _Cohesion score 0.06142410015649452 - nodes in this community are weakly interconnected._
-- **Should `Audit Trail and Idempotency` be split into smaller, more focused modules?**
-  _Cohesion score 0.12561576354679804 - nodes in this community are weakly interconnected._
+- **Should `audit-privacy/src/index.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.1036036036036036 - nodes in this community are weakly interconnected._
+- **Should `CRM Sales Process` be split into smaller, more focused modules?**
+  _Cohesion score 0.05226480836236934 - nodes in this community are weakly interconnected._

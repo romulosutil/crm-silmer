@@ -124,9 +124,9 @@ gates de verificação.
 
 ### T01.2 Implementar sessão e usuários por convite
 
-- **Status em 30/08/2026:** parcial; domínio, criptografia, concorrência e
-  schema entregues. Adapter PostgreSQL, controllers HTTP e lockout estão na
-  issue `#12`.
+- **Status em 01/09/2026:** concluída na issue `#12`; adapters PostgreSQL,
+  controllers `/api/v1`, lockout progressivo pseudonimizado, OpenAPI, runbook e
+  fluxo acessível foram validados localmente e contra PostgreSQL 17 efêmero.
 - Senha Argon2id, convite de uso único/expirável, cookie com token hasheado,
   rotação, expiração, CSRF, revogação, TOTP criptografado e recovery codes.
 - **Verificação:** bootstrap auditado do primeiro Admin, login/logout/revogação,
@@ -134,9 +134,9 @@ gates de verificação.
 
 ### T01.3 Implementar funções e capacidades ortogonais
 
-- **Status em 30/08/2026:** parcial; policy e cenários negativos entregues.
-  Wiring API/UI está na issue `#12`; `ACL-P07-07..11` no ciclo real de
-  Pedido/Ficha está na issue `#13`.
+- **Status em 01/09/2026:** wiring IAM/ACL da issue `#12` concluído com
+  transação única para grant/revoke, auditoria e revogação imediata de sessão.
+  `ACL-P07-07..11` no ciclo real de Pedido/Ficha permanece na issue `#13`.
 - Separar `Atendimento|Vendedor`, `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e
   `TECHNICAL_PRIVACY_EXECUTOR`.
 - Impedir autoatribuição; registrar concessão/revogação.
@@ -145,8 +145,9 @@ gates de verificação.
 
 ### T01.4 Criar audit trail e idempotency records
 
-- **Status em 30/08/2026:** parcial; contratos, concorrência, replay e schema
-  entregues. Persistência transacional com o efeito real está na issue `#12`.
+- **Status em 01/09/2026:** concluída na issue `#12`; efeito, auditoria,
+  resposta criptografada e estado idempotente compartilham o mesmo cliente e
+  rollback PostgreSQL, com replay concorrente e conflito divergente provados.
 - Persistir ator, ação, alvo, versão, motivo e correlação sem copiar conteúdo.
 - **Verificação:** comandos repetidos retornam o mesmo efeito observável.
 

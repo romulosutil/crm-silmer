@@ -6,6 +6,7 @@ const statuses = new Set([
   'sandbox-verified',
   'pending-live',
   'pending-human',
+  'approved-human',
   'deferred',
 ]);
 

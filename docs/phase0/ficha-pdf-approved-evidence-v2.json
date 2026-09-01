@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "task": "T00.4",
+  "issue": 7,
+  "syntheticOnly": true,
+  "templateVersion": "ficha-canonical-v2",
+  "snapshotVersion": "synthetic-order-v1",
+  "snapshotSha256": "e9e9078aa06eb5d0268a2f3de6c3c6cfcf5e4c55723c25f4ffc961eac65e79b0",
+  "artifactSha256": "173c6de0bef58c8b069ebbef387aa21366efe722f1c16c1d1dc47917afbd6383",
+  "reviewedAt": "2026-08-31T23:31:07-03:00",
+  "reviewedBy": {
+    "rose": "Rose",
+    "operation": "Operacao Silmer"
+  },
+  "criteria": {
+    "legibility": true,
+    "content": true,
+    "order": true,
+    "grade": true,
+    "totals": true,
+    "printing": true
+  },
+  "visualEvidence": [
+    {
+      "type": "git",
+      "ref": "git:e96f6bec3913e8de61cbb3dd60f418eca47b2c42",
+      "containsPii": false
+    }
+  ]
+}

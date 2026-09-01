@@ -29,6 +29,17 @@ test('validates the versioned external-effect matrix and load envelope', async (
   assert.doesNotThrow(() => validateLoadEnvelope(envelope));
   assert.equal(effects.task, 'T00.4');
   assert.equal(envelope.approval.status, 'pending-human-approval');
+  const effectList = /** @type {Array<Record<string, any>>} */ (
+    effects.effects
+  );
+  const ficha = effectList.find(({ id }) => id === 'pdf.generate-ficha');
+  assert.equal(ficha?.status, 'approved-human');
+  assert.ok(
+    ficha?.evidence.some(
+      (/** @type {Record<string, any>} */ item) =>
+        item.url === 'docs/phase0/ficha-pdf-approved-evidence-v2.json',
+    ),
+  );
 });
 
 test('keeps uncertain Meta sends out of blind retry', async () => {
@@ -196,7 +207,8 @@ test('does not convert sandbox evidence into external approval claims', async ()
   assert.equal(effects.externalApprovalGranted, false);
   assert.equal(envelope.approval.approved, false);
   assert.ok(effectList.some(({ status }) => status === 'sandbox-verified'));
-  assert.ok(effectList.some(({ status }) => status === 'pending-human'));
+  assert.ok(effectList.some(({ status }) => status === 'pending-live'));
+  assert.ok(effectList.some(({ status }) => status === 'deferred'));
 });
 
 test('documents a secret-free, non-production Meta sandbox procedure', async () => {

@@ -53,9 +53,9 @@ gates de verificação.
 - **Status:** matriz, fixtures e gates locais executáveis concluídos. A issue
   `#6` aprovou para o piloto interno mídia transitória em volume privado da VPS,
   até o fim da jornada ou sete dias, sem custo incremental; R2 foi diferido
-  para a issue `#29`. O pacote sintético de revisão do PDF da issue `#7` também
-  está versionado. Smokes/aprovações externos permanecem pendentes nas issues
-  `#5`, `#7` e `#8`.
+  para a issue `#29`. Rose e Operação aprovaram o PDF sintético da issue `#7`,
+  com versão, hash, seis critérios e evidência sem PII registrados. Smokes e
+  aprovações externos permanecem pendentes nas issues `#5` e `#8`.
 - **Rastreabilidade:** `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`,
   `PAY-02`, `PAY-05`, `PRV-P06-07` e `PRV-P06-11`.
 - Validar WhatsApp Cloud API, assinatura, mídia, templates e status de entrega.

@@ -55,7 +55,10 @@ Rastreabilidade: `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`, `PAY-02`,
 ## Evidências e pendências externas
 
 A fonte, data, status e owner de cada efeito ficam em
-`external-effects.json`. Permanecem bloqueadores externos explícitos:
+`external-effects.json`. Rose e Operação aprovaram a Ficha canônica
+`ficha-canonical-v2`; a evidência versionada e sem PII fecha a issue `#7` sem
+alterar o estado dos demais efeitos externos. Permanecem bloqueadores externos
+explícitos:
 
 1. Operação/Integrações: antes da produção, registrar o número real, criar token
    de usuário do sistema, configurar pagamento e substituir a deduplicação em
@@ -64,11 +67,8 @@ A fonte, data, status e owner de cada efeito ficam em
    do ZDR da Gemini Developer API. Cloudflare R2 DPA, subprocessadores,
    localização e controles live foram movidos para a issue `#29`, antes de uso
    externo ou de qualquer alegação de durabilidade superior à VPS.
-3. Rose/Operação: executar o roteiro versionado e aprovar visualmente o PDF
-   canônico da Ficha; o pacote técnico da issue `#7` está pronto, mas não infere
-   o aceite.
-4. Produto/Operação/Tech Lead: confirmar ou ajustar `load-envelope.json`.
-5. T07.1: medir carga somente depois da aprovação do envelope.
+3. Produto/Operação/Tech Lead: confirmar ou ajustar `load-envelope.json`.
+4. T07.1: medir carga somente depois da aprovação do envelope.
 
 O procedimento executável e a matriz de fechamento da Meta estão em
 [`META-SANDBOX.md`](META-SANDBOX.md). O receiver e o smoke ali descritos são

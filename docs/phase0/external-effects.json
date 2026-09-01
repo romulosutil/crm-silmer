@@ -319,12 +319,12 @@
         "automaticRetry": false,
         "strategy": "Regenerate only from the same snapshot/template; never reserve a second order number."
       },
-      "status": "pending-human",
+      "status": "approved-human",
       "evidence": [
         {
           "url": "CAMPOS-FICHA-E-JORNADA-P0-1.md",
           "checkedAt": "2026-08-30",
-          "status": "local-contract-reviewed-Rose-visual-approval-pending"
+          "status": "local-contract-reviewed"
         },
         {
           "url": "docs/phase0/ficha-pdf-synthetic.json",
@@ -334,12 +334,17 @@
         {
           "url": "docs/phase0/ficha-pdf-approval.json",
           "checkedAt": "2026-08-31",
-          "status": "fail-closed-human-review-gate-versioned"
+          "status": "human-approval-versioned"
+        },
+        {
+          "url": "docs/phase0/ficha-pdf-approved-evidence-v2.json",
+          "checkedAt": "2026-08-31",
+          "status": "Rose-Operation-approval-recorded-without-PII"
         },
         {
           "url": "output/pdf/ficha-canonica-sintetica-v2.pdf",
           "checkedAt": "2026-08-31",
-          "status": "modular-visual-review-artifact-Rose-Operation-approval-pending"
+          "status": "modular-visual-review-artifact-approved"
         },
         {
           "url": "output/pdf/ficha-canonica-sintetica-v1.pdf",

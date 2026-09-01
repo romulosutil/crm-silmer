@@ -54,6 +54,11 @@ function invalidRequest(message) {
   return new AccessControlError(400, 'INVALID_REQUEST', message);
 }
 
+/** @param {string} message */
+function notFound(message) {
+  return new AccessControlError(404, 'NOT_FOUND', message);
+}
+
 /**
  * @typedef {{ id: string, kind?: 'human'|'assistant', functionName: OperationalFunction, capabilities: Capability[] }} AccessActor
  */
@@ -122,11 +127,11 @@ export function createAccessControlService({
     requireNonEmpty(input.reason, 'reason');
     requireNonEmpty(input.correlationId, 'correlationId');
     const actor = await repository.findUser(input.actorId);
-    const target = await repository.findUser(input.targetId);
-    if (!actor || !target) throw invalidRequest('User not found');
-    if (!actor.capabilities.includes(CAPABILITIES.COMMERCIAL_ADMIN)) {
+    if (!actor || !actor.capabilities.includes(CAPABILITIES.COMMERCIAL_ADMIN)) {
       throw forbidden('Forbidden');
     }
+    const target = await repository.findUser(input.targetId);
+    if (!target) throw notFound('User not found');
     return { actor, target };
   }
 

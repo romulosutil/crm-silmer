@@ -44,6 +44,11 @@ test('OpenAPI publishes every implemented identity route and security control', 
   ]) {
     assert.match(contract, new RegExp(escape(control), 'u'));
   }
+  assert.match(
+    contract,
+    /\/capabilities\/\{change\}:[\s\S]+?'404': \{ \$ref: '#\/components\/responses\/NotFound' \}/u,
+  );
+  assert.match(contract, /^    NotFound:$/mu);
 });
 
 test('deployment inventory and runbook cover all fail-closed identity secrets', async () => {

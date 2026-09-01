@@ -162,7 +162,7 @@ async function respond(reply, work) {
       error instanceof IdentityRequestError
         ? error.statusCode
         : readStatusCode(error);
-    if (![400, 401, 403, 409, 429, 503].includes(statusCode)) throw error;
+    if (![400, 401, 403, 404, 409, 429, 503].includes(statusCode)) throw error;
     return reply.code(statusCode).send({
       error: { code: publicErrorCode(statusCode, error) },
     });
@@ -187,6 +187,7 @@ function publicErrorCode(statusCode, error) {
   if (statusCode === 400) return 'INVALID_REQUEST';
   if (statusCode === 401) return 'INVALID_CREDENTIALS';
   if (statusCode === 403) return 'FORBIDDEN';
+  if (statusCode === 404) return 'NOT_FOUND';
   if (statusCode === 409) return 'IDEMPOTENCY_KEY_REUSED';
   if (statusCode === 429) return 'AUTHENTICATION_THROTTLED';
   if (

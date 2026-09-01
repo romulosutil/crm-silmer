@@ -28,7 +28,6 @@ test('validates the versioned external-effect matrix and load envelope', async (
   assert.doesNotThrow(() => validateExternalEffects(effects));
   assert.doesNotThrow(() => validateLoadEnvelope(envelope));
   assert.equal(effects.task, 'T00.4');
-  assert.equal(envelope.approval.status, 'pending-human-approval');
   const effectList = /** @type {Array<Record<string, any>>} */ (
     effects.effects
   );
@@ -39,6 +38,114 @@ test('validates the versioned external-effect matrix and load envelope', async (
       (/** @type {Record<string, any>} */ item) =>
         item.url === 'docs/phase0/ficha-pdf-approved-evidence-v2.json',
     ),
+  );
+  assert.equal(envelope.approval.status, 'approved');
+  assert.equal(envelope.approval.approved, true);
+  assert.deepEqual(
+    /** @type {Array<{role: string}>} */ (envelope.approval.approvers).map(
+      ({ role }) => role,
+    ),
+    ['Produto', 'Operacao', 'Tech Lead'],
+  );
+});
+
+test('preserves the engineering baseline beside the approved pilot forecast', async () => {
+  const envelope = await json('docs/phase0/load-envelope.json');
+
+  assert.equal(
+    envelope.baseline.dimensions.operators.authenticatedSessions,
+    20,
+  );
+  assert.equal(envelope.baseline.dimensions.webhooks.burstEventsPerSecond, 20);
+  assert.equal(envelope.baseline.dimensions.referenceMass.messages, 1_000_000);
+  assert.equal(envelope.forecast.source.expectedPeople, 5);
+  assert.equal(envelope.forecast.source.expectedContactsPerBusinessDay, 25);
+  assert.equal(envelope.forecast.source.observedInboxContacts, 89);
+  assert.equal(envelope.forecast.source.observedBusinessDays, 4);
+  assert.equal(envelope.forecast.source.messagesPerContact, 8);
+  assert.equal(envelope.forecast.derived.messagesPerBusinessDay, 200);
+  assert.equal(envelope.forecast.derived.messagesPer22BusinessDays, 4_400);
+  assert.equal(envelope.forecast.derived.messagesPer264BusinessDays, 52_800);
+  assert.equal(envelope.forecast.dimensions.referenceMass.messages, 100_000);
+  assert.equal(envelope.sizing.status, 'approved-no-adjustment');
+  assert.equal(envelope.sizing.plan, 'Hostinger KVM 4');
+  assert.equal(envelope.sizing.forecastWithinBaseline, true);
+  assert.equal(envelope.liveEvidence.executed, false);
+  assert.equal(envelope.liveEvidence.status, 'pending-T07.1-after-approval');
+});
+
+test('rejects incomplete or untraceable load-envelope approval', async () => {
+  const envelope = await json('docs/phase0/load-envelope.json');
+  const missingApprover = structuredClone(envelope);
+  missingApprover.approval.approvers.pop();
+  assert.throws(
+    () => validateLoadEnvelope(missingApprover),
+    /Produto, Operacao and Tech Lead|approvers/iu,
+  );
+
+  const untraceable = structuredClone(envelope);
+  untraceable.approval.evidenceRef = 'approved-in-chat';
+  assert.throws(
+    () => validateLoadEnvelope(untraceable),
+    /issue comment evidence/iu,
+  );
+
+  const wrongDate = structuredClone(envelope);
+  wrongDate.approval.approvedAt = 'August 31, 2026';
+  wrongDate.forecast.source.recordedAt = 'August 31, 2026';
+  assert.throws(() => validateLoadEnvelope(wrongDate), /approved date/iu);
+
+  const nonexistentEvidence = structuredClone(envelope);
+  nonexistentEvidence.approval.evidenceRef =
+    'https://github.com/romulosutil/crm-silmer/issues/8#issuecomment-9999999999';
+  nonexistentEvidence.forecast.source.evidenceRef =
+    nonexistentEvidence.approval.evidenceRef;
+  assert.throws(
+    () => validateLoadEnvelope(nonexistentEvidence),
+    /approved evidence/iu,
+  );
+
+  const forgedApprovers = structuredClone(envelope);
+  forgedApprovers.approval.approvers = forgedApprovers.approval.approvers.map(
+    /** @param {{ role: string }} approver */
+    (approver) => ({
+      role: approver.role,
+      name: 'Mallory',
+      identity: 'github:mallory',
+    }),
+  );
+  assert.throws(
+    () => validateLoadEnvelope(forgedApprovers),
+    /approved approvers/iu,
+  );
+});
+
+test('rejects baseline drift and a forecast that no longer fits the approved sizing', async () => {
+  const envelope = await json('docs/phase0/load-envelope.json');
+  const baselineDrift = structuredClone(envelope);
+  baselineDrift.baseline.dimensions.referenceMass.messages = 999_999;
+  assert.throws(
+    () => validateLoadEnvelope(baselineDrift),
+    /baseline.*TDD|TDD.*baseline/iu,
+  );
+
+  const oversizedForecast = structuredClone(envelope);
+  oversizedForecast.forecast.dimensions.referenceMass.messages = 1_000_001;
+  assert.throws(
+    () => validateLoadEnvelope(oversizedForecast),
+    /forecast.*baseline|baseline.*forecast/iu,
+  );
+});
+
+test('keeps T07.1 and real-load evidence pending after envelope approval', async () => {
+  const envelope = await json('docs/phase0/load-envelope.json');
+  const forgedLoadResult = structuredClone(envelope);
+  forgedLoadResult.liveEvidence.executed = true;
+  forgedLoadResult.liveEvidence.status = 'passed';
+
+  assert.throws(
+    () => validateLoadEnvelope(forgedLoadResult),
+    /T07\.1.*not executed|not executed.*T07\.1/iu,
   );
 });
 
@@ -197,7 +304,7 @@ test('documents an executable, fail-closed R2 gate without secret values', async
   );
 });
 
-test('does not convert sandbox evidence into external approval claims', async () => {
+test('does not convert load-envelope approval into external provider approval', async () => {
   const effects = await json('docs/phase0/external-effects.json');
   const envelope = await json('docs/phase0/load-envelope.json');
   const effectList = /** @type {Array<Record<string, any>>} */ (
@@ -205,7 +312,7 @@ test('does not convert sandbox evidence into external approval claims', async ()
   );
 
   assert.equal(effects.externalApprovalGranted, false);
-  assert.equal(envelope.approval.approved, false);
+  assert.equal(envelope.approval.approved, true);
   assert.ok(effectList.some(({ status }) => status === 'sandbox-verified'));
   assert.ok(effectList.some(({ status }) => status === 'pending-live'));
   assert.ok(effectList.some(({ status }) => status === 'deferred'));

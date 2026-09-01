@@ -180,36 +180,192 @@ export function validateExternalEffects(document) {
 /** @param {any} document */
 export function validateLoadEnvelope(document) {
   invariant(document?.task === 'T00.4', 'Envelope must trace to T00.4');
+  invariant(document?.schemaVersion === 2, 'Envelope schema must be version 2');
+
+  const approval = document.approval;
   invariant(
-    document.approval?.approved === false &&
-      document.approval?.status === 'pending-human-approval',
-    'Load envelope must not claim approval',
-  );
-  const dimensions = document.dimensions;
-  invariant(
-    dimensions?.operators?.authenticatedSessions === 20 &&
-      dimensions.operators.concurrentSseConnections === 30,
-    'Operator envelope drifted from TDD section 13',
+    approval?.approved === true && approval.status === 'approved',
+    'Load envelope approval must be complete',
   );
   invariant(
-    dimensions?.webhooks?.sustainedEventsPerSecond === 5 &&
-      dimensions.webhooks.burstEventsPerSecond === 20,
-    'Webhook envelope drifted from TDD section 13',
+    Number.isFinite(Date.parse(approval.approvedAt)),
+    'Load envelope approval needs an ISO date',
   );
   invariant(
-    dimensions?.workerRecovery?.backlogJobs === 1000 &&
-      dimensions.workerRecovery.blindRetryOutcomeUnknown === false,
-    'Worker envelope must preserve outcome_unknown safety',
+    approval.approvedAt === '2026-08-31',
+    'Load envelope approved date must match the recorded decision',
   );
   invariant(
-    dimensions?.attachmentsAndPdf?.concurrentUploadsAtConfiguredLimit === 4 &&
-      dimensions.attachmentsAndPdf.queuedPdfs === 20 &&
-      dimensions.attachmentsAndPdf.chromiumConcurrency === 1,
-    'Attachment/PDF envelope drifted from TDD section 13',
+    /^https:\/\/github\.com\/romulosutil\/crm-silmer\/issues\/8#issuecomment-\d+$/u.test(
+      approval.evidenceRef,
+    ),
+    'Load envelope approval needs GitHub issue comment evidence',
   );
   invariant(
-    dimensions?.referenceMass?.messages === 1_000_000,
-    'Reference mass drifted from TDD section 13',
+    approval.evidenceRef ===
+      'https://github.com/romulosutil/crm-silmer/issues/8#issuecomment-5488137562',
+    'Load envelope approved evidence must match the recorded decision',
+  );
+  const approvers = /** @type {Array<Record<string, any>>} */ (
+    approval.approvers
+  );
+  invariant(
+    Array.isArray(approvers) &&
+      JSON.stringify(approvers.map(({ role }) => role)) ===
+        JSON.stringify(['Produto', 'Operacao', 'Tech Lead']) &&
+      approvers.every(
+        ({ name, identity }) =>
+          typeof name === 'string' &&
+          name.trim().length > 0 &&
+          /^github:[a-z0-9-]+$/u.test(identity),
+      ),
+    'Load envelope needs Produto, Operacao and Tech Lead approvers',
+  );
+  invariant(
+    JSON.stringify(approvers) ===
+      JSON.stringify([
+        {
+          role: 'Produto',
+          name: 'Rômulo Sutil',
+          identity: 'github:romulosutil',
+        },
+        {
+          role: 'Operacao',
+          name: 'Rômulo Sutil',
+          identity: 'github:romulosutil',
+        },
+        {
+          role: 'Tech Lead',
+          name: 'Rômulo Sutil',
+          identity: 'github:romulosutil',
+        },
+      ]),
+    'Load envelope approved approvers must match the recorded decision',
+  );
+
+  const baseline = document.baseline;
+  invariant(
+    baseline?.status === 'engineering-homologation-baseline' &&
+      baseline.source === 'TECHNICAL-DESIGN.md section 13' &&
+      baseline.preserveOnRecalibration === true,
+    'Engineering baseline must retain its TDD source',
+  );
+  const baselineDimensions = baseline.dimensions;
+  invariant(
+    baselineDimensions?.operators?.authenticatedSessions === 20 &&
+      baselineDimensions.operators.concurrentSseConnections === 30 &&
+      baselineDimensions.webhooks.sustainedEventsPerSecond === 5 &&
+      baselineDimensions.webhooks.sustainedMinutes === 15 &&
+      baselineDimensions.webhooks.burstEventsPerSecond === 20 &&
+      baselineDimensions.webhooks.burstSeconds === 60 &&
+      baselineDimensions.workerRecovery.backlogJobs === 1000 &&
+      baselineDimensions.workerRecovery.blindRetryOutcomeUnknown === false &&
+      baselineDimensions.attachmentsAndPdf
+        .concurrentUploadsAtConfiguredLimit === 4 &&
+      baselineDimensions.attachmentsAndPdf.queuedPdfs === 20 &&
+      baselineDimensions.attachmentsAndPdf.chromiumConcurrency === 1 &&
+      baselineDimensions.referenceMass.contacts === 50_000 &&
+      baselineDimensions.referenceMass.conversations === 100_000 &&
+      baselineDimensions.referenceMass.messages === 1_000_000 &&
+      baselineDimensions.referenceMass.deals === 25_000,
+    'Engineering baseline drifted from TDD section 13',
+  );
+
+  const forecast = document.forecast;
+  invariant(
+    forecast?.status === 'approved-pilot-forecast' &&
+      forecast.horizon === 'first-12-months' &&
+      forecast.source?.kind === 'approved-operational-estimate' &&
+      forecast.source.recordedAt === approval.approvedAt &&
+      forecast.source.evidenceRef === approval.evidenceRef &&
+      forecast.source.expectedPeople === 5 &&
+      forecast.source.expectedContactsPerBusinessDay === 25 &&
+      forecast.source.observedInboxContacts === 89 &&
+      forecast.source.observedBusinessDays === 4 &&
+      forecast.source.messagesPerContact === 8 &&
+      forecast.source.maximumTextCharacters === 140 &&
+      forecast.source.attachmentsProfile ===
+        'photos-and-design-files-heavy-files-rare',
+    'Pilot forecast must retain its approved operational source',
+  );
+  invariant(
+    forecast.derived?.messagesPerBusinessDay === 200 &&
+      forecast.derived.contactsPer22BusinessDays === 550 &&
+      forecast.derived.messagesPer22BusinessDays === 4_400 &&
+      forecast.derived.contactsPer264BusinessDays === 6_600 &&
+      forecast.derived.messagesPer264BusinessDays === 52_800,
+    'Pilot forecast derived volume is inconsistent with the approved source',
+  );
+
+  const forecastDimensions = forecast.dimensions;
+  invariant(
+    forecastDimensions?.operators?.authenticatedSessions === 8 &&
+      forecastDimensions.operators.concurrentSseConnections === 10 &&
+      forecastDimensions.webhooks.sustainedEventsPerSecond === 1 &&
+      forecastDimensions.webhooks.sustainedMinutes === 15 &&
+      forecastDimensions.webhooks.burstEventsPerSecond === 5 &&
+      forecastDimensions.webhooks.burstSeconds === 60 &&
+      forecastDimensions.workerRecovery.backlogJobs === 300 &&
+      forecastDimensions.workerRecovery.blindRetryOutcomeUnknown === false &&
+      forecastDimensions.attachmentsAndPdf.estimatedAttachmentsPerDay === 100 &&
+      forecastDimensions.attachmentsAndPdf.concurrentUploads === 2 &&
+      forecastDimensions.attachmentsAndPdf.estimatedPdfsPerDay === 25 &&
+      forecastDimensions.attachmentsAndPdf.queuedPdfs === 10 &&
+      forecastDimensions.attachmentsAndPdf.chromiumConcurrency === 1 &&
+      forecastDimensions.referenceMass.contacts === 10_000 &&
+      forecastDimensions.referenceMass.conversations === 12_000 &&
+      forecastDimensions.referenceMass.messages === 100_000 &&
+      forecastDimensions.referenceMass.deals === 10_000,
+    'Pilot forecast drifted from the approved issue 8 decision or engineering baseline',
+  );
+  invariant(
+    forecastDimensions.operators.authenticatedSessions <=
+      baselineDimensions.operators.authenticatedSessions &&
+      forecastDimensions.operators.concurrentSseConnections <=
+        baselineDimensions.operators.concurrentSseConnections &&
+      forecastDimensions.webhooks.sustainedEventsPerSecond <=
+        baselineDimensions.webhooks.sustainedEventsPerSecond &&
+      forecastDimensions.webhooks.burstEventsPerSecond <=
+        baselineDimensions.webhooks.burstEventsPerSecond &&
+      forecastDimensions.workerRecovery.backlogJobs <=
+        baselineDimensions.workerRecovery.backlogJobs &&
+      forecastDimensions.attachmentsAndPdf.concurrentUploads <=
+        baselineDimensions.attachmentsAndPdf
+          .concurrentUploadsAtConfiguredLimit &&
+      forecastDimensions.attachmentsAndPdf.queuedPdfs <=
+        baselineDimensions.attachmentsAndPdf.queuedPdfs &&
+      forecastDimensions.referenceMass.contacts <=
+        baselineDimensions.referenceMass.contacts &&
+      forecastDimensions.referenceMass.conversations <=
+        baselineDimensions.referenceMass.conversations &&
+      forecastDimensions.referenceMass.messages <=
+        baselineDimensions.referenceMass.messages &&
+      forecastDimensions.referenceMass.deals <=
+        baselineDimensions.referenceMass.deals,
+    'Pilot forecast must remain within the approved engineering baseline',
+  );
+
+  const sizing = document.sizing;
+  invariant(
+    sizing?.status === 'approved-no-adjustment' &&
+      sizing.plan === 'Hostinger KVM 4' &&
+      sizing.vcpu === 4 &&
+      sizing.memoryGb === 16 &&
+      sizing.storageGb === 200 &&
+      sizing.forecastWithinBaseline === true &&
+      Array.isArray(sizing.reviewTriggers) &&
+      JSON.stringify(sizing.reviewTriggers) ===
+        JSON.stringify([
+          'forecast-exceeds-baseline',
+          'T07.1-results',
+          'two-weeks-real-usage',
+        ]),
+    'Sizing decision must keep KVM 4 and explicit review triggers',
+  );
+  invariant(
+    document.liveEvidence?.executed === false &&
+      document.liveEvidence.status === 'pending-T07.1-after-approval',
+    'T07.1 real-load evidence must remain not executed after approval',
   );
   return document;
 }
@@ -243,7 +399,7 @@ async function main() {
   validateLoadEnvelope(await readJson('docs/phase0/load-envelope.json'));
   validateFixtures(await readJson('schemas/fixtures/external/manifest.json'));
   console.log(
-    'External spikes valid: local evidence complete; live and human approvals remain explicit.',
+    'External spikes valid: load envelope approved; remaining live and human gates stay explicit.',
   );
 }
 

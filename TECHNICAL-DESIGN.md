@@ -506,9 +506,11 @@ nunca o conteúdo removido.
 
 ## 13. Performance, capacidade e SLOs iniciais
 
-Os SLOs só são válidos para o envelope de carga abaixo. Ele é um piso de
-engenharia para homologação, não uma previsão de negócio, e deve ser confirmado
-por Produto/Operação antes do teste de carga:
+Os SLOs só são válidos para o envelope de carga abaixo. Ele permanece como piso
+de engenharia para homologação, separado da previsão de negócio aprovada por
+Produto, Operação e Tech Lead na issue `#8` em 31/08/2026. O contrato
+versionado em `docs/phase0/load-envelope.json` preserva esta baseline, registra
+a previsão do piloto e mantém a execução da T07.1 pendente:
 
 | Dimensão              | Envelope inicial de homologação                                                            |
 | --------------------- | ------------------------------------------------------------------------------------------ |
@@ -646,17 +648,21 @@ engenharia e QA. O plano detalhado e os gates estão em
 
 ## 20. Questões e aprovações pendentes
 
-| Item                                    | Default adotado                                                                                        | Quem aprova                |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------- |
-| Tech Lead, time e Administrador Técnico | Ainda não designados                                                                                   | Silmer                     |
-| Confirmação de pagamento                | Exige role `Admin`                                                                                     | Produto/Operação           |
-| Relação Negócio/Pedido                  | 1:0..1 no MVP                                                                                          | Produto                    |
-| Reabertura de conversa terminal         | Novo ciclo ligado ao contato                                                                           | Produto/Operação           |
-| Storage e região                        | S3 privado com contrato e DPA; fornecedor no gate DevOps                                               | Privacidade/Tech Lead      |
-| Gemini Developer API                    | Tier pago, `gemini-2.5-flash-lite`, sem data sharing/logging opt-in; produção com PII somente após ZDR | Privacidade/Tech Lead      |
-| Formato da Ficha                        | PDF canônico                                                                                           | Rose/Operação              |
-| Domínios e Meta App IDs                 | A fornecer por ambiente                                                                                | Operação/DevOps            |
-| Envelope de carga                       | Baseline provisória da seção 13; confirmar antes de T07.1                                              | Produto/Operação/Tech Lead |
+| Item                                    | Default adotado                                                                                        | Quem aprova           |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------- |
+| Tech Lead, time e Administrador Técnico | Ainda não designados                                                                                   | Silmer                |
+| Confirmação de pagamento                | Exige role `Admin`                                                                                     | Produto/Operação      |
+| Relação Negócio/Pedido                  | 1:0..1 no MVP                                                                                          | Produto               |
+| Reabertura de conversa terminal         | Novo ciclo ligado ao contato                                                                           | Produto/Operação      |
+| Storage e região                        | S3 privado com contrato e DPA; fornecedor no gate DevOps                                               | Privacidade/Tech Lead |
+| Gemini Developer API                    | Tier pago, `gemini-2.5-flash-lite`, sem data sharing/logging opt-in; produção com PII somente após ZDR | Privacidade/Tech Lead |
+| Formato da Ficha                        | PDF canônico                                                                                           | Rose/Operação         |
+| Domínios e Meta App IDs                 | A fornecer por ambiente                                                                                | Operação/DevOps       |
+
+O envelope de carga deixou de ser uma pendência em 31/08/2026: a previsão do
+piloto ficou abaixo da baseline da seção 13, o sizing KVM 4 foi mantido e a
+evidência nominal está registrada na issue `#8`. Isso libera a execução da
+T07.1, mas não afirma que o teste de carga ou os SLOs já foram comprovados.
 
 ### Critérios de aprovação do TDD
 
@@ -665,7 +671,8 @@ engenharia e QA. O plano detalhado e os gates estão em
 - DevOps confirma sizing, licença EasyPanel e destino de backup.
 - Operação valida PDF, WhatsApp oficial e destinatário em UAT.
 - Tech Lead e time são formalmente nomeados.
-- Produto/Operação aprovam o envelope de carga usado nos SLOs.
+- Envelope de carga: aprovado por Produto, Operação e Tech Lead na issue `#8`;
+  T07.1 continua responsável por comprovar a baseline e recalibrar os SLOs.
 - Recovery drill em host limpo comprova RPO/RTO do CRM completo.
 
 ## 21. Referências externas verificadas em 30/08/2026

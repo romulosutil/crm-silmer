@@ -1,21 +1,22 @@
-# Graph Report - .  (2026-08-31)
+# Graph Report - crm-silmer-issue7  (2026-08-31)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 137 files · ~90,316 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1125 nodes · 1525 edges · 101 communities (78 shown, 23 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 8 edges (avg confidence: 0.81)
-- Token cost: 87 input · 10 output
+- 1128 nodes · 1528 edges · 97 communities (74 shown, 23 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 7 edges (avg confidence: 0.81)
+- Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `97407190`
+- Built from commit: `0d11482a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- observability.test.js
 - integration-reliability/src/index.js
+- worker/package.json
 - TDD — CRM Silmer MVP
 - 0002_phase1_domain.expand.sql
 - configuration-version.js
@@ -52,19 +53,16 @@
 - Fase 5 — Orçamento, PIX, Pedido e Ficha
 - Agentes do CRM Silmer
 - Arquitetura — Decisões do MVP
-- Dívida #29 — Aprovação e validação futura do Cloudflare R2
 - Runbook de recovery off-host — T00.3 / T07.3
 - Fase 0 — Fundação e riscos técnicos
 - Fase 2 — Caixa de Entrada, canais e confiabilidade
 - Contribuindo com o CRM Silmer
-- T00.4 - Revisao do PDF canonico da Ficha
 - T00.6 — Gate de aprovação da Fase 0
 - Supply chain da Fase 0
 - validateMediaRetentionPolicy
 - Fase 1 — Identidade, acesso e infraestrutura de domínio
 - Fase 3 — Negócio, Kanban e qualificação
 - Fase 6 — Privacidade, relatórios e operação
-- T00.4 — Sandbox da Meta
 - T00.5 — Threat model e catálogo de dados
 - T00.4 — Mídia transitória do piloto interno
 - audit-privacy/package.json
@@ -85,7 +83,6 @@
 - check-boundaries.mjs
 - serve-edge.mjs
 - Q: Como o pacote da issue 7 valida o PDF canonico da Ficha, preserva campos de producao vazios e mantem a aprovacao de Rose e Operacao fail-closed?
-- CRM Silmer
 - CRM Silmer MVP — Plano de Implementação
 - bootstrap.test.js
 - ci-images.test.js
@@ -122,12 +119,10 @@
 6. `compilerOptions` - 13 edges
 7. `runR2LiveSmoke()` - 13 edges
 8. `normalizeConfigurationValues()` - 12 edges
-9. `Passagem de Produto para Tech Lead` - 12 edges
-10. `invariant()` - 12 edges
+9. `invariant()` - 12 edges
+10. `Passagem de Produto para Tech Lead` - 12 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `createMetaWebhookRuntime()` --calls--> `processMetaWebhook()`  [EXTRACTED]
-  apps/api/src/server.js → modules/integration-reliability/src/meta-sandbox.js
 - `harness()` --calls--> `createCatalogService()`  [EXTRACTED]
   test/catalog.test.js → modules/catalog/src/application/catalog-service.js
 - `createHarness()` --calls--> `createConfigurationService()`  [EXTRACTED]
@@ -136,6 +131,8 @@
   test/observability.test.js → modules/shared/src/observability.js
 - `Vendedor Silmer (AI Agent)` --references--> `Crazy API (WhatsApp)`  [INFERRED]
   .specs/features/crm-mvp/context.md → historico-datacrazy/DATACRAZY-SETUP.md
+- `createApi()` --calls--> `createSafeLogger()`  [EXTRACTED]
+  apps/api/src/app.js → modules/shared/src/observability.js
 
 ## Import Cycles
 - None detected.
@@ -150,15 +147,15 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (101 total, 23 thin omitted)
+## Communities (97 total, 23 thin omitted)
 
-### Community 0 - "observability.test.js"
-Cohesion: 0.09
-Nodes (28): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, SERVICES, allowedContextFields, allowedEvents, allowedMetrics (+20 more)
+### Community 0 - "integration-reliability/src/index.js"
+Cohesion: 0.06
+Nodes (43): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, createMetaMessagesClient(), deepFreeze(), extractMetaEvents(), immutableClone() (+35 more)
 
-### Community 1 - "integration-reliability/src/index.js"
-Cohesion: 0.10
-Nodes (25): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+17 more)
+### Community 1 - "worker/package.json"
+Cohesion: 0.20
+Nodes (9): dependencies, @crm-silmer/shared, @crm-silmer/shared, name, private, scripts, start, type (+1 more)
 
 ### Community 2 - "TDD — CRM Silmer MVP"
 Cohesion: 0.05
@@ -209,8 +206,8 @@ Cohesion: 0.08
 Nodes (25): compilerOptions, allowJs, checkJs, esModuleInterop, forceConsistentCasingInFileNames, module, moduleResolution, noEmit (+17 more)
 
 ### Community 14 - "api/package.json"
-Cohesion: 0.08
-Nodes (23): dependencies, @crm-silmer/database, @crm-silmer/integration-reliability, @crm-silmer/shared, fastify, @crm-silmer/shared, name, private (+15 more)
+Cohesion: 0.12
+Nodes (15): dependencies, @crm-silmer/database, @crm-silmer/integration-reliability, @crm-silmer/shared, fastify, @crm-silmer/shared, name, private (+7 more)
 
 ### Community 15 - "Campos da Ficha e Jornada Conversacional — P0.1"
 Cohesion: 0.09
@@ -221,12 +218,12 @@ Cohesion: 0.09
 Nodes (23): 10. Jornada comercial aprovada, 11. Geração e envio da Ficha, 12. Financeiro comercial do MVP, 13. Privacidade e LGPD, 14. Critérios de sucesso do piloto, 15. Gate de produto para o Tech Lead, 16. Próximo passo recomendado, 1. Visão do produto (+15 more)
 
 ### Community 17 - "Topologia EasyPanel — CRM Silmer"
-Cohesion: 0.09
-Nodes (23): EasyPanel Topology, 10. Backups e disaster recovery, 11. Observabilidade e alertas, 12. Gates antes do piloto, 13. Riscos aceitos e evolução, 14. Referências verificadas, 1. Decisão, 2. Serviços no projeto (+15 more)
+Cohesion: 0.08
+Nodes (24): 10. Backups e disaster recovery, 11. Observabilidade e alertas, 12. Gates antes do piloto, 13. Riscos aceitos e evolução, 14. Referências verificadas, 1. Decisão, 2. Serviços no projeto, 3. Rede e domínios (+16 more)
 
 ### Community 18 - "audit-privacy/src/index.js"
-Cohesion: 0.19
-Nodes (11): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), isTransientMediaExpired(), resolveTransientMediaExpiresAt() (+3 more)
+Cohesion: 0.10
+Nodes (21): AuditEventValidationError, deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), isTransientMediaExpired(), resolveTransientMediaExpiresAt() (+13 more)
 
 ### Community 19 - "identity-access/src/index.js"
 Cohesion: 0.16
@@ -273,16 +270,16 @@ Cohesion: 0.17
 Nodes (11): engines, node, npm, name, packageManager, private, type, version (+3 more)
 
 ### Community 30 - "README.md"
-Cohesion: 0.22
-Nodes (4): Sobre o CRM Silmer, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
+Cohesion: 0.15
+Nodes (8): Sobre o CRM Silmer, Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
 
 ### Community 31 - "validate-external-spikes.mjs"
 Cohesion: 0.35
 Nodes (7): invariant(), main(), statuses, validateExternalEffects(), validateFixtures(), validateLoadEnvelope(), rootUrl
 
 ### Community 32 - "EXTERNAL-SPIKES.md"
-Cohesion: 0.20
-Nodes (8): Cloudflare R2, Decisões seguras, Evidências e pendências externas, Resultado local, T00.4 — Spikes externos, Verificação, Gemini Developer API, Meta WhatsApp Business API
+Cohesion: 0.06
+Nodes (27): Cloudflare R2, Decisões seguras, Evidências e pendências externas, Resultado local, T00.4 — Spikes externos, Verificação, Estado do gate, Geracao e verificacao tecnica (+19 more)
 
 ### Community 33 - "validate-security-catalog.mjs"
 Cohesion: 0.33
@@ -304,10 +301,6 @@ Nodes (8): Agentes do CRM Silmer, Composição eficiente por tipo de tarefa, Con
 Cohesion: 0.25
 Nodes (7): Aprovações ainda necessárias, Arquitetura — Decisões do MVP, Decisões confirmadas, Decisões de modelagem, Decisões técnicas propostas como baseline, Fronteiras funcionais, Projetos e documentos executáveis
 
-### Community 38 - "Dívida #29 — Aprovação e validação futura do Cloudflare R2"
-Cohesion: 0.25
-Nodes (7): Contrato candidato para implementação futura, Critérios live obrigatórios, Dívida #29 — Aprovação e validação futura do Cloudflare R2, Estado do gate, Procedimento live, Reconciliação de `PutObject` incerto, Verificação local
-
 ### Community 39 - "Runbook de recovery off-host — T00.3 / T07.3"
 Cohesion: 0.25
 Nodes (7): Execução externa pendente, Lacunas, donos e prazo-gate, Pre-flight obrigatório, Runbook de recovery off-host — T00.3 / T07.3, Stop conditions, Uso offline por uma segunda pessoa, Tombstone Ledger (T06.3)
@@ -323,10 +316,6 @@ Nodes (8): Fase 2 — Caixa de Entrada, canais e confiabilidade, T02.1 Implement
 ### Community 42 - "Contribuindo com o CRM Silmer"
 Cohesion: 0.29
 Nodes (6): Antes de alterar, Commits e publicação, Contribuindo com o CRM Silmer, Durante a implementação, Governança do repositório público, Validação
-
-### Community 43 - "T00.4 - Revisao do PDF canonico da Ficha"
-Cohesion: 0.29
-Nodes (6): Como registrar o aceite real, Estado do gate, Geracao e verificacao tecnica, Pacote versionado, Roteiro para Rose e Operacao, T00.4 - Revisao do PDF canonico da Ficha
 
 ### Community 44 - "T00.6 — Gate de aprovação da Fase 0"
 Cohesion: 0.29
@@ -351,10 +340,6 @@ Nodes (7): Fase 3 — Negócio, Kanban e qualificação, T03.1 Implementar conve
 ### Community 49 - "Fase 6 — Privacidade, relatórios e operação"
 Cohesion: 0.29
 Nodes (7): Fase 6 — Privacidade, relatórios e operação, T06.1 Implementar retenção por classe, T06.2 Implementar legal hold e solicitações, T06.3 Implementar tombstones de restore, T06.4 Implementar relatórios comerciais, T06.5 Implementar observabilidade e alertas, T06.6 Implementar UI de relatórios, configuração e privacidade
-
-### Community 50 - "T00.4 — Sandbox da Meta"
-Cohesion: 0.33
-Nodes (6): Ativos selecionados, Escopo e limite, Evidência de fechamento, Segredos e dados locais, Sequência operacional, T00.4 — Sandbox da Meta
 
 ### Community 51 - "T00.5 — Threat model e catálogo de dados"
 Cohesion: 0.33
@@ -436,10 +421,6 @@ Nodes (4): contentTypes, port, root, server
 Cohesion: 0.50
 Nodes (3): Answer, Q: Como o pacote da issue 7 valida o PDF canonico da Ficha, preserva campos de producao vazios e mantem a aprovacao de Rose e Operacao fail-closed?, Source Nodes
 
-### Community 71 - "CRM Silmer"
-Cohesion: 0.50
-Nodes (4): Comece por aqui, CRM Silmer, Desenvolvimento, Stack aprovada
-
 ### Community 72 - "CRM Silmer MVP — Plano de Implementação"
 Cohesion: 0.50
 Nodes (3): CRM Silmer MVP — Plano de Implementação, Definition of Done global, Dependências e caminho crítico
@@ -453,7 +434,7 @@ Cohesion: 0.67
 Nodes (3): API Application, Edge Web Application, CI and Immutable Images Workflow
 
 ## Knowledge Gaps
-- **562 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+557 more)
+- **564 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+559 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -461,16 +442,16 @@ Nodes (3): API Application, Edge Web Application, CI and Immutable Images Workfl
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `CRM Silmer MVP — Plano de Implementação` connect `CRM Silmer MVP — Plano de Implementação` to `Fase 5 — Orçamento, PIX, Pedido e Ficha`, `Fase 0 — Fundação e riscos técnicos`, `Fase 2 — Caixa de Entrada, canais e confiabilidade`, `Fase 1 — Identidade, acesso e infraestrutura de domínio`, `Fase 3 — Negócio, Kanban e qualificação`, `Fase 6 — Privacidade, relatórios e operação`, `Fase 4 — Vendedor Silmer assistivo`, `Fase 7 — Hardening, UAT e piloto`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Why does `TDD — CRM Silmer MVP` connect `TDD — CRM Silmer MVP` to `README.md`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `Fase 5 — Orçamento, PIX, Pedido e Ficha` connect `Fase 5 — Orçamento, PIX, Pedido e Ficha` to `CRM Silmer MVP — Plano de Implementação`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `CRM Silmer — Especificação de Produto do MVP` connect `CRM Silmer — Especificação de Produto do MVP` to `README.md`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _562 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `observability.test.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
+  _564 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `integration-reliability/src/index.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.09725158562367865 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06142410015649452 - nodes in this community are weakly interconnected._
 - **Should `TDD — CRM Silmer MVP` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
+- **Should `0002_phase1_domain.expand.sql` be split into smaller, more focused modules?**
+  _Cohesion score 0.08846153846153847 - nodes in this community are weakly interconnected._

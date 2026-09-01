@@ -408,7 +408,7 @@
       "_origin": "ast",
       "id": "apps_api_src_app",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "api/src/app.js"
     },
     {
@@ -419,7 +419,7 @@
       "_origin": "ast",
       "id": "apps_api_src_app_createapi",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createapi()"
     },
     {
@@ -481,7 +481,7 @@
       "label": "readStatusCode()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L171",
+      "source_location": "L173",
       "_origin": "ast",
       "id": "apps_api_src_identity_routes_readstatuscode",
       "community": 155,
@@ -492,7 +492,7 @@
       "label": "publicErrorCode()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L184",
+      "source_location": "L186",
       "_origin": "ast",
       "id": "apps_api_src_identity_routes_publicerrorcode",
       "community": 155,
@@ -503,7 +503,7 @@
       "label": "requireOrigin()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L202",
+      "source_location": "L204",
       "_origin": "ast",
       "id": "apps_api_src_identity_routes_requireorigin",
       "community": 155,
@@ -514,7 +514,7 @@
       "label": "requireAuthenticatedCommand()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L214",
+      "source_location": "L216",
       "_origin": "ast",
       "id": "apps_api_src_identity_routes_requireauthenticatedcommand",
       "community": 155,
@@ -525,7 +525,7 @@
       "label": "parseCookies()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L237",
+      "source_location": "L239",
       "_origin": "ast",
       "id": "apps_api_src_identity_routes_parsecookies",
       "community": 155,
@@ -536,7 +536,7 @@
       "label": "requireCookie()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L257",
+      "source_location": "L259",
       "_origin": "ast",
       "id": "apps_api_src_identity_routes_requirecookie",
       "community": 155,
@@ -547,7 +547,7 @@
       "label": "requireHeader()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L263",
+      "source_location": "L265",
       "_origin": "ast",
       "id": "apps_api_src_identity_routes_requireheader",
       "community": 155,
@@ -558,7 +558,7 @@
       "label": "requireString()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L268",
+      "source_location": "L270",
       "_origin": "ast",
       "id": "apps_api_src_identity_routes_requirestring",
       "community": 155,
@@ -569,7 +569,7 @@
       "label": "requireBody()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L276",
+      "source_location": "L278",
       "_origin": "ast",
       "id": "apps_api_src_identity_routes_requirebody",
       "community": 155,
@@ -624,7 +624,7 @@
       "label": "readKey()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L357",
+      "source_location": "L358",
       "_origin": "ast",
       "id": "apps_api_src_identity_runtime_readkey",
       "community": 161,
@@ -635,7 +635,7 @@
       "label": "requireSecret()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L368",
+      "source_location": "L369",
       "_origin": "ast",
       "id": "apps_api_src_identity_runtime_requiresecret",
       "community": 161,
@@ -646,7 +646,7 @@
       "label": "readOrigins()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L376",
+      "source_location": "L377",
       "_origin": "ast",
       "id": "apps_api_src_identity_runtime_readorigins",
       "community": 161,
@@ -657,7 +657,7 @@
       "label": "equalSecret()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L388",
+      "source_location": "L389",
       "_origin": "ast",
       "id": "apps_api_src_identity_runtime_equalsecret",
       "community": 161,
@@ -668,7 +668,7 @@
       "label": "base32()",
       "file_type": "code",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L395",
+      "source_location": "L396",
       "_origin": "ast",
       "id": "apps_api_src_identity_runtime_base32",
       "community": 161,
@@ -683,28 +683,28 @@
       "_origin": "ast",
       "id": "apps_api_src_server",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "server.js"
     },
     {
       "label": "createServerApi()",
       "file_type": "code",
       "source_file": "apps/api/src/server.js",
-      "source_location": "L24",
+      "source_location": "L25",
       "_origin": "ast",
       "id": "apps_api_src_server_createserverapi",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createserverapi()"
     },
     {
       "label": "createMetaWebhookRuntime()",
       "file_type": "code",
       "source_file": "apps/api/src/server.js",
-      "source_location": "L42",
+      "source_location": "L46",
       "_origin": "ast",
       "id": "apps_api_src_server_createmetawebhookruntime",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "createmetawebhookruntime()"
     },
@@ -946,8 +946,8 @@
       "source_location": "L329",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_select",
-      "community": 12,
-      "community_name": "catalog-version.js",
+      "community": 96,
+      "community_name": "edge-web/src/app.js",
       "norm_label": "select()"
     },
     {
@@ -1068,7 +1068,7 @@
       "_origin": "ast",
       "id": "apps_worker_src_worker",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "worker.js"
     },
     {
@@ -1078,8 +1078,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime",
-      "community": 158,
-      "community_name": "WorkerRuntime",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "workerruntime"
     },
     {
@@ -1089,8 +1089,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_constructor",
-      "community": 158,
-      "community_name": "WorkerRuntime",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -1100,8 +1100,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_start",
-      "community": 158,
-      "community_name": "WorkerRuntime",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".start()"
     },
     {
@@ -1111,8 +1111,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_emitheartbeat",
-      "community": 158,
-      "community_name": "WorkerRuntime",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".emitheartbeat()"
     },
     {
@@ -1122,8 +1122,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_recordjobfailure",
-      "community": 158,
-      "community_name": "WorkerRuntime",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".recordjobfailure()"
     },
     {
@@ -1133,8 +1133,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_stop",
-      "community": 158,
-      "community_name": "WorkerRuntime",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".stop()"
     },
     {
@@ -3517,7 +3517,7 @@
       "label": "requireSubject()",
       "file_type": "code",
       "source_file": "modules/identity-access/src/authentication-throttle.js",
-      "source_location": "L155",
+      "source_location": "L174",
       "_origin": "ast",
       "id": "modules_identity_access_src_authentication_throttle_requiresubject",
       "community": 163,
@@ -3528,7 +3528,7 @@
       "label": "toIsoString()",
       "file_type": "code",
       "source_file": "modules/identity-access/src/authentication-throttle.js",
-      "source_location": "L162",
+      "source_location": "L181",
       "_origin": "ast",
       "id": "modules_identity_access_src_authentication_throttle_toisostring",
       "community": 163,
@@ -3543,7 +3543,7 @@
       "_origin": "ast",
       "id": "modules_identity_access_src_authorization",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "authorization.js"
     },
     {
@@ -3554,7 +3554,7 @@
       "_origin": "ast",
       "id": "modules_identity_access_src_authorization_capabilities",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "capabilities"
     },
     {
@@ -3565,7 +3565,7 @@
       "_origin": "ast",
       "id": "modules_identity_access_src_authorization_operationalactions",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "operationalactions"
     },
     {
@@ -3576,7 +3576,7 @@
       "_origin": "ast",
       "id": "modules_identity_access_src_authorization_actioncapabilities",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "actioncapabilities"
     },
     {
@@ -3587,7 +3587,7 @@
       "_origin": "ast",
       "id": "modules_identity_access_src_authorization_knowncapabilities",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "knowncapabilities"
     },
     {
@@ -3598,40 +3598,84 @@
       "_origin": "ast",
       "id": "modules_identity_access_src_authorization_mfarequiredcapabilities",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "mfarequiredcapabilities"
+    },
+    {
+      "label": "AccessControlError",
+      "file_type": "code",
+      "source_file": "modules/identity-access/src/authorization.js",
+      "source_location": "L37",
+      "_origin": "ast",
+      "id": "modules_identity_access_src_authorization_accesscontrolerror",
+      "community": 32,
+      "community_name": "authorization.js",
+      "norm_label": "accesscontrolerror"
+    },
+    {
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "modules/identity-access/src/authorization.js",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "modules_identity_access_src_authorization_accesscontrolerror_constructor",
+      "community": 32,
+      "community_name": "authorization.js",
+      "norm_label": ".constructor()"
+    },
+    {
+      "label": "forbidden()",
+      "file_type": "code",
+      "source_file": "modules/identity-access/src/authorization.js",
+      "source_location": "L48",
+      "_origin": "ast",
+      "id": "modules_identity_access_src_authorization_forbidden",
+      "community": 32,
+      "community_name": "authorization.js",
+      "norm_label": "forbidden()"
+    },
+    {
+      "label": "invalidRequest()",
+      "file_type": "code",
+      "source_file": "modules/identity-access/src/authorization.js",
+      "source_location": "L53",
+      "_origin": "ast",
+      "id": "modules_identity_access_src_authorization_invalidrequest",
+      "community": 32,
+      "community_name": "authorization.js",
+      "norm_label": "invalidrequest()"
     },
     {
       "label": "authorize()",
       "file_type": "code",
       "source_file": "modules/identity-access/src/authorization.js",
-      "source_location": "L47",
+      "source_location": "L67",
       "_origin": "ast",
       "id": "modules_identity_access_src_authorization_authorize",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "authorize()"
     },
     {
       "label": "createAccessControlService()",
       "file_type": "code",
       "source_file": "modules/identity-access/src/authorization.js",
-      "source_location": "L90",
+      "source_location": "L110",
       "_origin": "ast",
       "id": "modules_identity_access_src_authorization_createaccesscontrolservice",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "createaccesscontrolservice()"
     },
     {
       "label": "requireNonEmpty()",
       "file_type": "code",
       "source_file": "modules/identity-access/src/authorization.js",
-      "source_location": "L159",
+      "source_location": "L179",
       "_origin": "ast",
       "id": "modules_identity_access_src_authorization_requirenonempty",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "requirenonempty()"
     },
     {
@@ -4016,7 +4060,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "idempotency.js"
     },
     {
@@ -4027,7 +4071,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "idempotencyconflicterror"
     },
     {
@@ -4038,7 +4082,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror_constructor",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4049,7 +4093,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_fingerprintcommand",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "fingerprintcommand()"
     },
     {
@@ -4060,7 +4104,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_canonicaljson",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "canonicaljson()"
     },
     {
@@ -4071,7 +4115,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_clone",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "clone()"
     },
     {
@@ -4082,7 +4126,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_createdeferred",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "createdeferred()"
     },
     {
@@ -4093,7 +4137,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "inmemoryidempotencyrecordstore"
     },
     {
@@ -4104,7 +4148,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_execute",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".execute()"
     },
     {
@@ -4115,7 +4159,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_get",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".get()"
     },
     {
@@ -4126,7 +4170,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_storagekey",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".#storagekey()"
     },
     {
@@ -4137,7 +4181,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_createidempotentcommandexecutor",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "createidempotentcommandexecutor()"
     },
     {
@@ -4148,7 +4192,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_validatecommandrequest",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "validatecommandrequest()"
     },
     {
@@ -4159,7 +4203,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_requirenonempty",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "requirenonempty()"
     },
     {
@@ -4169,7 +4213,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_index",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "integration-reliability/src/index.js"
     },
@@ -4180,7 +4224,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "meta-sandbox.js"
     },
@@ -4191,7 +4235,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookauthenticationerror",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "metawebhookauthenticationerror"
     },
@@ -4202,7 +4246,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookauthenticationerror_constructor",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
@@ -4213,7 +4257,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookpayloaderror",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "metawebhookpayloaderror"
     },
@@ -4224,7 +4268,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookpayloaderror_constructor",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
@@ -4235,7 +4279,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metaapierror",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "metaapierror"
     },
@@ -4246,7 +4290,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metaapierror_constructor",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
@@ -4257,7 +4301,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_immutableclone",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "immutableclone()"
     },
@@ -4268,7 +4312,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_deepfreeze",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "deepfreeze()"
     },
@@ -4279,7 +4323,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_requirenonempty",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "requirenonempty()"
     },
@@ -4290,7 +4334,7 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_verifymetawebhooksignature",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "verifymetawebhooksignature()"
     },
@@ -4301,7 +4345,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_extractmetaevents",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "extractmetaevents()"
     },
@@ -4312,7 +4356,7 @@
       "source_location": "L171",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_inmemorymetaeventstore",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "inmemorymetaeventstore"
     },
@@ -4323,7 +4367,7 @@
       "source_location": "L176",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_inmemorymetaeventstore_accept",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": ".accept()"
     },
@@ -4334,7 +4378,7 @@
       "source_location": "L182",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_inmemorymetaeventstore_list",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": ".list()"
     },
@@ -4345,7 +4389,7 @@
       "source_location": "L196",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_processmetawebhook",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "processmetawebhook()"
     },
@@ -4356,7 +4400,7 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_createmetamessagesclient",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "createmetamessagesclient()"
     },
@@ -4367,7 +4411,7 @@
       "source_location": "L294",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_runmetasendattempt",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "runmetasendattempt()"
     },
@@ -4379,7 +4423,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "postgres-idempotency.js"
     },
     {
@@ -4390,7 +4434,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "postgresidempotencyrecordstore"
     },
     {
@@ -4401,7 +4445,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore_constructor",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4412,7 +4456,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore_execute",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".execute()"
     },
     {
@@ -4423,7 +4467,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore_get",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".get()"
     },
     {
@@ -4434,7 +4478,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_identityvalues",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "identityvalues()"
     },
     {
@@ -4445,7 +4489,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_selectrecord",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "selectrecord()"
     },
     {
@@ -4456,7 +4500,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_validateidentity",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "validateidentity()"
     },
     {
@@ -4467,7 +4511,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_normalizeresponse",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "normalizeresponse()"
     },
     {
@@ -4478,7 +4522,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_encryptresponse",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "encryptresponse()"
     },
     {
@@ -4489,7 +4533,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_decryptresponse",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "decryptresponse()"
     },
     {
@@ -4500,7 +4544,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_parseenvelope",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "parseenvelope()"
     },
     {
@@ -4511,7 +4555,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_decodebase64url",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "decodebase64url()"
     },
     {
@@ -4522,7 +4566,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_aad",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "aad()"
     },
     {
@@ -4533,7 +4577,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_requirenonempty",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "requirenonempty()"
     },
     {
@@ -4544,7 +4588,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_storedstring",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "storedstring()"
     },
     {
@@ -4621,7 +4665,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_index",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "shared/src/index.js"
     },
     {
@@ -4632,7 +4676,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_index_services",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "services"
     },
     {
@@ -4642,8 +4686,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_shared_src_observability",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "observability.js"
     },
     {
@@ -4653,8 +4697,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "modules_shared_src_observability_redacted_field_names",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "redacted_field_names"
     },
     {
@@ -4664,8 +4708,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedcontextfields",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "allowedcontextfields"
     },
     {
@@ -4675,8 +4719,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedservices",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "allowedservices"
     },
     {
@@ -4686,8 +4730,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedevents",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "allowedevents"
     },
     {
@@ -4697,8 +4741,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedmetrics",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "allowedmetrics"
     },
     {
@@ -4708,8 +4752,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "modules_shared_src_observability_categoricalpolicies",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "categoricalpolicies"
     },
     {
@@ -4719,8 +4763,8 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "modules_shared_src_observability_tracefields",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "tracefields"
     },
     {
@@ -4731,7 +4775,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_normalizetraceid",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "normalizetraceid()"
     },
     {
@@ -4741,8 +4785,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "modules_shared_src_observability_isfinitenumber",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "isfinitenumber()"
     },
     {
@@ -4752,8 +4796,8 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "modules_shared_src_observability_createsafelogrecord",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createsafelogrecord()"
     },
     {
@@ -4764,7 +4808,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_createsafelogger",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createsafelogger()"
     },
     {
@@ -4774,8 +4818,8 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "metricregistry"
     },
     {
@@ -4785,8 +4829,8 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_constructor",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4796,8 +4840,8 @@
       "source_location": "L233",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_record",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".record()"
     },
     {
@@ -4807,8 +4851,8 @@
       "source_location": "L249",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_increment",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".increment()"
     },
     {
@@ -4818,8 +4862,8 @@
       "source_location": "L254",
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_snapshot",
-      "community": 156,
-      "community_name": "observability.js",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".snapshot()"
     },
     {
@@ -5978,10 +6022,21 @@
       "norm_label": "test:gemini:privacy"
     },
     {
-      "label": "test:media-retention",
+      "label": "test:identity:live",
       "file_type": "code",
       "source_file": "package.json",
       "source_location": "L38",
+      "_origin": "ast",
+      "id": "package_scripts_test_identity_live",
+      "community": 9,
+      "community_name": "scripts",
+      "norm_label": "test:identity:live"
+    },
+    {
+      "label": "test:media-retention",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "package_scripts_test_media_retention",
       "community": 9,
@@ -5992,7 +6047,7 @@
       "label": "test:phase0-decisions",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L39",
+      "source_location": "L40",
       "_origin": "ast",
       "id": "package_scripts_test_phase0_decisions",
       "community": 9,
@@ -6003,7 +6058,7 @@
       "label": "test:phase1-schema:live",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L40",
+      "source_location": "L41",
       "_origin": "ast",
       "id": "package_scripts_test_phase1_schema_live",
       "community": 9,
@@ -6014,7 +6069,7 @@
       "label": "test:security-catalog",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L41",
+      "source_location": "L42",
       "_origin": "ast",
       "id": "package_scripts_test_security_catalog",
       "community": 9,
@@ -6025,7 +6080,7 @@
       "label": "test:ficha-pdf-review",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L42",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "package_scripts_test_ficha_pdf_review",
       "community": 9,
@@ -6036,7 +6091,7 @@
       "label": "test:e2e",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L43",
+      "source_location": "L44",
       "_origin": "ast",
       "id": "package_scripts_test_e2e",
       "community": 9,
@@ -6047,7 +6102,7 @@
       "label": "typecheck",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L44",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "package_scripts_typecheck",
       "community": 9,
@@ -6058,7 +6113,7 @@
       "label": "validate:topology",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L45",
+      "source_location": "L46",
       "_origin": "ast",
       "id": "package_scripts_validate_topology",
       "community": 9,
@@ -6069,7 +6124,7 @@
       "label": "validate:r2",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L46",
+      "source_location": "L47",
       "_origin": "ast",
       "id": "package_scripts_validate_r2",
       "community": 9,
@@ -6080,7 +6135,7 @@
       "label": "validate:external-spikes",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L47",
+      "source_location": "L48",
       "_origin": "ast",
       "id": "package_scripts_validate_external_spikes",
       "community": 9,
@@ -6091,7 +6146,7 @@
       "label": "validate:media-retention",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L48",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "package_scripts_validate_media_retention",
       "community": 9,
@@ -6102,7 +6157,7 @@
       "label": "validate:observability",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L49",
+      "source_location": "L50",
       "_origin": "ast",
       "id": "package_scripts_validate_observability",
       "community": 9,
@@ -6113,7 +6168,7 @@
       "label": "validate:phase0-decisions",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L50",
+      "source_location": "L51",
       "_origin": "ast",
       "id": "package_scripts_validate_phase0_decisions",
       "community": 9,
@@ -6124,7 +6179,7 @@
       "label": "validate:security-catalog",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L51",
+      "source_location": "L52",
       "_origin": "ast",
       "id": "package_scripts_validate_security_catalog",
       "community": 9,
@@ -6135,7 +6190,7 @@
       "label": "validate:ficha-pdf-review",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L52",
+      "source_location": "L53",
       "_origin": "ast",
       "id": "package_scripts_validate_ficha_pdf_review",
       "community": 9,
@@ -6146,7 +6201,7 @@
       "label": "validate",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L53",
+      "source_location": "L54",
       "_origin": "ast",
       "id": "package_scripts_validate",
       "community": 9,
@@ -6157,7 +6212,7 @@
       "label": "devDependencies",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L55",
+      "source_location": "L56",
       "_origin": "ast",
       "id": "package_devdependencies",
       "community": 25,
@@ -6168,7 +6223,7 @@
       "label": "@axe-core/playwright",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L56",
+      "source_location": "L57",
       "_origin": "ast",
       "id": "package_devdependencies_axe_core_playwright",
       "community": 25,
@@ -6179,7 +6234,7 @@
       "label": "@axe-core/playwright",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L56",
+      "source_location": "L57",
       "_origin": "ast",
       "id": "axe_core_playwright",
       "community": 25,
@@ -6190,7 +6245,7 @@
       "label": "@playwright/test",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L57",
+      "source_location": "L58",
       "_origin": "ast",
       "id": "package_devdependencies_playwright_test",
       "community": 25,
@@ -6201,7 +6256,7 @@
       "label": "@playwright/test",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L57",
+      "source_location": "L58",
       "_origin": "ast",
       "id": "playwright_test",
       "community": 25,
@@ -6212,7 +6267,7 @@
       "label": "@types/node",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L58",
+      "source_location": "L59",
       "_origin": "ast",
       "id": "package_devdependencies_types_node",
       "community": 25,
@@ -6223,7 +6278,7 @@
       "label": "@types/node",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L58",
+      "source_location": "L59",
       "_origin": "ast",
       "id": "types_node",
       "community": 25,
@@ -6234,7 +6289,7 @@
       "label": "@types/punycode",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L59",
+      "source_location": "L60",
       "_origin": "ast",
       "id": "package_devdependencies_types_punycode",
       "community": 25,
@@ -6245,7 +6300,7 @@
       "label": "@types/punycode",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L59",
+      "source_location": "L60",
       "_origin": "ast",
       "id": "types_punycode",
       "community": 25,
@@ -6256,7 +6311,7 @@
       "label": "eslint",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L60",
+      "source_location": "L61",
       "_origin": "ast",
       "id": "package_devdependencies_eslint",
       "community": 25,
@@ -6267,7 +6322,7 @@
       "label": "eslint",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L60",
+      "source_location": "L61",
       "_origin": "ast",
       "id": "eslint",
       "community": 25,
@@ -6278,7 +6333,7 @@
       "label": "prettier",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L61",
+      "source_location": "L62",
       "_origin": "ast",
       "id": "package_devdependencies_prettier",
       "community": 25,
@@ -6289,7 +6344,7 @@
       "label": "prettier",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L61",
+      "source_location": "L62",
       "_origin": "ast",
       "id": "prettier",
       "community": 25,
@@ -6300,7 +6355,7 @@
       "label": "typescript",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L62",
+      "source_location": "L63",
       "_origin": "ast",
       "id": "package_devdependencies_typescript",
       "community": 25,
@@ -6311,7 +6366,7 @@
       "label": "typescript",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L62",
+      "source_location": "L63",
       "_origin": "ast",
       "id": "typescript",
       "community": 25,
@@ -7040,7 +7095,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_meta_sandbox_smoke",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "meta-sandbox-smoke.mjs"
     },
@@ -7051,7 +7106,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "scripts_meta_sandbox_smoke_required",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "required()"
     },
@@ -7062,7 +7117,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "scripts_meta_sandbox_smoke_sha256",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "sha256()"
     },
@@ -7073,7 +7128,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "scripts_meta_sandbox_smoke_runmetasandboxsmoke",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "runmetasandboxsmoke()"
     },
@@ -7887,8 +7942,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_validate_observability",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "validate-observability.mjs"
     },
     {
@@ -7898,8 +7953,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "scripts_validate_observability_rooturl",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "rooturl"
     },
     {
@@ -7909,8 +7964,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "scripts_validate_observability_requiredalerts",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "requiredalerts"
     },
     {
@@ -7920,8 +7975,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "scripts_validate_observability_invariant",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "invariant()"
     },
     {
@@ -7931,8 +7986,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "scripts_validate_observability_assertnosensitivefields",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "assertnosensitivefields()"
     },
     {
@@ -7942,8 +7997,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "scripts_validate_observability_isisotimestamp",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "isisotimestamp()"
     },
     {
@@ -7953,8 +8008,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "scripts_validate_observability_isevidencereference",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "isevidencereference()"
     },
     {
@@ -7964,8 +8019,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "scripts_validate_observability_isopaquereference",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "isopaquereference()"
     },
     {
@@ -7975,8 +8030,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "scripts_validate_observability_validatealertpolicy",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "validatealertpolicy()"
     },
     {
@@ -7986,8 +8041,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "scripts_validate_observability_validateactivationgate",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "validateactivationgate()"
     },
     {
@@ -7997,8 +8052,8 @@
       "source_location": "L303",
       "_origin": "ast",
       "id": "scripts_validate_observability_validateruntimehardening",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "validateruntimehardening()"
     },
     {
@@ -8008,8 +8063,8 @@
       "source_location": "L315",
       "_origin": "ast",
       "id": "scripts_validate_observability_main",
-      "community": 157,
-      "community_name": "validate-observability.mjs",
+      "community": 0,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "main()"
     },
     {
@@ -8493,7 +8548,7 @@
       "_origin": "ast",
       "id": "test_audit_idempotency_test",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "audit-idempotency.test.js"
     },
     {
@@ -8504,7 +8559,7 @@
       "_origin": "ast",
       "id": "test_audit_idempotency_test_commandmetadata",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "commandmetadata"
     },
     {
@@ -8515,7 +8570,7 @@
       "_origin": "ast",
       "id": "test_audit_idempotency_test_createaudittrail",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "createaudittrail()"
     },
     {
@@ -8767,8 +8822,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "test_database_test_transactionclient",
-      "community": 167,
-      "community_name": "TransactionClient",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "transactionclient"
     },
     {
@@ -8778,8 +8833,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "test_database_test_transactionclient_constructor",
-      "community": 167,
-      "community_name": "TransactionClient",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -8789,8 +8844,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "test_database_test_transactionclient_query",
-      "community": 167,
-      "community_name": "TransactionClient",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".query()"
     },
     {
@@ -8800,8 +8855,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "test_database_test_transactionclient_release",
-      "community": 167,
-      "community_name": "TransactionClient",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".release()"
     },
     {
@@ -8954,52 +9009,52 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_identity_api_live_test",
-      "community": 166,
-      "community_name": "identity-api-live.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "identity-api-live.test.js"
     },
     {
       "label": "cookies()",
       "file_type": "code",
       "source_file": "test/identity-api-live.test.js",
-      "source_location": "L225",
+      "source_location": "L252",
       "_origin": "ast",
       "id": "test_identity_api_live_test_cookies",
-      "community": 166,
-      "community_name": "identity-api-live.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "cookies()"
     },
     {
       "label": "commandHeaders()",
       "file_type": "code",
       "source_file": "test/identity-api-live.test.js",
-      "source_location": "L239",
+      "source_location": "L266",
       "_origin": "ast",
       "id": "test_identity_api_live_test_commandheaders",
-      "community": 166,
-      "community_name": "identity-api-live.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "commandheaders()"
     },
     {
       "label": "totp()",
       "file_type": "code",
       "source_file": "test/identity-api-live.test.js",
-      "source_location": "L249",
+      "source_location": "L276",
       "_origin": "ast",
       "id": "test_identity_api_live_test_totp",
-      "community": 166,
-      "community_name": "identity-api-live.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "totp()"
     },
     {
       "label": "decodeBase32()",
       "file_type": "code",
       "source_file": "test/identity-api-live.test.js",
-      "source_location": "L265",
+      "source_location": "L292",
       "_origin": "ast",
       "id": "test_identity_api_live_test_decodebase32",
-      "community": 166,
-      "community_name": "identity-api-live.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "decodebase32()"
     },
     {
@@ -9010,18 +9065,18 @@
       "_origin": "ast",
       "id": "test_identity_api_test",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "identity-api.test.js"
     },
     {
       "label": "harness()",
       "file_type": "code",
       "source_file": "test/identity-api.test.js",
-      "source_location": "L9",
+      "source_location": "L10",
       "_origin": "ast",
       "id": "test_identity_api_test_harness",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "harness()"
     },
     {
@@ -9032,29 +9087,29 @@
       "_origin": "ast",
       "id": "test_identity_authorization_test",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "identity-authorization.test.js"
     },
     {
       "label": "harness()",
       "file_type": "code",
       "source_file": "test/identity-authorization.test.js",
-      "source_location": "L69",
+      "source_location": "L87",
       "_origin": "ast",
       "id": "test_identity_authorization_test_harness",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "harness()"
     },
     {
       "label": "requireUser()",
       "file_type": "code",
       "source_file": "test/identity-authorization.test.js",
-      "source_location": "L206",
+      "source_location": "L254",
       "_origin": "ast",
       "id": "test_identity_authorization_test_requireuser",
       "community": 32,
-      "community_name": "Authorization and Capabilities",
+      "community_name": "authorization.js",
       "norm_label": "requireuser()"
     },
     {
@@ -9262,7 +9317,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_meta_sandbox_test",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "meta-sandbox.test.js"
     },
@@ -9273,7 +9328,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "test_meta_sandbox_test_signature",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "signature()"
     },
@@ -9284,7 +9339,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "test_meta_sandbox_test_messagepayload",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "messagepayload()"
     },
@@ -9295,7 +9350,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "test_meta_sandbox_test_statuspayload",
-      "community": 141,
+      "community": 0,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "statuspayload()"
     },
@@ -9306,8 +9361,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_migrations_live_test",
-      "community": 0,
-      "community_name": "observability.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "migrations-live.test.js"
     },
     {
@@ -9317,8 +9372,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_migrations_test",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "migrations.test.js"
     },
     {
@@ -9328,8 +9383,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "test_migrations_test_mutex",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "mutex"
     },
     {
@@ -9339,8 +9394,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "test_migrations_test_mutex_constructor",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -9350,8 +9405,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "test_migrations_test_mutex_acquire",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".acquire()"
     },
     {
@@ -9361,8 +9416,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "test_migrations_test_migrationpool",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "migrationpool"
     },
     {
@@ -9372,8 +9427,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "test_migrations_test_migrationpool_constructor",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -9383,8 +9438,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "test_migrations_test_migrationpool_connect",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".connect()"
     },
     {
@@ -9394,8 +9449,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "test_migrations_test_migrationclient",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "migrationclient"
     },
     {
@@ -9405,8 +9460,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "test_migrations_test_migrationclient_constructor",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -9416,8 +9471,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "test_migrations_test_migrationclient_query",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".query()"
     },
     {
@@ -9427,8 +9482,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "test_migrations_test_migrationclient_release",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".release()"
     },
     {
@@ -9438,8 +9493,8 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "test_migrations_test_expandone",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "expandone"
     },
     {
@@ -9449,8 +9504,8 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "test_migrations_test_expandtwo",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "expandtwo"
     },
     {
@@ -9460,8 +9515,8 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "test_migrations_test_contractthree",
-      "community": 160,
-      "community_name": "migrations.test.js",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "contractthree"
     },
     {
@@ -9483,7 +9538,7 @@
       "_origin": "ast",
       "id": "test_observability_test",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "observability.test.js"
     },
     {
@@ -9494,7 +9549,7 @@
       "_origin": "ast",
       "id": "test_observability_test_rooturl",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "rooturl"
     },
     {
@@ -9505,7 +9560,7 @@
       "_origin": "ast",
       "id": "test_observability_test_canaries",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "canaries"
     },
     {
@@ -9516,7 +9571,7 @@
       "_origin": "ast",
       "id": "test_observability_test_capture",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "capture()"
     },
     {
@@ -9527,7 +9582,7 @@
       "_origin": "ast",
       "id": "test_observability_test_escaperegexp",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "escaperegexp()"
     },
     {
@@ -9538,7 +9593,7 @@
       "_origin": "ast",
       "id": "test_observability_test_assertnocanaries",
       "community": 0,
-      "community_name": "observability.test.js",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "assertnocanaries()"
     },
     {
@@ -9680,8 +9735,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_recordingqueryable",
-      "community": 170,
-      "community_name": "RecordingQueryable",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": "recordingqueryable"
     },
     {
@@ -9691,8 +9746,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_recordingqueryable_query",
-      "community": 170,
-      "community_name": "RecordingQueryable",
+      "community": 7,
+      "community_name": "database/src/index.js",
       "norm_label": ".query()"
     },
     {
@@ -9725,7 +9780,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "postgres-idempotency.test.js"
     },
     {
@@ -9736,7 +9791,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_envelope_key",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "envelope_key"
     },
     {
@@ -9747,7 +9802,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_identity",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "identity"
     },
     {
@@ -9758,7 +9813,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "fakedatabase"
     },
     {
@@ -9769,7 +9824,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_constructor",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".constructor()"
     },
     {
@@ -9780,7 +9835,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_transaction",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".transaction()"
     },
     {
@@ -9791,7 +9846,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_query",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": ".query()"
     },
     {
@@ -9802,7 +9857,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_recordkey",
       "community": 141,
-      "community_name": "integration-reliability/src/index.js",
+      "community_name": "postgres-idempotency.js",
       "norm_label": "recordkey()"
     },
     {
@@ -16822,7 +16877,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/src/server.js",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_server_createserverapi",
@@ -16845,7 +16900,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-api.test.js",
-      "source_location": "L60",
+      "source_location": "L61",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_api_test_harness",
@@ -16891,7 +16946,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L237",
+      "source_location": "L239",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes",
@@ -16902,7 +16957,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L184",
+      "source_location": "L186",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes",
@@ -16913,7 +16968,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L171",
+      "source_location": "L173",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes",
@@ -16935,7 +16990,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L214",
+      "source_location": "L216",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes",
@@ -16946,7 +17001,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L276",
+      "source_location": "L278",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes",
@@ -16957,7 +17012,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L257",
+      "source_location": "L259",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes",
@@ -16968,7 +17023,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L263",
+      "source_location": "L265",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes",
@@ -16979,7 +17034,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L202",
+      "source_location": "L204",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes",
@@ -16990,7 +17045,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L268",
+      "source_location": "L270",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes",
@@ -17120,7 +17175,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L165",
+      "source_location": "L167",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes_respond",
@@ -17132,7 +17187,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L162",
+      "source_location": "L164",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes_respond",
@@ -17144,7 +17199,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L215",
+      "source_location": "L217",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes_requireauthenticatedcommand",
@@ -17156,7 +17211,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L216",
+      "source_location": "L218",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes_requireauthenticatedcommand",
@@ -17168,7 +17223,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L259",
+      "source_location": "L261",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes_requirecookie",
@@ -17180,7 +17235,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-routes.js",
-      "source_location": "L264",
+      "source_location": "L266",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_routes_requireheader",
@@ -17191,7 +17246,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L395",
+      "source_location": "L396",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_runtime",
@@ -17213,7 +17268,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L388",
+      "source_location": "L389",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_runtime",
@@ -17235,7 +17290,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L357",
+      "source_location": "L358",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_runtime",
@@ -17246,7 +17301,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L376",
+      "source_location": "L377",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_runtime",
@@ -17257,7 +17312,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L368",
+      "source_location": "L369",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_runtime",
@@ -17520,7 +17575,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/identity-runtime.js",
-      "source_location": "L358",
+      "source_location": "L359",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_identity_runtime_readkey",
@@ -17531,7 +17586,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/server.js",
-      "source_location": "L42",
+      "source_location": "L46",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_server",
@@ -17542,7 +17597,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/server.js",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_server",
@@ -17698,7 +17753,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/api/src/server.js",
-      "source_location": "L27",
+      "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_server_createserverapi",
@@ -17711,7 +17766,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/src/server.js",
-      "source_location": "L25",
+      "source_location": "L26",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_server_createserverapi",
@@ -17759,7 +17814,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/src/server.js",
-      "source_location": "L52",
+      "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_api_src_server_createmetawebhookruntime",
@@ -23052,7 +23107,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "modules/identity-access/src/authentication-throttle.js",
-      "source_location": "L155",
+      "source_location": "L174",
       "weight": 1.0,
       "_origin": "ast",
       "source": "modules_identity_access_src_authentication_throttle",
@@ -23063,7 +23118,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "modules/identity-access/src/authentication-throttle.js",
-      "source_location": "L162",
+      "source_location": "L181",
       "weight": 1.0,
       "_origin": "ast",
       "source": "modules_identity_access_src_authentication_throttle",
@@ -23122,6 +23177,17 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "modules/identity-access/src/authorization.js",
+      "source_location": "L37",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "modules_identity_access_src_authorization",
+      "target": "modules_identity_access_src_authorization_accesscontrolerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "modules/identity-access/src/authorization.js",
       "source_location": "L18",
       "weight": 1.0,
       "_origin": "ast",
@@ -23133,7 +23199,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "modules/identity-access/src/authorization.js",
-      "source_location": "L47",
+      "source_location": "L67",
       "weight": 1.0,
       "_origin": "ast",
       "source": "modules_identity_access_src_authorization",
@@ -23155,11 +23221,33 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "modules/identity-access/src/authorization.js",
-      "source_location": "L90",
+      "source_location": "L110",
       "weight": 1.0,
       "_origin": "ast",
       "source": "modules_identity_access_src_authorization",
       "target": "modules_identity_access_src_authorization_createaccesscontrolservice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "modules/identity-access/src/authorization.js",
+      "source_location": "L48",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "modules_identity_access_src_authorization",
+      "target": "modules_identity_access_src_authorization_forbidden",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "modules/identity-access/src/authorization.js",
+      "source_location": "L53",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "modules_identity_access_src_authorization",
+      "target": "modules_identity_access_src_authorization_invalidrequest",
       "confidence_score": 1.0
     },
     {
@@ -23199,7 +23287,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "modules/identity-access/src/authorization.js",
-      "source_location": "L159",
+      "source_location": "L179",
       "weight": 1.0,
       "_origin": "ast",
       "source": "modules_identity_access_src_authorization",
@@ -23255,6 +23343,53 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "modules/identity-access/src/authorization.js",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "modules_identity_access_src_authorization_accesscontrolerror",
+      "target": "modules_identity_access_src_authorization_accesscontrolerror_constructor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "re_exports",
+      "context": "re-export",
+      "confidence": "EXTRACTED",
+      "source_file": "modules/identity-access/src/index.js",
+      "source_location": "L716",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "modules_identity_access_src_index",
+      "target": "modules_identity_access_src_authorization_accesscontrolerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/identity-authorization.test.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_identity_authorization_test",
+      "target": "modules_identity_access_src_authorization_accesscontrolerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "modules/identity-access/src/authorization.js",
+      "source_location": "L68",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "modules_identity_access_src_authorization_authorize",
+      "target": "modules_identity_access_src_authorization_forbidden",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "re_exports",
       "context": "re-export",
       "confidence": "EXTRACTED",
@@ -23307,7 +23442,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-authorization.test.js",
-      "source_location": "L95",
+      "source_location": "L113",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_authorization_test_harness",
@@ -25734,7 +25869,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-api.test.js",
-      "source_location": "L64",
+      "source_location": "L63",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_api_test_harness",
@@ -26603,7 +26738,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package",
@@ -26935,7 +27070,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -26957,7 +27092,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -26983,6 +27118,17 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
+      "target": "package_scripts_test_identity_live",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
       "target": "package_scripts_test_media_retention",
       "confidence_score": 1.0
     },
@@ -27001,7 +27147,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L39",
+      "source_location": "L40",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27012,7 +27158,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L40",
+      "source_location": "L41",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27045,7 +27191,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L41",
+      "source_location": "L42",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27056,7 +27202,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27067,7 +27213,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L53",
+      "source_location": "L54",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27078,7 +27224,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27089,7 +27235,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L52",
+      "source_location": "L53",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27100,7 +27246,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L48",
+      "source_location": "L49",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27111,7 +27257,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L49",
+      "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27122,7 +27268,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L50",
+      "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27133,7 +27279,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L46",
+      "source_location": "L47",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27144,7 +27290,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L51",
+      "source_location": "L52",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27155,7 +27301,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -27166,7 +27312,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L56",
+      "source_location": "L57",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
@@ -27177,7 +27323,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L60",
+      "source_location": "L61",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
@@ -27188,7 +27334,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L57",
+      "source_location": "L58",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
@@ -27199,7 +27345,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
@@ -27210,7 +27356,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L58",
+      "source_location": "L59",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
@@ -27221,7 +27367,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L59",
+      "source_location": "L60",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
@@ -27232,7 +27378,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
@@ -27243,7 +27389,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L56",
+      "source_location": "L57",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -27255,7 +27401,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L57",
+      "source_location": "L58",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -27267,7 +27413,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L58",
+      "source_location": "L59",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -27279,7 +27425,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L59",
+      "source_location": "L60",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -27291,7 +27437,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L60",
+      "source_location": "L61",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -27303,7 +27449,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -27315,7 +27461,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -32445,7 +32591,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-api-live.test.js",
-      "source_location": "L239",
+      "source_location": "L266",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_api_live_test",
@@ -32456,7 +32602,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-api-live.test.js",
-      "source_location": "L225",
+      "source_location": "L252",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_api_live_test",
@@ -32467,7 +32613,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-api-live.test.js",
-      "source_location": "L265",
+      "source_location": "L292",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_api_live_test",
@@ -32478,7 +32624,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-api-live.test.js",
-      "source_location": "L249",
+      "source_location": "L276",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_api_live_test",
@@ -32490,7 +32636,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-api-live.test.js",
-      "source_location": "L250",
+      "source_location": "L277",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_api_live_test_totp",
@@ -32501,7 +32647,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-api.test.js",
-      "source_location": "L9",
+      "source_location": "L10",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_api_test",
@@ -32512,7 +32658,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-authorization.test.js",
-      "source_location": "L69",
+      "source_location": "L87",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_authorization_test",
@@ -32523,7 +32669,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-authorization.test.js",
-      "source_location": "L206",
+      "source_location": "L254",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_authorization_test",
@@ -32535,7 +32681,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "test/identity-authorization.test.js",
-      "source_location": "L105",
+      "source_location": "L123",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_identity_authorization_test_harness",
@@ -39036,5 +39182,5 @@
       "confidence_score": 1.0
     }
   ],
-  "built_at_commit": "c14b667bd699af8a860c7a0a4468ac1dfdc12342"
+  "built_at_commit": "e333359afbb271cb234a7ddcc563aeb3204ef029"
 }

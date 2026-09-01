@@ -77,7 +77,7 @@ test('login sets separate secure session and CSRF cookies without returning toke
       password: 'correct horse battery staple',
       totpCode: '123456',
     },
-    url: '/api/v1/auth/login',
+    url: '/api/v1/sessions',
   });
 
   assert.equal(response.statusCode, 200);
@@ -104,7 +104,7 @@ test('authenticated commands require matching Origin, CSRF cookie and header', a
       reason: 'Delegacao aprovada',
       targetId: 'seller-1',
     },
-    url: '/api/v1/auth/capabilities/grant',
+    url: '/api/v1/capabilities/grant',
   };
 
   for (const headers of [
@@ -155,7 +155,7 @@ test('invitation commands require an idempotency key and reject ambiguous cookie
       functionName: 'Vendedor',
       reason: 'Novo vendedor',
     },
-    url: '/api/v1/auth/invitations',
+    url: '/api/v1/invitations',
   });
   assert.equal(missingKey.statusCode, 400);
 
@@ -172,7 +172,7 @@ test('invitation commands require an idempotency key and reject ambiguous cookie
       functionName: 'Vendedor',
       reason: 'Novo vendedor',
     },
-    url: '/api/v1/auth/invitations',
+    url: '/api/v1/invitations',
   });
   assert.equal(duplicate.statusCode, 400);
   assert.equal(calls.length, 0);
@@ -190,7 +190,7 @@ test('MFA enrollment is authenticated, CSRF-protected and idempotent', async () 
     },
     method: 'POST',
     payload: { reason: 'Habilitar acesso privilegiado' },
-    url: '/api/v1/auth/mfa/enrollment',
+    url: '/api/v1/mfa/enrollments',
   });
 
   assert.equal(response.statusCode, 201);
@@ -209,7 +209,7 @@ test('current session uses only the HttpOnly session cookie and logout expires b
   const { api } = harness();
   const current = await api.inject({
     headers: { cookie: 'crm_session=session' },
-    url: '/api/v1/auth/session',
+    url: '/api/v1/sessions/current',
   });
   assert.equal(current.statusCode, 200);
 
@@ -219,8 +219,8 @@ test('current session uses only the HttpOnly session cookie and logout expires b
       origin: ORIGIN,
       'x-csrf-token': 'csrf',
     },
-    method: 'POST',
-    url: '/api/v1/auth/logout',
+    method: 'DELETE',
+    url: '/api/v1/sessions/current',
   });
   assert.equal(logout.statusCode, 204);
   assert.match(String(logout.headers['set-cookie']), /Max-Age=0/iu);

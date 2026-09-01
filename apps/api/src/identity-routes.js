@@ -14,7 +14,7 @@ class IdentityRequestError extends Error {
  * @param {(request: object) => {correlationId: string}} contextFor
  */
 export function registerIdentityRoutes(api, identity, contextFor) {
-  api.post('/api/v1/auth/bootstrap', async (request, reply) => {
+  api.post('/api/v1/bootstrap/identity', async (request, reply) => {
     return respond(reply, async () => {
       requireOrigin(request, identity.allowedOrigins);
       const body = requireBody(request.body);
@@ -30,7 +30,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
-  api.post('/api/v1/auth/invitations', async (request, reply) => {
+  api.post('/api/v1/invitations', async (request, reply) => {
     return respond(reply, async () => {
       const command = requireAuthenticatedCommand(
         request,
@@ -50,7 +50,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
-  api.post('/api/v1/auth/invitations/accept', async (request, reply) => {
+  api.post('/api/v1/invitations/accept', async (request, reply) => {
     return respond(reply, async () => {
       requireOrigin(request, identity.allowedOrigins);
       const body = requireBody(request.body);
@@ -63,7 +63,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
-  api.post('/api/v1/auth/login', async (request, reply) => {
+  api.post('/api/v1/sessions', async (request, reply) => {
     return respond(reply, async () => {
       requireOrigin(request, identity.allowedOrigins);
       const body = requireBody(request.body);
@@ -86,7 +86,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
-  api.post('/api/v1/auth/logout', async (request, reply) => {
+  api.delete('/api/v1/sessions/current', async (request, reply) => {
     return respond(reply, async () => {
       const command = requireAuthenticatedCommand(
         request,
@@ -101,7 +101,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
-  api.get('/api/v1/auth/session', async (request, reply) => {
+  api.get('/api/v1/sessions/current', async (request, reply) => {
     return respond(reply, async () => {
       const cookies = parseCookies(request.headers.cookie);
       const result = await identity.current({
@@ -111,7 +111,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
-  api.post('/api/v1/auth/mfa/enrollment', async (request, reply) => {
+  api.post('/api/v1/mfa/enrollments', async (request, reply) => {
     return respond(reply, async () => {
       const command = requireAuthenticatedCommand(
         request,
@@ -129,7 +129,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
   });
 
   for (const change of ['grant', 'revoke']) {
-    api.post(`/api/v1/auth/capabilities/${change}`, async (request, reply) => {
+    api.post(`/api/v1/capabilities/${change}`, async (request, reply) => {
       return respond(reply, async () => {
         const command = requireAuthenticatedCommand(
           request,

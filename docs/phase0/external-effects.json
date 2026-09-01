@@ -308,7 +308,7 @@
     {
       "id": "pdf.generate-ficha",
       "provider": "Local Chromium worker",
-      "effect": "Render canonical Ficha PDF from immutable snapshot and store SHA-256",
+      "effect": "Render modular canonical Ficha PDF from immutable snapshot, retain the tabular legacy fallback, and store both SHA-256 hashes",
       "idempotency": {
         "support": "deterministic-local-contract",
         "key": "snapshot version + template version"
@@ -337,9 +337,19 @@
           "status": "fail-closed-human-review-gate-versioned"
         },
         {
+          "url": "output/pdf/ficha-canonica-sintetica-v2.pdf",
+          "checkedAt": "2026-08-31",
+          "status": "modular-visual-review-artifact-Rose-Operation-approval-pending"
+        },
+        {
           "url": "output/pdf/ficha-canonica-sintetica-v1.pdf",
           "checkedAt": "2026-08-31",
-          "status": "visual-review-artifact-Rose-Operation-approval-pending"
+          "status": "legacy-table-fallback-preserved"
+        },
+        {
+          "url": "output/pdf/revisao-ficha.html",
+          "checkedAt": "2026-08-31",
+          "status": "review-only-canonical-and-legacy-download-selector"
         }
       ],
       "owner": "Rose/Operacao"

@@ -4,7 +4,10 @@ import test from 'node:test';
 
 import {
   PRODUCTION_FIELDS,
+  buildLegacyFichaHtml,
   buildFichaHtml,
+  buildReviewPageHtml,
+  containsPersonalContact,
   validateFichaApprovalEvidence,
   validateFichaApprovalGate,
   validateFichaSnapshot,
@@ -16,23 +19,42 @@ async function fixture() {
   const snapshotBytes = await readFile(
     new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl),
   );
-  const artifactBytes = await readFile(
-    new URL('output/pdf/ficha-canonica-sintetica-v1.pdf', rootUrl),
-  );
   const gate = JSON.parse(
     await readFile(
       new URL('docs/phase0/ficha-pdf-approval.json', rootUrl),
       'utf8',
     ),
   );
+  const artifactBytes = await readFile(new URL(gate.artifact.path, rootUrl));
+  const legacyArtifactBytes = await readFile(
+    new URL(gate.legacyArtifact.path, rootUrl),
+  );
+  const reviewPageHtml = await readFile(
+    new URL(gate.reviewPage.path, rootUrl),
+    'utf8',
+  );
 
   return {
     artifactBytes,
     gate,
+    legacyArtifactBytes,
+    reviewPageHtml,
     snapshot: JSON.parse(snapshotBytes.toString('utf8')),
     snapshotBytes,
   };
 }
+
+test('detects contact data without matching numeric fragments inside identifiers', () => {
+  assert.equal(
+    containsPersonalContact(
+      'c25e947b9573afceb726f5ff089a7c0f2fcd2da2ac10432342511234567890',
+    ),
+    false,
+  );
+  assert.equal(containsPersonalContact('id-12345678901-suffix'), false);
+  assert.equal(containsPersonalContact('(11) 99999-1234'), true);
+  assert.equal(containsPersonalContact('Contato +55 11 99999-1234'), true);
+});
 
 test('covers every commercial Ficha field and derives the grade total', async () => {
   const { snapshot } = await fixture();
@@ -71,26 +93,70 @@ test('keeps all production fields present and blank', async () => {
   }
 });
 
-test('renders a review document without hiding blank production fields', async () => {
+test('renders the modular candidate without hiding blank production fields', async () => {
   const { snapshot } = await fixture();
 
   const html = buildFichaHtml(snapshot);
 
   assert.match(html, /FICHA DE PEDIDO/u);
   assert.match(html, /01-CRM/u);
-  assert.match(html, /TOTAL DE PECAS/u);
+  assert.match(html, /Resumo do pedido/u);
+  assert.match(html, /Item 1/u);
+  assert.match(html, /Grade/u);
+  assert.match(html, /Total de pecas/u);
   assert.match(html, /32/u);
+  assert.match(html, /Arremate/u);
+  assert.match(html, /Conferencia e embalagem/u);
+  assert.match(html, /Cores e arte/u);
   assert.match(html, /Conferido para arrematar por:/u);
   assert.match(html, /Qtd total de cores do pedido:/u);
   assert.match(html, /campo-producao-vazio/u);
   assert.doesNotMatch(html, /secret:\/\//u);
 });
 
+test('preserves the dense table as the legacy download', async () => {
+  const { snapshot } = await fixture();
+
+  const html = buildLegacyFichaHtml(snapshot);
+
+  assert.match(html, /Itens, especificacoes e grade/u);
+  assert.match(html, /Manga direita/u);
+  assert.match(html, /TOTAL DE PECAS/u);
+  assert.match(html, /32/u);
+});
+
+test('offers the new Ficha first and the legacy Ficha as a fallback', async () => {
+  const { gate, reviewPageHtml } = await fixture();
+
+  assert.equal(gate.artifact.downloadLabel, 'Baixar nova ficha');
+  assert.equal(gate.legacyArtifact.downloadLabel, 'Download ficha legada');
+  assert.match(reviewPageHtml, />Baixar nova ficha</u);
+  assert.match(reviewPageHtml, />Download ficha legada</u);
+  assert.match(reviewPageHtml, /class="button button-primary"/u);
+  assert.match(reviewPageHtml, /class="button button-secondary"/u);
+  assert.match(reviewPageHtml, /href="\.\/ficha-canonica-sintetica-v2\.pdf"/u);
+  assert.match(reviewPageHtml, /href="\.\/ficha-canonica-sintetica-v1\.pdf"/u);
+  assert.equal(reviewPageHtml, buildReviewPageHtml(gate));
+});
+
 test('validates hashes and preserves a fail-closed human approval', async () => {
-  const { artifactBytes, gate, snapshotBytes } = await fixture();
+  const {
+    artifactBytes,
+    gate,
+    legacyArtifactBytes,
+    reviewPageHtml,
+    snapshotBytes,
+  } = await fixture();
+
+  const validationInput = {
+    artifactBytes,
+    legacyArtifactBytes,
+    reviewPageHtml,
+    snapshotBytes,
+  };
 
   assert.doesNotThrow(() =>
-    validateFichaApprovalGate({ artifactBytes, gate, snapshotBytes }),
+    validateFichaApprovalGate({ ...validationInput, gate }),
   );
   assert.equal(gate.approval.status, 'pending-human-approval');
   assert.equal(gate.approval.approved, false);
@@ -102,9 +168,8 @@ test('validates hashes and preserves a fail-closed human approval', async () => 
   assert.throws(
     () =>
       validateFichaApprovalGate({
-        artifactBytes,
+        ...validationInput,
         gate: partial,
-        snapshotBytes,
       }),
     /wholly pending or wholly approved/iu,
   );
@@ -117,9 +182,8 @@ test('validates hashes and preserves a fail-closed human approval', async () => 
   assert.throws(
     () =>
       validateFichaApprovalGate({
-        artifactBytes,
+        ...validationInput,
         gate: wrongCriteria,
-        snapshotBytes,
       }),
     /every canonical review criterion/iu,
   );
@@ -156,18 +220,16 @@ test('validates hashes and preserves a fail-closed human approval', async () => 
   assert.doesNotThrow(() => validateFichaApprovalEvidence(evidence, approved));
   assert.doesNotThrow(() =>
     validateFichaApprovalGate({
-      artifactBytes,
+      ...validationInput,
       evidence,
       gate: approved,
-      snapshotBytes,
     }),
   );
   assert.throws(
     () =>
       validateFichaApprovalGate({
-        artifactBytes,
+        ...validationInput,
         gate: approved,
-        snapshotBytes,
       }),
     /Approved evidence must be synthetic/iu,
   );
@@ -183,9 +245,9 @@ test('validates hashes and preserves a fail-closed human approval', async () => 
   assert.throws(
     () =>
       validateFichaApprovalGate({
+        ...validationInput,
         artifactBytes: wrongArtifact,
         gate,
-        snapshotBytes,
       }),
     /artifact SHA-256/iu,
   );

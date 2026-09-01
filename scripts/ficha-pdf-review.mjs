@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { format } from 'prettier';
 
 const rootUrl = new URL('../', import.meta.url);
 const snapshotUrl = new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl);
@@ -73,10 +74,12 @@ function nonEmptyString(value) {
 }
 
 /** @param {string} value */
-function containsPersonalContact(value) {
+export function containsPersonalContact(value) {
   return (
     /[\w.+-]+@[\w.-]+\.[a-z]{2,}/iu.test(value) ||
-    /(?:\+55\s*)?(?:\(\d{2}\)|\d{2})\s*9?\d{4}[- ]?\d{4}\b/u.test(value)
+    /(?<![\p{L}\p{N}_-])(?:\+55\s*)?(?:\(\d{2}\)|\d{2})\s*9?\d{4}[- ]?\d{4}(?![\p{L}\p{N}_-])/u.test(
+      value,
+    )
   );
 }
 
@@ -106,7 +109,7 @@ export function validateFichaSnapshot(snapshot) {
   );
   invariant(
     snapshot?.snapshotVersion === 'synthetic-order-v1' &&
-      snapshot?.templateVersion === 'ficha-canonical-v1',
+      snapshot?.templateVersion === 'ficha-canonical-v2',
     'Snapshot and template versions must be explicit',
   );
   invariant(
@@ -191,12 +194,14 @@ export function validateFichaSnapshot(snapshot) {
 }
 
 /**
- * @param {{artifactBytes: Buffer, evidence?: any, gate: any, snapshotBytes: Buffer}} input
+ * @param {{artifactBytes: Buffer, evidence?: any, gate: any, legacyArtifactBytes: Buffer, reviewPageHtml: string, snapshotBytes: Buffer}} input
  */
 export function validateFichaApprovalGate({
   artifactBytes,
   evidence = null,
   gate,
+  legacyArtifactBytes,
+  reviewPageHtml,
   snapshotBytes,
 }) {
   invariant(
@@ -216,7 +221,7 @@ export function validateFichaApprovalGate({
   );
   invariant(
     gate.snapshotVersion === 'synthetic-order-v1' &&
-      gate.templateVersion === 'ficha-canonical-v1',
+      gate.templateVersion === 'ficha-canonical-v2',
     'Approval gate versions must match the review package',
   );
   invariant(
@@ -229,7 +234,8 @@ export function validateFichaApprovalGate({
     'Review artifact must be a non-empty PDF',
   );
   invariant(
-    gate.artifact?.path === 'output/pdf/ficha-canonica-sintetica-v1.pdf',
+    gate.artifact?.path === 'output/pdf/ficha-canonica-sintetica-v2.pdf' &&
+      gate.artifact.downloadLabel === 'Baixar nova ficha',
     'Review artifact path must be stable',
   );
   invariant(
@@ -241,6 +247,40 @@ export function validateFichaApprovalGate({
       gate.artifact.pageCount >= 2 &&
       gate.artifact.pageCount === countPdfPages(artifactBytes),
     'Review artifact page count must match a PDF with at least two pages',
+  );
+  invariant(
+    legacyArtifactBytes.subarray(0, 5).toString('ascii') === '%PDF-' &&
+      legacyArtifactBytes.length > 10_000,
+    'Legacy artifact must be a non-empty PDF',
+  );
+  invariant(
+    gate.legacyArtifact?.templateVersion === 'ficha-legacy-v1' &&
+      gate.legacyArtifact.path ===
+        'output/pdf/ficha-canonica-sintetica-v1.pdf' &&
+      gate.legacyArtifact.downloadLabel === 'Download ficha legada',
+    'Legacy artifact metadata must identify the stable fallback',
+  );
+  invariant(
+    gate.legacyArtifact.sha256 === sha256(legacyArtifactBytes),
+    'Legacy artifact SHA-256 does not match the versioned PDF',
+  );
+  invariant(
+    Number.isInteger(gate.legacyArtifact.pageCount) &&
+      gate.legacyArtifact.pageCount >= 2 &&
+      gate.legacyArtifact.pageCount === countPdfPages(legacyArtifactBytes),
+    'Legacy artifact page count must match a PDF with at least two pages',
+  );
+  invariant(
+    gate.artifact.path !== gate.legacyArtifact.path &&
+      gate.artifact.sha256 !== gate.legacyArtifact.sha256,
+    'Canonical and legacy artifacts must be distinct',
+  );
+  invariant(
+    gate.reviewPage?.path === 'output/pdf/revisao-ficha.html' &&
+      gate.reviewPage.primaryLabel === 'Baixar nova ficha' &&
+      gate.reviewPage.legacyLabel === 'Download ficha legada' &&
+      reviewPageHtml === buildReviewPageHtml(gate),
+    'Review page must expose the canonical and legacy downloads',
   );
 
   const approval = gate.approval;
@@ -277,7 +317,8 @@ export function validateFichaApprovalGate({
   if (approved) validateFichaApprovalEvidence(evidence, gate);
   invariant(
     gate.versioning?.overwriteApprovedVersion === false &&
-      gate.versioning?.correctionsRequireNewTemplateVersion === true,
+      gate.versioning?.correctionsRequireNewTemplateVersion === true &&
+      gate.versioning?.supersedesTemplateVersion === 'ficha-canonical-v1',
     'Approved Ficha versions must never be overwritten',
   );
 
@@ -328,6 +369,202 @@ export function validateFichaApprovalEvidence(evidence, gate) {
 
 /** @param {any} snapshot */
 export function buildFichaHtml(snapshot) {
+  validateFichaSnapshot(snapshot);
+  const itemCards = snapshot.pedido.itens
+    .map((/** @type {any} */ item, /** @type {number} */ itemIndex) => {
+      const itemTotal = item.grade.reduce(
+        (/** @type {number} */ total, /** @type {any} */ grade) =>
+          total + grade.quantidade,
+        0,
+      );
+      const specs = [
+        ['Malha', item.malhas.join(' / ')],
+        ['Frente', item.cor_frente],
+        ['Costas', item.cor_costas],
+        ['Manga direita', item.cor_manga_direita],
+        ['Manga esquerda', item.cor_manga_esquerda],
+        ['Vies gola / mangas', `${item.vies_gola} / ${item.vies_mangas}`],
+      ];
+      return `<article class="item-card">
+        <div class="item-heading">
+          <div><span class="eyebrow">Item ${display(itemIndex + 1)}</span><h3>${display(item.tipo)} <span>${display(item.modelo)}</span></h3></div>
+          <div class="item-total"><strong>${display(itemTotal)}</strong><span>pecas</span></div>
+        </div>
+        <div class="item-body">
+          <dl class="spec-grid">${specs
+            .map(
+              ([label, value]) =>
+                `<div><dt>${display(label)}</dt><dd>${display(value)}</dd></div>`,
+            )
+            .join('')}</dl>
+          <div class="grade-block"><span class="grade-title">Grade</span><div class="grade-list">${item.grade
+            .map(
+              (/** @type {any} */ grade) =>
+                `<div class="grade-cell"><span>${display(grade.tamanho)}</span><strong>${display(grade.quantidade)}</strong></div>`,
+            )
+            .join('')}</div></div>
+        </div>
+      </article>`;
+    })
+    .join('');
+  const productionSections = [
+    {
+      title: 'Arremate',
+      description: 'Registro de conferencia e execucao.',
+      fields: [
+        ['Conferido para arrematar por:', 'conferido_arremate_por'],
+        ['Data:', 'conferido_arremate_em'],
+        ['Arrematado:', 'arrematado_por'],
+        ['Data:', 'arrematado_em'],
+        ['OBS:', 'observacao_arremate'],
+      ],
+    },
+    {
+      title: 'Conferencia e embalagem',
+      description: 'Fechamento fisico do pedido.',
+      fields: [
+        ['Conferido / Embalado por:', 'conferido_embalado_por'],
+        ['Data:', 'conferido_embalado_em'],
+      ],
+    },
+    {
+      title: 'Cores e arte',
+      description: 'Contagem final por parte da peca.',
+      fields: [
+        ['Cores Frente:', 'cores_frente'],
+        ['Costas:', 'cores_costas'],
+        ['Manga Direita:', 'cores_manga_direita'],
+        ['Manga Esq:', 'cores_manga_esquerda'],
+        ['Total:', 'total_cores_partes'],
+        ['OBS:', 'observacao_cores'],
+        ['Qtd total de cores do pedido:', 'quantidade_total_cores'],
+      ],
+    },
+  ];
+
+  return `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Ficha de Pedido ${display(snapshot.pedido.numero)}</title>
+    <style>
+      @page { size: A4 landscape; margin: 9mm 9mm 12mm; }
+      * { box-sizing: border-box; }
+      :root { --canvas: #f7f6fb; --surface: #ffffff; --raised: #f0eef8; --active: #e8e3fa; --text: #1b1530; --muted: #625b75; --border: #d8d4e4; --subtle: #e8e5ef; --accent: #ff5b01; --deep: #0c042d; --link: #5b3fd1; }
+      body { background: var(--canvas); color: var(--text); font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 9.5px; margin: 0; }
+      h1, h2, h3, p, dl, dd { margin: 0; }
+      .sheet-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 7px; }
+      .brand { color: var(--link); font-size: 9px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+      h1 { color: var(--deep); font-size: 21px; letter-spacing: -.03em; line-height: 1; margin-top: 2px; }
+      .header-id { align-items: center; display: flex; gap: 8px; }
+      .synthetic { background: #fff0e7; border: 1px solid #ffb88f; border-radius: 999px; color: #8b3100; font-size: 7px; font-weight: 800; padding: 4px 8px; text-transform: uppercase; }
+      .order-id { background: var(--deep); border-radius: 6px; color: white; min-width: 90px; padding: 6px 9px; text-align: right; }
+      .order-id span { display: block; font-size: 6px; letter-spacing: .08em; opacity: .75; text-transform: uppercase; }
+      .order-id strong { font-size: 13px; }
+      .section-label { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; margin-bottom: 5px; text-transform: uppercase; }
+      .summary { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; display: grid; grid-template-columns: 1.35fr 1fr .65fr 1fr; overflow: hidden; }
+      .summary > div { border-right: 1px solid var(--subtle); min-height: 48px; padding: 8px 9px; }
+      .summary > div:last-child { border-right: 0; }
+      .label { color: var(--muted); display: block; font-size: 8px; font-weight: 700; letter-spacing: .07em; margin-bottom: 3px; text-transform: uppercase; }
+      .summary strong { color: var(--deep); font-size: 12px; }
+      .summary .quantity { color: var(--accent); font-size: 20px; line-height: .9; }
+      .supporting { display: grid; gap: 6px; grid-template-columns: 1.5fr 1fr .8fr .5fr; margin: 7px 0 9px; }
+      .supporting > div { background: var(--raised); border-radius: 5px; min-height: 36px; padding: 7px 8px; }
+      .supporting strong { font-size: 9.5px; }
+      .items { display: grid; gap: 8px; }
+      .item-card { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--link); border-radius: 7px; break-inside: avoid; overflow: hidden; }
+      .item-heading { align-items: center; background: linear-gradient(90deg, var(--raised), var(--surface)); display: flex; justify-content: space-between; padding: 8px 9px; }
+      .eyebrow { color: var(--link); font-size: 7.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+      h3 { font-size: 13px; line-height: 1.1; }
+      h3 span { color: var(--muted); font-size: 9px; font-weight: 600; margin-left: 5px; }
+      .item-total { align-items: baseline; display: flex; gap: 3px; }
+      .item-total strong { color: var(--accent); font-size: 19px; }
+      .item-total span { color: var(--muted); font-size: 8px; }
+      .item-body { display: grid; gap: 9px; grid-template-columns: 1fr 240px; padding: 9px; }
+      .spec-grid { display: grid; gap: 7px; grid-template-columns: repeat(3, 1fr); }
+      .spec-grid div { border-bottom: 1px solid var(--subtle); min-height: 38px; padding-bottom: 5px; }
+      dt { color: var(--muted); font-size: 7.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+      dd { font-size: 9px; font-weight: 700; margin-top: 3px; }
+      .grade-block { border-left: 1px solid var(--subtle); padding-left: 9px; }
+      .grade-title { color: var(--muted); display: block; font-size: 8px; font-weight: 800; letter-spacing: .08em; margin-bottom: 6px; text-transform: uppercase; }
+      .grade-list { display: grid; gap: 4px; grid-template-columns: repeat(4, 1fr); }
+      .grade-cell { background: var(--active); border-radius: 5px; padding: 8px 2px; text-align: center; }
+      .grade-cell span { color: var(--muted); display: block; font-size: 7.5px; font-weight: 700; }
+      .grade-cell strong { color: var(--deep); font-size: 15px; }
+      .page-footer-content { align-items: stretch; display: grid; gap: 8px; grid-template-columns: 1fr 160px; margin-top: 8px; }
+      .observations { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; min-height: 76px; padding: 8px 9px; }
+      .observations ol { margin: 3px 0 0; padding-left: 16px; }
+      .observations li { line-height: 1.35; }
+      .grand-total { align-items: center; background: var(--deep); border-radius: 6px; color: white; display: flex; justify-content: space-between; padding: 7px 10px; }
+      .grand-total span { font-size: 7px; font-weight: 700; text-transform: uppercase; }
+      .grand-total strong { color: #ffb185; font-size: 22px; }
+      .page-break { break-before: page; }
+      .production-intro { background: #fff0e7; border-left: 4px solid var(--accent); border-radius: 0 6px 6px 0; color: #5b280a; margin-bottom: 8px; padding: 7px 9px; }
+      .production-grid { display: grid; gap: 7px; grid-template-columns: 1fr .72fr 1.25fr; }
+      .production-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; min-height: 400px; padding: 8px; }
+      .panel-number { align-items: center; background: var(--deep); border-radius: 50%; color: white; display: inline-flex; font-size: 8px; font-weight: 800; height: 20px; justify-content: center; margin-right: 5px; width: 20px; }
+      .production-panel h2 { color: var(--deep); display: inline; font-size: 12px; }
+      .panel-description { color: var(--muted); font-size: 7px; margin: 3px 0 8px 27px; }
+      .production-field { border-top: 1px solid var(--subtle); min-height: 54px; padding: 7px 2px 4px; }
+      .production-field.observation { min-height: 77px; }
+      .production-field strong { font-size: 7.5px; }
+      .campo-producao-vazio { border-bottom: 1px solid var(--text); display: block; height: 28px; margin-top: 5px; }
+      .production-field.observation .campo-producao-vazio { height: 49px; }
+      .review-box { align-items: center; background: var(--deep); border-radius: 7px; color: white; display: flex; justify-content: space-between; margin-top: 8px; padding: 8px 10px; }
+      .review-box strong { color: #ffb185; }
+      .review-box span { font-size: 7px; max-width: 590px; }
+    </style>
+  </head>
+  <body>
+    <header class="sheet-header">
+      <div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div>
+      <div class="header-id"><span class="synthetic">Amostra sintetica - nao produzir</span><div class="order-id"><span>Pedido</span><strong>${display(snapshot.pedido.numero)}</strong></div></div>
+    </header>
+    <div class="section-label">Resumo do pedido</div>
+    <section class="summary">
+      <div><span class="label">Cliente</span><strong>${display(snapshot.pedido.cliente)}</strong></div>
+      <div><span class="label">Entrega confirmada</span><strong>${display(snapshot.pedido.data_entrega_confirmada)}</strong></div>
+      <div><span class="label">Total de pecas</span><strong class="quantity">${display(snapshot.pedido.quantidade_total)}</strong></div>
+      <div><span class="label">Aplicacao</span><strong>${display(snapshot.pedido.aplicacao)}</strong></div>
+    </section>
+    <section class="supporting">
+      <div><span class="label">Evento / Nome</span><strong>${display(snapshot.pedido.nome)}</strong></div>
+      <div><span class="label">Vendedor</span><strong>${display(snapshot.pedido.vendedor)}</strong></div>
+      <div><span class="label">Data do pedido</span><strong>${display(snapshot.pedido.data)}</strong></div>
+      <div><span class="label">FAB</span><strong>FAB ${display(snapshot.pedido.fab)}</strong></div>
+    </section>
+    <div class="section-label">Itens e especificacoes</div>
+    <section class="items">${itemCards}</section>
+    <section class="page-footer-content">
+      <div class="observations"><span class="label">Observacoes do pedido</span><ol>${snapshot.pedido.observacoes.map((/** @type {string} */ note) => `<li>${display(note)}</li>`).join('')}</ol></div>
+      <div class="grand-total"><span>Total<br>de pecas</span><strong>${display(snapshot.pedido.quantidade_total)}</strong></div>
+    </section>
+
+    <section class="page-break">
+      <header class="sheet-header">
+        <div><div class="brand">Silmer</div><h1>CONTROLE DE PRODUCAO</h1></div>
+        <div class="header-id"><span class="synthetic">Campos vazios para preenchimento</span><div class="order-id"><span>Pedido</span><strong>${display(snapshot.pedido.numero)}</strong></div></div>
+      </header>
+      <p class="production-intro">Preenchimento exclusivo da equipe de producao e arte. Os 14 campos abaixo devem chegar vazios a esta etapa.</p>
+      <div class="production-grid">${productionSections
+        .map(
+          (section, sectionIndex) =>
+            `<section class="production-panel"><div><span class="panel-number">${display(sectionIndex + 1)}</span><h2>${display(section.title)}</h2></div><p class="panel-description">${display(section.description)}</p>${section.fields
+              .map(
+                ([label, field]) =>
+                  `<div class="production-field${field.includes('observacao') ? ' observation' : ''}"><strong>${display(label)}</strong><span class="campo-producao-vazio">${display(snapshot.producao[field])}</span></div>`,
+              )
+              .join('')}</section>`,
+        )
+        .join('')}</div>
+      <div class="review-box"><strong>Gate humano pendente</strong><span>Rose e Operacao devem revisar legibilidade, conteudo, ordem, grade, totais e impressao. Este arquivo nao registra aprovacao.</span></div>
+    </section>
+  </body>
+</html>`;
+}
+
+/** @param {any} snapshot */
+export function buildLegacyFichaHtml(snapshot) {
   validateFichaSnapshot(snapshot);
   const rows = snapshot.pedido.itens.flatMap(
     (/** @type {any} */ item, /** @type {number} */ itemIndex) =>
@@ -448,6 +685,52 @@ export function buildFichaHtml(snapshot) {
 </html>`;
 }
 
+/** @param {any} gate */
+export function buildReviewPageHtml(gate) {
+  const canonicalFile = gate.artifact.path.split('/').at(-1);
+  const legacyFile = gate.legacyArtifact.path.split('/').at(-1);
+  return `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Revisao da Ficha - Silmer</title>
+    <style>
+      :root { color-scheme: light; --canvas: #f7f6fb; --surface: #fff; --raised: #f0eef8; --text: #1b1530; --muted: #625b75; --border: #d8d4e4; --accent: #ff5b01; --deep: #0c042d; --link: #5b3fd1; }
+      * { box-sizing: border-box; }
+      body { align-items: center; background: var(--canvas); color: var(--text); display: flex; font-family: Poppins, Arial, sans-serif; justify-content: center; margin: 0; min-height: 100vh; padding: 32px 20px; }
+      main { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 18px 50px rgba(12, 4, 45, .08); max-width: 720px; padding: 36px; width: 100%; }
+      .eyebrow { color: var(--link); font-size: .75rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+      h1 { color: var(--deep); font-size: clamp(1.8rem, 5vw, 2.75rem); letter-spacing: -.04em; line-height: 1.05; margin: 8px 0 14px; }
+      p { color: var(--muted); line-height: 1.6; margin: 0; }
+      .notice { background: #fff0e7; border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0; color: #5b280a; margin: 24px 0; padding: 14px 16px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+      .button { border: 2px solid transparent; border-radius: 10px; display: inline-flex; font-weight: 800; justify-content: center; min-height: 48px; padding: 13px 18px; text-decoration: none; }
+      .button:focus-visible { outline: 3px solid #ffb88f; outline-offset: 3px; }
+      .button-primary { background: var(--accent); color: #241006; }
+      .button-primary:hover { background: #e94f00; color: white; }
+      .button-secondary { background: var(--raised); border-color: var(--border); color: var(--deep); }
+      .button-secondary:hover { border-color: var(--link); color: var(--link); }
+      .legacy-note { font-size: .85rem; margin-top: 18px; }
+      @media (max-width: 540px) { main { padding: 26px 20px; } .button { width: 100%; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="eyebrow">Issue #7 · T00.4</span>
+      <h1>Escolha a Ficha para revisao</h1>
+      <p>A nova Ficha organiza o pedido por blocos operacionais e preserva todos os campos comerciais e de producao.</p>
+      <p class="notice"><strong>Gate humano pendente.</strong> Os arquivos usam somente dados sinteticos e nao representam aprovacao de Rose ou Operacao.</p>
+      <div class="actions">
+        <a class="button button-primary" href="./${display(canonicalFile)}" download>${display(gate.artifact.downloadLabel)}</a>
+        <a class="button button-secondary" href="./${display(legacyFile)}" download>${display(gate.legacyArtifact.downloadLabel)}</a>
+      </div>
+      <p class="legacy-note">A ficha legada preserva temporariamente a visualizacao tabular anterior como opcao de contingencia.</p>
+    </main>
+  </body>
+</html>`;
+}
+
 /** @param {Buffer} bytes */
 function countPdfPages(bytes) {
   return (bytes.toString('latin1').match(/\/Type\s*\/Page\b/gu) ?? []).length;
@@ -470,6 +753,8 @@ async function generate() {
   );
   const artifactUrl = new URL(gate.artifact.path, rootUrl);
   const artifactPath = fileURLToPath(artifactUrl);
+  const legacyArtifactUrl = new URL(gate.legacyArtifact.path, rootUrl);
+  const reviewPageUrl = new URL(gate.reviewPage.path, rootUrl);
   await mkdir(dirname(artifactPath), { recursive: true });
 
   const browser = await chromium.launch({ headless: true });
@@ -492,13 +777,27 @@ async function generate() {
   }
 
   const artifactBytes = await readFile(artifactUrl);
+  const legacyArtifactBytes = await readFile(legacyArtifactUrl);
   gate.snapshotSha256 = sha256(snapshotBytes);
   gate.artifact.sha256 = sha256(artifactBytes);
   gate.artifact.pageCount = countPdfPages(artifactBytes);
-  await writeFile(gateUrl, `${JSON.stringify(gate, null, 2)}\n`);
-  validateFichaApprovalGate({ artifactBytes, gate, snapshotBytes });
+  gate.legacyArtifact.sha256 = sha256(legacyArtifactBytes);
+  gate.legacyArtifact.pageCount = countPdfPages(legacyArtifactBytes);
+  const reviewPageHtml = buildReviewPageHtml(gate);
+  await writeFile(reviewPageUrl, reviewPageHtml);
+  await writeFile(
+    gateUrl,
+    await format(JSON.stringify(gate), { parser: 'json' }),
+  );
+  validateFichaApprovalGate({
+    artifactBytes,
+    gate,
+    legacyArtifactBytes,
+    reviewPageHtml,
+    snapshotBytes,
+  });
   console.log(
-    `Ficha review PDF generated: ${gate.artifact.path} (${gate.artifact.pageCount} pages).`,
+    `Ficha review PDFs ready: ${gate.artifact.path} (new) and ${gate.legacyArtifact.path} (legacy).`,
   );
 }
 
@@ -506,12 +805,26 @@ async function validate() {
   const { gate, snapshot, snapshotBytes } = await readPackage();
   validateFichaSnapshot(snapshot);
   const artifactBytes = await readFile(new URL(gate.artifact.path, rootUrl));
+  const legacyArtifactBytes = await readFile(
+    new URL(gate.legacyArtifact.path, rootUrl),
+  );
+  const reviewPageHtml = await readFile(
+    new URL(gate.reviewPage.path, rootUrl),
+    'utf8',
+  );
   const evidence = gate.approval.evidenceRef
     ? JSON.parse(
         await readFile(new URL(gate.approval.evidenceRef, rootUrl), 'utf8'),
       )
     : null;
-  validateFichaApprovalGate({ artifactBytes, evidence, gate, snapshotBytes });
+  validateFichaApprovalGate({
+    artifactBytes,
+    evidence,
+    gate,
+    legacyArtifactBytes,
+    reviewPageHtml,
+    snapshotBytes,
+  });
   console.log(
     `Ficha PDF review gate valid: ${gate.approval.status}; Rose/Operation approval remains explicit.`,
   );

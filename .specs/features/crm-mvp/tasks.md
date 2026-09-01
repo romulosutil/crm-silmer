@@ -8,6 +8,14 @@ Cada item deve resultar em commit atômico e manter rastreabilidade com os IDs
 de aceite de `.specs/features/crm-mvp/spec.md`. Nenhuma fase avança sem seus
 gates de verificação.
 
+## Status operacional reconciliado
+
+Em 01/09/2026, a T00.5 está concluída na issue `#9`; a T00.6 permanece `pending-human-approval` na issue `#10`, mantendo T02, T03 e T05 bloqueadas.
+
+A fonte humana do status operacional corrente é `docs/phase0/PHASE-0-APPROVAL-GATE.md`; `docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Evidência local não equivale a aprovação humana.
+
+Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa (`github:romulosutil`).
+
 ## Fase 0 — Fundação e riscos técnicos
 
 ### T00.1 Estruturar o monorepo JavaScript ESM
@@ -90,8 +98,9 @@ gates de verificação.
 ### T00.6 Aprovar defaults de domínio e papéis
 
 - **Status:** gate local, defaults e separação de funções versionados em
-  30/08/2026; aprovações e designações humanas pendentes na issue `#10`,
-  com dependência externa na issue `#7`; o envelope da issue `#8` foi aprovado.
+  30/08/2026; aprovações e designações humanas pendentes na issue `#10`.
+  As dependências das issues `#7`, `#8` e `#9` estão concluídas, sem converter
+  evidência local em aprovação humana da T00.6.
 - **Rastreabilidade:** P0.7, `PAY-02`, `FIN-01..03`, `ORD-01/02/05`,
   `PRV-01..03`, `PRV-P06-12` e `ACL-P07-01..12`.
 - Confirmar `Admin` para pagamento, Negócio 1:0..1 Pedido, ciclo de conversa,

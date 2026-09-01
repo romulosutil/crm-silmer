@@ -28,9 +28,12 @@ gates de verificação.
 - **Rastreabilidade:** enabler de `MSG-02` e `MSG-03`; não satisfaz sozinho o
   comportamento funcional desses requisitos.
 - Validar lint, testes, E2E/a11y, dependências, imagens e diff.
+- Rejeitar commits de merge na faixa exclusiva de toda pull request; branches
+  divergentes devem ser atualizadas por rebase sobre `master`.
 - Publicar `edge-web` e `runtime` no GHCR por SHA/digest.
 - **Verificação:** o digest aprovado é configurado no projeto operacional sem
-  rebuild e permanece rastreável ao SHA de origem.
+  rebuild e permanece rastreável ao SHA de origem; o CI bloqueia histórico de
+  PR não linear antes dos demais gates.
 
 ### T00.3 Provisionar serviços Silmer no EasyPanel
 

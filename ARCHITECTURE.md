@@ -87,7 +87,11 @@
 - Produto/Operação confirmar os defaults destacados no TDD.
 - Privacidade aprovar os operadores de IA, storage e observabilidade.
 - Operação validar o PDF da Ficha, domínios e credenciais de cada ambiente.
-- Produto/Operação aprovar o envelope de carga que qualifica sizing e SLOs.
 - DevOps demonstrar RPO/RTO do CRM completo em uma VPS limpa.
+
+O envelope de carga foi aprovado por Produto, Operação e Tech Lead na issue
+`#8` em 31/08/2026. A previsão do piloto cabe na baseline de homologação, o
+sizing KVM 4 foi mantido e a comprovação por carga real continua pendente na
+T07.1.
 
 Nenhuma decisão técnica deve ser inferida do material arquivado do Datacrazy.

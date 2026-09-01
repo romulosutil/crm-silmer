@@ -23,7 +23,21 @@ jobs:
       - name: Check out approved source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
+      - name: Reject merge commits in pull request history
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          merge_commits="$(git rev-list --merges "$PR_BASE_SHA..$PR_HEAD_SHA")"
+          if [[ -n "$merge_commits" ]]; then
+            echo '::error::PR branch contains merge commits. Rebase it onto the current base branch.'
+            git log --oneline --merges "$PR_BASE_SHA..$PR_HEAD_SHA"
+            exit 1
+          fi
       - name: Set up pinned Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

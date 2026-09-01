@@ -80,6 +80,33 @@ canários sintéticos e nunca inclua mensagem, prompt, telefone ou segredo.
 
 Antes de publicar, execute também `git diff --check` e `git status --short`.
 
+## Atualização de branches de pull request
+
+Configure uma vez o Git do ambiente para que `pull` atualize branches por
+rebase, inclusive quando a instalação do Git for Windows definir merge como
+padrão:
+
+```powershell
+git config --global pull.rebase true
+```
+
+Para atualizar uma branch de PR, rebaseie sobre a ponta remota de `master` e
+publique a história reescrita somente com proteção por lease:
+
+```powershell
+git fetch origin --prune
+git rebase origin/master
+git push --force-with-lease
+```
+
+Não incorpore `master` com `git merge` em uma branch de PR. O CI rejeita
+commits de merge na faixa exclusiva da PR, pois o repositório exige histórico
+linear e aceita apenas integração por rebase. Resolva conflitos funcionais por
+composição. Se um commit conflitante contiver somente artefatos gerados em
+`graphify-out/`, descarte esse snapshot intermediário e execute
+`graphify update .` novamente depois de concluir o rebase; nunca resolva o
+grafo gerado manualmente.
+
 ## Commits e publicação
 
 - Um commit representa uma tarefa ou uma mudança mecânica claramente isolada.

@@ -2,6 +2,7 @@ export {
   AuditEventValidationError,
   InMemoryAuditTrail,
 } from './audit-trail.js';
+export { PostgresAuditTrail } from './postgres-audit-trail.js';
 export {
   isTransientMediaExpired,
   resolveTransientMediaExpiresAt,

@@ -81,6 +81,33 @@ function validateAuditEvent(input) {
   }
 }
 
+/**
+ * Builds the only business-audit envelope accepted by every adapter. Extra
+ * input properties are deliberately ignored so payloads, content, tokens and
+ * incidental PII cannot cross the persistence boundary.
+ *
+ * @param {AuditEventInput} input
+ * @param {{ clock?: () => Date, idFactory?: () => string }} [options]
+ * @returns {Readonly<AuditEvent>}
+ */
+export function createAuditEventEnvelope(input, options = {}) {
+  validateAuditEvent(input);
+  const clock = options.clock ?? (() => new Date());
+  const idFactory = options.idFactory ?? randomUUID;
+  return immutableClone(
+    /** @type {AuditEvent} */ ({
+      id: idFactory(),
+      actor: input.actor,
+      action: input.action,
+      target: { type: input.target.type, id: input.target.id },
+      version: input.version,
+      reason: input.reason,
+      correlationId: input.correlationId,
+      occurredAt: clock().toISOString(),
+    }),
+  );
+}
+
 export class InMemoryAuditTrail {
   /** @type {AuditEvent[]} */
   #events = [];
@@ -108,20 +135,12 @@ export class InMemoryAuditTrail {
    * @returns {Promise<Readonly<AuditEvent>>}
    */
   async append(input) {
-    validateAuditEvent(input);
-    const event = /** @type {AuditEvent} */ ({
-      id: this.#idFactory(),
-      actor: input.actor,
-      action: input.action,
-      target: { type: input.target.type, id: input.target.id },
-      version: input.version,
-      reason: input.reason,
-      correlationId: input.correlationId,
-      occurredAt: this.#clock().toISOString(),
+    const event = createAuditEventEnvelope(input, {
+      clock: this.#clock,
+      idFactory: this.#idFactory,
     });
-    const stored = immutableClone(event);
-    this.#events.push(stored);
-    return immutableClone(stored);
+    this.#events.push(event);
+    return immutableClone(event);
   }
 
   /** @returns {Promise<ReadonlyArray<Readonly<AuditEvent>>>} */

@@ -150,6 +150,8 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           const secret = randomBytes(20);
           const enrollment = await service.enrollTotp({
             actorId: result.user.id,
+            correlationId: input.correlationId,
+            reason: 'Bootstrap MFA enrollment',
             secret,
           });
           return {
@@ -270,6 +272,42 @@ export function createIdentityApiRuntime(database, environment = process.env) {
       } catch {
         throw new IdentityHttpError(401, 'INVALID_CREDENTIALS');
       }
+    },
+
+    /** @param {{correlationId: string, csrfToken: string, idempotencyKey: string, reason: string, sessionToken: string}} input */
+    async enrollMfa(input) {
+      const preflightSession = await preflight(input, false);
+      return executeIdempotent(
+        {
+          action: 'identity.mfa.enroll',
+          actorId: preflightSession.userId,
+          command: { enroll: true },
+          correlationId: input.correlationId,
+          idempotencyKey: input.idempotencyKey,
+          reason: input.reason,
+          target: { id: preflightSession.userId, type: 'user' },
+        },
+        async (client, actorId) => {
+          const session = await authenticatedSession(client, input, false);
+          if (session.userId !== actorId) {
+            throw new IdentityHttpError(403, 'FORBIDDEN');
+          }
+          const secret = randomBytes(20);
+          const enrollment = await identityService(client).enrollTotp({
+            actorId,
+            correlationId: input.correlationId,
+            reason: input.reason,
+            secret,
+          });
+          return {
+            algorithm: 'SHA1',
+            digits: 6,
+            period: 30,
+            recoveryCodes: enrollment.recoveryCodes,
+            secret: base32(secret),
+          };
+        },
+      );
     },
 
     /** @param {{email: string, network: string, password: string, recoveryCode?: string, totpCode?: string}} input */

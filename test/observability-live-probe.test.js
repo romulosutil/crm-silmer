@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { posix, win32 } from 'node:path';
 import test from 'node:test';
 
 import {
+  isPathWithinDirectory,
   observeApiTransition,
   probeLiveEndpoint,
   validateProbeEnvironment,
@@ -13,6 +15,29 @@ const liveUrl =
   'https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host/api/health/live';
 const authorizationRef =
   'https://github.com/romulosutil/crm-silmer/issues/11#issuecomment-1234567890';
+
+test('keeps evidence containment portable across POSIX and Windows paths', () => {
+  assert.equal(
+    isPathWithinDirectory('/repo/var/probe.json', '/repo/var', posix),
+    true,
+  );
+  assert.equal(
+    isPathWithinDirectory('/repo/var-escape/probe.json', '/repo/var', posix),
+    false,
+  );
+  assert.equal(
+    isPathWithinDirectory('C:\\repo\\var\\probe.json', 'C:\\repo\\var', win32),
+    true,
+  );
+  assert.equal(
+    isPathWithinDirectory(
+      'C:\\repo\\var-escape\\probe.json',
+      'C:\\repo\\var',
+      win32,
+    ),
+    false,
+  );
+});
 
 test('accepts a safe baseline and requires versioned drill authorization', () => {
   assert.deepEqual(

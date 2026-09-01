@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { setTimeout as sleepTimer } from 'node:timers/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -8,6 +8,26 @@ const rootPath = fileURLToPath(new URL('../', import.meta.url));
 const authorizationReferencePattern =
   /^https:\/\/github\.com\/romulosutil\/crm-silmer\/issues\/11#issuecomment-\d+$/u;
 const evidencePathPattern = /^var\/[a-z0-9][a-z0-9._/-]*\.json$/u;
+const nativePathApi = { isAbsolute, relative, sep };
+
+/**
+ * @param {string} candidatePath
+ * @param {string} directoryPath
+ * @param {{ isAbsolute: typeof isAbsolute, relative: typeof relative, sep: string }} [pathApi]
+ */
+export function isPathWithinDirectory(
+  candidatePath,
+  directoryPath,
+  pathApi = nativePathApi,
+) {
+  const nestedPath = pathApi.relative(directoryPath, candidatePath);
+  return (
+    nestedPath !== '' &&
+    nestedPath !== '..' &&
+    !nestedPath.startsWith(`..${pathApi.sep}`) &&
+    !pathApi.isAbsolute(nestedPath)
+  );
+}
 const forbiddenEvidencePattern =
   /(?:authorization["':]|body["':]|cliente|cookie|email|password|phone|secret|token|webhook)/iu;
 
@@ -227,9 +247,8 @@ export async function observeApiTransition({
 /** @param {string} evidencePath @param {unknown} evidence */
 async function writeEvidence(evidencePath, evidence) {
   const absolutePath = resolve(rootPath, evidencePath);
-  const allowedRoot = `${resolve(rootPath, 'var')}\\`;
   invariant(
-    absolutePath.startsWith(allowedRoot),
+    isPathWithinDirectory(absolutePath, resolve(rootPath, 'var')),
     'Observability evidence path must stay below var/',
   );
   await mkdir(dirname(absolutePath), { recursive: true });

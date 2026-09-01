@@ -263,10 +263,12 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           ).findUserById(session.userId);
           if (!user) throw new Error('User not found');
           return {
-            capabilities: user.capabilities,
-            functionName: user.functionName,
-            id: user.id,
             mfaVerified: session.mfaVerified,
+            user: {
+              capabilities: user.capabilities,
+              functionName: user.functionName,
+              id: user.id,
+            },
           };
         });
       } catch {

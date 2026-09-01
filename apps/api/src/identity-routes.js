@@ -153,6 +153,8 @@ export function registerIdentityRoutes(api, identity, contextFor) {
 
 /** @param {import('fastify').FastifyReply} reply @param {() => Promise<unknown>} work */
 async function respond(reply, work) {
+  reply.header('cache-control', 'no-store');
+  reply.header('pragma', 'no-cache');
   try {
     return await work();
   } catch (error) {

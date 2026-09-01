@@ -26,8 +26,12 @@ if (connectionString) {
     const migrations = await loadMigrations();
     const baseline = migrations.find(({ version }) => version === '0001');
     const phase1 = migrations.find(({ version }) => version === '0002');
+    const identityApiHardening = migrations.find(
+      ({ version }) => version === '0003',
+    );
     assert.ok(baseline);
     assert.ok(phase1);
+    assert.ok(identityApiHardening);
 
     try {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
@@ -37,12 +41,145 @@ if (connectionString) {
         applied: ['0001'],
         phase: 'expand',
       });
+      assert.deepEqual(
+        await migrate(pool, { migrations: [baseline, phase1] }),
+        {
+          applied: ['0002'],
+          phase: 'expand',
+        },
+      );
       assert.deepEqual(await migrate(pool, { migrations }), {
-        applied: ['0002'],
+        applied: ['0003'],
+        phase: 'expand',
+      });
+      assert.deepEqual(await migrate(pool, { migrations }), {
+        applied: [],
         phase: 'expand',
       });
       assert.equal(await checkDatabaseReadiness(pool, [baseline]), true);
       assert.equal(await checkDatabaseReadiness(pool, migrations), true);
+
+      const throttleColumns = await pool.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = 'crm'
+           AND table_name = 'authentication_throttles'
+         ORDER BY column_name`,
+      );
+      assert.deepEqual(
+        throttleColumns.rows.map(({ column_name: columnName }) => columnName),
+        [
+          'blocked_until',
+          'failure_count',
+          'scope',
+          'subject_hash',
+          'updated_at',
+          'window_started_at',
+        ],
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.authentication_throttles
+             (scope, subject_hash)
+           VALUES ('account', 'raw-account@example.test')`,
+        ),
+        /authentication_throttles_subject_hash_check/iu,
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.authentication_throttles
+             (scope, subject_hash)
+           VALUES ('network', '192.0.2.1')`,
+        ),
+        /authentication_throttles_subject_hash_check/iu,
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.authentication_throttles
+             (scope, subject_hash)
+           VALUES ('email', $1)`,
+          [hash('1')],
+        ),
+        /authentication_throttles_scope_check/iu,
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.authentication_throttles
+             (scope, subject_hash, failure_count)
+           VALUES ('account', $1, -1)`,
+          [hash('2')],
+        ),
+        /authentication_throttles_failure_count_check/iu,
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.authentication_throttles
+             (scope, subject_hash, failure_count, window_started_at,
+              blocked_until, updated_at)
+           VALUES ('account', $1, 1, '2026-09-01T12:00:00.000Z',
+             '2026-09-01T11:59:59.000Z', '2026-09-01T12:00:00.000Z')`,
+          [hash('3')],
+        ),
+        /authentication_throttles_time_order_check/iu,
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.authentication_throttles
+             (scope, subject_hash, failure_count, blocked_until)
+           VALUES ('network', $1, 0, now() + interval '1 minute')`,
+          [hash('4')],
+        ),
+        /authentication_throttles_block_requires_failure_check/iu,
+      );
+      await pool.query(
+        `INSERT INTO crm.authentication_throttles
+           (scope, subject_hash, failure_count, window_started_at,
+            blocked_until, updated_at)
+         VALUES
+           ('account', $1, 3, now() - interval '1 minute',
+             now() + interval '5 minutes', now()),
+           ('network', $2, 0, now(), NULL, now())`,
+        [hash('5'), hash('6')],
+      );
+      const throttleRows = await pool.query(
+        `SELECT scope, subject_hash, failure_count, blocked_until
+         FROM crm.authentication_throttles
+         ORDER BY scope`,
+      );
+      assert.deepEqual(
+        throttleRows.rows.map(({ blocked_until: blockedUntil, ...row }) => ({
+          ...row,
+          blocked: blockedUntil !== null,
+        })),
+        [
+          {
+            blocked: true,
+            failure_count: 3,
+            scope: 'account',
+            subject_hash: hash('5'),
+          },
+          {
+            blocked: false,
+            failure_count: 0,
+            scope: 'network',
+            subject_hash: hash('6'),
+          },
+        ],
+      );
+
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.idempotency_records
+             (scope, idempotency_key, fingerprint, actor_id, action,
+              target_type, target_id, version, reason, correlation_id,
+              status, completed_at)
+           VALUES ('admin-1:order.approve', 'completed-without-response', $1,
+             'admin-1', 'order.approve', 'order', 'order-1', '1',
+             'authorized', 'correlation-completed', 'completed', now())`,
+          [hash('7')],
+        ),
+        /idempotency_records_completed_response_check/iu,
+      );
 
       await pool.query(
         `INSERT INTO crm.users (id, email, password_hash)

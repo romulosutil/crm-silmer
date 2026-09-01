@@ -27,6 +27,10 @@ de logs é 30 dias; 90 dias é somente o teto jurídico definido em P0.6.
 
 `ops/observability/alerts.json` declara os sinais, limites, responsáveis e
 testes, todos com estado `pending-external`. A T00.7 não alega monitor ativo.
+`ops/observability/activation-gate.json` impede transição parcial e o runbook em
+`ops/observability/README.md` separa baseline, observação do drill e evidência de
+entrega do operador. `scripts/observability-live-probe.mjs` nunca para serviços
+nem lê corpo ou headers da resposta.
 Antes do piloto, o Tech Lead/DevOps deve contratar/configurar monitor fora da
 VPS, definir canal de destino sem PII, simular queda da API e do worker e guardar
 evidência de entrega e recuperação. Privacidade deve aprovar operador, DPA e
@@ -34,7 +38,7 @@ retenção caso erros/traces saiam da infraestrutura própria.
 
 ## Verificação local
 
-Execute `node --test test/observability.test.js` e
+Execute `npm run test:observability` e
 `node scripts/validate-observability.mjs`. Os testes usam apenas canários
 sintéticos e falham se algum conteúdo proibido surgir na saída serializada.
 

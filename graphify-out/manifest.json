@@ -60,8 +60,8 @@
     "semantic_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5"
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788262595.3357637,
-    "ast_hash": "5f3c4c1f13c28082be98402795fafbee",
+    "mtime": 1788265876.0407948,
+    "ast_hash": "81aaff794c4fba351b7064deab74b590",
     "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
@@ -85,9 +85,9 @@
     "semantic_hash": "fadc8e344110fdd89f105a5036a0d90a"
   },
   "CONTRIBUTING.md": {
-    "mtime": 1788262396.9512513,
-    "ast_hash": "2f01125a30993ccf37e73c5b12d1a16a",
-    "semantic_hash": "2f01125a30993ccf37e73c5b12d1a16a"
+    "mtime": 1788265876.0413704,
+    "ast_hash": "950eae1086b46224b81393bde71cd290",
+    "semantic_hash": ""
   },
   "README.md": {
     "mtime": 1788223251.600949,
@@ -200,9 +200,9 @@
     "semantic_hash": "a9e4df3cc208c2f1ef03009343ffc9b2"
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1788262396.9485621,
-    "ast_hash": "492db13854f2ff21178fd10f1021e6cc",
-    "semantic_hash": "492db13854f2ff21178fd10f1021e6cc"
+    "mtime": 1788265876.039289,
+    "ast_hash": "d7b2808758f09fe7d5ec30a61e648307",
+    "semantic_hash": ""
   },
   ".github/workflows/promote-approved-sha.yml": {
     "mtime": 1788094752.848164,
@@ -285,27 +285,27 @@
     "semantic_hash": ""
   },
   "docs/phase0/data-catalog.json": {
-    "mtime": 1788262473.431496,
+    "mtime": 1788265875.945951,
     "ast_hash": "ecc605f70b94d57ea4653c1b4c2119fa",
     "semantic_hash": ""
   },
   "docs/phase0/threat-model.json": {
-    "mtime": 1788262473.4300222,
+    "mtime": 1788265875.9476051,
     "ast_hash": "cb3f06238c986835f7dd52912746257a",
     "semantic_hash": ""
   },
   "scripts/validate-security-catalog.mjs": {
-    "mtime": 1788263194.2240095,
+    "mtime": 1788265875.9670403,
     "ast_hash": "387586aa3639dfdb0c0a52248b3fe30b",
     "semantic_hash": ""
   },
   "test/security-catalog.test.js": {
-    "mtime": 1788263242.2992778,
+    "mtime": 1788265875.9690464,
     "ast_hash": "02e1318fcd9c5c5731a35749c7504257",
     "semantic_hash": ""
   },
   "docs/phase0/THREAT-MODEL-AND-DATA-CATALOG.md": {
-    "mtime": 1788262595.333854,
+    "mtime": 1788265875.9444458,
     "ast_hash": "830fcaf079a9fd37db3ead550a5e336e",
     "semantic_hash": ""
   },
@@ -825,7 +825,7 @@
     "semantic_hash": ""
   },
   "docs/phase0/security-review.json": {
-    "mtime": 1788262668.2744749,
+    "mtime": 1788265875.9476051,
     "ast_hash": "6f295b928e9b4a46decda30dd03424e3",
     "semantic_hash": ""
   }

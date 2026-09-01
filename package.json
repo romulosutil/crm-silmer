@@ -35,6 +35,7 @@
     "test:external-spikes": "node --test test/external-spikes.test.js",
     "test:observability": "node --test test/observability.test.js test/observability-live-probe.test.js",
     "test:gemini:privacy": "node --test test/gemini-privacy-smoke.test.js",
+    "test:identity:live": "node --test --test-concurrency=1 test/migrations-live.test.js test/phase1-schema-live.test.js test/identity-postgres-live.test.js test/postgres-audit-live.test.js test/postgres-idempotency-live.test.js test/identity-api-live.test.js",
     "test:media-retention": "node --test test/media-retention-policy.test.js test/transient-media-retention.test.js",
     "test:phase0-decisions": "node --test test/phase0-decisions.test.js",
     "test:phase1-schema:live": "node --test test/phase1-schema-live.test.js",

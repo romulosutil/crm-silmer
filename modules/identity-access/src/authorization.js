@@ -81,7 +81,7 @@ export function authorize(actor, action) {
  *   clock?: () => Date,
  *   repository: {
  *     findUser: (id: string) => Promise<(AccessActor & {mfaEnrolled: boolean}) | null>,
- *     grant: (id: string, capability: Capability) => Promise<unknown>,
+ *     grant: (id: string, capability: Capability, grantedBy: string) => Promise<unknown>,
  *     revoke: (id: string, capability: Capability) => Promise<unknown>,
  *     revokePrivilegedSessions: (id: string, occurredAt: string) => Promise<unknown>
  *   }
@@ -131,7 +131,7 @@ export function createAccessControlService({
     if (mfaRequiredCapabilities.has(input.capability) && !target.mfaEnrolled) {
       throw new Error('MFA enrollment is required');
     }
-    await repository.grant(input.targetId, input.capability);
+    await repository.grant(input.targetId, input.capability, input.actorId);
     await audit('granted', input);
   }
 

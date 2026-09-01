@@ -679,3 +679,4 @@ function requireNonEmptyString(value, field) {
 }
 
 export { createPostgresIdentityRepository } from './postgres.js';
+export { createPostgresAccessRepository } from './postgres-access.js';

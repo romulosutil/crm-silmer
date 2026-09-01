@@ -4,14 +4,239 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <title>CRM Silmer</title>
+    <title>Acesso | CRM Silmer</title>
     <link rel="stylesheet" href="./styles.css" />
     <script type="module" src="./app.js"></script>
   </head>
   <body>
-    <main>
-      <h1>CRM Silmer</h1>
-      <p id="runtime-status" role="status">Carregando aplicação…</p>
+    <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="CRM Silmer, início">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>CRM Silmer</span>
+      </a>
+      <p class="environment">Ambiente seguro</p>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+      <div class="intro">
+        <p class="eyebrow">Acesso à operação</p>
+        <h1>Entre com sua conta Silmer</h1>
+        <p>
+          O acesso é individual, somente por convite e protegido por sessão
+          segura.
+        </p>
+      </div>
+
+      <p id="runtime-status" class="status" role="status" aria-live="polite">
+        Verificando sua sessão…
+      </p>
+      <div
+        id="error-summary"
+        class="error"
+        role="alert"
+        tabindex="-1"
+        hidden
+      ></div>
+
+      <section
+        id="signed-out"
+        class="surface"
+        aria-labelledby="access-title"
+        hidden
+      >
+        <h2 id="access-title" class="sr-only">Acessar o CRM</h2>
+        <div class="tabs" role="tablist" aria-label="Opções de acesso">
+          <button
+            id="login-tab"
+            type="button"
+            role="tab"
+            aria-controls="login-panel"
+            aria-selected="true"
+          >
+            Entrar
+          </button>
+          <button
+            id="invite-tab"
+            type="button"
+            role="tab"
+            aria-controls="invite-panel"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Aceitar convite
+          </button>
+        </div>
+
+        <section id="login-panel" role="tabpanel" aria-labelledby="login-tab">
+          <h2 tabindex="-1">Boas-vindas de volta</h2>
+          <form id="login-form">
+            <label for="login-email">E-mail</label>
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              autocomplete="username"
+              required
+            />
+            <label for="login-password">Senha</label>
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              minlength="12"
+              required
+            />
+            <details>
+              <summary>Verificação em duas etapas</summary>
+              <p class="field-help">
+                Informe o código do aplicativo ou um código de recuperação.
+              </p>
+              <label for="totp-code">Código de 6 dígitos</label>
+              <input
+                id="totp-code"
+                name="totpCode"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                pattern="[0-9]{6}"
+              />
+              <label for="recovery-code">Código de recuperação</label>
+              <input
+                id="recovery-code"
+                name="recoveryCode"
+                autocomplete="off"
+              />
+            </details>
+            <button class="primary" type="submit">Entrar com segurança</button>
+          </form>
+        </section>
+
+        <section
+          id="invite-panel"
+          role="tabpanel"
+          aria-labelledby="invite-tab"
+          hidden
+        >
+          <h2 tabindex="-1">Ativar conta convidada</h2>
+          <form id="accept-invite-form">
+            <label for="invite-token">Código do convite</label>
+            <input id="invite-token" name="token" autocomplete="off" required />
+            <label for="new-password">Crie uma senha</label>
+            <input
+              id="new-password"
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              minlength="12"
+              required
+            />
+            <button class="primary" type="submit">Ativar minha conta</button>
+          </form>
+        </section>
+      </section>
+
+      <section
+        id="signed-in"
+        class="workspace"
+        aria-labelledby="session-title"
+        hidden
+      >
+        <div class="surface session-card">
+          <div>
+            <p class="eyebrow">Sessão ativa</p>
+            <h2 id="session-title" tabindex="-1">Acesso confirmado</h2>
+            <p id="session-summary"></p>
+          </div>
+          <button id="logout-button" class="secondary" type="button">
+            Sair
+          </button>
+        </div>
+
+        <section class="surface" aria-labelledby="mfa-title">
+          <h2 id="mfa-title">Verificação em duas etapas</h2>
+          <p>Proteja ações privilegiadas com um autenticador TOTP.</p>
+          <form id="mfa-form">
+            <label for="mfa-reason">Motivo do cadastro</label>
+            <input
+              id="mfa-reason"
+              name="reason"
+              value="Proteger acesso privilegiado"
+              required
+            />
+            <button type="submit">Cadastrar autenticador</button>
+          </form>
+          <div id="mfa-result" class="one-time" tabindex="-1" hidden>
+            <h3>Guarde estas informações agora</h3>
+            <p id="mfa-secret"></p>
+            <ul id="recovery-codes"></ul>
+          </div>
+        </section>
+
+        <div id="admin-tools" class="admin-grid" hidden>
+          <section class="surface" aria-labelledby="new-invite-title">
+            <h2 id="new-invite-title">Convidar pessoa</h2>
+            <form id="create-invite-form">
+              <label for="new-invite-email">E-mail</label>
+              <input id="new-invite-email" name="email" type="email" required />
+              <label for="new-invite-function">Função operacional</label>
+              <select id="new-invite-function" name="functionName" required>
+                <option value="Atendimento">Atendimento</option>
+                <option value="Vendedor">Vendedor</option>
+              </select>
+              <label for="invite-expiry">Expira em</label>
+              <input
+                id="invite-expiry"
+                name="expiresAt"
+                type="datetime-local"
+                required
+              />
+              <label for="invite-reason">Motivo</label>
+              <input id="invite-reason" name="reason" required />
+              <button type="submit">Criar convite</button>
+            </form>
+            <output
+              id="created-invite"
+              class="one-time"
+              tabindex="-1"
+              hidden
+            ></output>
+          </section>
+
+          <section class="surface" aria-labelledby="capability-title">
+            <h2 id="capability-title">Gerenciar capacidade</h2>
+            <form id="capability-form">
+              <label for="target-user">ID da pessoa</label>
+              <input id="target-user" name="targetId" required />
+              <label for="capability">Capacidade</label>
+              <select id="capability" name="capability" required>
+                <option value="COMMERCIAL_ADMIN">Admin comercial</option>
+                <option value="PRIVACY_OFFICER">
+                  Encarregado de privacidade
+                </option>
+                <option value="TECHNICAL_PRIVACY_EXECUTOR">
+                  Executor técnico
+                </option>
+              </select>
+              <label for="capability-reason">Motivo</label>
+              <input id="capability-reason" name="reason" required />
+              <div class="button-row">
+                <button type="submit" name="change" value="grant">
+                  Conceder
+                </button>
+                <button
+                  class="danger"
+                  type="submit"
+                  name="change"
+                  value="revoke"
+                >
+                  Revogar
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </section>
     </main>
   </body>
 </html>

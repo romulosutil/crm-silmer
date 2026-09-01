@@ -13,6 +13,16 @@ const copies = [
   ['modules/database/src', 'runtime/modules/database/src'],
   ['modules/database/migrations', 'runtime/modules/database/migrations'],
   ['modules/database/package.json', 'runtime/modules/database/package.json'],
+  ['modules/audit-privacy/src', 'runtime/modules/audit-privacy/src'],
+  [
+    'modules/audit-privacy/package.json',
+    'runtime/modules/audit-privacy/package.json',
+  ],
+  ['modules/identity-access/src', 'runtime/modules/identity-access/src'],
+  [
+    'modules/identity-access/package.json',
+    'runtime/modules/identity-access/package.json',
+  ],
   [
     'modules/integration-reliability/src',
     'runtime/modules/integration-reliability/src',

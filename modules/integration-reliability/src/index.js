@@ -4,6 +4,7 @@ export {
   IdempotencyConflictError,
   InMemoryIdempotencyRecordStore,
 } from './idempotency.js';
+export { PostgresIdempotencyRecordStore } from './postgres-idempotency.js';
 export {
   createMetaMessagesClient,
   InMemoryMetaEventStore,

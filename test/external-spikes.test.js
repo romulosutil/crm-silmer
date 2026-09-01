@@ -122,11 +122,26 @@ test('rejects incomplete or untraceable load-envelope approval', async () => {
 
 test('rejects baseline drift and a forecast that no longer fits the approved sizing', async () => {
   const envelope = await json('docs/phase0/load-envelope.json');
+
+  const missingBaselineWebhooks = structuredClone(envelope);
+  delete missingBaselineWebhooks.baseline.dimensions.webhooks;
+  assert.throws(
+    () => validateLoadEnvelope(missingBaselineWebhooks),
+    /Engineering baseline drifted from TDD section 13/u,
+  );
+
   const baselineDrift = structuredClone(envelope);
   baselineDrift.baseline.dimensions.referenceMass.messages = 999_999;
   assert.throws(
     () => validateLoadEnvelope(baselineDrift),
     /baseline.*TDD|TDD.*baseline/iu,
+  );
+
+  const missingForecastAttachments = structuredClone(envelope);
+  delete missingForecastAttachments.forecast.dimensions.attachmentsAndPdf;
+  assert.throws(
+    () => validateLoadEnvelope(missingForecastAttachments),
+    /Pilot forecast drifted from the approved issue 8 decision or engineering baseline/u,
   );
 
   const oversizedForecast = structuredClone(envelope);

@@ -253,21 +253,21 @@ export function validateLoadEnvelope(document) {
   const baselineDimensions = baseline.dimensions;
   invariant(
     baselineDimensions?.operators?.authenticatedSessions === 20 &&
-      baselineDimensions.operators.concurrentSseConnections === 30 &&
-      baselineDimensions.webhooks.sustainedEventsPerSecond === 5 &&
-      baselineDimensions.webhooks.sustainedMinutes === 15 &&
-      baselineDimensions.webhooks.burstEventsPerSecond === 20 &&
-      baselineDimensions.webhooks.burstSeconds === 60 &&
-      baselineDimensions.workerRecovery.backlogJobs === 1000 &&
-      baselineDimensions.workerRecovery.blindRetryOutcomeUnknown === false &&
-      baselineDimensions.attachmentsAndPdf
-        .concurrentUploadsAtConfiguredLimit === 4 &&
-      baselineDimensions.attachmentsAndPdf.queuedPdfs === 20 &&
-      baselineDimensions.attachmentsAndPdf.chromiumConcurrency === 1 &&
-      baselineDimensions.referenceMass.contacts === 50_000 &&
-      baselineDimensions.referenceMass.conversations === 100_000 &&
-      baselineDimensions.referenceMass.messages === 1_000_000 &&
-      baselineDimensions.referenceMass.deals === 25_000,
+      baselineDimensions?.operators?.concurrentSseConnections === 30 &&
+      baselineDimensions?.webhooks?.sustainedEventsPerSecond === 5 &&
+      baselineDimensions?.webhooks?.sustainedMinutes === 15 &&
+      baselineDimensions?.webhooks?.burstEventsPerSecond === 20 &&
+      baselineDimensions?.webhooks?.burstSeconds === 60 &&
+      baselineDimensions?.workerRecovery?.backlogJobs === 1000 &&
+      baselineDimensions?.workerRecovery?.blindRetryOutcomeUnknown === false &&
+      baselineDimensions?.attachmentsAndPdf
+        ?.concurrentUploadsAtConfiguredLimit === 4 &&
+      baselineDimensions?.attachmentsAndPdf?.queuedPdfs === 20 &&
+      baselineDimensions?.attachmentsAndPdf?.chromiumConcurrency === 1 &&
+      baselineDimensions?.referenceMass?.contacts === 50_000 &&
+      baselineDimensions?.referenceMass?.conversations === 100_000 &&
+      baselineDimensions?.referenceMass?.messages === 1_000_000 &&
+      baselineDimensions?.referenceMass?.deals === 25_000,
     'Engineering baseline drifted from TDD section 13',
   );
 
@@ -300,22 +300,23 @@ export function validateLoadEnvelope(document) {
   const forecastDimensions = forecast.dimensions;
   invariant(
     forecastDimensions?.operators?.authenticatedSessions === 8 &&
-      forecastDimensions.operators.concurrentSseConnections === 10 &&
-      forecastDimensions.webhooks.sustainedEventsPerSecond === 1 &&
-      forecastDimensions.webhooks.sustainedMinutes === 15 &&
-      forecastDimensions.webhooks.burstEventsPerSecond === 5 &&
-      forecastDimensions.webhooks.burstSeconds === 60 &&
-      forecastDimensions.workerRecovery.backlogJobs === 300 &&
-      forecastDimensions.workerRecovery.blindRetryOutcomeUnknown === false &&
-      forecastDimensions.attachmentsAndPdf.estimatedAttachmentsPerDay === 100 &&
-      forecastDimensions.attachmentsAndPdf.concurrentUploads === 2 &&
-      forecastDimensions.attachmentsAndPdf.estimatedPdfsPerDay === 25 &&
-      forecastDimensions.attachmentsAndPdf.queuedPdfs === 10 &&
-      forecastDimensions.attachmentsAndPdf.chromiumConcurrency === 1 &&
-      forecastDimensions.referenceMass.contacts === 10_000 &&
-      forecastDimensions.referenceMass.conversations === 12_000 &&
-      forecastDimensions.referenceMass.messages === 100_000 &&
-      forecastDimensions.referenceMass.deals === 10_000,
+      forecastDimensions?.operators?.concurrentSseConnections === 10 &&
+      forecastDimensions?.webhooks?.sustainedEventsPerSecond === 1 &&
+      forecastDimensions?.webhooks?.sustainedMinutes === 15 &&
+      forecastDimensions?.webhooks?.burstEventsPerSecond === 5 &&
+      forecastDimensions?.webhooks?.burstSeconds === 60 &&
+      forecastDimensions?.workerRecovery?.backlogJobs === 300 &&
+      forecastDimensions?.workerRecovery?.blindRetryOutcomeUnknown === false &&
+      forecastDimensions?.attachmentsAndPdf?.estimatedAttachmentsPerDay ===
+        100 &&
+      forecastDimensions?.attachmentsAndPdf?.concurrentUploads === 2 &&
+      forecastDimensions?.attachmentsAndPdf?.estimatedPdfsPerDay === 25 &&
+      forecastDimensions?.attachmentsAndPdf?.queuedPdfs === 10 &&
+      forecastDimensions?.attachmentsAndPdf?.chromiumConcurrency === 1 &&
+      forecastDimensions?.referenceMass?.contacts === 10_000 &&
+      forecastDimensions?.referenceMass?.conversations === 12_000 &&
+      forecastDimensions?.referenceMass?.messages === 100_000 &&
+      forecastDimensions?.referenceMass?.deals === 10_000,
     'Pilot forecast drifted from the approved issue 8 decision or engineering baseline',
   );
   invariant(

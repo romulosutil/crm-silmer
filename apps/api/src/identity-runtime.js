@@ -318,6 +318,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
         const throttle = createPostgresAuthenticationThrottle(client, {
           hmacKey: throttleHmacKey,
         });
+        await throttle.lock(input);
         const state = await throttle.check(input);
         if (!state.allowed) return { kind: 'throttled' };
         try {

@@ -64,6 +64,25 @@ export function createPostgresAuthenticationThrottle(
   }
 
   return Object.freeze({
+    /**
+     * Serializes attempts for both pseudonymous subjects for the lifetime of
+     * the caller's PostgreSQL transaction. This closes the gap between the
+     * eligibility check and recording a failed Argon2 verification.
+     * @param {AuthenticationSubject} subject
+     */
+    async lock(subject) {
+      const subjectHashes = hashes(subject);
+      for (const scope of /** @type {ThrottleScope[]} */ ([
+        'account',
+        'network',
+      ])) {
+        await database.query(
+          'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+          [`${scope}:${subjectHashes[scope]}`],
+        );
+      }
+    },
+
     /** @param {AuthenticationSubject} subject */
     async check(subject) {
       const subjectHashes = hashes(subject);

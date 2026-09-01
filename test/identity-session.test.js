@@ -51,6 +51,54 @@ function harness() {
   };
 }
 
+/**
+ * @param {ReturnType<typeof createInMemoryIdentityRepository>} repository
+ * @returns {ReturnType<typeof createInMemoryIdentityRepository>}
+ */
+function asAsyncRepository(repository) {
+  const entries = Object.entries(repository).map(([name, operation]) => {
+    /** @param {...unknown} args */
+    const invoke = async (...args) =>
+      Reflect.apply(operation, repository, args);
+    return [name, invoke];
+  });
+  return /** @type {ReturnType<typeof createInMemoryIdentityRepository>} */ (
+    /** @type {unknown} */ (Object.freeze(Object.fromEntries(entries)))
+  );
+}
+
+test('supports asynchronous repository ports used by PostgreSQL adapters', async () => {
+  let sequence = 0;
+  const repository = createInMemoryIdentityRepository();
+  const service = createIdentityAccessService({
+    auditPort: { append: async () => undefined },
+    clock: () => NOW,
+    envelopeKey: ENVELOPE_KEY,
+    idFactory: (prefix) => `${prefix}-${++sequence}`,
+    passwordParameters: { memory: 64, parallelism: 2, passes: 2 },
+    repository: asAsyncRepository(repository),
+    tokenFactory: () => `opaque-token-${++sequence}-with-enough-entropy`,
+  });
+
+  const { user } = await service.bootstrapAdmin({
+    correlationId: 'correlation-bootstrap-async',
+    email: 'admin@example.test',
+    functionName: 'Atendimento',
+    password: 'correct horse battery staple',
+    reason: 'Provisionamento inicial autorizado',
+  });
+  await service.enrollTotp({ actorId: user.id, secret: Buffer.alloc(20, 3) });
+  const login = await service.login({
+    email: 'admin@example.test',
+    password: 'correct horse battery staple',
+    totpCode: service.currentTotpForTesting(Buffer.alloc(20, 3)),
+  });
+
+  assert.equal((await service.authenticate(login.sessionToken)).userId, user.id);
+  await service.logout(login.sessionToken);
+  await assert.rejects(service.authenticate(login.sessionToken), /session/iu);
+});
+
 test('hashes passwords with Argon2id and verifies without storing plaintext', async () => {
   const encoded = await hashPassword('correct horse battery staple', {
     memory: 64,

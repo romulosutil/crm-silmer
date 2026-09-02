@@ -20,7 +20,10 @@ export function assertChannelAdapterContract(adapter) {
       'channel adapter provider must be a lowercase canonical id',
     );
   }
-  if (!['instagram', 'whatsapp'].includes(String(candidate.channel))) {
+  if (
+    typeof candidate.channel !== 'string' ||
+    !['instagram', 'whatsapp'].includes(candidate.channel)
+  ) {
     throw new ChannelContractError(
       'channel adapter channel must be instagram or whatsapp',
     );

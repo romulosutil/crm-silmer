@@ -302,6 +302,20 @@ test('defines the port required from concrete channel adapters', () => {
       }),
     /prepareOutbound/u,
   );
+  assert.throws(
+    () =>
+      assertChannelAdapterContract({
+        channel: {
+          toString() {
+            throw new Error('channel coercion must not run');
+          },
+        },
+        normalizeInbound() {},
+        prepareOutbound() {},
+        provider: 'meta',
+      }),
+    /channel/u,
+  );
 });
 
 test('rejects missing scope and non-canonical timestamps', async () => {

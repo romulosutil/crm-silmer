@@ -1,6 +1,6 @@
 {
   "0": "integration-reliability/src/index.js",
-  "1": "server.js",
+  "1": "shared/src/index.js",
   "2": "TDD — CRM Silmer MVP",
   "3": "0002_phase1_domain.expand.sql",
   "4": "configuration-catalog-postgres-live.test.js",
@@ -12,7 +12,7 @@
   "10": "T00.4 — Spikes externos",
   "11": "recovery-mock.mjs",
   "12": "audit-privacy/src/index.js",
-  "13": "channel-envelope.js",
+  "13": "meta-whatsapp.js",
   "14": "dependencies",
   "15": "ficha-pdf-review.mjs",
   "16": "compilerOptions",
@@ -134,7 +134,16 @@
   "132": "Codex — Contexto do CRM Silmer",
   "133": "PASSO A PASSO — Conectar a Crazy API (quando o cliente aprovar)",
   "134": "configuration-version.js",
+  "135": "postgres-webhook-inbox.js",
+  "136": "api/src/app.js",
   "137": "inbox-channels/package.json",
+  "138": "server.js",
+  "139": "validate-observability.mjs",
+  "140": "createApi",
+  "141": "WorkerRuntime",
+  "142": "0004_phase2_channel_webhook.expand.sql",
+  "143": "Webhook WhatsApp — decisões de T02.2",
+  "144": "observability.test.js",
   "155": "identity-routes.js",
   "156": "T00.6 — Evidência de aprovação"
 }

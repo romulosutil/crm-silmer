@@ -12,6 +12,7 @@
     "@crm-silmer/configuration": "0.0.0",
     "@crm-silmer/database": "0.0.0",
     "@crm-silmer/identity-access": "0.0.0",
+    "@crm-silmer/inbox-channels": "0.0.0",
     "@crm-silmer/integration-reliability": "0.0.0",
     "@crm-silmer/shared": "0.0.0",
     "fastify": "5.12.1"

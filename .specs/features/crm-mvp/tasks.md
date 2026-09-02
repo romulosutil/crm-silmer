@@ -202,6 +202,11 @@ externos e operacionais continuam independentes.
 
 ### T02.2 Implementar webhook WhatsApp
 
+- **Status:** concluída localmente em 02/09/2026; integração em `master` depende
+  de PR. Limite de `1 MiB`, janela de 24 horas, envelope `AES-256-GCM`,
+  allowlist Meta, backpressure e fronteira transacional com `T02.3` foram
+  aprovados e validados, inclusive concorrência e rollback em PostgreSQL 17,
+  conforme `docs/phase2/WHATSAPP-WEBHOOK.md`.
 - Validar assinatura, deduplicar, persistir e responder rapidamente.
 - Preservar raw body para a assinatura e rejeitar tamanho, tipo e schema
   inválidos antes de qualquer efeito.

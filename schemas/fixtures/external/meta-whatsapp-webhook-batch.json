@@ -1,0 +1,42 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "synthetic-whatsapp-account",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "metadata": {
+              "display_phone_number": "5500000000000",
+              "phone_number_id": "synthetic-phone-number"
+            },
+            "messages": [
+              {
+                "from": "5500000000001",
+                "id": "wamid.synthetic-text-001",
+                "timestamp": "1788307200",
+                "type": "text",
+                "text": {
+                  "body": "mensagem sintetica sem dado real"
+                }
+              },
+              {
+                "from": "5500000000001",
+                "id": "wamid.synthetic-image-001",
+                "timestamp": "1788307201",
+                "type": "image",
+                "image": {
+                  "caption": "imagem sintetica",
+                  "id": "synthetic-media-001",
+                  "mime_type": "image/png",
+                  "sha256": "synthetic-provider-sha256"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

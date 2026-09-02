@@ -4,16 +4,21 @@ import { clearInterval, setInterval } from 'node:timers';
 import { createSafeLogger, MetricRegistry, SERVICES } from '@crm-silmer/shared';
 
 /**
- * Minimal process boundary for the asynchronous runtime. Domain jobs are added
- * by later tracked tasks.
+ * Process boundary for asynchronous jobs. Concrete handlers are injected by
+ * each domain module, keeping queue reliability independent from job payloads.
  */
 export class WorkerRuntime {
   /**
    * @param {{
+   *   handlers?: Record<string, (job: Readonly<Record<string, unknown>>, context: {heartbeat: () => Promise<boolean>, markEffectStarted: (input: {provider: string}) => Promise<boolean>}) => Promise<{outcome: 'sent'|'failed'|'outcome_unknown', errorCode?: string, providerExternalId?: string, retryable?: boolean, retrySafe?: boolean}>>,
    *   heartbeatIntervalMs?: number,
+   *   leaseMs?: number,
    *   logger?: ReturnType<typeof createSafeLogger>,
    *   metrics?: MetricRegistry,
-   *   now?: () => number
+   *   now?: () => number,
+   *   pollIntervalMs?: number,
+   *   queue?: {claim: Function, heartbeat: Function, markEffectStarted: Function, settle: Function},
+   *   workerId?: string
    * }} [options]
    */
   constructor(options = {}) {
@@ -23,9 +28,18 @@ export class WorkerRuntime {
     this.metrics =
       options.metrics ?? new MetricRegistry({ logger: this.logger });
     this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? 30_000;
+    this.pollIntervalMs = options.pollIntervalMs ?? 1_000;
+    this.leaseMs = options.leaseMs ?? 30_000;
     this.now = options.now ?? Date.now;
+    this.queue = options.queue;
+    this.handlers = Object.freeze({ ...(options.handlers ?? {}) });
+    this.workerId = options.workerId ?? `worker-${process.pid}`;
     /** @type {NodeJS.Timeout | undefined} */
     this.heartbeatTimer = undefined;
+    /** @type {NodeJS.Timeout | undefined} */
+    this.pollTimer = undefined;
+    /** @type {Promise<void>|undefined} */
+    this.pollInFlight = undefined;
   }
 
   /** @returns {Promise<void>} */
@@ -37,6 +51,10 @@ export class WorkerRuntime {
       () => this.emitHeartbeat(),
       this.heartbeatIntervalMs,
     );
+    if (this.queue) {
+      this.pollTimer = setInterval(() => this.poll(), this.pollIntervalMs);
+      this.poll();
+    }
     this.logger.info('worker_started');
   }
 
@@ -68,13 +86,122 @@ export class WorkerRuntime {
     this.logger.error('worker_job_failed', context);
   }
 
+  /** Processes at most one claim batch without overlapping another poll. */
+  async poll() {
+    if (this.pollInFlight) return this.pollInFlight;
+    this.pollInFlight = this.runOnce()
+      .then(() => {})
+      .finally(() => {
+        this.pollInFlight = undefined;
+      });
+    return this.pollInFlight;
+  }
+
+  /** @returns {Promise<number>} */
+  async runOnce() {
+    const queue = this.queue;
+    if (!queue) return 0;
+    const jobs = await queue.claim({
+      leaseMs: this.leaseMs,
+      limit: 1,
+      now: new Date(this.now()),
+      workerId: this.workerId,
+    });
+    for (const job of jobs) {
+      await this.processJob(job);
+    }
+    return jobs.length;
+  }
+
+  /** @param {Readonly<Record<string, any>>} job */
+  async processJob(job) {
+    const queue = this.queue;
+    if (!queue) throw new Error('Worker queue is not configured');
+    const handler = this.handlers[job.jobType];
+    let effectStarted = false;
+    const heartbeat = () =>
+      queue.heartbeat({
+        attemptId: job.attemptId,
+        jobId: job.id,
+        leaseMs: this.leaseMs,
+        now: new Date(this.now()),
+        workerId: this.workerId,
+      });
+    /** @param {{provider: string}} input */
+    const markEffectStarted = async ({ provider }) => {
+      const marked = await queue.markEffectStarted({
+        attemptId: job.attemptId,
+        jobId: job.id,
+        now: new Date(this.now()),
+        provider,
+        workerId: this.workerId,
+      });
+      if (!marked) throw new Error('Job lease was lost before effect start');
+      effectStarted = true;
+      return true;
+    };
+    const context = Object.freeze({
+      heartbeat,
+      markEffectStarted,
+    });
+
+    try {
+      if (!handler) throw new Error('No handler registered for job type');
+      const result = await handler(job, context);
+      await queue.settle({
+        attemptId: job.attemptId,
+        errorCode: result.errorCode,
+        jobId: job.id,
+        now: new Date(this.now()),
+        outcome: result.outcome,
+        providerExternalId: result.providerExternalId,
+        retryable: result.retryable ?? false,
+        retrySafe: result.retrySafe ?? false,
+        workerId: this.workerId,
+      });
+    } catch (error) {
+      const errorCode = technicalErrorCode(error);
+      this.recordJobFailure({
+        errorCode,
+        jobType: job.jobType,
+        queue: job.queue,
+      });
+      await queue.settle({
+        attemptId: job.attemptId,
+        errorCode,
+        jobId: job.id,
+        now: new Date(this.now()),
+        outcome: effectStarted ? 'outcome_unknown' : 'failed',
+        retryable: !effectStarted,
+        retrySafe: !effectStarted,
+        workerId: this.workerId,
+      });
+    }
+  }
+
   async stop() {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = undefined;
     }
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = undefined;
+    }
+    await this.pollInFlight;
     this.logger.info('worker_stopped');
   }
+}
+
+/** @param {unknown} error */
+function technicalErrorCode(error) {
+  const candidate =
+    error && typeof error === 'object' && 'code' in error
+      ? String(error.code)
+      : 'JOB_HANDLER_FAILED';
+  return /^[A-Z0-9_]{1,64}$/u.test(candidate)
+    ? candidate
+    : 'JOB_HANDLER_FAILED';
 }
 
 if (

@@ -27,6 +27,11 @@
 - n8n opcional e fora do caminho crítico.
 - Numeração de pedidos iniciada em `01-CRM`, sem dependência legada.
 - Rômulo Sutil Corrêa como Responsável de Privacidade e política do piloto aprovada após consulta jurídica.
+- Defaults `D00.6-01..07` aprovados; `silmer:romulo.sutil` designado como Tech
+  Lead, equipe de entrega e Administrador Técnico com MFA.
+- Exceção `SOLO-OPS-PILOT-01` limita a concentração de Privacidade e execução
+  técnica ao piloto interno, preservando capacidades ortogonais, eventos
+  separados, ausência de encadeamento automático e auditoria.
 
 ## Decisões técnicas propostas como baseline
 
@@ -41,7 +46,7 @@
   idempotência quando suportada pelo provedor e `outcome_unknown` reconciliável;
   não há promessa de exactly-once de rede. Redis não entra no MVP.
 - **Autenticação:** sessão opaca em cookie seguro, CSRF, MFA obrigatório para
-  `Admin` e autorização aplicada no backend.
+  `Admin` e Administrador Técnico, e autorização aplicada no backend.
 - **Storage:** no piloto interno, mídia de canal é transitória em volume privado
   da VPS, sem backup, por até sete dias ou até o fim da jornada. Arquivos
   válidos seguem ao Dropbox por procedimento operacional registrado. Object
@@ -81,13 +86,15 @@
 - `EASYPANEL-TOPOLOGY.md`: serviços, rede, sizing, segredos, CI/CD e recovery.
 - `.specs/features/crm-mvp/tasks.md`: decomposição de implementação e gates.
 
-## Aprovações ainda necessárias
+## Aprovações externas e operacionais ainda necessárias
 
-- Designar Tech Lead, time e Administrador Técnico.
-- Produto/Operação confirmar os defaults destacados no TDD.
 - Privacidade aprovar os operadores de IA, storage e observabilidade.
 - Operação validar o PDF da Ficha, domínios e credenciais de cada ambiente.
 - DevOps demonstrar RPO/RTO do CRM completo em uma VPS limpa.
+
+A T00.6 foi aprovada em 02/09/2026 com evidência em
+`docs/phase0/T00.6-APPROVAL-EVIDENCE.md`. Essa aprovação não satisfaz nem
+antecipa os gates externos listados acima.
 
 O envelope de carga foi aprovado por Produto, Operação e Tech Lead na issue
 `#8` em 31/08/2026. A previsão do piloto cabe na baseline de homologação, o

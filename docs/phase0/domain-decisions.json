@@ -1,34 +1,43 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": "T00.6",
-  "generatedAt": "2026-08-30",
-  "approvalGranted": false,
+  "generatedAt": "2026-09-02",
+  "approvalGranted": true,
   "gate": {
-    "status": "pending-human-approval",
+    "status": "approved",
     "requiredReviews": [
       {
         "reviewer": "Produto",
-        "status": "pending",
-        "approved": false,
-        "reviewedAt": null,
-        "evidence": null
+        "status": "approved",
+        "approved": true,
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#autoridade-e-fonte-humana",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       },
       {
         "reviewer": "Operacao",
-        "status": "pending",
-        "approved": false,
-        "reviewedAt": null,
-        "evidence": null
+        "status": "approved",
+        "approved": true,
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#autoridade-e-fonte-humana",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       },
       {
         "reviewer": "Privacidade",
-        "status": "pending",
-        "approved": false,
-        "reviewedAt": null,
-        "evidence": null
+        "status": "approved",
+        "approved": true,
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#autoridade-e-fonte-humana",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       }
     ],
-    "blockedPhases": ["T02", "T03", "T05"]
+    "blockedPhases": []
   },
   "decisions": [
     {
@@ -45,11 +54,14 @@
       ],
       "requirements": ["PAY-02", "ACL-P07-01", "ACL-P07-06"],
       "approval": {
-        "status": "pending",
-        "approved": false,
+        "status": "approved",
+        "approved": true,
         "reviewers": ["Produto", "Operacao"],
-        "reviewedAt": null,
-        "evidence": null
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#decisoes-aprovadas",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       }
     },
     {
@@ -63,11 +75,14 @@
       "basis": ["TECHNICAL-DESIGN.md:246-258"],
       "requirements": ["ORD-01", "ORD-02"],
       "approval": {
-        "status": "pending",
-        "approved": false,
+        "status": "approved",
+        "approved": true,
         "reviewers": ["Produto"],
-        "reviewedAt": null,
-        "evidence": null
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#decisoes-aprovadas",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       }
     },
     {
@@ -81,11 +96,14 @@
       "basis": ["TECHNICAL-DESIGN.md:246-258"],
       "requirements": ["INB-01", "PRV-03"],
       "approval": {
-        "status": "pending",
-        "approved": false,
+        "status": "approved",
+        "approved": true,
         "reviewers": ["Produto", "Operacao"],
-        "reviewedAt": null,
-        "evidence": null
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#decisoes-aprovadas",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       }
     },
     {
@@ -98,11 +116,14 @@
       "basis": ["TECHNICAL-DESIGN.md:246-258"],
       "requirements": ["ORD-05"],
       "approval": {
-        "status": "pending",
-        "approved": false,
+        "status": "approved",
+        "approved": true,
         "reviewers": ["Rose", "Operacao"],
-        "reviewedAt": null,
-        "evidence": null
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#decisoes-aprovadas",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       }
     },
     {
@@ -117,11 +138,14 @@
       "basis": ["TECHNICAL-DESIGN.md:246-258"],
       "requirements": ["FIN-01", "FIN-02", "FIN-03"],
       "approval": {
-        "status": "pending",
-        "approved": false,
+        "status": "approved",
+        "approved": true,
         "reviewers": ["Produto", "Operacao"],
-        "reviewedAt": null,
-        "evidence": null
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#decisoes-aprovadas",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       }
     },
     {
@@ -140,11 +164,14 @@
       ],
       "requirements": ["PAY-02", "FIN-03", "ACL-P07-11"],
       "approval": {
-        "status": "pending",
-        "approved": false,
+        "status": "approved",
+        "approved": true,
         "reviewers": ["Produto", "Operacao"],
-        "reviewedAt": null,
-        "evidence": null
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#decisoes-aprovadas",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       }
     },
     {
@@ -171,11 +198,14 @@
       "basis": ["TECHNICAL-DESIGN.md:483-508"],
       "requirements": ["T07.1"],
       "approval": {
-        "status": "pending",
-        "approved": false,
+        "status": "approved",
+        "approved": true,
         "reviewers": ["Produto", "Operacao", "Tech Lead"],
-        "reviewedAt": null,
-        "evidence": null
+        "reviewedAt": "2026-09-02T03:53:43.970Z",
+        "evidence": {
+          "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#decisoes-aprovadas",
+          "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+        }
       }
     }
   ],
@@ -183,31 +213,42 @@
     {
       "id": "ROLE-TECH-LEAD",
       "role": "Tech Lead",
-      "status": "pending",
-      "assignees": [],
+      "status": "designated",
+      "assignees": ["silmer:romulo.sutil"],
       "reviewers": ["Silmer"],
-      "reviewedAt": null,
-      "evidence": null
+      "reviewedAt": "2026-09-02T03:53:43.970Z",
+      "evidence": {
+        "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#designacoes",
+        "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+      }
     },
     {
       "id": "ROLE-DELIVERY-TEAM",
       "role": "Equipe de entrega",
-      "status": "pending",
-      "assignees": [],
+      "status": "designated",
+      "assignees": ["silmer:romulo.sutil"],
       "reviewers": ["Silmer", "Tech Lead"],
-      "reviewedAt": null,
-      "evidence": null
+      "reviewedAt": "2026-09-02T03:53:43.970Z",
+      "evidence": {
+        "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#designacoes",
+        "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+      }
     },
     {
       "id": "ROLE-TECHNICAL-ADMIN",
       "role": "Administrador Tecnico",
       "capability": "TECHNICAL_PRIVACY_EXECUTOR",
-      "status": "pending",
-      "assignees": [],
+      "status": "designated",
+      "assignees": ["silmer:romulo.sutil"],
       "reviewers": ["Silmer", "Tech Lead", "Privacidade"],
-      "reviewedAt": null,
-      "evidence": null,
-      "mustBeDistinctFrom": ["PRIVACY_OFFICER"]
+      "reviewedAt": "2026-09-02T03:53:43.970Z",
+      "evidence": {
+        "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#designacoes",
+        "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+      },
+      "mfaRequired": true,
+      "mfaConfirmed": true,
+      "soloOperationExceptionId": "SOLO-OPS-PILOT-01"
     }
   ],
   "separationOfDuties": {
@@ -217,14 +258,34 @@
       "PRIVACY_OFFICER",
       "TECHNICAL_PRIVACY_EXECUTOR"
     ],
-    "commercialAdminIsTechnicalAdmin": false,
-    "privacyAuthorizationAndDeletionExecutionMustBeDistinct": true,
+    "commercialAndTechnicalCapabilitiesRemainDistinct": true,
     "privacyOfficer": "Romulo Sutil Correa",
+    "privacyOfficerAssignee": "silmer:romulo.sutil",
+    "soloOperationException": {
+      "id": "SOLO-OPS-PILOT-01",
+      "status": "approved",
+      "approved": true,
+      "scope": "internal-pilot",
+      "assignee": "silmer:romulo.sutil",
+      "riskAccepted": true,
+      "reviewedAt": "2026-09-02T03:53:43.970Z",
+      "evidence": {
+        "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#excecao-de-operacao-solo-e-risco-aceito",
+        "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
+      },
+      "capabilitiesRemainOrthogonal": true,
+      "separateAuthorizationAndExecutionEvents": true,
+      "automaticChainingAllowed": false,
+      "auditEvidenceRequired": true,
+      "reviewTriggers": ["before-external-pilot", "second-operator-available"]
+    },
     "rules": [
       "Vendedor does not implicitly receive COMMERCIAL_ADMIN",
-      "COMMERCIAL_ADMIN does not imply PRIVACY_OFFICER or TECHNICAL_PRIVACY_EXECUTOR",
+      "Capabilities remain distinct even when assigned to the same identity",
       "PRIVACY_OFFICER authorizes privacy exceptions and legal holds",
-      "TECHNICAL_PRIVACY_EXECUTOR executes and proves deletion"
+      "TECHNICAL_PRIVACY_EXECUTOR executes and proves deletion",
+      "Privacy authorization and execution emit separate audit events",
+      "Privacy authorization never chains automatically into execution"
     ]
   }
 }

@@ -646,11 +646,11 @@ Estimativa preliminar: 15–18 semanas para uma equipe pequena de produto,
 engenharia e QA. O plano detalhado e os gates estão em
 `.specs/features/crm-mvp/tasks.md`.
 
-## 20. Questões e aprovações pendentes
+## 20. Decisões aprovadas e pendências externas
 
 | Item                                    | Default adotado                                                                                        | Quem aprova           |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------- |
-| Tech Lead, time e Administrador Técnico | Ainda não designados                                                                                   | Silmer                |
+| Tech Lead, time e Administrador Técnico | `silmer:romulo.sutil`, MFA; exceção solo limitada ao piloto interno                                    | Silmer                |
 | Confirmação de pagamento                | Exige role `Admin`                                                                                     | Produto/Operação      |
 | Relação Negócio/Pedido                  | 1:0..1 no MVP                                                                                          | Produto               |
 | Reabertura de conversa terminal         | Novo ciclo ligado ao contato                                                                           | Produto/Operação      |
@@ -663,6 +663,13 @@ O envelope de carga deixou de ser uma pendência em 31/08/2026: a previsão do
 piloto ficou abaixo da baseline da seção 13, o sizing KVM 4 foi mantido e a
 evidência nominal está registrada na issue `#8`. Isso libera a execução da
 T07.1, mas não afirma que o teste de carga ou os SLOs já foram comprovados.
+
+Os defaults de domínio e papéis da T00.6 foram aprovados em 02/09/2026. A
+exceção `SOLO-OPS-PILOT-01` permite a mesma identidade em Privacidade e
+execução técnica somente no piloto interno. MFA, capacidades ortogonais,
+eventos separados de autorização/execução, proibição de encadeamento automático
+e auditoria permanecem obrigatórios. A evidência está em
+`docs/phase0/T00.6-APPROVAL-EVIDENCE.md`.
 
 ### Critérios de aprovação do TDD
 

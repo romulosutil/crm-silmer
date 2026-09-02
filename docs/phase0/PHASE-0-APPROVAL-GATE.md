@@ -1,26 +1,21 @@
 # T00.6 — Gate de aprovação da Fase 0
 
-## Resultado local
+## Resultado
 
-Os defaults técnicos e as designações necessárias estão registrados em
-`docs/phase0/domain-decisions.json`. O registro é deliberadamente um gate
-**pendente**: nenhuma aprovação, nomeação ou data humana foi inferida.
+Em 02/09/2026, a T00.6 foi aprovada na issue `#10` e deixou de bloquear T02, T03 e T05.
 
-Enquanto Produto, Operação e Privacidade não registrarem as revisões exigidas,
-e Tech Lead, equipe e Administrador Técnico não forem designados, T02, T03 e
-T05 permanecem bloqueadas pelo critério da T00.6.
+Produto, Operação e Privacidade aprovaram os sete defaults; a Silmer designou
+Tech Lead, equipe de entrega e Administrador Técnico. A fonte humana e a
+aceitação de risco estão em `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`,
+versionada no commit `1e30b67b112241415c4ab39b601bd7ba6499ed12`.
 
-## Status operacional reconciliado
+`docs/phase0/domain-decisions.json` é o espelho executável fail-closed. A
+aprovação da T00.6 remove somente esse bloqueio; cada fase continua sujeita aos
+próprios gates técnicos, externos e operacionais.
 
-Em 01/09/2026, a T00.5 está concluída na issue `#9`; a T00.6 permanece `pending-human-approval` na issue `#10`, mantendo T02, T03 e T05 bloqueadas.
+## Defaults aprovados
 
-A fonte humana do status operacional corrente é `docs/phase0/PHASE-0-APPROVAL-GATE.md`; `docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Evidência local não equivale a aprovação humana.
-
-Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa (`github:romulosutil`).
-
-## Defaults aguardando confirmação
-
-| ID       | Default proposto                                                            | Revisão exigida               |
+| ID       | Default aprovado                                                            | Revisores                     |
 | -------- | --------------------------------------------------------------------------- | ----------------------------- |
 | D00.6-01 | Confirmação de pagamento exige pessoa com `COMMERCIAL_ADMIN` (`Admin`)      | Produto e Operação            |
 | D00.6-02 | Um Negócio possui zero ou um Pedido no MVP                                  | Produto                       |
@@ -28,51 +23,50 @@ Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa (`gi
 | D00.6-04 | PDF é a Ficha canônica; XLSX editável não integra o MVP                     | Rose e Operação               |
 | D00.6-05 | BRL em centavos; operação em `America/Sao_Paulo`; persistência em UTC       | Produto e Operação            |
 | D00.6-06 | Exceção de pagamento é manual, auditável e não libera Ficha automaticamente | Produto e Operação            |
-| D00.6-07 | Envelope provisório da seção 13 do TDD                                      | Produto, Operação e Tech Lead |
+| D00.6-07 | Envelope da seção 13 do TDD e `docs/phase0/load-envelope.json`              | Produto, Operação e Tech Lead |
 
-O envelope D00.6-07 referencia `docs/phase0/load-envelope.json`; aprovadores
-devem confirmar ou substituir a baseline antes da T07.1. A validação automática
-impede que uma alteração local transforme evidência técnica em aprovação.
+O D00.6-07 mantém a baseline aprovada na issue `#8`. A T07.1 continua
+responsável por comprovar a capacidade com carga real e recalibrar os SLOs.
 
-## Papéis e separação de funções
+## Papéis designados
 
-- **Tech Lead:** pessoa ainda não designada pela Silmer.
-- **Equipe de entrega:** integrantes ainda não designados pela Silmer e Tech
-  Lead.
-- **Administrador Técnico:** executor de `TECHNICAL_PRIVACY_EXECUTOR` ainda não
-  designado; deve usar MFA e não pode ser a mesma autoridade que decide o
-  `legal_hold` ou autoriza exceções de privacidade.
-- **Responsável de Privacidade:** Rômulo Sutil Corrêa, já definido pelo P0.6;
-  autoriza pedidos/exceções, mas não substitui a nomeação do executor técnico.
+`silmer:romulo.sutil` foi designado como:
 
-`Atendimento` e `Vendedor` são funções operacionais. `COMMERCIAL_ADMIN`
-(`Admin`), `PRIVACY_OFFICER` e `TECHNICAL_PRIVACY_EXECUTOR` são capacidades
-ortogonais; nenhuma é concedida implicitamente pela outra. Em particular, a
-função Vendedor não aprova venda, Ficha ou fechamento sem a role adicional
-`Admin`.
+- **Tech Lead** (`ROLE-TECH-LEAD`);
+- **equipe de entrega** (`ROLE-DELIVERY-TEAM`);
+- **Administrador Técnico** (`ROLE-TECHNICAL-ADMIN`), com a capacidade
+  `TECHNICAL_PRIVACY_EXECUTOR` e MFA confirmado.
 
-## Como registrar uma aprovação real
+Rômulo Sutil Corrêa permanece também como Produto, Operação e Responsável de
+Privacidade do piloto interno.
 
-1. O revisor confirma o valor correspondente no JSON ou registra o valor
-   substituto aprovado.
-2. No bloco `approval`, altera `status` para `approved`, `approved` para `true`,
-   informa `reviewedAt` em ISO 8601 e inclui em `evidence` um objeto com
-   `reference` não vazio e `revision` no formato `git:<SHA completo>`.
-3. Para uma designação, registra o identificador corporativo da pessoa em
-   `assignees` no formato `silmer:<id>`, muda `status` para `designated` e
-   registra data/evidência; não registrar documento pessoal.
-4. Produto, Operação e Privacidade alteram cada revisão global para `approved`,
-   registrando `approved: true`, data e evidência versionada.
-5. Somente quando decisões, revisões e designações estiverem completas,
-   `approvalGranted` pode ser `true`, o gate pode mudar para `approved` e
-   `blockedPhases` pode ficar vazio.
+## Exceção de operação solo
 
-O validador aceita somente os dois estados integrais descritos acima: baseline
-pendente ou aprovação completa. Estado misto é inválido.
+A exceção `SOLO-OPS-PILOT-01` permite que a mesma identidade acumule
+`PRIVACY_OFFICER` e `TECHNICAL_PRIVACY_EXECUTOR` somente no piloto interno. O
+proprietário aceitou explicitamente o risco residual de concentração de
+funções. A aprovação operacional não declara nova revisão da assessoria
+jurídica.
 
-Até esse fluxo ser concluído, o estado correto é
-`pending-human-approval` e a implementação das fases bloqueadas não deve usar
-os defaults como decisão humana final.
+Os controles compensatórios são obrigatórios e validados:
+
+- `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e
+  `TECHNICAL_PRIVACY_EXECUTOR` continuam capacidades ortogonais;
+- MFA continua obrigatório para `COMMERCIAL_ADMIN` e Administrador Técnico;
+- autorização e execução de privacidade produzem eventos distintos;
+- autorização nunca encadeia automaticamente a execução;
+- motivo, escopo, ator e horário permanecem auditáveis;
+- a exceção deve ser revista antes de piloto externo ou quando houver um
+  segundo operador disponível.
+
+Atendimento e Vendedor continuam funções operacionais e não recebem capacidade
+privilegiada implicitamente.
+
+## Como alterar esta aprovação
+
+Qualquer mudança em default, papel, MFA ou controle compensatório exige nova
+evidência humana versionada. O JSON aceita somente estado integralmente
+pendente ou integralmente aprovado; estados mistos continuam inválidos.
 
 ## Verificação
 

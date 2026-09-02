@@ -5,6 +5,7 @@ import test from 'node:test';
 import { validatePhase0Decisions } from '../scripts/validate-phase0-decisions.mjs';
 
 const rootUrl = new URL('../', import.meta.url);
+const soloAssignee = 'silmer:romulo.sutil';
 
 async function decisions() {
   return JSON.parse(
@@ -15,75 +16,58 @@ async function decisions() {
   );
 }
 
-const approvedAt = '2026-08-30T12:00:00.000Z';
-const revision = `git:${'a'.repeat(40)}`;
-
-/** @param {string} reference */
-function evidence(reference) {
-  return { reference, revision };
+/** @param {Record<string, any>} approved */
+function pendingState(approved) {
+  const pending = structuredClone(approved);
+  pending.approvalGranted = false;
+  pending.gate.status = 'pending-human-approval';
+  pending.gate.blockedPhases = ['T02', 'T03', 'T05'];
+  for (const review of pending.gate.requiredReviews) {
+    review.status = 'pending';
+    review.approved = false;
+    review.reviewedAt = null;
+    review.evidence = null;
+  }
+  for (const decision of pending.decisions) {
+    decision.approval.status = 'pending';
+    decision.approval.approved = false;
+    decision.approval.reviewedAt = null;
+    decision.approval.evidence = null;
+  }
+  for (const role of pending.roleDesignations) {
+    role.status = 'pending';
+    role.assignees = [];
+    role.reviewedAt = null;
+    role.evidence = null;
+  }
+  const pendingRoles = /** @type {Array<Record<string, any>>} */ (
+    pending.roleDesignations
+  );
+  const technicalAdmin = pendingRoles.find(
+    ({ id }) => id === 'ROLE-TECHNICAL-ADMIN',
+  );
+  assert.ok(technicalAdmin);
+  technicalAdmin.mfaConfirmed = false;
+  const solo = pending.separationOfDuties.soloOperationException;
+  solo.status = 'pending';
+  solo.approved = false;
+  solo.riskAccepted = false;
+  solo.reviewedAt = null;
+  solo.evidence = null;
+  return pending;
 }
 
-/** @param {Record<string, any>} baseline */
-function fullyApprove(baseline) {
-  const approved = structuredClone(baseline);
-  approved.approvalGranted = true;
-  approved.gate.status = 'approved';
-  approved.gate.blockedPhases = [];
-  for (const review of approved.gate.requiredReviews) {
-    review.status = 'approved';
-    review.approved = true;
-    review.reviewedAt = approvedAt;
-    review.evidence = evidence(`approvals/${review.reviewer.toLowerCase()}.md`);
-  }
-  for (const decision of approved.decisions) {
-    decision.approval.status = 'approved';
-    decision.approval.approved = true;
-    decision.approval.reviewedAt = approvedAt;
-    decision.approval.evidence = evidence(`approvals/${decision.id}.md`);
-  }
-  for (const role of approved.roleDesignations) {
-    role.status = 'designated';
-    role.assignees = [`silmer:${role.id.toLowerCase().replaceAll('_', '-')}`];
-    role.reviewedAt = approvedAt;
-    role.evidence = evidence(`approvals/${role.id}.md`);
-  }
-  return approved;
-}
-
-test('records every T00.6 default without claiming human approval', async () => {
+test('records the complete human-approved T00.6 gate', async () => {
   const document = await decisions();
 
   assert.doesNotThrow(() => validatePhase0Decisions(document));
-  assert.equal(document.approvalGranted, false);
-  assert.equal(document.gate.status, 'pending-human-approval');
-  assert.deepEqual(document.gate.blockedPhases, ['T02', 'T03', 'T05']);
+  assert.equal(document.schemaVersion, 2);
+  assert.equal(document.approvalGranted, true);
+  assert.equal(document.gate.status, 'approved');
+  assert.deepEqual(document.gate.blockedPhases, []);
   assert.equal(document.decisions.length, 7);
-});
-
-test('requires versioned reviewer, evidence and date fields to remain pending', async () => {
-  const document = await decisions();
-
-  for (const decision of document.decisions) {
-    assert.ok(decision.approval.reviewers.length > 0);
-    assert.equal(decision.approval.status, 'pending');
-    assert.equal(decision.approval.approved, false);
-    assert.equal(decision.approval.reviewedAt, null);
-    assert.equal(decision.approval.evidence, null);
-  }
-});
-
-test('accepts only a complete transition to the approved state', async () => {
-  const approved = fullyApprove(await decisions());
-
-  assert.doesNotThrow(() => validatePhase0Decisions(approved));
-  assert.equal(approved.approvalGranted, true);
-  assert.equal(approved.gate.status, 'approved');
-  assert.deepEqual(approved.gate.blockedPhases, []);
   const approvedDecisions = /** @type {Array<Record<string, any>>} */ (
-    approved.decisions
-  );
-  const approvedRoles = /** @type {Array<Record<string, any>>} */ (
-    approved.roleDesignations
+    document.decisions
   );
   assert.ok(
     approvedDecisions.every(
@@ -91,41 +75,46 @@ test('accepts only a complete transition to the approved state', async () => {
         approval.status === 'approved' && approval.approved === true,
     ),
   );
+  const approvedRoles = /** @type {Array<Record<string, any>>} */ (
+    document.roleDesignations
+  );
   assert.ok(
     approvedRoles.every(
       ({ status, assignees }) =>
-        status === 'designated' && assignees.length > 0,
+        status === 'designated' &&
+        assignees.length === 1 &&
+        assignees[0] === soloAssignee,
     ),
   );
 });
 
+test('retains a coherent fail-closed pending state', async () => {
+  const pending = pendingState(await decisions());
+
+  assert.doesNotThrow(() => validatePhase0Decisions(pending));
+  assert.equal(pending.approvalGranted, false);
+  assert.equal(pending.gate.status, 'pending-human-approval');
+  assert.deepEqual(pending.gate.blockedPhases, ['T02', 'T03', 'T05']);
+});
+
 test('rejects mixed gate, review, decision and designation states', async () => {
-  const baseline = await decisions();
+  const approved = await decisions();
 
-  const gateOnly = structuredClone(baseline);
-  gateOnly.approvalGranted = true;
-  gateOnly.gate.status = 'approved';
-  gateOnly.gate.blockedPhases = [];
-  assert.throws(
-    () => validatePhase0Decisions(gateOnly),
-    /review is incomplete|must be approved/iu,
-  );
-
-  const missingReview = fullyApprove(baseline);
+  const missingReview = structuredClone(approved);
   missingReview.gate.requiredReviews[0].approved = false;
   assert.throws(
     () => validatePhase0Decisions(missingReview),
     /review is incomplete/iu,
   );
 
-  const missingDecision = fullyApprove(baseline);
+  const missingDecision = structuredClone(approved);
   missingDecision.decisions[0].approval.status = 'pending';
   assert.throws(
     () => validatePhase0Decisions(missingDecision),
     /D00\.6-01 must be approved/iu,
   );
 
-  const missingRole = fullyApprove(baseline);
+  const missingRole = structuredClone(approved);
   missingRole.roleDesignations[0].status = 'pending';
   assert.throws(
     () => validatePhase0Decisions(missingRole),
@@ -134,20 +123,20 @@ test('rejects mixed gate, review, decision and designation states', async () => 
 });
 
 test('rejects forged approval evidence, dates and assignee identities', async () => {
-  const baseline = await decisions();
+  const approved = await decisions();
 
-  const badEvidence = fullyApprove(baseline);
+  const badEvidence = structuredClone(approved);
   badEvidence.decisions[0].approval.evidence.revision = 'main';
   assert.throws(
     () => validatePhase0Decisions(badEvidence),
     /versioned evidence/iu,
   );
 
-  const badDate = fullyApprove(baseline);
+  const badDate = structuredClone(approved);
   badDate.gate.requiredReviews[0].reviewedAt = 'yesterday';
   assert.throws(() => validatePhase0Decisions(badDate), /ISO review date/iu);
 
-  const badAssignee = fullyApprove(baseline);
+  const badAssignee = structuredClone(approved);
   badAssignee.roleDesignations[0].assignees = ['Person Name'];
   assert.throws(
     () => validatePhase0Decisions(badAssignee),
@@ -155,53 +144,101 @@ test('rejects forged approval evidence, dates and assignee identities', async ()
   );
 });
 
-test('preserves separation of duties after complete approval', async () => {
-  const approved = fullyApprove(await decisions());
-  approved.separationOfDuties.commercialAdminIsTechnicalAdmin = true;
-
-  assert.throws(
-    () => validatePhase0Decisions(approved),
-    /cannot be conflated/iu,
+test('requires MFA for the solo Technical Admin', async () => {
+  const approved = await decisions();
+  const approvedRoles = /** @type {Array<Record<string, any>>} */ (
+    approved.roleDesignations
   );
+  const technicalAdmin = approvedRoles.find(
+    ({ id }) => id === 'ROLE-TECHNICAL-ADMIN',
+  );
+
+  assert.ok(technicalAdmin);
+  assert.equal(technicalAdmin.mfaRequired, true);
+  assert.equal(technicalAdmin.mfaConfirmed, true);
+
+  const unsafe = structuredClone(approved);
+  const unsafeRoles = /** @type {Array<Record<string, any>>} */ (
+    unsafe.roleDesignations
+  );
+  const unsafeTechnicalAdmin = unsafeRoles.find(
+    ({ id }) => id === 'ROLE-TECHNICAL-ADMIN',
+  );
+  assert.ok(unsafeTechnicalAdmin);
+  unsafeTechnicalAdmin.mfaConfirmed = false;
+  assert.throws(() => validatePhase0Decisions(unsafe), /MFA/iu);
 });
 
-test('rejects a local edit that invents human approval', async () => {
-  const document = await decisions();
-  const unsafe = structuredClone(document);
-  unsafe.decisions[0].approval = {
-    ...unsafe.decisions[0].approval,
-    status: 'approved',
-    approved: true,
-    reviewedAt: '2026-08-30T00:00:00Z',
-    evidence: 'not-a-real-review',
-  };
+test('requires every compensating control for solo operation', async () => {
+  const approved = await decisions();
+  const cases = /** @type {Array<[string, boolean, RegExp]>} */ ([
+    ['riskAccepted', false, /risk/iu],
+    ['capabilitiesRemainOrthogonal', false, /orthogonal/iu],
+    [
+      'separateAuthorizationAndExecutionEvents',
+      false,
+      /authorization and execution/iu,
+    ],
+    ['automaticChainingAllowed', true, /automatic chaining/iu],
+    ['auditEvidenceRequired', false, /audit evidence/iu],
+  ]);
+
+  for (const [field, value, expected] of cases) {
+    const unsafe = structuredClone(approved);
+    unsafe.separationOfDuties.soloOperationException[field] = value;
+    assert.throws(() => validatePhase0Decisions(unsafe), expected);
+  }
+});
+
+test('rejects identity overlap without the approved solo exception', async () => {
+  const approved = await decisions();
+  const unsafe = structuredClone(approved);
+  unsafe.separationOfDuties.soloOperationException.approved = false;
 
   assert.throws(
     () => validatePhase0Decisions(unsafe),
-    /D00\.6-01.*pending|cannot claim approval/iu,
+    /solo operation exception/iu,
   );
 });
 
-test('keeps Vendedor, commercial Admin and Technical Admin separate', async () => {
-  const document = await decisions();
+test('binds every designated role to the approved solo assignee', async () => {
+  const approved = await decisions();
+  const changedAssignee = structuredClone(approved);
+  changedAssignee.roleDesignations[0].assignees = ['silmer:other.operator'];
+
+  assert.throws(
+    () => validatePhase0Decisions(changedAssignee),
+    /approved solo assignee/iu,
+  );
+
+  const changedException = structuredClone(approved);
   const roles = /** @type {Array<Record<string, any>>} */ (
-    document.roleDesignations
+    changedException.roleDesignations
   );
   const technicalAdmin = roles.find(({ id }) => id === 'ROLE-TECHNICAL-ADMIN');
-
   assert.ok(technicalAdmin);
-  assert.equal(technicalAdmin.status, 'pending');
-  assert.deepEqual(technicalAdmin.assignees, []);
-  assert.ok(technicalAdmin.mustBeDistinctFrom.includes('PRIVACY_OFFICER'));
-  assert.equal(
-    document.separationOfDuties.commercialAdminIsTechnicalAdmin,
-    false,
+  technicalAdmin.soloOperationExceptionId = 'SOLO-OPS-PILOT-99';
+
+  assert.throws(
+    () => validatePhase0Decisions(changedException),
+    /solo exception reference/iu,
   );
+});
+
+test('keeps capabilities separate despite the shared identity', async () => {
+  const document = await decisions();
+  const separation = document.separationOfDuties;
+
+  assert.equal(separation.privacyOfficerAssignee, soloAssignee);
   assert.equal(
-    document.separationOfDuties
-      .privacyAuthorizationAndDeletionExecutionMustBeDistinct,
+    separation.commercialAndTechnicalCapabilitiesRemainDistinct,
     true,
   );
+  assert.deepEqual(separation.orthogonalCapabilities, [
+    'COMMERCIAL_ADMIN',
+    'PRIVACY_OFFICER',
+    'TECHNICAL_PRIVACY_EXECUTOR',
+  ]);
 });
 
 test('rejects unsafe changes to authorization and the load envelope', async () => {
@@ -236,7 +273,7 @@ test('product persona does not grant approval merely by being Vendedor', async (
   assert.match(persona, /role adicional `Admin`/u);
 });
 
-test('keeps product readiness distinct from the current operational gate', async () => {
+test('reconciles canonical sources with the approved operational gate', async () => {
   const [specification, approvalGate, tasks, document] = await Promise.all([
     readFile(new URL('.specs/features/crm-mvp/spec.md', rootUrl), 'utf8'),
     readFile(new URL('docs/phase0/PHASE-0-APPROVAL-GATE.md', rootUrl), 'utf8'),
@@ -244,24 +281,16 @@ test('keeps product readiness distinct from the current operational gate', async
     decisions(),
   ]);
   const reconciledStatus =
-    'Em 01/09/2026, a T00.5 está concluída na issue `#9`; a T00.6 permanece ' +
-    '`pending-human-approval` na issue `#10`, mantendo T02, T03 e T05 bloqueadas.';
-  const operationalSource =
-    'A fonte humana do status operacional corrente é ' +
-    '`docs/phase0/PHASE-0-APPROVAL-GATE.md`';
-  const reviewer =
-    'Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa ' +
-    '(`github:romulosutil`).';
+    'Em 02/09/2026, a T00.6 foi aprovada na issue `#10` e deixou de bloquear ' +
+    'T02, T03 e T05.';
 
   for (const source of [specification, approvalGate, tasks]) {
-    assert.match(source, /evidência local não equivale a aprovação humana/iu);
     assert.ok(source.includes(reconciledStatus));
-    assert.ok(source.includes(operationalSource));
-    assert.ok(source.includes(reviewer));
+    assert.match(source, /T00\.6-APPROVAL-EVIDENCE\.md/u);
+    assert.match(source, /silmer:romulo\.sutil/u);
   }
-  assert.doesNotMatch(specification, /GO integral|nenhum P0 aberto/iu);
   assert.match(specification, /GO de produto/iu);
-  assert.equal(document.approvalGranted, false);
-  assert.equal(document.gate.status, 'pending-human-approval');
-  assert.deepEqual(document.gate.blockedPhases, ['T02', 'T03', 'T05']);
+  assert.equal(document.approvalGranted, true);
+  assert.equal(document.gate.status, 'approved');
+  assert.deepEqual(document.gate.blockedPhases, []);
 });

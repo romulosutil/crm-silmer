@@ -1,0 +1,24 @@
+{
+  "provider": "meta",
+  "providerAccountId": "synthetic-instagram-account",
+  "channel": "instagram",
+  "externalEventId": "synthetic-instagram-event-001",
+  "externalMessageId": "synthetic-instagram-message-001",
+  "externalConversationId": "synthetic-instagram-conversation-001",
+  "occurredAt": "2026-09-02T12:00:00.000Z",
+  "origin": "channel",
+  "visibility": "inbox",
+  "identity": {
+    "externalId": "synthetic-instagram-identity-001",
+    "kind": "handle",
+    "displayHandle": "@cliente_sintetico",
+    "phoneStatus": "pending",
+    "automaticMergeAllowed": false
+  },
+  "message": {
+    "type": "text",
+    "content": {
+      "text": "mensagem sintetica sem dado real"
+    }
+  }
+}

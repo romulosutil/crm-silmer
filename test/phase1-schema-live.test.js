@@ -49,7 +49,7 @@ if (connectionString) {
         },
       );
       assert.deepEqual(await migrate(pool, { migrations }), {
-        applied: ['0003'],
+        applied: migrations.slice(2).map(({ version }) => version),
         phase: 'expand',
       });
       assert.deepEqual(await migrate(pool, { migrations }), {

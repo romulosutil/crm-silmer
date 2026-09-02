@@ -381,6 +381,18 @@ por tópico para reconectar sem vazar eventos entre usuários.
 6. Falha transitória usa backoff exponencial com jitter.
 7. Falha final cria item visível de reconciliação.
 
+Para `T02.2`, o contrato aprovado limita o callback a `1 MiB` e o processamento
+normal a eventos com no máximo 24 horas. Evento assinado mais antigo é
+persistido para reconciliação, sem job normal. O payload bruto com PII é
+protegido por envelope `AES-256-GCM` com chave dedicada e versionada; sem essa
+chave o runtime produtivo permanece indisponível. Evento, metadados de mídia e
+job mínimo compartilham a transação que antecede o `200`. A WABA e o
+`phone_number_id` são allowlist obrigatória. O ingresso limita 100 eventos por
+callback, 20 requests/s e oito persistências concorrentes; o evento canônico é
+cifrado com AAD ligada à identidade externa e ao fingerprint para leitura pelo
+worker sem reparse do payload Meta. O detalhamento e as evidências exigidas
+estão em `docs/phase2/WHATSAPP-WEBHOOK.md`.
+
 ### Comando e outbox
 
 Estado do domínio, auditoria e evento de outbox são gravados na mesma

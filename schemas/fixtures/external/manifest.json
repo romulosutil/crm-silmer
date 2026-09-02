@@ -9,7 +9,11 @@
       "expectedHeader": "sha256=803ddd849be1f90a623deef8f743b648c6849fe7408397eb55e2407ab4219d30"
     },
     "messageFixture": "schemas/fixtures/external/meta-message.json",
-    "statusFixture": "schemas/fixtures/external/meta-status.json"
+    "statusFixture": "schemas/fixtures/external/meta-status.json",
+    "canonicalInboundFixtures": {
+      "whatsapp": "schemas/fixtures/external/meta-whatsapp-canonical-inbound.json",
+      "instagram": "schemas/fixtures/external/meta-instagram-canonical-inbound.json"
+    }
   },
   "gemini": {
     "schemaFixture": "schemas/fixtures/external/gemini-suggestion-schema.json"

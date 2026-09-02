@@ -255,6 +255,30 @@ Lacunas só existem com registro explícito de reserva/cancelamento.
 - Um Negócio gera no máximo um Pedido no MVP.
 - Nova mensagem após conversa terminal cria novo ciclo de conversa ligado ao
   mesmo contato, preservando o gatilho de retenção anterior.
+- O primeiro inbound cria um `Contact` provisório ligado à identidade externa;
+  isso não cria Lead, Negócio nem Card. Conversas e mensagens permanecem
+  ancoradas na identidade, enquanto o `Contact` é uma agregação resolvida por
+  vínculos históricos.
+- O backlog usa `nova`, `em_analise`, `em_atendimento`, `requer_atencao`,
+  `convertida_em_lead` e `sem_lead`. Os dois últimos estados são terminais e
+  nunca são reabertos; nova mensagem cria outro ciclo em `nova`.
+- Merge e unmerge alteram somente o vínculo versionado `Identity -> Contact`,
+  exigem ação humana de Atendimento ou Vendedor, motivo, correlação, versão
+  esperada e evidência auditável. Históricos não são movidos ou reescritos e
+  nome, handle ou similaridade nunca autorizam vínculo automático.
+- Enquanto não houver evidência de criptografia do volume, identidade externa,
+  conteúdo de mensagem, legenda e pergunta de sugestão usam envelope
+  `AES-256-GCM` na aplicação; busca de identidade usa HMAC com chave distinta.
+  IDs técnicos e logs não carregam conteúdo pessoal.
+- Responder como pessoa suspende a IA, atribui a conversa ao autor e cria a
+  mensagem/outbox na mesma transação. A reativação da IA é uma ação humana
+  explícita. Como a Meta não comprova idempotência de envio, o job usa política
+  de reconciliação manual. O fencing do efeito externo por `automation_epoch`
+  permanece na T04.4.
+- A T02.4 mantém sugestões estruturalmente separadas do estado oficial. A
+  geração, o aceite/descarte e a apresentação completa pertencem à T04.3 e à
+  T02.6; portanto CHN-P04-07/08 não são declarados operacionalmente encerrados
+  antes dessas fatias.
 - Confirmação de pagamento exige pessoa com role `Admin`, por menor privilégio.
 - Exceção de pagamento não libera Ficha automaticamente; exige decisão `Admin`.
 - PDF é o artefato canônico da Ficha. XLSX editável fica fora do MVP.

@@ -202,8 +202,8 @@ externos e operacionais continuam independentes.
 
 ### T02.2 Implementar webhook WhatsApp
 
-- **Status:** concluída localmente em 02/09/2026; integração em `master` depende
-  de PR. Limite de `1 MiB`, janela de 24 horas, envelope `AES-256-GCM`,
+- **Status:** concluída e integrada em `master` em 02/09/2026. Limite de
+  `1 MiB`, janela de 24 horas, envelope `AES-256-GCM`,
   allowlist Meta, backpressure e fronteira transacional com `T02.3` foram
   aprovados e validados, inclusive concorrência e rollback em PostgreSQL 17,
   conforme `docs/phase2/WHATSAPP-WEBHOOK.md`.
@@ -217,6 +217,10 @@ externos e operacionais continuam independentes.
 
 ### T02.3 Implementar fila PostgreSQL e worker
 
+- **Status:** concluída e integrada em `master` em 02/09/2026 com fila durável,
+  lease/heartbeat/reclaim, retry seguro, dead letter, `outcome_unknown`, volume
+  privado de mídia e recibo manual de handoff Dropbox validados em PostgreSQL
+  17. Isso não declara storage externo nem recuperação da mídia transitória.
 - Inbox/outbox, `available_at`, prioridade, lease/`locked_until`, claim com
   lock, reclaim, retry, jitter, heartbeat, máximo de tentativas, dead letter e
   estados `sent|failed|outcome_unknown`.
@@ -230,9 +234,25 @@ externos e operacionais continuam independentes.
 
 ### T02.4 Implementar Conversa, Mensagem e Contato
 
+- **Status:** concluída localmente em 02/09/2026; integração em `master` depende
+  de PR. O domínio e os adapters PostgreSQL cobrem contato provisório,
+  identidade externa, ciclos de conversa, mensagens, merge/unmerge reversível,
+  takeover e envio humano atômico. Concorrência, idempotência, isolamento por
+  conta, auditoria e envelopes `AES-256-GCM` foram validados em PostgreSQL 17;
+  envio Meta continua com reconciliação manual e sem promessa de idempotência
+  do provedor.
+- **Decisão aprovada em 02/09/2026:** primeiro inbound cria `Contact`
+  provisório sem Lead/Negócio; conversa e mensagem ficam ancoradas na identidade
+  externa; merge/unmerge humano altera vínculo histórico versionado sem mover
+  mensagens; resposta humana e takeover são atômicos; conteúdo e identidade
+  sensíveis usam envelope enquanto não houver evidência de criptografia do
+  volume.
 - Estados de backlog, ciclos, `@usuario`/telefone pendente, identidades e
   merge/unmerge humano verificável.
-- **Verificação:** INB-01, CHN-P04-05 a CHN-P04-08 e isolamento entre titulares.
+- **Verificação:** INB-01, fundações de CHN-P04-05 a CHN-P04-08,
+  CHN-P04-04/11/12 para identidade e isolamento entre titulares. Geração e
+  apresentação integral de sugestões permanecem em T04.3/T02.6; fencing de
+  efeito externo permanece em T04.4.
 
 ### T02.5 Implementar reconciliação e saúde do canal
 

@@ -263,10 +263,23 @@ export class PostgresWebhookInbox {
    * @returns {Promise<Record<string, unknown>|null>}
    */
   async readCanonicalEvent(channelEventId) {
+    const record = await this.readCanonicalEventRecord(channelEventId);
+    return record?.event ?? null;
+  }
+
+  /**
+   * Returns the decrypted event together with its content-free correlation
+   * identifier so a worker can preserve traceability without reopening the
+   * provider payload.
+   *
+   * @param {string} channelEventId
+   * @returns {Promise<Readonly<{correlationId: string, event: Record<string, unknown>}>|null>}
+   */
+  async readCanonicalEventRecord(channelEventId) {
     const id = boundedString(channelEventId, 'channelEventId', 128);
     const selected = await this.#database.query(
       `SELECT provider, provider_account_id, external_event_id, fingerprint,
-              event_envelope, event_key_version
+              event_envelope, event_key_version, correlation_id
        FROM crm.channel_events
        WHERE id = $1`,
       [id],
@@ -275,7 +288,13 @@ export class PostgresWebhookInbox {
     if (selected.rows.length !== 1) {
       throw new Error('Canonical webhook event identity is not unique');
     }
-    return decryptCanonicalEvent(selected.rows[0], this.#envelopeKey);
+    return Object.freeze({
+      correlationId: storedString(
+        selected.rows[0].correlation_id,
+        'channel event correlation id',
+      ),
+      event: decryptCanonicalEvent(selected.rows[0], this.#envelopeKey),
+    });
   }
 }
 

@@ -256,6 +256,7 @@ test('round-trips the encrypted canonical event and authenticates its linkage', 
     }
     if (sql.includes('INSERT INTO crm.channel_events')) {
       storedEvent = {
+        correlation_id: values[15],
         event_envelope: JSON.parse(String(values[10])),
         event_key_version: values[11],
         external_event_id: values[5],

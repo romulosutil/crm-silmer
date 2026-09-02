@@ -25,10 +25,17 @@ const copies = [
     'modules/configuration/package.json',
     'runtime/modules/configuration/package.json',
   ],
+  ['modules/contacts/src', 'runtime/modules/contacts/src'],
+  ['modules/contacts/package.json', 'runtime/modules/contacts/package.json'],
   ['modules/identity-access/src', 'runtime/modules/identity-access/src'],
   [
     'modules/identity-access/package.json',
     'runtime/modules/identity-access/package.json',
+  ],
+  ['modules/inbox-channels/src', 'runtime/modules/inbox-channels/src'],
+  [
+    'modules/inbox-channels/package.json',
+    'runtime/modules/inbox-channels/package.json',
   ],
   [
     'modules/integration-reliability/src',

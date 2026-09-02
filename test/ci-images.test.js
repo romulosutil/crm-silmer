@@ -67,8 +67,10 @@ test('packages every runtime workspace required by the API', async () => {
     'audit-privacy',
     'catalog',
     'configuration',
+    'contacts',
     'database',
     'identity-access',
+    'inbox-channels',
     'integration-reliability',
     'shared',
   ];

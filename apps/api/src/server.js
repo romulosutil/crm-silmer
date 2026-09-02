@@ -1,13 +1,16 @@
 import { pathToFileURL } from 'node:url';
 
 import { createDatabase } from '@crm-silmer/database';
+import { createMetaWhatsAppNormalizer } from '@crm-silmer/inbox-channels';
 import {
   InMemoryMetaEventStore,
+  PostgresWebhookInbox,
   processMetaWebhook,
 } from '@crm-silmer/integration-reliability';
 import { createApi } from './app.js';
 import { createCommercialRuntime } from './commercial-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
+import { createWhatsAppWebhookRuntime } from './whatsapp-webhook-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
 /**
@@ -17,6 +20,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  * @param {{
  *   database?: ReturnType<typeof createDatabase>,
  *   commercial?: ReturnType<typeof createCommercialRuntime>,
+ *   environment?: Record<string, string|undefined>,
  *   logger?: ReturnType<typeof createSafeLogger>,
  *   readiness?: () => boolean | Promise<boolean>,
  *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>,
@@ -27,7 +31,14 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 export function createServerApi(runtime = {}) {
   const logger = runtime.logger ?? createSafeLogger({ service: SERVICES.api });
   const readiness = runtime.readiness ?? runtime.database?.readiness;
-  const metaWebhook = runtime.metaWebhook ?? createMetaWebhookRuntime();
+  const metaWebhook =
+    runtime.metaWebhook ??
+    (runtime.database
+      ? createDurableMetaWebhookRuntime(
+          runtime.database,
+          runtime.environment ?? process.env,
+        )
+      : undefined);
   const commercial =
     runtime.commercial ??
     (runtime.database ? createCommercialRuntime(runtime.database) : undefined);
@@ -43,8 +54,8 @@ export function createServerApi(runtime = {}) {
 }
 
 /**
- * The Phase 0 sandbox store proves the webhook boundary and replay behavior in
- * one process. T02.2 replaces it with the PostgreSQL inbox before production.
+ * Legacy Phase 0 sandbox helper. Production wiring never calls this in-memory
+ * runtime; it remains only for the isolated synthetic smoke contract.
  *
  * @param {Record<string, string|undefined>} [environment]
  */
@@ -65,6 +76,77 @@ export function createMetaWebhookRuntime(environment = process.env) {
         ...input,
       }),
   });
+}
+
+/**
+ * Creates the production webhook only when its complete durable configuration
+ * exists. Partial configuration is a startup error rather than an in-memory
+ * fallback.
+ *
+ * @param {ReturnType<typeof createDatabase>|{query: Function, transaction: Function}} database
+ * @param {Record<string, string|undefined>} [environment]
+ */
+export function createDurableMetaWebhookRuntime(
+  database,
+  environment = process.env,
+) {
+  const names = [
+    'META_APP_SECRET',
+    'META_VERIFY_TOKEN',
+    'META_WHATSAPP_BUSINESS_ACCOUNT_ID',
+    'META_WHATSAPP_PHONE_NUMBER_ID',
+    'META_WEBHOOK_PAYLOAD_ENVELOPE_KEY',
+  ];
+  if (names.every((name) => !environment[name])) return undefined;
+
+  const appSecret = requireConfiguredSecret(
+    environment.META_APP_SECRET,
+    'META_APP_SECRET',
+  );
+  const verifyToken = requireConfiguredSecret(
+    environment.META_VERIFY_TOKEN,
+    'META_VERIFY_TOKEN',
+  );
+  const envelopeKey = readEnvelopeKey(
+    environment.META_WEBHOOK_PAYLOAD_ENVELOPE_KEY,
+  );
+  const normalize = createMetaWhatsAppNormalizer({
+    businessAccountId: requireConfiguredSecret(
+      environment.META_WHATSAPP_BUSINESS_ACCOUNT_ID,
+      'META_WHATSAPP_BUSINESS_ACCOUNT_ID',
+    ),
+    phoneNumberId: requireConfiguredSecret(
+      environment.META_WHATSAPP_PHONE_NUMBER_ID,
+      'META_WHATSAPP_PHONE_NUMBER_ID',
+    ),
+  });
+  const inbox = new PostgresWebhookInbox({ database, envelopeKey });
+  return createWhatsAppWebhookRuntime({
+    appSecret,
+    inbox,
+    normalize,
+    verifyToken,
+  });
+}
+
+/** @param {string|undefined} value @param {string} name */
+function requireConfiguredSecret(value, name) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`${name} is required when the Meta webhook is enabled`);
+  }
+  return value;
+}
+
+/** @param {string|undefined} value */
+function readEnvelopeKey(value) {
+  const name = 'META_WEBHOOK_PAYLOAD_ENVELOPE_KEY';
+  const encoded = requireConfiguredSecret(value, name);
+  if (!/^[A-Za-z0-9_-]+$/u.test(encoded)) {
+    throw new Error(`${name} must use base64url`);
+  }
+  const key = Buffer.from(encoded, 'base64url');
+  if (key.length !== 32) throw new Error(`${name} must decode to 32 bytes`);
+  return key;
 }
 
 if (

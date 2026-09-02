@@ -10,8 +10,13 @@ import {
 import {
   MetaWebhookAuthenticationError,
   MetaWebhookPayloadError,
+  WebhookEventConflictError,
 } from '@crm-silmer/integration-reliability';
 import { registerIdentityRoutes } from './identity-routes.js';
+import { WEBHOOK_BODY_LIMIT_BYTES } from './whatsapp-webhook-runtime.js';
+
+export const WEBHOOK_MAX_IN_FLIGHT = 8;
+export const WEBHOOK_REQUESTS_PER_SECOND = 20;
 
 /**
  * Creates the HTTP API without binding a socket, so callers and tests own its
@@ -24,7 +29,7 @@ import { registerIdentityRoutes } from './identity-routes.js';
  *   readiness?: () => boolean | Promise<boolean>,
  *   metaWebhook?: {
  *     verifyToken: string,
- *     process(input: {rawBody: Buffer, signature: unknown}): Promise<unknown>
+ *     process(input: {correlationId: string, rawBody: Buffer, signature: unknown}): Promise<unknown>
  *   },
  *   commercial?: Record<string, any>,
  *   identity?: Record<string, any>
@@ -35,6 +40,8 @@ export function createApi(options = {}, runtime = {}) {
   const logger = runtime.logger ?? createSafeLogger({ service: SERVICES.api });
   const metrics = runtime.metrics ?? new MetricRegistry({ logger });
   const readiness = runtime.readiness ?? (() => false);
+  const webhookAdmission = createWebhookAdmissionGate();
+  const admittedWebhooks = new WeakSet();
   /** @type {WeakMap<object, { correlationId: string, requestId: string, startedAt: number }>} */
   const requests = new WeakMap();
 
@@ -146,10 +153,29 @@ export function createApi(options = {}, runtime = {}) {
 
     metaWebhookScope.post(
       '/api/v1/webhooks/meta/whatsapp',
+      {
+        bodyLimit: WEBHOOK_BODY_LIMIT_BYTES,
+        onRequest: async (request, reply) => {
+          if (!isJsonContentType(request.headers['content-type'])) {
+            return reply.code(415).send();
+          }
+          if (!webhookAdmission.enter()) {
+            reply.header('retry-after', '1');
+            return reply.code(429).send();
+          }
+          admittedWebhooks.add(request);
+        },
+        onResponse: async (request) => {
+          if (admittedWebhooks.delete(request)) webhookAdmission.leave();
+        },
+      },
       async (request, reply) => {
         if (!runtime.metaWebhook) return reply.code(503).send();
         try {
+          const context = requests.get(request);
+          if (!context) throw new Error('Missing request context');
           const result = await runtime.metaWebhook.process({
+            correlationId: context.correlationId,
             rawBody: /** @type {Buffer} */ (request.body),
             signature: request.headers['x-hub-signature-256'],
           });
@@ -160,6 +186,13 @@ export function createApi(options = {}, runtime = {}) {
           }
           if (error instanceof MetaWebhookPayloadError) {
             return reply.code(400).send();
+          }
+          if (error instanceof WebhookEventConflictError) {
+            return reply.code(409).send();
+          }
+          if (isTransientWebhookPersistenceError(error)) {
+            reply.header('retry-after', '1');
+            return reply.code(503).send();
           }
           throw error;
         }
@@ -179,4 +212,52 @@ export function createApi(options = {}, runtime = {}) {
   api.get('/health/live', live);
 
   return api;
+}
+
+/** @param {unknown} contentType */
+function isJsonContentType(contentType) {
+  return (
+    typeof contentType === 'string' &&
+    /^application\/json(?:\s*;[^\r\n]*)?$/iu.test(contentType)
+  );
+}
+
+function createWebhookAdmissionGate() {
+  let inFlight = 0;
+  let admittedInWindow = 0;
+  let windowStartedAt = performance.now();
+  return {
+    enter() {
+      const now = performance.now();
+      if (now - windowStartedAt >= 1000) {
+        admittedInWindow = 0;
+        windowStartedAt = now;
+      }
+      if (
+        inFlight >= WEBHOOK_MAX_IN_FLIGHT ||
+        admittedInWindow >= WEBHOOK_REQUESTS_PER_SECOND
+      ) {
+        return false;
+      }
+      inFlight += 1;
+      admittedInWindow += 1;
+      return true;
+    },
+    leave() {
+      inFlight = Math.max(0, inFlight - 1);
+    },
+  };
+}
+
+/** @param {unknown} error */
+function isTransientWebhookPersistenceError(error) {
+  if (!error || typeof error !== 'object') return false;
+  const code = /** @type {Record<string, unknown>} */ (error).code;
+  return [
+    '25P04',
+    '53300',
+    '55P03',
+    '57014',
+    'DATABASE_CONNECTION_TIMEOUT',
+  ].includes(String(code));
 }

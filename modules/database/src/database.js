@@ -27,11 +27,12 @@ export async function checkDatabaseReadiness(database, migrations) {
 }
 
 /**
- * @param {{ connectionString: string, applicationName?: string, max?: number }} options
+ * @param {{ connectionString: string, applicationName?: string, connectionTimeoutMillis?: number, max?: number }} options
  */
 export function createDatabase({
   connectionString,
   applicationName = 'crm-silmer-api',
+  connectionTimeoutMillis = 5000,
   max = 10,
 }) {
   if (!connectionString) {
@@ -40,6 +41,7 @@ export function createDatabase({
 
   const pool = new Pool({
     application_name: applicationName,
+    connectionTimeoutMillis,
     connectionString,
     max,
   });

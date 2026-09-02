@@ -3,6 +3,15 @@
  * @typedef {{ connect: () => Promise<DatabaseClient> }} DatabasePool
  */
 
+export class DatabaseConnectionTimeoutError extends Error {
+  /** @param {{cause?: unknown}} [options] */
+  constructor(options = {}) {
+    super('Database connection acquisition timed out', options);
+    this.name = 'DatabaseConnectionTimeoutError';
+    this.code = 'DATABASE_CONNECTION_TIMEOUT';
+  }
+}
+
 /**
  * Runs domain work in one PostgreSQL transaction. A rollback failure never
  * replaces the original application error.
@@ -14,7 +23,18 @@
  * @returns {Promise<T>}
  */
 export async function withTransaction(pool, work) {
-  const client = await pool.connect();
+  let client;
+  try {
+    client = await pool.connect();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /timeout exceeded when trying to connect/iu.test(error.message)
+    ) {
+      throw new DatabaseConnectionTimeoutError({ cause: error });
+    }
+    throw error;
+  }
   try {
     await client.query('BEGIN');
     const result = await work(client);

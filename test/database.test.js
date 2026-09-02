@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   checkDatabaseReadiness,
+  DatabaseConnectionTimeoutError,
   withTransaction,
 } from '../modules/database/src/index.js';
 
@@ -56,6 +57,25 @@ test('rolls back failed work without replacing the domain error', async () => {
 
   assert.deepEqual(client.queries, ['BEGIN', 'ROLLBACK']);
   assert.equal(client.released, true);
+});
+
+test('classifies a bounded PostgreSQL pool acquisition timeout', async () => {
+  const cause = new Error('timeout exceeded when trying to connect');
+  const pool = {
+    async connect() {
+      throw cause;
+    },
+  };
+
+  await assert.rejects(
+    withTransaction(pool, async () => undefined),
+    (error) => {
+      assert.ok(error instanceof DatabaseConnectionTimeoutError);
+      assert.equal(error.code, 'DATABASE_CONNECTION_TIMEOUT');
+      assert.equal(error.cause, cause);
+      return true;
+    },
+  );
 });
 
 test('readiness requires connectivity and every compatible expand migration', async () => {

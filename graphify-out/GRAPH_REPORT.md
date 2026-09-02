@@ -1,22 +1,22 @@
-# Graph Report - crm-silmer  (2026-09-02)
+# Graph Report - crm-silmer-t02-1  (2026-09-02)
 
 ## Corpus Check
-- 186 files · ~119,153 words
+- 172 files · ~118,911 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1514 nodes · 2091 edges · 157 communities (115 shown, 42 thin omitted)
+- 1471 nodes · 2106 edges · 140 communities (98 shown, 42 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.76)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `eb9f9035`
+- Built from commit: `1f33db4e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- postgres-idempotency.js
 - integration-reliability/src/index.js
+- server.js
 - TDD — CRM Silmer MVP
 - 0002_phase1_domain.expand.sql
 - configuration-version.js
@@ -25,10 +25,10 @@
 - O que já está configurado
 - Design do CRM Silmer
 - database/src/index.js
-- T00.4 — Spikes externos
+- T00.4 — Sandbox da Meta
 - recovery-mock.mjs
 - audit-privacy/src/index.js
-- catalog-version.js
+- channel-envelope.js
 - dependencies
 - ficha-pdf-review.mjs
 - compilerOptions
@@ -50,7 +50,7 @@
 - alerts.json
 - identity-runtime.js
 - Passagem de Produto para Tech Lead
-- signature
+- meta
 - package.json
 - tasks.md
 - README.md
@@ -146,27 +146,10 @@
 - DATACRAZY-SETUP.md
 - Codex — Contexto do CRM Silmer
 - PASSO A PASSO — Conectar a Crazy API (quando o cliente aprovar)
-- Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?
-- Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?
-- Q: Como a nova decisao do P0.4 limita a autonomia do Vendedor Silmer?
-- Q: Quais decisões resolvem o P0.7 do PRODUCT-READINESS-TECH-LEAD?
-- Q: Quais decisões resolvem o P0.5 do PRODUCT-READINESS-TECH-LEAD?
-- Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?
-- Q: Como o P0.5 define FAB, sequência, reserva, concorrência e reutilização do número da Ficha?
-- Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?
-- Q: Como o P0.7 modela Admin, Atendimento e Vendedor?
-- Q: Where are the agent roles and contribution protocol defined?
-- Q: Quais requisitos, tarefas, arquivos, contratos de acessibilidade, segurança e critérios de aceite estão relacionados à GitHub Issue #1?
-- Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?
-- Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?
-- Q: Qual requisito, tarefa, arquivos e critérios de aceite correspondem à issue GitHub #2 deste repositório?
-- Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?
-- Q: Quais dependências e critérios verificáveis da issue 5 ainda podem ser concluídos sem aceite humano, credenciais OpenAI ou designação do Tech Lead?
-- Q: Qual modelo Gemini oferece o melhor custo-beneficio para os chats do CRM Silmer na issue 5?
-- Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?
-- Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?
-- Q: Qual é o escopo, os requisitos, as dependências, os critérios de aceite e as evidências esperadas da issue 6 do CRM Silmer?
-- Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?
+- T00.4 — Spikes externos
+- T00.4 - Revisao do PDF canonico da Ficha
+- Dívida #29 — Aprovação e validação futura do Cloudflare R2
+- inbox-channels/package.json
 - identity-routes.js
 - T00.6 — Evidência de aprovação
 
@@ -183,16 +166,16 @@
 10. `migrate()` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `createCatalogService()` --indirect_call--> `select()`  [INFERRED]
+  modules/catalog/src/application/catalog-service.js → apps/edge-web/src/app.js
 - `createIdempotentCommandExecutor()` --indirect_call--> `request()`  [INFERRED]
   modules/integration-reliability/src/idempotency.js → apps/edge-web/src/app.js
 - `createR2S3Client()` --indirect_call--> `request()`  [INFERRED]
   scripts/r2-live-smoke.mjs → apps/edge-web/src/app.js
-- `createCatalogService()` --indirect_call--> `select()`  [INFERRED]
-  modules/catalog/src/application/catalog-service.js → apps/edge-web/src/app.js
-- `createCommercialRuntime()` --calls--> `createCatalogService()`  [EXTRACTED]
-  apps/api/src/commercial-runtime.js → modules/catalog/src/application/catalog-service.js
 - `harness()` --calls--> `createCatalogService()`  [EXTRACTED]
   test/catalog.test.js → modules/catalog/src/application/catalog-service.js
+- `createHarness()` --calls--> `createConfigurationService()`  [EXTRACTED]
+  test/configuration.test.js → modules/configuration/src/application/configuration-service.js
 
 ## Import Cycles
 - None detected.
@@ -213,15 +196,15 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (157 total, 42 thin omitted)
+## Communities (140 total, 42 thin omitted)
 
-### Community 0 - "postgres-idempotency.js"
+### Community 0 - "integration-reliability/src/index.js"
+Cohesion: 0.06
+Nodes (42): createMetaWebhookRuntime(), canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore (+34 more)
+
+### Community 1 - "server.js"
 Cohesion: 0.09
-Nodes (26): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+18 more)
-
-### Community 1 - "integration-reliability/src/index.js"
-Cohesion: 0.05
-Nodes (51): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, createMetaMessagesClient(), deepFreeze(), extractMetaEvents(), immutableClone() (+43 more)
+Nodes (33): createApi(), createServerApi(), WorkerRuntime, SERVICES, allowedContextFields, allowedEvents, allowedMetrics, allowedServices (+25 more)
 
 ### Community 2 - "TDD — CRM Silmer MVP"
 Cohesion: 0.05
@@ -232,8 +215,8 @@ Cohesion: 0.09
 Nodes (37): crm_meta.protect_catalog_entry, crm_meta.protect_catalog_version, crm_meta.protect_idempotency_record, crm_meta.reject_immutable_change, audit_events_immutable_rows, audit_events_immutable_truncate, catalog_materials_immutable_truncate, catalog_materials_protect_rows (+29 more)
 
 ### Community 4 - "configuration-version.js"
-Cohesion: 0.08
-Nodes (36): createCommercialRuntime(), createPostgresCatalogRepository(), createPostgresConfigurationRepository(), isoString(), mapConfiguration(), requireQueryable(), requireString(), createConfigurationService() (+28 more)
+Cohesion: 0.05
+Nodes (59): createCommercialRuntime(), createPostgresCatalogRepository(), isoString(), mapCatalog(), requireQueryable(), requireString(), createCatalogService(), assertExactKeys() (+51 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.05
@@ -252,12 +235,12 @@ Cohesion: 0.05
 Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e conteúdo, 13. Arquitetura de implementação visual, 14. Critérios de aceite do design system, 15. Antipadrões proibidos, 1. Objetivo, 2. Tradução da marca para o produto (+29 more)
 
 ### Community 9 - "database/src/index.js"
-Cohesion: 0.08
-Nodes (19): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+11 more)
+Cohesion: 0.07
+Nodes (22): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+14 more)
 
-### Community 10 - "T00.4 — Spikes externos"
-Cohesion: 0.06
-Nodes (28): Cloudflare R2 Integration, Decisões seguras, Evidências e pendências externas, Gemini Developer API Integration, Meta Sandbox Validation, Resultado local, T00.4 — Spikes externos, Verificação (+20 more)
+### Community 10 - "T00.4 — Sandbox da Meta"
+Cohesion: 0.20
+Nodes (6): Ativos selecionados, Escopo e limite, Evidência de fechamento, Segredos e dados locais, Sequência operacional, T00.4 — Sandbox da Meta
 
 ### Community 11 - "recovery-mock.mjs"
 Cohesion: 0.13
@@ -267,9 +250,9 @@ Nodes (28): buildRecoveryPlan(), expectedAdapterKeys, expectedBlockerKeys, expec
 Cohesion: 0.15
 Nodes (14): AuditEventValidationError, createAuditEventEnvelope(), deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), PostgresAuditTrail (+6 more)
 
-### Community 13 - "catalog-version.js"
-Cohesion: 0.11
-Nodes (24): select(), isoString(), mapCatalog(), requireQueryable(), requireString(), createCatalogService(), assertExactKeys(), assertNonEmptyString() (+16 more)
+### Community 13 - "channel-envelope.js"
+Cohesion: 0.14
+Nodes (24): ATTACHMENT_CONTENT_FIELDS, canonicalIdentity(), canonicalMessage(), ChannelContractError, CHANNELS, createCanonicalInboundEnvelope(), createCanonicalOutboundEnvelope(), createScopedExternalId() (+16 more)
 
 ### Community 14 - "dependencies"
 Cohesion: 0.08
@@ -308,8 +291,8 @@ Cohesion: 0.22
 Nodes (17): APPROVED_MODEL, APPROVED_PROVIDER, APPROVED_SUGGESTION_SCHEMA, buildEndpoint(), buildRequest(), containsPii(), extractOutputText(), invariant() (+9 more)
 
 ### Community 23 - "edge-web/src/app.js"
-Cohesion: 0.20
-Nodes (12): announce(), clearError(), elements, publicMessage(), readCookie(), request(), restoreSession(), showError() (+4 more)
+Cohesion: 0.18
+Nodes (13): announce(), clearError(), elements, publicMessage(), readCookie(), request(), restoreSession(), select() (+5 more)
 
 ### Community 24 - "authorization.js"
 Cohesion: 0.17
@@ -355,9 +338,9 @@ Nodes (8): createIdentityApiRuntime(), IdentityHttpError, readKey(), readOrigins
 Cohesion: 0.15
 Nodes (12): Decisões P0 para aprovação final e estimativa fechada, Gate recomendado, O que o Tech Lead já pode especificar, P0.1 resolvido — contrato de passagem, P0.2 resolvido — autoridade sobre preço, P0.3 resolvido — limite financeiro comercial, P0.4 resolvido — canais e limite operacional da IA, P0.5 resolvido — identidade, FAB e numeração da Ficha (+4 more)
 
-### Community 35 - "signature"
-Cohesion: 0.15
-Nodes (12): gemini, schemaFixture, meta, messageFixture, signature, statusFixture, schemaVersion, appSecret (+4 more)
+### Community 35 - "meta"
+Cohesion: 0.12
+Nodes (15): instagram, whatsapp, gemini, schemaFixture, meta, canonicalInboundFixtures, messageFixture, signature (+7 more)
 
 ### Community 36 - "package.json"
 Cohesion: 0.17
@@ -400,8 +383,8 @@ Cohesion: 0.20
 Nodes (10): Fase 5 — Orçamento, PIX, Pedido e Ficha, T05.1 Implementar orçamento versionado, T05.2 Implementar ledger de vendido, T05.3 Implementar subfluxo PIX, T05.4 Implementar número e Pedido, T05.5 Implementar ciclo da Ficha, T05.6 Implementar PDF íntegro e reproduzível, T05.7 Implementar envio e onboarding (+2 more)
 
 ### Community 46 - "postgres.js"
-Cohesion: 0.31
-Nodes (7): createPostgresIdentityRepository(), decodeEncryptedSecret(), mapFactor(), mapInvitation(), mapSession(), requireIsoString(), toIsoString()
+Cohesion: 0.36
+Nodes (6): decodeEncryptedSecret(), mapFactor(), mapInvitation(), mapSession(), requireIsoString(), toIsoString()
 
 ### Community 47 - "Agentes do CRM Silmer"
 Cohesion: 0.25
@@ -571,89 +554,21 @@ Nodes (5): Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Gua
 Cohesion: 0.40
 Nodes (5): Alternativas sem o custo da Crazy API, ATENÇÃO — definir qual número vai hospedar o agente, Cuidados com a Crazy API (WhatsApp não-oficial), PASSO A PASSO — Conectar a Crazy API (quando o cliente aprovar), Passos
 
-### Community 134 - "Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Quais decisoes fecham o P0.2 de autoridade do Vendedor Silmer sobre preco?, Source Nodes
+### Community 134 - "T00.4 — Spikes externos"
+Cohesion: 0.25
+Nodes (8): Cloudflare R2 Integration, Decisões seguras, Evidências e pendências externas, Gemini Developer API Integration, Meta Sandbox Validation, Resultado local, T00.4 — Spikes externos, Verificação
 
-### Community 135 - "Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Quais decisoes resolvem o P0.4 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
+### Community 135 - "T00.4 - Revisao do PDF canonico da Ficha"
+Cohesion: 0.29
+Nodes (7): Estado do gate, Ficha Canonical V2, Geracao e verificacao tecnica, Pacote versionado, Registro do aceite real, Roteiro executado por Rose e Operacao, T00.4 - Revisao do PDF canonico da Ficha
 
-### Community 136 - "Q: Como a nova decisao do P0.4 limita a autonomia do Vendedor Silmer?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Como a nova decisao do P0.4 limita a autonomia do Vendedor Silmer?, Source Nodes
+### Community 136 - "Dívida #29 — Aprovação e validação futura do Cloudflare R2"
+Cohesion: 0.29
+Nodes (7): Contrato candidato para implementação futura, Critérios live obrigatórios, Dívida #29 — Aprovação e validação futura do Cloudflare R2, Estado do gate, Procedimento live, Reconciliação de `PutObject` incerto, Verificação local
 
-### Community 137 - "Q: Quais decisões resolvem o P0.7 do PRODUCT-READINESS-TECH-LEAD?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Quais decisões resolvem o P0.7 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
-
-### Community 138 - "Q: Quais decisões resolvem o P0.5 do PRODUCT-READINESS-TECH-LEAD?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Quais decisões resolvem o P0.5 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
-
-### Community 139 - "Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Quais decisoes resolvem o P0.6 de retencao e exclusao?, Source Nodes
-
-### Community 140 - "Q: Como o P0.5 define FAB, sequência, reserva, concorrência e reutilização do número da Ficha?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Como o P0.5 define FAB, sequência, reserva, concorrência e reutilização do número da Ficha?, Source Nodes
-
-### Community 141 - "Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Como foi resolvido o P0.6 do PRODUCT-READINESS-TECH-LEAD?, Source Nodes
-
-### Community 142 - "Q: Como o P0.7 modela Admin, Atendimento e Vendedor?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Como o P0.7 modela Admin, Atendimento e Vendedor?, Source Nodes
-
-### Community 143 - "Q: Where are the agent roles and contribution protocol defined?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Where are the agent roles and contribution protocol defined?, Source Nodes
-
-### Community 144 - "Q: Quais requisitos, tarefas, arquivos, contratos de acessibilidade, segurança e critérios de aceite estão relacionados à GitHub Issue #1?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Quais requisitos, tarefas, arquivos, contratos de acessibilidade, segurança e critérios de aceite estão relacionados à GitHub Issue #1?, Source Nodes
-
-### Community 145 - "Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Quais contratos do CRM Silmer governam segurança do repositório público, GitHub Actions, imagens imutáveis, aprovação, publicação no GHCR e fechamento da T00.2 Issue 1?, Source Nodes
-
-### Community 146 - "Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Como integrar o arquivo pr-review.yml para que o Google Jules valide pull requests, respeitando requisitos, tarefas e automacoes GitHub existentes?, Source Nodes
-
-### Community 147 - "Q: Qual requisito, tarefa, arquivos e critérios de aceite correspondem à issue GitHub #2 deste repositório?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Qual requisito, tarefa, arquivos e critérios de aceite correspondem à issue GitHub #2 deste repositório?, Source Nodes
-
-### Community 148 - "Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Como o gate da issue 3 impede falso passed e distingue T00.3 de T07.3?, Source Nodes
-
-### Community 149 - "Q: Quais dependências e critérios verificáveis da issue 5 ainda podem ser concluídos sem aceite humano, credenciais OpenAI ou designação do Tech Lead?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Quais dependências e critérios verificáveis da issue 5 ainda podem ser concluídos sem aceite humano, credenciais OpenAI ou designação do Tech Lead?, Source Nodes
-
-### Community 150 - "Q: Qual modelo Gemini oferece o melhor custo-beneficio para os chats do CRM Silmer na issue 5?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Qual modelo Gemini oferece o melhor custo-beneficio para os chats do CRM Silmer na issue 5?, Source Nodes
-
-### Community 151 - "Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Como a baseline Gemini Developer API da issue 5 controla modelo, tier pago, ZDR, PII, persistencia e saida estruturada?, Source Nodes
-
-### Community 152 - "Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Quais evidencias ainda bloqueiam o fechamento da issue 5 apos o merge do PR 26?, Source Nodes
-
-### Community 153 - "Q: Qual é o escopo, os requisitos, as dependências, os critérios de aceite e as evidências esperadas da issue 6 do CRM Silmer?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Qual é o escopo, os requisitos, as dependências, os critérios de aceite e as evidências esperadas da issue 6 do CRM Silmer?, Source Nodes
-
-### Community 154 - "Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?"
-Cohesion: 0.50
-Nodes (3): Answer, Q: Como os contratos canonicos do CRM Silmer tratam imagens recebidas e enviadas, anexos validos, Dropbox, retencao P0.6, Cloudflare R2, fim da jornada de compra e exclusao em sete dias?, Source Nodes
+### Community 137 - "inbox-channels/package.json"
+Cohesion: 0.33
+Nodes (5): exports, name, private, type, version
 
 ### Community 155 - "identity-routes.js"
 Cohesion: 0.30
@@ -664,24 +579,24 @@ Cohesion: 0.29
 Nodes (6): Autoridade e fonte humana, Decisões aprovadas, Designações, Exceção de operação solo e risco aceito, Rastreabilidade, T00.6 — Evidência de aprovação
 
 ## Knowledge Gaps
-- **729 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+724 more)
+- **703 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+698 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **42 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `request()` connect `edge-web/src/app.js` to `postgres-idempotency.js`, `r2-live-smoke.mjs`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
-- **Why does `createIdempotentCommandExecutor()` connect `postgres-idempotency.js` to `integration-reliability/src/index.js`, `edge-web/src/app.js`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `request()` connect `edge-web/src/app.js` to `integration-reliability/src/index.js`, `r2-live-smoke.mjs`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
+- **Why does `createIdempotentCommandExecutor()` connect `integration-reliability/src/index.js` to `edge-web/src/app.js`?**
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Why does `createR2S3Client()` connect `r2-live-smoke.mjs` to `edge-web/src/app.js`?**
   _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _729 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `postgres-idempotency.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.08780487804878048 - nodes in this community are weakly interconnected._
+  _703 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `integration-reliability/src/index.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.054069938289744345 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05924978687127025 - nodes in this community are weakly interconnected._
+- **Should `server.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.08627450980392157 - nodes in this community are weakly interconnected._
 - **Should `TDD — CRM Silmer MVP` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._

@@ -10,6 +10,18 @@ export {
   WebhookEventConflictError,
 } from './postgres-webhook-inbox.js';
 export {
+  calculateRetryDelayMs,
+  decideExpiredAttempt,
+  decideFailedAttempt,
+  PostgresJobQueue,
+} from './postgres-job-queue.js';
+export {
+  MediaQuotaExceededError,
+  MediaVolumeUnavailableError,
+  PrivateMediaVolume,
+} from './private-media-volume.js';
+export { PostgresTransientMediaRepository } from './postgres-transient-media.js';
+export {
   createMetaMessagesClient,
   InMemoryMetaEventStore,
   MetaApiError,

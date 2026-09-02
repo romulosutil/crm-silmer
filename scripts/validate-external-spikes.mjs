@@ -385,6 +385,13 @@ export function validateFixtures(document) {
   invariant(document.meta.messageFixture, 'Meta message fixture is required');
   invariant(document.meta.statusFixture, 'Meta status fixture is required');
   invariant(
+    document.meta.canonicalInboundFixtures?.whatsapp ===
+      'schemas/fixtures/external/meta-whatsapp-canonical-inbound.json' &&
+      document.meta.canonicalInboundFixtures?.instagram ===
+        'schemas/fixtures/external/meta-instagram-canonical-inbound.json',
+    'Canonical WhatsApp and Instagram fixtures are required',
+  );
+  invariant(
     document.gemini?.schemaFixture,
     'Gemini schema fixture is required',
   );

@@ -191,6 +191,10 @@ externos e operacionais continuam independentes.
 
 ### T02.1 Implementar adapter canônico de canais
 
+- **Status:** concluída em 02/09/2026 com contratos inbound/outbound puros no
+  módulo `inbox-channels`, fixtures sintéticas por canal e IDs externos
+  escopados sem concatenação ambígua. Isso não declara webhook, persistência ou
+  integração Instagram live, que permanecem em T02.2 e T02.7.
 - Definir contratos inbound/outbound independentes da Meta e escopar IDs por
   `(provider, provider_account_id, external_id)`.
 - **Verificação:** fixtures WhatsApp/Instagram convergem para o mesmo envelope

@@ -42,6 +42,7 @@ test('declares the deployable ESM workspaces and shared module', async () => {
     'apps/edge-web/package.json',
     'apps/api/package.json',
     'apps/worker/package.json',
+    'modules/inbox-channels/package.json',
     'modules/integration-reliability/package.json',
     'modules/shared/package.json',
   ];

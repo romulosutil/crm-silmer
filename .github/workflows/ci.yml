@@ -65,7 +65,7 @@ jobs:
       - name: Run serialized PostgreSQL gates
         env:
           TEST_DATABASE_URL: postgresql://postgres:issue12-ci-only@127.0.0.1:5432/crm_silmer_test
-        run: npm run test:identity:live && npm run test:webhook:live
+        run: npm run test:identity:live && npm run test:webhook:live && npm run test:worker:live
       - name: Run E2E and accessibility gates
         run: npm run test:e2e
       - name: Scan production dependencies

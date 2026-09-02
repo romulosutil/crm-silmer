@@ -85,6 +85,7 @@ function validateApproval(approval, owner, mode) {
 
 /** @param {any} document */
 export function validatePhase0Decisions(document) {
+  invariant(document?.schemaVersion === 2, 'Gate schema must be version 2');
   invariant(document?.task === 'T00.6', 'Gate must trace to T00.6');
   const pendingGate =
     document.approvalGranted === false &&
@@ -272,25 +273,110 @@ export function validatePhase0Decisions(document) {
   const technicalAdmin = roles.find(({ id }) => id === 'ROLE-TECHNICAL-ADMIN');
   if (!technicalAdmin) throw new Error('ROLE-TECHNICAL-ADMIN is missing');
   invariant(
-    technicalAdmin.capability === 'TECHNICAL_PRIVACY_EXECUTOR' &&
-      technicalAdmin.mustBeDistinctFrom?.includes('PRIVACY_OFFICER'),
-    'Technical Admin must be a segregated privacy executor',
+    technicalAdmin.capability === 'TECHNICAL_PRIVACY_EXECUTOR',
+    'Technical Admin must remain the privacy executor',
   );
+  invariant(
+    technicalAdmin.mfaRequired === true,
+    'Technical Admin must require MFA',
+  );
+  if (mode === 'approved') {
+    invariant(
+      technicalAdmin.mfaConfirmed === true,
+      'Technical Admin needs confirmed MFA',
+    );
+  } else {
+    invariant(
+      technicalAdmin.mfaConfirmed === false,
+      'Pending Technical Admin cannot claim MFA confirmation',
+    );
+  }
 
   const separation = document.separationOfDuties;
   invariant(
-    separation?.commercialAdminIsTechnicalAdmin === false,
-    'Commercial Admin cannot be conflated with Technical Admin',
+    isCorporateId(separation?.privacyOfficerAssignee),
+    'Privacy Officer needs a corporate ID',
   );
   invariant(
-    separation?.privacyAuthorizationAndDeletionExecutionMustBeDistinct === true,
-    'Privacy authorization and deletion execution must be segregated',
+    separation?.commercialAndTechnicalCapabilitiesRemainDistinct === true,
+    'Commercial and Technical Admin capabilities must remain distinct',
   );
   invariant(
     ['COMMERCIAL_ADMIN', 'PRIVACY_OFFICER', 'TECHNICAL_PRIVACY_EXECUTOR'].every(
       (capability) => separation.orthogonalCapabilities?.includes(capability),
     ),
     'Orthogonal capabilities are incomplete',
+  );
+
+  const solo = separation?.soloOperationException;
+  if (mode === 'pending') {
+    invariant(solo?.status === 'pending', 'Solo exception must remain pending');
+    invariant(solo?.approved === false, 'Solo exception cannot claim approval');
+    invariant(solo?.riskAccepted === false, 'Solo exception cannot claim risk');
+    invariant(solo?.reviewedAt === null, 'Solo exception cannot claim date');
+    invariant(solo?.evidence === null, 'Solo exception cannot claim evidence');
+    return document;
+  }
+
+  const identityOverlap = technicalAdmin.assignees.includes(
+    separation.privacyOfficerAssignee,
+  );
+  invariant(
+    identityOverlap,
+    'Approved solo gate must record the shared privacy identity',
+  );
+  invariant(
+    solo?.status === 'approved' && solo.approved === true,
+    'Identity overlap needs an approved solo operation exception',
+  );
+  invariant(
+    solo.scope === 'internal-pilot' &&
+      solo.assignee === separation.privacyOfficerAssignee &&
+      technicalAdmin.assignees.includes(solo.assignee),
+    'Solo operation exception must be limited to the internal pilot assignee',
+  );
+  invariant(
+    roles.every(
+      ({ assignees }) =>
+        assignees.length === 1 && assignees[0] === solo.assignee,
+    ),
+    'Every role must remain bound to the approved solo assignee',
+  );
+  invariant(
+    technicalAdmin.soloOperationExceptionId === solo.id,
+    'Technical Admin has an invalid solo exception reference',
+  );
+  invariant(solo.riskAccepted === true, 'Solo operation risk must be accepted');
+  invariant(
+    isIsoDate(solo.reviewedAt),
+    'Solo exception needs an ISO review date',
+  );
+  invariant(
+    isVersionedEvidence(solo.evidence),
+    'Solo exception needs versioned evidence',
+  );
+  invariant(
+    solo.capabilitiesRemainOrthogonal === true,
+    'Solo operation capabilities must remain orthogonal',
+  );
+  invariant(
+    solo.separateAuthorizationAndExecutionEvents === true,
+    'Solo operation needs separate authorization and execution events',
+  );
+  invariant(
+    solo.automaticChainingAllowed === false,
+    'Solo operation cannot allow automatic chaining',
+  );
+  invariant(
+    solo.auditEvidenceRequired === true,
+    'Solo operation requires audit evidence',
+  );
+  invariant(
+    Array.isArray(solo.reviewTriggers) &&
+      ['before-external-pilot', 'second-operator-available'].every((trigger) =>
+        solo.reviewTriggers.includes(trigger),
+      ),
+    'Solo operation needs explicit review triggers',
   );
   return document;
 }

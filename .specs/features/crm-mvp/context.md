@@ -45,6 +45,11 @@ Entregar a jornada comercial desde a entrada de uma conversa no WhatsApp oficial
 - O MVP mede valor vendido, quantidade de vendas e ticket médio; recebido e saldo a receber ficam para P2.
 - A política de privacidade do piloto foi aprovada após consulta jurídica. Rômulo Sutil Corrêa é o Responsável de Privacidade.
 - Atendimento/Vendedor executa a operação comercial; Admin governa usuários, configurações, retenção e atos administrativos da Ficha.
+- No piloto interno, `silmer:romulo.sutil` concentra Produto, Operação, Tech
+  Lead, equipe de entrega, Privacidade e Administração Técnica com MFA. A
+  exceção solo mantém capacidades ortogonais, autorização e execução em
+  eventos distintos, auditoria obrigatória e revisão antes de piloto externo
+  ou quando houver segundo operador.
 
 ## Discrição do Tech Lead
 
@@ -52,7 +57,8 @@ Entregar a jornada comercial desde a entrada de uma conversa no WhatsApp oficial
 - Estratégia de filas, retries, observabilidade, anexos e documentos.
 - Uso eventual do n8n fora do caminho crítico.
 - Formato interno dos contratos, desde que preserve as regras do produto.
-- Designação do administrador técnico executor da política de privacidade antes do piloto.
+- Revisão da exceção de operação solo antes do piloto externo ou quando houver
+  um segundo operador disponível.
 
 ## Ideias adiadas
 

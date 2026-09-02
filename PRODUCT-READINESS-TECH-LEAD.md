@@ -345,9 +345,16 @@ cada papel antes do piloto.
 
 O Responsável de Privacidade designado é **Rômulo Sutil Corrêa**. A política e
 os prazos desta seção foram validados com a assessoria jurídica consultada pela
-Silmer. O Tech Lead responde por traduzir o contrato aprovado em arquitetura,
-controles, testes e operação e por designar o Administrador Técnico executor
-antes do piloto; isso não reabre decisão de produto.
+Silmer. Em 02/09/2026, a Silmer também designou `silmer:romulo.sutil` como
+Administrador Técnico com MFA e aceitou o risco residual da exceção de
+operação solo `SOLO-OPS-PILOT-01`, limitada ao piloto interno. Essa aprovação
+operacional não declara nova revisão da assessoria jurídica.
+
+Na exceção, a segregação por identidade é substituída por controles
+compensatórios: capacidades concedidas separadamente, eventos distintos de
+autorização e execução, proibição de encadeamento automático, MFA e evidência
+auditável de motivo, escopo, ator e horário. A exceção deve ser revista antes
+de piloto externo ou quando houver um segundo operador disponível.
 
 O titular dispõe de canal eletrônico publicado para solicitar confirmação,
 acesso, correção, exportação, bloqueio ou exclusão. A solicitação exige
@@ -392,9 +399,11 @@ Critérios da decisão:
     registra sucesso, falha ou limitação por destino para reconciliação; no
     Dropbox operacional, essa evidência é manual enquanto não existir adapter
     aprovado.
-12. **PRV-P06-12:** antes do piloto existem pessoas formalmente designadas como
-    Responsável de Privacidade e Administrador Técnico, com segregação entre
-    autorização e execução da exclusão.
+12. **PRV-P06-12:** antes do piloto existem designações formais para
+    Responsável de Privacidade e Administrador Técnico. A regra normal separa
+    as identidades; no piloto interno de uma pessoa, a exceção aprovada exige
+    MFA, capacidades ortogonais, eventos distintos de autorização/execução,
+    ausência de encadeamento automático e auditoria do ato.
 
 ## P0.7 resolvido — permissões e auditoria da Ficha
 

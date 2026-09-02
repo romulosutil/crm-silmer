@@ -151,8 +151,13 @@ de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 
 **GO de produto.** P0.1 a P0.7 estão resolvidos e rastreados em `PRODUCT-READINESS-TECH-LEAD.md`. O Tech Lead possui o caminho completo para produzir desenho técnico, tarefas e estimativas sem depender de nova decisão de produto. Esse GO não é um GO operacional e não libera fases sujeitas a gates humanos.
 
-Em 01/09/2026, a T00.5 está concluída na issue `#9`; a T00.6 permanece `pending-human-approval` na issue `#10`, mantendo T02, T03 e T05 bloqueadas.
+Em 02/09/2026, a T00.6 foi aprovada na issue `#10` e deixou de bloquear T02, T03 e T05.
 
-A fonte humana do status operacional corrente é `docs/phase0/PHASE-0-APPROVAL-GATE.md`; `docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Evidência local não equivale a aprovação humana.
+A fonte humana está versionada em `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`;
+`docs/phase0/PHASE-0-APPROVAL-GATE.md` descreve o gate aprovado e
+`docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Os
+papéis usam `silmer:romulo.sutil`, com MFA confirmado e exceção de operação
+solo limitada ao piloto interno.
 
-Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa (`github:romulosutil`).
+Essa aprovação remove apenas o bloqueio da T00.6; os demais gates técnicos,
+externos e operacionais continuam independentes.

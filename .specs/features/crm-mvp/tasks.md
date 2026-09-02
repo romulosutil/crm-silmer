@@ -10,11 +10,16 @@ gates de verificação.
 
 ## Status operacional reconciliado
 
-Em 01/09/2026, a T00.5 está concluída na issue `#9`; a T00.6 permanece `pending-human-approval` na issue `#10`, mantendo T02, T03 e T05 bloqueadas.
+Em 02/09/2026, a T00.6 foi aprovada na issue `#10` e deixou de bloquear T02, T03 e T05.
 
-A fonte humana do status operacional corrente é `docs/phase0/PHASE-0-APPROVAL-GATE.md`; `docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Evidência local não equivale a aprovação humana.
+A fonte humana está versionada em `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`;
+`docs/phase0/PHASE-0-APPROVAL-GATE.md` descreve o gate aprovado e
+`docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Os
+papéis usam `silmer:romulo.sutil`, com MFA confirmado e exceção de operação
+solo limitada ao piloto interno.
 
-Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa (`github:romulosutil`).
+Essa aprovação remove apenas o bloqueio da T00.6; os demais gates técnicos,
+externos e operacionais continuam independentes.
 
 ## Fase 0 — Fundação e riscos técnicos
 
@@ -97,18 +102,21 @@ Reconciliação revisada e aprovada em 01/09/2026 por Rômulo Sutil Corrêa (`gi
 
 ### T00.6 Aprovar defaults de domínio e papéis
 
-- **Status:** gate local, defaults e separação de funções versionados em
-  30/08/2026; aprovações e designações humanas pendentes na issue `#10`.
-  As dependências das issues `#7`, `#8` e `#9` estão concluídas, sem converter
-  evidência local em aprovação humana da T00.6.
+- **Status:** concluída em 02/09/2026. Produto, Operação e Privacidade
+  aprovaram `D00.6-01..07`; `silmer:romulo.sutil` foi designado como Tech
+  Lead, equipe e Administrador Técnico com MFA. A exceção
+  `SOLO-OPS-PILOT-01` limita a concentração de funções ao piloto interno e
+  preserva capacidades ortogonais, eventos separados e auditoria.
 - **Rastreabilidade:** P0.7, `PAY-02`, `FIN-01..03`, `ORD-01/02/05`,
   `PRV-01..03`, `PRV-P06-12` e `ACL-P07-01..12`.
 - Confirmar `Admin` para pagamento, Negócio 1:0..1 Pedido, ciclo de conversa,
   PDF canônico, moeda/timezone e exceção de pagamento.
 - Confirmar o envelope de carga que qualifica sizing e SLOs.
 - Designar Tech Lead, time e Administrador Técnico.
-- **Verificação:** aprovação versionada de Produto, Operação e Privacidade;
-  T02, T03 e T05 ficam bloqueadas até este gate.
+- **Verificação:** aprovação versionada em
+  `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`, gate executável aprovado e testes
+  negativos dos controles compensatórios. T00.6 não bloqueia mais T02, T03 e
+  T05; os gates próprios dessas fases permanecem aplicáveis.
 
 ### T00.7 Implantar telemetria e hardening mínimos
 

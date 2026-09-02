@@ -10,7 +10,13 @@ export const CAPABILITIES = Object.freeze({
  */
 
 const operationalActions = new Set([
+  'contact.identity.merge',
+  'contact.identity.unmerge',
   'conversation.read',
+  'conversation.message.send',
+  'conversation.reactivate-agent',
+  'conversation.takeover',
+  'conversation.transition',
   'deal.draft.edit',
   'deal.draft.read',
 ]);

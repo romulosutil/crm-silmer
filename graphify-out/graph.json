@@ -509,7 +509,7 @@
       "_origin": "ast",
       "id": "apps_api_src_commercial_runtime",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "commercial-runtime.js"
     },
     {
@@ -520,7 +520,7 @@
       "_origin": "ast",
       "id": "apps_api_src_commercial_runtime_createcommercialruntime",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createcommercialruntime()"
     },
     {
@@ -805,8 +805,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "apps_api_src_server_createmetawebhookruntime",
-      "community": 0,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 1,
+      "community_name": "server.js",
       "norm_label": "createmetawebhookruntime()"
     },
     {
@@ -1961,7 +1961,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "postgres-catalog-repository.js"
     },
     {
@@ -1972,7 +1972,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_requirequeryable",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "requirequeryable()"
     },
     {
@@ -1983,7 +1983,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_requirestring",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "requirestring()"
     },
     {
@@ -1994,7 +1994,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_isostring",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "isostring()"
     },
     {
@@ -2005,7 +2005,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_mapcatalog",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "mapcatalog()"
     },
     {
@@ -2016,7 +2016,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_createpostgrescatalogrepository",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createpostgrescatalogrepository()"
     },
     {
@@ -2027,7 +2027,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_insertentries",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "insertentries()"
     },
     {
@@ -2038,7 +2038,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_insertmodels",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "insertmodels()"
     },
     {
@@ -2049,7 +2049,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_application_catalog_service",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog-service.js"
     },
     {
@@ -2060,7 +2060,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_application_catalog_service_createcatalogservice",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createcatalogservice()"
     },
     {
@@ -2071,7 +2071,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_application_catalog_service_assertprivilegedactor",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertprivilegedactor()"
     },
     {
@@ -2082,7 +2082,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_application_catalog_service_assertcommandmetadata",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertcommandmetadata()"
     },
     {
@@ -2093,7 +2093,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog-version.js"
     },
     {
@@ -2104,7 +2104,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_value_groups",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "value_groups"
     },
     {
@@ -2115,7 +2115,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_isplainrecord",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "isplainrecord()"
     },
     {
@@ -2126,7 +2126,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_assertrecord",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertrecord()"
     },
     {
@@ -2137,7 +2137,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_assertexactkeys",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertexactkeys()"
     },
     {
@@ -2148,7 +2148,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_assertnonemptystring",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertnonemptystring()"
     },
     {
@@ -2159,7 +2159,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_validateentries",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "validateentries()"
     },
     {
@@ -2170,7 +2170,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_deepfreeze",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "deepfreeze()"
     },
     {
@@ -2181,7 +2181,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_immutablecatalogclone",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "immutablecatalogclone()"
     },
     {
@@ -2192,7 +2192,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_normalizecatalogvalues",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "normalizecatalogvalues()"
     },
     {
@@ -2203,7 +2203,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_createpublishedcatalogversion",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createpublishedcatalogversion()"
     },
     {
@@ -2214,7 +2214,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_createcatalogselection",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createcatalogselection()"
     },
     {
@@ -2225,7 +2225,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog/src/domain/errors.js"
     },
     {
@@ -2236,7 +2236,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogerror",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogerror"
     },
     {
@@ -2247,7 +2247,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogerror_constructor",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -2258,7 +2258,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogforbiddenerror",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogforbiddenerror"
     },
     {
@@ -2269,7 +2269,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogforbiddenerror_constructor",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -2280,7 +2280,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogconflicterror",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogconflicterror"
     },
     {
@@ -2291,7 +2291,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogconflicterror_constructor",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -2302,7 +2302,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogvalidationerror",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogvalidationerror"
     },
     {
@@ -2313,7 +2313,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogvalidationerror_constructor",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -2324,7 +2324,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_index",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog/src/index.js"
     },
     {
@@ -2335,7 +2335,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_ports_contracts",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog/src/ports/contracts.js"
     },
     {
@@ -2346,7 +2346,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_ports_contracts_assertcatalogports",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertcatalogports()"
     },
     {
@@ -2422,7 +2422,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "postgres-configuration-repository.js"
     },
@@ -2433,7 +2433,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_requirequeryable",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "requirequeryable()"
     },
@@ -2444,7 +2444,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_requirestring",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "requirestring()"
     },
@@ -2455,7 +2455,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_isostring",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "isostring()"
     },
@@ -2466,7 +2466,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_mapconfiguration",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "mapconfiguration()"
     },
@@ -2478,7 +2478,7 @@
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_createpostgresconfigurationrepository",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createpostgresconfigurationrepository()"
     },
     {
@@ -2488,7 +2488,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_application_configuration_service",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configuration-service.js"
     },
@@ -2500,7 +2500,7 @@
       "_origin": "ast",
       "id": "modules_configuration_src_application_configuration_service_createconfigurationservice",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createconfigurationservice()"
     },
     {
@@ -2510,7 +2510,7 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "modules_configuration_src_application_configuration_service_assertprivilegedactor",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertprivilegedactor()"
     },
@@ -2521,7 +2521,7 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "modules_configuration_src_application_configuration_service_assertcommandmetadata",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertcommandmetadata()"
     },
@@ -2532,7 +2532,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configuration-version.js"
     },
@@ -2543,7 +2543,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_configuration_sections",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configuration_sections"
     },
@@ -2554,7 +2554,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_fab",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "fab"
     },
@@ -2565,7 +2565,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_recipient",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "recipient"
     },
@@ -2576,7 +2576,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_secret_field_names",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "secret_field_names"
     },
@@ -2587,7 +2587,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_isplainrecord",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "isplainrecord()"
     },
@@ -2598,7 +2598,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_assertrecord",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertrecord()"
     },
@@ -2609,7 +2609,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_assertexactkeys",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertexactkeys()"
     },
@@ -2620,7 +2620,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_assertnonemptystring",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertnonemptystring()"
     },
@@ -2631,7 +2631,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_assertjsonvalue",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertjsonvalue()"
     },
@@ -2642,7 +2642,7 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_assertfab",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertfab()"
     },
@@ -2653,7 +2653,7 @@
       "source_location": "L123",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_assertpix",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertpix()"
     },
@@ -2664,7 +2664,7 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_assertrecipient",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertrecipient()"
     },
@@ -2675,7 +2675,7 @@
       "source_location": "L153",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_asserttemplates",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "asserttemplates()"
     },
@@ -2686,7 +2686,7 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_assertchannels",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertchannels()"
     },
@@ -2697,7 +2697,7 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_assertfeatureflags",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertfeatureflags()"
     },
@@ -2708,7 +2708,7 @@
       "source_location": "L213",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_deepfreeze",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "deepfreeze()"
     },
@@ -2719,7 +2719,7 @@
       "source_location": "L225",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_normalizeconfigurationvalues",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "normalizeconfigurationvalues()"
     },
@@ -2730,7 +2730,7 @@
       "source_location": "L258",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_createconfigurationversion",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "createconfigurationversion()"
     },
@@ -2741,7 +2741,7 @@
       "source_location": "L286",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_createchannelconfiguration",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "createchannelconfiguration()"
     },
@@ -2752,7 +2752,7 @@
       "source_location": "L308",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_configuration_version_freezeconfigurationrecord",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "freezeconfigurationrecord()"
     },
@@ -2763,7 +2763,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configuration/src/domain/errors.js"
     },
@@ -2774,7 +2774,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationerror",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configurationerror"
     },
@@ -2785,7 +2785,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationerror_constructor",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": ".constructor()"
     },
@@ -2796,7 +2796,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationvalidationerror",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configurationvalidationerror"
     },
@@ -2807,7 +2807,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationvalidationerror_constructor",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": ".constructor()"
     },
@@ -2818,7 +2818,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationforbiddenerror",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configurationforbiddenerror"
     },
@@ -2829,7 +2829,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationforbiddenerror_constructor",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": ".constructor()"
     },
@@ -2840,7 +2840,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationconflicterror",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configurationconflicterror"
     },
@@ -2851,7 +2851,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationconflicterror_constructor",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": ".constructor()"
     },
@@ -2862,7 +2862,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_index",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configuration/src/index.js"
     },
@@ -2873,7 +2873,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_ports_contracts",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configuration/src/ports/contracts.js"
     },
@@ -2884,7 +2884,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "modules_configuration_src_ports_contracts_assertconfigurationports",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "assertconfigurationports()"
     },
@@ -9419,7 +9419,7 @@
       "_origin": "ast",
       "id": "test_catalog_test",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog.test.js"
     },
     {
@@ -9430,7 +9430,7 @@
       "_origin": "ast",
       "id": "test_catalog_test_admin",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "admin"
     },
     {
@@ -9441,7 +9441,7 @@
       "_origin": "ast",
       "id": "test_catalog_test_data",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "data()"
     },
     {
@@ -9452,7 +9452,7 @@
       "_origin": "ast",
       "id": "test_catalog_test_harness",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "harness()"
     },
     {
@@ -9511,6 +9511,17 @@
       "norm_label": "prepareoutbound()"
     },
     {
+      "label": "toString()",
+      "file_type": "code",
+      "source_file": "test/channel-contract.test.js",
+      "source_location": "L309",
+      "_origin": "ast",
+      "id": "test_channel_contract_test_tostring",
+      "community": 13,
+      "community_name": "channel-envelope.js",
+      "norm_label": "tostring()"
+    },
+    {
       "label": "ci-images.test.js",
       "file_type": "code",
       "source_file": "test/ci-images.test.js",
@@ -9562,7 +9573,7 @@
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "configuration-catalog-postgres-live.test.js"
     },
     {
@@ -9573,7 +9584,7 @@
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test_admin",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "admin"
     },
     {
@@ -9584,7 +9595,7 @@
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test_configurationvalues",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "configurationvalues()"
     },
     {
@@ -9595,7 +9606,7 @@
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test_catalogvalues",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogvalues()"
     },
     {
@@ -9606,7 +9617,7 @@
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test_append",
       "community": 4,
-      "community_name": "configuration-version.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "append()"
     },
     {
@@ -9616,7 +9627,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_configuration_test",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "configuration.test.js"
     },
@@ -9627,7 +9638,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "test_configuration_test_admin_actor",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "admin_actor"
     },
@@ -9638,7 +9649,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "test_configuration_test_validvalues",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "validvalues()"
     },
@@ -9649,7 +9660,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "test_configuration_test_createharness",
-      "community": 4,
+      "community": 134,
       "community_name": "configuration-version.js",
       "norm_label": "createharness()"
     },
@@ -12928,7 +12939,7 @@
       "_origin": "ast",
       "id": "docs_phase0_meta_sandbox",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "meta-sandbox.md"
     },
     {
@@ -12939,7 +12950,7 @@
       "_origin": "ast",
       "id": "docs_phase0_meta_sandbox_t00_4_sandbox_da_meta",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "t00.4 \u2014 sandbox da meta"
     },
     {
@@ -12950,7 +12961,7 @@
       "_origin": "ast",
       "id": "docs_phase0_meta_sandbox_escopo_e_limite",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "escopo e limite"
     },
     {
@@ -12961,7 +12972,7 @@
       "_origin": "ast",
       "id": "docs_phase0_meta_sandbox_ativos_selecionados",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "ativos selecionados"
     },
     {
@@ -12972,7 +12983,7 @@
       "_origin": "ast",
       "id": "docs_phase0_meta_sandbox_segredos_e_dados_locais",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "segredos e dados locais"
     },
     {
@@ -12983,7 +12994,7 @@
       "_origin": "ast",
       "id": "docs_phase0_meta_sandbox_sequ\u00eancia_operacional",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "sequencia operacional"
     },
     {
@@ -12994,7 +13005,7 @@
       "_origin": "ast",
       "id": "docs_phase0_meta_sandbox_evid\u00eancia_de_fechamento",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "evidencia de fechamento"
     },
     {
@@ -13148,7 +13159,7 @@
       "_origin": "ast",
       "id": "docs_phase0_r2_validation",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "r2-validation.md"
     },
     {
@@ -13158,8 +13169,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_phase0_r2_validation_d\u00edvida_29_aprova\u00e7\u00e3o_e_valida\u00e7\u00e3o_futura_do_cloudflare_r2",
-      "community": 136,
-      "community_name": "D\u00edvida #29 \u2014 Aprova\u00e7\u00e3o e valida\u00e7\u00e3o futura do Cloudflare R2",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "divida #29 \u2014 aprovacao e validacao futura do cloudflare r2"
     },
     {
@@ -13169,8 +13180,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "docs_phase0_r2_validation_estado_do_gate",
-      "community": 136,
-      "community_name": "D\u00edvida #29 \u2014 Aprova\u00e7\u00e3o e valida\u00e7\u00e3o futura do Cloudflare R2",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "estado do gate"
     },
     {
@@ -13180,8 +13191,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "docs_phase0_r2_validation_contrato_candidato_para_implementa\u00e7\u00e3o_futura",
-      "community": 136,
-      "community_name": "D\u00edvida #29 \u2014 Aprova\u00e7\u00e3o e valida\u00e7\u00e3o futura do Cloudflare R2",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "contrato candidato para implementacao futura"
     },
     {
@@ -13191,8 +13202,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "docs_phase0_r2_validation_reconcilia\u00e7\u00e3o_de_putobject_incerto",
-      "community": 136,
-      "community_name": "D\u00edvida #29 \u2014 Aprova\u00e7\u00e3o e valida\u00e7\u00e3o futura do Cloudflare R2",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "reconciliacao de `putobject` incerto"
     },
     {
@@ -13202,8 +13213,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "docs_phase0_r2_validation_procedimento_live",
-      "community": 136,
-      "community_name": "D\u00edvida #29 \u2014 Aprova\u00e7\u00e3o e valida\u00e7\u00e3o futura do Cloudflare R2",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "procedimento live"
     },
     {
@@ -13213,8 +13224,8 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "docs_phase0_r2_validation_crit\u00e9rios_live_obrigat\u00f3rios",
-      "community": 136,
-      "community_name": "D\u00edvida #29 \u2014 Aprova\u00e7\u00e3o e valida\u00e7\u00e3o futura do Cloudflare R2",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "criterios live obrigatorios"
     },
     {
@@ -13224,8 +13235,8 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "docs_phase0_r2_validation_verifica\u00e7\u00e3o_local",
-      "community": 136,
-      "community_name": "D\u00edvida #29 \u2014 Aprova\u00e7\u00e3o e valida\u00e7\u00e3o futura do Cloudflare R2",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "verificacao local"
     },
     {
@@ -14489,7 +14500,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "external-spikes.md",
       "id": "docs_phase0_external_spikes"
     },
@@ -14499,7 +14510,7 @@
       "source_file": "docs/phase0/EXTERNAL-SPIKES.md",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 134,
+      "community": 10,
       "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "resultado local",
       "id": "docs_phase0_external_spikes_resultado_local"
@@ -14510,7 +14521,7 @@
       "source_file": "docs/phase0/EXTERNAL-SPIKES.md",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 134,
+      "community": 10,
       "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "decisoes seguras",
       "id": "docs_phase0_external_spikes_decis\u00f5es_seguras"
@@ -14521,7 +14532,7 @@
       "source_file": "docs/phase0/EXTERNAL-SPIKES.md",
       "source_location": "L55",
       "_origin": "ast",
-      "community": 134,
+      "community": 10,
       "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "evidencias e pendencias externas",
       "id": "docs_phase0_external_spikes_evid\u00eancias_e_pend\u00eancias_externas"
@@ -14532,7 +14543,7 @@
       "source_file": "docs/phase0/EXTERNAL-SPIKES.md",
       "source_location": "L81",
       "_origin": "ast",
-      "community": 134,
+      "community": 10,
       "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "verificacao",
       "id": "docs_phase0_external_spikes_verifica\u00e7\u00e3o"
@@ -14544,7 +14555,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "community": 10,
-      "community_name": "T00.4 \u2014 Sandbox da Meta",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "ficha-pdf-review.md",
       "id": "docs_phase0_ficha_pdf_review"
     },
@@ -14554,8 +14565,8 @@
       "source_file": "docs/phase0/FICHA-PDF-REVIEW.md",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 135,
-      "community_name": "T00.4 - Revisao do PDF canonico da Ficha",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "estado do gate",
       "id": "docs_phase0_ficha_pdf_review_estado_do_gate"
     },
@@ -14565,8 +14576,8 @@
       "source_file": "docs/phase0/FICHA-PDF-REVIEW.md",
       "source_location": "L25",
       "_origin": "ast",
-      "community": 135,
-      "community_name": "T00.4 - Revisao do PDF canonico da Ficha",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "pacote versionado",
       "id": "docs_phase0_ficha_pdf_review_pacote_versionado"
     },
@@ -14576,8 +14587,8 @@
       "source_file": "docs/phase0/FICHA-PDF-REVIEW.md",
       "source_location": "L36",
       "_origin": "ast",
-      "community": 135,
-      "community_name": "T00.4 - Revisao do PDF canonico da Ficha",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "geracao e verificacao tecnica",
       "id": "docs_phase0_ficha_pdf_review_geracao_e_verificacao_tecnica"
     },
@@ -14587,8 +14598,8 @@
       "source_file": "docs/phase0/FICHA-PDF-REVIEW.md",
       "source_location": "L52",
       "_origin": "ast",
-      "community": 135,
-      "community_name": "T00.4 - Revisao do PDF canonico da Ficha",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "roteiro executado por rose e operacao",
       "id": "docs_phase0_ficha_pdf_review_roteiro_executado_por_rose_e_operacao"
     },
@@ -14598,8 +14609,8 @@
       "source_file": "docs/phase0/FICHA-PDF-REVIEW.md",
       "source_location": "L66",
       "_origin": "ast",
-      "community": 135,
-      "community_name": "T00.4 - Revisao do PDF canonico da Ficha",
+      "community": 10,
+      "community_name": "T00.4 \u2014 Spikes externos",
       "norm_label": "registro do aceite real",
       "id": "docs_phase0_ficha_pdf_review_registro_do_aceite_real"
     },
@@ -16082,7 +16093,7 @@
       "label": "T00.4 \u2014 Spikes externos",
       "file_type": "document",
       "source_file": "docs/phase0/EXTERNAL-SPIKES.md",
-      "community": 134,
+      "community": 10,
       "norm_label": "t00.4 \u2014 spikes externos",
       "community_name": "T00.4 \u2014 Spikes externos",
       "_origin": "semantic",
@@ -16092,7 +16103,7 @@
       "label": "Meta Sandbox Validation",
       "file_type": "concept",
       "source_file": "docs/phase0/EXTERNAL-SPIKES.md",
-      "community": 134,
+      "community": 10,
       "norm_label": "meta sandbox validation",
       "community_name": "T00.4 \u2014 Spikes externos",
       "_origin": "semantic",
@@ -16102,7 +16113,7 @@
       "label": "Gemini Developer API Integration",
       "file_type": "concept",
       "source_file": "docs/phase0/EXTERNAL-SPIKES.md",
-      "community": 134,
+      "community": 10,
       "norm_label": "gemini developer api integration",
       "community_name": "T00.4 \u2014 Spikes externos",
       "_origin": "semantic",
@@ -16112,7 +16123,7 @@
       "label": "Cloudflare R2 Integration",
       "file_type": "concept",
       "source_file": "docs/phase0/EXTERNAL-SPIKES.md",
-      "community": 134,
+      "community": 10,
       "norm_label": "cloudflare r2 integration",
       "community_name": "T00.4 \u2014 Spikes externos",
       "_origin": "semantic",
@@ -16122,9 +16133,9 @@
       "label": "T00.4 - Revisao do PDF canonico da Ficha",
       "file_type": "document",
       "source_file": "docs/phase0/FICHA-PDF-REVIEW.md",
-      "community": 135,
+      "community": 10,
       "norm_label": "t00.4 - revisao do pdf canonico da ficha",
-      "community_name": "T00.4 - Revisao do PDF canonico da Ficha",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "_origin": "semantic",
       "id": "docs_phase0_ficha_pdf_review_t00_4"
     },
@@ -16132,9 +16143,9 @@
       "label": "Ficha Canonical V2",
       "file_type": "concept",
       "source_file": "docs/phase0/FICHA-PDF-REVIEW.md",
-      "community": 135,
+      "community": 10,
       "norm_label": "ficha canonical v2",
-      "community_name": "T00.4 - Revisao do PDF canonico da Ficha",
+      "community_name": "T00.4 \u2014 Spikes externos",
       "_origin": "semantic",
       "id": "docs_phase0_ficha_pdf_review_ficha_v2"
     },
@@ -34068,7 +34079,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/channel-contract.test.js",
-      "source_location": "L300",
+      "source_location": "L313",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_channel_contract_test",
@@ -34079,7 +34090,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/channel-contract.test.js",
-      "source_location": "L292",
+      "source_location": "L314",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_channel_contract_test",
@@ -34095,6 +34106,17 @@
       "_origin": "ast",
       "source": "test_channel_contract_test",
       "target": "test_channel_contract_test_rooturl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "test/channel-contract.test.js",
+      "source_location": "L309",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "test_channel_contract_test",
+      "target": "test_channel_contract_test_tostring",
       "confidence_score": 1.0
     },
     {
@@ -40373,5 +40395,5 @@
       "confidence_score": 1.0
     }
   ],
-  "built_at_commit": "1f33db4e70f7b6073957965ddffb7fd5361a7140"
+  "built_at_commit": "01243ea6832ae5f90c8bcca468b3a6d9adfd4566"
 }

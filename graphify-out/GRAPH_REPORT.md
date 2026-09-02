@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer-t02-1  (2026-09-02)
 
 ## Corpus Check
-- 172 files · ~118,911 words
+- 172 files · ~118,944 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1471 nodes · 2106 edges · 140 communities (98 shown, 42 thin omitted)
+- 1472 nodes · 2107 edges · 138 communities (96 shown, 42 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.76)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1f33db4e`
+- Built from commit: `01243ea6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,13 +19,13 @@
 - server.js
 - TDD — CRM Silmer MVP
 - 0002_phase1_domain.expand.sql
-- configuration-version.js
+- configuration-catalog-postgres-live.test.js
 - scripts
 - r2-live-smoke.mjs
 - O que já está configurado
 - Design do CRM Silmer
 - database/src/index.js
-- T00.4 — Sandbox da Meta
+- T00.4 — Spikes externos
 - recovery-mock.mjs
 - audit-privacy/src/index.js
 - channel-envelope.js
@@ -146,9 +146,7 @@
 - DATACRAZY-SETUP.md
 - Codex — Contexto do CRM Silmer
 - PASSO A PASSO — Conectar a Crazy API (quando o cliente aprovar)
-- T00.4 — Spikes externos
-- T00.4 - Revisao do PDF canonico da Ficha
-- Dívida #29 — Aprovação e validação futura do Cloudflare R2
+- configuration-version.js
 - inbox-channels/package.json
 - identity-routes.js
 - T00.6 — Evidência de aprovação
@@ -172,10 +170,10 @@
   modules/integration-reliability/src/idempotency.js → apps/edge-web/src/app.js
 - `createR2S3Client()` --indirect_call--> `request()`  [INFERRED]
   scripts/r2-live-smoke.mjs → apps/edge-web/src/app.js
-- `harness()` --calls--> `createCatalogService()`  [EXTRACTED]
-  test/catalog.test.js → modules/catalog/src/application/catalog-service.js
 - `createHarness()` --calls--> `createConfigurationService()`  [EXTRACTED]
   test/configuration.test.js → modules/configuration/src/application/configuration-service.js
+- `createMetaWebhookRuntime()` --calls--> `processMetaWebhook()`  [EXTRACTED]
+  apps/api/src/server.js → modules/integration-reliability/src/meta-sandbox.js
 
 ## Import Cycles
 - None detected.
@@ -196,15 +194,15 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (140 total, 42 thin omitted)
+## Communities (138 total, 42 thin omitted)
 
 ### Community 0 - "integration-reliability/src/index.js"
 Cohesion: 0.06
-Nodes (42): createMetaWebhookRuntime(), canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore (+34 more)
+Nodes (41): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+33 more)
 
 ### Community 1 - "server.js"
-Cohesion: 0.09
-Nodes (33): createApi(), createServerApi(), WorkerRuntime, SERVICES, allowedContextFields, allowedEvents, allowedMetrics, allowedServices (+25 more)
+Cohesion: 0.08
+Nodes (34): createApi(), createMetaWebhookRuntime(), createServerApi(), WorkerRuntime, SERVICES, allowedContextFields, allowedEvents, allowedMetrics (+26 more)
 
 ### Community 2 - "TDD — CRM Silmer MVP"
 Cohesion: 0.05
@@ -214,9 +212,9 @@ Nodes (41): 10. Confiabilidade e processamento assíncrono, 11. Vendedor Silmer 
 Cohesion: 0.09
 Nodes (37): crm_meta.protect_catalog_entry, crm_meta.protect_catalog_version, crm_meta.protect_idempotency_record, crm_meta.reject_immutable_change, audit_events_immutable_rows, audit_events_immutable_truncate, catalog_materials_immutable_truncate, catalog_materials_protect_rows (+29 more)
 
-### Community 4 - "configuration-version.js"
-Cohesion: 0.05
-Nodes (59): createCommercialRuntime(), createPostgresCatalogRepository(), isoString(), mapCatalog(), requireQueryable(), requireString(), createCatalogService(), assertExactKeys() (+51 more)
+### Community 4 - "configuration-catalog-postgres-live.test.js"
+Cohesion: 0.10
+Nodes (28): createCommercialRuntime(), createPostgresCatalogRepository(), isoString(), mapCatalog(), requireQueryable(), requireString(), createCatalogService(), assertExactKeys() (+20 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.05
@@ -238,9 +236,9 @@ Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e con
 Cohesion: 0.07
 Nodes (22): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+14 more)
 
-### Community 10 - "T00.4 — Sandbox da Meta"
-Cohesion: 0.20
-Nodes (6): Ativos selecionados, Escopo e limite, Evidência de fechamento, Segredos e dados locais, Sequência operacional, T00.4 — Sandbox da Meta
+### Community 10 - "T00.4 — Spikes externos"
+Cohesion: 0.06
+Nodes (28): Cloudflare R2 Integration, Decisões seguras, Evidências e pendências externas, Gemini Developer API Integration, Meta Sandbox Validation, Resultado local, T00.4 — Spikes externos, Verificação (+20 more)
 
 ### Community 11 - "recovery-mock.mjs"
 Cohesion: 0.13
@@ -251,7 +249,7 @@ Cohesion: 0.15
 Nodes (14): AuditEventValidationError, createAuditEventEnvelope(), deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), PostgresAuditTrail (+6 more)
 
 ### Community 13 - "channel-envelope.js"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (24): ATTACHMENT_CONTENT_FIELDS, canonicalIdentity(), canonicalMessage(), ChannelContractError, CHANNELS, createCanonicalInboundEnvelope(), createCanonicalOutboundEnvelope(), createScopedExternalId() (+16 more)
 
 ### Community 14 - "dependencies"
@@ -554,17 +552,9 @@ Nodes (5): Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Gua
 Cohesion: 0.40
 Nodes (5): Alternativas sem o custo da Crazy API, ATENÇÃO — definir qual número vai hospedar o agente, Cuidados com a Crazy API (WhatsApp não-oficial), PASSO A PASSO — Conectar a Crazy API (quando o cliente aprovar), Passos
 
-### Community 134 - "T00.4 — Spikes externos"
-Cohesion: 0.25
-Nodes (8): Cloudflare R2 Integration, Decisões seguras, Evidências e pendências externas, Gemini Developer API Integration, Meta Sandbox Validation, Resultado local, T00.4 — Spikes externos, Verificação
-
-### Community 135 - "T00.4 - Revisao do PDF canonico da Ficha"
-Cohesion: 0.29
-Nodes (7): Estado do gate, Ficha Canonical V2, Geracao e verificacao tecnica, Pacote versionado, Registro do aceite real, Roteiro executado por Rose e Operacao, T00.4 - Revisao do PDF canonico da Ficha
-
-### Community 136 - "Dívida #29 — Aprovação e validação futura do Cloudflare R2"
-Cohesion: 0.29
-Nodes (7): Contrato candidato para implementação futura, Critérios live obrigatórios, Dívida #29 — Aprovação e validação futura do Cloudflare R2, Estado do gate, Procedimento live, Reconciliação de `PutObject` incerto, Verificação local
+### Community 134 - "configuration-version.js"
+Cohesion: 0.10
+Nodes (31): isoString(), mapConfiguration(), requireQueryable(), requireString(), assertChannels(), assertExactKeys(), assertFab(), assertFeatureFlags() (+23 more)
 
 ### Community 137 - "inbox-channels/package.json"
 Cohesion: 0.33
@@ -595,8 +585,8 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
   _703 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `integration-reliability/src/index.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05924978687127025 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0601404741000878 - nodes in this community are weakly interconnected._
 - **Should `server.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.08627450980392157 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08446455505279035 - nodes in this community are weakly interconnected._
 - **Should `TDD — CRM Silmer MVP` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._

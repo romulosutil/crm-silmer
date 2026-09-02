@@ -885,8 +885,8 @@
     "semantic_hash": ""
   },
   "modules/inbox-channels/src/ports/contracts.js": {
-    "mtime": 1788325729.5554276,
-    "ast_hash": "bb99fbaf6ecaa81c2f944d532eddffd8",
+    "mtime": 1788327253.611202,
+    "ast_hash": "fec456eb7a38f77bb307e4a3ef1d9362",
     "semantic_hash": ""
   },
   "schemas/fixtures/external/meta-instagram-canonical-inbound.json": {
@@ -900,8 +900,8 @@
     "semantic_hash": ""
   },
   "test/channel-contract.test.js": {
-    "mtime": 1788326515.3292565,
-    "ast_hash": "e414f0fc488ed30d8db7465e4c5ec5bc",
+    "mtime": 1788327449.0600908,
+    "ast_hash": "f251278a1cb9187e124ad275f073dc76",
     "semantic_hash": ""
   }
 }

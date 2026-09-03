@@ -15,6 +15,7 @@ export {
   decideFailedAttempt,
   PostgresJobQueue,
 } from './postgres-job-queue.js';
+export { PostgresOutboundMessageOutbox } from './postgres-outbound-message-outbox.js';
 export {
   MediaQuotaExceededError,
   MediaVolumeUnavailableError,

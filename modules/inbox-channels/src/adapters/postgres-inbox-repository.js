@@ -14,6 +14,7 @@ const ALGORITHM = 'AES-256-GCM';
 /**
  * @typedef {{query: (sql: string, values?: unknown[]) => Promise<{rows: any[]}>}} Queryable
  * @typedef {{query: Queryable['query'], transaction: <T>(work: (transaction: Queryable) => Promise<T>) => Promise<T>}} TransactionalDatabase
+ * @typedef {{enqueueChannelMessage: (input: {id: string, idempotencyKey: string, messageId: string, availableAt: string|Date}, context: {transaction: Queryable}) => Promise<void>}} OutboundMessageOutbox
  */
 
 export class PostgresInboxRepository {
@@ -21,9 +22,11 @@ export class PostgresInboxRepository {
   #database;
   /** @type {Buffer} */
   #envelopeKey;
+  /** @type {OutboundMessageOutbox} */
+  #outboundMessageOutbox;
 
-  /** @param {{database: TransactionalDatabase, envelopeKey: Buffer}} options */
-  constructor({ database, envelopeKey }) {
+  /** @param {{database: TransactionalDatabase, envelopeKey: Buffer, outboundMessageOutbox: OutboundMessageOutbox}} options */
+  constructor({ database, envelopeKey, outboundMessageOutbox }) {
     if (
       !database ||
       typeof database.query !== 'function' ||
@@ -34,8 +37,15 @@ export class PostgresInboxRepository {
     if (!Buffer.isBuffer(envelopeKey) || envelopeKey.length !== 32) {
       throw new TypeError('envelopeKey must be a 32-byte Buffer');
     }
+    if (
+      !outboundMessageOutbox ||
+      typeof outboundMessageOutbox.enqueueChannelMessage !== 'function'
+    ) {
+      throw new TypeError('An outbound message outbox port is required');
+    }
     this.#database = database;
     this.#envelopeKey = Buffer.from(envelopeKey);
+    this.#outboundMessageOutbox = outboundMessageOutbox;
   }
 
   /** @param {any} input @param {any} runtime */
@@ -240,19 +250,14 @@ export class PostgresInboxRepository {
             occurredAt,
           ],
         );
-        await transaction.query(
-          `INSERT INTO crm.outbox_jobs
-             (id, job_type, idempotency_key, channel_event_id, status, priority,
-              available_at, created_at, transient_media_id, queue, attempt_count,
-              max_attempts, updated_at, effect_policy, message_id)
-           VALUES ($1, 'channel_message.send', $2, NULL, 'pending', 100, $3, $3,
-                   NULL, 'channel-outbound', 0, 8, $3, 'manual', $4)`,
-          [
-            runtime.idFactory('job'),
-            input.idempotencyKey,
-            occurredAt,
+        await this.#outboundMessageOutbox.enqueueChannelMessage(
+          {
+            availableAt: occurredAt,
+            id: runtime.idFactory('job'),
+            idempotencyKey: input.idempotencyKey,
             messageId,
-          ],
+          },
+          { transaction },
         );
         result = mapMessage(
           message.rows[0],

@@ -19,7 +19,10 @@ import {
   createChannelEventJobHandler,
   createInboxService,
 } from '../modules/inbox-channels/src/index.js';
-import { PostgresWebhookInbox } from '../modules/integration-reliability/src/index.js';
+import {
+  PostgresOutboundMessageOutbox,
+  PostgresWebhookInbox,
+} from '../modules/integration-reliability/src/index.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const NOW = new Date('2026-09-02T12:00:00.000Z');
@@ -37,9 +40,11 @@ function databaseFor(pool) {
   };
 }
 
-/** @param {Pool} pool */
-function servicesFor(pool) {
+/** @param {Pool} pool @param {{outboundMessageOutbox?: {enqueueChannelMessage: (input: any, context: {transaction: any}) => Promise<void>}}} [options] */
+function servicesFor(pool, options = {}) {
   const database = databaseFor(pool);
+  const outboundMessageOutbox =
+    options.outboundMessageOutbox ?? new PostgresOutboundMessageOutbox();
   const auditPort = {
     async append(/** @type {any} */ event, context = /** @type {any} */ ({})) {
       const queryable = context.transaction ?? database;
@@ -78,6 +83,7 @@ function servicesFor(pool) {
       repository: new PostgresInboxRepository({
         database,
         envelopeKey: Buffer.alloc(32, 41),
+        outboundMessageOutbox,
       }),
     }),
   };
@@ -360,6 +366,86 @@ if (connectionString) {
         },
       );
       assert.doesNotMatch(state.rows[0].stored_content, /PII-human/u);
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
+
+  test('PostgreSQL rolls back conversation, message, audit, command and job when outbox enqueue fails', async () => {
+    const databaseName = new URL(connectionString).pathname.slice(1);
+    assert.equal(databaseName, 'crm_silmer_test');
+    const pool = new Pool({ connectionString, max: 16 });
+    const runId = randomUUID().replaceAll('-', '');
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+      const { contacts, inbox } = servicesFor(pool, {
+        outboundMessageOutbox: {
+          /** @param {any} _input @param {{transaction: any}} context */
+          async enqueueChannelMessage(_input, { transaction }) {
+            assert.equal(typeof transaction?.query, 'function');
+            throw new Error('synthetic outbox failure');
+          },
+        },
+      });
+      const identity = await contacts.resolveInboundIdentity(
+        identityInput(runId),
+      );
+      const received = await inbox.receiveInbound(
+        inboundInput(runId, identity),
+      );
+
+      await assert.rejects(
+        inbox.sendHumanMessage({
+          actor: ATTENDANT,
+          content: { text: `PII-human-rollback-${runId}` },
+          conversationId: received.conversation.id,
+          correlationId: `correlation-send-rollback-${runId}`,
+          expectedVersion: received.conversation.version,
+          idempotencyKey: `send-rollback-${runId}`,
+          messageType: 'text',
+          reason: 'Falha sintética de outbox',
+        }),
+        /synthetic outbox failure/u,
+      );
+
+      const state = await pool.query(
+        `SELECT c.automation_state, c.automation_epoch, c.assigned_user_id,
+                c.state, c.version,
+                (SELECT count(*)::integer FROM crm.messages
+                 WHERE conversation_id = c.id) AS messages,
+                (SELECT count(*)::integer FROM crm.audit_events
+                 WHERE target_id = c.id
+                   AND action = 'conversation.human_message_queued') AS audits,
+                (SELECT count(*)::integer FROM crm.inbox_commands
+                 WHERE idempotency_key = $2) AS commands,
+                (SELECT count(*)::integer FROM crm.outbox_jobs
+                 WHERE idempotency_key = $2) AS jobs
+         FROM crm.conversations c
+         WHERE c.id = $1`,
+        [received.conversation.id, `send-rollback-${runId}`],
+      );
+      assert.deepEqual(
+        {
+          ...state.rows[0],
+          automation_epoch: Number(state.rows[0].automation_epoch),
+          version: Number(state.rows[0].version),
+        },
+        {
+          assigned_user_id: null,
+          audits: 0,
+          automation_epoch: 0,
+          automation_state: 'assistant',
+          commands: 0,
+          jobs: 0,
+          messages: 1,
+          state: 'nova',
+          version: received.conversation.version,
+        },
+      );
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

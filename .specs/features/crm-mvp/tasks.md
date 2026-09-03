@@ -234,8 +234,11 @@ externos e operacionais continuam independentes.
 
 ### T02.4 Implementar Conversa, Mensagem e Contato
 
-- **Status:** concluída localmente em 02/09/2026; integração em `master` depende
-  de PR. O domínio e os adapters PostgreSQL cobrem contato provisório,
+- **Status:** concluída e integrada em `master` em 02/09/2026. A correção da
+  fronteira de módulos mantém o enqueue transacional sob
+  `integration-reliability` por port injetado, sem escrita direta da Caixa de
+  Entrada em tabela privada; a integração dessa correção depende de PR. O
+  domínio e os adapters PostgreSQL cobrem contato provisório,
   identidade externa, ciclos de conversa, mensagens, merge/unmerge reversível,
   takeover e envio humano atômico. Concorrência, idempotência, isolamento por
   conta, auditoria e envelopes `AES-256-GCM` foram validados em PostgreSQL 17;

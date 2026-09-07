@@ -2,10 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createApi } from '../apps/api/src/app.js';
-import { formatDealSseEvent } from '../apps/api/src/deal-routes.js';
+import {
+  formatDealSseEvent,
+  SSE_MAX_CONNECTIONS,
+  SSE_OPENINGS_PER_MINUTE,
+} from '../apps/api/src/deal-routes.js';
 import { createSafeLogger } from '../modules/shared/src/index.js';
 
-function harness() {
+function harness(dealOverrides = {}) {
   /** @type {any[]} */
   const calls = [];
   const deals = {
@@ -53,6 +57,7 @@ function harness() {
         stage: input.stage,
       };
     },
+    ...dealOverrides,
   };
   const api = createApi(
     {},
@@ -150,4 +155,82 @@ test('SSE projection maps task and handoff changes to the owning Deal without ra
     assert.match(frame, new RegExp(`"dealId":"${event.dealId}"`, 'u'));
     assert.doesNotMatch(frame, /must-not-leak|"private"/u);
   }
+});
+
+test('SSE rate-limits repeated openings before authorization reaches the database', async () => {
+  let authorizationAttempts = 0;
+  const { api, headers } = harness({
+    async authorizeRead() {
+      authorizationAttempts += 1;
+      throw Object.assign(new Error('forbidden'), {
+        code: 'DEAL_FORBIDDEN',
+        statusCode: 403,
+      });
+    },
+  });
+
+  for (let attempt = 0; attempt < SSE_OPENINGS_PER_MINUTE; attempt += 1) {
+    const response = await api.inject({
+      headers,
+      method: 'GET',
+      url: '/api/v1/events?topic=kanban',
+    });
+    assert.equal(response.statusCode, 403);
+  }
+  const limited = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/events?topic=kanban',
+  });
+
+  assert.equal(limited.statusCode, 429);
+  assert.equal(authorizationAttempts, SSE_OPENINGS_PER_MINUTE);
+  assert.ok(Number(limited.headers['retry-after']) >= 1);
+  await api.close();
+});
+
+test('SSE caps active streams at the approved single-replica envelope', async () => {
+  let activeReads = 0;
+  /** @type {() => void} */
+  let releaseReads = () => {};
+  /** @type {() => void} */
+  let resolveAllStarted = () => {};
+  /** @type {Promise<void>} */
+  const allStarted = new Promise((resolve) => {
+    resolveAllStarted = () => resolve();
+  });
+  /** @type {Promise<void>} */
+  const blockedReads = new Promise((resolve) => {
+    releaseReads = () => resolve();
+  });
+  const { api, headers } = harness({
+    async readDealEvents() {
+      activeReads += 1;
+      if (activeReads === SSE_MAX_CONNECTIONS) resolveAllStarted();
+      await blockedReads;
+      throw new Error('test stream closed');
+    },
+  });
+
+  const streams = Array.from({ length: SSE_MAX_CONNECTIONS }, () =>
+    api.inject({
+      headers,
+      method: 'GET',
+      url: '/api/v1/events?topic=kanban',
+    }),
+  );
+  await allStarted;
+
+  const rejected = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/events?topic=kanban',
+  });
+  assert.equal(rejected.statusCode, 429);
+  assert.equal(rejected.json().error.code, 'SSE_CAPACITY_EXCEEDED');
+  assert.equal(rejected.headers['retry-after'], '1');
+
+  releaseReads();
+  await Promise.all(streams);
+  await api.close();
 });

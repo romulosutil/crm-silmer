@@ -64,7 +64,9 @@ não reativa a automação. Esta etapa também não promete cancelar envios exte
   paginação keyset própria, assinada e vinculada à etapa, filtros, ordem e limite.
 - `GET /api/v1/events?topic=kanban` usa SSE e `Last-Event-ID` (ou `after`) como
   cursor durável. `stream.reset` exige recarregar REST; `kanban.card.changed`
-  contém apenas IDs, versões, tipo de origem e horário, nunca payload livre.
+  contém apenas IDs, versões, tipo de origem e horário, nunca payload livre. A
+  réplica aceita até 30 streams simultâneos e 60 aberturas por minuto por IP;
+  excesso retorna `429` com `Retry-After`.
 - O detalhe usa `ETag` composto por Negócio, tarefas e handoffs; respostas usam
   `Cache-Control: private, no-cache` e `Vary: Origin, Cookie`.
 

@@ -60,12 +60,12 @@
     "semantic_hash": "abde5c1a6d0c9ebe3e81c30bde2204b5"
   },
   ".specs/features/crm-mvp/tasks.md": {
-    "mtime": 1788747348.6327007,
+    "mtime": 1788749120.3140936,
     "ast_hash": "5de5e727471b892f1db9f0648002ccfd",
     "semantic_hash": ""
   },
   "EASYPANEL-TOPOLOGY.md": {
-    "mtime": 1788747951.082786,
+    "mtime": 1788749120.3150935,
     "ast_hash": "fc3479b25d59f65108fd7df3c89eccd2",
     "semantic_hash": ""
   },
@@ -105,12 +105,12 @@
     "semantic_hash": ""
   },
   "apps/api/src/app.js": {
-    "mtime": 1788747917.2655776,
+    "mtime": 1788749120.3180957,
     "ast_hash": "5c965d5f2f6dd1c907ef94142fc11dca",
     "semantic_hash": ""
   },
   "apps/api/src/server.js": {
-    "mtime": 1788748381.2802222,
+    "mtime": 1788749120.3222783,
     "ast_hash": "ae213f20cf5b6efbcb71022ab7dc8a8b",
     "semantic_hash": ""
   },
@@ -215,7 +215,7 @@
     "semantic_hash": "e645a9b6d312824024f23b5f020ba5fe"
   },
   "ops/easypanel/topology.json": {
-    "mtime": 1788747951.0807786,
+    "mtime": 1788749120.3307216,
     "ast_hash": "60cbf9a85ffe383d4c196178493287a0",
     "semantic_hash": ""
   },
@@ -480,7 +480,7 @@
     "semantic_hash": ""
   },
   "modules/identity-access/src/index.js": {
-    "mtime": 1788747633.8970044,
+    "mtime": 1788749120.3307216,
     "ast_hash": "b8a2dafbb4c2dd8dc083fc42fc511268",
     "semantic_hash": ""
   },
@@ -1100,32 +1100,32 @@
     "semantic_hash": ""
   },
   "apps/api/src/automation-auth-runtime.js": {
-    "mtime": 1788747759.1440449,
+    "mtime": 1788749120.3192787,
     "ast_hash": "b7daf1f095f9b86da9ffaccd3f45c8b7",
     "semantic_hash": ""
   },
   "modules/identity-access/src/automation-credentials.js": {
-    "mtime": 1788747759.1420393,
+    "mtime": 1788749120.3287134,
     "ast_hash": "28022891ab1ac869740383c2eaaa8e4e",
     "semantic_hash": ""
   },
   "test/automation-auth-runtime.test.js": {
-    "mtime": 1788748363.7555773,
+    "mtime": 1788749120.3338685,
     "ast_hash": "f16f8b5f2348cb21dda91ef66946523a",
     "semantic_hash": ""
   },
   "test/automation-credentials.test.js": {
-    "mtime": 1788747759.1440449,
+    "mtime": 1788749120.3338685,
     "ast_hash": "398e84ee4c0f374c97d0583dd235cfad",
     "semantic_hash": ""
   },
   "test/automation-server-config.test.js": {
-    "mtime": 1788748363.757584,
+    "mtime": 1788749120.3362844,
     "ast_hash": "fedf1d0e2ba71559f64a674509f2aba1",
     "semantic_hash": ""
   },
   "docs/runbooks/automation-executor.md": {
-    "mtime": 1788747379.0350568,
+    "mtime": 1788749120.3266623,
     "ast_hash": "e9551a39b30d333781be9fca10bd8972",
     "semantic_hash": ""
   }

@@ -1,3 +1,8 @@
+import rateLimit from '@fastify/rate-limit';
+
+export const SSE_MAX_CONNECTIONS = 30;
+export const SSE_OPENINGS_PER_MINUTE = 60;
+
 class DealRequestError extends Error {
   /** @param {number} statusCode @param {string} code */
   constructor(statusCode, code) {
@@ -14,6 +19,20 @@ class DealRequestError extends Error {
  * @param {(request: object) => {correlationId: string}} contextFor
  */
 export function registerDealRoutes(api, deals, contextFor) {
+  api.register(async (dealApi) => {
+    await dealApi.register(rateLimit, { global: false });
+    registerScopedDealRoutes(dealApi, deals, contextFor);
+  });
+}
+
+/**
+ * @param {import('fastify').FastifyInstance} api
+ * @param {Record<string, any>} deals
+ * @param {(request: object) => {correlationId: string}} contextFor
+ */
+function registerScopedDealRoutes(api, deals, contextFor) {
+  const sseAdmission = createSseAdmissionGate();
+
   api.get('/api/v1/kanban', async (request, reply) => {
     return respond(reply, async () => {
       await authorizeDealRead(request, deals, 'kanban.read');
@@ -70,102 +89,120 @@ export function registerDealRoutes(api, deals, contextFor) {
     });
   });
 
-  api.get('/api/v1/events', async (request, reply) => {
-    const query = readQuery(request.query, ['after', 'topic']);
-    await authorizeDealRead(request, deals, 'deal.events.read');
-    const topic =
-      query.topic === undefined
-        ? 'kanban'
-        : requireString(query.topic, 'TOPIC');
-    const headerCursor = request.headers['last-event-id'];
-    const queryCursor = query.after;
-    let cursor =
-      headerCursor !== undefined &&
-      queryCursor !== undefined &&
-      String(headerCursor) !== String(queryCursor)
-        ? 'invalid'
-        : (headerCursor ?? queryCursor ?? 0);
-    let closed = false;
-    /** @type {ReturnType<typeof setTimeout>|undefined} */
-    let pollTimer;
-    /** @type {ReturnType<typeof setTimeout>|undefined} */
-    let heartbeatTimer;
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      'cache-control': 'private, no-cache',
-      connection: 'keep-alive',
-      'content-type': 'text/event-stream; charset=utf-8',
-      vary: 'Origin, Cookie',
-      'x-accel-buffering': 'no',
-    });
-    const cleanup = () => {
-      if (closed) return;
-      closed = true;
-      if (pollTimer) clearTimeout(pollTimer);
-      if (heartbeatTimer) clearTimeout(heartbeatTimer);
-    };
-    request.raw.on('close', cleanup);
-    reply.raw.on('close', cleanup);
-    const heartbeat = () => {
-      if (!closed && !reply.raw.write(': heartbeat\n\n')) {
-        cleanup();
-        reply.raw.end();
-        return;
+  api.get(
+    '/api/v1/events',
+    {
+      config: {
+        rateLimit: {
+          max: SSE_OPENINGS_PER_MINUTE,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    async (request, reply) => {
+      const query = readQuery(request.query, ['after', 'topic']);
+      await authorizeDealRead(request, deals, 'deal.events.read');
+      const topic =
+        query.topic === undefined
+          ? 'kanban'
+          : requireString(query.topic, 'TOPIC');
+      const headerCursor = request.headers['last-event-id'];
+      const queryCursor = query.after;
+      let cursor =
+        headerCursor !== undefined &&
+        queryCursor !== undefined &&
+        String(headerCursor) !== String(queryCursor)
+          ? 'invalid'
+          : (headerCursor ?? queryCursor ?? 0);
+      if (!sseAdmission.enter()) {
+        reply.header('retry-after', '1');
+        return reply
+          .code(429)
+          .send({ error: { code: 'SSE_CAPACITY_EXCEEDED' } });
       }
-      if (!closed) heartbeatTimer = setTimeout(heartbeat, 15_000);
-    };
-    heartbeatTimer = setTimeout(heartbeat, 15_000);
-    heartbeatTimer.unref?.();
-    const poll = async () => {
-      try {
-        await authorizeDealRead(request, deals, 'deal.events.read');
-        const batch = await deals.readDealEvents({
-          after: cursor,
-          limit: 100,
-          topic,
-        });
-        if (batch.reset) {
-          cursor = batch.cursor;
-          if (
-            !writeSse(reply.raw, {
-              cursor: batch.cursor,
-              payload: { cursor: batch.cursor, reason: batch.reset.reason },
-              type: 'stream.reset',
-            })
-          ) {
-            cleanup();
-            reply.raw.end();
-            return;
-          }
-        } else {
-          for (const event of batch.events) {
-            if (!writeSse(reply.raw, event)) {
+      let closed = false;
+      /** @type {ReturnType<typeof setTimeout>|undefined} */
+      let pollTimer;
+      /** @type {ReturnType<typeof setTimeout>|undefined} */
+      let heartbeatTimer;
+      reply.hijack();
+      reply.raw.writeHead(200, {
+        'cache-control': 'private, no-cache',
+        connection: 'keep-alive',
+        'content-type': 'text/event-stream; charset=utf-8',
+        vary: 'Origin, Cookie',
+        'x-accel-buffering': 'no',
+      });
+      const cleanup = () => {
+        if (closed) return;
+        closed = true;
+        sseAdmission.leave();
+        if (pollTimer) clearTimeout(pollTimer);
+        if (heartbeatTimer) clearTimeout(heartbeatTimer);
+      };
+      request.raw.on('close', cleanup);
+      reply.raw.on('close', cleanup);
+      const heartbeat = () => {
+        if (!closed && !reply.raw.write(': heartbeat\n\n')) {
+          cleanup();
+          reply.raw.end();
+          return;
+        }
+        if (!closed) heartbeatTimer = setTimeout(heartbeat, 15_000);
+      };
+      heartbeatTimer = setTimeout(heartbeat, 15_000);
+      heartbeatTimer.unref?.();
+      const poll = async () => {
+        try {
+          await authorizeDealRead(request, deals, 'deal.events.read');
+          const batch = await deals.readDealEvents({
+            after: cursor,
+            limit: 100,
+            topic,
+          });
+          if (batch.reset) {
+            cursor = batch.cursor;
+            if (
+              !writeSse(reply.raw, {
+                cursor: batch.cursor,
+                payload: { cursor: batch.cursor, reason: batch.reset.reason },
+                type: 'stream.reset',
+              })
+            ) {
               cleanup();
               reply.raw.end();
               return;
             }
+          } else {
+            for (const event of batch.events) {
+              if (!writeSse(reply.raw, event)) {
+                cleanup();
+                reply.raw.end();
+                return;
+              }
+            }
+            cursor = batch.cursor;
           }
-          cursor = batch.cursor;
+          if (!closed) {
+            pollTimer = setTimeout(poll, 1_000);
+            pollTimer.unref?.();
+          }
+        } catch {
+          if (!closed) {
+            writeSse(reply.raw, {
+              cursor: Number.isSafeInteger(Number(cursor)) ? Number(cursor) : 0,
+              payload: { reason: 'authorization_revoked' },
+              type: 'stream.reset',
+            });
+            reply.raw.end();
+          }
+          cleanup();
         }
-        if (!closed) {
-          pollTimer = setTimeout(poll, 1_000);
-          pollTimer.unref?.();
-        }
-      } catch {
-        if (!closed) {
-          writeSse(reply.raw, {
-            cursor: Number.isSafeInteger(Number(cursor)) ? Number(cursor) : 0,
-            payload: { reason: 'authorization_revoked' },
-            type: 'stream.reset',
-          });
-          reply.raw.end();
-        }
-        cleanup();
-      }
-    };
-    await poll();
-    return reply;
-  });
+      };
+      await poll();
+      return reply;
+    },
+  );
 
   api.post(
     '/api/v1/conversations/:conversationId/convert',
@@ -504,6 +541,20 @@ export function registerDealRoutes(api, deals, contextFor) {
       });
     });
   }
+}
+
+function createSseAdmissionGate() {
+  let activeConnections = 0;
+  return Object.freeze({
+    enter() {
+      if (activeConnections >= SSE_MAX_CONNECTIONS) return false;
+      activeConnections += 1;
+      return true;
+    },
+    leave() {
+      activeConnections = Math.max(0, activeConnections - 1);
+    },
+  });
 }
 
 /** @param {any} request @param {any} deals @param {Function} contextFor @param {string} action */

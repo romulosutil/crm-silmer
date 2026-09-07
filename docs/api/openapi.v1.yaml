@@ -303,6 +303,10 @@ paths:
             text/event-stream: { schema: { type: string } }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '429':
+          description: Limite de aberturas por origem ou de streams simultâneos excedido
+          headers:
+            Retry-After: { schema: { type: integer, minimum: 1 } }
   /conversations/{conversationId}/convert:
     post:
       operationId: convertConversation

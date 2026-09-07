@@ -60,13 +60,27 @@ export function createServerApi(runtime = {}) {
           runtime.environment ?? process.env,
         )
       : undefined);
+  const dealEnvironment = runtime.environment ?? process.env;
+  const dealSecretNames = ['IDEMPOTENCY_ENVELOPE_KEY', 'DEAL_ENVELOPE_KEY'];
+  const dealConfigurationPresent = dealSecretNames.some((name) =>
+    Boolean(dealEnvironment[name]),
+  );
+  if (
+    runtime.database &&
+    dealConfigurationPresent &&
+    !dealSecretNames.every((name) => Boolean(dealEnvironment[name]))
+  ) {
+    throw new Error(
+      'Deal runtime requires IDEMPOTENCY_ENVELOPE_KEY and DEAL_ENVELOPE_KEY together',
+    );
+  }
   const deals =
     runtime.deals ??
     (runtime.database &&
-    (runtime.environment ?? process.env).IDEMPOTENCY_ENVELOPE_KEY
+    dealSecretNames.every((name) => Boolean(dealEnvironment[name]))
       ? createDealApiRuntime(runtime.database, {
           automationAuth,
-          environment: runtime.environment ?? process.env,
+          environment: dealEnvironment,
           identity: runtime.identity,
         })
       : undefined);

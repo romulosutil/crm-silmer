@@ -8,7 +8,10 @@ import {
   DealValidationError,
   createDealConversionService,
 } from '../modules/deals-pipeline/src/index.js';
-import { InMemoryIdempotencyRecordStore } from '../modules/integration-reliability/src/index.js';
+import {
+  InMemoryDomainEventStore,
+  InMemoryIdempotencyRecordStore,
+} from '../modules/integration-reliability/src/index.js';
 
 const NOW = new Date('2026-09-07T15:00:00.000Z');
 const HUMAN = Object.freeze({
@@ -56,6 +59,10 @@ function harness() {
     clock: () => NOW,
     idFactory: () => 'audit-1',
   });
+  const eventPort = new InMemoryDomainEventStore({
+    clock: () => NOW,
+    idFactory: () => 'event-1',
+  });
   const service = createDealConversionService({
     auditPort,
     clock: () => NOW,
@@ -95,6 +102,7 @@ function harness() {
         return structuredClone(deal);
       },
     },
+    eventPort,
     idFactory: () => `deal-${++dealSequence}`,
     idempotencyStore: new InMemoryIdempotencyRecordStore(),
     inboxPort: {
@@ -131,11 +139,11 @@ function harness() {
       },
     },
   });
-  return { auditPort, contexts, service, state };
+  return { auditPort, contexts, eventPort, service, state };
 }
 
 test('converts one conversation into its existing Contact and exactly one Deal', async () => {
-  const { auditPort, contexts, service, state } = harness();
+  const { auditPort, contexts, eventPort, service, state } = harness();
 
   const result = await service.convertConversation(command());
 
@@ -159,6 +167,10 @@ test('converts one conversation into its existing Contact and exactly one Deal',
     },
   });
   assert.equal(state.deals.length, 1);
+  assert.deepEqual(eventPort.list()[0].payload, {
+    stage: 'produto',
+    version: 1,
+  });
   assert.deepEqual(
     contexts.map(([name]) => name),
     ['inbox-lock', 'contact', 'deal', 'inbox-complete'],

@@ -27,3 +27,10 @@ export class DealConflictError extends DealError {
     super(message, 'DEAL_CONFLICT', 409);
   }
 }
+
+export class DealGateIncompleteError extends DealConflictError {
+  constructor() {
+    super('Deal gate is incomplete');
+    this.code = 'DEAL_GATE_INCOMPLETE';
+  }
+}

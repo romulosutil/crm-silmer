@@ -19,6 +19,7 @@ import {
  *   clock?: () => Date,
  *   contactPort: {promoteIdentityContact: Function},
  *   dealRepository: {createFromConversation: Function},
+ *   eventPort: {append: Function},
  *   idFactory?: () => string,
  *   idempotencyStore: {execute: (identity: any, operation: (transaction?: unknown) => Promise<unknown>) => Promise<unknown>},
  *   inboxPort: {completeConversion: Function, lockForConversion: Function},
@@ -88,6 +89,18 @@ export function createDealConversionService(dependencies) {
                 createdAt: occurredAt,
                 id: idFactory(),
                 sourceConversationId: conversation.id,
+              },
+              context,
+            );
+            await dependencies.eventPort.append(
+              {
+                aggregateId: deal.id,
+                aggregateType: 'deal',
+                aggregateVersion: deal.version,
+                correlationId: command.correlationId,
+                occurredAt: new Date(occurredAt),
+                payload: { stage: deal.stage, version: deal.version },
+                type: 'deal.created',
               },
               context,
             );
@@ -209,6 +222,9 @@ function assertDependencies(dependencies) {
     typeof dependencies.idFactory !== 'function'
   ) {
     throw new DealValidationError('idFactory must be a function');
+  }
+  if (typeof dependencies.eventPort?.append !== 'function') {
+    throw new DealValidationError('eventPort must implement append');
   }
 }
 

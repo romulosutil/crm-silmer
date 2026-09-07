@@ -48,9 +48,10 @@ if (connectionString) {
     const pool = new Pool({ connectionString, max: 24 });
     const database = databaseFor(pool);
     const runId = randomUUID().replaceAll('-', '');
+    let auditSequence = 0;
     const auditPort = new PostgresAuditTrail(database, {
       clock: () => NOW,
-      idFactory: () => `audit-${runId}`,
+      idFactory: () => `audit-${runId}-${++auditSequence}`,
     });
     const contacts = createContactIdentityService({
       auditPort,

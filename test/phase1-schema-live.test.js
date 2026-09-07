@@ -260,16 +260,6 @@ if (connectionString) {
         /invitations_token_hash_key/iu,
       );
       await pool.query(
-        `INSERT INTO crm.mfa_factors (user_id, encrypted_secret)
-         VALUES ('admin-1', 'v1.fixture.fixture.fixture')`,
-      );
-      await pool.query(
-        `INSERT INTO crm.mfa_recovery_codes (user_id, code_hash)
-         VALUES ('admin-1', $1)`,
-        [hash('e')],
-      );
-
-      await pool.query(
         `INSERT INTO crm.audit_events
            (id, actor_id, action, target_type, target_id, version, reason, correlation_id)
          VALUES ('audit-1', 'admin-1', 'identity.user.created', 'user', 'seller-1', '1', 'authorized', 'correlation-1')`,

@@ -34,11 +34,6 @@ const actionCapabilities = new Map([
 ]);
 /** @type {Set<Capability>} */
 const knownCapabilities = new Set(Object.values(CAPABILITIES));
-/** @type {Set<Capability>} */
-const mfaRequiredCapabilities = new Set([
-  CAPABILITIES.COMMERCIAL_ADMIN,
-  CAPABILITIES.TECHNICAL_PRIVACY_EXECUTOR,
-]);
 
 export class AccessControlError extends Error {
   /** @param {number} statusCode @param {string} code @param {string} message */
@@ -111,7 +106,7 @@ export function authorize(actor, action) {
  *   }) => Promise<unknown> },
  *   clock?: () => Date,
  *   repository: {
- *     findUser: (id: string) => Promise<(AccessActor & {mfaEnrolled: boolean}) | null>,
+ *     findUser: (id: string) => Promise<AccessActor | null>,
  *     grant: (id: string, capability: Capability, grantedBy: string) => Promise<unknown>,
  *     revoke: (id: string, capability: Capability) => Promise<unknown>,
  *     revokePrivilegedSessions: (id: string, occurredAt: string) => Promise<unknown>
@@ -155,12 +150,9 @@ export function createAccessControlService({
 
   /** @param {CapabilityCommand} input */
   async function grantCapability(input) {
-    const { target } = await validate(input);
+    await validate(input);
     if (input.actorId === input.targetId) {
       throw forbidden('An Admin cannot self-assign capabilities');
-    }
-    if (mfaRequiredCapabilities.has(input.capability) && !target.mfaEnrolled) {
-      throw forbidden('MFA enrollment is required');
     }
     await repository.grant(input.targetId, input.capability, input.actorId);
     await audit('granted', input);

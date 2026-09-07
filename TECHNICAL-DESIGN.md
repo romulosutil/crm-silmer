@@ -162,7 +162,7 @@ efeito oficial; o worker continua responsável por documentos e jobs internos.
 
 | Módulo                    | Fonte de verdade                                           | Pode emitir                                        |
 | ------------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
-| `identity-access`         | usuários, funções, roles, sessões, MFA                     | autenticação, concessão e revogação                |
+| `identity-access`         | usuários, funções, roles e sessões                          | autenticação, concessão e revogação                |
 | `inbox-channels`          | conversas, mensagens, anexos e envelopes canônicos         | mensagem recebida, estado do canal                 |
 | `contacts`                | contato e identidades externas verificadas                 | vínculo, merge e unmerge auditáveis                |
 | `catalog`                 | tipos, modelos, malhas, técnicas e versões publicadas      | item selecionado e snapshot de referência          |
@@ -205,7 +205,7 @@ bloqueia o lançamento do MVP e permanece visível.
 
 | Grupo          | Tabelas/estruturas                                                                                    | Restrições críticas                                                                                             |
 | -------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Acesso         | `users`, `user_functions`, `user_capabilities`, `sessions`, `mfa_factors`                             | função única; `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e `TECHNICAL_PRIVACY_EXECUTOR` ortogonais; sessão revogável |
+| Acesso         | `users`, `user_functions`, `user_capabilities`, `sessions`                                            | função única; `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e `TECHNICAL_PRIVACY_EXECUTOR` ortogonais; sessão revogável |
 | Identidade     | `contacts`, `contact_identities`, `identity_links`, `identity_handoffs`                               | identidade única por provedor/conta/canal; handoff verificável; merge humano reversível                         |
 | Inbox          | `conversations`, `messages`, `attachments`                                                            | mensagem única por `(provider, provider_account_id, external_message_id)`                                       |
 | Catálogo       | `catalog_versions`, `catalog_products`, `catalog_models`, `catalog_materials`, `catalog_techniques`   | versão publicada imutável; Pedido guarda snapshot                                                               |
@@ -480,7 +480,6 @@ suboperadores.
   `TECHNICAL_PRIVACY_EXECUTOR`; nenhuma implica outra.
 - O nome de produto `Admin` corresponde somente a `COMMERCIAL_ADMIN`; as
   capacidades de privacidade e execução técnica permanecem separadas.
-- MFA TOTP obrigatório para `COMMERCIAL_ADMIN` e Administrador Técnico.
 - API e UI aplicam a mesma matriz; ocultar botão não é autorização.
 - Concessão/revogação de `Admin` não permite autoatribuição e é auditada.
 - O n8n usa o ator técnico `AUTOMATION_EXECUTOR`, sem login interativo,
@@ -670,7 +669,7 @@ estimativa anterior até nova estimativa por tarefa.
 
 | Item                                    | Default adotado                                                                                        | Quem aprova           |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------- |
-| Tech Lead, time e Administrador Técnico | `silmer:romulo.sutil`, MFA; exceção solo limitada ao piloto interno                                    | Silmer                |
+| Tech Lead, time e Administrador Técnico | `silmer:romulo.sutil`; exceção solo limitada ao piloto interno                                         | Silmer                |
 | Confirmação de pagamento                | Exige role `Admin`                                                                                     | Produto/Operação      |
 | Relação Negócio/Pedido                  | 1:0..1 no MVP                                                                                          | Produto               |
 | Reabertura de conversa terminal         | Novo ciclo ligado ao contato                                                                           | Produto/Operação      |
@@ -686,7 +685,7 @@ T07.1, mas não afirma que o teste de carga ou os SLOs já foram comprovados.
 
 Os defaults de domínio e papéis da T00.6 foram aprovados em 02/09/2026. A
 exceção `SOLO-OPS-PILOT-01` permite a mesma identidade em Privacidade e
-execução técnica somente no piloto interno. MFA, capacidades ortogonais,
+execução técnica somente no piloto interno. Capacidades ortogonais,
 eventos separados de autorização/execução, proibição de encadeamento automático
 e auditoria permanecem obrigatórios. A evidência está em
 `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`.

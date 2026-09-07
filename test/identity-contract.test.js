@@ -18,7 +18,6 @@ test('OpenAPI publishes every implemented identity route and security control', 
     '/invitations/accept',
     '/sessions',
     '/sessions/current',
-    '/mfa/enrollments',
     '/capabilities/{change}',
   ]) {
     assert.match(contract, new RegExp(`^  ${escape(path)}:`, 'mu'));
@@ -29,7 +28,6 @@ test('OpenAPI publishes every implemented identity route and security control', 
     '/api/v1/invitations/accept',
     '/api/v1/sessions',
     '/api/v1/sessions/current',
-    '/api/v1/mfa/enrollments',
     '/api/v1/capabilities/',
   ]) {
     assert.match(routes, new RegExp(escape(path), 'u'));
@@ -62,7 +60,6 @@ test('deployment inventory and runbook cover all fail-closed identity secrets', 
   for (const name of [
     'APP_ORIGIN',
     'IDENTITY_BOOTSTRAP_TOKEN',
-    'IDENTITY_ENVELOPE_KEY',
     'IDEMPOTENCY_ENVELOPE_KEY',
     'AUTH_THROTTLE_HMAC_KEY',
   ]) {

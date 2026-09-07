@@ -42,11 +42,6 @@ function harness(options = {}) {
       return { expiresAt: '2026-09-02T12:00:00.000Z', token: 'invite-token' };
     },
     /** @param {Record<string, unknown>} input */
-    enrollMfa: async (input) => {
-      calls.push({ input, operation: 'mfa' });
-      return { recoveryCodes: ['recovery-code'], secret: 'BASE32SECRET' };
-    },
-    /** @param {Record<string, unknown>} input */
     current: async (input) => {
       calls.push({ input, operation: 'current' });
       return { capabilities: ['COMMERCIAL_ADMIN'], id: 'admin-1' };
@@ -55,7 +50,7 @@ function harness(options = {}) {
     login: async (input) => {
       calls.push({ input, operation: 'login' });
       return {
-        body: { mfaVerified: true, user: { id: 'admin-1' } },
+        body: { user: { id: 'admin-1' } },
         cookie:
           'crm_session=opaque-session; Path=/; HttpOnly; Secure; SameSite=Lax',
         csrfToken: 'opaque-csrf',
@@ -82,7 +77,6 @@ test('login sets separate secure session and CSRF cookies without returning toke
     payload: {
       email: 'admin@example.test',
       password: 'correct horse battery staple',
-      totpCode: '123456',
     },
     url: '/api/v1/sessions',
   });
@@ -91,7 +85,6 @@ test('login sets separate secure session and CSRF cookies without returning toke
   assert.equal(response.headers['cache-control'], 'no-store');
   assert.equal(response.headers.pragma, 'no-cache');
   assert.deepEqual(response.json(), {
-    mfaVerified: true,
     user: { id: 'admin-1' },
   });
   assert.doesNotMatch(response.body, /opaque-session|opaque-csrf/iu);
@@ -235,32 +228,6 @@ test('invitation commands require an idempotency key and reject ambiguous cookie
   await api.close();
 });
 
-test('MFA enrollment is authenticated, CSRF-protected and idempotent', async () => {
-  const { api, calls } = harness();
-  const response = await api.inject({
-    headers: {
-      cookie: 'crm_session=session; crm_csrf=csrf',
-      'idempotency-key': 'mfa-enrollment-request-1',
-      origin: ORIGIN,
-      'x-csrf-token': 'csrf',
-    },
-    method: 'POST',
-    payload: { reason: 'Habilitar acesso privilegiado' },
-    url: '/api/v1/mfa/enrollments',
-  });
-
-  assert.equal(response.statusCode, 201);
-  assert.equal(response.headers['cache-control'], 'no-store');
-  assert.deepEqual(response.json(), {
-    recoveryCodes: ['recovery-code'],
-    secret: 'BASE32SECRET',
-  });
-  assert.equal(calls[0].operation, 'mfa');
-  assert.equal(calls[0].input.sessionToken, 'session');
-  assert.equal(calls[0].input.csrfToken, 'csrf');
-  assert.equal(calls[0].input.idempotencyKey, 'mfa-enrollment-request-1');
-  await api.close();
-});
 
 test('current session uses only the HttpOnly session cookie and logout expires both cookies', async () => {
   const { api } = harness();

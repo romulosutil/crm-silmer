@@ -43,8 +43,6 @@ async function submitLogin(event) {
       body: compact({
         email: data.email,
         password: data.password,
-        recoveryCode: data.recoveryCode,
-        totpCode: data.totpCode,
       }),
     });
     form.reset();
@@ -170,22 +168,6 @@ defineExpose({ focusHeading });
           minlength="12"
           required
         />
-        <details>
-          <summary>Verificação em duas etapas</summary>
-          <p class="field-help">
-            Informe o código do aplicativo ou um código de recuperação.
-          </p>
-          <label for="totp-code">Código de 6 dígitos</label>
-          <input
-            id="totp-code"
-            name="totpCode"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            pattern="[0-9]{6}"
-          />
-          <label for="recovery-code">Código de recuperação</label>
-          <input id="recovery-code" name="recoveryCode" autocomplete="off" />
-        </details>
         <button class="primary" type="submit" :disabled="busy">
           {{ busy ? 'Verificando…' : 'Entrar com segurança' }}
         </button>

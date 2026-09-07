@@ -8,7 +8,6 @@ import {
   verifyPassword,
 } from '../modules/identity-access/src/index.js';
 
-const ENVELOPE_KEY = Buffer.alloc(32, 7);
 const NOW = new Date('2026-08-30T12:00:00.000Z');
 
 /**
@@ -35,7 +34,6 @@ function harness() {
       },
     },
     clock: () => new Date(currentTime),
-    envelopeKey: ENVELOPE_KEY,
     idFactory: (prefix) => `${prefix}-${++tokenSequence}`,
     passwordParameters: { memory: 64, parallelism: 2, passes: 2 },
     repository,
@@ -73,7 +71,6 @@ test('supports asynchronous repository ports used by PostgreSQL adapters', async
   const service = createIdentityAccessService({
     auditPort: { append: async () => undefined },
     clock: () => NOW,
-    envelopeKey: ENVELOPE_KEY,
     idFactory: (prefix) => `${prefix}-${++sequence}`,
     passwordParameters: { memory: 64, parallelism: 2, passes: 2 },
     repository: asAsyncRepository(repository),
@@ -87,16 +84,9 @@ test('supports asynchronous repository ports used by PostgreSQL adapters', async
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });
-  await service.enrollTotp({
-    actorId: user.id,
-    correlationId: 'correlation-enroll-mfa',
-    reason: 'Enable privileged access',
-    secret: Buffer.alloc(20, 3),
-  });
   const login = await service.login({
     email: 'admin@example.test',
     password: 'correct horse battery staple',
-    totpCode: service.currentTotpForTesting(Buffer.alloc(20, 3)),
   });
 
   assert.equal(
@@ -144,7 +134,6 @@ test('delegates active-session validation and touch to atomic repository operati
   const service = createIdentityAccessService({
     auditPort: { append: async () => undefined },
     clock: () => NOW,
-    envelopeKey: ENVELOPE_KEY,
     idFactory: (prefix) => `${prefix}-${++sequence}`,
     passwordParameters: { memory: 64, parallelism: 2, passes: 2 },
     repository,
@@ -157,22 +146,15 @@ test('delegates active-session validation and touch to atomic repository operati
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });
-  await service.enrollTotp({
-    actorId: user.id,
-    correlationId: 'correlation-enroll-mfa',
-    reason: 'Enable privileged access',
-    secret: Buffer.alloc(20, 3),
-  });
   const login = await service.login({
     email: 'admin@example.test',
     password: 'correct horse battery staple',
-    totpCode: service.currentTotpForTesting(Buffer.alloc(20, 3)),
   });
 
   await service.authenticate(login.sessionToken);
   assert.deepEqual(
     await service.assertCsrf(login.sessionToken, login.csrfToken),
-    { mfaVerified: true, userId: user.id },
+    { userId: user.id },
   );
   assert.deepEqual(calls, ['authenticate', 'csrf']);
 });
@@ -186,7 +168,6 @@ test('runs the same password verifier path for existing and missing accounts', a
   const service = createIdentityAccessService({
     auditPort: { append: async () => undefined },
     clock: () => NOW,
-    envelopeKey: ENVELOPE_KEY,
     idFactory: (prefix) => `${prefix}-${++sequence}`,
     passwordParameters: { memory: 64, parallelism: 2, passes: 2 },
     passwordVerifier: async (_password, passwordHash) => {
@@ -328,17 +309,9 @@ test('creates only hashed opaque sessions and enforces CSRF, logout and expiry',
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });
-  await service.enrollTotp({
-    actorId: user.id,
-    correlationId: 'correlation-enroll-mfa',
-    reason: 'Enable privileged access',
-    secret: Buffer.alloc(20, 3),
-  });
-  const code = service.currentTotpForTesting(Buffer.alloc(20, 3));
   const login = await service.login({
     email: 'admin@example.test',
     password: 'correct horse battery staple',
-    totpCode: code,
   });
 
   assert.match(login.cookie, /HttpOnly/iu);
@@ -375,49 +348,4 @@ test('creates only hashed opaque sessions and enforces CSRF, logout and expiry',
   );
   await service.logout(login.sessionToken);
   await assert.rejects(service.authenticate(login.sessionToken), /session/iu);
-});
-
-test('requires encrypted TOTP for privileged users and consumes recovery codes once', async () => {
-  const { repository, service } = harness();
-  const { user } = await service.bootstrapAdmin({
-    correlationId: 'correlation-bootstrap',
-    email: 'admin@example.test',
-    functionName: 'Atendimento',
-    password: 'correct horse battery staple',
-    reason: 'Provisionamento inicial autorizado',
-  });
-  await assert.rejects(
-    service.login({
-      email: 'admin@example.test',
-      password: 'correct horse battery staple',
-    }),
-    /MFA enrollment required/iu,
-  );
-
-  const enrollment = await service.enrollTotp({
-    actorId: user.id,
-    correlationId: 'correlation-enroll-mfa',
-    reason: 'Enable privileged access',
-    secret: Buffer.alloc(20, 5),
-  });
-  assert.equal(enrollment.recoveryCodes.length, 8);
-  assert.doesNotMatch(
-    JSON.stringify(repository.inspect()),
-    new RegExp(Buffer.alloc(20, 5).toString('hex'), 'u'),
-  );
-
-  const first = await service.login({
-    email: 'admin@example.test',
-    password: 'correct horse battery staple',
-    recoveryCode: enrollment.recoveryCodes[0],
-  });
-  assert.equal(first.body.mfaVerified, true);
-  await assert.rejects(
-    service.login({
-      email: 'admin@example.test',
-      password: 'correct horse battery staple',
-      recoveryCode: enrollment.recoveryCodes[0],
-    }),
-    /invalid MFA/iu,
-  );
 });

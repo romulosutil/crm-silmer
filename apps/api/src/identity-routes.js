@@ -71,12 +71,6 @@ export function registerIdentityRoutes(api, identity, contextFor) {
         email: requireString(body.email, 'email'),
         network: request.ip,
         password: requireString(body.password, 'password'),
-        ...(typeof body.recoveryCode === 'string'
-          ? { recoveryCode: body.recoveryCode }
-          : {}),
-        ...(typeof body.totpCode === 'string'
-          ? { totpCode: body.totpCode }
-          : {}),
       });
       reply.header('set-cookie', [
         result.cookie,
@@ -108,23 +102,6 @@ export function registerIdentityRoutes(api, identity, contextFor) {
         sessionToken: requireCookie(cookies, 'crm_session'),
       });
       return reply.code(200).send(result);
-    });
-  });
-
-  api.post('/api/v1/mfa/enrollments', async (request, reply) => {
-    return respond(reply, async () => {
-      const command = requireAuthenticatedCommand(
-        request,
-        identity.allowedOrigins,
-      );
-      const body = requireBody(request.body);
-      const result = await identity.enrollMfa({
-        ...command,
-        correlationId: contextFor(request).correlationId,
-        idempotencyKey: requireHeader(request, 'idempotency-key'),
-        reason: requireString(body.reason, 'reason'),
-      });
-      return reply.code(201).send(result);
     });
   });
 

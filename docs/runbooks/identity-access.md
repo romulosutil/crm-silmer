@@ -3,7 +3,7 @@
 ## Escopo
 
 Este runbook opera a entrega `T01.2` a `T01.4` da issue `#12`: bootstrap,
-convites, sessões, MFA, capacidades, bloqueio progressivo, auditoria e
+convites, sessões, capacidades, bloqueio progressivo, auditoria e
 idempotência. O contrato HTTP está em `docs/api/openapi.v1.yaml`.
 
 ## Segredos obrigatórios
@@ -14,14 +14,12 @@ Configure no cofre do ambiente, nunca em arquivo versionado:
   vírgula.
 - `IDENTITY_BOOTSTRAP_TOKEN`: autorização de uso único, com no mínimo 32
   caracteres; remova-a depois do bootstrap.
-- `IDENTITY_ENVELOPE_KEY`: 32 bytes em base64url para segredos TOTP.
 - `IDEMPOTENCY_ENVELOPE_KEY`: 32 bytes em base64url para respostas de replay.
 - `AUTH_THROTTLE_HMAC_KEY`: 32 bytes em base64url para pseudonimizar conta e
   rede.
 
 Gere cada chave de 32 bytes de forma independente com um gerador
-criptograficamente seguro. Não reutilize uma chave entre finalidades. A versão
-atual do envelope é `v1`; não troque `IDENTITY_ENVELOPE_KEY` ou
+criptograficamente seguro. Não reutilize uma chave entre finalidades. Não troque
 `IDEMPOTENCY_ENVELOPE_KEY` em produção sem uma migração de recriptografia
 aprovada e testada.
 
@@ -33,9 +31,7 @@ aprovada e testada.
    bootstrap pelo cofre.
 3. Execute uma única chamada `POST /api/v1/bootstrap/identity` com `Origin`
    permitido e `X-Bootstrap-Token`.
-4. Entregue o segredo TOTP e os oito códigos de recuperação diretamente ao
-   Admin. Eles são exibidos uma vez; não os copie para issue, log ou evidência.
-5. Remova `IDENTITY_BOOTSTRAP_TOKEN` do serviço e faça um novo deploy. Uma nova
+4. Remova `IDENTITY_BOOTSTRAP_TOKEN` do serviço e faça um novo deploy. Uma nova
    tentativa de bootstrap deve falhar.
 
 ## Verificações operacionais
@@ -47,11 +43,10 @@ SameSite=Lax`; `crm_csrf` contém `Secure; SameSite=Lax` e nunca autentica
   desativação do usuário ou revogação de capacidade privilegiada.
 - Todo comando autenticado exige `Origin` exata e igualdade entre o cookie
   `crm_csrf` e `X-CSRF-Token`.
-- Convite, MFA e concessão/revogação exigem `Idempotency-Key`. A mesma chave e
+- Convite e concessão/revogação exigem `Idempotency-Key`. A mesma chave e
   payload reproduzem a resposta; payload divergente retorna `409`.
 - Logs podem conter apenas códigos técnicos e IDs de correlação. Nunca devem
-  conter e-mail, endereço de rede, senha, token, segredo TOTP ou código de
-  recuperação.
+  conter e-mail, endereço de rede, senha ou token.
 
 Para observar o bloqueio sem expor sujeitos, consulte somente agregados por
 `scope` e estado bloqueado. Não selecione nem exporte `subject_hash` como

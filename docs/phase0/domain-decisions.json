@@ -246,8 +246,6 @@
         "reference": "docs/phase0/T00.6-APPROVAL-EVIDENCE.md#designacoes",
         "revision": "git:1e30b67b112241415c4ab39b601bd7ba6499ed12"
       },
-      "mfaRequired": true,
-      "mfaConfirmed": true,
       "soloOperationExceptionId": "SOLO-OPS-PILOT-01"
     }
   ],

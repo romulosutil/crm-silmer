@@ -40,14 +40,6 @@ function pendingState(approved) {
     role.reviewedAt = null;
     role.evidence = null;
   }
-  const pendingRoles = /** @type {Array<Record<string, any>>} */ (
-    pending.roleDesignations
-  );
-  const technicalAdmin = pendingRoles.find(
-    ({ id }) => id === 'ROLE-TECHNICAL-ADMIN',
-  );
-  assert.ok(technicalAdmin);
-  technicalAdmin.mfaConfirmed = false;
   const solo = pending.separationOfDuties.soloOperationException;
   solo.status = 'pending';
   solo.approved = false;
@@ -144,30 +136,6 @@ test('rejects forged approval evidence, dates and assignee identities', async ()
   );
 });
 
-test('requires MFA for the solo Technical Admin', async () => {
-  const approved = await decisions();
-  const approvedRoles = /** @type {Array<Record<string, any>>} */ (
-    approved.roleDesignations
-  );
-  const technicalAdmin = approvedRoles.find(
-    ({ id }) => id === 'ROLE-TECHNICAL-ADMIN',
-  );
-
-  assert.ok(technicalAdmin);
-  assert.equal(technicalAdmin.mfaRequired, true);
-  assert.equal(technicalAdmin.mfaConfirmed, true);
-
-  const unsafe = structuredClone(approved);
-  const unsafeRoles = /** @type {Array<Record<string, any>>} */ (
-    unsafe.roleDesignations
-  );
-  const unsafeTechnicalAdmin = unsafeRoles.find(
-    ({ id }) => id === 'ROLE-TECHNICAL-ADMIN',
-  );
-  assert.ok(unsafeTechnicalAdmin);
-  unsafeTechnicalAdmin.mfaConfirmed = false;
-  assert.throws(() => validatePhase0Decisions(unsafe), /MFA/iu);
-});
 
 test('requires every compensating control for solo operation', async () => {
   const approved = await decisions();

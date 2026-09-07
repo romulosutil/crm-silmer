@@ -4,7 +4,7 @@
 
 O n8n chama a API do CRM como o ator técnico fixo `AUTOMATION_EXECUTOR`. Essa
 identidade não é uma pessoa, não recebe função operacional, não abre sessão de
-navegador e não participa das rotas de convite, login, MFA ou concessão de
+navegador e não participa das rotas de convite, login ou concessão de
 capacidades.
 
 As únicas ações autorizadas nesta primeira fatia são:

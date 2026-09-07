@@ -17,7 +17,6 @@ class RecordingDatabase {
             capabilities: ['COMMERCIAL_ADMIN'],
             function_name: 'Atendimento',
             id: 'admin-1',
-            mfa_enrolled: true,
           },
         ],
       };
@@ -34,7 +33,6 @@ test('maps ACL users and records the grant authority', async () => {
     capabilities: ['COMMERCIAL_ADMIN'],
     functionName: 'Atendimento',
     id: 'admin-1',
-    mfaEnrolled: true,
   });
   await repository.grant('seller-1', 'PRIVACY_OFFICER', 'admin-1');
 

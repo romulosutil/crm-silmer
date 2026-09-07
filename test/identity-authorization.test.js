@@ -13,7 +13,6 @@ test('classifies expected ACL denials for the HTTP boundary', () => {
     capabilities: [],
     functionName: /** @type {const} */ ('Vendedor'),
     id: 'seller-1',
-    mfaEnrolled: false,
   };
 
   assert.throws(
@@ -32,7 +31,6 @@ test('classifies expected ACL denials for the HTTP boundary', () => {
  *   functionName: 'Atendimento'|'Vendedor',
  *   id: string,
  *   kind?: 'human'|'assistant',
- *   mfaEnrolled: boolean,
  * }} TestUser
  * @typedef {{
  *   actor: string,
@@ -51,7 +49,6 @@ test('keeps operational functions and orthogonal capabilities deny-by-default', 
     functionName: 'Vendedor',
     id: 'seller-1',
     kind: 'human',
-    mfaEnrolled: false,
   };
   assert.doesNotThrow(() => authorize(seller, 'deal.draft.edit'));
   assert.throws(() => authorize(seller, 'sale.approve'), /forbidden/iu);
@@ -93,7 +90,6 @@ function harness() {
         capabilities: [CAPABILITIES.COMMERCIAL_ADMIN],
         functionName: 'Atendimento',
         id: 'admin-1',
-        mfaEnrolled: true,
       },
     ],
     [
@@ -102,7 +98,6 @@ function harness() {
         capabilities: [],
         functionName: 'Vendedor',
         id: 'seller-1',
-        mfaEnrolled: false,
       },
     ],
   ]);
@@ -138,7 +133,7 @@ function harness() {
   return { auditEvents, revocations, service, users };
 }
 
-test('prevents self-assignment and requires MFA before privileged grants', async () => {
+test('prevents self-assignment and permits privileged grants without MFA', async () => {
   const { service, users } = harness();
   await assert.rejects(
     service.grantCapability({
@@ -150,17 +145,6 @@ test('prevents self-assignment and requires MFA before privileged grants', async
     }),
     /self-assign/iu,
   );
-  await assert.rejects(
-    service.grantCapability({
-      actorId: 'admin-1',
-      capability: CAPABILITIES.COMMERCIAL_ADMIN,
-      correlationId: 'correlation-no-mfa',
-      reason: 'Promoção sem MFA',
-      targetId: 'seller-1',
-    }),
-    /MFA/iu,
-  );
-  requireUser(users, 'seller-1').mfaEnrolled = true;
   await service.grantCapability({
     actorId: 'admin-1',
     capability: CAPABILITIES.COMMERCIAL_ADMIN,

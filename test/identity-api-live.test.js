@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { createHmac } from 'node:crypto';
 import test from 'node:test';
 
 import { Pool } from 'pg';
@@ -17,11 +16,10 @@ const connectionString = process.env.TEST_DATABASE_URL;
 const origin = 'https://crm.example.test';
 
 if (connectionString) {
-  test('identity API live: bootstrap, login, invite, MFA, ACL, replay and revocation', async () => {
+  test('identity API live: bootstrap, login, invite, ACL, replay and revocation', async () => {
     const databaseName = new URL(connectionString).pathname.slice(1);
     assert.equal(databaseName, 'crm_silmer_test');
     const administration = new Pool({ connectionString, max: 4 });
-    const encodedKey = Buffer.alloc(32, 23).toString('base64url');
     const environment = {
       APP_ORIGIN: origin,
       AUTH_THROTTLE_HMAC_KEY: Buffer.alloc(32, 24).toString('base64url'),
@@ -29,7 +27,6 @@ if (connectionString) {
       DEAL_ENVELOPE_KEY: Buffer.alloc(32, 26).toString('base64url'),
       IDENTITY_BOOTSTRAP_TOKEN:
         'issue12-bootstrap-token-at-least-32-characters',
-      IDENTITY_ENVELOPE_KEY: encodedKey,
     };
     const database = createDatabase({ connectionString, max: 8 });
     const api = createServerApi({
@@ -60,16 +57,12 @@ if (connectionString) {
       });
       assert.equal(bootstrap.statusCode, 201);
       const bootstrapBody = bootstrap.json();
-      assert.equal(bootstrapBody.mfa.recoveryCodes.length, 8);
-      assert.match(bootstrapBody.mfa.secret, /^[A-Z2-7]+$/u);
-
       const adminLogin = await api.inject({
         headers: { origin },
         method: 'POST',
         payload: {
           email: 'admin@example.test',
           password: 'admin correct horse battery staple',
-          totpCode: totp(bootstrapBody.mfa.secret),
         },
         url: '/api/v1/sessions',
       });
@@ -127,15 +120,6 @@ if (connectionString) {
       });
       assert.equal(sellerLogin.statusCode, 200);
       const sellerCookies = cookies(sellerLogin);
-
-      const enrollment = await api.inject({
-        headers: commandHeaders(sellerCookies, 'seller-mfa-key-1'),
-        method: 'POST',
-        payload: { reason: 'Habilitar acesso privilegiado' },
-        url: '/api/v1/mfa/enrollments',
-      });
-      assert.equal(enrollment.statusCode, 201);
-      assert.equal(enrollment.json().recoveryCodes.length, 8);
 
       const missingTarget = await api.inject({
         headers: commandHeaders(adminCookies, 'missing-target-key-1'),
@@ -271,37 +255,4 @@ function commandHeaders(values, key) {
     origin,
     'x-csrf-token': values.csrf,
   };
-}
-
-/** @param {string} encodedSecret */
-function totp(encodedSecret) {
-  const secret = decodeBase32(encodedSecret);
-  const counter = Math.floor(Date.now() / 30_000);
-  const buffer = Buffer.alloc(8);
-  buffer.writeBigUInt64BE(BigInt(counter));
-  const digest = createHmac('sha1', secret).update(buffer).digest();
-  const offset = digest[digest.length - 1] & 0x0f;
-  const binary =
-    ((digest[offset] & 0x7f) << 24) |
-    ((digest[offset + 1] & 0xff) << 16) |
-    ((digest[offset + 2] & 0xff) << 8) |
-    (digest[offset + 3] & 0xff);
-  return String(binary % 1_000_000).padStart(6, '0');
-}
-
-/** @param {string} encoded */
-function decodeBase32(encoded) {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  let bits = 0;
-  let value = 0;
-  const bytes = [];
-  for (const character of encoded) {
-    value = (value << 5) | alphabet.indexOf(character);
-    bits += 5;
-    if (bits >= 8) {
-      bytes.push((value >>> (bits - 8)) & 0xff);
-      bits -= 8;
-    }
-  }
-  return Buffer.from(bytes);
 }

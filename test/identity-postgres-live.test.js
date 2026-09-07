@@ -167,7 +167,6 @@ if (connectionString) {
           createdAt: '2026-09-01T10:00:00.000Z',
           csrfHash: hash('c'),
           lastSeenAt: '2026-09-01T10:00:00.000Z',
-          mfaVerified: true,
           revokedAt: null,
           tokenHash: hash('d'),
           userId: adminId,
@@ -237,7 +236,6 @@ if (connectionString) {
           createdAt: '2026-09-01T10:00:00.000Z',
           csrfHash: hash('e'),
           lastSeenAt: '2026-09-01T10:00:00.000Z',
-          mfaVerified: true,
           revokedAt: null,
           tokenHash: hash('f'),
           userId: adminId,
@@ -266,51 +264,6 @@ if (connectionString) {
         [adminId],
       );
 
-      const encryptedSecret = {
-        authTag: 'auth-tag',
-        ciphertext: 'ciphertext-value',
-        iv: 'iv-value',
-        keyVersion: 1,
-      };
-      await transaction((repository) =>
-        repository.enrollFactor(adminId, {
-          encryptedSecret,
-          recoveryCodeHashes: [hash('8'), hash('9')],
-        }),
-      );
-      assert.equal(
-        (
-          await pool.query(
-            `SELECT encrypted_secret
-             FROM crm.mfa_factors
-             WHERE user_id = $1`,
-            [adminId],
-          )
-        ).rows[0].encrypted_secret,
-        'v1.iv-value.ciphertext-value.auth-tag',
-      );
-      const storedFactor = await reader.findFactor(adminId);
-      assert.deepEqual(storedFactor?.encryptedSecret, encryptedSecret);
-      assert.deepEqual(
-        [...(storedFactor?.recoveryCodeHashes ?? [])].toSorted(),
-        [hash('8'), hash('9')],
-      );
-
-      const recoveryResults = await Promise.all(
-        Array.from({ length: 2 }, () =>
-          transaction((repository) =>
-            repository.consumeRecoveryCode(adminId, hash('8')),
-          ),
-        ),
-      );
-      assert.deepEqual(recoveryResults.toSorted(), [false, true]);
-      const counterResults = await Promise.all(
-        Array.from({ length: 2 }, () =>
-          transaction((repository) => repository.useTotpCounter(adminId, 123)),
-        ),
-      );
-      assert.deepEqual(counterResults.toSorted(), [false, true]);
-      assert.equal((await reader.findFactor(adminId))?.lastCounter, 123);
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

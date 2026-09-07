@@ -2587,8 +2587,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository",
-      "community": 63,
-      "community_name": "configuration-catalog-postgres-live.test.js",
+      "community": 173,
+      "community_name": "catalog-version.js",
       "norm_label": "postgres-catalog-repository.js"
     },
     {
@@ -2609,8 +2609,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_requirestring",
-      "community": 63,
-      "community_name": "configuration-catalog-postgres-live.test.js",
+      "community": 173,
+      "community_name": "catalog-version.js",
       "norm_label": "requirestring()"
     },
     {
@@ -2620,8 +2620,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_isostring",
-      "community": 63,
-      "community_name": "configuration-catalog-postgres-live.test.js",
+      "community": 173,
+      "community_name": "catalog-version.js",
       "norm_label": "isostring()"
     },
     {
@@ -2631,8 +2631,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_mapcatalog",
-      "community": 63,
-      "community_name": "configuration-catalog-postgres-live.test.js",
+      "community": 173,
+      "community_name": "catalog-version.js",
       "norm_label": "mapcatalog()"
     },
     {
@@ -2653,8 +2653,8 @@
       "source_location": "L194",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_insertentries",
-      "community": 63,
-      "community_name": "configuration-catalog-postgres-live.test.js",
+      "community": 173,
+      "community_name": "catalog-version.js",
       "norm_label": "insertentries()"
     },
     {
@@ -2664,8 +2664,8 @@
       "source_location": "L205",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_insertmodels",
-      "community": 63,
-      "community_name": "configuration-catalog-postgres-live.test.js",
+      "community": 173,
+      "community_name": "catalog-version.js",
       "norm_label": "insertmodels()"
     },
     {
@@ -3049,8 +3049,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository",
-      "community": 176,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 63,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "postgres-configuration-repository.js"
     },
     {
@@ -3060,8 +3060,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_requirequeryable",
-      "community": 176,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 63,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "requirequeryable()"
     },
     {
@@ -3071,8 +3071,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_requirestring",
-      "community": 176,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 63,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "requirestring()"
     },
     {
@@ -3082,8 +3082,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_isostring",
-      "community": 176,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 63,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "isostring()"
     },
     {
@@ -3093,8 +3093,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_mapconfiguration",
-      "community": 176,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 63,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "mapconfiguration()"
     },
     {
@@ -3104,8 +3104,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_createpostgresconfigurationrepository",
-      "community": 176,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 63,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createpostgresconfigurationrepository()"
     },
     {
@@ -18193,7 +18193,7 @@
       "label": "dealVersion()",
       "file_type": "code",
       "source_file": "test/qualification-postgres-live.test.js",
-      "source_location": "L593",
+      "source_location": "L599",
       "_origin": "ast",
       "id": "test_qualification_postgres_live_test_dealversion",
       "community": 175,
@@ -18204,7 +18204,7 @@
       "label": "qualificationChangeCount()",
       "file_type": "code",
       "source_file": "test/qualification-postgres-live.test.js",
-      "source_location": "L602",
+      "source_location": "L608",
       "_origin": "ast",
       "id": "test_qualification_postgres_live_test_qualificationchangecount",
       "community": 175,
@@ -18215,7 +18215,7 @@
       "label": "fieldAssessmentCount()",
       "file_type": "code",
       "source_file": "test/qualification-postgres-live.test.js",
-      "source_location": "L611",
+      "source_location": "L617",
       "_origin": "ast",
       "id": "test_qualification_postgres_live_test_fieldassessmentcount",
       "community": 175,
@@ -35990,7 +35990,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "test/qualification-postgres-live.test.js",
-      "source_location": "L594",
+      "source_location": "L600",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_qualification_postgres_live_test_dealversion",
@@ -36002,7 +36002,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "test/qualification-postgres-live.test.js",
-      "source_location": "L612",
+      "source_location": "L618",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_qualification_postgres_live_test_fieldassessmentcount",
@@ -36014,7 +36014,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "test/qualification-postgres-live.test.js",
-      "source_location": "L603",
+      "source_location": "L609",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_qualification_postgres_live_test_qualificationchangecount",
@@ -60984,7 +60984,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/qualification-postgres-live.test.js",
-      "source_location": "L593",
+      "source_location": "L599",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_qualification_postgres_live_test",
@@ -60995,7 +60995,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/qualification-postgres-live.test.js",
-      "source_location": "L611",
+      "source_location": "L617",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_qualification_postgres_live_test",
@@ -61017,7 +61017,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "test/qualification-postgres-live.test.js",
-      "source_location": "L602",
+      "source_location": "L608",
       "weight": 1.0,
       "_origin": "ast",
       "source": "test_qualification_postgres_live_test",
@@ -66349,5 +66349,5 @@
       "confidence_score": 1.0
     }
   ],
-  "built_at_commit": "c5a4bb51ac9d84da58254944e2a1330ecd6330fa"
+  "built_at_commit": "208f2ca793b70491da77c146162393bbe373e9a2"
 }

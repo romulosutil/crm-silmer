@@ -175,7 +175,6 @@
   "173": "catalog-version.js",
   "174": "qualification/package.json",
   "175": "qualification-postgres-live.test.js",
-  "176": "postgres-configuration-repository.js",
   "177": "identity-api-live.test.js",
   "178": "postgres-audit-live.test.js",
   "179": "TransactionClient",

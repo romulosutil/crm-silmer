@@ -116,6 +116,18 @@ test('build emits deployable Vue assets instead of source components', async () 
   );
 });
 
+test('reads form values before disabling the submit button', async () => {
+  const source = await readFile(
+    new URL('apps/edge-web/src/components/AuthPanel.vue', rootUrl),
+    'utf8',
+  );
+
+  assert.match(
+    source,
+    /const data = formValues\(form\);[\s\S]*busy\.value = true;/u,
+  );
+});
+
 test('exposes a live API health contract', async () => {
   const { createApi } = await import('../apps/api/src/app.js');
   const api = createApi();

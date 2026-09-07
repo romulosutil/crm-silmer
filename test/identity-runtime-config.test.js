@@ -47,3 +47,25 @@ test('identity runtime normalizes and freezes the exact origin allowlist', () =>
   ]);
   assert.equal(Object.isFrozen(runtime.allowedOrigins), true);
 });
+
+test('development accepts HTTP only for loopback origins', () => {
+  const runtime = createIdentityApiRuntime(database, {
+    ...environment,
+    APP_ENV: 'development',
+    APP_ORIGIN: 'http://127.0.0.1:4173,http://localhost:4173',
+  });
+
+  assert.deepEqual(runtime.allowedOrigins, [
+    'http://127.0.0.1:4173',
+    'http://localhost:4173',
+  ]);
+  assert.throws(
+    () =>
+      createIdentityApiRuntime(database, {
+        ...environment,
+        APP_ENV: 'development',
+        APP_ORIGIN: 'http://crm.example.test',
+      }),
+    /HTTPS/u,
+  );
+});

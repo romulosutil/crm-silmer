@@ -60,7 +60,10 @@ export function createIdentityApiRuntime(database, environment = process.env) {
   if (!database || typeof database.transaction !== 'function') {
     throw new TypeError('A transactional database is required');
   }
-  const allowedOrigins = readOrigins(environment.APP_ORIGIN);
+  const allowedOrigins = readOrigins(
+    environment.APP_ORIGIN,
+    environment.APP_ENV === 'development',
+  );
   const bootstrapToken = requireSecret(
     environment.IDENTITY_BOOTSTRAP_TOKEN,
     'IDENTITY_BOOTSTRAP_TOKEN',
@@ -390,16 +393,31 @@ function requireSecret(value, name) {
   return value;
 }
 
-/** @param {string|undefined} value */
-function readOrigins(value) {
+/** @param {string|undefined} value @param {boolean} allowLoopbackHttp */
+function readOrigins(value, allowLoopbackHttp) {
   if (!value) throw new Error('APP_ORIGIN is required');
   const origins = value
     .split(',')
     .map((candidate) => new URL(candidate).origin);
-  if (origins.some((origin) => !origin.startsWith('https://'))) {
-    throw new Error('APP_ORIGIN entries must use HTTPS');
+  if (
+    origins.some(
+      (origin) =>
+        !origin.startsWith('https://') &&
+        !(allowLoopbackHttp && isLoopbackHttpOrigin(origin)),
+    )
+  ) {
+    throw new Error('APP_ORIGIN entries must use HTTPS outside local development');
   }
   return Object.freeze([...new Set(origins)]);
+}
+
+/** @param {string} origin */
+function isLoopbackHttpOrigin(origin) {
+  const url = new URL(origin);
+  return (
+    url.protocol === 'http:' &&
+    ['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname)
+  );
 }
 
 /** @param {string} left @param {string} right */

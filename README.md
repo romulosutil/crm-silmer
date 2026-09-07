@@ -61,23 +61,30 @@ manifesto SHA-256 sem timestamps.
 
 ### Ambiente local com atualização automática
 
-Depois de configurar um PostgreSQL de desenvolvimento e exportar `DATABASE_URL`,
-inicie tudo com:
+Com Docker Desktop em execução, inicie tudo com:
 
 ```powershell
 npm run dev
 ```
 
-O comando faz o build inicial, observa `apps/edge-web/src` e reconstrói o
-frontend quando ele muda. Também inicia a API com o watcher nativo do Node, que
-reinicia o processo ao mudar código carregado pela API. A aplicação fica em
+O comando sobe um PostgreSQL local persistente, espera a disponibilidade,
+aplica as migrations, faz o build inicial, observa `apps/edge-web/src` e
+reconstrói o frontend quando ele muda. Também inicia a API com o watcher nativo
+do Node, que reinicia o processo ao mudar código carregado pela API. A aplicação fica em
 `http://127.0.0.1:4173` e encaminha chamadas `/api/*` para a API local em
 `http://127.0.0.1:3000`, preservando cookies e o mesmo origin.
 
-Os valores podem ser ajustados somente para a sessão atual com `API_HOST`,
+O banco de desenvolvimento fica em um volume Docker nomeado. Para parar apenas
+os containers, preservando os dados locais, use `npm run dev:down`. Um
+`DATABASE_URL` exportado substitui o banco Docker gerenciado. Os valores de
+porta/origem podem ser ajustados somente para a sessão atual com `API_HOST`,
 `API_PORT`, `DEV_HOST`, `DEV_PORT` e `API_ORIGIN`. Esse fluxo é exclusivamente
 local: não substitui `npm run build`, imagens por digest nem a promoção manual
 dos ambientes operacionais.
+
+No modo local, o comando gera em memória chaves de autenticação efêmeras e
+aceita HTTP exclusivamente em `localhost`, `127.0.0.1` ou `::1`. Produção e
+qualquer origem não local continuam exigindo HTTPS e segredos configurados.
 
 O contrato de `T00.3` fica em `ops/easypanel/topology.json`,
 `ops/easypanel/provisioning-gate.json` e `ops/recovery/off-host-kit.json`.

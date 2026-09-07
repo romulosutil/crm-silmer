@@ -34,6 +34,8 @@ Documentos principais:
   definitivas, gates, PIX e boas-vindas.
 - `RULES.md`: invariantes de produto e implementação.
 - `ARCHITECTURE.md`: resumo das fronteiras e decisões técnicas propostas como baseline.
+- `docs/adr/`: decisões arquiteturais tomadas, imutáveis e numeradas.
+- `docs/rfc/`: propostas relevantes em avaliação antes da decisão.
 - `TECHNICAL-DESIGN.md`: TDD canônico com stack, módulos, dados, APIs,
   segurança, SLOs, riscos e decisões técnicas do MVP.
 - `EASYPANEL-TOPOLOGY.md`: projetos, serviços, sizing, CI/CD, backups e

@@ -20,6 +20,21 @@ Quando houver conflito, use esta ordem:
 
 `historico-datacrazy/` nunca supera uma fonte acima.
 
+## Padrão de decisões e propostas
+
+- ADRs devem ser salvos em `docs/adr/`, com numeração sequencial de três
+  dígitos e nome `NNN-titulo-em-kebab-case.md`. Eles registram decisões
+  arquiteturais tomadas e não devem ser reescritos; uma mudança cria um novo
+  ADR que supersede o anterior.
+- RFCs devem ser salvos em `docs/rfc/`, usando a mesma convenção de nome e
+  numeração. Eles registram propostas relevantes antes da decisão e podem ser
+  atualizados durante a revisão.
+- Toda decisão arquitetural durável deve vincular o RFC ao ADR correspondente
+  e manter links para requisitos, issues e PRs relacionados.
+- `ARCHITECTURE.md` e `TECHNICAL-DESIGN.md` continuam sendo fontes canônicas
+  de síntese e implementação; ADR/RFC registram o contexto, as alternativas e
+  o motivo da decisão.
+
 ## Protocolo obrigatório
 
 1. **Vault-first:** antes da pesquisa em código ou documentos, execute

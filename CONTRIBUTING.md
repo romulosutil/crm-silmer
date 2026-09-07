@@ -12,6 +12,18 @@ Uma mudança sem requisito rastreável deve ser classificada como correção de
 documentação, manutenção interna ou nova decisão. Mudanças de arquitetura,
 stack ou escopo exigem aprovação explícita e atualização da fonte canônica.
 
+### ADRs e RFCs
+
+- Salve propostas relevantes ainda não decididas em `docs/rfc/`.
+- Salve decisões arquiteturais tomadas em `docs/adr/`.
+- Use numeração sequencial de três dígitos e o formato
+  `NNN-titulo-em-kebab-case.md`; consulte os READMEs de cada pasta antes de
+  criar um documento.
+- Atualize o RFC durante a revisão. Após a decisão, preserve o histórico e
+  crie um ADR vinculado quando a decisão for arquitetural e durável.
+- Relacione o documento a requisitos, issues e PRs. Documentação não substitui
+  aprovação humana nem evidência operacional.
+
 ## Governança do repositório público
 
 - Contribuições externas entram por fork e pull request; não há push externo na

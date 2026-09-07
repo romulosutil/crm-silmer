@@ -263,7 +263,6 @@ if (connectionString) {
         `UPDATE crm.users SET disabled_at = NULL WHERE id = $1`,
         [adminId],
       );
-
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

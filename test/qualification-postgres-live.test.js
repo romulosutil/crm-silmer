@@ -480,8 +480,8 @@ async function seed(pool, runId) {
   );
   await pool.query(
     `INSERT INTO crm.catalog_versions
-       (id, number, status, created_by, reason, created_at, published_by, published_at)
-     VALUES ($1, 1, 'published', $2, 'Fixture', $3, $2, $3)`,
+       (id, number, status, created_by, reason, created_at)
+     VALUES ($1, 1, 'draft', $2, 'Fixture', $3)`,
     [`catalog-${runId}`, `user-${runId}`, NOW],
   );
   await pool.query(
@@ -499,6 +499,12 @@ async function seed(pool, runId) {
   await pool.query(
     "INSERT INTO crm.catalog_techniques VALUES ($1, 'SILK', 'Silk')",
     [`catalog-${runId}`],
+  );
+  await pool.query(
+    `UPDATE crm.catalog_versions
+     SET status = 'published', published_by = $2, published_at = $3
+     WHERE id = $1`,
+    [`catalog-${runId}`, `user-${runId}`, NOW],
   );
   await pool.query(
     `INSERT INTO crm.catalog_versions

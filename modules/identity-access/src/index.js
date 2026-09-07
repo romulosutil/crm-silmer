@@ -1,9 +1,6 @@
 import {
   argon2,
-  createCipheriv,
-  createDecipheriv,
   createHash,
-  createHmac,
   randomBytes,
   timingSafeEqual,
 } from 'node:crypto';
@@ -33,43 +30,30 @@ import {
  *   csrfHash: string,
  *   createdAt: string,
  *   lastSeenAt: string,
- *   mfaVerified: boolean,
  *   revokedAt: string | null,
  *   tokenHash: string,
  *   userId: string,
  * }} IdentitySession
- * @typedef {{ authTag: string, ciphertext: string, iv: string, keyVersion: number }} EncryptedSecret
- * @typedef {{
- *   encryptedSecret: EncryptedSecret,
- *   lastCounter: number | null,
- *   recoveryCodeHashes: Set<string>,
- * }} MfaFactor
  * @typedef {{
  *   authenticateSession: (tokenHash: string, touchedAt: string, idleExpiresBefore: string) => IdentitySession | null | Promise<IdentitySession | null>,
  *   consumeInvitation: (tokenHash: string, now: Date) => IdentityInvitation | null | Promise<IdentityInvitation | null>,
- *   consumeRecoveryCode: (userId: string, codeHash: string) => boolean | Promise<boolean>,
  *   createInvitation: (invitation: IdentityInvitation) => void | Promise<void>,
  *   createSession: (session: IdentitySession) => void | Promise<void>,
  *   createUser: (user: IdentityUser) => void | Promise<void>,
- *   enrollFactor: (userId: string, factor: {encryptedSecret: EncryptedSecret, recoveryCodeHashes: Iterable<string>}) => void | Promise<void>,
- *   findFactor: (userId: string) => MfaFactor | null | Promise<MfaFactor | null>,
  *   findSession: (tokenHash: string) => IdentitySession | null | Promise<IdentitySession | null>,
  *   findUserByEmail: (email: string) => IdentityUser | null | undefined | Promise<IdentityUser | null | undefined>,
  *   findUserById: (id: string) => IdentityUser | null | Promise<IdentityUser | null>,
  *   hasUsers: () => boolean | Promise<boolean>,
  *   insertInitialUser: (user: IdentityUser) => boolean | Promise<boolean>,
  *   inspect: () => {
- *     factors: Array<{encryptedSecret: EncryptedSecret, recoveryCodeHashes: string[]}>,
  *     sessions: IdentitySession[],
  *     users: IdentityUser[],
  *   } | Promise<{
- *     factors: Array<{encryptedSecret: EncryptedSecret, recoveryCodeHashes: string[]}>,
  *     sessions: IdentitySession[],
  *     users: IdentityUser[],
  *   }>,
  *   revokeSession: (tokenHash: string, revokedAt: string) => void | Promise<void>,
  *   touchSession: (tokenHash: string, touchedAt: string) => void | Promise<void>,
- *   useTotpCounter: (userId: string, counter: number) => boolean | Promise<boolean>,
  *   validateCsrfSession: (tokenHash: string, csrfHash: string, touchedAt: string, idleExpiresBefore: string) => IdentitySession | null | Promise<IdentitySession | null>,
  * }} IdentityRepository
  * @typedef {{
@@ -91,11 +75,6 @@ const DEFAULT_PASSWORD_PARAMETERS = Object.freeze({
 });
 const UNKNOWN_USER_PASSWORD_HASH =
   '$argon2id$v=19$m=19456,t=2,p=2$xMr8EkVto6XX3sYwTVTyOA$pM1ue-Zt9HInxnqVdW8WDGRrCyxnKUZm8IK-O-32cLM';
-/** @type {Set<IdentityCapability>} */
-const PRIVILEGED_CAPABILITIES = new Set([
-  'COMMERCIAL_ADMIN',
-  'TECHNICAL_PRIVACY_EXECUTOR',
-]);
 /** @type {Set<OperationalFunction>} */
 const FUNCTIONS = new Set(['Atendimento', 'Vendedor']);
 
@@ -176,48 +155,6 @@ export async function verifyPassword(password, encoded) {
   }
 }
 
-/** @param {Buffer} secret @param {Buffer} key @returns {Readonly<EncryptedSecret>} */
-function encryptSecret(secret, key) {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const ciphertext = Buffer.concat([cipher.update(secret), cipher.final()]);
-  return Object.freeze({
-    authTag: cipher.getAuthTag().toString('base64url'),
-    ciphertext: ciphertext.toString('base64url'),
-    iv: iv.toString('base64url'),
-    keyVersion: 1,
-  });
-}
-
-/** @param {EncryptedSecret} encrypted @param {Buffer} key */
-function decryptSecret(encrypted, key) {
-  const decipher = createDecipheriv(
-    'aes-256-gcm',
-    key,
-    Buffer.from(encrypted.iv, 'base64url'),
-  );
-  decipher.setAuthTag(Buffer.from(encrypted.authTag, 'base64url'));
-  return Buffer.concat([
-    decipher.update(Buffer.from(encrypted.ciphertext, 'base64url')),
-    decipher.final(),
-  ]);
-}
-
-/** @param {Buffer} secret @param {Date} time @param {number} [stepSeconds] */
-function totp(secret, time, stepSeconds = 30) {
-  const counter = Math.floor(time.getTime() / 1000 / stepSeconds);
-  const value = Buffer.alloc(8);
-  value.writeBigUInt64BE(BigInt(counter));
-  const mac = createHmac('sha1', secret).update(value).digest();
-  const offset = mac[mac.length - 1] & 0x0f;
-  const binary =
-    ((mac[offset] & 0x7f) << 24) |
-    ((mac[offset + 1] & 0xff) << 16) |
-    ((mac[offset + 2] & 0xff) << 8) |
-    (mac[offset + 3] & 0xff);
-  return { code: String(binary % 1_000_000).padStart(6, '0'), counter };
-}
-
 /** @param {IdentityUser} user */
 function freezeUser(user) {
   return Object.freeze({
@@ -237,8 +174,6 @@ export function createInMemoryIdentityRepository() {
   const invitations = new Map();
   /** @type {Map<string, IdentitySession>} */
   const sessions = new Map();
-  /** @type {Map<string, MfaFactor>} */
-  const factors = new Map();
 
   /**
    * @param {string} tokenHash
@@ -279,13 +214,6 @@ export function createInMemoryIdentityRepository() {
       invitation.consumedAt = now.toISOString();
       return { ...invitation };
     },
-    /** @param {string} userId @param {string} codeHash */
-    consumeRecoveryCode(userId, codeHash) {
-      const factor = factors.get(userId);
-      if (!factor || !factor.recoveryCodeHashes.has(codeHash)) return false;
-      factor.recoveryCodeHashes.delete(codeHash);
-      return true;
-    },
     /** @param {IdentityInvitation} invitation */
     createInvitation(invitation) {
       invitations.set(invitation.tokenHash, { ...invitation });
@@ -299,18 +227,6 @@ export function createInMemoryIdentityRepository() {
       if (emails.has(user.email.toLowerCase())) throw new Error('User exists');
       users.set(user.id, { ...user, capabilities: [...user.capabilities] });
       emails.set(user.email.toLowerCase(), user.id);
-    },
-    /** @param {string} userId @param {{encryptedSecret: EncryptedSecret, recoveryCodeHashes: Iterable<string>}} factor */
-    enrollFactor(userId, factor) {
-      factors.set(userId, {
-        ...factor,
-        lastCounter: null,
-        recoveryCodeHashes: new Set(factor.recoveryCodeHashes),
-      });
-    },
-    /** @param {string} userId */
-    findFactor(userId) {
-      return factors.get(userId) ?? null;
     },
     /** @param {string} tokenHash */
     findSession(tokenHash) {
@@ -336,10 +252,6 @@ export function createInMemoryIdentityRepository() {
     },
     inspect() {
       return {
-        factors: [...factors.values()].map((factor) => ({
-          encryptedSecret: factor.encryptedSecret,
-          recoveryCodeHashes: [...factor.recoveryCodeHashes],
-        })),
         sessions: [...sessions.values()].map((session) => ({ ...session })),
         users: [...users.values()].map((user) => ({
           ...user,
@@ -357,13 +269,6 @@ export function createInMemoryIdentityRepository() {
       const session = sessions.get(tokenHash);
       if (session) session.lastSeenAt = touchedAt;
     },
-    /** @param {string} userId @param {number} counter */
-    useTotpCounter(userId, counter) {
-      const factor = factors.get(userId);
-      if (!factor || (factor.lastCounter ?? -1) >= counter) return false;
-      factor.lastCounter = counter;
-      return true;
-    },
     /** @param {string} tokenHash @param {string} csrfHash @param {string} touchedAt @param {string} idleExpiresBefore */
     validateCsrfSession(tokenHash, csrfHash, touchedAt, idleExpiresBefore) {
       const session = activeSession(tokenHash, touchedAt, idleExpiresBefore);
@@ -380,7 +285,6 @@ export function createInMemoryIdentityRepository() {
  * @param {{
  *   auditPort: {append: (event: IdentityAuditEvent) => Promise<unknown>},
  *   clock?: () => Date,
- *   envelopeKey: Buffer,
  *   idFactory?: (prefix: string) => string,
  *   passwordParameters?: PasswordParameters,
  *   passwordVerifier?: typeof verifyPassword,
@@ -394,7 +298,6 @@ export function createInMemoryIdentityRepository() {
 export function createIdentityAccessService({
   auditPort,
   clock = () => new Date(),
-  envelopeKey,
   idFactory = (prefix) => `${prefix}-${randomBytes(16).toString('hex')}`,
   passwordParameters = DEFAULT_PASSWORD_PARAMETERS,
   passwordVerifier = verifyPassword,
@@ -404,9 +307,6 @@ export function createIdentityAccessService({
   tokenFactory = () => randomBytes(32).toString('base64url'),
   unknownUserPasswordHash = UNKNOWN_USER_PASSWORD_HASH,
 }) {
-  if (!Buffer.isBuffer(envelopeKey) || envelopeKey.length !== 32) {
-    throw new TypeError('A 32-byte envelope key is required');
-  }
   if (
     !Number.isFinite(sessionAbsoluteMs) ||
     sessionAbsoluteMs <= 0 ||
@@ -532,82 +432,9 @@ export function createIdentityAccessService({
     return freezeUser(user);
   }
 
-  /** @param {{actorId: string, correlationId: string, reason: string, secret?: Buffer}} input */
-  async function enrollTotp({
-    actorId,
-    correlationId,
-    reason,
-    secret = randomBytes(20),
-  }) {
-    requireNonEmptyString(actorId, 'actorId');
-    requireNonEmptyString(correlationId, 'correlationId');
-    requireNonEmptyString(reason, 'reason');
-    if (!Buffer.isBuffer(secret) || secret.length < 20) {
-      throw new TypeError('TOTP secret must contain at least 20 bytes');
-    }
-    const user = await repository.findUserById(actorId);
-    if (!user) throw new Error('User not found');
-    const recoveryCodes = Array.from({ length: 8 }, () =>
-      randomBytes(9).toString('base64url'),
-    );
-    await repository.enrollFactor(user.id, {
-      encryptedSecret: encryptSecret(secret, envelopeKey),
-      recoveryCodeHashes: recoveryCodes.map(digest),
-    });
-    await record({
-      action: 'identity.mfa.enrolled',
-      actor: user.id,
-      correlationId,
-      reason,
-      target: { id: user.id, type: 'user' },
-      version: 1,
-    });
-    return Object.freeze({ recoveryCodes: Object.freeze(recoveryCodes) });
-  }
-
-  /**
-   * @param {IdentityUser} user
-   * @param {{recoveryCode?: string, totpCode?: string}} input
-   */
-  async function verifyMfa(user, { recoveryCode, totpCode }) {
-    if (
-      !user.capabilities.some((capability) =>
-        PRIVILEGED_CAPABILITIES.has(capability),
-      )
-    ) {
-      return false;
-    }
-    const factor = await repository.findFactor(user.id);
-    if (!factor) throw new Error('MFA enrollment required');
-    if (
-      recoveryCode &&
-      (await repository.consumeRecoveryCode(user.id, digest(recoveryCode)))
-    ) {
-      return true;
-    }
-    if (typeof totpCode === 'string') {
-      const secret = decryptSecret(factor.encryptedSecret, envelopeKey);
-      for (const drift of [-1, 0, 1]) {
-        const candidate = totp(
-          secret,
-          new Date(clock().getTime() + drift * 30_000),
-        );
-        if (
-          constantTimeEqual(totpCode, candidate.code) &&
-          (await repository.useTotpCounter(user.id, candidate.counter))
-        ) {
-          return true;
-        }
-      }
-    }
-    throw new Error('Invalid MFA code');
-  }
-
   /** @param {{
    *   email: string,
    *   password: string,
-   *   recoveryCode?: string,
-   *   totpCode?: string,
    * }} input */
   async function login(input) {
     const user = await repository.findUserByEmail(input.email);
@@ -618,10 +445,6 @@ export function createIdentityAccessService({
     if (!user || !passwordMatches) {
       throw new Error('Invalid credentials');
     }
-    const mfaRequired = user.capabilities.some((capability) =>
-      PRIVILEGED_CAPABILITIES.has(capability),
-    );
-    const mfaVerified = mfaRequired ? await verifyMfa(user, input) : false;
     const sessionToken = tokenFactory();
     const csrfToken = tokenFactory();
     const now = clock();
@@ -632,13 +455,12 @@ export function createIdentityAccessService({
       csrfHash: digest(csrfToken),
       createdAt: now.toISOString(),
       lastSeenAt: now.toISOString(),
-      mfaVerified,
       revokedAt: null,
       tokenHash: digest(sessionToken),
       userId: user.id,
     });
     return Object.freeze({
-      body: Object.freeze({ mfaVerified, user: freezeUser(user) }),
+      body: Object.freeze({ user: freezeUser(user) }),
       cookie: `crm_session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax`,
       csrfToken,
       sessionToken,
@@ -663,7 +485,6 @@ export function createIdentityAccessService({
     );
     if (!session) throw new Error('Invalid or expired session');
     return Object.freeze({
-      mfaVerified: session.mfaVerified,
       userId: session.userId,
     });
   }
@@ -679,7 +500,6 @@ export function createIdentityAccessService({
     );
     if (!session) throw new Error('CSRF validation failed');
     return Object.freeze({
-      mfaVerified: session.mfaVerified,
       userId: session.userId,
     });
   }
@@ -695,9 +515,6 @@ export function createIdentityAccessService({
     authenticate,
     bootstrapAdmin,
     createInvitation,
-    /** @param {Buffer} secret */
-    currentTotpForTesting: (secret) => totp(secret, clock()).code,
-    enrollTotp,
     login,
     logout,
   });

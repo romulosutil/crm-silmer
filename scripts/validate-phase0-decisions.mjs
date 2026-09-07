@@ -276,22 +276,6 @@ export function validatePhase0Decisions(document) {
     technicalAdmin.capability === 'TECHNICAL_PRIVACY_EXECUTOR',
     'Technical Admin must remain the privacy executor',
   );
-  invariant(
-    technicalAdmin.mfaRequired === true,
-    'Technical Admin must require MFA',
-  );
-  if (mode === 'approved') {
-    invariant(
-      technicalAdmin.mfaConfirmed === true,
-      'Technical Admin needs confirmed MFA',
-    );
-  } else {
-    invariant(
-      technicalAdmin.mfaConfirmed === false,
-      'Pending Technical Admin cannot claim MFA confirmation',
-    );
-  }
-
   const separation = document.separationOfDuties;
   invariant(
     isCorporateId(separation?.privacyOfficerAssignee),

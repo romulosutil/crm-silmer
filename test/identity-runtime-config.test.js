@@ -9,7 +9,6 @@ const environment = Object.freeze({
   AUTH_THROTTLE_HMAC_KEY: encodedKey,
   IDEMPOTENCY_ENVELOPE_KEY: encodedKey,
   IDENTITY_BOOTSTRAP_TOKEN: 'bootstrap-token-with-at-least-32-characters',
-  IDENTITY_ENVELOPE_KEY: encodedKey,
 });
 const database = {
   query: async () => ({ rows: [] }),
@@ -26,7 +25,6 @@ test('identity runtime fails closed on missing, weak or non-HTTPS configuration'
       ['AUTH_THROTTLE_HMAC_KEY', 'short'],
       ['IDEMPOTENCY_ENVELOPE_KEY', 'not-base64url!'.repeat(3)],
       ['IDENTITY_BOOTSTRAP_TOKEN', 'short'],
-      ['IDENTITY_ENVELOPE_KEY', Buffer.alloc(31).toString('base64url')],
     ]);
   for (const [field, value] of invalidConfiguration) {
     assert.throws(

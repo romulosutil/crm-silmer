@@ -17,10 +17,6 @@ const elements = {
   loginPanel: select('#login-panel'),
   loginTab: /** @type {HTMLButtonElement} */ (select('#login-tab')),
   logoutButton: /** @type {HTMLButtonElement} */ (select('#logout-button')),
-  mfaForm: /** @type {HTMLFormElement} */ (select('#mfa-form')),
-  mfaResult: select('#mfa-result'),
-  mfaSecret: select('#mfa-secret'),
-  recoveryCodes: select('#recovery-codes'),
   sessionSummary: select('#session-summary'),
   signedIn: select('#signed-in'),
   signedOut: select('#signed-out'),
@@ -47,8 +43,6 @@ elements.loginForm.addEventListener('submit', (event) =>
       body: compact({
         email: data.email,
         password: data.password,
-        recoveryCode: data.recoveryCode,
-        totpCode: data.totpCode,
       }),
       method: 'POST',
     });
@@ -82,28 +76,6 @@ elements.logoutButton.addEventListener('click', async () => {
   });
 });
 
-elements.mfaForm.addEventListener('submit', (event) =>
-  submit(event, async (form) => {
-    const data = formData(form);
-    const enrollment = await request('/api/v1/mfa/enrollments', {
-      authenticated: true,
-      body: { reason: data.reason },
-      idempotent: true,
-      method: 'POST',
-    });
-    elements.mfaSecret.textContent = `Segredo: ${enrollment.secret}`;
-    elements.recoveryCodes.replaceChildren(
-      ...enrollment.recoveryCodes.map((/** @type {string} */ code) => {
-        const item = document.createElement('li');
-        item.textContent = code;
-        return item;
-      }),
-    );
-    elements.mfaResult.hidden = false;
-    elements.mfaResult.focus();
-    announce('Autenticador cadastrado. Guarde os códigos de recuperação.');
-  }),
-);
 
 elements.createInviteForm.addEventListener('submit', (event) =>
   submit(event, async (form) => {

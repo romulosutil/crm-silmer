@@ -58,7 +58,6 @@ test('submits login, restores and closes a session by keyboard without browser s
         status: authenticated ? 200 : 401,
         body: authenticated
           ? JSON.stringify({
-              mfaVerified: true,
               user: {
                 capabilities: ['COMMERCIAL_ADMIN'],
                 functionName: 'Atendimento',
@@ -87,7 +86,6 @@ test('submits login, restores and closes a session by keyboard without browser s
         contentType: 'application/json',
         status: 200,
         body: JSON.stringify({
-          mfaVerified: true,
           user: {
             capabilities: ['COMMERCIAL_ADMIN'],
             functionName: 'Atendimento',

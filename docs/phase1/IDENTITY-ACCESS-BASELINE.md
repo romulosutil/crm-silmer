@@ -18,13 +18,7 @@
 - Comandos autenticados exigem token CSRF independente. A aplicação não grava
   token de sessão ou CSRF em `localStorage`, `sessionStorage`, IndexedDB ou
   Cache Storage.
-- TOTP usa passo de 30 segundos, seis dígitos e tolerância de uma janela para
-  cada lado. O contador aceito não pode ser reutilizado. O segredo fica
-  criptografado com AES-256-GCM e chave externa ao banco.
-- O enrolamento MFA emite oito recovery codes de uso único. Somente hashes são
-  persistidos; os códigos em claro são mostrados uma vez.
-- `COMMERCIAL_ADMIN` e `TECHNICAL_PRIVACY_EXECUTOR` exigem MFA. Função
-  `Atendimento|Vendedor`, `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e
+- Função `Atendimento|Vendedor`, `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e
   `TECHNICAL_PRIVACY_EXECUTOR` permanecem ortogonais.
 
 ## Invariantes operacionais
@@ -48,24 +42,24 @@
 ## Superfícies entregues
 
 - Contrato HTTP versionado em `docs/api/openapi.v1.yaml`, com bootstrap,
-  convite/aceite, login, sessão atual, logout, MFA e concessão/revogação.
+  convite/aceite, login, sessão atual, logout e concessão/revogação.
 - Operação e rollback em `docs/runbooks/identity-access.md`, incluindo inventário
   de chaves e proibição de rotação destrutiva sem recriptografia.
 - UI vanilla em `apps/edge-web`, sem storage de autenticação ou estado de domínio
   global, com navegação por teclado, foco pós-mudança e regiões `status`/`alert`.
-- Repositórios PostgreSQL para usuário, convite, sessão, MFA/recovery, ACL,
+- Repositórios PostgreSQL para usuário, convite, sessão, ACL,
   auditoria, throttle e idempotência; responses idempotentes ficam cifradas com
   AES-256-GCM e AAD ligada a escopo, chave e fingerprint.
 
 ## Gates
 
 - Testes determinísticos cobrem Argon2id, convite, login/logout, sessão
-  hasheada, CSRF, TOTP, recovery, segregação de capacidades, autoatribuição,
+  hasheada, CSRF, segregação de capacidades, autoatribuição,
   revogação, auditoria e concorrência idempotente.
 - A migration da Fase 1 deve provar constraints e compatibilidade em PostgreSQL
   efêmero antes de publicação.
-- `test/identity-api-live.test.js` provou em PostgreSQL 17 bootstrap, TOTP,
-  convite concorrente, MFA, grant/revoke, replay, `409`, revogação imediata e
+- `test/identity-api-live.test.js` provou em PostgreSQL 17 bootstrap,
+  convite concorrente, grant/revoke, replay, `409`, revogação imediata e
   progressão `401, 401, 401, 429`; os testes E2E passaram axe e teclado.
 - `ACL-P07-07..11` só pode receber prova E2E completa quando Pedido/Ficha e sua
   UI existirem na Fase 5; a Fase 1 fixa e testa a política reutilizável.

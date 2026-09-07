@@ -88,26 +88,6 @@
               minlength="12"
               required
             />
-            <details>
-              <summary>Verificação em duas etapas</summary>
-              <p class="field-help">
-                Informe o código do aplicativo ou um código de recuperação.
-              </p>
-              <label for="totp-code">Código de 6 dígitos</label>
-              <input
-                id="totp-code"
-                name="totpCode"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                pattern="[0-9]{6}"
-              />
-              <label for="recovery-code">Código de recuperação</label>
-              <input
-                id="recovery-code"
-                name="recoveryCode"
-                autocomplete="off"
-              />
-            </details>
             <button class="primary" type="submit">Entrar com segurança</button>
           </form>
         </section>
@@ -152,26 +132,6 @@
             Sair
           </button>
         </div>
-
-        <section class="surface" aria-labelledby="mfa-title">
-          <h2 id="mfa-title">Verificação em duas etapas</h2>
-          <p>Proteja ações privilegiadas com um autenticador TOTP.</p>
-          <form id="mfa-form">
-            <label for="mfa-reason">Motivo do cadastro</label>
-            <input
-              id="mfa-reason"
-              name="reason"
-              value="Proteger acesso privilegiado"
-              required
-            />
-            <button type="submit">Cadastrar autenticador</button>
-          </form>
-          <div id="mfa-result" class="one-time" tabindex="-1" hidden>
-            <h3>Guarde estas informações agora</h3>
-            <p id="mfa-secret"></p>
-            <ul id="recovery-codes"></ul>
-          </div>
-        </section>
 
         <div id="admin-tools" class="admin-grid" hidden>
           <section class="surface" aria-labelledby="new-invite-title">

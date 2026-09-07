@@ -37,7 +37,7 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 - n8n obrigatório; indisponibilidade do n8n torna a automação indisponível e visível, sem fallback silencioso para outra fonte de estado.
 - Numeração de pedidos iniciada em `01-CRM`, sem dependência legada.
 - Rômulo Sutil Corrêa como Responsável de Privacidade e política do piloto aprovada após consulta jurídica.
-- Defaults `D00.6-01..07` aprovados; `silmer:romulo.sutil` designado como Tech Lead, equipe de entrega e Administrador Técnico com MFA.
+- Defaults `D00.6-01..07` aprovados; `silmer:romulo.sutil` designado como Tech Lead, equipe de entrega e Administrador Técnico.
 - Exceção `SOLO-OPS-PILOT-01` limitada ao piloto interno; não prova segregação, infraestrutura provisionada ou recovery.
 
 ## Baseline técnica
@@ -50,7 +50,7 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 - **Persistência:** PostgreSQL com SQL e migrações versionadas; dados oficiais normalizados e JSONB limitado a payloads e snapshots apropriados.
 - **Assíncrono:** CRM mantém inbox/outbox e jobs transacionais. A rede opera at-least-once; contratos idempotentes e reconciliação tratam replay e `outcome_unknown` sem prometer exactly-once.
 - **Escala:** execução regular do n8n no MVP. Queue mode e Redis só entram após medição que justifique mais infraestrutura.
-- **Autenticação humana:** sessão opaca em cookie seguro, CSRF, MFA obrigatório para `Admin` e Administrador Técnico.
+- **Autenticação humana:** sessão opaca em cookie seguro e CSRF.
 - **Autenticação técnica:** credencial exclusiva e rotacionável do n8n, sem sessão de navegador, sem capacidade administrativa e sem acesso de rede ao banco do CRM.
 - **Storage:** mídia de canal transitória em volume privado da VPS por até sete dias ou fim da jornada; arquivos válidos seguem ao Dropbox por procedimento operacional registrado. Evolução de storage depende da issue `#29`.
 - **Documentos:** snapshot imutável, template HTML/CSS e PDF gerado no worker.

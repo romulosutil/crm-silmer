@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import {
@@ -46,10 +46,6 @@ export function createIdentityApiRuntime(database, environment = process.env) {
     environment.IDENTITY_BOOTSTRAP_TOKEN,
     'IDENTITY_BOOTSTRAP_TOKEN',
   );
-  const identityEnvelopeKey = readKey(
-    environment.IDENTITY_ENVELOPE_KEY,
-    'IDENTITY_ENVELOPE_KEY',
-  );
   const idempotencyEnvelopeKey = readKey(
     environment.IDEMPOTENCY_ENVELOPE_KEY,
     'IDEMPOTENCY_ENVELOPE_KEY',
@@ -67,21 +63,17 @@ export function createIdentityApiRuntime(database, environment = process.env) {
   function identityService(client) {
     return createIdentityAccessService({
       auditPort: new PostgresAuditTrail(client),
-      envelopeKey: identityEnvelopeKey,
       repository: createPostgresIdentityRepository(client),
     });
   }
 
-  /** @param {any} client @param {{sessionToken: string, csrfToken: string}} input @param {boolean} requireMfa */
-  async function authenticatedSession(client, input, requireMfa) {
+  /** @param {any} client @param {{sessionToken: string, csrfToken: string}} input */
+  async function authenticatedSession(client, input) {
     try {
       const session = await identityService(client).assertCsrf(
         input.sessionToken,
         input.csrfToken,
       );
-      if (requireMfa && !session.mfaVerified) {
-        throw new IdentityHttpError(403, 'FORBIDDEN');
-      }
       return session;
     } catch (error) {
       if (error instanceof IdentityHttpError) throw error;
@@ -89,11 +81,9 @@ export function createIdentityApiRuntime(database, environment = process.env) {
     }
   }
 
-  /** @param {{sessionToken: string, csrfToken: string}} input @param {boolean} requireMfa */
-  function preflight(input, requireMfa = true) {
-    return database.transaction((client) =>
-      authenticatedSession(client, input, requireMfa),
-    );
+  /** @param {{sessionToken: string, csrfToken: string}} input */
+  function preflight(input) {
+    return database.transaction((client) => authenticatedSession(client, input));
   }
 
   /**
@@ -146,24 +136,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
       try {
         return await database.transaction(async (client) => {
           const service = identityService(client);
-          const result = await service.bootstrapAdmin(input);
-          const secret = randomBytes(20);
-          const enrollment = await service.enrollTotp({
-            actorId: result.user.id,
-            correlationId: input.correlationId,
-            reason: 'Bootstrap MFA enrollment',
-            secret,
-          });
-          return {
-            mfa: {
-              algorithm: 'SHA1',
-              digits: 6,
-              period: 30,
-              recoveryCodes: enrollment.recoveryCodes,
-              secret: base32(secret),
-            },
-            user: result.user,
-          };
+          return service.bootstrapAdmin(input);
         });
       } catch (error) {
         if (error instanceof IdentityHttpError) throw error;
@@ -190,7 +163,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           target: { id: input.targetId, type: 'user' },
         },
         async (client, actorId) => {
-          const session = await authenticatedSession(client, input, true);
+          const session = await authenticatedSession(client, input);
           if (session.userId !== actorId) {
             throw new IdentityHttpError(403, 'FORBIDDEN');
           }
@@ -236,7 +209,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           },
         },
         async (client, actorId) => {
-          const session = await authenticatedSession(client, input, true);
+          const session = await authenticatedSession(client, input);
           if (session.userId !== actorId) {
             throw new IdentityHttpError(403, 'FORBIDDEN');
           }
@@ -263,7 +236,6 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           ).findUserById(session.userId);
           if (!user) throw new Error('User not found');
           return {
-            mfaVerified: session.mfaVerified,
             user: {
               capabilities: user.capabilities,
               functionName: user.functionName,
@@ -276,43 +248,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
       }
     },
 
-    /** @param {{correlationId: string, csrfToken: string, idempotencyKey: string, reason: string, sessionToken: string}} input */
-    async enrollMfa(input) {
-      const preflightSession = await preflight(input, false);
-      return executeIdempotent(
-        {
-          action: 'identity.mfa.enroll',
-          actorId: preflightSession.userId,
-          command: { enroll: true },
-          correlationId: input.correlationId,
-          idempotencyKey: input.idempotencyKey,
-          reason: input.reason,
-          target: { id: preflightSession.userId, type: 'user' },
-        },
-        async (client, actorId) => {
-          const session = await authenticatedSession(client, input, false);
-          if (session.userId !== actorId) {
-            throw new IdentityHttpError(403, 'FORBIDDEN');
-          }
-          const secret = randomBytes(20);
-          const enrollment = await identityService(client).enrollTotp({
-            actorId,
-            correlationId: input.correlationId,
-            reason: input.reason,
-            secret,
-          });
-          return {
-            algorithm: 'SHA1',
-            digits: 6,
-            period: 30,
-            recoveryCodes: enrollment.recoveryCodes,
-            secret: base32(secret),
-          };
-        },
-      );
-    },
-
-    /** @param {{email: string, network: string, password: string, recoveryCode?: string, totpCode?: string}} input */
+    /** @param {{email: string, network: string, password: string}} input */
     async login(input) {
       const outcome = await database.transaction(async (client) => {
         const throttle = createPostgresAuthenticationThrottle(client, {
@@ -390,22 +326,4 @@ function equalSecret(left, right) {
   const leftDigest = createHash('sha256').update(left).digest();
   const rightDigest = createHash('sha256').update(right).digest();
   return timingSafeEqual(leftDigest, rightDigest);
-}
-
-/** @param {Buffer} input */
-function base32(input) {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  let bits = 0;
-  let value = 0;
-  let output = '';
-  for (const byte of input) {
-    value = (value << 8) | byte;
-    bits += 8;
-    while (bits >= 5) {
-      output += alphabet[(value >>> (bits - 5)) & 31];
-      bits -= 5;
-    }
-  }
-  if (bits > 0) output += alphabet[(value << (5 - bits)) & 31];
-  return output;
 }

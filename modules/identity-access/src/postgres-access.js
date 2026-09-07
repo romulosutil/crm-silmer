@@ -32,10 +32,6 @@ export function createPostgresAccessRepository(database) {
                FILTER (WHERE c.capability IS NOT NULL),
              ARRAY[]::text[]
            ) AS capabilities,
-           EXISTS (
-             SELECT 1 FROM crm.mfa_factors AS factor
-             WHERE factor.user_id = u.id
-           ) AS mfa_enrolled
          FROM crm.users AS u
          JOIN crm.user_functions AS f ON f.user_id = u.id
          LEFT JOIN crm.user_capabilities AS c ON c.user_id = u.id
@@ -49,7 +45,6 @@ export function createPostgresAccessRepository(database) {
         capabilities: /** @type {Capability[]} */ (row.capabilities),
         functionName: /** @type {OperationalFunction} */ (row.function_name),
         id: /** @type {string} */ (row.id),
-        mfaEnrolled: row.mfa_enrolled === true,
       };
     },
 

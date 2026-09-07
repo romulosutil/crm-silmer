@@ -1,10 +1,8 @@
 const bootstrapAdvisoryLock = 0x49414d31;
-const base64urlPattern = /^[a-zA-Z0-9_-]+$/u;
 
 /**
  * @typedef {'COMMERCIAL_ADMIN'|'PRIVACY_OFFICER'|'TECHNICAL_PRIVACY_EXECUTOR'} IdentityCapability
  * @typedef {'Atendimento'|'Vendedor'} OperationalFunction
- * @typedef {{ authTag: string, ciphertext: string, iv: string, keyVersion: number }} EncryptedSecret
  * @typedef {{
  *   capabilities: IdentityCapability[],
  *   email: string,
@@ -26,16 +24,10 @@ const base64urlPattern = /^[a-zA-Z0-9_-]+$/u;
  *   csrfHash: string,
  *   createdAt: string,
  *   lastSeenAt: string,
- *   mfaVerified: boolean,
  *   revokedAt: string | null,
  *   tokenHash: string,
  *   userId: string,
  * }} IdentitySession
- * @typedef {{
- *   encryptedSecret: EncryptedSecret,
- *   lastCounter: number | null,
- *   recoveryCodeHashes: Set<string>,
- * }} MfaFactor
  * @typedef {{
  *   query: (
  *     sql: string,
@@ -69,8 +61,7 @@ const sessionReturning = `
   s.created_at,
   s.last_seen_at,
   s.absolute_expires_at,
-  s.revoked_at,
-  s.mfa_verified
+  s.revoked_at
 `;
 
 /**
@@ -150,20 +141,6 @@ export function createPostgresIdentityRepository(database) {
       return result.rows[0] ? mapInvitation(result.rows[0]) : null;
     },
 
-    /** @param {string} userId @param {string} codeHash */
-    async consumeRecoveryCode(userId, codeHash) {
-      const result = await database.query(
-        `UPDATE crm.mfa_recovery_codes
-         SET consumed_at = now()
-         WHERE user_id = $1
-           AND code_hash = $2
-           AND consumed_at IS NULL
-         RETURNING code_hash`,
-        [userId, codeHash],
-      );
-      return result.rows.length === 1;
-    },
-
     /** @param {IdentityInvitation} invitation */
     async createInvitation(invitation) {
       await database.query(
@@ -186,8 +163,8 @@ export function createPostgresIdentityRepository(database) {
       await database.query(
         `INSERT INTO crm.sessions
            (token_hash, user_id, csrf_hash, created_at, last_seen_at,
-            absolute_expires_at, revoked_at, mfa_verified)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+             absolute_expires_at, revoked_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           session.tokenHash,
           session.userId,
@@ -196,7 +173,6 @@ export function createPostgresIdentityRepository(database) {
           session.lastSeenAt,
           session.absoluteExpiresAt,
           session.revokedAt,
-          session.mfaVerified,
         ],
       );
     },
@@ -204,46 +180,6 @@ export function createPostgresIdentityRepository(database) {
     /** @param {IdentityUser} user */
     async createUser(user) {
       await insertUser(user);
-    },
-
-    /** @param {string} userId @param {{encryptedSecret: EncryptedSecret, recoveryCodeHashes: Iterable<string>}} factor */
-    async enrollFactor(userId, factor) {
-      await database.query(
-        `INSERT INTO crm.mfa_factors (user_id, encrypted_secret)
-         VALUES ($1, $2)`,
-        [userId, encodeEncryptedSecret(factor.encryptedSecret)],
-      );
-      for (const codeHash of factor.recoveryCodeHashes) {
-        await database.query(
-          `INSERT INTO crm.mfa_recovery_codes (user_id, code_hash)
-           VALUES ($1, $2)`,
-          [userId, codeHash],
-        );
-      }
-    },
-
-    /** @param {string} userId */
-    async findFactor(userId) {
-      const result = await database.query(
-        `SELECT
-           factor.encrypted_secret,
-           factor.last_counter,
-           COALESCE(
-             array_agg(recovery.code_hash ORDER BY recovery.code_hash)
-               FILTER (
-                 WHERE recovery.code_hash IS NOT NULL
-                   AND recovery.consumed_at IS NULL
-               ),
-             ARRAY[]::text[]
-           ) AS recovery_code_hashes
-         FROM crm.mfa_factors AS factor
-         LEFT JOIN crm.mfa_recovery_codes AS recovery
-           ON recovery.user_id = factor.user_id
-         WHERE factor.user_id = $1
-         GROUP BY factor.user_id, factor.encrypted_secret, factor.last_counter`,
-        [userId],
-      );
-      return result.rows[0] ? mapFactor(result.rows[0]) : null;
     },
 
     /** @param {string} tokenHash */
@@ -255,9 +191,8 @@ export function createPostgresIdentityRepository(database) {
            csrf_hash,
            created_at,
            last_seen_at,
-           absolute_expires_at,
-           revoked_at,
-           mfa_verified
+            absolute_expires_at,
+            revoked_at
          FROM crm.sessions
          WHERE token_hash = $1`,
         [tokenHash],
@@ -305,41 +240,16 @@ export function createPostgresIdentityRepository(database) {
     },
 
     async inspect() {
-      const [users, sessions, factors] = await Promise.all([
+      const [users, sessions] = await Promise.all([
         database.query(`${userSelect} ORDER BY u.id`),
         database.query(
           `SELECT token_hash, user_id, csrf_hash, created_at, last_seen_at,
-             absolute_expires_at, revoked_at, mfa_verified
+              absolute_expires_at, revoked_at
            FROM crm.sessions
            ORDER BY token_hash`,
         ),
-        database.query(
-          `SELECT
-             factor.encrypted_secret,
-             factor.last_counter,
-             COALESCE(
-               array_agg(recovery.code_hash ORDER BY recovery.code_hash)
-                 FILTER (
-                   WHERE recovery.code_hash IS NOT NULL
-                     AND recovery.consumed_at IS NULL
-                 ),
-               ARRAY[]::text[]
-             ) AS recovery_code_hashes
-           FROM crm.mfa_factors AS factor
-           LEFT JOIN crm.mfa_recovery_codes AS recovery
-             ON recovery.user_id = factor.user_id
-           GROUP BY factor.user_id, factor.encrypted_secret, factor.last_counter
-           ORDER BY factor.user_id`,
-        ),
       ]);
       return {
-        factors: factors.rows.map((row) => {
-          const factor = mapFactor(row);
-          return {
-            encryptedSecret: factor.encryptedSecret,
-            recoveryCodeHashes: [...factor.recoveryCodeHashes],
-          };
-        }),
         sessions: sessions.rows.map(mapSession),
         users: users.rows.map(mapUser),
       };
@@ -366,19 +276,6 @@ export function createPostgresIdentityRepository(database) {
       );
     },
 
-    /** @param {string} userId @param {number} counter */
-    async useTotpCounter(userId, counter) {
-      const result = await database.query(
-        `UPDATE crm.mfa_factors
-         SET last_counter = $2
-         WHERE user_id = $1
-           AND (last_counter IS NULL OR last_counter < $2)
-         RETURNING last_counter`,
-        [userId, counter],
-      );
-      return result.rows.length === 1;
-    },
-
     /** @param {string} tokenHash @param {string} csrfHash @param {string} touchedAt @param {string} idleExpiresBefore */
     async validateCsrfSession(
       tokenHash,
@@ -403,37 +300,6 @@ export function createPostgresIdentityRepository(database) {
       return result.rows[0] ? mapSession(result.rows[0]) : null;
     },
   });
-}
-
-/** @param {EncryptedSecret} secret */
-function encodeEncryptedSecret(secret) {
-  if (secret.keyVersion !== 1) {
-    throw new TypeError('Unsupported MFA envelope key version');
-  }
-  const parts = [secret.iv, secret.ciphertext, secret.authTag];
-  if (parts.some((part) => !base64urlPattern.test(part))) {
-    throw new TypeError('MFA envelope fields must use base64url');
-  }
-  return `v1.${parts.join('.')}`;
-}
-
-/** @param {unknown} value @returns {EncryptedSecret} */
-function decodeEncryptedSecret(value) {
-  if (typeof value !== 'string') {
-    throw new TypeError('Stored MFA envelope must be text');
-  }
-  const [version, iv, ciphertext, authTag, extra] = value.split('.');
-  if (
-    version !== 'v1' ||
-    !iv ||
-    !ciphertext ||
-    !authTag ||
-    [iv, ciphertext, authTag].some((part) => !base64urlPattern.test(part)) ||
-    extra !== undefined
-  ) {
-    throw new TypeError('Stored MFA envelope is invalid');
-  }
-  return { authTag, ciphertext, iv, keyVersion: 1 };
 }
 
 /** @param {Record<string, unknown>} row @returns {IdentityUser} */
@@ -468,22 +334,9 @@ function mapSession(row) {
     createdAt: requireIsoString(row.created_at),
     csrfHash: /** @type {string} */ (row.csrf_hash),
     lastSeenAt: requireIsoString(row.last_seen_at),
-    mfaVerified: row.mfa_verified === true,
     revokedAt: toIsoString(row.revoked_at),
     tokenHash: /** @type {string} */ (row.token_hash),
     userId: /** @type {string} */ (row.user_id),
-  };
-}
-
-/** @param {Record<string, unknown>} row @returns {MfaFactor} */
-function mapFactor(row) {
-  return {
-    encryptedSecret: decodeEncryptedSecret(row.encrypted_secret),
-    lastCounter:
-      row.last_counter === null ? null : Number(row.last_counter ?? null),
-    recoveryCodeHashes: new Set(
-      /** @type {string[]} */ (row.recovery_code_hashes),
-    ),
   };
 }
 

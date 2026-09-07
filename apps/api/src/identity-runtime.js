@@ -105,7 +105,9 @@ export function createIdentityApiRuntime(database, environment = process.env) {
 
   /** @param {{sessionToken: string, csrfToken: string}} input */
   function preflight(input) {
-    return database.transaction((client) => authenticatedSession(client, input));
+    return database.transaction((client) =>
+      authenticatedSession(client, input),
+    );
   }
 
   /**
@@ -145,7 +147,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
         throw new IdentityHttpError(403, 'FORBIDDEN');
       }
       return database.transaction(async (client) => {
-        const session = await authenticatedSession(client, input, false);
+        const session = await authenticatedSession(client, input);
         const user = await createPostgresIdentityRepository(
           client,
         ).findUserById(session.userId);
@@ -406,7 +408,9 @@ function readOrigins(value, allowLoopbackHttp) {
         !(allowLoopbackHttp && isLoopbackHttpOrigin(origin)),
     )
   ) {
-    throw new Error('APP_ORIGIN entries must use HTTPS outside local development');
+    throw new Error(
+      'APP_ORIGIN entries must use HTTPS outside local development',
+    );
   }
   return Object.freeze([...new Set(origins)]);
 }

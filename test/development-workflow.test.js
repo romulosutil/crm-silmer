@@ -37,6 +37,8 @@ test('documents and exposes a local development workflow with automatic refresh'
   assert.match(seeder, /TECHNICAL_PRIVACY_EXECUTOR/u);
   assert.match(watcher, /watch\(source, \{ recursive: true \}/u);
   assert.match(edgeServer, /proxyApiRequest/u);
+  assert.match(edgeServer, /hostname: apiOrigin\.hostname/u);
+  assert.doesNotMatch(edgeServer, /transport\.request\(\s*target/u);
   assert.match(compose, /postgres:17-alpine/u);
   assert.match(compose, /crm-silmer-postgres-data/u);
   assert.match(guide, /npm run dev/u);

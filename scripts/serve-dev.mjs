@@ -59,16 +59,18 @@ const server = createServer(async (request, response) => {
  * @param {URL} requestUrl
  */
 function proxyApiRequest(request, response, requestUrl) {
-  const target = new URL(
-    `${requestUrl.pathname}${requestUrl.search}`,
-    apiOrigin,
-  );
-  const transport = target.protocol === 'https:' ? https : http;
-  const headers = { ...request.headers, host: target.host };
+  const transport = apiOrigin.protocol === 'https:' ? https : http;
+  const headers = { ...request.headers, host: apiOrigin.host };
   delete headers.connection;
   const upstream = transport.request(
-    target,
-    { headers, method: request.method },
+    {
+      headers,
+      hostname: apiOrigin.hostname,
+      method: request.method,
+      path: `${requestUrl.pathname}${requestUrl.search}`,
+      port: apiOrigin.port || undefined,
+      protocol: apiOrigin.protocol,
+    },
     (upstreamResponse) => {
       response.writeHead(
         upstreamResponse.statusCode ?? 502,

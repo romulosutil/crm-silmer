@@ -1195,8 +1195,8 @@
     "semantic_hash": ""
   },
   "test/deal-conversion-postgres-live.test.js": {
-    "mtime": 1788791582.2533638,
-    "ast_hash": "28e091013e1d7b40f2ac1a4a430f00ba",
+    "mtime": 1788792084.6643329,
+    "ast_hash": "cb899d872806b6d7ded597a6acbe2deb",
     "semantic_hash": ""
   },
   "test/deal-conversion.test.js": {

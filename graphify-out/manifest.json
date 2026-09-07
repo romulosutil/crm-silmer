@@ -185,8 +185,8 @@
     "semantic_hash": ""
   },
   "test/e2e/foundation.spec.js": {
-    "mtime": 1788817585.3542044,
-    "ast_hash": "28f0fb1b52f269b140dd195e86919726",
+    "mtime": 1788818442.5970438,
+    "ast_hash": "31ea3dc0bf6f75b9ee9e85862314123f",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -1485,8 +1485,8 @@
     "semantic_hash": ""
   },
   "apps/edge-web/src/views/AccountView.vue": {
-    "mtime": 1788817212.9872417,
-    "ast_hash": "27dba534d98c3e5109c5ef1a8dc6a011",
+    "mtime": 1788818442.5960484,
+    "ast_hash": "86f863682b01f48f26c17450cdcd42e5",
     "semantic_hash": ""
   },
   "apps/edge-web/vite.config.js": {

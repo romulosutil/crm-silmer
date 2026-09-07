@@ -792,8 +792,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_commercial_runtime",
-      "community": 141,
-      "community_name": "configuration-catalog-postgres-live.test.js",
+      "community": 87,
+      "community_name": "server.js",
       "norm_label": "commercial-runtime.js"
     },
     {
@@ -869,8 +869,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_api_src_deal_routes_registerdealroutes",
-      "community": 172,
-      "community_name": "deal-routes.js",
+      "community": 146,
+      "community_name": "app.js",
       "norm_label": "registerdealroutes()"
     },
     {
@@ -1837,8 +1837,8 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_logout",
-      "community": 18,
-      "community_name": "identity-access/src/index.js",
+      "community": 132,
+      "community_name": "App.vue",
       "norm_label": "logout()"
     },
     {
@@ -2211,8 +2211,8 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "apps_edge_web_src_features_deal_detail_view_createdealdetailview",
-      "community": 164,
-      "community_name": "deal-detail-view.js",
+      "community": 194,
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "createdealdetailview()"
     },
     {
@@ -2310,8 +2310,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client",
-      "community": 187,
-      "community_name": "request",
+      "community": 164,
+      "community_name": "deal-detail-view.js",
       "norm_label": "api-client.js"
     },
     {
@@ -2321,8 +2321,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client_apierror",
-      "community": 187,
-      "community_name": "request",
+      "community": 164,
+      "community_name": "deal-detail-view.js",
       "norm_label": "apierror"
     },
     {
@@ -2332,8 +2332,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client_apierror_constructor",
-      "community": 187,
-      "community_name": "request",
+      "community": 164,
+      "community_name": "deal-detail-view.js",
       "norm_label": ".constructor()"
     },
     {
@@ -2343,8 +2343,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client_readcookie",
-      "community": 187,
-      "community_name": "request",
+      "community": 164,
+      "community_name": "deal-detail-view.js",
       "norm_label": "readcookie()"
     },
     {
@@ -2354,8 +2354,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client_request",
-      "community": 187,
-      "community_name": "request",
+      "community": 164,
+      "community_name": "deal-detail-view.js",
       "norm_label": "request()"
     },
     {
@@ -2365,8 +2365,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client_commandkey",
-      "community": 187,
-      "community_name": "request",
+      "community": 164,
+      "community_name": "deal-detail-view.js",
       "norm_label": "commandkey()"
     },
     {
@@ -2376,8 +2376,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_event_stream",
-      "community": 200,
-      "community_name": "KanbanEventStream",
+      "community": 132,
+      "community_name": "App.vue",
       "norm_label": "event-stream.js"
     },
     {
@@ -2387,8 +2387,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_event_stream_kanbaneventstream",
-      "community": 200,
-      "community_name": "KanbanEventStream",
+      "community": 132,
+      "community_name": "App.vue",
       "norm_label": "kanbaneventstream"
     },
     {
@@ -2398,8 +2398,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_event_stream_kanbaneventstream_constructor",
-      "community": 200,
-      "community_name": "KanbanEventStream",
+      "community": 132,
+      "community_name": "App.vue",
       "norm_label": ".constructor()"
     },
     {
@@ -2409,8 +2409,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_event_stream_kanbaneventstream_start",
-      "community": 200,
-      "community_name": "KanbanEventStream",
+      "community": 132,
+      "community_name": "App.vue",
       "norm_label": ".start()"
     },
     {
@@ -2420,8 +2420,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_event_stream_kanbaneventstream_consume",
-      "community": 200,
-      "community_name": "KanbanEventStream",
+      "community": 132,
+      "community_name": "App.vue",
       "norm_label": ".consume()"
     },
     {
@@ -2431,8 +2431,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_event_stream_kanbaneventstream_parse",
-      "community": 200,
-      "community_name": "KanbanEventStream",
+      "community": 132,
+      "community_name": "App.vue",
       "norm_label": ".parse()"
     },
     {
@@ -2442,8 +2442,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_event_stream_kanbaneventstream_close",
-      "community": 200,
-      "community_name": "KanbanEventStream",
+      "community": 132,
+      "community_name": "App.vue",
       "norm_label": ".close()"
     },
     {
@@ -2465,7 +2465,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_ui_select",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "select()"
     },
     {
@@ -2608,7 +2608,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "accountview.vue"
     },
     {
@@ -2619,7 +2619,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_props",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "props"
     },
     {
@@ -2630,7 +2630,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_heading",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "heading"
     },
     {
@@ -2641,7 +2641,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_reason",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "reason"
     },
     {
@@ -2652,7 +2652,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_busy",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "busy"
     },
     {
@@ -2663,7 +2663,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_enrollment",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "enrollment"
     },
     {
@@ -2674,51 +2674,62 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_result",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "result"
+    },
+    {
+      "label": "enrollmentIdempotencyKey",
+      "file_type": "code",
+      "source_file": "apps/edge-web/src/views/AccountView.vue",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "apps_edge_web_src_views_accountview_enrollmentidempotencykey",
+      "community": 187,
+      "community_name": "AccountView.vue",
+      "norm_label": "enrollmentidempotencykey"
     },
     {
       "label": "user",
       "file_type": "code",
       "source_file": "apps/edge-web/src/views/AccountView.vue",
-      "source_location": "L15",
+      "source_location": "L16",
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_user",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "user"
     },
     {
       "label": "capabilities",
       "file_type": "code",
       "source_file": "apps/edge-web/src/views/AccountView.vue",
-      "source_location": "L16",
+      "source_location": "L17",
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_capabilities",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "capabilities"
     },
     {
       "label": "functionName",
       "file_type": "code",
       "source_file": "apps/edge-web/src/views/AccountView.vue",
-      "source_location": "L20",
+      "source_location": "L21",
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_functionname",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "functionname"
     },
     {
       "label": "enroll()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/views/AccountView.vue",
-      "source_location": "L27",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_enroll",
       "community": 187,
-      "community_name": "request",
+      "community_name": "AccountView.vue",
       "norm_label": "enroll()"
     },
     {
@@ -3356,7 +3367,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "audit-trail.js"
     },
     {
@@ -3366,8 +3377,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_auditeventvalidationerror",
-      "community": 201,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 12,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "auditeventvalidationerror"
     },
     {
@@ -3377,8 +3388,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_auditeventvalidationerror_constructor",
-      "community": 201,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 12,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3389,7 +3400,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_immutableclone",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "immutableclone()"
     },
     {
@@ -3400,7 +3411,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_deepfreeze",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "deepfreeze()"
     },
     {
@@ -3411,7 +3422,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_requirenonemptystring",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "requirenonemptystring()"
     },
     {
@@ -3422,7 +3433,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_validateauditevent",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "validateauditevent()"
     },
     {
@@ -3433,7 +3444,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_createauditeventenvelope",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "createauditeventenvelope()"
     },
     {
@@ -3444,7 +3455,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "inmemoryaudittrail"
     },
     {
@@ -3455,7 +3466,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_constructor",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3466,7 +3477,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_append",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".append()"
     },
     {
@@ -3477,7 +3488,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_list",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".list()"
     },
     {
@@ -3487,7 +3498,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_index",
-      "community": 178,
+      "community": 12,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "audit-privacy/src/index.js"
     },
@@ -3499,7 +3510,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "postgres-audit-trail.js"
     },
     {
@@ -3510,7 +3521,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail_requirequeryable",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "requirequeryable()"
     },
     {
@@ -3521,7 +3532,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail_postgresaudittrail",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "postgresaudittrail"
     },
     {
@@ -3532,7 +3543,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail_postgresaudittrail_constructor",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3543,7 +3554,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail_postgresaudittrail_append",
       "community": 12,
-      "community_name": "PostgresAuditTrail",
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".append()"
     },
     {
@@ -3553,7 +3564,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention",
-      "community": 178,
+      "community": 12,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "transient-media-retention.js"
     },
@@ -3564,7 +3575,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_transientmediaretentionerror",
-      "community": 178,
+      "community": 12,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "transientmediaretentionerror"
     },
@@ -3575,7 +3586,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_transientmediaretentionerror_constructor",
-      "community": 178,
+      "community": 12,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": ".constructor()"
     },
@@ -3586,7 +3597,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_timestamp",
-      "community": 178,
+      "community": 12,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "timestamp()"
     },
@@ -3597,7 +3608,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_resolvetransientmediaexpiresat",
-      "community": 178,
+      "community": 12,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "resolvetransientmediaexpiresat()"
     },
@@ -3608,7 +3619,7 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_istransientmediaexpired",
-      "community": 178,
+      "community": 12,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "istransientmediaexpired()"
     },
@@ -3619,7 +3630,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_transient_media_max_age_days",
-      "community": 178,
+      "community": 12,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "transient_media_max_age_days"
     },
@@ -3696,7 +3707,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "postgres-catalog-repository.js"
     },
@@ -3707,7 +3718,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_requirequeryable",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "requirequeryable()"
     },
@@ -3718,7 +3729,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_requirestring",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "requirestring()"
     },
@@ -3729,7 +3740,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_isostring",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "isostring()"
     },
@@ -3740,7 +3751,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_mapcatalog",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "mapcatalog()"
     },
@@ -3751,7 +3762,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_createpostgrescatalogrepository",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createpostgrescatalogrepository()"
     },
@@ -3762,7 +3773,7 @@
       "source_location": "L194",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_insertentries",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "insertentries()"
     },
@@ -3773,7 +3784,7 @@
       "source_location": "L205",
       "_origin": "ast",
       "id": "modules_catalog_src_adapters_postgres_catalog_repository_insertmodels",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "insertmodels()"
     },
@@ -3785,7 +3796,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_application_catalog_service",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog-service.js"
     },
     {
@@ -3796,7 +3807,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_application_catalog_service_createcatalogservice",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createcatalogservice()"
     },
     {
@@ -3807,7 +3818,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_application_catalog_service_assertprivilegedactor",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertprivilegedactor()"
     },
     {
@@ -3818,7 +3829,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_application_catalog_service_assertcommandmetadata",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertcommandmetadata()"
     },
     {
@@ -3828,8 +3839,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog-version.js"
     },
     {
@@ -3839,8 +3850,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_value_groups",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "value_groups"
     },
     {
@@ -3850,8 +3861,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_isplainrecord",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "isplainrecord()"
     },
     {
@@ -3861,8 +3872,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_assertrecord",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertrecord()"
     },
     {
@@ -3872,8 +3883,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_assertexactkeys",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertexactkeys()"
     },
     {
@@ -3883,8 +3894,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_assertnonemptystring",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertnonemptystring()"
     },
     {
@@ -3894,8 +3905,8 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_validateentries",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "validateentries()"
     },
     {
@@ -3905,8 +3916,8 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_deepfreeze",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "deepfreeze()"
     },
     {
@@ -3916,8 +3927,8 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_immutablecatalogclone",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "immutablecatalogclone()"
     },
     {
@@ -3927,8 +3938,8 @@
       "source_location": "L147",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_normalizecatalogvalues",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "normalizecatalogvalues()"
     },
     {
@@ -3938,8 +3949,8 @@
       "source_location": "L180",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_createpublishedcatalogversion",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createpublishedcatalogversion()"
     },
     {
@@ -3949,8 +3960,8 @@
       "source_location": "L204",
       "_origin": "ast",
       "id": "modules_catalog_src_domain_catalog_version_createcatalogselection",
-      "community": 192,
-      "community_name": "catalog-version.js",
+      "community": 54,
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "createcatalogselection()"
     },
     {
@@ -3961,7 +3972,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog/src/domain/errors.js"
     },
     {
@@ -3972,7 +3983,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogerror",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogerror"
     },
     {
@@ -3983,7 +3994,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogerror_constructor",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -3994,7 +4005,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogforbiddenerror",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogforbiddenerror"
     },
     {
@@ -4005,7 +4016,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogforbiddenerror_constructor",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4016,7 +4027,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogconflicterror",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogconflicterror"
     },
     {
@@ -4027,7 +4038,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogconflicterror_constructor",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4038,7 +4049,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogvalidationerror",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogvalidationerror"
     },
     {
@@ -4049,7 +4060,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_domain_errors_catalogvalidationerror_constructor",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4060,7 +4071,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_index",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog/src/index.js"
     },
     {
@@ -4071,7 +4082,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_ports_contracts",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog/src/ports/contracts.js"
     },
     {
@@ -4082,7 +4093,7 @@
       "_origin": "ast",
       "id": "modules_catalog_src_ports_contracts_assertcatalogports",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "assertcatalogports()"
     },
     {
@@ -4158,8 +4169,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository",
-      "community": 202,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "postgres-configuration-repository.js"
     },
     {
@@ -4169,8 +4180,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_requirequeryable",
-      "community": 202,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "requirequeryable()"
     },
     {
@@ -4180,8 +4191,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_requirestring",
-      "community": 202,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "requirestring()"
     },
     {
@@ -4191,8 +4202,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_isostring",
-      "community": 202,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "isostring()"
     },
     {
@@ -4202,8 +4213,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_mapconfiguration",
-      "community": 202,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "mapconfiguration()"
     },
     {
@@ -4213,8 +4224,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "modules_configuration_src_adapters_postgres_configuration_repository_createpostgresconfigurationrepository",
-      "community": 202,
-      "community_name": "postgres-configuration-repository.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "createpostgresconfigurationrepository()"
     },
     {
@@ -4224,8 +4235,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_application_configuration_service",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "configuration-service.js"
     },
     {
@@ -4235,8 +4246,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "modules_configuration_src_application_configuration_service_createconfigurationservice",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "createconfigurationservice()"
     },
     {
@@ -4246,8 +4257,8 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "modules_configuration_src_application_configuration_service_assertprivilegedactor",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "assertprivilegedactor()"
     },
     {
@@ -4257,8 +4268,8 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "modules_configuration_src_application_configuration_service_assertcommandmetadata",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "assertcommandmetadata()"
     },
     {
@@ -4499,8 +4510,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "configuration/src/domain/errors.js"
     },
     {
@@ -4510,8 +4521,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationerror",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "configurationerror"
     },
     {
@@ -4521,8 +4532,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationerror_constructor",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4532,8 +4543,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationvalidationerror",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "configurationvalidationerror"
     },
     {
@@ -4543,8 +4554,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationvalidationerror_constructor",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4554,8 +4565,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationforbiddenerror",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "configurationforbiddenerror"
     },
     {
@@ -4565,8 +4576,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationforbiddenerror_constructor",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4576,8 +4587,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationconflicterror",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "configurationconflicterror"
     },
     {
@@ -4587,8 +4598,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "modules_configuration_src_domain_errors_configurationconflicterror_constructor",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": ".constructor()"
     },
     {
@@ -4598,8 +4609,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_index",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "configuration/src/index.js"
     },
     {
@@ -4609,8 +4620,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_configuration_src_ports_contracts",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "configuration/src/ports/contracts.js"
     },
     {
@@ -4620,8 +4631,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "modules_configuration_src_ports_contracts_assertconfigurationports",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "assertconfigurationports()"
     },
     {
@@ -7129,7 +7140,7 @@
       "_origin": "ast",
       "id": "modules_database_src_cli",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "cli.js"
     },
     {
@@ -7140,7 +7151,7 @@
       "_origin": "ast",
       "id": "modules_database_src_cli_readphase",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "readphase()"
     },
     {
@@ -7161,7 +7172,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_database_src_database",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "database.js"
     },
@@ -7172,7 +7183,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "modules_database_src_database_checkdatabasereadiness",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "checkdatabasereadiness()"
     },
@@ -7183,7 +7194,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "modules_database_src_database_createdatabase",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "createdatabase()"
     },
@@ -7194,7 +7205,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_database_src_index",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "database/src/index.js"
     },
@@ -7206,7 +7217,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "migrations.js"
     },
     {
@@ -7217,7 +7228,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_checksum",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "checksum()"
     },
     {
@@ -7228,7 +7239,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_loadmigrations",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "loadmigrations()"
     },
     {
@@ -7239,7 +7250,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_normalizemigrationplan",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "normalizemigrationplan()"
     },
     {
@@ -7250,7 +7261,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_ensuredirectoryurl",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "ensuredirectoryurl()"
     },
     {
@@ -7261,7 +7272,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_migrate",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "migrate()"
     },
     {
@@ -7272,7 +7283,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_applymigration",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "applymigration()"
     },
     {
@@ -7282,7 +7293,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_database_src_transactions",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "transactions.js"
     },
@@ -7293,7 +7304,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "modules_database_src_transactions_databaseconnectiontimeouterror",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "databaseconnectiontimeouterror"
     },
@@ -7304,7 +7315,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "modules_database_src_transactions_databaseconnectiontimeouterror_constructor",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": ".constructor()"
     },
@@ -7315,7 +7326,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_database_src_transactions_withtransaction",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "withtransaction()"
     },
@@ -9262,8 +9273,8 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "modules_identity_access_src_postgres_createpostgresidentityrepository",
-      "community": 9,
-      "community_name": "loadMigrations",
+      "community": 33,
+      "community_name": "identity-runtime.js",
       "norm_label": "createpostgresidentityrepository()"
     },
     {
@@ -9460,8 +9471,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": "in-memory-inbox-repository.js"
     },
     {
@@ -9471,8 +9482,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_clone",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": "clone()"
     },
     {
@@ -9482,8 +9493,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": "inmemoryinboxrepository"
     },
     {
@@ -9493,8 +9504,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_exclusive",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": ".#exclusive()"
     },
     {
@@ -9504,8 +9515,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_receiveinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": ".receiveinbound()"
     },
     {
@@ -9515,8 +9526,8 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_mutateconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": ".mutateconversation()"
     },
     {
@@ -9526,8 +9537,8 @@
       "source_location": "L207",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_recordsuggestion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": ".recordsuggestion()"
     },
     {
@@ -9537,8 +9548,8 @@
       "source_location": "L234",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_publicconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": "publicconversation()"
     },
     {
@@ -9548,8 +9559,8 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_createaudit",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": "createaudit()"
     },
     {
@@ -9559,7 +9570,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "meta-whatsapp.js"
     },
@@ -9570,7 +9581,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_media_types",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "media_types"
     },
@@ -9581,7 +9592,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_metawhatsappwebhookpayloaderror",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "metawhatsappwebhookpayloaderror"
     },
@@ -9592,7 +9603,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_metawhatsappwebhookpayloaderror_constructor",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": ".constructor()"
     },
@@ -9603,7 +9614,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_invalid",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "invalid()"
     },
@@ -9614,7 +9625,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_record",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "record()"
     },
@@ -9625,7 +9636,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_nonemptystring",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "nonemptystring()"
     },
@@ -9636,7 +9647,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_boundedstring",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "boundedstring()"
     },
@@ -9647,7 +9658,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_optionalstring",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "optionalstring()"
     },
@@ -9658,7 +9669,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_optionalboundedstring",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "optionalboundedstring()"
     },
@@ -9669,7 +9680,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_array",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "array()"
     },
@@ -9680,7 +9691,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_absoluteinstant",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "absoluteinstant()"
     },
@@ -9691,7 +9702,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_metatimestamp",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "metatimestamp()"
     },
@@ -9702,7 +9713,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_immutableclone",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "immutableclone()"
     },
@@ -9713,7 +9724,7 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_deepfreeze",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "deepfreeze()"
     },
@@ -9724,7 +9735,7 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_dispositionfor",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "dispositionfor()"
     },
@@ -9735,7 +9746,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_normalizemessage",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "normalizemessage()"
     },
@@ -9746,7 +9757,7 @@
       "source_location": "L235",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_normalizestatus",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "normalizestatus()"
     },
@@ -9757,7 +9768,7 @@
       "source_location": "L287",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_normalizemetawhatsappwebhook",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "normalizemetawhatsappwebhook()"
     },
@@ -9790,8 +9801,8 @@
       "source_location": "L392",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_meta_whatsapp_max_events_per_callback",
-      "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community": 37,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "meta_whatsapp_max_events_per_callback"
     },
     {
@@ -9801,8 +9812,8 @@
       "source_location": "L393",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_meta_whatsapp_stale_after_hours",
-      "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community": 37,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "meta_whatsapp_stale_after_hours"
     },
     {
@@ -9812,8 +9823,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 166,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "postgres-conversation-conversion-port.js"
     },
     {
@@ -9823,8 +9834,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_requirequeryable",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 166,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "requirequeryable()"
     },
     {
@@ -9834,8 +9845,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_postgresconversationconversionport",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 166,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "postgresconversationconversionport"
     },
     {
@@ -9845,8 +9856,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_postgresconversationconversionport_lockforconversion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 166,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": ".lockforconversion()"
     },
     {
@@ -9856,8 +9867,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_postgresconversationconversionport_completeconversion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 166,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": ".completeconversion()"
     },
     {
@@ -9867,8 +9878,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_mapconversionconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 166,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "mapconversionconversation()"
     },
     {
@@ -9878,8 +9889,8 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_iso",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 166,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "iso()"
     },
     {
@@ -9955,8 +9966,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "postgres-inbox-repository.js"
     },
     {
@@ -9966,8 +9977,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "postgresinboxrepository"
     },
     {
@@ -9977,8 +9988,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_constructor",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".constructor()"
     },
     {
@@ -9988,8 +9999,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_receiveinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".receiveinbound()"
     },
     {
@@ -9999,8 +10010,8 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_mutateconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".mutateconversation()"
     },
     {
@@ -10010,8 +10021,8 @@
       "source_location": "L316",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_recordsuggestion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".recordsuggestion()"
     },
     {
@@ -10021,8 +10032,8 @@
       "source_location": "L371",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_hydratecommand",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".#hydratecommand()"
     },
     {
@@ -10032,8 +10043,8 @@
       "source_location": "L402",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_mutationassignments",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "mutationassignments()"
     },
     {
@@ -10043,8 +10054,8 @@
       "source_location": "L426",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "mapconversation()"
     },
     {
@@ -10054,8 +10065,8 @@
       "source_location": "L448",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapmessage",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "mapmessage()"
     },
     {
@@ -10065,8 +10076,8 @@
       "source_location": "L469",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapsuggestion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "mapsuggestion()"
     },
     {
@@ -10076,8 +10087,8 @@
       "source_location": "L485",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_encryptjson",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "encryptjson()"
     },
     {
@@ -10087,8 +10098,8 @@
       "source_location": "L504",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_decryptjson",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "decryptjson()"
     },
     {
@@ -10098,8 +10109,8 @@
       "source_location": "L535",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_advisorylock",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "advisorylock()"
     },
     {
@@ -10109,8 +10120,8 @@
       "source_location": "L543",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_hashjson",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "hashjson()"
     },
     {
@@ -10120,8 +10131,8 @@
       "source_location": "L548",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_iso",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "iso()"
     },
     {
@@ -10131,8 +10142,8 @@
       "source_location": "L555",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_createaudit",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 141,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "createaudit()"
     },
     {
@@ -10186,8 +10197,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "inbox-service.js"
     },
     {
@@ -10208,8 +10219,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_validateinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "validateinbound()"
     },
     {
@@ -10219,8 +10230,8 @@
       "source_location": "L148",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_validatecontent",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "validatecontent()"
     },
     {
@@ -10230,8 +10241,8 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_validatehumancommand",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "validatehumancommand()"
     },
     {
@@ -10241,8 +10252,8 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_normalizeinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "normalizeinbound()"
     },
     {
@@ -10252,8 +10263,8 @@
       "source_location": "L199",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_normalizehumancommand",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "normalizehumancommand()"
     },
     {
@@ -10263,8 +10274,8 @@
       "source_location": "L216",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_defaultidfactory",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "defaultidfactory()"
     },
     {
@@ -10275,7 +10286,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "channel-envelope.js"
     },
     {
@@ -10286,7 +10297,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_channels",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "channels"
     },
     {
@@ -10297,7 +10308,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_inbound_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "inbound_fields"
     },
     {
@@ -10308,7 +10319,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_identity_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "identity_fields"
     },
     {
@@ -10319,7 +10330,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_message_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "message_fields"
     },
     {
@@ -10330,7 +10341,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_attachment_content_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "attachment_content_fields"
     },
     {
@@ -10341,7 +10352,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_template_content_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "template_content_fields"
     },
     {
@@ -10352,7 +10363,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_text_content_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "text_content_fields"
     },
     {
@@ -10363,7 +10374,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_unsupported_content_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "unsupported_content_fields"
     },
     {
@@ -10374,7 +10385,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_unsupported_reason_codes",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "unsupported_reason_codes"
     },
     {
@@ -10385,7 +10396,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_outbound_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "outbound_fields"
     },
     {
@@ -10396,7 +10407,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_channelcontracterror",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "channelcontracterror"
     },
     {
@@ -10407,7 +10418,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_channelcontracterror_constructor",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": ".constructor()"
     },
     {
@@ -10418,7 +10429,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_immutableclone",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "immutableclone()"
     },
     {
@@ -10429,7 +10440,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_deepfreeze",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "deepfreeze()"
     },
     {
@@ -10440,7 +10451,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_requirestring",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "requirestring()"
     },
     {
@@ -10451,7 +10462,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_requirerecord",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "requirerecord()"
     },
     {
@@ -10462,7 +10473,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_rejectunknownfields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "rejectunknownfields()"
     },
     {
@@ -10473,7 +10484,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_requirechannel",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "requirechannel()"
     },
     {
@@ -10484,7 +10495,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_createscopedexternalid",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "createscopedexternalid()"
     },
     {
@@ -10495,7 +10506,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_canonicalidentity",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "canonicalidentity()"
     },
     {
@@ -10506,7 +10517,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_canonicalmessage",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "canonicalmessage()"
     },
     {
@@ -10517,7 +10528,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_createcanonicalinboundenvelope",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "createcanonicalinboundenvelope()"
     },
     {
@@ -10528,7 +10539,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_createcanonicaloutboundenvelope",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "createcanonicaloutboundenvelope()"
     },
     {
@@ -10637,8 +10648,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "inbox.js"
     },
     {
@@ -10648,8 +10659,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_inbox_states",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "inbox_states"
     },
     {
@@ -10659,8 +10670,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_terminal_inbox_states",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "terminal_inbox_states"
     },
     {
@@ -10670,8 +10681,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_assertinboxstate",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "assertinboxstate()"
     },
     {
@@ -10681,8 +10692,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_isterminalinboxstate",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "isterminalinboxstate()"
     },
     {
@@ -10692,8 +10703,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_requirenonempty",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "requirenonempty()"
     },
     {
@@ -10703,8 +10714,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_requireversion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 159,
+      "community_name": "inbox-service.js",
       "norm_label": "requireversion()"
     },
     {
@@ -10714,8 +10725,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_freezeinboxrecord",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 160,
+      "community_name": "freezeInboxRecord",
       "norm_label": "freezeinboxrecord()"
     },
     {
@@ -10737,7 +10748,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_ports_contracts",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "inbox-channels/src/ports/contracts.js"
     },
     {
@@ -10748,7 +10759,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_ports_contracts_assertchanneladaptercontract",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "assertchanneladaptercontract()"
     },
     {
@@ -10824,8 +10835,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 73,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "domain-event-store.js"
     },
     {
@@ -10835,8 +10846,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_validate",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 73,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "validate()"
     },
     {
@@ -10846,8 +10857,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_inmemorydomaineventstore",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 73,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "inmemorydomaineventstore"
     },
     {
@@ -10857,8 +10868,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_inmemorydomaineventstore_constructor",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 73,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -10868,8 +10879,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_inmemorydomaineventstore_append",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 73,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": ".append()"
     },
     {
@@ -10879,8 +10890,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_inmemorydomaineventstore_list",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 73,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": ".list()"
     },
     {
@@ -10913,7 +10924,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "idempotency.js"
     },
     {
@@ -10924,7 +10935,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "idempotencyconflicterror"
     },
     {
@@ -10935,7 +10946,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror_constructor",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -10946,7 +10957,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_fingerprintcommand",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "fingerprintcommand()"
     },
     {
@@ -10957,7 +10968,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_canonicaljson",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "canonicaljson()"
     },
     {
@@ -10968,7 +10979,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_clone",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "clone()"
     },
     {
@@ -10979,7 +10990,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_createdeferred",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createdeferred()"
     },
     {
@@ -10990,7 +11001,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "inmemoryidempotencyrecordstore"
     },
     {
@@ -11001,7 +11012,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_execute",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".execute()"
     },
     {
@@ -11012,7 +11023,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_get",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".get()"
     },
     {
@@ -11023,7 +11034,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_inmemoryidempotencyrecordstore_storagekey",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".#storagekey()"
     },
     {
@@ -11034,7 +11045,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_createidempotentcommandexecutor",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createidempotentcommandexecutor()"
     },
     {
@@ -11045,7 +11056,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_validatecommandrequest",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "validatecommandrequest()"
     },
     {
@@ -11056,7 +11067,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_requirenonempty",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "requirenonempty()"
     },
     {
@@ -11066,7 +11077,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_index",
-      "community": 63,
+      "community": 149,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "integration-reliability/src/index.js"
     },
@@ -11132,8 +11143,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metaapierror",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 23,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "metaapierror"
     },
     {
@@ -11143,8 +11154,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metaapierror_constructor",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 23,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -11286,8 +11297,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore",
-      "community": 73,
-      "community_name": "work-management-postgres-live.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "postgresidempotencyrecordstore"
     },
     {
@@ -11297,8 +11308,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore_constructor",
-      "community": 73,
-      "community_name": "work-management-postgres-live.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -11693,7 +11704,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_outbound_message_outbox",
-      "community": 63,
+      "community": 149,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "postgres-outbound-message-outbox.js"
     },
@@ -11704,7 +11715,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_outbound_message_outbox_postgresoutboundmessageoutbox",
-      "community": 63,
+      "community": 149,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "postgresoutboundmessageoutbox"
     },
@@ -11715,7 +11726,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_outbound_message_outbox_postgresoutboundmessageoutbox_enqueuechannelmessage",
-      "community": 63,
+      "community": 149,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": ".enqueuechannelmessage()"
     },
@@ -12012,8 +12023,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_webhook_inbox_webhookeventconflicterror",
-      "community": 74,
-      "community_name": "whatsapp-webhook.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "webhookeventconflicterror"
     },
     {
@@ -12023,8 +12034,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_webhook_inbox_webhookeventconflicterror_constructor",
-      "community": 74,
-      "community_name": "whatsapp-webhook.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -12375,8 +12386,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 81,
+      "community_name": "PrivateMediaVolume",
       "norm_label": "mediavolumeunavailableerror"
     },
     {
@@ -12386,8 +12397,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror_constructor",
-      "community": 63,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 81,
+      "community_name": "PrivateMediaVolume",
       "norm_label": ".constructor()"
     },
     {
@@ -18624,7 +18635,7 @@
       "_origin": "ast",
       "id": "test_audit_idempotency_test",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "audit-idempotency.test.js"
     },
     {
@@ -18635,7 +18646,7 @@
       "_origin": "ast",
       "id": "test_audit_idempotency_test_commandmetadata",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "commandmetadata"
     },
     {
@@ -18646,7 +18657,7 @@
       "_origin": "ast",
       "id": "test_audit_idempotency_test_createaudittrail",
       "community": 149,
-      "community_name": "createIdempotentCommandExecutor",
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "createaudittrail()"
     },
     {
@@ -18899,7 +18910,7 @@
       "_origin": "ast",
       "id": "test_catalog_test",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalog.test.js"
     },
     {
@@ -18910,7 +18921,7 @@
       "_origin": "ast",
       "id": "test_catalog_test_admin",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "admin"
     },
     {
@@ -18921,7 +18932,7 @@
       "_origin": "ast",
       "id": "test_catalog_test_data",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "data()"
     },
     {
@@ -18932,7 +18943,7 @@
       "_origin": "ast",
       "id": "test_catalog_test_harness",
       "community": 54,
-      "community_name": "catalog/src/index.js",
+      "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "harness()"
     },
     {
@@ -18943,7 +18954,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "channel-contract.test.js"
     },
     {
@@ -18954,7 +18965,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_rooturl",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "rooturl"
     },
     {
@@ -18965,7 +18976,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_json",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "json()"
     },
     {
@@ -18976,7 +18987,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_normalizeinbound",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "normalizeinbound()"
     },
     {
@@ -18987,7 +18998,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_prepareoutbound",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "prepareoutbound()"
     },
     {
@@ -18998,7 +19009,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_tostring",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "tostring()"
     },
     {
@@ -19008,8 +19019,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_channel_event_handler_test",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 168,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "channel-event-handler.test.js"
     },
     {
@@ -19019,8 +19030,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_canonicalevent",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 168,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "canonicalevent()"
     },
     {
@@ -19030,8 +19041,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_resolveinboundidentity",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 168,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "resolveinboundidentity()"
     },
     {
@@ -19041,8 +19052,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_receiveinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 168,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "receiveinbound()"
     },
     {
@@ -19052,8 +19063,8 @@
       "source_location": "L175",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_process",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 168,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "process()"
     },
     {
@@ -19063,8 +19074,8 @@
       "source_location": "L180",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_readcanonicaleventrecord",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 168,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "readcanonicaleventrecord()"
     },
     {
@@ -19118,7 +19129,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "configuration-catalog-postgres-live.test.js"
     },
@@ -19129,7 +19140,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test_admin",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "admin"
     },
@@ -19140,7 +19151,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test_configurationvalues",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "configurationvalues()"
     },
@@ -19151,7 +19162,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test_catalogvalues",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "catalogvalues()"
     },
@@ -19162,7 +19173,7 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "test_configuration_catalog_postgres_live_test_append",
-      "community": 141,
+      "community": 54,
       "community_name": "configuration-catalog-postgres-live.test.js",
       "norm_label": "append()"
     },
@@ -19173,8 +19184,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_configuration_test",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "configuration.test.js"
     },
     {
@@ -19184,8 +19195,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "test_configuration_test_admin_actor",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "admin_actor"
     },
     {
@@ -19195,8 +19206,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "test_configuration_test_validvalues",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "validvalues()"
     },
     {
@@ -19206,8 +19217,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "test_configuration_test_createharness",
-      "community": 186,
-      "community_name": "configuration/src/index.js",
+      "community": 4,
+      "community_name": "configuration-version.js",
       "norm_label": "createharness()"
     },
     {
@@ -19283,7 +19294,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_database_test",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "database.test.js"
     },
@@ -19338,7 +19349,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "test_database_test_connect",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "connect()"
     },
@@ -19404,8 +19415,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_deal_conversion_postgres_live_test",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "deal-conversion-postgres-live.test.js"
     },
     {
@@ -19415,8 +19426,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "test_deal_conversion_postgres_live_test_now",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "now"
     },
     {
@@ -19426,7 +19437,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "test_deal_conversion_postgres_live_test_databasefor",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "databasefor()"
     },
@@ -19514,8 +19525,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "test_deal_read_api_test_harness",
-      "community": 146,
-      "community_name": "app.js",
+      "community": 172,
+      "community_name": "deal-routes.js",
       "norm_label": "harness()"
     },
     {
@@ -19624,8 +19635,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_deal_read_postgres_live_test",
-      "community": 175,
-      "community_name": "qualification-postgres-live.test.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "deal-read-postgres-live.test.js"
     },
     {
@@ -19635,8 +19646,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "test_deal_read_postgres_live_test_now",
-      "community": 175,
-      "community_name": "qualification-postgres-live.test.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "now"
     },
     {
@@ -19646,8 +19657,8 @@
       "source_location": "L148",
       "_origin": "ast",
       "id": "test_deal_read_postgres_live_test_insertevent",
-      "community": 175,
-      "community_name": "qualification-postgres-live.test.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "insertevent()"
     },
     {
@@ -19657,8 +19668,8 @@
       "source_location": "L172",
       "_origin": "ast",
       "id": "test_deal_read_postgres_live_test_seed",
-      "community": 175,
-      "community_name": "qualification-postgres-live.test.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "seed()"
     },
     {
@@ -19734,8 +19745,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_deal_transitions_postgres_live_test",
-      "community": 73,
-      "community_name": "work-management-postgres-live.test.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "deal-transitions-postgres-live.test.js"
     },
     {
@@ -19745,8 +19756,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "test_deal_transitions_postgres_live_test_now",
-      "community": 73,
-      "community_name": "work-management-postgres-live.test.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "now"
     },
     {
@@ -19756,8 +19767,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "test_deal_transitions_postgres_live_test_databasefor",
-      "community": 73,
-      "community_name": "work-management-postgres-live.test.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "databasefor()"
     },
     {
@@ -20053,8 +20064,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_identity_api_live_test",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 186,
+      "community_name": "identity-api-live.test.js",
       "norm_label": "identity-api-live.test.js"
     },
     {
@@ -20064,8 +20075,8 @@
       "source_location": "L253",
       "_origin": "ast",
       "id": "test_identity_api_live_test_cookies",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 186,
+      "community_name": "identity-api-live.test.js",
       "norm_label": "cookies()"
     },
     {
@@ -20075,8 +20086,8 @@
       "source_location": "L267",
       "_origin": "ast",
       "id": "test_identity_api_live_test_commandheaders",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 186,
+      "community_name": "identity-api-live.test.js",
       "norm_label": "commandheaders()"
     },
     {
@@ -20086,8 +20097,8 @@
       "source_location": "L277",
       "_origin": "ast",
       "id": "test_identity_api_live_test_totp",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 186,
+      "community_name": "identity-api-live.test.js",
       "norm_label": "totp()"
     },
     {
@@ -20097,8 +20108,8 @@
       "source_location": "L293",
       "_origin": "ast",
       "id": "test_identity_api_live_test_decodebase32",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 186,
+      "community_name": "identity-api-live.test.js",
       "norm_label": "decodebase32()"
     },
     {
@@ -20208,7 +20219,7 @@
       "_origin": "ast",
       "id": "test_identity_postgres_live_test",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "identity-postgres-live.test.js"
     },
     {
@@ -20219,7 +20230,7 @@
       "_origin": "ast",
       "id": "test_identity_postgres_live_test_hash",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "hash()"
     },
     {
@@ -20383,8 +20394,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 165,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "inbox-postgres-live.test.js"
     },
     {
@@ -20394,8 +20405,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_now",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 165,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "now"
     },
     {
@@ -20405,8 +20416,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_attendant",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 165,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "attendant"
     },
     {
@@ -20416,8 +20427,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_databasefor",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 165,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "databasefor()"
     },
     {
@@ -20427,8 +20438,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_servicesfor",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 165,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "servicesfor()"
     },
     {
@@ -20438,8 +20449,8 @@
       "source_location": "L93",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_identityinput",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 165,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "identityinput()"
     },
     {
@@ -20449,8 +20460,8 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_inboundinput",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 165,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "inboundinput()"
     },
     {
@@ -20460,8 +20471,8 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_canonicalwebhookevent",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 165,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "canonicalwebhookevent()"
     },
     {
@@ -20471,8 +20482,8 @@
       "source_location": "L388",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_enqueuechannelmessage",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 165,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "enqueuechannelmessage()"
     },
     {
@@ -20559,7 +20570,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "meta-whatsapp-adapter.test.js"
     },
@@ -20570,7 +20581,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test_rooturl",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "rooturl"
     },
@@ -20581,7 +20592,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test_accountscope",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "accountscope"
     },
@@ -20592,7 +20603,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test_normalize",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "normalize()"
     },
@@ -20603,7 +20614,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test_fixture",
-      "community": 13,
+      "community": 63,
       "community_name": "meta-whatsapp.js",
       "norm_label": "fixture()"
     },
@@ -20614,8 +20625,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_migrations_live_test",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 9,
+      "community_name": "database/src/index.js",
       "norm_label": "migrations-live.test.js"
     },
     {
@@ -20889,7 +20900,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_outbound_message_outbox_test",
-      "community": 63,
+      "community": 149,
       "community_name": "integration-reliability/src/index.js",
       "norm_label": "outbound-message-outbox.test.js"
     },
@@ -20945,7 +20956,7 @@
       "_origin": "ast",
       "id": "test_phase1_schema_live_test",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "phase1-schema-live.test.js"
     },
     {
@@ -20956,7 +20967,7 @@
       "_origin": "ast",
       "id": "test_phase1_schema_live_test_hash",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "hash()"
     },
     {
@@ -20999,8 +21010,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test",
-      "community": 201,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 12,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "postgres-audit-live.test.js"
     },
     {
@@ -21010,8 +21021,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_auditinput",
-      "community": 201,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 12,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "auditinput"
     },
     {
@@ -21021,8 +21032,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_recordingqueryable",
-      "community": 201,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 12,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "recordingqueryable"
     },
     {
@@ -21032,8 +21043,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_recordingqueryable_query",
-      "community": 201,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 12,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".query()"
     },
     {
@@ -21043,8 +21054,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_createpostgresaudittrail",
-      "community": 201,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 12,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "createpostgresaudittrail()"
     },
     {
@@ -21054,8 +21065,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_postgres_idempotency_live_test",
-      "community": 73,
-      "community_name": "work-management-postgres-live.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "postgres-idempotency-live.test.js"
     },
     {
@@ -21065,8 +21076,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test",
-      "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "postgres-idempotency.test.js"
     },
     {
@@ -21076,8 +21087,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_envelope_key",
-      "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "envelope_key"
     },
     {
@@ -21087,8 +21098,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_identity",
-      "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "identity"
     },
     {
@@ -21098,8 +21109,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase",
-      "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "fakedatabase"
     },
     {
@@ -21109,8 +21120,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_constructor",
-      "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -21120,8 +21131,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_transaction",
-      "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".transaction()"
     },
     {
@@ -21131,8 +21142,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_query",
-      "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": ".query()"
     },
     {
@@ -21142,8 +21153,8 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_recordkey",
-      "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 149,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "recordkey()"
     },
     {
@@ -21153,7 +21164,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_postgres_job_queue_live_test",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "postgres-job-queue-live.test.js"
     },
@@ -21164,7 +21175,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "test_postgres_job_queue_live_test_databasefor",
-      "community": 191,
+      "community": 9,
       "community_name": "database/src/index.js",
       "norm_label": "databasefor()"
     },
@@ -21175,8 +21186,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "test_postgres_job_queue_live_test_seedjob",
-      "community": 191,
-      "community_name": "database/src/index.js",
+      "community": 175,
+      "community_name": "qualification-postgres-live.test.js",
       "norm_label": "seedjob()"
     },
     {
@@ -21187,7 +21198,7 @@
       "_origin": "ast",
       "id": "test_postgres_webhook_inbox_live_test",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "postgres-webhook-inbox-live.test.js"
     },
     {
@@ -21198,7 +21209,7 @@
       "_origin": "ast",
       "id": "test_postgres_webhook_inbox_live_test_canonicalevent",
       "community": 9,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "canonicalevent()"
     },
     {
@@ -21659,7 +21670,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_transient_media_retention_test",
-      "community": 178,
+      "community": 12,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "transient-media-retention.test.js"
     },
@@ -22000,8 +22011,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_worker_queue_test",
-      "community": 0,
-      "community_name": "postgres-job-queue.js",
+      "community": 154,
+      "community_name": "shared/src/index.js",
       "norm_label": "worker-queue.test.js"
     },
     {
@@ -22011,8 +22022,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "test_worker_queue_test_silentlogger",
-      "community": 0,
-      "community_name": "postgres-job-queue.js",
+      "community": 154,
+      "community_name": "shared/src/index.js",
       "norm_label": "silentlogger"
     },
     {
@@ -22022,8 +22033,8 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "test_worker_queue_test_queuefixture",
-      "community": 0,
-      "community_name": "postgres-job-queue.js",
+      "community": 154,
+      "community_name": "shared/src/index.js",
       "norm_label": "queuefixture()"
     },
     {
@@ -22077,8 +22088,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec",
-      "community": 166,
-      "community_name": "DATACRAZY-SETUP.md",
+      "community": 38,
+      "community_name": "README.md",
       "norm_label": "spec.md"
     },
     {
@@ -22088,8 +22099,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_crm_silmer_mvp_requisitos_rastre\u00e1veis",
-      "community": 165,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 29,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "crm silmer mvp \u2014 requisitos rastreaveis"
     },
     {
@@ -22099,8 +22110,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_problema",
-      "community": 165,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 29,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "problema"
     },
     {
@@ -22110,8 +22121,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_objetivos",
-      "community": 165,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 29,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "objetivos"
     },
     {
@@ -22220,8 +22231,8 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_p2_depois_do_piloto",
-      "community": 165,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 29,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "p2 \u2014 depois do piloto"
     },
     {
@@ -22231,8 +22242,8 @@
       "source_location": "L146",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_fora_do_escopo",
-      "community": 165,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 29,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "fora do escopo"
     },
     {
@@ -22242,8 +22253,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_rastreabilidade",
-      "community": 165,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 29,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "rastreabilidade"
     },
     {
@@ -22253,8 +22264,8 @@
       "source_location": "L169",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_crit\u00e9rio_de_passagem",
-      "community": 165,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 29,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "criterio de passagem"
     },
     {
@@ -22264,8 +22275,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_tasks",
-      "community": 158,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community": 38,
+      "community_name": "README.md",
       "norm_label": "tasks.md"
     },
     {
@@ -22726,8 +22737,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "codex_codex_contexto_do_crm_silmer",
-      "community": 38,
-      "community_name": "README.md",
+      "community": 178,
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "codex \u2014 contexto do crm silmer"
     },
     {
@@ -22737,8 +22748,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "codex_inicializa\u00e7\u00e3o_obrigat\u00f3ria",
-      "community": 38,
-      "community_name": "README.md",
+      "community": 178,
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "inicializacao obrigatoria"
     },
     {
@@ -22748,8 +22759,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "codex_guardrails_do_mvp",
-      "community": 38,
-      "community_name": "README.md",
+      "community": 178,
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "guardrails do mvp"
     },
     {
@@ -22759,8 +22770,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "codex_forma_de_trabalhar",
-      "community": 38,
-      "community_name": "README.md",
+      "community": 178,
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "forma de trabalhar"
     },
     {
@@ -22770,8 +22781,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "codex_fechamento",
-      "community": 38,
-      "community_name": "README.md",
+      "community": 178,
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "fechamento"
     },
     {
@@ -23232,8 +23243,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "readme_crm_silmer",
-      "community": 198,
-      "community_name": "CRM Silmer",
+      "community": 38,
+      "community_name": "README.md",
       "norm_label": "crm silmer"
     },
     {
@@ -23243,8 +23254,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "readme_comece_por_aqui",
-      "community": 198,
-      "community_name": "CRM Silmer",
+      "community": 38,
+      "community_name": "README.md",
       "norm_label": "comece por aqui"
     },
     {
@@ -23254,8 +23265,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "readme_stack_aprovada",
-      "community": 198,
-      "community_name": "CRM Silmer",
+      "community": 38,
+      "community_name": "README.md",
       "norm_label": "stack aprovada"
     },
     {
@@ -23265,8 +23276,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "readme_desenvolvimento",
-      "community": 198,
-      "community_name": "CRM Silmer",
+      "community": 38,
+      "community_name": "README.md",
       "norm_label": "desenvolvimento"
     },
     {
@@ -24717,8 +24728,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas",
-      "community": 166,
-      "community_name": "DATACRAZY-SETUP.md",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "crm-processo-vendas.md"
     },
     {
@@ -24728,7 +24739,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualifica\u00e7\u00e3o_e_venda_silmer",
-      "community": 159,
+      "community": 7,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "crm-processo-vendas.md \u2014 processo de qualificacao e venda (silmer)"
     },
@@ -24739,7 +24750,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_1_vis\u00e3o_geral_do_fluxo",
-      "community": 159,
+      "community": 7,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "1. visao geral do fluxo"
     },
@@ -24750,7 +24761,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_2_card_r\u00e1pido_de_briefing",
-      "community": 159,
+      "community": 7,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "2. card rapido de briefing"
     },
@@ -24761,7 +24772,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_3_roteiro_completo_de_qualifica\u00e7\u00e3o_os_13_campos",
-      "community": 159,
+      "community": 7,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "3. roteiro completo de qualificacao \u2014 os 13 campos"
     },
@@ -24772,7 +24783,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_4_tags_e_tipifica\u00e7\u00e3o",
-      "community": 159,
+      "community": 7,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "4. tags e tipificacao"
     },
@@ -24783,7 +24794,7 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_5_pipeline_vendas_estamparia_as_5_etapas",
-      "community": 159,
+      "community": 7,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "5. pipeline \"vendas estamparia\" \u2014 as 5 etapas"
     },
@@ -24794,7 +24805,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_6_transfer\u00eancia_da_ia_pro_vendedor_humano",
-      "community": 159,
+      "community": 7,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "6. transferencia da ia pro vendedor humano"
     },
@@ -24805,7 +24816,7 @@
       "source_location": "L132",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_7_o_que_a_ia_e_o_vendedor_nunca_afirmam",
-      "community": 159,
+      "community": 7,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "7. o que a ia e o vendedor nunca afirmam"
     },
@@ -24816,7 +24827,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_8_pend\u00eancias_que_travam_o_processo_hoje",
-      "community": 159,
+      "community": 7,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "8. pendencias que travam o processo hoje"
     },
@@ -25970,8 +25981,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 166,
-      "community_name": "DATACRAZY-SETUP.md",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "datacrazy-setup.md",
       "id": "historico_datacrazy_datacrazy_setup"
     },
@@ -25982,7 +25993,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "datacrazy \u2014 automacao \"vendedor silmer\" (sdr whatsapp \u2192 vendedor humano)",
       "id": "historico_datacrazy_datacrazy_setup_datacrazy_automa\u00e7\u00e3o_vendedor_silmer_sdr_whatsapp_vendedor_humano"
     },
@@ -25993,7 +26004,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "fluxo desenhado",
       "id": "historico_datacrazy_datacrazy_setup_fluxo_desenhado"
     },
@@ -26004,7 +26015,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "o que ja esta configurado",
       "id": "historico_datacrazy_datacrazy_setup_o_que_j\u00e1_est\u00e1_configurado"
     },
@@ -26015,7 +26026,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "campos adicionais de lead (13 novos)",
       "id": "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos"
     },
@@ -26026,7 +26037,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "tags (4 novas)",
       "id": "historico_datacrazy_datacrazy_setup_tags_4_novas"
     },
@@ -26037,7 +26048,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "pipeline \"vendas estamparia\"",
       "id": "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia"
     },
@@ -26048,7 +26059,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "agente \"vendedor silmer\"",
       "id": "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer"
     },
@@ -26059,7 +26070,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "base de conhecimento",
       "id": "historico_datacrazy_datacrazy_setup_base_de_conhecimento"
     },
@@ -26070,7 +26081,7 @@
       "source_location": "L67",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "automacao",
       "id": "historico_datacrazy_datacrazy_setup_automa\u00e7\u00e3o"
     },
@@ -26081,7 +26092,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "community": 7,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "bloqueadores (nao resolvidos)",
       "id": "historico_datacrazy_datacrazy_setup_bloqueadores_n\u00e3o_resolvidos"
     },
@@ -26091,8 +26102,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L92",
       "_origin": "ast",
-      "community": 168,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "passo a passo \u2014 conectar a crazy api (quando o cliente aprovar)",
       "id": "historico_datacrazy_datacrazy_setup_passo_a_passo_conectar_a_crazy_api_quando_o_cliente_aprovar"
     },
@@ -26102,8 +26113,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L96",
       "_origin": "ast",
-      "community": 168,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "atencao \u2014 definir qual numero vai hospedar o agente",
       "id": "historico_datacrazy_datacrazy_setup_aten\u00e7\u00e3o_definir_qual_n\u00famero_vai_hospedar_o_agente"
     },
@@ -26113,8 +26124,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L108",
       "_origin": "ast",
-      "community": 168,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "passos",
       "id": "historico_datacrazy_datacrazy_setup_passos"
     },
@@ -26124,8 +26135,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L125",
       "_origin": "ast",
-      "community": 168,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "cuidados com a crazy api (whatsapp nao-oficial)",
       "id": "historico_datacrazy_datacrazy_setup_cuidados_com_a_crazy_api_whatsapp_n\u00e3o_oficial"
     },
@@ -26135,8 +26146,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L132",
       "_origin": "ast",
-      "community": 168,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "alternativas sem o custo da crazy api",
       "id": "historico_datacrazy_datacrazy_setup_alternativas_sem_o_custo_da_crazy_api"
     },
@@ -26146,8 +26157,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L139",
       "_origin": "ast",
-      "community": 160,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "chat na landing page \u2014 o que existe e o que falta",
       "id": "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta"
     },
@@ -26157,8 +26168,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L149",
       "_origin": "ast",
-      "community": 160,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "arquitetura necessaria",
       "id": "historico_datacrazy_datacrazy_setup_arquitetura_necess\u00e1ria"
     },
@@ -26168,8 +26179,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L167",
       "_origin": "ast",
-      "community": 160,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "o que a conexao universal pede",
       "id": "historico_datacrazy_datacrazy_setup_o_que_a_conex\u00e3o_universal_pede"
     },
@@ -26179,8 +26190,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L189",
       "_origin": "ast",
-      "community": 160,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "ponto de atencao do fluxo no site",
       "id": "historico_datacrazy_datacrazy_setup_ponto_de_aten\u00e7\u00e3o_do_fluxo_no_site"
     },
@@ -26190,8 +26201,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L198",
       "_origin": "ast",
-      "community": 160,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "ajuste necessario no prompt do agente",
       "id": "historico_datacrazy_datacrazy_setup_ajuste_necess\u00e1rio_no_prompt_do_agente"
     },
@@ -26201,8 +26212,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L205",
       "_origin": "ast",
-      "community": 160,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "esforco estimado",
       "id": "historico_datacrazy_datacrazy_setup_esfor\u00e7o_estimado"
     },
@@ -26212,8 +26223,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L210",
       "_origin": "ast",
-      "community": 160,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "pendencias de conteudo (a silmer precisa fornecer)",
       "id": "historico_datacrazy_datacrazy_setup_pend\u00eancias_de_conte\u00fado_a_silmer_precisa_fornecer"
     },
@@ -26223,8 +26234,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L222",
       "_origin": "ast",
-      "community": 160,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "a validar no primeiro teste real",
       "id": "historico_datacrazy_datacrazy_setup_a_validar_no_primeiro_teste_real"
     },
@@ -26234,8 +26245,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L229",
       "_origin": "ast",
-      "community": 160,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 7,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "proximos passos, em ordem",
       "id": "historico_datacrazy_datacrazy_setup_pr\u00f3ximos_passos_em_ordem"
     },
@@ -26869,9 +26880,9 @@
       "label": "Vendedor Silmer (AI Agent)",
       "file_type": "concept",
       "source_file": ".specs/features/crm-mvp/context.md",
-      "community": 166,
+      "community": 7,
       "norm_label": "vendedor silmer (ai agent)",
-      "community_name": "DATACRAZY-SETUP.md",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "_origin": "semantic",
       "id": "vendedor_silmer"
     },
@@ -27020,9 +27031,9 @@
       "label": "Datacrazy CRM",
       "file_type": "concept",
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
-      "community": 166,
+      "community": 7,
       "norm_label": "datacrazy crm",
-      "community_name": "DATACRAZY-SETUP.md",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "_origin": "semantic",
       "id": "datacrazy_crm"
     },
@@ -27030,9 +27041,9 @@
       "label": "Crazy API (WhatsApp)",
       "file_type": "concept",
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
-      "community": 166,
+      "community": 7,
       "norm_label": "crazy api (whatsapp)",
-      "community_name": "DATACRAZY-SETUP.md",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "_origin": "semantic",
       "id": "crazy_api"
     },
@@ -27358,9 +27369,9 @@
       "label": "CI and Immutable Images Workflow",
       "file_type": "code",
       "source_file": ".github/workflows/ci.yml",
-      "community": 158,
+      "community": 38,
       "norm_label": "ci and immutable images workflow",
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "_origin": "semantic",
       "id": "github_workflows_ci"
     },
@@ -27378,9 +27389,9 @@
       "label": "PostgreSQL 17 Alpine Image",
       "file_type": "concept",
       "source_file": ".github/workflows/ci.yml",
-      "community": 158,
+      "community": 38,
       "norm_label": "postgresql 17 alpine image",
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "_origin": "semantic",
       "id": "postgres_17_alpine"
     },
@@ -33397,7 +33408,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/views/AccountView.vue",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_views_accountview_enroll",
@@ -33726,7 +33737,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/views/AccountView.vue",
-      "source_location": "L16",
+      "source_location": "L17",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_views_accountview",
@@ -33737,7 +33748,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/views/AccountView.vue",
-      "source_location": "L27",
+      "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_views_accountview",
@@ -33759,7 +33770,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/views/AccountView.vue",
-      "source_location": "L20",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_views_accountview",
+      "target": "apps_edge_web_src_views_accountview_enrollmentidempotencykey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/views/AccountView.vue",
+      "source_location": "L21",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_views_accountview",
@@ -33814,7 +33836,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/views/AccountView.vue",
-      "source_location": "L15",
+      "source_location": "L16",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_views_accountview",
@@ -77654,5 +77676,5 @@
       "confidence_score": 1.0
     }
   ],
-  "built_at_commit": "9a21c4d6f5bcf411a847efd942dba477ebdb601b"
+  "built_at_commit": "e8cb7169f4de402aaa0656390471e30939717be1"
 }

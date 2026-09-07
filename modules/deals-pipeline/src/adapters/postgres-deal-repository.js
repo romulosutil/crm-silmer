@@ -161,6 +161,41 @@ export class PostgresDealRepository {
     );
     return mapCommandDeal(updated.rows[0]);
   }
+
+  /** @param {any} input @param {any} context */
+  async applyFields(input, context) {
+    const transaction = requireQueryable(
+      context?.transaction,
+      'context.transaction',
+    );
+    const version = input.deal.version + 1;
+    const updated = await transaction.query(
+      `UPDATE crm.deals
+       SET stage = COALESCE($3, stage), version = version + 1, updated_at = $4
+       WHERE id = $1 AND version = $2 AND status = 'active'
+       RETURNING id, contact_id, source_conversation_id, stage, status, version,
+                 created_at, updated_at, lost_at`,
+      [input.deal.id, input.deal.version, input.returnedTo, input.occurredAt],
+    );
+    if (updated.rows.length !== 1) throw new DealConflictError();
+    if (input.returnedTo) {
+      await transaction.query(
+        `INSERT INTO crm.deal_stage_history
+           (deal_id, resulting_version, event_kind, from_stage, to_stage,
+            actor_id, reason, occurred_at)
+         VALUES ($1, $2, 'returned', $3, $4, $5, NULL, $6)`,
+        [
+          input.deal.id,
+          version,
+          input.deal.stage,
+          input.returnedTo,
+          input.actorId,
+          input.occurredAt,
+        ],
+      );
+    }
+    return mapCommandDeal(updated.rows[0]);
+  }
 }
 
 /** @param {any} row */

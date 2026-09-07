@@ -39,6 +39,7 @@ function harness() {
       environment: {
         DEAL_ENVELOPE_KEY: Buffer.alloc(32, 46).toString('base64url'),
         IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 45).toString('base64url'),
+        QUALIFICATION_ENVELOPE_KEY: Buffer.alloc(32, 47).toString('base64url'),
       },
       identity: {
         allowedOrigins: ['https://crm.example.test'],
@@ -122,6 +123,6 @@ test('server rejects a partially configured Deal runtime', () => {
           IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 45).toString('base64url'),
         },
       }),
-    /IDEMPOTENCY_ENVELOPE_KEY and DEAL_ENVELOPE_KEY together/u,
+    /IDEMPOTENCY_ENVELOPE_KEY, DEAL_ENVELOPE_KEY and QUALIFICATION_ENVELOPE_KEY together/u,
   );
 });

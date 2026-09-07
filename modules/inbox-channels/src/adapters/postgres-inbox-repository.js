@@ -163,6 +163,16 @@ export class PostgresInboxRepository {
           input.occurredAt,
         ],
       );
+      if (input.channelEventId) {
+        await transaction.query(
+          `INSERT INTO crm.attachments (message_id, transient_media_id)
+           SELECT $1, media.transient_media_id
+           FROM crm.channel_event_media AS media
+           WHERE media.channel_event_id = $2
+           ON CONFLICT DO NOTHING`,
+          [messageId, input.channelEventId],
+        );
+      }
       return freezeInboxRecord({
         conversation: mapConversation(conversation),
         message: mapMessage(inserted.rows[0], this.#envelopeKey),

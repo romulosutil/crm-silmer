@@ -12,6 +12,13 @@ import {
   PostgresDomainEventStore,
   PostgresIdempotencyRecordStore,
 } from '@crm-silmer/integration-reliability';
+import {
+  PostgresQualificationAttachmentPort,
+  PostgresQualificationCatalog,
+  PostgresQualificationRepository,
+  createQualificationCipher,
+  createQualificationService,
+} from '@crm-silmer/qualification';
 
 /**
  * @param {any} database
@@ -44,6 +51,14 @@ export function createDealApiRuntime(database, options = {}) {
     idempotencyStore,
     inboxPort: new PostgresConversationConversionPort(),
   });
+  const qualificationRepository = new PostgresQualificationRepository({
+    cipher: createQualificationCipher({
+      key: readEnvelopeKey(
+        environment.QUALIFICATION_ENVELOPE_KEY,
+        'QUALIFICATION_ENVELOPE_KEY',
+      ),
+    }),
+  });
   const commands = createDealCommandService({
     auditPort,
     automationFencePort: new PostgresDealAutomationFencePort(),
@@ -53,11 +68,17 @@ export function createDealApiRuntime(database, options = {}) {
     lossReasonCipher: createDealLossReasonCipher({
       key: readEnvelopeKey(environment.DEAL_ENVELOPE_KEY, 'DEAL_ENVELOPE_KEY'),
     }),
-    qualificationPort: {
-      async evaluateGate() {
-        return { blockers: ['qualification.unavailable'] };
-      },
-    },
+    qualificationPort: qualificationRepository,
+  });
+  const qualification = createQualificationService({
+    auditPort,
+    attachmentPort: new PostgresQualificationAttachmentPort(),
+    automationFencePort: new PostgresDealAutomationFencePort(),
+    catalogPort: new PostgresQualificationCatalog(),
+    dealRepository,
+    eventPort,
+    idempotencyStore,
+    qualificationRepository,
   });
 
   return Object.freeze({
@@ -95,6 +116,7 @@ export function createDealApiRuntime(database, options = {}) {
     },
     convertConversation: conversion.convertConversation,
     loseDeal: commands.loseDeal,
+    patchFields: qualification.patchFields,
     transitionDeal: commands.transitionDeal,
   });
 }

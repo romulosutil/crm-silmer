@@ -88,6 +88,30 @@ export class InMemoryDealRepository {
     return freezeDealRecord(publicDeal(stored));
   }
 
+  /** @param {any} input */
+  async applyFields(input) {
+    const stored = this.#current(input.deal);
+    const version = stored.version + 1;
+    if (input.returnedTo) {
+      this.#history.push({
+        actorId: input.actorId,
+        dealId: stored.id,
+        fromStage: stored.stage,
+        kind: 'returned',
+        occurredAt: input.occurredAt,
+        reason: null,
+        resultingVersion: version,
+        toStage: input.returnedTo,
+      });
+    }
+    Object.assign(stored, {
+      ...(input.returnedTo ? { stage: input.returnedTo } : {}),
+      updatedAt: input.occurredAt,
+      version,
+    });
+    return freezeDealRecord(publicDeal(stored));
+  }
+
   /** @param {string} id */
   get(id) {
     const deal = this.#deals.get(id);

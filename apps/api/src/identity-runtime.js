@@ -127,6 +127,29 @@ export function createIdentityApiRuntime(database, environment = process.env) {
   return Object.freeze({
     allowedOrigins,
 
+    /** @param {{action: string, csrfToken: string, sessionToken: string}} input */
+    async authorizeOperational(input) {
+      if (input.action !== 'conversation.convert') {
+        throw new IdentityHttpError(403, 'FORBIDDEN');
+      }
+      return database.transaction(async (client) => {
+        const session = await authenticatedSession(client, input, false);
+        const user = await createPostgresIdentityRepository(
+          client,
+        ).findUserById(session.userId);
+        if (!user || !['Atendimento', 'Vendedor'].includes(user.functionName)) {
+          throw new IdentityHttpError(403, 'FORBIDDEN');
+        }
+        return {
+          actor: {
+            functionName: user.functionName,
+            id: user.id,
+            kind: 'human',
+          },
+        };
+      });
+    },
+
     /** @param {{correlationId: string, password: string, token: string}} input */
     async acceptInvitation(input) {
       try {

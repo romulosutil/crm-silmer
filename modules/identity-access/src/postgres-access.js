@@ -31,7 +31,7 @@ export function createPostgresAccessRepository(database) {
              array_agg(c.capability ORDER BY c.capability)
                FILTER (WHERE c.capability IS NOT NULL),
              ARRAY[]::text[]
-           ) AS capabilities,
+           ) AS capabilities
          FROM crm.users AS u
          JOIN crm.user_functions AS f ON f.user_id = u.id
          LEFT JOIN crm.user_capabilities AS c ON c.user_id = u.id

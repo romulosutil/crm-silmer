@@ -10,12 +10,13 @@ async function text(path) {
 }
 
 test('documents and exposes a local development workflow with automatic refresh', async () => {
-  const [packageJson, guide, dev, watcher, edgeServer, compose] =
+  const [packageJson, guide, dev, seeder, watcher, edgeServer, compose] =
     await Promise.all([
-    text('package.json'),
-    text('README.md'),
-    text('scripts/dev.mjs'),
-    text('scripts/watch-edge.mjs'),
+      text('package.json'),
+      text('README.md'),
+      text('scripts/dev.mjs'),
+      text('scripts/seed-dev-users.mjs'),
+      text('scripts/watch-edge.mjs'),
       text('scripts/serve-dev.mjs'),
       text('docker-compose.dev.yml'),
     ]);
@@ -30,9 +31,14 @@ test('documents and exposes a local development workflow with automatic refresh'
   assert.match(dev, /startLocalDatabase/u);
   assert.match(dev, /randomBytes/u);
   assert.match(dev, /API_ORIGIN/u);
+  assert.match(dev, /seedDevelopmentUsers/u);
+  assert.match(seeder, /admin@crm-silmer\.local/u);
+  assert.match(seeder, /PRIVACY_OFFICER/u);
+  assert.match(seeder, /TECHNICAL_PRIVACY_EXECUTOR/u);
   assert.match(watcher, /watch\(source, \{ recursive: true \}/u);
   assert.match(edgeServer, /proxyApiRequest/u);
   assert.match(compose, /postgres:17-alpine/u);
   assert.match(compose, /crm-silmer-postgres-data/u);
   assert.match(guide, /npm run dev/u);
+  assert.match(guide, /Desenvolvimento!2026/u);
 });

@@ -86,6 +86,21 @@ No modo local, o comando gera em memória chaves de autenticação efêmeras e
 aceita HTTP exclusivamente em `localhost`, `127.0.0.1` ou `::1`. Produção e
 qualquer origem não local continuam exigindo HTTPS e segredos configurados.
 
+Na primeira execução, o ambiente também cria contas sintéticas locais por meio
+da API de identidade. Todas usam a senha `Desenvolvimento!2026`:
+
+| Perfil                          | E-mail                                 | Função operacional | Capacidade adicional         |
+| ------------------------------- | -------------------------------------- | ------------------ | ---------------------------- |
+| Admin comercial                 | `admin@crm-silmer.local`               | Atendimento        | `COMMERCIAL_ADMIN`           |
+| Atendimento                     | `atendimento@crm-silmer.local`         | Atendimento        | —                            |
+| Vendedor                        | `vendedor@crm-silmer.local`            | Vendedor           | —                            |
+| Encarregado de privacidade      | `privacidade@crm-silmer.local`         | Atendimento        | `PRIVACY_OFFICER`            |
+| Executor técnico de privacidade | `privacidade-tecnica@crm-silmer.local` | Atendimento        | `TECHNICAL_PRIVACY_EXECUTOR` |
+
+Essas credenciais são exclusivamente para o PostgreSQL local iniciado por
+`npm run dev`; não são usadas nem aceitas em ambiente operacional. O seed é
+idempotente e preserva contas existentes ao reiniciar o comando.
+
 O contrato de `T00.3` fica em `ops/easypanel/topology.json`,
 `ops/easypanel/provisioning-gate.json` e `ops/recovery/off-host-kit.json`.
 Execute `npm run validate:topology`,

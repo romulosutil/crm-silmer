@@ -2,6 +2,9 @@ import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { once } from 'node:events';
 import { resolve } from 'node:path';
+import { seedDevelopmentUsers } from './seed-dev-users.mjs';
+
+/** @typedef {import('node:child_process').ChildProcess} ChildProcess */
 
 const root = resolve(import.meta.dirname, '..');
 const apiHost = process.env.API_HOST ?? '127.0.0.1';
@@ -12,6 +15,9 @@ const apiOrigin = process.env.API_ORIGIN ?? `http://${apiHost}:${apiPort}`;
 const databaseUrl =
   process.env.DATABASE_URL ??
   'postgresql://crm_silmer:crm_silmer_dev@127.0.0.1:5432/crm_silmer';
+const shouldSeedDevelopmentUsers =
+  process.env.DATABASE_URL === undefined ||
+  process.env.SEED_DEVELOPMENT_USERS === 'true';
 const localIdentityEnvironment = {
   APP_ENV: process.env.APP_ENV ?? 'development',
   APP_ORIGIN: process.env.APP_ORIGIN ?? `http://${devHost}:${devPort}`,
@@ -22,27 +28,44 @@ const localIdentityEnvironment = {
     randomBytes(32).toString('base64url'),
   IDENTITY_BOOTSTRAP_TOKEN:
     process.env.IDENTITY_BOOTSTRAP_TOKEN ??
-    randomBytes(32).toString('base64url'),
+    'development-bootstrap-token-local-only',
 };
 
 if (process.env.DATABASE_URL === undefined) await startLocalDatabase();
 await runMigrations();
 await runInitialBuild();
 
-const children = [
-  start('api', ['--watch', 'apps/api/src/server.js'], {
-    DATABASE_URL: databaseUrl,
-    ...localIdentityEnvironment,
-    HOST: apiHost,
-    PORT: apiPort,
-  }),
-  start('edge watcher', ['scripts/watch-edge.mjs']),
-  start('development edge server', ['scripts/serve-dev.mjs'], {
-    API_ORIGIN: apiOrigin,
-    HOST: devHost,
-    PORT: devPort,
-  }),
-];
+/** @type {ChildProcess[]} */
+const children = [];
+try {
+  children.push(
+    start('api', ['--watch', 'apps/api/src/server.js'], {
+      DATABASE_URL: databaseUrl,
+      ...localIdentityEnvironment,
+      HOST: apiHost,
+      PORT: apiPort,
+    }),
+  );
+  await waitForApi();
+  if (shouldSeedDevelopmentUsers) {
+    await seedDevelopmentUsers({
+      apiOrigin,
+      bootstrapToken: localIdentityEnvironment.IDENTITY_BOOTSTRAP_TOKEN,
+      origin: localIdentityEnvironment.APP_ORIGIN,
+    });
+  }
+  children.push(
+    start('edge watcher', ['scripts/watch-edge.mjs']),
+    start('development edge server', ['scripts/serve-dev.mjs'], {
+      API_ORIGIN: apiOrigin,
+      HOST: devHost,
+      PORT: devPort,
+    }),
+  );
+} catch (error) {
+  for (const child of children) child.kill('SIGTERM');
+  throw error;
+}
 
 console.log(`Development environment ready at http://${devHost}:${devPort}`);
 
@@ -77,19 +100,24 @@ async function startLocalDatabase() {
     'postgres',
   ]);
   for (let attempt = 1; attempt <= 20; attempt += 1) {
-    const code = await run('PostgreSQL readiness check', 'docker', [
-      'compose',
-      '-f',
-      'docker-compose.dev.yml',
-      'exec',
-      '--no-TTY',
-      'postgres',
-      'pg_isready',
-      '-U',
-      'crm_silmer',
-      '-d',
-      'crm_silmer',
-    ], false);
+    const code = await run(
+      'PostgreSQL readiness check',
+      'docker',
+      [
+        'compose',
+        '-f',
+        'docker-compose.dev.yml',
+        'exec',
+        '--no-TTY',
+        'postgres',
+        'pg_isready',
+        '-U',
+        'crm_silmer',
+        '-d',
+        'crm_silmer',
+      ],
+      false,
+    );
     if (code === 0) return;
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
   }
@@ -104,6 +132,21 @@ async function runMigrations() {
     true,
     { DATABASE_URL: databaseUrl },
   );
+}
+
+async function waitForApi() {
+  for (let attempt = 1; attempt <= 30; attempt += 1) {
+    try {
+      const response = await globalThis.fetch(
+        new URL('/api/health/live', apiOrigin),
+      );
+      if (response.ok) return;
+    } catch {
+      // The API process is still starting.
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
+  }
+  throw new Error('Local API did not become ready in time');
 }
 
 /** @param {string} name @param {string[]} args @param {Record<string, string>} [environment] */

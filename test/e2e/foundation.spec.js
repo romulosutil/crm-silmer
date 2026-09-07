@@ -25,6 +25,23 @@ test('keeps the status announcement and document language available', async ({
   await expect(page.getByRole('status')).toHaveText('Entre para continuar.');
 });
 
+test('applies the semantic dark theme from tokens.css', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/');
+
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        globalThis
+          .getComputedStyle(globalThis.document.documentElement)
+          .getPropertyValue('--color-canvas')
+          .trim(),
+      ),
+    )
+    .toBe('#0c042d');
+});
+
 test('switches access panels with the keyboard and keeps focus predictable', async ({
   page,
 }) => {

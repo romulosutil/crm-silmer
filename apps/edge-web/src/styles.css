@@ -1,55 +1,16 @@
-:root {
-  color-scheme: light dark;
-  font-family: Poppins, Inter, ui-sans-serif, system-ui, sans-serif;
-  line-height: 1.5;
-  --canvas: #f7f6fb;
-  --surface: #fff;
-  --raised: #f0eef8;
-  --active: #e8e3fa;
-  --text: #1b1530;
-  --muted: #625b75;
-  --border: #d8d4e4;
-  --subtle: #e8e5ef;
-  --accent: #ff5b01;
-  --accent-hover: #e54f00;
-  --accent-text: #9d3500;
-  --on-accent: #0c042d;
-  --link: #5b3fd1;
-  --focus: #6f50e8;
-  --danger: #a52828;
-  --danger-soft: #fff0ef;
-  --success: #246345;
-  --success-soft: #e5f5ec;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #0c042d;
-    --surface: #110642;
-    --raised: #19085e;
-    --active: #250c8d;
-    --text: #f0ecfd;
-    --muted: #b5aecb;
-    --border: #38249a;
-    --subtle: #25166c;
-    --link: #c0b1ff;
-    --accent-text: #ff9a65;
-    --danger: #ff9e99;
-    --danger-soft: #401535;
-    --success: #80d6a9;
-    --success-soft: #123b31;
-  }
-}
 * {
   box-sizing: border-box;
 }
 html {
-  background: var(--canvas);
+  background: var(--color-canvas);
 }
 body {
   min-block-size: 100vh;
   margin: 0;
-  color: var(--text);
-  background: var(--canvas);
+  color: var(--color-text);
+  font-family: var(--font-family-sans);
+  line-height: 1.5;
+  background: var(--color-canvas);
 }
 #app {
   min-block-size: 100vh;
@@ -67,7 +28,7 @@ a {
   border-radius: 0.35rem;
 }
 :focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 [hidden] {
@@ -89,15 +50,15 @@ a {
   z-index: 100;
   inset: 0.5rem auto auto 0.5rem;
   padding: 0.75rem 1rem;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--color-on-accent);
+  background: var(--color-accent);
   transform: translateY(-150%);
 }
 .skip-link:focus {
   transform: translateY(0);
 }
 a {
-  color: var(--link);
+  color: var(--color-link);
   text-underline-offset: 0.2em;
 }
 h1,
@@ -117,7 +78,7 @@ h2 {
 }
 .eyebrow {
   margin-block-end: 0.4rem;
-  color: var(--accent-text);
+  color: var(--color-link);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -126,7 +87,7 @@ h2 {
 .muted,
 .field-help,
 .environment {
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 .brand {
   display: inline-flex;
@@ -143,15 +104,15 @@ h2 {
   letter-spacing: 0.055em;
 }
 .brand-word span {
-  color: var(--accent);
+  color: var(--color-accent);
 }
 .product-label {
   padding-inline-start: 0.55rem;
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.13em;
-  border-inline-start: 1px solid var(--border);
+  border-inline-start: 1px solid var(--color-border);
 }
 .site-header {
   display: flex;
@@ -168,10 +129,10 @@ h2 {
     linear-gradient(
       135deg,
       transparent 0 66%,
-      rgb(255 91 1 / 5%) 66% 67%,
+      var(--color-accent-subtle) 66% 67%,
       transparent 67%
     ),
-    var(--canvas);
+    var(--color-canvas);
 }
 .public-content {
   display: grid;
@@ -190,18 +151,18 @@ h2 {
   font-size: clamp(2.45rem, 6vw, 5rem);
 }
 .intro h1 em {
-  color: var(--link);
+  color: var(--color-link);
   font-style: normal;
 }
 .intro > p:last-child {
   max-inline-size: 47ch;
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 1.05rem;
 }
 .auth-panel {
   inline-size: 100%;
-  border-block-start: 4px solid var(--accent);
-  box-shadow: 0 1.5rem 4rem rgb(12 4 45 / 10%);
+  border-block-start: 4px solid var(--color-accent);
+  box-shadow: var(--shadow-auth-panel);
 }
 .loading-state,
 .unavailable-state {
@@ -209,7 +170,7 @@ h2 {
 }
 .section-kicker {
   margin-block-end: 0.35rem;
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.73rem;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -217,8 +178,8 @@ h2 {
 }
 .surface {
   padding: clamp(1rem, 2vw, 1.5rem);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 0.625rem;
 }
 .tabs {
@@ -226,7 +187,7 @@ h2 {
   gap: 0.25rem;
   margin: -0.3rem -0.3rem 1.5rem;
   padding: 0.3rem;
-  background: var(--raised);
+  background: var(--color-surface-raised);
 }
 .tabs button {
   flex: 1;
@@ -234,8 +195,8 @@ h2 {
   border-color: transparent;
 }
 .tabs button[aria-selected='true'] {
-  background: var(--surface);
-  border-color: var(--border);
+  background: var(--color-surface);
+  border-color: var(--color-border);
 }
 form {
   display: grid;
@@ -251,45 +212,45 @@ select {
   inline-size: 100%;
   min-block-size: 44px;
   padding: 0.65rem 0.75rem;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 button {
   min-block-size: 44px;
   padding: 0.6rem 0.9rem;
-  color: var(--text);
+  color: var(--color-text);
   font-weight: 600;
-  background: var(--raised);
-  border: 1px solid var(--border);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
   cursor: pointer;
 }
 button:not(.primary, .danger):hover:not(:disabled) {
-  border-color: var(--link);
-  background: var(--active);
+  border-color: var(--color-link);
+  background: var(--color-surface-active);
 }
 button:disabled {
   cursor: wait;
   opacity: 0.65;
 }
 button.primary {
-  color: var(--on-accent);
-  background: var(--accent);
-  border-color: var(--accent);
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
 }
 button.primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
 }
 button.danger {
-  color: var(--danger);
-  background: var(--danger-soft);
-  border-color: var(--danger);
+  color: var(--status-error-text);
+  background: var(--status-error-surface);
+  border-color: var(--status-error-text);
 }
 button.danger:hover:not(:disabled) {
-  color: var(--danger-soft);
-  background: var(--danger);
-  border-color: var(--danger);
+  color: var(--status-error-surface);
+  background: var(--status-error-text);
+  border-color: var(--status-error-text);
 }
 button.quiet {
   background: transparent;
@@ -302,7 +263,7 @@ button.quiet {
 }
 details {
   padding: 0.8rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
 }
 details[open] {
   display: grid;
@@ -327,13 +288,13 @@ summary {
   gap: 2rem;
   block-size: 100vh;
   padding: 1rem;
-  color: #f0ecfd;
-  background: #0c042d;
-  border-inline-end: 1px solid #25166c;
+  color: var(--color-navigation-text);
+  background: var(--color-navigation-surface);
+  border-inline-end: 1px solid var(--color-navigation-border);
 }
 .app-sidebar .product-label {
-  color: #b5aecb;
-  border-color: #38249a;
+  color: var(--color-navigation-text-muted);
+  border-color: var(--color-navigation-border-strong);
 }
 .app-sidebar nav {
   display: grid;
@@ -351,13 +312,13 @@ summary {
 }
 .app-sidebar nav a:hover,
 .sidebar-logout:hover:not(:disabled) {
-  color: #f0ecfd;
-  background: #250c8d;
-  border-color: #38249a;
+  color: var(--color-navigation-text);
+  background: var(--color-navigation-active);
+  border-color: var(--color-navigation-border-strong);
 }
 .app-sidebar nav a[aria-current] {
-  background: #25166c;
-  border-inline-start: 3px solid var(--accent);
+  background: var(--color-navigation-border);
+  border-inline-start: 3px solid var(--color-accent);
 }
 .app-sidebar svg {
   inline-size: 1.25rem;
@@ -381,19 +342,19 @@ summary {
   gap: 1.5rem;
   min-block-size: 64px;
   padding: 0.6rem clamp(1rem, 3vw, 2.25rem);
-  background: color-mix(in srgb, var(--canvas) 92%, transparent);
-  border-block-end: 1px solid var(--border);
+  background: color-mix(in srgb, var(--color-canvas) 92%, transparent);
+  border-block-end: 1px solid var(--color-border);
   backdrop-filter: blur(12px);
 }
 .app-topbar p {
   margin: 0;
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 .connection-state {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--success);
+  color: var(--status-success-text);
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -407,7 +368,7 @@ summary {
   border-radius: 50%;
 }
 .connection-state[data-state='reconectando'] {
-  color: var(--danger);
+  color: var(--status-error-text);
 }
 .connection-state[data-state='reconectando']::before {
   content: '!';
@@ -436,7 +397,7 @@ summary {
 }
 .page-heading p:last-child {
   max-inline-size: 65ch;
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 .mobile-stage-picker {
   display: none;
@@ -451,8 +412,8 @@ summary {
 }
 .kanban-column {
   min-inline-size: 0;
-  background: var(--raised);
-  border-block-start: 3px solid var(--border);
+  background: var(--color-surface-raised);
+  border-block-start: 3px solid var(--color-border);
   scroll-snap-align: start;
 }
 .kanban-column > header {
@@ -462,13 +423,13 @@ summary {
   gap: 0.55rem;
   min-block-size: 54px;
   padding: 0.7rem 0.8rem;
-  border-block-end: 1px solid var(--border);
+  border-block-end: 1px solid var(--color-border);
 }
 .kanban-column h2 {
   margin: 0;
 }
 .stage-index {
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
 }
@@ -480,8 +441,8 @@ summary {
   padding-inline: 0.35rem;
   font-size: 0.78rem;
   font-weight: 700;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
 }
 .kanban-list {
@@ -494,22 +455,22 @@ summary {
 }
 .deal-card {
   padding: 0.9rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-inline-start: 3px solid var(--link);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-inline-start: 3px solid var(--color-link);
   border-radius: 0.45rem;
 }
 .card-link {
   display: grid;
   gap: 0.25rem;
-  color: var(--text);
+  color: var(--color-text);
   text-decoration: none;
 }
 .card-title {
   font-weight: 700;
 }
 .card-context {
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.84rem;
 }
 .card-facts {
@@ -523,7 +484,7 @@ summary {
   gap: 0.4rem;
 }
 .card-facts dt {
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.76rem;
 }
 .card-facts dd {
@@ -537,7 +498,7 @@ summary {
   justify-content: space-between;
   gap: 0.5rem;
   padding-block-start: 0.7rem;
-  border-block-start: 1px solid var(--subtle);
+  border-block-start: 1px solid var(--color-border-subtle);
 }
 .blocker,
 .ready {
@@ -548,7 +509,7 @@ summary {
   font-weight: 600;
 }
 .blocker {
-  color: var(--danger);
+  color: var(--status-error-text);
 }
 .blocker::before {
   content: '!';
@@ -560,7 +521,7 @@ summary {
   border-radius: 50%;
 }
 .ready {
-  color: var(--success);
+  color: var(--status-success-text);
 }
 .ready::before {
   content: '✓';
@@ -571,10 +532,10 @@ summary {
 }
 .empty-column {
   padding: 1rem;
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.85rem;
   text-align: center;
-  border: 1px dashed var(--border);
+  border: 1px dashed var(--color-border);
 }
 .load-more {
   inline-size: 100%;
@@ -587,8 +548,8 @@ summary {
   min-inline-size: 7rem;
   padding: 1rem;
   text-align: center;
-  background: var(--raised);
-  border-block-start: 3px solid var(--accent);
+  background: var(--color-surface-raised);
+  border-block-start: 3px solid var(--color-accent);
 }
 .detail-score strong,
 .detail-score span {
@@ -603,18 +564,18 @@ summary {
   gap: 0.65rem;
   margin-block-end: 1rem;
   padding: 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 .detail-summary {
   margin-block-end: 1rem;
 }
 .blocker-message {
-  color: var(--danger);
+  color: var(--status-error-text);
   font-weight: 600;
 }
 .ready-message {
-  color: var(--success);
+  color: var(--status-success-text);
   font-weight: 600;
 }
 .blocker-list {
@@ -635,10 +596,10 @@ summary {
   grid-template-columns: minmax(7rem, 40%) 1fr;
   gap: 0.75rem;
   padding-block: 0.35rem;
-  border-block-end: 1px solid var(--subtle);
+  border-block-end: 1px solid var(--color-border-subtle);
 }
 .field-list dt {
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 .field-list dd {
   margin: 0;
@@ -659,7 +620,7 @@ summary {
 }
 .timeline p {
   margin: 0.2rem 0 0;
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.86rem;
 }
 .inline-actions {
@@ -683,13 +644,13 @@ summary {
   inline-size: min(calc(100% - 2rem), 32rem);
   max-block-size: calc(100vh - 2rem);
   padding: 0;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 0.65rem;
 }
 .command-dialog::backdrop {
-  background: rgb(12 4 45 / 68%);
+  background: var(--color-overlay);
 }
 .command-dialog form {
   padding: 1.5rem;
@@ -700,16 +661,16 @@ summary {
   inset: auto 1rem 1rem auto;
   inline-size: min(calc(100% - 2rem), 30rem);
   padding: 1rem;
-  color: var(--danger);
-  background: var(--danger-soft);
-  border: 1px solid var(--danger);
-  border-inline-start: 4px solid var(--danger);
+  color: var(--status-error-text);
+  background: var(--status-error-surface);
+  border: 1px solid var(--status-error-text);
+  border-inline-start: 4px solid var(--status-error-text);
 }
 .one-time {
   margin-block-start: 1rem;
   padding: 1rem;
-  background: var(--raised);
-  border-inline-start: 3px solid var(--accent);
+  background: var(--color-surface-raised);
+  border-inline-start: 3px solid var(--color-accent);
 }
 .account-facts {
   display: grid;
@@ -718,10 +679,10 @@ summary {
 }
 .account-facts div {
   padding-block-end: 0.75rem;
-  border-block-end: 1px solid var(--subtle);
+  border-block-end: 1px solid var(--color-border-subtle);
 }
 .account-facts dt {
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.78rem;
 }
 .account-facts dd {
@@ -780,8 +741,8 @@ summary {
     z-index: 4;
     inset-block-start: 64px;
     grid-template-columns: 1fr 1fr;
-    background: var(--surface);
-    border-block-end: 1px solid var(--border);
+    background: var(--color-surface);
+    border-block-end: 1px solid var(--color-border);
   }
   .mobile-nav:not([hidden]) {
     display: grid;

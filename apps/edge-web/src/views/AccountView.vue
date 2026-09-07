@@ -12,6 +12,7 @@ const reason = ref('Proteger acesso privilegiado');
 const busy = ref(false);
 const enrollment = ref(null);
 const result = ref(null);
+let enrollmentIdempotencyKey = globalThis.crypto.randomUUID();
 const user = computed(() => props.session.user ?? props.session);
 const capabilities = computed(() => {
   const values = props.session.capabilities ?? user.value.capabilities;
@@ -30,10 +31,11 @@ async function enroll() {
   try {
     const response = await request('/api/v1/mfa/enrollments', {
       method: 'POST',
-      idempotencyKey: globalThis.crypto.randomUUID(),
+      idempotencyKey: enrollmentIdempotencyKey,
       body: { reason: reason.value },
     });
     enrollment.value = response.data;
+    enrollmentIdempotencyKey = globalThis.crypto.randomUUID();
     await nextTick();
     result.value?.focus();
     props.announce(

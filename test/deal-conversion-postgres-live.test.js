@@ -90,6 +90,21 @@ if (connectionString) {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
       await migrate(pool, { migrations: await loadMigrations() });
+      await pool.query(
+        `INSERT INTO crm.users (id, email, password_hash, created_at)
+         VALUES ($1, $2, '$argon2id$fixture', $3)`,
+        [
+          `attendant-${runId}`,
+          `attendant-${runId}@example.test`,
+          NOW,
+        ],
+      );
+      await pool.query(
+        `INSERT INTO crm.user_functions
+           (user_id, function_name, assigned_at)
+         VALUES ($1, 'Atendimento', $2)`,
+        [`attendant-${runId}`, NOW],
+      );
       const identity = await contacts.resolveInboundIdentity({
         channel: 'instagram',
         correlationId: `identity-correlation-${runId}`,

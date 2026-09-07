@@ -8,16 +8,25 @@ da Ficha. O contrato HTTP está em `docs/api/openapi.v1.yaml`.
 
 ## Segredo obrigatório
 
-Configure `DEAL_ENVELOPE_KEY` e `QUALIFICATION_ENVELOPE_KEY` no cofre do ambiente
+Configure `DEAL_ENVELOPE_KEY`, `QUALIFICATION_ENVELOPE_KEY` e
+`HANDOFF_ENVELOPE_KEY` no cofre do ambiente
 como chaves independentes de 32 bytes em base64url. A primeira cifra motivos de
 perda; a segunda cifra PII, texto livre e motivos N/A da Ficha. Nunca reutilize
-essas chaves para identidade, inbox ou respostas idempotentes. Não troque uma
+essas chaves para identidade, inbox ou respostas idempotentes. A chave de
+handoff cifra resumos e textos de tarefas. Não troque uma
 chave em produção sem migração de recriptografia aprovada e testada.
 
 O inventário versionado declara somente o nome do segredo. Ele não prova que um
 valor foi provisionado no EasyPanel. Sem `DEAL_ENVELOPE_KEY`,
-`QUALIFICATION_ENVELOPE_KEY` e `IDEMPOTENCY_ENVELOPE_KEY`, o runtime não publica
+`QUALIFICATION_ENVELOPE_KEY`, `HANDOFF_ENVELOPE_KEY` e
+`IDEMPOTENCY_ENVELOPE_KEY`, o runtime não publica
 as rotas de Negócio.
+
+`HANDOFF_SLA_MINUTES` aceita 5 a 10080 minutos. Na ausência de configuração, o
+runtime usa 240 minutos UTC com `HANDOFF_SLA_POLICY_VERSION=technical-default-v1`.
+Esse valor é um default técnico provisório, não uma política operacional aprovada.
+Transferências preservam o vencimento original; aceitar ou resolver um handoff
+não reativa a automação. Esta etapa também não promete cancelar envios externos.
 
 ## Operação segura
 
@@ -48,8 +57,9 @@ as rotas de Negócio.
 
 ## Migração e rollback
 
-As migrations `0008_phase3_deal_state_machine.expand.sql` e
-`0009_phase3_qualification.expand.sql` são aditivas. Elas ampliam o Negócio e
+As migrations `0008_phase3_deal_state_machine.expand.sql`,
+`0009_phase3_qualification.expand.sql` e
+`0010_phase3_work_management.expand.sql` são aditivas. Elas ampliam o Negócio e
 criam gates, histórico, qualificação e eventos imutáveis, incluindo backfill
 técnico para Negócios existentes. Faça backup antes das migrations e confirme
 que todos os registros receberam histórico `created` e evento `deal.created`.

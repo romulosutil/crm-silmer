@@ -11,7 +11,7 @@ const CLIENT_ID = 'silmer-n8n';
 const CURRENT_SECRET = 'current-automation-secret-with-32-characters';
 const PREVIOUS_SECRET = 'previous-automation-secret-with-32-characters';
 
-test('builds the fixed technical actor with only the six CRM-1 actions', () => {
+test('builds the fixed technical actor with only the approved CRM actions', () => {
   const credentials = createAutomationCredentials({
     clientId: CLIENT_ID,
     currentSecret: CURRENT_SECRET,
@@ -30,6 +30,7 @@ test('builds the fixed technical actor with only the six CRM-1 actions', () => {
     'conversation.convert',
     'deal.fields.patch',
     'deal.transition',
+    'handoff.create',
   ]);
   for (const action of AUTOMATION_EXECUTOR_ACTIONS) {
     assert.equal(credentials.isActionAllowed(action), true);

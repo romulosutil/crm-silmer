@@ -165,6 +165,192 @@ export function registerDealRoutes(api, deals, contextFor) {
       return reply.code(200).send(result);
     });
   });
+
+  api.post('/api/v1/deals/:dealId/assign', async (request, reply) => {
+    return respond(reply, async () => {
+      const params = requireObject(request.params);
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, [
+        'assignedUserId',
+        'expectedDealVersion',
+        'reasonCode',
+      ]);
+      const command = await authorizeDealCommand(
+        request,
+        deals,
+        contextFor,
+        'deal.assign',
+      );
+      return reply.code(200).send(
+        await deals.assignDeal({
+          ...command,
+          assignedUserId: requireString(
+            body.assignedUserId,
+            'ASSIGNED_USER_ID',
+          ),
+          dealId: requireString(params.dealId, 'DEAL_ID'),
+          expectedDealVersion: requireVersion(body.expectedDealVersion),
+          reasonCode: requireString(body.reasonCode, 'REASON_CODE'),
+        }),
+      );
+    });
+  });
+
+  api.post('/api/v1/deals/:dealId/tasks', async (request, reply) => {
+    return respond(reply, async () => {
+      const params = requireObject(request.params);
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, [
+        'assignedUserId',
+        'dueAt',
+        'expectedDealVersion',
+        'reasonCode',
+        'text',
+        'type',
+      ]);
+      const command = await authorizeDealCommand(
+        request,
+        deals,
+        contextFor,
+        'task.create',
+      );
+      const result = await deals.createTask({
+        ...command,
+        assignedUserId: requireString(body.assignedUserId, 'ASSIGNED_USER_ID'),
+        dealId: requireString(params.dealId, 'DEAL_ID'),
+        dueAt: requireString(body.dueAt, 'DUE_AT'),
+        expectedDealVersion: requireVersion(body.expectedDealVersion),
+        reasonCode: requireString(body.reasonCode, 'REASON_CODE'),
+        text: requireString(body.text, 'TEXT'),
+        type: requireString(body.type, 'TYPE'),
+      });
+      reply.header('location', `/api/v1/tasks/${result.task.id}`);
+      return reply.code(201).send(result);
+    });
+  });
+
+  for (const [path, action, method] of [
+    ['start', 'task.start', 'startTask'],
+    ['complete', 'task.complete', 'completeTask'],
+    ['cancel', 'task.cancel', 'cancelTask'],
+  ]) {
+    api.post(`/api/v1/tasks/:taskId/${path}`, async (request, reply) => {
+      return respond(reply, async () => {
+        const params = requireObject(request.params);
+        const body = requireObject(request.body);
+        rejectUnknownKeys(body, ['expectedTaskVersion', 'reasonCode']);
+        const command = await authorizeDealCommand(
+          request,
+          deals,
+          contextFor,
+          action,
+        );
+        return reply.code(200).send(
+          await deals[method]({
+            ...command,
+            expectedTaskVersion: requireVersion(body.expectedTaskVersion),
+            reasonCode: requireString(body.reasonCode, 'REASON_CODE'),
+            taskId: requireString(params.taskId, 'TASK_ID'),
+          }),
+        );
+      });
+    });
+  }
+
+  api.post('/api/v1/deals/:dealId/handoffs', async (request, reply) => {
+    return respond(reply, async () => {
+      const params = requireObject(request.params);
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, [
+        'assignedUserId',
+        'automationContext',
+        'automationEpoch',
+        'conversationId',
+        'expectedConversationVersion',
+        'expectedDealVersion',
+        'reasonCode',
+        'summary',
+      ]);
+      const command = await authorizeDealCommand(
+        request,
+        deals,
+        contextFor,
+        'handoff.create',
+      );
+      const result = await deals.createHandoff({
+        ...command,
+        assignedUserId: requireString(body.assignedUserId, 'ASSIGNED_USER_ID'),
+        ...(body.automationContext === undefined
+          ? {}
+          : {
+              automationContext: requireAutomationContext(
+                body.automationContext,
+              ),
+            }),
+        ...(body.automationEpoch === undefined
+          ? {}
+          : { automationEpoch: requireAutomationEpoch(body.automationEpoch) }),
+        conversationId: requireString(body.conversationId, 'CONVERSATION_ID'),
+        dealId: requireString(params.dealId, 'DEAL_ID'),
+        expectedConversationVersion: requireVersion(
+          body.expectedConversationVersion,
+        ),
+        expectedDealVersion: requireVersion(body.expectedDealVersion),
+        reasonCode: requireString(body.reasonCode, 'REASON_CODE'),
+        summary: requireString(body.summary, 'SUMMARY'),
+      });
+      reply.header('location', `/api/v1/handoffs/${result.handoff.id}`);
+      return reply.code(201).send(result);
+    });
+  });
+
+  for (const [path, action, method] of [
+    ['accept', 'handoff.accept', 'acceptHandoff'],
+    ['transfer', 'handoff.transfer', 'transferHandoff'],
+    ['resolve', 'handoff.resolve', 'resolveHandoff'],
+  ]) {
+    api.post(`/api/v1/handoffs/:handoffId/${path}`, async (request, reply) => {
+      return respond(reply, async () => {
+        const params = requireObject(request.params);
+        const body = requireObject(request.body);
+        rejectUnknownKeys(body, [
+          'assignedUserId',
+          'expectedConversationVersion',
+          'expectedDealVersion',
+          'expectedHandoffVersion',
+          'expectedTaskVersion',
+          'reasonCode',
+        ]);
+        const command = await authorizeDealCommand(
+          request,
+          deals,
+          contextFor,
+          action,
+        );
+        return reply.code(200).send(
+          await deals[method]({
+            ...command,
+            ...(body.assignedUserId === undefined
+              ? {}
+              : {
+                  assignedUserId: requireString(
+                    body.assignedUserId,
+                    'ASSIGNED_USER_ID',
+                  ),
+                }),
+            expectedConversationVersion: requireVersion(
+              body.expectedConversationVersion,
+            ),
+            expectedDealVersion: requireVersion(body.expectedDealVersion),
+            expectedHandoffVersion: requireVersion(body.expectedHandoffVersion),
+            expectedTaskVersion: requireVersion(body.expectedTaskVersion),
+            handoffId: requireString(params.handoffId, 'HANDOFF_ID'),
+            reasonCode: requireString(body.reasonCode, 'REASON_CODE'),
+          }),
+        );
+      });
+    });
+  }
 }
 
 /** @param {any} request @param {any} deals @param {Function} contextFor @param {string} action */
@@ -228,6 +414,9 @@ function publicCode(error) {
     'INVALID_IDEMPOTENCY_KEY',
     'INVALID_REASON',
     'INVALID_REQUEST',
+    'WORK_CONFLICT',
+    'WORK_FORBIDDEN',
+    'WORK_INVALID',
   ]);
   return allowed.has(String(normalized?.code))
     ? String(normalized.code)
@@ -272,6 +461,17 @@ function requireAutomationEpoch(value) {
     throw new DealRequestError(400, 'INVALID_AUTOMATION_EPOCH');
   }
   return value;
+}
+
+/** @param {unknown} value */
+function requireAutomationContext(value) {
+  const context = requireObject(value);
+  rejectUnknownKeys(context, ['executionId', 'workflowKey', 'workflowVersion']);
+  return {
+    executionId: requireString(context.executionId, 'EXECUTION_ID'),
+    workflowKey: requireString(context.workflowKey, 'WORKFLOW_KEY'),
+    workflowVersion: requireString(context.workflowVersion, 'WORKFLOW_VERSION'),
+  };
 }
 
 /** @param {Record<string, unknown>} value @param {string[]} allowed */

@@ -18,6 +18,15 @@ const OPERATIONAL_ACTIONS = new Set([
   'deal.lose',
   'deal.fields.patch',
   'deal.transition',
+  'deal.assign',
+  'task.create',
+  'task.start',
+  'task.complete',
+  'task.cancel',
+  'handoff.create',
+  'handoff.accept',
+  'handoff.transfer',
+  'handoff.resolve',
 ]);
 
 class IdentityHttpError extends Error {

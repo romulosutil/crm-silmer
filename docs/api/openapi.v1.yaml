@@ -325,6 +325,122 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/InvalidRequest' }
         '503': { $ref: '#/components/responses/Unavailable' }
+  /deals/{dealId}/assign:
+    post:
+      operationId: assignDeal
+      summary: Atribui um Negócio a Atendimento ou Vendedor ativo
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/DealId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealAssignmentRequest' }
+      responses:
+        '200': { description: Atribuição persistida ou replay idempotente }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/InvalidRequest' }
+  /deals/{dealId}/tasks:
+    post:
+      operationId: createFollowUpTask
+      summary: Cria tarefa humana de follow-up com texto cifrado
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/DealId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskCreateRequest' }
+      responses:
+        '201': { description: Tarefa criada ou replay idempotente }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/InvalidRequest' }
+  /tasks/{taskId}/{action}:
+    post:
+      operationId: transitionFollowUpTask
+      summary: Inicia, conclui ou cancela uma tarefa de follow-up
+      description: Tarefas vinculadas a handoff não podem ser canceladas isoladamente.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: action
+          in: path
+          required: true
+          schema: { type: string, enum: [start, complete, cancel] }
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskActionRequest' }
+      responses:
+        '200': { description: Tarefa atualizada ou replay idempotente }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /deals/{dealId}/handoffs:
+    post:
+      operationId: createHumanHandoff
+      summary: Cria handoff humano e sua única tarefa atomicamente
+      description: AUTOMATION_EXECUTOR deve informar contexto n8n e fence da conversa.
+      security:
+        - automationBasic: []
+          idempotencyKey: []
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - $ref: '#/components/parameters/DealId'
+        - $ref: '#/components/parameters/OriginOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HandoffCreateRequest' }
+      responses:
+        '201': { description: Handoff e tarefa criados ou replay idempotente }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/InvalidRequest' }
+  /handoffs/{handoffId}/{action}:
+    post:
+      operationId: transitionHumanHandoff
+      summary: Aceita, transfere ou resolve um handoff humano
+      description: Transferência preserva dueAt; nenhuma ação reativa a automação.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - name: handoffId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: action
+          in: path
+          required: true
+          schema: { type: string, enum: [accept, transfer, resolve] }
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HandoffActionRequest' }
+      responses:
+        '200': { description: Handoff e tarefa atualizados ou replay idempotente }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
 components:
   securitySchemes:
     automationBasic:
@@ -732,6 +848,74 @@ components:
                   type: array
                   maxItems: 0
                 evaluatedAt: { type: string, format: date-time }
+    DealAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [assignedUserId, expectedDealVersion, reasonCode]
+      properties:
+        assignedUserId: { type: string, minLength: 1 }
+        expectedDealVersion: { type: integer, minimum: 1 }
+        reasonCode: { type: string, enum: [manual_assignment] }
+    TaskCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [assignedUserId, dueAt, expectedDealVersion, reasonCode, text, type]
+      properties:
+        assignedUserId: { type: string, minLength: 1 }
+        dueAt: { type: string, format: date-time }
+        expectedDealVersion: { type: integer, minimum: 1 }
+        reasonCode: { type: string, enum: [manual_follow_up] }
+        text: { type: string, minLength: 1, maxLength: 4096 }
+        type: { type: string, const: follow_up }
+    TaskActionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedTaskVersion, reasonCode]
+      properties:
+        expectedTaskVersion: { type: integer, minimum: 1 }
+        reasonCode:
+          { type: string, enum: [task_started, task_completed, task_cancelled] }
+    HandoffCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [assignedUserId, conversationId, expectedConversationVersion,
+         expectedDealVersion, reasonCode, summary]
+      properties:
+        assignedUserId: { type: string, minLength: 1 }
+        conversationId: { type: string, minLength: 1 }
+        expectedConversationVersion: { type: integer, minimum: 1 }
+        expectedDealVersion: { type: integer, minimum: 1 }
+        reasonCode:
+          type: string
+          enum: [customer_requested_human, price_before_quote, unresolved_blocker, low_confidence]
+        summary: { type: string, minLength: 1, maxLength: 8192 }
+        automationEpoch: { type: integer, minimum: 0 }
+        automationContext:
+          type: object
+          additionalProperties: false
+          required: [executionId, workflowKey, workflowVersion]
+          properties:
+            executionId: { type: string, minLength: 1 }
+            workflowKey: { type: string, minLength: 1 }
+            workflowVersion: { type: string, minLength: 1 }
+    HandoffActionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [expectedConversationVersion, expectedDealVersion,
+         expectedHandoffVersion, expectedTaskVersion, reasonCode]
+      properties:
+        assignedUserId:
+          type: string
+          minLength: 1
+          description: Obrigatório somente em transfer.
+        expectedConversationVersion: { type: integer, minimum: 1 }
+        expectedDealVersion: { type: integer, minimum: 1 }
+        expectedHandoffVersion: { type: integer, minimum: 1 }
+        expectedTaskVersion: { type: integer, minimum: 1 }
+        reasonCode:
+          { type: string, enum: [handoff_accepted, manual_transfer, handoff_resolved] }
     Error:
       type: object
       additionalProperties: false

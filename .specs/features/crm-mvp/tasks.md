@@ -30,9 +30,15 @@ essa aprovação nem satisfaz gates externos e operacionais independentes.
 ### Etapa CRM-1 — Consolidar a fundação já entregue
 
 - **Situação:** majoritariamente pronta em `T00` e `T01`.
+- **Execução:** em andamento pela fatia CRM-1A, que introduz o ator técnico
+  `AUTOMATION_EXECUTOR`, sua autenticação exclusiva e a matriz mínima de
+  comandos do n8n.
 - Preservar migrations, sessões, MFA, ACL humana, auditoria, idempotência, configuração e catálogo versionados.
 - Acrescentar o ator técnico `AUTOMATION_EXECUTOR`, credencial rotacionável e capacidades mínimas, sem autoatribuição nem sessão de navegador.
 - Fechar os testes de ACL do ciclo Pedido/Ficha ainda rastreados na issue `#13`.
+- **Dependência remanescente:** a issue `#13` continua aberta até existirem as
+  entidades, comandos e UI reais de Pedido/Ficha previstos na CRM-3; doubles de
+  autorização não serão promovidos a evidência E2E.
 - **Verificação:** uma credencial do n8n só executa comandos previstos; tentativa de acesso administrativo ou direto ao banco falha e é auditada.
 
 ### Etapa CRM-2 — Concluir Contato, Negócio e Kanban

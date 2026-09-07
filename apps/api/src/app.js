@@ -31,6 +31,7 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *     verifyToken: string,
  *     process(input: {correlationId: string, rawBody: Buffer, signature: unknown}): Promise<unknown>
  *   },
+ *   automationAuth?: {authorize(input: {action: string, authorization: unknown, correlationId: string}): Promise<unknown>},
  *   commercial?: Record<string, any>,
  *   identity?: Record<string, any>
  * }} [runtime]
@@ -47,6 +48,9 @@ export function createApi(options = {}, runtime = {}) {
 
   if (runtime.commercial) {
     api.decorate('commercial', runtime.commercial);
+  }
+  if (runtime.automationAuth) {
+    api.decorate('automationAuth', runtime.automationAuth);
   }
 
   api.addHook('onRequest', async (request, reply) => {

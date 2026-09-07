@@ -100,8 +100,8 @@
     "semantic_hash": "b3013e4c88eea8951416bb45c9811105"
   },
   "apps/api/package.json": {
-    "mtime": 1788802936.5275903,
-    "ast_hash": "023186a87c48bb2fc7c01b5340787263",
+    "mtime": 1788810637.5431116,
+    "ast_hash": "62b9ed2c90ca33035df55610877fbe46",
     "semantic_hash": ""
   },
   "apps/api/src/app.js": {
@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/server.js": {
-    "mtime": 1788802936.5255804,
-    "ast_hash": "405d6418f94a82e4c115125c53c6050e",
+    "mtime": 1788806216.6164703,
+    "ast_hash": "e7508273063295fb153a3dfc0ea409ea",
     "semantic_hash": ""
   },
   "apps/edge-web/package.json": {
@@ -120,9 +120,9 @@
     "semantic_hash": "dc89800cb273b32792711169f1363d0f"
   },
   "apps/edge-web/src/app.js": {
-    "mtime": 1788788892.4278119,
-    "ast_hash": "8a228c18622fed5f1084c2314e9898c4",
-    "semantic_hash": "8a228c18622fed5f1084c2314e9898c4"
+    "mtime": 1788806078.9280603,
+    "ast_hash": "4a9a7988e2bc35310a5ecf565be23246",
+    "semantic_hash": ""
   },
   "apps/worker/package.json": {
     "mtime": 1788788892.4298093,
@@ -155,8 +155,8 @@
     "semantic_hash": "ee73cc92676a528a57f11629d9d26832"
   },
   "package.json": {
-    "mtime": 1788803626.6360326,
-    "ast_hash": "2703351fad67b194321dacd9f7b6464d",
+    "mtime": 1788806950.1428833,
+    "ast_hash": "0ae752636ee42addcae18566a0cf545b",
     "semantic_hash": ""
   },
   "scripts/build.mjs": {
@@ -175,9 +175,9 @@
     "semantic_hash": ""
   },
   "apps/edge-web/src/index.html": {
-    "mtime": 1788788892.4278119,
-    "ast_hash": "e4ecdc81567034500720c106fb233f2d",
-    "semantic_hash": "e4ecdc81567034500720c106fb233f2d"
+    "mtime": 1788806078.8050206,
+    "ast_hash": "83a4925829ef736f8ffd681fab1d21ed",
+    "semantic_hash": ""
   },
   "playwright.config.js": {
     "mtime": 1788788892.5885522,
@@ -185,9 +185,9 @@
     "semantic_hash": "106e4b1234da91a04f92395ffd496fce"
   },
   "scripts/serve-edge.mjs": {
-    "mtime": 1788788892.6047745,
-    "ast_hash": "45d40f87bb5c524720a058cc173e1303",
-    "semantic_hash": "45d40f87bb5c524720a058cc173e1303"
+    "mtime": 1788806573.8801484,
+    "ast_hash": "70af4107bdbb958ff8f4c665e4a1df16",
+    "semantic_hash": ""
   },
   "test/ci-images.test.js": {
     "mtime": 1788804053.6165252,
@@ -195,9 +195,9 @@
     "semantic_hash": ""
   },
   "test/e2e/foundation.spec.js": {
-    "mtime": 1788788892.6283534,
-    "ast_hash": "de135cea22e342a6bfe378b31e6549f4",
-    "semantic_hash": "de135cea22e342a6bfe378b31e6549f4"
+    "mtime": 1788806203.6615872,
+    "ast_hash": "ebbfa81e7ac78ff905a75e197eefb998",
+    "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
     "mtime": 1788792904.6029778,
@@ -215,8 +215,8 @@
     "semantic_hash": "e645a9b6d312824024f23b5f020ba5fe"
   },
   "ops/easypanel/topology.json": {
-    "mtime": 1788803626.6318727,
-    "ast_hash": "46cbe94aad4fd60c0d7be10defc29340",
+    "mtime": 1788807119.6264064,
+    "ast_hash": "8a452777439304deaff37ff26ffc0646",
     "semantic_hash": ""
   },
   "ops/recovery/off-host-kit.json": {
@@ -750,8 +750,8 @@
     "semantic_hash": "7d2c2ec050d937af346f946321ad1fdd"
   },
   "apps/api/src/identity-runtime.js": {
-    "mtime": 1788802787.3560777,
-    "ast_hash": "fd06697f667fc422cf77c1b932613f7f",
+    "mtime": 1788807221.2575133,
+    "ast_hash": "c0a2d89a5244afec987eff983915bac1",
     "semantic_hash": ""
   },
   "modules/audit-privacy/src/postgres-audit-trail.js": {
@@ -835,8 +835,8 @@
     "semantic_hash": "c0b5093834ca011495ad323ba0e449c3"
   },
   "docs/api/openapi.v1.yaml": {
-    "mtime": 1788804053.61866,
-    "ast_hash": "8237af944f07cfb63c27a5e51d60aa34",
+    "mtime": 1788811015.370926,
+    "ast_hash": "8204b7c378a56b830e95f3039ff873d6",
     "semantic_hash": ""
   },
   "docs/runbooks/identity-access.md": {
@@ -1130,13 +1130,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/deal-routes.js": {
-    "mtime": 1788803925.6318016,
-    "ast_hash": "db1ed7af90746fb62f346427e13f9fa9",
+    "mtime": 1788810908.81788,
+    "ast_hash": "b6f3e0d9f88ac7c32922992381695251",
     "semantic_hash": ""
   },
   "apps/api/src/deal-runtime.js": {
-    "mtime": 1788803925.6689668,
-    "ast_hash": "a547e88754b5a38fe9e88910f7a25e17",
+    "mtime": 1788807221.1452487,
+    "ast_hash": "826e1d3776d8821679e10f1ffd66d818",
     "semantic_hash": ""
   },
   "modules/contacts/src/adapters/postgres-contact-conversion-port.js": {
@@ -1150,8 +1150,8 @@
     "semantic_hash": ""
   },
   "modules/deals-pipeline/package.json": {
-    "mtime": 1788790080.1994095,
-    "ast_hash": "4ce5d29a2b69d634d6d9d8e6f9885363",
+    "mtime": 1788806655.1867871,
+    "ast_hash": "d938440086c48b2be286c551e5d96a2a",
     "semantic_hash": ""
   },
   "modules/deals-pipeline/src/adapters/postgres-deal-repository.js": {
@@ -1175,8 +1175,8 @@
     "semantic_hash": ""
   },
   "modules/deals-pipeline/src/index.js": {
-    "mtime": 1788802541.964356,
-    "ast_hash": "3dc0c9f9213d4c2672cb69f2fd592c2a",
+    "mtime": 1788805603.084799,
+    "ast_hash": "877f9dbbb8871eb9de14fc77eb3e31c0",
     "semantic_hash": ""
   },
   "modules/inbox-channels/src/adapters/postgres-conversation-conversion-port.js": {
@@ -1195,8 +1195,8 @@
     "semantic_hash": ""
   },
   "test/deal-conversion-postgres-live.test.js": {
-    "mtime": 1788793273.9181254,
-    "ast_hash": "44e97fc75968fa33b583400c59bf495c",
+    "mtime": 1788805004.4244788,
+    "ast_hash": "4648ec02b81ae7e8d6a5ff7ee4486e98",
     "semantic_hash": ""
   },
   "test/deal-conversion.test.js": {
@@ -1205,8 +1205,8 @@
     "semantic_hash": ""
   },
   "test/deal-runtime-auth.test.js": {
-    "mtime": 1788802936.5275903,
-    "ast_hash": "611efa1813fae332ddf4669cbf67e00a",
+    "mtime": 1788807221.6757166,
+    "ast_hash": "126b6f54bd9b8844491b653c2b4a35cc",
     "semantic_hash": ""
   },
   "modules/database/migrations/0008_phase3_deal_state_machine.expand.sql": {
@@ -1255,8 +1255,8 @@
     "semantic_hash": ""
   },
   "docs/runbooks/deals-pipeline.md": {
-    "mtime": 1788803626.637655,
-    "ast_hash": "0a460031e15811feb6c827a7baf25a3e",
+    "mtime": 1788810703.9265313,
+    "ast_hash": "cef7ba1d0b3b5bfb3f0df5b03597c443",
     "semantic_hash": ""
   },
   "modules/database/migrations/0009_phase3_qualification.expand.sql": {
@@ -1285,8 +1285,8 @@
     "semantic_hash": ""
   },
   "modules/qualification/src/index.js": {
-    "mtime": 1788798108.9370034,
-    "ast_hash": "707bfd1adc03e472ff4e6229832112d1",
+    "mtime": 1788806655.1847787,
+    "ast_hash": "ba8e82715c7e2b14d6c02802a118dda9",
     "semantic_hash": ""
   },
   "modules/qualification/src/postgres-qualification-attachment-port.js": {
@@ -1392,6 +1392,66 @@
   "test/work-management.test.js": {
     "mtime": 1788803926.0305336,
     "ast_hash": "93ceb737dfd7a64383e4dff27648b144",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/features/deal-detail-view.js": {
+    "mtime": 1788807391.7467184,
+    "ast_hash": "8406e2b34c6dc841f5849a0778eb57bf",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/features/kanban-view.js": {
+    "mtime": 1788807297.9715843,
+    "ast_hash": "624097549b1508daf3d8fc27a1b3af5f",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/lib/api-client.js": {
+    "mtime": 1788806314.098469,
+    "ast_hash": "7a89f9de825be4c2fa74401b237ff980",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/lib/event-stream.js": {
+    "mtime": 1788806079.1288004,
+    "ast_hash": "9346f8df121ce8c2b03e8bc449ba13b2",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/lib/ui.js": {
+    "mtime": 1788806079.1103525,
+    "ast_hash": "4bbd622ca5f5e83249bb60f109467732",
+    "semantic_hash": ""
+  },
+  "modules/database/migrations/0011_phase3_deal_read_models.expand.sql": {
+    "mtime": 1788805908.7240758,
+    "ast_hash": "5aff71da59a9a48dffadf7c437ade4f9",
+    "semantic_hash": ""
+  },
+  "modules/deals-pipeline/src/adapters/postgres-deal-read-repository.js": {
+    "mtime": 1788807345.638645,
+    "ast_hash": "ef507fb2295b81982ae6e5b411defe0c",
+    "semantic_hash": ""
+  },
+  "modules/deals-pipeline/src/deal-read-service.js": {
+    "mtime": 1788807221.404071,
+    "ast_hash": "ecc35dbf44f01ce0d9464f4498ea67d4",
+    "semantic_hash": ""
+  },
+  "test/deal-read-api.test.js": {
+    "mtime": 1788811015.3719256,
+    "ast_hash": "a56c60a0ec286daddc48db2a728b8d56",
+    "semantic_hash": ""
+  },
+  "test/deal-read-model.test.js": {
+    "mtime": 1788807221.5936787,
+    "ast_hash": "76248c1f5930da10dd030b9234e64089",
+    "semantic_hash": ""
+  },
+  "test/deal-read-postgres-live.test.js": {
+    "mtime": 1788807221.6380296,
+    "ast_hash": "c6b3d2ded6ae75ad4baeee3f3a1ab3b1",
+    "semantic_hash": ""
+  },
+  "test/e2e/crm-ui.spec.js": {
+    "mtime": 1788807391.7477307,
+    "ast_hash": "7d5f99d721b49e9c31c24e3644af0799",
     "semantic_hash": ""
   }
 }

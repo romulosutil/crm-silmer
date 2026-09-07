@@ -27,7 +27,7 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 
 ## Decisões confirmadas
 
-- Frontend em HTML, CSS e JavaScript vanilla.
+- Frontend em Vue 3, JavaScript ESM e CSS, compilado com Vite; decisão registrada em `docs/adr/001-adotar-vue-no-frontend.md`.
 - APIs oficiais do WhatsApp Business e Instagram Direct como canais obrigatórios do piloto, integradas operacionalmente pelo n8n e sujeitas ao mesmo contrato canônico.
 - Migração entre Instagram e WhatsApp preserva o Negócio e só associa `@instagram` e telefone após correlação verificável e auditável.
 - Caixa de Entrada separada do Kanban.
@@ -45,7 +45,7 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 - **Forma:** CRM como monólito modular em JavaScript ESM e n8n como runtime externo obrigatório de automação; não criar microserviços adicionais.
 - **Processos do CRM:** `silmer-edge-web`, `silmer-api`, `silmer-worker` e `silmer-postgres`.
 - **Automação:** `silmer-n8n`, persistência própria e workflows versionados. A interface administrativa não é pública.
-- **Frontend:** HTML semântico, CSS e JavaScript vanilla; Nginx não-root serve os assets e mantém web/API na mesma origem.
+- **Frontend:** SPA acessível em Vue 3 e Vue Router, sem store global nesta fase; Vite gera assets estáticos e Nginx não-root mantém web/API na mesma origem.
 - **Backend:** Node.js Active LTS, Fastify, REST `/api/v1`, OpenAPI 3.1 e SSE.
 - **Persistência:** PostgreSQL com SQL e migrações versionadas; dados oficiais normalizados e JSONB limitado a payloads e snapshots apropriados.
 - **Assíncrono:** CRM mantém inbox/outbox e jobs transacionais. A rede opera at-least-once; contratos idempotentes e reconciliação tratam replay e `outcome_unknown` sem prometer exactly-once.

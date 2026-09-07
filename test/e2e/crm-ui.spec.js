@@ -19,9 +19,10 @@ const card = {
   stageEnteredAt: '2026-09-06T12:00:00Z',
 };
 
-/** @param {import('@playwright/test').Page} page @param {{conflict?: boolean, empty?: boolean, failBoard?: boolean, onBoard?:()=>void}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
+  let failDetail = options.failDetailOnce ?? false;
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -64,6 +65,15 @@ async function mockCrm(page, options = {}) {
       return;
     }
     if (path === '/api/v1/deals/deal-1' && request.method() === 'GET') {
+      if (failDetail) {
+        failDetail = false;
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/problem+json',
+          body: JSON.stringify({ code: 'UNAVAILABLE' }),
+        });
+        return;
+      }
       await route.fulfill({
         contentType: 'application/json',
         headers: { ETag: '"deal-1-v4"' },
@@ -232,17 +242,26 @@ test('renders the five-stage Kanban and opens a deal with keyboard', async ({
   await expect(
     page.getByRole('heading', { name: 'Transferências e retomadas' }),
   ).toBeVisible();
+  await page.reload();
+  await expect(page).toHaveURL('/negocios/deal-1');
+  await expect(
+    page.getByRole('heading', { name: 'Cliente 028' }),
+  ).toBeFocused();
   await expect(
     page.getByRole('button', { name: 'Aceitar retomada' }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Iniciar' }).click();
+  const startTask = page.getByRole('button', { name: 'Iniciar' });
+  await startTask.click();
   await expect(page.getByRole('status')).toHaveText(
     'Tarefa atualizada: iniciar.',
   );
-  await page.getByRole('button', { name: 'Aceitar retomada' }).click();
+  await expect(startTask).toBeFocused();
+  const acceptHandoff = page.getByRole('button', { name: 'Aceitar retomada' });
+  await acceptHandoff.click();
   await expect(page.getByRole('status')).toHaveText(
     'Aceitar retomada concluída.',
   );
+  await expect(acceptHandoff).toBeFocused();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
@@ -342,4 +361,15 @@ test('renders a recoverable board error', async ({ page }) => {
     page.getByRole('button', { name: 'Tentar novamente' }),
   ).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('restores focus after retrying a failed deal detail', async ({ page }) => {
+  await mockCrm(page, { failDetailOnce: true });
+  await page.goto('/negocios/deal-1');
+  const retry = page.getByRole('button', { name: 'Tentar novamente' });
+  await expect(retry).toBeVisible();
+  await retry.click();
+  await expect(
+    page.getByRole('heading', { name: 'Cliente 028' }),
+  ).toBeFocused();
 });

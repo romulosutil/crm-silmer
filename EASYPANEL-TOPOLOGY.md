@@ -57,7 +57,7 @@ Internet e Meta
    HTTPS 443
       |
 silmer-edge-web (único serviço público)
-   |-- /                         arquivos vanilla
+   |-- /                         bundle estático da SPA Vue
    |-- /api/*                    silmer-api:8000
    |-- /webhook/meta/*           silmer-n8n:5678
    `-- /api/v1/events            silmer-api:8000 (SSE)

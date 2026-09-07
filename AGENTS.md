@@ -50,9 +50,9 @@ Quando houver conflito, use esta ordem:
    e uma atualização `graphify update .`. Se o grafo rastreado mudar, publique-o
    em um commit mecânico separado e deixe o worktree limpo.
 
-Não introduza frameworks de frontend, estado de domínio em `window`, Redis,
-microserviços ou nova infraestrutura sem autorização explícita e decisão
-registrada.
+Não introduza outro framework de frontend, store global, estado de domínio em
+`window`, Redis, microserviços ou nova infraestrutura sem autorização explícita
+e decisão registrada. Vue 3 e Vue Router são a baseline aprovada no ADR-001.
 
 ## Equipe por responsabilidade
 

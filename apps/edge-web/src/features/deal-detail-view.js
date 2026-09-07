@@ -53,6 +53,24 @@ const SECTION_FIELDS = [
   ],
 ];
 
+const VALUE_LABELS = new Map([
+  ['OPEN', 'Em andamento'],
+  ['WON', 'Ganho'],
+  ['LOST', 'Perdido'],
+  ['delivery', 'Entrega'],
+  ['pickup', 'Retirada'],
+  ['pending', 'Pendente'],
+  ['confirmed', 'Confirmado'],
+  ['silk', 'Silk screen'],
+]);
+
+/** @param {unknown} value */
+function displayValue(value) {
+  if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
+  const source = text(value);
+  return VALUE_LABELS.get(source) ?? source;
+}
+
 /** @param {Record<string,any>} raw */
 function normalize(raw) {
   const deal = asObject(raw.deal ?? raw.item ?? raw);
@@ -155,10 +173,17 @@ function uniqueValues(values, key) {
  */
 export function createDealDetailView(outlet, dealId, context) {
   let disposed = false;
+  let entryFocusPending = true;
   let controller = new AbortController();
   let current = normalize({ id: dealId });
   let etag = '';
-  async function load({ announce = false } = {}) {
+  async function load({ announce = false, restoreFocusKey = '' } = {}) {
+    const focusKey =
+      restoreFocusKey ||
+      (document.activeElement instanceof globalThis.HTMLElement &&
+      outlet.contains(document.activeElement)
+        ? document.activeElement.dataset.focusKey
+        : '');
     controller.abort();
     controller = new AbortController();
     try {
@@ -171,6 +196,7 @@ export function createDealDetailView(outlet, dealId, context) {
       etag = response.etag ?? etag;
       context.onCursor(current.eventCursor);
       render();
+      restoreFocus(focusKey);
       if (announce) context.announce('Detalhes do negócio atualizados.');
     } catch (error) {
       if (/** @type {Error} */ (error).name === 'AbortError') return;
@@ -179,7 +205,19 @@ export function createDealDetailView(outlet, dealId, context) {
           ? 'Negócio não encontrado.'
           : 'Não foi possível carregar este negócio.',
       );
+      restoreFocus(focusKey);
     }
+  }
+
+  /** @param {string|undefined} focusKey */
+  function restoreFocus(focusKey) {
+    if (!focusKey) return;
+    const target = /** @type {HTMLElement|null} */ (
+      outlet.querySelector(
+        `[data-focus-key="${globalThis.CSS.escape(focusKey)}"]`,
+      )
+    );
+    (target ?? outlet.querySelector('h1'))?.focus();
   }
 
   function render() {
@@ -187,6 +225,7 @@ export function createDealDetailView(outlet, dealId, context) {
     const back = el('a', {
       href: '/kanban',
       'data-route': '',
+      'data-focus-key': 'detail-back',
       class: 'back-link',
       text: '← Voltar ao Kanban',
     });
@@ -206,7 +245,7 @@ export function createDealDetailView(outlet, dealId, context) {
         el('p', { class: 'eyebrow', text: `Etapa: ${stageLabel}` }),
         h1,
         el('p', {
-          text: `Status: ${current.status}. Responsável: ${current.responsible}.`,
+          text: `Status: ${displayValue(current.status)}. Responsável: ${current.responsible}.`,
         }),
       ),
       el(
@@ -274,7 +313,10 @@ export function createDealDetailView(outlet, dealId, context) {
         history,
       ),
     );
-    h1.focus();
+    if (entryFocusPending) {
+      h1.focus();
+      entryFocusPending = false;
+    }
   }
 
   function renderBlockers() {
@@ -315,7 +357,7 @@ export function createDealDetailView(outlet, dealId, context) {
           'div',
           {},
           el('dt', { text: label }),
-          el('dd', { text: text(source[field] ?? raw[field]) }),
+          el('dd', { text: displayValue(source[field] ?? raw[field]) }),
         ),
       );
     return el(
@@ -428,6 +470,7 @@ export function createDealDetailView(outlet, dealId, context) {
     const button = el('button', {
       type: 'button',
       class: 'quiet',
+      'data-focus-key': `task-${task.id}-${action}`,
       text: label,
     });
     button.addEventListener('click', () => {
@@ -447,12 +490,12 @@ export function createDealDetailView(outlet, dealId, context) {
       )
         .then(async () => {
           context.announce(`Tarefa atualizada: ${label.toLowerCase()}.`);
-          await load();
+          await load({ restoreFocusKey: button.dataset.focusKey });
         })
         .catch(async (error) => {
           if (error instanceof ApiError && error.status === 409) {
             context.showError('A tarefa mudou. Os dados foram atualizados.');
-            await load();
+            await load({ restoreFocusKey: button.dataset.focusKey });
           } else context.showError('A tarefa não pôde ser atualizada.');
         });
     });
@@ -478,6 +521,7 @@ export function createDealDetailView(outlet, dealId, context) {
     const button = el('button', {
       type: 'button',
       class: 'quiet',
+      'data-focus-key': `handoff-${handoff.id}-${action}`,
       text: label,
     });
     button.addEventListener('click', () => {
@@ -497,9 +541,11 @@ export function createDealDetailView(outlet, dealId, context) {
       )
         .then(async () => {
           context.announce(`${label} concluída.`);
-          await load();
+          await load({ restoreFocusKey: button.dataset.focusKey });
         })
-        .catch(async (error) => handleHandoffError(error));
+        .catch(async (error) =>
+          handleHandoffError(error, button.dataset.focusKey),
+        );
     });
     return button;
   }
@@ -509,6 +555,7 @@ export function createDealDetailView(outlet, dealId, context) {
     const button = el('button', {
       type: 'button',
       class: 'quiet',
+      'data-focus-key': `handoff-${handoff.id}-transfer`,
       text: 'Transferir',
     });
     button.addEventListener('click', () =>
@@ -552,11 +599,11 @@ export function createDealDetailView(outlet, dealId, context) {
     };
   }
 
-  /** @param {unknown} error */
-  async function handleHandoffError(error) {
+  /** @param {unknown} error @param {string|undefined} restoreFocusKey */
+  async function handleHandoffError(error, restoreFocusKey) {
     if (error instanceof ApiError && error.status === 409) {
       context.showError('A retomada mudou. Os dados foram atualizados.');
-      await load();
+      await load({ restoreFocusKey });
     } else context.showError('A retomada não pôde ser atualizada.');
   }
 
@@ -568,19 +615,26 @@ export function createDealDetailView(outlet, dealId, context) {
     const move = el('button', {
       class: 'primary',
       type: 'button',
+      'data-focus-key': 'detail-move',
       text: 'Alterar etapa',
     });
     move.addEventListener('click', () => openMove(move));
-    const task = el('button', { type: 'button', text: 'Criar tarefa' });
+    const task = el('button', {
+      type: 'button',
+      'data-focus-key': 'detail-task',
+      text: 'Criar tarefa',
+    });
     task.addEventListener('click', () => openTask(task));
     const assign = el('button', {
       type: 'button',
+      'data-focus-key': 'detail-assign',
       text: 'Atribuir responsável',
     });
     assign.addEventListener('click', () => openAssign(assign));
     const lose = el('button', {
       type: 'button',
       class: 'danger',
+      'data-focus-key': 'detail-lose',
       text: 'Marcar como perdido',
     });
     lose.addEventListener('click', () => openLose(lose));
@@ -769,7 +823,7 @@ export function createDealDetailView(outlet, dealId, context) {
         .then(async () => {
           dialog.close();
           context.announce(success);
-          await load();
+          await load({ restoreFocusKey: trigger.dataset.focusKey });
         })
         .catch(async (error) => {
           if (error instanceof ApiError && error.status === 409) {
@@ -777,7 +831,7 @@ export function createDealDetailView(outlet, dealId, context) {
             context.showError(
               'Este negócio foi alterado por outra pessoa. Os dados foram atualizados.',
             );
-            await load();
+            await load({ restoreFocusKey: trigger.dataset.focusKey });
           } else
             context.showError(
               'A ação não pôde ser concluída. Revise os dados e permissões.',
@@ -795,9 +849,13 @@ export function createDealDetailView(outlet, dealId, context) {
     const retry = el('button', {
       class: 'primary',
       type: 'button',
+      'data-focus-key': 'detail-retry',
       text: 'Tentar novamente',
     });
-    retry.addEventListener('click', () => void load());
+    retry.addEventListener(
+      'click',
+      () => void load({ restoreFocusKey: 'detail-retry' }),
+    );
     outlet.replaceChildren(
       el(
         'section',
@@ -807,7 +865,10 @@ export function createDealDetailView(outlet, dealId, context) {
         retry,
       ),
     );
-    h1.focus();
+    if (entryFocusPending) {
+      h1.focus();
+      entryFocusPending = false;
+    }
   }
   void load();
   return {

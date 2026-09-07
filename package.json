@@ -16,8 +16,8 @@
     "build": "node scripts/build.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "db:migrate": "npm run migrate --workspace @crm-silmer/database --",
-    "format": "prettier --write package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/**/*.{md,yml,yaml}\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
-    "format:check": "prettier --check package.json \"apps/**/*.{html,css,js,json}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/**/*.{md,yml,yaml}\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
+    "format": "prettier --write package.json \"apps/**/*.{html,css,js,json,vue}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"docs/adr/**/*.md\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/**/*.{md,yml,yaml}\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
+    "format:check": "prettier --check package.json \"apps/**/*.{html,css,js,json,vue}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"docs/adr/**/*.md\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/**/*.{md,yml,yaml}\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
     "lint": "eslint apps modules scripts test eslint.config.js",
     "preview": "node scripts/serve-edge.mjs",
     "recovery:plan": "node scripts/recovery-mock.mjs --plan",
@@ -63,8 +63,14 @@
     "@playwright/test": "1.62.1",
     "@types/node": "24.13.3",
     "@types/punycode": "2.1.4",
+    "@vitejs/plugin-vue": "6.0.8",
+    "@fontsource/poppins": "5.3.0",
     "eslint": "10.9.1",
+    "eslint-plugin-vue": "10.11.0",
     "prettier": "3.9.6",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vite": "8.2.2",
+    "vue": "3.5.42",
+    "vue-router": "4.6.4"
   }
 }

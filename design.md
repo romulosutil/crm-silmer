@@ -2,7 +2,7 @@
 
 > **Status:** direção visual e contrato de interface para o MVP  
 > **Referência de marca:** [silmer.com.br](https://silmer.com.br/), inspecionado em 29/08/2026  
-> **Escopo:** produto web responsivo em HTML, CSS e JavaScript vanilla
+> **Escopo:** produto web responsivo em Vue 3, HTML semântico, CSS e JavaScript ESM
 
 ## 1. Objetivo
 

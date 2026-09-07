@@ -28,15 +28,18 @@ assert.deepEqual(
  * @param {string} directory
  * @returns {Promise<string[]>}
  */
-async function listJavaScript(directory) {
+async function listFrontendSources(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
 
   for (const entry of entries) {
     const path = resolve(directory, entry.name);
     if (entry.isDirectory()) {
-      files.push(...(await listJavaScript(path)));
-    } else if (entry.isFile() && entry.name.endsWith('.js')) {
+      files.push(...(await listFrontendSources(path)));
+    } else if (
+      entry.isFile() &&
+      (entry.name.endsWith('.js') || entry.name.endsWith('.vue'))
+    ) {
       files.push(path);
     }
   }
@@ -45,7 +48,9 @@ async function listJavaScript(directory) {
 }
 
 const windowState = /\bwindow\s*(?:\.|\[)/u;
-for (const path of await listJavaScript(resolve(root, 'apps/edge-web/src'))) {
+for (const path of await listFrontendSources(
+  resolve(root, 'apps/edge-web/src'),
+)) {
   const source = await readFile(path, 'utf8');
   assert.doesNotMatch(
     source,

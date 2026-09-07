@@ -19,7 +19,7 @@
 O CRM Silmer será implementado como um **monólito modular em JavaScript ESM**,
 implantado em três processos independentes a partir do mesmo repositório:
 
-1. `edge-web`: Nginx não-root, arquivos HTML/CSS/JS vanilla e reverse proxy.
+1. `edge-web`: Nginx não-root, SPA Vue compilada em assets estáticos e reverse proxy.
 2. `api`: REST, autenticação, comandos, consultas e SSE.
 3. `worker`: documentos, outbox, retries, retenção e reconciliação do CRM.
 
@@ -108,7 +108,7 @@ privilegiadas que precisam de auditoria e recuperação.
 | ---------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | Forma do sistema | Monólito modular                                                                                        | Uma equipe e um domínio transacional; reduz custo sem perder fronteiras                                |
 | Linguagem        | JavaScript ESM                                                                                          | Mantém a stack definida e compartilhamento de contratos                                                |
-| Frontend         | HTML semântico, CSS e JS vanilla                                                                        | ESM/IIFE/classes isoladas; sem framework de UI ou estado de domínio em `window`                        |
+| Frontend         | Vue 3, Vue Router, CSS e JavaScript ESM                                                                 | SFCs pequenos, sem store global nesta fase e sem estado de domínio em `window`                         |
 | Backend          | Node.js Active LTS + Fastify                                                                            | I/O assíncrono, JSON Schema, baixo overhead e ecossistema maduro                                       |
 | API              | REST `/api/v1` + OpenAPI 3.1                                                                            | Comandos, idempotência e autorização explícitos                                                        |
 | Tempo real       | Server-Sent Events                                                                                      | Atualização unidirecional suficiente; menor complexidade que WebSocket                                 |
@@ -603,10 +603,10 @@ externo contratado com retenção compatível.
 | Acessibilidade           | teclado, foco, ARIA, contraste e alternativa ao drag-and-drop                              | sem violação crítica e operação sem mouse                                               |
 | Recuperação              | restore isolado e perda total simulada da VPS, com tombstones, storage, segredos e digests | RPO/RTO do CRM completo demonstrados em host limpo sem copiar produção para homologação |
 
-Ferramentas: `node:test`, injeção Fastify, PostgreSQL efêmero em CI, Playwright
-e axe-core. O frontend continua vanilla; Vite é apenas servidor/build tool.
-Lint/review bloqueia estado de domínio em `window` e exige ESM, IIFE ou classes
-isoladas.
+Ferramentas: `node:test`, injeção Fastify, PostgreSQL efêmero em CI, Playwright,
+axe-core, Vue 3 e Vite. O bundle do frontend é produzido no mesmo build
+reproduzível do runtime. Lint/review bloqueia estado de domínio em `window` e
+exige módulos ESM isolados.
 
 ## 16. Deploy e rollback
 

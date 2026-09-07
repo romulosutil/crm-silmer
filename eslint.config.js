@@ -1,3 +1,5 @@
+import pluginVue from 'eslint-plugin-vue';
+
 const nodeGlobals = {
   AbortController: 'readonly',
   AbortSignal: 'readonly',
@@ -34,8 +36,9 @@ export default [
       'prefer-const': 'error',
     },
   },
+  ...pluginVue.configs['flat/essential'],
   {
-    files: ['apps/edge-web/src/**/*.js'],
+    files: ['apps/edge-web/src/**/*.{js,vue}'],
     languageOptions: {
       globals: {
         document: 'readonly',

@@ -31,7 +31,7 @@
 
 ## Regras técnicas já impostas
 
-1. O frontend usa HTML, CSS e JavaScript vanilla; frameworks exigem autorização explícita.
+1. O frontend usa Vue 3, Vue Router e Vite, conforme `docs/adr/001-adotar-vue-no-frontend.md`; novas bibliotecas de estado ou frameworks exigem autorização explícita.
 2. Evitar estado global em `window`; preferir ESM, IIFE ou classes isoladas.
 3. Interações devem funcionar por teclado e manter ARIA dinâmica quando aplicável.
 4. O WhatsApp usa a API oficial do WhatsApp Business e é obrigatório para o lançamento do piloto.

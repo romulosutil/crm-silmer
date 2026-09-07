@@ -27,6 +27,9 @@ const OPERATIONAL_ACTIONS = new Set([
   'handoff.accept',
   'handoff.transfer',
   'handoff.resolve',
+  'kanban.read',
+  'deal.read',
+  'deal.events.read',
 ]);
 
 class IdentityHttpError extends Error {
@@ -160,6 +163,45 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           actor: {
             functionName: user.functionName,
             id: user.id,
+            kind: 'human',
+          },
+        };
+      });
+    },
+
+    /** @param {{action: string, sessionToken: string}} input */
+    async authorizeOperationalRead(input) {
+      if (
+        !OPERATIONAL_ACTIONS.has(input.action) ||
+        !input.action.endsWith('.read')
+      ) {
+        throw new IdentityHttpError(403, 'FORBIDDEN');
+      }
+      return database.transaction(async (client) => {
+        let session;
+        try {
+          session = await identityService(client).authenticate(
+            input.sessionToken,
+          );
+        } catch {
+          throw new IdentityHttpError(403, 'FORBIDDEN');
+        }
+        const repository = createPostgresIdentityRepository(client);
+        const user = await repository.findUserById(session.userId);
+        const activeUser = user
+          ? await repository.findUserByEmail(user.email)
+          : null;
+        if (
+          !activeUser ||
+          activeUser.id !== session.userId ||
+          !['Atendimento', 'Vendedor'].includes(activeUser.functionName)
+        ) {
+          throw new IdentityHttpError(403, 'FORBIDDEN');
+        }
+        return {
+          actor: {
+            functionName: activeUser.functionName,
+            id: activeUser.id,
             kind: 'human',
           },
         };

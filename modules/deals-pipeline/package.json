@@ -5,6 +5,7 @@
   "type": "module",
   "exports": "./src/index.js",
   "dependencies": {
-    "@crm-silmer/integration-reliability": "0.0.0"
+    "@crm-silmer/integration-reliability": "0.0.0",
+    "@crm-silmer/qualification": "0.0.0"
   }
 }

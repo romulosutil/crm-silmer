@@ -4,3 +4,8 @@ export { PostgresQualificationCatalog } from './postgres-qualification-catalog.j
 export { PostgresQualificationAttachmentPort } from './postgres-qualification-attachment-port.js';
 export { PostgresQualificationRepository } from './postgres-qualification-repository.js';
 export { createQualificationService } from './qualification-service.js';
+export {
+  compareFieldPaths,
+  isAssessmentApplicable,
+  resolveFieldDefinition,
+} from './field-registry.js';

@@ -14,6 +14,159 @@ class DealRequestError extends Error {
  * @param {(request: object) => {correlationId: string}} contextFor
  */
 export function registerDealRoutes(api, deals, contextFor) {
+  api.get('/api/v1/kanban', async (request, reply) => {
+    return respond(reply, async () => {
+      await authorizeDealRead(request, deals, 'kanban.read');
+      const query = readQuery(request.query, [
+        'assignedUserId',
+        'hasOverdueTask',
+        'limit',
+      ]);
+      privateReadHeaders(reply);
+      return reply
+        .code(200)
+        .send(await deals.getKanbanBoard(parseKanbanFilters(query)));
+    });
+  });
+
+  api.get('/api/v1/kanban/cards', async (request, reply) => {
+    return respond(reply, async () => {
+      await authorizeDealRead(request, deals, 'kanban.read');
+      const query = readQuery(request.query, [
+        'assignedUserId',
+        'cursor',
+        'hasOverdueTask',
+        'limit',
+        'stage',
+      ]);
+      privateReadHeaders(reply);
+      return reply.code(200).send(
+        await deals.getKanbanColumn({
+          ...parseKanbanFilters(query),
+          ...(query.cursor === undefined
+            ? {}
+            : { cursor: requireString(query.cursor, 'CURSOR') }),
+          stage: requireString(query.stage, 'STAGE'),
+        }),
+      );
+    });
+  });
+
+  api.get('/api/v1/deals/:dealId', async (request, reply) => {
+    return respond(reply, async () => {
+      await authorizeDealRead(request, deals, 'deal.read');
+      const params = requireObject(request.params);
+      privateReadHeaders(reply);
+      const result = await deals.getDealDetail({
+        dealId: requireString(params.dealId, 'DEAL_ID'),
+        ...(typeof request.headers['if-none-match'] === 'string'
+          ? { ifNoneMatch: request.headers['if-none-match'] }
+          : {}),
+      });
+      reply.header('etag', result.etag);
+      return result.notModified
+        ? reply.code(304).send()
+        : reply.code(200).send(result.detail);
+    });
+  });
+
+  api.get('/api/v1/events', async (request, reply) => {
+    const query = readQuery(request.query, ['after', 'topic']);
+    await authorizeDealRead(request, deals, 'deal.events.read');
+    const topic =
+      query.topic === undefined
+        ? 'kanban'
+        : requireString(query.topic, 'TOPIC');
+    const headerCursor = request.headers['last-event-id'];
+    const queryCursor = query.after;
+    let cursor =
+      headerCursor !== undefined &&
+      queryCursor !== undefined &&
+      String(headerCursor) !== String(queryCursor)
+        ? 'invalid'
+        : (headerCursor ?? queryCursor ?? 0);
+    let closed = false;
+    /** @type {ReturnType<typeof setTimeout>|undefined} */
+    let pollTimer;
+    /** @type {ReturnType<typeof setTimeout>|undefined} */
+    let heartbeatTimer;
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'cache-control': 'private, no-cache',
+      connection: 'keep-alive',
+      'content-type': 'text/event-stream; charset=utf-8',
+      vary: 'Origin, Cookie',
+      'x-accel-buffering': 'no',
+    });
+    const cleanup = () => {
+      if (closed) return;
+      closed = true;
+      if (pollTimer) clearTimeout(pollTimer);
+      if (heartbeatTimer) clearTimeout(heartbeatTimer);
+    };
+    request.raw.on('close', cleanup);
+    reply.raw.on('close', cleanup);
+    const heartbeat = () => {
+      if (!closed && !reply.raw.write(': heartbeat\n\n')) {
+        cleanup();
+        reply.raw.end();
+        return;
+      }
+      if (!closed) heartbeatTimer = setTimeout(heartbeat, 15_000);
+    };
+    heartbeatTimer = setTimeout(heartbeat, 15_000);
+    heartbeatTimer.unref?.();
+    const poll = async () => {
+      try {
+        await authorizeDealRead(request, deals, 'deal.events.read');
+        const batch = await deals.readDealEvents({
+          after: cursor,
+          limit: 100,
+          topic,
+        });
+        if (batch.reset) {
+          cursor = batch.cursor;
+          if (
+            !writeSse(reply.raw, {
+              cursor: batch.cursor,
+              payload: { cursor: batch.cursor, reason: batch.reset.reason },
+              type: 'stream.reset',
+            })
+          ) {
+            cleanup();
+            reply.raw.end();
+            return;
+          }
+        } else {
+          for (const event of batch.events) {
+            if (!writeSse(reply.raw, event)) {
+              cleanup();
+              reply.raw.end();
+              return;
+            }
+          }
+          cursor = batch.cursor;
+        }
+        if (!closed) {
+          pollTimer = setTimeout(poll, 1_000);
+          pollTimer.unref?.();
+        }
+      } catch {
+        if (!closed) {
+          writeSse(reply.raw, {
+            cursor: Number.isSafeInteger(Number(cursor)) ? Number(cursor) : 0,
+            payload: { reason: 'authorization_revoked' },
+            type: 'stream.reset',
+          });
+          reply.raw.end();
+        }
+        cleanup();
+      }
+    };
+    await poll();
+    return reply;
+  });
+
   api.post(
     '/api/v1/conversations/:conversationId/convert',
     async (request, reply) => {
@@ -402,6 +555,7 @@ function publicCode(error) {
     'DEAL_FORBIDDEN',
     'DEAL_GATE_INCOMPLETE',
     'DEAL_INVALID',
+    'DEAL_NOT_FOUND',
     'FORBIDDEN',
     'FORBIDDEN_AUTOMATION_ACTION',
     'IDEMPOTENCY_KEY_REUSED',
@@ -410,10 +564,14 @@ function publicCode(error) {
     'INVALID_CONVERSATION_ID',
     'INVALID_DEAL_ID',
     'INVALID_DIRECTION',
+    'INVALID_CURSOR',
     'INVALID_EXPECTED_VERSION',
     'INVALID_IDEMPOTENCY_KEY',
+    'INVALID_FILTER',
+    'INVALID_LIMIT',
     'INVALID_REASON',
     'INVALID_REQUEST',
+    'INVALID_STAGE',
     'WORK_CONFLICT',
     'WORK_FORBIDDEN',
     'WORK_INVALID',
@@ -480,4 +638,72 @@ function rejectUnknownKeys(value, allowed) {
   if (Object.keys(value).some((key) => !accepted.has(key))) {
     throw new DealRequestError(400, 'INVALID_REQUEST');
   }
+}
+
+/** @param {any} request @param {any} deals @param {string} action */
+async function authorizeDealRead(request, deals, action) {
+  return deals.authorizeRead({
+    action,
+    authorization: request.headers.authorization,
+    cookie: request.headers.cookie,
+    origin: request.headers.origin,
+    secFetchSite: request.headers['sec-fetch-site'],
+  });
+}
+
+/** @param {unknown} value @param {string[]} allowed */
+function readQuery(value, allowed) {
+  const query =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? /** @type {Record<string, unknown>} */ (value)
+      : {};
+  rejectUnknownKeys(query, allowed);
+  return query;
+}
+
+/** @param {Record<string, unknown>} query */
+function parseKanbanFilters(query) {
+  const parsed = {};
+  if (query.assignedUserId !== undefined)
+    parsed.assignedUserId = requireString(
+      query.assignedUserId,
+      'ASSIGNED_USER_ID',
+    );
+  if (query.hasOverdueTask !== undefined) {
+    if (!['true', 'false'].includes(String(query.hasOverdueTask)))
+      throw new DealRequestError(400, 'INVALID_FILTER');
+    parsed.hasOverdueTask = query.hasOverdueTask === 'true';
+  }
+  if (query.limit !== undefined) {
+    if (typeof query.limit !== 'string' || !/^[0-9]+$/u.test(query.limit))
+      throw new DealRequestError(400, 'INVALID_LIMIT');
+    parsed.limit = Number(query.limit);
+  }
+  return parsed;
+}
+
+/** @param {import('fastify').FastifyReply} reply */
+function privateReadHeaders(reply) {
+  reply.header('cache-control', 'private, no-cache');
+  reply.header('vary', 'Origin, Cookie');
+}
+
+/** @param {import('node:http').ServerResponse} stream @param {{cursor: number, payload?: unknown, type: string, [key: string]: unknown}} event */
+function writeSse(stream, event) {
+  return stream.write(formatDealSseEvent(event));
+}
+
+/** @param {{cursor: number, payload?: unknown, type: string, [key: string]: unknown}} event */
+export function formatDealSseEvent(event) {
+  const reset = event.type === 'stream.reset';
+  const type = reset ? 'stream.reset' : 'kanban.card.changed';
+  const payload = reset
+    ? event.payload
+    : {
+        dealId: event.dealId,
+        aggregateVersion: event.aggregateVersion,
+        occurredAt: event.occurredAt,
+        sourceType: event.type,
+      };
+  return `id: ${event.cursor}\nevent: ${type}\ndata: ${JSON.stringify(payload)}\n\n`;
 }

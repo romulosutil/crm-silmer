@@ -2,14 +2,14 @@
 
 ## Regras de produto
 
-1. Conversa não é lead. Toda mensagem entra primeiro no backlog da Caixa de Entrada.
-2. No MVP, apenas uma pessoa pode executar a conversão explícita em lead; o Vendedor Silmer pode sugeri-la.
+1. Conversa não é lead. Toda mensagem entra primeiro no backlog da Caixa de Entrada e dispara automaticamente o workflow correspondente no n8n.
+2. O Vendedor Silmer pode classificar uma conversa como oportunidade e solicitar ao CRM, de forma idempotente, a criação ou atualização do Contato e do Negócio; a simples chegada da mensagem não cria lead.
 3. Backlog não é coluna do Kanban.
 4. A Ficha de Pedido é a fonte da verdade dos dados necessários para concluir a jornada.
-5. No MVP, o Vendedor Silmer conversa, coleta dados e sugere ações, mas não converte conversas, atualiza campos oficiais nem move cards.
+5. O Vendedor Silmer conversa, coleta dados e pode converter conversas, atualizar campos oficiais e mover cards somente por comandos autorizados da API do CRM e pelos gates da jornada.
 6. O Vendedor Silmer nunca calcula, negocia ou inventa preço, prazo ou regra comercial; ele só pode comunicar orçamento aprovado por uma pessoa autorizada.
-7. A autonomia comercial futura exige a chave `vendedor_silmer_autonomia_comercial`, desabilitada por padrão, e especificação própria com auditoria e rollback.
-8. Toda mensagem, sugestão ou transferência do agente é auditável; retries e duplicidades não podem criar conversas, leads, cards, pedidos ou envios duplicados.
+7. A autonomia operacional do Vendedor Silmer é parte do MVP, limitada às capacidades do ator técnico do n8n, ao `automation_epoch`, aos gates do domínio e a um desligamento imediato por conversa e global.
+8. Toda mensagem, decisão, mutação ou transferência do agente é auditável no CRM; retries e duplicidades não podem criar conversas, leads, cards, pedidos ou envios duplicados.
 9. Conversa sem oportunidade termina como `Sem lead`; oportunidade encerrada termina como `Fechado` ou `Perdido` com motivo.
 10. Toda Ficha aprovada registra versão, autor e estado de envio.
 11. O primeiro pedido é `01-CRM`; os seguintes usam a sequência `02-CRM`, `03-CRM` e assim por diante, sem dependência de numeração legada.
@@ -35,9 +35,9 @@
 2. Evitar estado global em `window`; preferir ESM, IIFE ou classes isoladas.
 3. Interações devem funcionar por teclado e manter ARIA dinâmica quando aplicável.
 4. O WhatsApp usa a API oficial do WhatsApp Business e é obrigatório para o lançamento do piloto.
-5. O Instagram Direct integra o piloto quando disponível, mas não bloqueia nem adia o lançamento pelo WhatsApp.
-6. n8n é opcional e não pode ser requisito para o núcleo do agente ou da máquina de estados.
-7. Integrações externas entram por contratos explícitos e não definem o modelo interno do domínio.
+5. WhatsApp Business e Instagram Direct são canais obrigatórios do MVP e seguem a mesma jornada no n8n. A migração entre canais preserva o Negócio e só conecta `@instagram` e telefone após correlação verificável e auditável.
+6. O n8n é obrigatório no MVP e é o motor de canais, IA e orquestração da jornada comercial. Cada mensagem recebida dispara o n8n sem depender de ação ou botão da UI.
+7. Integrações externas entram por contratos explícitos e não definem o modelo interno do domínio. O n8n nunca acessa diretamente o banco: usa APIs autenticadas, autorizadas, idempotentes e auditáveis do CRM.
 8. Dados pessoais seguem minimização, controle de acesso, auditoria e a política de retenção aprovada no P0.6.
 9. No piloto interno, a mídia transitória usa volume privado da VPS sem backup;
    arquivos válidos seguem ao Dropbox por procedimento operacional registrado.

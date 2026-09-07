@@ -1,12 +1,15 @@
 # CRM Silmer MVP — Contexto de Produto
 
-**Coletado em:** 29/08/2026
+**Coletado em:** 29/08/2026  
+**Atualizado em:** 06/09/2026 — n8n definido como motor obrigatório
 **Spec:** `.specs/features/crm-mvp/spec.md`
 **Status:** P0.1 a P0.7 resolvidos; pronto para especificação técnica e implementação
 
 ## Limite da feature
 
-Entregar a jornada comercial desde a entrada de uma conversa no WhatsApp oficial até a geração, envio e registro comercial da Ficha de Pedido. No MVP, o Vendedor Silmer conversa, coleta dados e sugere ações; apenas pessoas alteram o estado oficial do CRM.
+Entregar a jornada comercial desde a entrada de uma conversa no WhatsApp oficial até a geração, envio e registro comercial da Ficha de Pedido. Cada mensagem recebida dispara automaticamente o n8n, que executa o Vendedor Silmer e orquestra a jornada. O CRM continua sendo a fonte da verdade e a única fronteira autorizada para mutações oficiais.
+
+O trabalho será conduzido como três objetivos divergentes — CRM, Inbox Multicanal e Agente Vendedor Silmer no n8n — que se conectam no teste integrado e no lançamento.
 
 ## Decisões confirmadas
 
@@ -14,22 +17,26 @@ Entregar a jornada comercial desde a entrada de uma conversa no WhatsApp oficial
 
 - Caixa de Entrada funciona como backlog.
 - Conversa não cria lead automaticamente apenas por existir.
-- Pessoas possuem o botão `Transformar em lead`.
-- No MVP, o Vendedor Silmer pode sugerir a conversão, mas não executá-la.
+- A simples chegada de uma mensagem não cria lead.
+- Quando identifica intenção comercial, o Vendedor Silmer solicita ao CRM a criação ou atualização idempotente do Contato e do Negócio.
+- A interface pode oferecer conversão manual durante a tomada humana, mas esse botão não inicia nem substitui o workflow do n8n.
 
 ### Vendedor Silmer
 
-- Lê o contexto, conversa, coleta dados e sugere o próximo passo.
-- Não converte conversa, atualiza campo oficial nem move card no MVP.
+- Lê o contexto autorizado, conversa, coleta dados e decide o próximo passo dentro dos gates do domínio.
+- Converte conversa, atualiza campos oficiais e move o card por APIs autenticadas, autorizadas, idempotentes e auditáveis do CRM.
 - Transfere quando o cliente pede vendedor, insiste em valores sem orçamento humano aprovado ou existe bloqueio real não resolvível.
 - Pode comunicar um orçamento já aprovado por pessoa autorizada, sem calcular, negociar ou alterar preço.
-- O núcleo do agente pertence ao CRM; n8n é opcional.
-- A autonomia comercial fica para o pós-MVP sob a chave `vendedor_silmer_autonomia_comercial`, desabilitada por padrão e sujeita a especificação, auditoria e rollback próprios.
+- O n8n é o runtime obrigatório do agente e da orquestração comercial.
+- OpenAI e Gemini são provedores intercambiáveis atrás do mesmo contrato; nenhum provedor pode contornar regras do CRM.
+- Tomada humana incrementa o `automation_epoch`, invalida execuções antigas e impede que uma resposta atrasada retome a automação.
 
 ### Integrações
 
-- WhatsApp usa a API oficial e é o canal obrigatório para lançar o piloto; a verificação já foi obtida.
-- Instagram Direct integra o piloto quando disponível, mas não bloqueia nem adia o lançamento pelo WhatsApp.
+- WhatsApp Business e Instagram Direct usam APIs oficiais e são canais obrigatórios do MVP; a verificação do WhatsApp já foi obtida e a do Instagram continua como gate operacional.
+- Webhooks e envios operacionais dos dois canais pertencem ao n8n; o CRM recebe eventos canônicos e comandos, não payloads usados como estado de domínio.
+- Instagram Direct e WhatsApp Business disparam a mesma jornada no n8n.
+- O atendimento pode migrar entre Instagram e WhatsApp preservando o mesmo Negócio. O CRM conecta `@instagram` e telefone ao lead somente por correlação verificável e auditável.
 - No MVP, o site direciona o visitante para o WhatsApp.
 - O destinatário da Ficha é Rose; o telefone é resolvido pela referência
   `secret://crm/order-recipient-phone` e não é versionado.
@@ -53,16 +60,15 @@ Entregar a jornada comercial desde a entrada de uma conversa no WhatsApp oficial
 
 ## Discrição do Tech Lead
 
-- Backend, banco, hospedagem e runtime de IA.
+- Backend, banco e detalhes internos dos contratos, preservadas as fronteiras aprovadas.
 - Estratégia de filas, retries, observabilidade, anexos e documentos.
-- Uso eventual do n8n fora do caminho crítico.
+- Escolha entre OpenAI e Gemini por ambiente ou política versionada, condicionada aos gates de privacidade.
 - Formato interno dos contratos, desde que preserve as regras do produto.
 - Revisão da exceção de operação solo antes do piloto externo ou quando houver
   um segundo operador disponível.
 
 ## Ideias adiadas
 
-- Ativação da autonomia comercial do Vendedor Silmer pela chave pós-MVP.
 - Canal próprio de atendimento do site.
 - Valores recebidos e saldo a receber.
 - ERP financeiro completo, estoque, chão de fábrica e pós-venda.

@@ -1,508 +1,190 @@
-# CRM Silmer MVP — Plano de Implementação
+# CRM Silmer MVP — Plano Macro de Entrega
 
-> **Status:** Fase 0 em execução  
+> **Atualizado em:** 06/09/2026  
+> **Decisão:** n8n é obrigatório e funciona como motor de canais, IA e jornada comercial.  
 > **Design técnico:** `TECHNICAL-DESIGN.md`  
 > **Topologia:** `EASYPANEL-TOPOLOGY.md`
 
-Cada item deve resultar em commit atômico e manter rastreabilidade com os IDs
-de aceite de `.specs/features/crm-mvp/spec.md`. Nenhuma fase avança sem seus
-gates de verificação.
+O MVP será construído como três objetivos divergentes: **CRM | Inbox Multicanal | Agente Vendedor Silmer no n8n**. Cada objetivo pode avançar e ser validado isoladamente; os três se conectam somente na etapa de integração e lançamento.
 
-## Status operacional reconciliado
+Os identificadores `T00..T07` permanecem como referência histórica das issues e entregas já realizadas. Este documento passa a ordenar o trabalho pelo produto que precisa ficar pronto, sem criar clusters adicionais.
+
+## Premissas comuns
+
+- Cada mensagem válida do cliente dispara automaticamente o n8n. A UI não inicia o workflow.
+- O n8n recebe e envia mensagens do WhatsApp e Instagram oficiais, executa OpenAI ou Gemini e orquestra a mesma jornada nos dois canais.
+- PostgreSQL e APIs do CRM continuam sendo a fonte da verdade. O n8n nunca acessa diretamente o banco.
+- O ator técnico `AUTOMATION_EXECUTOR` recebe somente as capacidades necessárias para conversar, criar ou atualizar leads, preencher campos e transicionar etapas.
+- Preço, aprovação da venda, confirmação de pagamento e aprovação da Ficha continuam exigindo pessoa autorizada.
+- Toda tarefa concluída exige teste proporcional ao risco, commit atômico, push por PR e atualização do Graphify.
 
 Em 02/09/2026, a T00.6 foi aprovada na issue `#10` e deixou de bloquear T02, T03 e T05.
+A evidência permanece em `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`, com
+`silmer:romulo.sutil` no gate aprovado. A nova decisão de arquitetura não altera
+essa aprovação nem satisfaz gates externos e operacionais independentes.
 
-A fonte humana está versionada em `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`;
-`docs/phase0/PHASE-0-APPROVAL-GATE.md` descreve o gate aprovado e
-`docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Os
-papéis usam `silmer:romulo.sutil`, com MFA confirmado e exceção de operação
-solo limitada ao piloto interno.
-
-Essa aprovação remove apenas o bloqueio da T00.6; os demais gates técnicos,
-externos e operacionais continuam independentes.
-
-## Fase 0 — Fundação e riscos técnicos
-
-### T00.1 Estruturar o monorepo JavaScript ESM
-
-- **Status:** concluída em 30/08/2026.
-- **Rastreabilidade:** fundação técnica que habilita os 32 requisitos do MVP;
-  não satisfaz isoladamente um requisito funcional.
-- Criar diretórios `apps/edge-web`, `apps/api`, `apps/worker` e `modules/*`.
-- Fixar versões de Node, dependências e imagens.
-- Configurar JSDoc/checkJs, lint, formatação e testes nativos.
-- **Verificação:** build reprodutível, nenhum runtime framework no frontend e
-  nenhum estado de domínio em `window`; usar ESM/IIFE/classes isoladas.
-
-### T00.2 Criar CI e imagens imutáveis
-
-- **Status:** concluída em 30/08/2026; SHA e digests aprovados foram publicados
-  pelo run `33335770692` e configurados nos serviços `silmer-*`.
-- **Rastreabilidade:** enabler de `MSG-02` e `MSG-03`; não satisfaz sozinho o
-  comportamento funcional desses requisitos.
-- Validar lint, testes, E2E/a11y, dependências, imagens e diff.
-- Rejeitar commits de merge na faixa exclusiva de toda pull request; branches
-  divergentes devem ser atualizadas por rebase sobre `master`.
-- Publicar `edge-web` e `runtime` no GHCR por SHA/digest.
-- **Verificação:** o digest aprovado é configurado no projeto operacional sem
-  rebuild e permanece rastreável ao SHA de origem; o CI bloqueia histórico de
-  PR não linear antes dos demais gates.
-
-### T00.3 Provisionar serviços Silmer no EasyPanel
-
-- **Status:** concluída por decisão operacional em 31/08/2026 no projeto
-  compartilhado e duradouro `espectro-mvp`; riscos e follow-ups aceitos estão
-  em `ops/easypanel/provisioning-gate.json`. Drills reais permanecem na issue
-  `#3`.
-- **Rastreabilidade:** suporte operacional a `MSG-03`, `MSG-04` e `PRV-01`;
-  mocks não satisfazem esses requisitos funcionais.
-- Manter `silmer-edge-web`, `silmer-api`, `silmer-worker` e `silmer-postgres`
-  no projeto `espectro-mvp`, com prefixo que evita colisões.
-- Aplicar redes, domínios, limites, health checks e segredos separados.
-- Criar kit off-host de recovery com topologia, digests, DNS, migrations e
-  inventário de segredos, sem valores sensíveis em arquivo versionado.
-- **Verificação:** somente `silmer-edge-web` possui domínio/porta pública e uma
-  segunda pessoa consegue reconstruir a topologia usando o kit e mocks.
-
-### T00.4 Fechar spikes externos
-
-- **Status:** matriz, fixtures e gates locais executáveis concluídos. A issue
-  `#6` aprovou para o piloto interno mídia transitória em volume privado da VPS,
-  até o fim da jornada ou sete dias, sem custo incremental; R2 foi diferido
-  para a issue `#29`. Rose e Operação aprovaram o PDF sintético da issue `#7`,
-  com versão, hash, seis critérios e evidência sem PII registrados. A issue `#8`
-  aprovou o envelope do piloto e manteve o sizing KVM 4 em 31/08/2026, sem alegar
-  execução da T07.1. Smokes e aprovações externos permanecem pendentes na
-  issue `#5`.
-- **Rastreabilidade:** `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`,
-  `PAY-02`, `PAY-05`, `PRV-P06-07` e `PRV-P06-11`.
-- Validar WhatsApp Cloud API, assinatura, mídia, templates e status de entrega.
-- Versionar matriz por efeito externo com suporte a idempotência, consulta do
-  resultado, ponto de não retorno e estratégia para `outcome_unknown`.
-- Validar provedor de IA, DPA/retenção e schema estruturado.
-- Validar PDF da Ficha com Rose; validar a política de mídia transitória e o
-  handoff operacional de arquivos válidos ao Dropbox sem presumir API.
-- Levantar operadores, mensagens, bursts, anexos e massa esperada para aprovar
-  ou ajustar o envelope de carga da seção 13 do TDD.
-- **Verificação:** evidências e matriz versionadas, envelope aprovado e nenhum
-  bloqueador de integração aberto.
-
-### T00.5 Definir threat model e catálogo de dados
-
-- **Status:** concluída em 01/09/2026; baseline local, validação executável e
-  revisões de Tech Lead e Privacidade registradas na issue `#9` e em
-  `docs/phase0/security-review.json`. Controles `planned` continuam nas tarefas
-  funcionais correspondentes e produção Gemini com PII permanece bloqueada
-  pela issue `#5`.
-- **Rastreabilidade:** `PRV-01..03` e `PRV-P06-01..12`; controles marcados
-  como `planned` permanecem nas tarefas funcionais correspondentes.
-- Mapear ativos, atores, trust boundaries, PII, operadores e abusos.
-- Ligar cada classe à retenção P0.6.
-- **Verificação:** revisão de Tech Lead e Responsável de Privacidade.
-
-### T00.6 Aprovar defaults de domínio e papéis
-
-- **Status:** concluída em 02/09/2026. Produto, Operação e Privacidade
-  aprovaram `D00.6-01..07`; `silmer:romulo.sutil` foi designado como Tech
-  Lead, equipe e Administrador Técnico com MFA. A exceção
-  `SOLO-OPS-PILOT-01` limita a concentração de funções ao piloto interno e
-  preserva capacidades ortogonais, eventos separados e auditoria.
-- **Rastreabilidade:** P0.7, `PAY-02`, `FIN-01..03`, `ORD-01/02/05`,
-  `PRV-01..03`, `PRV-P06-12` e `ACL-P07-01..12`.
-- Confirmar `Admin` para pagamento, Negócio 1:0..1 Pedido, ciclo de conversa,
-  PDF canônico, moeda/timezone e exceção de pagamento.
-- Confirmar o envelope de carga que qualifica sizing e SLOs.
-- Designar Tech Lead, time e Administrador Técnico.
-- **Verificação:** aprovação versionada em
-  `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`, gate executável aprovado e testes
-  negativos dos controles compensatórios. T00.6 não bloqueia mais T02, T03 e
-  T05; os gates próprios dessas fases permanecem aplicáveis.
-
-### T00.7 Implantar telemetria e hardening mínimos
-
-- **Status:** controles locais, testes negativos e política de alertas
-  concluídos em 30/08/2026; monitor off-host, roteamento e simulações reais
-  pendentes na issue `#11`, e digest publicado dependente da issue `#1`.
-- **Rastreabilidade:** enabler de `PRV-01`, `PRV-02` e `PRV-P06-06`; não
-  satisfaz sozinho a observabilidade completa da T06.5.
-- Logs redigidos, request/correlation IDs, métricas de API/worker e alertas live.
-- Usuário não-root, capabilities removidas, imagens por digest, filesystem
-  read-only quando possível e temporários limitados.
-- **Verificação:** falha simulada é detectada sem registrar PII.
-
-## Fase 1 — Identidade, acesso e infraestrutura de domínio
-
-### T01.1 Implementar migrations e acesso PostgreSQL
-
-- **Status em 30/08/2026:** concluída localmente; runner, readiness, imagem e
-  migrations `0001/0002` validados em PostgreSQL 17.6 efêmero.
-- Criar runner expand/contract, transações e health/readiness.
-- **Verificação:** migrate de zero, upgrade, execução concorrente e rollback de app.
-
-### T01.2 Implementar sessão e usuários por convite
-
-- **Status em 01/09/2026:** concluída na issue `#12`; adapters PostgreSQL,
-  controllers `/api/v1`, lockout progressivo pseudonimizado, OpenAPI, runbook e
-  fluxo acessível foram validados localmente e contra PostgreSQL 17 efêmero.
-- Senha Argon2id, convite de uso único/expirável, cookie com token hasheado,
-  rotação, expiração, CSRF, revogação, TOTP criptografado e recovery codes.
-- **Verificação:** bootstrap auditado do primeiro Admin, login/logout/revogação,
-  recuperação MFA e nenhum token no storage do browser.
-
-### T01.3 Implementar funções e capacidades ortogonais
-
-- **Status em 01/09/2026:** wiring IAM/ACL da issue `#12` concluído com
-  transação única para grant/revoke, auditoria e revogação imediata de sessão.
-  `ACL-P07-07..11` no ciclo real de Pedido/Ficha permanece na issue `#13`.
-- Separar `Atendimento|Vendedor`, `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e
-  `TECHNICAL_PRIVACY_EXECUTOR`.
-- Impedir autoatribuição; registrar concessão/revogação.
-- Revogar sessões privilegiadas imediatamente após retirada de capacidade.
-- **Verificação:** ACL-P07-01 a ACL-P07-12 e PRV-01 em testes negativos de API/UI.
-
-### T01.4 Criar audit trail e idempotency records
-
-- **Status em 01/09/2026:** concluída na issue `#12`; efeito, auditoria,
-  resposta criptografada e estado idempotente compartilham o mesmo cliente e
-  rollback PostgreSQL, com replay concorrente e conflito divergente provados.
-- Persistir ator, ação, alvo, versão, motivo e correlação sem copiar conteúdo.
-- **Verificação:** comandos repetidos retornam o mesmo efeito observável.
-
-### T01.5 Criar configuração versionada
-
-- **Status em 01/09/2026:** concluída na issue `#15`; adapter PostgreSQL,
-  lock transacional para `expectedVersion`, auditoria atômica e wiring da API
-  entregues. O runtime de canais recebe somente `channels`, `featureFlags` e
-  número da versão, sem PIX, destinatário, template ou referência de segredo.
-- FAB, PIX mascarado, destinatária, templates, canais e feature flags.
-- **Verificação:** alteração privilegiada auditada e segredo não exposto.
-
-### T01.6 Implementar catálogo versionado
-
-- **Status em 01/09/2026:** concluída na issue `#15`; adapter PostgreSQL publica
-  `draft`, itens e auditoria na mesma transação, valida `expectedLatestNumber`
-  sob lock e lê apenas versões publicadas. Concorrência, rollback e imutabilidade
-  histórica possuem teste PostgreSQL real.
-- Importar/publicar tipos, modelos, malhas e técnicas autorizadas.
-- Vincular seleção à versão e copiar snapshot para o Pedido.
-- **Verificação:** atualização de catálogo não altera Negócio/Pedido histórico.
-
-## Fase 2 — Caixa de Entrada, canais e confiabilidade
-
-### T02.1 Implementar adapter canônico de canais
-
-- **Status:** concluída em 02/09/2026 com contratos inbound/outbound puros no
-  módulo `inbox-channels`, fixtures sintéticas por canal e IDs externos
-  escopados sem concatenação ambígua. Isso não declara webhook, persistência ou
-  integração Instagram live, que permanecem em T02.2 e T02.7.
-- Definir contratos inbound/outbound independentes da Meta e escopar IDs por
-  `(provider, provider_account_id, external_id)`.
-- **Verificação:** fixtures WhatsApp/Instagram convergem para o mesmo envelope
-  e cobrem CHN-P04-01 a CHN-P04-04.
-
-### T02.2 Implementar webhook WhatsApp
-
-- **Status:** concluída e integrada em `master` em 02/09/2026. Limite de
-  `1 MiB`, janela de 24 horas, envelope `AES-256-GCM`,
-  allowlist Meta, backpressure e fronteira transacional com `T02.3` foram
-  aprovados e validados, inclusive concorrência e rollback em PostgreSQL 17,
-  conforme `docs/phase2/WHATSAPP-WEBHOOK.md`.
-- Validar assinatura, deduplicar, persistir e responder rapidamente.
-- Preservar raw body para a assinatura e rejeitar tamanho, tipo e schema
-  inválidos antes de qualquer efeito.
-- Para mídia, persistir metadados e `expires_at` idempotentes antes do download;
-  manter bytes em quarentena privada, sem tornar arquivo duplicado disponível.
-- **Verificação:** MSG-01, assinatura inválida, fuzz de payload e carga
-  concorrente sem mensagens duplicadas.
-
-### T02.3 Implementar fila PostgreSQL e worker
-
-- **Status:** concluída e integrada em `master` em 02/09/2026 com fila durável,
-  lease/heartbeat/reclaim, retry seguro, dead letter, `outcome_unknown`, volume
-  privado de mídia e recibo manual de handoff Dropbox validados em PostgreSQL
-  17. Isso não declara storage externo nem recuperação da mídia transitória.
-- Inbox/outbox, `available_at`, prioridade, lease/`locked_until`, claim com
-  lock, reclaim, retry, jitter, heartbeat, máximo de tentativas, dead letter e
-  estados `sent|failed|outcome_unknown`.
-- Implementar o volume privado de mídia, quota fail-closed, escrita parcial
-  segura, hash, validação, estado `lost/unavailable`, deleção no vencimento e
-  recibo manual do handoff Dropbox. Evento terminal agenda deleção imediata;
-  pendência de arquivo não estende o TTL.
-- **Verificação:** kill antes, durante e depois do efeito respeita a matriz do
-  provider; estado incerto não sofre retry cego, fica reconciliável, e poison
-  message termina em reconciliação.
-
-### T02.4 Implementar Conversa, Mensagem e Contato
-
-- **Status:** concluída e integrada em `master` em 02/09/2026. A correção da
-  fronteira de módulos mantém o enqueue transacional sob
-  `integration-reliability` por port injetado, sem escrita direta da Caixa de
-  Entrada em tabela privada; a integração dessa correção depende de PR. O
-  domínio e os adapters PostgreSQL cobrem contato provisório,
-  identidade externa, ciclos de conversa, mensagens, merge/unmerge reversível,
-  takeover e envio humano atômico. Concorrência, idempotência, isolamento por
-  conta, auditoria e envelopes `AES-256-GCM` foram validados em PostgreSQL 17;
-  envio Meta continua com reconciliação manual e sem promessa de idempotência
-  do provedor.
-- **Decisão aprovada em 02/09/2026:** primeiro inbound cria `Contact`
-  provisório sem Lead/Negócio; conversa e mensagem ficam ancoradas na identidade
-  externa; merge/unmerge humano altera vínculo histórico versionado sem mover
-  mensagens; resposta humana e takeover são atômicos; conteúdo e identidade
-  sensíveis usam envelope enquanto não houver evidência de criptografia do
-  volume.
-- Estados de backlog, ciclos, `@usuario`/telefone pendente, identidades e
-  merge/unmerge humano verificável.
-- **Verificação:** INB-01, fundações de CHN-P04-05 a CHN-P04-08,
-  CHN-P04-04/11/12 para identidade e isolamento entre titulares. Geração e
-  apresentação integral de sugestões permanecem em T04.3/T02.6; fencing de
-  efeito externo permanece em T04.4.
-
-### T02.5 Implementar reconciliação e saúde do canal
+## Objetivo 1 — CRM
 
-- Mostrar pendência, erro, `outcome_unknown`, tentativa, identificador externo,
-  último evento e retomada condicionada à capacidade do provider.
-- **Verificação:** MSG-02 a MSG-04 e retry auditável.
+**Resultado:** possuir o sistema oficial de dados e regras comerciais, independente da interface e da implementação interna dos workflows.
 
-### T02.6 Implementar UI da Caixa de Entrada
+### Etapa CRM-1 — Consolidar a fundação já entregue
 
-- Lista, detalhe, filtros, estados, takeover e SSE.
-- **Verificação:** teclado, foco, ARIA dinâmica, estados de erro/vazio/loading,
-  autorização por tópico, reconnect com `Last-Event-ID` e cliente lento.
+- **Situação:** majoritariamente pronta em `T00` e `T01`.
+- Preservar migrations, sessões, MFA, ACL humana, auditoria, idempotência, configuração e catálogo versionados.
+- Acrescentar o ator técnico `AUTOMATION_EXECUTOR`, credencial rotacionável e capacidades mínimas, sem autoatribuição nem sessão de navegador.
+- Fechar os testes de ACL do ciclo Pedido/Ficha ainda rastreados na issue `#13`.
+- **Verificação:** uma credencial do n8n só executa comandos previstos; tentativa de acesso administrativo ou direto ao banco falha e é auditada.
 
-### T02.7 Implementar Instagram Direct feature-gated
+### Etapa CRM-2 — Concluir Contato, Negócio e Kanban
 
-- Webhook, outbound, saúde, reconciliação e `handoff_id` Instagram→WhatsApp.
-- Manter feature flag desligável sem afetar o WhatsApp.
-- **Verificação:** CHN-P04-01 a CHN-P04-12; indisponibilidade não bloqueia go-live.
+- **Origem:** `T03.1..T03.6`.
+- Implementar `Contact`, identidade, `Deal` como raiz única e projeção de Card.
+- Implementar etapas Produto, Especificação, Estampa, Logística e Fechamento com versão esperada, gates, retorno à primeira etapa incompleta e motivo de perda.
+- Expor comandos idempotentes para criar/atualizar lead, preencher campos, registrar gate, avançar, recuar, transferir e encerrar.
+- Publicar eventos canônicos para atualização em tempo real da UI.
+- **Verificação:** concorrência, replay e transição inválida nunca criam dois negócios nem pulam etapa.
 
-## Fase 3 — Negócio, Kanban e qualificação
+### Etapa CRM-3 — Concluir fechamento, pedido e Ficha
 
-### T03.1 Implementar conversão idempotente em Negócio
+- **Origem:** `T05.1..T05.9`.
+- Implementar orçamento versionado, aprovação humana da venda, PIX, conferência humana, numeração `NN-CRM`, snapshot imutável, PDF, envio para Rose e boas-vindas.
+- Tornar cada efeito externo idempotente e reconciliável, incluindo `outcome_unknown`.
+- **Verificação:** repetir aprovação, cobrança, geração e envio não duplica cobrança, pedido, número ou mensagem.
 
-- Vincular/criar Contato, criar Deal em Produto e encerrar ciclo do backlog.
-- **Verificação:** INB-02 a INB-04 sob clique e transação concorrentes.
+### Etapa CRM-4 — Concluir gestão e operação
 
-### T03.2 Implementar máquina de estados do Deal
+- **Origem:** `T06.1..T06.6`.
+- Entregar relatório de vendas, usuários, configurações, privacidade, retenção, tombstones e painel de saúde.
+- Fechar evidências de observabilidade off-host na issue `#11`, storage/recovery na issue `#29` e recovery drill na issue `#3`.
+- **Verificação:** relatórios reconciliam com eventos do domínio; retenção e recovery não fazem alegações além das evidências reais.
 
-- Etapas, gates, histórico, retorno e perda com motivo.
-- **Verificação:** JRN-01 a JRN-04 e JRN-09.
+### Critério de conclusão do CRM
 
-### T03.3 Implementar campos e itens da Ficha
+O objetivo está pronto quando as APIs conseguem executar toda a jornada com fixtures, sem n8n nem UI, preservando ACL, idempotência, auditoria e invariantes comerciais.
 
-- Itens, malhas, partes, grade, estampa, logística e `field_assessments`.
-- **Verificação:** inventário P0.1 coberto e JRN-05.
+## Objetivo 2 — Inbox Multicanal
 
-### T03.4 Implementar Kanban acessível
+**Resultado:** oferecer uma superfície operacional única para observar conversas, responder manualmente, tratar pendências e assumir o atendimento.
 
-- Card como projeção do Deal, atualização otimista e alternativa ao drag-and-drop.
-- **Verificação:** fluxo completo por teclado e nenhum estado independente no Card.
+### Etapa INBOX-1 — Reaproveitar o núcleo de mensagens
 
-### T03.5 Implementar tarefas, responsável e handoff humano
+- **Situação:** persistência e configuração de canal de `T02.1` e `T02.4` estão prontas; devem ser preservadas.
+- Manter conversa, ciclo, mensagem, identidade externa, anexos, status e mídia transitória como modelo canônico do CRM.
+- Adaptar a entrada para aceitar o envelope normalizado pelo n8n, mantendo chaves externas e idempotência.
+- **Verificação:** mensagens repetidas e fora de ordem convergem para uma única linha do tempo.
 
-- SLA operacional, atribuição, transferência e retomada.
-- **Verificação:** nenhum handoff fica sem responsável.
+### Etapa INBOX-2 — Refatorar a fronteira do WhatsApp
 
-### T03.6 Implementar detalhe acessível do Negócio
+- **Situação:** o adapter direto da Meta em `T02.2` deixa de ser a porta operacional e vira referência reutilizável para assinatura, normalização e fixtures.
+- Mover recebimento, download/upload de mídia, envio e status do WhatsApp para workflows publicados no n8n.
+- O CRM recebe eventos canônicos do n8n e devolve comandos/resultados; não recebe o clique da UI para iniciar automação.
+- Separar apps/webhooks de desenvolvimento e produção e documentar credenciais e rotação.
+- **Verificação:** mensagem realista entra pela Meta, dispara n8n e aparece uma única vez na Inbox; resposta manual e automática usam o mesmo histórico oficial.
 
-- Exibir qualificação, itens, gates, histórico, tarefas, conflitos e ações de
-  avanço/retorno/perda sem depender do Kanban.
-- **Verificação:** loading/vazio/erro/409, foco após mutação, mensagens de erro
-  associadas e jornada completa por teclado em Playwright + axe-core.
+### Etapa INBOX-3 — Concluir confiabilidade do canal
 
-## Fase 4 — Vendedor Silmer assistivo
+- **Origem:** completar `T02.3` e `T02.5`.
+- Implementar pendências, retries seguros, reconciliação, status de entrega e estados `outcome_unknown`, `lost/unavailable` e `requer_atencao`.
+- Exibir saúde do n8n, WhatsApp e último evento observado sem afirmar recuperação de dados não recebidos.
+- **Verificação:** indisponibilidade do n8n, Meta, CRM ou mídia fica visível e retomável sem duplicidade.
 
-### T04.1 Implementar compositor de contexto
+### Etapa INBOX-4 — Concluir a interface acessível
 
-- Janela recente, resumo, campos oficiais, sugestões, catálogo e orçamento vigente.
-- **Verificação:** limites de tokens, proveniência e exclusão de dado não autorizado.
+- **Origem:** `T02.6`.
+- Entregar lista de conversas, filtros, thread, composer, anexos, estados vazios/erro/offline e atualização em tempo real.
+- Implementar resposta manual, tomada humana, reativação controlada, atribuição e histórico do resumo de handoff.
+- Garantir teclado, foco previsível, regiões vivas e rótulos dinâmicos; nenhum botão deve simular “iniciar n8n”.
+- **Verificação:** operação completa sem mouse e takeover durante uma resposta de IA impede envio atrasado.
 
-### T04.2 Implementar adapter AIProvider
+### Etapa INBOX-5 — Concluir Instagram e migração de canal
 
-- Schema estruturado, timeout, retry, custo, modelo e redaction.
-- **Verificação:** troca por fake provider sem alterar módulos de CRM.
+- **Origem:** `T02.7`.
+- Integrar Instagram Direct como canal obrigatório, mantendo identidades separadas até correlação verificável.
+- Permitir migração entre WhatsApp e Instagram sem criar outro Negócio; conectar `@instagram` e telefone ao mesmo lead após confirmação verificável.
+- **Verificação:** ambos os canais aparecem na mesma Inbox, mantêm o mesmo contexto e não fundem pessoas por nome ou similaridade.
 
-### T04.3 Implementar sugestões separadas
+### Critério de conclusão da Inbox Multicanal
 
-- Resposta, field suggestion, stage suggestion e handoff sem comando de mutação.
-- **Verificação:** AGT-01 a AGT-08 e CHN-P04-09/10; nenhum campo oficial alterado pela IA.
+O objetivo está pronto quando uma pessoa consegue observar, responder, assumir e reconciliar conversas por teclado usando eventos simulados, mesmo antes do agente completo estar conectado.
 
-### T04.4 Implementar takeover seguro
+## Objetivo 3 — Agente Vendedor Silmer no n8n
 
-- `automation_epoch`, cancelamento/revalidação, ponto de não retorno por adapter
-  e reativação humana.
-- **Verificação:** takeover impede novas tentativas antes do ponto de não
-  retorno; chamada já aceita termina em `sent|outcome_unknown` visível e
-  reconciliável; CHN-P04-11/12 e kill switch bloqueiam novos envios imediatamente.
+**Resultado:** executar a mesma jornada de vendas no WhatsApp e no Instagram a partir da mensagem recebida, usando IA sob regras determinísticas, migrando de canal e transferindo para uma pessoa quando necessário.
 
-### T04.5 Criar evals de segurança comercial
+### Etapa AGENTE-1 — Implantar o n8n obrigatório
 
-- Preço, prazo, desconto, prompt injection, dado conflitante e pedido de humano.
-- **Verificação:** zero violação nos casos bloqueantes antes de homologação.
+- Criar o serviço privado `silmer-n8n`, banco/esquema e credenciais próprios, criptografia de credenciais, backup, health check e publicação por versão.
+- Publicar os webhooks de WhatsApp e Instagram sem expor a interface administrativa do n8n.
+- Usar execução regular no MVP; queue mode e Redis permanecem P2 até haver evidência de escala.
+- **Verificação:** workflow sintético é publicado, executado e restaurado sem acesso direto ao PostgreSQL do CRM.
 
-## Fase 5 — Orçamento, PIX, Pedido e Ficha
+### Etapa AGENTE-2 — Criar contratos CRM ↔ n8n
 
-### T05.1 Implementar orçamento versionado
+- Definir envelopes versionados para mensagem, contexto, comando, resultado, erro e handoff.
+- Implementar autenticação de serviço, `Idempotency-Key`, `correlation_id`, `workflow_key`, versão, `execution_id` e `automation_epoch`.
+- Rejeitar comando obsoleto, capacidade indevida, schema divergente e replay com payload diferente.
+- **Verificação:** testes de contrato executam contra doubles de ambos os lados e contra PostgreSQL real do CRM.
 
-- Versão, validade, aprovação Admin, invalidação e comunicação fiel.
-- **Verificação:** PRC-01 a PRC-07 e orçamento stale nunca comunicado.
+### Etapa AGENTE-3 — Conectar OpenAI e Gemini
 
-### T05.2 Implementar ledger de vendido
+- Implementar o mesmo schema estruturado para os dois provedores, com seleção por configuração versionada e fallback somente quando seguro.
+- Minimizar contexto, aplicar retenção aprovada, bloquear segredo/PII em logs e registrar modelo, versão de prompt, tokens e decisão.
+- Manter regras de preço, permissão, gate e handoff em validação determinística, fora do prompt.
+- Fechar DPA, retenção e ZDR do provedor escolhido antes de produção com PII, conforme issue `#5`.
+- **Verificação:** evals equivalentes cobrem prompt injection, preço inventado, schema inválido e indisponibilidade dos dois provedores.
 
-- Reconhecer exatamente uma vez em `aprovado_aguardando_pix`; perda/cancelamento
-  invalida quote, encerra cobrança quando possível e gera reversão lógica.
-- **Verificação:** FIN-01 a FIN-03 e FIN-P03-01 a FIN-P03-07 sem dupla contagem.
+### Etapa AGENTE-4 — Construir o workflow da jornada
 
-### T05.3 Implementar subfluxo PIX
+- Ao receber mensagem, carregar contexto oficial, descobrir o próximo dado necessário, perguntar apenas o que falta e persistir a resposta validada.
+- Classificar intenção, criar ou atualizar lead, registrar gates e mover o Kanban pelas etapas permitidas.
+- Executar o mesmo fluxo no WhatsApp e Instagram, preservando o Negócio ao migrar de canal e solicitando ao CRM o vínculo verificado entre `@instagram` e telefone.
+- Após aprovações humanas obrigatórias, continuar PIX, Ficha, envio e boas-vindas sem duplicar efeitos.
+- Versionar e publicar workflows por ambiente; execução ativa deve sempre apontar para uma versão conhecida.
+- **Verificação:** jornada sintética percorre Backlog até Fechado e uma segunda termina em Sem lead.
 
-- Cobrança única, chave configurada, comprovante, rejeição, exceção autorizada,
-  retorno ao PIX, cancelamento e confirmação Admin.
-- **Verificação:** PAY-01 a PAY-04 e JRN-06/JRN-07 em todos os ramos.
+### Etapa AGENTE-5 — Implementar handoff e desligamento seguro
 
-### T05.4 Implementar número e Pedido
+- Transferir quando o cliente pede pessoa, quando preço/regra não está aprovado, quando há bloqueio real ou quando a confiança fica abaixo do limite versionado.
+- Gerar resumo, motivo, etapa, pendências e responsável; suspender novos envios automáticos.
+- Incrementar `automation_epoch` no takeover e validar o epoch novamente imediatamente antes de cada envio ou mutação.
+- **Verificação:** uma execução atrasada após takeover não envia mensagem nem altera o CRM.
 
-- Contador transacional `01-CRM`, FAB e snapshot dos itens.
-- **Verificação:** ORD-P05-01 a ORD-P05-09 sob concorrência, incluindo autoria,
-  origem e chave idempotente da reserva.
+### Etapa AGENTE-6 — Tornar a automação operável
 
-### T05.5 Implementar ciclo da Ficha
+- Criar métricas e alertas de latência, erro, backlog, handoff, custo por conversa, loops, versão ativa e divergência CRM/n8n.
+- Criar runbooks de pausar globalmente, pausar por conversa, reprocessar, reconciliar, rotacionar credencial, trocar provedor e restaurar workflows.
+- Auditar no CRM o efeito de negócio; o histórico de execução do n8n é evidência técnica, não a fonte oficial.
+- **Verificação:** simulações de falha são detectadas e recuperadas sem PII em logs e sem avanço silencioso.
 
-- Rascunho, revisão, aprovação, substituição, cancelamento e ACL.
-- **Verificação:** ORD-01/02/05 e ACL-P07-06 a ACL-P07-12.
+### Critério de conclusão do Agente Vendedor Silmer no n8n
 
-### T05.6 Implementar PDF íntegro e reproduzível
+O objetivo está pronto quando workflows versionados conduzem casos sintéticos com OpenAI e Gemini, respeitam os gates humanos remanescentes e sobrevivem a retry, takeover e falha externa.
 
-- Template e snapshot canônico versionados; fixar Chromium, fontes, locale e
-  timezone; registrar SHA-256 do artefato e campos de produção vazios.
-- **Verificação:** golden visual, revisão de Rose e hash determinístico do snapshot.
+## Integração e lançamento
 
-### T05.7 Implementar envio e onboarding
+Esta etapa começa somente quando os critérios isolados dos três objetivos estiverem atendidos.
 
-- Envio inicial, retry, reenvio, cancelamento, aviso de cancelamento para Rose e
-  mensagem de boas-vindas, todos reconciliáveis.
-- **Verificação:** ORD-03/04, PAY-05, JRN-08 e ACL-P07-09 a ACL-P07-11 sem duplicidade.
+### Etapa INT-1 — Conectar os três objetivos
 
-### T05.8 Implementar segurança de anexos
+- Ligar WhatsApp/Instagram → n8n → CRM → Inbox e os comandos CRM → n8n → canal de origem ou canal migrado.
+- Executar uma venda completa e um handoff humano, incluindo atualização em tempo real da Inbox e do Kanban.
+- **Gate:** nenhuma ação depende de botão para iniciar o n8n e nenhum workflow escreve diretamente no banco.
 
-- Quarentena, limites, MIME real, hash, ClamAV, download Meta com proteção SSRF,
-  timeout/redirect e URLs assinadas `no-store`.
-- **Verificação:** malware, payload grande, MIME falso e URL interna são
-  bloqueados; assinatura ClamAV acima de 36 horas mantém anexo em quarentena.
+### Etapa INT-2 — Validar falhas e segurança
 
-### T05.9 Implementar UI comercial, PIX, Pedido e Ficha
+- Repetir webhook, derrubar cada dependência, atrasar resposta de IA, provocar concorrência, trocar versão de workflow e executar takeover.
+- Validar ACL, CSRF onde aplicável, assinatura do canal, rotação de segredos, PII, teclado, foco e ARIA.
+- **Gate:** zero duplicidade, zero mutação obsoleta, zero violação bloqueante de acesso, privacidade ou acessibilidade.
 
-- Orçamento versionado, aprovação, PIX/comprovante, exceção, Pedido, revisão da
-  Ficha, envio, falha e reconciliação com ações autorizadas.
-- **Verificação:** todos os estados e conflitos são operáveis por teclado, foco
-  retorna ao contexto após comandos, status assíncrono é anunciado e testes
-  Playwright + axe-core cobrem caminho feliz e falhas recuperáveis.
+### Etapa INT-3 — Preparar produção
 
-## Fase 6 — Privacidade, relatórios e operação
+- Construir imagens imutáveis, aplicar migrations, publicar workflows, configurar domínios/segredos, backups, monitor off-host, rollback e recovery.
+- Executar carga conforme envelope aprovado e fechar evidências pendentes das issues `#1`, `#3`, `#5`, `#11`, `#13` e `#29` que forem aplicáveis ao go-live.
+- **Gate:** smoke por digest, alertas roteados, restore e rollback demonstrados no ambiente alvo.
 
-### T06.1 Implementar retenção por classe
+### Etapa INT-4 — UAT e lançamento do MVP
 
-- Jobs por vencimento e evento terminal, com sweeper diário de segurança,
-  exclusão/anonimização e reconciliação por destino. A mídia transitória usa o
-  menor prazo entre sete dias e encerramento; documentos duráveis ficam fora
-  desse sweep.
-- **Verificação:** PRV-02/03 e PRV-P06-01 a PRV-P06-08 com relógio controlado.
-
-### T06.2 Implementar legal hold e solicitações
-
-- Protocolo, verificação, decisão, execução, propagação e evidência, incluindo
-  recibo operacional `success|failure|limitation` para o Dropbox enquanto não
-  houver adapter aprovado.
-- **Verificação:** PRV-01 a PRV-03 e PRV-P06-09 a PRV-P06-12.
-
-### T06.3 Implementar tombstones de restore
-
-- Ledger externo pseudonimizado, bucket e credenciais dedicados, proteção contra
-  overwrite/delete e reaplicação antes do ready.
-- **Verificação:** runtime de dados não acessa tombstones; writer não altera nem
-  exclui entrada; restore read-only reaplica o ledger e backup antigo não
-  reintroduz titular excluído.
-
-### T06.4 Implementar relatórios comerciais
-
-- Total vendido, quantidade, ticket médio, canceladas e perdidas.
-- **Verificação:** período/timezone corretos e leitura apenas de projeções.
-
-### T06.5 Implementar observabilidade e alertas
-
-- Métricas, logs redigidos, traces, custo IA, jobs, canal e backup.
-- **Verificação:** cada alerta mínimo é disparado em teste controlado.
-
-### T06.6 Implementar UI de relatórios, configuração e privacidade
-
-- Relatórios comerciais, saúde operacional, configuração permitida, solicitações
-  de titular, legal hold e evidências conforme capacidade do ator.
-- **Verificação:** autorização negativa API/UI, tabelas e filtros acessíveis,
-  estados loading/vazio/erro, confirmação destrutiva e operação completa por
-  teclado em Playwright + axe-core.
-
-## Fase 7 — Hardening, UAT e piloto
-
-### T07.1 Executar testes de carga e concorrência
-
-- Webhook, SSE, jobs, contador, PDF e consultas do Kanban usando o envelope
-  aprovado da seção 13 do TDD.
-- **Verificação:** relatório registra dataset, duração, taxas, concorrência,
-  percentis e erros; SLOs só são considerados atendidos dentro desse envelope.
-
-### T07.2 Executar auditoria de segurança e acessibilidade
-
-- OWASP, secrets, SBOM/scan de imagem, headers, uploads, teclado, foco, ARIA e
-  contraste.
-- **Verificação:** zero finding crítico/alto aberto e matriz de superfícies
-  comprova Caixa de Entrada, Kanban, detalhe, comercial/Ficha e
-  relatórios/configuração/privacidade sem mouse.
-
-### T07.3 Executar recovery drill
-
-- Executar restore mensal do banco isolado e drill de perda total em VPS limpa,
-  usando kit off-host, escrow de segredos, tombstones, digests, recuperação de
-  versão de objeto, troca de DNS de drill e adapters mock.
-- **Verificação:** RPO até 1 h e RTO até 4 h do CRM completo demonstrados no host
-  limpo, sem reutilizar EasyPanel de produção nem copiar produção para HML.
-
-### T07.4 Executar UAT operacional
-
-- Conversa real de teste até PIX, Ficha, Rose e onboarding.
-- **Verificação:** aceite de Operação, Produto e Privacidade.
-
-### T07.5 Fazer go-live controlado
-
-- Checklist, janela, responsáveis, monitoramento e rollback prontos.
-- **Verificação:** WhatsApp oficial saudável e nenhuma pendência P0/P1 bloqueante.
-
-## Dependências e caminho crítico
-
-```mermaid
-flowchart LR
-    f0["Fase 0"] --> f1["Fase 1"]
-    f1 --> f2["Fase 2"]
-    f2 --> f3["Fase 3"]
-    f3 --> f4["Fase 4"]
-    f3 --> f5["Fase 5"]
-    f5 --> f6["Fase 6"]
-    f4 --> f7["Fase 7"]
-    f5 --> f7
-    f6 --> f7
-```
-
-Fase 4 depende de contexto de Fases 2/3. Fase 5 pode começar depois do núcleo do
-Deal, em paralelo ao hardening da IA. Privacidade acompanha todas as migrations
-e não deve ser deixada apenas para Fase 6.
-
-## Definition of Done global
-
-- Critério rastreável atendido e teste automatizado correspondente.
-- Autorização testada na API e na UI.
-- Migração compatível com rollback.
-- Logs sem PII/conteúdo proibido.
-- Observabilidade e runbook atualizados.
-- Acessibilidade por teclado validada.
-- Estados loading/vazio/erro/conflito e foco pós-mudança cobertos em cada superfície UI.
-- Efeito externo incerto termina em `outcome_unknown` visível, nunca em retry cego.
-- Teste de performance registra e respeita o envelope de carga aprovado.
-- Estado de domínio não exposto em `window`.
-- Commit atômico, push e `graphify update .` concluídos.
+- Produto valida os critérios `ORC`, `INB`, `AGT`, `MSG`, `ORD`, `PAY`, `FIN` e `PRV` com dados sintéticos.
+- Operação aprova Inbox, handoff, pedido, Ficha e runbooks.
+- Privacidade e DevOps aprovam somente os gates sob sua autoridade; testes e documentos não substituem essas aprovações.
+- **Gate final:** WhatsApp e Instagram operacionais, n8n saudável, CRM íntegro, Inbox acessível, agente controlável, migração de canal validada e rollback ensaiado.

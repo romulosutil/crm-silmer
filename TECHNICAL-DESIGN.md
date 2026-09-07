@@ -4,7 +4,7 @@
 | -------------------------- | ------------------------------------------------------ |
 | Status                     | Baseline proposta para aprovação técnica e operacional |
 | Criado em                  | 30/08/2026                                             |
-| Última atualização         | 30/08/2026                                             |
+| Última atualização         | 06/09/2026                                             |
 | Produto                    | CRM Silmer                                             |
 | Tech Lead                  | A designar formalmente pela Silmer                     |
 | Responsável de Privacidade | Rômulo Sutil Corrêa                                    |
@@ -21,14 +21,20 @@ implantado em três processos independentes a partir do mesmo repositório:
 
 1. `edge-web`: Nginx não-root, arquivos HTML/CSS/JS vanilla e reverse proxy.
 2. `api`: REST, autenticação, comandos, consultas e SSE.
-3. `worker`: webhooks, IA, documentos, envios, retries, retenção e reconciliação.
+3. `worker`: documentos, outbox, retries, retenção e reconciliação do CRM.
+
+O n8n é um quarto runtime, obrigatório e implantado separadamente. Ele recebe e
+envia mensagens do WhatsApp oficial, chama OpenAI ou Gemini e orquestra os
+comandos comerciais. Cada mensagem válida dispara um workflow automaticamente;
+a UI não inicia o fluxo.
 
 O PostgreSQL é a fonte de verdade e também sustenta a fila durável por meio de
 inbox/outbox e jobs transacionais. No piloto interno, bytes de mídia de canal
 ficam temporariamente em volume privado da VPS; arquivos válidos são arquivados
 no Dropbox pelo procedimento operacional existente. Fichas e demais documentos
-comerciais mantêm classe durável própria. Redis, MinIO, n8n, microserviços,
-vector database e GraphQL não entram no MVP.
+comerciais mantêm classe durável própria. Redis, MinIO, microserviços
+adicionais, vector database e GraphQL não entram no MVP. O n8n usa persistência
+própria e nunca acessa diretamente o banco do CRM.
 
 Esta solução privilegia consistência, recuperação e simplicidade operacional.
 Ela mantém os formatos da Meta, do provedor de IA e do storage fora do núcleo
@@ -42,7 +48,7 @@ de runtime. O CRM substituirá integralmente o Datacrazy; o material em
 `historico-datacrazy/` é apenas histórico e não orienta a arquitetura.
 
 O produto precisa distinguir conversas recebidas de oportunidades comerciais,
-conduzir uma jornada com gates verificáveis, operar um agente de IA assistivo,
+conduzir uma jornada com gates verificáveis, operar o Vendedor Silmer no n8n,
 registrar venda e PIX, gerar uma Ficha imutável e enviar essa Ficha com
 idempotência. Tudo isso envolve dados pessoais, integrações assíncronas e ações
 privilegiadas que precisam de auditoria e recuperação.
@@ -53,8 +59,8 @@ privilegiadas que precisam de auditoria e recuperação.
   consistente do domínio Silmer.
 - Retries, webhooks duplicados e cliques concorrentes podem duplicar leads,
   cobranças, pedidos, envios e métricas sem garantias transacionais.
-- A IA precisa ajudar sem se tornar uma segunda autoridade sobre preço, etapa,
-  contato ou pedido.
+- A IA precisa executar as ações concedidas sem se tornar uma segunda fonte da
+  verdade sobre preço, etapa, contato ou pedido.
 - A Ficha precisa ser produzida sem redigitação e continuar verificável depois
   de correções, cancelamentos e reenvios.
 - Retenção, exclusão, restore e operadores externos precisam cumprir o contrato
@@ -66,7 +72,7 @@ privilegiadas que precisam de auditoria e recuperação.
 - Divergência entre Kanban, venda, pagamento e Ficha.
 - Comunicação comercial não autorizada pelo agente.
 - Incapacidade de provar autoria, aprovação, envio ou exclusão.
-- Dependência de automações externas para regras que pertencem ao CRM.
+- Automação sem contrato que contorne regras pertencentes ao CRM.
 
 ## 3. Objetivos e não objetivos
 
@@ -74,25 +80,25 @@ privilegiadas que precisam de auditoria e recuperação.
 
 - Login, sessão, função `Atendimento|Vendedor` e role adicional `Admin`.
 - Caixa de Entrada, contato, conversa, mensagens, anexos e tomada humana.
-- Conversão humana idempotente de conversa em Negócio.
+- Conversão automática ou manual idempotente de conversa em Negócio.
 - Kanban `Produto -> Especificação -> Estampa -> Logística -> Fechamento`.
 - Campos e gates aprovados da Ficha, incluindo pedidos com múltiplos itens.
-- Vendedor Silmer assistivo, sugestões separadas de dados oficiais e handoff.
+- Vendedor Silmer no n8n, mutações autorizadas por API, takeover e handoff.
 - Orçamentos versionados, aprovação de venda, PIX e confirmação humana.
 - Pedido, numeração `NN-CRM`, Ficha versionada, PDF e envio para Rose.
 - WhatsApp Business oficial, reconciliação e saúde do canal.
 - Auditoria, retenção, legal hold, tombstones e solicitações de titulares.
 - Indicadores de vendido, quantidade de vendas e ticket médio.
-- Instagram Direct oficial no piloto quando disponível, sem bloquear o go-live
-  por WhatsApp, com inbound/outbound, saúde, reconciliação e handoff verificável.
+- Instagram Direct e WhatsApp Business oficiais como canais obrigatórios, com
+  o mesmo fluxo no n8n, inbound/outbound, saúde, reconciliação e migração
+  verificável entre identidades.
 
 ### Fora de escopo
 
-- Autonomia comercial da IA.
 - Precificação automática, ERP, fiscal, estoque ou chão de fábrica.
 - Recebido, saldo a receber, parcelamento, conciliação ou estorno financeiro.
 - Aplicativo móvel nativo, disparos em massa e automação de pós-venda.
-- n8n no caminho crítico, RAG/vector database e busca dedicada.
+- RAG/vector database e busca dedicada.
 - Multi-tenancy; o MVP é single-tenant para a Silmer.
 - Dividir ou agrupar Negócios em múltiplos Pedidos.
 
@@ -111,7 +117,8 @@ privilegiadas que precisam de auditoria e recuperação.
 | Storage          | Volume privado e descartável para mídia; Dropbox operacional para arquivos válidos; S3 externo diferido | Zero custo incremental no piloto e risco de perda transitória aceito sem reduzir a retenção documental |
 | Documentos       | Snapshot JSON + template HTML/CSS + Chromium para PDF                                                   | Snapshot determinístico; artefato íntegro, versionável e testável                                      |
 | Autenticação     | Sessão opaca no servidor em cookie seguro                                                               | Revogação simples; nenhum token no `localStorage`                                                      |
-| IA               | Adapter `AIProvider`; Gemini Developer API paga com `gemini-2.5-flash-lite`                             | Evita agregador/suboperadores extras, reduz custo e mantém DPA/controles de retenção explícitos        |
+| Orquestração     | n8n obrigatório, workflows versionados e APIs do CRM                                                    | Centraliza canal, IA e jornada sem duplicar a autoridade do domínio                                    |
+| IA               | OpenAI ou Gemini atrás do mesmo contrato estruturado no n8n                                             | Permite troca controlada sem alterar regras, dados oficiais ou avaliações                              |
 | Observabilidade  | Logs JSON, métricas EasyPanel, erros/traces externos e audit trail no banco                             | Separa telemetria técnica de evidência de negócio                                                      |
 | Deploy           | Imagens imutáveis por digest em EasyPanel                                                               | Promoção reproduzível e rollback rápido                                                                |
 
@@ -123,61 +130,40 @@ migração e registro da decisão; imagens de banco nunca usam `latest`.
 
 ```mermaid
 flowchart LR
-    subgraph client ["Clientes"]
-        browser["Navegador CRM"]
-    end
-    subgraph gateway ["Entrada pública"]
-        edgeWeb["edge-web: estáticos e proxy"]
-    end
-    subgraph service ["Aplicação"]
-        api["API modular"]
-        worker["Worker assíncrono"]
-    end
-    subgraph datastore ["Dados"]
-        postgres["PostgreSQL"]
-        mediaVolume["Volume privado: mídia transitória"]
-    end
-    subgraph external ["Operadores externos"]
-        meta["Meta WhatsApp e Instagram"]
-        aiProvider["Gemini Developer API"]
-        objectStorage["Object storage futuro: issue #29"]
-        telemetry["Erros e uptime"]
-    end
-
-    browser -->|"HTTPS e SSE"| edgeWeb
-    edgeWeb -->|"Proxy API, SSE e webhooks"| api
-    api -->|"Transações e consultas"| postgres
-    worker -->|"Claim de jobs e outbox"| postgres
-    api -->|"Leitura autorizada"| mediaVolume
-    worker -->|"Quarentena, scan e expiração"| mediaVolume
-    meta -.->|"Meta: Webhooks"| edgeWeb
-    worker -.->|"Meta: Mensagens"| meta
-    worker -.->|"Gemini: Respostas estruturadas"| aiProvider
-    worker -.->|"Futuro: arquivo durável/backups/tombstones"| objectStorage
-    api -.->|"Telemetria: API"| telemetry
-    worker -.->|"Telemetria: Jobs"| telemetry
+    customer["Cliente"] --> meta["WhatsApp ou Instagram oficial"]
+    meta -->|"webhook"| n8n["n8n: canal, IA e jornada"]
+    n8n --> ai["OpenAI ou Gemini"]
+    n8n -->|"eventos e comandos autorizados"| api["CRM API"]
+    api --> postgres["PostgreSQL: fonte da verdade"]
+    browser["Inbox e Kanban"] --> edge["edge-web"]
+    edge -->|"HTTPS e SSE"| api
+    api --> worker["worker: documentos e outbox"]
+    worker --> media["mídia transitória"]
+    api -->|"comando de envio"| n8n
+    n8n -->|"mensagem"| meta
 ```
 
-`edge-web` é o único serviço com domínio público. `api`, `worker` e PostgreSQL
-usam apenas a rede interna do projeto EasyPanel. O webhook valida, persiste e
-responde rapidamente; qualquer trabalho dependente de canal, IA, PDF ou retry
-é executado no worker.
+`edge-web` publica a aplicação e `silmer-n8n` publica somente os endpoints de
+webhook necessários ao canal. As interfaces administrativas, `api`, `worker` e
+PostgreSQL usam rede privada. O n8n normaliza o canal; o CRM valida e persiste o
+efeito oficial; o worker continua responsável por documentos e jobs internos.
 
 ### Processos implantáveis
 
-| Processo   | Responsabilidades                                                 | Estado local                        |
-| ---------- | ----------------------------------------------------------------- | ----------------------------------- |
-| `edge-web` | Arquivos estáticos, TLS via proxy EasyPanel, headers e roteamento | Nenhum                              |
-| `api`      | Sessão, REST, SSE, comandos, consultas, webhook ingress           | Nenhum                              |
-| `worker`   | Jobs, IA, Meta outbound, PDF, retenção, reconciliação, agendas    | Diretório temporário descartável    |
-| `postgres` | Estado oficial, auditoria, inbox/outbox, jobs e projeções         | Volume persistente e backup externo |
+| Processo   | Responsabilidades                                                       | Estado local                         |
+| ---------- | ----------------------------------------------------------------------- | ------------------------------------ |
+| `edge-web` | Arquivos estáticos, TLS via proxy EasyPanel, headers e roteamento       | Nenhum                               |
+| `api`      | Sessão, REST, SSE, comandos, consultas e eventos canônicos do n8n       | Nenhum                               |
+| `worker`   | Jobs internos, PDF, retenção, reconciliação e agendas do CRM            | Diretório temporário descartável     |
+| `postgres` | Estado oficial, auditoria, inbox/outbox, jobs e projeções               | Volume persistente e backup externo  |
+| `n8n`      | Webhooks, WhatsApp, OpenAI/Gemini, jornada, retries de integração e handoff | Persistência própria e backup externo |
 
 ## 6. Fronteiras do monólito
 
 | Módulo                    | Fonte de verdade                                           | Pode emitir                                        |
 | ------------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
 | `identity-access`         | usuários, funções, roles, sessões, MFA                     | autenticação, concessão e revogação                |
-| `inbox-channels`          | conversas, mensagens, anexos, adapters Meta                | mensagem recebida, estado do canal                 |
+| `inbox-channels`          | conversas, mensagens, anexos e envelopes canônicos         | mensagem recebida, estado do canal                 |
 | `contacts`                | contato e identidades externas verificadas                 | vínculo, merge e unmerge auditáveis                |
 | `catalog`                 | tipos, modelos, malhas, técnicas e versões publicadas      | item selecionado e snapshot de referência          |
 | `deals-pipeline`          | Negócio, etapa, gate, tarefa e histórico                   | avanço, retorno, perda e fechamento                |
@@ -185,7 +171,7 @@ responde rapidamente; qualquer trabalho dependente de canal, IA, PDF ou retry
 | `quotes-sales`            | versões de orçamento e ledger de vendido                   | orçamento aprovado, invalidado, venda reconhecida  |
 | `payments`                | cobrança PIX, comprovante e confirmação                    | comprovante recebido, pagamento confirmado         |
 | `orders-documents`        | Pedido, Ficha, artefato e envio                            | versão aprovada, cancelada, enviada ou substituída |
-| `assistant`               | turnos, sugestões e handoffs                               | resposta, sugestão e transferência                 |
+| `assistant`               | decisões do agente, versões de workflow e handoffs         | resposta, mutação solicitada e transferência       |
 | `integration-reliability` | inbox, outbox, jobs, tentativas e reconciliação            | retry, dead letter e recuperação                   |
 | `audit-privacy`           | auditoria, retenção, legal hold, solicitações e tombstones | anonimização, exclusão e propagação                |
 | `reporting`               | read models derivados                                      | total vendido, quantidade, ticket médio e saúde    |
@@ -201,18 +187,19 @@ por comandos e eventos dentro da mesma transação ou por outbox.
 é uma projeção visual do Negócio; nenhum dos dois mantém etapa independente.
 Backlog é estado de `Conversation`, nunca etapa do Negócio.
 
-### Instagram e handoff de identidade
+### Migração entre Instagram e WhatsApp
 
-O adapter oficial do Instagram implementa recebimento e envio, status do canal,
-retry e reconciliação com o mesmo envelope canônico do WhatsApp. Enquanto não
+O workflow oficial do Instagram no n8n implementa recebimento e envio, status
+do canal, retry e reconciliação com o mesmo envelope canônico do WhatsApp. Enquanto não
 existe telefone confirmado, o contato usa `@usuario` e estado
 `telefone_pendente`; nome ou similaridade nunca fundem identidades.
 
-O handoff Instagram para WhatsApp gera `handoff_id` de uso único, com TTL e
+O handoff em qualquer direção gera `handoff_id` de uso único, com TTL e
 auditoria. A identidade só é vinculada quando o cliente conclui o fluxo pelo
-link/código ou uma pessoa confirma evidência verificável. Falha ou
-indisponibilidade do Instagram permanece visível, mas não bloqueia o lançamento
-do WhatsApp.
+link/código ou uma pessoa confirma evidência verificável. A migração preserva o
+mesmo Negócio, conecta `@instagram` e telefone como identidades distintas do
+lead e mantém os dois históricos. A indisponibilidade de qualquer um dos canais
+bloqueia o lançamento do MVP e permanece visível.
 
 ## 7. Modelo de dados essencial
 
@@ -227,7 +214,7 @@ do WhatsApp.
 | Comercial      | `quote_versions`, `sale_events`                                                                       | versão aprovada imutável; reconhecimento vendido único                                                          |
 | Pagamento      | `payment_flows`, `payment_evidence`                                                                   | comprovante não confirma pagamento; uma cobrança lógica                                                         |
 | Pedido         | `order_counter`, `orders`, `order_form_versions`, `document_artifacts`, `deliveries`                  | número global único; versão aprovada imutável                                                                   |
-| IA             | `ai_turns`, `ai_suggestions`, `handoffs`                                                              | sugestão nunca ocupa campo oficial automaticamente                                                              |
+| IA             | `ai_turns`, `automation_runs`, `handoffs`                                                             | versão, execução e epoch correlacionados; só API autorizada altera campo oficial                                 |
 | Confiabilidade | `channel_events`, `idempotency_records`, `outbox_jobs`, `processing_attempts`, `reconciliation_items` | chave única por efeito observável                                                                               |
 | Privacidade    | `audit_events`, `privacy_requests`, `legal_holds`, `tombstone_receipts`                               | auditoria sem cópia eterna; ledger canônico externo ao backup                                                   |
 
@@ -292,7 +279,7 @@ implementação sem reabrir os contratos P0.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Produto: conversão humana
+    [*] --> Produto: conversão automática ou manual
     Produto --> Especificacao: gate confirmado
     Especificacao --> Estampa: gate confirmado
     Estampa --> Logistica: gate confirmado
@@ -308,8 +295,9 @@ stateDiagram-v2
 ```
 
 Correção material retorna o Negócio à primeira etapa incompleta sem remover
-eventos anteriores. O card avança uma etapa por confirmação humana; a IA apenas
-sugere. Durante PIX, Ficha e onboarding, o card continua em `Fechamento`.
+eventos anteriores. O n8n pode registrar gates e avançar uma etapa quando o CRM
+validar todos os campos; preço, venda, pagamento e Ficha mantêm seus gates
+humanos. Durante PIX, Ficha e onboarding, o card continua em `Fechamento`.
 
 ### Estado do pagamento
 
@@ -345,29 +333,30 @@ Ficha.
 
 ## 9. Contratos centrais da API
 
-Todos os comandos aceitam `Idempotency-Key`, ator autenticado e versão
-esperada. Conflitos de versão retornam `409`; erros seguem
+Todos os comandos aceitam `Idempotency-Key`, ator humano ou técnico autenticado
+e versão esperada. O ator `AUTOMATION_EXECUTOR` usa credencial própria,
+rotacionável e capacidades mínimas. Conflitos de versão retornam `409`; erros seguem
 `application/problem+json`. Listagens usam paginação por cursor.
 
 | Método e rota                                      | Finalidade                              | Autorização principal                          |
 | -------------------------------------------------- | --------------------------------------- | ---------------------------------------------- |
-| `GET /api/v1/webhooks/meta`                        | Verificação inicial do callback         | Verify token Meta                              |
-| `POST /api/v1/webhooks/meta/whatsapp`              | Validar e persistir evento              | Assinatura Meta                                |
-| `POST /api/v1/webhooks/meta/instagram`             | Validar e persistir evento              | Assinatura Meta                                |
+| `POST /api/v1/integrations/n8n/messages`            | Persistir evento canônico de canal      | `AUTOMATION_EXECUTOR`                          |
+| `POST /api/v1/integrations/n8n/delivery-status`     | Atualizar estado de envio               | `AUTOMATION_EXECUTOR`                          |
+| `POST /api/v1/integrations/n8n/runs`                | Correlacionar execução e versão          | `AUTOMATION_EXECUTOR`                          |
 | `POST /api/v1/sessions`                            | Criar sessão                            | Credencial válida                              |
 | `DELETE /api/v1/sessions/current`                  | Revogar sessão                          | Sessão válida                                  |
 | `GET /api/v1/inbox/conversations`                  | Consultar backlog                       | Atendimento ou Vendedor                        |
 | `POST /api/v1/conversations/{id}/takeover`         | Suspender IA e assumir                  | Atendimento ou Vendedor                        |
 | `POST /api/v1/conversations/{id}/reactivate-agent` | Reativar IA explicitamente              | Atendimento ou Vendedor                        |
-| `POST /api/v1/conversations/{id}/convert`          | Criar/vincular contato e Negócio        | Humano autenticado                             |
+| `POST /api/v1/conversations/{id}/convert`          | Criar/vincular contato e Negócio        | `AUTOMATION_EXECUTOR` ou humano autorizado     |
 | `POST /api/v1/conversations/{id}/messages`         | Enviar mensagem humana                  | Atendimento ou Vendedor                        |
 | `POST /api/v1/identity-handoffs`                   | Iniciar Instagram para WhatsApp         | Atendimento, Vendedor ou sistema               |
 | `POST /api/v1/identity-handoffs/{id}/confirm`      | Confirmar vínculo verificável           | Atendimento ou Vendedor                        |
 | `GET /api/v1/deals/{id}`                           | Detalhe e completude                    | Atendimento ou Vendedor                        |
-| `PATCH /api/v1/deals/{id}/fields`                  | Confirmar campo oficial                 | Atendimento ou Vendedor                        |
+| `PATCH /api/v1/deals/{id}/fields`                  | Validar e persistir campo oficial       | `AUTOMATION_EXECUTOR` ou humano autorizado     |
 | `POST /api/v1/suggestions/{id}/accept`             | Aceitar sugestão como comando humano    | Atendimento ou Vendedor                        |
 | `POST /api/v1/suggestions/{id}/reject`             | Descartar sugestão com motivo           | Atendimento ou Vendedor                        |
-| `POST /api/v1/deals/{id}/transitions`              | Confirmar gate e avançar                | Atendimento ou Vendedor                        |
+| `POST /api/v1/deals/{id}/transitions`              | Registrar gate e avançar                | `AUTOMATION_EXECUTOR` ou humano autorizado     |
 | `POST /api/v1/deals/{id}/lose`                     | Marcar Perdido/cancelar com motivo      | Humano; `Admin` após venda aprovada            |
 | `POST /api/v1/deals/{id}/quotes`                   | Criar versão de orçamento               | Vendedor                                       |
 | `POST /api/v1/quotes/{id}/approve`                 | Aprovar versão                          | `Admin`                                        |
@@ -394,28 +383,25 @@ por tópico para reconectar sem vazar eventos entre usuários.
 
 ## 10. Confiabilidade e processamento assíncrono
 
-### Webhook inbound
+### Webhook inbound pelo n8n
 
-1. Validar assinatura, tamanho e formato mínimo.
-2. Persistir envelope com
+1. WhatsApp ou Instagram entrega o callback ao webhook publicado do n8n.
+2. O workflow valida assinatura, allowlist, tamanho e formato mínimo e deriva
+   um envelope canônico sem usar o payload Meta como estado de domínio.
+3. O n8n chama `POST /api/v1/integrations/n8n/messages` com credencial técnica,
+   `Idempotency-Key`, `correlation_id`, versão do workflow e `automation_epoch`.
+4. O CRM persiste mensagem, auditoria e efeitos internos na mesma transação sob
    `UNIQUE(provider, provider_account_id, external_event_id)`.
-3. Criar job na mesma transação.
-4. Responder antes de executar IA, download ou regra comercial.
-5. Worker reclama job com lock, processa e registra tentativa.
-6. Falha transitória usa backoff exponencial com jitter.
-7. Falha final cria item visível de reconciliação.
+5. O n8n carrega o contexto autorizado e continua IA e jornada somente depois
+   de receber a confirmação durável do CRM.
+6. Falha transitória usa backoff com jitter; resultado incerto ou falha final
+   cria item visível de reconciliação.
 
-Para `T02.2`, o contrato aprovado limita o callback a `1 MiB` e o processamento
-normal a eventos com no máximo 24 horas. Evento assinado mais antigo é
-persistido para reconciliação, sem job normal. O payload bruto com PII é
-protegido por envelope `AES-256-GCM` com chave dedicada e versionada; sem essa
-chave o runtime produtivo permanece indisponível. Evento, metadados de mídia e
-job mínimo compartilham a transação que antecede o `200`. A WABA e o
-`phone_number_id` são allowlist obrigatória. O ingresso limita 100 eventos por
-callback, 20 requests/s e oito persistências concorrentes; o evento canônico é
-cifrado com AAD ligada à identidade externa e ao fingerprint para leitura pelo
-worker sem reparse do payload Meta. O detalhamento e as evidências exigidas
-estão em `docs/phase2/WHATSAPP-WEBHOOK.md`.
+O adapter de `T02.2`, suas fixtures, limites, assinatura e criptografia devem
+ser reaproveitados na refatoração, mas a rota direta da Meta no CRM deixa de ser
+a entrada operacional. Apps e webhooks de desenvolvimento e produção são
+separados. Nenhum payload bruto com PII pode permanecer no histórico do n8n
+além da retenção aprovada.
 
 ### Comando e outbox
 
@@ -442,8 +428,8 @@ nem repetido às cegas.
 ### Corrida IA versus tomada humana
 
 Cada conversa possui `automation_epoch`. O takeover incrementa o epoch e
-cancela jobs ainda não enviados. Antes do envio, o worker revalida epoch,
-estado e responsável; resposta calculada sob epoch antigo é descartada e
+cancela jobs ainda não enviados. Antes do envio ou mutação, o n8n apresenta o
+epoch e o CRM revalida estado e responsável; resposta calculada sob epoch antigo é descartada e
 auditada. A garantia vale até o ponto de não retorno declarado pelo adapter. Se
 uma chamada externa já o atravessou, o takeover impede novas tentativas, expõe
 `sent` ou `outcome_unknown` e exige reconciliação; não se promete cancelar uma
@@ -451,10 +437,12 @@ requisição que o provedor já aceitou.
 
 ## 11. Vendedor Silmer e IA
 
-O módulo `assistant` recebe apenas contexto autorizado e não possui port de
-mutação comercial. O resultado estruturado contém resposta, sugestões de campo
-com evidências, próxima ação sugerida e eventual handoff. Aceitar sugestão é um
-comando humano separado.
+O Vendedor Silmer é um conjunto de workflows versionados no n8n. Ele recebe
+somente contexto autorizado e produz resposta, campos extraídos, decisão de
+etapa, evidências e eventual handoff em schema fechado. Mutações comerciais
+permitidas são comandos explícitos da API do CRM; o workflow não possui acesso
+ao banco e o CRM pode rejeitar qualquer comando por capacidade, versão, gate,
+idempotência ou `automation_epoch`.
 
 Contexto do MVP:
 
@@ -470,15 +458,13 @@ correlação. Prompt/resposta com conteúdo ficam em storage técnico separado c
 TTL máximo de 30 dias; mensagens integrais não entram no log técnico. Regras de
 preço, handoff, role e tomada humana são checadas em código, fora do prompt.
 
-Baseline de provedor: Gemini Developer API direta no tier pago, com
-`gemini-2.5-flash-lite`, data sharing desabilitado e DPA aplicável. A integração
-usa `models.generateContent` stateless, saída JSON Schema e não habilita
-Interactions, grounding, File API, cache explícito nem logging opt-in. O free
-tier é proibido para dados do CRM. A auth key criada no AI Studio fica somente
-no servidor e restrita à Gemini API. Sem ZDR aprovado, o provedor declara
-retenção de abuso por 55 dias; portanto produção com PII permanece fail-closed
-até a confirmação live do ZDR. Um adapter permite trocar o provedor sem mudar o
-domínio. Agregadores multi-provedor não entram antes de validar todos os
+OpenAI e Gemini são implementações intercambiáveis do mesmo contrato no n8n. A
+seleção é configuração versionada por ambiente; fallback só ocorre quando o
+efeito anterior pode ser provado como ausente e o segundo provedor atende aos
+mesmos gates de privacidade. O CRM registra provedor, modelo, versão do prompt,
+schema e correlação, nunca a chave. Produção com PII permanece fail-closed até
+DPA, retenção efetiva e ZDR aplicáveis ao provedor escolhido possuírem evidência
+live. Agregadores multi-provedor não entram antes de validar todos os
 suboperadores.
 
 ## 12. Segurança e LGPD
@@ -497,6 +483,8 @@ suboperadores.
 - MFA TOTP obrigatório para `COMMERCIAL_ADMIN` e Administrador Técnico.
 - API e UI aplicam a mesma matriz; ocultar botão não é autorização.
 - Concessão/revogação de `Admin` não permite autoatribuição e é auditada.
+- O n8n usa o ator técnico `AUTOMATION_EXECUTOR`, sem login interativo,
+  capacidade administrativa ou rota de rede ao PostgreSQL do CRM.
 
 ### Dados e anexos
 
@@ -609,7 +597,7 @@ externo contratado com retenção compatível.
 | Propriedade/concorrência | conversão, contador `NN-CRM`, PIX, aprovação e cancelamento                                | nenhuma duplicidade sob disputa                                                         |
 | Integração               | PostgreSQL real, transações, outbox, jobs e migrações                                      | rollback lógico e constraints comprovados                                               |
 | Contrato                 | fixtures assinadas da Meta e respostas de provedores                                       | versões suportadas documentadas                                                         |
-| IA/evals                 | preço, prompt injection, handoff e proibição de mutação                                    | zero violação nos casos bloqueantes                                                     |
+| IA/evals                 | preço, prompt injection, handoff, capabilities e epoch obsoleto                            | zero violação nos casos bloqueantes                                                     |
 | Documento                | golden PDF, snapshot e campos de produção vazios                                           | revisão visual e hash do snapshot                                                       |
 | E2E                      | inbox até Ficha/onboarding                                                                 | caminho feliz e falhas recuperáveis                                                     |
 | Acessibilidade           | teclado, foco, ARIA, contraste e alternativa ao drag-and-drop                              | sem violação crítica e operação sem mouse                                               |
@@ -658,29 +646,25 @@ Detalhes, recursos e checklist estão em `EASYPANEL-TOPOLOGY.md`.
 | Microserviços           | Rejeitado: transações distribuídas e operação sem escala/equipe que justifique |
 | Event sourcing completo | Rejeitado: audit trail append-only e modelo relacional atendem o MVP           |
 | GraphQL                 | Rejeitado: REST/OpenAPI explicita comandos, versões e idempotência             |
-| Redis/BullMQ            | Adiado: PostgreSQL suporta o volume inicial com menos um serviço crítico       |
+| Redis/queue mode do n8n | Adiado: execução regular atende o piloto até medição justificar escala         |
 | JWT no browser          | Rejeitado: pior revogação e maior superfície de exfiltração                    |
 | MinIO na mesma VPS      | Rejeitado: preserva o mesmo domínio de falha dos dados                         |
-| n8n no núcleo           | Rejeitado: viola a fronteira da máquina de estados e permissões                |
+| n8n como motor          | Aceito: obrigatório para canal, IA e orquestração; CRM preserva estado e regras |
 | RAG/pgvector imediato   | Adiado: dados e regras centrais já são estruturados                            |
 | Agregador de modelos    | Adiado: adiciona suboperadores e dificulta retenção/LGPD                       |
 
 ## 19. Plano de implementação
 
-| Fase | Entrega                                                          | Estimativa inicial |
-| ---- | ---------------------------------------------------------------- | -----------------: |
-| 0    | Fundação, CI, ambientes, schemas, observabilidade e threat model |           1 semana |
-| 1    | IAM, sessões, ACL, auditoria e configuração                      |        1–2 semanas |
-| 2    | Inbox, contatos, WhatsApp, worker e reconciliação                |        2–3 semanas |
-| 3    | Deal, Kanban, qualificação, gates e tarefas                      |        2–3 semanas |
-| 4    | IA assistiva, takeover, sugestões e evals                        |          2 semanas |
-| 5    | Orçamento, vendido, PIX, Pedido, PDF e envio                     |          3 semanas |
-| 6    | Privacidade, retenção, relatórios e recovery drills              |          2 semanas |
-| 7    | Hardening, UAT, acessibilidade e piloto                          |          2 semanas |
+O trabalho foi reorganizado em três objetivos independentes:
 
-Estimativa preliminar: 15–18 semanas para uma equipe pequena de produto,
-engenharia e QA. O plano detalhado e os gates estão em
-`.specs/features/crm-mvp/tasks.md`.
+1. **CRM:** concluir domínio, APIs, Kanban, Pedido/Ficha, relatórios e controles.
+2. **Inbox Multicanal:** refatorar a fronteira do WhatsApp e concluir a UI operacional acessível.
+3. **Agente Vendedor Silmer no n8n:** implantar n8n, contratos, OpenAI/Gemini, jornada, handoff e operação.
+
+Os três convergem em integração ponta a ponta, falhas/segurança, preparação de
+produção e UAT. A sequência, o estado reaproveitável e os gates estão em
+`.specs/features/crm-mvp/tasks.md`; a mudança de arquitetura invalida a
+estimativa anterior até nova estimativa por tarefa.
 
 ## 20. Decisões aprovadas e pendências externas
 

@@ -2,7 +2,8 @@
 
 CRM web próprio da Silmer para organizar conversas comerciais, qualificação,
 vendas, PIX e geração da Ficha de Pedido. O produto substituirá integralmente o
-Datacrazy; o piloto começa pela API oficial do WhatsApp Business.
+Datacrazy; WhatsApp Business e Instagram Direct são canais obrigatórios do
+piloto e disparam a mesma jornada no n8n.
 
 > **Estado atual:** o bootstrap do runtime (`T00.1`), a supply chain de CI e
 > imagens imutáveis (`T00.2`) e a decisão operacional e o gate de provisionamento
@@ -30,13 +31,15 @@ histórico e não define o sistema novo.
 - Frontend: HTML semântico, CSS e JavaScript vanilla.
 - Runtime: monólito modular em JavaScript ESM, Node.js e Fastify.
 - Dados: PostgreSQL com SQL e migrações versionadas.
-- Processos: `edge-web`, `api` e `worker` no mesmo repositório.
-- Integrações: ports/adapters para Meta e IA; mídia transitória em volume
+- Processos do CRM: `edge-web`, `api` e `worker` no mesmo repositório.
+- Automação: n8n obrigatório para WhatsApp, Instagram, OpenAI/Gemini e jornada,
+  sempre por APIs do CRM e sem acesso direto ao banco.
+- Integrações: contratos canônicos entre n8n e CRM; mídia transitória em volume
   privado da VPS, arquivos válidos no processo operacional Dropbox e storage
   S3-compatible diferido para a issue `#29`.
 
-Framework de frontend, Redis, microserviços, n8n no caminho crítico e estado de
-domínio em `window` estão fora da baseline do MVP.
+Framework de frontend, Redis, microserviços adicionais e estado de domínio em
+`window` estão fora da baseline do MVP.
 
 ## Desenvolvimento
 

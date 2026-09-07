@@ -1,104 +1,77 @@
 # Arquitetura — Decisões do MVP
 
-> **Status:** baseline técnica proposta em 30/08/2026. O desenho completo está
-> em `TECHNICAL-DESIGN.md`; implantação e operação estão em
-> `EASYPANEL-TOPOLOGY.md`.
+> **Status:** baseline revisada em 06/09/2026 para tornar o n8n obrigatório.  
+> **Detalhes:** `TECHNICAL-DESIGN.md`; implantação em `EASYPANEL-TOPOLOGY.md`.
 
-## Fronteiras funcionais
+## Forma do produto
 
-- **Interface web:** Caixa de Entrada, Kanban, detalhe da conversa/Negócio,
-  comercial/PIX/Ficha, relatórios, configuração e privacidade; cada superfície
-  possui estados completos e operação sem mouse como parte do DoD.
-- **Domínio do CRM:** contatos, conversas, leads, cards, etapas, tarefas, catálogo, pedidos, estados financeiros e auditoria.
-- **Runtime do Vendedor Silmer:** no MVP, lê contexto, envia mensagens e registra sugestões, sem mutar Contato, Lead, Card, etapa, campo oficial, preço ou pedido.
-- **Integração de canais:** recebe e envia eventos sem tornar o modelo interno dependente dos formatos do WhatsApp ou Instagram.
-- **Geração documental:** transforma uma versão aprovada do pedido em documento estável.
-- **Confiabilidade:** idempotência, fila de pendências, reconciliação e observabilidade do canal.
+O MVP possui três objetivos que podem evoluir isoladamente e convergem no lançamento:
+
+| Objetivo | Responsabilidade | Não faz |
+| --- | --- | --- |
+| CRM | Fonte oficial de contatos, conversas, negócios, etapas, catálogo, pedidos, financeiro, permissões e auditoria | Não executa prompts nem depende da UI para iniciar fluxos |
+| Inbox Multicanal | Exibe mensagens, pendências e saúde; permite resposta manual, atribuição, takeover e reconciliação | Não contém regra comercial nem dispara o n8n por botão |
+| Agente Vendedor Silmer no n8n | Recebe/envia WhatsApp, chama OpenAI ou Gemini e orquestra criação/atualização de leads, Kanban e handoff | Não escreve no banco nem decide fora dos contratos do CRM |
+
+Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM → Inbox/Kanban`. Respostas seguem `CRM → n8n → canal de origem ou canal migrado`. Cada mensagem válida dispara automaticamente o n8n; a interface apenas observa ou assume a conversa.
+
+## Fronteiras e autoridade
+
+- PostgreSQL é a fonte da verdade do CRM.
+- O n8n é o motor obrigatório de canais, IA e orquestração, mas nunca acessa diretamente o banco do CRM.
+- Toda mutação oficial usa API versionada, autenticação de serviço, capacidade mínima, `Idempotency-Key`, versão esperada, auditoria e `automation_epoch`.
+- O CRM valida estados e gates. O workflow decide o próximo comando permitido; não redefine a máquina de estados.
+- Logs do n8n são evidência técnica. A auditoria durável do efeito comercial pertence ao CRM.
+- OpenAI e Gemini implementam o mesmo contrato estruturado. Regras de preço, permissão, gate e handoff são determinísticas e ficam fora do prompt.
+- Tomada humana incrementa o `automation_epoch`; qualquer execução antiga é rejeitada antes de enviar mensagem ou alterar estado.
 
 ## Decisões confirmadas
 
 - Frontend em HTML, CSS e JavaScript vanilla.
-- API oficial do WhatsApp Business como canal obrigatório do piloto.
-- Instagram Direct no piloto quando disponível, sem bloquear o lançamento pelo WhatsApp.
+- APIs oficiais do WhatsApp Business e Instagram Direct como canais obrigatórios do piloto, integradas operacionalmente pelo n8n e sujeitas ao mesmo contrato canônico.
+- Migração entre Instagram e WhatsApp preserva o Negócio e só associa `@instagram` e telefone após correlação verificável e auditável.
 - Caixa de Entrada separada do Kanban.
 - Ficha de Pedido como contrato de dados da jornada.
-- Vendedor Silmer em modo assistivo no MVP; mutações comerciais permanecem humanas.
-- Autonomia comercial pós-MVP somente pela chave `vendedor_silmer_autonomia_comercial`, desabilitada por padrão, com auditoria e rollback próprios.
-- n8n opcional e fora do caminho crítico.
+- Vendedor Silmer autônomo nas operações explicitamente concedidas ao ator `AUTOMATION_EXECUTOR`.
+- Aprovação de preço, venda, pagamento e Ficha permanece humana no caminho inicial.
+- n8n obrigatório; indisponibilidade do n8n torna a automação indisponível e visível, sem fallback silencioso para outra fonte de estado.
 - Numeração de pedidos iniciada em `01-CRM`, sem dependência legada.
 - Rômulo Sutil Corrêa como Responsável de Privacidade e política do piloto aprovada após consulta jurídica.
-- Defaults `D00.6-01..07` aprovados; `silmer:romulo.sutil` designado como Tech
-  Lead, equipe de entrega e Administrador Técnico com MFA.
-- Exceção `SOLO-OPS-PILOT-01` limita a concentração de Privacidade e execução
-  técnica ao piloto interno, preservando capacidades ortogonais, eventos
-  separados, ausência de encadeamento automático e auditoria.
+- Defaults `D00.6-01..07` aprovados; `silmer:romulo.sutil` designado como Tech Lead, equipe de entrega e Administrador Técnico com MFA.
+- Exceção `SOLO-OPS-PILOT-01` limitada ao piloto interno; não prova segregação, infraestrutura provisionada ou recovery.
 
-## Decisões técnicas propostas como baseline
+## Baseline técnica
 
-- **Forma:** monólito modular em JavaScript ESM, sem microserviços no MVP.
-- **Processos:** `edge-web`, `api` e `worker`, construídos do mesmo repositório.
-- **Frontend:** HTML semântico, CSS e JavaScript vanilla; Nginx não-root serve
-  os assets e mantém web/API na mesma origem.
+- **Forma:** CRM como monólito modular em JavaScript ESM e n8n como runtime externo obrigatório de automação; não criar microserviços adicionais.
+- **Processos do CRM:** `silmer-edge-web`, `silmer-api`, `silmer-worker` e `silmer-postgres`.
+- **Automação:** `silmer-n8n`, persistência própria e workflows versionados. A interface administrativa não é pública.
+- **Frontend:** HTML semântico, CSS e JavaScript vanilla; Nginx não-root serve os assets e mantém web/API na mesma origem.
 - **Backend:** Node.js Active LTS, Fastify, REST `/api/v1`, OpenAPI 3.1 e SSE.
-- **Persistência:** PostgreSQL com SQL e migrações versionadas; dados oficiais
-  normalizados e JSONB limitado a payloads/snapshots apropriados.
-- **Assíncrono:** inbox/outbox e jobs no PostgreSQL, com entrega at-least-once,
-  idempotência quando suportada pelo provedor e `outcome_unknown` reconciliável;
-  não há promessa de exactly-once de rede. Redis não entra no MVP.
-- **Autenticação:** sessão opaca em cookie seguro, CSRF, MFA obrigatório para
-  `Admin` e Administrador Técnico, e autorização aplicada no backend.
-- **Storage:** no piloto interno, mídia de canal é transitória em volume privado
-  da VPS, sem backup, por até sete dias ou até o fim da jornada. Arquivos
-  válidos seguem ao Dropbox por procedimento operacional registrado. Object
-  storage externo para arquivo automatizado, backups e tombstones permanece
-  evolução condicionada à issue `#29`; R2 não está autorizado nem provisionado.
-- **Documentos:** snapshot imutável + template HTML/CSS + PDF gerado no worker.
-- **IA:** adapter próprio e Gemini Developer API paga como baseline, fixada em
-  `gemini-2.5-flash-lite`, sem fine-tuning, RAG ou vector database no MVP. A
-  produção com PII permanece bloqueada até ZDR aprovado; DPA e retenção efetiva
-  são gates.
-- **Operação:** projeto EasyPanel compartilhado e duradouro `espectro-mvp`, com
-  serviços `silmer-edge-web`, `silmer-api`, `silmer-worker` e
-  `silmer-postgres`; somente `silmer-edge-web` pode ser público. O risco de não
-  haver isolamento entre ambientes foi aceito para o piloto e a aceitação da
-  VPS única continua dependente de recovery drill em host limpo.
-- **Deploy:** imagens imutáveis por digest, promoção manual no projeto estável,
-  migrations expand/contract, backup externo e rollback para digest anterior.
+- **Persistência:** PostgreSQL com SQL e migrações versionadas; dados oficiais normalizados e JSONB limitado a payloads e snapshots apropriados.
+- **Assíncrono:** CRM mantém inbox/outbox e jobs transacionais. A rede opera at-least-once; contratos idempotentes e reconciliação tratam replay e `outcome_unknown` sem prometer exactly-once.
+- **Escala:** execução regular do n8n no MVP. Queue mode e Redis só entram após medição que justifique mais infraestrutura.
+- **Autenticação humana:** sessão opaca em cookie seguro, CSRF, MFA obrigatório para `Admin` e Administrador Técnico.
+- **Autenticação técnica:** credencial exclusiva e rotacionável do n8n, sem sessão de navegador, sem capacidade administrativa e sem acesso de rede ao banco do CRM.
+- **Storage:** mídia de canal transitória em volume privado da VPS por até sete dias ou fim da jornada; arquivos válidos seguem ao Dropbox por procedimento operacional registrado. Evolução de storage depende da issue `#29`.
+- **Documentos:** snapshot imutável, template HTML/CSS e PDF gerado no worker.
+- **IA:** OpenAI ou Gemini por configuração versionada, sujeitos ao mesmo schema, evals e gates de privacidade. Produção com PII permanece bloqueada até evidências aplicáveis de DPA, retenção e ZDR.
+- **Deploy:** imagens imutáveis por digest, workflows publicados por versão, migrations expand/contract, backup externo e rollback coordenado.
 
-## Decisões de modelagem
+## Modelagem e confiabilidade
 
-- `Deal`/`Negocio` é a única raiz do funil. Lead é classificação e Card é
-  projeção visual, sem estado próprio concorrente.
+- `Deal`/`Negocio` é a única raiz do funil. Lead é classificação e Card é projeção visual.
 - Backlog pertence à Conversa e permanece fora do Kanban.
-- Sugestões da IA e campos oficiais são persistidos separadamente.
+- Dados extraídos pela IA só se tornam oficiais após validação do schema e aceitação pelo comando do CRM.
 - Auditoria de negócio é append-only e não se confunde com log técnico.
-- A perda da única cópia de mídia transitória na VPS é risco aceito do piloto e
-  produz estado `lost/unavailable`, nunca alegação de recuperação. Documentos
-  comerciais duráveis não usam essa classe de storage.
-- PostgreSQL é a fonte da verdade; canais, IA, storage e futuras automações
-  entram apenas por ports/adapters.
-- Venda, PIX, Pedido, Ficha, envio e onboarding usam chaves idempotentes e
-  constraints transacionais.
+- Perda da única cópia de mídia transitória produz `lost/unavailable`, nunca alegação de recuperação.
+- Venda, PIX, Pedido, Ficha, envio e onboarding usam chaves idempotentes e constraints transacionais.
+- Cada execução correlaciona `workflow_key`, versão, `execution_id`, mensagem, `correlation_id` e `automation_epoch`.
 
-## Projetos e documentos executáveis
+## Caminho de lançamento
 
-- `TECHNICAL-DESIGN.md`: TDD, stack, módulos, dados, APIs, segurança e SLOs.
-- `EASYPANEL-TOPOLOGY.md`: serviços, rede, sizing, segredos, CI/CD e recovery.
-- `.specs/features/crm-mvp/tasks.md`: decomposição de implementação e gates.
+1. Concluir e provar o CRM isoladamente por API e fixtures.
+2. Concluir e provar a Inbox Multicanal com eventos simulados e takeover acessível.
+3. Concluir e provar o Vendedor Silmer no n8n com OpenAI e Gemini.
+4. Integrar os três objetivos, testar falhas e executar UAT, carga, deploy, rollback e recovery.
 
-## Aprovações externas e operacionais ainda necessárias
-
-- Privacidade aprovar os operadores de IA, storage e observabilidade.
-- Operação validar o PDF da Ficha, domínios e credenciais de cada ambiente.
-- DevOps demonstrar RPO/RTO do CRM completo em uma VPS limpa.
-
-A T00.6 foi aprovada em 02/09/2026 com evidência em
-`docs/phase0/T00.6-APPROVAL-EVIDENCE.md`. Essa aprovação não satisfaz nem
-antecipa os gates externos listados acima.
-
-O envelope de carga foi aprovado por Produto, Operação e Tech Lead na issue
-`#8` em 31/08/2026. A previsão do piloto cabe na baseline de homologação, o
-sizing KVM 4 foi mantido e a comprovação por carga real continua pendente na
-T07.1.
-
-Nenhuma decisão técnica deve ser inferida do material arquivado do Datacrazy.
+As aprovações externas de IA, observabilidade, storage e recovery permanecem gates próprios. Testes e documentação não substituem evidência operacional nem aprovação humana.

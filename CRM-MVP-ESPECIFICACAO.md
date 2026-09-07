@@ -23,14 +23,15 @@ auditoria e rollback explícitos.
 
 - Centralizar as conversas comerciais recebidas pela API oficial do WhatsApp Business.
 - Separar conversas pendentes de oportunidades comerciais reais.
-- Permitir conversão humana, idempotente e auditável de uma conversa em lead.
-- Fazer o Vendedor Silmer conduzir a conversa e sugerir a próxima etapa sem
-  alterar o estado comercial no MVP.
+- Disparar automaticamente o n8n a cada mensagem válida recebida, sem botão na interface.
+- Permitir conversão automática, idempotente e auditável de uma conversa comercial em lead.
+- Fazer o Vendedor Silmer no n8n conduzir a conversa, atualizar dados e avançar
+  as etapas permitidas até o fechamento ou a transferência para uma pessoa.
 - Produzir a Ficha de Pedido com dados suficientes para produção e cobrança.
 - Enviar a Ficha aprovada para Rose usando o telefone resolvido pela referência
   `secret://crm/order-recipient-phone`, sem versionar o dado pessoal.
 - Registrar vendas e oferecer uma visão financeira comercial básica.
-- Manter intervenção humana, rastreabilidade e recuperação em caso de falha.
+- Manter tomada humana, rastreabilidade e recuperação em caso de falha.
 
 ## 3. Fora do escopo inicial
 
@@ -60,20 +61,21 @@ o P0.7.
 
 ### Vendedor Silmer
 
-É o agente de IA operacional. No MVP pode ler contexto autorizado, responder,
-consultar regras, resumir e sugerir a próxima etapa. A sugestão é não
-vinculante e depende de confirmação humana. A autonomia para criar lead,
-preencher campos e mover cards pertence ao pós-MVP e só poderá existir atrás
-da chave `vendedor_silmer_autonomia_comercial`, desativada por padrão.
+É o agente de IA operacional executado obrigatoriamente no n8n. Pode ler
+contexto autorizado, responder, consultar regras, resumir, criar ou atualizar
+leads, preencher campos e mover cards por comandos da API do CRM. Preço,
+aprovação de venda, confirmação de pagamento e aprovação da Ficha continuam
+dependendo de pessoa autorizada.
 
 ## 5. Caixa de Entrada como backlog
 
 Toda conversa recebida entra primeiro na Caixa de Entrada com estado próprio, por exemplo: `Nova`, `Em análise`, `Em atendimento`, `Convertida em lead`, `Encerrada sem lead` ou `Requer atenção`.
 
-No MVP, uma conversa sai do backlog por ação humana: Atendimento ou Vendedor
-usa o botão `Transformar em lead`. O Vendedor Silmer pode sugerir essa ação,
-mas não executá-la. A execução autônoma poderá ser habilitada somente na fase
-P2 pela chave de autonomia comercial.
+Cada mensagem válida dispara automaticamente o workflow do n8n. A simples
+chegada não cria lead: o Vendedor Silmer primeiro classifica a intenção e,
+quando ela for comercial, solicita ao CRM a criação ou vinculação do Contato e
+de exatamente um Negócio. A interface pode oferecer conversão manual durante
+tomada humana, mas nenhum botão inicia o n8n.
 
 Converter em lead cria ou vincula um Contato e cria um novo Negócio no Kanban. Contatos recorrentes podem possuir vários negócios sem perder o histórico de relacionamento.
 
@@ -81,16 +83,17 @@ A conversão deve ser idempotente: retries do webhook, mensagens duplicadas ou c
 
 ## 6. Canal do MVP
 
-O canal obrigatório do MVP é a **API oficial do WhatsApp Business**. A
-verificação necessária já foi obtida. O **Instagram Direct** também entra no
-piloto por integração oficial, mas é não bloqueante: sua indisponibilidade não
-atrasa o lançamento pelo WhatsApp. O site apenas abre o WhatsApp e pode
-registrar origem `site`; não é um terceiro canal de conversa.
+Os canais obrigatórios do MVP são a **API oficial do WhatsApp Business** e o
+**Instagram Direct**, ambos integrados pelo n8n e submetidos ao mesmo fluxo. O
+site apenas abre um desses canais e pode registrar origem `site`; não é um
+terceiro canal de conversa.
 
 Cada mensagem registra canal, identificador externo, remetente, timestamp,
 conteúdo, anexos e estado de processamento. Identidades de Instagram e
-WhatsApp só são fundidas por correlação verificável ou decisão humana
-auditável.
+WhatsApp só são conectadas por correlação verificável ou decisão humana
+auditável. Ao migrar de canal, o mesmo Negócio continua ativo e o lead passa a
+referenciar tanto o `@instagram` quanto o telefone, sem apagar os históricos
+separados de cada identidade.
 
 Os metadados da mensagem e os bytes de mídia têm ciclos distintos. Imagens e
 arquivos de canal ficam temporariamente em volume privado da VPS e são
@@ -106,7 +109,7 @@ Se o CRM não consumir uma mensagem, ela pode continuar disponível no canal nat
 
 O produto deve exibir saúde do canal, último evento recebido e pendências de processamento. A sincronização retroativa oferecida pela API deverá ser confirmada pelo Tech Lead; o produto não deve prometer recuperação automática que o provedor não ofereça.
 
-## 7. Vendedor Silmer no MVP e autonomia futura
+## 7. Vendedor Silmer no MVP
 
 No MVP, o Vendedor Silmer:
 
@@ -115,9 +118,11 @@ No MVP, o Vendedor Silmer:
 3. Identifica intenção comercial e sugere `Transformar em lead`.
 4. Descobre o próximo campo necessário da jornada.
 5. Pergunta apenas o que ainda não foi respondido.
-6. Produz resumo e sugestão não vinculante da etapa.
-7. Aguarda uma pessoa confirmar a conversão, o campo oficial ou a mudança de
-   card.
+6. Produz uma decisão estruturada e solicita ao CRM somente as mutações
+   autorizadas para a etapa.
+7. Registra o gate e avança o card quando os campos estiverem válidos, ou
+   aguarda a aprovação humana quando o gate for preço, venda, pagamento ou
+   Ficha.
 
 O agente interrompe e transfere para uma pessoa quando:
 
@@ -130,18 +135,27 @@ regra de produção. Após a qualificação, comunica somente uma versão vigent
 orçamento humano aprovada por `Admin`; não calcula, negocia nem concede
 desconto.
 
-No pós-MVP, a chave `vendedor_silmer_autonomia_comercial`, desativada por
-padrão, poderá autorizar conversão em lead, escrita de campos e avanço de card.
-Essa fase exige escopo de permissão, auditoria, rollback e desligamento
-imediato e não compõe o aceite do MVP.
+Tomada humana ou desligamento global incrementa o `automation_epoch`. Antes de
+cada envio ou mutação, o n8n apresenta esse epoch ao CRM; execuções antigas são
+rejeitadas e não podem retomar a conversa silenciosamente.
 
 ## 8. Papel do n8n
 
-O n8n é **opcional** e não faz parte do núcleo obrigatório do produto.
+O n8n é **obrigatório** e funciona como motor operacional do MVP. Ele recebe e
+envia mensagens do WhatsApp oficial, chama OpenAI ou Gemini, conduz perguntas,
+solicita criação ou atualização de leads, move o Kanban pelos gates permitidos
+e transfere para uma pessoa quando necessário.
 
-A máquina de estados comercial, as permissões do agente, a idempotência, a auditoria e o avanço dos cards devem pertencer ao CRM. O Vendedor Silmer deve funcionar mesmo sem n8n; no MVP, somente pessoas mutam o estado comercial.
+O n8n não é a fonte da verdade. A máquina de estados, as permissões, a
+idempotência e a auditoria oficial pertencem ao CRM. Workflows nunca acessam
+diretamente o banco: usam APIs autenticadas, autorizadas, versionadas e
+idempotentes. O histórico do n8n é log técnico; o efeito de negócio precisa
+estar registrado no CRM.
 
-O n8n poderá ser usado depois para automações periféricas, como notificações, integrações de baixa criticidade e rotinas agendadas. O Tech Lead decidirá se há benefício suficiente para incluí-lo, sem transformar sua presença em requisito do MVP.
+A indisponibilidade do n8n interrompe a automação e aparece como pendência
+operacional. Não há execução silenciosa por outro caminho. No MVP, o n8n usa
+execução regular; queue mode e Redis ficam para uma evolução sustentada por
+medição.
 
 ## 9. Ficha de Pedido como contrato da jornada
 
@@ -266,31 +280,34 @@ comerciais nem auditoria.
 
 - Toda conversa recebida pelo CRM aparece no backlog ou na fila de reconciliação.
 - Nenhuma conversa vira mais de um lead pelo mesmo evento de conversão.
-- O Vendedor Silmer responde e sugere a próxima etapa sem mutar o estado do
-  domínio no MVP.
-- Toda mensagem e sugestão do agente é auditável; somente uma pessoa confirma
-  conversão e mudança de etapa.
+- Toda mensagem válida dispara automaticamente o n8n e aparece no CRM ou em
+  pendência de reconciliação.
+- O Vendedor Silmer cria ou atualiza leads e move o Kanban por comandos
+  autorizados do CRM, sem acesso direto ao banco.
+- Toda mensagem, decisão, mutação e transferência é auditável e correlacionada
+  com uma versão de workflow.
 - Todo card termina como `Fechado` ou `Perdido`; conversas sem oportunidade terminam como `Sem lead` no backlog.
 - Toda venda fechada gera uma Ficha sem redigitação dos dados já coletados.
 - Toda Ficha aprovada possui estado de envio para Rose.
 - O CRM apresenta total vendido, quantidade de vendas e ticket médio no período.
 - Nenhum card transferido para atendimento humano fica sem responsável.
 
-Instagram pode entrar durante o piloto sem ser condição de lançamento. Os
-números de observação e volume são métricas operacionais definidas pelo Tech
-Lead com a operação e não reabrem P0.
+WhatsApp e Instagram são condições de lançamento. A migração entre eles deve
+preservar o mesmo Negócio, o contexto e as identidades verificadas. Os números
+de observação e volume são métricas operacionais definidas pelo Tech Lead com a
+operação e não reabrem P0.
 
 ## 15. Gate de produto para o Tech Lead
 
 ### Definido e liberado
 
 - Caixa de Entrada é backlog; Kanban contém leads.
-- Conversão e mutação de card são humanas no MVP; o Vendedor Silmer apenas
-  conversa e sugere.
-- Autonomia comercial é P2 e fica atrás de chave desativada por padrão.
-- n8n não é dependência central.
-- WhatsApp usa API oficial e bloqueia o go-live; Instagram Direct entra no
-  piloto sem bloquear o lançamento; site abre o WhatsApp.
+- Conversão, preenchimento e mudanças de etapa permitidas são executadas pelo
+  Vendedor Silmer no n8n; gates de preço, venda, pagamento e Ficha permanecem
+  humanos.
+- n8n é dependência central e obrigatória do MVP.
+- WhatsApp e Instagram usam APIs oficiais, seguem o mesmo fluxo no n8n e
+  bloqueiam o go-live; o site abre um dos canais.
 - Ficha é o contrato da qualificação.
 - P0.1 está resolvido: etapas, campos obrigatórios, gates, PIX e boas-vindas
   estão definidos em `CAMPOS-FICHA-E-JORNADA-P0-1.md`.

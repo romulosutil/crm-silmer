@@ -4,6 +4,14 @@
 **Parecer:** GO integral para o Tech Lead. P0.1 a P0.7 estão resolvidos e
 propagados para o PRD, contexto, requisitos, regras e design.
 
+> **Nota de supersessão — 06/09/2026:** este documento preserva a evidência das
+> decisões P0 tomadas em 29/08. As decisões sobre agente assistivo, autonomia,
+> n8n e Instagram não bloqueante foram substituídas pela revisão atual de
+> `RULES.md`, `CRM-MVP-ESPECIFICACAO.md` e
+> `.specs/features/crm-mvp/spec.md`: n8n, WhatsApp e Instagram são obrigatórios;
+> o agente pode mutar o estado por APIs do CRM. Os gates humanos de preço,
+> venda, pagamento e Ficha continuam vigentes.
+
 ## O que o Tech Lead já pode especificar
 
 - Contexto e limites do sistema.

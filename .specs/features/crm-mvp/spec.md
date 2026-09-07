@@ -2,16 +2,35 @@
 
 ## Problema
 
-As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é uma oportunidade. A Silmer precisa separar backlog de leads, apoiar a qualificação sem perder controle humano e transformar o resultado em uma Ficha de Pedido válida para produção e cobrança.
+As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é uma oportunidade. A Silmer precisa separar backlog de leads, automatizar a qualificação sem perder a autoridade do domínio e transformar o resultado em uma Ficha de Pedido válida para produção e cobrança.
 
 ## Objetivos
 
-- Conduzir o caminho feliz do WhatsApp oficial até a Ficha de Pedido.
-- Usar o Vendedor Silmer para conversar e sugerir ações, sem alterar o estado oficial do CRM no MVP.
-- Manter rastreabilidade, reversão humana e reconciliação de falhas.
+- Conduzir o caminho feliz do WhatsApp e do Instagram oficiais até a Ficha de Pedido.
+- Disparar automaticamente o n8n a cada mensagem recebida, sem botão na UI.
+- Usar o Vendedor Silmer no n8n para conversar, cadastrar ou atualizar leads, mover o Kanban e transferir para uma pessoa quando necessário.
+- Manter o CRM como fonte da verdade, com APIs autorizadas, rastreabilidade, tomada humana e reconciliação de falhas.
 - Medir as vendas originadas no CRM.
 
 ## P1 — MVP
+
+### P1.0 n8n como motor obrigatório
+
+**User story:** Como operação, quero que toda mensagem recebida inicie automaticamente a jornada no n8n para que canais, IA e etapas comerciais funcionem sem depender de um botão na interface.
+
+**Critérios de aceite:**
+
+1. **ORC-01:** WHEN uma mensagem recebida é validada pelo canal THEN ela SHALL disparar automaticamente o n8n, sem ação da UI.
+2. **ORC-02:** WHEN o n8n recebe ou envia uma mensagem pelo WhatsApp ou Instagram oficial THEN ele SHALL aplicar o mesmo fluxo, normalizar o evento e registrar seu resultado no CRM por contrato versionado.
+3. **ORC-03:** WHEN o Vendedor Silmer cria ou atualiza Contato ou Negócio, preenche campo ou move etapa THEN o n8n SHALL usar uma API autenticada, autorizada, idempotente e auditável do CRM e nunca acessar diretamente o banco.
+4. **ORC-04:** WHEN um workflow executa THEN o CRM SHALL correlacionar `workflow_key`, versão publicada, `execution_id`, mensagem, `automation_epoch` e resultado sem armazenar segredo.
+5. **ORC-05:** WHEN eventos são repetidos, concorrentes ou chegam fora de ordem THEN CRM e n8n SHALL produzir no máximo um efeito oficial e expor divergências para reconciliação.
+6. **ORC-06:** WHEN a política versionada seleciona OpenAI ou Gemini THEN o workflow SHALL preservar o mesmo schema de entrada, saída, segurança, privacidade e avaliação.
+7. **ORC-07:** WHEN uma pessoa assume a conversa ou a automação é desligada THEN o CRM SHALL incrementar o `automation_epoch` e rejeitar comandos e envios de execuções antigas.
+8. **ORC-08:** WHEN n8n, canal ou provedor de IA fica indisponível ou retorna resultado incerto THEN o sistema SHALL tornar a pendência visível e retomável, sem avançar silenciosamente a jornada.
+9. **ORC-09:** WHEN o atendimento migra de canal THEN o sistema SHALL continuar o mesmo Negócio e conectar `@instagram` e telefone ao lead somente após correlação verificável, explícita e auditável, preservando as duas identidades e os históricos.
+
+**Teste independente:** receber uma mensagem realista, comprovar o disparo automático do n8n, executar a jornada com OpenAI e Gemini, repetir eventos e assumir a conversa durante uma execução sem duplicar ou aplicar efeito atrasado.
 
 ### P1.1 Caixa de Entrada e conversão
 
@@ -20,28 +39,28 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 **Critérios de aceite:**
 
 1. **INB-01:** WHEN uma mensagem válida chega pela API oficial THEN o sistema SHALL criar ou atualizar uma conversa no backlog sem criar automaticamente um lead apenas pela chegada.
-2. **INB-02:** WHEN uma pessoa aciona `Transformar em lead` THEN o sistema SHALL criar ou vincular o Contato e criar exatamente um Negócio no Kanban.
-3. **INB-03:** WHEN o Vendedor Silmer identifica intenção comercial THEN o sistema SHALL sugerir a conversão e aguardar confirmação humana, sem criar Contato, Lead ou Card.
-4. **INB-04:** WHEN a mesma conversão humana é repetida THEN o sistema SHALL retornar o resultado existente sem duplicar Contato, Lead ou Card.
+2. **INB-02:** WHEN o Vendedor Silmer identifica intenção comercial THEN o n8n SHALL solicitar a criação ou vinculação do Contato e de exatamente um Negócio no Kanban.
+3. **INB-03:** WHEN a conversa não representa oportunidade THEN o n8n SHALL encerrá-la como `Sem lead` com motivo auditável, sem criar Negócio.
+4. **INB-04:** WHEN a mesma conversão automática ou manual é repetida THEN o sistema SHALL retornar o resultado existente sem duplicar Contato, Lead ou Card.
 
-**Teste independente:** receber uma conversa, mantê-la no backlog, obter uma sugestão do agente e convertê-la uma única vez por ação humana.
+**Teste independente:** receber duas conversas, converter automaticamente apenas a comercial e repetir os eventos sem duplicar Contato, Lead ou Card.
 
 ### P1.2 Atendimento assistido pelo Vendedor Silmer
 
-**User story:** Como operação, quero que o Vendedor Silmer converse, colete informações e sugira o próximo passo para reduzir trabalho manual mantendo as decisões oficiais sob controle humano.
+**User story:** Como operação, quero que o Vendedor Silmer converse, colete informações e conduza automaticamente os passos permitidos, preservando os gates humanos explícitos.
 
 **Critérios de aceite:**
 
 1. **AGT-01:** WHEN existe uma conversa ou lead ativo THEN o agente SHALL consultar o histórico e os campos já respondidos antes de perguntar.
-2. **AGT-02:** WHEN os campos obrigatórios da etapa estão válidos THEN o agente SHALL sugerir a próxima etapa sem mover o card.
+2. **AGT-02:** WHEN os campos obrigatórios da etapa estão válidos THEN o n8n SHALL registrar o gate e solicitar ao CRM o avanço de exatamente uma etapa.
 3. **AGT-03:** WHEN o cliente pede um vendedor da Silmer THEN o agente SHALL interromper sua atuação e transferir com resumo e responsável.
 4. **AGT-04:** WHEN o cliente insiste em valor antes de existir orçamento humano aprovado THEN o agente SHALL transferir sem calcular, negociar ou inventar valor.
 5. **AGT-05:** WHEN o agente encontra bloqueio não resolvível THEN ele SHALL registrar o motivo e transferir sem descartar o contexto.
-6. **AGT-06:** WHEN o agente envia mensagem, sugere ação ou transfere atendimento THEN um usuário autorizado SHALL conseguir auditar o evento.
-7. **AGT-07:** WHEN todos os campos obrigatórios aplicáveis da etapa estão `preenchido` ou `nao_aplicavel` com motivo THEN o sistema SHALL permitir que uma pessoa registre o gate e avance exatamente uma etapa conforme `CAMPOS-FICHA-E-JORNADA-P0-1.md`.
+6. **AGT-06:** WHEN o agente envia mensagem, decide, altera estado ou transfere atendimento THEN um usuário autorizado SHALL conseguir auditar o evento e sua correlação com a execução do n8n.
+7. **AGT-07:** WHEN todos os campos obrigatórios aplicáveis da etapa estão `preenchido` ou `nao_aplicavel` com motivo THEN o sistema SHALL permitir que o ator técnico do n8n registre o gate e avance exatamente uma etapa conforme `CAMPOS-FICHA-E-JORNADA-P0-1.md`.
 8. **AGT-08:** WHEN um campo obrigatório está `pendente` ou `divergente`, ou uma correção invalida etapa anterior, THEN o sistema SHALL impedir avanço ou exigir retorno à primeira etapa incompleta sem apagar o histórico.
 
-**Teste independente:** conduzir um lead simulado por todas as etapas, confirmar humanamente cada mudança e repetir com os três cenários de handoff.
+**Teste independente:** conduzir um lead simulado automaticamente pelas etapas permitidas, preservar as aprovações humanas de preço, venda, pagamento e Ficha e repetir com os três cenários de handoff.
 
 ### P1.3 Ficha de Pedido
 
@@ -68,12 +87,12 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 1. **MSG-01:** WHEN um webhook é recebido mais de uma vez THEN o sistema SHALL processá-lo idempotentemente, sem duplicar mídia, validação ou handoff operacional.
 2. **MSG-02:** WHEN o processamento falha ou a mídia temporária fica indisponível THEN o sistema SHALL colocar o evento em pendência visível com motivo e opção de retomada quando ainda possível.
 3. **MSG-03:** WHEN o canal ou o volume temporário fica indisponível THEN o sistema SHALL exibir o estado e o último evento recebido sem afirmar que mensagens ou bytes não observados foram recuperados.
-4. **MSG-04:** WHEN o piloto é iniciado THEN o WhatsApp oficial SHALL estar operacional; o Instagram Direct SHALL fazer parte do piloto quando disponível, mas sua indisponibilidade não poderá bloquear ou adiar o lançamento pelo WhatsApp.
+4. **MSG-04:** WHEN o piloto é iniciado THEN os canais obrigatórios WhatsApp Business e Instagram Direct SHALL estar operacionais no n8n e executar a mesma jornada, inclusive migração de canal e handoff.
 
 **Teste independente:** repetir webhooks com mídia, induzir falha e perda da
 cópia temporária, concluir o reprocessamento possível e comprovar que não há
 duplicidade nem alegação falsa de recuperação e que a indisponibilidade do
-Instagram não interrompe o WhatsApp.
+um canal não corrompe o histórico do outro.
 
 ### P1.5 Financeiro comercial
 
@@ -93,7 +112,7 @@ Instagram não interrompe o WhatsApp.
 
 **Critérios de aceite:**
 
-1. **PRV-01:** WHEN um usuário acessa ou altera dados THEN o sistema SHALL aplicar as permissões de Atendimento/Vendedor ou Admin definidas no P0.7.
+1. **PRV-01:** WHEN uma pessoa ou o ator técnico do n8n acessa ou altera dados THEN o sistema SHALL aplicar as capacidades mínimas definidas no P0.7 e no contrato `AUTOMATION_EXECUTOR`, sem permitir autoatribuição ou acesso direto ao banco.
 2. **PRV-02:** WHEN dados pessoais são alterados, exportados, anonimizados ou excluídos THEN o sistema SHALL registrar a operação conforme a política aprovada no P0.6.
 3. **PRV-03:** WHEN o prazo de retenção é alcançado THEN o sistema SHALL aplicar a regra aprovada de descarte ou anonimização e permitir a execução pelo administrador técnico designado; para mídia transitória, o prazo SHALL ser o menor entre o encerramento da jornada e sete dias do recebimento ou envio.
 
@@ -119,9 +138,8 @@ de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 
 ## P2 — Depois do piloto
 
-- Chave `vendedor_silmer_autonomia_comercial`, desabilitada por padrão, para permitir que o agente converta conversas, atualize campos e mova cards apenas após especificação, testes, auditoria e rollback próprios.
 - Canal próprio de atendimento do site; no MVP, o site apenas direciona para o WhatsApp.
-- Automação periférica com n8n quando houver benefício comprovado.
+- Escala do n8n em queue mode e Redis somente quando medições justificarem a infraestrutura adicional.
 - Precificação automática baseada em política comercial futura; no MVP, o agente só comunica orçamento aprovado por uma pessoa.
 - Valores recebidos e saldo a receber.
 
@@ -137,15 +155,16 @@ de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 
 | Grupo              | IDs             | Status                            |
 | ------------------ | --------------- | --------------------------------- |
+| Orquestração n8n   | ORC-01 a ORC-09 | Requer refatoração da baseline    |
 | Inbox e conversão  | INB-01 a INB-04 | Pronto para especificação técnica |
-| Agente assistivo   | AGT-01 a AGT-08 | Pronto para especificação técnica |
+| Agente vendedor    | AGT-01 a AGT-08 | Requer refatoração da baseline    |
 | Pedido             | ORD-01 a ORD-05 | Pronto para especificação técnica |
 | Mensagens e canais | MSG-01 a MSG-04 | Pronto para especificação técnica |
 | Financeiro         | FIN-01 a FIN-03 | Pronto para especificação técnica |
 | Privacidade        | PRV-01 a PRV-03 | Pronto para especificação técnica |
 | PIX e boas-vindas  | PAY-01 a PAY-05 | Pronto para especificação técnica |
 
-**Cobertura:** 32 requisitos de MVP; 32 mapeados; nenhuma decisão de produto P0 aberta. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.
+**Cobertura:** 41 requisitos de MVP; 41 mapeados; nenhuma decisão de produto P0 aberta. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.
 
 ## Critério de passagem
 

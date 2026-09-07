@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
 
+import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { createDatabase } from '@crm-silmer/database';
 import { createMetaWhatsAppNormalizer } from '@crm-silmer/inbox-channels';
 import {
@@ -8,6 +9,7 @@ import {
   processMetaWebhook,
 } from '@crm-silmer/integration-reliability';
 import { createApi } from './app.js';
+import { createAutomationAuthRuntime } from './automation-auth-runtime.js';
 import { createCommercialRuntime } from './commercial-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
 import { createWhatsAppWebhookRuntime } from './whatsapp-webhook-runtime.js';
@@ -18,13 +20,19 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  * checker. Tests may inject a checker without weakening that default.
  *
  * @param {{
- *   database?: ReturnType<typeof createDatabase>,
- *   commercial?: ReturnType<typeof createCommercialRuntime>,
+ *   database?: {
+ *     close?: () => Promise<void>,
+ *     query: (sql: string, values?: unknown[]) => Promise<{rows: Array<Record<string, unknown>>}>,
+ *     readiness?: () => Promise<boolean>,
+ *     transaction: <T>(work: (client: any) => Promise<T>) => Promise<T>,
+ *   },
+ *   commercial?: Record<string, any>,
  *   environment?: Record<string, string|undefined>,
  *   logger?: ReturnType<typeof createSafeLogger>,
  *   readiness?: () => boolean | Promise<boolean>,
  *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>,
  *   identity?: ReturnType<typeof createIdentityApiRuntime>,
+ *   automationAuth?: ReturnType<typeof createAutomationAuthRuntime>,
  *   trustProxy?: import('fastify').FastifyServerOptions['trustProxy']
  * }} [runtime]
  */
@@ -42,15 +50,51 @@ export function createServerApi(runtime = {}) {
   const commercial =
     runtime.commercial ??
     (runtime.database ? createCommercialRuntime(runtime.database) : undefined);
+  const automationAuth =
+    runtime.automationAuth ??
+    (runtime.database
+      ? createConfiguredAutomationAuthRuntime(
+          runtime.database,
+          runtime.environment ?? process.env,
+        )
+      : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
-    { ...runtime, commercial, logger, metaWebhook, readiness },
+    {
+      ...runtime,
+      automationAuth,
+      commercial,
+      logger,
+      metaWebhook,
+      readiness,
+    },
   );
   const database = runtime.database;
-  if (database) {
-    api.addHook('onClose', () => database.close());
+  const closeDatabase = database?.close;
+  if (closeDatabase) {
+    api.addHook('onClose', closeDatabase.bind(database));
   }
   return api;
+}
+
+/**
+ * Keeps the technical actor disabled until both canonical credentials exist.
+ * Any partial configuration fails during startup.
+ *
+ * @param {{query: (sql: string, values?: unknown[]) => Promise<{rows: Array<Record<string, unknown>>}>}} database
+ * @param {Record<string, string|undefined>} environment
+ */
+export function createConfiguredAutomationAuthRuntime(database, environment) {
+  const names = [
+    'CRM_AUTOMATION_CLIENT_ID',
+    'CRM_AUTOMATION_CLIENT_SECRET',
+    'CRM_AUTOMATION_PREVIOUS_CLIENT_SECRET',
+  ];
+  if (names.every((name) => environment[name] === undefined)) return undefined;
+  return createAutomationAuthRuntime({
+    auditPort: new PostgresAuditTrail(database),
+    environment,
+  });
 }
 
 /**

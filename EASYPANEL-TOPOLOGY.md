@@ -271,6 +271,7 @@ DB_POSTGRESDB_PASSWORD
 CRM_API_BASE_URL
 CRM_AUTOMATION_CLIENT_ID
 CRM_AUTOMATION_CLIENT_SECRET
+CRM_AUTOMATION_PREVIOUS_CLIENT_SECRET
 ```
 
 Regras:
@@ -279,6 +280,8 @@ Regras:
   serviços do projeto;
 - tokens Meta e chaves OpenAI/Gemini ficam somente no n8n; a credencial
   `CRM_AUTOMATION_*` não concede administração nem acesso ao banco do CRM;
+- `CRM_AUTOMATION_PREVIOUS_CLIENT_SECRET` existe somente durante a janela
+  curta de rotação e deve ser removida depois do smoke com o segredo novo;
 - `N8N_ENCRYPTION_KEY` é obrigatória, fica em escrow operacional e deve ser
   restaurável junto do banco próprio do n8n;
 - `PIX_KEY_VALUE` fica disponível somente ao runtime que monta a mensagem e

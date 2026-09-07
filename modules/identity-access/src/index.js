@@ -714,6 +714,11 @@ export { createPostgresIdentityRepository } from './postgres.js';
 export { createPostgresAccessRepository } from './postgres-access.js';
 export { createPostgresAuthenticationThrottle } from './authentication-throttle.js';
 export {
+  AUTOMATION_EXECUTOR_ACTIONS,
+  AUTOMATION_EXECUTOR_ACTOR,
+  createAutomationCredentials,
+} from './automation-credentials.js';
+export {
   AccessControlError,
   CAPABILITIES,
   authorize,

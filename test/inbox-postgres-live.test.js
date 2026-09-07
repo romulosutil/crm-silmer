@@ -532,7 +532,7 @@ if (connectionString) {
     }
   });
 
-  test('PostgreSQL links the durable webhook job to the resulting inbox message', async () => {
+  test('PostgreSQL links webhook media to the inbox message once across replay', async () => {
     const databaseName = new URL(connectionString).pathname.slice(1);
     assert.equal(databaseName, 'crm_silmer_test');
     const pool = new Pool({ connectionString, max: 16 });
@@ -546,10 +546,26 @@ if (connectionString) {
         database,
         envelopeKey: Buffer.alloc(32, 31),
       });
-      const event = canonicalWebhookEvent(runId);
+      const event = /** @type {any} */ (canonicalWebhookEvent(runId));
+      const externalMediaId = `media-${runId}`;
+      event.message = {
+        content: {
+          attachmentId: externalMediaId,
+          caption: `PII-caption-${runId}`,
+        },
+        type: 'image',
+      };
+      const media = /** @type {any[]} */ ([
+        {
+          declaredMimeType: 'image/png',
+          externalMediaId,
+          mediaType: 'image',
+          providerSha256: null,
+        },
+      ]);
       await eventStore.persistBatch({
         correlationId: `correlation-chain-${runId}`,
-        events: [{ disposition: 'process', event, media: [] }],
+        events: [{ disposition: 'process', event, media }],
         rawBody: Buffer.from(`{"synthetic":"${runId}"}`),
         receivedAt: NOW.toISOString(),
       });
@@ -572,22 +588,31 @@ if (connectionString) {
         }),
         { outcome: 'sent' },
       );
+      assert.deepEqual(
+        await processEvent({
+          channelEventId: selectedJob.rows[0].channel_event_id,
+        }),
+        { outcome: 'sent' },
+      );
       const state = await pool.query(
         `SELECT
            (SELECT count(*)::integer FROM crm.contacts) AS contacts,
            (SELECT count(*)::integer FROM crm.conversations) AS conversations,
            (SELECT count(*)::integer FROM crm.messages) AS messages,
+           (SELECT count(*)::integer FROM crm.attachments) AS attachments,
            (SELECT channel_event_id FROM crm.messages LIMIT 1) AS linked_event,
            (SELECT content_envelope::text FROM crm.messages LIMIT 1) AS stored_content`,
       );
       assert.deepEqual(
         {
+          attachments: state.rows[0].attachments,
           contacts: state.rows[0].contacts,
           conversations: state.rows[0].conversations,
           linked_event: state.rows[0].linked_event,
           messages: state.rows[0].messages,
         },
         {
+          attachments: 1,
           contacts: 1,
           conversations: 1,
           linked_event: selectedJob.rows[0].channel_event_id,

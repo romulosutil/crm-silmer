@@ -16,6 +16,7 @@ import {
 const OPERATIONAL_ACTIONS = new Set([
   'conversation.convert',
   'deal.lose',
+  'deal.fields.patch',
   'deal.transition',
 ]);
 

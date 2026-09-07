@@ -120,6 +120,51 @@ export function registerDealRoutes(api, deals, contextFor) {
       return reply.code(200).send(result);
     });
   });
+
+  api.patch('/api/v1/deals/:dealId/fields', async (request, reply) => {
+    return respond(reply, async () => {
+      const params = requireObject(request.params);
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, [
+        'automationEpoch',
+        'conversationId',
+        'expectedVersion',
+        'fields',
+        'reasonCode',
+        'reasonDetail',
+      ]);
+      const command = await authorizeDealCommand(
+        request,
+        deals,
+        contextFor,
+        'deal.fields.patch',
+      );
+      const result = await deals.patchFields({
+        ...command,
+        ...(body.automationEpoch === undefined
+          ? {}
+          : { automationEpoch: requireAutomationEpoch(body.automationEpoch) }),
+        ...(body.conversationId === undefined
+          ? {}
+          : {
+              conversationId: requireString(
+                body.conversationId,
+                'CONVERSATION_ID',
+              ),
+            }),
+        dealId: requireString(params.dealId, 'DEAL_ID'),
+        expectedVersion: requireVersion(body.expectedVersion),
+        fields: requireObject(body.fields),
+        reasonCode: requireString(body.reasonCode, 'REASON_CODE'),
+        ...(body.reasonDetail === undefined
+          ? {}
+          : {
+              reasonDetail: requireString(body.reasonDetail, 'REASON_DETAIL'),
+            }),
+      });
+      return reply.code(200).send(result);
+    });
+  });
 }
 
 /** @param {any} request @param {any} deals @param {Function} contextFor @param {string} action */

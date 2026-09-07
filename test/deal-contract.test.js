@@ -47,7 +47,7 @@ test('OpenAPI publishes one-step Deal transition and human-only loss commands', 
     /^  \/deals\/\{dealId\}\/transitions:[\s\S]+?(?=^  \/deals\/\{dealId\}\/lose:)/mu,
   )?.[0];
   const loss = contract.match(
-    /^  \/deals\/\{dealId\}\/lose:[\s\S]+?(?=^components:)/mu,
+    /^  \/deals\/\{dealId\}\/lose:[\s\S]+?(?=^  \/deals\/\{dealId\}\/fields:)/mu,
   )?.[0];
   assert.ok(transition);
   assert.ok(loss);
@@ -62,6 +62,36 @@ test('OpenAPI publishes one-step Deal transition and human-only loss commands', 
   assert.doesNotMatch(loss, /automationBasic/u);
   assert.match(routes, /\/api\/v1\/deals\/:dealId\/transitions/u);
   assert.match(routes, /\/api\/v1\/deals\/:dealId\/lose/u);
+});
+
+test('OpenAPI publishes the closed qualification patch and its dedicated key', async () => {
+  const [contract, routes, environment, topology] = await Promise.all([
+    readFile(new URL('docs/api/openapi.v1.yaml', rootUrl), 'utf8'),
+    readFile(new URL('apps/api/src/deal-routes.js', rootUrl), 'utf8'),
+    readFile(new URL('.env.example', rootUrl), 'utf8'),
+    readFile(new URL('ops/easypanel/topology.json', rootUrl), 'utf8'),
+  ]);
+  const patch = contract.match(
+    /^  \/deals\/\{dealId\}\/fields:[\s\S]+?(?=^components:)/mu,
+  )?.[0];
+  assert.ok(patch);
+  assert.match(patch, /operationId: patchDealFields/u);
+  assert.doesNotMatch(patch, /targetStage/u);
+  assert.match(contract, /^    DealFieldsPatchRequest:$/mu);
+  assert.match(contract, /required: \[expectedVersion, fields, reasonCode\]/u);
+  assert.match(
+    contract,
+    /operation: \{ type: string, enum: \[upsert, remove\] \}/u,
+  );
+  assert.match(contract, /required: \[attachmentId, itemId, locationId\]/u);
+  assert.match(contract, /required: \[deal, readiness, totalQuantity\]/u);
+  assert.match(routes, /api\.patch\('\/api\/v1\/deals\/:dealId\/fields'/u);
+  assert.match(environment, /^QUALIFICATION_ENVELOPE_KEY=$/mu);
+  assert.ok(
+    JSON.parse(topology).projects[0].secrets.inventory.includes(
+      'QUALIFICATION_ENVELOPE_KEY',
+    ),
+  );
 });
 
 test('Deal encryption key is inventoried without a versioned value', async () => {

@@ -72,6 +72,7 @@ test('packages every runtime workspace required by the API', async () => {
     'identity-access',
     'inbox-channels',
     'integration-reliability',
+    'qualification',
     'shared',
   ];
   for (const moduleName of runtimeModules) {

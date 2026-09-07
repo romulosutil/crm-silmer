@@ -291,6 +291,40 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
         '503': { $ref: '#/components/responses/Unavailable' }
+  /deals/{dealId}/fields:
+    patch:
+      operationId: patchDealFields
+      summary: Atualiza campos oficiais da Ficha do Negócio
+      description: >-
+        Patch idempotente de seções fechadas. Incrementa a versão raiz uma vez
+        e retorna atomicamente à primeira etapa anterior incompleta. O executor
+        técnico deve provar conversa ativa e automationEpoch na mesma transação.
+      security:
+        - automationBasic: []
+          idempotencyKey: []
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - $ref: '#/components/parameters/DealId'
+        - $ref: '#/components/parameters/OriginOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealFieldsPatchRequest' }
+      responses:
+        '200':
+          description: Campos persistidos ou resposta original reproduzida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealFieldsPatchResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/InvalidRequest' }
+        '503': { $ref: '#/components/responses/Unavailable' }
 components:
   securitySchemes:
     automationBasic:
@@ -487,6 +521,185 @@ components:
           type: string
           minLength: 1
           description: Motivo sensível cifrado antes da persistência.
+    DealFieldsPatchRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, fields, reasonCode]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        reasonCode:
+          type: string
+          enum:
+            [
+              customer_update,
+              correction,
+              qualification_review,
+              automation_extraction,
+            ]
+        reasonDetail:
+          type: string
+          minLength: 1
+          maxLength: 2048
+          description: Detalhe sensível cifrado; eventos e auditoria recebem somente código e hash.
+        conversationId: { type: string, minLength: 1 }
+        automationEpoch: { type: integer, minimum: 0 }
+        fields:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            order:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                customer: { type: string, minLength: 1 }
+                name: { type: string, minLength: 1 }
+                commercialIntent: { type: boolean, const: true }
+            items:
+              type: array
+              minItems: 1
+              items: { $ref: '#/components/schemas/DealItemFields' }
+            artwork: { $ref: '#/components/schemas/DealArtworkFields' }
+            logistics: { $ref: '#/components/schemas/DealLogisticsFields' }
+            observations:
+              type: array
+              items: { type: string, minLength: 1 }
+            assessments:
+              type: array
+              items: { $ref: '#/components/schemas/FieldAssessment' }
+    DealItemFields:
+      type: object
+      additionalProperties: false
+      required: [id]
+      minProperties: 2
+      properties:
+        id: { type: string, minLength: 1 }
+        operation: { type: string, enum: [upsert, remove] }
+        catalogVersionId: { type: string, minLength: 1 }
+        productCode: { type: string, minLength: 1 }
+        modelCode: { type: string, minLength: 1 }
+        estimatedQuantity: { type: integer, minimum: 1 }
+        fabrics:
+          type: array
+          items: { type: string, minLength: 1 }
+        colors:
+          type: object
+          additionalProperties: false
+          properties:
+            front: { type: string, minLength: 1 }
+            back: { type: string, minLength: 1 }
+            rightSleeve: { type: string, minLength: 1 }
+            leftSleeve: { type: string, minLength: 1 }
+            collarTrim: { type: string, minLength: 1 }
+            sleeveTrim: { type: string, minLength: 1 }
+        grade:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [size, quantity]
+            properties:
+              size: { type: string, minLength: 1 }
+              quantity: { type: integer, minimum: 1 }
+              duplicateSizeReason: { type: string, minLength: 1 }
+    DealArtworkFields:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        status:
+          {
+            type: string,
+            enum:
+              [ready, customer_will_send, silmer_will_create, not_applicable],
+          }
+        catalogVersionId: { type: string, minLength: 1 }
+        responsibility: { type: string, minLength: 1 }
+        techniqueCode: { type: string, minLength: 1 }
+        locations:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name]
+            properties:
+              id: { type: string, minLength: 1 }
+              name: { type: string, minLength: 1 }
+        files:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [attachmentId, itemId, locationId]
+            properties:
+              attachmentId:
+                type: object
+                additionalProperties: false
+                required: [messageId, transientMediaId]
+                properties:
+                  messageId: { type: string, minLength: 1, maxLength: 64 }
+                  transientMediaId:
+                    { type: string, minLength: 1, maxLength: 64 }
+              itemId: { type: string, minLength: 1 }
+              locationId: { type: string, minLength: 1 }
+        colors:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [locationId, values]
+            properties:
+              locationId: { type: string, minLength: 1 }
+              values:
+                type: array
+                minItems: 1
+                items: { type: string, minLength: 1 }
+    DealLogisticsFields:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        desiredDate: { type: string, format: date }
+        purpose: { type: string, minLength: 1 }
+        purchaseProfile: { type: string, minLength: 1 }
+        mode: { type: string, enum: [delivery, pickup] }
+        city: { type: string, minLength: 1 }
+        address: { type: string, minLength: 1 }
+        pickupLocation: { type: string, minLength: 1 }
+    FieldAssessment:
+      type: object
+      additionalProperties: false
+      required: [field, status]
+      properties:
+        field: { type: string, minLength: 1 }
+        status:
+          {
+            type: string,
+            enum: [preenchido, nao_aplicavel, pendente, divergente],
+          }
+        reason: { type: string, minLength: 1 }
+    DealFieldsPatchResponse:
+      type: object
+      additionalProperties: false
+      required: [deal, readiness, totalQuantity]
+      properties:
+        deal:
+          { $ref: '#/components/schemas/DealCommandResponse/properties/deal' }
+        readiness:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: false
+            required: [complete, blockers]
+            properties:
+              complete: { type: boolean }
+              blockers: { type: array, items: { type: string } }
+              nextPendingField: { type: string }
+        totalQuantity:
+          type: integer
+          minimum: 0
+          description: Soma derivada das quantidades estimadas de todos os itens.
     DealCommandResponse:
       type: object
       additionalProperties: false

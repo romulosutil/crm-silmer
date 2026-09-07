@@ -1,8 +1,8 @@
 # Topologia EasyPanel — CRM Silmer
 
-> **Status:** baseline operacional aprovada
+> **Status:** baseline do CRM aprovada; extensão obrigatória do n8n pendente de provisionamento e gate operacional
 >
-> **Data:** 31/08/2026
+> **Data:** 31/08/2026; revisão arquitetural em 06/09/2026
 >
 > **Host:** Hostinger VPS com Ubuntu 24.04 e EasyPanel
 
@@ -18,8 +18,9 @@ aceito para o piloto. A evolução para projeto ou host próprio passa a ser exi
 quando os gatilhos da seção 13 forem atingidos.
 
 Não criar projeto de observabilidade dentro da mesma VPS: o monitor de uptime
-precisa estar fora do domínio de falha do host. n8n, se aprovado depois do MVP,
-receberá o projeto separado `crm-silmer-automation`, sem acesso direto ao banco.
+precisa estar fora do domínio de falha do host. O n8n é obrigatório no MVP e
+entra no projeto `espectro-mvp` com o prefixo `silmer-`, persistência própria,
+sem acesso direto ao banco do CRM e com somente o webhook do canal publicado.
 
 ## 2. Serviços no projeto
 
@@ -29,15 +30,21 @@ receberá o projeto separado `crm-silmer-automation`, sem acesso direto ao banco
 | `silmer-api`      | App                | GHCR por digest                        |                     Não | Volume de mídia somente leitura ao ativar T02 |
 | `silmer-worker`   | App                | Mesma imagem runtime, comando distinto |                     Não | Volume de mídia leitura/escrita ao ativar T02 |
 | `silmer-postgres` | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo             |
+| `silmer-n8n`      | App                | n8n por versão e digest fixados        |                     Não | Nenhuma; usa banco próprio                    |
+| `silmer-n8n-db`   | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo             |
 
 `migrate` é um job curto executado pelo pipeline ou script salvo do EasyPanel;
 não é serviço permanente.
+
+O inventário executável atual em `ops/easypanel/topology.json` continua sendo a
+evidência do que já foi provisionado e ainda não contém n8n. A etapa AGENTE-1
+deve atualizá-lo junto da configuração e da prova live; este planejamento não
+pode ser usado para afirmar que os dois novos serviços já existem.
 
 Não subir no MVP:
 
 - Redis ou BullMQ;
 - MinIO;
-- n8n;
 - Elasticsearch ou Meilisearch;
 - Grafana, Prometheus ou Loki próprios;
 - banco/admin UI permanentemente habilitado.
@@ -52,14 +59,18 @@ Internet e Meta
 silmer-edge-web (único serviço público)
    |-- /                         arquivos vanilla
    |-- /api/*                    silmer-api:8000
-   |-- /api/v1/webhooks/meta/*   silmer-api:8000
+   |-- /webhook/meta/*           silmer-n8n:5678
    `-- /api/v1/events            silmer-api:8000 (SSE)
-                                      |
-                               silmer-postgres privado
-                                      |
-                               silmer-worker privado
-                                      |
-                          Meta / IA / storage externo
+          |                              |
+          |                       silmer-postgres privado
+          |                              |
+          |                       silmer-worker privado
+          |
+   silmer-n8n privado --------> silmer-api privada
+          |
+   silmer-n8n-db privado
+          |
+   Meta / OpenAI ou Gemini
 ```
 
 Domínios propostos, substituindo `<dominio>` pelo domínio aprovado:
@@ -67,13 +78,15 @@ Domínios propostos, substituindo `<dominio>` pelo domínio aprovado:
 | Finalidade   | Domínio               | Proteção adicional                                  |
 | ------------ | --------------------- | --------------------------------------------------- |
 | CRM          | `crm.<dominio>`       | Login da aplicação, HSTS e rate limiting            |
-| webhook Meta | `hooks.crm.<dominio>` | Público somente na rota Meta                        |
+| webhooks Meta | `hooks.crm.<dominio>` | Público somente nas rotas WhatsApp/Instagram do n8n |
 | EasyPanel    | `ops.<dominio>`       | VPN/allowlist, MFA obrigatório e contas individuais |
 
 VPN, allowlist ou Basic Auth não podem bloquear o callback público da Meta. O
-host `hooks.crm.<dominio>` roteia somente `/api/v1/webhooks/meta/*`; qualquer outra rota
-retorna `404`. Assinatura, verify token, limite de corpo e rate limit permanecem
-na aplicação.
+host `hooks.crm.<dominio>` roteia somente o caminho publicado do webhook do
+n8n; editor, API administrativa e demais rotas retornam `404`. Assinatura,
+verify token, limite de corpo e rate limit permanecem no workflow e no proxy.
+O n8n acessa o CRM somente pela API privada e não recebe rota ou credencial para
+`silmer-postgres`.
 
 ### Firewall Hostinger
 
@@ -86,9 +99,10 @@ na aplicação.
 ## 4. Sizing inicial
 
 Baseline recomendada: **Hostinger KVM 4, com 4 vCPU, 16 GB RAM e 200 GB NVMe**.
-Ela acomoda o piloto do CRM junto dos demais serviços já existentes no projeto,
-desde que o envelope agregado do host seja acompanhado e o worker de PDF tenha
-concorrência estritamente limitada.
+Ela é a hipótese inicial para o CRM e o n8n junto dos demais serviços do
+projeto, desde que o envelope agregado seja novamente validado e o worker de
+PDF tenha concorrência estritamente limitada. A aprovação anterior da issue
+`#8` não mediu o n8n e, portanto, não prova esse novo envelope.
 
 Essa recomendação só vale para o envelope de carga da seção 13 do TDD.
 T07.1 bloqueia o piloto se a carga aprovada não atingir os SLOs ou se a previsão
@@ -106,6 +120,8 @@ Os valores abaixo são **limites máximos**, não reservas somáveis:
 | `silmer-api`      |     1–1,5 GB, até 1 CPU |
 | `silmer-worker`   |       2 GB, até 1,5 CPU |
 | `silmer-edge-web` |        256 MB, 0,25 CPU |
+| `silmer-n8n`      |       1,5 GB, até 1 CPU |
+| `silmer-n8n-db`   |       1,5 GB, até 1 CPU |
 
 Regras operacionais:
 
@@ -220,6 +236,7 @@ META_INSTAGRAM_ACCOUNT_ID
 META_ACCESS_TOKEN
 AI_PROVIDER
 AI_MODEL_PRIMARY
+OPENAI_API_KEY
 GEMINI_API_KEY
 GEMINI_PAID_SERVICE_CONFIRMED
 GEMINI_ZDR_APPROVED
@@ -242,12 +259,28 @@ PIX_KEY_VALUE
 PIX_KEY_DISPLAY_MASKED
 FICHA_RECIPIENT_E164
 FAB_CODE
+N8N_ENCRYPTION_KEY
+N8N_HOST
+N8N_EDITOR_BASE_URL
+WEBHOOK_URL
+DB_TYPE
+DB_POSTGRESDB_HOST
+DB_POSTGRESDB_DATABASE
+DB_POSTGRESDB_USER
+DB_POSTGRESDB_PASSWORD
+CRM_API_BASE_URL
+CRM_AUTOMATION_CLIENT_ID
+CRM_AUTOMATION_CLIENT_SECRET
 ```
 
 Regras:
 
 - tokens Meta, buckets, banco e chaves não são compartilhados com outros
   serviços do projeto;
+- tokens Meta e chaves OpenAI/Gemini ficam somente no n8n; a credencial
+  `CRM_AUTOMATION_*` não concede administração nem acesso ao banco do CRM;
+- `N8N_ENCRYPTION_KEY` é obrigatória, fica em escrow operacional e deve ser
+  restaurável junto do banco próprio do n8n;
 - `PIX_KEY_VALUE` fica disponível somente ao runtime que monta a mensagem e
   não aparece em log, frontend ou variável de build;
 - `secret://crm/order-recipient-phone` é resolvido somente no runtime para
@@ -268,6 +301,9 @@ Regras:
 | worker local       | processo/loop local     | processo responde sem consultar dependência externa |
 | worker operacional | heartbeat no PostgreSQL | idade inferior a 120 s                              |
 | postgres           | `pg_isready`            | conexão aceita                                      |
+| n8n live           | health interno          | processo saudável sem publicar editor               |
+| n8n operacional    | workflow sintético      | webhook, banco próprio e API do CRM correlacionados |
+| n8n postgres       | `pg_isready`            | conexão aceita somente na rede privada               |
 
 Dependências Meta, IA e storage possuem diagnóstico separado e não derrubam o
 container. Docker `HEALTHCHECK`: intervalo 30 s, timeout 5 s, start period 20 s
@@ -295,9 +331,10 @@ O branch canônico atual é `master`.
 2. unitários e integração com PostgreSQL;
 3. contratos e evals da IA;
 4. E2E e acessibilidade;
-5. build das duas imagens;
-6. scan de dependências e imagem;
-7. `git diff --check`.
+5. validação e diff dos exports versionados de workflows n8n;
+6. build das duas imagens;
+7. scan de dependências e imagem;
+8. `git diff --check`.
 
 ### Merge e promoção
 
@@ -307,8 +344,10 @@ O branch canônico atual é `master`.
 4. Executa `migrate` como script salvo, usando a imagem runtime e advisory lock.
 5. Troca `silmer-api` e `silmer-worker` e depois `silmer-edge-web` para os
    digests aprovados no projeto estável.
-6. Executa smoke e registra a aprovação operacional.
-7. Auto-deploy direto no projeto permanece desabilitado.
+6. Publica a versão aprovada dos workflows no `silmer-n8n`, preservando a
+   versão anterior para rollback.
+7. Executa smoke WhatsApp → n8n → CRM → Inbox e registra a aprovação operacional.
+8. Auto-deploy direto no projeto permanece desabilitado.
 
 No piloto, GitHub Actions testa, escaneia e publica; não acessa a API
 administrativa do EasyPanel. A promoção é manual e auditada no painel. Automação
@@ -326,9 +365,10 @@ Sequência de deploy:
 2. ativar manutenção quando necessário;
 3. aplicar migration compatível;
 4. implantar API e worker;
-5. implantar edge;
-6. verificar live, ready, heartbeat e smoke ponta a ponta;
-7. liberar tráfego e monitorar 30 minutos.
+5. publicar workflows n8n compatíveis com o contrato;
+6. implantar edge;
+7. verificar live, ready, heartbeat e smoke ponta a ponta;
+8. liberar tráfego e monitorar 30 minutos.
 
 Migrações seguem expand/contract. Remover tabela/coluna ocorre somente quando o
 digest anterior já não depender dela. Rollback normal reaponta para o digest
@@ -340,6 +380,7 @@ Triggers de rollback:
 - perda ou duplicidade de efeito comercial;
 - webhook não persistido;
 - worker sem progresso ou dead-letter crescente;
+- workflow n8n incompatível, em loop ou sem correlação com o CRM;
 - violação de autorização ou exposição de dados;
 - migration incompatível.
 
@@ -347,15 +388,16 @@ Triggers de rollback:
 
 Produção:
 
-- `pg_dump` horário, 48 cópias;
-- `pg_dump` diário, 35 cópias;
+- `pg_dump` horário, 48 cópias, para CRM e banco próprio do n8n;
+- `pg_dump` diário, 35 cópias, para ambos os bancos;
 - lifecycle apaga qualquer backup com mais de 35 dias;
 - backup manual verificado antes de mudança destrutiva;
 - restore mensal do banco em serviço temporário `postgres-restore-drill`,
   isolado, sem UI, worker, rota pública ou credenciais externas;
 - drill trimestral de perda total em VPS limpa fora do host de produção;
-- RPO até 1 hora e RTO até 4 horas para o CRM completo, condicionados à
-  aprovação do drill em host limpo.
+- RPO alvo de até 1 hora e RTO alvo de até 4 horas para CRM e automação,
+  condicionados a novo drill em host limpo que inclua n8n, workflows e sua
+  chave de criptografia.
 
 O agendamento usa o backup de PostgreSQL do EasyPanel com storage remoto e
 licença compatível. O backup semanal/snapshot da Hostinger é proteção
@@ -385,8 +427,8 @@ O drill não interrompe produção e nunca envia WhatsApp, IA ou objetos externo
    off-host.
 3. Recuperar segredos do escrow, promover os digests registrados e manter todos
    os adapters externos em modo mock.
-4. Restaurar PostgreSQL, aplicar migrations e reaplicar tombstones com a
-   credencial read-only.
+4. Restaurar os bancos do CRM e do n8n, aplicar migrations, recuperar workflows
+   e chave de criptografia e reaplicar tombstones com a credencial read-only.
 5. Validar acesso aos objetos existentes, recuperar uma versão apagada/corrompida
    e confirmar que objetos sujeitos a tombstone não reaparecem.
 6. Executar smoke completo de login, inbox, Deal, PIX, Ficha e reconciliação.
@@ -424,6 +466,7 @@ Alertas mínimos:
 
 - API indisponível ou 5xx acima do limite;
 - worker sem heartbeat;
+- n8n indisponível, execução em loop ou versão divergente da publicada;
 - job mais antigo acima de 5 minutos;
 - dead-letter ou reconciliação crescente;
 - último backup horário bem-sucedido acima de 75 minutos ou diário acima de 26 horas;
@@ -439,16 +482,20 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Domínios, DNS, SSL e firewall validados.
 - [ ] Credenciais separadas e rotação testada.
 - [ ] PostgreSQL e serviços internos sem portas públicas.
+- [ ] Editor e API administrativa do n8n sem rota pública; apenas webhook do canal publicado.
+- [ ] Ator `AUTOMATION_EXECUTOR` sem acesso administrativo ou direto ao banco do CRM.
 - [ ] Backup horário/diário executado e alerta configurado.
 - [ ] Restore completo em serviço temporário isolado dentro do RTO.
 - [ ] Perda total da VPS recuperada em host limpo dentro do RTO.
 - [ ] Tombstones imutáveis, com credenciais separadas, reaplicados depois de restore antigo.
 - [ ] Webhook repetido sem duplicar mensagem, Negócio ou job.
+- [ ] Cada mensagem válida dispara o n8n sem botão da UI e registra versão, execução e epoch no CRM.
 - [ ] Worker parado acumula jobs e recupera a fila ao voltar.
 - [ ] Crash durante efeito externo produz `sent`, `failed` ou `outcome_unknown`, sem retry cego.
 - [ ] Digest promovido e revertido com sucesso.
 - [ ] Takeover impede novos envios até o ponto de não retorno e reconcilia resultado incerto.
-- [ ] Smoke WhatsApp oficial ponta a ponta.
+- [ ] Restore recupera banco, workflows e chave de criptografia do n8n em host limpo.
+- [ ] Smoke WhatsApp e Instagram oficiais ponta a ponta, incluindo migração de canal.
 - [ ] Falha de Ficha aparece na reconciliação e retry não duplica envio.
 - [ ] Monitor externo detecta parada da VPS.
 - [ ] Responsável de Privacidade aprova storage, IA e observabilidade.

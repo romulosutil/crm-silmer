@@ -2,9 +2,23 @@
 
 O CRM Silmer é um produto web próprio para organizar conversas comerciais, qualificação, vendas e geração de Fichas de Pedido. Ele substitui integralmente o Datacrazy.
 
-O fluxo começa na Caixa de Entrada, tratada como backlog de conversas. Apenas oportunidades comerciais viram leads e entram no Kanban. No MVP, uma pessoa confirma a conversão; o agente de IA Vendedor Silmer conversa, coleta dados e sugere o próximo passo sem alterar o estado oficial do CRM.
+O fluxo começa quando uma mensagem válida do cliente dispara automaticamente um workflow no n8n. O n8n é o motor obrigatório da jornada: integra os canais, executa o Vendedor Silmer, cria ou atualiza leads pelo contrato da API do CRM, move o Kanban quando os gates forem satisfeitos e transfere para uma pessoa quando necessário. Não existe botão da interface para iniciar essa automação.
 
-O canal obrigatório do piloto é a API oficial do WhatsApp Business. O Instagram Direct participa quando disponível, mas não bloqueia o lançamento. O artefato central do domínio é `ficha_exemplo.xlsx`: os dados necessários para produzir e cobrar um pedido definem as perguntas, validações e etapas da jornada.
+O MVP é organizado em três objetivos que evoluem em paralelo e se conectam no lançamento:
+
+1. **CRM:** fonte oficial dos dados, regras, permissões, estados, auditoria, pedidos e relatórios.
+2. **Inbox Multicanal:** visão operacional das conversas, mensagens, pendências e tomada humana.
+3. **Agente Vendedor Silmer no n8n:** integração WhatsApp, IA, orquestração da jornada, atualizações comerciais e handoff.
+
+O n8n nunca acessa diretamente o banco. Toda mutação oficial passa pela API idempotente e autorizada do CRM; a interface observa o fluxo e permite intervenção humana, mas não o dispara.
+
+Os canais obrigatórios do piloto são WhatsApp Business e Instagram Direct,
+ambos integrados no n8n e conduzidos pela mesma jornada. O atendimento pode
+migrar entre os canais preservando o Negócio; após correlação verificável, o
+lead mantém o `@instagram` e o telefone como identidades distintas da mesma
+pessoa. O artefato central do domínio é `ficha_exemplo.xlsx`: os dados
+necessários para produzir e cobrar um pedido definem as perguntas, validações e
+etapas da jornada.
 
 Documentos principais:
 

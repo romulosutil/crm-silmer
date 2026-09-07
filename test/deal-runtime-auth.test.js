@@ -2,6 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createDealApiRuntime } from '../apps/api/src/deal-runtime.js';
+import { createServerApi } from '../apps/api/src/server.js';
+
+const DATABASE = Object.freeze({
+  query: async () => ({ rows: [] }),
+  /** @param {(client: any) => Promise<any>} work */
+  transaction: async (work) => work({ query: async () => ({ rows: [] }) }),
+});
 
 function harness() {
   /** @type {Array<{input: any, operation: string}>} */
@@ -30,6 +37,7 @@ function harness() {
         },
       },
       environment: {
+        DEAL_ENVELOPE_KEY: Buffer.alloc(32, 46).toString('base64url'),
         IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 45).toString('base64url'),
       },
       identity: {
@@ -103,4 +111,17 @@ test('deal runtime rejects invalid Origin, CSRF and ambiguous cookies', async ()
     );
     assert.equal(calls.length, 0);
   }
+});
+
+test('server rejects a partially configured Deal runtime', () => {
+  assert.throws(
+    () =>
+      createServerApi({
+        database: DATABASE,
+        environment: {
+          IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 45).toString('base64url'),
+        },
+      }),
+    /IDEMPOTENCY_ENVELOPE_KEY and DEAL_ENVELOPE_KEY together/u,
+  );
 });

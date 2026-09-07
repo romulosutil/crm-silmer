@@ -1,11 +1,17 @@
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { PostgresContactConversionPort } from '@crm-silmer/contacts';
 import {
+  PostgresDealAutomationFencePort,
   PostgresDealRepository,
+  createDealCommandService,
   createDealConversionService,
+  createDealLossReasonCipher,
 } from '@crm-silmer/deals-pipeline';
 import { PostgresConversationConversionPort } from '@crm-silmer/inbox-channels';
-import { PostgresIdempotencyRecordStore } from '@crm-silmer/integration-reliability';
+import {
+  PostgresDomainEventStore,
+  PostgresIdempotencyRecordStore,
+} from '@crm-silmer/integration-reliability';
 
 /**
  * @param {any} database
@@ -20,15 +26,38 @@ export function createDealApiRuntime(database, options = {}) {
     throw new TypeError('A transactional PostgreSQL database is required');
   }
   const environment = options.environment ?? process.env;
-  const service = createDealConversionService({
-    auditPort: new PostgresAuditTrail(database),
+  const auditPort = new PostgresAuditTrail(database);
+  const dealRepository = new PostgresDealRepository();
+  const eventPort = new PostgresDomainEventStore();
+  const idempotencyStore = new PostgresIdempotencyRecordStore({
+    database,
+    envelopeKey: readEnvelopeKey(
+      environment.IDEMPOTENCY_ENVELOPE_KEY,
+      'IDEMPOTENCY_ENVELOPE_KEY',
+    ),
+  });
+  const conversion = createDealConversionService({
+    auditPort,
     contactPort: new PostgresContactConversionPort(),
-    dealRepository: new PostgresDealRepository(),
-    idempotencyStore: new PostgresIdempotencyRecordStore({
-      database,
-      envelopeKey: readEnvelopeKey(environment.IDEMPOTENCY_ENVELOPE_KEY),
-    }),
+    dealRepository,
+    eventPort,
+    idempotencyStore,
     inboxPort: new PostgresConversationConversionPort(),
+  });
+  const commands = createDealCommandService({
+    auditPort,
+    automationFencePort: new PostgresDealAutomationFencePort(),
+    dealRepository,
+    eventPort,
+    idempotencyStore,
+    lossReasonCipher: createDealLossReasonCipher({
+      key: readEnvelopeKey(environment.DEAL_ENVELOPE_KEY, 'DEAL_ENVELOPE_KEY'),
+    }),
+    qualificationPort: {
+      async evaluateGate() {
+        return { blockers: ['qualification.unavailable'] };
+      },
+    },
   });
 
   return Object.freeze({
@@ -64,7 +93,9 @@ export function createDealApiRuntime(database, options = {}) {
         sessionToken,
       });
     },
-    convertConversation: service.convertConversation,
+    convertConversation: conversion.convertConversation,
+    loseDeal: commands.loseDeal,
+    transitionDeal: commands.transitionDeal,
   });
 }
 
@@ -84,14 +115,14 @@ function parseCookies(raw) {
   return cookies;
 }
 
-/** @param {string|undefined} value */
-function readEnvelopeKey(value) {
+/** @param {string|undefined} value @param {string} name */
+function readEnvelopeKey(value, name) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/u.test(value)) {
-    throw new Error('IDEMPOTENCY_ENVELOPE_KEY must use base64url');
+    throw new Error(`${name} must use base64url`);
   }
   const key = Buffer.from(value, 'base64url');
   if (key.length !== 32) {
-    throw new Error('IDEMPOTENCY_ENVELOPE_KEY must decode to 32 bytes');
+    throw new Error(`${name} must decode to 32 bytes`);
   }
   return key;
 }

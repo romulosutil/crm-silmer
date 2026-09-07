@@ -26,6 +26,7 @@ if (connectionString) {
       APP_ORIGIN: origin,
       AUTH_THROTTLE_HMAC_KEY: Buffer.alloc(32, 24).toString('base64url'),
       IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 25).toString('base64url'),
+      DEAL_ENVELOPE_KEY: Buffer.alloc(32, 26).toString('base64url'),
       IDENTITY_BOOTSTRAP_TOKEN:
         'issue12-bootstrap-token-at-least-32-characters',
       IDENTITY_ENVELOPE_KEY: encodedKey,

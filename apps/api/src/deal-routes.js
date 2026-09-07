@@ -60,6 +60,84 @@ export function registerDealRoutes(api, deals, contextFor) {
       });
     },
   );
+
+  api.post('/api/v1/deals/:dealId/transitions', async (request, reply) => {
+    return respond(reply, async () => {
+      const params = requireObject(request.params);
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, [
+        'automationEpoch',
+        'conversationId',
+        'direction',
+        'expectedVersion',
+        'reason',
+      ]);
+      const command = await authorizeDealCommand(
+        request,
+        deals,
+        contextFor,
+        'deal.transition',
+      );
+      const result = await deals.transitionDeal({
+        ...command,
+        ...(body.automationEpoch === undefined
+          ? {}
+          : { automationEpoch: requireAutomationEpoch(body.automationEpoch) }),
+        ...(body.conversationId === undefined
+          ? {}
+          : {
+              conversationId: requireString(
+                body.conversationId,
+                'CONVERSATION_ID',
+              ),
+            }),
+        dealId: requireString(params.dealId, 'DEAL_ID'),
+        direction: requireDirection(body.direction),
+        expectedVersion: requireVersion(body.expectedVersion),
+        reason: requireString(body.reason, 'REASON'),
+      });
+      return reply.code(200).send(result);
+    });
+  });
+
+  api.post('/api/v1/deals/:dealId/lose', async (request, reply) => {
+    return respond(reply, async () => {
+      const params = requireObject(request.params);
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['expectedVersion', 'reason']);
+      const command = await authorizeDealCommand(
+        request,
+        deals,
+        contextFor,
+        'deal.lose',
+      );
+      const result = await deals.loseDeal({
+        ...command,
+        dealId: requireString(params.dealId, 'DEAL_ID'),
+        expectedVersion: requireVersion(body.expectedVersion),
+        reason: requireString(body.reason, 'REASON'),
+      });
+      return reply.code(200).send(result);
+    });
+  });
+}
+
+/** @param {any} request @param {any} deals @param {Function} contextFor @param {string} action */
+async function authorizeDealCommand(request, deals, contextFor, action) {
+  const correlationId = contextFor(request).correlationId;
+  const idempotencyKey = requireString(
+    request.headers['idempotency-key'],
+    'IDEMPOTENCY_KEY',
+  );
+  const principal = await deals.authorize({
+    action,
+    authorization: request.headers.authorization,
+    cookie: request.headers.cookie,
+    correlationId,
+    csrfToken: request.headers['x-csrf-token'],
+    origin: request.headers.origin,
+  });
+  return { actor: principal.actor, correlationId, idempotencyKey };
 }
 
 /** @param {import('fastify').FastifyReply} reply @param {() => Promise<unknown>} operation */
@@ -91,6 +169,7 @@ function publicCode(error) {
   const allowed = new Set([
     'DEAL_CONFLICT',
     'DEAL_FORBIDDEN',
+    'DEAL_GATE_INCOMPLETE',
     'DEAL_INVALID',
     'FORBIDDEN',
     'FORBIDDEN_AUTOMATION_ACTION',
@@ -98,6 +177,8 @@ function publicCode(error) {
     'INVALID_AUTOMATION_CREDENTIALS',
     'INVALID_AUTOMATION_EPOCH',
     'INVALID_CONVERSATION_ID',
+    'INVALID_DEAL_ID',
+    'INVALID_DIRECTION',
     'INVALID_EXPECTED_VERSION',
     'INVALID_IDEMPOTENCY_KEY',
     'INVALID_REASON',
@@ -128,6 +209,14 @@ function requireString(value, field) {
 function requireVersion(value) {
   if (!Number.isSafeInteger(value) || Number(value) < 1) {
     throw new DealRequestError(400, 'INVALID_EXPECTED_VERSION');
+  }
+  return value;
+}
+
+/** @param {unknown} value */
+function requireDirection(value) {
+  if (!['advance', 'retreat'].includes(String(value))) {
+    throw new DealRequestError(400, 'INVALID_DIRECTION');
   }
   return value;
 }

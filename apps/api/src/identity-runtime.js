@@ -13,6 +13,12 @@ import {
   PostgresIdempotencyRecordStore,
 } from '@crm-silmer/integration-reliability';
 
+const OPERATIONAL_ACTIONS = new Set([
+  'conversation.convert',
+  'deal.lose',
+  'deal.transition',
+]);
+
 class IdentityHttpError extends Error {
   /** @param {number} statusCode @param {string} code */
   constructor(statusCode, code) {
@@ -129,7 +135,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
 
     /** @param {{action: string, csrfToken: string, sessionToken: string}} input */
     async authorizeOperational(input) {
-      if (input.action !== 'conversation.convert') {
+      if (!OPERATIONAL_ACTIONS.has(input.action)) {
         throw new IdentityHttpError(403, 'FORBIDDEN');
       }
       return database.transaction(async (client) => {

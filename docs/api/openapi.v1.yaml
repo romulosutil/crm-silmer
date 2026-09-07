@@ -231,6 +231,66 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
         '503': { $ref: '#/components/responses/Unavailable' }
+  /deals/{dealId}/transitions:
+    post:
+      operationId: transitionDeal
+      summary: Avança ou retorna exatamente uma etapa do Negócio
+      description: >-
+        O destino é sempre derivado da etapa atual. O avanço persiste a
+        avaliação do gate, o histórico e o evento canônico na mesma transação.
+        O executor técnico deve informar a conversa ativa e seu automationEpoch.
+      security:
+        - automationBasic: []
+          idempotencyKey: []
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - $ref: '#/components/parameters/DealId'
+        - $ref: '#/components/parameters/OriginOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealTransitionRequest' }
+      responses:
+        '200':
+          description: Transição aplicada ou resposta original reproduzida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealCommandResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /deals/{dealId}/lose:
+    post:
+      operationId: loseDeal
+      summary: Marca o Negócio como perdido com motivo cifrado
+      description: Exclusivo para Atendimento ou Vendedor autenticado.
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - $ref: '#/components/parameters/DealId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealLossRequest' }
+      responses:
+        '200':
+          description: Perda registrada ou resposta original reproduzida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealCommandResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503': { $ref: '#/components/responses/Unavailable' }
 components:
   securitySchemes:
     automationBasic:
@@ -268,6 +328,11 @@ components:
       in: header
       required: true
       schema: { type: string, minLength: 32 }
+    DealId:
+      name: dealId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
   schemas:
     User:
       type: object
@@ -396,6 +461,64 @@ components:
             sourceConversationId: { type: string }
             stage: { type: string, const: produto }
             version: { type: integer, const: 1 }
+    DealTransitionRequest:
+      type: object
+      additionalProperties: false
+      required: [direction, expectedVersion, reason]
+      properties:
+        direction: { type: string, enum: [advance, retreat] }
+        expectedVersion: { type: integer, minimum: 1 }
+        reason: { type: string, minLength: 1 }
+        conversationId:
+          type: string
+          minLength: 1
+          description: Obrigatório e exclusivo para AUTOMATION_EXECUTOR.
+        automationEpoch:
+          type: integer
+          minimum: 0
+          description: Obrigatório e exclusivo para AUTOMATION_EXECUTOR.
+    DealLossRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, reason]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        reason:
+          type: string
+          minLength: 1
+          description: Motivo sensível cifrado antes da persistência.
+    DealCommandResponse:
+      type: object
+      additionalProperties: false
+      required: [deal]
+      properties:
+        deal:
+          type: object
+          additionalProperties: true
+          required: [id, stage, status, version]
+          properties:
+            id: { type: string }
+            stage:
+              type: string
+              enum: [produto, especificacao, estampa, logistica, fechamento]
+            status: { type: string, enum: [active, lost] }
+            version: { type: integer, minimum: 2 }
+        gate:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [dealId, fromStage, version, blockers, evaluatedAt]
+              properties:
+                dealId: { type: string }
+                fromStage:
+                  type: string
+                  enum: [produto, especificacao, estampa, logistica]
+                version: { type: integer, minimum: 1 }
+                blockers:
+                  type: array
+                  maxItems: 0
+                evaluatedAt: { type: string, format: date-time }
     Error:
       type: object
       additionalProperties: false

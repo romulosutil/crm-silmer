@@ -25,6 +25,7 @@ import {
   createInboxService,
 } from '../modules/inbox-channels/src/index.js';
 import {
+  PostgresDomainEventStore,
   PostgresIdempotencyRecordStore,
   PostgresOutboundMessageOutbox,
 } from '../modules/integration-reliability/src/index.js';
@@ -76,6 +77,7 @@ if (connectionString) {
       clock: () => NOW,
       contactPort: new PostgresContactConversionPort(),
       dealRepository: new PostgresDealRepository(),
+      eventPort: new PostgresDomainEventStore(),
       idFactory: () => `deal-${runId}`,
       idempotencyStore: new PostgresIdempotencyRecordStore({
         database,

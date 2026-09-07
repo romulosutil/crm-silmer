@@ -93,11 +93,7 @@ if (connectionString) {
       await pool.query(
         `INSERT INTO crm.users (id, email, password_hash, created_at)
          VALUES ($1, $2, '$argon2id$fixture', $3)`,
-        [
-          `attendant-${runId}`,
-          `attendant-${runId}@example.test`,
-          NOW,
-        ],
+        [`attendant-${runId}`, `attendant-${runId}@example.test`, NOW],
       );
       await pool.query(
         `INSERT INTO crm.user_functions

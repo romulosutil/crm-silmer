@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: CRM Silmer Identity API
+  title: CRM Silmer API
   version: 1.0.0
-  description: Contrato de identidade, sessão, MFA e capacidades da issue 12.
+  description: Contratos versionados de identidade e domínio do CRM Silmer.
 servers:
   - url: /api/v1
 paths:
@@ -189,8 +189,54 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /conversations/{conversationId}/convert:
+    post:
+      operationId: convertConversation
+      summary: Vincula o Contato e cria exatamente um Negócio em Produto
+      description: >-
+        Fecha a conversa como convertida_em_lead na mesma transação da promoção
+        do Contato, criação do Negócio, idempotência e auditoria. Aceita o ator
+        técnico do n8n ou uma sessão humana de Atendimento/Vendedor.
+      security:
+        - automationBasic: []
+          idempotencyKey: []
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+        - $ref: '#/components/parameters/OriginOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationConversionRequest'
+      responses:
+        '201':
+          description: Conversão criada ou resposta original reproduzida
+          headers:
+            Location:
+              description: URL canônica do Negócio criado
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationConversionResponse'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503': { $ref: '#/components/responses/Unavailable' }
 components:
   securitySchemes:
+    automationBasic:
+      type: http
+      scheme: basic
+      description: Credencial exclusiva e rotacionável do AUTOMATION_EXECUTOR.
     sessionCookie:
       type: apiKey
       in: cookie
@@ -210,6 +256,12 @@ components:
       name: Origin
       in: header
       required: true
+      schema: { type: string, format: uri }
+    OriginOptional:
+      name: Origin
+      in: header
+      required: false
+      description: Obrigatório para autenticação humana; não usado pelo ator técnico.
       schema: { type: string, format: uri }
     BootstrapToken:
       name: X-Bootstrap-Token
@@ -300,6 +352,50 @@ components:
         targetId: { type: string, minLength: 1 }
         capability: { $ref: '#/components/schemas/Capability' }
         reason: { type: string, minLength: 1 }
+    ConversationConversionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, reason]
+      properties:
+        automationEpoch:
+          type: integer
+          minimum: 0
+          description: >-
+            Obrigatório para AUTOMATION_EXECUTOR e rejeitado se estiver obsoleto
+            ou se uma pessoa tiver assumido a conversa. Omitido por humanos.
+        expectedVersion: { type: integer, minimum: 1 }
+        reason: { type: string, minLength: 1 }
+    ConversationConversionResponse:
+      type: object
+      additionalProperties: false
+      required: [contact, conversation, deal]
+      properties:
+        contact:
+          type: object
+          additionalProperties: false
+          required: [id, provisional, version]
+          properties:
+            id: { type: string }
+            provisional: { type: boolean, const: false }
+            version: { type: integer, minimum: 1 }
+        conversation:
+          type: object
+          required: [id, state, terminalAt, version]
+          properties:
+            id: { type: string }
+            state: { type: string, const: convertida_em_lead }
+            terminalAt: { type: string, format: date-time }
+            version: { type: integer, minimum: 2 }
+        deal:
+          type: object
+          additionalProperties: false
+          required: [id, contactId, sourceConversationId, stage, version]
+          properties:
+            id: { type: string }
+            contactId: { type: string }
+            sourceConversationId: { type: string }
+            stage: { type: string, const: produto }
+            version: { type: integer, const: 1 }
     Error:
       type: object
       additionalProperties: false
@@ -339,6 +435,11 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
     Throttled:
       description: Bloqueio progressivo ativo
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unavailable:
+      description: Dependência de autenticação ou persistência indisponível
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }

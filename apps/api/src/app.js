@@ -12,6 +12,7 @@ import {
   MetaWebhookPayloadError,
   WebhookEventConflictError,
 } from '@crm-silmer/integration-reliability';
+import { registerDealRoutes } from './deal-routes.js';
 import { registerIdentityRoutes } from './identity-routes.js';
 import { WEBHOOK_BODY_LIMIT_BYTES } from './whatsapp-webhook-runtime.js';
 
@@ -33,6 +34,7 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   },
  *   automationAuth?: {authorize(input: {action: string, authorization: unknown, correlationId: string}): Promise<unknown>},
  *   commercial?: Record<string, any>,
+ *   deals?: Record<string, any>,
  *   identity?: Record<string, any>
  * }} [runtime]
  */
@@ -51,6 +53,9 @@ export function createApi(options = {}, runtime = {}) {
   }
   if (runtime.automationAuth) {
     api.decorate('automationAuth', runtime.automationAuth);
+  }
+  if (runtime.deals) {
+    api.decorate('deals', runtime.deals);
   }
 
   api.addHook('onRequest', async (request, reply) => {
@@ -206,6 +211,14 @@ export function createApi(options = {}, runtime = {}) {
 
   if (runtime.identity) {
     registerIdentityRoutes(api, runtime.identity, (request) => {
+      const context = requests.get(request);
+      if (!context) throw new Error('Missing request context');
+      return context;
+    });
+  }
+
+  if (runtime.deals) {
+    registerDealRoutes(api, runtime.deals, (request) => {
       const context = requests.get(request);
       if (!context) throw new Error('Missing request context');
       return context;

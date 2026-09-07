@@ -11,6 +11,7 @@ import {
 import { createApi } from './app.js';
 import { createAutomationAuthRuntime } from './automation-auth-runtime.js';
 import { createCommercialRuntime } from './commercial-runtime.js';
+import { createDealApiRuntime } from './deal-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
 import { createWhatsAppWebhookRuntime } from './whatsapp-webhook-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
@@ -27,6 +28,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *     transaction: <T>(work: (client: any) => Promise<T>) => Promise<T>,
  *   },
  *   commercial?: Record<string, any>,
+ *   deals?: Record<string, any>,
  *   environment?: Record<string, string|undefined>,
  *   logger?: ReturnType<typeof createSafeLogger>,
  *   readiness?: () => boolean | Promise<boolean>,
@@ -58,12 +60,23 @@ export function createServerApi(runtime = {}) {
           runtime.environment ?? process.env,
         )
       : undefined);
+  const deals =
+    runtime.deals ??
+    (runtime.database &&
+    (runtime.environment ?? process.env).IDEMPOTENCY_ENVELOPE_KEY
+      ? createDealApiRuntime(runtime.database, {
+          automationAuth,
+          environment: runtime.environment ?? process.env,
+          identity: runtime.identity,
+        })
+      : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
     {
       ...runtime,
       automationAuth,
       commercial,
+      deals,
       logger,
       metaWebhook,
       readiness,

@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer-crm2  (2026-09-07)
 
 ## Corpus Check
-- 256 files · ~177,463 words
+- 256 files · ~177,481 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2161 nodes · 3691 edges · 182 communities (130 shown, 52 thin omitted)
+- 2161 nodes · 3691 edges · 181 communities (129 shown, 52 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c5a4bb51`
+- Built from commit: `208f2ca7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -188,7 +188,6 @@
 - catalog-version.js
 - qualification/package.json
 - qualification-postgres-live.test.js
-- postgres-configuration-repository.js
 - identity-api-live.test.js
 - postgres-audit-live.test.js
 - TransactionClient
@@ -238,7 +237,7 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (182 total, 52 thin omitted)
+## Communities (181 total, 52 thin omitted)
 
 ### Community 0 - "postgres-job-queue.js"
 Cohesion: 0.24
@@ -493,8 +492,8 @@ Cohesion: 0.23
 Nodes (11): crm.deal_gates, crm.deal_stage_history, crm.domain_events, deal_gates_immutable, deal_gates_no_truncate, deal_stage_history_immutable, deal_stage_history_no_truncate, domain_events_immutable (+3 more)
 
 ### Community 63 - "configuration-catalog-postgres-live.test.js"
-Cohesion: 0.19
-Nodes (7): createCommercialRuntime(), createPostgresCatalogRepository(), isoString(), mapCatalog(), requireQueryable(), requireString(), ADMIN
+Cohesion: 0.21
+Nodes (9): createCommercialRuntime(), createPostgresCatalogRepository(), requireQueryable(), createPostgresConfigurationRepository(), isoString(), mapConfiguration(), requireQueryable(), requireString() (+1 more)
 
 ### Community 65 - "T00.4 — Mídia transitória do piloto interno"
 Cohesion: 0.33
@@ -733,8 +732,8 @@ Cohesion: 0.28
 Nodes (11): authorizeDealCommand(), DealRequestError, publicCode(), registerDealRoutes(), rejectUnknownKeys(), requireAutomationEpoch(), requireDirection(), requireObject() (+3 more)
 
 ### Community 173 - "catalog-version.js"
-Cohesion: 0.41
-Nodes (11): assertExactKeys(), assertNonEmptyString(), assertRecord(), createCatalogSelection(), createPublishedCatalogVersion(), deepFreeze(), immutableCatalogClone(), isPlainRecord() (+3 more)
+Cohesion: 0.24
+Nodes (14): isoString(), mapCatalog(), requireString(), assertExactKeys(), assertNonEmptyString(), assertRecord(), createCatalogSelection(), createPublishedCatalogVersion() (+6 more)
 
 ### Community 174 - "qualification/package.json"
 Cohesion: 0.22
@@ -743,10 +742,6 @@ Nodes (8): dependencies, @crm-silmer/integration-reliability, exports, @crm-silm
 ### Community 175 - "qualification-postgres-live.test.js"
 Cohesion: 0.36
 Nodes (6): pool, dealVersion(), fieldAssessmentCount(), NOW, qualificationChangeCount(), seed()
-
-### Community 176 - "postgres-configuration-repository.js"
-Cohesion: 0.53
-Nodes (5): createPostgresConfigurationRepository(), isoString(), mapConfiguration(), requireQueryable(), requireString()
 
 ## Knowledge Gaps
 - **755 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+750 more)

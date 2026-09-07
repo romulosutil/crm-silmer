@@ -1,33 +1,33 @@
-# Graph Report - crm-silmer-crm1  (2026-09-06)
+# Graph Report - crm-silmer-crm2  (2026-09-07)
 
 ## Corpus Check
-- 217 files · ~153,331 words
+- 233 files · ~158,440 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1852 nodes · 2973 edges · 157 communities (109 shown, 48 thin omitted)
+- 1943 nodes · 3174 edges · 172 communities (123 shown, 49 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `54996d65`
+- Built from commit: `8c1f5d4e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- meta-sandbox.test.js
+- integration-reliability/src/index.js
 - PostgresTransientMediaRepository
 - TDD — CRM Silmer MVP
 - 0002_phase1_domain.expand.sql
 - configuration-version.js
 - scripts
 - r2-live-smoke.mjs
-- CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)
+- O que já está configurado
 - Design do CRM Silmer
 - database/src/index.js
 - T00.4 — Spikes externos
 - recovery-mock.mjs
-- audit-privacy/src/index.js
+- PostgresAuditTrail
 - meta-whatsapp.js
 - dependencies
 - ficha-pdf-review.mjs
@@ -52,7 +52,7 @@
 - Passagem de Produto para Tech Lead
 - meta
 - package.json
-- inbox-channels/src/index.js
+- inbox-service.js
 - README.md
 - T00.7 — Ativação e drills de observabilidade
 - signals
@@ -69,15 +69,15 @@
 - hardening
 - monitor
 - Runbook de recovery off-host — T00.3 / T07.3
-- catalog/src/index.js
-- configuration/src/index.js
+- catalog-version.js
+- deal-runtime.js
 - T00.6 — Gate de aprovação da Fase 0
 - Supply chain da Fase 0
 - T00.5 — Threat model e catálogo de dados
 - activation-gate.json
 - routing
 - validate-media-retention.mjs
-- catalog-version.js
+- inbox-channels/src/index.js
 - configuration-catalog-postgres-live.test.js
 - n8n-core-planning.test.js
 - T00.4 — Mídia transitória do piloto interno
@@ -88,7 +88,7 @@
 - integration-reliability/package.json
 - shared/package.json
 - build.mjs
-- idempotency.js
+- channel-envelope.js
 - observability.test.js
 - edge-web/package.json
 - Política de segurança
@@ -148,39 +148,54 @@
 - postgres-contact-identity-repository.js
 - crm.transient_media
 - postgres-webhook-inbox.js
-- whatsapp-webhook.test.js
+- api/src/app.js
 - inbox-channels/package.json
 - postgres-idempotency.js
-- api/src/app.js
+- createApi
 - observability.js
-- postgres-job-queue.js
+- postgres-inbox-repository.js
 - 0004_phase2_channel_webhook.expand.sql
 - Webhook WhatsApp — decisões de T02.2
 - automation-auth-runtime.js
 - automation-credentials.js
 - WorkerRuntime
 - 0006_phase2_inbox_contacts.expand.sql
-- integration-reliability/src/index.js
-- postgres-idempotency.test.js
+- migrations.test.js
+- freezeInboxRecord
 - Ator técnico do n8n
 - contacts/package.json
 - crm.channel_events
 - crm.outbox_jobs
-- identity-api-live.test.js
+- deal-routes.js
 - identity-routes.js
 - T00.6 — Evidência de aprovação
+- audit-privacy/src/index.js
+- tasks.md
+- CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)
+- CHAT NA LANDING PAGE — o que existe e o que falta
+- deals-pipeline/package.json
+- inbox-postgres-live.test.js
+- T00.4 - Revisao do PDF canonico da Ficha
+- postgres-conversation-conversion-port.js
+- CRM Silmer MVP — Requisitos Rastreáveis
+- DATACRAZY-SETUP.md
+- crm.deals
+- PASSO A PASSO — Conectar a Crazy API (quando o cliente aprovar)
+- deal-conversion-postgres-live.test.js
+- TransactionClient
+- deal-contract.test.js
 
 ## God Nodes (most connected - your core abstractions)
-1. `scripts` - 43 edges
+1. `scripts` - 44 edges
 2. `TDD — CRM Silmer MVP` - 22 edges
-3. `loadMigrations()` - 19 edges
-4. `freezeInboxRecord()` - 17 edges
-5. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
-6. `migrate()` - 16 edges
-7. `Design do CRM Silmer` - 16 edges
-8. `PostgresTransientMediaRepository` - 15 edges
-9. `createSafeLogger()` - 15 edges
-10. `Topologia EasyPanel — CRM Silmer` - 15 edges
+3. `loadMigrations()` - 20 edges
+4. `freezeInboxRecord()` - 19 edges
+5. `createApi()` - 17 edges
+6. `migrate()` - 17 edges
+7. `createSafeLogger()` - 17 edges
+8. `CRM Silmer — Especificação de Produto do MVP` - 17 edges
+9. `withTransaction()` - 16 edges
+10. `Design do CRM Silmer` - 16 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `createIdempotentCommandExecutor()` --indirect_call--> `request()`  [INFERRED]
@@ -189,10 +204,10 @@
   scripts/r2-live-smoke.mjs → apps/edge-web/src/app.js
 - `createCatalogService()` --indirect_call--> `select()`  [INFERRED]
   modules/catalog/src/application/catalog-service.js → apps/edge-web/src/app.js
+- `databaseFor()` --calls--> `withTransaction()`  [EXTRACTED]
+  test/deal-conversion-postgres-live.test.js → modules/database/src/transactions.js
 - `capture()` --calls--> `createSafeLogger()`  [EXTRACTED]
   test/observability.test.js → modules/shared/src/observability.js
-- `createAutomationAuthRuntime()` --calls--> `createAutomationCredentials()`  [EXTRACTED]
-  apps/api/src/automation-auth-runtime.js → modules/identity-access/src/automation-credentials.js
 
 ## Import Cycles
 - None detected.
@@ -213,11 +228,11 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (157 total, 48 thin omitted)
+## Communities (172 total, 49 thin omitted)
 
-### Community 0 - "meta-sandbox.test.js"
-Cohesion: 0.17
-Nodes (14): createMetaWebhookRuntime(), createMetaMessagesClient(), deepFreeze(), extractMetaEvents(), immutableClone(), InMemoryMetaEventStore, MetaWebhookAuthenticationError, processMetaWebhook() (+6 more)
+### Community 0 - "integration-reliability/src/index.js"
+Cohesion: 0.05
+Nodes (46): createMetaWebhookRuntime(), canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore (+38 more)
 
 ### Community 1 - "PostgresTransientMediaRepository"
 Cohesion: 0.21
@@ -232,48 +247,48 @@ Cohesion: 0.09
 Nodes (37): crm_meta.protect_catalog_entry, crm_meta.protect_catalog_version, crm_meta.protect_idempotency_record, crm_meta.reject_immutable_change, audit_events_immutable_rows, audit_events_immutable_truncate, catalog_materials_immutable_truncate, catalog_materials_protect_rows (+29 more)
 
 ### Community 4 - "configuration-version.js"
-Cohesion: 0.23
-Nodes (20): assertChannels(), assertExactKeys(), assertFab(), assertFeatureFlags(), assertJsonValue(), assertNonEmptyString(), assertPix(), assertRecipient() (+12 more)
+Cohesion: 0.10
+Nodes (32): isoString(), mapConfiguration(), requireQueryable(), requireString(), createConfigurationService(), assertChannels(), assertExactKeys(), assertFab() (+24 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.05
-Nodes (43): scripts, build, check:boundaries, db:migrate, drill:observability:api, format, format:check, generate:ficha-pdf-review (+35 more)
+Nodes (44): scripts, build, check:boundaries, db:migrate, drill:observability:api, format, format:check, generate:ficha-pdf-review (+36 more)
 
 ### Community 6 - "r2-live-smoke.mjs"
 Cohesion: 0.11
 Nodes (34): assertNoS3ObjectLockHeaders(), assertSafeR2Evidence(), awsDate(), awsEncode(), awsTimestamp(), BUCKETS, canonicalObjectPath(), canonicalQuery() (+26 more)
 
-### Community 7 - "CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)"
-Cohesion: 0.06
-Nodes (36): Crazy API (WhatsApp), Datacrazy CRM, 1. Visão geral do fluxo, 2. Card rápido de briefing, 3. Roteiro completo de qualificação — os 13 campos, 4. Tags e tipificação, 5. Pipeline "Vendas Estamparia" — as 5 etapas, 6. Transferência da IA pro vendedor humano (+28 more)
+### Community 7 - "O que já está configurado"
+Cohesion: 0.20
+Nodes (10): Agente "Vendedor Silmer", Automação, Base de conhecimento, BLOQUEADORES (não resolvidos), Campos adicionais de lead (13 novos), Datacrazy — Automação "Vendedor Silmer" (SDR WhatsApp → Vendedor humano), Fluxo desenhado, O que já está configurado (+2 more)
 
 ### Community 8 - "Design do CRM Silmer"
 Cohesion: 0.05
 Nodes (37): 10. Interação e movimento, 11. Acessibilidade, 12. Linguagem e conteúdo, 13. Arquitetura de implementação visual, 14. Critérios de aceite do design system, 15. Antipadrões proibidos, 1. Objetivo, 2. Tradução da marca para o produto (+29 more)
 
 ### Community 9 - "database/src/index.js"
-Cohesion: 0.06
-Nodes (27): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+19 more)
+Cohesion: 0.13
+Nodes (15): pool, checkDatabaseReadiness(), createDatabase(), applyMigration(), checksum(), ensureDirectoryUrl(), loadMigrations(), migrate() (+7 more)
 
 ### Community 10 - "T00.4 — Spikes externos"
-Cohesion: 0.11
-Nodes (15): Cloudflare R2 Integration, Decisões seguras, Evidências e pendências externas, Gemini Developer API Integration, Meta Sandbox Validation, Resultado local, T00.4 — Spikes externos, Verificação (+7 more)
+Cohesion: 0.25
+Nodes (8): Cloudflare R2 Integration, Decisões seguras, Evidências e pendências externas, Gemini Developer API Integration, Meta Sandbox Validation, Resultado local, T00.4 — Spikes externos, Verificação
 
 ### Community 11 - "recovery-mock.mjs"
 Cohesion: 0.13
 Nodes (28): buildRecoveryPlan(), expectedAdapterKeys, expectedBlockerKeys, expectedCadenceEntryKeys, expectedCadenceKeys, expectedDigestKeys, expectedGateKeys, expectedRecoveryCheckKeys (+20 more)
 
-### Community 12 - "audit-privacy/src/index.js"
-Cohesion: 0.15
-Nodes (14): AuditEventValidationError, createAuditEventEnvelope(), deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), PostgresAuditTrail (+6 more)
+### Community 12 - "PostgresAuditTrail"
+Cohesion: 0.24
+Nodes (8): createAuditEventEnvelope(), deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), PostgresAuditTrail, requireQueryable()
 
 ### Community 13 - "meta-whatsapp.js"
-Cohesion: 0.07
-Nodes (48): absoluteInstant(), array(), boundedString(), configuredId(), createMetaWhatsAppNormalizer(), deepFreeze(), dispositionFor(), immutableClone() (+40 more)
+Cohesion: 0.20
+Nodes (21): absoluteInstant(), array(), boundedString(), configuredId(), createMetaWhatsAppNormalizer(), deepFreeze(), dispositionFor(), immutableClone() (+13 more)
 
 ### Community 14 - "dependencies"
-Cohesion: 0.08
-Nodes (25): dependencies, @crm-silmer/audit-privacy, @crm-silmer/catalog, @crm-silmer/configuration, @crm-silmer/database, @crm-silmer/identity-access, @crm-silmer/inbox-channels, @crm-silmer/integration-reliability (+17 more)
+Cohesion: 0.07
+Nodes (29): dependencies, @crm-silmer/audit-privacy, @crm-silmer/catalog, @crm-silmer/configuration, @crm-silmer/contacts, @crm-silmer/database, @crm-silmer/deals-pipeline, @crm-silmer/identity-access (+21 more)
 
 ### Community 15 - "ficha-pdf-review.mjs"
 Cohesion: 0.17
@@ -296,7 +311,7 @@ Cohesion: 0.09
 Nodes (22): 1. Leitura técnica do arquivo, 2.1 Identificação do pedido, 2.2 Itens, partes da peça e grade, 2.3 Observações do pedido, 2.4 Campos posteriores de produção, 2. Inventário completo dos campos da planilha, 3. Campos necessários no CRM que não existem na planilha, 4. Jornada definitiva e critérios de passagem (+14 more)
 
 ### Community 20 - "CRM Silmer — Especificação de Produto do MVP"
-Cohesion: 0.08
+Cohesion: 0.09
 Nodes (23): 10. Jornada comercial aprovada, 11. Geração e envio da Ficha, 12. Financeiro comercial do MVP, 13. Privacidade e LGPD, 14. Critérios de sucesso do piloto, 15. Gate de produto para o Tech Lead, 16. Próximo passo recomendado, 1. Visão do produto (+15 more)
 
 ### Community 21 - "identity-access.md"
@@ -332,8 +347,8 @@ Cohesion: 0.25
 Nodes (10): expectedDecisionSubjects, expectedRoles, invariant(), isCorporateId(), isIsoDate(), isVersionedEvidence(), main(), validateApproval() (+2 more)
 
 ### Community 29 - "P1 — MVP"
-Cohesion: 0.12
-Nodes (16): Critério de passagem, CRM Silmer MVP — Requisitos Rastreáveis, Fora do escopo, Objetivos, P1.0 n8n como motor obrigatório, P1.1 Caixa de Entrada e conversão, P1.2 Atendimento assistido pelo Vendedor Silmer, P1.3 Ficha de Pedido (+8 more)
+Cohesion: 0.22
+Nodes (9): P1.0 n8n como motor obrigatório, P1.1 Caixa de Entrada e conversão, P1.2 Atendimento assistido pelo Vendedor Silmer, P1.3 Ficha de Pedido, P1.4 Confiabilidade e canais, P1.5 Financeiro comercial, P1.6 Privacidade e acesso, P1.7 PIX e boas-vindas (+1 more)
 
 ### Community 30 - "worker/package.json"
 Cohesion: 0.20
@@ -348,8 +363,8 @@ Cohesion: 0.14
 Nodes (13): activationGateRef, alerts, legalMaximumRetentionDays, monitorLocation, operationalRetentionDays, routing, destination, owner (+5 more)
 
 ### Community 33 - "identity-runtime.js"
-Cohesion: 0.22
-Nodes (8): createIdentityApiRuntime(), IdentityHttpError, readKey(), readOrigins(), requireSecret(), database, encodedKey, environment
+Cohesion: 0.16
+Nodes (10): createIdentityApiRuntime(), IdentityHttpError, readKey(), readOrigins(), requireSecret(), decodeBase32(), totp(), database (+2 more)
 
 ### Community 34 - "Passagem de Produto para Tech Lead"
 Cohesion: 0.15
@@ -363,13 +378,13 @@ Nodes (15): instagram, whatsapp, gemini, schemaFixture, meta, canonicalInboundFi
 Cohesion: 0.17
 Nodes (11): engines, node, npm, name, packageManager, private, type, version (+3 more)
 
-### Community 37 - "inbox-channels/src/index.js"
-Cohesion: 0.07
-Nodes (39): clone(), createAudit(), InMemoryInboxRepository, publicConversation(), advisoryLock(), createAudit(), decryptJson(), encryptJson() (+31 more)
+### Community 37 - "inbox-service.js"
+Cohesion: 0.14
+Nodes (15): createInboxService(), normalizeInbound(), validateContent(), validateHumanCommand(), validateInbound(), InboxConflictError, InboxForbiddenError, InboxValidationError (+7 more)
 
 ### Community 38 - "README.md"
-Cohesion: 0.17
-Nodes (6): Sobre o CRM Silmer, CI and Immutable Images Workflow, PostgreSQL 17 Alpine Image, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
+Cohesion: 0.22
+Nodes (4): Sobre o CRM Silmer, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
 
 ### Community 39 - "T00.7 — Ativação e drills de observabilidade"
 Cohesion: 0.18
@@ -400,8 +415,8 @@ Cohesion: 0.07
 Nodes (28): Critério de conclusão da Inbox Multicanal, Critério de conclusão do Agente Vendedor Silmer no n8n, Critério de conclusão do CRM, CRM Silmer MVP — Plano Macro de Entrega, Etapa AGENTE-1 — Implantar o n8n obrigatório, Etapa AGENTE-2 — Criar contratos CRM ↔ n8n, Etapa AGENTE-3 — Conectar OpenAI e Gemini, Etapa AGENTE-4 — Construir o workflow da jornada (+20 more)
 
 ### Community 46 - "postgres.js"
-Cohesion: 0.36
-Nodes (6): decodeEncryptedSecret(), mapFactor(), mapInvitation(), mapSession(), requireIsoString(), toIsoString()
+Cohesion: 0.31
+Nodes (7): createPostgresIdentityRepository(), decodeEncryptedSecret(), mapFactor(), mapInvitation(), mapSession(), requireIsoString(), toIsoString()
 
 ### Community 47 - "Agentes do CRM Silmer"
 Cohesion: 0.25
@@ -431,17 +446,17 @@ Nodes (8): monitor, checkIntervalSeconds, consecutiveFailures, evidenceRef, live
 Cohesion: 0.25
 Nodes (7): Execução externa pendente, Lacunas, donos e prazo-gate, Pre-flight obrigatório, Runbook de recovery off-host — T00.3 / T07.3, Stop conditions, Uso offline por uma segunda pessoa, Tombstone Ledger (T06.3)
 
-### Community 54 - "catalog/src/index.js"
-Cohesion: 0.17
-Nodes (9): select(), createCatalogService(), CatalogConflictError, CatalogError, CatalogForbiddenError, CatalogValidationError, assertCatalogPorts(), ADMIN (+1 more)
+### Community 54 - "catalog-version.js"
+Cohesion: 0.11
+Nodes (25): select(), createPostgresCatalogRepository(), isoString(), mapCatalog(), requireQueryable(), requireString(), createCatalogService(), assertExactKeys() (+17 more)
 
-### Community 55 - "configuration/src/index.js"
-Cohesion: 0.19
-Nodes (8): createConfigurationService(), ConfigurationConflictError, ConfigurationError, ConfigurationForbiddenError, ConfigurationValidationError, assertConfigurationPorts(), ADMIN_ACTOR, createHarness()
+### Community 55 - "deal-runtime.js"
+Cohesion: 0.10
+Nodes (26): createDealApiRuntime(), httpError(), parseCookies(), readEnvelopeKey(), iso(), mapDeal(), PostgresDealRepository, requireQueryable() (+18 more)
 
 ### Community 56 - "T00.6 — Gate de aprovação da Fase 0"
-Cohesion: 0.16
-Nodes (11): Evidência local versionada, Gate externo ainda aberto, T00.7 — Observabilidade e hardening mínimos, Verificação local, Como alterar esta aprovação, Defaults aprovados, Exceção de operação solo, Papéis designados (+3 more)
+Cohesion: 0.29
+Nodes (7): Como alterar esta aprovação, Defaults aprovados, Exceção de operação solo, Papéis designados, Resultado, T00.6 — Gate de aprovação da Fase 0, Verificação
 
 ### Community 57 - "Supply chain da Fase 0"
 Cohesion: 0.29
@@ -463,13 +478,13 @@ Nodes (7): routing, criticalEscalationMinutes, destinations, evidenceRef, highEs
 Cohesion: 0.43
 Nodes (4): invariant(), main(), validateMediaRetentionPolicy(), policyUrl
 
-### Community 62 - "catalog-version.js"
-Cohesion: 0.24
-Nodes (14): isoString(), mapCatalog(), requireString(), assertExactKeys(), assertNonEmptyString(), assertRecord(), createCatalogSelection(), createPublishedCatalogVersion() (+6 more)
+### Community 62 - "inbox-channels/src/index.js"
+Cohesion: 0.10
+Nodes (12): META_WHATSAPP_MAX_EVENTS_PER_CALLBACK, META_WHATSAPP_STALE_AFTER_HOURS, MetaWhatsAppWebhookPayloadError, createChannelEventHandler(), createChannelEventJobHandler(), ChannelContractError, InboxError, TERMINAL_INBOX_STATES (+4 more)
 
 ### Community 63 - "configuration-catalog-postgres-live.test.js"
-Cohesion: 0.21
-Nodes (9): createCommercialRuntime(), createPostgresCatalogRepository(), requireQueryable(), createPostgresConfigurationRepository(), isoString(), mapConfiguration(), requireQueryable(), requireString() (+1 more)
+Cohesion: 0.36
+Nodes (3): createCommercialRuntime(), createPostgresConfigurationRepository(), ADMIN
 
 ### Community 65 - "T00.4 — Mídia transitória do piloto interno"
 Cohesion: 0.33
@@ -503,9 +518,9 @@ Nodes (5): exports, name, private, type, version
 Cohesion: 0.33
 Nodes (4): copies, manifest, output, root
 
-### Community 73 - "idempotency.js"
+### Community 73 - "channel-envelope.js"
 Cohesion: 0.21
-Nodes (10): canonicalJson(), clone(), createDeferred(), createIdempotentCommandExecutor(), fingerprintCommand(), IdempotencyConflictError, InMemoryIdempotencyRecordStore, requireNonEmpty() (+2 more)
+Nodes (21): ATTACHMENT_CONTENT_FIELDS, canonicalIdentity(), canonicalMessage(), CHANNELS, createCanonicalInboundEnvelope(), createCanonicalOutboundEnvelope(), createScopedExternalId(), deepFreeze() (+13 more)
 
 ### Community 74 - "observability.test.js"
 Cohesion: 0.22
@@ -532,8 +547,8 @@ Cohesion: 0.40
 Nodes (4): contentTypes, port, root, server
 
 ### Community 81 - "PrivateMediaVolume"
-Cohesion: 0.17
-Nodes (9): boundedString(), DEFAULT_ALLOWED_MIME_TYPES, MediaQuotaExceededError, positiveInteger(), PrivateMediaVolume, toAsyncIterable(), validDate(), repositoryFixture() (+1 more)
+Cohesion: 0.15
+Nodes (10): boundedString(), DEFAULT_ALLOWED_MIME_TYPES, MediaQuotaExceededError, MediaVolumeUnavailableError, positiveInteger(), PrivateMediaVolume, toAsyncIterable(), validDate() (+2 more)
 
 ### Community 82 - "CRM Silmer"
 Cohesion: 0.50
@@ -544,11 +559,11 @@ Cohesion: 0.67
 Nodes (3): json(), rootUrl, text()
 
 ### Community 87 - "server.js"
-Cohesion: 0.18
+Cohesion: 0.19
 Nodes (8): createConfiguredAutomationAuthRuntime(), createDurableMetaWebhookRuntime(), createServerApi(), readEnvelopeKey(), requireConfiguredSecret(), database, environment, KEY
 
 ### Community 129 - "T00.4 — Sandbox da Meta"
-Cohesion: 0.33
+Cohesion: 0.20
 Nodes (6): Ativos selecionados, Escopo e limite, Evidência de fechamento, Segredos e dados locais, Sequência operacional, T00.4 — Sandbox da Meta
 
 ### Community 130 - "0005_phase2_worker_media.expand.sql"
@@ -564,15 +579,15 @@ Cohesion: 0.40
 Nodes (5): Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Guardrails do MVP, Inicialização obrigatória
 
 ### Community 133 - "postgres-contact-identity-repository.js"
-Cohesion: 0.07
-Nodes (41): auditEvent(), commandReplay(), identityScope(), InMemoryContactIdentityRepository, advisoryLock(), auditEvent(), decryptIdentity(), encryptIdentity() (+33 more)
+Cohesion: 0.06
+Nodes (44): auditEvent(), commandReplay(), identityScope(), InMemoryContactIdentityRepository, mapContact(), PostgresContactConversionPort, requireQueryable(), advisoryLock() (+36 more)
 
 ### Community 135 - "postgres-webhook-inbox.js"
 Cohesion: 0.13
 Nodes (30): boundedString(), canonicalEventAad(), canonicalInstant(), canonicalJson(), decryptCanonicalEvent(), encryptCanonicalEvent(), encryptPayload(), MEDIA_TYPES (+22 more)
 
-### Community 136 - "whatsapp-webhook.test.js"
-Cohesion: 0.13
+### Community 136 - "api/src/app.js"
+Cohesion: 0.16
 Nodes (9): WEBHOOK_MAX_IN_FLIGHT, WEBHOOK_REQUESTS_PER_SECOND, createWhatsAppWebhookRuntime(), requireSecret(), WEBHOOK_BODY_LIMIT_BYTES, MetaWebhookPayloadError, WebhookEventConflictError, normalize() (+1 more)
 
 ### Community 137 - "inbox-channels/package.json"
@@ -580,20 +595,20 @@ Cohesion: 0.22
 Nodes (8): dependencies, @crm-silmer/audit-privacy, exports, @crm-silmer/audit-privacy, name, private, type, version
 
 ### Community 138 - "postgres-idempotency.js"
-Cohesion: 0.25
-Nodes (12): aad(), decodeBase64Url(), decryptResponse(), encryptResponse(), identityValues(), normalizeResponse(), parseEnvelope(), PostgresIdempotencyRecordStore (+4 more)
+Cohesion: 0.29
+Nodes (11): aad(), decodeBase64Url(), decryptResponse(), encryptResponse(), identityValues(), normalizeResponse(), parseEnvelope(), requireNonEmpty() (+3 more)
 
-### Community 139 - "api/src/app.js"
-Cohesion: 0.30
-Nodes (9): createApi(), createWebhookAdmissionGate(), isJsonContentType(), isTransientWebhookPersistenceError(), SERVICES, createSafeLogger(), normalizeTraceId(), harness() (+1 more)
+### Community 139 - "createApi"
+Cohesion: 0.24
+Nodes (10): createApi(), createWebhookAdmissionGate(), isJsonContentType(), isTransientWebhookPersistenceError(), SERVICES, createSafeLogger(), normalizeTraceId(), harness() (+2 more)
 
 ### Community 140 - "observability.js"
 Cohesion: 0.16
 Nodes (10): allowedContextFields, allowedEvents, allowedMetrics, allowedServices, categoricalPolicies, createSafeLogRecord(), isFiniteNumber(), MetricRegistry (+2 more)
 
-### Community 141 - "postgres-job-queue.js"
-Cohesion: 0.24
-Nodes (15): boundedString(), calculateRetryDelayMs(), decideExpiredAttempt(), decideFailedAttempt(), errorCodeValue(), finishAttempt(), finishJob(), insertReconciliation() (+7 more)
+### Community 141 - "postgres-inbox-repository.js"
+Cohesion: 0.28
+Nodes (11): advisoryLock(), createAudit(), decryptJson(), encryptJson(), hashJson(), iso(), mapConversation(), mapMessage() (+3 more)
 
 ### Community 142 - "0004_phase2_channel_webhook.expand.sql"
 Cohesion: 0.53
@@ -615,13 +630,13 @@ Nodes (8): allowedActions, AUTOMATION_EXECUTOR_ACTIONS, AUTOMATION_EXECUTOR_ACTO
 Cohesion: 0.24
 Nodes (12): crm.reject_identity_link_history_mutation, crm.ai_suggestions, crm.attachments, crm.contact_identities, crm.contacts, crm.conversations, crm.identity_links, crm.inbox_commands (+4 more)
 
-### Community 148 - "integration-reliability/src/index.js"
-Cohesion: 0.28
-Nodes (3): MetaApiError, PostgresOutboundMessageOutbox, MediaVolumeUnavailableError
+### Community 148 - "migrations.test.js"
+Cohesion: 0.15
+Nodes (6): contractThree, expandOne, expandTwo, MigrationClient, MigrationPool, Mutex
 
-### Community 149 - "postgres-idempotency.test.js"
-Cohesion: 0.29
-Nodes (4): ENVELOPE_KEY, FakeDatabase, identity, recordKey()
+### Community 149 - "freezeInboxRecord"
+Cohesion: 0.42
+Nodes (7): clone(), createAudit(), InMemoryInboxRepository, publicConversation(), normalizeHumanCommand(), freezeInboxRecord(), isTerminalInboxState()
 
 ### Community 150 - "Ator técnico do n8n"
 Cohesion: 0.33
@@ -631,6 +646,10 @@ Nodes (5): Ator técnico do n8n, Auditoria e resposta a falhas, Configuração e
 Cohesion: 0.33
 Nodes (5): exports, name, private, type, version
 
+### Community 154 - "deal-routes.js"
+Cohesion: 0.31
+Nodes (9): DealRequestError, publicCode(), registerDealRoutes(), rejectUnknownKeys(), requireAutomationEpoch(), requireObject(), requireString(), requireVersion() (+1 more)
+
 ### Community 155 - "identity-routes.js"
 Cohesion: 0.30
 Nodes (12): IdentityRequestError, parseCookies(), publicErrorCode(), readStatusCode(), registerIdentityRoutes(), requireAuthenticatedCommand(), requireBody(), requireCookie() (+4 more)
@@ -639,25 +658,77 @@ Nodes (12): IdentityRequestError, parseCookies(), publicErrorCode(), readStatusC
 Cohesion: 0.29
 Nodes (6): Autoridade e fonte humana, Decisões aprovadas, Designações, Exceção de operação solo e risco aceito, Rastreabilidade, T00.6 — Evidência de aprovação
 
+### Community 157 - "audit-privacy/src/index.js"
+Cohesion: 0.36
+Nodes (6): AuditEventValidationError, isTransientMediaExpired(), resolveTransientMediaExpiresAt(), timestamp(), TRANSIENT_MEDIA_MAX_AGE_DAYS, TransientMediaRetentionError
+
+### Community 158 - "tasks.md"
+Cohesion: 0.22
+Nodes (6): Evidência local versionada, Gate externo ainda aberto, T00.7 — Observabilidade e hardening mínimos, Verificação local, CI and Immutable Images Workflow, PostgreSQL 17 Alpine Image
+
+### Community 159 - "CRM-PROCESSO-VENDAS.md — Processo de Qualificação e Venda (Silmer)"
+Cohesion: 0.22
+Nodes (9): 1. Visão geral do fluxo, 2. Card rápido de briefing, 3. Roteiro completo de qualificação — os 13 campos, 4. Tags e tipificação, 5. Pipeline "Vendas Estamparia" — as 5 etapas, 6. Transferência da IA pro vendedor humano, 7. O que a IA e o vendedor nunca afirmam, 8. Pendências que travam o processo hoje (+1 more)
+
+### Community 160 - "CHAT NA LANDING PAGE — o que existe e o que falta"
+Cohesion: 0.22
+Nodes (9): A validar no primeiro teste real, Ajuste necessário no prompt do agente, Arquitetura necessária, CHAT NA LANDING PAGE — o que existe e o que falta, Esforço estimado, O que a Conexão Universal pede, Pendências de conteúdo (a Silmer precisa fornecer), Ponto de atenção do fluxo no site (+1 more)
+
+### Community 161 - "deals-pipeline/package.json"
+Cohesion: 0.22
+Nodes (8): dependencies, @crm-silmer/integration-reliability, exports, @crm-silmer/integration-reliability, name, private, type, version
+
+### Community 162 - "inbox-postgres-live.test.js"
+Cohesion: 0.25
+Nodes (4): ATTENDANT, databaseFor(), NOW, servicesFor()
+
+### Community 163 - "T00.4 - Revisao do PDF canonico da Ficha"
+Cohesion: 0.29
+Nodes (7): Estado do gate, Ficha Canonical V2, Geracao e verificacao tecnica, Pacote versionado, Registro do aceite real, Roteiro executado por Rose e Operacao, T00.4 - Revisao do PDF canonico da Ficha
+
+### Community 164 - "postgres-conversation-conversion-port.js"
+Cohesion: 0.52
+Nodes (4): iso(), mapConversionConversation(), PostgresConversationConversionPort, requireQueryable()
+
+### Community 165 - "CRM Silmer MVP — Requisitos Rastreáveis"
+Cohesion: 0.29
+Nodes (7): Critério de passagem, CRM Silmer MVP — Requisitos Rastreáveis, Fora do escopo, Objetivos, P2 — Depois do piloto, Problema, Rastreabilidade
+
+### Community 166 - "DATACRAZY-SETUP.md"
+Cohesion: 0.47
+Nodes (3): Crazy API (WhatsApp), Datacrazy CRM, Vendedor Silmer (AI Agent)
+
+### Community 167 - "crm.deals"
+Cohesion: 0.40
+Nodes (4): crm, crm.contacts, crm.conversations, crm.deals
+
+### Community 168 - "PASSO A PASSO — Conectar a Crazy API (quando o cliente aprovar)"
+Cohesion: 0.40
+Nodes (5): Alternativas sem o custo da Crazy API, ATENÇÃO — definir qual número vai hospedar o agente, Cuidados com a Crazy API (WhatsApp não-oficial), PASSO A PASSO — Conectar a Crazy API (quando o cliente aprovar), Passos
+
+### Community 169 - "deal-conversion-postgres-live.test.js"
+Cohesion: 0.40
+Nodes (3): PostgresIdempotencyRecordStore, databaseFor(), NOW
+
 ## Knowledge Gaps
-- **713 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+708 more)
+- **728 isolated node(s):** `singleQuote`, `trailingComma`, `name`, `version`, `private` (+723 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **48 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **49 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `request()` connect `edge-web/src/app.js` to `idempotency.js`, `r2-live-smoke.mjs`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `createIdempotentCommandExecutor()` connect `idempotency.js` to `integration-reliability/src/index.js`, `edge-web/src/app.js`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
-- **Why does `loadMigrations()` connect `database/src/index.js` to `idempotency.js`, `identity-api-live.test.js`, `server.js`, `configuration-catalog-postgres-live.test.js`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Why does `request()` connect `edge-web/src/app.js` to `integration-reliability/src/index.js`, `r2-live-smoke.mjs`?**
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Why does `createIdempotentCommandExecutor()` connect `integration-reliability/src/index.js` to `edge-web/src/app.js`, `deal-runtime.js`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `createR2S3Client()` connect `r2-live-smoke.mjs` to `edge-web/src/app.js`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `name` to the rest of the system?**
-  _713 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _728 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `integration-reliability/src/index.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.054746835443037975 - nodes in this community are weakly interconnected._
 - **Should `TDD — CRM Silmer MVP` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
 - **Should `0002_phase1_domain.expand.sql` be split into smaller, more focused modules?**
   _Cohesion score 0.08846153846153847 - nodes in this community are weakly interconnected._
-- **Should `scripts` be split into smaller, more focused modules?**
-  _Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected._

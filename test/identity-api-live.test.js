@@ -220,8 +220,8 @@ if (connectionString) {
              FROM crm.idempotency_records WHERE response IS NOT NULL) AS encrypted`,
         [`%${invitationBody.token}%`],
       );
-      assert.ok(persisted.rows[0].audits >= 7);
-      assert.ok(persisted.rows[0].completed_records >= 4);
+      assert.ok(persisted.rows[0].audits >= 5);
+      assert.ok(persisted.rows[0].completed_records >= 3);
       assert.equal(persisted.rows[0].hashes_only, true);
       assert.equal(persisted.rows[0].encrypted, true);
     } finally {

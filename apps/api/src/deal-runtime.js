@@ -3,11 +3,16 @@ import { PostgresContactConversionPort } from '@crm-silmer/contacts';
 import {
   PostgresDealAutomationFencePort,
   PostgresDealRepository,
+  PostgresDealWorkPort,
   createDealCommandService,
   createDealConversionService,
   createDealLossReasonCipher,
 } from '@crm-silmer/deals-pipeline';
-import { PostgresConversationConversionPort } from '@crm-silmer/inbox-channels';
+import {
+  PostgresConversationConversionPort,
+  PostgresHandoffConversationPort,
+} from '@crm-silmer/inbox-channels';
+import { PostgresOperationalUserPort } from '@crm-silmer/identity-access';
 import {
   PostgresDomainEventStore,
   PostgresIdempotencyRecordStore,
@@ -19,6 +24,11 @@ import {
   createQualificationCipher,
   createQualificationService,
 } from '@crm-silmer/qualification';
+import {
+  PostgresWorkManagementRepository,
+  createHandoffCipher,
+  createWorkManagementService,
+} from '@crm-silmer/work-management';
 
 /**
  * @param {any} database
@@ -80,6 +90,25 @@ export function createDealApiRuntime(database, options = {}) {
     idempotencyStore,
     qualificationRepository,
   });
+  const workManagement = createWorkManagementService({
+    auditPort,
+    cipher: createHandoffCipher({
+      key: readEnvelopeKey(
+        environment.HANDOFF_ENVELOPE_KEY,
+        'HANDOFF_ENVELOPE_KEY',
+      ),
+    }),
+    eventPort,
+    idempotencyStore,
+    repository: new PostgresWorkManagementRepository({
+      conversationPort: new PostgresHandoffConversationPort(),
+      dealPort: new PostgresDealWorkPort(),
+      userPort: new PostgresOperationalUserPort(),
+    }),
+    slaMinutes: readSlaMinutes(environment.HANDOFF_SLA_MINUTES),
+    slaPolicyVersion:
+      environment.HANDOFF_SLA_POLICY_VERSION ?? 'technical-default-v1',
+  });
 
   return Object.freeze({
     /** @param {any} input */
@@ -115,9 +144,18 @@ export function createDealApiRuntime(database, options = {}) {
       });
     },
     convertConversation: conversion.convertConversation,
+    acceptHandoff: workManagement.acceptHandoff,
+    assignDeal: workManagement.assignDeal,
+    cancelTask: workManagement.cancelTask,
+    completeTask: workManagement.completeTask,
+    createHandoff: workManagement.createHandoff,
+    createTask: workManagement.createTask,
     loseDeal: commands.loseDeal,
     patchFields: qualification.patchFields,
+    resolveHandoff: workManagement.resolveHandoff,
+    startTask: workManagement.startTask,
     transitionDeal: commands.transitionDeal,
+    transferHandoff: workManagement.transferHandoff,
   });
 }
 
@@ -147,6 +185,23 @@ function readEnvelopeKey(value, name) {
     throw new Error(`${name} must decode to 32 bytes`);
   }
   return key;
+}
+
+/** @param {string|undefined} value */
+function readSlaMinutes(value) {
+  if (value === undefined || value === '') return 240;
+  if (!/^[0-9]+$/u.test(value)) {
+    throw new Error(
+      'HANDOFF_SLA_MINUTES must be an integer between 5 and 10080',
+    );
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 5 || parsed > 10_080) {
+    throw new Error(
+      'HANDOFF_SLA_MINUTES must be an integer between 5 and 10080',
+    );
+  }
+  return parsed;
 }
 
 /** @param {number} statusCode @param {string} code */

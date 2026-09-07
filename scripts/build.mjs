@@ -50,6 +50,11 @@ const copies = [
     'modules/qualification/package.json',
     'runtime/modules/qualification/package.json',
   ],
+  ['modules/work-management/src', 'runtime/modules/work-management/src'],
+  [
+    'modules/work-management/package.json',
+    'runtime/modules/work-management/package.json',
+  ],
   ['modules/shared/src', 'runtime/modules/shared/src'],
   ['modules/shared/package.json', 'runtime/modules/shared/package.json'],
 ];

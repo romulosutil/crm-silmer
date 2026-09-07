@@ -711,6 +711,7 @@ function requireNonEmptyString(value, field) {
 }
 
 export { createPostgresIdentityRepository } from './postgres.js';
+export { PostgresOperationalUserPort } from './postgres-operational-user-port.js';
 export { createPostgresAccessRepository } from './postgres-access.js';
 export { createPostgresAuthenticationThrottle } from './authentication-throttle.js';
 export {

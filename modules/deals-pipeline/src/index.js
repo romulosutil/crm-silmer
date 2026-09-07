@@ -3,6 +3,7 @@ export { createDealCommandService } from './application/deal-command-service.js'
 export { InMemoryDealRepository } from './adapters/in-memory-deal-repository.js';
 export { PostgresDealAutomationFencePort } from './adapters/postgres-deal-automation-fence.js';
 export { PostgresDealRepository } from './adapters/postgres-deal-repository.js';
+export { PostgresDealWorkPort } from './adapters/postgres-deal-work-port.js';
 export {
   DEAL_STAGES,
   INITIAL_DEAL_STAGE,

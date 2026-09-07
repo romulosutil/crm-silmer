@@ -13,6 +13,7 @@ export const AUTOMATION_EXECUTOR_ACTIONS = Object.freeze([
   'conversation.convert',
   'deal.fields.patch',
   'deal.transition',
+  'handoff.create',
 ]);
 
 const allowedActions = new Set(AUTOMATION_EXECUTOR_ACTIONS);

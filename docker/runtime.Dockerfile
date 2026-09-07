@@ -12,6 +12,7 @@ COPY modules/contacts/package.json modules/contacts/package.json
 COPY modules/database/package.json modules/database/package.json
 COPY modules/deals-pipeline/package.json modules/deals-pipeline/package.json
 COPY modules/qualification/package.json modules/qualification/package.json
+COPY modules/work-management/package.json modules/work-management/package.json
 COPY modules/identity-access/package.json modules/identity-access/package.json
 COPY modules/inbox-channels/package.json modules/inbox-channels/package.json
 COPY modules/integration-reliability/package.json modules/integration-reliability/package.json
@@ -36,6 +37,7 @@ COPY modules/contacts/package.json modules/contacts/package.json
 COPY modules/database/package.json modules/database/package.json
 COPY modules/deals-pipeline/package.json modules/deals-pipeline/package.json
 COPY modules/qualification/package.json modules/qualification/package.json
+COPY modules/work-management/package.json modules/work-management/package.json
 COPY modules/identity-access/package.json modules/identity-access/package.json
 COPY modules/inbox-channels/package.json modules/inbox-channels/package.json
 COPY modules/integration-reliability/package.json modules/integration-reliability/package.json

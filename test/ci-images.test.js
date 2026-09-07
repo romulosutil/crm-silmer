@@ -74,6 +74,7 @@ test('packages every runtime workspace required by the API', async () => {
     'integration-reliability',
     'qualification',
     'shared',
+    'work-management',
   ];
   for (const moduleName of runtimeModules) {
     assert.equal(

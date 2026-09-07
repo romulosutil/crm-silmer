@@ -65,6 +65,7 @@ export function createServerApi(runtime = {}) {
     'IDEMPOTENCY_ENVELOPE_KEY',
     'DEAL_ENVELOPE_KEY',
     'QUALIFICATION_ENVELOPE_KEY',
+    'HANDOFF_ENVELOPE_KEY',
   ];
   const dealConfigurationPresent = dealSecretNames.some((name) =>
     Boolean(dealEnvironment[name]),
@@ -75,7 +76,7 @@ export function createServerApi(runtime = {}) {
     !dealSecretNames.every((name) => Boolean(dealEnvironment[name]))
   ) {
     throw new Error(
-      'Deal runtime requires IDEMPOTENCY_ENVELOPE_KEY, DEAL_ENVELOPE_KEY and QUALIFICATION_ENVELOPE_KEY together',
+      'Deal runtime requires IDEMPOTENCY_ENVELOPE_KEY, DEAL_ENVELOPE_KEY, QUALIFICATION_ENVELOPE_KEY and HANDOFF_ENVELOPE_KEY together',
     );
   }
   const deals =

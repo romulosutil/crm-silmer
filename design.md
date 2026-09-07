@@ -69,6 +69,13 @@ O produto é usado para triar conversas, acompanhar oportunidades, revisar dados
 
 Os componentes consomem somente tokens semânticos. Cores brutas não devem ser usadas diretamente fora da definição do tema.
 
+### Implementação canônica e regra de evolução
+
+- `apps/edge-web/src/tokens.css` é a única fonte para valores de cor, tipografia, espaçamento, raios, sombras, foco e movimento do produto.
+- `apps/edge-web/src/main.js` o importa antes de `styles.css`; CSS de tela e componente consome somente `var(--token-semântico)`, inclusive para foco, overlay e estados.
+- Novos valores brutos de cor (`#...`, `rgb()`, `hsl()` ou cores nomeadas) só podem ser declarados em `tokens.css`. Se um papel ainda não existe, criar ou evoluir o token semântico antes de usá-lo.
+- `npm run check:design-tokens` é o guardrail executável dessa regra e integra `npm run validate`; uma alteração de frontend não está pronta se ele falhar.
+
 ### Paleta base
 
 | Papel | Light | Dark | Uso |
@@ -287,7 +294,7 @@ Cada componente precisa documentar: propósito, anatomia, variantes, estados, co
 
 ## 13. Arquitetura de implementação visual
 
-- CSS organizado por camadas: `reset`, `tokens`, `base`, `layout`, `components`, `utilities`.
+- CSS organizado por camadas: `tokens.css` concentra `tokens`; `styles.css` concentra `base`, `layout`, `components` e poucas `utilities`.
 - Tokens de tema ficam em `:root` e seletores `[data-theme]`; componentes não conhecem valores hexadecimais.
 - Componentes interativos são módulos ESM ou classes isoladas e não registram estado em `window`.
 - HTML semântico é a base; ARIA complementa o comportamento que o HTML nativo não cobre.

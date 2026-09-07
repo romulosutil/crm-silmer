@@ -15,6 +15,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:design-tokens": "node scripts/check-design-tokens.mjs",
     "db:migrate": "npm run migrate --workspace @crm-silmer/database --",
     "dev": "node scripts/dev.mjs",
     "dev:down": "docker compose -f docker-compose.dev.yml down",
@@ -58,7 +59,7 @@
     "validate:phase0-decisions": "node scripts/validate-phase0-decisions.mjs",
     "validate:security-catalog": "node scripts/validate-security-catalog.mjs",
     "validate:ficha-pdf-review": "node scripts/ficha-pdf-review.mjs --validate",
-    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run validate:topology && npm run validate:r2 && npm run validate:external-spikes && npm run validate:media-retention && npm run validate:security-catalog && npm run validate:ficha-pdf-review && npm run validate:phase0-decisions && npm run validate:observability && npm test && npm run build"
+    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run check:design-tokens && npm run validate:topology && npm run validate:r2 && npm run validate:external-spikes && npm run validate:media-retention && npm run validate:security-catalog && npm run validate:ficha-pdf-review && npm run validate:phase0-decisions && npm run validate:observability && npm test && npm run build"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

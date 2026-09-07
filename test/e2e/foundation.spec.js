@@ -86,6 +86,64 @@ test('returns a real 404 for a missing compiled asset', async ({ request }) => {
   expect(response.status()).toBe(404);
 });
 
+test('reuses the MFA idempotency key on retry and rotates it after success', async ({
+  page,
+}) => {
+  /** @type {string[]} */
+  const keys = [];
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path === '/api/v1/sessions/current') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          mfaVerified: true,
+          user: {
+            capabilities: ['COMMERCIAL_ADMIN'],
+            functionName: 'Atendimento',
+            id: 'admin-1',
+          },
+        }),
+      });
+      return;
+    }
+    if (path === '/api/v1/mfa/enrollments') {
+      keys.push(request.headers()['idempotency-key']);
+      if (keys.length === 1) {
+        await route.fulfill({ status: 503 });
+        return;
+      }
+      await route.fulfill({
+        contentType: 'application/json',
+        status: 201,
+        body: JSON.stringify({
+          recoveryCodes: ['recuperacao-1'],
+          secret: 'SEGREDOTESTE',
+        }),
+      });
+      return;
+    }
+    await route.fulfill({ status: 204 });
+  });
+
+  await page.goto('/conta');
+  const enroll = page.getByRole('button', {
+    name: 'Cadastrar autenticador',
+  });
+  await enroll.click();
+  await expect(page.getByRole('alert')).toContainText(
+    'Não foi possível cadastrar o autenticador.',
+  );
+  await enroll.click();
+  await expect(page.getByText('Segredo: SEGREDOTESTE')).toBeVisible();
+  expect(keys[1]).toBe(keys[0]);
+
+  await enroll.click();
+  await expect.poll(() => keys.length).toBe(3);
+  expect(keys[2]).not.toBe(keys[1]);
+});
+
 test('submits login, restores and closes a session by keyboard without browser storage', async ({
   page,
 }) => {

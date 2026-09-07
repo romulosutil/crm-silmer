@@ -8,7 +8,7 @@ test('renders the semantic foundation without critical accessibility violations'
 
   await expect(page).toHaveTitle('CRM Silmer');
   await expect(page.getByRole('main')).toContainText(
-    'Entre com sua conta Silmer',
+    'O comercial inteiro,em movimento.',
   );
   await expect(page.getByRole('tabpanel', { name: 'Entrar' })).toBeVisible();
 
@@ -40,6 +40,50 @@ test('switches access panels with the keyboard and keeps focus predictable', asy
   await expect(
     page.getByRole('tabpanel', { name: 'Aceitar convite' }),
   ).toBeVisible();
+
+  await page.keyboard.press('Home');
+  await expect(loginTab).toBeFocused();
+  await expect(loginTab).toHaveAttribute('aria-selected', 'true');
+
+  await page.keyboard.press('End');
+  await expect(inviteTab).toBeFocused();
+
+  await page.keyboard.press('ArrowRight');
+  await expect(loginTab).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(inviteTab).toBeFocused();
+});
+
+test('distinguishes session service failure from a signed-out session', async ({
+  page,
+}) => {
+  let available = false;
+  await page.route('**/api/v1/sessions/current', async (route) => {
+    await route.fulfill({
+      contentType: 'application/problem+json',
+      status: available ? 401 : 503,
+      body: JSON.stringify({
+        code: available ? 'UNAUTHORIZED' : 'UNAVAILABLE',
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await expect(
+    page.getByRole('heading', {
+      name: 'Não foi possível verificar sua sessão',
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole('tab')).toHaveCount(0);
+
+  available = true;
+  await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(page.getByRole('tab', { name: 'Entrar' })).toBeVisible();
+});
+
+test('returns a real 404 for a missing compiled asset', async ({ request }) => {
+  const response = await request.get('/assets/inexistente.js');
+  expect(response.status()).toBe(404);
 });
 
 test('submits login, restores and closes a session by keyboard without browser storage', async ({

@@ -67,25 +67,53 @@ test('pins the approved runtime and toolchain versions exactly', async () => {
   assert.equal(apiPackage.dependencies.fastify, '5.12.1');
   assert.deepEqual(packageJson.devDependencies, {
     '@axe-core/playwright': '4.13.0',
+    '@fontsource/poppins': '5.3.0',
     '@playwright/test': '1.62.1',
     '@types/node': '24.13.3',
     '@types/punycode': '2.1.4',
+    '@vitejs/plugin-vue': '6.0.8',
     eslint: '10.9.1',
+    'eslint-plugin-vue': '10.11.0',
     prettier: '3.9.6',
     typescript: '7.0.2',
+    vite: '8.2.2',
+    vue: '3.5.42',
+    'vue-router': '4.6.4',
   });
 });
 
-test('keeps the browser runtime vanilla and isolated', async () => {
+test('pins the approved Vue client stack without runtime workspace packages', async () => {
+  const rootPackage = await readJson('package.json');
   const packageJson = await readJson('apps/edge-web/package.json');
   const source = await readFile(
-    new URL('apps/edge-web/src/app.js', rootUrl),
+    new URL('apps/edge-web/src/main.js', rootUrl),
     'utf8',
   );
 
   assert.deepEqual(packageJson.dependencies ?? {}, {});
-  assert.doesNotMatch(source, /\b(?:React|Vue|Angular|Svelte)\b/u);
+  assert.equal(rootPackage.devDependencies.vue, '3.5.42');
+  assert.equal(rootPackage.devDependencies['vue-router'], '4.6.4');
+  assert.equal(rootPackage.devDependencies.vite, '8.2.2');
+  assert.match(source, /createApp\(App\)\.use\(router\)\.mount/u);
+  assert.doesNotMatch(source, /\b(?:React|Angular|Svelte)\b/u);
   assert.doesNotMatch(source, /\bwindow\s*(?:\.|\[)/u);
+});
+
+test('build emits deployable Vue assets instead of source components', async () => {
+  await digestBuild();
+  const html = await readFile(
+    new URL('dist/edge-web/index.html', rootUrl),
+    'utf8',
+  );
+  const files = await readdir(new URL('dist/edge-web/assets/', rootUrl));
+
+  assert.match(html, /\/assets\/[^"']+\.js/u);
+  assert.ok(files.some((file) => file.endsWith('.css')));
+  assert.ok(files.some((file) => file.endsWith('.woff2')));
+  assert.equal(
+    files.some((file) => file.endsWith('.vue')),
+    false,
+  );
 });
 
 test('exposes a live API health contract', async () => {

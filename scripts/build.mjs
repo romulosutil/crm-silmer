@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve } from 'node:path';
+import { build as buildFrontend } from 'vite';
 
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'dist');
 const copies = [
-  ['apps/edge-web/src', 'edge-web'],
   ['apps/api/src', 'runtime/apps/api/src'],
   ['apps/api/package.json', 'runtime/apps/api/package.json'],
   ['apps/worker/src', 'runtime/apps/worker/src'],
@@ -61,6 +61,10 @@ const copies = [
 
 await rm(output, { force: true, recursive: true });
 await mkdir(output, { recursive: true });
+
+await buildFrontend({
+  configFile: resolve(root, 'apps/edge-web/vite.config.js'),
+});
 
 for (const [source, destination] of copies) {
   const destinationPath = resolve(output, destination);

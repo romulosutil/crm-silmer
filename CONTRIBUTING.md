@@ -42,7 +42,7 @@ stack ou escopo exigem aprovação explícita e atualização da fonte canônica
 ## Durante a implementação
 
 - Prefira uma fatia vertical pequena, observável e reversível.
-- Mantenha frontend em HTML/CSS/JS vanilla e módulos JavaScript em ESM.
+- Mantenha o frontend em Vue 3 com SFCs pequenos, CSS e módulos JavaScript ESM; não adicione store global sem decisão registrada.
 - Trate acessibilidade, autorização, privacidade e idempotência no primeiro
   patch.
 - Não adicione dependência sem justificar necessidade, risco, licença e impacto

@@ -254,6 +254,7 @@ export function createKanbanView(outlet, context) {
       const more = el('button', {
         type: 'button',
         class: 'quiet load-more',
+        'data-focus-key': `load-more-${key}`,
         text: 'Carregar mais',
       });
       more.addEventListener(
@@ -276,7 +277,12 @@ export function createKanbanView(outlet, context) {
           class: 'stage-index',
           text: String(STAGES.findIndex(([stage]) => stage === key) + 1),
         }),
-        el('h2', { id: `stage-title-${key}`, text: label }),
+        el('h2', {
+          id: `stage-title-${key}`,
+          tabindex: '-1',
+          'data-focus-key': `stage-${key}`,
+          text: label,
+        }),
         el('span', {
           class: 'count',
           text: String(column.total),
@@ -484,6 +490,17 @@ export function createKanbanView(outlet, context) {
         raw.total ?? Math.max(column.total, column.items.length),
       );
       render();
+      const lastFreshId = fresh.at(-1)?.id;
+      const focusKey = column.nextCursor
+        ? `load-more-${stage}`
+        : lastFreshId
+          ? `deal-${lastFreshId}`
+          : `stage-${stage}`;
+      /** @type {HTMLElement|null} */ (
+        outlet.querySelector(
+          `[data-focus-key="${globalThis.CSS.escape(focusKey)}"]`,
+        )
+      )?.focus();
     });
   }
 

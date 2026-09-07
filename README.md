@@ -28,7 +28,7 @@ histórico e não define o sistema novo.
 
 ## Stack aprovada
 
-- Frontend: HTML semântico, CSS e JavaScript vanilla.
+- Frontend: Vue 3, Vue Router, JavaScript ESM e CSS; bundle estático com Vite.
 - Runtime: monólito modular em JavaScript ESM, Node.js e Fastify.
 - Dados: PostgreSQL com SQL e migrações versionadas.
 - Processos do CRM: `edge-web`, `api` e `worker` no mesmo repositório.
@@ -38,8 +38,9 @@ histórico e não define o sistema novo.
   privado da VPS, arquivos válidos no processo operacional Dropbox e storage
   S3-compatible diferido para a issue `#29`.
 
-Framework de frontend, Redis, microserviços adicionais e estado de domínio em
-`window` estão fora da baseline do MVP.
+Pinia/Nuxt, outros frameworks de frontend, Redis, microserviços adicionais e
+estado de domínio em `window` estão fora da baseline do MVP. A adoção de Vue
+está registrada em [`docs/adr/001-adotar-vue-no-frontend.md`](docs/adr/001-adotar-vue-no-frontend.md).
 
 ## Desenvolvimento
 
@@ -93,8 +94,8 @@ Os controles locais de observabilidade e hardening de `T00.7` estão em
 Execute `npm run validate:observability` e `npm run test:observability`; ativação
 do monitor externo e os drills permanecem explicitamente pendentes.
 
-Os processos executáveis ficam em `apps/api` e `apps/worker`; o frontend
-estático e vanilla fica em `apps/edge-web`. Contratos compartilhados começam em
+Os processos executáveis ficam em `apps/api` e `apps/worker`; a SPA Vue
+compilada como assets estáticos fica em `apps/edge-web`. Contratos compartilhados começam em
 `modules/shared`.
 
 Toda contribuição segue [`CONTRIBUTING.md`](CONTRIBUTING.md), mantém vínculo com

@@ -19,7 +19,7 @@ dos arquivos. O diretório `historico-datacrazy/` não é fonte normativa.
 
 ## Guardrails do MVP
 
-- Use somente HTML, CSS e JavaScript vanilla no frontend.
+- Use Vue 3, Vue Router, CSS e JavaScript ESM no frontend; não adicione Pinia, Nuxt ou outro framework sem autorização explícita.
 - Use ESM, IIFE ou classes isoladas; não publique estado de domínio em `window`.
 - Mantenha `Deal`/`Negocio` como única raiz do funil e PostgreSQL como fonte da
   verdade.

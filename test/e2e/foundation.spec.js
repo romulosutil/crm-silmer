@@ -6,7 +6,7 @@ test('renders the semantic foundation without critical accessibility violations'
 }) => {
   await page.goto('/');
 
-  await expect(page).toHaveTitle('Acesso | CRM Silmer');
+  await expect(page).toHaveTitle('CRM Silmer');
   await expect(page.getByRole('main')).toContainText(
     'Entre com sua conta Silmer',
   );
@@ -104,6 +104,19 @@ test('submits login, restores and closes a session by keyboard without browser s
       return;
     }
 
+    if (path === '/api/v1/kanban' && method === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ eventCursor: 'evt-1', columns: [] }),
+      });
+      return;
+    }
+
+    if (path === '/api/v1/events' && method === 'GET') {
+      await route.fulfill({ status: 204 });
+      return;
+    }
+
     await route.abort();
   });
 
@@ -123,7 +136,7 @@ test('submits login, restores and closes a session by keyboard without browser s
   await loginPanel.getByLabel('Senha').fill('correct horse battery staple');
   await loginPanel.getByLabel('Senha').press('Enter');
   await expect(
-    page.getByRole('heading', { name: 'Acesso confirmado' }),
+    page.getByRole('heading', { name: 'Kanban comercial' }),
   ).toBeFocused();
   await expect(page.getByRole('status')).toHaveText(
     'Sessão iniciada com segurança.',
@@ -132,7 +145,7 @@ test('submits login, restores and closes a session by keyboard without browser s
   await page.reload();
   await expect(page.getByRole('status')).toHaveText('Sessão restaurada.');
   await expect(
-    page.getByRole('heading', { name: 'Acesso confirmado' }),
+    page.getByRole('heading', { name: 'Kanban comercial' }),
   ).toBeFocused();
 
   await page.getByRole('button', { name: 'Sair' }).focus();

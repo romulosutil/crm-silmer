@@ -41,12 +41,18 @@ function harness() {
         IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 45).toString('base64url'),
         QUALIFICATION_ENVELOPE_KEY: Buffer.alloc(32, 47).toString('base64url'),
         HANDOFF_ENVELOPE_KEY: Buffer.alloc(32, 48).toString('base64url'),
+        KANBAN_CURSOR_HMAC_KEY: Buffer.alloc(32, 49).toString('base64url'),
       },
       identity: {
         allowedOrigins: ['https://crm.example.test'],
         /** @param {any} input */
         async authorizeOperational(input) {
           calls.push({ input, operation: 'human' });
+          return { actor: humanActor };
+        },
+        /** @param {any} input */
+        async authorizeOperationalRead(input) {
+          calls.push({ input, operation: 'human-read' });
           return { actor: humanActor };
         },
       },
@@ -115,6 +121,37 @@ test('deal runtime rejects invalid Origin, CSRF and ambiguous cookies', async ()
   }
 });
 
+test('deal runtime read authorization rejects Basic and cross-site while allowing same-origin metadata without CSRF', async () => {
+  const { calls, runtime } = harness();
+  await assert.rejects(
+    runtime.authorizeRead({
+      action: 'kanban.read',
+      authorization: 'Basic opaque',
+      cookie: 'crm_session=session',
+      origin: 'https://crm.example.test',
+    }),
+    /FORBIDDEN/u,
+  );
+  await assert.rejects(
+    runtime.authorizeRead({
+      action: 'kanban.read',
+      cookie: 'crm_session=session',
+      secFetchSite: 'cross-site',
+    }),
+    /FORBIDDEN/u,
+  );
+  const principal = await runtime.authorizeRead({
+    action: 'kanban.read',
+    cookie: 'crm_session=session',
+    secFetchSite: 'same-origin',
+  });
+  assert.equal(principal.actor.kind, 'human');
+  assert.deepEqual(calls.at(-1), {
+    input: { action: 'kanban.read', sessionToken: 'session' },
+    operation: 'human-read',
+  });
+});
+
 test('server rejects a partially configured Deal runtime', () => {
   assert.throws(
     () =>
@@ -124,6 +161,6 @@ test('server rejects a partially configured Deal runtime', () => {
           IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 45).toString('base64url'),
         },
       }),
-    /IDEMPOTENCY_ENVELOPE_KEY, DEAL_ENVELOPE_KEY, QUALIFICATION_ENVELOPE_KEY and HANDOFF_ENVELOPE_KEY together/u,
+    /IDEMPOTENCY_ENVELOPE_KEY, DEAL_ENVELOPE_KEY, QUALIFICATION_ENVELOPE_KEY, HANDOFF_ENVELOPE_KEY and KANBAN_CURSOR_HMAC_KEY together/u,
   );
 });

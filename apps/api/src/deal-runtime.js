@@ -2,11 +2,13 @@ import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { PostgresContactConversionPort } from '@crm-silmer/contacts';
 import {
   PostgresDealAutomationFencePort,
+  PostgresDealReadRepository,
   PostgresDealRepository,
   PostgresDealWorkPort,
   createDealCommandService,
   createDealConversionService,
   createDealLossReasonCipher,
+  createDealReadService,
 } from '@crm-silmer/deals-pipeline';
 import {
   PostgresConversationConversionPort,
@@ -109,6 +111,13 @@ export function createDealApiRuntime(database, options = {}) {
     slaPolicyVersion:
       environment.HANDOFF_SLA_POLICY_VERSION ?? 'technical-default-v1',
   });
+  const readModel = createDealReadService({
+    cursorKey: readEnvelopeKey(
+      environment.KANBAN_CURSOR_HMAC_KEY,
+      'KANBAN_CURSOR_HMAC_KEY',
+    ),
+    repository: new PostgresDealReadRepository(database),
+  });
 
   return Object.freeze({
     /** @param {any} input */
@@ -143,6 +152,25 @@ export function createDealApiRuntime(database, options = {}) {
         sessionToken,
       });
     },
+    /** @param {any} input */
+    async authorizeRead(input) {
+      if (input.authorization !== undefined) throw httpError(403, 'FORBIDDEN');
+      if (!options.identity) throw httpError(503, 'IDENTITY_UNAVAILABLE');
+      if (
+        (input.origin !== undefined &&
+          (typeof input.origin !== 'string' ||
+            !options.identity.allowedOrigins.includes(input.origin))) ||
+        (input.origin === undefined &&
+          !['same-origin', 'none'].includes(input.secFetchSite))
+      )
+        throw httpError(403, 'FORBIDDEN');
+      const sessionToken = parseCookies(input.cookie).get('crm_session');
+      if (typeof sessionToken !== 'string') throw httpError(403, 'FORBIDDEN');
+      return options.identity.authorizeOperationalRead({
+        action: input.action,
+        sessionToken,
+      });
+    },
     convertConversation: conversion.convertConversation,
     acceptHandoff: workManagement.acceptHandoff,
     assignDeal: workManagement.assignDeal,
@@ -150,8 +178,12 @@ export function createDealApiRuntime(database, options = {}) {
     completeTask: workManagement.completeTask,
     createHandoff: workManagement.createHandoff,
     createTask: workManagement.createTask,
+    getDealDetail: readModel.getDetail,
+    getKanbanBoard: readModel.getBoard,
+    getKanbanColumn: readModel.getColumn,
     loseDeal: commands.loseDeal,
     patchFields: qualification.patchFields,
+    readDealEvents: readModel.readEvents,
     resolveHandoff: workManagement.resolveHandoff,
     startTask: workManagement.startTask,
     transitionDeal: commands.transitionDeal,

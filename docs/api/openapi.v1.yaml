@@ -189,6 +189,120 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /kanban:
+    get:
+      operationId: getKanban
+      summary: Projeta as cinco colunas do Kanban a partir de Negócios ativos
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - {
+            name: assignedUserId,
+            in: query,
+            schema: { type: string, minLength: 1 },
+          }
+        - { name: hasOverdueTask, in: query, schema: { type: boolean } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 20 },
+          }
+      responses:
+        '200':
+          description: Colunas com paginação independente; Backlog não integra o Kanban
+          headers:
+            Cache-Control:
+              { schema: { type: string, const: 'private, no-cache' } }
+            Vary: { schema: { type: string, const: 'Origin, Cookie' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KanbanBoard' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /kanban/cards:
+    get:
+      operationId: getKanbanCards
+      summary: Pagina uma etapa do Kanban por updatedAt e Deal id
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - {
+            name: stage,
+            in: query,
+            required: true,
+            schema: { $ref: '#/components/schemas/DealStage' },
+          }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
+        - {
+            name: assignedUserId,
+            in: query,
+            schema: { type: string, minLength: 1 },
+          }
+        - { name: hasOverdueTask, in: query, schema: { type: boolean } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 20 },
+          }
+      responses:
+        '200':
+          description: Página da coluna solicitada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KanbanColumn' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /deals/{dealId}:
+    get:
+      operationId: getDealDetail
+      summary: Retorna detalhe operacional pseudônimo do Negócio
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/DealId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - { name: If-None-Match, in: header, schema: { type: string } }
+      responses:
+        '200':
+          description: Negócio, qualificação, tarefas, gates, histórico e handoffs sem texto cifrado
+          headers:
+            ETag: { schema: { type: string } }
+            Cache-Control:
+              { schema: { type: string, const: 'private, no-cache' } }
+            Vary: { schema: { type: string, const: 'Origin, Cookie' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealDetail' }
+        '304': { description: Representação composta não mudou }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /events:
+    get:
+      operationId: streamKanbanEvents
+      summary: Reproduz invalidações do Kanban em ordem total durável
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - {
+            name: topic,
+            in: query,
+            required: true,
+            schema: { type: string, const: kanban },
+          }
+        - { name: after, in: query, schema: { type: integer, minimum: 0 } }
+        - {
+            name: Last-Event-ID,
+            in: header,
+            schema: { type: integer, minimum: 0 },
+          }
+      responses:
+        '200':
+          description: >-
+            text/event-stream. Emite kanban.card.changed, stream.reset e
+            heartbeats; nenhum payload livre de domínio é transportado.
+          content:
+            text/event-stream: { schema: { type: string } }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /conversations/{conversationId}/convert:
     post:
       operationId: convertConversation
@@ -437,7 +551,8 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/HandoffActionRequest' }
       responses:
-        '200': { description: Handoff e tarefa atualizados ou replay idempotente }
+        '200':
+          { description: Handoff e tarefa atualizados ou replay idempotente }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -473,6 +588,14 @@ components:
       required: false
       description: Obrigatório para autenticação humana; não usado pelo ator técnico.
       schema: { type: string, format: uri }
+    HumanReadOrigin:
+      name: Origin
+      in: header
+      required: false
+      description: >-
+        Se presente, deve pertencer à allowlist. Se ausente, o navegador deve
+        enviar Sec-Fetch-Site same-origin ou none.
+      schema: { type: string, format: uri }
     BootstrapToken:
       name: X-Bootstrap-Token
       in: header
@@ -484,6 +607,156 @@ components:
       required: true
       schema: { type: string, minLength: 1 }
   schemas:
+    DealStage:
+      type: string
+      enum: [produto, especificacao, estampa, logistica, fechamento]
+    OperationalUserRef:
+      type: object
+      additionalProperties: false
+      required: [id, functionName]
+      properties:
+        id: { type: string }
+        functionName: { type: string, enum: [Atendimento, Vendedor] }
+    TaskView:
+      type: object
+      additionalProperties: false
+      required: [id, type, status, assignedUserId, dueAt, version]
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [follow_up, human_handoff] }
+        status: { type: string, enum: [pending, in_progress] }
+        assignedUserId: { type: string }
+        dueAt: { type: string, format: date-time }
+        version: { type: integer, minimum: 1 }
+    KanbanCard:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          stage,
+          status,
+          version,
+          updatedAt,
+          stageEnteredAt,
+          totalQuantity,
+          assignedUser,
+          nextTask,
+          nextPendingField,
+        ]
+      properties:
+        id:
+          {
+            type: string,
+            description: O próprio Deal id; Card não é entidade persistida.,
+          }
+        stage: { $ref: '#/components/schemas/DealStage' }
+        status: { type: string, const: active }
+        version: { type: integer, minimum: 1 }
+        updatedAt: { type: string, format: date-time }
+        stageEnteredAt: { type: string, format: date-time }
+        totalQuantity: { type: integer, minimum: 0 }
+        assignedUser:
+          oneOf:
+            [
+              { type: 'null' },
+              { $ref: '#/components/schemas/OperationalUserRef' },
+            ]
+        nextTask:
+          oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/TaskView' }]
+        nextPendingField:
+          oneOf: [{ type: 'null' }, { type: string }]
+    KanbanColumn:
+      type: object
+      additionalProperties: false
+      required: [stage, label, count, cards, nextCursor]
+      properties:
+        stage: { $ref: '#/components/schemas/DealStage' }
+        label:
+          {
+            type: string,
+            enum: [Produto, Especificação, Estampa, Logística, Fechamento],
+          }
+        count: { type: integer, minimum: 0 }
+        cards:
+          { type: array, items: { $ref: '#/components/schemas/KanbanCard' } }
+        nextCursor:
+          oneOf: [{ type: 'null' }, { type: string, maxLength: 1024 }]
+    KanbanBoard:
+      type: object
+      additionalProperties: false
+      required: [columns]
+      properties:
+        columns:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items: { $ref: '#/components/schemas/KanbanColumn' }
+    HandoffView:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          conversationId,
+          assignedUserId,
+          status,
+          version,
+          reasonCode,
+          dueAt,
+          slaMinutes,
+          slaPolicyVersion,
+          createdAt,
+          updatedAt,
+          resolvedAt,
+          dealVersion,
+          conversationVersion,
+          taskId,
+          taskVersion,
+        ]
+      properties:
+        id: { type: string }
+        conversationId: { type: string }
+        assignedUserId: { type: string }
+        status: { type: string, enum: [pending, accepted, resolved] }
+        version: { type: integer, minimum: 1 }
+        reasonCode: { type: string }
+        dueAt: { type: string, format: date-time }
+        slaMinutes: { type: integer, minimum: 5, maximum: 10080 }
+        slaPolicyVersion: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        resolvedAt:
+          { oneOf: [{ type: 'null' }, { type: string, format: date-time }] }
+        dealVersion: { type: integer, minimum: 1 }
+        conversationVersion: { type: integer, minimum: 1 }
+        taskId: { type: string }
+        taskVersion: { type: integer, minimum: 1 }
+    DealDetail:
+      type: object
+      additionalProperties: false
+      required: [deal, qualification, tasks, nextTask, gates, history, handoffs]
+      properties:
+        deal:
+          type: object
+          additionalProperties: true
+          required:
+            [id, contactRef, stage, status, version, updatedAt, assignedUser]
+        qualification:
+          type: object
+          description: Dados estruturados e indicadores de presença; texto cifrado nunca é exposto.
+          additionalProperties: true
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/TaskView' }
+        nextTask:
+          oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/TaskView' }]
+        gates:
+          { type: array, items: { type: object, additionalProperties: true } }
+        history:
+          { type: array, items: { type: object, additionalProperties: true } }
+        handoffs:
+          { type: array, items: { $ref: '#/components/schemas/HandoffView' } }
     User:
       type: object
       additionalProperties: false
@@ -859,7 +1132,8 @@ components:
     TaskCreateRequest:
       type: object
       additionalProperties: false
-      required: [assignedUserId, dueAt, expectedDealVersion, reasonCode, text, type]
+      required:
+        [assignedUserId, dueAt, expectedDealVersion, reasonCode, text, type]
       properties:
         assignedUserId: { type: string, minLength: 1 }
         dueAt: { type: string, format: date-time }
@@ -879,8 +1153,14 @@ components:
       type: object
       additionalProperties: false
       required:
-        [assignedUserId, conversationId, expectedConversationVersion,
-         expectedDealVersion, reasonCode, summary]
+        [
+          assignedUserId,
+          conversationId,
+          expectedConversationVersion,
+          expectedDealVersion,
+          reasonCode,
+          summary,
+        ]
       properties:
         assignedUserId: { type: string, minLength: 1 }
         conversationId: { type: string, minLength: 1 }
@@ -888,7 +1168,13 @@ components:
         expectedDealVersion: { type: integer, minimum: 1 }
         reasonCode:
           type: string
-          enum: [customer_requested_human, price_before_quote, unresolved_blocker, low_confidence]
+          enum:
+            [
+              customer_requested_human,
+              price_before_quote,
+              unresolved_blocker,
+              low_confidence,
+            ]
         summary: { type: string, minLength: 1, maxLength: 8192 }
         automationEpoch: { type: integer, minimum: 0 }
         automationContext:
@@ -903,8 +1189,13 @@ components:
       type: object
       additionalProperties: false
       required:
-        [expectedConversationVersion, expectedDealVersion,
-         expectedHandoffVersion, expectedTaskVersion, reasonCode]
+        [
+          expectedConversationVersion,
+          expectedDealVersion,
+          expectedHandoffVersion,
+          expectedTaskVersion,
+          reasonCode,
+        ]
       properties:
         assignedUserId:
           type: string
@@ -915,7 +1206,10 @@ components:
         expectedHandoffVersion: { type: integer, minimum: 1 }
         expectedTaskVersion: { type: integer, minimum: 1 }
         reasonCode:
-          { type: string, enum: [handoff_accepted, manual_transfer, handoff_resolved] }
+          {
+            type: string,
+            enum: [handoff_accepted, manual_transfer, handoff_resolved],
+          }
     Error:
       type: object
       additionalProperties: false

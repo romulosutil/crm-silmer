@@ -118,7 +118,7 @@ function harness() {
           throw new DealConflictError('Automation command is fenced');
         }
         state.conversation.state = 'convertida_em_lead';
-        state.conversation.terminalAt = input.occurredAt;
+        state.conversation.terminalAt = null;
         state.conversation.version += 1;
         return structuredClone(state.conversation);
       },
@@ -153,7 +153,7 @@ test('converts one conversation into its existing Contact and exactly one Deal',
       id: 'conversation-1',
       identityId: 'identity-1',
       state: 'convertida_em_lead',
-      terminalAt: NOW.toISOString(),
+      terminalAt: null,
       version: 4,
     },
     deal: {

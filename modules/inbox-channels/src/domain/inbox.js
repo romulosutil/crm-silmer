@@ -9,10 +9,7 @@ export const INBOX_STATES = Object.freeze([
   'sem_lead',
 ]);
 
-export const TERMINAL_INBOX_STATES = Object.freeze([
-  'convertida_em_lead',
-  'sem_lead',
-]);
+export const TERMINAL_INBOX_STATES = Object.freeze(['sem_lead']);
 
 /** @param {unknown} state */
 export function assertInboxState(state) {

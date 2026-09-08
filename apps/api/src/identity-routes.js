@@ -99,7 +99,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     return respond(reply, async () => {
       const cookies = parseCookies(request.headers.cookie);
       const result = await identity.current({
-        sessionToken: requireCookie(cookies, 'crm_session'),
+        sessionToken: requireSessionCookie(cookies),
       });
       return reply.code(200).send(result);
     });
@@ -233,10 +233,13 @@ function parseCookies(raw) {
   return cookies;
 }
 
-/** @param {Map<unknown, unknown>} cookies @param {string} name */
-function requireCookie(cookies, name) {
-  const value = cookies.get(name);
-  return requireString(value, name);
+/** @param {Map<unknown, unknown>} cookies */
+function requireSessionCookie(cookies) {
+  const value = cookies.get('crm_session');
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new IdentityRequestError(401, 'INVALID_CREDENTIALS');
+  }
+  return value;
 }
 
 /** @param {import('fastify').FastifyRequest} request @param {string} name */

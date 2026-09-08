@@ -16,6 +16,7 @@ COPY modules/work-management/package.json modules/work-management/package.json
 COPY modules/identity-access/package.json modules/identity-access/package.json
 COPY modules/inbox-channels/package.json modules/inbox-channels/package.json
 COPY modules/integration-reliability/package.json modules/integration-reliability/package.json
+COPY modules/n8n-integration/package.json modules/n8n-integration/package.json
 COPY modules/shared/package.json modules/shared/package.json
 RUN npm ci --ignore-scripts
 COPY apps apps
@@ -41,6 +42,7 @@ COPY modules/work-management/package.json modules/work-management/package.json
 COPY modules/identity-access/package.json modules/identity-access/package.json
 COPY modules/inbox-channels/package.json modules/inbox-channels/package.json
 COPY modules/integration-reliability/package.json modules/integration-reliability/package.json
+COPY modules/n8n-integration/package.json modules/n8n-integration/package.json
 COPY modules/shared/package.json modules/shared/package.json
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
@@ -50,6 +52,10 @@ ENV HOST=0.0.0.0 \
     NODE_ENV=production \
     PORT=3000
 WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends clamav file \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx

@@ -558,6 +558,7 @@ function normalizeJob(row, attemptId) {
     attemptId,
     availableAt: new Date(String(row.available_at)),
     channelEventId: nullableString(row.channel_event_id),
+    commandId: String(row.idempotency_key),
     deletionReason: nullableString(row.deletion_reason),
     effectPolicy: String(row.effect_policy),
     id: String(row.id),

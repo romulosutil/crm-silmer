@@ -185,8 +185,8 @@
     "semantic_hash": ""
   },
   "test/e2e/foundation.spec.js": {
-    "mtime": 1788844173.1607232,
-    "ast_hash": "f171069f4666707d65b86993727f89c1",
+    "mtime": 1788847539.1174543,
+    "ast_hash": "d6ed5a6be2bc0952cfda21bd050d304b",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -1565,8 +1565,8 @@
     "semantic_hash": ""
   },
   "apps/edge-web/src/views/DashboardView.vue": {
-    "mtime": 1788840620.467548,
-    "ast_hash": "51ac39d3964ae1d7fe84485873f09329",
+    "mtime": 1788847539.1192472,
+    "ast_hash": "d6e81cf801d97da306b243662f5b04f0",
     "semantic_hash": ""
   },
   "apps/edge-web/src/views/InboxView.vue": {

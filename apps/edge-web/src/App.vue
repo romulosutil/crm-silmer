@@ -34,6 +34,7 @@ const sessionSummary = computed(
     user.value.functionName ??
     'Conta autenticada',
 );
+const pageTitle = computed(() => String(route.meta.title ?? 'CRM'));
 const connectionLabel = computed(() => {
   if (connection.value === 'conectado') return 'Ao vivo';
   if (connection.value === 'reconectando') return 'Reconectando…';
@@ -73,7 +74,7 @@ async function restoreSession() {
     await showSession(response.data, false);
     announce('Sessão restaurada.');
   } catch (error) {
-    if (error instanceof ApiError && [401, 404].includes(error.status)) {
+    if (error instanceof ApiError && [400, 401, 404].includes(error.status)) {
       await showSignedOut(false);
       announce('Entre para continuar.');
       return;
@@ -87,7 +88,7 @@ async function restoreSession() {
 async function showSession(value, announceLogin = true) {
   session.value = value;
   phase.value = 'authenticated';
-  if (route.path === '/') await router.replace('/kanban');
+  if (route.path === '/') await router.replace('/dashboard');
   stream.start();
   if (announceLogin) announce('Sessão iniciada com segurança.');
 }
@@ -213,13 +214,26 @@ function onCursor(cursor) {
     <aside class="app-sidebar" aria-label="Navegação principal">
       <RouterLink
         class="brand app-brand"
-        to="/kanban"
-        aria-label="CRM Silmer, Kanban"
+        to="/dashboard"
+        aria-label="CRM Silmer, Dashboard"
       >
         <span class="brand-word" aria-hidden="true">SILMER<span>.</span></span>
         <span class="product-label brand-label">CRM</span>
       </RouterLink>
-      <nav>
+      <nav aria-label="Navegação principal">
+        <RouterLink to="/dashboard">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M4 13h6v7H4zm10-9h6v16h-6zM4 4h6v5H4z" />
+          </svg>
+          <span class="nav-label">Dashboard</span>
+        </RouterLink>
+        <RouterLink to="/inbox">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M3 5h18v13H7l-4 3zm2 2v10l1.2-1H19V7z" />
+          </svg>
+          <span class="nav-label">Caixa de Entrada</span>
+          <span class="nav-count" aria-hidden="true">3</span>
+        </RouterLink>
         <RouterLink
           to="/kanban"
           :aria-current="
@@ -230,6 +244,14 @@ function onCursor(cursor) {
             <path d="M4 5h4v14H4zm6 0h4v9h-4zm6 0h4v11h-4z" />
           </svg>
           <span class="nav-label">Kanban</span>
+        </RouterLink>
+        <RouterLink to="/clientes">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 20a6 6 0 0 1 12 0Zm12.5-6a5.5 5.5 0 0 1 5.5 5.5V20h-4a8 8 0 0 0-1.5-4.7Z"
+            />
+          </svg>
+          <span class="nav-label">Clientes</span>
         </RouterLink>
         <RouterLink to="/conta">
           <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -266,6 +288,7 @@ function onCursor(cursor) {
         >
           Menu
         </button>
+        <strong class="topbar-title">{{ pageTitle }}</strong>
         <p>{{ sessionSummary }}</p>
         <span class="connection-state" :data-state="connection">
           {{ connectionLabel }}
@@ -278,7 +301,10 @@ function onCursor(cursor) {
         aria-label="Navegação móvel"
         :hidden="!mobileOpen"
       >
+        <RouterLink to="/dashboard">Dashboard</RouterLink>
+        <RouterLink to="/inbox">Caixa de Entrada</RouterLink>
         <RouterLink to="/kanban">Kanban</RouterLink>
+        <RouterLink to="/clientes">Clientes</RouterLink>
         <RouterLink to="/conta">Conta</RouterLink>
       </nav>
       <main id="main-content" tabindex="-1">

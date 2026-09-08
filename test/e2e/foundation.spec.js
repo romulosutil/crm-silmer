@@ -93,9 +93,9 @@ test('distinguishes session service failure from a signed-out session', async ({
   await page.route('**/api/v1/sessions/current', async (route) => {
     await route.fulfill({
       contentType: 'application/problem+json',
-      status: available ? 401 : 503,
+      status: available ? 400 : 503,
       body: JSON.stringify({
-        code: available ? 'UNAUTHORIZED' : 'UNAVAILABLE',
+        code: available ? 'AUTH_INPUT_INVALID' : 'UNAVAILABLE',
       }),
     });
   });
@@ -209,9 +209,7 @@ test('submits login, restores and closes a session by keyboard without browser s
 
   await loginPanel.getByLabel('Senha').fill('correct horse battery staple');
   await loginPanel.getByLabel('Senha').press('Enter');
-  await expect(
-    page.getByRole('heading', { name: 'Kanban comercial' }),
-  ).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
   await expect(page.getByRole('status')).toHaveText(
     'Sessão iniciada com segurança.',
   );
@@ -228,9 +226,7 @@ test('submits login, restores and closes a session by keyboard without browser s
 
   await page.reload();
   await expect(page.getByRole('status')).toHaveText('Sessão restaurada.');
-  await expect(
-    page.getByRole('heading', { name: 'Kanban comercial' }),
-  ).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
 
   await page.getByRole('button', { name: 'Sair' }).focus();
   await page.keyboard.press('Enter');

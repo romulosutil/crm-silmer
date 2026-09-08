@@ -265,6 +265,51 @@ test('renders the five-stage Kanban and opens a deal with keyboard', async ({
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test('exposes the CRM screens as authenticated Vue routes', async ({
+  page,
+}) => {
+  await mockCrm(page);
+  await page.goto('/dashboard');
+
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
+  for (const name of [
+    'Dashboard',
+    'Caixa de Entrada',
+    'Kanban',
+    'Clientes',
+    'Conta',
+  ]) {
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Navegação principal' })
+        .getByRole('link', { name }),
+    ).toBeVisible();
+  }
+  await expect(page.getByText('Dados de demonstração').first()).toBeVisible();
+
+  await page
+    .getByRole('navigation', { name: 'Navegação principal' })
+    .getByRole('link', { name: 'Caixa de Entrada' })
+    .press('Enter');
+  await expect(page).toHaveURL('/inbox');
+  await expect(
+    page.getByRole('heading', { name: 'Caixa de Entrada' }),
+  ).toBeFocused();
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
+
+  await page
+    .getByRole('navigation', { name: 'Navegação principal' })
+    .getByRole('link', { name: 'Clientes' })
+    .press('Enter');
+  await expect(page).toHaveURL('/clientes');
+  await expect(page.getByRole('heading', { name: 'Clientes' })).toBeFocused();
+  await expect(
+    page.getByRole('link', { name: 'Ateliê Bela Vista' }),
+  ).toBeVisible();
+
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
 test('keeps the official command authoritative and refetches after 409', async ({
   page,
 }) => {

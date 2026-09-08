@@ -92,6 +92,10 @@ Atendimento. Não há mensagem automática de confirmação no primeiro corte.
 ## Workflow e configuração
 
 - Workflow: `k7tI6T4RhQPyJkn9` — `Silmer | Atendimento WhatsApp IA`.
+- Workflow DEV: `0S5ZS1xeDCSoWovs` — `DEV | Silmer | Fluxo completo sem
+  WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos por
+  `silmer/dev-mvp-flow`, usa a API real do CRM e simula apenas os dois envios
+  pelo WhatsApp. O webhook CRM→n8n isolado é `silmer/dev-panel-command`.
 - Baseline preservada: `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.
 - Rascunho simplificado validado: `fae803db-eef0-4074-a7ae-1a6bb786e203`,
   com 42 nós e sem avisos estruturais.
@@ -100,6 +104,19 @@ Atendimento. Não há mensagem automática de confirmação no primeiro corte.
 - Segredos não entram em export, repositório, log, chat ou Data Table.
 - Persistência de execuções manuais/sucesso e progresso deve ficar desabilitada;
   falhas são sanitizadas e têm expurgo técnico em até 30 dias.
+
+Gere o snapshot sanitizado da variante DEV com
+`npm run generate:n8n-dev-workflow`. Para preparar um JSON importável a partir
+de um export autenticado do workflow principal, execute
+`node ops/n8n/workflows/create-dev-test-workflow.mjs <origem.json>
+<destino.json> --deployment`. O arquivo de implantação preserva credenciais não
+WhatsApp já vinculadas e referencia, somente por nome, as duas credenciais
+Basic DEV. Nenhum segredo deve ser salvo no repositório.
+
+O n8n precisa alcançar `SILMER_PANEL_BASE_URL`; uma API executada apenas em
+`127.0.0.1` não é acessível pelo host remoto. Para testar uma branch local, use
+um endpoint HTTPS temporário autorizado ou um ambiente DEV publicado e aponte
+o worker do CRM para `/webhook/silmer/dev-panel-command`.
 
 ## Rollout e recuperação
 

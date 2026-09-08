@@ -1,16 +1,16 @@
 # Graph Report - crm-silmer-integrate-pages  (2026-09-08)
 
 ## Corpus Check
-- 306 files · ~205,967 words
+- 306 files · ~205,985 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2581 nodes · 4468 edges · 212 communities (156 shown, 56 thin omitted)
+- 2581 nodes · 4468 edges · 213 communities (157 shown, 56 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.68)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `514787ab`
+- Built from commit: `69c750a6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -53,7 +53,7 @@
 - meta
 - package.json
 - inbox-channels/src/index.js
-- T00.6 — Gate de aprovação da Fase 0
+- README.md
 - T00.7 — Ativação e drills de observabilidade
 - signals
 - validate-external-spikes.mjs
@@ -186,9 +186,10 @@
 - deal-routes.js
 - qualification-service.js
 - qualification/package.json
+- T00.6 — Gate de aprovação da Fase 0
 - deals-pipeline/src/index.js
 - PostgresDealRepository
-- README.md
+- Codex — Contexto do CRM Silmer
 - meta-whatsapp.js
 - work-management/package.json
 - crm.deal_stage_history
@@ -199,7 +200,7 @@
 - router.js
 - deal-read-service.js
 - AuthPanel.vue
-- postgres-idempotency.test.js
+- IdempotencyConflictError
 - postgres-inbox-repository.js
 - crm-ui.spec.js
 - freezeInboxRecord
@@ -264,7 +265,7 @@
 - **Fluxo Comercial Silmer** — kanban_comercial, vendedor_silmer, ficha_pedido [EXTRACTED 1.00]
 - **Trilha de Implementação Técnica** — technical_design, easypanel_topology, specs_features_crm_mvp_tasks [EXTRACTED 1.00]
 
-## Communities (212 total, 56 thin omitted)
+## Communities (213 total, 56 thin omitted)
 
 ### Community 0 - "postgres-job-queue.js"
 Cohesion: 0.13
@@ -311,8 +312,8 @@ Cohesion: 0.13
 Nodes (28): buildRecoveryPlan(), expectedAdapterKeys, expectedBlockerKeys, expectedCadenceEntryKeys, expectedCadenceKeys, expectedDigestKeys, expectedGateKeys, expectedRecoveryCheckKeys (+20 more)
 
 ### Community 12 - "audit-privacy/src/index.js"
-Cohesion: 0.12
-Nodes (16): AuditEventValidationError, createAuditEventEnvelope(), deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), PostgresAuditTrail (+8 more)
+Cohesion: 0.14
+Nodes (15): AuditEventValidationError, createAuditEventEnvelope(), deepFreeze(), immutableClone(), InMemoryAuditTrail, requireNonEmptyString(), validateAuditEvent(), PostgresAuditTrail (+7 more)
 
 ### Community 13 - "channel-envelope.js"
 Cohesion: 0.13
@@ -414,9 +415,9 @@ Nodes (11): engines, node, npm, name, packageManager, private, type, version (+3
 Cohesion: 0.11
 Nodes (16): META_WHATSAPP_MAX_EVENTS_PER_CALLBACK, META_WHATSAPP_STALE_AFTER_HOURS, MetaWhatsAppWebhookPayloadError, mapConversation(), PostgresHandoffConversationPort, queryable(), createChannelEventHandler(), createChannelEventJobHandler() (+8 more)
 
-### Community 38 - "T00.6 — Gate de aprovação da Fase 0"
-Cohesion: 0.12
-Nodes (13): Evidência local versionada, Gate externo ainda aberto, T00.7 — Observabilidade e hardening mínimos, Verificação local, Como alterar esta aprovação, Defaults aprovados, Exceção de operação solo, Papéis designados (+5 more)
+### Community 38 - "README.md"
+Cohesion: 0.16
+Nodes (7): Sobre o CRM Silmer, Evidência local versionada, Gate externo ainda aberto, T00.7 — Observabilidade e hardening mínimos, Verificação local, CI and Immutable Images Workflow, PostgreSQL 17 Alpine Image
 
 ### Community 39 - "T00.7 — Ativação e drills de observabilidade"
 Cohesion: 0.18
@@ -758,6 +759,10 @@ Nodes (29): aad(), decodeBase64Url(), decryptResponse(), encryptResponse(), iden
 Cohesion: 0.22
 Nodes (8): dependencies, @crm-silmer/integration-reliability, exports, @crm-silmer/integration-reliability, name, private, type, version
 
+### Community 175 - "T00.6 — Gate de aprovação da Fase 0"
+Cohesion: 0.29
+Nodes (7): Como alterar esta aprovação, Defaults aprovados, Exceção de operação solo, Papéis designados, Resultado, T00.6 — Gate de aprovação da Fase 0, Verificação
+
 ### Community 176 - "deals-pipeline/src/index.js"
 Cohesion: 0.22
 Nodes (8): PostgresDealAutomationFencePort, DEAL_STAGES, deriveDealStage(), INITIAL_DEAL_STAGE, DealConflictError, DealError, DealGateIncompleteError, DealValidationError
@@ -766,9 +771,9 @@ Nodes (8): PostgresDealAutomationFencePort, DEAL_STAGES, deriveDealStage(), INIT
 Cohesion: 0.38
 Nodes (5): iso(), mapCommandDeal(), mapDeal(), PostgresDealRepository, requireQueryable()
 
-### Community 178 - "README.md"
-Cohesion: 0.14
-Nodes (9): Sobre o CRM Silmer, Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Guardrails do MVP, Inicialização obrigatória, Regras de produto, Regras do CRM Silmer (+1 more)
+### Community 178 - "Codex — Contexto do CRM Silmer"
+Cohesion: 0.18
+Nodes (8): Codex — Contexto do CRM Silmer, Fechamento, Forma de trabalhar, Guardrails do MVP, Inicialização obrigatória, Regras de produto, Regras do CRM Silmer, Regras técnicas já impostas
 
 ### Community 179 - "meta-whatsapp.js"
 Cohesion: 0.20
@@ -802,9 +807,9 @@ Nodes (8): boundedId(), DealReadError, decodeDealCursor(), deepFreeze(), encodeD
 Cohesion: 0.17
 Nodes (16): busy, compact(), emit, formValues(), handleTabKey(), inviteHeading, loginHeading, publicMessage() (+8 more)
 
-### Community 190 - "postgres-idempotency.test.js"
-Cohesion: 0.29
-Nodes (4): ENVELOPE_KEY, FakeDatabase, identity, recordKey()
+### Community 190 - "IdempotencyConflictError"
+Cohesion: 0.22
+Nodes (5): IdempotencyConflictError, ENVELOPE_KEY, FakeDatabase, identity, recordKey()
 
 ### Community 192 - "postgres-inbox-repository.js"
 Cohesion: 0.28

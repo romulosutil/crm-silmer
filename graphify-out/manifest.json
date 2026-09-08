@@ -185,8 +185,8 @@
     "semantic_hash": ""
   },
   "test/e2e/foundation.spec.js": {
-    "mtime": 1788843093.6684656,
-    "ast_hash": "1cb5bf72e1d0e36512559652bf01abe3",
+    "mtime": 1788844173.1607232,
+    "ast_hash": "f171069f4666707d65b86993727f89c1",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -1455,8 +1455,8 @@
     "semantic_hash": ""
   },
   "apps/edge-web/src/App.vue": {
-    "mtime": 1788843093.6674633,
-    "ast_hash": "485e61999fff94e432792e900e4c24b2",
+    "mtime": 1788844173.1607232,
+    "ast_hash": "b4abd527a95f6fdf8de257347bd50052",
     "semantic_hash": ""
   },
   "apps/edge-web/src/components/AuthPanel.vue": {

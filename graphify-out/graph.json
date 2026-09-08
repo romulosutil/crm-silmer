@@ -1823,7 +1823,7 @@
       "label": "showSession()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L88",
+      "source_location": "L91",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_showsession",
       "community": 132,
@@ -1834,7 +1834,7 @@
       "label": "showSignedOut()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L97",
+      "source_location": "L100",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_showsignedout",
       "community": 132,
@@ -1845,7 +1845,7 @@
       "label": "logout()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L111",
+      "source_location": "L114",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_logout",
       "community": 132,
@@ -1856,7 +1856,7 @@
       "label": "handleShellKey()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L130",
+      "source_location": "L133",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_handleshellkey",
       "community": 132,
@@ -1867,7 +1867,7 @@
       "label": "announce()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L137",
+      "source_location": "L140",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_announce",
       "community": 132,
@@ -1878,7 +1878,7 @@
       "label": "showError()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L147",
+      "source_location": "L150",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_showerror",
       "community": 132,
@@ -1889,7 +1889,7 @@
       "label": "clearError()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L154",
+      "source_location": "L157",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_clearerror",
       "community": 132,
@@ -1900,7 +1900,7 @@
       "label": "onCursor()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L159",
+      "source_location": "L162",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_oncursor",
       "community": 132,
@@ -11440,8 +11440,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror",
-      "community": 12,
-      "community_name": "audit-privacy/src/index.js",
+      "community": 190,
+      "community_name": "IdempotencyConflictError",
       "norm_label": "idempotencyconflicterror"
     },
     {
@@ -11451,8 +11451,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_idempotency_idempotencyconflicterror_constructor",
-      "community": 12,
-      "community_name": "audit-privacy/src/index.js",
+      "community": 190,
+      "community_name": "IdempotencyConflictError",
       "norm_label": ".constructor()"
     },
     {
@@ -22012,7 +22012,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test",
       "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community_name": "IdempotencyConflictError",
       "norm_label": "postgres-idempotency.test.js"
     },
     {
@@ -22023,7 +22023,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_envelope_key",
       "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community_name": "IdempotencyConflictError",
       "norm_label": "envelope_key"
     },
     {
@@ -22034,7 +22034,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_identity",
       "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community_name": "IdempotencyConflictError",
       "norm_label": "identity"
     },
     {
@@ -22045,7 +22045,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase",
       "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community_name": "IdempotencyConflictError",
       "norm_label": "fakedatabase"
     },
     {
@@ -22056,7 +22056,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_constructor",
       "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community_name": "IdempotencyConflictError",
       "norm_label": ".constructor()"
     },
     {
@@ -22067,7 +22067,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_transaction",
       "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community_name": "IdempotencyConflictError",
       "norm_label": ".transaction()"
     },
     {
@@ -22078,7 +22078,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_query",
       "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community_name": "IdempotencyConflictError",
       "norm_label": ".query()"
     },
     {
@@ -22089,7 +22089,7 @@
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_recordkey",
       "community": 190,
-      "community_name": "postgres-idempotency.test.js",
+      "community_name": "IdempotencyConflictError",
       "norm_label": "recordkey()"
     },
     {
@@ -23211,7 +23211,7 @@
       "_origin": "ast",
       "id": "specs_features_crm_mvp_tasks",
       "community": 38,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "norm_label": "tasks.md"
     },
     {
@@ -23529,7 +23529,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "about",
-      "community": 178,
+      "community": 38,
       "community_name": "README.md",
       "norm_label": "about.md"
     },
@@ -23540,7 +23540,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "about_sobre_o_crm_silmer",
-      "community": 178,
+      "community": 38,
       "community_name": "README.md",
       "norm_label": "sobre o crm silmer"
     },
@@ -23552,7 +23552,7 @@
       "_origin": "ast",
       "id": "agents",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "agents.md"
     },
     {
@@ -23662,7 +23662,7 @@
       "_origin": "ast",
       "id": "codex",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "codex.md"
     },
     {
@@ -23673,7 +23673,7 @@
       "_origin": "ast",
       "id": "codex_codex_contexto_do_crm_silmer",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "codex \u2014 contexto do crm silmer"
     },
     {
@@ -23684,7 +23684,7 @@
       "_origin": "ast",
       "id": "codex_inicializa\u00e7\u00e3o_obrigat\u00f3ria",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "inicializacao obrigatoria"
     },
     {
@@ -23695,7 +23695,7 @@
       "_origin": "ast",
       "id": "codex_guardrails_do_mvp",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "guardrails do mvp"
     },
     {
@@ -23706,7 +23706,7 @@
       "_origin": "ast",
       "id": "codex_forma_de_trabalhar",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "forma de trabalhar"
     },
     {
@@ -23717,7 +23717,7 @@
       "_origin": "ast",
       "id": "codex_fechamento",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "fechamento"
     },
     {
@@ -24167,7 +24167,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "readme",
-      "community": 178,
+      "community": 38,
       "community_name": "README.md",
       "norm_label": "readme.md"
     },
@@ -24234,7 +24234,7 @@
       "_origin": "ast",
       "id": "rules",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "rules.md"
     },
     {
@@ -24245,7 +24245,7 @@
       "_origin": "ast",
       "id": "rules_regras_do_crm_silmer",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "regras do crm silmer"
     },
     {
@@ -24256,7 +24256,7 @@
       "_origin": "ast",
       "id": "rules_regras_de_produto",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "regras de produto"
     },
     {
@@ -24267,7 +24267,7 @@
       "_origin": "ast",
       "id": "rules_regras_t\u00e9cnicas_j\u00e1_impostas",
       "community": 178,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "regras tecnicas ja impostas"
     },
     {
@@ -24916,7 +24916,7 @@
       "_origin": "ast",
       "id": "docs_phase0_observability_and_hardening",
       "community": 38,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "norm_label": "observability-and-hardening.md"
     },
     {
@@ -24927,7 +24927,7 @@
       "_origin": "ast",
       "id": "docs_phase0_observability_and_hardening_t00_7_observabilidade_e_hardening_m\u00ednimos",
       "community": 38,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "norm_label": "t00.7 \u2014 observabilidade e hardening minimos"
     },
     {
@@ -24938,7 +24938,7 @@
       "_origin": "ast",
       "id": "docs_phase0_observability_and_hardening_evid\u00eancia_local_versionada",
       "community": 38,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "norm_label": "evidencia local versionada"
     },
     {
@@ -24949,7 +24949,7 @@
       "_origin": "ast",
       "id": "docs_phase0_observability_and_hardening_gate_externo_ainda_aberto",
       "community": 38,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "norm_label": "gate externo ainda aberto"
     },
     {
@@ -24960,7 +24960,7 @@
       "_origin": "ast",
       "id": "docs_phase0_observability_and_hardening_verifica\u00e7\u00e3o_local",
       "community": 38,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "norm_label": "verificacao local"
     },
     {
@@ -24971,7 +24971,7 @@
       "_origin": "ast",
       "id": "docs_phase0_phase_0_approval_gate",
       "community": 38,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "norm_label": "phase-0-approval-gate.md"
     },
     {
@@ -24981,7 +24981,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_phase0_phase_0_approval_gate_t00_6_gate_de_aprova\u00e7\u00e3o_da_fase_0",
-      "community": 38,
+      "community": 175,
       "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
       "norm_label": "t00.6 \u2014 gate de aprovacao da fase 0"
     },
@@ -24992,7 +24992,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "docs_phase0_phase_0_approval_gate_resultado",
-      "community": 38,
+      "community": 175,
       "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
       "norm_label": "resultado"
     },
@@ -25003,7 +25003,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "docs_phase0_phase_0_approval_gate_defaults_aprovados",
-      "community": 38,
+      "community": 175,
       "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
       "norm_label": "defaults aprovados"
     },
@@ -25014,7 +25014,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "docs_phase0_phase_0_approval_gate_pap\u00e9is_designados",
-      "community": 38,
+      "community": 175,
       "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
       "norm_label": "papeis designados"
     },
@@ -25025,7 +25025,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "docs_phase0_phase_0_approval_gate_exce\u00e7\u00e3o_de_opera\u00e7\u00e3o_solo",
-      "community": 38,
+      "community": 175,
       "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
       "norm_label": "excecao de operacao solo"
     },
@@ -25036,7 +25036,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "docs_phase0_phase_0_approval_gate_como_alterar_esta_aprova\u00e7\u00e3o",
-      "community": 38,
+      "community": 175,
       "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
       "norm_label": "como alterar esta aprovacao"
     },
@@ -25047,7 +25047,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "docs_phase0_phase_0_approval_gate_verifica\u00e7\u00e3o",
-      "community": 38,
+      "community": 175,
       "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
       "norm_label": "verificacao"
     },
@@ -26234,7 +26234,7 @@
       "source_file": "TECHNICAL-DESIGN.md",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 178,
+      "community": 38,
       "community_name": "README.md",
       "norm_label": "technical-design.md",
       "id": "technical_design"
@@ -27609,7 +27609,7 @@
       "source_file": "CRM-MVP-ESPECIFICACAO.md",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 178,
+      "community": 38,
       "community_name": "README.md",
       "norm_label": "crm-mvp-especificacao.md",
       "id": "crm_mvp_especificacao"
@@ -28372,7 +28372,7 @@
       "source_file": ".github/workflows/ci.yml",
       "community": 38,
       "norm_label": "ci and immutable images workflow",
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "_origin": "semantic",
       "id": "github_workflows_ci"
     },
@@ -28392,7 +28392,7 @@
       "source_file": ".github/workflows/ci.yml",
       "community": 38,
       "norm_label": "postgresql 17 alpine image",
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community_name": "README.md",
       "_origin": "semantic",
       "id": "postgres_17_alpine"
     },
@@ -32704,7 +32704,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L137",
+      "source_location": "L140",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32726,7 +32726,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L154",
+      "source_location": "L157",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32781,7 +32781,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L130",
+      "source_location": "L133",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32792,7 +32792,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L111",
+      "source_location": "L114",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32825,7 +32825,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L159",
+      "source_location": "L162",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32924,7 +32924,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L147",
+      "source_location": "L150",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32935,7 +32935,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L88",
+      "source_location": "L91",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32946,7 +32946,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L97",
+      "source_location": "L100",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -33112,7 +33112,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L78",
+      "source_location": "L81",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_restoresession",
@@ -33136,7 +33136,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L93",
+      "source_location": "L96",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_showsession",
@@ -33149,7 +33149,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L92",
+      "source_location": "L95",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_showsession",
@@ -33160,7 +33160,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L120",
+      "source_location": "L123",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_logout",
@@ -33172,7 +33172,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L104",
+      "source_location": "L107",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_showsignedout",
@@ -33185,7 +33185,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L100",
+      "source_location": "L103",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_showsignedout",
@@ -33196,7 +33196,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L121",
+      "source_location": "L124",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_logout",
@@ -33208,7 +33208,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L115",
+      "source_location": "L118",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_logout",
@@ -79897,5 +79897,5 @@
       "confidence_score": 1.0
     }
   ],
-  "built_at_commit": "514787ab1acbc138b1ee78a2b8da3f864df8c53c"
+  "built_at_commit": "69c750a6ed4293788d7eabc7568fad850de6d573"
 }

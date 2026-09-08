@@ -8,7 +8,11 @@ export const AUTOMATION_EXECUTOR_ACTOR = Object.freeze({
 
 export const AUTOMATION_EXECUTOR_ACTIONS = Object.freeze([
   'integration.n8n.message.create',
+  'integration.n8n.attachment.create',
+  'integration.n8n.ai-turn.claim',
+  'integration.n8n.message-send.reserve',
   'integration.n8n.delivery-status.update',
+  'integration.n8n.briefing.update',
   'integration.n8n.run.create',
   'conversation.convert',
   'deal.fields.patch',

@@ -11,8 +11,10 @@ import {
 import { createApi } from './app.js';
 import { createAutomationAuthRuntime } from './automation-auth-runtime.js';
 import { createCommercialRuntime } from './commercial-runtime.js';
+import { createConversationApiRuntime } from './conversation-runtime.js';
 import { createDealApiRuntime } from './deal-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
+import { createN8nApiRuntime } from './n8n-runtime.js';
 import { createWhatsAppWebhookRuntime } from './whatsapp-webhook-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
@@ -35,32 +37,34 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>,
  *   identity?: ReturnType<typeof createIdentityApiRuntime>,
  *   automationAuth?: ReturnType<typeof createAutomationAuthRuntime>,
+ *   conversations?: Record<string, any>,
+ *   n8n?: Record<string, any>,
  *   trustProxy?: import('fastify').FastifyServerOptions['trustProxy']
  * }} [runtime]
  */
 export function createServerApi(runtime = {}) {
   const logger = runtime.logger ?? createSafeLogger({ service: SERVICES.api });
   const readiness = runtime.readiness ?? runtime.database?.readiness;
-  const metaWebhook =
-    runtime.metaWebhook ??
-    (runtime.database
-      ? createDurableMetaWebhookRuntime(
-          runtime.database,
-          runtime.environment ?? process.env,
-        )
-      : undefined);
+  const environment = runtime.environment ?? process.env;
+  const n8nEnabled = readBooleanFlag(
+    environment.N8N_INTEGRATION_ENABLED,
+    'N8N_INTEGRATION_ENABLED',
+  );
+  const metaWebhook = n8nEnabled
+    ? undefined
+    : (runtime.metaWebhook ??
+      (runtime.database
+        ? createDurableMetaWebhookRuntime(runtime.database, environment)
+        : undefined));
   const commercial =
     runtime.commercial ??
     (runtime.database ? createCommercialRuntime(runtime.database) : undefined);
   const automationAuth =
     runtime.automationAuth ??
     (runtime.database
-      ? createConfiguredAutomationAuthRuntime(
-          runtime.database,
-          runtime.environment ?? process.env,
-        )
+      ? createConfiguredAutomationAuthRuntime(runtime.database, environment)
       : undefined);
-  const dealEnvironment = runtime.environment ?? process.env;
+  const dealEnvironment = environment;
   const dealSecretNames = [
     'IDEMPOTENCY_ENVELOPE_KEY',
     'DEAL_ENVELOPE_KEY',
@@ -90,15 +94,35 @@ export function createServerApi(runtime = {}) {
           identity: runtime.identity,
         })
       : undefined);
+  const n8n =
+    runtime.n8n ??
+    (runtime.database && n8nEnabled
+      ? createN8nApiRuntime(runtime.database, { environment })
+      : undefined);
+  const conversations =
+    runtime.conversations ??
+    (runtime.database && n8n && deals
+      ? createConversationApiRuntime(
+          runtime.database,
+          deals,
+          n8n,
+          readEnvelopeKey(
+            environment.INBOX_MESSAGE_ENVELOPE_KEY,
+            'INBOX_MESSAGE_ENVELOPE_KEY',
+          ),
+        )
+      : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
     {
       ...runtime,
       automationAuth,
       commercial,
+      conversations,
       deals,
       logger,
       metaWebhook,
+      n8n,
       readiness,
     },
   );
@@ -186,6 +210,7 @@ export function createDurableMetaWebhookRuntime(
   );
   const envelopeKey = readEnvelopeKey(
     environment.META_WEBHOOK_PAYLOAD_ENVELOPE_KEY,
+    'META_WEBHOOK_PAYLOAD_ENVELOPE_KEY',
   );
   const normalize = createMetaWhatsAppNormalizer({
     businessAccountId: requireConfiguredSecret(
@@ -214,9 +239,8 @@ function requireConfiguredSecret(value, name) {
   return value;
 }
 
-/** @param {string|undefined} value */
-function readEnvelopeKey(value) {
-  const name = 'META_WEBHOOK_PAYLOAD_ENVELOPE_KEY';
+/** @param {string|undefined} value @param {string} name */
+function readEnvelopeKey(value, name) {
   const encoded = requireConfiguredSecret(value, name);
   if (!/^[A-Za-z0-9_-]+$/u.test(encoded)) {
     throw new Error(`${name} must use base64url`);
@@ -224,6 +248,13 @@ function readEnvelopeKey(value) {
   const key = Buffer.from(encoded, 'base64url');
   if (key.length !== 32) throw new Error(`${name} must decode to 32 bytes`);
   return key;
+}
+
+/** @param {string|undefined} value @param {string} name */
+function readBooleanFlag(value, name) {
+  if (value === undefined || value === '' || value === 'false') return false;
+  if (value === 'true') return true;
+  throw new Error(`${name} must be true or false`);
 }
 
 if (

@@ -37,16 +37,22 @@ Quando houver conflito, use esta ordem:
 
 ## Protocolo obrigatório
 
-1. **Vault-first:** antes da pesquisa em código ou documentos, execute
-   `graphify query` com a pergunta da tarefa.
-2. **Contexto mínimo:** leia `ABOUT.md`, `ARCHITECTURE.md` e `RULES.md`; depois
+1. **Pesquisa por intenção:** para perguntas arquiteturais, relações entre
+   código e documentação ou descoberta inicial de uma área, execute `graphify
+   query` com a pergunta da tarefa. Para localizar texto, símbolo, header,
+   arquivo ou mudança local, use `rg` como busca primária.
+2. **Grafo não é worktree:** trate o Graphify como mapa de descoberta, não como
+   fonte da versão atual. Antes de decidir ou editar, confirme os achados no
+   arquivo de origem e com `rg`; isso é obrigatório quando o grafo anteceder o
+   último commit ou houver alterações locais relevantes.
+3. **Contexto mínimo:** leia `ABOUT.md`, `ARCHITECTURE.md` e `RULES.md`; depois
    carregue somente requisitos e seções técnicas relevantes.
-3. **Rastreabilidade:** associe a mudança a um ID de requisito e a uma tarefa.
-4. **Patch estreito:** altere apenas a fronteira necessária e preserve mudanças
+4. **Rastreabilidade:** associe a mudança a um ID de requisito e a uma tarefa.
+5. **Patch estreito:** altere apenas a fronteira necessária e preserve mudanças
    locais de terceiros.
-5. **A11y e segurança:** trate teclado, foco, ARIA, autorização, PII,
+6. **A11y e segurança:** trate teclado, foco, ARIA, autorização, PII,
    idempotência e auditoria como parte da implementação, não como revisão tardia.
-6. **1:1:1:1:** uma tarefa concluída gera uma entrega atômica, um commit, um push
+7. **1:1:1:1:** uma tarefa concluída gera uma entrega atômica, um commit, um push
    e uma atualização `graphify update .`. Se o grafo rastreado mudar, publique-o
    em um commit mecânico separado e deixe o worktree limpo.
 

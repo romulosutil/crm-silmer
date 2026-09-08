@@ -31,7 +31,9 @@ const conversationCount = canais.reduce(
   0,
 );
 const lostTotal = perdidos.reduce((sum, deal) => sum + deal.valor, 0);
-const conversion = Math.round((leads / conversationCount) * 100);
+const conversion = conversationCount
+  ? Math.round((leads / conversationCount) * 100)
+  : 0;
 const periodDescription = computed(
   () =>
     `Valor vendido, oportunidades em aberto e pendências operacionais dos últimos ${periodo.value}.`,
@@ -63,7 +65,7 @@ onMounted(() => heading.value?.focus());
 
     <DemoNotice />
 
-    <div class="filter-bar" aria-label="Filtros do Dashboard">
+    <div class="filter-bar" role="group" aria-label="Filtros do Dashboard">
       <span class="filter-label">Período</span>
       <div class="chip-row">
         <button
@@ -78,7 +80,7 @@ onMounted(() => heading.value?.focus());
         </button>
       </div>
       <span class="filter-label filter-label-spaced">Vendedor</span>
-      <div class="chip-row" aria-label="Vendedor selecionado">
+      <div class="chip-row" role="group" aria-label="Vendedor selecionado">
         <span class="chip chip-static">Todos</span>
       </div>
     </div>

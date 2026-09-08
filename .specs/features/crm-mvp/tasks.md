@@ -166,6 +166,32 @@ O objetivo está pronto quando uma pessoa consegue observar, responder, assumir 
 
 O objetivo está pronto quando workflows versionados conduzem casos sintéticos com OpenAI e Gemini, respeitam os gates humanos remanescentes e sobrevivem a retry, takeover e falha externa.
 
+## Entrega transversal N8N-1–N8N-7 — contrato v1
+
+Esta sequência implementa [RFC 001](../../../docs/rfc/001-contrato-integracao-n8n-v1.md)
+e [ADR 002](../../../docs/adr/002-adotar-adaptador-de-integracao-n8n.md), com
+rastreabilidade ORC-01–09, INB-01–04, AGT-01–08, MSG-01–04 e PRV-01–03.
+
+1. **N8N-1 — contrato e decisões:** OpenAPI, fixtures, Basic Auth, erros e
+   registros RFC/ADR.
+2. **N8N-2 — migrações e domínio:** revisões, briefing, claims, execuções,
+   handoff por papel, comandos, tentativas e correção do ciclo convertido.
+3. **N8N-3 — inbound e mídia:** identidade, conversa/mensagem idempotente,
+   contexto recente, hash, MIME, scanner, quarentena e retenção.
+4. **N8N-4 — claim e eventos:** lease concorrente, epoch/revisão/evento,
+   reserva de envio e status monotônico.
+5. **N8N-5 — handoff e comandos humanos:** fila sem responsável, claim CAS e
+   estado/auditoria/outbox antes do comando ao n8n.
+6. **N8N-6 — worker e observabilidade:** entrega Basic CRM→n8n, retry seguro,
+   `outcome_unknown`, reconciliação, métricas, alertas e runbook.
+7. **N8N-7 — workflow e homologação:** preservar a versão
+   `98f96069-ede2-4900-aa5c-7fec0d3b80cb`, atualizar o workflow inativo
+   `k7tI6T4RhQPyJkn9`, homologar WhatsApp e só então publicar. Instagram é a
+   etapa obrigatória seguinte antes do lançamento integral.
+
+Cada fatia encerra com testes proporcionais, documentação, commit/push e
+`graphify update .`; mudanças de `graphify-out` usam commit mecânico separado.
+
 ## Integração e lançamento
 
 Esta etapa começa somente quando os critérios isolados dos três objetivos estiverem atendidos.

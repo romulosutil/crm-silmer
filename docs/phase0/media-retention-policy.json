@@ -13,6 +13,7 @@
     "scope": [
       "inbound channel images",
       "outbound channel images",
+      "original channel media uploaded by n8n",
       "journey files not promoted to a valid commercial record"
     ],
     "expiryRule": "earliest-of",

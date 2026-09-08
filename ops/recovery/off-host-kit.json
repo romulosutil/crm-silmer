@@ -22,7 +22,7 @@
         "purpose": "meta-webhook",
         "hostname": null,
         "target": null,
-        "route": "/api/v1/webhooks/meta/*"
+        "route": "/webhook/meta/*"
       },
       {
         "environment": "ops",
@@ -41,6 +41,7 @@
       "acquire-advisory-lock",
       "apply-compatible-expansion",
       "promote-api-and-worker-digests",
+      "restore-n8n-database-key-and-inactive-workflow",
       "promote-edge-web-digest",
       "verify-live-ready-heartbeat-and-smoke",
       "contract-only-after-rollback-window"
@@ -50,6 +51,7 @@
   "adapters": {
     "meta": "mock",
     "ai": "mock",
+    "n8nCommand": "mock",
     "objectStorage": "mock",
     "telemetry": "mock",
     "tombstones": "mock"

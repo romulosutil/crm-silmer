@@ -39,6 +39,10 @@
       "api-live-unavailable",
       "api-5xx",
       "api-latency",
+      "n8n-claim-denied-spike",
+      "n8n-command-stuck",
+      "n8n-reconciliation-growing",
+      "n8n-workflow-version-divergent",
       "worker-heartbeat-stale",
       "worker-oldest-job",
       "worker-job-failures"
@@ -75,6 +79,42 @@
     },
     {
       "alertId": "api-latency",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    },
+    {
+      "alertId": "n8n-claim-denied-spike",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    },
+    {
+      "alertId": "n8n-command-stuck",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    },
+    {
+      "alertId": "n8n-reconciliation-growing",
+      "status": "pending-external",
+      "startedAt": null,
+      "detectedAt": null,
+      "deliveredAt": null,
+      "recoveredAt": null,
+      "evidenceRef": null
+    },
+    {
+      "alertId": "n8n-workflow-version-divergent",
       "status": "pending-external",
       "startedAt": null,
       "detectedAt": null,

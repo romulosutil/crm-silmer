@@ -1,8 +1,10 @@
 # Webhook WhatsApp — decisões de T02.2
 
-Status: aprovado em 02/09/2026 na execução de T02.2. Esta aprovação fixa o
-contrato técnico; não comprova provisionamento de segredo, criptografia do host
-ou ativação em produção.
+Status: aprovado em 02/09/2026 na execução de T02.2 e preservado como fixture e
+referência de desenvolvimento. O contrato operacional de produção foi
+supersedido em 07/09/2026 por RFC 001/ADR 002: a Meta chama o n8n e o n8n chama
+os quatro endpoints Basic do CRM. Após o corte, esta rota retorna indisponível
+e nunca atua como fallback silencioso.
 
 ## Rastreabilidade
 
@@ -12,6 +14,10 @@ ou ativação em produção.
 - Contrato anterior: adapter canônico de canais de `T02.1`.
 
 ## Decisões aprovadas
+
+As decisões abaixo continuam válidas para validar o callback da Meta dentro do
+n8n e para fixtures. `X-Hub-Signature-256` autentica Meta→receiver; ele não deve
+ser confundido com n8n→CRM, que não usa HMAC nem timestamp.
 
 1. O corpo HTTP máximo é `1 MiB` (`1_048_576` bytes). Tipo diferente de
    `application/json` retorna `415`; excesso retorna `413`; ambos são rejeitados
@@ -69,3 +75,8 @@ ou ativação em produção.
 - Verificação de que nenhum download ou regra comercial ocorre no request.
 - Provisionamento externo da chave e ativação live permanecem evidências
   separadas; testes locais não as comprovam.
+
+Para produção, a evidência adicional é o smoke
+Meta → n8n → inbound CRM → claim → IA → `message.send.requested` → Meta →
+status. O rollout inicial cobre WhatsApp; Instagram continua obrigatório antes
+do lançamento integral.

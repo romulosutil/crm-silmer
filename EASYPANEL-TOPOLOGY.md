@@ -27,7 +27,7 @@ sem acesso direto ao banco do CRM e com somente o webhook do canal publicado.
 | Serviço           | Tipo EasyPanel     | Imagem                                 |                 Público | Persistência                                  |
 | ----------------- | ------------------ | -------------------------------------- | ----------------------: | --------------------------------------------- |
 | `silmer-edge-web` | App                | GHCR por digest                        | Sim, 80/443 via domínio | Nenhuma                                       |
-| `silmer-api`      | App                | GHCR por digest                        |                     Não | Volume de mídia somente leitura ao ativar T02 |
+| `silmer-api`      | App                | GHCR por digest                        |                     Não | Volume de mídia leitura/escrita ao ativar T02 |
 | `silmer-worker`   | App                | Mesma imagem runtime, comando distinto |                     Não | Volume de mídia leitura/escrita ao ativar T02 |
 | `silmer-postgres` | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo             |
 | `silmer-n8n`      | App                | n8n por versão e digest fixados        |                     Não | Nenhuma; usa banco próprio                    |
@@ -138,9 +138,10 @@ Regras operacionais:
 
 Imagens e arquivos de canal ainda não promovidos a registro comercial válido
 usam um volume privado `silmer-media` na VPS. O volume não possui domínio,
-porta pública nem backup. O worker monta leitura/escrita para quarentena,
-validação e limpeza; a API monta somente leitura e entrega bytes por rota
-autenticada/autorizada, nunca como caminho de filesystem ou URL pública.
+porta pública nem backup. API e worker montam leitura/escrita: a API recebe,
+valida e publica uploads seguros, enquanto o worker executa expurgo e
+reconciliação. Bytes são entregues apenas por rota autenticada/autorizada,
+nunca como caminho de filesystem ou URL pública.
 
 Cada objeto usa chave opaca, arquivo parcial separado, hash e `expires_at` no
 PostgreSQL. O vencimento é o menor entre sete dias do recebimento/envio e o
@@ -272,6 +273,20 @@ CRM_API_BASE_URL
 CRM_AUTOMATION_CLIENT_ID
 CRM_AUTOMATION_CLIENT_SECRET
 CRM_AUTOMATION_PREVIOUS_CLIENT_SECRET
+N8N_INTEGRATION_ENABLED
+N8N_INTEGRATION_ENVELOPE_KEY
+CONTACT_IDENTITY_ENVELOPE_KEY
+CONTACT_IDENTITY_LOOKUP_KEY
+INBOX_MESSAGE_ENVELOPE_KEY
+N8N_COMMAND_URL
+N8N_COMMAND_CLIENT_ID
+N8N_COMMAND_CLIENT_SECRET
+N8N_COMMAND_TIMEOUT_MS
+N8N_COMMAND_REPLAY_SAFE
+PRIVATE_MEDIA_ROOT
+PRIVATE_MEDIA_MAX_BYTES
+PRIVATE_MEDIA_MAX_FILE_BYTES
+MEDIA_RETENTION_SCAN_INTERVAL_MS
 ```
 
 Regras:
@@ -282,6 +297,14 @@ Regras:
   `CRM_AUTOMATION_*` não concede administração nem acesso ao banco do CRM;
 - `CRM_AUTOMATION_PREVIOUS_CLIENT_SECRET` existe somente durante a janela
   curta de rotação e deve ser removida depois do smoke com o segredo novo;
+- `CRM_AUTOMATION_*` identifica n8n→CRM; `N8N_COMMAND_CLIENT_*` é outra
+  credencial Basic, exclusiva para CRM→n8n, e os valores nunca são exportados;
+- `CONTACT_IDENTITY_*` e `INBOX_MESSAGE_ENVELOPE_KEY` devem reutilizar as
+  chaves dos respectivos módulos canônicos; `N8N_INTEGRATION_ENVELOPE_KEY`
+  protege briefing, token de claim, payload de comando, filename e resumo;
+- `N8N_COMMAND_REPLAY_SAFE=true` só é permitido depois que a reserva remota
+  anterior à Meta foi comprovada em homologação; até lá, timeout produz
+  `outcome_unknown` e reconciliação;
 - `N8N_ENCRYPTION_KEY` é obrigatória, fica em escrow operacional e deve ser
   restaurável junto do banco próprio do n8n;
 - `PIX_KEY_VALUE` fica disponível somente ao runtime que monta a mensagem e
@@ -313,6 +336,11 @@ container. Docker `HEALTHCHECK`: intervalo 30 s, timeout 5 s, start period 20 s
 e três falhas. O monitor externo consulta `/api/health/ready` através do edge,
 não apenas `/healthz`. Falha de banco alerta o worker, mas não cria loop de
 restart contínuo.
+
+Com `N8N_INTEGRATION_ENABLED=true`, o gate de ativação também exige schema
+0013, volume privado gravável e scanner com assinatura de até 36 horas. A rota
+direta da Meta no CRM retorna indisponível; isso é comportamento de corte, não
+fallback.
 
 ### Hardening dos containers
 
@@ -362,16 +390,17 @@ a configuração registra o digest atual e o anterior.
 
 ## 9. Migração e rollback
 
-Sequência de deploy:
+Sequência de deploy do contrato n8n v1:
 
 1. verificar backup e espaço livre;
 2. ativar manutenção quando necessário;
-3. aplicar migration compatível;
-4. implantar API e worker;
-5. publicar workflows n8n compatíveis com o contrato;
-6. implantar edge;
-7. verificar live, ready, heartbeat e smoke ponta a ponta;
-8. liberar tráfego e monitorar 30 minutos.
+3. aplicar migration expand-only com `N8N_INTEGRATION_ENABLED=false`;
+4. implantar API e worker e configurar duas credenciais Basic distintas;
+5. atualizar o workflow `k7tI6T4RhQPyJkn9` ainda inativo;
+6. executar contrato, banco, scanner e smoke WhatsApp de homologação;
+7. publicar o workflow, transferir o webhook Meta para o n8n e habilitar a
+   integração, tornando a rota direta do CRM indisponível;
+8. implantar edge, verificar live, ready, heartbeat e monitorar 30 minutos.
 
 Migrações seguem expand/contract. Remover tabela/coluna ocorre somente quando o
 digest anterior já não depender dela. Rollback normal reaponta para o digest
@@ -386,6 +415,10 @@ Triggers de rollback:
 - workflow n8n incompatível, em loop ou sem correlação com o CRM;
 - violação de autorização ou exposição de dados;
 - migration incompatível.
+
+Rollback despublica/pausa o novo workflow e a automação, preserva comandos,
+tentativas e reconciliações e reaponta apenas os runtimes compatíveis. Ele não
+reativa silenciosamente a entrada direta da Meta.
 
 ## 10. Backups e disaster recovery
 
@@ -470,6 +503,8 @@ Alertas mínimos:
 - API indisponível ou 5xx acima do limite;
 - worker sem heartbeat;
 - n8n indisponível, execução em loop ou versão divergente da publicada;
+- claims negados anormais, leases expirados e reservas de envio divergentes;
+- comandos n8n em `processing` além do lease ou em `outcome_unknown`;
 - job mais antigo acima de 5 minutos;
 - dead-letter ou reconciliação crescente;
 - último backup horário bem-sucedido acima de 75 minutos ou diário acima de 26 horas;
@@ -484,6 +519,7 @@ Audit trail comercial não depende de logs do EasyPanel.
 
 - [ ] Domínios, DNS, SSL e firewall validados.
 - [ ] Credenciais separadas e rotação testada.
+- [ ] Basic n8n→CRM e CRM→n8n criados e vinculados sem HMAC/timestamp.
 - [ ] PostgreSQL e serviços internos sem portas públicas.
 - [ ] Editor e API administrativa do n8n sem rota pública; apenas webhook do canal publicado.
 - [ ] Ator `AUTOMATION_EXECUTOR` sem acesso administrativo ou direto ao banco do CRM.
@@ -495,10 +531,13 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Cada mensagem válida dispara o n8n sem botão da UI e registra versão, execução e epoch no CRM.
 - [ ] Worker parado acumula jobs e recupera a fila ao voltar.
 - [ ] Crash durante efeito externo produz `sent`, `failed` ou `outcome_unknown`, sem retry cego.
+- [ ] Os sete caminhos de envio reservam `message.send.requested` antes da Meta.
 - [ ] Digest promovido e revertido com sucesso.
 - [ ] Takeover impede novos envios até o ponto de não retorno e reconcilia resultado incerto.
 - [ ] Restore recupera banco, workflows e chave de criptografia do n8n em host limpo.
-- [ ] Smoke WhatsApp e Instagram oficiais ponta a ponta, incluindo migração de canal.
+- [ ] Smoke WhatsApp oficial ponta a ponta aprovado antes da publicação.
+- [ ] Instagram oficial e migração de canal aprovados antes do lançamento integral.
+- [ ] Persistência de execução/manual do n8n desabilitada ou expurgada em até 30 dias, sem PII.
 - [ ] Falha de Ficha aparece na reconciliação e retry não duplica envio.
 - [ ] Monitor externo detecta parada da VPS.
 - [ ] Responsável de Privacidade aprova storage, IA e observabilidade.

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "status": "proposed-for-human-review",
+  "task": "N8N-1",
+  "extends": {
+    "dataCatalog": "../../../docs/phase0/data-catalog.json",
+    "threatModel": "../../../docs/phase0/threat-model.json"
+  },
+  "requirements": [
+    "ORC-03",
+    "ORC-05",
+    "ORC-07",
+    "ORC-08",
+    "AGT-06",
+    "MSG-01",
+    "PRV-01",
+    "PRV-03"
+  ],
+  "dataCatalogAdditions": [
+    {
+      "id": "n8n-integration-technical-state",
+      "pii": [
+        "opaque conversation and message identifiers",
+        "workflow, version, execution, revision, epoch and outcome codes",
+        "no message body, prompt, attachment bytes or credentials"
+      ],
+      "purpose": "Fence automation, deliver idempotent commands and reconcile uncertain outcomes.",
+      "systemsAndCopies": [
+        "PostgreSQL automation_runs, ai_turns, n8n_commands and message_delivery_attempts",
+        "n8n technical execution metadata"
+      ],
+      "actorsAndOperators": [
+        "AUTOMATION_EXECUTOR",
+        "worker",
+        "authorized technical operators"
+      ],
+      "trigger": "Automation run or command reaches a terminal outcome.",
+      "operationalRetentionDays": 30,
+      "maximumRetentionDays": 30,
+      "destination": "Delete execution and manual metadata while retaining only separately authorized audit data or the minimum idempotency tombstone.",
+      "legalHold": "Minimum scoped exception only; never preserve credentials or message bodies in technical state.",
+      "deletionPropagation": [
+        "CRM technical tables and reconciliation payloads",
+        "n8n execution history and manual data",
+        "technical log indexes"
+      ]
+    }
+  ],
+  "threatModelAdditions": [
+    {
+      "id": "TM-N8N-01",
+      "family": "n8n-service-credential-replay",
+      "asset": "conversation state and authorized automation commands",
+      "boundary": "n8n to CRM API and CRM worker to n8n webhook",
+      "mitigation": "Distinct rotating Basic credentials, TLS, action allowlist, immutable payload hash, idempotency and workflow correlation.",
+      "owner": "Backend/Integrations/Security",
+      "test": "Invalid Basic, divergent replay, wrong workflow identity and forbidden action produce no effect and leak no credential.",
+      "status": "partially-mitigated"
+    },
+    {
+      "id": "TM-N8N-02",
+      "family": "stale-ai-external-effect",
+      "asset": "customer messages and official conversation state",
+      "boundary": "n8n AI execution to Meta send",
+      "mitigation": "Lease claim is fenced by revision, last event and automation epoch, followed by a one-use message.send.requested reservation before Meta.",
+      "owner": "Backend/Integrations",
+      "test": "Takeover during generation and replay after authorization never permit a second or stale Meta send.",
+      "status": "partially-mitigated"
+    }
+  ],
+  "retention": {
+    "n8nExecutionAndManualDataDays": 30,
+    "transientMedia": "earliest of journey termination or seven days"
+  },
+  "reviewNote": "The approved Phase 0 evidence remains immutable. Incorporate this addendum into a new reviewed catalog and threat-model revision before activation."
+}

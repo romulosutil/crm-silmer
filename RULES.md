@@ -28,6 +28,15 @@
     dias após o recebimento/envio, o que ocorrer primeiro. Pedido, Ficha,
     orçamento aprovado, comprovante PIX válido, eventos comerciais e auditoria
     nunca herdam esse prazo curto.
+19. `convertida_em_lead` encerra a triagem, não a Conversa. Enquanto existir
+    Negócio ativo, `terminal_at` permanece nulo e o ator técnico pode continuar
+    usando os endpoints canônicos de campos e transições. `Sem lead`, Fechado
+    e Perdido continuam sendo os únicos encerramentos oficiais aplicáveis.
+20. Handoff automático começa sem pessoa responsável e declara
+    `target_role`. `briefing_complete` e `negotiation` vão para Vendedor;
+    `human_requested`, `complaint`, `urgency`, `low_confidence` e
+    `unsupported` vão para Atendimento. A atribuição ocorre atomicamente para
+    uma pessoa ativa com papel compatível.
 
 ## Regras técnicas já impostas
 
@@ -43,3 +52,16 @@
    arquivos válidos seguem ao Dropbox por procedimento operacional registrado.
    Isso não autoriza nem presume API, token ou sincronização automática do
    Dropbox.
+10. O contrato n8n v1 usa somente Basic Auth com o ator
+    `AUTOMATION_EXECUTOR`, headers de idempotência/correlação/workflow e
+    `application/problem+json`; HMAC e timestamp não fazem parte desse
+    contrato.
+11. `message.send.requested` é o fence obrigatório e de uso único antes de
+    qualquer chamada à Meta. Timeout posterior vira `message.send.unknown` e
+    reconciliação; retry cego é proibido.
+12. Claims da IA são leases cercados por revisão, último evento, modo e
+    `automation_epoch`. Takeover, handoff, retorno, fechamento ou desligamento
+    invalidam claims anteriores elevando o epoch.
+13. O backend é neutro de canal, mas o rollout desta versão ativa somente
+    WhatsApp. Instagram deve ser homologado antes do lançamento integral do
+    MVP; não há fallback silencioso para o webhook direto da Meta.

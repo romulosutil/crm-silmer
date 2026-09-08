@@ -1,6 +1,20 @@
 import { pathToFileURL } from 'node:url';
 import { clearInterval, setInterval } from 'node:timers';
 
+import { createDatabase } from '@crm-silmer/database';
+import {
+  ClamAvMediaScanner,
+  createMediaDeleteJobHandler,
+  createN8nCommandDeliveryClient,
+  createN8nCommandJobHandler,
+  MEDIA_DELETE_JOB_TYPE,
+  MEDIA_RETENTION_QUEUE,
+  N8N_COMMAND_JOB_TYPE,
+  N8N_COMMAND_QUEUE,
+  PostgresJobQueue,
+  PostgresTransientMediaRepository,
+  PrivateMediaVolume,
+} from '@crm-silmer/integration-reliability';
 import { createSafeLogger, MetricRegistry, SERVICES } from '@crm-silmer/shared';
 
 /**
@@ -17,6 +31,7 @@ export class WorkerRuntime {
    *   metrics?: MetricRegistry,
    *   now?: () => number,
    *   pollIntervalMs?: number,
+   *   queueName?: string,
    *   queue?: {claim: Function, heartbeat: Function, markEffectStarted: Function, settle: Function},
    *   workerId?: string
    * }} [options]
@@ -32,6 +47,7 @@ export class WorkerRuntime {
     this.leaseMs = options.leaseMs ?? 30_000;
     this.now = options.now ?? Date.now;
     this.queue = options.queue;
+    this.queueName = options.queueName ?? 'default';
     this.handlers = Object.freeze({ ...(options.handlers ?? {}) });
     this.workerId = options.workerId ?? `worker-${process.pid}`;
     /** @type {NodeJS.Timeout | undefined} */
@@ -105,6 +121,7 @@ export class WorkerRuntime {
       leaseMs: this.leaseMs,
       limit: 1,
       now: new Date(this.now()),
+      queue: this.queueName,
       workerId: this.workerId,
     });
     for (const job of jobs) {
@@ -148,6 +165,17 @@ export class WorkerRuntime {
     try {
       if (!handler) throw new Error('No handler registered for job type');
       const result = await handler(job, context);
+      if (result.outcome !== 'sent') {
+        this.recordJobFailure({
+          errorCode:
+            result.errorCode ??
+            (result.outcome === 'outcome_unknown'
+              ? 'OUTCOME_UNKNOWN'
+              : 'JOB_FAILED'),
+          jobType: job.jobType,
+          queue: job.queue,
+        });
+      }
       await queue.settle({
         attemptId: job.attemptId,
         errorCode: result.errorCode,
@@ -193,6 +221,266 @@ export class WorkerRuntime {
   }
 }
 
+export class MediaRetentionScheduler {
+  /** @param {{repository: {scheduleExpiredDeletions: Function, scheduleTerminalJourneyDeletions: Function}, intervalMs?: number, logger?: ReturnType<typeof createSafeLogger>}} options */
+  constructor(options) {
+    if (
+      !options?.repository ||
+      typeof options.repository.scheduleExpiredDeletions !== 'function'
+    ) {
+      throw new TypeError(
+        'Media retention scheduler requires scheduleExpiredDeletions',
+      );
+    }
+    if (
+      typeof options.repository.scheduleTerminalJourneyDeletions !== 'function'
+    ) {
+      throw new TypeError(
+        'Media retention scheduler requires scheduleTerminalJourneyDeletions',
+      );
+    }
+    this.repository = options.repository;
+    this.intervalMs = options.intervalMs ?? 60_000;
+    if (!Number.isSafeInteger(this.intervalMs) || this.intervalMs < 1_000) {
+      throw new TypeError('Media retention interval must be at least 1000ms');
+    }
+    this.logger =
+      options.logger ?? createSafeLogger({ service: SERVICES.worker });
+    /** @type {NodeJS.Timeout|undefined} */
+    this.timer = undefined;
+    /** @type {Promise<void>|undefined} */
+    this.inFlight = undefined;
+  }
+
+  async start() {
+    if (this.timer) return;
+    await this.runOnce();
+    this.timer = setInterval(() => this.poll(), this.intervalMs);
+  }
+
+  poll() {
+    if (this.inFlight) return this.inFlight;
+    this.inFlight = this.runOnce()
+      .catch((error) => {
+        this.logger.error('worker_job_failed', {
+          error_code: technicalErrorCode(error),
+          job_type: 'media.retention.scan',
+          queue: MEDIA_RETENTION_QUEUE,
+        });
+      })
+      .finally(() => {
+        this.inFlight = undefined;
+      });
+    return this.inFlight;
+  }
+
+  async runOnce() {
+    await this.repository.scheduleTerminalJourneyDeletions();
+    await this.repository.scheduleExpiredDeletions();
+  }
+
+  async stop() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = undefined;
+    }
+    await this.inFlight;
+  }
+}
+
+/**
+ * Production composition root. The n8n domain store remains a port so this
+ * package has no compile-time dependency on the domain module.
+ *
+ * @param {{
+ *   client?: {prepareDelivery: Function},
+ *   commandStore: {
+ *     loadForDelivery: (commandId: string, context: Record<string, unknown>) => Promise<unknown>,
+ *     markProcessing: (commandId: string, context: Record<string, unknown>) => Promise<unknown>,
+ *     markDelivered: (commandId: string, context: Record<string, unknown>) => Promise<unknown>,
+ *     markFailed: (commandId: string, context: Record<string, unknown>) => Promise<unknown>,
+ *     markOutcomeUnknown: (commandId: string, context: Record<string, unknown>) => Promise<unknown>,
+ *   },
+ *   database: {query: (sql: string, values?: unknown[]) => Promise<{rows: Array<Record<string, unknown>>}>, transaction: <T>(work: (client: any) => Promise<T>) => Promise<T>},
+ *   environment?: Record<string, string|undefined>,
+ *   fetchImpl?: (input: URL, init: RequestInit) => Promise<{status: number, json: () => Promise<unknown>}>,
+ *   logger?: ReturnType<typeof createSafeLogger>,
+ *   metrics?: MetricRegistry,
+ *   queue?: {claim: Function, heartbeat: Function, markEffectStarted: Function, settle: Function},
+ *   workerId?: string,
+ * }} options
+ */
+export function createWorkerRuntime(options) {
+  if (
+    !options?.database ||
+    typeof options.database.transaction !== 'function'
+  ) {
+    throw new TypeError('A transactional database is required');
+  }
+  const environment = options.environment ?? process.env;
+  const queue =
+    options.queue ?? new PostgresJobQueue({ database: options.database });
+  const client =
+    options.client ??
+    createN8nCommandDeliveryClient({
+      clientId: requiredEnvironment(environment, 'N8N_COMMAND_CLIENT_ID'),
+      clientSecret: requiredEnvironment(
+        environment,
+        'N8N_COMMAND_CLIENT_SECRET',
+      ),
+      endpoint: requiredEnvironment(environment, 'N8N_COMMAND_URL'),
+      fetchImpl: options.fetchImpl,
+      replaySafe: environment.N8N_COMMAND_REPLAY_SAFE === 'true',
+      timeoutMs: optionalPositiveInteger(
+        environment.N8N_COMMAND_TIMEOUT_MS,
+        10_000,
+        'N8N_COMMAND_TIMEOUT_MS',
+      ),
+    });
+  return new WorkerRuntime({
+    handlers: {
+      [N8N_COMMAND_JOB_TYPE]: createN8nCommandJobHandler({
+        client,
+        commandStore: options.commandStore,
+      }),
+    },
+    logger: options.logger,
+    metrics: options.metrics,
+    queue,
+    queueName: N8N_COMMAND_QUEUE,
+    workerId: options.workerId,
+  });
+}
+
+/** @param {{database: any, logger?: ReturnType<typeof createSafeLogger>, mediaVolume: {delete: Function}, metrics?: MetricRegistry, queue?: any, repository: any, workerId?: string}} options */
+export function createMediaRetentionWorkerRuntime(options) {
+  if (
+    !options?.database ||
+    typeof options.database.transaction !== 'function'
+  ) {
+    throw new TypeError('A transactional database is required');
+  }
+  return new WorkerRuntime({
+    handlers: {
+      [MEDIA_DELETE_JOB_TYPE]: createMediaDeleteJobHandler({
+        mediaVolume: options.mediaVolume,
+        repository: options.repository,
+      }),
+    },
+    logger: options.logger,
+    metrics: options.metrics,
+    queue:
+      options.queue ?? new PostgresJobQueue({ database: options.database }),
+    queueName: MEDIA_RETENTION_QUEUE,
+    workerId: options.workerId,
+  });
+}
+
+/**
+ * Dynamically loads the domain adapter only at the executable boundary. Tests
+ * and modules depend exclusively on the store port above.
+ *
+ * @param {Record<string, unknown>} database
+ * @param {Record<string, string|undefined>} environment
+ * @param {(specifier: string) => Promise<Record<string, any>>} [importModule]
+ */
+export async function loadN8nCommandStore(
+  database,
+  environment,
+  importModule = (specifier) => import(specifier),
+) {
+  const packageName = '@crm-silmer/n8n-integration';
+  const domainModule = await importModule(packageName);
+  if (typeof domainModule.createPostgresN8nCommandStore === 'function') {
+    return domainModule.createPostgresN8nCommandStore({
+      database,
+      environment,
+    });
+  }
+  if (typeof domainModule.PostgresN8nCommandStore === 'function') {
+    return new domainModule.PostgresN8nCommandStore({
+      database,
+      environment,
+    });
+  }
+  throw technicalStartupError('N8N_COMMAND_STORE_UNAVAILABLE');
+}
+
+/**
+ * @param {{environment?: Record<string, string|undefined>, importModule?: (specifier: string) => Promise<Record<string, any>>, logger?: ReturnType<typeof createSafeLogger>}} [options]
+ */
+export async function startWorkerFromEnvironment(options = {}) {
+  const environment = options.environment ?? process.env;
+  const logger =
+    options.logger ?? createSafeLogger({ service: SERVICES.worker });
+  const database = createDatabase({
+    applicationName: SERVICES.worker,
+    connectionString: requiredEnvironment(environment, 'DATABASE_URL'),
+  });
+  try {
+    const commandStore = await loadN8nCommandStore(
+      database,
+      environment,
+      options.importModule,
+    );
+    const queue = new PostgresJobQueue({ database });
+    const repository = new PostgresTransientMediaRepository({ database });
+    const mediaVolume = new PrivateMediaVolume({
+      maxBytes: requiredPositiveInteger(environment, 'PRIVATE_MEDIA_MAX_BYTES'),
+      maxFileBytes: requiredPositiveInteger(
+        environment,
+        'PRIVATE_MEDIA_MAX_FILE_BYTES',
+      ),
+      repository,
+      rootDirectory: requiredEnvironment(environment, 'PRIVATE_MEDIA_ROOT'),
+      scanner: new ClamAvMediaScanner(),
+    });
+    const commandWorker = createWorkerRuntime({
+      commandStore,
+      database,
+      environment,
+      logger,
+      queue,
+      workerId: `n8n-${process.pid}`,
+    });
+    const mediaWorker = createMediaRetentionWorkerRuntime({
+      database,
+      logger,
+      mediaVolume,
+      queue,
+      repository,
+      workerId: `media-${process.pid}`,
+    });
+    const retentionScheduler = new MediaRetentionScheduler({
+      intervalMs: optionalPositiveInteger(
+        environment.MEDIA_RETENTION_SCAN_INTERVAL_MS,
+        60_000,
+        'MEDIA_RETENTION_SCAN_INTERVAL_MS',
+      ),
+      logger,
+      repository,
+    });
+    await retentionScheduler.start();
+    await commandWorker.start();
+    await mediaWorker.start();
+    return Object.freeze({
+      runtime: Object.freeze({
+        commandWorker,
+        mediaWorker,
+        retentionScheduler,
+      }),
+      stop: async () => {
+        await retentionScheduler.stop();
+        await Promise.all([commandWorker.stop(), mediaWorker.stop()]);
+        await database.close();
+      },
+    });
+  } catch (error) {
+    await database.close();
+    throw error;
+  }
+}
+
 /** @param {unknown} error */
 function technicalErrorCode(error) {
   const candidate =
@@ -204,10 +492,52 @@ function technicalErrorCode(error) {
     : 'JOB_HANDLER_FAILED';
 }
 
+/** @param {Record<string, string|undefined>} environment @param {string} name */
+function requiredEnvironment(environment, name) {
+  const value = environment[name];
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw technicalStartupError(`${name}_REQUIRED`);
+  }
+  return value;
+}
+
+/** @param {string|undefined} value @param {number} fallback @param {string} name */
+function optionalPositiveInteger(value, fallback, name) {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    throw technicalStartupError(`${name}_INVALID`);
+  }
+  return parsed;
+}
+
+/** @param {Record<string, string|undefined>} environment @param {string} name */
+function requiredPositiveInteger(environment, name) {
+  return optionalPositiveInteger(
+    requiredEnvironment(environment, name),
+    0,
+    name,
+  );
+}
+
+/** @param {string} code */
+function technicalStartupError(code) {
+  return Object.assign(new Error(code), { code });
+}
+
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  const worker = new WorkerRuntime();
-  await worker.start();
+  const logger = createSafeLogger({ service: SERVICES.worker });
+  try {
+    await startWorkerFromEnvironment({ logger });
+  } catch (error) {
+    logger.error('worker_job_failed', {
+      error_code: technicalErrorCode(error),
+      job_type: 'unknown_job',
+      queue: 'default',
+    });
+    process.exitCode = 1;
+  }
 }

@@ -316,18 +316,25 @@ if (connectionString) {
         /expiry is immutable/iu,
       );
       const jobs = await pool.query(
-        `SELECT job_type, available_at, deletion_reason
+        `SELECT job_type, available_at, deletion_reason, queue
          FROM crm.outbox_jobs WHERE transient_media_id = $1`,
         [mediaId],
       );
       assert.deepEqual(
         jobs.rows.map(
-          ({ job_type: jobType, deletion_reason: deletionReason }) => ({
+          ({ job_type: jobType, deletion_reason: deletionReason, queue }) => ({
             deletionReason,
             jobType,
+            queue,
           }),
         ),
-        [{ deletionReason: 'journey_terminal', jobType: 'media.delete' }],
+        [
+          {
+            deletionReason: 'journey_terminal',
+            jobType: 'media.delete',
+            queue: 'media-retention',
+          },
+        ],
       );
       const receipts = await pool.query(
         `SELECT operator_id, result, content_sha256
@@ -366,11 +373,12 @@ if (connectionString) {
         1,
       );
       const expiredJob = await pool.query(
-        `SELECT deletion_reason FROM crm.outbox_jobs
+        `SELECT deletion_reason, queue FROM crm.outbox_jobs
          WHERE transient_media_id = $1`,
         [expiredMediaId],
       );
       assert.equal(expiredJob.rows[0].deletion_reason, 'expired');
+      assert.equal(expiredJob.rows[0].queue, 'media-retention');
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

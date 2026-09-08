@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mkdir, open, readdir, rename, rm, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
@@ -27,6 +27,14 @@ export class MediaVolumeUnavailableError extends Error {
     super('Private media volume is unavailable', options);
     this.name = 'MediaVolumeUnavailableError';
     this.code = 'MEDIA_VOLUME_UNAVAILABLE';
+  }
+}
+
+export class MediaHashMismatchError extends Error {
+  constructor() {
+    super('Uploaded media hash does not match the declared digest');
+    this.name = 'MediaHashMismatchError';
+    this.code = 'MEDIA_HASH_MISMATCH';
   }
 }
 
@@ -91,7 +99,7 @@ export class PrivateMediaVolume {
   }
 
   /**
-   * @param {{mediaId: string, bytes: Buffer|Uint8Array|AsyncIterable<Uint8Array>, declaredMimeType?: string|null}} input
+   * @param {{mediaId: string, bytes: Buffer|Uint8Array|AsyncIterable<Uint8Array>, declaredMimeType?: string|null, expectedSha256?: string|null}} input
    */
   async store(input) {
     const previous = this.#tail;
@@ -108,12 +116,21 @@ export class PrivateMediaVolume {
     }
   }
 
-  /** @param {{mediaId: string, bytes: Buffer|Uint8Array|AsyncIterable<Uint8Array>, declaredMimeType?: string|null}} input */
-  async #storeSerial({ mediaId, bytes, declaredMimeType = null }) {
+  /** @param {{mediaId: string, bytes: Buffer|Uint8Array|AsyncIterable<Uint8Array>, declaredMimeType?: string|null, expectedSha256?: string|null}} input */
+  async #storeSerial({
+    mediaId,
+    bytes,
+    declaredMimeType = null,
+    expectedSha256 = null,
+  }) {
     const normalizedMediaId = boundedString(mediaId, 'mediaId', 128);
     const declared = declaredMimeType
       ? boundedString(declaredMimeType, 'declaredMimeType', 255)
       : null;
+    const expectedDigest =
+      expectedSha256 === null
+        ? null
+        : sha256Digest(expectedSha256, 'expectedSha256');
     const now = validDate(this.#now(), 'now');
     await this.#prepareRoot();
     let usedBytes;
@@ -161,6 +178,26 @@ export class PrivateMediaVolume {
       handle = undefined;
 
       const contentSha256 = digest.digest('hex');
+      if (
+        expectedDigest !== null &&
+        !timingSafeEqual(
+          Buffer.from(contentSha256, 'hex'),
+          Buffer.from(expectedDigest, 'hex'),
+        )
+      ) {
+        await rm(partialPath, { force: true });
+        await this.#repository.markRejected({
+          contentSha256,
+          declaredMimeType: declared,
+          detectedMimeType: declared ?? 'application/octet-stream',
+          mediaId: normalizedMediaId,
+          now,
+          reason: 'hash_mismatch',
+          sizeBytes,
+          storageKey,
+        });
+        throw new MediaHashMismatchError();
+      }
       const scan = await this.#scanner.scan(partialPath);
       const detectedMimeType = boundedString(
         scan?.detectedMimeType,
@@ -250,6 +287,7 @@ export class PrivateMediaVolume {
         });
         throw error;
       }
+      if (error instanceof MediaHashMismatchError) throw error;
       await this.#repository.markUnavailable({
         mediaId: normalizedMediaId,
         now,
@@ -355,6 +393,14 @@ function positiveInteger(value, field) {
 function boundedString(value, field, maximum) {
   if (typeof value !== 'string' || value.length < 1 || value.length > maximum) {
     throw new TypeError(`${field} must be between 1 and ${maximum} characters`);
+  }
+  return value;
+}
+
+/** @param {unknown} value @param {string} field */
+function sha256Digest(value, field) {
+  if (typeof value !== 'string' || !/^[0-9a-f]{64}$/u.test(value)) {
+    throw new TypeError(`${field} must be a lowercase SHA-256 digest`);
   }
   return value;
 }

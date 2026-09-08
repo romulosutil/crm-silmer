@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdtemp, readdir, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
 import {
+  MediaHashMismatchError,
   MediaQuotaExceededError,
   PrivateMediaVolume,
 } from '../modules/integration-reliability/src/private-media-volume.js';
@@ -98,6 +100,37 @@ test('fails quota closed and removes every partial file', async () => {
       );
       assert.deepEqual(await readdir(rootDirectory), []);
       assert.equal(repository.events.at(-1)[0], 'unavailable');
+    },
+  );
+});
+
+test('rejects a divergent declared digest before scanning or publishing bytes', async () => {
+  let scans = 0;
+  await withVolume(
+    {
+      scanner: {
+        async scan() {
+          scans += 1;
+          throw new Error('scanner must not run for a bad digest');
+        },
+      },
+    },
+    async ({ repository, rootDirectory, volume }) => {
+      await assert.rejects(
+        volume.store({
+          bytes: Buffer.from('uploaded-bytes'),
+          declaredMimeType: 'image/png',
+          expectedSha256: createHash('sha256')
+            .update('different-bytes')
+            .digest('hex'),
+          mediaId: 'media-bad-digest',
+        }),
+        MediaHashMismatchError,
+      );
+      assert.equal(scans, 0);
+      assert.deepEqual(await readdir(rootDirectory), []);
+      assert.equal(repository.events.at(-1)[0], 'rejected');
+      assert.equal(repository.events.at(-1)[1].reason, 'hash_mismatch');
     },
   );
 });

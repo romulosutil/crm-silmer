@@ -1,3 +1,4 @@
+export { ClamAvMediaScanner } from './clamav-media-scanner.js';
 export {
   createIdempotentCommandExecutor,
   fingerprintCommand,
@@ -21,7 +22,28 @@ export {
 } from './postgres-job-queue.js';
 export { PostgresOutboundMessageOutbox } from './postgres-outbound-message-outbox.js';
 export {
+  canonicalJsonStringify,
+  createN8nCommandDeliveryClient,
+  N8nCommandDeliveryClient,
+  N8nCommandDeliveryError,
+  sha256Hex,
+} from './n8n-outbound-client.js';
+export {
+  assertN8nCommandStore,
+  classifyN8nCommandDeliveryFailure,
+  createN8nCommandJobHandler,
+  N8N_COMMAND_JOB_TYPE,
+  N8N_COMMAND_QUEUE,
+  reconcileN8nCommandOutcome,
+} from './n8n-command-worker.js';
+export {
+  createMediaDeleteJobHandler,
+  MEDIA_DELETE_JOB_TYPE,
+  MEDIA_RETENTION_QUEUE,
+} from './media-retention-worker.js';
+export {
   MediaQuotaExceededError,
+  MediaHashMismatchError,
   MediaVolumeUnavailableError,
   PrivateMediaVolume,
 } from './private-media-volume.js';

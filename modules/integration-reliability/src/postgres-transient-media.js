@@ -259,6 +259,55 @@ export class PostgresTransientMediaRepository {
     });
   }
 
+  /** @param {{now?: string|Date, limit?: number}} [input] */
+  async scheduleTerminalJourneyDeletions({
+    now = new Date(),
+    limit = 100,
+  } = {}) {
+    const timestamp = validDate(now, 'now');
+    positiveInteger(limit, 'limit');
+    if (limit > 1_000) throw new TypeError('limit must not exceed 1000');
+    return this.#database.transaction(async (client) => {
+      await setTransactionBounds(client);
+      const selected = await client.query(
+        `SELECT media.id
+         FROM crm.transient_media AS media
+         JOIN crm.attachments AS attachment
+           ON attachment.transient_media_id = media.id
+         JOIN crm.messages AS message ON message.id = attachment.message_id
+         JOIN crm.conversations AS conversation
+           ON conversation.id = message.conversation_id
+         WHERE conversation.terminal_at IS NOT NULL
+           AND conversation.terminal_at <= $1
+           AND media.availability_status <> 'deleted'
+           AND NOT EXISTS (
+             SELECT 1 FROM crm.outbox_jobs AS job
+             WHERE job.job_type = 'media.delete'
+               AND job.transient_media_id = media.id
+               AND job.status NOT IN ('dead_letter', 'completed')
+           )
+         ORDER BY conversation.terminal_at, media.id
+         FOR UPDATE OF media SKIP LOCKED
+         LIMIT $2`,
+        [timestamp, limit],
+      );
+      let scheduled = 0;
+      for (const row of selected.rows) {
+        if (
+          await this.#scheduleDeletion({
+            client,
+            mediaId: String(row.id),
+            now: timestamp,
+            reason: 'journey_terminal',
+          })
+        ) {
+          scheduled += 1;
+        }
+      }
+      return scheduled;
+    });
+  }
+
   /**
    * @param {{client: Queryable, mediaId: string, reason: 'expired'|'journey_terminal', now: Date}} input
    */
@@ -269,11 +318,11 @@ export class PostgresTransientMediaRepository {
     const normalizedMediaId = boundedString(mediaId, 'mediaId', 128);
     const result = await client.query(
       `INSERT INTO crm.outbox_jobs
-         (id, job_type, idempotency_key, transient_media_id, status,
+         (id, job_type, idempotency_key, transient_media_id, status, queue,
           priority, available_at, created_at, updated_at, max_attempts,
           effect_policy, deletion_reason)
-       VALUES ($1, 'media.delete', $2, $3, 'pending', 0, $4, $4, $4, 8,
-         'internal', $5)
+       VALUES ($1, 'media.delete', $2, $3, 'pending', 'media-retention', 0,
+         $4, $4, $4, 8, 'internal', $5)
        ON CONFLICT (job_type, idempotency_key)
        DO UPDATE SET
          available_at = LEAST(crm.outbox_jobs.available_at, EXCLUDED.available_at),

@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { WorkerRuntime } from '../apps/worker/src/worker.js';
+import {
+  createWorkerRuntime,
+  loadN8nCommandStore,
+  WorkerRuntime,
+} from '../apps/worker/src/worker.js';
 import {
   calculateRetryDelayMs,
   decideFailedAttempt,
@@ -98,8 +102,8 @@ function queueFixture() {
   });
   return {
     calls,
-    async claim() {
-      calls.push(['claim']);
+    async claim(/** @type {any} */ input) {
+      calls.push(['claim', input]);
       return [job];
     },
     /** @param {any} input */
@@ -148,6 +152,77 @@ test('worker settles a successful effect only after marking its boundary', async
     ['claim', 'heartbeat', 'effect', 'settle'],
   );
   assert.equal(queue.calls[3][1].outcome, 'sent');
+});
+
+test('worker claims only its configured queue', async () => {
+  const queue = queueFixture();
+  const worker = new WorkerRuntime({
+    handlers: {
+      'fixture.process': async () => ({ outcome: 'sent' }),
+    },
+    logger: silentLogger,
+    queue,
+    queueName: 'external_effects',
+    workerId: 'worker-queue-scope',
+  });
+
+  await worker.runOnce();
+  assert.equal(queue.calls[0][0], 'claim');
+  assert.equal(queue.calls[0][1].queue, 'external_effects');
+});
+
+test('production composition registers the n8n command handler on the existing queue', () => {
+  const queue = queueFixture();
+  const commandStore = {
+    loadForDelivery: async () => ({}),
+    markDelivered: async () => undefined,
+    markFailed: async () => undefined,
+    markOutcomeUnknown: async () => undefined,
+    markProcessing: async () => undefined,
+  };
+  const runtime = createWorkerRuntime({
+    client: { prepareDelivery: () => ({}) },
+    commandStore,
+    database: {
+      query: async () => ({ rows: [] }),
+      transaction: async (work) => work({ query: async () => ({ rows: [] }) }),
+    },
+    logger: silentLogger,
+    queue,
+  });
+
+  assert.equal(runtime.queue, queue);
+  assert.equal(runtime.queueName, 'external_effects');
+  assert.equal(typeof runtime.handlers['n8n.command.deliver'], 'function');
+});
+
+test('bootstrap loads the domain store dynamically without compile-time coupling', async () => {
+  const expected = {
+    loadForDelivery: async () => ({}),
+    markDelivered: async () => undefined,
+    markFailed: async () => undefined,
+    markOutcomeUnknown: async () => undefined,
+    markProcessing: async () => undefined,
+  };
+  const database = {};
+  const environment = { N8N_COMMAND_ENVELOPE_KEY: 'not-exposed' };
+  const actual = await loadN8nCommandStore(
+    database,
+    environment,
+    async (specifier) => {
+      assert.equal(specifier, '@crm-silmer/n8n-integration');
+      return {
+        createPostgresN8nCommandStore(
+          /** @type {{database: unknown, environment: unknown}} */ options,
+        ) {
+          assert.equal(options.database, database);
+          assert.equal(options.environment, environment);
+          return expected;
+        },
+      };
+    },
+  );
+  assert.equal(actual, expected);
 });
 
 test('worker distinguishes safe pre-effect failure from uncertain effect', async () => {
@@ -201,4 +276,57 @@ test('worker distinguishes safe pre-effect failure from uncertain effect', async
     },
     { outcome: 'outcome_unknown', retryable: false, retrySafe: false },
   );
+});
+
+test('worker logs only bounded technical failure data', async () => {
+  /** @type {Array<Record<string, unknown>>} */
+  const records = [];
+  const logger = createSafeLogger({
+    service: 'crm-silmer-worker',
+    sink: (record) => records.push(record),
+  });
+  const queue = queueFixture();
+  const worker = new WorkerRuntime({
+    handlers: {
+      'fixture.process': async () => {
+        throw Object.assign(
+          new Error('cliente@example.test +55 27 99999-9999'),
+          { code: 'telefone +55 27 99999-9999' },
+        );
+      },
+    },
+    logger,
+    queue,
+    workerId: 'worker-safe-log',
+  });
+
+  await worker.runOnce();
+  const serialized = JSON.stringify(records);
+  assert.doesNotMatch(serialized, /cliente|99999|telefone/iu);
+  assert.match(serialized, /worker_job_failed/u);
+});
+
+test('worker records an explicit outcome_unknown returned by a handler', async () => {
+  /** @type {Array<Record<string, unknown>>} */
+  const records = [];
+  const logger = createSafeLogger({
+    service: 'crm-silmer-worker',
+    sink: (record) => records.push(record),
+  });
+  const queue = queueFixture();
+  const worker = new WorkerRuntime({
+    handlers: {
+      'fixture.process': async () => ({
+        errorCode: 'OUTCOME_UNKNOWN',
+        outcome: 'outcome_unknown',
+      }),
+    },
+    logger,
+    queue,
+    workerId: 'worker-unknown-observability',
+  });
+
+  await worker.runOnce();
+  assert.equal(queue.calls.at(-1)[1].outcome, 'outcome_unknown');
+  assert.match(JSON.stringify(records), /worker_job_failed/u);
 });

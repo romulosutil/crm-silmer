@@ -22,7 +22,8 @@ Leia nesta ordem antes de implementar:
 5. [`ARCHITECTURE.md`](ARCHITECTURE.md) — fronteiras e decisões do MVP.
 6. [`TECHNICAL-DESIGN.md`](TECHNICAL-DESIGN.md) — desenho técnico completo.
 7. [`.specs/features/crm-mvp/tasks.md`](.specs/features/crm-mvp/tasks.md) — ordem de implementação e gates.
-8. [`docs/integrations/n8n/README.md`](docs/integrations/n8n/README.md) — integração executável, operação e rollout.
+8. [`docs/roadmap/PROXIMAS-FASES.md`](docs/roadmap/PROXIMAS-FASES.md) — sequência executiva das próximas telas.
+9. [`docs/integrations/n8n/README.md`](docs/integrations/n8n/README.md) — integração executável, operação e rollout.
 
 Para trabalho assistido por IA, leia também [`AGENTS.md`](AGENTS.md) e
 [`CODEX.md`](CODEX.md). Material em `historico-datacrazy/` é apenas arquivo

@@ -3,5 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.js"
+  "exports": {
+    ".": "./src/index.js",
+    "./identity-envelope": "./src/adapters/contact-identity-envelope.js"
+  }
 }

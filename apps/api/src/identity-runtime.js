@@ -30,6 +30,8 @@ const OPERATIONAL_ACTIONS = new Set([
   'kanban.read',
   'deal.read',
   'deal.events.read',
+  'conversation.read',
+  'contact.read',
 ]);
 
 class IdentityHttpError extends Error {

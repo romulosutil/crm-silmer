@@ -9,3 +9,4 @@ export {
 export { InMemoryContactIdentityRepository } from './adapters/in-memory-contact-identity-repository.js';
 export { PostgresContactConversionPort } from './adapters/postgres-contact-conversion-port.js';
 export { PostgresContactIdentityRepository } from './adapters/postgres-contact-identity-repository.js';
+export { PostgresContactReadRepository } from './adapters/postgres-contact-read-repository.js';

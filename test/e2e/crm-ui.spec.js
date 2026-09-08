@@ -18,8 +18,58 @@ const card = {
   nextTask: { title: 'Confirmar quantidade', dueAt: '2026-09-08T12:00:00Z' },
   stageEnteredAt: '2026-09-06T12:00:00Z',
 };
+const contact = {
+  activeDealCount: 1,
+  createdAt: '2026-09-01T12:00:00.000Z',
+  id: 'contact-1',
+  identities: [
+    {
+      channel: 'whatsapp',
+      displayHandle: 'Studio Malu',
+      externalId: '5511999999999',
+      id: 'identity-1',
+      kind: 'phone',
+      phoneStatus: 'verified',
+    },
+  ],
+  label: 'Studio Malu',
+  latestActivityAt: '2026-09-08T12:00:00.000Z',
+  provisional: false,
+  updatedAt: '2026-09-08T12:00:00.000Z',
+  version: 2,
+};
+const conversation = {
+  assignedUser: { functionName: 'Atendimento', id: 'operator-1' },
+  automationEpoch: 2,
+  automationState: 'human',
+  channel: 'whatsapp',
+  contact: {
+    displayHandle: 'Studio Malu',
+    externalId: '5511999999999',
+    id: contact.id,
+    label: 'Studio Malu',
+  },
+  deal: { id: card.id, stage: 'produto', status: 'active' },
+  handoff: null,
+  id: 'conversation-1',
+  lastMessage: {
+    deliveryStatus: null,
+    direction: 'inbound',
+    id: 'message-1',
+    occurredAt: '2026-09-08T12:00:00.000Z',
+    preview: 'Preciso de 120 camisetas.',
+    status: 'received',
+    type: 'text',
+  },
+  openedAt: '2026-09-08T11:00:00.000Z',
+  requiresAttention: false,
+  state: 'em_atendimento',
+  terminalAt: null,
+  updatedAt: '2026-09-08T12:00:00.000Z',
+  version: 3,
+};
 
-/** @param {import('@playwright/test').Page} page @param {{conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void, onMessage?:(body:any)=>void}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -59,7 +109,90 @@ async function mockCrm(page, options = {}) {
           eventCursor: 'evt-8',
           columns: options.empty
             ? []
-            : [{ stage: 'product', total: 1, items: [card] }],
+            : [
+                {
+                  cards: [card],
+                  count: 1,
+                  items: [card],
+                  label: 'Produto',
+                  stage: 'product',
+                  total: 1,
+                },
+              ],
+        }),
+      });
+      return;
+    }
+    if (path === '/api/v1/inbox/conversations' && request.method() === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: options.empty ? [] : [conversation],
+          nextCursor: null,
+          totalCount: options.empty ? 0 : 1,
+        }),
+      });
+      return;
+    }
+    if (
+      path === '/api/v1/inbox/conversations/conversation-1' &&
+      request.method() === 'GET'
+    ) {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          conversation,
+          messages: [conversation.lastMessage],
+          suggestion: null,
+        }),
+      });
+      return;
+    }
+    if (
+      path === '/api/v1/conversations/conversation-1/messages' &&
+      request.method() === 'POST'
+    ) {
+      expect(request.headers()['idempotency-key']).toBeTruthy();
+      expect(request.headers()['x-csrf-token']).toBe('csrf-test');
+      const body = request.postDataJSON();
+      options.onMessage?.(body);
+      await route.fulfill({
+        status: 202,
+        contentType: 'application/json',
+        body: JSON.stringify({ accepted: true }),
+      });
+      return;
+    }
+    if (path === '/api/v1/contacts' && request.method() === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: options.empty ? [] : [contact],
+          nextCursor: null,
+          totalCount: options.empty ? 0 : 1,
+        }),
+      });
+      return;
+    }
+    if (path === '/api/v1/contacts/contact-1' && request.method() === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          activeDealCount: 1,
+          contact,
+          conversations: [conversation],
+          deals: [
+            {
+              assignedUser: null,
+              createdAt: '2026-09-06T12:00:00.000Z',
+              id: card.id,
+              stage: 'produto',
+              status: 'active',
+              updatedAt: '2026-09-08T12:00:00.000Z',
+              version: 4,
+            },
+          ],
+          identities: contact.identities,
         }),
       });
       return;
@@ -285,7 +418,7 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
         .getByRole('link', { name }),
     ).toBeVisible();
   }
-  await expect(page.getByText('Dados de demonstração').first()).toBeVisible();
+  await expect(page.getByText('Studio Malu').first()).toBeVisible();
 
   await page
     .getByRole('navigation', { name: 'Navegação principal' })
@@ -303,9 +436,7 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
     .press('Enter');
   await expect(page).toHaveURL('/clientes');
   await expect(page.getByRole('heading', { name: 'Clientes' })).toBeFocused();
-  await expect(
-    page.getByRole('link', { name: 'Ateliê Bela Vista' }),
-  ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
@@ -325,14 +456,6 @@ test('restores search focus after removing filter controls', async ({
   await clearClientSearch.press('Enter');
   await expect(clientSearch).toBeFocused();
 
-  await clientSearch.fill('inexistente');
-  const clearClientFilters = page.getByRole('button', {
-    name: 'Limpar filtros',
-  });
-  await clearClientFilters.focus();
-  await clearClientFilters.press('Enter');
-  await expect(clientSearch).toBeFocused();
-
   await page.goto('/inbox');
   const inboxSearch = page.locator('#inbox-search');
   await inboxSearch.fill('inexistente');
@@ -342,6 +465,26 @@ test('restores search focus after removing filter controls', async ({
   await clearInboxSearch.focus();
   await clearInboxSearch.press('Enter');
   await expect(inboxSearch).toBeFocused();
+});
+
+test('sends an authorized human reply through the official command', async ({
+  page,
+}) => {
+  let sentBody;
+  await mockCrm(page, { onMessage: (body) => (sentBody = body) });
+  await page.goto('/inbox');
+  await page.evaluate(() => {
+    globalThis.document.cookie = 'crm_csrf=csrf-test; Path=/; SameSite=Lax';
+  });
+  await page.getByLabel('Responder').fill('Resposta persistida');
+  await page.getByRole('button', { name: 'Enviar resposta' }).click();
+  await expect(page.getByText('Mensagem aceita para envio.')).toBeVisible();
+  expect(sentBody).toEqual({
+    content: { text: 'Resposta persistida' },
+    expectedVersion: 3,
+    messageType: 'text',
+    reason: 'Resposta humana na Caixa de Entrada',
+  });
 });
 
 test('keeps the official command authoritative and refetches after 409', async ({

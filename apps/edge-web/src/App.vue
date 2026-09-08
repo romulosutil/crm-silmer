@@ -235,7 +235,6 @@ function onCursor(cursor) {
             <path d="M3 5h18v13H7l-4 3zm2 2v10l1.2-1H19V7z" />
           </svg>
           <span class="nav-label">Caixa de Entrada</span>
-          <span class="nav-count" aria-hidden="true">3</span>
         </RouterLink>
         <RouterLink
           to="/kanban"

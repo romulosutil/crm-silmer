@@ -34,7 +34,7 @@ export async function request(url, options = {}) {
   if (options.body !== undefined)
     headers.set('Content-Type', 'application/json');
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    const csrf = readCookie('csrf_token');
+    const csrf = readCookie('crm_csrf');
     if (csrf) headers.set('X-CSRF-Token', decodeURIComponent(csrf));
   }
   if (options.idempotencyKey)

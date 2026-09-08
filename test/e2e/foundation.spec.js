@@ -191,6 +191,14 @@ test('submits login, restores and closes a session by keyboard without browser s
       return;
     }
 
+    if (path === '/api/v1/inbox/conversations' && method === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [], nextCursor: null, totalCount: 0 }),
+      });
+      return;
+    }
+
     if (path === '/api/v1/events' && method === 'GET') {
       await route.fulfill({ status: 204 });
       return;

@@ -26,6 +26,15 @@ const localIdentityEnvironment = {
   IDEMPOTENCY_ENVELOPE_KEY:
     process.env.IDEMPOTENCY_ENVELOPE_KEY ??
     randomBytes(32).toString('base64url'),
+  DEAL_ENVELOPE_KEY:
+    process.env.DEAL_ENVELOPE_KEY ?? randomBytes(32).toString('base64url'),
+  QUALIFICATION_ENVELOPE_KEY:
+    process.env.QUALIFICATION_ENVELOPE_KEY ??
+    randomBytes(32).toString('base64url'),
+  HANDOFF_ENVELOPE_KEY:
+    process.env.HANDOFF_ENVELOPE_KEY ?? randomBytes(32).toString('base64url'),
+  KANBAN_CURSOR_HMAC_KEY:
+    process.env.KANBAN_CURSOR_HMAC_KEY ?? randomBytes(32).toString('base64url'),
   IDENTITY_BOOTSTRAP_TOKEN:
     process.env.IDENTITY_BOOTSTRAP_TOKEN ??
     'development-bootstrap-token-local-only',

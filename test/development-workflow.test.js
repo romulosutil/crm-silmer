@@ -30,6 +30,15 @@ test('documents and exposes a local development workflow with automatic refresh'
   assert.match(dev, /runMigrations/u);
   assert.match(dev, /startLocalDatabase/u);
   assert.match(dev, /randomBytes/u);
+  for (const secret of [
+    'IDEMPOTENCY_ENVELOPE_KEY',
+    'DEAL_ENVELOPE_KEY',
+    'QUALIFICATION_ENVELOPE_KEY',
+    'HANDOFF_ENVELOPE_KEY',
+    'KANBAN_CURSOR_HMAC_KEY',
+  ]) {
+    assert.match(dev, new RegExp(`process\\.env\\.${secret}`, 'u'));
+  }
   assert.match(dev, /API_ORIGIN/u);
   assert.match(dev, /seedDevelopmentUsers/u);
   assert.match(seeder, /admin@crm-silmer\.local/u);

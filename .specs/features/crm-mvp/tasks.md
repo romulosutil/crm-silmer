@@ -1,9 +1,10 @@
 # CRM Silmer MVP — Plano Macro de Entrega
 
-> **Atualizado em:** 06/09/2026  
+> **Atualizado em:** 08/09/2026  
 > **Decisão:** n8n é obrigatório e funciona como motor de canais, IA e jornada comercial.  
 > **Design técnico:** `TECHNICAL-DESIGN.md`  
-> **Topologia:** `EASYPANEL-TOPOLOGY.md`
+> **Topologia:** `EASYPANEL-TOPOLOGY.md`  
+> **Próximas interfaces:** `docs/roadmap/PROXIMAS-FASES.md`
 
 O MVP será construído como três objetivos divergentes: **CRM | Inbox Multicanal | Agente Vendedor Silmer no n8n**. Cada objetivo pode avançar e ser validado isoladamente; os três se conectam somente na etapa de integração e lançamento.
 
@@ -191,6 +192,31 @@ rastreabilidade ORC-01–09, INB-01–04, AGT-01–08, MSG-01–04 e PRV-01–03
 
 Cada fatia encerra com testes proporcionais, documentação, commit/push e
 `graphify update .`; mudanças de `graphify-out` usam commit mecânico separado.
+
+## Sequência executiva de interfaces UI-1–UI-8
+
+O detalhamento, contratos anteriores à tela e critérios de aceite estão em
+[`docs/roadmap/PROXIMAS-FASES.md`](../../../docs/roadmap/PROXIMAS-FASES.md).
+Esta é a ordem canônica das próximas fatias de produto após o contrato n8n v1:
+
+1. **UI-1 — Inbox:** lista, filtros, prioridades e estados da automação.
+2. **UI-2 — Atendimento:** thread, anexos, briefing, resposta, takeover,
+   retorno à IA e fechamento.
+3. **UI-3 — Handoffs:** filas por papel e claim concorrente.
+4. **UI-4 — Contato:** representação do Cliente como `Contact` mais
+   `ContactIdentity`, com conversas e Negócios.
+5. **UI-5 — Negócio:** evoluir Kanban/detalhe existentes com vínculos, gates,
+   tarefas e ações comerciais restantes.
+6. **UI-6 — Automação:** monitor de runs, claims, comandos, tentativas e
+   reconciliação.
+7. **UI-7 — Integrações:** configuração segura, versões e saúde sem exposição
+   de segredos.
+8. **UI-8 — Gate transversal:** E2E, acessibilidade, segurança e homologação
+   WhatsApp/Instagram.
+
+Cada fase começa pelo read model e pela atualização da OpenAPI quando a consulta
+ainda não existir. A ativação do n8n pode avançar em paralelo a UI-1/UI-2, mas
+UI-8 e o lançamento dependem dos gates operacionais e externos documentados.
 
 ## Integração e lançamento
 

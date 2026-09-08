@@ -38,6 +38,8 @@ Documentos principais:
 - `docs/rfc/`: propostas relevantes em avaliação antes da decisão.
 - `docs/integrations/n8n/README.md`: contrato v1, entidades, estados,
   configuração, rollout e troubleshooting da integração.
+- `docs/roadmap/PROXIMAS-FASES.md`: ordem UI-1–UI-8, contratos necessários,
+  critérios de aceite e mapa dos documentos que guiam as próximas telas.
 - `TECHNICAL-DESIGN.md`: TDD canônico com stack, módulos, dados, APIs,
   segurança, SLOs, riscos e decisões técnicas do MVP.
 - `EASYPANEL-TOPOLOGY.md`: projetos, serviços, sizing, CI/CD, backups e

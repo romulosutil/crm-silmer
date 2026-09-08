@@ -7,5 +7,6 @@ import App from './App.vue';
 import { router } from './router.js';
 import './tokens.css';
 import './styles.css';
+import './screen-styles.css';
 
 createApp(App).use(router).mount('#app');

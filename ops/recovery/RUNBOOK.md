@@ -89,15 +89,21 @@ repositório:
 
 1. Manter o EasyPanel compatível na VPS autorizada.
 2. Recriar o projeto compartilhado `espectro-mvp` com `silmer-edge-web`,
-   `silmer-api`, `silmer-worker` e `silmer-postgres` conforme
+   `silmer-api`, `silmer-worker`, `silmer-postgres`, n8n e seu PostgreSQL conforme
    `ops/easypanel/topology.json`.
 3. Recuperar segredos do escrow com duas pessoas, sem registrar valores em logs.
 4. Registrar digests atual/anterior e aplicar migrations expand/contract.
 5. Manter Meta, IA, storage, telemetria e tombstones em adapters mock durante o
    drill.
-6. Restaurar o PostgreSQL isolado, aplicar tombstones e executar smoke sem saída.
-7. Testar DNS em subdomínio autorizado, registrar tempos, RPO/RTO e evidências.
-8. Destruir o host temporário somente após preservar evidências sem PII.
+6. Restaurar os PostgreSQL do CRM e do n8n, a chave de criptografia e a versão
+   preservada do workflow; aplicar tombstones e executar smoke sem saída.
+7. Confirmar que comandos `processing` expirados e reservas de envio incertas
+   reaparecem em reconciliação, sem chamada à Meta.
+8. Testar DNS em subdomínio autorizado, registrar tempos, RPO/RTO e evidências.
+9. Destruir o host temporário somente após preservar evidências sem PII.
 
 O restore mensal de PostgreSQL e o drill trimestral de perda total continuam
 externos. Somente o drill real em host limpo pode comprovar o RTO do CRM.
+O workflow recuperado permanece inativo até API/worker ready e credenciais
+Basic restauradas; o drill nunca publica o workflow nem reativa a entrada
+direta da Meta.

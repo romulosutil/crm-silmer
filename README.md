@@ -5,10 +5,11 @@ vendas, PIX e geração da Ficha de Pedido. O produto substituirá integralmente
 Datacrazy; WhatsApp Business e Instagram Direct são canais obrigatórios do
 piloto e disparam a mesma jornada no n8n.
 
-> **Estado atual:** o bootstrap do runtime (`T00.1`), a supply chain de CI e
-> imagens imutáveis (`T00.2`) e a decisão operacional e o gate de provisionamento
-> (`T00.3`) estão disponíveis; as demais tarefas da Fase 0 permanecem guiadas por
-> [`.specs/features/crm-mvp/tasks.md`](.specs/features/crm-mvp/tasks.md).
+> **Estado atual:** a integração n8n v1 está implementada na sequência
+> `N8N-1–N8N-7`, mas publicação e go-live continuam sujeitos às duas
+> credenciais Basic DEV, homologação WhatsApp, gates externos e, para o
+> lançamento integral, homologação Instagram. Veja
+> [`docs/integrations/n8n/README.md`](docs/integrations/n8n/README.md).
 
 ## Comece por aqui
 
@@ -21,6 +22,7 @@ Leia nesta ordem antes de implementar:
 5. [`ARCHITECTURE.md`](ARCHITECTURE.md) — fronteiras e decisões do MVP.
 6. [`TECHNICAL-DESIGN.md`](TECHNICAL-DESIGN.md) — desenho técnico completo.
 7. [`.specs/features/crm-mvp/tasks.md`](.specs/features/crm-mvp/tasks.md) — ordem de implementação e gates.
+8. [`docs/integrations/n8n/README.md`](docs/integrations/n8n/README.md) — integração executável, operação e rollout.
 
 Para trabalho assistido por IA, leia também [`AGENTS.md`](AGENTS.md) e
 [`CODEX.md`](CODEX.md). Material em `historico-datacrazy/` é apenas arquivo
@@ -118,6 +120,8 @@ carga de `T00.4` estão em
 humanas e provas live continuam externas e não são simuladas por esses gates.
 O runbook não produtivo do WhatsApp está em
 [`docs/phase0/META-SANDBOX.md`](docs/phase0/META-SANDBOX.md).
+O adapter direto permanece somente como fixture/referência; produção usa Meta
+→ n8n → CRM e fica sem fallback direto após o corte.
 
 O threat model e o catálogo de dados de `T00.5` estão em
 [`docs/phase0/THREAT-MODEL-AND-DATA-CATALOG.md`](docs/phase0/THREAT-MODEL-AND-DATA-CATALOG.md).

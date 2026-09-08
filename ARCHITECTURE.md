@@ -1,6 +1,6 @@
 # Arquitetura — Decisões do MVP
 
-> **Status:** baseline revisada em 06/09/2026 para tornar o n8n obrigatório.  
+> **Status:** baseline revisada em 07/09/2026 pelo contrato n8n v1.  
 > **Detalhes:** `TECHNICAL-DESIGN.md`; implantação em `EASYPANEL-TOPOLOGY.md`.
 
 ## Forma do produto
@@ -19,11 +19,12 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 
 - PostgreSQL é a fonte da verdade do CRM.
 - O n8n é o motor obrigatório de canais, IA e orquestração, mas nunca acessa diretamente o banco do CRM.
-- Toda mutação oficial usa API versionada, autenticação de serviço, capacidade mínima, `Idempotency-Key`, versão esperada, auditoria e `automation_epoch`.
+- Toda mutação oficial usa API versionada, Basic Auth de serviço, capacidade mínima, `Idempotency-Key`, correlação, identidade de workflow, versão esperada, auditoria e `automation_epoch`.
 - O CRM valida estados e gates. O workflow decide o próximo comando permitido; não redefine a máquina de estados.
 - Logs do n8n são evidência técnica. A auditoria durável do efeito comercial pertence ao CRM.
 - OpenAI e Gemini implementam o mesmo contrato estruturado. Regras de preço, permissão, gate e handoff são determinísticas e ficam fora do prompt.
-- Tomada humana incrementa o `automation_epoch`; qualquer execução antiga é rejeitada antes de enviar mensagem ou alterar estado.
+- Tomada humana, handoff, retorno à IA, fechamento e desligamento incrementam o `automation_epoch`; qualquer claim antigo é rejeitado antes de enviar mensagem ou alterar estado.
+- Toda chamada à Meta exige reserva atômica `message.send.requested`; resultado incerto é reconciliado e nunca repetido às cegas.
 
 ## Decisões confirmadas
 
@@ -35,6 +36,10 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 - Vendedor Silmer autônomo nas operações explicitamente concedidas ao ator `AUTOMATION_EXECUTOR`.
 - Aprovação de preço, venda, pagamento e Ficha permanece humana no caminho inicial.
 - n8n obrigatório; indisponibilidade do n8n torna a automação indisponível e visível, sem fallback silencioso para outra fonte de estado.
+- Adaptador n8n v1 conforme RFC 001/ADR 002: quatro endpoints, Basic only,
+  briefing oficial, claim com lease e comandos CRM→n8n por outbox.
+- Backend neutro de canal, com WhatsApp homologado primeiro; Instagram continua
+  como gate obrigatório antes do lançamento integral.
 - Numeração de pedidos iniciada em `01-CRM`, sem dependência legada.
 - Rômulo Sutil Corrêa como Responsável de Privacidade e política do piloto aprovada após consulta jurídica.
 - Defaults `D00.6-01..07` aprovados; `silmer:romulo.sutil` designado como Tech Lead, equipe de entrega e Administrador Técnico.
@@ -51,7 +56,7 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 - **Assíncrono:** CRM mantém inbox/outbox e jobs transacionais. A rede opera at-least-once; contratos idempotentes e reconciliação tratam replay e `outcome_unknown` sem prometer exactly-once.
 - **Escala:** execução regular do n8n no MVP. Queue mode e Redis só entram após medição que justifique mais infraestrutura.
 - **Autenticação humana:** sessão opaca em cookie seguro e CSRF.
-- **Autenticação técnica:** credencial exclusiva e rotacionável do n8n, sem sessão de navegador, sem capacidade administrativa e sem acesso de rede ao banco do CRM.
+- **Autenticação técnica:** credenciais Basic distintas n8n→CRM e CRM→n8n, exclusivas e rotacionáveis, sem HMAC/timestamp, sessão de navegador, capacidade administrativa ou acesso ao banco do CRM.
 - **Storage:** mídia de canal transitória em volume privado da VPS por até sete dias ou fim da jornada; arquivos válidos seguem ao Dropbox por procedimento operacional registrado. Evolução de storage depende da issue `#29`.
 - **Documentos:** snapshot imutável, template HTML/CSS e PDF gerado no worker.
 - **IA:** OpenAI ou Gemini por configuração versionada, sujeitos ao mesmo schema, evals e gates de privacidade. Produção com PII permanece bloqueada até evidências aplicáveis de DPA, retenção e ZDR.
@@ -60,7 +65,11 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 ## Modelagem e confiabilidade
 
 - `Deal`/`Negocio` é a única raiz do funil. Lead é classificação e Card é projeção visual.
+- Cliente é `Contact` + `ContactIdentity`; briefing de conversa não é um segundo
+  lead e só promove dados pelos endpoints canônicos.
 - Backlog pertence à Conversa e permanece fora do Kanban.
+- `convertida_em_lead` encerra a triagem, não a conversa; handoff pode existir
+  antes de Negócio, começa sem responsável e é reivindicado por papel via CAS.
 - Dados extraídos pela IA só se tornam oficiais após validação do schema e aceitação pelo comando do CRM.
 - Auditoria de negócio é append-only e não se confunde com log técnico.
 - Perda da única cópia de mídia transitória produz `lost/unavailable`, nunca alegação de recuperação.
@@ -69,9 +78,10 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 
 ## Caminho de lançamento
 
-1. Concluir e provar o CRM isoladamente por API e fixtures.
-2. Concluir e provar a Inbox Multicanal com eventos simulados e takeover acessível.
-3. Concluir e provar o Vendedor Silmer no n8n com OpenAI e Gemini.
-4. Integrar os três objetivos, testar falhas e executar UAT, carga, deploy, rollback e recovery.
+1. Aplicar migrações com a integração desligada e implantar API/worker.
+2. Criar as duas credenciais Basic DEV e atualizar o workflow ainda inativo.
+3. Homologar WhatsApp ponta a ponta, publicar e transferir o webhook da Meta.
+4. Desabilitar a entrada direta no CRM; rollback pausa a automação sem reativá-la.
+5. Homologar Instagram e só então executar o gate integral de UAT/lançamento.
 
 As aprovações externas de IA, observabilidade, storage e recovery permanecem gates próprios. Testes e documentação não substituem evidência operacional nem aprovação humana.

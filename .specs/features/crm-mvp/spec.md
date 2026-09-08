@@ -30,6 +30,11 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 8. **ORC-08:** WHEN n8n, canal ou provedor de IA fica indisponível ou retorna resultado incerto THEN o sistema SHALL tornar a pendência visível e retomável, sem avançar silenciosamente a jornada.
 9. **ORC-09:** WHEN o atendimento migra de canal THEN o sistema SHALL continuar o mesmo Negócio e conectar `@instagram` e telefone ao lead somente após correlação verificável, explícita e auditável, preservando as duas identidades e os históricos.
 
+O contrato executável de ORC-01–09 é a OpenAPI v1: quatro endpoints n8n→CRM,
+Basic Auth como `AUTOMATION_EXECUTOR`, idempotência com hash, claims com lease e
+o fence de uso único `message.send.requested`. Resultado desconhecido exige
+reconciliação e nunca retry cego à Meta.
+
 **Teste independente:** receber uma mensagem realista, comprovar o disparo automático do n8n, executar a jornada com OpenAI e Gemini, repetir eventos e assumir a conversa durante uma execução sem duplicar ou aplicar efeito atrasado.
 
 ### P1.1 Caixa de Entrada e conversão
@@ -43,6 +48,11 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 3. **INB-03:** WHEN a conversa não representa oportunidade THEN o n8n SHALL encerrá-la como `Sem lead` com motivo auditável, sem criar Negócio.
 4. **INB-04:** WHEN a mesma conversão automática ou manual é repetida THEN o sistema SHALL retornar o resultado existente sem duplicar Contato, Lead ou Card.
 
+Para INB-01–04, Cliente permanece `Contact` + `ContactIdentity`; inbound nunca
+cria Negócio. `convertida_em_lead` encerra a triagem mas mantém a conversa não
+terminal enquanto o Negócio estiver ativo, permitindo os comandos oficiais
+posteriores.
+
 **Teste independente:** receber duas conversas, converter automaticamente apenas a comercial e repetir os eventos sem duplicar Contato, Lead ou Card.
 
 ### P1.2 Atendimento assistido pelo Vendedor Silmer
@@ -53,12 +63,16 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 
 1. **AGT-01:** WHEN existe uma conversa ou lead ativo THEN o agente SHALL consultar o histórico e os campos já respondidos antes de perguntar.
 2. **AGT-02:** WHEN os campos obrigatórios da etapa estão válidos THEN o n8n SHALL registrar o gate e solicitar ao CRM o avanço de exatamente uma etapa.
-3. **AGT-03:** WHEN o cliente pede um vendedor da Silmer THEN o agente SHALL interromper sua atuação e transferir com resumo e responsável.
+3. **AGT-03:** WHEN o cliente pede uma pessoa da Silmer THEN o agente SHALL interromper sua atuação e criar handoff com resumo, motivo e papel-alvo, inicialmente sem responsável.
 4. **AGT-04:** WHEN o cliente insiste em valor antes de existir orçamento humano aprovado THEN o agente SHALL transferir sem calcular, negociar ou inventar valor.
 5. **AGT-05:** WHEN o agente encontra bloqueio não resolvível THEN ele SHALL registrar o motivo e transferir sem descartar o contexto.
 6. **AGT-06:** WHEN o agente envia mensagem, decide, altera estado ou transfere atendimento THEN um usuário autorizado SHALL conseguir auditar o evento e sua correlação com a execução do n8n.
 7. **AGT-07:** WHEN todos os campos obrigatórios aplicáveis da etapa estão `preenchido` ou `nao_aplicavel` com motivo THEN o sistema SHALL permitir que o ator técnico do n8n registre o gate e avance exatamente uma etapa conforme `CAMPOS-FICHA-E-JORNADA-P0-1.md`.
 8. **AGT-08:** WHEN um campo obrigatório está `pendente` ou `divergente`, ou uma correção invalida etapa anterior, THEN o sistema SHALL impedir avanço ou exigir retorno à primeira etapa incompleta sem apagar o histórico.
+
+O contexto do agente vem de `recent_messages` e do briefing oficial versionado
+do CRM; não existe memória curta paralela no n8n. `lead_patch` ignora nulos e
+altera apenas o briefing até a promoção explícita pelos endpoints canônicos.
 
 **Teste independente:** conduzir um lead simulado automaticamente pelas etapas permitidas, preservar as aprovações humanas de preço, venda, pagamento e Ficha e repetir com os três cenários de handoff.
 
@@ -88,6 +102,10 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 2. **MSG-02:** WHEN o processamento falha ou a mídia temporária fica indisponível THEN o sistema SHALL colocar o evento em pendência visível com motivo e opção de retomada quando ainda possível.
 3. **MSG-03:** WHEN o canal ou o volume temporário fica indisponível THEN o sistema SHALL exibir o estado e o último evento recebido sem afirmar que mensagens ou bytes não observados foram recuperados.
 4. **MSG-04:** WHEN o piloto é iniciado THEN os canais obrigatórios WhatsApp Business e Instagram Direct SHALL estar operacionais no n8n e executar a mesma jornada, inclusive migração de canal e handoff.
+
+O backend comum é neutro de canal. WhatsApp é a primeira homologação desta
+entrega; MSG-04 e o lançamento integral continuam bloqueados até a homologação
+obrigatória do Instagram.
 
 **Teste independente:** repetir webhooks com mídia, induzir falha e perda da
 cópia temporária, concluir o reprocessamento possível e comprovar que não há
@@ -155,13 +173,13 @@ de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 
 | Grupo              | IDs             | Status                            |
 | ------------------ | --------------- | --------------------------------- |
-| Orquestração n8n   | ORC-01 a ORC-09 | Requer refatoração da baseline    |
-| Inbox e conversão  | INB-01 a INB-04 | Pronto para especificação técnica |
-| Agente vendedor    | AGT-01 a AGT-08 | Requer refatoração da baseline    |
+| Orquestração n8n   | ORC-01 a ORC-09 | Implementada; homologação operacional pendente |
+| Inbox e conversão  | INB-01 a INB-04 | Implementada no contrato n8n v1      |
+| Agente vendedor    | AGT-01 a AGT-08 | Implementado; publicação pendente    |
 | Pedido             | ORD-01 a ORD-05 | Pronto para especificação técnica |
-| Mensagens e canais | MSG-01 a MSG-04 | Pronto para especificação técnica |
+| Mensagens e canais | MSG-01 a MSG-04 | WhatsApp primeiro; Instagram bloqueia lançamento |
 | Financeiro         | FIN-01 a FIN-03 | Pronto para especificação técnica |
-| Privacidade        | PRV-01 a PRV-03 | Pronto para especificação técnica |
+| Privacidade        | PRV-01 a PRV-03 | Coberta no contrato; homologação pendente |
 | PIX e boas-vindas  | PAY-01 a PAY-05 | Pronto para especificação técnica |
 
 **Cobertura:** 41 requisitos de MVP; 41 mapeados; nenhuma decisão de produto P0 aberta. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.

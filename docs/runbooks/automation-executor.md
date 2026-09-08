@@ -7,11 +7,14 @@ identidade não é uma pessoa, não recebe função operacional, não abre sess�
 navegador e não participa das rotas de convite, login ou concessão de
 capacidades.
 
-As únicas ações autorizadas nesta primeira fatia são:
+As ações autorizadas pelo contrato v1 são:
 
 - persistir mensagem canônica normalizada pelo n8n;
 - registrar atualização de entrega;
 - correlacionar execução e versão do workflow;
+- armazenar anexo seguro e reivindicar rodada de IA;
+- reservar envio antes da Meta, atualizar briefing e registrar falha;
+- criar handoff sem responsável para a fila do papel-alvo;
 - converter uma conversa em Negócio;
 - atualizar campos oficiais de um Negócio;
 - registrar transição de etapa validada pelo CRM.
@@ -45,6 +48,15 @@ O piloto usa uma única instância da API. Uma futura rotação com sobreposiç�
 entre múltiplas instâncias exige contrato próprio; não se mantém token anterior
 ativo implicitamente.
 
+HMAC e timestamp não fazem parte do contrato n8n→CRM. TLS, Basic, allowlist,
+idempotência com fingerprint, correlação e fences de revisão/epoch formam o
+controle. CRM→n8n usa outra credencial, em `N8N_COMMAND_CLIENT_ID` e
+`N8N_COMMAND_CLIENT_SECRET`, entregue somente ao worker.
+
+Antes de publicar o workflow, criar no n8n duas credenciais `httpBasicAuth`,
+vinculá-las às direções corretas e executar o smoke sem registrar valores. O
+workflow permanece inativo se qualquer credencial estiver ausente.
+
 ## Auditoria e resposta a falhas
 
 Credencial ausente ou inválida retorna `401`. Credencial válida tentando ação
@@ -55,6 +67,12 @@ pessoais não entram no evento.
 
 Falha ao persistir a auditoria também mantém a operação negada. Não existe
 fallback para sessão humana, acesso direto ao banco ou permissão implícita.
+
+Timeout depois de `message.send.requested` produz `message.send.unknown`; não
+repita o envio. Comando CRM→n8n em `outcome_unknown` segue para reconciliação.
+Se houver suspeita de comprometimento, pausar o workflow, revogar as duas
+credenciais, elevar o epoch das conversas afetadas e reconciliar reservas antes
+de retomar.
 
 ## Pendência independente
 

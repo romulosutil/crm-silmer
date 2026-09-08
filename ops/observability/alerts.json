@@ -44,6 +44,46 @@
       "status": "pending-external"
     },
     {
+      "id": "n8n-claim-denied-spike",
+      "signal": "n8n_claims_denied_total",
+      "condition": "counter increases by more than fifty within five minutes",
+      "threshold": 50,
+      "severity": "high",
+      "owner": "Backend/Integrations",
+      "test": "generate synthetic stale revisions without customer content",
+      "status": "pending-external"
+    },
+    {
+      "id": "n8n-command-stuck",
+      "signal": "n8n_command_processing_age_seconds",
+      "condition": "oldest processing command exceeds two minutes",
+      "threshold": 120,
+      "severity": "critical",
+      "owner": "Backend/Integrations",
+      "test": "expire a synthetic command lease and prove reconciliation",
+      "status": "pending-external"
+    },
+    {
+      "id": "n8n-reconciliation-growing",
+      "signal": "n8n_reconciliation_open_total",
+      "condition": "open integration reconciliation count grows within five minutes",
+      "threshold": 1,
+      "severity": "high",
+      "owner": "Integrations/Operations",
+      "test": "create one synthetic outcome unknown and inspect the redacted alert",
+      "status": "pending-external"
+    },
+    {
+      "id": "n8n-workflow-version-divergent",
+      "signal": "n8n_workflow_version_divergence_total",
+      "condition": "an execution reports an unapproved workflow version",
+      "threshold": 1,
+      "severity": "critical",
+      "owner": "Integrations/DevOps",
+      "test": "submit a synthetic unapproved workflow version",
+      "status": "pending-external"
+    },
+    {
       "id": "worker-heartbeat-stale",
       "signal": "worker_heartbeat_unixtime_seconds",
       "condition": "last heartbeat is older than 120 seconds",

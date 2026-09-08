@@ -7,6 +7,7 @@ const expectedDigestKeys = ['edge-web', 'runtime'];
 const expectedAdapterKeys = [
   'meta',
   'ai',
+  'n8nCommand',
   'objectStorage',
   'telemetry',
   'tombstones',

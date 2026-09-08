@@ -79,6 +79,11 @@ tomada humana, mas nenhum botão inicia o n8n.
 
 Converter em lead cria ou vincula um Contato e cria um novo Negócio no Kanban. Contatos recorrentes podem possuir vários negócios sem perder o histórico de relacionamento.
 
+`Convertida em lead` encerra a triagem, não a Conversa. O mesmo registro segue
+ativo durante a jornada do Negócio, permitindo campos e transições automáticas;
+`terminal_at` só é preenchido pelos encerramentos oficiais. Cliente é sempre a
+composição `Contact` + `ContactIdentity`, nunca uma tabela paralela de leads.
+
 A conversão deve ser idempotente: retries do webhook, mensagens duplicadas ou cliques repetidos não podem criar leads ou cards duplicados.
 
 ## 6. Canal do MVP
@@ -87,6 +92,10 @@ Os canais obrigatórios do MVP são a **API oficial do WhatsApp Business** e o
 **Instagram Direct**, ambos integrados pelo n8n e submetidos ao mesmo fluxo. O
 site apenas abre um desses canais e pode registrar origem `site`; não é um
 terceiro canal de conversa.
+
+O adaptador do backend nasce neutro de canal, mas o rollout v1 homologa e ativa
+WhatsApp primeiro. Instagram é a próxima etapa obrigatória e continua
+bloqueando o lançamento integral até passar pelo mesmo contrato e smoke.
 
 Cada mensagem registra canal, identificador externo, remetente, timestamp,
 conteúdo, anexos e estado de processamento. Identidades de Instagram e
@@ -124,19 +133,25 @@ No MVP, o Vendedor Silmer:
    aguarda a aprovação humana quando o gate for preço, venda, pagamento ou
    Ficha.
 
-O agente interrompe e transfere para uma pessoa quando:
+O agente interrompe e abre uma fila humana por papel quando:
 
 - o cliente pede explicitamente para falar com um vendedor da Silmer;
 - o cliente insiste em preço, promessa de prazo ou mínimo antes de concluir a jornada necessária;
 - o agente encontra um bloqueio real que não consegue resolver com os dados, catálogo e regras autorizadas, depois de registrar o motivo.
+
+`briefing_complete` e `negotiation` direcionam para Vendedor; solicitação
+humana, reclamação, urgência, baixa confiança e caso não suportado direcionam
+para Atendimento. O handoff nasce sem responsável e a primeira pessoa elegível
+o reivindica atomicamente.
 
 O agente nunca inventa preço, prazo, disponibilidade, condição de pagamento ou
 regra de produção. Após a qualificação, comunica somente uma versão vigente de
 orçamento humano aprovada por `Admin`; não calcula, negocia nem concede
 desconto.
 
-Tomada humana ou desligamento global incrementa o `automation_epoch`. Antes de
-cada envio ou mutação, o n8n apresenta esse epoch ao CRM; execuções antigas são
+Tomada humana, handoff, retorno à IA, fechamento ou desligamento incrementam o
+`automation_epoch`. Antes de cada envio ou mutação, o n8n apresenta epoch,
+revisão, claim e token ao CRM; execuções antigas são
 rejeitadas e não podem retomar a conversa silenciosamente.
 
 ## 8. Papel do n8n
@@ -156,6 +171,13 @@ A indisponibilidade do n8n interrompe a automação e aparece como pendência
 operacional. Não há execução silenciosa por outro caminho. No MVP, o n8n usa
 execução regular; queue mode e Redis ficam para uma evolução sustentada por
 medição.
+
+O contrato n8n→CRM v1 possui quatro endpoints e usa somente Basic Auth com o
+ator `AUTOMATION_EXECUTOR`, idempotência, correlação e identidade de workflow
+nos headers. O contexto vem de mensagens recentes e briefing oficial
+versionado; o n8n não mantém memória comercial paralela. Toda chamada à Meta é
+precedida de uma reserva de uso único `message.send.requested`; resultado
+incerto é reconciliado sem retry cego.
 
 ## 9. Ficha de Pedido como contrato da jornada
 
@@ -290,7 +312,8 @@ comerciais nem auditoria.
 - Toda venda fechada gera uma Ficha sem redigitação dos dados já coletados.
 - Toda Ficha aprovada possui estado de envio para Rose.
 - O CRM apresenta total vendido, quantidade de vendas e ticket médio no período.
-- Nenhum card transferido para atendimento humano fica sem responsável.
+- Nenhum handoff aceito fica sem responsável; handoff pendente permanece em
+  fila explícita por papel até uma pessoa elegível reivindicá-lo.
 
 WhatsApp e Instagram são condições de lançamento. A migração entre eles deve
 preservar o mesmo Negócio, o contexto e as identidades verificadas. Os números

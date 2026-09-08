@@ -207,15 +207,15 @@ bloqueia o lançamento do MVP e permanece visível.
 | -------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | Acesso         | `users`, `user_functions`, `user_capabilities`, `sessions`                                            | função única; `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e `TECHNICAL_PRIVACY_EXECUTOR` ortogonais; sessão revogável |
 | Identidade     | `contacts`, `contact_identities`, `identity_links`, `identity_handoffs`                               | identidade única por provedor/conta/canal; handoff verificável; merge humano reversível                         |
-| Inbox          | `conversations`, `messages`, `attachments`                                                            | mensagem única por `(provider, provider_account_id, external_message_id)`                                       |
+| Inbox          | `conversations`, `messages`, `attachments`, `conversation_briefing_versions`                         | mensagem única por `(provider, provider_account_id, external_message_id)`; revisão inbound monotônica           |
 | Catálogo       | `catalog_versions`, `catalog_products`, `catalog_models`, `catalog_materials`, `catalog_techniques`   | versão publicada imutável; Pedido guarda snapshot                                                               |
 | Funil          | `deals`, `deal_stage_history`, `tasks`                                                                | versão otimista; uma projeção Kanban por Deal                                                                   |
 | Qualificação   | `deal_items`, `item_fabrics`, `grade_lines`, `artwork`, `logistics`, `field_assessments`              | grade positiva; soma exata; N/A exige motivo                                                                    |
 | Comercial      | `quote_versions`, `sale_events`                                                                       | versão aprovada imutável; reconhecimento vendido único                                                          |
 | Pagamento      | `payment_flows`, `payment_evidence`                                                                   | comprovante não confirma pagamento; uma cobrança lógica                                                         |
 | Pedido         | `order_counter`, `orders`, `order_form_versions`, `document_artifacts`, `deliveries`                  | número global único; versão aprovada imutável                                                                   |
-| IA             | `ai_turns`, `automation_runs`, `handoffs`                                                             | versão, execução e epoch correlacionados; só API autorizada altera campo oficial                                 |
-| Confiabilidade | `channel_events`, `idempotency_records`, `outbox_jobs`, `processing_attempts`, `reconciliation_items` | chave única por efeito observável                                                                               |
+| IA             | `ai_turns`, `automation_runs`, `handoffs`                                                             | lease, revisão, último evento, execução e epoch correlacionados; handoff por papel                               |
+| Confiabilidade | `channel_events`, `idempotency_records`, `outbox_jobs`, `processing_attempts`, `reconciliation_items`, `n8n_commands`, `message_delivery_attempts` | chave única por efeito observável; reserva de envio antes da Meta |
 | Privacidade    | `audit_events`, `privacy_requests`, `legal_holds`, `tombstone_receipts`                               | auditoria sem cópia eterna; ledger canônico externo ao backup                                                   |
 
 Dados estáveis são normalizados. JSONB é permitido para payload bruto com
@@ -247,8 +247,9 @@ Lacunas só existem com registro explícito de reserva/cancelamento.
   ancoradas na identidade, enquanto o `Contact` é uma agregação resolvida por
   vínculos históricos.
 - O backlog usa `nova`, `em_analise`, `em_atendimento`, `requer_atencao`,
-  `convertida_em_lead` e `sem_lead`. Os dois últimos estados são terminais e
-  nunca são reabertos; nova mensagem cria outro ciclo em `nova`.
+  `convertida_em_lead` e `sem_lead`. Apenas `sem_lead` é terminal na triagem.
+  `convertida_em_lead` encerra o backlog, mas mantém `terminal_at` nulo enquanto
+  houver Negócio ativo; Fechado/Perdido encerram a jornada pelo domínio oficial.
 - Merge e unmerge alteram somente o vínculo versionado `Identity -> Contact`,
   exigem ação humana de Atendimento ou Vendedor, motivo, correlação, versão
   esperada e evidência auditável. Históricos não são movidos ou reescritos e
@@ -257,11 +258,11 @@ Lacunas só existem com registro explícito de reserva/cancelamento.
   conteúdo de mensagem, legenda e pergunta de sugestão usam envelope
   `AES-256-GCM` na aplicação; busca de identidade usa HMAC com chave distinta.
   IDs técnicos e logs não carregam conteúdo pessoal.
-- Responder como pessoa suspende a IA, atribui a conversa ao autor e cria a
-  mensagem/outbox na mesma transação. A reativação da IA é uma ação humana
-  explícita. Como a Meta não comprova idempotência de envio, o job usa política
-  de reconciliação manual. O fencing do efeito externo por `automation_epoch`
-  permanece na T04.4.
+- Responder como pessoa suspende a IA, atribui a conversa ao autor e cria
+  mensagem, `n8n_command`, auditoria e outbox na mesma transação. A reativação
+  da IA é humana e explícita. Todo envio à Meta exige primeiro uma reserva
+  `message.send.requested`; timeout após a reserva vira `message.send.unknown`
+  e reconciliação, nunca retry cego.
 - A T02.4 mantém sugestões estruturalmente separadas do estado oficial. A
   geração, o aceite/descarte e a apresentação completa pertencem à T04.3 e à
   T02.6; portanto CHN-P04-07/08 não são declarados operacionalmente encerrados
@@ -340,14 +341,17 @@ rotacionável e capacidades mínimas. Conflitos de versão retornam `409`; erros
 
 | Método e rota                                      | Finalidade                              | Autorização principal                          |
 | -------------------------------------------------- | --------------------------------------- | ---------------------------------------------- |
-| `POST /api/v1/integrations/n8n/messages`            | Persistir evento canônico de canal      | `AUTOMATION_EXECUTOR`                          |
-| `POST /api/v1/integrations/n8n/delivery-status`     | Atualizar estado de envio               | `AUTOMATION_EXECUTOR`                          |
-| `POST /api/v1/integrations/n8n/runs`                | Correlacionar execução e versão          | `AUTOMATION_EXECUTOR`                          |
+| `POST /api/v1/integrations/n8n/messages/inbound`    | Persistir inbound e devolver contexto   | `AUTOMATION_EXECUTOR`                          |
+| `POST /api/v1/integrations/n8n/conversations/{id}/attachments` | Validar e publicar mídia segura | `AUTOMATION_EXECUTOR`                          |
+| `POST /api/v1/integrations/n8n/conversations/{id}/ai-turns/claim` | Conceder lease cercado ou negar com HTTP 200 | `AUTOMATION_EXECUTOR`              |
+| `POST /api/v1/integrations/n8n/events`              | Reserva, entrega, briefing, handoff e falha | `AUTOMATION_EXECUTOR`                       |
 | `POST /api/v1/sessions`                            | Criar sessão                            | Credencial válida                              |
 | `DELETE /api/v1/sessions/current`                  | Revogar sessão                          | Sessão válida                                  |
 | `GET /api/v1/inbox/conversations`                  | Consultar backlog                       | Atendimento ou Vendedor                        |
 | `POST /api/v1/conversations/{id}/takeover`         | Suspender IA e assumir                  | Atendimento ou Vendedor                        |
-| `POST /api/v1/conversations/{id}/reactivate-agent` | Reativar IA explicitamente              | Atendimento ou Vendedor                        |
+| `POST /api/v1/conversations/{id}/return-to-ai`      | Reativar IA explicitamente              | Atendimento ou Vendedor                        |
+| `POST /api/v1/conversations/{id}/close`             | Encerrar atendimento                    | Atendimento ou Vendedor                        |
+| `POST /api/v1/handoffs/{id}/claim`                  | Assumir handoff não atribuído por CAS   | Papel compatível com `target_role`             |
 | `POST /api/v1/conversations/{id}/convert`          | Criar/vincular contato e Negócio        | `AUTOMATION_EXECUTOR` ou humano autorizado     |
 | `POST /api/v1/conversations/{id}/messages`         | Enviar mensagem humana                  | Atendimento ou Vendedor                        |
 | `POST /api/v1/identity-handoffs`                   | Iniciar Instagram para WhatsApp         | Atendimento, Vendedor ou sistema               |
@@ -388,20 +392,23 @@ por tópico para reconectar sem vazar eventos entre usuários.
 1. WhatsApp ou Instagram entrega o callback ao webhook publicado do n8n.
 2. O workflow valida assinatura, allowlist, tamanho e formato mínimo e deriva
    um envelope canônico sem usar o payload Meta como estado de domínio.
-3. O n8n chama `POST /api/v1/integrations/n8n/messages` com credencial técnica,
-   `Idempotency-Key`, `correlation_id`, versão do workflow e `automation_epoch`.
+3. O n8n chama `POST /api/v1/integrations/n8n/messages/inbound` com Basic Auth,
+   `Idempotency-Key`, correlação, workflow, versão e execução nos headers.
 4. O CRM persiste mensagem, auditoria e efeitos internos na mesma transação sob
    `UNIQUE(provider, provider_account_id, external_event_id)`.
-5. O n8n carrega o contexto autorizado e continua IA e jornada somente depois
-   de receber a confirmação durável do CRM.
-6. Falha transitória usa backoff com jitter; resultado incerto ou falha final
+5. O n8n usa `recent_messages` e o briefing oficial, aguarda a janela de
+   agrupamento e reivindica um `ai_turn` com revisão, evento e epoch atuais.
+6. Antes da Meta, publica `message.send.requested`; somente
+   `authorized: true` na primeira reserva permite atravessar o ponto de não
+   retorno.
+7. Falha transitória usa backoff com jitter; resultado incerto ou falha final
    cria item visível de reconciliação.
 
-O adapter de `T02.2`, suas fixtures, limites, assinatura e criptografia devem
-ser reaproveitados na refatoração, mas a rota direta da Meta no CRM deixa de ser
-a entrada operacional. Apps e webhooks de desenvolvimento e produção são
-separados. Nenhum payload bruto com PII pode permanecer no histórico do n8n
-além da retenção aprovada.
+O adapter de `T02.2`, suas fixtures, limites, assinatura e criptografia do canal
+devem ser reaproveitados, mas HMAC/timestamp não pertencem ao contrato
+n8n→CRM. Após o corte, a rota direta da Meta no CRM fica indisponível e nunca
+funciona como fallback. Nenhum payload bruto com PII permanece no histórico do
+n8n além de 30 dias.
 
 ### Comando e outbox
 
@@ -411,8 +418,9 @@ impedem agendamento interno duplicado, mas não criam “exactly once” de rede
 Cada adapter declara, em uma matriz versionada, se o provedor aceita chave de
 idempotência, permite consultar o resultado e qual é o ponto de não retorno.
 
-Uma tentativa externa percorre
-`pending -> sending -> sent|failed|outcome_unknown`. Se o processo cair entre a
+Um comando n8n percorre
+`pending -> processing -> sent|failed|outcome_unknown`. Uma tentativa de mensagem
+registra separadamente `sent < delivered < read`. Se o processo cair entre a
 chamada remota e o registro da resposta, a tentativa fica `outcome_unknown`.
 Retry automático só ocorre quando o adapter consegue provar ausência do efeito
 ou reutilizar idempotência suportada pelo provedor; nos demais casos, o item vai
@@ -427,9 +435,10 @@ nem repetido às cegas.
 
 ### Corrida IA versus tomada humana
 
-Cada conversa possui `automation_epoch`. O takeover incrementa o epoch e
-cancela jobs ainda não enviados. Antes do envio ou mutação, o n8n apresenta o
-epoch e o CRM revalida estado e responsável; resposta calculada sob epoch antigo é descartada e
+Cada conversa possui `automation_epoch`. Takeover, handoff, retorno à IA,
+fechamento e desligamento incrementam o epoch e invalidam claims antigos.
+Antes do envio ou mutação, o n8n apresenta epoch, revisão, claim e token; o CRM
+revalida estado e responsável. Resposta calculada sob epoch antigo é descartada e
 auditada. A garantia vale até o ponto de não retorno declarado pelo adapter. Se
 uma chamada externa já o atravessou, o takeover impede novas tentativas, expõe
 `sent` ou `outcome_unknown` e exige reconciliação; não se promete cancelar uma
@@ -444,10 +453,10 @@ permitidas são comandos explícitos da API do CRM; o workflow não possui acess
 ao banco e o CRM pode rejeitar qualquer comando por capacidade, versão, gate,
 idempotência ou `automation_epoch`.
 
-Contexto do MVP:
+Contexto do MVP, vindo exclusivamente do CRM:
 
 - janela recente limitada por tokens;
-- resumo versionado;
+- briefing criptografado e versionado;
 - campos oficiais e sugestões pendentes, claramente separados;
 - catálogo e regras autorizadas;
 - orçamento aprovado e vigente, quando aplicável.

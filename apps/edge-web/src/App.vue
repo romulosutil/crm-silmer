@@ -9,6 +9,7 @@ import {
 } from 'vue';
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import AuthPanel from './components/AuthPanel.vue';
+import ThemeSwitcher from './components/ThemeSwitcher.vue';
 import { ApiError, request } from './lib/api-client.js';
 import { KanbanEventStream } from './lib/event-stream.js';
 
@@ -269,6 +270,7 @@ function onCursor(cursor) {
         <span class="connection-state" :data-state="connection">
           {{ connectionLabel }}
         </span>
+        <ThemeSwitcher />
       </header>
       <nav
         id="mobile-nav"

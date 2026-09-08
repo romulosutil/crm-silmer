@@ -25,11 +25,14 @@ test('keeps the status announcement and document language available', async ({
   await expect(page.getByRole('status')).toHaveText('Entre para continuar.');
 });
 
-test('applies the semantic dark theme from tokens.css', async ({ page }) => {
+test('uses the light theme by default, even when the system is dark', async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/');
 
-  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
   await expect
     .poll(() =>
       page.evaluate(() =>
@@ -39,7 +42,19 @@ test('applies the semantic dark theme from tokens.css', async ({ page }) => {
           .trim(),
       ),
     )
-    .toBe('#0c042d');
+    .toBe('#f7f6fb');
+});
+
+test('applies a saved dark theme before the application bundle loads', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    globalThis.localStorage.setItem('silmer-theme', 'dark');
+  });
+  await page.goto('/');
+
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
 });
 
 test('switches access panels with the keyboard and keeps focus predictable', async ({
@@ -201,6 +216,16 @@ test('submits login, restores and closes a session by keyboard without browser s
     'Sessão iniciada com segurança.',
   );
 
+  await page.getByRole('button', { name: 'Claro' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Escuro' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.getByRole('button', { name: 'Escuro' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
   await page.reload();
   await expect(page.getByRole('status')).toHaveText('Sessão restaurada.');
   await expect(
@@ -213,6 +238,7 @@ test('submits login, restores and closes a session by keyboard without browser s
   await expect(
     page.getByRole('heading', { name: 'Boas-vindas de volta' }),
   ).toBeFocused();
+  await page.evaluate(() => globalThis.localStorage.removeItem('silmer-theme'));
   await expect(
     page.evaluate(() => ({
       local: globalThis.localStorage.length,

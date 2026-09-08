@@ -4,8 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#0c042d" />
+    <meta name="theme-color" content="#f7f6fb" />
     <title>CRM Silmer</title>
+    <script>
+      (() => {
+        const stored = localStorage.getItem('silmer-theme') ?? 'light';
+        const resolved =
+          stored === 'system'
+            ? matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : stored;
+        document.documentElement.dataset.theme = resolved;
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

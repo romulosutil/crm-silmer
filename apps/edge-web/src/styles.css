@@ -98,7 +98,7 @@ h2 {
   text-decoration: none;
 }
 .brand-word {
-  color: currentColor;
+  color: var(--color-brand-ink);
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.055em;
@@ -319,6 +319,7 @@ summary {
 .app-sidebar nav a[aria-current] {
   background: var(--color-navigation-border);
   border-inline-start: 3px solid var(--color-accent);
+  color: var(--color-navigation-text);
 }
 .app-sidebar svg {
   inline-size: 1.25rem;
@@ -349,6 +350,29 @@ summary {
 .app-topbar p {
   margin: 0;
   color: var(--color-text-muted);
+}
+.theme-switcher {
+  display: inline-flex;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.2rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+.theme-switcher button {
+  min-block-size: 32px;
+  padding: 0 0.7rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pill);
+}
+.theme-switcher button[aria-pressed='true'] {
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
 }
 .connection-state {
   display: inline-flex;
@@ -730,6 +754,15 @@ summary {
   .app-topbar {
     justify-content: space-between;
   }
+  .theme-switcher button {
+    inline-size: 32px;
+    padding: 0;
+    font-size: 0;
+  }
+  .theme-switcher button::after {
+    content: attr(data-short-label);
+    font-size: var(--text-xs);
+  }
   .icon-button {
     display: inline-block;
   }
@@ -807,6 +840,11 @@ summary {
   .field-list div {
     grid-template-columns: 1fr;
     gap: 0.1rem;
+  }
+}
+@media (max-width: 480px) {
+  .app-topbar p {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

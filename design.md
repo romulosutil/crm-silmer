@@ -92,6 +92,7 @@ Os componentes consomem somente tokens semânticos. Cores brutas não devem ser 
 | `--color-on-accent` | `#0c042d` | `#0c042d` | conteúdo sobre o laranja |
 | `--color-link` | `#5b3fd1` | `#a78bfa` | links e ações textuais |
 | `--color-focus` | `#6f50e8` | `#b9a6ff` | anel de foco |
+| `--color-brand-ink` | `#0c042d` | `#f0ecfd` | logo e marca institucional |
 
 O contraste de texto principal supera `16:1` nos dois temas. Texto secundário supera `5.9:1`. Texto `--color-on-accent` sobre `--color-accent` atinge aproximadamente `6.3:1`.
 
@@ -108,12 +109,15 @@ Cada estado combina cor, ícone e rótulo. Os nomes dos tokens devem expressar f
 
 ### Aplicação do tema
 
-- O tema inicial respeita `prefers-color-scheme` quando não existe preferência salva.
+- O modo claro é a aparência inicial quando não existe preferência salva; `Sistema` continua respeitando `prefers-color-scheme`.
 - A escolha manual oferece `Sistema`, `Claro` e `Escuro`.
 - Aplicar `data-theme="light|dark"` no elemento `html` e declarar `color-scheme` correspondente.
 - Persistir somente a preferência de tema, sem estado global em `window`.
 - Aplicar o tema antes da primeira pintura para evitar flash entre temas.
 - Nenhuma informação, ação ou ilustração pode existir apenas em um dos temas.
+
+O roxo profundo é tinta de marca no modo claro, não fundo de navegação. O
+documento visual aprovado é `design-system/branding-book.html`.
 
 ## 5. Tipografia
 

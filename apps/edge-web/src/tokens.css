@@ -64,12 +64,13 @@
     --status-info-surface: #eaf2ff;
     --status-info-text: #205aa7;
     --color-overlay: rgb(12 4 45 / 68%);
-    --color-navigation-surface: #0c042d;
-    --color-navigation-text: #f0ecfd;
-    --color-navigation-text-muted: #b5aecb;
-    --color-navigation-border: #25166c;
-    --color-navigation-border-strong: #38249a;
-    --color-navigation-active: #250c8d;
+    --color-navigation-surface: #ffffff;
+    --color-navigation-text: #1b1530;
+    --color-navigation-text-muted: #625b75;
+    --color-navigation-border: #e6e0fa;
+    --color-navigation-border-strong: #cfc7ee;
+    --color-navigation-active: #f2effc;
+    --color-brand-ink: #0c042d;
   }
 
   html[data-theme='dark'] {
@@ -103,40 +104,6 @@
     --color-navigation-border: #25166c;
     --color-navigation-border-strong: #38249a;
     --color-navigation-active: #250c8d;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) {
-      color-scheme: dark;
-      --color-canvas: #0c042d;
-      --color-surface: #110642;
-      --color-surface-raised: #19085e;
-      --color-surface-active: #250c8d;
-      --color-text: #f0ecfd;
-      --color-text-muted: #a39dbe;
-      --color-border: #38249a;
-      --color-border-subtle: #250c8d;
-      --color-accent: #ff5b01;
-      --color-accent-hover: #e54f00;
-      --color-accent-subtle: rgb(255 91 1 / 12%);
-      --color-on-accent: #0c042d;
-      --color-link: #a78bfa;
-      --color-focus: #b9a6ff;
-      --status-success-surface: #123a2a;
-      --status-success-text: #8fe3b3;
-      --status-warning-surface: #4a2e00;
-      --status-warning-text: #ffd17a;
-      --status-error-surface: #491a22;
-      --status-error-text: #ffb4c0;
-      --status-info-surface: #152f56;
-      --status-info-text: #a8caff;
-      --color-overlay: rgb(0 0 0 / 68%);
-      --color-navigation-surface: #0c042d;
-      --color-navigation-text: #f0ecfd;
-      --color-navigation-text-muted: #b5aecb;
-      --color-navigation-border: #25166c;
-      --color-navigation-border-strong: #38249a;
-      --color-navigation-active: #250c8d;
-    }
+    --color-brand-ink: #f0ecfd;
   }
 }

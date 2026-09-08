@@ -27,6 +27,7 @@ for (const token of [
   '--color-on-accent',
   '--color-link',
   '--color-focus',
+  '--color-brand-ink',
   '--status-success-surface',
   '--status-success-text',
   '--status-warning-surface',
@@ -41,7 +42,10 @@ for (const token of [
 
 assert.match(tokens, /html\[data-theme='light'\]/u);
 assert.match(tokens, /html\[data-theme='dark'\]/u);
-assert.match(tokens, /:root:not\(\[data-theme\]\)/u);
+assert.doesNotMatch(tokens, /:root:not\(\[data-theme\]\)/u);
+assert.match(tokens, /--color-navigation-surface: #ffffff;/u);
+assert.match(tokens, /--color-navigation-border: #e6e0fa;/u);
+assert.match(tokens, /--color-brand-ink: #0c042d;/u);
 
 const literalColor = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(/iu;
 const namedColor =

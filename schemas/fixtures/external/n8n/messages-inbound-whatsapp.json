@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "event_id": "event-whatsapp-inbound-001",
+  "occurred_at": "2026-09-07T12:00:00.000Z",
+  "channel": "whatsapp",
+  "contact": {
+    "external_id": "contact-whatsapp-synthetic",
+    "display_name": null
+  },
+  "message": {
+    "external_id": "message-whatsapp-inbound-001",
+    "type": "text",
+    "text": "synthetic inbound content",
+    "reply_to": null,
+    "attachment": null
+  },
+  "metadata": {
+    "provider_account_id": "account-whatsapp-synthetic"
+  }
+}

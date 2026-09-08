@@ -1,0 +1,10 @@
+{
+  "claimed": true,
+  "conversation_id": "conversation-synthetic-001",
+  "revision": 7,
+  "conversation_version": 11,
+  "automation_epoch": 3,
+  "claim_id": "claim-synthetic-001",
+  "claim_token": "claim-token-synthetic-001",
+  "lease_expires_at": "2026-09-07T12:00:30.000Z"
+}

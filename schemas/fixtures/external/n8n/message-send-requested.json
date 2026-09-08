@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "automation_epoch": 3,
+  "event_id": "event-send-fence-001",
+  "event_type": "message.send.requested",
+  "occurred_at": "2026-09-07T12:00:10.000Z",
+  "conversation_id": "conversation-synthetic-001",
+  "revision": 7,
+  "expected_version": 11,
+  "claim_token": "claim-token-synthetic-001",
+  "claim_id": "claim-synthetic-001",
+  "command_id": "claim-synthetic-001:ai-response",
+  "attempt_id": "attempt-send-synthetic-001",
+  "message": {
+    "type": "text",
+    "text": "synthetic outbound content"
+  },
+  "lead_patch": {
+    "segment": "uniform",
+    "quantity": 30
+  }
+}

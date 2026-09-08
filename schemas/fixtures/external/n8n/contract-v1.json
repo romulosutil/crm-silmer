@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "1.0",
+  "authentication": {
+    "scheme": "Basic",
+    "serviceActor": "AUTOMATION_EXECUTOR",
+    "rotation": "current-and-previous-during-explicit-overlap"
+  },
+  "requiredHeaders": [
+    "authorization",
+    "idempotency-key",
+    "x-correlation-id",
+    "x-silmer-workflow-key",
+    "x-silmer-workflow-version",
+    "x-silmer-execution-id"
+  ],
+  "errorMediaType": "application/problem+json",
+  "channels": ["whatsapp", "instagram"],
+  "activeChannels": ["whatsapp"],
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/v1/integrations/n8n/messages/inbound",
+      "requestFixture": "messages-inbound-whatsapp.json"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integrations/n8n/conversations/{conversation_id}/attachments",
+      "requestFixture": "attachment-metadata.json"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integrations/n8n/conversations/{conversation_id}/ai-turns/claim",
+      "requestFixture": "ai-turn-claim-request.json",
+      "responseFixture": "ai-turn-claim-response.json"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integrations/n8n/events",
+      "requestFixture": "message-send-requested.json"
+    }
+  ],
+  "eventTypes": [
+    "message.send.requested",
+    "message.send.unknown",
+    "message.sent",
+    "message.delivered",
+    "message.read",
+    "message.failed",
+    "lead.updated",
+    "handoff.requested",
+    "workflow.failed"
+  ],
+  "briefingPatchFields": [
+    "artwork_status",
+    "city_or_postal_code",
+    "colors",
+    "customizations",
+    "delivery_mode",
+    "needed_by",
+    "notes",
+    "numbers",
+    "product_model",
+    "quantity",
+    "segment",
+    "sizes",
+    "sponsors"
+  ],
+  "deliveryStatusOrder": ["sent", "delivered", "read"],
+  "security": {
+    "rejectUnknownFields": true,
+    "rejectBearerAuthentication": true,
+    "persistRawAuthorization": false,
+    "persistMessageContentInTechnicalLogs": false,
+    "persistSecretsInProblems": false
+  }
+}

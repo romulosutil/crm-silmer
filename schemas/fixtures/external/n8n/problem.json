@@ -1,0 +1,12 @@
+{
+  "type": "https://crm.silmer.invalid/problems/stale-automation-epoch",
+  "title": "Automation command is stale",
+  "status": 409,
+  "detail": "The request conflicts with the current conversation state",
+  "instance": "/api/v1/integrations/n8n/events",
+  "accepted": false,
+  "error": {
+    "code": "STALE_AUTOMATION_EPOCH"
+  },
+  "request_id": "request-synthetic-001"
+}

@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { WorkConflictError, WorkValidationError } from './errors.js';
+import {
+  WorkConflictError,
+  WorkForbiddenError,
+  WorkValidationError,
+} from './errors.js';
 
 export class PostgresWorkManagementRepository {
   /** @param {{dealPort: any, conversationPort: any, userPort: any, idFactory?: (kind: string) => string}} input */
@@ -189,19 +193,21 @@ export class PostgresWorkManagementRepository {
       (
         await database.query(
           `INSERT INTO crm.handoffs
-             (id, deal_id, conversation_id, assigned_user_id, status, version,
+             (id, deal_id, conversation_id, assigned_user_id, target_role,
+              status, version,
               reason_code, summary_envelope, due_at, sla_minutes,
               sla_policy_version, automation_workflow_key,
               automation_workflow_version, automation_execution_id,
               created_at, updated_at)
-           VALUES ($1, $2, $3, $4, 'pending', 1, $5, $6::jsonb, $7, $8,
-                   $9, $10, $11, $12, $13, $13)
+           VALUES ($1, $2, $3, $4, $5, 'pending', 1, $6, $7::jsonb, $8, $9,
+                   $10, $11, $12, $13, $14, $14)
            RETURNING *`,
           [
             handoffId,
             deal.id,
             conversation.id,
             user.id,
+            user.functionName,
             input.reasonCode,
             JSON.stringify(input.summaryEnvelope),
             input.dueAt,
@@ -245,6 +251,92 @@ export class PostgresWorkManagementRepository {
       deal: changedDeal,
       handoff,
       task,
+    });
+  }
+
+  /** @param {any} input @param {any} context */
+  async claimHandoff(input, context) {
+    const database = queryable(context);
+    const locator = (
+      await database.query(
+        'SELECT conversation_id FROM crm.handoffs WHERE id = $1',
+        [input.handoffId],
+      )
+    ).rows[0];
+    if (!locator) throw new WorkConflictError('Handoff was not found');
+    const conversation = (
+      await database.query(
+        `SELECT * FROM crm.conversations WHERE id = $1 FOR UPDATE`,
+        [locator.conversation_id],
+      )
+    ).rows[0];
+    if (!conversation)
+      throw new WorkConflictError('Conversation was not found');
+    const user = await this.#activeUser(input.actor.id, context);
+    const handoff = mapHandoff(
+      (
+        await database.query(
+          'SELECT * FROM crm.handoffs WHERE id = $1 FOR UPDATE',
+          [input.handoffId],
+        )
+      ).rows[0],
+    );
+    if (
+      handoff.version !== input.expectedHandoffVersion ||
+      handoff.status !== 'pending' ||
+      handoff.assignedUserId !== null
+    ) {
+      throw new WorkConflictError('Handoff was already claimed');
+    }
+    if (user.functionName !== handoff.targetRole) {
+      throw new WorkForbiddenError();
+    }
+    if (conversation.automation_state !== 'human' || conversation.terminal_at) {
+      throw new WorkConflictError('Conversation is not awaiting a human');
+    }
+    const changedConversation = (
+      await database.query(
+        `UPDATE crm.conversations
+         SET assigned_user_id = $2, state = 'em_atendimento',
+             version = version + 1
+         WHERE id = $1 AND automation_state = 'human'
+           AND terminal_at IS NULL
+         RETURNING id, automation_state, automation_epoch, assigned_user_id,
+                   state, version, terminal_at`,
+        [handoff.conversationId, user.id],
+      )
+    ).rows[0];
+    if (!changedConversation) throw new WorkConflictError();
+    const changedHandoff = mapHandoff(
+      (
+        await database.query(
+          `UPDATE crm.handoffs
+           SET assigned_user_id = $3, status = 'accepted',
+               version = version + 1, updated_at = $4
+           WHERE id = $1 AND version = $2 AND status = 'pending'
+             AND assigned_user_id IS NULL
+           RETURNING *`,
+          [handoff.id, handoff.version, user.id, input.occurredAt],
+        )
+      ).rows[0],
+    );
+    await this.#appendHandoffHistory(
+      database,
+      changedHandoff,
+      handoff.status,
+      input,
+    );
+    return freeze({
+      conversation: {
+        assignedUserId: changedConversation.assigned_user_id,
+        automationEpoch: Number(changedConversation.automation_epoch),
+        automationState: changedConversation.automation_state,
+        id: changedConversation.id,
+        state: changedConversation.state,
+        terminalAt: null,
+        version: Number(changedConversation.version),
+      },
+      handoff: changedHandoff,
     });
   }
 
@@ -440,14 +532,16 @@ export class PostgresWorkManagementRepository {
     await database.query(
       `INSERT INTO crm.handoff_history
          (handoff_id, resulting_version, from_status, to_status,
-          assigned_user_id, actor_id, reason_code, correlation_id, occurred_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          assigned_user_id, target_role, actor_id, reason_code, correlation_id,
+          occurred_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         handoff.id,
         handoff.version,
         fromStatus,
         handoff.status,
         handoff.assignedUserId,
+        handoff.targetRole,
         input.actor.id,
         input.reasonCode,
         input.correlationId,
@@ -496,6 +590,7 @@ function mapHandoff(row) {
     dueAt: iso(row.due_at),
     id: row.id,
     reasonCode: row.reason_code,
+    targetRole: row.target_role,
     slaMinutes: Number(row.sla_minutes),
     slaPolicyVersion: row.sla_policy_version,
     status: row.status,

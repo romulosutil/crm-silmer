@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { WorkConflictError, WorkValidationError } from './errors.js';
+import {
+  WorkConflictError,
+  WorkForbiddenError,
+  WorkValidationError,
+} from './errors.js';
 
 export class InMemoryWorkManagementRepository {
   /** @type {any[]} */
@@ -16,13 +20,21 @@ export class InMemoryWorkManagementRepository {
   #taskHistory = [];
   #users = new Map();
 
-  /** @param {{deals?: any[], conversations?: any[], users?: any[], idFactory?: (kind: string) => string}} [options] */
-  constructor({ deals = [], conversations = [], users = [], idFactory } = {}) {
+  /** @param {{deals?: any[], conversations?: any[], handoffs?: any[], users?: any[], idFactory?: (kind: string) => string}} [options] */
+  constructor({
+    deals = [],
+    conversations = [],
+    handoffs = [],
+    users = [],
+    idFactory,
+  } = {}) {
     this.#idFactory = idFactory ?? ((kind) => `${kind}-${randomUUID()}`);
     for (const value of deals)
       this.#deals.set(value.id, structuredClone(value));
     for (const value of conversations)
       this.#conversations.set(value.id, structuredClone(value));
+    for (const value of handoffs)
+      this.#handoffs.set(value.id, structuredClone(value));
     for (const value of users)
       this.#users.set(value.id, structuredClone(value));
   }
@@ -148,6 +160,7 @@ export class InMemoryWorkManagementRepository {
       dueAt: input.dueAt,
       id: this.#idFactory('handoff'),
       reasonCode: input.reasonCode,
+      targetRole: user.functionName,
       slaMinutes: input.slaMinutes,
       slaPolicyVersion: input.slaPolicyVersion,
       status: 'pending',
@@ -250,6 +263,45 @@ export class InMemoryWorkManagementRepository {
       deal: publicDeal(deal),
       handoff: publicHandoff(handoff),
       task: publicTask(task),
+    });
+  }
+
+  /** @param {any} input */
+  async claimHandoff(input) {
+    this.#humanActor(input);
+    const handoff = this.#handoff(
+      input.handoffId,
+      input.expectedHandoffVersion,
+    );
+    const user = this.#user(input.actor.id);
+    const conversation = this.#conversations.get(handoff.conversationId);
+    if (
+      handoff.status !== 'pending' ||
+      handoff.assignedUserId !== null ||
+      !conversation ||
+      conversation.terminalAt ||
+      conversation.automationState !== 'human'
+    ) {
+      throw new WorkConflictError('Handoff was already claimed');
+    }
+    if (user.functionName !== handoff.targetRole) {
+      throw new WorkForbiddenError();
+    }
+    conversation.assignedUserId = user.id;
+    conversation.state = 'em_atendimento';
+    conversation.updatedAt = input.occurredAt;
+    conversation.version += 1;
+    const previous = handoff.status;
+    handoff.assignedUserId = user.id;
+    handoff.status = 'accepted';
+    handoff.updatedAt = input.occurredAt;
+    handoff.version += 1;
+    this.#handoffHistory.push(
+      history(handoff, previous, handoff.status, input),
+    );
+    return freeze({
+      conversation: publicConversation(conversation),
+      handoff: publicHandoff(handoff),
     });
   }
 

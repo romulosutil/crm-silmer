@@ -51,6 +51,11 @@ function clearFilters() {
   void nextTick(() => document.querySelector('#inbox-search')?.focus());
 }
 
+function clearSearch() {
+  query.value = '';
+  void nextTick(() => document.querySelector('#inbox-search')?.focus());
+}
+
 onMounted(() => heading.value?.focus());
 </script>
 
@@ -79,7 +84,7 @@ onMounted(() => heading.value?.focus());
             v-if="query"
             type="button"
             aria-label="Limpar busca"
-            @click="query = ''"
+            @click="clearSearch"
           >
             Limpar
           </button>

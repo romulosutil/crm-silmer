@@ -2,13 +2,13 @@
 
 CRM web próprio da Silmer para organizar conversas comerciais, qualificação,
 vendas, PIX e geração da Ficha de Pedido. O produto substituirá integralmente o
-Datacrazy; WhatsApp Business e Instagram Direct são canais obrigatórios do
-piloto e disparam a mesma jornada no n8n.
+Datacrazy. O primeiro MVP operacional usa WhatsApp Business no n8n; Instagram
+Direct é a próxima fase de canal.
 
-> **Estado atual:** a integração n8n v1 está implementada na sequência
-> `N8N-1–N8N-7`, mas publicação e go-live continuam sujeitos às duas
-> credenciais Basic DEV, homologação WhatsApp, gates externos e, para o
-> lançamento integral, homologação Instagram. Veja
+> **Estado atual:** a integração n8n foi reduzida ao recorte `N8N-MVP-1`, com
+> três endpoints e reserva de envio por epoch/revisão. Publicação e go-live
+> continuam sujeitos às duas credenciais Basic DEV, homologação WhatsApp e
+> gates externos. Veja
 > [`docs/integrations/n8n/README.md`](docs/integrations/n8n/README.md).
 
 ## Comece por aqui
@@ -35,7 +35,7 @@ histórico e não define o sistema novo.
 - Runtime: monólito modular em JavaScript ESM, Node.js e Fastify.
 - Dados: PostgreSQL com SQL e migrações versionadas.
 - Processos do CRM: `edge-web`, `api` e `worker` no mesmo repositório.
-- Automação: n8n obrigatório para WhatsApp, Instagram, OpenAI/Gemini e jornada,
+- Automação: n8n obrigatório para WhatsApp, provedor de IA e jornada,
   sempre por APIs do CRM e sem acesso direto ao banco.
 - Integrações: contratos canônicos entre n8n e CRM; mídia transitória em volume
   privado da VPS, arquivos válidos no processo operacional Dropbox e storage

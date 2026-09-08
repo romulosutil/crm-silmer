@@ -6,8 +6,6 @@ import {
   ContractValidationError,
   assertChannelActive,
   validateAttachmentMetadata,
-  validateClaimRequest,
-  validateClaimResponse,
   validateContract,
   validateEvent,
   validateHeaders,
@@ -44,13 +42,12 @@ function basicHeaders() {
   };
 }
 
-test('declares exactly four POST endpoints with Basic-only service identity', async () => {
+test('declares exactly three POST endpoints with Basic-only service identity', async () => {
   const contract = await fixture('contract-v1.json');
   assert.equal(validateContract(contract), true);
   assert.deepEqual(contract.endpoints.map(routeKey), [
     'POST /api/v1/integrations/n8n/messages/inbound',
     'POST /api/v1/integrations/n8n/conversations/{conversation_id}/attachments',
-    'POST /api/v1/integrations/n8n/conversations/{conversation_id}/ai-turns/claim',
     'POST /api/v1/integrations/n8n/events',
   ]);
   assert.equal(contract.authentication.scheme, 'Basic');
@@ -62,31 +59,26 @@ test('validates every endpoint fixture and correlates required headers', async (
   const contract = await fixture('contract-v1.json');
   const inbound = await fixture('messages-inbound-whatsapp.json');
   const attachment = await fixture('attachment-metadata.json');
-  const claim = await fixture('ai-turn-claim-request.json');
-  const claimResponse = await fixture('ai-turn-claim-response.json');
   const event = await fixture('message-send-requested.json');
 
   assert.equal(validateHeaders(basicHeaders(), contract), true);
   assert.equal(validateInbound(inbound, contract), true);
   assert.equal(validateAttachmentMetadata(attachment), true);
-  assert.equal(validateClaimRequest(claim), true);
-  assert.equal(validateClaimResponse(claimResponse), true);
   assert.equal(validateEvent(event, contract), true);
 });
 
-test('keeps Instagram in the schema while activating only WhatsApp', async () => {
+test('scopes the executable MVP contract to WhatsApp', async () => {
   const contract = await fixture('contract-v1.json');
   const whatsapp = await fixture('messages-inbound-whatsapp.json');
   const instagram = await fixture('messages-inbound-instagram.json');
 
   assert.equal(validateInbound(whatsapp, contract), true);
-  assert.equal(validateInbound(instagram, contract), true);
   assert.equal(assertChannelActive(whatsapp, contract), true);
   assert.throws(
-    () => assertChannelActive(instagram, contract),
+    () => validateInbound(instagram, contract),
     (error) =>
       error instanceof ContractValidationError &&
-      error.code === 'CHANNEL_NOT_ACTIVE',
+      error.code === 'UNSUPPORTED_CHANNEL',
   );
 });
 

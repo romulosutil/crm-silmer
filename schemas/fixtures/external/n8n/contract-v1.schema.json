@@ -31,9 +31,7 @@
       "maxLength": 512,
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
     },
-    "channel": {
-      "enum": ["whatsapp", "instagram"]
-    },
+    "channel": { "const": "whatsapp" },
     "briefingPatch": {
       "type": "object",
       "additionalProperties": false,
@@ -121,7 +119,7 @@
     "errorMediaType": { "const": "application/problem+json" },
     "channels": {
       "type": "array",
-      "const": ["whatsapp", "instagram"]
+      "const": ["whatsapp"]
     },
     "activeChannels": {
       "type": "array",
@@ -129,8 +127,8 @@
     },
     "endpoints": {
       "type": "array",
-      "minItems": 4,
-      "maxItems": 4,
+      "minItems": 3,
+      "maxItems": 3,
       "items": {
         "type": "object",
         "required": ["method", "path", "requestFixture"],

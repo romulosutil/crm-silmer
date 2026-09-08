@@ -1,19 +1,22 @@
 # Arquitetura — Decisões do MVP
 
-> **Status:** baseline revisada em 07/09/2026 pelo contrato n8n v1.  
+> **Status:** baseline simplificada em 08/09/2026 pelo contrato n8n MVP.  
 > **Detalhes:** `TECHNICAL-DESIGN.md`; implantação em `EASYPANEL-TOPOLOGY.md`.
 
 ## Forma do produto
 
 O MVP possui três objetivos que podem evoluir isoladamente e convergem no lançamento:
 
-| Objetivo | Responsabilidade | Não faz |
-| --- | --- | --- |
-| CRM | Fonte oficial de contatos, conversas, negócios, etapas, catálogo, pedidos, financeiro, permissões e auditoria | Não executa prompts nem depende da UI para iniciar fluxos |
-| Inbox Multicanal | Exibe mensagens, pendências e saúde; permite resposta manual, atribuição, takeover e reconciliação | Não contém regra comercial nem dispara o n8n por botão |
-| Agente Vendedor Silmer no n8n | Recebe/envia WhatsApp, chama OpenAI ou Gemini e orquestra criação/atualização de leads, Kanban e handoff | Não escreve no banco nem decide fora dos contratos do CRM |
+| Objetivo                      | Responsabilidade                                                                                              | Não faz                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| CRM                           | Fonte oficial de contatos, conversas, negócios, etapas, catálogo, pedidos, financeiro, permissões e auditoria | Não executa prompts nem depende da UI para iniciar fluxos |
+| Inbox Multicanal              | Exibe mensagens, pendências e saúde; permite resposta manual, atribuição, takeover e reconciliação            | Não contém regra comercial nem dispara o n8n por botão    |
+| Agente Vendedor Silmer no n8n | Recebe/envia WhatsApp, chama o provedor de IA configurado e orquestra resposta, comandos canônicos e handoff  | Não escreve no banco nem decide fora dos contratos do CRM |
 
-Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM → Inbox/Kanban`. Respostas seguem `CRM → n8n → canal de origem ou canal migrado`. Cada mensagem válida dispara automaticamente o n8n; a interface apenas observa ou assume a conversa.
+Fluxo inicial: `Cliente → WhatsApp → n8n → API do CRM → Inbox/Kanban`.
+Respostas seguem `CRM → n8n → WhatsApp`. Instagram reutilizará a fronteira em
+fase posterior. Cada mensagem válida dispara automaticamente o n8n; a
+interface apenas observa ou assume a conversa.
 
 ## Fronteiras e autoridade
 
@@ -23,23 +26,26 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 - O CRM valida estados e gates. O workflow decide o próximo comando permitido; não redefine a máquina de estados.
 - Logs do n8n são evidência técnica. A auditoria durável do efeito comercial pertence ao CRM.
 - OpenAI e Gemini implementam o mesmo contrato estruturado. Regras de preço, permissão, gate e handoff são determinísticas e ficam fora do prompt.
-- Tomada humana, handoff, retorno à IA, fechamento e desligamento incrementam o `automation_epoch`; qualquer claim antigo é rejeitado antes de enviar mensagem ou alterar estado.
+- Tomada humana, handoff, retorno à IA, fechamento e desligamento incrementam o
+  `automation_epoch`; decisões antigas são rejeitadas na reserva de envio.
 - Toda chamada à Meta exige reserva atômica `message.send.requested`; resultado incerto é reconciliado e nunca repetido às cegas.
 
 ## Decisões confirmadas
 
 - Frontend em Vue 3, JavaScript ESM e CSS, compilado com Vite; decisão registrada em `docs/adr/001-adotar-vue-no-frontend.md`.
-- APIs oficiais do WhatsApp Business e Instagram Direct como canais obrigatórios do piloto, integradas operacionalmente pelo n8n e sujeitas ao mesmo contrato canônico.
+- API oficial do WhatsApp Business como canal do primeiro MVP operacional;
+  Instagram Direct é a próxima fase de canal.
 - Migração entre Instagram e WhatsApp preserva o Negócio e só associa `@instagram` e telefone após correlação verificável e auditável.
 - Caixa de Entrada separada do Kanban.
 - Ficha de Pedido como contrato de dados da jornada.
 - Vendedor Silmer autônomo nas operações explicitamente concedidas ao ator `AUTOMATION_EXECUTOR`.
 - Aprovação de preço, venda, pagamento e Ficha permanece humana no caminho inicial.
 - n8n obrigatório; indisponibilidade do n8n torna a automação indisponível e visível, sem fallback silencioso para outra fonte de estado.
-- Adaptador n8n v1 conforme RFC 001/ADR 002: quatro endpoints, Basic only,
-  briefing oficial, claim com lease e comandos CRM→n8n por outbox.
-- Backend neutro de canal, com WhatsApp homologado primeiro; Instagram continua
-  como gate obrigatório antes do lançamento integral.
+- Integração n8n MVP conforme RFC 002/ADR 003: três endpoints, Basic only,
+  briefing consolidado na Conversa, reserva por epoch/revisão e comandos
+  CRM→n8n por outbox.
+- Contrato ativo somente para WhatsApp; Instagram é evolução posterior e não
+  bloqueia a validação do primeiro MVP operacional.
 - Numeração de pedidos iniciada em `01-CRM`, sem dependência legada.
 - Rômulo Sutil Corrêa como Responsável de Privacidade e política do piloto aprovada após consulta jurídica.
 - Defaults `D00.6-01..07` aprovados; `silmer:romulo.sutil` designado como Tech Lead, equipe de entrega e Administrador Técnico.
@@ -74,7 +80,9 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 - Auditoria de negócio é append-only e não se confunde com log técnico.
 - Perda da única cópia de mídia transitória produz `lost/unavailable`, nunca alegação de recuperação.
 - Venda, PIX, Pedido, Ficha, envio e onboarding usam chaves idempotentes e constraints transacionais.
-- Cada execução correlaciona `workflow_key`, versão, `execution_id`, mensagem, `correlation_id` e `automation_epoch`.
+- Cada evento técnico correlaciona `workflow_key`, versão, `execution_id`,
+  mensagem, `correlation_id` e `automation_epoch`, sem exigir entidade própria
+  de execução.
 
 ## Caminho de lançamento
 
@@ -82,6 +90,6 @@ Fluxo obrigatório: `Cliente → WhatsApp ou Instagram → n8n → API do CRM �
 2. Criar as duas credenciais Basic DEV e atualizar o workflow ainda inativo.
 3. Homologar WhatsApp ponta a ponta, publicar e transferir o webhook da Meta.
 4. Desabilitar a entrada direta no CRM; rollback pausa a automação sem reativá-la.
-5. Homologar Instagram e só então executar o gate integral de UAT/lançamento.
+5. Após o primeiro MVP, implementar e homologar Instagram como `CANAL-2`.
 
 As aprovações externas de IA, observabilidade, storage e recovery permanecem gates próprios. Testes e documentação não substituem evidência operacional nem aprovação humana.

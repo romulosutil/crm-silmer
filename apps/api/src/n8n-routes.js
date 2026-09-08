@@ -8,14 +8,13 @@ const N8N_SCHEMA_VERSION = '1.0';
 
 const EVENT_ACTIONS = Object.freeze({
   'handoff.requested': 'handoff.create',
-  'lead.updated': 'integration.n8n.briefing.update',
-  'message.delivered': 'integration.n8n.delivery-status.update',
-  'message.failed': 'integration.n8n.delivery-status.update',
-  'message.read': 'integration.n8n.delivery-status.update',
-  'message.send.requested': 'integration.n8n.message-send.reserve',
-  'message.send.unknown': 'integration.n8n.delivery-status.update',
-  'message.sent': 'integration.n8n.delivery-status.update',
-  'workflow.failed': 'integration.n8n.run.create',
+  'message.delivered': 'integration.n8n.event.create',
+  'message.failed': 'integration.n8n.event.create',
+  'message.read': 'integration.n8n.event.create',
+  'message.send.requested': 'integration.n8n.event.create',
+  'message.send.unknown': 'integration.n8n.event.create',
+  'message.sent': 'integration.n8n.event.create',
+  'workflow.failed': 'integration.n8n.event.create',
 });
 
 export class N8nRouteError extends Error {
@@ -37,7 +36,6 @@ export class N8nRouteError extends Error {
  * @param {{
  *   receiveInbound(input: Record<string, unknown>): Promise<Record<string, unknown>>,
  *   storeAttachment(input: Record<string, unknown>): Promise<Record<string, unknown>>,
- *   claimAiTurn(input: Record<string, unknown>): Promise<Record<string, unknown>>,
  *   recordEvent(input: Record<string, unknown>): Promise<Record<string, unknown>>,
  * }} integration
  * @param {(request: import('fastify').FastifyRequest) => {correlationId: string, requestId: string}} contextFor
@@ -142,64 +140,24 @@ export function registerN8nRoutes(api, integration, contextFor) {
     );
 
     scope.post(
-      '/api/v1/integrations/n8n/conversations/:conversationId/ai-turns/claim',
-      { bodyLimit: JSON_BODY_LIMIT_BYTES },
-      async (request, reply) => {
-        const body = requireObject(request.body);
-        rejectUnknownKeys(body, [
-          'automation_epoch',
-          'claim_id',
-          'last_event_id',
-          'revision',
-          'schema_version',
-          'worker_id',
-        ]);
-        requireSchemaVersion(body.schema_version);
-        const params = requireObject(request.params);
-        const technical = await authorizeRequest(
-          request,
-          contextFor,
-          'integration.n8n.ai-turn.claim',
-        );
-        const result = await integration.claimAiTurn({
-          ...body,
-          conversation_id: requireIdentifier(
-            params.conversationId,
-            'INVALID_CONVERSATION_ID',
-          ),
-          technical,
-        });
-        return reply.code(200).send(result);
-      },
-    );
-
-    scope.post(
       '/api/v1/integrations/n8n/events',
       { bodyLimit: JSON_BODY_LIMIT_BYTES },
       async (request, reply) => {
         const body = requireObject(request.body);
         rejectUnknownKeys(body, [
-          'ai_model',
-          'ai_provider',
-          'attempt_id',
           'automation_epoch',
-          'claim_id',
-          'claim_token',
+          'briefing_patch',
           'command_id',
           'conversation_id',
           'event_id',
           'event_type',
-          'expected_version',
           'external_message_id',
           'failure',
           'handoff',
-          'lead_patch',
           'message',
           'occurred_at',
-          'prompt_version',
-          'revision',
           'schema_version',
-          'status',
+          'source_revision',
         ]);
         requireSchemaVersion(body.schema_version);
         const eventType = requireIdentifier(
@@ -411,12 +369,7 @@ function problemTitle(statusCode) {
 
 /** @param {any} integration */
 function assertIntegration(integration) {
-  for (const method of [
-    'claimAiTurn',
-    'receiveInbound',
-    'recordEvent',
-    'storeAttachment',
-  ]) {
+  for (const method of ['receiveInbound', 'recordEvent', 'storeAttachment']) {
     if (!integration || typeof integration[method] !== 'function') {
       throw new TypeError(`n8n integration must implement ${method}`);
     }

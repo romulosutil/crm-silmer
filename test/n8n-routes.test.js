@@ -17,15 +17,13 @@ function harness() {
   /** @type {Array<{method: string, input: Record<string, unknown>}>} */
   const calls = [];
   const integration = Object.fromEntries(
-    ['claimAiTurn', 'receiveInbound', 'recordEvent', 'storeAttachment'].map(
-      (method) => [
-        method,
-        async (/** @type {Record<string, unknown>} */ input) => {
-          calls.push({ input, method });
-          return { accepted: true, method };
-        },
-      ],
-    ),
+    ['receiveInbound', 'recordEvent', 'storeAttachment'].map((method) => [
+      method,
+      async (/** @type {Record<string, unknown>} */ input) => {
+        calls.push({ input, method });
+        return { accepted: true, method };
+      },
+    ]),
   );
   const api = createApi(
     {},

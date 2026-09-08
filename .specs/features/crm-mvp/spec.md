@@ -6,7 +6,8 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 
 ## Objetivos
 
-- Conduzir o caminho feliz do WhatsApp e do Instagram oficiais até a Ficha de Pedido.
+- Conduzir o caminho feliz do WhatsApp oficial até a Ficha de Pedido; adicionar
+  Instagram em uma fase posterior sobre o mesmo domínio.
 - Disparar automaticamente o n8n a cada mensagem recebida, sem botão na UI.
 - Usar o Vendedor Silmer no n8n para conversar, cadastrar ou atualizar leads, mover o Kanban e transferir para uma pessoa quando necessário.
 - Manter o CRM como fonte da verdade, com APIs autorizadas, rastreabilidade, tomada humana e reconciliação de falhas.
@@ -21,7 +22,10 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 **Critérios de aceite:**
 
 1. **ORC-01:** WHEN uma mensagem recebida é validada pelo canal THEN ela SHALL disparar automaticamente o n8n, sem ação da UI.
-2. **ORC-02:** WHEN o n8n recebe ou envia uma mensagem pelo WhatsApp ou Instagram oficial THEN ele SHALL aplicar o mesmo fluxo, normalizar o evento e registrar seu resultado no CRM por contrato versionado.
+2. **ORC-02:** WHEN o n8n recebe ou envia uma mensagem pelo WhatsApp oficial
+   THEN ele SHALL normalizar o evento e registrar seu resultado no CRM por
+   contrato versionado; o adapter futuro do Instagram SHALL reutilizar esse
+   contrato sem criar outro domínio.
 3. **ORC-03:** WHEN o Vendedor Silmer cria ou atualiza Contato ou Negócio, preenche campo ou move etapa THEN o n8n SHALL usar uma API autenticada, autorizada, idempotente e auditável do CRM e nunca acessar diretamente o banco.
 4. **ORC-04:** WHEN um workflow executa THEN o CRM SHALL correlacionar `workflow_key`, versão publicada, `execution_id`, mensagem, `automation_epoch` e resultado sem armazenar segredo.
 5. **ORC-05:** WHEN eventos são repetidos, concorrentes ou chegam fora de ordem THEN CRM e n8n SHALL produzir no máximo um efeito oficial e expor divergências para reconciliação.
@@ -30,10 +34,11 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
 8. **ORC-08:** WHEN n8n, canal ou provedor de IA fica indisponível ou retorna resultado incerto THEN o sistema SHALL tornar a pendência visível e retomável, sem avançar silenciosamente a jornada.
 9. **ORC-09:** WHEN o atendimento migra de canal THEN o sistema SHALL continuar o mesmo Negócio e conectar `@instagram` e telefone ao lead somente após correlação verificável, explícita e auditável, preservando as duas identidades e os históricos.
 
-O contrato executável de ORC-01–09 é a OpenAPI v1: quatro endpoints n8n→CRM,
-Basic Auth como `AUTOMATION_EXECUTOR`, idempotência com hash, claims com lease e
-o fence de uso único `message.send.requested`. Resultado desconhecido exige
-reconciliação e nunca retry cego à Meta.
+O contrato executável de ORC-01–09 é a OpenAPI v1: três endpoints n8n→CRM,
+Basic Auth como `AUTOMATION_EXECUTOR`, idempotência com hash e o fence de uso
+único `message.send.requested`, validado por `automation_epoch` e
+`source_revision`. Resultado desconhecido exige reconciliação e nunca retry
+cego à Meta. Não há claim, lease ou token de rodada no MVP simples.
 
 **Teste independente:** receber uma mensagem realista, comprovar o disparo automático do n8n, executar a jornada com OpenAI e Gemini, repetir eventos e assumir a conversa durante uma execução sem duplicar ou aplicar efeito atrasado.
 
@@ -70,9 +75,10 @@ posteriores.
 7. **AGT-07:** WHEN todos os campos obrigatórios aplicáveis da etapa estão `preenchido` ou `nao_aplicavel` com motivo THEN o sistema SHALL permitir que o ator técnico do n8n registre o gate e avance exatamente uma etapa conforme `CAMPOS-FICHA-E-JORNADA-P0-1.md`.
 8. **AGT-08:** WHEN um campo obrigatório está `pendente` ou `divergente`, ou uma correção invalida etapa anterior, THEN o sistema SHALL impedir avanço ou exigir retorno à primeira etapa incompleta sem apagar o histórico.
 
-O contexto do agente vem de `recent_messages` e do briefing oficial versionado
-do CRM; não existe memória curta paralela no n8n. `lead_patch` ignora nulos e
-altera apenas o briefing até a promoção explícita pelos endpoints canônicos.
+O contexto do agente vem de `recent_messages` e do snapshot de briefing da
+Conversa; não existe memória curta paralela no n8n. `briefing_patch` ignora
+nulos, aceita somente campos de qualificação e altera apenas esse snapshot até
+a promoção explícita pelos endpoints canônicos.
 
 **Teste independente:** conduzir um lead simulado automaticamente pelas etapas permitidas, preservar as aprovações humanas de preço, venda, pagamento e Ficha e repetir com os três cenários de handoff.
 
@@ -101,11 +107,14 @@ altera apenas o briefing até a promoção explícita pelos endpoints canônicos
 1. **MSG-01:** WHEN um webhook é recebido mais de uma vez THEN o sistema SHALL processá-lo idempotentemente, sem duplicar mídia, validação ou handoff operacional.
 2. **MSG-02:** WHEN o processamento falha ou a mídia temporária fica indisponível THEN o sistema SHALL colocar o evento em pendência visível com motivo e opção de retomada quando ainda possível.
 3. **MSG-03:** WHEN o canal ou o volume temporário fica indisponível THEN o sistema SHALL exibir o estado e o último evento recebido sem afirmar que mensagens ou bytes não observados foram recuperados.
-4. **MSG-04:** WHEN o piloto é iniciado THEN os canais obrigatórios WhatsApp Business e Instagram Direct SHALL estar operacionais no n8n e executar a mesma jornada, inclusive migração de canal e handoff.
+4. **MSG-04:** WHEN o primeiro MVP operacional é iniciado THEN WhatsApp
+   Business SHALL estar operacional no n8n; WHEN a fase `CANAL-2` é iniciada
+   THEN Instagram Direct SHALL reutilizar a mesma jornada, inclusive correlação
+   de identidade e handoff.
 
-O backend comum é neutro de canal. WhatsApp é a primeira homologação desta
-entrega; MSG-04 e o lançamento integral continuam bloqueados até a homologação
-obrigatória do Instagram.
+O domínio comum preserva fronteiras neutras de canal, mas o contrato desta
+entrega aceita somente WhatsApp. Instagram é uma fase posterior e não bloqueia
+a validação do primeiro MVP operacional.
 
 **Teste independente:** repetir webhooks com mídia, induzir falha e perda da
 cópia temporária, concluir o reprocessamento possível e comprovar que não há
@@ -171,16 +180,16 @@ de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 
 ## Rastreabilidade
 
-| Grupo              | IDs             | Status                            |
-| ------------------ | --------------- | --------------------------------- |
-| Orquestração n8n   | ORC-01 a ORC-09 | Implementada; homologação operacional pendente |
-| Inbox e conversão  | INB-01 a INB-04 | Implementada no contrato n8n v1      |
-| Agente vendedor    | AGT-01 a AGT-08 | Implementado; publicação pendente    |
-| Pedido             | ORD-01 a ORD-05 | Pronto para especificação técnica |
+| Grupo              | IDs             | Status                                           |
+| ------------------ | --------------- | ------------------------------------------------ |
+| Orquestração n8n   | ORC-01 a ORC-09 | Implementada; homologação operacional pendente   |
+| Inbox e conversão  | INB-01 a INB-04 | Implementada no contrato n8n v1                  |
+| Agente vendedor    | AGT-01 a AGT-08 | Implementado; publicação pendente                |
+| Pedido             | ORD-01 a ORD-05 | Pronto para especificação técnica                |
 | Mensagens e canais | MSG-01 a MSG-04 | WhatsApp primeiro; Instagram bloqueia lançamento |
-| Financeiro         | FIN-01 a FIN-03 | Pronto para especificação técnica |
-| Privacidade        | PRV-01 a PRV-03 | Coberta no contrato; homologação pendente |
-| PIX e boas-vindas  | PAY-01 a PAY-05 | Pronto para especificação técnica |
+| Financeiro         | FIN-01 a FIN-03 | Pronto para especificação técnica                |
+| Privacidade        | PRV-01 a PRV-03 | Coberta no contrato; homologação pendente        |
+| PIX e boas-vindas  | PAY-01 a PAY-05 | Pronto para especificação técnica                |
 
 **Cobertura:** 41 requisitos de MVP; 41 mapeados; nenhuma decisão de produto P0 aberta. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.
 

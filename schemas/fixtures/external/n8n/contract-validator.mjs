@@ -1,9 +1,4 @@
 const commonEnvelopeKeys = Object.freeze(['schema_version']);
-const automaticEnvelopeKeys = Object.freeze([
-  ...commonEnvelopeKeys,
-  'automation_epoch',
-]);
-
 const inboundKeys = Object.freeze([
   ...commonEnvelopeKeys,
   'channel',
@@ -13,7 +8,6 @@ const inboundKeys = Object.freeze([
   'metadata',
   'occurred_at',
 ]);
-
 const attachmentKeys = Object.freeze([
   ...commonEnvelopeKeys,
   'content_sha256',
@@ -24,37 +18,20 @@ const attachmentKeys = Object.freeze([
   'mime_type',
   'size_bytes',
 ]);
-
-const claimKeys = Object.freeze([
-  ...automaticEnvelopeKeys,
-  'claim_id',
-  'conversation_id',
-  'last_event_id',
-  'revision',
-  'worker_id',
-]);
-
 const eventKeys = Object.freeze([
-  ...automaticEnvelopeKeys,
-  'ai_model',
-  'ai_provider',
-  'attempt_id',
-  'claim_id',
-  'claim_token',
+  ...commonEnvelopeKeys,
+  'automation_epoch',
+  'briefing_patch',
   'command_id',
   'conversation_id',
   'event_id',
   'event_type',
-  'expected_version',
   'external_message_id',
   'failure',
   'handoff',
-  'lead_patch',
   'message',
   'occurred_at',
-  'prompt_version',
-  'revision',
-  'status',
+  'source_revision',
 ]);
 
 export class ContractValidationError extends Error {
@@ -76,17 +53,13 @@ export function validateContract(contract) {
   if (contract.errorMediaType !== 'application/problem+json') {
     fail('INVALID_ERROR_MEDIA_TYPE');
   }
-  exactMembers(
-    contract.channels,
-    ['whatsapp', 'instagram'],
-    'INVALID_CHANNELS',
-  );
+  exactMembers(contract.channels, ['whatsapp'], 'INVALID_CHANNELS');
   exactMembers(
     contract.activeChannels,
     ['whatsapp'],
     'INVALID_ACTIVE_CHANNELS',
   );
-  if (!Array.isArray(contract.endpoints) || contract.endpoints.length !== 4) {
+  if (!Array.isArray(contract.endpoints) || contract.endpoints.length !== 3) {
     fail('INVALID_ENDPOINT_COUNT');
   }
   const routes = new Set();
@@ -201,80 +174,54 @@ export function validateAttachmentMetadata(payload) {
   return true;
 }
 
-/** @param {any} payload */
-export function validateClaimRequest(payload) {
-  object(payload, 'INVALID_CLAIM');
-  rejectUnknown(payload, claimKeys);
-  common(payload, true);
-  for (const field of [
-    'claim_id',
-    'conversation_id',
-    'last_event_id',
-    'worker_id',
-  ]) {
-    nonEmpty(payload[field], 'INVALID_CLAIM');
-  }
-  if (!Number.isSafeInteger(payload.revision) || payload.revision < 1) {
-    fail('INVALID_CLAIM');
-  }
-  return true;
-}
-
-/** @param {any} payload */
-export function validateClaimResponse(payload) {
-  object(payload, 'INVALID_CLAIM_RESPONSE');
-  rejectUnknown(payload, [
-    'automation_epoch',
-    'claim_id',
-    'claim_token',
-    'claimed',
-    'conversation_id',
-    'conversation_version',
-    'lease_expires_at',
-    'revision',
-  ]);
-  if (payload.claimed !== true) fail('INVALID_CLAIM_RESPONSE');
-  for (const field of [
-    'claim_id',
-    'claim_token',
-    'conversation_id',
-    'lease_expires_at',
-  ]) {
-    nonEmpty(payload[field], 'INVALID_CLAIM_RESPONSE');
-  }
-  epoch(payload.automation_epoch);
-  return true;
-}
-
 /** @param {any} payload @param {any} contract */
 export function validateEvent(payload, contract) {
   object(payload, 'INVALID_EVENT');
   rejectUnknown(payload, eventKeys);
-  common(payload, true);
-  for (const field of [
-    'conversation_id',
-    'event_id',
-    'event_type',
-    'occurred_at',
-  ]) {
+  common(payload);
+  for (const field of ['event_id', 'event_type', 'occurred_at']) {
     nonEmpty(payload[field], 'INVALID_EVENT');
   }
   if (!contract.eventTypes.includes(payload.event_type)) {
     fail('UNSUPPORTED_EVENT_TYPE');
   }
+  if (payload.event_type !== 'workflow.failed') {
+    nonEmpty(payload.conversation_id, 'INVALID_EVENT');
+  }
   if (payload.event_type === 'message.send.requested') {
-    for (const field of ['claim_id', 'claim_token', 'command_id']) {
-      nonEmpty(payload[field], 'INVALID_SEND_FENCE');
-    }
-    for (const field of ['expected_version', 'revision']) {
-      if (!Number.isSafeInteger(payload[field]) || payload[field] < 1) {
-        fail('INVALID_SEND_FENCE');
-      }
-    }
+    nonEmpty(payload.command_id, 'INVALID_SEND_FENCE');
+    epoch(payload.automation_epoch);
+    positive(payload.source_revision, 'INVALID_SEND_FENCE');
     object(payload.message, 'INVALID_SEND_FENCE');
   }
-  if (payload.lead_patch !== undefined) {
-    validateBriefingPatch(payload.lead_patch, contract);
+  if (payload.event_type === 'handoff.requested') {
+    epoch(payload.automation_epoch);
+    positive(payload.source_revision, 'INVALID_HANDOFF_FENCE');
+    object(payload.handoff, 'INVALID_HANDOFF');
+  }
+  if (payload.event_type === 'message.sent') {
+    nonEmpty(payload.command_id, 'INVALID_MESSAGE_STATUS');
+    nonEmpty(payload.external_message_id, 'INVALID_MESSAGE_STATUS');
+  }
+  if (payload.event_type === 'message.send.unknown') {
+    nonEmpty(payload.command_id, 'INVALID_MESSAGE_STATUS');
+  }
+  if (
+    ['message.delivered', 'message.failed', 'message.read'].includes(
+      payload.event_type,
+    )
+  ) {
+    nonEmpty(payload.external_message_id, 'INVALID_MESSAGE_STATUS');
+  }
+  if (payload.briefing_patch !== undefined) {
+    if (
+      !['handoff.requested', 'message.send.requested'].includes(
+        payload.event_type,
+      )
+    ) {
+      fail('INVALID_BRIEFING_PATCH_EVENT');
+    }
+    validateBriefingPatch(payload.briefing_patch, contract);
   }
   return true;
 }
@@ -313,10 +260,9 @@ export function validateProblem(problem) {
   return true;
 }
 
-/** @param {any} payload @param {boolean} [requiresEpoch] */
-function common(payload, requiresEpoch = false) {
+/** @param {any} payload */
+function common(payload) {
   if (payload.schema_version !== '1.0') fail('UNSUPPORTED_SCHEMA_VERSION');
-  if (requiresEpoch) epoch(payload.automation_epoch);
 }
 
 /** @param {any} value */
@@ -324,6 +270,11 @@ function epoch(value) {
   if (!Number.isSafeInteger(value) || value < 0) {
     fail('INVALID_AUTOMATION_EPOCH');
   }
+}
+
+/** @param {any} value @param {string} code */
+function positive(value, code) {
+  if (!Number.isSafeInteger(value) || value < 1) fail(code);
 }
 
 /** @param {Record<string, unknown>} value @param {readonly string[]} allowed */

@@ -89,7 +89,6 @@ export function createN8nApiRuntime(database, options = {}) {
 
   return Object.freeze({
     commandOutbox,
-    claimAiTurn: service.claimAiTurn,
     receiveInbound: service.receiveInbound,
     recordEvent: service.recordEvent,
     /** @param {any} input */

@@ -1,136 +1,126 @@
-# Integração CRM Silmer ↔ n8n v1
+# Integração CRM Silmer ↔ n8n — MVP simples
 
-Este documento é o ponto de entrada operacional da integração. O contrato
-executável está em [`docs/api/openapi.v1.yaml`](../../api/openapi.v1.yaml), o
-contexto em [RFC 001](../../rfc/001-contrato-integracao-n8n-v1.md) e a decisão
-em [ADR 002](../../adr/002-adotar-adaptador-de-integracao-n8n.md).
+> **Decisão vigente:** [RFC 002](../../rfc/002-simplificar-integracao-n8n-para-o-mvp.md)
+> e [ADR 003](../../adr/003-adotar-integracao-n8n-mvp-simples.md). RFC 001 e
+> ADR 002 são histórico da alternativa mais robusta.
 
-## Fonte da verdade e entidades
+## Objetivo e limite
 
-| Conceito externo | Representação canônica                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| Cliente/lead     | `Contact` + `ContactIdentity`; não existe tabela paralela `customers` ou `leads`            |
-| Conversa         | `conversations`, com `inbound_revision`, `last_inbound_event_id`, estado, automação e epoch |
-| Mensagem         | `messages`, criptografada e única por canal/conta/identidade externa                        |
-| Briefing         | `conversation_briefing_versions`, criptografado, imutável e versionado                      |
-| Rodada de IA     | `ai_turns`, contendo fences, lease, claim, token criptografado, workflow e efeito           |
-| Execução         | `automation_runs`, sem segredos nem conteúdo pessoal técnico                                |
-| Handoff          | `handoffs`, opcionalmente sem Negócio, inicialmente sem responsável e com `target_role`     |
-| Comando ao n8n   | `n8n_commands`, imutável e idempotente                                                      |
-| Entrega          | `message_delivery_attempts`, uma linha por tentativa e estado monotônico                    |
+O n8n recebe o webhook oficial do WhatsApp, registra a mensagem no CRM, usa o
+contexto devolvido pelo CRM, decide entre resposta de IA e handoff e pede ao CRM
+uma autorização de uso único antes de chamar a Meta. PostgreSQL continua sendo
+a fonte da verdade. O n8n não acessa o banco e não mantém cópia paralela de
+cliente, conversa, briefing ou memória curta.
 
-São reutilizados `idempotency_records`, `outbox_jobs`, `audit_events`,
-`domain_events`, `reconciliation_items` e `transient_media`.
+Esta entrega ativa somente WhatsApp. Instagram, leitura multimodal pela IA e
+novas telas ficam nas fases posteriores. O adapter direto Meta → CRM permanece
+apenas como fixture de desenvolvimento e nunca é fallback silencioso.
 
-## Endpoints n8n → CRM
+## Entidades que o fluxo cria ou altera
 
-Todos são `POST`, usam HTTPS e exigem:
+| Conceito de produto | Persistência oficial                    | Comportamento no fluxo                                                                                                            |
+| ------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Cliente             | `contacts` + `contact_identities`       | Criado provisoriamente na primeira identidade de WhatsApp; não existe tabela paralela `customers` ou `leads`.                     |
+| Conversa            | `conversations`                         | Uma conversa aberta por identidade/canal; guarda modo, `automation_epoch`, revisão inbound e o snapshot atual do briefing.        |
+| Mensagem            | `messages`                              | Inbound e outbound cifrados; identidade externa ou `command_id` impede duplicidade. O estado de entrega fica na própria mensagem. |
+| Briefing            | colunas cifradas da `conversation`      | Um snapshot consolidado; `briefing_patch` ignora nulos e só aceita campos de qualificação. Não promove dado oficial de Negócio.   |
+| Handoff             | `handoffs`                              | Criado sem responsável, com papel-alvo Atendimento ou Vendedor; uma pessoa compatível o reivindica atomicamente.                  |
+| Negócio             | `deals` e módulos canônicos             | Nunca é criado pela simples chegada de mensagem. Conversão, campos e etapas continuam nos endpoints de domínio.                   |
+| Comando humano      | `n8n_commands` + `outbox_jobs`          | Estado oficial e outbox são gravados antes de o worker chamar o webhook do n8n.                                                   |
+| Evidência técnica   | `n8n_events`, auditoria e reconciliação | Registra correlação, workflow, versão, execução e resultado sem conteúdo pessoal ou segredo técnico.                              |
 
-- `Authorization: Basic …`
-- `Idempotency-Key`
-- `X-Correlation-Id`
-- `X-Silmer-Workflow-Key`
-- `X-Silmer-Workflow-Version`
-- `X-Silmer-Execution-Id`
+As tabelas `ai_turns`, `automation_runs`, `conversation_briefing_versions` e
+`message_delivery_attempts` foram criadas por migrações já publicadas, mas não
+participam do runtime simplificado. Permanecem dormentes até uma migração
+contract explícita e segura removê-las.
 
-As rotas são:
+## Contrato n8n → CRM
 
-- `/api/v1/integrations/n8n/messages/inbound`
-- `/api/v1/integrations/n8n/conversations/{id}/attachments`
-- `/api/v1/integrations/n8n/conversations/{id}/ai-turns/claim`
-- `/api/v1/integrations/n8n/events`
+Os três endpoints usam `Authorization: Basic`, `Idempotency-Key`,
+`X-Correlation-Id`, `X-Silmer-Workflow-Key`, `X-Silmer-Workflow-Version` e
+`X-Silmer-Execution-Id`. Upload também exige `X-Silmer-Content-SHA256`.
 
-Upload adiciona `X-Silmer-Content-SHA256`. A resposta de erro usa
-`application/problem+json` e inclui `accepted: false`, `error.code` e
-`request_id` para compatibilidade. Reuso de chave idempotente com outro corpo
-é `409`.
+1. `POST /api/v1/integrations/n8n/messages/inbound`
+   cria ou resolve Cliente, Conversa e Mensagem e devolve `source_revision`,
+   `automation_epoch`, modo, mensagens recentes e briefing.
+2. `POST /api/v1/integrations/n8n/conversations/{id}/attachments`
+   recebe uma mídia por streaming, valida tamanho, hash, MIME e malware e só a
+   vincula depois da quarentena. A IA multimodal fica diferida.
+3. `POST /api/v1/integrations/n8n/events`
+   recebe reserva de envio, callbacks de entrega, handoff e falha do workflow.
 
-## Regras de execução
+Eventos aceitos: `message.send.requested`, `message.sent`,
+`message.delivered`, `message.read`, `message.failed`,
+`message.send.unknown`, `handoff.requested` e `workflow.failed`.
 
-O inbound resolve identidade, cria ou reutiliza conversa ativa e só incrementa
-`inbound_revision` para evento novo. O modo projetado é, nesta ordem:
+Erros usam `application/problem+json`. Replay da mesma chave com o mesmo
+payload devolve o resultado idempotente; a mesma chave com payload diferente
+retorna `409`.
 
-1. terminal → `closed`;
-2. handoff aberto e não atribuído → `handoff_pending`;
-3. automação humana → `human_active`;
-4. demais conversas ativas → `ai_active`.
+## Fence de envio simplificado
 
-Claim negado responde HTTP 200 com `claimed: false` e motivo. Claim aceito é
-exclusivo até expirar. Takeover, handoff, retorno e fechamento elevam
-`automation_epoch`; tokens antigos deixam de ser válidos.
+Não existe claim, lease nem token de rodada. Para uma resposta automática, o
+`message.send.requested` deve apresentar a revisão inbound e o epoch devolvidos
+pelo CRM. A autorização só é concedida quando a conversa continua aberta e em
+modo IA, o epoch é atual e a revisão ainda não foi consumida. O CRM grava a
+Mensagem com estado `sending` e avança `claimed_revision` na mesma transação.
 
-`message.send.requested` é o único fence que autoriza uma chamada à Meta. A
-autorização é de uso único. Timeout posterior vira `message.send.unknown` e
-gera reconciliação. Estados `sent`, `delivered` e `read` nunca regridem; falha
-fica presa à tentativa.
+Somente `send_authorized: true` permite chamar a Meta. Replay sempre devolve
+`send_authorized: false`. Timeout depois da autorização vira
+`message.send.unknown`; não há retry cego. Callbacks tardios de uma reserva já
+aceita podem concluir o estado mesmo após takeover.
 
-`lead_patch` ignora valores nulos e atualiza apenas o briefing. Promoção para
-dados oficiais usa conversão, campos e transições canônicas do Negócio.
-`convertida_em_lead` encerra triagem, não a Conversa. `Sem lead` é terminal;
-uma Conversa com Negócio só termina pelos caminhos oficiais Fechado/Perdido.
+Takeover e handoff incrementam `automation_epoch`, invalidando decisões ainda
+não reservadas. Status segue a ordem `sent < delivered < read` e nunca regride.
 
-## Fluxo humano
+## Briefing, conversão e handoff
 
-O painel usa as operações canônicas de mensagem, takeover, retorno à IA,
-fechamento e claim de handoff. Primeiro ocorre a transação local com auditoria
-e outbox; depois o worker entrega um comando idempotente ao webhook
-`/webhook/silmer/panel-command` do n8n.
+O agente recebe `recent_messages` e `briefing` na resposta inbound. Pode mandar
+um `briefing_patch` junto de `message.send.requested` ou `handoff.requested`;
+nulos são ignorados. Preço, pagamento, etapa e outros campos oficiais não são
+aceitos nesse patch.
 
-Handoffs `briefing_complete` e `negotiation` têm `target_role=Vendedor`.
-`human_requested`, `complaint`, `urgency`, `low_confidence` e `unsupported`
-têm `target_role=Atendimento`. O primeiro usuário ativo com papel compatível
-que concluir o CAS assume; concorrentes recebem `409`.
+Inbound não cria Negócio. Quando houver intenção comercial, o workflow usa os
+endpoints canônicos de conversão, campos e transição. `convertida_em_lead`
+encerra a triagem, não a Conversa; ela só termina por `Sem lead`, `Fechado` ou
+`Perdido` conforme as regras do domínio.
 
-## Mídia e retenção
+Handoffs de negociação ou briefing completo vão para Vendedor. Pedido humano,
+reclamação, urgência, baixa confiança e conteúdo não suportado vão para
+Atendimento. Não há mensagem automática de confirmação no primeiro corte.
 
-O complemento versionado de catálogo de dados e modelo de ameaças está em
-`security-privacy-addendum.json`. Ele preserva as evidências aprovadas da Fase 0
-e precisa ser incorporado a uma nova revisão humana antes da ativação.
+## Workflow e configuração
 
-O upload é limitado por arquivo e quota total, escrito com permissão privada,
-hasheado durante o stream, validado pelo hash declarado, inspecionado por MIME
-real e antivírus e renomeado atomicamente somente quando seguro. Nome de arquivo
-é saneado antes de persistir. Scanner indisponível ou assinatura desatualizada
-mantém quarentena/falha fechada.
+- Workflow: `k7tI6T4RhQPyJkn9` — `Silmer | Atendimento WhatsApp IA`.
+- Baseline preservada: `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.
+- Rascunho simplificado validado: `fae803db-eef0-4074-a7ae-1a6bb786e203`,
+  com 42 nós e sem avisos estruturais.
+- O workflow simplificado permanece inativo até credenciais e homologação.
+- São necessárias duas credenciais Basic distintas: n8n → CRM e CRM → n8n.
+- Segredos não entram em export, repositório, log, chat ou Data Table.
+- Persistência de execuções manuais/sucesso e progresso deve ficar desabilitada;
+  falhas são sanitizadas e têm expurgo técnico em até 30 dias.
 
-Bytes transitórios expiram ao terminar a jornada ou em sete dias, o que vier
-primeiro. Dados técnicos de execução/manual do n8n devem ser expurgados em até
-30 dias e não podem conter PII, mensagens ou credenciais.
+## Rollout e recuperação
 
-## Configuração e rollout
+1. Aplicar migrações com a integração desligada.
+2. Implantar API e worker e configurar as duas credenciais Basic.
+3. Testar o workflow inativo com dados sintéticos e o número Meta de homologação.
+4. Homologar inbound → contexto → IA/handoff → reserva → Meta → status.
+5. Publicar o workflow, transferir o webhook da Meta e desabilitar a entrada direta.
 
-São necessárias duas credenciais Basic distintas:
+Rollback pausa ou despublica o workflow e preserva mensagens, comandos e itens
+incertos para reconciliação. A rota direta não é reativada automaticamente.
 
-- n8n→CRM: valores configurados como segredo do CRM e credencial HTTP Basic no
-  n8n;
-- CRM→n8n: valores configurados como segredo do worker e credencial do webhook
-  de comandos.
+## Diagnóstico rápido
 
-O operador cria e vincula as credenciais sem copiar valores para chat,
-repositório ou export. O workflow `k7tI6T4RhQPyJkn9` fica inativo até o smoke de
-homologação. Migrações entram primeiro com a integração desligada; depois API e
-worker, credenciais, workflow, WhatsApp de homologação, publicação e corte do
-webhook. A entrada direta no CRM fica indisponível após o corte.
+- `401/403`: conferir credencial e capacidade do `AUTOMATION_EXECUTOR`.
+- `409 STALE_AUTOMATION_FENCE`: a pessoa assumiu, chegou mensagem nova ou a
+  revisão já foi respondida; não enviar.
+- `send_authorized: false`: replay; não chamar a Meta novamente.
+- `message.send.unknown`: reconciliar pelo `command_id` antes de qualquer ação.
+- mídia em quarentena/indisponível: abrir handoff e não afirmar que os bytes
+  foram recuperados.
 
-O baseline completo sanitizado `98f96069-ede2-4900-aa5c-7fec0d3b80cb` e o
-rascunho validado `0c41ee97-954b-4319-b822-fbb91f239b6e` estão em
-`ops/n8n/workflows/`. O rascunho removeu os blocos HMAC, a memória curta e os
-acessos à `silmer_failures`; desabilitou persistência de execução; adicionou os
-headers técnicos e colocou um fence do CRM antes dos sete nós de envio à Meta.
-As reservas, confirmações e resultados incertos da IA propagam `claim_id`,
-token, revisão, versão da conversa, epoch e versão do workflow.
-No upload, o próprio nó HTTP gera o `Content-Type` multipart com seu boundary;
-o workflow não sobrescreve esse header.
-Os nós HTTP Basic permanecem deliberadamente sem vínculo até o operador criar
-as duas credenciais DEV distintas.
-
-## Troubleshooting
-
-- `401`: credencial Basic ausente/inválida; confira vínculo e janela de
-  rotação sem imprimir o segredo.
-- `403`: ação fora da allowlist do ator técnico.
-- `409`: chave idempotente divergente, fence obsoleto ou disputa de handoff.
-- `422`: evento/canal/MIME não suportado.
-- `429`: capacidade/quota excedida; respeite `Retry-After`.
-- `503`: CRM, volume, scanner ou n8n indisponível; não faça retry de envio já
-  autorizado à Meta. Abra/reveja o item de reconciliação.
+As próximas telas e a ordem de entrega estão em
+[`docs/roadmap/PROXIMAS-FASES.md`](../../roadmap/PROXIMAS-FASES.md).

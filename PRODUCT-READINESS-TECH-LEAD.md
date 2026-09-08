@@ -8,8 +8,9 @@ propagados para o PRD, contexto, requisitos, regras e design.
 > decisões P0 tomadas em 29/08. As decisões sobre agente assistivo, autonomia,
 > n8n e Instagram não bloqueante foram substituídas pela revisão atual de
 > `RULES.md`, `CRM-MVP-ESPECIFICACAO.md` e
-> `.specs/features/crm-mvp/spec.md`: n8n, WhatsApp e Instagram são obrigatórios;
-> o agente pode mutar o estado por APIs do CRM. Os gates humanos de preço,
+> `.specs/features/crm-mvp/spec.md`: n8n e WhatsApp são obrigatórios no primeiro
+> MVP operacional; Instagram foi movido para a fase `CANAL-2`; o agente pode
+> mutar o estado por APIs do CRM. Os gates humanos de preço,
 > venda, pagamento e Ficha continuam vigentes.
 
 ## O que o Tech Lead já pode especificar

@@ -13,7 +13,8 @@ Os identificadores `T00..T07` permanecem como referência histórica das issues 
 ## Premissas comuns
 
 - Cada mensagem válida do cliente dispara automaticamente o n8n. A UI não inicia o workflow.
-- O n8n recebe e envia mensagens do WhatsApp e Instagram oficiais, executa OpenAI ou Gemini e orquestra a mesma jornada nos dois canais.
+- O n8n recebe e envia mensagens do WhatsApp oficial e executa o provedor de IA
+  configurado. Instagram reutiliza a jornada em uma fase posterior.
 - PostgreSQL e APIs do CRM continuam sendo a fonte da verdade. O n8n nunca acessa diretamente o banco.
 - O ator técnico `AUTOMATION_EXECUTOR` recebe somente as capacidades necessárias para conversar, criar ou atualizar leads, preencher campos e transicionar etapas.
 - Preço, aprovação da venda, confirmação de pagamento e aprovação da Ficha continuam exigindo pessoa autorizada.
@@ -103,10 +104,10 @@ O objetivo está pronto quando as APIs conseguem executar toda a jornada com fix
 - Garantir teclado, foco previsível, regiões vivas e rótulos dinâmicos; nenhum botão deve simular “iniciar n8n”.
 - **Verificação:** operação completa sem mouse e takeover durante uma resposta de IA impede envio atrasado.
 
-### Etapa INBOX-5 — Concluir Instagram e migração de canal
+### Etapa CANAL-2 — Concluir Instagram e migração de canal
 
 - **Origem:** `T02.7`.
-- Integrar Instagram Direct como canal obrigatório, mantendo identidades separadas até correlação verificável.
+- Após o primeiro MVP, integrar Instagram Direct mantendo identidades separadas até correlação verificável.
 - Permitir migração entre WhatsApp e Instagram sem criar outro Negócio; conectar `@instagram` e telefone ao mesmo lead após confirmação verificável.
 - **Verificação:** ambos os canais aparecem na mesma Inbox, mantêm o mesmo contexto e não fundem pessoas por nome ou similaridade.
 
@@ -116,12 +117,13 @@ O objetivo está pronto quando uma pessoa consegue observar, responder, assumir 
 
 ## Objetivo 3 — Agente Vendedor Silmer no n8n
 
-**Resultado:** executar a mesma jornada de vendas no WhatsApp e no Instagram a partir da mensagem recebida, usando IA sob regras determinísticas, migrando de canal e transferindo para uma pessoa quando necessário.
+**Resultado:** executar a jornada inicial de vendas no WhatsApp usando IA sob
+regras determinísticas e transferir para uma pessoa quando necessário.
 
 ### Etapa AGENTE-1 — Implantar o n8n obrigatório
 
 - Criar o serviço privado `silmer-n8n`, banco/esquema e credenciais próprios, criptografia de credenciais, backup, health check e publicação por versão.
-- Publicar os webhooks de WhatsApp e Instagram sem expor a interface administrativa do n8n.
+- Publicar o webhook do WhatsApp sem expor a interface administrativa do n8n.
 - Usar execução regular no MVP; queue mode e Redis permanecem P2 até haver evidência de escala.
 - **Verificação:** workflow sintético é publicado, executado e restaurado sem acesso direto ao PostgreSQL do CRM.
 
@@ -132,19 +134,22 @@ O objetivo está pronto quando uma pessoa consegue observar, responder, assumir 
 - Rejeitar comando obsoleto, capacidade indevida, schema divergente e replay com payload diferente.
 - **Verificação:** testes de contrato executam contra doubles de ambos os lados e contra PostgreSQL real do CRM.
 
-### Etapa AGENTE-3 — Conectar OpenAI e Gemini
+### Etapa AGENTE-3 — Conectar o provedor de IA
 
-- Implementar o mesmo schema estruturado para os dois provedores, com seleção por configuração versionada e fallback somente quando seguro.
+- Implementar o schema estruturado para um provedor configurado. Um segundo
+  provedor só entra depois com os mesmos contratos e evals, sem fallback cego.
 - Minimizar contexto, aplicar retenção aprovada, bloquear segredo/PII em logs e registrar modelo, versão de prompt, tokens e decisão.
 - Manter regras de preço, permissão, gate e handoff em validação determinística, fora do prompt.
 - Fechar DPA, retenção e ZDR do provedor escolhido antes de produção com PII, conforme issue `#5`.
-- **Verificação:** evals equivalentes cobrem prompt injection, preço inventado, schema inválido e indisponibilidade dos dois provedores.
+- **Verificação:** evals cobrem prompt injection, preço inventado, schema
+  inválido e indisponibilidade do provedor.
 
 ### Etapa AGENTE-4 — Construir o workflow da jornada
 
 - Ao receber mensagem, carregar contexto oficial, descobrir o próximo dado necessário, perguntar apenas o que falta e persistir a resposta validada.
 - Classificar intenção, criar ou atualizar lead, registrar gates e mover o Kanban pelas etapas permitidas.
-- Executar o mesmo fluxo no WhatsApp e Instagram, preservando o Negócio ao migrar de canal e solicitando ao CRM o vínculo verificado entre `@instagram` e telefone.
+- Executar o fluxo inicial no WhatsApp; a adaptação do Instagram pertence a
+  `CANAL-2` e preserva o mesmo domínio.
 - Após aprovações humanas obrigatórias, continuar PIX, Ficha, envio e boas-vindas sem duplicar efeitos.
 - Versionar e publicar workflows por ambiente; execução ativa deve sempre apontar para uma versão conhecida.
 - **Verificação:** jornada sintética percorre Backlog até Fechado e uma segunda termina em Sem lead.
@@ -167,56 +172,42 @@ O objetivo está pronto quando uma pessoa consegue observar, responder, assumir 
 
 O objetivo está pronto quando workflows versionados conduzem casos sintéticos com OpenAI e Gemini, respeitam os gates humanos remanescentes e sobrevivem a retry, takeover e falha externa.
 
-## Entrega transversal N8N-1–N8N-7 — contrato v1
+## Entrega transversal N8N-MVP-1 — integração simples
 
-Esta sequência implementa [RFC 001](../../../docs/rfc/001-contrato-integracao-n8n-v1.md)
-e [ADR 002](../../../docs/adr/002-adotar-adaptador-de-integracao-n8n.md), com
-rastreabilidade ORC-01–09, INB-01–04, AGT-01–08, MSG-01–04 e PRV-01–03.
+Esta fatia implementa
+[RFC 002](../../../docs/rfc/002-simplificar-integracao-n8n-para-o-mvp.md) e
+[ADR 003](../../../docs/adr/003-adotar-integracao-n8n-mvp-simples.md), que
+supersedem RFC 001/ADR 002 sem reescrever o histórico.
 
-1. **N8N-1 — contrato e decisões:** OpenAPI, fixtures, Basic Auth, erros e
-   registros RFC/ADR.
-2. **N8N-2 — migrações e domínio:** revisões, briefing, claims, execuções,
-   handoff por papel, comandos, tentativas e correção do ciclo convertido.
-3. **N8N-3 — inbound e mídia:** identidade, conversa/mensagem idempotente,
-   contexto recente, hash, MIME, scanner, quarentena e retenção.
-4. **N8N-4 — claim e eventos:** lease concorrente, epoch/revisão/evento,
-   reserva de envio e status monotônico.
-5. **N8N-5 — handoff e comandos humanos:** fila sem responsável, claim CAS e
-   estado/auditoria/outbox antes do comando ao n8n.
-6. **N8N-6 — worker e observabilidade:** entrega Basic CRM→n8n, retry seguro,
-   `outcome_unknown`, reconciliação, métricas, alertas e runbook.
-7. **N8N-7 — workflow e homologação:** preservar a versão
-   `98f96069-ede2-4900-aa5c-7fec0d3b80cb`, atualizar o workflow inativo
-   `k7tI6T4RhQPyJkn9`, homologar WhatsApp e só então publicar. Instagram é a
-   etapa obrigatória seguinte antes do lançamento integral.
+1. **N8N-MVP-1A — contrato e modelo:** reduzir a fronteira para inbound,
+   attachment e events; consolidar briefing na Conversa; manter entrega na
+   Mensagem; remover claim do runtime.
+2. **N8N-MVP-1B — efeito seguro:** incorporar o fence ao
+   `message.send.requested` com `automation_epoch`, `source_revision`,
+   `claimed_revision` e `command_id`; preservar outbox para comandos humanos.
+3. **N8N-MVP-1C — workflow:** reduzir `k7tI6T4RhQPyJkn9` ao caminho WhatsApp
+   inbound → contexto → IA/handoff → reserva → Meta → status, mantendo-o
+   inativo e preservando a baseline `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.
+4. **OPS-1 — homologação:** configurar as duas credenciais Basic, executar
+   smoke sintético e número Meta de homologação e só então publicar e transferir
+   o webhook. Este item continua externo à implementação local.
 
-Cada fatia encerra com testes proporcionais, documentação, commit/push e
-`graphify update .`; mudanças de `graphify-out` usam commit mecânico separado.
+As tabelas de runs, turns, histórico de briefing e tentativas já publicadas
+ficam dormentes; a remoção física exige migração contract posterior. Cada fatia
+encerra com testes, documentação, commit/push e `graphify update .`.
 
-## Sequência executiva de interfaces UI-1–UI-8
+## Sequência executiva posterior
 
 O detalhamento, contratos anteriores à tela e critérios de aceite estão em
 [`docs/roadmap/PROXIMAS-FASES.md`](../../../docs/roadmap/PROXIMAS-FASES.md).
-Esta é a ordem canônica das próximas fatias de produto após o contrato n8n v1:
-
-1. **UI-1 — Inbox:** lista, filtros, prioridades e estados da automação.
-2. **UI-2 — Atendimento:** thread, anexos, briefing, resposta, takeover,
-   retorno à IA e fechamento.
-3. **UI-3 — Handoffs:** filas por papel e claim concorrente.
-4. **UI-4 — Contato:** representação do Cliente como `Contact` mais
-   `ContactIdentity`, com conversas e Negócios.
-5. **UI-5 — Negócio:** evoluir Kanban/detalhe existentes com vínculos, gates,
-   tarefas e ações comerciais restantes.
-6. **UI-6 — Automação:** monitor de runs, claims, comandos, tentativas e
-   reconciliação.
-7. **UI-7 — Integrações:** configuração segura, versões e saúde sem exposição
-   de segredos.
-8. **UI-8 — Gate transversal:** E2E, acessibilidade, segurança e homologação
-   WhatsApp/Instagram.
+Esta é a ordem canônica após `N8N-MVP-1`: OPS-1 (homologação WhatsApp), UI-1
+(Inbox e Conversa), UI-2 (Handoffs), UI-3 (Cliente), UI-4 (evolução do
+Negócio), UI-5 (operação/reconciliação somente se o uso justificar) e CANAL-2
+(Instagram). Não há tela de runs, claims ou tentativas no MVP simples.
 
 Cada fase começa pelo read model e pela atualização da OpenAPI quando a consulta
-ainda não existir. A ativação do n8n pode avançar em paralelo a UI-1/UI-2, mas
-UI-8 e o lançamento dependem dos gates operacionais e externos documentados.
+ainda não existir. A homologação do n8n pode avançar antes das novas telas; o
+lançamento depende dos gates operacionais e externos documentados.
 
 ## Integração e lançamento
 
@@ -224,7 +215,7 @@ Esta etapa começa somente quando os critérios isolados dos três objetivos est
 
 ### Etapa INT-1 — Conectar os três objetivos
 
-- Ligar WhatsApp/Instagram → n8n → CRM → Inbox e os comandos CRM → n8n → canal de origem ou canal migrado.
+- Ligar WhatsApp → n8n → CRM → Inbox e os comandos CRM → n8n → WhatsApp.
 - Executar uma venda completa e um handoff humano, incluindo atualização em tempo real da Inbox e do Kanban.
 - **Gate:** nenhuma ação depende de botão para iniciar o n8n e nenhum workflow escreve diretamente no banco.
 
@@ -245,4 +236,6 @@ Esta etapa começa somente quando os critérios isolados dos três objetivos est
 - Produto valida os critérios `ORC`, `INB`, `AGT`, `MSG`, `ORD`, `PAY`, `FIN` e `PRV` com dados sintéticos.
 - Operação aprova Inbox, handoff, pedido, Ficha e runbooks.
 - Privacidade e DevOps aprovam somente os gates sob sua autoridade; testes e documentos não substituem essas aprovações.
-- **Gate final:** WhatsApp e Instagram operacionais, n8n saudável, CRM íntegro, Inbox acessível, agente controlável, migração de canal validada e rollback ensaiado.
+- **Gate final:** WhatsApp operacional, n8n saudável, CRM íntegro, Inbox
+  acessível, agente controlável e rollback ensaiado. Instagram passa por UAT
+  próprio em `CANAL-2`.

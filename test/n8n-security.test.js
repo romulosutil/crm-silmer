@@ -97,7 +97,7 @@ test('keeps committed n8n fixtures free from recognizable PII and secrets', asyn
   const names = (await readdir(fixtureRoot))
     .filter((name) => name.endsWith('.json'))
     .sort();
-  assert.ok(names.length >= 9);
+  assert.ok(names.length >= 7);
 
   for (const name of names) {
     const content = await readFile(new URL(name, fixtureRoot), 'utf8');
@@ -134,7 +134,7 @@ test('coalesces concurrent idempotent effects and rejects divergent replay', asy
   let effects = 0;
   const effect = async () => {
     effects += 1;
-    return { accepted: true, attempt_id: payload.attempt_id };
+    return { accepted: true, command_id: payload.command_id };
   };
 
   const [first, replay] = await Promise.all([
@@ -186,14 +186,7 @@ test('rejects privilege fields and unfenced automatic events', async () => {
       validateBriefingPatch({ [forbidden]: 'synthetic-value' }, contract),
     );
   }
-  for (const field of [
-    'automation_epoch',
-    'claim_id',
-    'claim_token',
-    'command_id',
-    'expected_version',
-    'revision',
-  ]) {
+  for (const field of ['automation_epoch', 'command_id', 'source_revision']) {
     const invalid = structuredClone(event);
     delete invalid[field];
     assert.throws(() => validateEvent(invalid, contract));

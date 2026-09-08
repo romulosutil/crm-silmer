@@ -12,11 +12,11 @@ O MVP é organizado em três objetivos que evoluem em paralelo e se conectam no 
 
 O n8n nunca acessa diretamente o banco. Toda mutação oficial passa pela API idempotente e autorizada do CRM; a interface observa o fluxo e permite intervenção humana, mas não o dispara.
 
-Os canais obrigatórios do piloto são WhatsApp Business e Instagram Direct,
-ambos integrados no n8n e conduzidos pela mesma jornada. O atendimento pode
-migrar entre os canais preservando o Negócio; após correlação verificável, o
-lead mantém o `@instagram` e o telefone como identidades distintas da mesma
-pessoa. O artefato central do domínio é `ficha_exemplo.xlsx`: os dados
+O primeiro MVP operacional usa WhatsApp Business. Instagram Direct é a próxima
+fase de canal e reutilizará a mesma jornada. Quando essa fase chegar, o
+atendimento poderá migrar entre canais preservando o Negócio somente após
+correlação verificável entre `@instagram` e telefone. O artefato central do
+domínio é `ficha_exemplo.xlsx`: os dados
 necessários para produzir e cobrar um pedido definem as perguntas, validações e
 etapas da jornada.
 
@@ -38,7 +38,7 @@ Documentos principais:
 - `docs/rfc/`: propostas relevantes em avaliação antes da decisão.
 - `docs/integrations/n8n/README.md`: contrato v1, entidades, estados,
   configuração, rollout e troubleshooting da integração.
-- `docs/roadmap/PROXIMAS-FASES.md`: ordem UI-1–UI-8, contratos necessários,
+- `docs/roadmap/PROXIMAS-FASES.md`: ordem das próximas telas e do Instagram,
   critérios de aceite e mapa dos documentos que guiam as próximas telas.
 - `TECHNICAL-DESIGN.md`: TDD canônico com stack, módulos, dados, APIs,
   segurança, SLOs, riscos e decisões técnicas do MVP.
@@ -50,6 +50,6 @@ Documentos principais:
   verificação e rastreabilidade.
 - `historico-datacrazy/`: arquivo histórico, sem valor normativo para o sistema novo.
 
-O documento externo de API recebido foi incorporado por RFC 001/ADR 002 com as
-decisões posteriores: Basic only, CRM como fonte da verdade, fence de envio,
-retenção canônica e WhatsApp antes de Instagram.
+O documento externo de API foi inicialmente incorporado por RFC 001/ADR 002 e
+depois simplificado por RFC 002/ADR 003: Basic only, CRM como fonte da verdade,
+três endpoints, fence de envio incorporado à reserva e WhatsApp primeiro.

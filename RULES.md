@@ -44,7 +44,10 @@
 2. Evitar estado global em `window`; preferir ESM, IIFE ou classes isoladas.
 3. Interações devem funcionar por teclado e manter ARIA dinâmica quando aplicável.
 4. O WhatsApp usa a API oficial do WhatsApp Business e é obrigatório para o lançamento do piloto.
-5. WhatsApp Business e Instagram Direct são canais obrigatórios do MVP e seguem a mesma jornada no n8n. A migração entre canais preserva o Negócio e só conecta `@instagram` e telefone após correlação verificável e auditável.
+5. WhatsApp Business é o canal do primeiro MVP operacional. Instagram Direct
+   é a fase de canal seguinte e deve reutilizar a mesma jornada. A migração
+   preserva o Negócio e só conecta `@instagram` e telefone após correlação
+   verificável e auditável.
 6. O n8n é obrigatório no MVP e é o motor de canais, IA e orquestração da jornada comercial. Cada mensagem recebida dispara o n8n sem depender de ação ou botão da UI.
 7. Integrações externas entram por contratos explícitos e não definem o modelo interno do domínio. O n8n nunca acessa diretamente o banco: usa APIs autenticadas, autorizadas, idempotentes e auditáveis do CRM.
 8. Dados pessoais seguem minimização, controle de acesso, auditoria e a política de retenção aprovada no P0.6.
@@ -59,9 +62,10 @@
 11. `message.send.requested` é o fence obrigatório e de uso único antes de
     qualquer chamada à Meta. Timeout posterior vira `message.send.unknown` e
     reconciliação; retry cego é proibido.
-12. Claims da IA são leases cercados por revisão, último evento, modo e
-    `automation_epoch`. Takeover, handoff, retorno, fechamento ou desligamento
-    invalidam claims anteriores elevando o epoch.
-13. O backend é neutro de canal, mas o rollout desta versão ativa somente
-    WhatsApp. Instagram deve ser homologado antes do lançamento integral do
-    MVP; não há fallback silencioso para o webhook direto da Meta.
+12. A autorização da resposta automática é incorporada ao
+    `message.send.requested`: modo, `automation_epoch` e `source_revision`
+    devem estar atuais, e cada revisão inbound só pode ser consumida uma vez.
+    Não existe claim, lease ou token de rodada no MVP simples.
+13. O backend preserva fronteiras neutras de canal, mas o contrato executável
+    desta versão aceita somente WhatsApp. Instagram é uma fase posterior; não
+    há fallback silencioso para o webhook direto da Meta.

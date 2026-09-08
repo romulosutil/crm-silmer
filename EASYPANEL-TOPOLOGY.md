@@ -78,7 +78,7 @@ Domínios propostos, substituindo `<dominio>` pelo domínio aprovado:
 | Finalidade   | Domínio               | Proteção adicional                                  |
 | ------------ | --------------------- | --------------------------------------------------- |
 | CRM          | `crm.<dominio>`       | Login da aplicação, HSTS e rate limiting            |
-| webhooks Meta | `hooks.crm.<dominio>` | Público somente nas rotas WhatsApp/Instagram do n8n |
+| webhook Meta | `hooks.crm.<dominio>` | Público somente na rota WhatsApp do n8n             |
 | EasyPanel    | `ops.<dominio>`       | VPN/allowlist, MFA obrigatório e contas individuais |
 
 VPN, allowlist ou Basic Auth não podem bloquear o callback público da Meta. O
@@ -293,7 +293,7 @@ Regras:
 
 - tokens Meta, buckets, banco e chaves não são compartilhados com outros
   serviços do projeto;
-- tokens Meta e chaves OpenAI/Gemini ficam somente no n8n; a credencial
+- tokens Meta e chave do provedor de IA ficam somente no n8n; a credencial
   `CRM_AUTOMATION_*` não concede administração nem acesso ao banco do CRM;
 - `CRM_AUTOMATION_PREVIOUS_CLIENT_SECRET` existe somente durante a janela
   curta de rotação e deve ser removida depois do smoke com o segredo novo;
@@ -301,7 +301,7 @@ Regras:
   credencial Basic, exclusiva para CRM→n8n, e os valores nunca são exportados;
 - `CONTACT_IDENTITY_*` e `INBOX_MESSAGE_ENVELOPE_KEY` devem reutilizar as
   chaves dos respectivos módulos canônicos; `N8N_INTEGRATION_ENVELOPE_KEY`
-  protege briefing, token de claim, payload de comando, filename e resumo;
+  protege briefing, payload de comando, filename e resumo;
 - `N8N_COMMAND_REPLAY_SAFE=true` só é permitido depois que a reserva remota
   anterior à Meta foi comprovada em homologação; até lá, timeout produz
   `outcome_unknown` e reconciliação;
@@ -329,7 +329,7 @@ Regras:
 | postgres           | `pg_isready`            | conexão aceita                                      |
 | n8n live           | health interno          | processo saudável sem publicar editor               |
 | n8n operacional    | workflow sintético      | webhook, banco próprio e API do CRM correlacionados |
-| n8n postgres       | `pg_isready`            | conexão aceita somente na rede privada               |
+| n8n postgres       | `pg_isready`            | conexão aceita somente na rede privada              |
 
 Dependências Meta, IA e storage possuem diagnóstico separado e não derrubam o
 container. Docker `HEALTHCHECK`: intervalo 30 s, timeout 5 s, start period 20 s
@@ -401,6 +401,11 @@ Sequência de deploy do contrato n8n v1:
 7. publicar o workflow, transferir o webhook Meta para o n8n e habilitar a
    integração, tornando a rota direta do CRM indisponível;
 8. implantar edge, verificar live, ready, heartbeat e monitorar 30 minutos.
+
+O rascunho simplificado atual é a versão
+`fae803db-eef0-4074-a7ae-1a6bb786e203`, com 42 nós. A publicação permanece
+bloqueada pelas credenciais Basic DEV e pela homologação WhatsApp; Instagram
+entra depois em `CANAL-2` e não bloqueia este primeiro MVP operacional.
 
 Migrações seguem expand/contract. Remover tabela/coluna ocorre somente quando o
 digest anterior já não depender dela. Rollback normal reaponta para o digest
@@ -503,7 +508,7 @@ Alertas mínimos:
 - API indisponível ou 5xx acima do limite;
 - worker sem heartbeat;
 - n8n indisponível, execução em loop ou versão divergente da publicada;
-- claims negados anormais, leases expirados e reservas de envio divergentes;
+- reservas de envio obsoletas ou divergentes por epoch/revisão;
 - comandos n8n em `processing` além do lease ou em `outcome_unknown`;
 - job mais antigo acima de 5 minutos;
 - dead-letter ou reconciliação crescente;
@@ -536,7 +541,7 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Takeover impede novos envios até o ponto de não retorno e reconcilia resultado incerto.
 - [ ] Restore recupera banco, workflows e chave de criptografia do n8n em host limpo.
 - [ ] Smoke WhatsApp oficial ponta a ponta aprovado antes da publicação.
-- [ ] Instagram oficial e migração de canal aprovados antes do lançamento integral.
+- [ ] Instagram oficial e migração de canal aprovados na fase `CANAL-2`.
 - [ ] Persistência de execução/manual do n8n desabilitada ou expurgada em até 30 dias, sem PII.
 - [ ] Falha de Ficha aparece na reconciliação e retry não duplica envio.
 - [ ] Monitor externo detecta parada da VPS.

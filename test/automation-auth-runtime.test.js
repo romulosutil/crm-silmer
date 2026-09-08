@@ -39,8 +39,7 @@ test('authorizes HTTP Basic credentials for every minimum n8n action', async () 
   const { auditEvents, runtime } = harness();
   const allowedActions = [
     'integration.n8n.message.create',
-    'integration.n8n.delivery-status.update',
-    'integration.n8n.run.create',
+    'integration.n8n.event.create',
     'conversation.convert',
     'deal.fields.patch',
     'deal.transition',
@@ -162,7 +161,7 @@ test('rejects missing and malformed authorization without leaking the header', a
     const { auditEvents, runtime } = harness();
     await assert.rejects(
       runtime.authorize({
-        action: 'integration.n8n.run.create',
+        action: 'integration.n8n.event.create',
         authorization,
         correlationId: 'correlation-malformed',
       }),

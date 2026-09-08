@@ -1440,8 +1440,8 @@
     "semantic_hash": ""
   },
   "test/e2e/crm-ui.spec.js": {
-    "mtime": 1788840621.45704,
-    "ast_hash": "e64505c32f21f182f7cd075b9a22d575",
+    "mtime": 1788846634.508927,
+    "ast_hash": "86a488db5930716085ac495e9fe74fa7",
     "semantic_hash": ""
   },
   "docs/adr/README.md": {
@@ -1455,8 +1455,8 @@
     "semantic_hash": ""
   },
   "apps/edge-web/src/App.vue": {
-    "mtime": 1788844173.1607232,
-    "ast_hash": "b4abd527a95f6fdf8de257347bd50052",
+    "mtime": 1788846594.774385,
+    "ast_hash": "cc6212a22529621e5080d6ba6029e08b",
     "semantic_hash": ""
   },
   "apps/edge-web/src/components/AuthPanel.vue": {
@@ -1560,8 +1560,8 @@
     "semantic_hash": ""
   },
   "apps/edge-web/src/views/ClientsView.vue": {
-    "mtime": 1788840620.8686554,
-    "ast_hash": "a7a3966358fd06553db40f9c9b2600a4",
+    "mtime": 1788846594.7678392,
+    "ast_hash": "88ddcdfad44bcf535294c1294f64feb4",
     "semantic_hash": ""
   },
   "apps/edge-web/src/views/DashboardView.vue": {
@@ -1570,8 +1570,8 @@
     "semantic_hash": ""
   },
   "apps/edge-web/src/views/InboxView.vue": {
-    "mtime": 1788840620.7013197,
-    "ast_hash": "830b53dbeea4e999d6e1df4004c7e2bb",
+    "mtime": 1788846594.7723727,
+    "ast_hash": "a42ac25a708b70dd8859d168bd0ff821",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260908_050203_onde_as_telas_importadas_do_design_system_devem_vi.md": {

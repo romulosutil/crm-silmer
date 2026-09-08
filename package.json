@@ -30,6 +30,7 @@
     "smoke:observability:live": "node scripts/observability-live-probe.mjs --baseline",
     "drill:observability:api": "node scripts/observability-live-probe.mjs --watch-api-drill",
     "generate:ficha-pdf-review": "node scripts/ficha-pdf-review.mjs --generate",
+    "generate:n8n-dev-workflow": "node ops/n8n/workflows/create-dev-test-workflow.mjs",
     "test": "node --test test/*.test.js",
     "test:database": "node --test test/database.test.js test/migrations.test.js",
     "test:database:live": "node --test test/migrations-live.test.js",

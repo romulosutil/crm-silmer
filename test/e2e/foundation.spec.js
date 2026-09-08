@@ -96,7 +96,7 @@ test('distinguishes session service failure from a signed-out session', async ({
       contentType: 'application/problem+json',
       status: available ? signedOutStatus : 503,
       body: JSON.stringify({
-        code: available ? 'AUTH_INPUT_INVALID' : 'UNAVAILABLE',
+        code: available ? 'INVALID_CRM_SESSION' : 'UNAVAILABLE',
       }),
     });
   });

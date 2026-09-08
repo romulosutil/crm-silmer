@@ -175,6 +175,7 @@ export function createDealApiRuntime(database, options = {}) {
     acceptHandoff: workManagement.acceptHandoff,
     assignDeal: workManagement.assignDeal,
     cancelTask: workManagement.cancelTask,
+    claimHandoff: workManagement.claimHandoff,
     completeTask: workManagement.completeTask,
     createHandoff: workManagement.createHandoff,
     createTask: workManagement.createTask,

@@ -17,6 +17,7 @@ const operationalActions = new Set([
   'conversation.reactivate-agent',
   'conversation.takeover',
   'conversation.transition',
+  'handoff.claim',
   'deal.draft.edit',
   'deal.draft.read',
 ]);

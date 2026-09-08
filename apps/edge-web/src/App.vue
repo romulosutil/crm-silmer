@@ -74,7 +74,10 @@ async function restoreSession() {
     await showSession(response.data, false);
     announce('Sessão restaurada.');
   } catch (error) {
-    if (error instanceof ApiError && [400, 401, 404].includes(error.status)) {
+    if (
+      error instanceof ApiError &&
+      [400, 401, 403, 404].includes(error.status)
+    ) {
       await showSignedOut(false);
       announce('Entre para continuar.');
       return;

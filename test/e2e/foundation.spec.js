@@ -90,10 +90,11 @@ test('distinguishes session service failure from a signed-out session', async ({
   page,
 }) => {
   let available = false;
+  let signedOutStatus = 400;
   await page.route('**/api/v1/sessions/current', async (route) => {
     await route.fulfill({
       contentType: 'application/problem+json',
-      status: available ? 400 : 503,
+      status: available ? signedOutStatus : 503,
       body: JSON.stringify({
         code: available ? 'AUTH_INPUT_INVALID' : 'UNAVAILABLE',
       }),
@@ -110,6 +111,10 @@ test('distinguishes session service failure from a signed-out session', async ({
 
   available = true;
   await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(page.getByRole('tab', { name: 'Entrar' })).toBeVisible();
+
+  signedOutStatus = 403;
+  await page.reload();
   await expect(page.getByRole('tab', { name: 'Entrar' })).toBeVisible();
 });
 

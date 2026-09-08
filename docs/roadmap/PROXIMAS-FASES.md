@@ -10,10 +10,27 @@ sem criar entidades ou requisitos paralelos.
 
 ## Estado de partida
 
-O frontend já possui autenticação, shell, Kanban, detalhe do Negócio e Conta.
-O backend possui as mutações humanas de resposta, takeover, retorno à IA,
-fechamento e reivindicação de handoff. Ainda faltam os read models de Inbox,
-Conversa, Handoff e Contato antes das novas telas.
+O frontend já possui autenticação, shell, Dashboard operacional, Inbox,
+detalhe da conversa, Kanban, detalhe do Negócio, Clientes e Conta. Inbox e
+Clientes consomem read models autorizados do PostgreSQL; Dashboard agrega
+somente Kanban e Inbox, sem fabricar vendas ou pedidos ainda inexistentes. O
+read model da fila de Handoffs continua pendente.
+
+### Entregue na conexão frontend/backend de 08/09/2026
+
+- `GET /api/v1/inbox/conversations` e
+  `GET /api/v1/inbox/conversations/{id}`, com filtros fechados, paginação por
+  cursor assinado, minimização e ACL `conversation.read`;
+- `GET /api/v1/contacts` e `GET /api/v1/contacts/{id}`, com identidades
+  decifradas somente após autorização e ACL `contact.read`;
+- Inbox ligada às mutações existentes de resposta, takeover, retorno à IA e
+  encerramento, usando versão esperada, CSRF e idempotência;
+- estados acessíveis de loading, vazio, erro e repetição em Dashboard, Inbox e
+  Clientes; remoção do dataset e do aviso de demonstração.
+
+Permanecem fora desta fatia anexos seguros, atualização em tempo real da Inbox,
+fila dedicada de Handoffs e merge/unmerge de identidades. Portanto, UI-1 e UI-3
+avançaram, mas não devem ser declaradas integralmente encerradas.
 
 ## Ordem recomendada
 
@@ -29,8 +46,8 @@ Conversa, Handoff e Contato antes das novas telas.
 
 ## UI-1 — Inbox e atendimento da conversa
 
-Primeiro criar os read models `GET /api/v1/inbox/conversations` e
-`GET /api/v1/conversations/{id}`. A tela combina lista e detalhe responsivos:
+Os read models são `GET /api/v1/inbox/conversations` e
+`GET /api/v1/inbox/conversations/{id}`. A tela combina lista e detalhe responsivos:
 última mensagem, prioridade, canal, modo IA/humano, indicador de handoff,
 histórico, anexos seguros, briefing atual, composer e estados de entrega.
 
@@ -52,7 +69,8 @@ Rastreabilidade: AGT-03–05, AGT-08 e PRV-01.
 
 ## UI-3 — detalhe do Cliente
 
-Criar `GET /api/v1/contacts/{id}` com ACL e minimização. A tela mostra dados
+Usar `GET /api/v1/contacts` e `GET /api/v1/contacts/{id}` com ACL e
+minimização. A tela mostra dados
 canônicos, identidades verificadas, conversas, handoffs e Negócios. Não funde
 pessoas por nome, telefone parecido ou inferência de IA. Merge/unmerge, quando
 exposto, é humano, reversível, motivado e auditado.

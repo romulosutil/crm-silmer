@@ -15,6 +15,7 @@ export {
 export { InMemoryInboxRepository } from './adapters/in-memory-inbox-repository.js';
 export { PostgresConversationConversionPort } from './adapters/postgres-conversation-conversion-port.js';
 export { PostgresInboxRepository } from './adapters/postgres-inbox-repository.js';
+export { PostgresInboxReadRepository } from './adapters/postgres-inbox-read-repository.js';
 export { PostgresHandoffConversationPort } from './adapters/postgres-handoff-conversation-port.js';
 export {
   createChannelEventHandler,

@@ -568,6 +568,16 @@ function decryptJson(raw, context, key) {
   }
 }
 
+/** @param {unknown} raw @param {string} id @param {Buffer} key @param {boolean} [contextIsComplete] */
+export function decryptInboxMessageEnvelope(
+  raw,
+  id,
+  key,
+  contextIsComplete = false,
+) {
+  return decryptJson(raw, contextIsComplete ? id : `message:${id}`, key);
+}
+
 /** @param {Queryable} transaction @param {string} identity */
 async function advisoryLock(transaction, identity) {
   await transaction.query(

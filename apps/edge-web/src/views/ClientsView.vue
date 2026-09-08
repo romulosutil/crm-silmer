@@ -1,43 +1,110 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue';
-import DemoNotice from '../components/DemoNotice.vue';
-import { brl, brlExato, clientes, dataBR } from '../data/demo-crm.js';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
+import { request } from '../lib/api-client.js';
+import {
+  CHANNEL_LABELS,
+  CONVERSATION_LABELS,
+  STAGE_LABELS,
+  dateTimeBR,
+} from '../lib/format.js';
 
 const props = defineProps({ selectedId: { type: String, default: '' } });
 const heading = ref(null);
-const profile = ref('Todos');
+const searchInput = ref(null);
 const query = ref('');
+const loading = ref(true);
+const detailLoading = ref(false);
+const error = ref('');
+const contacts = ref([]);
+const totalCount = ref(0);
+const detail = ref(null);
+let listController;
+let detailController;
+
 const filtered = computed(() => {
-  const needle = query.value.toLocaleLowerCase('pt-BR');
-  return clientes.filter(
-    (client) =>
-      (profile.value === 'Todos' || client.perfil === profile.value) &&
-      (!needle ||
-        `${client.nome} ${client.contato} ${client.identificador}`
-          .toLocaleLowerCase('pt-BR')
-          .includes(needle)),
+  const needle = query.value.trim().toLocaleLowerCase('pt-BR');
+  if (!needle) return contacts.value;
+  return contacts.value.filter((contact) =>
+    `${contact.label} ${contact.identities.map((identity) => identity.externalId).join(' ')}`
+      .toLocaleLowerCase('pt-BR')
+      .includes(needle),
   );
 });
-const selected = computed(
-  () =>
-    clientes.find((client) => client.id === props.selectedId) ??
-    filtered.value[0] ??
-    null,
-);
-const portfolio = clientes.reduce((sum, client) => sum + client.total, 0);
+const selected = computed(() => detail.value?.contact ?? null);
 
-function clearFilters() {
-  profile.value = 'Todos';
-  query.value = '';
-  void nextTick(() => document.querySelector('#client-search')?.focus());
+async function loadContacts() {
+  listController?.abort();
+  listController = new AbortController();
+  loading.value = true;
+  error.value = '';
+  try {
+    const response = await request('/api/v1/contacts?limit=100', {
+      signal: listController.signal,
+    });
+    contacts.value = response.data.items;
+    totalCount.value = response.data.totalCount;
+    const id = props.selectedId || contacts.value[0]?.id;
+    if (id) await loadContact(id);
+    else detail.value = null;
+  } catch (cause) {
+    if (cause?.name !== 'AbortError') {
+      error.value = 'Não foi possível carregar os contatos.';
+    }
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadContact(id) {
+  if (!id) return;
+  detailController?.abort();
+  detailController = new AbortController();
+  detailLoading.value = true;
+  error.value = '';
+  try {
+    const response = await request(
+      `/api/v1/contacts/${encodeURIComponent(id)}`,
+      {
+        signal: detailController.signal,
+      },
+    );
+    detail.value = response.data;
+  } catch (cause) {
+    if (cause?.name !== 'AbortError') {
+      error.value = 'Não foi possível carregar o contato selecionado.';
+      detail.value = null;
+    }
+  } finally {
+    detailLoading.value = false;
+  }
 }
 
 function clearSearch() {
   query.value = '';
-  void nextTick(() => document.querySelector('#client-search')?.focus());
+  void nextTick(() => searchInput.value?.focus());
 }
 
-onMounted(() => heading.value?.focus());
+watch(
+  () => props.selectedId,
+  (id) => {
+    if (id && id !== selected.value?.id) void loadContact(id);
+  },
+);
+onMounted(() => {
+  heading.value?.focus();
+  void loadContacts();
+});
+onBeforeUnmount(() => {
+  listController?.abort();
+  detailController?.abort();
+});
 </script>
 
 <template>
@@ -47,20 +114,25 @@ onMounted(() => heading.value?.focus());
         <p class="eyebrow">Relacionamento</p>
         <h1 ref="heading" tabindex="-1">Clientes</h1>
         <p>
-          Contatos recorrentes mantêm um cadastro e vários negócios, sem perder
-          o histórico de pedidos e conversas.
+          Contatos canônicos, identidades por canal e histórico operacional
+          persistido.
         </p>
       </div>
-      <button type="button" disabled>Exportar carteira</button>
+      <button type="button" :disabled="loading" @click="loadContacts">
+        Atualizar
+      </button>
     </header>
-
-    <DemoNotice />
 
     <div class="filter-bar">
       <div class="search-control">
-        <label for="client-search">Buscar cliente, contato ou telefone</label>
+        <label for="client-search">Buscar contato ou identificador</label>
         <div class="search-field">
-          <input id="client-search" v-model="query" type="search" />
+          <input
+            id="client-search"
+            ref="searchInput"
+            v-model="query"
+            type="search"
+          />
           <button
             v-if="query"
             type="button"
@@ -71,70 +143,61 @@ onMounted(() => heading.value?.focus());
           </button>
         </div>
       </div>
-      <span class="filter-label">Perfil de compra</span>
-      <div class="chip-row">
-        <button
-          v-for="option in ['Todos', 'Uso próprio', 'Revenda / atacado']"
-          :key="option"
-          type="button"
-          class="chip"
-          :aria-pressed="profile === option"
-          @click="profile = option"
-        >
-          {{ option }}
-        </button>
-      </div>
       <p class="filter-summary">
-        {{ filtered.length }} de {{ clientes.length }} clientes ·
-        {{ brl(portfolio) }} em pedidos concluídos
+        {{ filtered.length }} exibidos · {{ totalCount }} contatos
       </p>
     </div>
 
-    <div class="clients-layout">
+    <p v-if="error" role="alert" class="audit-note">{{ error }}</p>
+    <div v-if="loading" class="loading-state" role="status">
+      Carregando contatos…
+    </div>
+    <div v-else class="clients-layout">
       <section class="surface" aria-labelledby="portfolio-title">
         <div class="panel-head">
-          <h2 id="portfolio-title">Carteira</h2>
-          <p>Ordenada pelo último pedido</p>
+          <h2 id="portfolio-title">Contatos</h2>
+          <p>Ordenados pela atualização cadastral</p>
         </div>
         <div v-if="filtered.length" class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th scope="col">Cliente</th>
-                <th scope="col">Canal</th>
-                <th scope="col">Responsável</th>
-                <th scope="col" class="num">Pedidos</th>
-                <th scope="col" class="num">Total</th>
-                <th scope="col">Último</th>
+                <th scope="col">Contato</th>
+                <th scope="col">Canais</th>
+                <th scope="col" class="num">Negócios ativos</th>
+                <th scope="col">Situação</th>
+                <th scope="col">Última atividade</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="client in filtered"
-                :key="client.id"
-                :data-selected="selected?.id === client.id"
+                v-for="contact in filtered"
+                :key="contact.id"
+                :data-selected="selected?.id === contact.id"
               >
                 <td>
-                  <RouterLink class="row-link" :to="`/clientes/${client.id}`">
-                    {{ client.nome }}
+                  <RouterLink class="row-link" :to="`/clientes/${contact.id}`">
+                    {{ contact.label }}
                   </RouterLink>
-                  <span class="table-detail">
-                    {{ client.contato }} · {{ client.cidade }}
-                  </span>
+                  <span class="table-detail">{{ contact.id }}</span>
                 </td>
-                <td>{{ client.canal }}</td>
-                <td>{{ client.responsavel }}</td>
-                <td class="num">{{ client.pedidos }}</td>
-                <td class="num">{{ brl(client.total) }}</td>
-                <td>{{ dataBR(client.ultimo) }}</td>
+                <td>
+                  {{
+                    contact.identities
+                      .map((identity) => CHANNEL_LABELS[identity.channel])
+                      .join(', ') || 'Sem canal'
+                  }}
+                </td>
+                <td class="num">{{ contact.activeDealCount }}</td>
+                <td>{{ contact.provisional ? 'Provisório' : 'Canônico' }}</td>
+                <td>{{ dateTimeBR(contact.latestActivityAt) }}</td>
               </tr>
             </tbody>
           </table>
         </div>
         <div v-else class="empty-list">
-          <h3>Nenhum cliente encontrado</h3>
-          <p>Revise a busca ou volte ao filtro de todos os perfis.</p>
-          <button type="button" @click="clearFilters">Limpar filtros</button>
+          <h3>Nenhum contato encontrado</h3>
+          <p>Revise a busca informada.</p>
         </div>
       </section>
 
@@ -144,63 +207,96 @@ onMounted(() => heading.value?.focus());
         :aria-labelledby="`client-${selected.id}`"
       >
         <div class="client-head">
-          <p class="section-kicker">Ficha do cliente</p>
-          <h2 :id="`client-${selected.id}`">{{ selected.nome }}</h2>
+          <p class="section-kicker">Ficha do contato</p>
+          <h2 :id="`client-${selected.id}`">{{ selected.label }}</h2>
           <p>
-            {{ selected.contato }} · {{ selected.canal }} ·
-            {{ selected.identificador }}
+            {{
+              selected.provisional ? 'Cadastro provisório' : 'Cadastro canônico'
+            }}
           </p>
         </div>
-        <dl class="client-facts">
-          <div>
-            <dt>Cidade</dt>
-            <dd>{{ selected.cidade }}</dd>
-          </div>
-          <div>
-            <dt>Perfil de compra</dt>
-            <dd>{{ selected.perfil }}</dd>
-          </div>
-          <div>
-            <dt>Responsável</dt>
-            <dd>{{ selected.responsavel }}</dd>
-          </div>
-          <div>
-            <dt>Cliente desde</dt>
-            <dd>{{ selected.desde }}</dd>
-          </div>
-          <div>
-            <dt>Pedidos concluídos</dt>
-            <dd>{{ selected.pedidos }}</dd>
-          </div>
-          <div>
-            <dt>Total comprado</dt>
-            <dd>{{ brlExato(selected.total) }}</dd>
-          </div>
-        </dl>
-        <div class="inline-actions client-actions">
-          <button type="button" disabled class="primary">Abrir conversa</button>
-          <button type="button" disabled>Criar novo negócio</button>
+        <div v-if="detailLoading" class="loading-state" role="status">
+          Carregando histórico…
         </div>
-        <div class="panel-head">
-          <h3>Histórico</h3>
-          <p>
-            <span v-if="selected.abertos" class="badge" data-tone="info">
-              {{ selected.abertos }} negócio(s) em aberto
-            </span>
-            <span v-else class="badge">Sem negócio em aberto</span>
-          </p>
-        </div>
-        <ul class="history-list">
-          <li
-            v-for="(entry, index) in selected.historico"
-            :key="`${selected.id}-${index}`"
-            :data-kind="entry.tipo"
-          >
-            <span>{{ entry.quando }}</span>
-            <strong>{{ entry.titulo }}</strong>
-            <p>{{ entry.detalhe }}</p>
-          </li>
-        </ul>
+        <template v-else>
+          <dl class="client-facts">
+            <div>
+              <dt>Identidades</dt>
+              <dd>{{ detail.identities.length }}</dd>
+            </div>
+            <div>
+              <dt>Negócios ativos</dt>
+              <dd>{{ detail.activeDealCount }}</dd>
+            </div>
+            <div>
+              <dt>Conversas</dt>
+              <dd>{{ detail.conversations.length }}</dd>
+            </div>
+            <div>
+              <dt>Cadastrado em</dt>
+              <dd>{{ dateTimeBR(selected.createdAt) }}</dd>
+            </div>
+          </dl>
+
+          <div class="panel-head subsection-heading">
+            <h3>Identidades por canal</h3>
+          </div>
+          <ul class="history-list">
+            <li v-for="identity in detail.identities" :key="identity.id">
+              <strong>{{
+                CHANNEL_LABELS[identity.channel] ?? identity.channel
+              }}</strong>
+              <span>{{ identity.displayHandle ?? identity.externalId }}</span>
+              <small v-if="identity.phoneStatus"
+                >Telefone: {{ identity.phoneStatus }}</small
+              >
+            </li>
+          </ul>
+
+          <div class="panel-head subsection-heading">
+            <h3>Negócios</h3>
+            <p>{{ detail.activeDealCount }} ativo(s)</p>
+          </div>
+          <ul v-if="detail.deals.length" class="history-list">
+            <li v-for="deal in detail.deals" :key="deal.id">
+              <RouterLink :to="`/negocios/${deal.id}`"
+                >Negócio {{ deal.id }}</RouterLink
+              >
+              <span
+                >{{ STAGE_LABELS[deal.stage] ?? deal.stage }} ·
+                {{ deal.status }}</span
+              >
+              <small>Atualizado em {{ dateTimeBR(deal.updatedAt) }}</small>
+            </li>
+          </ul>
+          <p v-else class="empty-list">Nenhum negócio associado.</p>
+
+          <div class="panel-head subsection-heading">
+            <h3>Conversas</h3>
+          </div>
+          <ul v-if="detail.conversations.length" class="history-list">
+            <li
+              v-for="conversation in detail.conversations"
+              :key="conversation.id"
+            >
+              <RouterLink to="/inbox">{{
+                CHANNEL_LABELS[conversation.channel]
+              }}</RouterLink>
+              <span>{{
+                CONVERSATION_LABELS[conversation.state] ?? conversation.state
+              }}</span>
+              <small
+                >Última mensagem em
+                {{ dateTimeBR(conversation.lastMessageAt) }}</small
+              >
+            </li>
+          </ul>
+          <p v-else class="empty-list">Nenhuma conversa associada.</p>
+        </template>
+      </section>
+      <section v-else class="surface empty-list" aria-live="polite">
+        <h2>Selecione um contato</h2>
+        <p>Identidades, negócios e conversas aparecerão aqui.</p>
       </section>
     </div>
   </div>

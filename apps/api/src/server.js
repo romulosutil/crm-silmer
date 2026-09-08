@@ -15,6 +15,7 @@ import { createConversationApiRuntime } from './conversation-runtime.js';
 import { createDealApiRuntime } from './deal-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
 import { createN8nApiRuntime } from './n8n-runtime.js';
+import { createOperationReadRuntime } from './operation-runtime.js';
 import { createWhatsAppWebhookRuntime } from './whatsapp-webhook-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
@@ -39,6 +40,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   automationAuth?: ReturnType<typeof createAutomationAuthRuntime>,
  *   conversations?: Record<string, any>,
  *   n8n?: Record<string, any>,
+ *   operations?: Record<string, any>,
  *   trustProxy?: import('fastify').FastifyServerOptions['trustProxy']
  * }} [runtime]
  */
@@ -112,6 +114,32 @@ export function createServerApi(runtime = {}) {
           ),
         )
       : undefined);
+  const operationSecretNames = [
+    'CONTACT_IDENTITY_ENVELOPE_KEY',
+    'INBOX_MESSAGE_ENVELOPE_KEY',
+    'KANBAN_CURSOR_HMAC_KEY',
+  ];
+  const operationConfigurationPresent = operationSecretNames.some((name) =>
+    Boolean(environment[name]),
+  );
+  if (
+    runtime.database &&
+    operationConfigurationPresent &&
+    !operationSecretNames.every((name) => Boolean(environment[name]))
+  ) {
+    throw new Error(
+      'Operation read runtime requires CONTACT_IDENTITY_ENVELOPE_KEY, INBOX_MESSAGE_ENVELOPE_KEY and KANBAN_CURSOR_HMAC_KEY together',
+    );
+  }
+  const operations =
+    runtime.operations ??
+    (runtime.database &&
+    operationSecretNames.every((name) => Boolean(environment[name]))
+      ? createOperationReadRuntime(runtime.database, {
+          environment,
+          identity: runtime.identity,
+        })
+      : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
     {
@@ -123,6 +151,7 @@ export function createServerApi(runtime = {}) {
       logger,
       metaWebhook,
       n8n,
+      operations,
       readiness,
     },
   );

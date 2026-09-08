@@ -352,6 +352,9 @@ rotacionável e capacidades mínimas. Conflitos de versão retornam `409`; erros
 | `POST /api/v1/sessions`                                        | Criar sessão                                        | Credencial válida                              |
 | `DELETE /api/v1/sessions/current`                              | Revogar sessão                                      | Sessão válida                                  |
 | `GET /api/v1/inbox/conversations`                              | Consultar backlog                                   | Atendimento ou Vendedor                        |
+| `GET /api/v1/inbox/conversations/{id}`                         | Consultar conversa e histórico minimizado           | Atendimento ou Vendedor                        |
+| `GET /api/v1/contacts`                                         | Listar contatos e identidades por canal              | Atendimento ou Vendedor                        |
+| `GET /api/v1/contacts/{id}`                                    | Consultar contato, conversas e Negócios              | Atendimento ou Vendedor                        |
 | `POST /api/v1/conversations/{id}/takeover`                     | Suspender IA e assumir                              | Atendimento ou Vendedor                        |
 | `POST /api/v1/conversations/{id}/return-to-ai`                 | Reativar IA explicitamente                          | Atendimento ou Vendedor                        |
 | `POST /api/v1/conversations/{id}/close`                        | Encerrar atendimento                                | Atendimento ou Vendedor                        |

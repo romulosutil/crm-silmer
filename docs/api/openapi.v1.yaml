@@ -161,6 +161,82 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /inbox/conversations:
+    get:
+      operationId: listInboxConversations
+      summary: Lista o backlog operacional de conversas
+      description: >-
+        Projeção paginada e minimizada. Cursores são assinados e vinculados aos
+        filtros para impedir troca silenciosa de escopo.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - { name: state, in: query, schema: { $ref: '#/components/schemas/ConversationState' } }
+        - { name: channel, in: query, schema: { $ref: '#/components/schemas/Channel' } }
+        - { name: automationState, in: query, schema: { type: string, enum: [assistant, human] } }
+        - { name: assignedUserId, in: query, schema: { type: string, minLength: 1, maxLength: 128 } }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        '200':
+          description: Página de conversas, sem envelopes cifrados ou payload bruto
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-cache' } }
+            Vary: { schema: { type: string, const: 'Origin, Cookie' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InboxPage' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /inbox/conversations/{conversationId}:
+    get:
+      operationId: getInboxConversation
+      summary: Retorna uma conversa e seu histórico persistido
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Conversa, mensagens e sugestão pendente minimizadas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InboxConversationDetail' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /contacts:
+    get:
+      operationId: listContacts
+      summary: Lista contatos canônicos e suas identidades por canal
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        '200':
+          description: Página de contatos, sem envelopes cifrados
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContactPage' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /contacts/{contactId}:
+    get:
+      operationId: getContact
+      summary: Retorna contato, identidades, conversas e negócios associados
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ContactId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Histórico operacional minimizado do contato
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContactDetail' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /kanban:
     get:
       operationId: getKanban
@@ -749,6 +825,11 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
+    ContactId:
+      name: contactId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
     DealId:
       name: dealId
       in: path
@@ -940,6 +1021,128 @@ components:
         expectedDealVersion: { type: integer, minimum: 1 }
         expectedTaskVersion: { type: integer, minimum: 1 }
         reasonCode: { type: string, minLength: 1, maxLength: 512 }
+    Channel:
+      type: string
+      enum: [instagram, whatsapp]
+    ConversationState:
+      type: string
+      enum: [nova, em_analise, em_atendimento, requer_atencao, convertida_em_lead, sem_lead]
+    ContactIdentityView:
+      type: object
+      additionalProperties: false
+      required: [id, channel, kind, externalId, displayHandle, phoneStatus]
+      properties:
+        id: { type: string }
+        channel: { $ref: '#/components/schemas/Channel' }
+        kind: { type: string }
+        externalId: { type: string }
+        displayHandle: { type: [string, 'null'] }
+        phoneStatus: { type: [string, 'null'] }
+    ContactView:
+      type: object
+      additionalProperties: false
+      required: [id, label, provisional, version, identities, activeDealCount, createdAt, updatedAt, latestActivityAt]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        provisional: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        identities:
+          type: array
+          items: { $ref: '#/components/schemas/ContactIdentityView' }
+        activeDealCount: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        latestActivityAt: { type: string, format: date-time }
+    InboxMessageView:
+      type: object
+      additionalProperties: false
+      required: [id, direction, type, preview, status, deliveryStatus, occurredAt]
+      properties:
+        id: { type: string }
+        direction: { type: string, enum: [inbound, outbound] }
+        type: { type: string }
+        preview: { type: string }
+        status: { type: string }
+        deliveryStatus: { type: [string, 'null'] }
+        occurredAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        authorKind: { type: [string, 'null'] }
+        authorId: { type: [string, 'null'] }
+    InboxConversationView:
+      type: object
+      additionalProperties: false
+      required: [id, state, automationState, automationEpoch, version, channel, contact, lastMessage, requiresAttention, openedAt, updatedAt]
+      properties:
+        id: { type: string }
+        state: { $ref: '#/components/schemas/ConversationState' }
+        automationState: { type: string, enum: [assistant, human] }
+        automationEpoch: { type: integer, minimum: 0 }
+        version: { type: integer, minimum: 1 }
+        channel: { $ref: '#/components/schemas/Channel' }
+        contact:
+          type: object
+          additionalProperties: false
+          required: [id, label, externalId, displayHandle]
+          properties:
+            id: { type: string }
+            label: { type: string }
+            externalId: { type: string }
+            displayHandle: { type: [string, 'null'] }
+        assignedUser: { oneOf: [{ $ref: '#/components/schemas/OperationalUserRef' }, { type: 'null' }] }
+        deal: { type: [object, 'null'] }
+        handoff: { type: [object, 'null'] }
+        lastMessage: { oneOf: [{ $ref: '#/components/schemas/InboxMessageView' }, { type: 'null' }] }
+        requiresAttention: { type: boolean }
+        openedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        terminalAt: { type: [string, 'null'], format: date-time }
+    InboxPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor, totalCount]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/InboxConversationView' }
+        nextCursor: { type: [string, 'null'] }
+        totalCount: { type: integer, minimum: 0 }
+    InboxConversationDetail:
+      type: object
+      additionalProperties: false
+      required: [conversation, messages, suggestion]
+      properties:
+        conversation: { $ref: '#/components/schemas/InboxConversationView' }
+        messages:
+          type: array
+          items: { $ref: '#/components/schemas/InboxMessageView' }
+        suggestion: { type: [object, 'null'] }
+    ContactPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor, totalCount]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ContactView' }
+        nextCursor: { type: [string, 'null'] }
+        totalCount: { type: integer, minimum: 0 }
+    ContactDetail:
+      type: object
+      additionalProperties: false
+      required: [contact, identities, conversations, deals, activeDealCount]
+      properties:
+        contact: { $ref: '#/components/schemas/ContactView' }
+        identities:
+          type: array
+          items: { $ref: '#/components/schemas/ContactIdentityView' }
+        conversations:
+          type: array
+          items: { type: object }
+        deals:
+          type: array
+          items: { type: object }
+        activeDealCount: { type: integer, minimum: 0 }
     DealStage:
       type: string
       enum: [produto, especificacao, estampa, logistica, fechamento]

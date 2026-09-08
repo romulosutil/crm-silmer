@@ -2,8 +2,8 @@
 
 Status: aprovado em 02/09/2026 na execução de T02.2 e preservado como fixture e
 referência de desenvolvimento. O contrato operacional de produção foi
-supersedido em 07/09/2026 por RFC 001/ADR 002: a Meta chama o n8n e o n8n chama
-os quatro endpoints Basic do CRM. Após o corte, esta rota retorna indisponível
+supersedido em 08/09/2026 por RFC 002/ADR 003: a Meta chama o n8n e o n8n chama
+os três endpoints Basic do CRM. Após o corte, esta rota retorna indisponível
 e nunca atua como fallback silencioso.
 
 ## Rastreabilidade
@@ -34,8 +34,8 @@ ser confundido com n8n→CRM, que não usa HMAC nem timestamp.
    O runtime produtivo falha fechado sem a chave; seu valor nunca entra no Git,
    em logs ou em evidência.
 5. Evento canônico, metadados de mídia e job mínimo são persistidos na mesma
-   transação PostgreSQL antes do `200`. `T02.3` implementará claim, lease,
-   heartbeat, retry, dead letter e download.
+   transação PostgreSQL antes do `200`. O fluxo atual cerca a resposta por
+   epoch/revisão na reserva, sem claim ou lease separado.
 6. O receiver aceita somente a WABA e o `phone_number_id` configurados, limita
    cada callback a 100 eventos/100 mídias e admite por processo até 20 requests
    por segundo, com no máximo oito persistências concorrentes; excesso retorna
@@ -77,6 +77,5 @@ ser confundido com n8n→CRM, que não usa HMAC nem timestamp.
   separadas; testes locais não as comprovam.
 
 Para produção, a evidência adicional é o smoke
-Meta → n8n → inbound CRM → claim → IA → `message.send.requested` → Meta →
-status. O rollout inicial cobre WhatsApp; Instagram continua obrigatório antes
-do lançamento integral.
+Meta → n8n → inbound CRM → IA → `message.send.requested` → Meta → status. O
+rollout inicial cobre WhatsApp; Instagram pertence à fase `CANAL-2`.

@@ -26,11 +26,7 @@ test('builds the fixed technical actor with only the approved CRM actions', () =
   assert.deepEqual(AUTOMATION_EXECUTOR_ACTIONS, [
     'integration.n8n.message.create',
     'integration.n8n.attachment.create',
-    'integration.n8n.ai-turn.claim',
-    'integration.n8n.message-send.reserve',
-    'integration.n8n.delivery-status.update',
-    'integration.n8n.briefing.update',
-    'integration.n8n.run.create',
+    'integration.n8n.event.create',
     'conversation.convert',
     'deal.fields.patch',
     'deal.transition',

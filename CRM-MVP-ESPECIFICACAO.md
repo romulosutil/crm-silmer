@@ -1,6 +1,6 @@
 # CRM Silmer — Especificação de Produto do MVP
 
-> **Versão:** v6 — 29/08/2026
+> **Versão:** v7 — 08/09/2026
 > **Status:** P0.1 a P0.7 resolvidos e rastreabilidade sincronizada
 > **Decisão de passagem:** GO integral; design técnico, tarefas, estimativa e implementação estão nas mãos do Tech Lead.
 
@@ -150,14 +150,14 @@ orçamento humano aprovada por `Admin`; não calcula, negocia nem concede
 desconto.
 
 Tomada humana, handoff, retorno à IA, fechamento ou desligamento incrementam o
-`automation_epoch`. Antes de cada envio ou mutação, o n8n apresenta epoch,
-revisão, claim e token ao CRM; execuções antigas são
-rejeitadas e não podem retomar a conversa silenciosamente.
+`automation_epoch`. Antes de cada resposta automática, o n8n reserva o efeito
+apresentando epoch e revisão inbound ao CRM; decisões antigas são rejeitadas e
+não podem retomar a conversa silenciosamente.
 
 ## 8. Papel do n8n
 
 O n8n é **obrigatório** e funciona como motor operacional do MVP. Ele recebe e
-envia mensagens do WhatsApp oficial, chama OpenAI ou Gemini, conduz perguntas,
+envia mensagens do WhatsApp oficial, chama o provedor de IA configurado, conduz perguntas,
 solicita criação ou atualização de leads, move o Kanban pelos gates permitidos
 e transfere para uma pessoa quando necessário.
 
@@ -172,11 +172,12 @@ operacional. Não há execução silenciosa por outro caminho. No MVP, o n8n usa
 execução regular; queue mode e Redis ficam para uma evolução sustentada por
 medição.
 
-O contrato n8n→CRM v1 possui quatro endpoints e usa somente Basic Auth com o
+O contrato n8n→CRM do MVP possui três endpoints e usa somente Basic Auth com o
 ator `AUTOMATION_EXECUTOR`, idempotência, correlação e identidade de workflow
-nos headers. O contexto vem de mensagens recentes e briefing oficial
-versionado; o n8n não mantém memória comercial paralela. Toda chamada à Meta é
-precedida de uma reserva de uso único `message.send.requested`; resultado
+nos headers. O contexto vem de mensagens recentes e do snapshot de briefing da
+Conversa; o n8n não mantém memória comercial paralela. Toda chamada à Meta é
+precedida de uma reserva de uso único `message.send.requested`, cercada por
+epoch e revisão inbound; não há claim, lease ou token de rodada. Resultado
 incerto é reconciliado sem retry cego.
 
 ## 9. Ficha de Pedido como contrato da jornada
@@ -315,8 +316,9 @@ comerciais nem auditoria.
 - Nenhum handoff aceito fica sem responsável; handoff pendente permanece em
   fila explícita por papel até uma pessoa elegível reivindicá-lo.
 
-WhatsApp e Instagram são condições de lançamento. A migração entre eles deve
-preservar o mesmo Negócio, o contexto e as identidades verificadas. Os números
+WhatsApp é a condição de canal do primeiro MVP operacional. Instagram entra em
+`CANAL-2` e então deve preservar o mesmo Negócio, o contexto e as identidades
+verificadas. Os números
 de observação e volume são métricas operacionais definidas pelo Tech Lead com a
 operação e não reabrem P0.
 
@@ -329,8 +331,8 @@ operação e não reabrem P0.
   Vendedor Silmer no n8n; gates de preço, venda, pagamento e Ficha permanecem
   humanos.
 - n8n é dependência central e obrigatória do MVP.
-- WhatsApp e Instagram usam APIs oficiais, seguem o mesmo fluxo no n8n e
-  bloqueiam o go-live; o site abre um dos canais.
+- WhatsApp usa a API oficial e bloqueia o primeiro go-live; Instagram será
+  adicionado em `CANAL-2` sobre o mesmo fluxo e o site abre um canal disponível.
 - Ficha é o contrato da qualificação.
 - P0.1 está resolvido: etapas, campos obrigatórios, gates, PIX e boas-vindas
   estão definidos em `CAMPOS-FICHA-E-JORNADA-P0-1.md`.

@@ -34,6 +34,7 @@ export class PostgresN8nCommandOutbox {
         `SELECT message.id, message.command_id, message.author_id,
                 message.message_type, message.content_envelope,
                 conversation.id AS conversation_id, conversation.automation_epoch,
+                conversation.inbound_revision,
                 identity.external_identity_lookup_hash, identity.identity_envelope
          FROM crm.messages AS message
          JOIN crm.conversations AS conversation
@@ -65,8 +66,10 @@ export class PostgresN8nCommandOutbox {
     const payload = {
       action: 'send_message',
       actor: { id: row.author_id },
+      automation_epoch: Number(row.automation_epoch),
       command_id: input.idempotencyKey,
       conversation_id: row.conversation_id,
+      source_revision: Number(row.inbound_revision),
       message: {
         filename: null,
         media_url: null,
@@ -110,6 +113,7 @@ export class PostgresN8nCommandOutbox {
     const payload = {
       action: input.action,
       actor: { id: input.actor.id },
+      automation_epoch: Number(conversation.automation_epoch),
       command_id: input.commandId,
       conversation_id: conversation.id,
       schema_version: '1.0',

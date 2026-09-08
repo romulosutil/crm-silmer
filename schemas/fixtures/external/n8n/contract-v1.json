@@ -14,7 +14,7 @@
     "x-silmer-execution-id"
   ],
   "errorMediaType": "application/problem+json",
-  "channels": ["whatsapp", "instagram"],
+  "channels": ["whatsapp"],
   "activeChannels": ["whatsapp"],
   "endpoints": [
     {
@@ -29,12 +29,6 @@
     },
     {
       "method": "POST",
-      "path": "/api/v1/integrations/n8n/conversations/{conversation_id}/ai-turns/claim",
-      "requestFixture": "ai-turn-claim-request.json",
-      "responseFixture": "ai-turn-claim-response.json"
-    },
-    {
-      "method": "POST",
       "path": "/api/v1/integrations/n8n/events",
       "requestFixture": "message-send-requested.json"
     }
@@ -46,7 +40,6 @@
     "message.delivered",
     "message.read",
     "message.failed",
-    "lead.updated",
     "handoff.requested",
     "workflow.failed"
   ],

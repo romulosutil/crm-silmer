@@ -24,7 +24,7 @@ implantado em três processos independentes a partir do mesmo repositório:
 3. `worker`: documentos, outbox, retries, retenção e reconciliação do CRM.
 
 O n8n é um quarto runtime, obrigatório e implantado separadamente. Ele recebe e
-envia mensagens do WhatsApp oficial, chama OpenAI ou Gemini e orquestra os
+envia mensagens do WhatsApp oficial, chama o provedor de IA configurado e orquestra os
 comandos comerciais. Cada mensagem válida dispara um workflow automaticamente;
 a UI não inicia o fluxo.
 
@@ -89,9 +89,8 @@ privilegiadas que precisam de auditoria e recuperação.
 - WhatsApp Business oficial, reconciliação e saúde do canal.
 - Auditoria, retenção, legal hold, tombstones e solicitações de titulares.
 - Indicadores de vendido, quantidade de vendas e ticket médio.
-- Instagram Direct e WhatsApp Business oficiais como canais obrigatórios, com
-  o mesmo fluxo no n8n, inbound/outbound, saúde, reconciliação e migração
-  verificável entre identidades.
+- WhatsApp Business oficial no primeiro MVP; Instagram Direct reutiliza o
+  mesmo domínio em uma fase posterior com correlação verificável.
 
 ### Fora de escopo
 
@@ -118,7 +117,7 @@ privilegiadas que precisam de auditoria e recuperação.
 | Documentos       | Snapshot JSON + template HTML/CSS + Chromium para PDF                                                   | Snapshot determinístico; artefato íntegro, versionável e testável                                      |
 | Autenticação     | Sessão opaca no servidor em cookie seguro                                                               | Revogação simples; nenhum token no `localStorage`                                                      |
 | Orquestração     | n8n obrigatório, workflows versionados e APIs do CRM                                                    | Centraliza canal, IA e jornada sem duplicar a autoridade do domínio                                    |
-| IA               | OpenAI ou Gemini atrás do mesmo contrato estruturado no n8n                                             | Permite troca controlada sem alterar regras, dados oficiais ou avaliações                              |
+| IA               | Um provedor configurado atrás de contrato estruturado no n8n; segundo provedor é evolução               | Mantém o primeiro MVP simples sem acoplar regras ou dados oficiais ao modelo                           |
 | Observabilidade  | Logs JSON, métricas EasyPanel, erros/traces externos e audit trail no banco                             | Separa telemetria técnica de evidência de negócio                                                      |
 | Deploy           | Imagens imutáveis por digest em EasyPanel                                                               | Promoção reproduzível e rollback rápido                                                                |
 
@@ -130,9 +129,9 @@ migração e registro da decisão; imagens de banco nunca usam `latest`.
 
 ```mermaid
 flowchart LR
-    customer["Cliente"] --> meta["WhatsApp ou Instagram oficial"]
+    customer["Cliente"] --> meta["WhatsApp oficial"]
     meta -->|"webhook"| n8n["n8n: canal, IA e jornada"]
-    n8n --> ai["OpenAI ou Gemini"]
+    n8n --> ai["Provedor de IA configurado"]
     n8n -->|"eventos e comandos autorizados"| api["CRM API"]
     api --> postgres["PostgreSQL: fonte da verdade"]
     browser["Inbox e Kanban"] --> edge["edge-web"]
@@ -150,19 +149,19 @@ efeito oficial; o worker continua responsável por documentos e jobs internos.
 
 ### Processos implantáveis
 
-| Processo   | Responsabilidades                                                       | Estado local                         |
-| ---------- | ----------------------------------------------------------------------- | ------------------------------------ |
-| `edge-web` | Arquivos estáticos, TLS via proxy EasyPanel, headers e roteamento       | Nenhum                               |
-| `api`      | Sessão, REST, SSE, comandos, consultas e eventos canônicos do n8n       | Nenhum                               |
-| `worker`   | Jobs internos, PDF, retenção, reconciliação e agendas do CRM            | Diretório temporário descartável     |
-| `postgres` | Estado oficial, auditoria, inbox/outbox, jobs e projeções               | Volume persistente e backup externo  |
-| `n8n`      | Webhooks, WhatsApp, OpenAI/Gemini, jornada, retries de integração e handoff | Persistência própria e backup externo |
+| Processo   | Responsabilidades                                                 | Estado local                          |
+| ---------- | ----------------------------------------------------------------- | ------------------------------------- |
+| `edge-web` | Arquivos estáticos, TLS via proxy EasyPanel, headers e roteamento | Nenhum                                |
+| `api`      | Sessão, REST, SSE, comandos, consultas e eventos canônicos do n8n | Nenhum                                |
+| `worker`   | Jobs internos, PDF, retenção, reconciliação e agendas do CRM      | Diretório temporário descartável      |
+| `postgres` | Estado oficial, auditoria, inbox/outbox, jobs e projeções         | Volume persistente e backup externo   |
+| `n8n`      | Webhook, WhatsApp, provedor de IA, jornada e handoff              | Persistência própria e backup externo |
 
 ## 6. Fronteiras do monólito
 
 | Módulo                    | Fonte de verdade                                           | Pode emitir                                        |
 | ------------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
-| `identity-access`         | usuários, funções, roles e sessões                          | autenticação, concessão e revogação                |
+| `identity-access`         | usuários, funções, roles e sessões                         | autenticação, concessão e revogação                |
 | `inbox-channels`          | conversas, mensagens, anexos e envelopes canônicos         | mensagem recebida, estado do canal                 |
 | `contacts`                | contato e identidades externas verificadas                 | vínculo, merge e unmerge auditáveis                |
 | `catalog`                 | tipos, modelos, malhas, técnicas e versões publicadas      | item selecionado e snapshot de referência          |
@@ -187,10 +186,10 @@ por comandos e eventos dentro da mesma transação ou por outbox.
 é uma projeção visual do Negócio; nenhum dos dois mantém etapa independente.
 Backlog é estado de `Conversation`, nunca etapa do Negócio.
 
-### Migração entre Instagram e WhatsApp
+### Evolução posterior para Instagram
 
-O workflow oficial do Instagram no n8n implementa recebimento e envio, status
-do canal, retry e reconciliação com o mesmo envelope canônico do WhatsApp. Enquanto não
+Na fase `CANAL-2`, o workflow do Instagram implementará recebimento, envio e
+status com o mesmo envelope canônico do WhatsApp. Enquanto não
 existe telefone confirmado, o contato usa `@usuario` e estado
 `telefone_pendente`; nome ou similaridade nunca fundem identidades.
 
@@ -203,20 +202,26 @@ bloqueia o lançamento do MVP e permanece visível.
 
 ## 7. Modelo de dados essencial
 
-| Grupo          | Tabelas/estruturas                                                                                    | Restrições críticas                                                                                             |
-| -------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Acesso         | `users`, `user_functions`, `user_capabilities`, `sessions`                                            | função única; `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e `TECHNICAL_PRIVACY_EXECUTOR` ortogonais; sessão revogável |
-| Identidade     | `contacts`, `contact_identities`, `identity_links`, `identity_handoffs`                               | identidade única por provedor/conta/canal; handoff verificável; merge humano reversível                         |
-| Inbox          | `conversations`, `messages`, `attachments`, `conversation_briefing_versions`                         | mensagem única por `(provider, provider_account_id, external_message_id)`; revisão inbound monotônica           |
-| Catálogo       | `catalog_versions`, `catalog_products`, `catalog_models`, `catalog_materials`, `catalog_techniques`   | versão publicada imutável; Pedido guarda snapshot                                                               |
-| Funil          | `deals`, `deal_stage_history`, `tasks`                                                                | versão otimista; uma projeção Kanban por Deal                                                                   |
-| Qualificação   | `deal_items`, `item_fabrics`, `grade_lines`, `artwork`, `logistics`, `field_assessments`              | grade positiva; soma exata; N/A exige motivo                                                                    |
-| Comercial      | `quote_versions`, `sale_events`                                                                       | versão aprovada imutável; reconhecimento vendido único                                                          |
-| Pagamento      | `payment_flows`, `payment_evidence`                                                                   | comprovante não confirma pagamento; uma cobrança lógica                                                         |
-| Pedido         | `order_counter`, `orders`, `order_form_versions`, `document_artifacts`, `deliveries`                  | número global único; versão aprovada imutável                                                                   |
-| IA             | `ai_turns`, `automation_runs`, `handoffs`                                                             | lease, revisão, último evento, execução e epoch correlacionados; handoff por papel                               |
-| Confiabilidade | `channel_events`, `idempotency_records`, `outbox_jobs`, `processing_attempts`, `reconciliation_items`, `n8n_commands`, `message_delivery_attempts` | chave única por efeito observável; reserva de envio antes da Meta |
-| Privacidade    | `audit_events`, `privacy_requests`, `legal_holds`, `tombstone_receipts`                               | auditoria sem cópia eterna; ledger canônico externo ao backup                                                   |
+| Grupo          | Tabelas/estruturas                                                                                                                  | Restrições críticas                                                                                             |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Acesso         | `users`, `user_functions`, `user_capabilities`, `sessions`                                                                          | função única; `COMMERCIAL_ADMIN`, `PRIVACY_OFFICER` e `TECHNICAL_PRIVACY_EXECUTOR` ortogonais; sessão revogável |
+| Identidade     | `contacts`, `contact_identities`, `identity_links`, `identity_handoffs`                                                             | identidade única por provedor/conta/canal; handoff verificável; merge humano reversível                         |
+| Inbox          | `conversations`, `messages`, `attachments`                                                                                          | mensagem única por identidade externa; revisão inbound e briefing consolidado na Conversa                       |
+| Catálogo       | `catalog_versions`, `catalog_products`, `catalog_models`, `catalog_materials`, `catalog_techniques`                                 | versão publicada imutável; Pedido guarda snapshot                                                               |
+| Funil          | `deals`, `deal_stage_history`, `tasks`                                                                                              | versão otimista; uma projeção Kanban por Deal                                                                   |
+| Qualificação   | `deal_items`, `item_fabrics`, `grade_lines`, `artwork`, `logistics`, `field_assessments`                                            | grade positiva; soma exata; N/A exige motivo                                                                    |
+| Comercial      | `quote_versions`, `sale_events`                                                                                                     | versão aprovada imutável; reconhecimento vendido único                                                          |
+| Pagamento      | `payment_flows`, `payment_evidence`                                                                                                 | comprovante não confirma pagamento; uma cobrança lógica                                                         |
+| Pedido         | `order_counter`, `orders`, `order_form_versions`, `document_artifacts`, `deliveries`                                                | número global único; versão aprovada imutável                                                                   |
+| IA             | `handoffs`                                                                                                                          | resposta cercada na reserva por revisão e epoch; handoff por papel                                              |
+| Confiabilidade | `channel_events`, `idempotency_records`, `outbox_jobs`, `processing_attempts`, `reconciliation_items`, `n8n_commands`, `n8n_events` | chave única por efeito observável; entrega na Mensagem; reserva antes da Meta                                   |
+| Privacidade    | `audit_events`, `privacy_requests`, `legal_holds`, `tombstone_receipts`                                                             | auditoria sem cópia eterna; ledger canônico externo ao backup                                                   |
+
+As tabelas `ai_turns`, `automation_runs`, `conversation_briefing_versions` e
+`message_delivery_attempts` permanecem fisicamente presentes porque suas
+migrações expand já foram publicadas, mas ficam fora do runtime do MVP simples.
+Uma remoção futura exige migração contract explícita, após confirmar que não há
+dados dependentes.
 
 Dados estáveis são normalizados. JSONB é permitido para payload bruto com
 expiração, snapshot imutável de Ficha e resposta estruturada da IA; não é
@@ -339,45 +344,44 @@ e versão esperada. O ator `AUTOMATION_EXECUTOR` usa credencial própria,
 rotacionável e capacidades mínimas. Conflitos de versão retornam `409`; erros seguem
 `application/problem+json`. Listagens usam paginação por cursor.
 
-| Método e rota                                      | Finalidade                              | Autorização principal                          |
-| -------------------------------------------------- | --------------------------------------- | ---------------------------------------------- |
-| `POST /api/v1/integrations/n8n/messages/inbound`    | Persistir inbound e devolver contexto   | `AUTOMATION_EXECUTOR`                          |
-| `POST /api/v1/integrations/n8n/conversations/{id}/attachments` | Validar e publicar mídia segura | `AUTOMATION_EXECUTOR`                          |
-| `POST /api/v1/integrations/n8n/conversations/{id}/ai-turns/claim` | Conceder lease cercado ou negar com HTTP 200 | `AUTOMATION_EXECUTOR`              |
-| `POST /api/v1/integrations/n8n/events`              | Reserva, entrega, briefing, handoff e falha | `AUTOMATION_EXECUTOR`                       |
-| `POST /api/v1/sessions`                            | Criar sessão                            | Credencial válida                              |
-| `DELETE /api/v1/sessions/current`                  | Revogar sessão                          | Sessão válida                                  |
-| `GET /api/v1/inbox/conversations`                  | Consultar backlog                       | Atendimento ou Vendedor                        |
-| `POST /api/v1/conversations/{id}/takeover`         | Suspender IA e assumir                  | Atendimento ou Vendedor                        |
-| `POST /api/v1/conversations/{id}/return-to-ai`      | Reativar IA explicitamente              | Atendimento ou Vendedor                        |
-| `POST /api/v1/conversations/{id}/close`             | Encerrar atendimento                    | Atendimento ou Vendedor                        |
-| `POST /api/v1/handoffs/{id}/claim`                  | Assumir handoff não atribuído por CAS   | Papel compatível com `target_role`             |
-| `POST /api/v1/conversations/{id}/convert`          | Criar/vincular contato e Negócio        | `AUTOMATION_EXECUTOR` ou humano autorizado     |
-| `POST /api/v1/conversations/{id}/messages`         | Enviar mensagem humana                  | Atendimento ou Vendedor                        |
-| `POST /api/v1/identity-handoffs`                   | Iniciar Instagram para WhatsApp         | Atendimento, Vendedor ou sistema               |
-| `POST /api/v1/identity-handoffs/{id}/confirm`      | Confirmar vínculo verificável           | Atendimento ou Vendedor                        |
-| `GET /api/v1/deals/{id}`                           | Detalhe e completude                    | Atendimento ou Vendedor                        |
-| `PATCH /api/v1/deals/{id}/fields`                  | Validar e persistir campo oficial       | `AUTOMATION_EXECUTOR` ou humano autorizado     |
-| `POST /api/v1/suggestions/{id}/accept`             | Aceitar sugestão como comando humano    | Atendimento ou Vendedor                        |
-| `POST /api/v1/suggestions/{id}/reject`             | Descartar sugestão com motivo           | Atendimento ou Vendedor                        |
-| `POST /api/v1/deals/{id}/transitions`              | Registrar gate e avançar                | `AUTOMATION_EXECUTOR` ou humano autorizado     |
-| `POST /api/v1/deals/{id}/lose`                     | Marcar Perdido/cancelar com motivo      | Humano; `Admin` após venda aprovada            |
-| `POST /api/v1/deals/{id}/quotes`                   | Criar versão de orçamento               | Vendedor                                       |
-| `POST /api/v1/quotes/{id}/approve`                 | Aprovar versão                          | `Admin`                                        |
-| `POST /api/v1/deals/{id}/approve-sale`             | Reconhecer vendido e iniciar PIX        | `Admin`                                        |
-| `POST /api/v1/payments/{id}/evidence`              | Anexar comprovante                      | Canal ou humano autenticado                    |
-| `POST /api/v1/payments/{id}/reject`                | Rejeitar comprovante com motivo         | `Admin`                                        |
-| `POST /api/v1/payments/{id}/exception`             | Registrar condição excepcional          | `Admin`                                        |
-| `POST /api/v1/payments/{id}/confirm`               | Confirmar pagamento humano              | `Admin`                                        |
-| `POST /api/v1/orders/{id}/forms/approve`           | Aprovar versão e reservar número        | `Admin`                                        |
-| `POST /api/v1/order-forms/{id}/send`               | Enviar Ficha                            | `Admin`                                        |
-| `POST /api/v1/order-forms/{id}/retry`              | Repetir envio falho                     | `Admin`                                        |
-| `POST /api/v1/order-forms/{id}/resend`             | Reenviar versão enviada com motivo      | `Admin`                                        |
-| `POST /api/v1/order-forms/{id}/cancel`             | Cancelar e avisar Rose quando aplicável | `Admin`                                        |
-| `POST /api/v1/reconciliation/{id}/retry`           | Retomar falha                           | Atendimento, Vendedor ou Admin conforme efeito |
-| `POST /api/v1/privacy/requests`                    | Abrir solicitação de titular            | Operador de Privacidade                        |
-| `POST /api/v1/privacy/legal-holds`                 | Criar legal hold                        | `PRIVACY_OFFICER`                              |
-| `GET /api/v1/events`                               | SSE de inbox, jobs e cards              | Sessão válida                                  |
+| Método e rota                                                  | Finalidade                                          | Autorização principal                          |
+| -------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------- |
+| `POST /api/v1/integrations/n8n/messages/inbound`               | Persistir inbound e devolver contexto               | `AUTOMATION_EXECUTOR`                          |
+| `POST /api/v1/integrations/n8n/conversations/{id}/attachments` | Validar e publicar mídia segura                     | `AUTOMATION_EXECUTOR`                          |
+| `POST /api/v1/integrations/n8n/events`                         | Reserva cercada, entrega, briefing, handoff e falha | `AUTOMATION_EXECUTOR`                          |
+| `POST /api/v1/sessions`                                        | Criar sessão                                        | Credencial válida                              |
+| `DELETE /api/v1/sessions/current`                              | Revogar sessão                                      | Sessão válida                                  |
+| `GET /api/v1/inbox/conversations`                              | Consultar backlog                                   | Atendimento ou Vendedor                        |
+| `POST /api/v1/conversations/{id}/takeover`                     | Suspender IA e assumir                              | Atendimento ou Vendedor                        |
+| `POST /api/v1/conversations/{id}/return-to-ai`                 | Reativar IA explicitamente                          | Atendimento ou Vendedor                        |
+| `POST /api/v1/conversations/{id}/close`                        | Encerrar atendimento                                | Atendimento ou Vendedor                        |
+| `POST /api/v1/handoffs/{id}/claim`                             | Assumir handoff não atribuído por CAS               | Papel compatível com `target_role`             |
+| `POST /api/v1/conversations/{id}/convert`                      | Criar/vincular contato e Negócio                    | `AUTOMATION_EXECUTOR` ou humano autorizado     |
+| `POST /api/v1/conversations/{id}/messages`                     | Enviar mensagem humana                              | Atendimento ou Vendedor                        |
+| `POST /api/v1/identity-handoffs`                               | Iniciar Instagram para WhatsApp                     | Atendimento, Vendedor ou sistema               |
+| `POST /api/v1/identity-handoffs/{id}/confirm`                  | Confirmar vínculo verificável                       | Atendimento ou Vendedor                        |
+| `GET /api/v1/deals/{id}`                                       | Detalhe e completude                                | Atendimento ou Vendedor                        |
+| `PATCH /api/v1/deals/{id}/fields`                              | Validar e persistir campo oficial                   | `AUTOMATION_EXECUTOR` ou humano autorizado     |
+| `POST /api/v1/suggestions/{id}/accept`                         | Aceitar sugestão como comando humano                | Atendimento ou Vendedor                        |
+| `POST /api/v1/suggestions/{id}/reject`                         | Descartar sugestão com motivo                       | Atendimento ou Vendedor                        |
+| `POST /api/v1/deals/{id}/transitions`                          | Registrar gate e avançar                            | `AUTOMATION_EXECUTOR` ou humano autorizado     |
+| `POST /api/v1/deals/{id}/lose`                                 | Marcar Perdido/cancelar com motivo                  | Humano; `Admin` após venda aprovada            |
+| `POST /api/v1/deals/{id}/quotes`                               | Criar versão de orçamento                           | Vendedor                                       |
+| `POST /api/v1/quotes/{id}/approve`                             | Aprovar versão                                      | `Admin`                                        |
+| `POST /api/v1/deals/{id}/approve-sale`                         | Reconhecer vendido e iniciar PIX                    | `Admin`                                        |
+| `POST /api/v1/payments/{id}/evidence`                          | Anexar comprovante                                  | Canal ou humano autenticado                    |
+| `POST /api/v1/payments/{id}/reject`                            | Rejeitar comprovante com motivo                     | `Admin`                                        |
+| `POST /api/v1/payments/{id}/exception`                         | Registrar condição excepcional                      | `Admin`                                        |
+| `POST /api/v1/payments/{id}/confirm`                           | Confirmar pagamento humano                          | `Admin`                                        |
+| `POST /api/v1/orders/{id}/forms/approve`                       | Aprovar versão e reservar número                    | `Admin`                                        |
+| `POST /api/v1/order-forms/{id}/send`                           | Enviar Ficha                                        | `Admin`                                        |
+| `POST /api/v1/order-forms/{id}/retry`                          | Repetir envio falho                                 | `Admin`                                        |
+| `POST /api/v1/order-forms/{id}/resend`                         | Reenviar versão enviada com motivo                  | `Admin`                                        |
+| `POST /api/v1/order-forms/{id}/cancel`                         | Cancelar e avisar Rose quando aplicável             | `Admin`                                        |
+| `POST /api/v1/reconciliation/{id}/retry`                       | Retomar falha                                       | Atendimento, Vendedor ou Admin conforme efeito |
+| `POST /api/v1/privacy/requests`                                | Abrir solicitação de titular                        | Operador de Privacidade                        |
+| `POST /api/v1/privacy/legal-holds`                             | Criar legal hold                                    | `PRIVACY_OFFICER`                              |
+| `GET /api/v1/events`                                           | SSE de inbox, jobs e cards                          | Sessão válida                                  |
 
 A tabela fixa os comandos críticos, mas não substitui o OpenAPI completo que
 será criado na implementação. OpenAPI 3.1 é gerado a partir dos mesmos JSON
@@ -389,7 +393,7 @@ por tópico para reconectar sem vazar eventos entre usuários.
 
 ### Webhook inbound pelo n8n
 
-1. WhatsApp ou Instagram entrega o callback ao webhook publicado do n8n.
+1. WhatsApp entrega o callback ao webhook publicado do n8n.
 2. O workflow valida assinatura, allowlist, tamanho e formato mínimo e deriva
    um envelope canônico sem usar o payload Meta como estado de domínio.
 3. O n8n chama `POST /api/v1/integrations/n8n/messages/inbound` com Basic Auth,
@@ -436,9 +440,10 @@ nem repetido às cegas.
 ### Corrida IA versus tomada humana
 
 Cada conversa possui `automation_epoch`. Takeover, handoff, retorno à IA,
-fechamento e desligamento incrementam o epoch e invalidam claims antigos.
-Antes do envio ou mutação, o n8n apresenta epoch, revisão, claim e token; o CRM
-revalida estado e responsável. Resposta calculada sob epoch antigo é descartada e
+fechamento e desligamento incrementam o epoch e invalidam decisões antigas.
+Antes do envio automático, o n8n apresenta epoch e `source_revision` no
+`message.send.requested`; o CRM revalida modo e revisão e consome cada revisão
+uma única vez. Resposta calculada sob epoch antigo é descartada e
 auditada. A garantia vale até o ponto de não retorno declarado pelo adapter. Se
 uma chamada externa já o atravessou, o takeover impede novas tentativas, expõe
 `sent` ou `outcome_unknown` e exige reconciliação; não se promete cancelar uma
@@ -649,25 +654,27 @@ Detalhes, recursos e checklist estão em `EASYPANEL-TOPOLOGY.md`.
 
 ## 18. Alternativas consideradas
 
-| Alternativa             | Decisão                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------ |
-| Microserviços           | Rejeitado: transações distribuídas e operação sem escala/equipe que justifique |
-| Event sourcing completo | Rejeitado: audit trail append-only e modelo relacional atendem o MVP           |
-| GraphQL                 | Rejeitado: REST/OpenAPI explicita comandos, versões e idempotência             |
-| Redis/queue mode do n8n | Adiado: execução regular atende o piloto até medição justificar escala         |
-| JWT no browser          | Rejeitado: pior revogação e maior superfície de exfiltração                    |
-| MinIO na mesma VPS      | Rejeitado: preserva o mesmo domínio de falha dos dados                         |
+| Alternativa             | Decisão                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| Microserviços           | Rejeitado: transações distribuídas e operação sem escala/equipe que justifique  |
+| Event sourcing completo | Rejeitado: audit trail append-only e modelo relacional atendem o MVP            |
+| GraphQL                 | Rejeitado: REST/OpenAPI explicita comandos, versões e idempotência              |
+| Redis/queue mode do n8n | Adiado: execução regular atende o piloto até medição justificar escala          |
+| JWT no browser          | Rejeitado: pior revogação e maior superfície de exfiltração                     |
+| MinIO na mesma VPS      | Rejeitado: preserva o mesmo domínio de falha dos dados                          |
 | n8n como motor          | Aceito: obrigatório para canal, IA e orquestração; CRM preserva estado e regras |
-| RAG/pgvector imediato   | Adiado: dados e regras centrais já são estruturados                            |
-| Agregador de modelos    | Adiado: adiciona suboperadores e dificulta retenção/LGPD                       |
+| RAG/pgvector imediato   | Adiado: dados e regras centrais já são estruturados                             |
+| Agregador de modelos    | Adiado: adiciona suboperadores e dificulta retenção/LGPD                        |
 
 ## 19. Plano de implementação
 
 O trabalho foi reorganizado em três objetivos independentes:
 
 1. **CRM:** concluir domínio, APIs, Kanban, Pedido/Ficha, relatórios e controles.
-2. **Inbox Multicanal:** refatorar a fronteira do WhatsApp e concluir a UI operacional acessível.
-3. **Agente Vendedor Silmer no n8n:** implantar n8n, contratos, OpenAI/Gemini, jornada, handoff e operação.
+2. **Inbox:** concluir a fronteira do WhatsApp e a UI operacional acessível;
+   multicanal entra depois em `CANAL-2`.
+3. **Agente Vendedor Silmer no n8n:** implantar n8n, contratos, provedor de IA,
+   jornada, handoff e operação.
 
 Os três convergem em integração ponta a ponta, falhas/segurança, preparação de
 produção e UAT. A sequência, o estado reaproveitável e os gates estão em

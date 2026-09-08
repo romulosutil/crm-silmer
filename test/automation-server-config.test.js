@@ -35,7 +35,7 @@ test('wires configured automation authentication into the API instance', async (
   assert.equal(api.hasDecorator('automationAuth'), true);
   const automationAuth = /** @type {any} */ (api).automationAuth;
   const principal = await automationAuth.authorize({
-    action: 'integration.n8n.run.create',
+    action: 'integration.n8n.message.create',
     authorization: basic(CLIENT_ID, SECRET),
     correlationId: 'correlation-server-wiring',
   });

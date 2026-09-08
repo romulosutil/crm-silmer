@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 import {
   N8nConflictError,
@@ -8,14 +8,13 @@ import {
 import { fingerprint } from './crypto.js';
 
 const EVENT_TYPES = new Set([
-  'message.sent',
+  'handoff.requested',
   'message.delivered',
-  'message.read',
   'message.failed',
+  'message.read',
   'message.send.requested',
   'message.send.unknown',
-  'lead.updated',
-  'handoff.requested',
+  'message.sent',
   'workflow.failed',
 ]);
 const EVENTS_WITH_RESOLVABLE_CONVERSATION = new Set([
@@ -25,61 +24,56 @@ const EVENTS_WITH_RESOLVABLE_CONVERSATION = new Set([
   'message.send.unknown',
   'message.sent',
 ]);
+const BRIEFING_PATCH_FIELDS = new Set([
+  'artwork_status',
+  'city_or_postal_code',
+  'colors',
+  'customizations',
+  'delivery_mode',
+  'needed_by',
+  'notes',
+  'numbers',
+  'product_model',
+  'quantity',
+  'segment',
+  'sizes',
+  'sponsors',
+]);
 
 /**
- * Domain boundary consumed by the HTTP adapter. Transport authentication is
- * complete before this service runs, but the technical actor is still fenced
- * here so an internal caller cannot bypass least privilege accidentally.
+ * Small compatibility boundary for the WhatsApp MVP. Authentication happens at
+ * the HTTP edge; the actor is checked again here so internal callers cannot
+ * accidentally bypass the service account boundary.
  *
  * @param {{
  *   repository: {
  *     receiveInbound(input: any, runtime: any): Promise<any>,
  *     storeAttachment(input: any, runtime: any): Promise<any>,
- *     claimAiTurn(input: any, runtime: any): Promise<any>,
  *     recordEvent(input: any, runtime: any): Promise<any>,
- *     reserveSend?: (input: any, runtime: any) => Promise<any>,
- *     enqueuePanelCommand?: (input: any, runtime: any) => Promise<any>,
  *   },
  *   clock?: () => Date,
  *   idFactory?: (kind: string) => string,
- *   tokenFactory?: () => string,
- *   claimLeaseMs?: number,
  * }} options
  */
 export function createN8nIntegrationService({
   repository,
   clock = () => new Date(),
   idFactory = (kind) => `${kind}-${randomUUID()}`,
-  tokenFactory = () => randomBytes(32).toString('base64url'),
-  claimLeaseMs = 60_000,
 }) {
   for (const [candidate, method] of [
     [repository?.receiveInbound, 'receiveInbound'],
     [repository?.storeAttachment, 'storeAttachment'],
-    [repository?.claimAiTurn, 'claimAiTurn'],
     [repository?.recordEvent, 'recordEvent'],
   ]) {
     if (typeof candidate !== 'function') {
       throw new N8nValidationError(`repository must implement ${method}`);
     }
   }
-  if (
-    typeof clock !== 'function' ||
-    typeof idFactory !== 'function' ||
-    typeof tokenFactory !== 'function' ||
-    !Number.isSafeInteger(claimLeaseMs) ||
-    claimLeaseMs < 1_000 ||
-    claimLeaseMs > 300_000
-  ) {
+  if (typeof clock !== 'function' || typeof idFactory !== 'function') {
     throw new N8nValidationError('Invalid n8n integration runtime');
   }
 
-  const runtime = Object.freeze({
-    claimLeaseMs,
-    clock,
-    idFactory,
-    tokenFactory,
-  });
+  const runtime = Object.freeze({ clock, idFactory });
 
   return Object.freeze({
     /** @param {any} input */
@@ -87,8 +81,8 @@ export function createN8nIntegrationService({
       const technical = normalizeTechnical(input?.technical);
       requireSchema(input?.schema_version);
       const occurredAt = instant(input?.occurred_at, 'occurred_at');
-      const channel = /** @type {'instagram'|'whatsapp'} */ (
-        oneOf(input?.channel, ['instagram', 'whatsapp'], 'channel')
+      const channel = /** @type {'whatsapp'} */ (
+        oneOf(input?.channel, ['whatsapp'], 'channel')
       );
       const provider = identifier(input?.provider ?? 'meta', 'provider', 64);
       const providerAccountId = identifier(
@@ -98,11 +92,8 @@ export function createN8nIntegrationService({
         'metadata.provider_account_id',
         512,
       );
-      const externalIdentityId = normalizeChannelIdentity(
-        channel,
-        input?.contact?.external_id ??
-          input?.contact?.ig_id ??
-          input?.contact?.wa_id,
+      const externalIdentityId = normalizeWhatsAppIdentity(
+        input?.contact?.external_id ?? input?.contact?.wa_id,
       );
       const externalMessageId = identifier(
         input?.message?.external_id,
@@ -133,16 +124,10 @@ export function createN8nIntegrationService({
       )
         ? 'text'
         : messageType;
-      const identityKind = channel === 'whatsapp' ? 'phone' : 'handle';
-      const displayHandle =
-        channel === 'instagram'
-          ? optionalString(input?.contact?.name ?? input?.contact?.handle, 512)
-          : null;
 
       return translateConflict(() =>
         repository.receiveInbound(
           Object.freeze({
-            briefing: plainObject(input?.briefing ?? {}),
             channel,
             correlationId: technical.correlationId,
             eventFingerprint: fingerprint({
@@ -158,11 +143,11 @@ export function createN8nIntegrationService({
             externalEventId: identifier(input?.event_id, 'event_id', 512),
             externalIdentityId,
             externalMessageId,
-            identityKind,
-            displayHandle,
+            identityKind: 'phone',
+            displayHandle: null,
             message: { content, type: canonicalMessageType },
             occurredAt,
-            phoneStatus: channel === 'whatsapp' ? 'confirmed' : 'pending',
+            phoneStatus: 'confirmed',
             provider,
             providerAccountId,
             technical,
@@ -221,44 +206,6 @@ export function createN8nIntegrationService({
     },
 
     /** @param {any} input */
-    async claimAiTurn(input) {
-      const technical = normalizeTechnical(input?.technical);
-      requireSchema(input?.schema_version);
-      const revision = positiveInteger(input?.revision, 'revision');
-      const automationEpoch = nonNegativeInteger(
-        input?.automation_epoch,
-        'automation_epoch',
-      );
-      const normalized = Object.freeze({
-        automationEpoch,
-        claimId: identifier(
-          input?.claim_id ?? idFactory('ai-turn-claim'),
-          'claim_id',
-          512,
-        ),
-        conversationId: identifier(
-          input?.conversation_id,
-          'conversation_id',
-          512,
-        ),
-        eventFingerprint: fingerprint({
-          automationEpoch,
-          conversationId: input?.conversation_id,
-          lastEventId: input?.last_event_id,
-          revision,
-          workerId: input?.worker_id,
-        }),
-        lastEventId: identifier(input?.last_event_id, 'last_event_id', 512),
-        revision,
-        technical,
-        workerId: identifier(input?.worker_id, 'worker_id', 128),
-      });
-      return translateConflict(() =>
-        repository.claimAiTurn(normalized, runtime),
-      );
-    },
-
-    /** @param {any} input */
     async recordEvent(input) {
       const technical = normalizeTechnical(input?.technical);
       requireSchema(input?.schema_version);
@@ -276,78 +223,107 @@ export function createN8nIntegrationService({
           ? null
           : identifier(input?.conversation_id, 'conversation_id', 512);
       const normalized = Object.freeze({
-        aiModel: optionalString(input?.ai_model, 128),
-        aiProvider:
-          input?.ai_provider === undefined
-            ? null
-            : oneOf(input.ai_provider, ['openai', 'gemini'], 'ai_provider'),
         automationEpoch:
           input?.automation_epoch === undefined
             ? null
             : nonNegativeInteger(input.automation_epoch, 'automation_epoch'),
-        claimToken: optionalString(input?.claim_token, 512),
-        claimId: optionalString(input?.claim_id, 512),
+        briefingPatch: normalizeBriefingPatch(input?.briefing_patch),
         commandId: optionalString(input?.command_id, 512),
         conversationId,
         correlationId: technical.correlationId,
         eventFingerprint: fingerprint(stripTechnical(input)),
         eventId: identifier(input?.event_id, 'event_id', 512),
         eventType,
-        expectedVersion:
-          input?.expected_version === undefined
-            ? null
-            : positiveInteger(input.expected_version, 'expected_version'),
-        externalMessageId: optionalString(
-          input?.external_message_id ?? input?.message?.external_id,
-          512,
-        ),
+        externalMessageId: optionalString(input?.external_message_id, 512),
         failure: input?.failure ? plainObject(input.failure) : null,
         handoff: input?.handoff ? plainObject(input.handoff) : null,
-        leadPatch: input?.lead_patch ? plainObject(input.lead_patch) : null,
         message: input?.message ? plainObject(input.message) : null,
         occurredAt,
-        promptVersion: optionalString(input?.prompt_version, 128),
-        revision:
-          input?.revision === undefined
+        sourceRevision:
+          input?.source_revision === undefined
             ? null
-            : positiveInteger(input.revision, 'revision'),
-        status: optionalString(input?.status, 64),
+            : positiveInteger(input.source_revision, 'source_revision'),
         technical,
       });
+      validateEventShape(normalized);
       return translateConflict(() =>
         repository.recordEvent(normalized, runtime),
       );
     },
-
-    /** Transactional panel-to-n8n send reservation used by human APIs. */
-    async reserveSend(/** @type {any} */ input) {
-      const operation = repository.reserveSend;
-      if (typeof operation !== 'function') {
-        throw new N8nValidationError(
-          'repository does not implement reserveSend',
-        );
-      }
-      return translateConflict(() => operation(input, runtime));
-    },
-
-    /** Transactional non-message command hook (take_over/return_to_ai/close). */
-    async enqueuePanelCommand(/** @type {any} */ input) {
-      const operation = repository.enqueuePanelCommand;
-      if (typeof operation !== 'function') {
-        throw new N8nValidationError(
-          'repository does not implement enqueuePanelCommand',
-        );
-      }
-      return translateConflict(() => operation(input, runtime));
-    },
   });
+}
+
+/** @param {any} input */
+function validateEventShape(input) {
+  if (
+    input.briefingPatch &&
+    !['handoff.requested', 'message.send.requested'].includes(input.eventType)
+  ) {
+    throw new N8nValidationError(
+      'briefing_patch is only allowed on send reservation or handoff',
+    );
+  }
+  if (
+    input.eventType === 'handoff.requested' &&
+    (input.automationEpoch === null || input.sourceRevision === null)
+  ) {
+    throw new N8nValidationError(
+      `${input.eventType} requires automation_epoch and source_revision`,
+    );
+  }
+  if (input.eventType === 'message.send.requested') {
+    if (
+      !input.commandId ||
+      !input.message ||
+      input.automationEpoch === null ||
+      input.sourceRevision === null
+    ) {
+      throw new N8nValidationError(
+        'message.send.requested requires command_id, message, automation_epoch and source_revision',
+      );
+    }
+  }
+  if (input.eventType === 'handoff.requested' && !input.handoff) {
+    throw new N8nValidationError('handoff.requested requires handoff');
+  }
+  if (
+    ['message.delivered', 'message.failed', 'message.read'].includes(
+      input.eventType,
+    ) &&
+    !input.externalMessageId
+  ) {
+    throw new N8nValidationError(
+      `${input.eventType} requires external_message_id`,
+    );
+  }
+  if (
+    input.eventType === 'message.sent' &&
+    (!input.commandId || !input.externalMessageId)
+  ) {
+    throw new N8nValidationError(
+      'message.sent requires command_id and external_message_id',
+    );
+  }
+  if (input.eventType === 'message.send.unknown' && !input.commandId) {
+    throw new N8nValidationError('message.send.unknown requires command_id');
+  }
+}
+
+/** @param {unknown} value */
+function normalizeBriefingPatch(value) {
+  if (value === null || value === undefined) return null;
+  const patch = plainObject(value);
+  for (const key of Object.keys(patch)) {
+    if (!BRIEFING_PATCH_FIELDS.has(key)) {
+      throw new N8nValidationError(`briefing_patch.${key} is not allowed`);
+    }
+  }
+  return patch;
 }
 
 /** @param {any} value */
 function normalizeTechnical(value) {
-  if (!value || typeof value !== 'object') {
-    throw new N8nForbiddenError();
-  }
+  if (!value || typeof value !== 'object') throw new N8nForbiddenError();
   const actorValue = value.actor;
   const actor =
     typeof actorValue === 'string'
@@ -419,8 +395,9 @@ function stripTechnical(input) {
 
 /** @param {unknown} value */
 function requireSchema(value) {
-  if (value !== '1.0')
+  if (value !== '1.0') {
     throw new N8nValidationError('schema_version must be 1.0');
+  }
 }
 
 /** @param {unknown} value @param {string[]} allowed @param {string} field */
@@ -452,10 +429,9 @@ function optionalString(value, max) {
     : identifier(value, 'optional value', max);
 }
 
-/** @param {'instagram'|'whatsapp'} channel @param {unknown} value */
-function normalizeChannelIdentity(channel, value) {
+/** @param {unknown} value */
+function normalizeWhatsAppIdentity(value) {
   const identity = identifier(value, 'contact.external_id', 512);
-  if (channel === 'instagram') return identity;
   const compact = identity.startsWith('+') ? identity.slice(1) : identity;
   if (!/^[1-9][0-9]{7,14}$/u.test(compact)) {
     throw new N8nValidationError('contact.wa_id must be a valid E.164 number');

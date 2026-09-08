@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "proposed-for-human-review",
-  "task": "N8N-1",
+  "task": "N8N-MVP-1",
   "extends": {
     "dataCatalog": "../../../docs/phase0/data-catalog.json",
     "threatModel": "../../../docs/phase0/threat-model.json"
@@ -26,7 +26,7 @@
       ],
       "purpose": "Fence automation, deliver idempotent commands and reconcile uncertain outcomes.",
       "systemsAndCopies": [
-        "PostgreSQL automation_runs, ai_turns, n8n_commands and message_delivery_attempts",
+        "PostgreSQL conversations, messages, n8n_events, n8n_commands and reconciliation_items",
         "n8n technical execution metadata"
       ],
       "actorsAndOperators": [
@@ -62,7 +62,7 @@
       "family": "stale-ai-external-effect",
       "asset": "customer messages and official conversation state",
       "boundary": "n8n AI execution to Meta send",
-      "mitigation": "Lease claim is fenced by revision, last event and automation epoch, followed by a one-use message.send.requested reservation before Meta.",
+      "mitigation": "The one-use message.send.requested reservation validates conversation mode, inbound revision and automation epoch before Meta.",
       "owner": "Backend/Integrations",
       "test": "Takeover during generation and replay after authorization never permit a second or stale Meta send.",
       "status": "partially-mitigated"

@@ -173,12 +173,13 @@
   "n8nIntegration": {
     "workflowId": "k7tI6T4RhQPyJkn9",
     "baselineVersionId": "98f96069-ede2-4900-aa5c-7fec0d3b80cb",
-    "draftVersionId": "0c41ee97-954b-4319-b822-fbb91f239b6e",
+    "draftVersionId": "fae803db-eef0-4074-a7ae-1a6bb786e203",
+    "draftNodeCount": 42,
     "active": false,
     "authentication": "distinct-basic-credentials",
     "crmDatabaseAccess": false,
     "whatsappStatus": "pending-homologation",
-    "instagramStatus": "required-before-full-launch",
+    "instagramStatus": "planned-canal-2-not-mvp-blocking",
     "directMetaFallback": false
   },
   "externalExecution": {

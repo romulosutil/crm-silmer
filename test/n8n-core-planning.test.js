@@ -11,7 +11,7 @@ async function read(relativePath) {
   return readFile(path.join(root, relativePath), 'utf8');
 }
 
-test('mantém o n8n obrigatório e fora do banco do CRM', async () => {
+test('mantém o n8n obrigatório, fora do banco e com WhatsApp como primeiro canal', async () => {
   const canonicalPaths = [
     'ABOUT.md',
     'ARCHITECTURE.md',
@@ -47,9 +47,12 @@ test('mantém o n8n obrigatório e fora do banco do CRM', async () => {
   assert.match(spec, /ORC-01/);
   assert.match(spec, /mensagem recebida[^\n]+dispara[^\n]+n8n/iu);
   assert.match(spec, /OpenAI[^\n]+Gemini|Gemini[^\n]+OpenAI/iu);
-  assert.match(spec, /Instagram[^\n]+obrigatóri|obrigatóri[^\n]+Instagram/iu);
+  assert.match(
+    spec,
+    /Instagram[^\n]+(?:fase posterior|não bloqueia)|(?:fase posterior|não bloqueia)[^\n]+Instagram/iu,
+  );
   assert.match(spec, /@instagram[^\n]+telefone|telefone[^\n]+@instagram/iu);
-  assert.match(spec, /migra(?:r|ção)[^\n]+canal/iu);
+  assert.match(spec, /migr(?:a|ar|ação)[^\n]+canal/iu);
 });
 
 test('organiza o lançamento em três objetivos que convergem', async () => {

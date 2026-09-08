@@ -24,51 +24,46 @@ function harness() {
   const calls = [];
   const repository = /** @type {any} */ (
     Object.fromEntries(
-      ['receiveInbound', 'storeAttachment', 'claimAiTurn', 'recordEvent'].map(
-        (method) => [
-          method,
-          async (/** @type {any} */ input, /** @type {any} */ runtime) => {
-            calls.push({ input, method, runtime });
-            return { accepted: true, method };
-          },
-        ],
-      ),
+      ['receiveInbound', 'storeAttachment', 'recordEvent'].map((method) => [
+        method,
+        async (/** @type {any} */ input, /** @type {any} */ runtime) => {
+          calls.push({ input, method, runtime });
+          return { accepted: true, method };
+        },
+      ]),
     )
   );
   return {
     calls,
     service: createN8nIntegrationService({
-      claimLeaseMs: 45_000,
       clock: () => NOW,
       idFactory: (kind) => `${kind}-1`,
       repository,
-      tokenFactory: () => 'claim-token-1',
     }),
   };
 }
 
-test('normalizes both channels and keeps button payload inside canonical text content', async () => {
+test('normalizes WhatsApp buttons inside canonical text content', async () => {
   const { calls, service } = harness();
   await service.receiveInbound({
-    channel: 'instagram',
-    contact: { external_id: 'ig-user-1', handle: '@cliente' },
-    event_id: 'ig-event-1',
-    external_conversation_id: 'ig-thread-1',
+    channel: 'whatsapp',
+    contact: { name: 'Cliente', wa_id: '5511000000000' },
+    event_id: 'wa-event-1',
     message: {
       button: { id: 'quote', title: 'Quero orçamento' },
-      external_id: 'ig-message-1',
+      external_id: 'wa-message-1',
       text: 'Quero orçamento',
       type: 'button',
     },
-    metadata: { provider_account_id: 'ig-account-1' },
+    metadata: { phone_number_id: 'wa-account-1' },
     occurred_at: NOW.toISOString(),
     schema_version: '1.0',
     technical: TECHNICAL,
   });
 
   const normalized = calls[0].input;
-  assert.equal(normalized.channel, 'instagram');
-  assert.equal(normalized.identityKind, 'handle');
+  assert.equal(normalized.channel, 'whatsapp');
+  assert.equal(normalized.identityKind, 'phone');
   assert.equal(normalized.message.type, 'text');
   assert.deepEqual(normalized.message.content, {
     interaction: {
@@ -80,34 +75,21 @@ test('normalizes both channels and keeps button payload inside canonical text co
   assert.equal(normalized.technical.actor, 'AUTOMATION_EXECUTOR');
 });
 
-test('passes claim epoch, token runtime and every v1 event to the repository', async () => {
+test('passes source revision, epoch and briefing patch to the event repository', async () => {
   const { calls, service } = harness();
-  await service.claimAiTurn({
-    automation_epoch: 3,
-    conversation_id: 'conversation-1',
-    last_event_id: 'event-7',
-    revision: 7,
-    schema_version: '1.0',
-    technical: TECHNICAL,
-    worker_id: 'worker-1',
-  });
-  assert.equal(calls[0].input.automationEpoch, 3);
-  assert.equal(calls[0].runtime.claimLeaseMs, 45_000);
-  assert.equal(calls[0].runtime.tokenFactory(), 'claim-token-1');
-
   for (const eventType of ['message.send.requested', 'message.send.unknown']) {
     await service.recordEvent({
       automation_epoch: 3,
-      claim_id: 'claim-1',
-      claim_token: 'claim-token-1',
+      ...(eventType === 'message.send.requested'
+        ? { briefing_patch: { segment: 'uniform' } }
+        : {}),
       command_id: 'command-1',
       conversation_id: 'conversation-1',
       event_id: `${eventType}-1`,
       event_type: eventType,
       message: { text: 'Mensagem segura', type: 'text' },
       occurred_at: NOW.toISOString(),
-      expected_version: 4,
-      revision: 7,
+      source_revision: 7,
       schema_version: '1.0',
       technical: {
         ...TECHNICAL,
@@ -116,21 +98,34 @@ test('passes claim epoch, token runtime and every v1 event to the repository', a
     });
   }
   assert.deepEqual(
-    calls.slice(1).map(({ input }) => input.eventType),
+    calls.map(({ input }) => input.eventType),
     ['message.send.requested', 'message.send.unknown'],
   );
   assert.deepEqual(
-    calls
-      .slice(1)
-      .map(({ input }) => [
-        input.claimId,
-        input.revision,
-        input.expectedVersion,
-      ]),
+    calls.map(({ input }) => [
+      input.automationEpoch,
+      input.sourceRevision,
+      input.briefingPatch,
+    ]),
     [
-      ['claim-1', 7, 4],
-      ['claim-1', 7, 4],
+      [3, 7, { segment: 'uniform' }],
+      [3, 7, null],
     ],
+  );
+});
+
+test('rejects Instagram until the channel-specific phase is delivered', async () => {
+  const { service } = harness();
+  await assert.rejects(
+    service.receiveInbound({
+      channel: 'instagram',
+      occurred_at: NOW.toISOString(),
+      schema_version: '1.0',
+      technical: TECHNICAL,
+    }),
+    (error) =>
+      error instanceof N8nValidationError &&
+      error.message === 'channel is unsupported',
   );
 });
 
@@ -147,5 +142,21 @@ test('rejects a non-technical actor and malformed contract with typed HTTP error
       technical: TECHNICAL,
     }),
     (error) => error instanceof N8nValidationError && error.statusCode === 400,
+  );
+  await assert.rejects(
+    service.recordEvent({
+      automation_epoch: 0,
+      command_id: 'command-without-source-revision',
+      conversation_id: 'conversation-1',
+      event_id: 'send-without-source-revision',
+      event_type: 'message.send.requested',
+      message: { text: 'Mensagem sem fence completo', type: 'text' },
+      occurred_at: NOW.toISOString(),
+      schema_version: '1.0',
+      technical: TECHNICAL,
+    }),
+    (error) =>
+      error instanceof N8nValidationError &&
+      /source_revision/u.test(error.message),
   );
 });

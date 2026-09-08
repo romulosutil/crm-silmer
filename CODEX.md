@@ -26,7 +26,7 @@ dos arquivos. O diretório `historico-datacrazy/` não é fonte normativa.
 - O Vendedor Silmer pode converter, preencher e mover uma etapa somente pelo
   ator técnico, contrato n8n v1 e gates do CRM; nunca inventa preço, prazo ou
   condição comercial.
-- Use `docs/integrations/n8n/README.md`, RFC 001 e ADR 002 para a fronteira n8n;
+- Use `docs/integrations/n8n/README.md`, RFC 002 e ADR 003 para a fronteira n8n;
   HMAC/timestamp não pertencem ao contrato n8n→CRM.
 - Efeitos externos são idempotentes, auditáveis e podem terminar em
   `outcome_unknown`; nunca faça retry cego.

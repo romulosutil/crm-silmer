@@ -185,14 +185,6 @@ export class PostgresN8nCommandStore {
             now,
           ],
         );
-        await upsertAttempt(client, {
-          commandId,
-          errorCode: status === 'sent' ? null : safeError(context.errorCode),
-          externalMessageId,
-          messageId: row.message_id,
-          now,
-          status: deliveryStatus,
-        });
       }
       if (status === 'outcome_unknown') {
         await insertReconciliation(client, commandId, now);
@@ -275,29 +267,6 @@ async function insertReconciliation(client, commandId, now) {
      WHERE job.n8n_command_id = $1
      ON CONFLICT (job_id) DO NOTHING`,
     [commandId, now],
-  );
-}
-
-/** @param {any} client @param {any} input */
-async function upsertAttempt(client, input) {
-  await client.query(
-    `INSERT INTO crm.message_delivery_attempts
-       (id, message_id, command_id, attempt_no, provider,
-        external_message_id, status, occurred_at, updated_at, error_code)
-     VALUES (gen_random_uuid()::text, $1, $2, 1, 'n8n', $3, $4, $5, $5, $6)
-     ON CONFLICT (message_id, attempt_no) DO UPDATE
-     SET external_message_id = COALESCE(EXCLUDED.external_message_id,
-                                        crm.message_delivery_attempts.external_message_id),
-         status = EXCLUDED.status, updated_at = EXCLUDED.updated_at,
-         error_code = EXCLUDED.error_code`,
-    [
-      input.messageId,
-      input.commandId,
-      input.externalMessageId,
-      input.status,
-      input.now,
-      input.errorCode,
-    ],
   );
 }
 

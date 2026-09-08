@@ -586,33 +586,6 @@ paths:
         '415': { $ref: '#/components/responses/N8nProblem' }
         '422': { $ref: '#/components/responses/N8nProblem' }
         '503': { $ref: '#/components/responses/N8nProblem' }
-  /integrations/n8n/conversations/{conversationId}/ai-turns/claim:
-    post:
-      operationId: claimN8nAiTurn
-      summary: Concede por compare-and-swap um lease exclusivo para uma rodada de IA
-      description: Claim negado é resposta 200 com claimed=false e motivo estável.
-      security: [{ automationBasic: [], idempotencyKey: [] }]
-      parameters:
-        - $ref: '#/components/parameters/ConversationId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/WorkflowKey'
-        - $ref: '#/components/parameters/WorkflowVersion'
-        - $ref: '#/components/parameters/ExecutionId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/N8nClaimRequest' }
-      responses:
-        '200':
-          description: Claim concedido ou negado sem efeito externo
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/N8nClaimResponse' }
-        '400': { $ref: '#/components/responses/N8nProblem' }
-        '401': { $ref: '#/components/responses/N8nProblem' }
-        '409': { $ref: '#/components/responses/N8nProblem' }
-        '503': { $ref: '#/components/responses/N8nProblem' }
   /integrations/n8n/events:
     post:
       operationId: recordN8nEvent
@@ -802,19 +775,16 @@ components:
         schema_version: { type: string, const: '1.0' }
         event_id: { type: string, minLength: 1, maxLength: 512 }
         occurred_at: { type: string, format: date-time }
-        channel: { type: string, enum: [whatsapp, instagram] }
+        channel: { type: string, const: whatsapp }
         contact:
           type: object
           anyOf:
             - required: [external_id]
             - required: [wa_id]
-            - required: [ig_id]
           properties:
             external_id: { type: string, minLength: 1, maxLength: 512 }
             wa_id: { type: string, minLength: 1, maxLength: 512 }
-            ig_id: { type: string, minLength: 1, maxLength: 512 }
             name: { type: string, maxLength: 512 }
-            handle: { type: string, maxLength: 512 }
         message:
           type: object
           additionalProperties: true
@@ -831,7 +801,6 @@ components:
           anyOf:
             - required: [provider_account_id]
             - required: [phone_number_id]
-        briefing: { type: object, additionalProperties: true }
     N8nInboundResponse:
       type: object
       additionalProperties: true
@@ -840,24 +809,27 @@ components:
           accepted,
           duplicate,
           conversation_id,
-          revision,
+          source_revision,
           automation_epoch,
           mode,
           recent_messages,
-          lead,
+          briefing,
         ]
       properties:
         accepted: { type: boolean, const: true }
         duplicate: { type: boolean }
         conversation_id: { type: string }
-        revision: { type: integer, minimum: 1 }
+        source_revision: { type: integer, minimum: 1 }
+        conversation_version: { type: integer, minimum: 1 }
+        contact_id: { type: string }
         automation_epoch: { type: integer, minimum: 0 }
         mode: { $ref: '#/components/schemas/N8nMode' }
         recent_messages: { type: array, items: { type: object } }
-        lead:
+        briefing_version: { type: integer, minimum: 0 }
+        briefing:
           type: object
           additionalProperties: true
-          description: Projeção compatível do briefing versionado oficial.
+          description: Snapshot criptografado e consolidado da qualificação.
     N8nAttachmentRequest:
       type: object
       additionalProperties: false
@@ -868,48 +840,6 @@ components:
         filename: { type: string, minLength: 1, maxLength: 255 }
         mime_type: { type: string, minLength: 1, maxLength: 255 }
         file: { type: string, format: binary }
-    N8nClaimRequest:
-      type: object
-      additionalProperties: false
-      required:
-        [schema_version, revision, last_event_id, automation_epoch, worker_id]
-      properties:
-        schema_version: { type: string, const: '1.0' }
-        revision: { type: integer, minimum: 1 }
-        last_event_id: { type: string, minLength: 1, maxLength: 512 }
-        automation_epoch: { type: integer, minimum: 0 }
-        worker_id: { type: string, minLength: 1, maxLength: 128 }
-        claim_id: { type: string, minLength: 1, maxLength: 512 }
-    N8nClaimResponse:
-      oneOf:
-        - type: object
-          additionalProperties: true
-          required: [accepted, claimed, claim_id, claim_token, lease_expires_at]
-          properties:
-            accepted: { type: boolean, const: true }
-            claimed: { type: boolean, const: true }
-            claim_id: { type: string }
-            claim_token:
-              { type: string, description: Token opaco exibido uma vez. }
-            lease_expires_at: { type: string, format: date-time }
-        - type: object
-          additionalProperties: true
-          required: [accepted, claimed, reason]
-          properties:
-            accepted: { type: boolean, const: true }
-            claimed: { type: boolean, const: false }
-            reason:
-              type: string
-              enum:
-                [
-                  MODE_NOT_AI_ACTIVE,
-                  STALE_AUTOMATION_EPOCH,
-                  STALE_REVISION,
-                  LAST_EVENT_MISMATCH,
-                  ALREADY_CLAIMED,
-                  ALREADY_PROCESSED,
-                  EFFECT_OUTCOME_UNKNOWN,
-                ]
     N8nEventRequest:
       type: object
       additionalProperties: false
@@ -928,27 +858,34 @@ components:
               message.failed,
               message.send.unknown,
               handoff.requested,
-              lead.updated,
               workflow.failed,
             ]
         occurred_at: { type: string, format: date-time }
         conversation_id: { type: [string, 'null'] }
         automation_epoch: { type: integer, minimum: 0 }
-        revision: { type: integer, minimum: 1 }
-        expected_version: { type: integer, minimum: 1 }
-        claim_id: { type: string, maxLength: 512 }
-        claim_token: { type: string, maxLength: 512 }
+        source_revision: { type: integer, minimum: 1 }
         command_id: { type: string, maxLength: 512 }
-        attempt_id: { type: string, maxLength: 512 }
         external_message_id: { type: string, maxLength: 512 }
-        ai_provider: { type: string, enum: [openai, gemini] }
-        ai_model: { type: string, maxLength: 128 }
-        prompt_version: { type: string, maxLength: 128 }
         message: { type: object, additionalProperties: true }
-        lead_patch: { type: object, additionalProperties: true }
+        briefing_patch:
+          type: object
+          additionalProperties: false
+          properties:
+            artwork_status: {}
+            city_or_postal_code: {}
+            colors: {}
+            customizations: {}
+            delivery_mode: {}
+            needed_by: {}
+            notes: {}
+            numbers: {}
+            product_model: {}
+            quantity: {}
+            segment: {}
+            sizes: {}
+            sponsors: {}
         handoff: { type: object, additionalProperties: true }
         failure: { type: object, additionalProperties: true }
-        status: { type: string, maxLength: 64 }
     N8nEventResponse:
       type: object
       additionalProperties: true

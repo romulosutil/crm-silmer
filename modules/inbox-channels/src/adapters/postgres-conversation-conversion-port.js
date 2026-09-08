@@ -67,7 +67,7 @@ export class PostgresConversationConversionPort {
     const automated = input.actorKind === 'AUTOMATION_EXECUTOR';
     const updated = await transaction.query(
       `UPDATE crm.conversations
-       SET state = 'convertida_em_lead', terminal_at = $2,
+       SET state = 'convertida_em_lead', terminal_at = NULL,
            last_message_at = GREATEST(last_message_at, $2),
            version = version + 1
        WHERE id = $1 AND version = $3 AND terminal_at IS NULL

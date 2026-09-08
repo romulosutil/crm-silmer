@@ -14,7 +14,7 @@ const ALGORITHM = 'AES-256-GCM';
 /**
  * @typedef {{query: (sql: string, values?: unknown[]) => Promise<{rows: any[]}>}} Queryable
  * @typedef {{query: Queryable['query'], transaction: <T>(work: (transaction: Queryable) => Promise<T>) => Promise<T>}} TransactionalDatabase
- * @typedef {{enqueueChannelMessage: (input: {id: string, idempotencyKey: string, messageId: string, availableAt: string|Date}, context: {transaction: Queryable}) => Promise<void>}} OutboundMessageOutbox
+ * @typedef {{enqueueChannelMessage: (input: {id: string, idempotencyKey: string, messageId: string, availableAt: string|Date}, context: {transaction: Queryable}) => Promise<void>, enqueuePanelCommand?: (input: Record<string, any>, context: {transaction: Queryable}) => Promise<unknown>}} OutboundMessageOutbox
  */
 
 export class PostgresInboxRepository {
@@ -219,6 +219,19 @@ export class PostgresInboxRepository {
           'Terminal conversations cannot be mutated',
         );
       }
+      if (kind === 'transition' && input.state === 'sem_lead') {
+        const activeDeal = await transaction.query(
+          `SELECT id FROM crm.deals
+           WHERE conversation_id = $1 AND status = 'active'
+           LIMIT 1`,
+          [input.conversationId],
+        );
+        if (activeDeal.rows[0]) {
+          throw new InboxConflictError(
+            'A conversation with an active Deal must use the official Deal closing path',
+          );
+        }
+      }
       const occurredAt = runtime.clock().toISOString();
       let result;
       let commandResult;
@@ -296,6 +309,30 @@ export class PostgresInboxRepository {
       await runtime.appendAudit(createAudit(kind, input, result, occurredAt), {
         transaction,
       });
+      const panelAction =
+        kind === 'takeover'
+          ? 'take_over'
+          : kind === 'reactivate'
+            ? 'return_to_ai'
+            : kind === 'transition' && input.state === 'sem_lead'
+              ? 'close'
+              : null;
+      if (
+        panelAction !== null &&
+        typeof this.#outboundMessageOutbox.enqueuePanelCommand === 'function'
+      ) {
+        await this.#outboundMessageOutbox.enqueuePanelCommand(
+          {
+            action: panelAction,
+            actor: input.actor,
+            availableAt: occurredAt,
+            commandId: input.idempotencyKey,
+            conversationId: input.conversationId,
+            jobId: runtime.idFactory('job'),
+          },
+          { transaction },
+        );
+      }
       await transaction.query(
         `INSERT INTO crm.inbox_commands
            (operation, idempotency_key, fingerprint, result, created_at, completed_at)

@@ -1625,7 +1625,7 @@
       "label": "router",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L15",
+      "source_location": "L16",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_router",
       "community": 132,
@@ -1636,7 +1636,7 @@
       "label": "route",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L16",
+      "source_location": "L17",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_route",
       "community": 132,
@@ -1647,7 +1647,7 @@
       "label": "phase",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L17",
+      "source_location": "L18",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_phase",
       "community": 132,
@@ -1658,7 +1658,7 @@
       "label": "session",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L18",
+      "source_location": "L19",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_session",
       "community": 132,
@@ -1669,7 +1669,7 @@
       "label": "activeView",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L19",
+      "source_location": "L20",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_activeview",
       "community": 132,
@@ -1680,7 +1680,7 @@
       "label": "authPanel",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L20",
+      "source_location": "L21",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_authpanel",
       "community": 132,
@@ -1691,7 +1691,7 @@
       "label": "errorMessage",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L21",
+      "source_location": "L22",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_errormessage",
       "community": 132,
@@ -1702,7 +1702,7 @@
       "label": "errorSummary",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L22",
+      "source_location": "L23",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_errorsummary",
       "community": 132,
@@ -1713,7 +1713,7 @@
       "label": "runtimeStatus",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L23",
+      "source_location": "L24",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_runtimestatus",
       "community": 132,
@@ -1724,7 +1724,7 @@
       "label": "connection",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L24",
+      "source_location": "L25",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_connection",
       "community": 132,
@@ -1735,7 +1735,7 @@
       "label": "mobileOpen",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L25",
+      "source_location": "L26",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_mobileopen",
       "community": 132,
@@ -1746,7 +1746,7 @@
       "label": "logoutBusy",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L26",
+      "source_location": "L27",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_logoutbusy",
       "community": 132,
@@ -1757,7 +1757,7 @@
       "label": "user",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L29",
+      "source_location": "L30",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_user",
       "community": 132,
@@ -1768,7 +1768,7 @@
       "label": "sessionSummary",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L30",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_sessionsummary",
       "community": 132,
@@ -1779,7 +1779,7 @@
       "label": "connectionLabel",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L36",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_connectionlabel",
       "community": 132,
@@ -1790,7 +1790,7 @@
       "label": "stream",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L43",
+      "source_location": "L44",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_stream",
       "community": 132,
@@ -1801,7 +1801,7 @@
       "label": "restoreSession()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L67",
+      "source_location": "L68",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_restoresession",
       "community": 132,
@@ -1812,7 +1812,7 @@
       "label": "showSession()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L86",
+      "source_location": "L87",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_showsession",
       "community": 132,
@@ -1823,7 +1823,7 @@
       "label": "showSignedOut()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L95",
+      "source_location": "L96",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_showsignedout",
       "community": 132,
@@ -1834,7 +1834,7 @@
       "label": "logout()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L109",
+      "source_location": "L110",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_logout",
       "community": 132,
@@ -1845,7 +1845,7 @@
       "label": "handleShellKey()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L128",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_handleshellkey",
       "community": 132,
@@ -1856,7 +1856,7 @@
       "label": "announce()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L135",
+      "source_location": "L136",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_announce",
       "community": 132,
@@ -1867,7 +1867,7 @@
       "label": "showError()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L145",
+      "source_location": "L146",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_showerror",
       "community": 132,
@@ -1878,7 +1878,7 @@
       "label": "clearError()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L152",
+      "source_location": "L153",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_clearerror",
       "community": 132,
@@ -1889,7 +1889,7 @@
       "label": "onCursor()",
       "file_type": "code",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L157",
+      "source_location": "L158",
       "_origin": "ast",
       "id": "apps_edge_web_src_app_oncursor",
       "community": 132,
@@ -2057,7 +2057,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_edge_web_src_components_legacyviewhost",
-      "community": 194,
+      "community": 187,
       "community_name": "LegacyViewHost.vue",
       "norm_label": "legacyviewhost.vue"
     },
@@ -2068,7 +2068,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_edge_web_src_components_legacyviewhost_props",
-      "community": 194,
+      "community": 187,
       "community_name": "LegacyViewHost.vue",
       "norm_label": "props"
     },
@@ -2079,7 +2079,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_edge_web_src_components_legacyviewhost_emit",
-      "community": 194,
+      "community": 187,
       "community_name": "LegacyViewHost.vue",
       "norm_label": "emit"
     },
@@ -2090,7 +2090,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_edge_web_src_components_legacyviewhost_host",
-      "community": 194,
+      "community": 187,
       "community_name": "LegacyViewHost.vue",
       "norm_label": "host"
     },
@@ -2101,9 +2101,86 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "apps_edge_web_src_components_legacyviewhost_router",
-      "community": 194,
+      "community": 187,
       "community_name": "LegacyViewHost.vue",
       "norm_label": "router"
+    },
+    {
+      "label": "ThemeSwitcher.vue",
+      "file_type": "code",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_edge_web_src_components_themeswitcher",
+      "community": 213,
+      "community_name": "ThemeSwitcher.vue",
+      "norm_label": "themeswitcher.vue"
+    },
+    {
+      "label": "options",
+      "file_type": "code",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "apps_edge_web_src_components_themeswitcher_options",
+      "community": 213,
+      "community_name": "ThemeSwitcher.vue",
+      "norm_label": "options"
+    },
+    {
+      "label": "theme",
+      "file_type": "code",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "apps_edge_web_src_components_themeswitcher_theme",
+      "community": 213,
+      "community_name": "ThemeSwitcher.vue",
+      "norm_label": "theme"
+    },
+    {
+      "label": "mediaQuery",
+      "file_type": "code",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "apps_edge_web_src_components_themeswitcher_mediaquery",
+      "community": 213,
+      "community_name": "ThemeSwitcher.vue",
+      "norm_label": "mediaquery"
+    },
+    {
+      "label": "readStoredTheme()",
+      "file_type": "code",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "apps_edge_web_src_components_themeswitcher_readstoredtheme",
+      "community": 213,
+      "community_name": "ThemeSwitcher.vue",
+      "norm_label": "readstoredtheme()"
+    },
+    {
+      "label": "selectTheme()",
+      "file_type": "code",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L25",
+      "_origin": "ast",
+      "id": "apps_edge_web_src_components_themeswitcher_selecttheme",
+      "community": 213,
+      "community_name": "ThemeSwitcher.vue",
+      "norm_label": "selecttheme()"
+    },
+    {
+      "label": "applyTheme()",
+      "file_type": "code",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "apps_edge_web_src_components_themeswitcher_applytheme",
+      "community": 213,
+      "community_name": "ThemeSwitcher.vue",
+      "norm_label": "applytheme()"
     },
     {
       "label": "env.d.ts",
@@ -2211,7 +2288,7 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "apps_edge_web_src_features_deal_detail_view_createdealdetailview",
-      "community": 194,
+      "community": 187,
       "community_name": "LegacyViewHost.vue",
       "norm_label": "createdealdetailview()"
     },
@@ -2365,8 +2442,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client_commandkey",
-      "community": 164,
-      "community_name": "deal-detail-view.js",
+      "community": 189,
+      "community_name": "AuthPanel.vue",
       "norm_label": "commandkey()"
     },
     {
@@ -2564,7 +2641,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_main",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "main.js"
     },
     {
@@ -2575,7 +2652,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_router",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "router.js"
     },
     {
@@ -2586,7 +2663,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_router_publicroute",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "publicroute"
     },
     {
@@ -2597,7 +2674,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_router_router",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "router"
     },
     {
@@ -2608,7 +2685,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "accountview.vue"
     },
     {
@@ -2619,7 +2696,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_props",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "props"
     },
     {
@@ -2630,7 +2707,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_heading",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "heading"
     },
     {
@@ -2641,7 +2718,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_user",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "user"
     },
     {
@@ -2652,7 +2729,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_capabilities",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "capabilities"
     },
     {
@@ -2663,7 +2740,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_views_accountview_functionname",
       "community": 187,
-      "community_name": "AccountView.vue",
+      "community_name": "LegacyViewHost.vue",
       "norm_label": "functionname"
     },
     {
@@ -3311,8 +3388,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_auditeventvalidationerror",
-      "community": 192,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 186,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "auditeventvalidationerror"
     },
     {
@@ -3322,8 +3399,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_auditeventvalidationerror_constructor",
-      "community": 192,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 186,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -7096,7 +7173,7 @@
       "_origin": "ast",
       "id": "modules_database_src_cli",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "cli.js"
     },
     {
@@ -7107,7 +7184,7 @@
       "_origin": "ast",
       "id": "modules_database_src_cli_readphase",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "readphase()"
     },
     {
@@ -7128,7 +7205,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_database_src_database",
-      "community": 9,
+      "community": 165,
       "community_name": "database/src/index.js",
       "norm_label": "database.js"
     },
@@ -7139,7 +7216,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "modules_database_src_database_checkdatabasereadiness",
-      "community": 9,
+      "community": 165,
       "community_name": "database/src/index.js",
       "norm_label": "checkdatabasereadiness()"
     },
@@ -7150,7 +7227,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "modules_database_src_database_createdatabase",
-      "community": 9,
+      "community": 165,
       "community_name": "database/src/index.js",
       "norm_label": "createdatabase()"
     },
@@ -7161,7 +7238,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_database_src_index",
-      "community": 9,
+      "community": 165,
       "community_name": "database/src/index.js",
       "norm_label": "database/src/index.js"
     },
@@ -7173,7 +7250,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "migrations.js"
     },
     {
@@ -7184,7 +7261,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_checksum",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "checksum()"
     },
     {
@@ -7195,7 +7272,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_loadmigrations",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "loadmigrations()"
     },
     {
@@ -7206,7 +7283,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_normalizemigrationplan",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "normalizemigrationplan()"
     },
     {
@@ -7217,7 +7294,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_ensuredirectoryurl",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "ensuredirectoryurl()"
     },
     {
@@ -7228,7 +7305,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_migrate",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "migrate()"
     },
     {
@@ -7239,7 +7316,7 @@
       "_origin": "ast",
       "id": "modules_database_src_migrations_applymigration",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "applymigration()"
     },
     {
@@ -7250,7 +7327,7 @@
       "_origin": "ast",
       "id": "modules_database_src_transactions",
       "community": 9,
-      "community_name": "database/src/index.js",
+      "community_name": "database.test.js",
       "norm_label": "transactions.js"
     },
     {
@@ -7261,7 +7338,7 @@
       "_origin": "ast",
       "id": "modules_database_src_transactions_databaseconnectiontimeouterror",
       "community": 9,
-      "community_name": "database/src/index.js",
+      "community_name": "database.test.js",
       "norm_label": "databaseconnectiontimeouterror"
     },
     {
@@ -7272,7 +7349,7 @@
       "_origin": "ast",
       "id": "modules_database_src_transactions_databaseconnectiontimeouterror_constructor",
       "community": 9,
-      "community_name": "database/src/index.js",
+      "community_name": "database.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -7282,8 +7359,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_database_src_transactions_withtransaction",
-      "community": 9,
-      "community_name": "database/src/index.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "withtransaction()"
     },
     {
@@ -7931,8 +8008,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_deals_pipeline_src_adapters_postgres_deal_work_port",
-      "community": 183,
-      "community_name": "PostgresDealWorkPort",
+      "community": 176,
+      "community_name": "deals-pipeline/src/index.js",
       "norm_label": "postgres-deal-work-port.js"
     },
     {
@@ -8019,8 +8096,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "modules_deals_pipeline_src_application_deal_command_service_createdealcommandservice",
-      "community": 82,
-      "community_name": "deal-runtime.js",
+      "community": 73,
+      "community_name": "deal-transitions.test.js",
       "norm_label": "createdealcommandservice()"
     },
     {
@@ -8129,8 +8206,8 @@
       "source_location": "L295",
       "_origin": "ast",
       "id": "modules_deals_pipeline_src_application_deal_command_service_assertdependencies",
-      "community": 82,
-      "community_name": "deal-runtime.js",
+      "community": 73,
+      "community_name": "deal-transitions.test.js",
       "norm_label": "assertdependencies()"
     },
     {
@@ -8261,8 +8338,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "modules_deals_pipeline_src_deal_read_service_createdealreadservice",
-      "community": 196,
-      "community_name": "deal-read-model.test.js",
+      "community": 188,
+      "community_name": "deal-read-service.js",
       "norm_label": "createdealreadservice()"
     },
     {
@@ -9174,8 +9251,8 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "modules_identity_access_src_postgres_createpostgresidentityrepository",
-      "community": 165,
-      "community_name": "loadMigrations",
+      "community": 46,
+      "community_name": "postgres.js",
       "norm_label": "createpostgresidentityrepository()"
     },
     {
@@ -9339,8 +9416,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": "in-memory-inbox-repository.js"
     },
     {
@@ -9350,8 +9427,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_clone",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": "clone()"
     },
     {
@@ -9361,8 +9438,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": "inmemoryinboxrepository"
     },
     {
@@ -9372,8 +9449,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_exclusive",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": ".#exclusive()"
     },
     {
@@ -9383,8 +9460,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_receiveinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": ".receiveinbound()"
     },
     {
@@ -9394,8 +9471,8 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_mutateconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": ".mutateconversation()"
     },
     {
@@ -9405,8 +9482,8 @@
       "source_location": "L207",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_recordsuggestion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": ".recordsuggestion()"
     },
     {
@@ -9416,8 +9493,8 @@
       "source_location": "L234",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_publicconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": "publicconversation()"
     },
     {
@@ -9427,8 +9504,8 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_in_memory_inbox_repository_createaudit",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": "createaudit()"
     },
     {
@@ -9438,7 +9515,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "meta-whatsapp.js"
     },
@@ -9449,7 +9526,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_media_types",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "media_types"
     },
@@ -9460,7 +9537,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_metawhatsappwebhookpayloaderror",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "metawhatsappwebhookpayloaderror"
     },
@@ -9471,7 +9548,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_metawhatsappwebhookpayloaderror_constructor",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": ".constructor()"
     },
@@ -9482,7 +9559,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_invalid",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "invalid()"
     },
@@ -9493,7 +9570,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_record",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "record()"
     },
@@ -9504,7 +9581,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_nonemptystring",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "nonemptystring()"
     },
@@ -9515,7 +9592,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_boundedstring",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "boundedstring()"
     },
@@ -9526,7 +9603,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_optionalstring",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "optionalstring()"
     },
@@ -9537,7 +9614,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_optionalboundedstring",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "optionalboundedstring()"
     },
@@ -9548,7 +9625,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_array",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "array()"
     },
@@ -9559,7 +9636,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_absoluteinstant",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "absoluteinstant()"
     },
@@ -9570,7 +9647,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_metatimestamp",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "metatimestamp()"
     },
@@ -9581,7 +9658,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_immutableclone",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "immutableclone()"
     },
@@ -9592,7 +9669,7 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_deepfreeze",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "deepfreeze()"
     },
@@ -9603,7 +9680,7 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_dispositionfor",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "dispositionfor()"
     },
@@ -9614,7 +9691,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_normalizemessage",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "normalizemessage()"
     },
@@ -9625,7 +9702,7 @@
       "source_location": "L235",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_normalizestatus",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "normalizestatus()"
     },
@@ -9636,7 +9713,7 @@
       "source_location": "L287",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_normalizemetawhatsappwebhook",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "normalizemetawhatsappwebhook()"
     },
@@ -9647,8 +9724,8 @@
       "source_location": "L362",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_createmetawhatsappnormalizer",
-      "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community": 87,
+      "community_name": "server.js",
       "norm_label": "createmetawhatsappnormalizer()"
     },
     {
@@ -9658,8 +9735,8 @@
       "source_location": "L380",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_configuredid",
-      "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community": 87,
+      "community_name": "server.js",
       "norm_label": "configuredid()"
     },
     {
@@ -9669,8 +9746,8 @@
       "source_location": "L392",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_meta_whatsapp_max_events_per_callback",
-      "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community": 37,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "meta_whatsapp_max_events_per_callback"
     },
     {
@@ -9680,8 +9757,8 @@
       "source_location": "L393",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_meta_whatsapp_stale_after_hours",
-      "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community": 37,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "meta_whatsapp_stale_after_hours"
     },
     {
@@ -9691,8 +9768,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 214,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "postgres-conversation-conversion-port.js"
     },
     {
@@ -9702,8 +9779,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_requirequeryable",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 214,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "requirequeryable()"
     },
     {
@@ -9713,8 +9790,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_postgresconversationconversionport",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 214,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "postgresconversationconversionport"
     },
     {
@@ -9724,8 +9801,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_postgresconversationconversionport_lockforconversion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 214,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": ".lockforconversion()"
     },
     {
@@ -9735,8 +9812,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_postgresconversationconversionport_completeconversion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 214,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": ".completeconversion()"
     },
     {
@@ -9746,8 +9823,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_mapconversionconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 214,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "mapconversionconversation()"
     },
     {
@@ -9757,8 +9834,8 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_iso",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 214,
+      "community_name": "postgres-conversation-conversion-port.js",
       "norm_label": "iso()"
     },
     {
@@ -9834,8 +9911,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "postgres-inbox-repository.js"
     },
     {
@@ -9845,8 +9922,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "postgresinboxrepository"
     },
     {
@@ -9856,8 +9933,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_constructor",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".constructor()"
     },
     {
@@ -9867,8 +9944,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_receiveinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".receiveinbound()"
     },
     {
@@ -9878,8 +9955,8 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_mutateconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".mutateconversation()"
     },
     {
@@ -9889,8 +9966,8 @@
       "source_location": "L316",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_recordsuggestion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".recordsuggestion()"
     },
     {
@@ -9900,8 +9977,8 @@
       "source_location": "L371",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_hydratecommand",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": ".#hydratecommand()"
     },
     {
@@ -9911,8 +9988,8 @@
       "source_location": "L402",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_mutationassignments",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "mutationassignments()"
     },
     {
@@ -9922,8 +9999,8 @@
       "source_location": "L426",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapconversation",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "mapconversation()"
     },
     {
@@ -9933,8 +10010,8 @@
       "source_location": "L448",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapmessage",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "mapmessage()"
     },
     {
@@ -9944,8 +10021,8 @@
       "source_location": "L469",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapsuggestion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "mapsuggestion()"
     },
     {
@@ -9955,8 +10032,8 @@
       "source_location": "L485",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_encryptjson",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "encryptjson()"
     },
     {
@@ -9966,8 +10043,8 @@
       "source_location": "L504",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_decryptjson",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "decryptjson()"
     },
     {
@@ -9977,8 +10054,8 @@
       "source_location": "L535",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_advisorylock",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "advisorylock()"
     },
     {
@@ -9988,8 +10065,8 @@
       "source_location": "L543",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_hashjson",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "hashjson()"
     },
     {
@@ -9999,8 +10076,8 @@
       "source_location": "L548",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_iso",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "iso()"
     },
     {
@@ -10010,8 +10087,8 @@
       "source_location": "L555",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_inbox_repository_createaudit",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 192,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "createaudit()"
     },
     {
@@ -10065,8 +10142,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "inbox-service.js"
     },
     {
@@ -10087,8 +10164,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_validateinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "validateinbound()"
     },
     {
@@ -10098,8 +10175,8 @@
       "source_location": "L148",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_validatecontent",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "validatecontent()"
     },
     {
@@ -10109,8 +10186,8 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_validatehumancommand",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "validatehumancommand()"
     },
     {
@@ -10120,8 +10197,8 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_normalizeinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "normalizeinbound()"
     },
     {
@@ -10131,8 +10208,8 @@
       "source_location": "L199",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_normalizehumancommand",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "normalizehumancommand()"
     },
     {
@@ -10142,8 +10219,8 @@
       "source_location": "L216",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_defaultidfactory",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "defaultidfactory()"
     },
     {
@@ -10154,7 +10231,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "channel-envelope.js"
     },
     {
@@ -10165,7 +10242,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_channels",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "channels"
     },
     {
@@ -10176,7 +10253,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_inbound_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "inbound_fields"
     },
     {
@@ -10187,7 +10264,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_identity_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "identity_fields"
     },
     {
@@ -10198,7 +10275,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_message_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "message_fields"
     },
     {
@@ -10209,7 +10286,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_attachment_content_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "attachment_content_fields"
     },
     {
@@ -10220,7 +10297,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_template_content_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "template_content_fields"
     },
     {
@@ -10231,7 +10308,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_text_content_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "text_content_fields"
     },
     {
@@ -10242,7 +10319,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_unsupported_content_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "unsupported_content_fields"
     },
     {
@@ -10253,7 +10330,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_unsupported_reason_codes",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "unsupported_reason_codes"
     },
     {
@@ -10264,7 +10341,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_outbound_fields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "outbound_fields"
     },
     {
@@ -10275,7 +10352,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_channelcontracterror",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "channelcontracterror"
     },
     {
@@ -10286,7 +10363,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_channelcontracterror_constructor",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": ".constructor()"
     },
     {
@@ -10297,7 +10374,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_immutableclone",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "immutableclone()"
     },
     {
@@ -10308,7 +10385,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_deepfreeze",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "deepfreeze()"
     },
     {
@@ -10319,7 +10396,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_requirestring",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "requirestring()"
     },
     {
@@ -10330,7 +10407,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_requirerecord",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "requirerecord()"
     },
     {
@@ -10341,7 +10418,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_rejectunknownfields",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "rejectunknownfields()"
     },
     {
@@ -10352,7 +10429,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_requirechannel",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "requirechannel()"
     },
     {
@@ -10363,7 +10440,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_createscopedexternalid",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "createscopedexternalid()"
     },
     {
@@ -10374,7 +10451,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_canonicalidentity",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "canonicalidentity()"
     },
     {
@@ -10385,7 +10462,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_canonicalmessage",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "canonicalmessage()"
     },
     {
@@ -10396,7 +10473,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_createcanonicalinboundenvelope",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "createcanonicalinboundenvelope()"
     },
     {
@@ -10407,7 +10484,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_createcanonicaloutboundenvelope",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "createcanonicaloutboundenvelope()"
     },
     {
@@ -10516,8 +10593,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "inbox.js"
     },
     {
@@ -10527,8 +10604,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_inbox_states",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "inbox_states"
     },
     {
@@ -10538,8 +10615,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_terminal_inbox_states",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "terminal_inbox_states"
     },
     {
@@ -10549,8 +10626,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_assertinboxstate",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "assertinboxstate()"
     },
     {
@@ -10560,8 +10637,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_isterminalinboxstate",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "isterminalinboxstate()"
     },
     {
@@ -10571,8 +10648,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_requirenonempty",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "requirenonempty()"
     },
     {
@@ -10582,8 +10659,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_requireversion",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 194,
+      "community_name": "inbox-service.js",
       "norm_label": "requireversion()"
     },
     {
@@ -10593,8 +10670,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_freezeinboxrecord",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 196,
+      "community_name": "freezeInboxRecord",
       "norm_label": "freezeinboxrecord()"
     },
     {
@@ -10616,7 +10693,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_ports_contracts",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "inbox-channels/src/ports/contracts.js"
     },
     {
@@ -10627,7 +10704,7 @@
       "_origin": "ast",
       "id": "modules_inbox_channels_src_ports_contracts_assertchanneladaptercontract",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "assertchanneladaptercontract()"
     },
     {
@@ -10703,8 +10780,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store",
-      "community": 73,
-      "community_name": "deal-transitions.test.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "domain-event-store.js"
     },
     {
@@ -10714,8 +10791,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_validate",
-      "community": 73,
-      "community_name": "deal-transitions.test.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "validate()"
     },
     {
@@ -10725,8 +10802,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_inmemorydomaineventstore",
-      "community": 73,
-      "community_name": "deal-transitions.test.js",
+      "community": 182,
+      "community_name": "deal-conversion.test.js",
       "norm_label": "inmemorydomaineventstore"
     },
     {
@@ -10736,8 +10813,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_inmemorydomaineventstore_constructor",
-      "community": 73,
-      "community_name": "deal-transitions.test.js",
+      "community": 182,
+      "community_name": "deal-conversion.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -10747,8 +10824,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_inmemorydomaineventstore_append",
-      "community": 73,
-      "community_name": "deal-transitions.test.js",
+      "community": 182,
+      "community_name": "deal-conversion.test.js",
       "norm_label": ".append()"
     },
     {
@@ -10758,8 +10835,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_inmemorydomaineventstore_list",
-      "community": 73,
-      "community_name": "deal-transitions.test.js",
+      "community": 182,
+      "community_name": "deal-conversion.test.js",
       "norm_label": ".list()"
     },
     {
@@ -10769,8 +10846,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_postgresdomaineventstore",
-      "community": 73,
-      "community_name": "deal-transitions.test.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "postgresdomaineventstore"
     },
     {
@@ -10780,8 +10857,8 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_domain_event_store_postgresdomaineventstore_append",
-      "community": 73,
-      "community_name": "deal-transitions.test.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": ".append()"
     },
     {
@@ -11165,8 +11242,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore",
-      "community": 138,
-      "community_name": "postgres-idempotency.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "postgresidempotencyrecordstore"
     },
     {
@@ -11176,8 +11253,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore_constructor",
-      "community": 138,
-      "community_name": "postgres-idempotency.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -12254,8 +12331,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror",
-      "community": 23,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 81,
+      "community_name": "PrivateMediaVolume",
       "norm_label": "mediavolumeunavailableerror"
     },
     {
@@ -12265,8 +12342,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror_constructor",
-      "community": 23,
-      "community_name": "integration-reliability/src/index.js",
+      "community": 81,
+      "community_name": "PrivateMediaVolume",
       "norm_label": ".constructor()"
     },
     {
@@ -16684,7 +16761,7 @@
       "label": "listStyles()",
       "file_type": "code",
       "source_file": "scripts/check-design-tokens.mjs",
-      "source_location": "L70",
+      "source_location": "L74",
       "_origin": "ast",
       "id": "scripts_check_design_tokens_liststyles",
       "community": 207,
@@ -19251,7 +19328,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "channel-contract.test.js"
     },
     {
@@ -19262,7 +19339,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_rooturl",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "rooturl"
     },
     {
@@ -19273,7 +19350,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_json",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "json()"
     },
     {
@@ -19284,7 +19361,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_normalizeinbound",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "normalizeinbound()"
     },
     {
@@ -19295,7 +19372,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_prepareoutbound",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "prepareoutbound()"
     },
     {
@@ -19306,7 +19383,7 @@
       "_origin": "ast",
       "id": "test_channel_contract_test_tostring",
       "community": 13,
-      "community_name": "meta-whatsapp.js",
+      "community_name": "channel-envelope.js",
       "norm_label": "tostring()"
     },
     {
@@ -19316,8 +19393,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_channel_event_handler_test",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 215,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "channel-event-handler.test.js"
     },
     {
@@ -19327,8 +19404,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_canonicalevent",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 215,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "canonicalevent()"
     },
     {
@@ -19338,8 +19415,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_resolveinboundidentity",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 215,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "resolveinboundidentity()"
     },
     {
@@ -19349,8 +19426,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_receiveinbound",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 215,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "receiveinbound()"
     },
     {
@@ -19360,8 +19437,8 @@
       "source_location": "L175",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_process",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 215,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "process()"
     },
     {
@@ -19371,8 +19448,8 @@
       "source_location": "L180",
       "_origin": "ast",
       "id": "test_channel_event_handler_test_readcanonicaleventrecord",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 215,
+      "community_name": "channel-event-handler.test.js",
       "norm_label": "readcanonicaleventrecord()"
     },
     {
@@ -19592,7 +19669,7 @@
       "_origin": "ast",
       "id": "test_database_test",
       "community": 9,
-      "community_name": "database/src/index.js",
+      "community_name": "database.test.js",
       "norm_label": "database.test.js"
     },
     {
@@ -19602,8 +19679,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "test_database_test_transactionclient",
-      "community": 179,
-      "community_name": "TransactionClient",
+      "community": 9,
+      "community_name": "database.test.js",
       "norm_label": "transactionclient"
     },
     {
@@ -19613,8 +19690,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "test_database_test_transactionclient_constructor",
-      "community": 179,
-      "community_name": "TransactionClient",
+      "community": 9,
+      "community_name": "database.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -19624,8 +19701,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "test_database_test_transactionclient_query",
-      "community": 179,
-      "community_name": "TransactionClient",
+      "community": 9,
+      "community_name": "database.test.js",
       "norm_label": ".query()"
     },
     {
@@ -19635,8 +19712,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "test_database_test_transactionclient_release",
-      "community": 179,
-      "community_name": "TransactionClient",
+      "community": 9,
+      "community_name": "database.test.js",
       "norm_label": ".release()"
     },
     {
@@ -19647,7 +19724,7 @@
       "_origin": "ast",
       "id": "test_database_test_connect",
       "community": 9,
-      "community_name": "database/src/index.js",
+      "community_name": "database.test.js",
       "norm_label": "connect()"
     },
     {
@@ -19712,8 +19789,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_deal_conversion_postgres_live_test",
-      "community": 133,
-      "community_name": "postgres-contact-identity-repository.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "deal-conversion-postgres-live.test.js"
     },
     {
@@ -19723,8 +19800,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "test_deal_conversion_postgres_live_test_now",
-      "community": 133,
-      "community_name": "postgres-contact-identity-repository.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "now"
     },
     {
@@ -19734,8 +19811,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "test_deal_conversion_postgres_live_test_databasefor",
-      "community": 9,
-      "community_name": "database/src/index.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "databasefor()"
     },
     {
@@ -19855,8 +19932,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_deal_read_model_test",
-      "community": 196,
-      "community_name": "deal-read-model.test.js",
+      "community": 188,
+      "community_name": "deal-read-service.js",
       "norm_label": "deal-read-model.test.js"
     },
     {
@@ -19866,8 +19943,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "test_deal_read_model_test_cursor_key",
-      "community": 196,
-      "community_name": "deal-read-model.test.js",
+      "community": 188,
+      "community_name": "deal-read-service.js",
       "norm_label": "cursor_key"
     },
     {
@@ -19877,8 +19954,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "test_deal_read_model_test_service",
-      "community": 196,
-      "community_name": "deal-read-model.test.js",
+      "community": 188,
+      "community_name": "deal-read-service.js",
       "norm_label": "service()"
     },
     {
@@ -19888,8 +19965,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "test_deal_read_model_test_getboard",
-      "community": 196,
-      "community_name": "deal-read-model.test.js",
+      "community": 188,
+      "community_name": "deal-read-service.js",
       "norm_label": "getboard()"
     },
     {
@@ -19899,8 +19976,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "test_deal_read_model_test_getdetail",
-      "community": 196,
-      "community_name": "deal-read-model.test.js",
+      "community": 188,
+      "community_name": "deal-read-service.js",
       "norm_label": "getdetail()"
     },
     {
@@ -19910,8 +19987,8 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "test_deal_read_model_test_getversion",
-      "community": 196,
-      "community_name": "deal-read-model.test.js",
+      "community": 188,
+      "community_name": "deal-read-service.js",
       "norm_label": "getversion()"
     },
     {
@@ -19921,8 +19998,8 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "test_deal_read_model_test_readevents",
-      "community": 196,
-      "community_name": "deal-read-model.test.js",
+      "community": 188,
+      "community_name": "deal-read-service.js",
       "norm_label": "readevents()"
     },
     {
@@ -20042,8 +20119,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_deal_transitions_postgres_live_test",
-      "community": 82,
-      "community_name": "deal-runtime.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "deal-transitions-postgres-live.test.js"
     },
     {
@@ -20053,8 +20130,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "test_deal_transitions_postgres_live_test_now",
-      "community": 82,
-      "community_name": "deal-runtime.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "now"
     },
     {
@@ -20064,8 +20141,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "test_deal_transitions_postgres_live_test_databasefor",
-      "community": 9,
-      "community_name": "database/src/index.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "databasefor()"
     },
     {
@@ -20130,8 +20207,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "test_deal_transitions_test_harness",
-      "community": 82,
-      "community_name": "deal-runtime.js",
+      "community": 73,
+      "community_name": "deal-transitions.test.js",
       "norm_label": "harness()"
     },
     {
@@ -20394,8 +20471,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_identity_api_live_test",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 165,
+      "community_name": "database/src/index.js",
       "norm_label": "identity-api-live.test.js"
     },
     {
@@ -20405,8 +20482,8 @@
       "source_location": "L237",
       "_origin": "ast",
       "id": "test_identity_api_live_test_cookies",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 165,
+      "community_name": "database/src/index.js",
       "norm_label": "cookies()"
     },
     {
@@ -20416,8 +20493,8 @@
       "source_location": "L251",
       "_origin": "ast",
       "id": "test_identity_api_live_test_commandheaders",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 165,
+      "community_name": "database/src/index.js",
       "norm_label": "commandheaders()"
     },
     {
@@ -20527,7 +20604,7 @@
       "_origin": "ast",
       "id": "test_identity_postgres_live_test",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "identity-postgres-live.test.js"
     },
     {
@@ -20538,7 +20615,7 @@
       "_origin": "ast",
       "id": "test_identity_postgres_live_test_hash",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "hash()"
     },
     {
@@ -20691,8 +20768,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 212,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "inbox-postgres-live.test.js"
     },
     {
@@ -20702,8 +20779,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_now",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 212,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "now"
     },
     {
@@ -20713,8 +20790,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_attendant",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 212,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "attendant"
     },
     {
@@ -20724,8 +20801,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_databasefor",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 212,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "databasefor()"
     },
     {
@@ -20735,8 +20812,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_servicesfor",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 212,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "servicesfor()"
     },
     {
@@ -20746,8 +20823,8 @@
       "source_location": "L93",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_identityinput",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 212,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "identityinput()"
     },
     {
@@ -20757,8 +20834,8 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_inboundinput",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 212,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "inboundinput()"
     },
     {
@@ -20768,8 +20845,8 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_canonicalwebhookevent",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 212,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "canonicalwebhookevent()"
     },
     {
@@ -20779,8 +20856,8 @@
       "source_location": "L388",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_enqueuechannelmessage",
-      "community": 37,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 212,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "enqueuechannelmessage()"
     },
     {
@@ -20867,7 +20944,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "meta-whatsapp-adapter.test.js"
     },
@@ -20878,7 +20955,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test_rooturl",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "rooturl"
     },
@@ -20889,7 +20966,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test_accountscope",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "accountscope"
     },
@@ -20900,7 +20977,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test_normalize",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "normalize()"
     },
@@ -20911,7 +20988,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "test_meta_whatsapp_adapter_test_fixture",
-      "community": 13,
+      "community": 179,
       "community_name": "meta-whatsapp.js",
       "norm_label": "fixture()"
     },
@@ -20922,8 +20999,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_migrations_live_test",
-      "community": 87,
-      "community_name": "server.js",
+      "community": 165,
+      "community_name": "database/src/index.js",
       "norm_label": "migrations-live.test.js"
     },
     {
@@ -21252,7 +21329,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_phase1_schema_live_test",
-      "community": 9,
+      "community": 165,
       "community_name": "database/src/index.js",
       "norm_label": "phase1-schema-live.test.js"
     },
@@ -21263,7 +21340,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "test_phase1_schema_live_test_hash",
-      "community": 9,
+      "community": 165,
       "community_name": "database/src/index.js",
       "norm_label": "hash()"
     },
@@ -21307,8 +21384,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test",
-      "community": 192,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 186,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "postgres-audit-live.test.js"
     },
     {
@@ -21318,8 +21395,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_auditinput",
-      "community": 192,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 186,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "auditinput"
     },
     {
@@ -21329,8 +21406,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_recordingqueryable",
-      "community": 192,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 186,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "recordingqueryable"
     },
     {
@@ -21340,8 +21417,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_recordingqueryable_query",
-      "community": 192,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 186,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".query()"
     },
     {
@@ -21351,8 +21428,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_createpostgresaudittrail",
-      "community": 192,
-      "community_name": "postgres-audit-live.test.js",
+      "community": 186,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "createpostgresaudittrail()"
     },
     {
@@ -21362,7 +21439,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_postgres_idempotency_live_test",
-      "community": 9,
+      "community": 165,
       "community_name": "database/src/index.js",
       "norm_label": "postgres-idempotency-live.test.js"
     },
@@ -21461,8 +21538,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_postgres_job_queue_live_test",
-      "community": 9,
-      "community_name": "database/src/index.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "postgres-job-queue-live.test.js"
     },
     {
@@ -21472,8 +21549,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "test_postgres_job_queue_live_test_databasefor",
-      "community": 9,
-      "community_name": "database/src/index.js",
+      "community": 202,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "databasefor()"
     },
     {
@@ -21483,8 +21560,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "test_postgres_job_queue_live_test_seedjob",
-      "community": 9,
-      "community_name": "database/src/index.js",
+      "community": 175,
+      "community_name": "qualification-postgres-live.test.js",
       "norm_label": "seedjob()"
     },
     {
@@ -21495,7 +21572,7 @@
       "_origin": "ast",
       "id": "test_postgres_webhook_inbox_live_test",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "postgres-webhook-inbox-live.test.js"
     },
     {
@@ -21506,7 +21583,7 @@
       "_origin": "ast",
       "id": "test_postgres_webhook_inbox_live_test_canonicalevent",
       "community": 165,
-      "community_name": "loadMigrations",
+      "community_name": "database/src/index.js",
       "norm_label": "canonicalevent()"
     },
     {
@@ -23790,7 +23867,7 @@
       "label": "Cores sem\u00e2nticas",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L98",
+      "source_location": "L99",
       "_origin": "ast",
       "id": "design_cores_sem\u00e2nticas",
       "community": 8,
@@ -23801,7 +23878,7 @@
       "label": "Aplica\u00e7\u00e3o do tema",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L109",
+      "source_location": "L110",
       "_origin": "ast",
       "id": "design_aplica\u00e7\u00e3o_do_tema",
       "community": 8,
@@ -23812,7 +23889,7 @@
       "label": "5. Tipografia",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L118",
+      "source_location": "L122",
       "_origin": "ast",
       "id": "design_5_tipografia",
       "community": 8,
@@ -23823,7 +23900,7 @@
       "label": "6. Espa\u00e7amento, forma e eleva\u00e7\u00e3o",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L139",
+      "source_location": "L143",
       "_origin": "ast",
       "id": "design_6_espa\u00e7amento_forma_e_eleva\u00e7\u00e3o",
       "community": 8,
@@ -23834,7 +23911,7 @@
       "label": "Escala de espa\u00e7amento",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L141",
+      "source_location": "L145",
       "_origin": "ast",
       "id": "design_escala_de_espa\u00e7amento",
       "community": 8,
@@ -23845,7 +23922,7 @@
       "label": "Raios",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L150",
+      "source_location": "L154",
       "_origin": "ast",
       "id": "design_raios",
       "community": 8,
@@ -23856,7 +23933,7 @@
       "label": "Eleva\u00e7\u00e3o",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L159",
+      "source_location": "L163",
       "_origin": "ast",
       "id": "design_eleva\u00e7\u00e3o",
       "community": 8,
@@ -23867,7 +23944,7 @@
       "label": "7. Estrutura da aplica\u00e7\u00e3o",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L167",
+      "source_location": "L171",
       "_origin": "ast",
       "id": "design_7_estrutura_da_aplica\u00e7\u00e3o",
       "community": 8,
@@ -23878,7 +23955,7 @@
       "label": "App shell",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L169",
+      "source_location": "L173",
       "_origin": "ast",
       "id": "design_app_shell",
       "community": 8,
@@ -23889,7 +23966,7 @@
       "label": "Responsividade",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L176",
+      "source_location": "L180",
       "_origin": "ast",
       "id": "design_responsividade",
       "community": 8,
@@ -23900,7 +23977,7 @@
       "label": "8. Biblioteca de componentes",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L184",
+      "source_location": "L188",
       "_origin": "ast",
       "id": "design_8_biblioteca_de_componentes",
       "community": 8,
@@ -23911,7 +23988,7 @@
       "label": "Primitivos obrigat\u00f3rios",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L186",
+      "source_location": "L190",
       "_origin": "ast",
       "id": "design_primitivos_obrigat\u00f3rios",
       "community": 8,
@@ -23922,7 +23999,7 @@
       "label": "Composi\u00e7\u00e3o de dom\u00ednio",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L207",
+      "source_location": "L211",
       "_origin": "ast",
       "id": "design_composi\u00e7\u00e3o_de_dom\u00ednio",
       "community": 8,
@@ -23933,7 +24010,7 @@
       "label": "9. Padr\u00f5es por superf\u00edcie do CRM",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L219",
+      "source_location": "L223",
       "_origin": "ast",
       "id": "design_9_padr\u00f5es_por_superf\u00edcie_do_crm",
       "community": 8,
@@ -23944,7 +24021,7 @@
       "label": "Caixa de Entrada",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L221",
+      "source_location": "L225",
       "_origin": "ast",
       "id": "design_caixa_de_entrada",
       "community": 8,
@@ -23955,7 +24032,7 @@
       "label": "Kanban Comercial",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L229",
+      "source_location": "L233",
       "_origin": "ast",
       "id": "design_kanban_comercial",
       "community": 8,
@@ -23966,7 +24043,7 @@
       "label": "Conversa e atua\u00e7\u00e3o do Vendedor Silmer",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L237",
+      "source_location": "L241",
       "_origin": "ast",
       "id": "design_conversa_e_atua\u00e7\u00e3o_do_vendedor_silmer",
       "community": 8,
@@ -23977,7 +24054,7 @@
       "label": "Ficha de Pedido",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L247",
+      "source_location": "L251",
       "_origin": "ast",
       "id": "design_ficha_de_pedido",
       "community": 8,
@@ -23988,7 +24065,7 @@
       "label": "Financeiro comercial",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L255",
+      "source_location": "L259",
       "_origin": "ast",
       "id": "design_financeiro_comercial",
       "community": 8,
@@ -23999,7 +24076,7 @@
       "label": "10. Intera\u00e7\u00e3o e movimento",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L263",
+      "source_location": "L267",
       "_origin": "ast",
       "id": "design_10_intera\u00e7\u00e3o_e_movimento",
       "community": 8,
@@ -24010,7 +24087,7 @@
       "label": "11. Acessibilidade",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L273",
+      "source_location": "L277",
       "_origin": "ast",
       "id": "design_11_acessibilidade",
       "community": 8,
@@ -24021,7 +24098,7 @@
       "label": "12. Linguagem e conte\u00fado",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L286",
+      "source_location": "L290",
       "_origin": "ast",
       "id": "design_12_linguagem_e_conte\u00fado",
       "community": 8,
@@ -24032,7 +24109,7 @@
       "label": "13. Arquitetura de implementa\u00e7\u00e3o visual",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L295",
+      "source_location": "L299",
       "_origin": "ast",
       "id": "design_13_arquitetura_de_implementa\u00e7\u00e3o_visual",
       "community": 8,
@@ -24043,7 +24120,7 @@
       "label": "14. Crit\u00e9rios de aceite do design system",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L305",
+      "source_location": "L309",
       "_origin": "ast",
       "id": "design_14_crit\u00e9rios_de_aceite_do_design_system",
       "community": 8,
@@ -24054,7 +24131,7 @@
       "label": "15. Antipadr\u00f5es proibidos",
       "file_type": "document",
       "source_file": "design.md",
-      "source_location": "L320",
+      "source_location": "L324",
       "_origin": "ast",
       "id": "design_15_antipadr\u00f5es_proibidos",
       "community": 8,
@@ -32011,7 +32088,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32022,7 +32099,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L135",
+      "source_location": "L136",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32033,7 +32110,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32044,7 +32121,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L152",
+      "source_location": "L153",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32055,7 +32132,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32066,7 +32143,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L36",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32077,7 +32154,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32088,7 +32165,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32099,7 +32176,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L128",
+      "source_location": "L129",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32110,7 +32187,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L109",
+      "source_location": "L110",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32121,7 +32198,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32132,7 +32209,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L25",
+      "source_location": "L26",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32143,7 +32220,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L157",
+      "source_location": "L158",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32154,7 +32231,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L17",
+      "source_location": "L18",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32165,7 +32242,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L67",
+      "source_location": "L68",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32176,7 +32253,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L16",
+      "source_location": "L17",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32187,7 +32264,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L15",
+      "source_location": "L16",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32198,7 +32275,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32209,7 +32286,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L18",
+      "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32220,7 +32297,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32231,7 +32308,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L145",
+      "source_location": "L146",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32242,7 +32319,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L86",
+      "source_location": "L87",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32253,7 +32330,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L95",
+      "source_location": "L96",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32264,7 +32341,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32275,7 +32352,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L29",
+      "source_location": "L30",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32303,31 +32380,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
-      "target": "apps_edge_web_src_lib_api_client",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L12",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_edge_web_src_app",
-      "target": "apps_edge_web_src_lib_api_client_apierror",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L12",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_edge_web_src_app",
-      "target": "apps_edge_web_src_lib_api_client_request",
+      "target": "apps_edge_web_src_components_themeswitcher",
       "confidence_score": 1.0
     },
     {
@@ -32339,7 +32392,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
-      "target": "apps_edge_web_src_lib_event_stream",
+      "target": "apps_edge_web_src_lib_api_client",
       "confidence_score": 1.0
     },
     {
@@ -32348,6 +32401,42 @@
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
       "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_app",
+      "target": "apps_edge_web_src_lib_api_client_apierror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/App.vue",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_app",
+      "target": "apps_edge_web_src_lib_api_client_request",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/App.vue",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_app",
+      "target": "apps_edge_web_src_lib_event_stream",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/App.vue",
+      "source_location": "L14",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app",
@@ -32371,7 +32460,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L73",
+      "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_restoresession",
@@ -32383,7 +32472,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L69",
+      "source_location": "L70",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_restoresession",
@@ -32395,7 +32484,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L72",
+      "source_location": "L73",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_restoresession",
@@ -32407,7 +32496,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L76",
+      "source_location": "L77",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_restoresession",
@@ -32419,7 +32508,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L71",
+      "source_location": "L72",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_restoresession",
@@ -32431,7 +32520,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L91",
+      "source_location": "L92",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_showsession",
@@ -32444,7 +32533,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L90",
+      "source_location": "L91",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_showsession",
@@ -32455,7 +32544,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L118",
+      "source_location": "L119",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_logout",
@@ -32467,7 +32556,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L102",
+      "source_location": "L103",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_showsignedout",
@@ -32480,7 +32569,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L98",
+      "source_location": "L99",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_showsignedout",
@@ -32491,7 +32580,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L119",
+      "source_location": "L120",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_logout",
@@ -32503,7 +32592,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/edge-web/src/App.vue",
-      "source_location": "L113",
+      "source_location": "L114",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_edge_web_src_app_logout",
@@ -32936,6 +33025,84 @@
       "_origin": "ast",
       "source": "apps_edge_web_src_router",
       "target": "apps_edge_web_src_components_legacyviewhost",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_components_themeswitcher",
+      "target": "apps_edge_web_src_components_themeswitcher_applytheme",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_components_themeswitcher",
+      "target": "apps_edge_web_src_components_themeswitcher_mediaquery",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_components_themeswitcher",
+      "target": "apps_edge_web_src_components_themeswitcher_options",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_components_themeswitcher",
+      "target": "apps_edge_web_src_components_themeswitcher_readstoredtheme",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_components_themeswitcher",
+      "target": "apps_edge_web_src_components_themeswitcher_selecttheme",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_components_themeswitcher",
+      "target": "apps_edge_web_src_components_themeswitcher_theme",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/edge-web/src/components/ThemeSwitcher.vue",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_edge_web_src_components_themeswitcher_selecttheme",
+      "target": "apps_edge_web_src_components_themeswitcher_applytheme",
       "confidence_score": 1.0
     },
     {
@@ -65374,7 +65541,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/check-design-tokens.mjs",
-      "source_location": "L70",
+      "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_check_design_tokens",
@@ -74550,7 +74717,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L263",
+      "source_location": "L267",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74561,7 +74728,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L273",
+      "source_location": "L277",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74572,7 +74739,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L286",
+      "source_location": "L290",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74583,7 +74750,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L295",
+      "source_location": "L299",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74594,7 +74761,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L305",
+      "source_location": "L309",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74605,7 +74772,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L320",
+      "source_location": "L324",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74660,7 +74827,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L118",
+      "source_location": "L122",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74671,7 +74838,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L139",
+      "source_location": "L143",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74682,7 +74849,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L167",
+      "source_location": "L171",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74693,7 +74860,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L184",
+      "source_location": "L188",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74704,7 +74871,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L219",
+      "source_location": "L223",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_design_do_crm_silmer",
@@ -74781,7 +74948,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L109",
+      "source_location": "L110",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_4_temas_e_tokens_sem\u00e2nticos",
@@ -74792,7 +74959,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L98",
+      "source_location": "L99",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_4_temas_e_tokens_sem\u00e2nticos",
@@ -74825,7 +74992,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L159",
+      "source_location": "L163",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_6_espa\u00e7amento_forma_e_eleva\u00e7\u00e3o",
@@ -74836,7 +75003,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L141",
+      "source_location": "L145",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_6_espa\u00e7amento_forma_e_eleva\u00e7\u00e3o",
@@ -74847,7 +75014,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L150",
+      "source_location": "L154",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_6_espa\u00e7amento_forma_e_eleva\u00e7\u00e3o",
@@ -74858,7 +75025,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L169",
+      "source_location": "L173",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_7_estrutura_da_aplica\u00e7\u00e3o",
@@ -74869,7 +75036,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L176",
+      "source_location": "L180",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_7_estrutura_da_aplica\u00e7\u00e3o",
@@ -74880,7 +75047,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L207",
+      "source_location": "L211",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_8_biblioteca_de_componentes",
@@ -74891,7 +75058,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L186",
+      "source_location": "L190",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_8_biblioteca_de_componentes",
@@ -74902,7 +75069,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L221",
+      "source_location": "L225",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_9_padr\u00f5es_por_superf\u00edcie_do_crm",
@@ -74913,7 +75080,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L237",
+      "source_location": "L241",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_9_padr\u00f5es_por_superf\u00edcie_do_crm",
@@ -74924,7 +75091,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L247",
+      "source_location": "L251",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_9_padr\u00f5es_por_superf\u00edcie_do_crm",
@@ -74935,7 +75102,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L255",
+      "source_location": "L259",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_9_padr\u00f5es_por_superf\u00edcie_do_crm",
@@ -74946,7 +75113,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "design.md",
-      "source_location": "L229",
+      "source_location": "L233",
       "weight": 1.0,
       "_origin": "ast",
       "source": "design_9_padr\u00f5es_por_superf\u00edcie_do_crm",
@@ -78262,5 +78429,5 @@
       "confidence_score": 1.0
     }
   ],
-  "built_at_commit": "cae976ee670ab2a01dfbda850a952f39665b9274"
+  "built_at_commit": "8330f348b57a249ac6b6773cc5d9189d5b5abfb6"
 }

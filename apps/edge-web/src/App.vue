@@ -214,7 +214,7 @@ function onCursor(cursor) {
   </div>
 
   <div v-else class="app-shell" @keydown="handleShellKey">
-    <aside class="app-sidebar" aria-label="Navegação principal">
+    <aside class="app-sidebar">
       <RouterLink
         class="brand app-brand"
         to="/dashboard"

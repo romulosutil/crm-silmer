@@ -310,6 +310,40 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test('restores search focus after removing filter controls', async ({
+  page,
+}) => {
+  await mockCrm(page);
+
+  await page.goto('/clientes');
+  const clientSearch = page.locator('#client-search');
+  await clientSearch.fill('inexistente');
+  const clearClientSearch = page.getByRole('button', {
+    name: 'Limpar busca',
+  });
+  await clearClientSearch.focus();
+  await clearClientSearch.press('Enter');
+  await expect(clientSearch).toBeFocused();
+
+  await clientSearch.fill('inexistente');
+  const clearClientFilters = page.getByRole('button', {
+    name: 'Limpar filtros',
+  });
+  await clearClientFilters.focus();
+  await clearClientFilters.press('Enter');
+  await expect(clientSearch).toBeFocused();
+
+  await page.goto('/inbox');
+  const inboxSearch = page.locator('#inbox-search');
+  await inboxSearch.fill('inexistente');
+  const clearInboxSearch = page.getByRole('button', {
+    name: 'Limpar busca',
+  });
+  await clearInboxSearch.focus();
+  await clearInboxSearch.press('Enter');
+  await expect(inboxSearch).toBeFocused();
+});
+
 test('keeps the official command authoritative and refetches after 409', async ({
   page,
 }) => {

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import DemoNotice from '../components/DemoNotice.vue';
 import { brl, brlExato, clientes, dataBR } from '../data/demo-crm.js';
 
@@ -29,6 +29,12 @@ const portfolio = clientes.reduce((sum, client) => sum + client.total, 0);
 function clearFilters() {
   profile.value = 'Todos';
   query.value = '';
+  void nextTick(() => document.querySelector('#client-search')?.focus());
+}
+
+function clearSearch() {
+  query.value = '';
+  void nextTick(() => document.querySelector('#client-search')?.focus());
 }
 
 onMounted(() => heading.value?.focus());
@@ -59,7 +65,7 @@ onMounted(() => heading.value?.focus());
             v-if="query"
             type="button"
             aria-label="Limpar busca"
-            @click="query = ''"
+            @click="clearSearch"
           >
             Limpar
           </button>

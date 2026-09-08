@@ -229,7 +229,16 @@ test('invitation commands require an idempotency key and reject ambiguous cookie
 });
 
 test('current session uses only the HttpOnly session cookie and logout expires both cookies', async () => {
-  const { api } = harness();
+  const { api, calls } = harness();
+  const signedOut = await api.inject({
+    url: '/api/v1/sessions/current',
+  });
+  assert.equal(signedOut.statusCode, 401);
+  assert.deepEqual(signedOut.json(), {
+    error: { code: 'INVALID_CREDENTIALS' },
+  });
+  assert.equal(calls.length, 0);
+
   const current = await api.inject({
     headers: { cookie: 'crm_session=session' },
     url: '/api/v1/sessions/current',

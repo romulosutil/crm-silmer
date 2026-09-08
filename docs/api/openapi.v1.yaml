@@ -532,6 +532,175 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /integrations/n8n/messages/inbound:
+    post:
+      operationId: receiveN8nInboundMessage
+      summary: Persiste uma mensagem recebida pelo n8n e devolve o contexto oficial
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkflowKey'
+        - $ref: '#/components/parameters/WorkflowVersion'
+        - $ref: '#/components/parameters/ExecutionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/N8nInboundRequest' }
+      responses:
+        '200':
+          description: Evento aceito ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/N8nInboundResponse' }
+        '400': { $ref: '#/components/responses/N8nProblem' }
+        '401': { $ref: '#/components/responses/N8nProblem' }
+        '403': { $ref: '#/components/responses/N8nProblem' }
+        '409': { $ref: '#/components/responses/N8nProblem' }
+        '422': { $ref: '#/components/responses/N8nProblem' }
+        '503': { $ref: '#/components/responses/N8nProblem' }
+  /integrations/n8n/conversations/{conversationId}/attachments:
+    post:
+      operationId: storeN8nAttachment
+      summary: Valida em streaming, quarentena e publica uma mídia transitória segura
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkflowKey'
+        - $ref: '#/components/parameters/WorkflowVersion'
+        - $ref: '#/components/parameters/ExecutionId'
+        - $ref: '#/components/parameters/ContentSha256'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/N8nAttachmentRequest' }
+      responses:
+        '200': { description: Replay idempotente do anexo já publicado }
+        '201': { description: Anexo verificado e publicado }
+        '400': { $ref: '#/components/responses/N8nProblem' }
+        '401': { $ref: '#/components/responses/N8nProblem' }
+        '409': { $ref: '#/components/responses/N8nProblem' }
+        '413': { $ref: '#/components/responses/N8nProblem' }
+        '415': { $ref: '#/components/responses/N8nProblem' }
+        '422': { $ref: '#/components/responses/N8nProblem' }
+        '503': { $ref: '#/components/responses/N8nProblem' }
+  /integrations/n8n/conversations/{conversationId}/ai-turns/claim:
+    post:
+      operationId: claimN8nAiTurn
+      summary: Concede por compare-and-swap um lease exclusivo para uma rodada de IA
+      description: Claim negado é resposta 200 com claimed=false e motivo estável.
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkflowKey'
+        - $ref: '#/components/parameters/WorkflowVersion'
+        - $ref: '#/components/parameters/ExecutionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/N8nClaimRequest' }
+      responses:
+        '200':
+          description: Claim concedido ou negado sem efeito externo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/N8nClaimResponse' }
+        '400': { $ref: '#/components/responses/N8nProblem' }
+        '401': { $ref: '#/components/responses/N8nProblem' }
+        '409': { $ref: '#/components/responses/N8nProblem' }
+        '503': { $ref: '#/components/responses/N8nProblem' }
+  /integrations/n8n/events:
+    post:
+      operationId: recordN8nEvent
+      summary: Aplica evento n8n com idempotência, fencing e transação atômica
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkflowKey'
+        - $ref: '#/components/parameters/WorkflowVersion'
+        - $ref: '#/components/parameters/ExecutionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/N8nEventRequest' }
+      responses:
+        '200':
+          description: Evento aplicado, negado pelo fence ou reproduzido idempotentemente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/N8nEventResponse' }
+        '400': { $ref: '#/components/responses/N8nProblem' }
+        '401': { $ref: '#/components/responses/N8nProblem' }
+        '403': { $ref: '#/components/responses/N8nProblem' }
+        '409': { $ref: '#/components/responses/N8nProblem' }
+        '422': { $ref: '#/components/responses/N8nProblem' }
+        '503': { $ref: '#/components/responses/N8nProblem' }
+  /conversations/{conversationId}/messages:
+    post:
+      operationId: sendHumanConversationMessage
+      summary: Persiste a intenção humana e agenda o comando idempotente ao n8n
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HumanMessageCommand' }
+      responses:
+        '202': { description: Estado oficial e outbox gravados atomicamente }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /conversations/{conversationId}/{command}:
+    post:
+      operationId: changeConversationAutomationMode
+      summary: Executa takeover, retorno à IA ou encerramento humano
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - name: command
+          in: path
+          required: true
+          schema: { type: string, enum: [takeover, return-to-ai, close] }
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HumanConversationCommand' }
+      responses:
+        '202': { description: Estado oficial, auditoria e outbox gravados }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /handoffs/{handoffId}/claim:
+    post:
+      operationId: claimHumanHandoff
+      summary: Reivindica atomicamente um handoff compatível ainda sem responsável
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - name: handoffId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HandoffClaimRequest' }
+      responses:
+        '200': { description: Handoff atribuído à pessoa autenticada }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
 components:
   securitySchemes:
     automationBasic:
@@ -577,12 +746,263 @@ components:
       in: header
       required: true
       schema: { type: string, minLength: 32 }
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    WorkflowKey:
+      name: X-Silmer-Workflow-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    WorkflowVersion:
+      name: X-Silmer-Workflow-Version
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 64 }
+    ExecutionId:
+      name: X-Silmer-Execution-Id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    ContentSha256:
+      name: X-Silmer-Content-SHA256
+      in: header
+      required: true
+      schema: { type: string, pattern: '^[a-f0-9]{64}$' }
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
     DealId:
       name: dealId
       in: path
       required: true
       schema: { type: string, minLength: 1 }
   schemas:
+    N8nMode:
+      type: string
+      enum: [ai_active, handoff_pending, human_active, closed]
+    N8nInboundRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          schema_version,
+          event_id,
+          occurred_at,
+          channel,
+          contact,
+          message,
+          metadata,
+        ]
+      properties:
+        schema_version: { type: string, const: '1.0' }
+        event_id: { type: string, minLength: 1, maxLength: 512 }
+        occurred_at: { type: string, format: date-time }
+        channel: { type: string, enum: [whatsapp, instagram] }
+        contact:
+          type: object
+          anyOf:
+            - required: [external_id]
+            - required: [wa_id]
+            - required: [ig_id]
+          properties:
+            external_id: { type: string, minLength: 1, maxLength: 512 }
+            wa_id: { type: string, minLength: 1, maxLength: 512 }
+            ig_id: { type: string, minLength: 1, maxLength: 512 }
+            name: { type: string, maxLength: 512 }
+            handle: { type: string, maxLength: 512 }
+        message:
+          type: object
+          additionalProperties: true
+          required: [external_id, type]
+          properties:
+            external_id: { type: string, minLength: 1, maxLength: 512 }
+            type:
+              type: string
+              enum: [text, image, audio, video, document, button, interactive]
+            text: { type: string, maxLength: 65536 }
+        metadata:
+          type: object
+          additionalProperties: true
+          anyOf:
+            - required: [provider_account_id]
+            - required: [phone_number_id]
+        briefing: { type: object, additionalProperties: true }
+    N8nInboundResponse:
+      type: object
+      additionalProperties: true
+      required:
+        [
+          accepted,
+          duplicate,
+          conversation_id,
+          revision,
+          automation_epoch,
+          mode,
+          recent_messages,
+          lead,
+        ]
+      properties:
+        accepted: { type: boolean, const: true }
+        duplicate: { type: boolean }
+        conversation_id: { type: string }
+        revision: { type: integer, minimum: 1 }
+        automation_epoch: { type: integer, minimum: 0 }
+        mode: { $ref: '#/components/schemas/N8nMode' }
+        recent_messages: { type: array, items: { type: object } }
+        lead:
+          type: object
+          additionalProperties: true
+          description: Projeção compatível do briefing versionado oficial.
+    N8nAttachmentRequest:
+      type: object
+      additionalProperties: false
+      required: [schema_version, external_id, file]
+      properties:
+        schema_version: { type: string, const: '1.0' }
+        external_id: { type: string, minLength: 1, maxLength: 512 }
+        filename: { type: string, minLength: 1, maxLength: 255 }
+        mime_type: { type: string, minLength: 1, maxLength: 255 }
+        file: { type: string, format: binary }
+    N8nClaimRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [schema_version, revision, last_event_id, automation_epoch, worker_id]
+      properties:
+        schema_version: { type: string, const: '1.0' }
+        revision: { type: integer, minimum: 1 }
+        last_event_id: { type: string, minLength: 1, maxLength: 512 }
+        automation_epoch: { type: integer, minimum: 0 }
+        worker_id: { type: string, minLength: 1, maxLength: 128 }
+        claim_id: { type: string, minLength: 1, maxLength: 512 }
+    N8nClaimResponse:
+      oneOf:
+        - type: object
+          additionalProperties: true
+          required: [accepted, claimed, claim_id, claim_token, lease_expires_at]
+          properties:
+            accepted: { type: boolean, const: true }
+            claimed: { type: boolean, const: true }
+            claim_id: { type: string }
+            claim_token:
+              { type: string, description: Token opaco exibido uma vez. }
+            lease_expires_at: { type: string, format: date-time }
+        - type: object
+          additionalProperties: true
+          required: [accepted, claimed, reason]
+          properties:
+            accepted: { type: boolean, const: true }
+            claimed: { type: boolean, const: false }
+            reason:
+              type: string
+              enum:
+                [
+                  MODE_NOT_AI_ACTIVE,
+                  STALE_AUTOMATION_EPOCH,
+                  STALE_REVISION,
+                  LAST_EVENT_MISMATCH,
+                  ALREADY_CLAIMED,
+                  ALREADY_PROCESSED,
+                  EFFECT_OUTCOME_UNKNOWN,
+                ]
+    N8nEventRequest:
+      type: object
+      additionalProperties: false
+      required: [schema_version, event_id, event_type, occurred_at]
+      properties:
+        schema_version: { type: string, const: '1.0' }
+        event_id: { type: string, minLength: 1, maxLength: 512 }
+        event_type:
+          type: string
+          enum:
+            [
+              message.send.requested,
+              message.sent,
+              message.delivered,
+              message.read,
+              message.failed,
+              message.send.unknown,
+              handoff.requested,
+              lead.updated,
+              workflow.failed,
+            ]
+        occurred_at: { type: string, format: date-time }
+        conversation_id: { type: [string, 'null'] }
+        automation_epoch: { type: integer, minimum: 0 }
+        revision: { type: integer, minimum: 1 }
+        expected_version: { type: integer, minimum: 1 }
+        claim_id: { type: string, maxLength: 512 }
+        claim_token: { type: string, maxLength: 512 }
+        command_id: { type: string, maxLength: 512 }
+        attempt_id: { type: string, maxLength: 512 }
+        external_message_id: { type: string, maxLength: 512 }
+        ai_provider: { type: string, enum: [openai, gemini] }
+        ai_model: { type: string, maxLength: 128 }
+        prompt_version: { type: string, maxLength: 128 }
+        message: { type: object, additionalProperties: true }
+        lead_patch: { type: object, additionalProperties: true }
+        handoff: { type: object, additionalProperties: true }
+        failure: { type: object, additionalProperties: true }
+        status: { type: string, maxLength: 64 }
+    N8nEventResponse:
+      type: object
+      additionalProperties: true
+      required: [accepted]
+      properties:
+        accepted: { type: boolean }
+        duplicate: { type: boolean }
+        send_authorized: { type: boolean }
+        reason: { type: string }
+    N8nProblem:
+      type: object
+      additionalProperties: false
+      required:
+        [type, title, status, detail, instance, accepted, error, request_id]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        detail: { type: string }
+        instance: { type: string }
+        accepted: { type: boolean, const: false }
+        error:
+          type: object
+          additionalProperties: false
+          required: [code]
+          properties: { code: { type: string } }
+        request_id: { type: string }
+    HumanMessageCommand:
+      type: object
+      additionalProperties: false
+      required: [content, expectedVersion, messageType, reason]
+      properties:
+        content: { type: object, additionalProperties: true }
+        expectedVersion: { type: integer, minimum: 1 }
+        messageType:
+          { type: string, enum: [text, image, audio, video, document] }
+        reason: { type: string, minLength: 1, maxLength: 512 }
+    HumanConversationCommand:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, reason]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        reason: { type: string, minLength: 1, maxLength: 512 }
+    HandoffClaimRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedHandoffVersion, reasonCode]
+      properties:
+        expectedHandoffVersion: { type: integer, minimum: 1 }
+        expectedConversationVersion: { type: integer, minimum: 1 }
+        expectedDealVersion: { type: integer, minimum: 1 }
+        expectedTaskVersion: { type: integer, minimum: 1 }
+        reasonCode: { type: string, minLength: 1, maxLength: 512 }
     DealStage:
       type: string
       enum: [produto, especificacao, estampa, logistica, fechamento]
@@ -676,6 +1096,7 @@ components:
           id,
           conversationId,
           assignedUserId,
+          targetRole,
           status,
           version,
           reasonCode,
@@ -693,7 +1114,8 @@ components:
       properties:
         id: { type: string }
         conversationId: { type: string }
-        assignedUserId: { type: string }
+        assignedUserId: { type: [string, 'null'] }
+        targetRole: { type: string, enum: [Atendimento, Vendedor] }
         status: { type: string, enum: [pending, accepted, resolved] }
         version: { type: integer, minimum: 1 }
         reasonCode: { type: string }
@@ -1180,6 +1602,11 @@ components:
           properties:
             code: { type: string }
   responses:
+    N8nProblem:
+      description: Erro compatível em application/problem+json sem eco de PII
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/N8nProblem' }
     InvalidRequest:
       description: Entrada inválida sem eco de dados recebidos
       content:

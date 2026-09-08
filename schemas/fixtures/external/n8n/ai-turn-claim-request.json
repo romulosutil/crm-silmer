@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "automation_epoch": 3,
+  "conversation_id": "conversation-synthetic-001",
+  "claim_id": "claim-synthetic-001",
+  "revision": 7,
+  "last_event_id": "event-whatsapp-inbound-001",
+  "worker_id": "worker-n8n-synthetic-001"
+}

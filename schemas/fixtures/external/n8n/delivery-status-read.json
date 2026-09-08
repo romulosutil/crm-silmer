@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "automation_epoch": 3,
+  "event_id": "event-status-read-001",
+  "event_type": "message.read",
+  "occurred_at": "2026-09-07T12:01:00.000Z",
+  "conversation_id": "conversation-synthetic-001",
+  "attempt_id": "attempt-send-synthetic-001",
+  "external_message_id": "message-whatsapp-outbound-001",
+  "status": "read"
+}

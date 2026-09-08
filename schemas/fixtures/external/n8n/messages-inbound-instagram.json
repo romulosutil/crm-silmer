@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "event_id": "event-instagram-inbound-001",
+  "occurred_at": "2026-09-07T12:00:00.000Z",
+  "channel": "instagram",
+  "contact": {
+    "external_id": "contact-instagram-synthetic",
+    "display_name": null
+  },
+  "message": {
+    "external_id": "message-instagram-inbound-001",
+    "type": "text",
+    "text": "synthetic inbound content",
+    "reply_to": null,
+    "attachment": null
+  },
+  "metadata": {
+    "provider_account_id": "account-instagram-synthetic"
+  }
+}

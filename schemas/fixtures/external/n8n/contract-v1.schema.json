@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crm.silmer.invalid/schemas/integrations/n8n/v1",
+  "title": "CRM Silmer n8n integration contract v1",
+  "$defs": {
+    "commonEnvelope": {
+      "type": "object",
+      "required": ["schema_version"],
+      "properties": {
+        "schema_version": { "const": "1.0" }
+      }
+    },
+    "automaticEnvelope": {
+      "allOf": [
+        { "$ref": "#/$defs/commonEnvelope" },
+        {
+          "type": "object",
+          "required": ["automation_epoch"],
+          "properties": {
+            "automation_epoch": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "opaqueId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "channel": {
+      "enum": ["whatsapp", "instagram"]
+    },
+    "briefingPatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "artwork_status": { "type": ["string", "null"] },
+        "city_or_postal_code": { "type": ["string", "null"] },
+        "colors": { "type": ["array", "null"] },
+        "customizations": { "type": ["array", "null"] },
+        "delivery_mode": { "type": ["string", "null"] },
+        "needed_by": { "type": ["string", "null"] },
+        "notes": { "type": ["string", "null"] },
+        "numbers": { "type": ["array", "null"] },
+        "product_model": { "type": ["string", "null"] },
+        "quantity": { "type": ["integer", "null"], "minimum": 1 },
+        "segment": { "type": ["string", "null"] },
+        "sizes": { "type": ["array", "null"] },
+        "sponsors": { "type": ["array", "null"] }
+      }
+    },
+    "problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "title",
+        "status",
+        "detail",
+        "instance",
+        "accepted",
+        "error",
+        "request_id"
+      ],
+      "properties": {
+        "type": { "type": "string", "format": "uri" },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "type": "integer", "minimum": 400, "maximum": 599 },
+        "detail": { "type": "string", "minLength": 1 },
+        "instance": { "type": "string", "minLength": 1 },
+        "accepted": { "const": false },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code"],
+          "properties": {
+            "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+          }
+        },
+        "request_id": { "$ref": "#/$defs/opaqueId" },
+        "correlation_id": { "$ref": "#/$defs/opaqueId" }
+      }
+    }
+  },
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "authentication",
+    "requiredHeaders",
+    "errorMediaType",
+    "channels",
+    "activeChannels",
+    "endpoints",
+    "eventTypes",
+    "briefingPatchFields",
+    "deliveryStatusOrder",
+    "security"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "authentication": {
+      "type": "object",
+      "required": ["scheme", "serviceActor", "rotation"],
+      "properties": {
+        "scheme": { "const": "Basic" },
+        "serviceActor": { "const": "AUTOMATION_EXECUTOR" },
+        "rotation": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "requiredHeaders": {
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 6,
+      "items": { "type": "string" }
+    },
+    "errorMediaType": { "const": "application/problem+json" },
+    "channels": {
+      "type": "array",
+      "const": ["whatsapp", "instagram"]
+    },
+    "activeChannels": {
+      "type": "array",
+      "const": ["whatsapp"]
+    },
+    "endpoints": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["method", "path", "requestFixture"],
+        "properties": {
+          "method": { "const": "POST" },
+          "path": { "type": "string", "minLength": 1 },
+          "requestFixture": { "type": "string", "pattern": "\\.json$" },
+          "responseFixture": { "type": "string", "pattern": "\\.json$" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "eventTypes": {
+      "type": "array",
+      "contains": { "const": "message.send.requested" }
+    },
+    "briefingPatchFields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" }
+    },
+    "deliveryStatusOrder": {
+      "type": "array",
+      "const": ["sent", "delivered", "read"]
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": { "const": true }
+    }
+  },
+  "additionalProperties": false
+}

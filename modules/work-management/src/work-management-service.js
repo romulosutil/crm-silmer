@@ -23,6 +23,7 @@ const TASK_REASONS = new Set([
 ]);
 const HANDOFF_ACTION_REASONS = new Set([
   'handoff_accepted',
+  'handoff_claimed',
   'manual_transfer',
   'handoff_resolved',
 ]);
@@ -347,10 +348,58 @@ export function createWorkManagementService(dependencies) {
     );
   }
 
+  /** @param {any} input */
+  async function claimHandoff(input) {
+    validateHumanCommon(
+      { ...input, reasonCode: input.reasonCode ?? 'handoff_claimed' },
+      new Set(['handoff_claimed']),
+    );
+    requireId(input.handoffId, 'handoffId');
+    requireVersion(input.expectedHandoffVersion, 'expectedHandoffVersion');
+    const command = {
+      ...input,
+      reasonCode: input.reasonCode ?? 'handoff_claimed',
+    };
+    return run(
+      command,
+      'handoff.claim',
+      'handoff',
+      input.handoffId,
+      { expectedHandoffVersion: input.expectedHandoffVersion },
+      `${input.expectedHandoffVersion}->${input.expectedHandoffVersion + 1}`,
+      async (context) => {
+        const result = await dependencies.repository.claimHandoff(
+          { ...command, occurredAt: clock().toISOString() },
+          context,
+        );
+        await appendEvent(
+          {
+            aggregateId: result.handoff.id,
+            aggregateType: 'handoff',
+            aggregateVersion: result.handoff.version,
+            correlationId: input.correlationId,
+            occurredAt: clock(),
+            payload: {
+              assignedUserId: result.handoff.assignedUserId,
+              conversationId: result.handoff.conversationId,
+              status: result.handoff.status,
+              targetRole: result.handoff.targetRole,
+              version: result.handoff.version,
+            },
+            type: 'handoff.claimed',
+          },
+          context,
+        );
+        return result;
+      },
+    );
+  }
+
   return Object.freeze({
     acceptHandoff: (/** @type {any} */ input) => updateHandoff(input, 'accept'),
     assignDeal,
     cancelTask: (/** @type {any} */ input) => updateTask(input, 'cancel'),
+    claimHandoff,
     completeTask: (/** @type {any} */ input) => updateTask(input, 'complete'),
     createHandoff,
     createTask,
@@ -534,6 +583,7 @@ function assertDependencies(dependencies) {
     [dependencies?.repository, 'createTask', 'repository'],
     [dependencies?.repository, 'updateTask', 'repository'],
     [dependencies?.repository, 'createHandoff', 'repository'],
+    [dependencies?.repository, 'claimHandoff', 'repository'],
     [dependencies?.repository, 'updateHandoff', 'repository'],
   ]) {
     if (!port || typeof port[method] !== 'function') {

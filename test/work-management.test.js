@@ -41,7 +41,7 @@ function harness(options = {}) {
     idFactory: () => `work-event-${++eventId}`,
   });
   const repository = new InMemoryWorkManagementRepository({
-    conversations: [
+    conversations: options.conversations ?? [
       {
         assignedUserId: null,
         automationEpoch: 2,
@@ -66,6 +66,7 @@ function harness(options = {}) {
       let value = 0;
       return (kind) => `${kind}-${++value}`;
     })(),
+    handoffs: options.handoffs ?? [],
     users: [
       { disabledAt: null, functionName: 'Vendedor', id: 'seller-1' },
       { disabledAt: null, functionName: 'Vendedor', id: 'seller-2' },
@@ -89,6 +90,65 @@ function harness(options = {}) {
   });
   return { auditPort, eventPort, repository, service };
 }
+
+test('claims an unassigned pre-Deal handoff once using a compatible role', async () => {
+  const { repository, service } = harness({
+    conversations: [
+      {
+        assignedUserId: null,
+        automationEpoch: 3,
+        automationState: 'human',
+        contactId: 'contact-1',
+        id: 'conversation-1',
+        state: 'requer_atencao',
+        terminalAt: null,
+        version: 5,
+      },
+    ],
+    handoffs: [
+      {
+        assignedUserId: null,
+        conversationId: 'conversation-1',
+        createdAt: NOW.toISOString(),
+        dealId: null,
+        dueAt: '2026-09-07T22:00:00.000Z',
+        id: 'handoff-unassigned-1',
+        reasonCode: 'briefing_complete',
+        slaMinutes: 240,
+        slaPolicyVersion: 'technical-default-v1',
+        status: 'pending',
+        summaryEnvelope: {},
+        targetRole: 'Vendedor',
+        updatedAt: NOW.toISOString(),
+        version: 1,
+      },
+    ],
+  });
+  const input = {
+    actor: SELLER,
+    correlationId: 'correlation-claim-1',
+    expectedHandoffVersion: 1,
+    handoffId: 'handoff-unassigned-1',
+    idempotencyKey: 'handoff-claim-key-1',
+  };
+  await assert.rejects(
+    service.claimHandoff({
+      ...input,
+      actor: ATTENDANT,
+      idempotencyKey: 'handoff-claim-wrong-role',
+    }),
+    (/** @type {any} */ error) => error.code === 'WORK_FORBIDDEN',
+  );
+  const first = await service.claimHandoff(input);
+  const replay = await service.claimHandoff(input);
+  assert.deepEqual(replay, first);
+  assert.equal(first.handoff.assignedUserId, SELLER.id);
+  assert.equal(first.handoff.status, 'accepted');
+  assert.equal(first.handoff.version, 2);
+  assert.equal(first.conversation.automationEpoch, 3);
+  assert.equal(first.conversation.state, 'em_atendimento');
+  assert.equal(repository.snapshot().handoffHistory.length, 1);
+});
 
 function createHandoff(overrides = {}) {
   return {

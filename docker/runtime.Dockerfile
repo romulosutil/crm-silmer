@@ -62,9 +62,10 @@ RUN rm -rf /usr/local/lib/node_modules/npm \
 COPY --from=production-dependencies --chown=node:node /workspace/node_modules ./node_modules
 COPY --from=build --chown=node:node /workspace/dist/runtime/apps ./apps
 COPY --from=build --chown=node:node /workspace/dist/runtime/modules ./modules
+COPY --chown=node:node scripts/runtime-healthcheck.mjs ./runtime-healthcheck.mjs
 
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api/health/live').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+  CMD ["node", "runtime-healthcheck.mjs", "http://127.0.0.1:3000/api/health/live"]
 CMD ["node", "apps/api/src/server.js"]

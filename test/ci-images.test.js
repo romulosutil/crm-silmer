@@ -60,8 +60,13 @@ test('routes the edge proxy to the canonical API service', async () => {
 test('packages every runtime workspace required by the API', async () => {
   const dockerfile = await text('docker/runtime.Dockerfile');
   const buildScript = await text('scripts/build.mjs');
+  const healthcheck = await text('scripts/runtime-healthcheck.mjs');
 
   assert.match(dockerfile, /rm -rf \/usr\/local\/lib\/node_modules\/npm/u);
+  assert.match(dockerfile, /COPY.+scripts\/runtime-healthcheck\.mjs/u);
+  assert.match(dockerfile, /CMD \["node", "runtime-healthcheck\.mjs"/u);
+  assert.match(healthcheck, /apps\/worker\/src\/worker\.js/u);
+  assert.match(healthcheck, /\/api\/health\/live/u);
 
   const runtimeModules = [
     'audit-privacy',

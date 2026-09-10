@@ -1,12 +1,10 @@
 export const CAPABILITIES = Object.freeze({
   COMMERCIAL_ADMIN: 'COMMERCIAL_ADMIN',
-  PRIVACY_OFFICER: 'PRIVACY_OFFICER',
-  TECHNICAL_PRIVACY_EXECUTOR: 'TECHNICAL_PRIVACY_EXECUTOR',
 });
 
 /**
- * @typedef {'COMMERCIAL_ADMIN'|'PRIVACY_OFFICER'|'TECHNICAL_PRIVACY_EXECUTOR'} Capability
- * @typedef {'Atendimento'|'Vendedor'} OperationalFunction
+ * @typedef {'COMMERCIAL_ADMIN'} Capability
+ * @typedef {'Vendedor'} OperationalFunction
  */
 
 const operationalActions = new Set([
@@ -31,8 +29,7 @@ const actionCapabilities = new Map([
   ['order-form.send', CAPABILITIES.COMMERCIAL_ADMIN],
   ['quote.approve', CAPABILITIES.COMMERCIAL_ADMIN],
   ['sale.approve', CAPABILITIES.COMMERCIAL_ADMIN],
-  ['privacy.legal-hold.authorize', CAPABILITIES.PRIVACY_OFFICER],
-  ['privacy.retention.execute', CAPABILITIES.TECHNICAL_PRIVACY_EXECUTOR],
+  ['user.manage', CAPABILITIES.COMMERCIAL_ADMIN],
 ]);
 /** @type {Set<Capability>} */
 const knownCapabilities = new Set(Object.values(CAPABILITIES));
@@ -74,10 +71,7 @@ function notFound(message) {
  */
 export function authorize(actor, action) {
   if (actor.kind === 'assistant') throw forbidden('Forbidden');
-  if (
-    operationalActions.has(action) &&
-    ['Atendimento', 'Vendedor'].includes(actor.functionName)
-  ) {
+  if (operationalActions.has(action) && actor.functionName === 'Vendedor') {
     return;
   }
   const required = actionCapabilities.get(action);

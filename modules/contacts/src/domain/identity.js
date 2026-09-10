@@ -5,7 +5,7 @@ import {
   ContactIdentityValidationError,
 } from './errors.js';
 
-const HUMAN_FUNCTIONS = new Set(['Atendimento', 'Vendedor']);
+const HUMAN_FUNCTIONS = new Set(['Vendedor']);
 
 /** @param {unknown} value @param {number} maximum */
 export function requiredString(value, maximum) {

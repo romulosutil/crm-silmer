@@ -974,13 +974,7 @@ async function createUnassignedHandoff(
     negotiation: 'price_before_quote',
   });
   const reasonCode = reasonMap[reason] ?? reason ?? 'unresolved_blocker';
-  const targetRole = [
-    'briefing_complete',
-    'negotiation',
-    'price_before_quote',
-  ].includes(reason)
-    ? 'Vendedor'
-    : 'Atendimento';
+  const targetRole = 'Vendedor';
   const existing = await client.query(
     `SELECT id FROM crm.handoffs
      WHERE conversation_id = $1 AND status IN ('pending', 'accepted')

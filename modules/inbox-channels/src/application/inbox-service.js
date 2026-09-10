@@ -158,7 +158,7 @@ function validateContent(content) {
 function validateHumanCommand(command) {
   if (
     command?.actor?.kind !== 'human' ||
-    !['Atendimento', 'Vendedor'].includes(command.actor.functionName)
+    command.actor.functionName !== 'Vendedor'
   ) {
     throw new InboxForbiddenError();
   }

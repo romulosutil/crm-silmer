@@ -11,11 +11,7 @@ export class PostgresOperationalUserPort {
       [input.userId],
     );
     const row = result.rows[0];
-    if (
-      !row ||
-      row.disabled_at ||
-      !['Atendimento', 'Vendedor'].includes(row.function_name)
-    ) {
+    if (!row || row.disabled_at || row.function_name !== 'Vendedor') {
       return null;
     }
     return Object.freeze({ id: row.id, functionName: row.function_name });

@@ -140,6 +140,45 @@ export function createIdentityApiRuntime(database, environment = process.env) {
     );
   }
 
+  /**
+   * Every administrative mutation shares the same envelope: CSRF preflight,
+   * idempotency record, and a re-check that the replayed actor still matches
+   * the session that opened the command.
+   *
+   * @param {{
+   *   action: string,
+   *   command: Record<string, unknown>,
+   *   correlationId: string,
+   *   csrfToken: string,
+   *   idempotencyKey: string,
+   *   reason: string,
+   *   sessionToken: string,
+   *   target: {id: string, type: string},
+   * }} metadata
+   * @param {(service: ReturnType<typeof identityService>, actorId: string) => Promise<unknown>} effect
+   */
+  async function adminMutation(metadata, effect) {
+    const preflightSession = await preflight(metadata);
+    return executeIdempotent(
+      {
+        action: metadata.action,
+        actorId: preflightSession.userId,
+        command: metadata.command,
+        correlationId: metadata.correlationId,
+        idempotencyKey: metadata.idempotencyKey,
+        reason: metadata.reason,
+        target: metadata.target,
+      },
+      async (client, actorId) => {
+        const session = await authenticatedSession(client, metadata);
+        if (session.userId !== actorId) {
+          throw new IdentityHttpError(403, 'FORBIDDEN');
+        }
+        return effect(identityService(client), actorId);
+      },
+    );
+  }
+
   return Object.freeze({
     allowedOrigins,
 
@@ -153,7 +192,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
         const user = await createPostgresIdentityRepository(
           client,
         ).findUserById(session.userId);
-        if (!user || !['Atendimento', 'Vendedor'].includes(user.functionName)) {
+        if (!user || user.functionName !== 'Vendedor') {
           throw new IdentityHttpError(403, 'FORBIDDEN');
         }
         return {
@@ -191,7 +230,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
         if (
           !activeUser ||
           activeUser.id !== session.userId ||
-          !['Atendimento', 'Vendedor'].includes(activeUser.functionName)
+          activeUser.functionName !== 'Vendedor'
         ) {
           throw new IdentityHttpError(403, 'FORBIDDEN');
         }
@@ -205,18 +244,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
       });
     },
 
-    /** @param {{correlationId: string, password: string, token: string}} input */
-    async acceptInvitation(input) {
-      try {
-        return await database.transaction((client) =>
-          identityService(client).acceptInvitation(input),
-        );
-      } catch {
-        throw new IdentityHttpError(400, 'INVALID_REQUEST');
-      }
-    },
-
-    /** @param {{bootstrapToken: string, correlationId: string, email: string, functionName: 'Atendimento'|'Vendedor', password: string, reason: string}} input */
+    /** @param {{bootstrapToken: string, correlationId: string, email: string, functionName?: 'Vendedor', name: string, password: string, reason: string}} input */
     async bootstrap(input) {
       if (!equalSecret(input.bootstrapToken, bootstrapToken)) {
         throw new IdentityHttpError(403, 'FORBIDDEN');
@@ -276,40 +304,31 @@ export function createIdentityApiRuntime(database, environment = process.env) {
       );
     },
 
-    /** @param {{correlationId: string, csrfToken: string, email: string, expiresAt: string, functionName: 'Atendimento'|'Vendedor', idempotencyKey: string, reason: string, sessionToken: string}} input */
-    async createInvitation(input) {
-      const preflightSession = await preflight(input);
-      return executeIdempotent(
+    /** @param {{correlationId: string, csrfToken: string, email: string, idempotencyKey: string, name: string, password: string, reason: string, sessionToken: string}} input */
+    async createUser(input) {
+      return adminMutation(
         {
-          action: 'identity.invitation.create',
-          actorId: preflightSession.userId,
-          command: {
-            email: input.email,
-            expiresAt: input.expiresAt,
-            functionName: input.functionName,
-          },
+          action: 'identity.user.create',
+          command: { email: input.email, name: input.name },
           correlationId: input.correlationId,
+          csrfToken: input.csrfToken,
           idempotencyKey: input.idempotencyKey,
           reason: input.reason,
+          sessionToken: input.sessionToken,
           target: {
             id: createHash('sha256').update(input.idempotencyKey).digest('hex'),
-            type: 'invitation-request',
+            type: 'user-request',
           },
         },
-        async (client, actorId) => {
-          const session = await authenticatedSession(client, input);
-          if (session.userId !== actorId) {
-            throw new IdentityHttpError(403, 'FORBIDDEN');
-          }
-          return identityService(client).createInvitation({
+        (service, actorId) =>
+          service.createOperationalUser({
             actorId,
             correlationId: input.correlationId,
             email: input.email,
-            expiresAt: new Date(input.expiresAt),
-            functionName: input.functionName,
+            name: input.name,
+            password: input.password,
             reason: input.reason,
-          });
-        },
+          }),
       );
     },
 
@@ -326,14 +345,30 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           return {
             user: {
               capabilities: user.capabilities,
+              email: user.email,
               functionName: user.functionName,
               id: user.id,
+              name: user.name,
             },
           };
         });
       } catch {
         throw new IdentityHttpError(401, 'INVALID_CREDENTIALS');
       }
+    },
+
+    /** @param {{sessionToken: string}} input */
+    async listUsers(input) {
+      return database.transaction(async (client) => {
+        const service = identityService(client);
+        let session;
+        try {
+          session = await service.authenticate(input.sessionToken);
+        } catch {
+          throw new IdentityHttpError(401, 'INVALID_CREDENTIALS');
+        }
+        return service.listUsers({ actorId: session.userId });
+      });
     },
 
     /** @param {{email: string, network: string, password: string}} input */
@@ -374,6 +409,63 @@ export function createIdentityApiRuntime(database, environment = process.env) {
       } catch {
         throw new IdentityHttpError(403, 'FORBIDDEN');
       }
+    },
+
+    /** @param {{correlationId: string, csrfToken: string, disabled: boolean, idempotencyKey: string, reason: string, sessionToken: string, targetId: string}} input */
+    async setUserDisabled(input) {
+      return adminMutation(
+        {
+          action: input.disabled
+            ? 'identity.user.disable'
+            : 'identity.user.enable',
+          command: { disabled: input.disabled, targetId: input.targetId },
+          correlationId: input.correlationId,
+          csrfToken: input.csrfToken,
+          idempotencyKey: input.idempotencyKey,
+          reason: input.reason,
+          sessionToken: input.sessionToken,
+          target: { id: input.targetId, type: 'user' },
+        },
+        (service, actorId) =>
+          service.setUserDisabled({
+            actorId,
+            correlationId: input.correlationId,
+            disabled: input.disabled,
+            reason: input.reason,
+            targetId: input.targetId,
+          }),
+      );
+    },
+
+    /** @param {{correlationId: string, csrfToken: string, email?: string, idempotencyKey: string, name?: string, password?: string, reason: string, sessionToken: string, targetId: string}} input */
+    async updateUser(input) {
+      return adminMutation(
+        {
+          action: 'identity.user.update',
+          command: {
+            email: input.email,
+            name: input.name,
+            passwordChanged: input.password !== undefined,
+            targetId: input.targetId,
+          },
+          correlationId: input.correlationId,
+          csrfToken: input.csrfToken,
+          idempotencyKey: input.idempotencyKey,
+          reason: input.reason,
+          sessionToken: input.sessionToken,
+          target: { id: input.targetId, type: 'user' },
+        },
+        (service, actorId) =>
+          service.updateUser({
+            actorId,
+            correlationId: input.correlationId,
+            email: input.email,
+            name: input.name,
+            password: input.password,
+            reason: input.reason,
+            targetId: input.targetId,
+          }),
+      );
     },
   });
 }

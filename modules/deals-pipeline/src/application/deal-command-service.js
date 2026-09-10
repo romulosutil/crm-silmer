@@ -212,7 +212,7 @@ function validateCommon(input) {
   const actor = input?.actor;
   const human =
     actor?.kind === 'human' &&
-    ['Atendimento', 'Vendedor'].includes(actor.functionName);
+    actor.functionName === 'Vendedor';
   const automation =
     actor?.kind === 'AUTOMATION_EXECUTOR' && actor.id === 'AUTOMATION_EXECUTOR';
   if (!human && !automation) throw new DealForbiddenError();

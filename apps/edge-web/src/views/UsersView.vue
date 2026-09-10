@@ -333,7 +333,10 @@ function formValues(form) {
             {{ copied ? 'Copiado' : 'Copiar' }}
           </button>
         </div>
-        <pre class="markdown-block"><code>{{ markdown }}</code></pre>
+        <pre
+          class="markdown-block"
+          tabindex="0"
+        ><code>{{ markdown }}</code></pre>
         <div class="button-row">
           <button class="quiet" type="button" @click="handover = null">
             Fechar

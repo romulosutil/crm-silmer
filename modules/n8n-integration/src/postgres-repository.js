@@ -46,7 +46,6 @@ async function appendConversationStreamEvent(client, runtime, event) {
   );
 }
 
-
 export class PostgresN8nIntegrationRepository {
   /**
    * @param {{

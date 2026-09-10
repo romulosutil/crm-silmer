@@ -64,3 +64,38 @@ Consequência de design: administrador não é uma função, é a capability
 ## Ainda por validar no ambiente
 A migração `0019` precisa rodar (`npm run db:migrate`) antes do deploy: sem a
 coluna `display_name` as leituras de contato quebram.
+
+## Verificação no ambiente (10/09/2026)
+
+Stack local: PostgreSQL 17 em container próprio na porta 55432 (a 5432 estava
+ocupada), API em 127.0.0.1:3300, edge em 127.0.0.1:4173. Migração `0019`
+aplicada — `crm.contacts.display_name` existe. Três usuários semeados
+(admin com `COMMERCIAL_ADMIN`, dois vendedores) e conversas entrando pelo
+endpoint real `POST /api/v1/integrations/n8n/messages/inbound`.
+
+**21 de 21 verificações passaram** (`scratchpad/verify.mjs`).
+
+### Dois defeitos que só o ambiente revelou
+
+1. Erros de domínio da Caixa de Entrada não tinham `statusCode`, então
+   `respond()` os relançava e o Fastify devolvia 500. Recusa por posse virava
+   "serviço indisponível"; conflito de versão nunca chegava como 409.
+2. Mensagens recebidas do WhatsApp entram pelo `PostgresN8nIntegrationRepository`,
+   não pelo `PostgresInboxRepository` instrumentado no primeiro commit. As
+   conversas ficavam ao vivo para comandos humanos e mudas para o cliente.
+
+Corrigidos no commit `7788520`, ambos com teste — o segundo com asserção no
+teste live contra PostgreSQL de verdade.
+
+### Não verificado
+Passada visual no browser (formulário de repasse, edição de nome inline, badge
+de posse): exige login e não preencho campo de senha. A tela de acesso
+confirmou o contraste novo (laranja com texto branco).
+
+### Falhas pré-existentes confirmadas fora do escopo
+- 3 testes em `test/inbox-postgres-live.test.js` falham igual no commit anterior
+  (FK `conversations_assigned_user_fk` sem usuário semeado).
+- `no-unused-vars` em `ops/n8n/workflows/create-dev-test-workflow.mjs`.
+
+## PR
+https://github.com/romulosutil/crm-silmer/pull/65

@@ -41,6 +41,17 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
+  api.get('/api/v1/users/assignable', async (request, reply) => {
+    return respond(reply, async () => {
+      requireOrigin(request, identity.allowedOrigins);
+      const cookies = parseCookies(request.headers.cookie);
+      const result = await identity.listAssignableUsers({
+        sessionToken: requireSessionCookie(cookies),
+      });
+      return reply.code(200).send(result);
+    });
+  });
+
   api.post('/api/v1/users', async (request, reply) => {
     return respond(reply, async () => {
       const command = requireAuthenticatedCommand(

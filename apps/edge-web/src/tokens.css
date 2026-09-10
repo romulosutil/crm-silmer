@@ -52,7 +52,12 @@
     --color-accent: #ff5b01;
     --color-accent-hover: #e54f00;
     --color-accent-subtle: rgb(255 91 1 / 5%);
-    --color-on-accent: #0c042d;
+    /* Brand orange stays #ff5b01 for stripes and borders. Filled controls use
+       the deeper tone so white label text clears WCAG AA (4.78:1); white on
+       #ff5b01 is only 3.0:1 and reads as a smear at button sizes. */
+    --color-accent-solid: #c94300;
+    --color-accent-solid-hover: #a83800;
+    --color-on-accent: #ffffff;
     --color-link: #5b3fd1;
     --color-focus: #6f50e8;
     --status-success-surface: #e7f6ed;
@@ -86,7 +91,9 @@
     --color-accent: #ff5b01;
     --color-accent-hover: #e54f00;
     --color-accent-subtle: rgb(255 91 1 / 12%);
-    --color-on-accent: #0c042d;
+    --color-accent-solid: #c94300;
+    --color-accent-solid-hover: #a83800;
+    --color-on-accent: #ffffff;
     --color-link: #a78bfa;
     --color-focus: #b9a6ff;
     --status-success-surface: #123a2a;

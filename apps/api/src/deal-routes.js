@@ -746,15 +746,30 @@ function writeSse(stream, event) {
 
 /** @param {{cursor: number, payload?: unknown, type: string, [key: string]: unknown}} event */
 export function formatDealSseEvent(event) {
-  const reset = event.type === 'stream.reset';
-  const type = reset ? 'stream.reset' : 'kanban.card.changed';
-  const payload = reset
-    ? event.payload
-    : {
-        dealId: event.dealId,
-        aggregateVersion: event.aggregateVersion,
-        occurredAt: event.occurredAt,
-        sourceType: event.type,
-      };
-  return `id: ${event.cursor}\nevent: ${type}\ndata: ${JSON.stringify(payload)}\n\n`;
+  if (event.type === 'stream.reset') {
+    return `id: ${event.cursor}\nevent: stream.reset\ndata: ${JSON.stringify(event.payload)}\n\n`;
+  }
+  const scope = {
+    contact: {
+      key: 'contactId',
+      name: 'inbox.contact.changed',
+      value: event.contactId,
+    },
+    conversation: {
+      key: 'conversationId',
+      name: 'inbox.conversation.changed',
+      value: event.conversationId,
+    },
+  }[String(event.aggregateType)] ?? {
+    key: 'dealId',
+    name: 'kanban.card.changed',
+    value: event.dealId,
+  };
+  const payload = {
+    aggregateVersion: event.aggregateVersion,
+    occurredAt: event.occurredAt,
+    sourceType: event.type,
+    [scope.key]: scope.value,
+  };
+  return `id: ${event.cursor}\nevent: ${scope.name}\ndata: ${JSON.stringify(payload)}\n\n`;
 }

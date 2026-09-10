@@ -248,7 +248,11 @@ export function createApi(options = {}, runtime = {}) {
   }
 
   if (runtime.operations) {
-    registerOperationRoutes(api, runtime.operations);
+    registerOperationRoutes(api, runtime.operations, (request) => {
+      const context = requests.get(request);
+      if (!context) throw new Error('Missing request context');
+      return context;
+    });
   }
 
   // Temporary compatibility for the T00.1 container contract.

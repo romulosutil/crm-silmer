@@ -3,10 +3,69 @@ import {
   createDecipheriv,
   createHash,
   randomBytes,
+  randomUUID,
 } from 'node:crypto';
 
-import { InboxConflictError } from '../domain/errors.js';
+import { InboxConflictError, InboxForbiddenError } from '../domain/errors.js';
 import { freezeInboxRecord, isTerminalInboxState } from '../domain/inbox.js';
+
+const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
+
+/** @type {Readonly<Record<string, string>>} */
+const STREAM_EVENT_TYPES = Object.freeze({
+  reactivate: 'conversation.assistant_reactivated',
+  send: 'conversation.message_queued',
+  takeover: 'conversation.taken_over',
+  transfer: 'conversation.transferred',
+  transition: 'conversation.state_changed',
+});
+
+/**
+ * Publishes a conversation change onto the shared domain event stream so the
+ * `inbox` SSE topic can push it to open panels. Written inside the caller's
+ * transaction: no event is visible unless the change committed. Payloads carry
+ * identifiers only — message bodies stay encrypted at rest and are re-read
+ * through the authorized read model.
+ *
+ * @param {Queryable} transaction
+ * @param {{conversationId: string, correlationId: string, occurredAt: string, type: string, version: number}} event
+ */
+async function appendConversationStreamEvent(transaction, event) {
+  await transaction.query(
+    `INSERT INTO crm.domain_events
+       (id, aggregate_type, aggregate_id, aggregate_version, event_type,
+        payload, correlation_id, occurred_at)
+     VALUES ($1, 'conversation', $2, $3, $4, $5::jsonb, $6, $7)
+     ON CONFLICT DO NOTHING`,
+    [
+      `event-${randomUUID()}`,
+      event.conversationId,
+      event.version,
+      event.type,
+      JSON.stringify({ conversationId: event.conversationId }),
+      event.correlationId,
+      event.occurredAt,
+    ],
+  );
+}
+
+/**
+ * A conversation belongs to whoever took it over. Another seller must not be
+ * able to answer, close, hand back to the AI, or re-take it; only an
+ * administrator may override, and only a transfer moves ownership on purpose.
+ *
+ * @param {string} kind
+ * @param {{assigned_user_id: string|null}} current
+ * @param {{capabilities?: readonly string[], id: string}} actor
+ */
+function assertConversationOwnership(kind, current, actor) {
+  const owner = current.assigned_user_id;
+  if (owner === null || owner === actor.id) return;
+  if ([...(actor.capabilities ?? [])].includes(ADMIN_CAPABILITY)) return;
+  throw new InboxForbiddenError(
+    `Conversation is assigned to another operator and cannot be ${kind === 'transfer' ? 'transferred' : 'mutated'} by this actor`,
+  );
+}
 
 const CIPHER = 'aes-256-gcm';
 const ALGORITHM = 'AES-256-GCM';
@@ -173,6 +232,13 @@ export class PostgresInboxRepository {
           [messageId, input.channelEventId],
         );
       }
+      await appendConversationStreamEvent(transaction, {
+        conversationId: conversation.id,
+        correlationId: input.correlationId,
+        occurredAt: input.occurredAt,
+        type: 'conversation.message_received',
+        version: Number(conversation.version),
+      });
       return freezeInboxRecord({
         conversation: mapConversation(conversation),
         message: mapMessage(inserted.rows[0], this.#envelopeKey),
@@ -218,6 +284,21 @@ export class PostgresInboxRepository {
         throw new InboxConflictError(
           'Terminal conversations cannot be mutated',
         );
+      }
+      assertConversationOwnership(kind, current, input.actor);
+      if (kind === 'transfer') {
+        const target = await transaction.query(
+          `SELECT users.id
+           FROM crm.users users
+           JOIN crm.user_functions functions ON functions.user_id = users.id
+           WHERE users.id = $1 AND users.disabled_at IS NULL`,
+          [input.targetUserId],
+        );
+        if (!target.rows[0]) {
+          throw new InboxForbiddenError(
+            'Target user is not an active operator',
+          );
+        }
       }
       if (kind === 'transition' && input.state === 'sem_lead') {
         const activeDeal = await transaction.query(
@@ -308,6 +389,15 @@ export class PostgresInboxRepository {
       }
       await runtime.appendAudit(createAudit(kind, input, result, occurredAt), {
         transaction,
+      });
+      await appendConversationStreamEvent(transaction, {
+        conversationId: input.conversationId,
+        correlationId: input.correlationId,
+        occurredAt,
+        type: STREAM_EVENT_TYPES[kind] ?? 'conversation.changed',
+        version: Number(
+          commandResult.version ?? commandResult.conversationVersion,
+        ),
       });
       const panelAction =
         kind === 'takeover'
@@ -451,6 +541,15 @@ function mutationAssignments(kind, input, occurredAt) {
       sql: `automation_state = 'human', automation_epoch = automation_epoch + 1,
             state = 'em_atendimento', assigned_user_id = $2`,
       values: [input.actor.id],
+    };
+  }
+  if (kind === 'transfer') {
+    // Ownership moves; the automation epoch is untouched because the channel
+    // side of the conversation does not change.
+    return {
+      sql: `assigned_user_id = $2, automation_state = 'human',
+            state = 'em_atendimento'`,
+      values: [input.targetUserId],
     };
   }
   return {
@@ -604,6 +703,7 @@ function createAudit(kind, input, result, occurredAt) {
     reactivate: 'conversation.assistant_reactivated',
     send: 'conversation.human_message_queued',
     takeover: 'conversation.takeover',
+    transfer: 'conversation.transferred',
     transition: 'conversation.state_transitioned',
   };
   return freezeInboxRecord({
@@ -611,7 +711,10 @@ function createAudit(kind, input, result, occurredAt) {
     actor: input.actor.id,
     correlationId: input.correlationId,
     occurredAt,
-    reason: input.reason,
+    reason:
+      kind === 'transfer'
+        ? `${input.reason} (repasse para ${input.targetUserId})`
+        : input.reason,
     target: { id: input.conversationId, type: 'conversation' },
     version: result.conversationVersion ?? result.version,
   });

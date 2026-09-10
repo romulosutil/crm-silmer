@@ -51,7 +51,7 @@ a {
   inset: 0.5rem auto auto 0.5rem;
   padding: 0.75rem 1rem;
   color: var(--color-on-accent);
-  background: var(--color-accent);
+  background: var(--color-accent-solid);
   transform: translateY(-150%);
 }
 .skip-link:focus {
@@ -235,12 +235,22 @@ button:disabled {
 }
 button.primary {
   color: var(--color-on-accent);
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--color-accent-solid);
+  border-color: var(--color-accent-solid);
 }
 button.primary:hover:not(:disabled) {
-  background: var(--color-accent-hover);
-  border-color: var(--color-accent-hover);
+  background: var(--color-accent-solid-hover);
+  border-color: var(--color-accent-solid-hover);
+}
+/* Text-only affordance next to a heading: never an orange-on-orange pair. */
+button.link-button {
+  min-block-size: auto;
+  padding: 0;
+  color: var(--color-link);
+  font-size: 0.88rem;
+  text-decoration: underline;
+  background: none;
+  border: 0;
 }
 button.danger {
   color: var(--status-error-text);

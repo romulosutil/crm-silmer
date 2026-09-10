@@ -3,6 +3,7 @@ import {
   computed,
   nextTick,
   onBeforeUnmount,
+  provide,
   ref,
   shallowRef,
   watch,
@@ -11,7 +12,7 @@ import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import AuthPanel from './components/AuthPanel.vue';
 import ThemeSwitcher from './components/ThemeSwitcher.vue';
 import { ApiError, request } from './lib/api-client.js';
-import { KanbanEventStream } from './lib/event-stream.js';
+import { LiveEventStream } from './lib/event-stream.js';
 
 const router = useRouter();
 const route = useRoute();
@@ -45,17 +46,36 @@ const connectionLabel = computed(() => {
   return 'Conectando…';
 });
 
-const stream = new KanbanEventStream({
+// One live connection per session: the topic follows the route, because the
+// server caps concurrent SSE streams and a second connection per user would
+// halve how many people can stay online.
+const liveEvent = ref(null);
+const liveTopic = computed(() =>
+  ['/inbox', '/clientes'].some((prefix) => route.path.startsWith(prefix))
+    ? 'inbox'
+    : 'kanban',
+);
+const stream = new LiveEventStream({
   onChange(event) {
     activeView.value?.refreshFromEvent(event);
+    liveEvent.value = { ...event, receivedAt: Date.now() };
   },
   onReset() {
     activeView.value?.reset();
+    liveEvent.value = { receivedAt: Date.now(), reset: true };
     announce('A conexão foi ressincronizada.');
   },
   onState(value) {
     connection.value = value;
   },
+});
+
+provide('liveEvent', liveEvent);
+provide('liveConnection', connection);
+provide('sessionUser', user);
+
+watch(liveTopic, (topic) => {
+  if (phase.value === 'authenticated') stream.start(topic);
 });
 
 watch(
@@ -95,7 +115,7 @@ async function showSession(value, announceLogin = true) {
   session.value = value;
   phase.value = 'authenticated';
   if (route.path === '/') await router.replace('/dashboard');
-  stream.start();
+  stream.start(liveTopic.value);
   if (announceLogin) announce('Sessão iniciada com segurança.');
 }
 

@@ -7,32 +7,16 @@ import {
   createPostgresAccessRepository,
   createPostgresAuthenticationThrottle,
   createPostgresIdentityRepository,
+  OPERATIONAL_ACTIONS,
 } from '@crm-silmer/identity-access';
 import {
   fingerprintCommand,
   PostgresIdempotencyRecordStore,
 } from '@crm-silmer/integration-reliability';
 
-const OPERATIONAL_ACTIONS = new Set([
-  'conversation.convert',
-  'deal.lose',
-  'deal.fields.patch',
-  'deal.transition',
-  'deal.assign',
-  'task.create',
-  'task.start',
-  'task.complete',
-  'task.cancel',
-  'handoff.create',
-  'handoff.accept',
-  'handoff.transfer',
-  'handoff.resolve',
-  'kanban.read',
-  'deal.read',
-  'deal.events.read',
-  'conversation.read',
-  'contact.read',
-]);
+// The allowlist lives in @crm-silmer/identity-access. Do not redeclare it here:
+// the local copy this replaced was missing every conversation write action and
+// denied the whole Inbox with 403.
 
 class IdentityHttpError extends Error {
   /** @param {number} statusCode @param {string} code */
@@ -197,11 +181,50 @@ export function createIdentityApiRuntime(database, environment = process.env) {
         }
         return {
           actor: {
+            capabilities: [...(user.capabilities ?? [])],
             functionName: user.functionName,
             id: user.id,
             kind: 'human',
           },
         };
+      });
+    },
+
+    /**
+     * Roster used by the Inbox "repassar venda" picker. Any active seller may
+     * read it — unlike listUsers, which is an administrative view — but it
+     * exposes only what the picker needs: who exists and what to call them.
+     * @param {{sessionToken: string}} input
+     */
+    async listAssignableUsers(input) {
+      return database.transaction(async (client) => {
+        let session;
+        try {
+          session = await identityService(client).authenticate(
+            input.sessionToken,
+          );
+        } catch {
+          throw new IdentityHttpError(401, 'INVALID_CREDENTIALS');
+        }
+        const repository = createPostgresIdentityRepository(client);
+        const actor = await repository.findUserById(session.userId);
+        if (!actor || actor.functionName !== 'Vendedor') {
+          throw new IdentityHttpError(403, 'FORBIDDEN');
+        }
+        const rows = await repository.listUsers();
+        return Object.freeze({
+          users: Object.freeze(
+            rows
+              .filter((/** @type {any} */ row) => !row.disabledAt)
+              .map((/** @type {any} */ row) =>
+                Object.freeze({
+                  id: row.id,
+                  isAdmin: [...row.capabilities].includes('COMMERCIAL_ADMIN'),
+                  name: row.name,
+                }),
+              ),
+          ),
+        });
       });
     },
 
@@ -236,6 +259,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
         }
         return {
           actor: {
+            capabilities: [...(activeUser.capabilities ?? [])],
             functionName: activeUser.functionName,
             id: activeUser.id,
             kind: 'human',

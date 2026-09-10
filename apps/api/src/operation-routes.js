@@ -11,8 +11,9 @@ class OperationReadRequestError extends Error {
 /**
  * @param {import('fastify').FastifyInstance} api
  * @param {Record<string, any>} operations
+ * @param {(request: object) => {correlationId: string, requestId: string}} contextFor
  */
-export function registerOperationRoutes(api, operations) {
+export function registerOperationRoutes(api, operations, contextFor) {
   api.get('/api/v1/inbox/conversations', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query, [
@@ -53,6 +54,31 @@ export function registerOperationRoutes(api, operations) {
       await authorizeRead(request, operations, 'contact.read');
       privateReadHeaders(reply);
       return reply.code(200).send(await operations.listContacts(input));
+    }),
+  );
+
+  api.post('/api/v1/contacts/:contactId/name', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['displayName', 'expectedVersion', 'reason']);
+      const principal = await operations.authorizeWrite({
+        action: 'contact.rename',
+        authorization: request.headers.authorization,
+        cookie: request.headers.cookie,
+        csrfToken: request.headers['x-csrf-token'],
+        origin: request.headers.origin,
+      });
+      const result = await operations.renameContact({
+        actor: principal.actor,
+        contactId: requireIdentifier(params.contactId, 'CONTACT_ID'),
+        correlationId: contextFor(request).correlationId,
+        displayName: body.displayName,
+        expectedVersion: body.expectedVersion,
+        reason: requireIdentifier(body.reason, 'REASON'),
+      });
+      privateReadHeaders(reply);
+      return reply.code(200).send(result);
     }),
   );
 
@@ -156,10 +182,12 @@ async function respond(reply, operation) {
     if (!Number.isSafeInteger(statusCode) || statusCode < 400) throw error;
     const publicStatus = statusCode >= 500 ? 503 : statusCode;
     const allowed = new Set([
+      'CONTACT_CONFLICT',
       'CONTACT_NOT_FOUND',
       'CONVERSATION_NOT_FOUND',
       'FORBIDDEN',
       'INVALID_CURSOR',
+      'INVALID_DISPLAY_NAME',
       'INVALID_FILTER',
       'INVALID_LIMIT',
       'INVALID_REQUEST',

@@ -5,6 +5,19 @@ import {
   resolveFieldDefinition,
 } from '@crm-silmer/qualification';
 
+/**
+ * SQL predicates that select which slice of crm.domain_events a live topic
+ * publishes. Keep them narrow: a subscriber sees every event a predicate
+ * matches, so a broad predicate leaks unrelated aggregates onto the stream.
+ */
+/** @type {Readonly<Record<string, string>>} */
+const EVENT_TOPIC_SELECTORS = Object.freeze({
+  inbox: `aggregate_type IN ('conversation', 'contact')`,
+  kanban: `aggregate_type = 'deal'
+    OR (aggregate_type = 'task' AND event_type IN ('task.started','task.completed','task.cancelled') AND payload ? 'dealId')
+    OR (aggregate_type = 'handoff' AND event_type IN ('handoff.accepted','handoff.transferred','handoff.resolved') AND payload ? 'dealId')`,
+});
+
 export class PostgresDealReadRepository {
   /** @param {{query: Function, transaction?: Function}} database */
   constructor(database) {
@@ -32,18 +45,14 @@ export class PostgresDealReadRepository {
 
   /** @param {{after: number, limit: number, topic: string}} input */
   async readEvents(input) {
-    if (input.topic !== 'kanban')
-      throw new DealReadError(400, 'INVALID_EVENT_TOPIC');
+    const selector = EVENT_TOPIC_SELECTORS[input.topic];
+    if (!selector) throw new DealReadError(400, 'INVALID_EVENT_TOPIC');
     const [events, bounds] = await Promise.all([
       this.database.query(
         `SELECT stream_cursor, aggregate_type, aggregate_id, aggregate_version,
                 event_type, payload, occurred_at
          FROM crm.domain_events
-         WHERE stream_cursor > $1 AND (
-           aggregate_type = 'deal'
-           OR (aggregate_type = 'task' AND event_type IN ('task.started','task.completed','task.cancelled') AND payload ? 'dealId')
-           OR (aggregate_type = 'handoff' AND event_type IN ('handoff.accepted','handoff.transferred','handoff.resolved') AND payload ? 'dealId')
-         )
+         WHERE stream_cursor > $1 AND (${selector})
          ORDER BY stream_cursor LIMIT $2`,
         [input.after, input.limit + 1],
       ),
@@ -58,9 +67,19 @@ export class PostgresDealReadRepository {
       rows: events.rows.slice(0, input.limit).map((/** @type {any} */ row) => ({
         aggregateType: row.aggregate_type,
         aggregateVersion: Number(row.aggregate_version),
+        contactId:
+          row.aggregate_type === 'contact'
+            ? row.aggregate_id
+            : (row.payload.contactId ?? null),
+        conversationId:
+          row.aggregate_type === 'conversation'
+            ? row.aggregate_id
+            : (row.payload.conversationId ?? null),
         cursor: Number(row.stream_cursor),
         dealId:
-          row.aggregate_type === 'deal' ? row.aggregate_id : row.payload.dealId,
+          row.aggregate_type === 'deal'
+            ? row.aggregate_id
+            : (row.payload.dealId ?? null),
         occurredAt: iso(row.occurred_at),
         type: row.event_type,
       })),

@@ -5,6 +5,7 @@
 > **Design técnico:** `TECHNICAL-DESIGN.md`  
 > **Topologia:** `EASYPANEL-TOPOLOGY.md`  
 > **Próximas interfaces:** `docs/roadmap/PROXIMAS-FASES.md`
+> **Execução em paralelo:** `docs/roadmap/EXECUCAO-PARALELA.md`
 
 O MVP será construído como três objetivos divergentes: **CRM | Inbox Multicanal | Agente Vendedor Silmer no n8n**. Cada objetivo pode avançar e ser validado isoladamente; os três se conectam somente na etapa de integração e lançamento.
 
@@ -208,6 +209,11 @@ Negócio), UI-5 (operação/reconciliação somente se o uso justificar) e CANAL
 Cada fase começa pelo read model e pela atualização da OpenAPI quando a consulta
 ainda não existir. A homologação do n8n pode avançar antes das novas telas; o
 lançamento depende dos gates operacionais e externos documentados.
+
+Quando houver duas pessoas desenvolvendo simultaneamente, a divisão de posse,
+as dependências de contrato e a ordem de merge estão em
+`docs/roadmap/EXECUCAO-PARALELA.md`. Essa decomposição não modifica a fila
+canônica desta seção.
 
 ## Integração e lançamento
 

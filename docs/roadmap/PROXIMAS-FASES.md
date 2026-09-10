@@ -1,8 +1,9 @@
 # Próximas fases — produto e interfaces do CRM Silmer
 
 > **Atualizado em:** 08/09/2026  
-> **Status:** sequência posterior à simplificação n8n MVP  
+> **Status:** sequência posterior à simplificação n8n MVP
 > **Fila canônica:** `.specs/features/crm-mvp/tasks.md`
+> **Execução em duas frentes:** `docs/roadmap/EXECUCAO-PARALELA.md`
 
 Nenhuma interface nova faz parte da entrega `N8N-MVP-1`. Este documento mostra
 o que deve aparecer em tela depois que o fluxo WhatsApp estiver homologado,
@@ -121,3 +122,7 @@ Use esta ordem em caso de dúvida:
 Cada fase começa pelo read model e OpenAPI, segue com backend e testes e só
 então implementa Vue. Acessibilidade, autorização, PII e estados de erro fazem
 parte da fase, não de uma revisão posterior.
+
+Quando duas pessoas trabalharem ao mesmo tempo, usar
+`EXECUCAO-PARALELA.md` para a posse de arquivos, dependências e ordem de merge.
+Ele organiza a execução, mas não altera esta sequência nem os critérios acima.

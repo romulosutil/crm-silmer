@@ -27,20 +27,30 @@ const STREAM_EVENT_TYPES = Object.freeze({
  * identifiers only — message bodies stay encrypted at rest and are re-read
  * through the authorized read model.
  *
+ * `aggregate_version` counts occurrences of this event type for this
+ * conversation rather than mirroring `conversations.version`. The unique
+ * constraint on (aggregate_type, aggregate_id, aggregate_version, event_type)
+ * would otherwise drop a second event at an unchanged conversation version, and
+ * a dropped event is a panel that silently stops updating.
+ *
  * @param {Queryable} transaction
- * @param {{conversationId: string, correlationId: string, occurredAt: string, type: string, version: number}} event
+ * @param {{conversationId: string, correlationId: string, occurredAt: string, type: string}} event
  */
 async function appendConversationStreamEvent(transaction, event) {
   await transaction.query(
     `INSERT INTO crm.domain_events
        (id, aggregate_type, aggregate_id, aggregate_version, event_type,
         payload, correlation_id, occurred_at)
-     VALUES ($1, 'conversation', $2, $3, $4, $5::jsonb, $6, $7)
-     ON CONFLICT DO NOTHING`,
+     SELECT $1, 'conversation', $2,
+            COALESCE((SELECT max(existing.aggregate_version)
+                      FROM crm.domain_events existing
+                      WHERE existing.aggregate_type = 'conversation'
+                        AND existing.aggregate_id = $2
+                        AND existing.event_type = $3), 0) + 1,
+            $3, $4::jsonb, $5, $6`,
     [
       `event-${randomUUID()}`,
       event.conversationId,
-      event.version,
       event.type,
       JSON.stringify({ conversationId: event.conversationId }),
       event.correlationId,
@@ -237,7 +247,6 @@ export class PostgresInboxRepository {
         correlationId: input.correlationId,
         occurredAt: input.occurredAt,
         type: 'conversation.message_received',
-        version: Number(conversation.version),
       });
       return freezeInboxRecord({
         conversation: mapConversation(conversation),
@@ -395,9 +404,6 @@ export class PostgresInboxRepository {
         correlationId: input.correlationId,
         occurredAt,
         type: STREAM_EVENT_TYPES[kind] ?? 'conversation.changed',
-        version: Number(
-          commandResult.version ?? commandResult.conversationVersion,
-        ),
       });
       const panelAction =
         kind === 'takeover'

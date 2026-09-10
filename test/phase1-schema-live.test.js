@@ -185,31 +185,43 @@ if (connectionString) {
       );
 
       await pool.query(
-        `INSERT INTO crm.users (id, email, password_hash)
-         VALUES ('admin-1', 'admin@example.test', '$argon2id$v=19$fixture')`,
+        `INSERT INTO crm.users (id, email, name, password_hash)
+         VALUES ('admin-1', 'admin@example.test', 'Administradora Silmer',
+           '$argon2id$v=19$fixture')`,
       );
       await pool.query(
-        `INSERT INTO crm.users (id, email, password_hash)
-         VALUES ('seller-1', 'seller@example.test', '$argon2id$v=19$fixture')`,
+        `INSERT INTO crm.users (id, email, name, password_hash)
+         VALUES ('seller-1', 'seller@example.test', 'Vendedora Silmer',
+           '$argon2id$v=19$fixture')`,
       );
       await assert.rejects(
         pool.query(
-          `INSERT INTO crm.users (id, email, password_hash)
-           VALUES ('duplicate-email', 'ADMIN@example.test', '$argon2id$v=19$fixture')`,
+          `INSERT INTO crm.users (id, email, name, password_hash)
+           VALUES ('duplicate-email', 'ADMIN@example.test', 'Homônima',
+             '$argon2id$v=19$fixture')`,
         ),
         /users_email_lower_unique/iu,
       );
       await assert.rejects(
         pool.query(
-          `INSERT INTO crm.users (id, email, password_hash)
-           VALUES ('plaintext-user', 'plain@example.test', 'plaintext')`,
+          `INSERT INTO crm.users (id, email, name, password_hash)
+           VALUES ('plaintext-user', 'plain@example.test', 'Texto Puro',
+             'plaintext')`,
         ),
         /users_password_hash_check/iu,
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.users (id, email, name, password_hash)
+           VALUES ('blank-name', 'blank@example.test', '  ',
+             '$argon2id$v=19$fixture')`,
+        ),
+        /users_name_check/iu,
       );
 
       await pool.query(
         `INSERT INTO crm.user_functions (user_id, function_name)
-         VALUES ('admin-1', 'Atendimento')`,
+         VALUES ('admin-1', 'Vendedor')`,
       );
       await assert.rejects(
         pool.query(
@@ -217,6 +229,13 @@ if (connectionString) {
            VALUES ('admin-1', 'Vendedor')`,
         ),
         /user_functions_pkey/iu,
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.user_functions (user_id, function_name)
+           VALUES ('seller-1', 'Atendimento')`,
+        ),
+        /user_functions_function_name_check/iu,
       );
       await pool.query(
         `INSERT INTO crm.user_capabilities
@@ -227,9 +246,17 @@ if (connectionString) {
         pool.query(
           `INSERT INTO crm.user_capabilities
              (user_id, capability, granted_by)
-           VALUES ('seller-1', 'PRIVACY_OFFICER', 'seller-1')`,
+           VALUES ('admin-1', 'COMMERCIAL_ADMIN', 'admin-1')`,
         ),
         /user_capabilities_grant_separation_check/iu,
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.user_capabilities
+             (user_id, capability, granted_by)
+           VALUES ('admin-1', 'PRIVACY_OFFICER', 'seller-1')`,
+        ),
+        /user_capabilities_capability_check/iu,
       );
 
       await pool.query(
@@ -246,21 +273,6 @@ if (connectionString) {
           [hash('c')],
         ),
         /sessions_token_hash_check/iu,
-      );
-      await pool.query(
-        `INSERT INTO crm.invitations
-           (id, email, function_name, token_hash, created_by, expires_at)
-         VALUES ('invite-1', 'new@example.test', 'Vendedor', $1, 'admin-1', now() + interval '1 day')`,
-        [hash('d')],
-      );
-      await assert.rejects(
-        pool.query(
-          `INSERT INTO crm.invitations
-             (id, email, function_name, token_hash, created_by, expires_at)
-           VALUES ('invite-2', 'other@example.test', 'Vendedor', $1, 'admin-1', now() + interval '1 day')`,
-          [hash('d')],
-        ),
-        /invitations_token_hash_key/iu,
       );
       await pool.query(
         `INSERT INTO crm.audit_events
@@ -406,6 +418,17 @@ if (connectionString) {
         ),
         /published catalog/iu,
       );
+
+      assert.deepEqual(await migrate(pool, { migrations, phase: 'contract' }), {
+        applied: migrations
+          .filter(({ phase }) => phase === 'contract')
+          .map(({ version }) => version),
+        phase: 'contract',
+      });
+      const droppedInvitations = await pool.query(
+        `SELECT to_regclass('crm.invitations') AS relation`,
+      );
+      assert.equal(droppedInvitations.rows[0].relation, null);
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

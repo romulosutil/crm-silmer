@@ -98,7 +98,7 @@ if (connectionString) {
       await pool.query(
         `INSERT INTO crm.user_functions
            (user_id, function_name, assigned_at)
-         VALUES ($1, 'Atendimento', $2)`,
+         VALUES ($1, 'Vendedor', $2)`,
         [`attendant-${runId}`, NOW],
       );
       const identity = await contacts.resolveInboundIdentity({
@@ -127,7 +127,7 @@ if (connectionString) {
         providerAccountId: `account-${runId}`,
       });
       const humanActor = {
-        functionName: 'Atendimento',
+        functionName: 'Vendedor',
         id: `attendant-${runId}`,
         kind: 'human',
       };

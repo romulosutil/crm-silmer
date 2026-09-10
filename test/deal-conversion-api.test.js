@@ -28,7 +28,7 @@ function harness(options = {}) {
       }
       return {
         actor: {
-          functionName: 'Atendimento',
+          functionName: 'Vendedor',
           id: 'user-attendant-1',
           kind: 'human',
         },

@@ -27,7 +27,7 @@ import {
 const connectionString = process.env.TEST_DATABASE_URL;
 const NOW = new Date('2026-09-02T12:00:00.000Z');
 const ATTENDANT = Object.freeze({
-  functionName: 'Atendimento',
+  functionName: 'Vendedor',
   id: 'user-attendant-live',
   kind: 'human',
 });

@@ -15,7 +15,7 @@ import {
 
 const NOW = new Date('2026-09-07T15:00:00.000Z');
 const HUMAN = Object.freeze({
-  functionName: 'Atendimento',
+  functionName: 'Vendedor',
   id: 'user-attendant-1',
   kind: 'human',
 });

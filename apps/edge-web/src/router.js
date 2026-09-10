@@ -5,6 +5,7 @@ import AccountView from './views/AccountView.vue';
 import ClientsView from './views/ClientsView.vue';
 import DashboardView from './views/DashboardView.vue';
 import InboxView from './views/InboxView.vue';
+import UsersView from './views/UsersView.vue';
 
 const PublicRoute = { name: 'PublicRoute', render: () => h('span') };
 
@@ -40,6 +41,7 @@ export const router = createRouter({
       props: (route) => ({ selectedId: String(route.params.clientId ?? '') }),
       meta: { title: 'Clientes' },
     },
+    { path: '/usuarios', component: UsersView, meta: { title: 'Usuários' } },
     { path: '/conta', component: AccountView, meta: { title: 'Conta' } },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],

@@ -42,8 +42,9 @@ test('documents and exposes a local development workflow with automatic refresh'
   assert.match(dev, /API_ORIGIN/u);
   assert.match(dev, /seedDevelopmentUsers/u);
   assert.match(seeder, /admin@crm-silmer\.local/u);
-  assert.match(seeder, /PRIVACY_OFFICER/u);
-  assert.match(seeder, /TECHNICAL_PRIVACY_EXECUTOR/u);
+  assert.match(seeder, /vendedor@crm-silmer\.local/u);
+  assert.match(seeder, /'\/api\/v1\/users'/u);
+  assert.doesNotMatch(seeder, /invitation/iu);
   assert.match(watcher, /watch\(source, \{ recursive: true \}/u);
   assert.match(edgeServer, /proxyApiRequest/u);
   assert.match(edgeServer, /hostname: apiOrigin\.hostname/u);

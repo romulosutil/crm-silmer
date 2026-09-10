@@ -1,16 +1,35 @@
-export class KanbanEventStream {
+/**
+ * Named events published per topic by `GET /api/v1/events`. A topic that is not
+ * listed here would connect but never deliver anything, so keep this in sync
+ * with `formatDealSseEvent` on the API side.
+ */
+/** @type {Readonly<Record<string, readonly string[]>>} */
+const TOPIC_EVENTS = Object.freeze({
+  inbox: Object.freeze(['inbox.contact.changed', 'inbox.conversation.changed']),
+  kanban: Object.freeze(['kanban.card.changed']),
+});
+
+export const LIVE_TOPICS = Object.freeze(Object.keys(TOPIC_EVENTS));
+
+export class LiveEventStream {
   /** @param {{onChange:(event:Record<string,any>)=>void,onReset:()=>void,onState:(state:string)=>void}} handlers */
   constructor(handlers) {
     this.handlers = handlers;
+    // stream_cursor is a single global sequence, so one cursor stays valid
+    // across topics; events the current topic does not select are simply not
+    // delivered.
     this.cursor = '';
     this.source = null;
-    this.timer = 0;
+    this.topic = 'kanban';
   }
-  /** @param {string} [cursor] */
-  start(cursor = this.cursor) {
+
+  /** @param {string} [topic] @param {string} [cursor] */
+  start(topic = this.topic, cursor = this.cursor) {
+    const nextTopic = TOPIC_EVENTS[topic] ? topic : 'kanban';
     this.close();
+    this.topic = nextTopic;
     this.cursor = cursor || this.cursor;
-    const query = new globalThis.URLSearchParams({ topic: 'kanban' });
+    const query = new globalThis.URLSearchParams({ topic: nextTopic });
     if (this.cursor) query.set('after', this.cursor);
     const Source = globalThis.EventSource;
     if (!Source) {
@@ -24,21 +43,24 @@ export class KanbanEventStream {
     this.source.addEventListener('open', () =>
       this.handlers.onState('conectado'),
     );
-    this.source.addEventListener('kanban.card.changed', (event) =>
-      this.consume(event, false),
-    );
+    for (const name of TOPIC_EVENTS[nextTopic]) {
+      this.source.addEventListener(name, (event) => this.consume(event, false));
+    }
     this.source.addEventListener('stream.reset', (event) =>
       this.consume(event, true),
     );
     this.source.addEventListener('message', (event) => {
       const parsed = this.parse(event.data);
-      if (parsed.type === 'kanban.card.changed') this.consume(event, false);
       if (parsed.type === 'stream.reset') this.consume(event, true);
+      else if (TOPIC_EVENTS[nextTopic].includes(parsed.type)) {
+        this.consume(event, false);
+      }
     });
     this.source.addEventListener('error', () =>
       this.handlers.onState('reconectando'),
     );
   }
+
   /** @param {MessageEvent} event @param {boolean} reset */
   consume(event, reset) {
     if (event.lastEventId) this.cursor = event.lastEventId;
@@ -46,6 +68,7 @@ export class KanbanEventStream {
     if (payload.cursor) this.cursor = String(payload.cursor);
     reset ? this.handlers.onReset() : this.handlers.onChange(payload);
   }
+
   /** @param {string} value */
   parse(value) {
     try {
@@ -54,9 +77,12 @@ export class KanbanEventStream {
       return {};
     }
   }
+
   close() {
     if (this.source) this.source.close();
     this.source = null;
-    if (this.timer) globalThis.clearTimeout(this.timer);
   }
 }
+
+/** Retained so the legacy Kanban host keeps its original import name. */
+export { LiveEventStream as KanbanEventStream };

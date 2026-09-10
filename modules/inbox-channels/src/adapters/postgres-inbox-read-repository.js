@@ -60,7 +60,8 @@ export class PostgresInboxReadRepository {
                   conversation.terminal_at,
                   identity.current_contact_id contact_id, identity.channel,
                   identity.external_identity_lookup_hash,
-                  identity.identity_envelope,
+                  identity.identity_envelope, contact.display_name,
+                  contact.version contact_version,
                   assigned_function.function_name,
                   deal.id deal_id, deal.stage deal_stage, deal.status deal_status,
                   handoff.id handoff_id, handoff.status handoff_status,
@@ -75,6 +76,7 @@ export class PostgresInboxReadRepository {
            FROM crm.conversations conversation
            JOIN crm.contact_identities identity
              ON identity.id=conversation.contact_identity_id
+           JOIN crm.contacts contact ON contact.id=identity.current_contact_id
            LEFT JOIN crm.user_functions assigned_function
              ON assigned_function.user_id=conversation.assigned_user_id
            LEFT JOIN LATERAL (
@@ -137,7 +139,8 @@ export class PostgresInboxReadRepository {
                     conversation.terminal_at,
                     identity.current_contact_id contact_id, identity.channel,
                     identity.external_identity_lookup_hash,
-                    identity.identity_envelope,
+                    identity.identity_envelope, contact.display_name,
+                    contact.version contact_version,
                     assigned_function.function_name,
                     deal.id deal_id, deal.stage deal_stage, deal.status deal_status,
                     handoff.id handoff_id, handoff.status handoff_status,
@@ -145,6 +148,7 @@ export class PostgresInboxReadRepository {
              FROM crm.conversations conversation
              JOIN crm.contact_identities identity
                ON identity.id=conversation.contact_identity_id
+             JOIN crm.contacts contact ON contact.id=identity.current_contact_id
              LEFT JOIN crm.user_functions assigned_function
                ON assigned_function.user_id=conversation.assigned_user_id
              LEFT JOIN LATERAL (
@@ -242,12 +246,17 @@ function mapConversationSummary(row, repository) {
     channel: row.channel,
     contact: {
       displayHandle: identity.displayHandle ?? null,
+      displayName: row.display_name ?? null,
       externalId: identity.externalIdentityId,
       id: row.contact_id,
+      // Operator-chosen name wins; the channel handle is only the fallback.
       label:
+        row.display_name ??
         identity.displayHandle ??
         identity.externalIdentityId ??
         `Contato ${row.contact_id}`,
+      version:
+        row.contact_version === undefined ? null : Number(row.contact_version),
     },
     deal: row.deal_id
       ? { id: row.deal_id, stage: row.deal_stage, status: row.deal_status }

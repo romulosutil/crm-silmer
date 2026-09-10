@@ -7,19 +7,48 @@ export const CAPABILITIES = Object.freeze({
  * @typedef {'Vendedor'} OperationalFunction
  */
 
-const operationalActions = new Set([
-  'contact.identity.merge',
-  'contact.identity.unmerge',
-  'contact.read',
-  'conversation.read',
-  'conversation.message.send',
-  'conversation.reactivate-agent',
-  'conversation.takeover',
-  'conversation.transition',
-  'handoff.claim',
-  'deal.draft.edit',
-  'deal.draft.read',
-]);
+/**
+ * Single source of truth for the operational actions any active seller may run.
+ * API guards MUST import this set instead of redeclaring it: the previous
+ * duplicate in `apps/api/src/identity-runtime.js` drifted and denied every
+ * Inbox write command with 403.
+ */
+export const OPERATIONAL_ACTIONS = Object.freeze(
+  new Set([
+    'contact.identity.merge',
+    'contact.identity.unmerge',
+    'contact.read',
+    'contact.rename',
+    'conversation.convert',
+    'conversation.read',
+    'conversation.message.send',
+    'conversation.reactivate-agent',
+    'conversation.takeover',
+    'conversation.transfer',
+    'conversation.transition',
+    'deal.assign',
+    'deal.draft.edit',
+    'deal.draft.read',
+    'deal.events.read',
+    'deal.fields.patch',
+    'deal.lose',
+    'deal.read',
+    'deal.transition',
+    'handoff.accept',
+    'handoff.claim',
+    'handoff.create',
+    'handoff.resolve',
+    'handoff.transfer',
+    'kanban.read',
+    'task.cancel',
+    'task.complete',
+    'task.create',
+    'task.start',
+    'user.assignable.read',
+  ]),
+);
+
+const operationalActions = OPERATIONAL_ACTIONS;
 /** @type {Map<string, Capability>} */
 const actionCapabilities = new Map([
   ['order-form.approve', CAPABILITIES.COMMERCIAL_ADMIN],

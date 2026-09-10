@@ -1,4 +1,4 @@
-import { InboxConflictError } from '../domain/errors.js';
+import { InboxConflictError, InboxForbiddenError } from '../domain/errors.js';
 import { freezeInboxRecord, isTerminalInboxState } from '../domain/inbox.js';
 
 /** @template T @param {T} value @returns {T} */
@@ -140,6 +140,16 @@ export class InMemoryInboxRepository {
           'Terminal conversations cannot be mutated',
         );
       }
+      if (
+        conversation.assignedUserId !== null &&
+        conversation.assignedUserId !== undefined &&
+        conversation.assignedUserId !== input.actor.id &&
+        ![...(input.actor.capabilities ?? [])].includes('COMMERCIAL_ADMIN')
+      ) {
+        throw new InboxForbiddenError(
+          'Conversation is assigned to another operator',
+        );
+      }
 
       const occurredAt = runtime.clock().toISOString();
       let result;
@@ -155,6 +165,14 @@ export class InMemoryInboxRepository {
         conversation.automationState = 'human';
         conversation.automationEpoch += 1;
         conversation.state = 'em_atendimento';
+        conversation.assignedUserId = input.actor.id;
+        conversation.updatedAt = occurredAt;
+        conversation.version += 1;
+        result = publicConversation(conversation);
+      } else if (kind === 'transfer') {
+        conversation.automationState = 'human';
+        conversation.state = 'em_atendimento';
+        conversation.assignedUserId = input.targetUserId;
         conversation.updatedAt = occurredAt;
         conversation.version += 1;
         result = publicConversation(conversation);
@@ -243,6 +261,7 @@ function createAudit(kind, input, conversation, occurredAt) {
     reactivate: 'conversation.assistant_reactivated',
     send: 'conversation.human_message_queued',
     takeover: 'conversation.takeover',
+    transfer: 'conversation.transferred',
     transition: 'conversation.state_transitioned',
   };
   return freezeInboxRecord({

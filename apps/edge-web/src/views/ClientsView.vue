@@ -1,6 +1,7 @@
 <script setup>
 import {
   computed,
+  inject,
   nextTick,
   onBeforeUnmount,
   onMounted,
@@ -15,7 +16,10 @@ import {
   dateTimeBR,
 } from '../lib/format.js';
 
+const LIVE_REFRESH_DELAY_MS = 250;
+
 const props = defineProps({ selectedId: { type: String, default: '' } });
+const liveEvent = inject('liveEvent', ref(null));
 const heading = ref(null);
 const searchInput = ref(null);
 const query = ref('');
@@ -25,8 +29,14 @@ const error = ref('');
 const contacts = ref([]);
 const totalCount = ref(0);
 const detail = ref(null);
+const busy = ref(false);
+const renaming = ref(false);
+const draftName = ref('');
+const actionMessage = ref('');
+const nameInput = ref(null);
 let listController;
 let detailController;
+let refreshTimer = 0;
 
 const filtered = computed(() => {
   const needle = query.value.trim().toLocaleLowerCase('pt-BR');
@@ -39,19 +49,34 @@ const filtered = computed(() => {
 });
 const selected = computed(() => detail.value?.contact ?? null);
 
-async function loadContacts() {
+/** @param {unknown} cause */
+function describeError(cause) {
+  const status = Number(/** @type {any} */ (cause)?.status);
+  if (status === 403) return 'Sem permissão para renomear este contato.';
+  if (status === 409) {
+    return 'O contato mudou enquanto você editava. Os dados foram recarregados.';
+  }
+  if (status === 400) return 'Informe um nome com até 120 caracteres.';
+  if (status >= 500) return 'Serviço indisponível no momento.';
+  return 'Não foi possível salvar o nome.';
+}
+
+/** @param {boolean} [silent] */
+async function loadContacts(silent = false) {
   listController?.abort();
   listController = new AbortController();
-  loading.value = true;
-  error.value = '';
+  if (!silent) {
+    loading.value = true;
+    error.value = '';
+  }
   try {
     const response = await request('/api/v1/contacts?limit=100', {
       signal: listController.signal,
     });
     contacts.value = response.data.items;
     totalCount.value = response.data.totalCount;
-    const id = props.selectedId || contacts.value[0]?.id;
-    if (id) await loadContact(id);
+    const id = props.selectedId || selected.value?.id || contacts.value[0]?.id;
+    if (id) await loadContact(id, silent);
     else detail.value = null;
   } catch (cause) {
     if (cause?.name !== 'AbortError') {
@@ -62,12 +87,15 @@ async function loadContacts() {
   }
 }
 
-async function loadContact(id) {
+/** @param {string} id @param {boolean} [silent] */
+async function loadContact(id, silent = false) {
   if (!id) return;
   detailController?.abort();
   detailController = new AbortController();
-  detailLoading.value = true;
-  error.value = '';
+  if (!silent) {
+    detailLoading.value = true;
+    error.value = '';
+  }
   try {
     const response = await request(
       `/api/v1/contacts/${encodeURIComponent(id)}`,
@@ -91,6 +119,49 @@ function clearSearch() {
   void nextTick(() => searchInput.value?.focus());
 }
 
+async function openRename() {
+  draftName.value = selected.value?.displayName ?? '';
+  renaming.value = true;
+  await nextTick();
+  nameInput.value?.focus();
+}
+
+async function saveName() {
+  if (!selected.value || busy.value) return;
+  busy.value = true;
+  error.value = '';
+  actionMessage.value = '';
+  try {
+    await request(
+      `/api/v1/contacts/${encodeURIComponent(selected.value.id)}/name`,
+      {
+        body: {
+          displayName: draftName.value.trim(),
+          expectedVersion: selected.value.version,
+          reason: 'Nome do contato ajustado na ficha do cliente',
+        },
+        method: 'POST',
+      },
+    );
+    actionMessage.value = 'Nome do contato atualizado.';
+    renaming.value = false;
+    await loadContacts(true);
+  } catch (cause) {
+    error.value = describeError(cause);
+  } finally {
+    busy.value = false;
+  }
+}
+
+/** Collapses bursts of live events into one silent refresh. */
+function scheduleLiveRefresh() {
+  if (refreshTimer) globalThis.clearTimeout(refreshTimer);
+  refreshTimer = globalThis.setTimeout(() => {
+    refreshTimer = 0;
+    void loadContacts(true);
+  }, LIVE_REFRESH_DELAY_MS);
+}
+
 watch(
   () => props.selectedId,
   (id) => {
@@ -101,9 +172,13 @@ onMounted(() => {
   heading.value?.focus();
   void loadContacts();
 });
+watch(liveEvent, (event) => {
+  if (event) scheduleLiveRefresh();
+});
 onBeforeUnmount(() => {
   listController?.abort();
   detailController?.abort();
+  if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });
 </script>
 
@@ -114,13 +189,10 @@ onBeforeUnmount(() => {
         <p class="eyebrow">Relacionamento</p>
         <h1 ref="heading" tabindex="-1">Clientes</h1>
         <p>
-          Contatos canônicos, identidades por canal e histórico operacional
-          persistido.
+          Contatos canônicos, canais e histórico operacional, atualizados em
+          tempo real.
         </p>
       </div>
-      <button type="button" :disabled="loading" @click="loadContacts">
-        Atualizar
-      </button>
     </header>
 
     <div class="filter-bar">
@@ -149,6 +221,9 @@ onBeforeUnmount(() => {
     </div>
 
     <p v-if="error" role="alert" class="audit-note">{{ error }}</p>
+    <p v-if="actionMessage" role="status" class="audit-note">
+      {{ actionMessage }}
+    </p>
     <div v-if="loading" class="loading-state" role="status">
       Carregando contatos…
     </div>
@@ -208,22 +283,44 @@ onBeforeUnmount(() => {
       >
         <div class="client-head">
           <p class="section-kicker">Ficha do contato</p>
-          <h2 :id="`client-${selected.id}`">{{ selected.label }}</h2>
-          <p>
-            {{
-              selected.provisional ? 'Cadastro provisório' : 'Cadastro canônico'
-            }}
-          </p>
+          <form v-if="renaming" class="rename-form" @submit.prevent="saveName">
+            <label :for="`client-name-${selected.id}`">Nome do contato</label>
+            <input
+              :id="`client-name-${selected.id}`"
+              ref="nameInput"
+              v-model="draftName"
+              type="text"
+              maxlength="120"
+              placeholder="Sem nome definido"
+            />
+            <div class="inline-actions">
+              <button type="submit" class="primary" :disabled="busy">
+                Salvar nome
+              </button>
+              <button type="button" :disabled="busy" @click="renaming = false">
+                Cancelar
+              </button>
+            </div>
+          </form>
+          <template v-else>
+            <h2 :id="`client-${selected.id}`">{{ selected.label }}</h2>
+            <p>
+              {{
+                selected.provisional
+                  ? 'Cadastro provisório'
+                  : 'Cadastro canônico'
+              }}
+            </p>
+            <button type="button" class="link-button" @click="openRename">
+              Editar nome
+            </button>
+          </template>
         </div>
         <div v-if="detailLoading" class="loading-state" role="status">
           Carregando histórico…
         </div>
         <template v-else>
           <dl class="client-facts">
-            <div>
-              <dt>Identidades</dt>
-              <dd>{{ detail.identities.length }}</dd>
-            </div>
             <div>
               <dt>Negócios ativos</dt>
               <dd>{{ detail.activeDealCount }}</dd>
@@ -239,7 +336,7 @@ onBeforeUnmount(() => {
           </dl>
 
           <div class="panel-head subsection-heading">
-            <h3>Identidades por canal</h3>
+            <h3>Canais de contato</h3>
           </div>
           <ul class="history-list">
             <li v-for="identity in detail.identities" :key="identity.id">

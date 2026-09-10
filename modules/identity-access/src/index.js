@@ -668,6 +668,7 @@ export {
 export {
   AccessControlError,
   CAPABILITIES,
+  OPERATIONAL_ACTIONS,
   authorize,
   createAccessControlService,
 } from './authorization.js';

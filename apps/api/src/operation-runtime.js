@@ -1,7 +1,15 @@
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import {
+  createHash,
+  createHmac,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto';
 
+import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { PostgresContactReadRepository } from '@crm-silmer/contacts';
 import { PostgresInboxReadRepository } from '@crm-silmer/inbox-channels';
+
+const DISPLAY_NAME_MAX_LENGTH = 120;
 
 const CONVERSATION_STATES = new Set([
   'nova',
@@ -144,8 +152,107 @@ export function createOperationReadRuntime(database, options = {}) {
     }),
   });
 
+  const auditPort = new PostgresAuditTrail(database);
+
   return Object.freeze({
     ...service,
+
+    /**
+     * Renames a contact. The channel handle in contact_identities keeps
+     * mirroring the provider; only crm.contacts.display_name is operator-owned,
+     * so a rename never desynchronises the identity envelope.
+     * @param {{actor: {id: string}, contactId: unknown, correlationId: string, displayName: unknown, expectedVersion: unknown, reason: string}} input
+     */
+    async renameContact(input) {
+      const contactId = requireId(input.contactId, 'CONTACT_ID');
+      const displayName = readDisplayName(input.displayName);
+      const expectedVersion = Number(input.expectedVersion);
+      if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+        throw new OperationReadError(400, 'INVALID_REQUEST');
+      }
+      return database.transaction(async (/** @type {any} */ transaction) => {
+        const current = await transaction.query(
+          'SELECT id, version FROM crm.contacts WHERE id = $1 FOR UPDATE',
+          [contactId],
+        );
+        if (!current.rows[0]) {
+          throw new OperationReadError(404, 'CONTACT_NOT_FOUND');
+        }
+        if (Number(current.rows[0].version) !== expectedVersion) {
+          throw new OperationReadError(409, 'CONTACT_CONFLICT');
+        }
+        const occurredAt = new Date().toISOString();
+        const updated = await transaction.query(
+          `UPDATE crm.contacts
+           SET display_name = $2, version = version + 1, updated_at = $3
+           WHERE id = $1 RETURNING id, display_name, version`,
+          [contactId, displayName, occurredAt],
+        );
+        const row = updated.rows[0];
+        await auditPort.append(
+          {
+            action: 'contact.renamed',
+            actor: input.actor.id,
+            correlationId: input.correlationId,
+            occurredAt,
+            reason: input.reason,
+            target: { id: contactId, type: 'contact' },
+            version: Number(row.version),
+          },
+          { transaction },
+        );
+        await transaction.query(
+          `INSERT INTO crm.domain_events
+             (id, aggregate_type, aggregate_id, aggregate_version, event_type,
+              payload, correlation_id, occurred_at)
+           VALUES ($1, 'contact', $2, $3, 'contact.renamed', $4::jsonb, $5, $6)
+           ON CONFLICT DO NOTHING`,
+          [
+            `event-${randomUUID()}`,
+            contactId,
+            Number(row.version),
+            JSON.stringify({ contactId }),
+            input.correlationId,
+            occurredAt,
+          ],
+        );
+        return Object.freeze({
+          displayName: row.display_name,
+          id: row.id,
+          version: Number(row.version),
+        });
+      });
+    },
+
+    /**
+     * Write counterpart of authorizeRead: mutations additionally require the
+     * CSRF token, so they go through authorizeOperational.
+     * @param {any} input
+     */
+    async authorizeWrite(input) {
+      if (input.authorization !== undefined) {
+        throw new OperationReadError(403, 'FORBIDDEN');
+      }
+      if (!options.identity) {
+        throw new OperationReadError(503, 'IDENTITY_UNAVAILABLE');
+      }
+      if (
+        typeof input.origin !== 'string' ||
+        !options.identity.allowedOrigins.includes(input.origin)
+      ) {
+        throw new OperationReadError(403, 'FORBIDDEN');
+      }
+      const sessionToken = parseCookies(input.cookie).get('crm_session');
+      if (typeof sessionToken !== 'string') {
+        throw new OperationReadError(403, 'FORBIDDEN');
+      }
+      return options.identity.authorizeOperational({
+        action: input.action,
+        csrfToken: input.csrfToken,
+        sessionToken,
+      });
+    },
+
     /** @param {any} input */
     async authorizeRead(input) {
       if (input.authorization !== undefined) {
@@ -249,6 +356,27 @@ function readLimit(value) {
     throw new OperationReadError(400, 'INVALID_LIMIT');
   }
   return limit;
+}
+
+/**
+ * An empty string clears the operator-chosen name and lets readers fall back to
+ * the channel handle.
+ * @param {unknown} value
+ */
+function readDisplayName(value) {
+  if (typeof value !== 'string') {
+    throw new OperationReadError(400, 'INVALID_DISPLAY_NAME');
+  }
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  const hasControlCharacter = [...trimmed].some((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code < 0x20 || code === 0x7f;
+  });
+  if (trimmed.length > DISPLAY_NAME_MAX_LENGTH || hasControlCharacter) {
+    throw new OperationReadError(400, 'INVALID_DISPLAY_NAME');
+  }
+  return trimmed;
 }
 
 /** @param {unknown} value @param {Set<string>} accepted */

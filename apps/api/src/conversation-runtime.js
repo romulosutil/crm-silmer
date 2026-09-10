@@ -26,5 +26,6 @@ export function createConversationApiRuntime(
     returnToAi: service.reactivateAgent,
     sendMessage: service.sendHumanMessage,
     takeover: service.takeover,
+    transfer: service.transferConversation,
   });
 }

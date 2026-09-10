@@ -271,3 +271,132 @@ test('stores stage suggestion separately from official conversation state', asyn
   assert.equal(suggestion.officialField, undefined);
   assert.equal(received.conversation.state, 'nova');
 });
+
+const OTHER_SELLER = Object.freeze({
+  functionName: 'Vendedor',
+  id: 'user-attendant-2',
+  kind: 'human',
+});
+const ADMIN = Object.freeze({
+  capabilities: ['COMMERCIAL_ADMIN'],
+  functionName: 'Vendedor',
+  id: 'user-admin-1',
+  kind: 'human',
+});
+
+/** @param {any} service */
+async function conversationOwnedByAttendant(service) {
+  const received = await service.receiveInbound(inbound());
+  return service.takeover({
+    actor: ATTENDANT,
+    conversationId: received.conversation.id,
+    correlationId: 'correlation-takeover-own',
+    expectedVersion: received.conversation.version,
+    idempotencyKey: 'takeover-own',
+    reason: 'Assumindo o atendimento',
+  });
+}
+
+test('keeps an assigned conversation off limits to every other seller', async () => {
+  const { service } = createHarness();
+  const owned = await conversationOwnedByAttendant(service);
+  assert.equal(owned.assignedUserId, ATTENDANT.id);
+
+  await assert.rejects(
+    service.takeover({
+      actor: OTHER_SELLER,
+      conversationId: owned.id,
+      correlationId: 'correlation-steal',
+      expectedVersion: owned.version,
+      idempotencyKey: 'steal-takeover',
+      reason: 'Tentativa de assumir conversa alheia',
+    }),
+    InboxForbiddenError,
+  );
+  await assert.rejects(
+    service.sendHumanMessage({
+      actor: OTHER_SELLER,
+      content: { ciphertext: 'sealed-steal' },
+      conversationId: owned.id,
+      correlationId: 'correlation-steal-send',
+      expectedVersion: owned.version,
+      idempotencyKey: 'steal-send',
+      messageType: 'text',
+      reason: 'Tentativa de responder conversa alheia',
+    }),
+    InboxForbiddenError,
+  );
+  await assert.rejects(
+    service.reactivateAgent({
+      actor: OTHER_SELLER,
+      conversationId: owned.id,
+      correlationId: 'correlation-steal-reactivate',
+      expectedVersion: owned.version,
+      idempotencyKey: 'steal-reactivate',
+      reason: 'Tentativa de devolver conversa alheia',
+    }),
+    InboxForbiddenError,
+  );
+});
+
+test('lets the owner and an administrator hand a conversation to another seller', async () => {
+  const { audits, service } = createHarness();
+  const owned = await conversationOwnedByAttendant(service);
+
+  const transferred = await service.transferConversation({
+    actor: ATTENDANT,
+    conversationId: owned.id,
+    correlationId: 'correlation-transfer',
+    expectedVersion: owned.version,
+    idempotencyKey: 'transfer-key',
+    reason: 'Repasse de venda',
+    targetUserId: OTHER_SELLER.id,
+  });
+  assert.equal(transferred.assignedUserId, OTHER_SELLER.id);
+  assert.equal(
+    audits.filter(({ action }) => action === 'conversation.transferred').length,
+    1,
+  );
+
+  // The previous owner lost the conversation with the transfer.
+  await assert.rejects(
+    service.reactivateAgent({
+      actor: ATTENDANT,
+      conversationId: transferred.id,
+      correlationId: 'correlation-after-transfer',
+      expectedVersion: transferred.version,
+      idempotencyKey: 'after-transfer',
+      reason: 'Tentativa após repasse',
+    }),
+    InboxForbiddenError,
+  );
+
+  // An administrator overrides ownership and can move it back.
+  const returned = await service.transferConversation({
+    actor: ADMIN,
+    conversationId: transferred.id,
+    correlationId: 'correlation-admin-transfer',
+    expectedVersion: transferred.version,
+    idempotencyKey: 'admin-transfer',
+    reason: 'Correção administrativa',
+    targetUserId: ATTENDANT.id,
+  });
+  assert.equal(returned.assignedUserId, ATTENDANT.id);
+});
+
+test('rejects a transfer that targets the actor itself', async () => {
+  const { service } = createHarness();
+  const owned = await conversationOwnedByAttendant(service);
+  await assert.rejects(
+    service.transferConversation({
+      actor: ATTENDANT,
+      conversationId: owned.id,
+      correlationId: 'correlation-self-transfer',
+      expectedVersion: owned.version,
+      idempotencyKey: 'self-transfer',
+      reason: 'Repasse inválido',
+      targetUserId: ATTENDANT.id,
+    }),
+    InboxValidationError,
+  );
+});

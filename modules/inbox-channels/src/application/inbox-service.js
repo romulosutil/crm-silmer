@@ -68,6 +68,24 @@ export function createInboxService({
       );
     },
 
+    async transferConversation(/** @type {any} */ command) {
+      validateHumanCommand(command);
+      const targetUserId = requireNonEmpty(
+        command.targetUserId,
+        'targetUserId',
+      );
+      if (targetUserId === command.actor.id) {
+        throw new InboxValidationError(
+          'targetUserId must differ from the current actor',
+        );
+      }
+      return repository.mutateConversation(
+        'transfer',
+        normalizeHumanCommand(command, { targetUserId }),
+        runtime,
+      );
+    },
+
     async sendHumanMessage(/** @type {any} */ command) {
       validateHumanCommand(command);
       requireNonEmpty(command.messageType, 'messageType');
@@ -199,6 +217,11 @@ function normalizeInbound(input) {
 function normalizeHumanCommand(command, extra = {}) {
   return freezeInboxRecord({
     actor: freezeInboxRecord({
+      // Carried through so the repository can tell an administrative override
+      // from a seller trying to take a colleague's conversation.
+      capabilities: freezeInboxRecord(
+        [...(command.actor.capabilities ?? [])].map(String).sort(),
+      ),
       functionName: command.actor.functionName,
       id: command.actor.id,
       kind: 'human',

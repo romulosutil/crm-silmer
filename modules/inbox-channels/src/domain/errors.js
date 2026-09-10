@@ -15,11 +15,9 @@ export class InboxValidationError extends InboxError {
 }
 
 export class InboxForbiddenError extends InboxError {
-  constructor() {
-    super(
-      'A human actor is required for this inbox mutation',
-      'INBOX_FORBIDDEN',
-    );
+  /** @param {string} [message] */
+  constructor(message = 'A human actor is required for this inbox mutation') {
+    super(message, 'INBOX_FORBIDDEN');
   }
 }
 

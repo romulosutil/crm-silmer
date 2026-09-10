@@ -10,6 +10,9 @@ const STAGE_LABELS = Object.freeze({
   fechamento: 'Fechamento',
 });
 
+/** Topics the live event endpoint will serve. */
+export const LIVE_EVENT_TOPICS = Object.freeze(new Set(['inbox', 'kanban']));
+
 export class DealReadError extends Error {
   /** @param {number} statusCode @param {string} code @param {string} [message] */
   constructor(statusCode, code, message = code) {
@@ -109,17 +112,18 @@ export function createDealReadService({ repository, cursorKey }) {
         input.after === undefined || input.after === ''
           ? 0
           : Number(input.after);
-      if (!Number.isSafeInteger(after) || after < 0 || topic !== 'kanban') {
+      const knownTopic = LIVE_EVENT_TOPICS.has(String(topic));
+      if (!Number.isSafeInteger(after) || after < 0 || !knownTopic) {
         const snapshot = await repository.readEvents({
           after: 0,
           limit: 1,
-          topic: 'kanban',
+          topic: knownTopic ? String(topic) : 'kanban',
         });
         return Object.freeze({
           cursor: snapshot.latestCursor,
           events: [],
           reset: {
-            reason: topic !== 'kanban' ? 'invalid_topic' : 'invalid_cursor',
+            reason: knownTopic ? 'invalid_cursor' : 'invalid_topic',
           },
         });
       }

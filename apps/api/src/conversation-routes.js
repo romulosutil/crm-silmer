@@ -58,6 +58,33 @@ export function registerConversationRoutes(api, conversations, contextFor) {
   }
 
   api.post(
+    '/api/v1/conversations/:conversationId/transfer',
+    async (request, reply) =>
+      respond(reply, request, contextFor, async () => {
+        const params = requireObject(request.params);
+        const body = requireObject(request.body);
+        rejectUnknownKeys(body, ['expectedVersion', 'reason', 'targetUserId']);
+        const command = await authorizeHumanCommand(
+          request,
+          conversations,
+          contextFor,
+          'conversation.transfer',
+        );
+        const result = await conversations.transfer({
+          ...command,
+          conversationId: requireString(
+            params.conversationId,
+            'CONVERSATION_ID',
+          ),
+          expectedVersion: requireVersion(body.expectedVersion),
+          reason: requireString(body.reason, 'REASON'),
+          targetUserId: requireString(body.targetUserId, 'TARGET_USER_ID'),
+        });
+        return reply.code(202).send({ accepted: true, ...result });
+      }),
+  );
+
+  api.post(
     '/api/v1/conversations/:conversationId/messages',
     async (request, reply) =>
       respond(reply, request, contextFor, async () => {

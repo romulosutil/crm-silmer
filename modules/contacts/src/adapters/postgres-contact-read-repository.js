@@ -77,7 +77,8 @@ export class PostgresContactReadRepository {
       const [contact, identities, conversations, deals] = await runSequential([
         () =>
           database.query(
-            `SELECT id, provisional, version, created_at, updated_at
+            `SELECT id, display_name, provisional, version, created_at,
+                    updated_at
              FROM crm.contacts WHERE id=$1`,
             [contactId],
           ),
@@ -182,6 +183,7 @@ function groupContacts(rows, key) {
       current = {
         activeDealCount: Number(row.active_deal_count),
         createdAt: iso(row.created_at),
+        displayName: row.display_name ?? null,
         id: row.id,
         identities: [],
         latestActivityAt: iso(row.latest_activity_at),
@@ -207,9 +209,16 @@ function mapContact(row, identities) {
   return Object.freeze({
     activeDealCount: Number(row.activeDealCount ?? row.active_deal_count ?? 0),
     createdAt: row.createdAt ?? iso(row.created_at),
+    displayName: row.displayName ?? row.display_name ?? null,
     id: row.id,
     identities: Object.freeze([...identities]),
-    label: primary?.displayHandle ?? primary?.externalId ?? `Contato ${row.id}`,
+    // Operator-chosen name wins; the channel handle is only the fallback.
+    label:
+      row.displayName ??
+      row.display_name ??
+      primary?.displayHandle ??
+      primary?.externalId ??
+      `Contato ${row.id}`,
     latestActivityAt:
       row.latestActivityAt ?? row.updatedAt ?? iso(row.updated_at),
     provisional: Boolean(row.provisional),

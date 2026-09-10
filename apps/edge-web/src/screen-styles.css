@@ -12,7 +12,7 @@
   color: var(--color-on-accent);
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
-  background: var(--color-accent);
+  background: var(--color-accent-solid);
   border-radius: var(--radius-pill);
 }
 
@@ -540,6 +540,20 @@ details.exact summary {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.rename-form,
+.transfer-form {
+  display: grid;
+  gap: 0.5rem;
+  max-inline-size: 26rem;
+}
+
+.transfer-form {
+  margin-block: 0.75rem;
+  padding: 0.9rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
 }
 
 .button-link {

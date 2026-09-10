@@ -224,3 +224,33 @@ function requireUser(users, id) {
   assert.ok(user);
   return user;
 }
+
+test('keeps a single operational allowlist for API guards and the policy', async () => {
+  const { OPERATIONAL_ACTIONS } =
+    await import('../modules/identity-access/src/index.js');
+  // Regression guard: apps/api/src/identity-runtime.js used to keep its own
+  // copy of this set. It drifted, lost every conversation write action, and
+  // answered the whole Inbox with 403.
+  for (const action of [
+    'contact.rename',
+    'conversation.message.send',
+    'conversation.reactivate-agent',
+    'conversation.read',
+    'conversation.takeover',
+    'conversation.transfer',
+    'conversation.transition',
+    'handoff.claim',
+  ]) {
+    assert.ok(
+      OPERATIONAL_ACTIONS.has(action),
+      `${action} must stay in the shared operational allowlist`,
+    );
+  }
+  const runtimeSource = await import('node:fs/promises').then((fs) =>
+    fs.readFile('apps/api/src/identity-runtime.js', 'utf8'),
+  );
+  assert.ok(
+    !/const OPERATIONAL_ACTIONS\s*=/u.test(runtimeSource),
+    'identity-runtime must import the allowlist instead of redeclaring it',
+  );
+});

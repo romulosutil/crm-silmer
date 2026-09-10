@@ -1,38 +1,29 @@
 {
   "artboards": [
-    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1140, "title": "Mesa de Trabalho" },
-    { "file": "Inbox.dc.html", "x": 1600, "y": 0, "w": 1440, "h": 1060, "title": "Caixa de Entrada + Ficha" },
-    { "file": "Ficha.dc.html", "x": 0, "y": 1400, "w": 1440, "h": 1400, "title": "Ficha canônica" },
-    { "file": "MesaMobile.dc.html", "x": 1600, "y": 1400, "w": 390, "h": 920, "title": "Mesa no celular" }
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1060, "title": "Caixa de Entrada + Ficha" },
+    { "file": "Ficha.dc.html", "x": 1600, "y": 0, "w": 1440, "h": 1280, "title": "Ficha do pedido" }
   ],
   "annotations": [
     {
-      "id": "nota-mesa",
-      "x": 0,
-      "y": -190,
-      "w": 640,
-      "text": "MESA DE TRABALHO — substitui o Kanban.\nUma pergunta só: de quem é a bola. 4 colunas, 2 filtros, 3 grupos.\nCortados do MVP: KPIs, coluna de marcos, coluna de valor, 3 chips de filtro."
-    },
-    {
       "id": "nota-inbox",
-      "x": 1600,
-      "y": -190,
+      "x": 0,
+      "y": -210,
       "w": 640,
-      "text": "CAIXA DE ENTRADA — mesma ficha, do lado da conversa.\nAssumir tira o agente da conversa; por isso o composer fica bloqueado antes disso.\nCortados: filtro de canal (só existe WhatsApp) e a régua de marcos no painel."
+      "text": "CAIXA DE ENTRADA — a única tela do MVP.\nO filtro \"Aguardando vendedor\" + ordenação por tempo parado faz o trabalho de triagem que seria da Mesa de Trabalho. O painel da direita é leitura; editar acontece na ficha."
     },
     {
       "id": "nota-ficha",
-      "x": 0,
-      "y": 1230,
+      "x": 1600,
+      "y": -210,
       "w": 640,
-      "text": "FICHA CANÔNICA — fonte da verdade; o PDF (v1 ou v2) é só render de saída.\nSeções completas viram uma linha; abertas só as que têm pendência.\nCortados: cards de marcos e de histórico. Sobrou uma coluna: Próxima ação."
+      "text": "FICHA DO PEDIDO — coluna única, edição por seção (um form, um Salvar).\nSeções completas viram uma linha. O banner no topo diz o que trava.\nA ficha é a fonte da verdade; o PDF é render de saída."
     },
     {
-      "id": "nota-mobile",
-      "x": 1600,
-      "y": 1230,
-      "w": 420,
-      "text": "MESA NO CELULAR — cartão com % , motivo da parada e um botão. Nada mais."
+      "id": "nota-cortes",
+      "x": 0,
+      "y": 1180,
+      "w": 900,
+      "text": "FORA DO MVP (P2): tela Mesa de Trabalho · marcos visuais (PRO/ESP/EST/LOG/ORÇ/PAG) · anel e barra de completude · histórico de quem preencheu · coluna \"Próxima ação\" · edição campo a campo · artboard de celular (o CSS do app já é responsivo).\n\nENTRA NO MVP: desbloquear as ações do inbox (403 da allowlist duplicada) · GET/PATCH da ficha · painel de ficha · página da ficha com edição por seção · diálogo de orçamento · estado \"Aguardando vendedor\" · apagar kanban-view.js e a rota /negocios."
     }
   ],
   "launch": { "view": "canvas" }

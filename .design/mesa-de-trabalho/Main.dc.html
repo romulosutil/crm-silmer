@@ -20,92 +20,80 @@
     a { color: #5b3fd1; text-underline-offset: 0.2em; }
     a:hover { color: #4a31ad; }
     .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-block-size: 100%; }
-    .sidebar {
-      display: flex; flex-direction: column; gap: 2rem; padding: 1rem;
-      background: #ffffff; border-inline-end: 1px solid #e6e0fa;
-    }
+    .sidebar { display: flex; flex-direction: column; gap: 2rem; padding: 1rem; background: #ffffff; border-inline-end: 1px solid #e6e0fa; }
     .brand { display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.4rem 0.3rem; text-decoration: none; }
     .brand-word { color: #0c042d; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.055em; }
     .brand-word span { color: #ff5b01; }
-    .product-label {
-      padding-inline-start: 0.55rem; color: #625b75; font-size: 0.72rem; font-weight: 600;
-      letter-spacing: 0.13em; border-inline-start: 1px solid #cfc7ee;
-    }
+    .product-label { padding-inline-start: 0.55rem; color: #625b75; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.13em; border-inline-start: 1px solid #cfc7ee; }
     .nav { display: grid; gap: 0.35rem; }
-    .nav a {
-      display: flex; align-items: center; gap: 0.75rem; min-block-size: 44px; padding: 0.7rem;
-      color: #1b1530; font-size: 0.9rem; font-weight: 500; text-decoration: none; border-radius: 0.35rem;
-    }
+    .nav a { display: flex; align-items: center; gap: 0.75rem; min-block-size: 44px; padding: 0.7rem; color: #1b1530; font-size: 0.9rem; font-weight: 500; text-decoration: none; border-radius: 0.35rem; }
     .nav a[aria-current] { background: #e6e0fa; border-inline-start: 3px solid #ff5b01; font-weight: 600; }
     .nav svg { inline-size: 1.25rem; block-size: 1.25rem; fill: currentColor; }
-    .topbar {
-      display: flex; align-items: center; justify-content: flex-end; gap: 1.5rem; min-block-size: 64px;
-      padding: 0.6rem 2.25rem; background: #f7f6fb; border-block-end: 1px solid #d8d4e4;
-    }
+    .nav-count { display: grid; place-items: center; min-inline-size: 1.35rem; block-size: 1.35rem; margin-inline-start: auto; padding-inline: 0.3rem; color: #0c042d; font-size: 0.7rem; font-weight: 700; background: #ff5b01; border-radius: 999px; }
+    .topbar { display: flex; align-items: center; justify-content: flex-end; gap: 1.5rem; min-block-size: 64px; padding: 0.6rem 2.25rem; background: #f7f6fb; border-block-end: 1px solid #d8d4e4; }
     .topbar-title { margin: 0 auto 0 0; color: #625b75; font-size: 0.875rem; }
     .live { display: inline-flex; align-items: center; gap: 0.45rem; color: #146c43; font-size: 0.8rem; font-weight: 600; }
     .theme { display: inline-flex; gap: 0.2rem; padding: 0.2rem; background: #f0eef8; border: 1px solid #d8d4e4; border-radius: 999px; }
     .theme span { min-block-size: 32px; padding: 0 0.7rem; display: grid; place-items: center; color: #625b75; font-size: 0.75rem; font-weight: 600; border-radius: 999px; }
     .theme span[data-on] { color: #1b1530; background: #ffffff; box-shadow: 0 0.75rem 2rem rgb(40 20 100 / 12%); }
     .page { padding: 2.25rem; }
-    .page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem; margin-block-end: 1.5rem; }
+    .page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem; margin-block-end: 1.25rem; }
     .eyebrow { margin: 0 0 0.4rem; color: #5b3fd1; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
     h1 { margin: 0 0 0.45rem; font-size: 2rem; line-height: 1.08; letter-spacing: -0.035em; }
     .page-heading p:last-child { max-inline-size: 65ch; margin: 0; color: #625b75; font-size: 0.9rem; }
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; min-block-size: 44px; padding: 0.6rem 0.9rem;
-      color: #1b1530; font-size: 0.875rem; font-weight: 600; background: #f0eef8; border: 1px solid #d8d4e4; border-radius: 0.35rem;
-    }
-    .btn-sm { min-block-size: 34px; padding: 0.3rem 0.7rem; font-size: 0.8rem; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-block-size: 44px; padding: 0.6rem 0.9rem; color: #1b1530; font-size: 0.875rem; font-weight: 600; background: #f0eef8; border: 1px solid #d8d4e4; border-radius: 0.35rem; }
+    .btn-primary { color: #0c042d; background: #ff5b01; border-color: #ff5b01; }
+    .btn-quiet { background: transparent; }
     .filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-block-end: 1rem; }
-    .chip {
-      display: inline-flex; align-items: center; min-block-size: 40px; padding: 0.4rem 0.85rem; color: #625b75;
-      font-size: 0.85rem; font-weight: 600; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 999px;
-    }
-    .chip[aria-pressed='true'] { color: #1b1530; background: #e8e3fa; border-color: #5b3fd1; }
-    .search {
-      display: flex; align-items: center; gap: 0.5rem; min-block-size: 40px; inline-size: 22rem; padding: 0.4rem 0.75rem;
-      color: #625b75; font-size: 0.85rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.35rem;
-    }
+    .search { display: flex; align-items: center; gap: 0.5rem; min-block-size: 40px; inline-size: 20rem; padding: 0.4rem 0.75rem; color: #625b75; font-size: 0.85rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.35rem; }
+    .sel { display: inline-flex; align-items: center; gap: 0.6rem; min-block-size: 40px; padding: 0.4rem 0.75rem; font-size: 0.85rem; background: #ffffff; border: 1px solid #5b3fd1; border-radius: 0.35rem; }
+    .sel b { font-weight: 600; }
+    .sel svg { inline-size: 0.8rem; block-size: 0.8rem; }
     .filter-summary { margin: 0 0 0 auto; color: #625b75; font-size: 0.8rem; }
-    .card { background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.875rem; overflow: hidden; }
-    .col-head, .row {
-      display: grid; grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1.2fr) 116px 92px;
-      align-items: center; gap: 1.25rem; padding: 0 1.25rem;
-    }
-    .col-head {
-      min-block-size: 40px; color: #625b75; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em;
-      text-transform: uppercase; background: #f0eef8; border-block-end: 1px solid #d8d4e4;
-    }
-    .group {
-      display: flex; align-items: center; gap: 0.6rem; min-block-size: 44px; padding: 0 1.25rem;
-      background: #f7f6fb; border-block: 1px solid #e8e5ef;
-    }
-    .group b { font-size: 0.875rem; font-weight: 700; }
-    .group .count {
-      display: grid; place-items: center; min-inline-size: 1.35rem; block-size: 1.35rem; padding-inline: 0.3rem;
-      color: #0c042d; font-size: 0.7rem; font-weight: 700; font-variant-numeric: tabular-nums; background: #ff5b01; border-radius: 999px;
-    }
-    .group .count[data-tone='quiet'] { color: #1b1530; background: #d8d4e4; }
-    .group small { margin-inline-start: auto; color: #625b75; font-size: 0.75rem; }
-    .dot { inline-size: 0.55rem; block-size: 0.55rem; border-radius: 50%; }
-    .row { min-block-size: 68px; border-block-end: 1px solid #e8e5ef; }
-    .ring { position: relative; inline-size: 44px; block-size: 44px; }
-    .ring span {
-      position: absolute; inset: 0; display: grid; place-items: center;
-      font-size: 0.72rem; font-weight: 700; font-variant-numeric: tabular-nums;
-    }
-    .who { display: grid; gap: 0.1rem; }
-    .who b { font-size: 0.9rem; font-weight: 700; }
-    .who small { color: #625b75; font-size: 0.78rem; }
-    .why { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
-    .why svg { flex: none; inline-size: 1.05rem; block-size: 1.05rem; }
-    .why span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .aged { font-size: 0.85rem; font-variant-numeric: tabular-nums; }
-    .aged[data-hot='true'] { color: #a12a2a; font-weight: 600; }
-    .act { text-align: end; }
-    .foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.9rem 1.25rem; background: #f7f6fb; }
-    .foot p { margin: 0; color: #625b75; font-size: 0.8rem; }
+    .inbox { display: grid; grid-template-columns: 19rem minmax(0, 1fr) 19rem; align-items: start; gap: 1rem; }
+    .inbox-list { display: grid; margin: 0; padding: 0; overflow: hidden; list-style: none; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.875rem; }
+    .conversation-row { display: grid; gap: 0.3rem; padding: 0.8rem 0.9rem; border-inline-start: 0.2rem solid transparent; border-block-end: 1px solid #e8e5ef; }
+    .conversation-row[aria-current='true'] { background: #e8e3fa; border-inline-start-color: #ff5b01; }
+    .conv-top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.35rem; }
+    .conv-name { font-size: 0.875rem; font-weight: 700; }
+    .conv-time { color: #625b75; font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+    .conv-time[data-hot='true'] { color: #a12a2a; font-weight: 600; }
+    .conv-snippet { color: #625b75; font-size: 0.82rem; }
+    .conv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+    .badge { display: inline-flex; align-items: center; padding: 0.2rem 0.5rem; color: #625b75; font-size: 0.72rem; font-weight: 600; background: #f0eef8; border-radius: 999px; }
+    .badge[data-tone='error'] { color: #a12a2a; background: #fdecec; }
+    .badge[data-tone='info'] { color: #205aa7; background: #eaf2ff; }
+    .badge[data-tone='success'] { color: #146c43; background: #e7f6ed; }
+    .surface { padding: 1.25rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.625rem; }
+    .conv-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-block-end: 1rem; border-block-end: 1px solid #d8d4e4; }
+    .section-kicker { margin: 0 0 0.35rem; color: #625b75; font-size: 0.73rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+    .conv-head h2 { margin: 0 0 0.25rem; font-size: 1.25rem; }
+    .conv-identity { margin: 0; color: #625b75; font-size: 0.875rem; }
+    .conv-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .thread { display: grid; gap: 0.8rem; margin: 0; padding: 1.15rem 0 0; list-style: none; }
+    .message { max-inline-size: 34rem; padding: 0.7rem 0.85rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.875rem; }
+    .message[data-from='cliente'] { background: #f0eef8; }
+    .message[data-from='agente'] { border-inline-start: 0.2rem solid #5b3fd1; }
+    .msg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-block-end: 0.25rem; color: #625b75; font-size: 0.72rem; font-weight: 600; }
+    .message p { margin: 0; font-size: 0.875rem; }
+    .stopcard { display: flex; align-items: center; gap: 0.6rem; margin-block-start: 0.8rem; padding: 0.75rem 0.9rem; color: #7a4a00; font-size: 0.8rem; background: #fff4d6; border: 1px solid #7a4a00; border-inline-start-width: 0.25rem; border-radius: 0.625rem; }
+    .composer { margin-block-start: 1.15rem; padding-block-start: 1rem; border-block-start: 1px solid #d8d4e4; }
+    .composer .box { min-block-size: 5rem; padding: 0.7rem 0.75rem; color: #9a94ac; font-size: 0.875rem; background: #f7f6fb; border: 1px solid #d8d4e4; border-radius: 0.625rem; }
+    .composer-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-block-start: 0.6rem; }
+    .composer-row p { margin: 0; color: #625b75; font-size: 0.75rem; }
+    .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-block-end: 0.75rem; }
+    .panel-head h3 { margin: 0; font-size: 1rem; }
+    .panel-head p { margin: 0; color: #625b75; font-size: 0.75rem; }
+    .state { display: grid; gap: 0.25rem; padding: 0.7rem 0.8rem; background: #fff4d6; border: 1px solid #7a4a00; border-inline-start: 0.2rem solid #7a4a00; border-radius: 0.375rem; }
+    .state b { color: #7a4a00; font-size: 0.82rem; }
+    .state small { color: #7a4a00; font-size: 0.72rem; }
+    .mini { display: grid; gap: 0.1rem; margin: 0.75rem 0 0; }
+    .mini div { display: grid; gap: 0.1rem; padding: 0.5rem 0.4rem; border-block-end: 1px solid #e8e5ef; }
+    .mini dt { color: #625b75; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    .mini dd { margin: 0; font-size: 0.85rem; font-weight: 500; }
+    .mini dd[data-empty='true'] { color: #9a94ac; font-weight: 400; font-style: italic; }
+    .side-actions { display: grid; gap: 0.5rem; margin-block-start: 1rem; }
+    .side-actions .btn { inline-size: 100%; }
   </style>
 </helmet>
 
@@ -117,8 +105,7 @@
     </a>
     <nav class="nav">
       <a href="#"><svg viewBox="0 0 24 24"><path d="M4 13h6v7H4zm10-9h6v16h-6zM4 4h6v5H4z" /></svg><span>Dashboard</span></a>
-      <a href="#"><svg viewBox="0 0 24 24"><path d="M3 5h18v13H7l-4 3zm2 2v10l1.2-1H19V7z" /></svg><span>Caixa de Entrada</span></a>
-      <a href="#" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 4h18v3H3zm0 6h18v3H3zm0 6h12v3H3z" /></svg><span>Mesa de Trabalho</span></a>
+      <a href="#" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 5h18v13H7l-4 3zm2 2v10l1.2-1H19V7z" /></svg><span>Caixa de Entrada</span><span class="nav-count">4</span></a>
       <a href="#"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-4 0-8 2-8 4.5V21h16v-2.5C20 16 16 14 12 14z" /></svg><span>Clientes</span></a>
       <a href="#"><svg viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm7 1a3 3 0 1 0-3-3 3 3 0 0 0 3 3zM3 20v-1.5C3 16.5 6 15 9 15s6 1.5 6 3.5V20zm14 0v-1.5c0-1.3-.7-2.4-1.8-3.2 2.6.3 4.8 1.6 4.8 3.2V20z" /></svg><span>Usuários</span></a>
       <a href="#"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-6 1.8-6 4v2h12v-2c0-2.2-2.7-4-6-4z" /></svg><span>Conta</span></a>
@@ -127,7 +114,7 @@
 
   <div>
     <header class="topbar">
-      <p class="topbar-title">Mesa de Trabalho</p>
+      <p class="topbar-title">Caixa de Entrada</p>
       <span class="live">Ao vivo</span>
       <div class="theme"><span data-on>Claro</span><span>Escuro</span><span>Sistema</span></div>
     </header>
@@ -135,165 +122,125 @@
     <main class="page">
       <div class="page-heading">
         <div>
-          <p class="eyebrow">Fichas em andamento</p>
-          <h1>Mesa de Trabalho</h1>
-          <p>Quem precisa agir primeiro aparece no topo. A posição é calculada pelos campos da ficha — ninguém arrasta card.</p>
+          <p class="eyebrow">Atendimento</p>
+          <h1>Caixa de Entrada</h1>
+          <p>A conversa e a ficha lado a lado. O filtro de estado mostra o que está parado esperando por você, ordenado por quem espera há mais tempo.</p>
         </div>
         <span class="btn">Atualizar</span>
       </div>
 
       <div class="filter-bar">
-        <span class="chip" aria-pressed="true">Todas</span>
-        <span class="chip">Só as minhas</span>
+        <span class="sel"><b>Estado: Aguardando vendedor</b> <svg viewBox="0 0 24 24" fill="none" stroke="#625b75" stroke-width="2"><path d="m6 9 6 6 6-6" stroke-linecap="round" /></svg></span>
         <span class="search">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#625b75" stroke-width="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" stroke-linecap="round" /></svg>
-          Buscar cliente, pedido ou telefone
+          Buscar contato ou mensagem
         </span>
-        <p class="filter-summary">32 fichas abertas · atualizado 14:32</p>
+        <p class="filter-summary">4 esperando você · 32 conversas abertas</p>
       </div>
 
-      <div class="card">
-        <div class="col-head">
-          <span>Ficha</span><span>Cliente e pedido</span><span>Por que parou</span><span>Parada há</span><span></span>
-        </div>
+      <div class="inbox">
+        <ul class="inbox-list">
+          <li class="conversation-row" aria-current="true">
+            <span class="conv-top"><span class="conv-name">Colégio Ápice</span><span class="conv-time">2h 14min</span></span>
+            <span class="conv-snippet">Quanto fica o total desse pedido?</span>
+            <span class="conv-meta"><span class="badge" data-tone="error">Perguntou o valor</span></span>
+          </li>
+          <li class="conversation-row">
+            <span class="conv-top"><span class="conv-name">Time Fênix Futsal</span><span class="conv-time" data-hot="true">1d 03h</span></span>
+            <span class="conv-snippet">É um modelo com recorte diagonal, tem?</span>
+            <span class="conv-meta"><span class="badge" data-tone="error">Fora do catálogo</span></span>
+          </li>
+          <li class="conversation-row">
+            <span class="conv-top"><span class="conv-name">Loja Vitória Sports</span><span class="conv-time" data-hot="true">5h 02min</span></span>
+            <span class="conv-snippet">São 40 no total mesmo, pode confirmar</span>
+            <span class="conv-meta"><span class="badge" data-tone="error">Grade divergente</span></span>
+          </li>
+          <li class="conversation-row">
+            <span class="conv-top"><span class="conv-name">Atlética Medicina UFBA</span><span class="conv-time">47min</span></span>
+            <span class="conv-snippet">Queria falar com a Marina, ela me atendeu ano passado</span>
+            <span class="conv-meta"><span class="badge" data-tone="error">Pediu um vendedor</span></span>
+          </li>
+          <li class="conversation-row">
+            <span class="conv-top"><span class="conv-name">Igreja Nova Aliança</span><span class="conv-time">12min</span></span>
+            <span class="conv-snippet">Segue o comprovante do PIX</span>
+            <span class="conv-meta"><span class="badge" data-tone="info">Conferir PIX</span></span>
+          </li>
+          <li class="conversation-row">
+            <span class="conv-top"><span class="conv-name">Buffet Casa Rosa</span><span class="conv-time">09:14</span></span>
+            <span class="conv-snippet">Perfeito, obrigada!</span>
+            <span class="conv-meta"><span class="badge" data-tone="success">Pedido gerado</span></span>
+          </li>
+        </ul>
 
-        <div class="group">
-          <span class="dot" style="background: #ff5b01"></span>
-          <b>Aguardando vendedor</b>
-          <span class="count">4</span>
-          <small>a bola é sua — o agente não avança sozinho daqui</small>
-        </div>
+        <section class="surface">
+          <div class="conv-head">
+            <div>
+              <p class="section-kicker">WhatsApp</p>
+              <h2>Colégio Ápice</h2>
+              <p class="conv-identity">+55 71 98812-4477 · agente ativo</p>
+            </div>
+            <div class="conv-actions">
+              <span class="btn btn-primary">Assumir atendimento</span>
+              <span class="btn btn-quiet">Ver contato</span>
+            </div>
+          </div>
 
-        <div class="row">
-          <div class="ring">
-            <svg viewBox="0 0 44 44" width="44" height="44"><circle cx="22" cy="22" r="19" fill="none" stroke="#e8e5ef" stroke-width="4" /><circle cx="22" cy="22" r="19" fill="none" stroke="#5b3fd1" stroke-width="4" stroke-linecap="round" stroke-dasharray="93.1 119.4" transform="rotate(-90 22 22)" /></svg>
-            <span>78%</span>
-          </div>
-          <div class="who"><b>Colégio Ápice</b><small>#07-CRM · Uniforme escolar 2027 · Marina</small></div>
-          <div class="why">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#7a4a00" stroke-width="2"><path d="M12 3v10" stroke-linecap="round" /><circle cx="12" cy="18" r="1.2" fill="#7a4a00" stroke="none" /></svg>
-            <span>Cliente perguntou o valor</span>
-          </div>
-          <div class="aged">2h 14min</div>
-          <div class="act"><span class="btn btn-sm">Abrir</span></div>
-        </div>
+          <ol class="thread">
+            <li class="message" data-from="agente">
+              <div class="msg-head"><span>Vendedor Silmer (IA)</span><span>13:58</span></div>
+              <p>Fechando a logística: entrega na Av. Paralela, 4200, em Salvador/BA, uso próprio. Confere?</p>
+            </li>
+            <li class="message" data-from="cliente">
+              <div class="msg-head"><span>Cliente</span><span>14:02</span></div>
+              <p>Isso mesmo. A gente precisa até dia 20/10.</p>
+            </li>
+            <li class="message" data-from="agente">
+              <div class="msg-head"><span>Vendedor Silmer (IA)</span><span>14:03</span></div>
+              <p>Anotei 20/10 como data desejada. A confirmação de prazo é feita pelo time depois da análise de produção.</p>
+            </li>
+            <li class="message" data-from="cliente">
+              <div class="msg-head"><span>Cliente</span><span>14:06</span></div>
+              <p>Quanto fica o total desse pedido?</p>
+            </li>
+          </ol>
 
-        <div class="row">
-          <div class="ring">
-            <svg viewBox="0 0 44 44" width="44" height="44"><circle cx="22" cy="22" r="19" fill="none" stroke="#e8e5ef" stroke-width="4" /><circle cx="22" cy="22" r="19" fill="none" stroke="#5b3fd1" stroke-width="4" stroke-linecap="round" stroke-dasharray="77.6 119.4" transform="rotate(-90 22 22)" /></svg>
-            <span>65%</span>
+          <div class="stopcard">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#7a4a00" stroke-width="2"><path d="M12 3v10" stroke-linecap="round" /><circle cx="12" cy="18" r="1.2" fill="#7a4a00" stroke="none" /></svg>
+            <span>Agente parou: o cliente pediu valor. Ele não responde preço e não segue sozinho a partir daqui.</span>
           </div>
-          <div class="who"><b>Atlética Medicina UFBA</b><small>#12-CRM · Camisetas de calourada · sem vendedor</small></div>
-          <div class="why">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#205aa7" stroke-width="2"><path d="M4 6h16v10H9l-5 3z" stroke-linejoin="round" /></svg>
-            <span>Cliente pediu para falar com a Marina</span>
-          </div>
-          <div class="aged">47min</div>
-          <div class="act"><span class="btn btn-sm">Abrir</span></div>
-        </div>
 
-        <div class="row">
-          <div class="ring">
-            <svg viewBox="0 0 44 44" width="44" height="44"><circle cx="22" cy="22" r="19" fill="none" stroke="#e8e5ef" stroke-width="4" /><circle cx="22" cy="22" r="19" fill="none" stroke="#a12a2a" stroke-width="4" stroke-linecap="round" stroke-dasharray="69.2 119.4" transform="rotate(-90 22 22)" /></svg>
-            <span>58%</span>
+          <div class="composer">
+            <div class="box">Escreva a resposta ao cliente…</div>
+            <div class="composer-row">
+              <p>Ao assumir, o agente sai da conversa e ela passa a ser sua.</p>
+              <span class="btn btn-primary">Assumir e responder</span>
+            </div>
           </div>
-          <div class="who"><b>Loja Vitória Sports</b><small>#09-CRM · Revenda dry fit · Ricardo</small></div>
-          <div class="why">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#a12a2a" stroke-width="2"><path d="M12 4 3 20h18z" stroke-linejoin="round" /><path d="M12 10v4" stroke-linecap="round" /></svg>
-            <span>Grade soma 45; cliente informou 40 peças</span>
-          </div>
-          <div class="aged" data-hot="true">5h 02min</div>
-          <div class="act"><span class="btn btn-sm">Abrir</span></div>
-        </div>
+        </section>
 
-        <div class="row">
-          <div class="ring">
-            <svg viewBox="0 0 44 44" width="44" height="44"><circle cx="22" cy="22" r="19" fill="none" stroke="#e8e5ef" stroke-width="4" /><circle cx="22" cy="22" r="19" fill="none" stroke="#5b3fd1" stroke-width="4" stroke-linecap="round" stroke-dasharray="48.9 119.4" transform="rotate(-90 22 22)" /></svg>
-            <span>41%</span>
+        <section class="surface">
+          <div class="panel-head">
+            <h3>Ficha #07-CRM</h3>
+            <p>Uniforme escolar</p>
           </div>
-          <div class="who"><b>Time Fênix Futsal</b><small>#15-CRM · Uniforme completo · sem vendedor</small></div>
-          <div class="why">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#7a4a00" stroke-width="2"><path d="M12 3v10" stroke-linecap="round" /><circle cx="12" cy="18" r="1.2" fill="#7a4a00" stroke="none" /></svg>
-            <span>Modelo fora do catálogo</span>
-          </div>
-          <div class="aged" data-hot="true">1d 03h</div>
-          <div class="act"><span class="btn btn-sm">Abrir</span></div>
-        </div>
 
-        <div class="group">
-          <span class="dot" style="background: #5b3fd1"></span>
-          <b>Aguardando conferência do PIX</b>
-          <span class="count">2</span>
-          <small>comprovante recebido; ninguém marca pago automaticamente</small>
-        </div>
+          <div class="state">
+            <b>Faltam o valor final e a condição de pagamento</b>
+            <small>14 de 18 campos obrigatórios preenchidos</small>
+          </div>
 
-        <div class="row">
-          <div class="ring">
-            <svg viewBox="0 0 44 44" width="44" height="44"><circle cx="22" cy="22" r="19" fill="none" stroke="#e8e5ef" stroke-width="4" /><circle cx="22" cy="22" r="19" fill="none" stroke="#146c43" stroke-width="4" stroke-linecap="round" stroke-dasharray="114.6 119.4" transform="rotate(-90 22 22)" /></svg>
-            <span>96%</span>
-          </div>
-          <div class="who"><b>Igreja Nova Aliança</b><small>#03-CRM · Camisetas do encontro · R$ 3.240,00</small></div>
-          <div class="why">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#205aa7" stroke-width="2"><path d="M5 4h9l5 5v11H5z" stroke-linejoin="round" /><path d="M8 13h8M8 16h5" stroke-linecap="round" /></svg>
-            <span>Comprovante anexado — conferir valor</span>
-          </div>
-          <div class="aged">12min</div>
-          <div class="act"><span class="btn btn-sm">Abrir</span></div>
-        </div>
+          <dl class="mini">
+            <div><dt>Itens e grade</dt><dd>2 itens · 150 peças</dd></div>
+            <div><dt>Malha e cores</dt><dd>Dry fit · branco com mangas verdes</dd></div>
+            <div><dt>Estampa</dt><dd>Sublimação total · peito e costas</dd></div>
+            <div><dt>Entrega</dt><dd>Salvador/BA · desejada 20/10</dd></div>
+            <div><dt>Valor final</dt><dd data-empty="true">a registrar</dd></div>
+          </dl>
 
-        <div class="row">
-          <div class="ring">
-            <svg viewBox="0 0 44 44" width="44" height="44"><circle cx="22" cy="22" r="19" fill="none" stroke="#e8e5ef" stroke-width="4" /><circle cx="22" cy="22" r="19" fill="none" stroke="#146c43" stroke-width="4" stroke-linecap="round" stroke-dasharray="114.6 119.4" transform="rotate(-90 22 22)" /></svg>
-            <span>96%</span>
+          <div class="side-actions">
+            <span class="btn">Abrir ficha</span>
           </div>
-          <div class="who"><b>Buffet Casa Rosa</b><small>#05-CRM · Aventais e camisetas · R$ 1.180,00</small></div>
-          <div class="why">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#205aa7" stroke-width="2"><path d="M5 4h9l5 5v11H5z" stroke-linejoin="round" /><path d="M8 13h8M8 16h5" stroke-linecap="round" /></svg>
-            <span>Comprovante anexado — conferir valor</span>
-          </div>
-          <div class="aged">1h 20min</div>
-          <div class="act"><span class="btn btn-sm">Abrir</span></div>
-        </div>
-
-        <div class="group">
-          <span class="dot" style="background: #a39dbe"></span>
-          <b>Com o agente ou com o cliente</b>
-          <span class="count" data-tone="quiet">26</span>
-          <small>sem ação humana necessária agora</small>
-        </div>
-
-        <div class="row">
-          <div class="ring">
-            <svg viewBox="0 0 44 44" width="44" height="44"><circle cx="22" cy="22" r="19" fill="none" stroke="#e8e5ef" stroke-width="4" /><circle cx="22" cy="22" r="19" fill="none" stroke="#5b3fd1" stroke-width="4" stroke-linecap="round" stroke-dasharray="39.4 119.4" transform="rotate(-90 22 22)" /></svg>
-            <span>33%</span>
-          </div>
-          <div class="who"><b>Condomínio Vila Alta</b><small>#18-CRM · Camisetas de portaria</small></div>
-          <div class="why">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#625b75" stroke-width="2"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" stroke-linecap="round" /></svg>
-            <span>Agente coletando a grade por tamanho</span>
-          </div>
-          <div class="aged">3min</div>
-          <div class="act"><span class="btn btn-sm">Abrir</span></div>
-        </div>
-
-        <div class="row">
-          <div class="ring">
-            <svg viewBox="0 0 44 44" width="44" height="44"><circle cx="22" cy="22" r="19" fill="none" stroke="#e8e5ef" stroke-width="4" /><circle cx="22" cy="22" r="19" fill="none" stroke="#5b3fd1" stroke-width="4" stroke-linecap="round" stroke-dasharray="60.9 119.4" transform="rotate(-90 22 22)" /></svg>
-            <span>51%</span>
-          </div>
-          <div class="who"><b>Sindicato dos Motoristas</b><small>#20-CRM · Camisetas de campanha</small></div>
-          <div class="why">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#625b75" stroke-width="2"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" stroke-linecap="round" /></svg>
-            <span>Cliente ainda não enviou a arte</span>
-          </div>
-          <div class="aged">6h 10min</div>
-          <div class="act"><span class="btn btn-sm">Abrir</span></div>
-        </div>
-
-        <div class="foot">
-          <p>Mostrando 8 de 32 fichas abertas.</p>
-          <span class="btn btn-sm">Ver mais</span>
-        </div>
+        </section>
       </div>
     </main>
   </div>

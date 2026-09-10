@@ -10,7 +10,7 @@ import {
 
 const NOW = new Date('2026-09-02T12:00:00.000Z');
 const ATTENDANT = Object.freeze({
-  functionName: 'Atendimento',
+  functionName: 'Vendedor',
   id: 'user-attendant-1',
   kind: 'human',
 });
@@ -138,7 +138,7 @@ test('merges and unmerges Identity to Contact reversibly with minimal audit enve
   assert.doesNotMatch(JSON.stringify(audits), /@cliente|5511999999999/u);
 });
 
-test('allows only Atendimento or Vendedor humans to merge identities', async () => {
+test('allows only Vendedor humans to merge identities', async () => {
   const { service } = createHarness();
   const source = await service.resolveInboundIdentity(inboundIdentity());
   const target = await service.resolveInboundIdentity(
@@ -154,7 +154,7 @@ test('allows only Atendimento or Vendedor humans to merge identities', async () 
   };
 
   for (const actor of [
-    { functionName: 'Atendimento', id: 'assistant-1', kind: 'assistant' },
+    { functionName: 'Vendedor', id: 'assistant-1', kind: 'assistant' },
     { functionName: 'Admin', id: 'user-admin-1', kind: 'human' },
   ]) {
     await assert.rejects(

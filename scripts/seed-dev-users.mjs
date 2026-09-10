@@ -3,41 +3,26 @@ import { randomUUID } from 'node:crypto';
 export const DEVELOPMENT_PASSWORD = 'Desenvolvimento!2026';
 export const DEVELOPMENT_USERS = Object.freeze([
   Object.freeze({
-    capabilities: Object.freeze(['COMMERCIAL_ADMIN']),
     email: 'admin@crm-silmer.local',
-    functionName: 'Atendimento',
     label: 'Admin comercial',
+    name: 'Admin Comercial',
   }),
   Object.freeze({
-    capabilities: Object.freeze([]),
-    email: 'atendimento@crm-silmer.local',
-    functionName: 'Atendimento',
-    label: 'Atendimento',
-  }),
-  Object.freeze({
-    capabilities: Object.freeze([]),
     email: 'vendedor@crm-silmer.local',
-    functionName: 'Vendedor',
     label: 'Vendedor',
+    name: 'Vendedor Silmer',
   }),
   Object.freeze({
-    capabilities: Object.freeze(['PRIVACY_OFFICER']),
-    email: 'privacidade@crm-silmer.local',
-    functionName: 'Atendimento',
-    label: 'Encarregado de privacidade',
-  }),
-  Object.freeze({
-    capabilities: Object.freeze(['TECHNICAL_PRIVACY_EXECUTOR']),
-    email: 'privacidade-tecnica@crm-silmer.local',
-    functionName: 'Atendimento',
-    label: 'Executor técnico de privacidade',
+    email: 'vendedora@crm-silmer.local',
+    label: 'Vendedora',
+    name: 'Vendedora Silmer',
   }),
 ]);
 
 /**
  * Seeds only local, synthetic identities through the public identity API. It is
- * safe to call on every `npm run dev`: existing accounts are preserved and
- * capabilities are added only when missing.
+ * safe to call on every `npm run dev`: existing accounts are preserved and only
+ * missing ones are created.
  *
  * @param {{apiOrigin: string, bootstrapToken: string, origin: string}} options
  */
@@ -52,7 +37,7 @@ export async function seedDevelopmentUsers({
     '/api/v1/bootstrap/identity',
     {
       email: admin.email,
-      functionName: admin.functionName,
+      name: admin.name,
       password: DEVELOPMENT_PASSWORD,
       reason: 'Criação automática de conta local de desenvolvimento',
     },
@@ -64,52 +49,27 @@ export async function seedDevelopmentUsers({
   const adminSession = await request.login(admin.email, DEVELOPMENT_PASSWORD);
   if (!adminSession)
     throw new Error(`Could not sign in local user ${admin.email}`);
+
   for (const user of DEVELOPMENT_USERS.slice(1)) {
     const existing = await request.login(
       user.email,
       DEVELOPMENT_PASSWORD,
       false,
     );
-    const invited = existing
-      ? null
-      : await inviteAndAccept(request, adminSession, user);
-    const session = existing ?? invited;
+    if (existing) continue;
+    await request.post(
+      '/api/v1/users',
+      {
+        email: user.email,
+        name: user.name,
+        password: DEVELOPMENT_PASSWORD,
+        reason: 'Criação automática de conta local de desenvolvimento',
+      },
+      adminSession.headers(),
+    );
+    const session = await request.login(user.email, DEVELOPMENT_PASSWORD);
     if (!session) throw new Error(`Could not create local user ${user.email}`);
-    for (const capability of user.capabilities) {
-      if (!session.user.capabilities.includes(capability)) {
-        await request.post(
-          '/api/v1/capabilities/grant',
-          {
-            capability,
-            reason: 'Configuração automática de conta local de desenvolvimento',
-            targetId: session.user.id,
-          },
-          adminSession.headers(),
-        );
-      }
-    }
   }
-}
-
-/** @param {ReturnType<typeof createClient>} request @param {Session} adminSession @param {(typeof DEVELOPMENT_USERS)[number]} user */
-async function inviteAndAccept(request, adminSession, user) {
-  const invitation = await request.post(
-    '/api/v1/invitations',
-    {
-      email: user.email,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      functionName: user.functionName,
-      reason: 'Criação automática de conta local de desenvolvimento',
-    },
-    adminSession.headers(),
-  );
-  await request.post('/api/v1/invitations/accept', {
-    password: DEVELOPMENT_PASSWORD,
-    token: invitation.body.token,
-  });
-  const session = await request.login(user.email, DEVELOPMENT_PASSWORD);
-  if (!session) throw new Error(`Could not create local user ${user.email}`);
-  return session;
 }
 
 /** @typedef {Record<string, string>} RequestHeaders */

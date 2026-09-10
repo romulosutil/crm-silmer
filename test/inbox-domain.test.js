@@ -12,7 +12,7 @@ import {
 
 const NOW = new Date('2026-09-02T12:00:00.000Z');
 const ATTENDANT = Object.freeze({
-  functionName: 'Atendimento',
+  functionName: 'Vendedor',
   id: 'user-attendant-1',
   kind: 'human',
 });
@@ -198,7 +198,7 @@ test('rejects assistant mutations and stale expectedVersion without side effects
   const received = await service.receiveInbound(inbound());
   const base = {
     actor: {
-      functionName: 'Atendimento',
+      functionName: 'Vendedor',
       id: 'assistant-1',
       kind: 'assistant',
     },
@@ -253,7 +253,7 @@ test('stores stage suggestion separately from official conversation state', asyn
   const received = await service.receiveInbound(inbound());
   const suggestion = await service.recordSuggestion({
     actor: {
-      functionName: 'Atendimento',
+      functionName: 'Vendedor',
       id: 'assistant-1',
       kind: 'assistant',
     },

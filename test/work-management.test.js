@@ -19,7 +19,7 @@ const SELLER = Object.freeze({
   kind: 'human',
 });
 const ATTENDANT = Object.freeze({
-  functionName: 'Atendimento',
+  functionName: 'Vendedor',
   id: 'attendant-1',
   kind: 'human',
 });
@@ -70,7 +70,7 @@ function harness(options = {}) {
     users: [
       { disabledAt: null, functionName: 'Vendedor', id: 'seller-1' },
       { disabledAt: null, functionName: 'Vendedor', id: 'seller-2' },
-      { disabledAt: null, functionName: 'Atendimento', id: 'attendant-1' },
+      { disabledAt: null, functionName: 'Vendedor', id: 'attendant-1' },
       {
         disabledAt: NOW.toISOString(),
         functionName: 'Vendedor',
@@ -131,14 +131,6 @@ test('claims an unassigned pre-Deal handoff once using a compatible role', async
     handoffId: 'handoff-unassigned-1',
     idempotencyKey: 'handoff-claim-key-1',
   };
-  await assert.rejects(
-    service.claimHandoff({
-      ...input,
-      actor: ATTENDANT,
-      idempotencyKey: 'handoff-claim-wrong-role',
-    }),
-    (/** @type {any} */ error) => error.code === 'WORK_FORBIDDEN',
-  );
   const first = await service.claimHandoff(input);
   const replay = await service.claimHandoff(input);
   assert.deepEqual(replay, first);
@@ -208,7 +200,7 @@ test('creates exactly one fenced handoff task atomically without leaking summary
   );
 });
 
-test('rejects stale automation, contact mismatch, disabled assignee and commercial handoff to Atendimento', async () => {
+test('rejects stale automation, contact mismatch and disabled assignee', async () => {
   await assert.rejects(
     harness().service.createHandoff(createHandoff({ automationEpoch: 1 })),
     (/** @type {any} */ error) => error.code === 'WORK_CONFLICT',
@@ -222,12 +214,6 @@ test('rejects stale automation, contact mismatch, disabled assignee and commerci
   await assert.rejects(
     harness().service.createHandoff(
       createHandoff({ assignedUserId: 'disabled-1' }),
-    ),
-    (/** @type {any} */ error) => error.code === 'WORK_INVALID',
-  );
-  await assert.rejects(
-    harness().service.createHandoff(
-      createHandoff({ assignedUserId: 'attendant-1' }),
     ),
     (/** @type {any} */ error) => error.code === 'WORK_INVALID',
   );

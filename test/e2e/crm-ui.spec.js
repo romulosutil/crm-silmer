@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 const session = {
   user: {
     id: 'operator-1',
-    functionName: 'Atendimento',
+    functionName: 'Vendedor',
     capabilities: ['COMMERCIAL_ADMIN'],
   },
 };
@@ -39,7 +39,7 @@ const contact = {
   version: 2,
 };
 const conversation = {
-  assignedUser: { functionName: 'Atendimento', id: 'operator-1' },
+  assignedUser: { functionName: 'Vendedor', id: 'operator-1' },
   automationEpoch: 2,
   automationState: 'human',
   channel: 'whatsapp',

@@ -9,7 +9,7 @@ function harness(overrides = {}) {
   const operations = {
     async authorizeRead(/** @type {any} */ input) {
       calls.push(['authorize', input]);
-      return { actor: { functionName: 'Atendimento', id: 'operator-1' } };
+      return { actor: { functionName: 'Vendedor', id: 'operator-1' } };
     },
     async getContact(/** @type {any} */ input) {
       calls.push(['contact', input]);

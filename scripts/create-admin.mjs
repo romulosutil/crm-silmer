@@ -21,17 +21,21 @@ const { values } = parseArgs({
   },
 });
 
-for (const field of ['name', 'email', 'password']) {
-  if (!values[field]?.trim()) {
-    throw new Error(`--${field} is required`);
-  }
-}
-
-const email = values.email.trim();
-const name = values.name.trim();
+const email = requireOption(values.email, 'email').trim();
+const name = requireOption(values.name, 'name').trim();
+// Deliberately not trimmed: leading or trailing spaces are part of a password.
+const password = requireOption(values.password, 'password');
 
 if (!email.includes('@')) {
   throw new Error('--email must contain @');
+}
+
+/** @param {string | undefined} value @param {string} field */
+function requireOption(value, field) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`--${field} is required`);
+  }
+  return value;
 }
 
 const database = createDatabase({
@@ -42,7 +46,7 @@ const database = createDatabase({
 
 try {
   const id = `user-${randomBytes(16).toString('hex')}`;
-  const passwordHash = await hashPassword(values.password);
+  const passwordHash = await hashPassword(password);
 
   await database.transaction(async (client) => {
     const existing = await client.query(

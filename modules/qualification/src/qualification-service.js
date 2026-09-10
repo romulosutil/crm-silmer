@@ -342,8 +342,7 @@ function validateCommand(input) {
     throw new TypeError('expectedVersion must be a positive integer');
   }
   const human =
-    input.actor?.kind === 'human' &&
-    input.actor.functionName === 'Vendedor';
+    input.actor?.kind === 'human' && input.actor.functionName === 'Vendedor';
   const automation =
     input.actor?.kind === 'AUTOMATION_EXECUTOR' &&
     input.actor.id === 'AUTOMATION_EXECUTOR';

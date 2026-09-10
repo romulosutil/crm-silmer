@@ -41,16 +41,18 @@ if (connectionString) {
       /** @type {Array<{
        *   capabilities: Array<'COMMERCIAL_ADMIN'>,
        *   email: string,
-       *   functionName: 'Atendimento'|'Vendedor',
+       *   functionName: 'Vendedor',
        *   id: string,
+       *   name: string,
        *   passwordHash: string,
        * }>} */
       const bootstrapUsers = [
         {
           capabilities: ['COMMERCIAL_ADMIN'],
           email: 'admin-one@example.test',
-          functionName: 'Atendimento',
+          functionName: 'Vendedor',
           id: 'admin-one',
+          name: 'Admin Um',
           passwordHash: '$argon2id$v=19$fixture-one',
         },
         {
@@ -58,6 +60,7 @@ if (connectionString) {
           email: 'admin-two@example.test',
           functionName: 'Vendedor',
           id: 'admin-two',
+          name: 'Admin Dois',
           passwordHash: '$argon2id$v=19$fixture-two',
         },
       ];
@@ -94,54 +97,45 @@ if (connectionString) {
         [adminId],
       );
 
-      const invitationConsumedAt = new Date(Date.now() + 60_000);
-      const invitationExpiresAt = new Date(Date.now() + 86_400_000);
-      await transaction((repository) =>
-        repository.createInvitation({
-          createdBy: adminId,
-          email: 'invited@example.test',
-          expiresAt: invitationExpiresAt,
-          functionName: 'Vendedor',
-          id: 'invitation-race',
-          tokenHash: hash('a'),
-        }),
-      );
-      const invitationResults = await Promise.all(
-        Array.from({ length: 2 }, () =>
+      // Two concurrent creations of the same address: the lower-cased unique
+      // index, not the application, is what keeps exactly one.
+      const raceResults = await Promise.allSettled(
+        ['seller-race-one', 'seller-race-two'].map((id) =>
           transaction((repository) =>
-            repository.consumeInvitation(hash('a'), invitationConsumedAt),
+            repository.createUser({
+              capabilities: [],
+              email: 'Seller-Race@example.test',
+              functionName: 'Vendedor',
+              id,
+              name: 'Vendedor Concorrente',
+              passwordHash: '$argon2id$v=19$race-fixture',
+            }),
           ),
         ),
       );
-      assert.equal(invitationResults.filter(Boolean).length, 1);
       assert.equal(
-        invitationResults.filter((value) => value === null).length,
+        raceResults.filter((result) => result.status === 'fulfilled').length,
         1,
       );
-
-      await transaction((repository) =>
-        repository.createInvitation({
-          createdBy: adminId,
-          email: 'rollback@example.test',
-          expiresAt: invitationExpiresAt,
-          functionName: 'Atendimento',
-          id: 'invitation-rollback',
-          tokenHash: hash('b'),
-        }),
+      assert.equal(
+        raceResults.filter((result) => result.status === 'rejected').length,
+        1,
       );
+      // The e-mail comparison ignores case, so the surviving row answers to
+      // the address written either way. Which of the two ids won is decided by
+      // the database, so the survivor is looked up rather than assumed.
+      const survivor = await reader.findUserByEmail('seller-race@example.test');
+      assert.ok(survivor);
+
       const rollbackError = new Error('rollback identity transaction');
       await assert.rejects(
         transaction(async (repository) => {
-          const invitation = await repository.consumeInvitation(
-            hash('b'),
-            invitationConsumedAt,
-          );
-          assert.ok(invitation);
           await repository.createUser({
             capabilities: [],
-            email: invitation.email,
-            functionName: invitation.functionName,
+            email: 'rollback@example.test',
+            functionName: 'Vendedor',
             id: 'rolled-back-user',
+            name: 'Conta Descartada',
             passwordHash: '$argon2id$v=19$rollback-fixture',
           });
           throw rollbackError;
@@ -149,16 +143,18 @@ if (connectionString) {
         (error) => error === rollbackError,
       );
       assert.equal(await reader.findUserById('rolled-back-user'), null);
+
+      const renamed = await transaction((repository) =>
+        repository.updateUser(survivor.id, { name: 'Nome Corrigido' }),
+      );
+      assert.equal(renamed?.name ?? null, 'Nome Corrigido');
+      const disabled = await transaction((repository) =>
+        repository.setUserDisabled(survivor.id, new Date().toISOString()),
+      );
+      assert.ok(disabled?.disabledAt);
       assert.equal(
-        (
-          await transaction((repository) =>
-            repository.consumeInvitation(
-              hash('b'),
-              new Date(invitationConsumedAt.getTime() + 60_000),
-            ),
-          )
-        )?.id,
-        'invitation-rollback',
+        await reader.findUserByEmail('seller-race@example.test'),
+        null,
       );
 
       await transaction((repository) =>

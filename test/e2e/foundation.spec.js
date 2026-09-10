@@ -10,7 +10,9 @@ test('renders the semantic foundation without critical accessibility violations'
   await expect(page.getByRole('main')).toContainText(
     'O comercial inteiro,em movimento.',
   );
-  await expect(page.getByRole('tabpanel', { name: 'Entrar' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Entrar com segurança' }),
+  ).toBeVisible();
 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
@@ -57,33 +59,24 @@ test('applies a saved dark theme before the application bundle loads', async ({
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
 });
 
-test('switches access panels with the keyboard and keeps focus predictable', async ({
+test('offers only the login form, with no invitation path', async ({
   page,
 }) => {
   await page.goto('/');
-  const loginTab = page.getByRole('tab', { name: 'Entrar' });
-  const inviteTab = page.getByRole('tab', { name: 'Aceitar convite' });
 
-  await loginTab.focus();
-  await page.keyboard.press('ArrowRight');
-
-  await expect(inviteTab).toBeFocused();
-  await expect(inviteTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(
+    'Boas-vindas de volta',
+  );
+  await expect(page.getByLabel('E-mail')).toBeVisible();
+  await expect(page.getByLabel('Senha')).toBeVisible();
   await expect(
-    page.getByRole('tabpanel', { name: 'Aceitar convite' }),
+    page.getByRole('button', { name: 'Entrar com segurança' }),
   ).toBeVisible();
 
-  await page.keyboard.press('Home');
-  await expect(loginTab).toBeFocused();
-  await expect(loginTab).toHaveAttribute('aria-selected', 'true');
-
-  await page.keyboard.press('End');
-  await expect(inviteTab).toBeFocused();
-
-  await page.keyboard.press('ArrowRight');
-  await expect(loginTab).toBeFocused();
-  await page.keyboard.press('ArrowLeft');
-  await expect(inviteTab).toBeFocused();
+  await expect(page.getByRole('tablist')).toHaveCount(0);
+  await expect(page.getByText(/convite/iu)).toHaveCount(0);
+  // No minimum-length rule is advertised or enforced by the markup.
+  await expect(page.getByLabel('Senha')).not.toHaveAttribute('minlength', /./u);
 });
 
 test('distinguishes session service failure from a signed-out session', async ({
@@ -107,15 +100,21 @@ test('distinguishes session service failure from a signed-out session', async ({
       name: 'Não foi possível verificar sua sessão',
     }),
   ).toBeVisible();
-  await expect(page.getByRole('tab')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Entrar com segurança' }),
+  ).toHaveCount(0);
 
   available = true;
   await page.getByRole('button', { name: 'Tentar novamente' }).click();
-  await expect(page.getByRole('tab', { name: 'Entrar' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Entrar com segurança' }),
+  ).toBeVisible();
 
   signedOutStatus = 403;
   await page.reload();
-  await expect(page.getByRole('tab', { name: 'Entrar' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Entrar com segurança' }),
+  ).toBeVisible();
 });
 
 test('returns a real 404 for a missing compiled asset', async ({ request }) => {
@@ -141,7 +140,8 @@ test('submits login, restores and closes a session by keyboard without browser s
           ? JSON.stringify({
               user: {
                 capabilities: ['COMMERCIAL_ADMIN'],
-                functionName: 'Atendimento',
+                functionName: 'Vendedor',
+                name: 'Admin Comercial',
                 id: 'admin-1',
               },
             })
@@ -169,7 +169,8 @@ test('submits login, restores and closes a session by keyboard without browser s
         body: JSON.stringify({
           user: {
             capabilities: ['COMMERCIAL_ADMIN'],
-            functionName: 'Atendimento',
+            functionName: 'Vendedor',
+            name: 'Admin Comercial',
             id: 'admin-1',
           },
         }),
@@ -210,7 +211,9 @@ test('submits login, restores and closes a session by keyboard without browser s
   await page.goto('/');
   await expect(page.getByRole('status')).toHaveText('Entre para continuar.');
 
-  const loginPanel = page.getByRole('tabpanel', { name: 'Entrar' });
+  const loginPanel = page.getByRole('region', {
+    name: 'Boas-vindas de volta',
+  });
   await loginPanel.getByLabel('E-mail').fill('admin@example.test');
   await loginPanel.getByLabel('Senha').fill('wrong password value');
   await loginPanel.getByLabel('Senha').press('Enter');

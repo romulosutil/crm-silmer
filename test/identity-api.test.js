@@ -37,9 +37,24 @@ function harness(options = {}) {
       return { changed: true };
     },
     /** @param {Record<string, unknown>} input */
-    createInvitation: async (input) => {
-      calls.push({ input, operation: 'invitation' });
-      return { expiresAt: '2026-09-02T12:00:00.000Z', token: 'invite-token' };
+    createUser: async (input) => {
+      calls.push({ input, operation: 'create-user' });
+      return { user: { id: 'user-1', name: input.name } };
+    },
+    /** @param {Record<string, unknown>} input */
+    listUsers: async (input) => {
+      calls.push({ input, operation: 'list-users' });
+      return { users: [] };
+    },
+    /** @param {Record<string, unknown>} input */
+    setUserDisabled: async (input) => {
+      calls.push({ input, operation: 'set-user-disabled' });
+      return { user: { id: input.targetId } };
+    },
+    /** @param {Record<string, unknown>} input */
+    updateUser: async (input) => {
+      calls.push({ input, operation: 'update-user' });
+      return { user: { id: input.targetId } };
     },
     /** @param {Record<string, unknown>} input */
     current: async (input) => {
@@ -125,7 +140,7 @@ test('authenticated commands require matching Origin, CSRF cookie and header', a
   const base = {
     method: /** @type {const} */ ('POST'),
     payload: {
-      capability: 'PRIVACY_OFFICER',
+      capability: 'COMMERCIAL_ADMIN',
       reason: 'Delegacao aprovada',
       targetId: 'seller-1',
     },
@@ -175,7 +190,7 @@ test('returns a stable 404 without leaking internals for a missing capability ta
     },
     method: 'POST',
     payload: {
-      capability: 'PRIVACY_OFFICER',
+      capability: 'COMMERCIAL_ADMIN',
       reason: 'Alvo inexistente',
       targetId: 'missing-user',
     },
@@ -188,23 +203,24 @@ test('returns a stable 404 without leaking internals for a missing capability ta
   await api.close();
 });
 
-test('invitation commands require an idempotency key and reject ambiguous cookies', async () => {
+test('user commands require an idempotency key and reject ambiguous cookies', async () => {
   const { api, calls } = harness();
   const headers = {
     cookie: 'crm_session=session; crm_csrf=csrf',
     origin: ORIGIN,
     'x-csrf-token': 'csrf',
   };
+  const payload = {
+    email: 'seller@example.test',
+    name: 'Vendedora Silmer',
+    password: 'x',
+    reason: 'Novo vendedor',
+  };
   const missingKey = await api.inject({
     headers,
     method: 'POST',
-    payload: {
-      email: 'seller@example.test',
-      expiresAt: '2026-09-02T12:00:00.000Z',
-      functionName: 'Vendedor',
-      reason: 'Novo vendedor',
-    },
-    url: '/api/v1/invitations',
+    payload,
+    url: '/api/v1/users',
   });
   assert.equal(missingKey.statusCode, 400);
 
@@ -212,19 +228,54 @@ test('invitation commands require an idempotency key and reject ambiguous cookie
     headers: {
       ...headers,
       cookie: 'crm_session=one; crm_session=two; crm_csrf=csrf',
-      'idempotency-key': 'invitation-request-1',
+      'idempotency-key': 'user-request-1',
     },
     method: 'POST',
-    payload: {
-      email: 'seller@example.test',
-      expiresAt: '2026-09-02T12:00:00.000Z',
-      functionName: 'Vendedor',
-      reason: 'Novo vendedor',
-    },
-    url: '/api/v1/invitations',
+    payload,
+    url: '/api/v1/users',
   });
   assert.equal(duplicate.statusCode, 400);
   assert.equal(calls.length, 0);
+  await api.close();
+});
+
+test('the invitation routes are gone and a patch needs at least one field', async () => {
+  const { api, calls } = harness();
+  const headers = {
+    cookie: 'crm_session=session; crm_csrf=csrf',
+    origin: ORIGIN,
+    'idempotency-key': 'user-request-2',
+    'x-csrf-token': 'csrf',
+  };
+  for (const url of ['/api/v1/invitations', '/api/v1/invitations/accept']) {
+    const gone = await api.inject({
+      headers,
+      method: 'POST',
+      payload: { email: 'seller@example.test' },
+      url,
+    });
+    assert.equal(gone.statusCode, 404);
+  }
+
+  const empty = await api.inject({
+    headers,
+    method: 'PATCH',
+    payload: { reason: 'Nada a mudar' },
+    url: '/api/v1/users/user-1',
+  });
+  assert.equal(empty.statusCode, 400);
+
+  const patched = await api.inject({
+    headers,
+    method: 'PATCH',
+    payload: { name: 'Nome Novo', reason: 'Correção de nome' },
+    url: '/api/v1/users/user-1',
+  });
+  assert.equal(patched.statusCode, 200);
+  assert.equal(calls.at(-1)?.operation, 'update-user');
+  assert.equal(calls.at(-1)?.input.name, 'Nome Novo');
+  assert.equal(calls.at(-1)?.input.targetId, 'user-1');
+  assert.equal(calls.at(-1)?.input.email, undefined);
   await api.close();
 });
 

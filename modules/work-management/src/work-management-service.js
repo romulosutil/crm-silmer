@@ -459,10 +459,7 @@ function validateCommon(input, reasons) {
 
 /** @param {any} actor */
 function validateHuman(actor) {
-  if (
-    actor?.kind !== 'human' ||
-    actor.functionName !== 'Vendedor'
-  ) {
+  if (actor?.kind !== 'human' || actor.functionName !== 'Vendedor') {
     throw new WorkForbiddenError();
   }
 }

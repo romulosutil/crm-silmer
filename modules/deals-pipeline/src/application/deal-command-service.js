@@ -210,9 +210,7 @@ function validateLoss(input) {
 /** @param {any} input */
 function validateCommon(input) {
   const actor = input?.actor;
-  const human =
-    actor?.kind === 'human' &&
-    actor.functionName === 'Vendedor';
+  const human = actor?.kind === 'human' && actor.functionName === 'Vendedor';
   const automation =
     actor?.kind === 'AUTOMATION_EXECUTOR' && actor.id === 'AUTOMATION_EXECUTOR';
   if (!human && !automation) throw new DealForbiddenError();

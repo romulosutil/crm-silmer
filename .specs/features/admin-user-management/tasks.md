@@ -209,4 +209,26 @@ específicos abaixo se somam a esse.
 
 | Tarefa | Situação |
 | --- | --- |
-| AUM-01 a AUM-16 | Não iniciada |
+| AUM-01 a AUM-15 | Concluída |
+| AUM-16 | Commits e `graphify update` feitos; PR pendente |
+
+### O que ainda não foi executado contra um banco real
+
+`npm run validate` passa inteiro (formatação, tipos, lint, fronteiras, tokens,
+os 13 validadores, 395 testes e o build) e os 21 testes Playwright passam. O que
+**não** foi verificado nesta máquina, por falta de `TEST_DATABASE_URL`:
+
+- As migrations `0017` (expand) e `0018` (contract) nunca foram aplicadas.
+- As suítes live: `npm run test:identity:live`, `npm run test:deal:live`,
+  `npm run test:phase1-schema:live`.
+
+Antes de promover, rodar contra um banco com dados legados de `Atendimento` e
+capacidades de privacidade — é exatamente o caminho que o `0017` migra, e o
+único jeito de confirmar que os nomes das constraints derrubadas conferem.
+
+### Perda de cobertura assumida
+
+Duas asserções de `test/work-management.test.js` foram removidas em vez de
+adaptadas: cobriam handoff para papel incompatível e claim por papel
+incompatível. Com `Vendedor` como única função operacional, o cenário deixou de
+ser construível.

@@ -80,7 +80,8 @@ test('supports asynchronous repository ports used by PostgreSQL adapters', async
   const { user } = await service.bootstrapAdmin({
     correlationId: 'correlation-bootstrap-async',
     email: 'admin@example.test',
-    functionName: 'Atendimento',
+    functionName: 'Vendedor',
+    name: 'Admin Comercial',
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });
@@ -142,7 +143,8 @@ test('delegates active-session validation and touch to atomic repository operati
   const { user } = await service.bootstrapAdmin({
     correlationId: 'correlation-bootstrap-atomic',
     email: 'admin@example.test',
-    functionName: 'Atendimento',
+    functionName: 'Vendedor',
+    name: 'Admin Comercial',
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });
@@ -181,7 +183,8 @@ test('runs the same password verifier path for existing and missing accounts', a
   await service.bootstrapAdmin({
     correlationId: 'correlation-bootstrap-enumeration',
     email: 'admin@example.test',
-    functionName: 'Atendimento',
+    functionName: 'Vendedor',
+    name: 'Admin Comercial',
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });
@@ -225,13 +228,14 @@ test('hashes passwords with Argon2id and verifies without storing plaintext', as
   assert.equal(await verifyPassword('wrong password', encoded), false);
 });
 
-test('bootstraps exactly one audited Admin and consumes an expiring invite once', async () => {
+test('bootstraps exactly one audited Admin and creates the first seller account', async () => {
   const { auditEvents, service } = harness();
   const bootstrapAttempts = await Promise.allSettled([
     service.bootstrapAdmin({
       correlationId: 'correlation-bootstrap',
       email: 'admin@example.test',
-      functionName: 'Atendimento',
+      functionName: 'Vendedor',
+      name: 'Admin Comercial',
       password: 'correct horse battery staple',
       reason: 'Provisionamento inicial autorizado',
     }),
@@ -239,6 +243,7 @@ test('bootstraps exactly one audited Admin and consumes an expiring invite once'
       correlationId: 'correlation-concurrent',
       email: 'other@example.test',
       functionName: 'Vendedor',
+      name: 'Admin Comercial',
       password: 'another correct horse battery staple',
       reason: 'Tentativa concorrente',
     }),
@@ -262,41 +267,36 @@ test('bootstraps exactly one audited Admin and consumes an expiring invite once'
     1,
   );
 
-  const invitation = await service.createInvitation({
+  const created = await service.createOperationalUser({
     actorId: bootstrap.user.id,
-    correlationId: 'correlation-invite',
+    correlationId: 'correlation-create-seller',
     email: 'seller@example.test',
-    expiresAt: new Date(NOW.getTime() + 60_000),
-    functionName: 'Vendedor',
+    name: 'Vendedora Silmer',
+    password: 'x',
     reason: 'Entrada no time comercial',
   });
-  const acceptAttempts = await Promise.allSettled([
-    service.acceptInvitation({
-      correlationId: 'correlation-accept-invitation',
-      password: 'seller correct horse battery staple',
-      token: invitation.token,
+  assert.equal(created.user.functionName, 'Vendedor');
+  assert.equal(created.user.name, 'Vendedora Silmer');
+  assert.deepEqual(created.user.capabilities, []);
+  assert.equal(auditEvents.at(-1)?.action, 'identity.user.created');
+
+  // The e-mail is the only uniqueness rule, and it ignores case.
+  await assert.rejects(
+    service.createOperationalUser({
+      actorId: bootstrap.user.id,
+      correlationId: 'correlation-duplicate-seller',
+      email: 'SELLER@example.test',
+      name: 'Outra Pessoa',
+      password: 'another password',
+      reason: 'Tentativa duplicada',
     }),
-    service.acceptInvitation({
-      correlationId: 'correlation-accept-invitation',
-      password: 'seller correct horse battery staple',
-      token: invitation.token,
-    }),
-  ]);
-  const fulfilledAcceptance = acceptAttempts.find(
-    (attempt) => attempt.status === 'fulfilled',
+    (/** @type {any} */ error) => error.code === 'EMAIL_ALREADY_REGISTERED',
   );
-  assert.ok(fulfilledAcceptance);
-  const accepted = fulfilledAcceptance.value;
-  assert.equal(accepted.functionName, 'Vendedor');
-  assert.equal(
-    acceptAttempts.filter((attempt) => attempt.status === 'fulfilled').length,
-    1,
-  );
-  assert.match(
-    String(
-      acceptAttempts.find((attempt) => attempt.status === 'rejected')?.reason,
-    ),
-    /invalid or expired/iu,
+
+  // A seller cannot manage accounts.
+  await assert.rejects(
+    service.listUsers({ actorId: created.user.id }),
+    (/** @type {any} */ error) => error.statusCode === 403,
   );
 });
 
@@ -305,7 +305,8 @@ test('creates only hashed opaque sessions and enforces CSRF, logout and expiry',
   const { user } = await service.bootstrapAdmin({
     correlationId: 'correlation-bootstrap',
     email: 'admin@example.test',
-    functionName: 'Atendimento',
+    functionName: 'Vendedor',
+    name: 'Admin Comercial',
     password: 'correct horse battery staple',
     reason: 'Provisionamento inicial autorizado',
   });

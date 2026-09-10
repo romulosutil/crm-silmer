@@ -101,7 +101,7 @@ setUserDisabled({ actorId, correlationId, disabled, reason, targetId })
   → { user }
 ```
 
-Ações de auditoria: `identity.user.created`, `identity.user.updated`, `identity.user.disabled`, `identity.user.enabled`. O evento carrega quais campos mudaram, nunca o valor da senha nem seu hash (**USR-09**).
+Ações de auditoria: `identity.user.created`, `identity.user.updated`, `identity.user.disabled`, `identity.user.enabled`. O envelope `IdentityAuditEvent` tem forma fixa — ator, ação, alvo, versão, motivo e `correlationId` — então o evento não enumera quais campos mudaram; ampliar o envelope seria uma mudança de contrato de auditoria fora do escopo desta feature. O que importa para **USR-09** está garantido: a senha e seu hash nunca entram no evento.
 
 `hashPassword` perde a checagem `password.length < 16` e passa a exigir apenas `typeof password === 'string' && password !== ''` (**USR-05**). O `unknownUserPasswordHash` e o resto do fluxo de login não mudam.
 

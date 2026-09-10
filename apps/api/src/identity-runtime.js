@@ -442,9 +442,12 @@ export function createIdentityApiRuntime(database, environment = process.env) {
       return adminMutation(
         {
           action: 'identity.user.update',
+          // Absent fields stay absent: the fingerprint only accepts JSON
+          // values, and a patch that leaves a field untouched must not be
+          // confused with one that sets it.
           command: {
-            email: input.email,
-            name: input.name,
+            ...(input.email === undefined ? {} : { email: input.email }),
+            ...(input.name === undefined ? {} : { name: input.name }),
             passwordChanged: input.password !== undefined,
             targetId: input.targetId,
           },

@@ -1,0 +1,39 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1140, "title": "Mesa de Trabalho" },
+    { "file": "Inbox.dc.html", "x": 1600, "y": 0, "w": 1440, "h": 1060, "title": "Caixa de Entrada + Ficha" },
+    { "file": "Ficha.dc.html", "x": 0, "y": 1400, "w": 1440, "h": 1400, "title": "Ficha canônica" },
+    { "file": "MesaMobile.dc.html", "x": 1600, "y": 1400, "w": 390, "h": 920, "title": "Mesa no celular" }
+  ],
+  "annotations": [
+    {
+      "id": "nota-mesa",
+      "x": 0,
+      "y": -190,
+      "w": 640,
+      "text": "MESA DE TRABALHO — substitui o Kanban.\nUma pergunta só: de quem é a bola. 4 colunas, 2 filtros, 3 grupos.\nCortados do MVP: KPIs, coluna de marcos, coluna de valor, 3 chips de filtro."
+    },
+    {
+      "id": "nota-inbox",
+      "x": 1600,
+      "y": -190,
+      "w": 640,
+      "text": "CAIXA DE ENTRADA — mesma ficha, do lado da conversa.\nAssumir tira o agente da conversa; por isso o composer fica bloqueado antes disso.\nCortados: filtro de canal (só existe WhatsApp) e a régua de marcos no painel."
+    },
+    {
+      "id": "nota-ficha",
+      "x": 0,
+      "y": 1230,
+      "w": 640,
+      "text": "FICHA CANÔNICA — fonte da verdade; o PDF (v1 ou v2) é só render de saída.\nSeções completas viram uma linha; abertas só as que têm pendência.\nCortados: cards de marcos e de histórico. Sobrou uma coluna: Próxima ação."
+    },
+    {
+      "id": "nota-mobile",
+      "x": 1600,
+      "y": 1230,
+      "w": 420,
+      "text": "MESA NO CELULAR — cartão com % , motivo da parada e um botão. Nada mais."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

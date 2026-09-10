@@ -82,6 +82,19 @@ if (connectionString) {
         true,
       ]);
 
+      // The Inbox goes live off crm.domain_events. This integration owns its
+      // own persistence path, so an inbound message that lands here without an
+      // event leaves every open panel silently stale.
+      const inboundStream = await pool.query(
+        `SELECT event_type FROM crm.domain_events
+         WHERE aggregate_type = 'conversation' AND aggregate_id = $1`,
+        [first.conversation_id],
+      );
+      assert.deepEqual(
+        inboundStream.rows.map((/** @type {any} */ row) => row.event_type),
+        ['conversation.message_received'],
+      );
+
       const reservation = {
         automation_epoch: first.automation_epoch,
         briefing_patch: { quantity: 30, segment: 'uniform' },

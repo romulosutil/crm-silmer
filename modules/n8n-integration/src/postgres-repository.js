@@ -8,6 +8,45 @@ import { N8nConflictError, N8nNotFoundError } from './errors.js';
 
 /** @typedef {{query(sql: string, values?: unknown[]): Promise<{rows: any[]}>}} Queryable */
 
+/**
+ * Mirrors the conversation change onto the shared domain event stream so the
+ * `inbox` SSE topic pushes it to open panels. The n8n integration owns its own
+ * persistence path, so without this the Inbox would stay live for human
+ * commands but go quiet for everything arriving from WhatsApp.
+ *
+ * `aggregate_version` counts occurrences of this event type for this
+ * conversation: the unique constraint on
+ * (aggregate_type, aggregate_id, aggregate_version, event_type) would otherwise
+ * drop events that land while the conversation version is unchanged.
+ *
+ * @param {Queryable} client
+ * @param {any} runtime
+ * @param {{conversationId: string, correlationId: string, occurredAt: string, type: string}} event
+ */
+async function appendConversationStreamEvent(client, runtime, event) {
+  await client.query(
+    `INSERT INTO crm.domain_events
+       (id, aggregate_type, aggregate_id, aggregate_version, event_type,
+        payload, correlation_id, occurred_at)
+     SELECT $1, 'conversation', $2,
+            COALESCE((SELECT max(existing.aggregate_version)
+                      FROM crm.domain_events existing
+                      WHERE existing.aggregate_type = 'conversation'
+                        AND existing.aggregate_id = $2
+                        AND existing.event_type = $3), 0) + 1,
+            $3, $4::jsonb, $5, $6`,
+    [
+      runtime.idFactory('event'),
+      event.conversationId,
+      event.type,
+      JSON.stringify({ conversationId: event.conversationId }),
+      event.correlationId,
+      event.occurredAt,
+    ],
+  );
+}
+
+
 export class PostgresN8nIntegrationRepository {
   /**
    * @param {{
@@ -256,6 +295,12 @@ export class PostgresN8nIntegrationRepository {
         targetType: 'conversation',
         version: conversation.version,
       });
+      await appendConversationStreamEvent(client, runtime, {
+        conversationId: conversation.id,
+        correlationId: input.correlationId,
+        occurredAt: now,
+        type: 'conversation.message_received',
+      });
       return this.#inboundResponse(client, conversation.id, false);
     });
   }
@@ -500,6 +545,14 @@ export class PostgresN8nIntegrationRepository {
         targetType: resolvedConversationId ? 'conversation' : 'n8n_workflow',
         version: eventInput.automationEpoch ?? 1,
       });
+      if (resolvedConversationId) {
+        await appendConversationStreamEvent(client, runtime, {
+          conversationId: resolvedConversationId,
+          correlationId: eventInput.correlationId,
+          occurredAt: processedAt,
+          type: `conversation.n8n.${eventInput.eventType}`,
+        });
+      }
       return {
         accepted: true,
         duplicate: false,

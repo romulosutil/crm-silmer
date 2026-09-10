@@ -400,3 +400,51 @@ test('rejects a transfer that targets the actor itself', async () => {
     InboxValidationError,
   );
 });
+
+test('classifies inbox domain failures for the HTTP boundary', async () => {
+  // Regression guard: these errors carried no statusCode, so the API answered
+  // an ownership refusal with 500 SERVICE_UNAVAILABLE and never surfaced a
+  // version conflict as a conflict.
+  const { service } = createHarness();
+  const owned = await conversationOwnedByAttendant(service);
+
+  const forbidden = await service
+    .takeover({
+      actor: OTHER_SELLER,
+      conversationId: owned.id,
+      correlationId: 'correlation-status-forbidden',
+      expectedVersion: owned.version,
+      idempotencyKey: 'status-forbidden',
+      reason: 'Conversa de outro vendedor',
+    })
+    .catch((/** @type {any} */ error) => error);
+  assert.equal(forbidden.statusCode, 403);
+  assert.equal(forbidden.code, 'INBOX_FORBIDDEN');
+
+  const conflict = await service
+    .takeover({
+      actor: ATTENDANT,
+      conversationId: owned.id,
+      correlationId: 'correlation-status-conflict',
+      expectedVersion: owned.version + 99,
+      idempotencyKey: 'status-conflict',
+      reason: 'Versao velha',
+    })
+    .catch((/** @type {any} */ error) => error);
+  assert.equal(conflict.statusCode, 409);
+  assert.equal(conflict.code, 'INBOX_CONFLICT');
+
+  const invalid = await service
+    .transferConversation({
+      actor: ATTENDANT,
+      conversationId: owned.id,
+      correlationId: 'correlation-status-invalid',
+      expectedVersion: owned.version,
+      idempotencyKey: 'status-invalid',
+      reason: 'Repasse para si mesmo',
+      targetUserId: ATTENDANT.id,
+    })
+    .catch((/** @type {any} */ error) => error);
+  assert.equal(invalid.statusCode, 400);
+  assert.equal(invalid.code, 'INBOX_INVALID');
+});

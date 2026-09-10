@@ -230,8 +230,8 @@ function human(runId) {
 /** @param {Pool} pool @param {string} runId */
 async function seed(pool, runId) {
   await pool.query(
-    `INSERT INTO crm.users (id, email, password_hash, created_at)
-     VALUES ($1, $2, '$argon2id$fixture', $3)`,
+    `INSERT INTO crm.users (id, email, name, password_hash, created_at)
+     VALUES ($1, $2, 'Vendedora Fixture', '$argon2id$fixture', $3)`,
     [`seller-${runId}`, `${runId}@example.test`, NOW],
   );
   await pool.query(

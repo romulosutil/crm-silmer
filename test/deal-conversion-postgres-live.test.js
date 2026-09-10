@@ -91,8 +91,8 @@ if (connectionString) {
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
       await migrate(pool, { migrations: await loadMigrations() });
       await pool.query(
-        `INSERT INTO crm.users (id, email, password_hash, created_at)
-         VALUES ($1, $2, '$argon2id$fixture', $3)`,
+        `INSERT INTO crm.users (id, email, name, password_hash, created_at)
+         VALUES ($1, $2, 'Vendedora Fixture', '$argon2id$fixture', $3)`,
         [`attendant-${runId}`, `attendant-${runId}@example.test`, NOW],
       );
       await pool.query(

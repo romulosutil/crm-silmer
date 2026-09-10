@@ -142,7 +142,9 @@ async function changeDisabled(user, disabled) {
     editing.value = null;
     await load();
     props.announce(
-      disabled ? `Conta de ${user.name} desativada.` : `Conta de ${user.name} reativada.`,
+      disabled
+        ? `Conta de ${user.name} desativada.`
+        : `Conta de ${user.name} reativada.`,
     );
   } catch (error) {
     props.showError(publicMessage(error));
@@ -290,7 +292,11 @@ function formValues(form) {
                 <td>{{ formatDate(user.createdAt) }}</td>
                 <td>
                   <div class="row-actions">
-                    <button class="small" type="button" @click="startEdit(user)">
+                    <button
+                      class="small"
+                      type="button"
+                      @click="startEdit(user)"
+                    >
                       Editar
                     </button>
                     <button

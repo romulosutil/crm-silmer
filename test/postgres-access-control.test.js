@@ -15,7 +15,7 @@ class RecordingDatabase {
         rows: [
           {
             capabilities: ['COMMERCIAL_ADMIN'],
-            function_name: 'Atendimento',
+            function_name: 'Vendedor',
             id: 'admin-1',
           },
         ],
@@ -31,15 +31,15 @@ test('maps ACL users and records the grant authority', async () => {
 
   assert.deepEqual(await repository.findUser('admin-1'), {
     capabilities: ['COMMERCIAL_ADMIN'],
-    functionName: 'Atendimento',
+    functionName: 'Vendedor',
     id: 'admin-1',
   });
-  await repository.grant('seller-1', 'PRIVACY_OFFICER', 'admin-1');
+  await repository.grant('seller-1', 'COMMERCIAL_ADMIN', 'admin-1');
 
   const grant = database.queries.find(({ sql }) =>
     sql.includes('INSERT INTO crm.user_capabilities'),
   );
-  assert.deepEqual(grant?.values, ['seller-1', 'PRIVACY_OFFICER', 'admin-1']);
+  assert.deepEqual(grant?.values, ['seller-1', 'COMMERCIAL_ADMIN', 'admin-1']);
 });
 
 test('revokes a capability and every active session at the supplied instant', async () => {

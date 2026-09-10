@@ -27,10 +27,35 @@ paths:
                 $ref: '#/components/schemas/BootstrapResponse'
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
-  /invitations:
+  /users:
+    get:
+      operationId: listUsers
+      summary: Lista todas as contas, inclusive as desativadas
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200':
+          description: Contas do CRM
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [users]
+                properties:
+                  users:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
-      operationId: createInvitation
-      summary: Cria convite por Admin autenticado
+      operationId: createUser
+      summary: Cria uma conta de Vendedor por Admin autenticado
+      description: >-
+        A senha em claro nunca retorna no corpo da resposta; o bloco de
+        entrega é montado no cliente a partir do que foi digitado.
       security:
         - sessionCookie: []
           csrfHeader: []
@@ -42,23 +67,71 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InvitationRequest'
+              $ref: '#/components/schemas/CreateUserRequest'
       responses:
         '201':
-          description: Convite criado; o token é exibido uma vez
+          description: Conta criada
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InvitationResponse'
+                type: object
+                additionalProperties: false
+                required: [user]
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
-  /invitations/accept:
-    post:
-      operationId: acceptInvitation
-      summary: Consome um convite e cria o usuário atomicamente
+  /users/{userId}:
+    patch:
+      operationId: updateUser
+      summary: Altera nome, e-mail ou senha de uma conta
+      description: >-
+        Todo campo é opcional e pelo menos um deve vir. Um campo ausente
+        permanece inalterado. Trocar a senha não revoga sessões abertas.
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
       parameters:
         - $ref: '#/components/parameters/Origin'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Conta atualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [user]
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /users/{userId}/{state}:
+    post:
+      operationId: setUserDisabled
+      summary: Desativa ou reativa uma conta
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+        - $ref: '#/components/parameters/UserId'
+        - name: state
+          in: path
+          required: true
+          schema: { type: string, enum: [disable, enable] }
       requestBody:
         required: true
         content:
@@ -66,18 +139,24 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [token, password]
+              required: [reason]
               properties:
-                token: { type: string, minLength: 1 }
-                password: { type: string, minLength: 12 }
+                reason: { type: string, minLength: 1 }
       responses:
-        '201':
-          description: Conta ativada
+        '200':
+          description: Situação da conta alterada
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
+              schema:
+                type: object
+                additionalProperties: false
+                required: [user]
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /sessions:
     post:
       operationId: createSession
@@ -362,7 +441,7 @@ paths:
       description: >-
         Fecha a conversa como convertida_em_lead na mesma transação da promoção
         do Contato, criação do Negócio, idempotência e auditoria. Aceita o ator
-        técnico do n8n ou uma sessão humana de Atendimento/Vendedor.
+        técnico do n8n ou uma sessão humana de Vendedor.
       security:
         - automationBasic: []
           idempotencyKey: []
@@ -434,7 +513,7 @@ paths:
     post:
       operationId: loseDeal
       summary: Marca o Negócio como perdido com motivo cifrado
-      description: Exclusivo para Atendimento ou Vendedor autenticado.
+      description: Exclusivo para Vendedor autenticado.
       security:
         - sessionCookie: []
           csrfHeader: []
@@ -494,7 +573,7 @@ paths:
   /deals/{dealId}/assign:
     post:
       operationId: assignDeal
-      summary: Atribui um Negócio a Atendimento ou Vendedor ativo
+      summary: Atribui um Negócio a um Vendedor ativo
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
       parameters:
         - $ref: '#/components/parameters/DealId'
@@ -795,6 +874,11 @@ components:
       in: header
       required: true
       schema: { type: string, minLength: 32 }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
     CorrelationId:
       name: X-Correlation-Id
       in: header
@@ -1152,7 +1236,7 @@ components:
       required: [id, functionName]
       properties:
         id: { type: string }
-        functionName: { type: string, enum: [Atendimento, Vendedor] }
+        functionName: { type: string, enum: [Vendedor] }
     TaskView:
       type: object
       additionalProperties: false
@@ -1255,7 +1339,7 @@ components:
         id: { type: string }
         conversationId: { type: string }
         assignedUserId: { type: [string, 'null'] }
-        targetRole: { type: string, enum: [Atendimento, Vendedor] }
+        targetRole: { type: string, enum: [Vendedor] }
         status: { type: string, enum: [pending, accepted, resolved] }
         version: { type: integer, minimum: 1 }
         reasonCode: { type: string }
@@ -1298,24 +1382,28 @@ components:
     User:
       type: object
       additionalProperties: false
-      required: [id, functionName, capabilities]
+      required: [id, name, email, functionName, capabilities]
       properties:
         id: { type: string }
-        functionName: { type: string, enum: [Atendimento, Vendedor] }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        email: { type: string, format: email }
+        functionName: { type: string, enum: [Vendedor] }
+        createdAt: { type: [string, 'null'], format: date-time }
+        disabledAt: { type: [string, 'null'], format: date-time }
         capabilities:
           type: array
           uniqueItems: true
           items: { $ref: '#/components/schemas/Capability' }
     Capability:
       type: string
-      enum: [COMMERCIAL_ADMIN, PRIVACY_OFFICER, TECHNICAL_PRIVACY_EXECUTOR]
+      enum: [COMMERCIAL_ADMIN]
     LoginRequest:
       type: object
       additionalProperties: false
       required: [email, password]
       properties:
         email: { type: string, format: email }
-        password: { type: string, minLength: 12 }
+        password: { type: string, minLength: 1 }
     SessionView:
       type: object
       additionalProperties: false
@@ -1325,33 +1413,37 @@ components:
     BootstrapRequest:
       type: object
       additionalProperties: false
-      required: [email, functionName, password, reason]
+      required: [email, name, password, reason]
       properties:
         email: { type: string, format: email }
-        functionName: { type: string, enum: [Atendimento, Vendedor] }
-        password: { type: string, minLength: 12 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        functionName: { type: string, enum: [Vendedor] }
+        password: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
     BootstrapResponse:
       type: object
       required: [user]
       properties:
         user: { $ref: '#/components/schemas/User' }
-    InvitationRequest:
+    CreateUserRequest:
       type: object
       additionalProperties: false
-      required: [email, functionName, expiresAt, reason]
+      required: [email, name, password, reason]
       properties:
         email: { type: string, format: email }
-        functionName: { type: string, enum: [Atendimento, Vendedor] }
-        expiresAt: { type: string, format: date-time }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        password: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
-    InvitationResponse:
+    UpdateUserRequest:
       type: object
       additionalProperties: false
-      required: [token, expiresAt]
+      required: [reason]
+      minProperties: 2
       properties:
-        token: { type: string }
-        expiresAt: { type: string, format: date-time }
+        email: { type: string, format: email }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        password: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1 }
     CapabilityRequest:
       type: object
       additionalProperties: false

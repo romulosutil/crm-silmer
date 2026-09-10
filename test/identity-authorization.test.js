@@ -25,10 +25,10 @@ test('classifies expected ACL denials for the HTTP boundary', () => {
 });
 
 /**
- * @typedef {'COMMERCIAL_ADMIN'|'PRIVACY_OFFICER'|'TECHNICAL_PRIVACY_EXECUTOR'} Capability
+ * @typedef {'COMMERCIAL_ADMIN'} Capability
  * @typedef {{
  *   capabilities: Capability[],
- *   functionName: 'Atendimento'|'Vendedor',
+ *   functionName: 'Vendedor',
  *   id: string,
  *   kind?: 'human'|'assistant',
  * }} TestUser
@@ -50,22 +50,18 @@ test('keeps operational functions and orthogonal capabilities deny-by-default', 
     id: 'seller-1',
     kind: 'human',
   };
+  const admin = {
+    ...seller,
+    capabilities: [CAPABILITIES.COMMERCIAL_ADMIN],
+  };
   assert.doesNotThrow(() => authorize(seller, 'deal.draft.edit'));
   assert.throws(() => authorize(seller, 'sale.approve'), /forbidden/iu);
-  assert.throws(
-    () =>
-      authorize(
-        { ...seller, capabilities: [CAPABILITIES.PRIVACY_OFFICER] },
-        'sale.approve',
-      ),
-    /forbidden/iu,
-  );
-  assert.doesNotThrow(() =>
-    authorize(
-      { ...seller, capabilities: [CAPABILITIES.PRIVACY_OFFICER] },
-      'privacy.legal-hold.authorize',
-    ),
-  );
+  assert.throws(() => authorize(seller, 'user.manage'), /forbidden/iu);
+  // The capability, not the operational function, is what opens the
+  // administrative actions.
+  assert.doesNotThrow(() => authorize(admin, 'sale.approve'));
+  assert.doesNotThrow(() => authorize(admin, 'user.manage'));
+  assert.doesNotThrow(() => authorize(admin, 'deal.draft.edit'));
   assert.throws(
     () =>
       authorize(
@@ -88,7 +84,7 @@ function harness() {
       'admin-1',
       {
         capabilities: [CAPABILITIES.COMMERCIAL_ADMIN],
-        functionName: 'Atendimento',
+        functionName: 'Vendedor',
         id: 'admin-1',
       },
     ],
@@ -138,7 +134,7 @@ test('prevents self-assignment and permits privileged grants without MFA', async
   await assert.rejects(
     service.grantCapability({
       actorId: 'admin-1',
-      capability: CAPABILITIES.PRIVACY_OFFICER,
+      capability: CAPABILITIES.COMMERCIAL_ADMIN,
       correlationId: 'correlation-self',
       reason: 'Tentativa de autoatribuição',
       targetId: 'admin-1',
@@ -172,7 +168,7 @@ test('classifies malformed targets separately from forbidden ACL changes', async
   await assert.rejects(
     service.grantCapability({
       actorId: 'admin-1',
-      capability: CAPABILITIES.PRIVACY_OFFICER,
+      capability: CAPABILITIES.COMMERCIAL_ADMIN,
       correlationId: 'correlation-missing-target',
       reason: 'Alvo ausente',
       targetId: 'missing-user',
@@ -185,7 +181,7 @@ test('classifies malformed targets separately from forbidden ACL changes', async
   await assert.rejects(
     service.grantCapability({
       actorId: 'admin-1',
-      capability: CAPABILITIES.PRIVACY_OFFICER,
+      capability: CAPABILITIES.COMMERCIAL_ADMIN,
       correlationId: 'correlation-self-grant',
       reason: 'Autoatribuicao negada',
       targetId: 'admin-1',
@@ -220,18 +216,6 @@ test('audits grants and revokes privileged sessions immediately', async () => {
     target: { id: 'seller-1', type: 'user' },
     version: CAPABILITIES.COMMERCIAL_ADMIN,
   });
-
-  requireUser(users, 'seller-1').capabilities.push(
-    CAPABILITIES.PRIVACY_OFFICER,
-  );
-  await service.revokeCapability({
-    actorId: 'admin-1',
-    capability: CAPABILITIES.PRIVACY_OFFICER,
-    correlationId: 'correlation-privacy-revoke',
-    reason: 'Fim da responsabilidade de privacidade',
-    targetId: 'seller-1',
-  });
-  assert.equal(revocations.length, 2);
 });
 
 /** @param {Map<string, TestUser>} users @param {string} id @returns {TestUser} */

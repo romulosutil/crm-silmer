@@ -363,11 +363,7 @@ export class InMemoryWorkManagementRepository {
   /** @param {string} id */
   #user(id) {
     const value = this.#users.get(id);
-    if (
-      !value ||
-      value.disabledAt ||
-      value.functionName !== 'Vendedor'
-    ) {
+    if (!value || value.disabledAt || value.functionName !== 'Vendedor') {
       throw new WorkValidationError('Assignee is unavailable');
     }
     return value;

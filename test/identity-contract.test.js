@@ -14,8 +14,9 @@ test('OpenAPI publishes every implemented identity route and security control', 
   ]);
   for (const path of [
     '/bootstrap/identity',
-    '/invitations',
-    '/invitations/accept',
+    '/users',
+    '/users/{userId}',
+    '/users/{userId}/{state}',
     '/sessions',
     '/sessions/current',
     '/capabilities/{change}',
@@ -24,14 +25,20 @@ test('OpenAPI publishes every implemented identity route and security control', 
   }
   for (const path of [
     '/api/v1/bootstrap/identity',
-    '/api/v1/invitations',
-    '/api/v1/invitations/accept',
+    '/api/v1/users',
+    '/api/v1/users/:id',
+    '/api/v1/users/:id/',
     '/api/v1/sessions',
     '/api/v1/sessions/current',
     '/api/v1/capabilities/',
   ]) {
     assert.match(routes, new RegExp(escape(path), 'u'));
   }
+  // The invitation flow is gone; nothing may reintroduce it silently.
+  assert.doesNotMatch(contract, /invitation/iu);
+  assert.doesNotMatch(routes, /invitation/iu);
+  assert.doesNotMatch(contract, /Atendimento/u);
+  assert.doesNotMatch(contract, /PRIVACY_OFFICER|TECHNICAL_PRIVACY_EXECUTOR/u);
   for (const control of [
     'crm_session',
     'X-CSRF-Token',

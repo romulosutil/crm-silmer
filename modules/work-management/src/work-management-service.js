@@ -461,7 +461,7 @@ function validateCommon(input, reasons) {
 function validateHuman(actor) {
   if (
     actor?.kind !== 'human' ||
-    !['Atendimento', 'Vendedor'].includes(actor.functionName)
+    actor.functionName !== 'Vendedor'
   ) {
     throw new WorkForbiddenError();
   }

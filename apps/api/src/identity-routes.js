@@ -22,7 +22,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
         bootstrapToken: requireHeader(request, 'x-bootstrap-token'),
         correlationId: contextFor(request).correlationId,
         email: requireString(body.email, 'email'),
-        functionName: requireString(body.functionName, 'functionName'),
+        name: requireString(body.name, 'name'),
         password: requireString(body.password, 'password'),
         reason: requireString(body.reason, 'reason'),
       });
@@ -30,38 +30,84 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
-  api.post('/api/v1/invitations', async (request, reply) => {
+  api.get('/api/v1/users', async (request, reply) => {
+    return respond(reply, async () => {
+      requireOrigin(request, identity.allowedOrigins);
+      const cookies = parseCookies(request.headers.cookie);
+      const result = await identity.listUsers({
+        sessionToken: requireSessionCookie(cookies),
+      });
+      return reply.code(200).send(result);
+    });
+  });
+
+  api.post('/api/v1/users', async (request, reply) => {
     return respond(reply, async () => {
       const command = requireAuthenticatedCommand(
         request,
         identity.allowedOrigins,
       );
       const body = requireBody(request.body);
-      const result = await identity.createInvitation({
+      const result = await identity.createUser({
         ...command,
         correlationId: contextFor(request).correlationId,
         email: requireString(body.email, 'email'),
-        expiresAt: requireString(body.expiresAt, 'expiresAt'),
-        functionName: requireString(body.functionName, 'functionName'),
         idempotencyKey: requireHeader(request, 'idempotency-key'),
+        name: requireString(body.name, 'name'),
+        password: requireString(body.password, 'password'),
         reason: requireString(body.reason, 'reason'),
       });
       return reply.code(201).send(result);
     });
   });
 
-  api.post('/api/v1/invitations/accept', async (request, reply) => {
+  api.patch('/api/v1/users/:id', async (request, reply) => {
     return respond(reply, async () => {
-      requireOrigin(request, identity.allowedOrigins);
+      const command = requireAuthenticatedCommand(
+        request,
+        identity.allowedOrigins,
+      );
       const body = requireBody(request.body);
-      const result = await identity.acceptInvitation({
+      const patch = {
+        ...optionalString(body.email, 'email'),
+        ...optionalString(body.name, 'name'),
+        ...optionalString(body.password, 'password'),
+      };
+      if (Object.keys(patch).length === 0) {
+        throw new IdentityRequestError(400, 'INVALID_REQUEST');
+      }
+      const result = await identity.updateUser({
+        ...command,
+        ...patch,
         correlationId: contextFor(request).correlationId,
-        password: requireString(body.password, 'password'),
-        token: requireString(body.token, 'token'),
+        idempotencyKey: requireHeader(request, 'idempotency-key'),
+        reason: requireString(body.reason, 'reason'),
+        targetId: requireParam(request, 'id'),
       });
-      return reply.code(201).send(result);
+      return reply.code(200).send(result);
     });
   });
+
+  for (const change of ['disable', 'enable']) {
+    api.post(`/api/v1/users/:id/${change}`, async (request, reply) => {
+      return respond(reply, async () => {
+        const command = requireAuthenticatedCommand(
+          request,
+          identity.allowedOrigins,
+        );
+        const body = requireBody(request.body);
+        const result = await identity.setUserDisabled({
+          ...command,
+          correlationId: contextFor(request).correlationId,
+          disabled: change === 'disable',
+          idempotencyKey: requireHeader(request, 'idempotency-key'),
+          reason: requireString(body.reason, 'reason'),
+          targetId: requireParam(request, 'id'),
+        });
+        return reply.code(200).send(result);
+      });
+    });
+  }
 
   api.post('/api/v1/sessions', async (request, reply) => {
     return respond(reply, async () => {
@@ -165,7 +211,11 @@ function publicErrorCode(statusCode, error) {
   if (statusCode === 401) return 'INVALID_CREDENTIALS';
   if (statusCode === 403) return 'FORBIDDEN';
   if (statusCode === 404) return 'NOT_FOUND';
-  if (statusCode === 409) return 'IDEMPOTENCY_KEY_REUSED';
+  if (statusCode === 409) {
+    return readErrorCode(error) === 'EMAIL_ALREADY_REGISTERED'
+      ? 'EMAIL_ALREADY_REGISTERED'
+      : 'IDEMPOTENCY_KEY_REUSED';
+  }
   if (statusCode === 429) return 'AUTHENTICATION_THROTTLED';
   if (
     error &&
@@ -242,9 +292,34 @@ function requireSessionCookie(cookies) {
   return value;
 }
 
+/** @param {unknown} error */
+function readErrorCode(error) {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return typeof error.code === 'string' ? error.code : null;
+  }
+  return null;
+}
+
 /** @param {import('fastify').FastifyRequest} request @param {string} name */
 function requireHeader(request, name) {
   return requireString(request.headers[name], name);
+}
+
+/** @param {import('fastify').FastifyRequest} request @param {string} name */
+function requireParam(request, name) {
+  const params = /** @type {Record<string, unknown>} */ (request.params ?? {});
+  return requireString(params[name], name);
+}
+
+/**
+ * Absent stays absent so a PATCH can leave a field untouched; present must
+ * still be a non-empty string.
+ *
+ * @param {unknown} value @param {string} field
+ */
+function optionalString(value, field) {
+  if (value === undefined) return {};
+  return { [field]: requireString(value, field) };
 }
 
 /** @param {unknown} value @param {string} field */

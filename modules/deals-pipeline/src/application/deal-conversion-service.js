@@ -143,7 +143,7 @@ function validateCommand(input) {
   const actor = input?.actor;
   const humanAllowed =
     actor?.kind === 'human' &&
-    ['Atendimento', 'Vendedor'].includes(actor.functionName);
+    actor.functionName === 'Vendedor';
   const automationAllowed =
     actor?.kind === 'AUTOMATION_EXECUTOR' && actor.id === 'AUTOMATION_EXECUTOR';
   if (!humanAllowed && !automationAllowed) throw new DealForbiddenError();

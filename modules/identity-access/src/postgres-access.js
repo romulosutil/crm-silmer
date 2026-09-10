@@ -1,6 +1,6 @@
 /**
- * @typedef {'COMMERCIAL_ADMIN'|'PRIVACY_OFFICER'|'TECHNICAL_PRIVACY_EXECUTOR'} Capability
- * @typedef {'Atendimento'|'Vendedor'} OperationalFunction
+ * @typedef {'COMMERCIAL_ADMIN'} Capability
+ * @typedef {'Vendedor'} OperationalFunction
  * @typedef {{
  *   query: (
  *     sql: string,

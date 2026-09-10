@@ -343,7 +343,7 @@ function validateCommand(input) {
   }
   const human =
     input.actor?.kind === 'human' &&
-    ['Atendimento', 'Vendedor'].includes(input.actor.functionName);
+    input.actor.functionName === 'Vendedor';
   const automation =
     input.actor?.kind === 'AUTOMATION_EXECUTOR' &&
     input.actor.id === 'AUTOMATION_EXECUTOR';

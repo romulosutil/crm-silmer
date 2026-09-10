@@ -366,7 +366,7 @@ export class InMemoryWorkManagementRepository {
     if (
       !value ||
       value.disabledAt ||
-      !['Atendimento', 'Vendedor'].includes(value.functionName)
+      value.functionName !== 'Vendedor'
     ) {
       throw new WorkValidationError('Assignee is unavailable');
     }

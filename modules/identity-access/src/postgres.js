@@ -1,24 +1,23 @@
 const bootstrapAdvisoryLock = 0x49414d31;
 
 /**
- * @typedef {'COMMERCIAL_ADMIN'|'PRIVACY_OFFICER'|'TECHNICAL_PRIVACY_EXECUTOR'} IdentityCapability
- * @typedef {'Atendimento'|'Vendedor'} OperationalFunction
+ * @typedef {'COMMERCIAL_ADMIN'} IdentityCapability
+ * @typedef {'Vendedor'} OperationalFunction
  * @typedef {{
  *   capabilities: IdentityCapability[],
+ *   createdAt?: string | null,
+ *   disabledAt?: string | null,
  *   email: string,
  *   functionName: OperationalFunction,
  *   id: string,
+ *   name: string,
  *   passwordHash: string,
  * }} IdentityUser
  * @typedef {{
- *   consumedAt?: string,
- *   createdBy: string,
- *   email: string,
- *   expiresAt: Date,
- *   functionName: OperationalFunction,
- *   id: string,
- *   tokenHash: string,
- * }} IdentityInvitation
+ *   email?: string,
+ *   name?: string,
+ *   passwordHash?: string,
+ * }} IdentityUserPatch
  * @typedef {{
  *   absoluteExpiresAt: string,
  *   csrfHash: string,
@@ -40,7 +39,10 @@ const userSelect = `
   SELECT
     u.id,
     u.email,
+    u.name,
     u.password_hash,
+    u.created_at,
+    u.disabled_at,
     f.function_name,
     COALESCE(
       (
@@ -79,9 +81,9 @@ export function createPostgresIdentityRepository(database) {
   /** @param {IdentityUser} user */
   async function insertUser(user) {
     await database.query(
-      `INSERT INTO crm.users (id, email, password_hash)
-       VALUES ($1, $2, $3)`,
-      [user.id, user.email, user.passwordHash],
+      `INSERT INTO crm.users (id, email, name, password_hash)
+       VALUES ($1, $2, $3, $4)`,
+      [user.id, user.email, user.name, user.passwordHash],
     );
     await database.query(
       `INSERT INTO crm.user_functions (user_id, function_name)
@@ -115,47 +117,6 @@ export function createPostgresIdentityRepository(database) {
         [tokenHash, touchedAt, idleExpiresBefore],
       );
       return result.rows[0] ? mapSession(result.rows[0]) : null;
-    },
-
-    /** @param {string} tokenHash @param {Date} now */
-    async consumeInvitation(tokenHash, now) {
-      const result = await database.query(
-        `WITH candidate AS (
-           SELECT token_hash
-           FROM crm.invitations
-           WHERE token_hash = $1
-             AND consumed_at IS NULL
-             AND expires_at > $2
-           FOR UPDATE
-         )
-         UPDATE crm.invitations AS invitation
-         SET consumed_at = $2
-         FROM candidate
-         WHERE invitation.token_hash = candidate.token_hash
-         RETURNING invitation.id, invitation.email,
-           invitation.function_name, invitation.token_hash,
-           invitation.created_by, invitation.expires_at,
-           invitation.consumed_at`,
-        [tokenHash, now],
-      );
-      return result.rows[0] ? mapInvitation(result.rows[0]) : null;
-    },
-
-    /** @param {IdentityInvitation} invitation */
-    async createInvitation(invitation) {
-      await database.query(
-        `INSERT INTO crm.invitations
-           (id, email, function_name, token_hash, created_by, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          invitation.id,
-          invitation.email,
-          invitation.functionName,
-          invitation.tokenHash,
-          invitation.createdBy,
-          invitation.expiresAt,
-        ],
-      );
     },
 
     /** @param {IdentitySession} session */
@@ -255,6 +216,13 @@ export function createPostgresIdentityRepository(database) {
       };
     },
 
+    async listUsers() {
+      const result = await database.query(
+        `${userSelect} ORDER BY u.name, u.email`,
+      );
+      return result.rows.map(mapUser);
+    },
+
     /** @param {string} tokenHash @param {string} revokedAt */
     async revokeSession(tokenHash, revokedAt) {
       await database.query(
@@ -263,6 +231,18 @@ export function createPostgresIdentityRepository(database) {
          WHERE token_hash = $1`,
         [tokenHash, revokedAt],
       );
+    },
+
+    /** @param {string} id @param {string | null} disabledAt */
+    async setUserDisabled(id, disabledAt) {
+      const result = await database.query(
+        `UPDATE crm.users
+         SET disabled_at = $2::timestamptz
+         WHERE id = $1
+         RETURNING id`,
+        [id, disabledAt],
+      );
+      return result.rows[0] ? reloadUser(database, id) : null;
     },
 
     /** @param {string} tokenHash @param {string} touchedAt */
@@ -274,6 +254,34 @@ export function createPostgresIdentityRepository(database) {
            AND revoked_at IS NULL`,
         [tokenHash, touchedAt],
       );
+    },
+
+    /** @param {string} id @param {IdentityUserPatch} patch */
+    async updateUser(id, patch) {
+      /** @type {string[]} */
+      const assignments = [];
+      /** @type {unknown[]} */
+      const values = [id];
+      /** @type {Array<[string, string | undefined]>} */
+      const columns = [
+        ['email', patch.email],
+        ['name', patch.name],
+        ['password_hash', patch.passwordHash],
+      ];
+      for (const [column, value] of columns) {
+        if (value === undefined) continue;
+        values.push(value);
+        assignments.push(`${column} = $${values.length}`);
+      }
+      if (assignments.length === 0) return reloadUser(database, id);
+      const result = await database.query(
+        `UPDATE crm.users
+         SET ${assignments.join(', ')}
+         WHERE id = $1
+         RETURNING id`,
+        values,
+      );
+      return result.rows[0] ? reloadUser(database, id) : null;
     },
 
     /** @param {string} tokenHash @param {string} csrfHash @param {string} touchedAt @param {string} idleExpiresBefore */
@@ -302,28 +310,23 @@ export function createPostgresIdentityRepository(database) {
   });
 }
 
+/** @param {Queryable} database @param {string} id */
+async function reloadUser(database, id) {
+  const result = await database.query(`${userSelect} WHERE u.id = $1`, [id]);
+  return result.rows[0] ? mapUser(result.rows[0]) : null;
+}
+
 /** @param {Record<string, unknown>} row @returns {IdentityUser} */
 function mapUser(row) {
   return {
     capabilities: /** @type {IdentityCapability[]} */ (row.capabilities),
+    createdAt: toIsoString(row.created_at),
+    disabledAt: toIsoString(row.disabled_at),
     email: /** @type {string} */ (row.email),
     functionName: /** @type {OperationalFunction} */ (row.function_name),
     id: /** @type {string} */ (row.id),
+    name: /** @type {string} */ (row.name),
     passwordHash: /** @type {string} */ (row.password_hash),
-  };
-}
-
-/** @param {Record<string, unknown>} row @returns {IdentityInvitation} */
-function mapInvitation(row) {
-  const consumedAt = toIsoString(row.consumed_at);
-  return {
-    ...(consumedAt ? { consumedAt } : {}),
-    createdBy: /** @type {string} */ (row.created_by),
-    email: /** @type {string} */ (row.email),
-    expiresAt: new Date(/** @type {string | Date} */ (row.expires_at)),
-    functionName: /** @type {OperationalFunction} */ (row.function_name),
-    id: /** @type {string} */ (row.id),
-    tokenHash: /** @type {string} */ (row.token_hash),
   };
 }
 

@@ -83,7 +83,9 @@ export function createIdentityApiRuntime(database, environment = process.env) {
 
   /** @param {{sessionToken: string, csrfToken: string}} input */
   function preflight(input) {
-    return database.transaction((client) => authenticatedSession(client, input));
+    return database.transaction((client) =>
+      authenticatedSession(client, input),
+    );
   }
 
   /**

@@ -228,7 +228,6 @@ test('invitation commands require an idempotency key and reject ambiguous cookie
   await api.close();
 });
 
-
 test('current session uses only the HttpOnly session cookie and logout expires both cookies', async () => {
   const { api } = harness();
   const current = await api.inject({

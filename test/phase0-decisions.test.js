@@ -136,7 +136,6 @@ test('rejects forged approval evidence, dates and assignee identities', async ()
   );
 });
 
-
 test('requires every compensating control for solo operation', async () => {
   const approved = await decisions();
   const cases = /** @type {Array<[string, boolean, RegExp]>} */ ([

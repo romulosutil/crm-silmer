@@ -1,9 +1,4 @@
-import {
-  argon2,
-  createHash,
-  randomBytes,
-  timingSafeEqual,
-} from 'node:crypto';
+import { argon2, createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 /**
  * @typedef {'COMMERCIAL_ADMIN'|'PRIVACY_OFFICER'|'TECHNICAL_PRIVACY_EXECUTOR'} IdentityCapability

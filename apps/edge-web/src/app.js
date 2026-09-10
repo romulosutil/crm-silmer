@@ -76,7 +76,6 @@ elements.logoutButton.addEventListener('click', async () => {
   });
 });
 
-
 elements.createInviteForm.addEventListener('submit', (event) =>
   submit(event, async (form) => {
     const data = formData(form);

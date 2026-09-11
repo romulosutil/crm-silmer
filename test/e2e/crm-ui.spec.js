@@ -68,8 +68,29 @@ const conversation = {
   updatedAt: '2026-09-08T12:00:00.000Z',
   version: 3,
 };
+const handoff = {
+  automationEpoch: 3,
+  contact: {
+    externalId: '5511999999999',
+    id: contact.id,
+    label: 'Studio Malu',
+  },
+  conversationId: conversation.id,
+  conversationVersion: conversation.version,
+  createdAt: '2026-09-08T12:10:00.000Z',
+  dealId: null,
+  dueAt: '2026-09-08T16:10:00.000Z',
+  id: 'handoff-1',
+  reasonCode: 'human_requested',
+  slaMinutes: 240,
+  status: 'pending',
+  summary: 'Cliente solicitou atendimento humano.',
+  targetRole: 'Vendedor',
+  updatedAt: '2026-09-08T12:10:00.000Z',
+  version: 1,
+};
 
-/** @param {import('@playwright/test').Page} page @param {{conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void, onMessage?:(body:any)=>void}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -145,6 +166,30 @@ async function mockCrm(page, options = {}) {
           messages: [conversation.lastMessage],
           suggestion: null,
         }),
+      });
+      return;
+    }
+    if (path === '/api/v1/inbox/handoffs' && request.method() === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [handoff],
+          nextCursor: null,
+          totalCount: 1,
+        }),
+      });
+      return;
+    }
+    if (
+      path === '/api/v1/handoffs/handoff-1/claim' &&
+      request.method() === 'POST'
+    ) {
+      expect(request.headers()['idempotency-key']).toBeTruthy();
+      expect(request.headers()['x-csrf-token']).toBe('csrf-test');
+      options.onHandoffClaim?.(request.postDataJSON());
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ accepted: true }),
       });
       return;
     }
@@ -408,6 +453,7 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
   for (const name of [
     'Dashboard',
     'Caixa de Entrada',
+    'Handoffs',
     'Kanban',
     'Clientes',
     'Conta',
@@ -438,6 +484,33 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
   await expect(page.getByRole('heading', { name: 'Clientes' })).toBeFocused();
   await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
 
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('claims a pending handoff through the official atomic command', async ({
+  page,
+}) => {
+  let claimedBody;
+  await mockCrm(page, { onHandoffClaim: (body) => (claimedBody = body) });
+  await page.goto('/handoffs');
+  await page.evaluate(() => {
+    globalThis.document.cookie = 'crm_csrf=csrf-test; Path=/; SameSite=Lax';
+  });
+  await expect(
+    page.getByRole('heading', { name: 'Fila de handoffs' }),
+  ).toBeFocused();
+  await expect(
+    page.getByText('Cliente solicitou atendimento humano.'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Assumir atendimento' }).click();
+  await expect(page.locator('.audit-note')).toContainText(
+    'Handoff de Studio Malu assumido.',
+  );
+  expect(claimedBody).toEqual({
+    expectedConversationVersion: 3,
+    expectedHandoffVersion: 1,
+    reasonCode: 'handoff_claimed',
+  });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 

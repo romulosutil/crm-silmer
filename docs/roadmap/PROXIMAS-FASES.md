@@ -1,7 +1,7 @@
 # Próximas fases — produto e interfaces do CRM Silmer
 
-> **Atualizado em:** 08/09/2026  
-> **Status:** sequência posterior à simplificação n8n MVP  
+> **Atualizado em:** 11/09/2026  
+> **Status:** jornada de atendimento priorizada antes da jornada comercial  
 > **Fila canônica:** `.specs/features/crm-mvp/tasks.md`
 
 Nenhuma interface nova faz parte da entrega `N8N-MVP-1`. Este documento mostra
@@ -14,7 +14,10 @@ O frontend já possui autenticação, shell, Dashboard operacional, Inbox,
 detalhe da conversa, Kanban, detalhe do Negócio, Clientes e Conta. Inbox e
 Clientes consomem read models autorizados do PostgreSQL; Dashboard agrega
 somente Kanban e Inbox, sem fabricar vendas ou pedidos ainda inexistentes. O
-read model da fila de Handoffs continua pendente.
+read model da fila de Handoffs está disponível para operadores Vendedor, assim
+como o claim atômico já existente. A migração vigente de identidade consolidou
+as funções humanas em `Vendedor`; este roadmap não volta a introduzir a antiga
+separação Atendimento/Vendedor sem decisão, migração e autorização explícitas.
 
 ### Entregue na conexão frontend/backend de 08/09/2026
 
@@ -25,12 +28,42 @@ read model da fila de Handoffs continua pendente.
   decifradas somente após autorização e ACL `contact.read`;
 - Inbox ligada às mutações existentes de resposta, takeover, retorno à IA e
   encerramento, usando versão esperada, CSRF e idempotência;
-- estados acessíveis de loading, vazio, erro e repetição em Dashboard, Inbox e
-  Clientes; remoção do dataset e do aviso de demonstração.
+- estados acessíveis de loading, vazio, erro e repetição em Dashboard, Inbox,
+  Clientes e Handoffs; remoção do dataset e do aviso de demonstração;
+- `GET /api/v1/inbox/handoffs`, com ACL `handoff.read`, cursor assinado e
+  minimização após autorização, e tela Handoffs que reivindica pela mutação
+  oficial com versão esperada, CSRF e idempotência;
+- atualização em tempo real da Inbox e da fila Handoffs sem roubar o foco,
+  incluindo tratamento compreensível de disputa (`409`) ao assumir um handoff.
 
-Permanecem fora desta fatia anexos seguros, atualização em tempo real da Inbox,
-fila dedicada de Handoffs e merge/unmerge de identidades. Portanto, UI-1 e UI-3
-avançaram, mas não devem ser declaradas integralmente encerradas.
+Permanecem fora desta fatia anexos seguros e merge/unmerge de identidades.
+UI-1 e UI-2 estão disponíveis para homologação conjunta; UI-3 não deve ser
+declarada integralmente encerrada até que a relação de handoffs seja exposta no
+detalhe do Cliente.
+
+## Corte atual — jornada de atendimento completa
+
+Este corte fecha a operação de atendimento antes de qualquer evolução comercial:
+entrada por n8n, criação ou resolução de Contato e Conversa, resposta da IA,
+handoff, fila, assumir conversa, responder manualmente, devolver à IA,
+transferir para outro Vendedor e encerrar. A fonte da verdade permanece o CRM;
+o n8n simula apenas o transporte WhatsApp no workflow de desenvolvimento.
+
+Não fazem parte deste corte conversão de Negócio, Kanban comercial, preço,
+pedido, PIX ou Ficha. A separação evita que a validação operacional dependa de
+dados comerciais ainda não homologados.
+
+| Frente | Dono sugerido | Pode seguir em paralelo | Dependência / fronteira protegida |
+| ------ | ------------- | ----------------------- | --------------------------------- |
+| Homologação do atendimento | QA/Integrações | Executar os quatro cenários DEV e as ações humanas no ambiente publicado. | Não altera contratos, banco nem workflow sem registrar a evidência. |
+| Robustez do atendimento | Backend/Frontend | Cobrir anexos seguros, offline e detalhes de handoff no Cliente. | Preserva `conversation-routes`, `operation-routes` e OpenAPI; mudanças de contrato são coordenadas. |
+| Jornada comercial | Produto/Backend | Refinar critérios e modelos de conversão em uma branch futura. | Só inicia após a homologação deste corte; não muda Inbox, Handoff ou workflow DEV. |
+
+Aceite operacional: para um mesmo Contato, um operador consegue observar a
+Conversa, disputar e assumir o Handoff com um único vencedor, responder sem
+duplicação, devolver a automação, transferir o responsável e receber atualizações
+em tempo real. O teste DEV deve cobrir `message`, `handoff`, `send_unknown` e
+`delivery_status` com identificadores de evento inéditos.
 
 ## Ordem recomendada
 
@@ -38,7 +71,7 @@ avançaram, mas não devem ser declaradas integralmente encerradas.
 | ----: | ------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 |     0 | OPS-1 — homologação WhatsApp    | O fluxo real é validado ainda sem nova UI; falhas são verificadas por contrato e runbook.                       | Conversa, Mensagem, briefing, Handoff e eventos técnicos.                     |
 |     1 | UI-1 — Inbox + Conversa         | A pessoa encontra conversas, lê histórico e briefing, responde, assume, devolve à IA ou encerra no mesmo fluxo. | `Contact`, `Conversation`, `Message` e estado de entrega.                     |
-|     2 | UI-2 — Fila de handoffs         | Atendimento e Vendedor veem e reivindicam somente itens compatíveis.                                            | `Handoff`, papel-alvo, motivo, SLA e responsável.                             |
+|     2 | UI-2 — Fila de handoffs         | Vendedor vê e reivindica itens pendentes compatíveis.                                                            | `Handoff`, papel-alvo, motivo, SLA e responsável.                             |
 |     3 | UI-3 — Detalhe do Cliente       | “Cliente” aparece como Contato, identidades, conversas e Negócios relacionados.                                 | `Contact` + `ContactIdentity`; nenhuma tabela `customers`.                    |
 |     4 | UI-4 — Evolução do Negócio      | Kanban e detalhe existentes mostram origem da conversa, dados promovidos, gates, tarefas e handoff.             | `Deal`, Contato e Conversa; Backlog continua fora do Kanban.                  |
 |     5 | UI-5 — Operação e reconciliação | Somente se o piloto demonstrar necessidade, a operação vê comandos falhos e resultados incertos.                | `n8n_commands`, `reconciliation_items`, Mensagem e metadados de `n8n_events`. |
@@ -59,11 +92,11 @@ Rastreabilidade: INB-01, AGT-01, AGT-03, AGT-05–06, ORC-07–08 e MSG-01–03.
 
 ## UI-2 — Fila de handoffs
 
-Criar consulta paginada de handoffs abertos e reutilizar
-`POST /api/v1/handoffs/{id}/claim`. A lista separa Atendimento e Vendedor e
-mostra motivo, idade, SLA, conversa e Negócio quando existir. O servidor decide
-elegibilidade e compare-and-swap; numa disputa há um vencedor e o outro recebe
-`409` compreensível.
+Disponibilizar consulta paginada de handoffs abertos e reutilizar
+`POST /api/v1/handoffs/{id}/claim`. A lista mostra motivo, idade, SLA, conversa
+e Negócio quando existir. O servidor decide elegibilidade e compare-and-swap;
+numa disputa há um vencedor e o outro recebe `409` compreensível. A primeira
+versão está entregue para a função humana vigente `Vendedor`.
 
 Rastreabilidade: AGT-03–05, AGT-08 e PRV-01.
 

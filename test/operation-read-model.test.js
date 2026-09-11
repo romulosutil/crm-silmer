@@ -38,11 +38,27 @@ function serviceHarness() {
       };
     },
   };
+  const handoffRepository = {
+    async listOpen(/** @type {any} */ input) {
+      calls.push(['list-handoffs', input]);
+      return {
+        hasMore: true,
+        items: [
+          {
+            id: 'handoff-1',
+            updatedAt: '2026-09-08T13:00:00.000Z',
+          },
+        ],
+        totalCount: 2,
+      };
+    },
+  };
   return {
     calls,
     service: createOperationReadService({
       contactRepository,
       cursorKey: Buffer.alloc(32, 77),
+      handoffRepository,
       inboxRepository,
     }),
   };
@@ -83,6 +99,30 @@ test('binds signed Inbox cursors to closed filters', async () => {
       cursor: first.nextCursor,
       state: 'requer_atencao',
     }),
+    (error) => /** @type {any} */ (error).code === 'INVALID_CURSOR',
+  );
+});
+
+test('binds handoff cursors to the pending queue scope', async () => {
+  const { calls, service } = serviceHarness();
+  const first = await service.listOpenHandoffs({ limit: 20 });
+  assert.equal(first.totalCount, 2);
+  assert.ok(first.nextCursor);
+  assert.deepEqual(calls[0], ['list-handoffs', { after: null, limit: 20 }]);
+
+  await service.listOpenHandoffs({ cursor: first.nextCursor, limit: 20 });
+  assert.deepEqual(calls[1], [
+    'list-handoffs',
+    {
+      after: {
+        id: 'handoff-1',
+        updatedAt: '2026-09-08T13:00:00.000Z',
+      },
+      limit: 20,
+    },
+  ]);
+  await assert.rejects(
+    service.listInbox({ cursor: first.nextCursor }),
     (error) => /** @type {any} */ (error).code === 'INVALID_CURSOR',
   );
 });

@@ -20,6 +20,7 @@ import {
   PostgresInboxRepository,
   createInboxService,
 } from '../modules/inbox-channels/src/index.js';
+import { PostgresHandoffReadRepository } from '../modules/work-management/src/index.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const NOW = new Date('2026-09-08T12:00:00.000Z');
@@ -64,6 +65,11 @@ if (connectionString) {
         envelopeKey: CONTACT_KEY,
       }),
       cursorKey: Buffer.alloc(32, 44),
+      handoffRepository: new PostgresHandoffReadRepository({
+        contactEnvelopeKey: CONTACT_KEY,
+        database,
+        handoffEnvelopeKey: Buffer.alloc(32, 45),
+      }),
       inboxRepository: new PostgresInboxReadRepository({
         contactEnvelopeKey: CONTACT_KEY,
         database,

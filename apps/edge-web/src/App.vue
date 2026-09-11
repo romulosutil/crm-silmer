@@ -51,7 +51,9 @@ const connectionLabel = computed(() => {
 // halve how many people can stay online.
 const liveEvent = ref(null);
 const liveTopic = computed(() =>
-  ['/inbox', '/clientes'].some((prefix) => route.path.startsWith(prefix))
+  ['/inbox', '/handoffs', '/clientes'].some((prefix) =>
+    route.path.startsWith(prefix),
+  )
     ? 'inbox'
     : 'kanban',
 );
@@ -257,6 +259,15 @@ function onCursor(cursor) {
             <path d="M3 5h18v13H7l-4 3zm2 2v10l1.2-1H19V7z" />
           </svg>
           <span class="nav-label">Caixa de Entrada</span>
+        </RouterLink>
+        <RouterLink to="/handoffs">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="M12 3a7 7 0 1 1-7 7 7 7 0 0 1 7-7Zm0 3a1 1 0 0 0-1 1v4.4l3 1.8a1 1 0 1 0 1-1.7l-2-1.2V7a1 1 0 0 0-1-1Z"
+            />
+            <path d="M18.7 17.3 21 19.6l-1.4 1.4-2.3-2.3z" />
+          </svg>
+          <span class="nav-label">Handoffs</span>
         </RouterLink>
         <RouterLink
           to="/kanban"

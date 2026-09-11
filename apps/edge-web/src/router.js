@@ -4,6 +4,7 @@ import LegacyViewHost from './components/LegacyViewHost.vue';
 import AccountView from './views/AccountView.vue';
 import ClientsView from './views/ClientsView.vue';
 import DashboardView from './views/DashboardView.vue';
+import HandoffsView from './views/HandoffsView.vue';
 import InboxView from './views/InboxView.vue';
 import UsersView from './views/UsersView.vue';
 
@@ -22,6 +23,11 @@ export const router = createRouter({
       path: '/inbox',
       component: InboxView,
       meta: { title: 'Caixa de Entrada' },
+    },
+    {
+      path: '/handoffs',
+      component: HandoffsView,
+      meta: { title: 'Fila de handoffs' },
     },
     {
       path: '/kanban',

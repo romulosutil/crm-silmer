@@ -140,7 +140,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -388,7 +388,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -456,7 +456,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -518,7 +518,7 @@
       "position": [950, -620],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nif (input.simulate_send_unknown === true) throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');\nconst command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { id: 'dev-ai-' + command, messages: [{ id: 'dev-ai-' + command }], simulated: true } };"
+        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nif (input.simulate_send_unknown === true || input.scenario === 'send_unknown') throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');\nconst command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { id: 'dev-ai-' + command, messages: [{ id: 'dev-ai-' + command }], simulated: true } };"
       },
       "onError": "continueErrorOutput"
     },
@@ -565,7 +565,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -633,7 +633,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -701,7 +701,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -861,7 +861,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -970,7 +970,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1080,7 +1080,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1156,7 +1156,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-1"
+              "value": "dev-mvp-simple-2"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1202,7 +1202,7 @@
       "position": [-1950, -300],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const body = $json.body ?? $json;\nconst waId = String(body.wa_id ?? '').trim();\nif (!/^[1-9][0-9]{7,14}$/.test(waId)) throw new Error('DEV_WA_ID_INVALID');\nconst occurredAt = String(Math.floor(Date.now() / 1000));\nconst eventId = String(body.event_id ?? ('dev-inbound-' + $execution.id));\nconst phoneNumberId = String(body.phone_number_id ?? 'dev-phone-number');\nconst status = body.status == null ? null : String(body.status);\nif (status) {\n  return { json: { entry: [{ changes: [{ value: {\n    metadata: { phone_number_id: phoneNumberId },\n    statuses: [{ id: String(body.external_message_id ?? eventId), status, timestamp: occurredAt, recipient_id: waId }]\n  } }] }] } };\n}\nconst text = String(body.message ?? body.text ?? '').trim();\nif (!text) throw new Error('DEV_MESSAGE_REQUIRED');\nreturn { json: { entry: [{ changes: [{ value: {\n  metadata: { phone_number_id: phoneNumberId },\n  contacts: [{ profile: { name: String(body.customer_name ?? 'Cliente de teste') }, wa_id: waId }],\n  messages: [{ from: waId, id: eventId, timestamp: occurredAt, type: 'text', text: { body: text } }]\n} }] }] } };"
+        "jsCode": "const body = $json.body ?? $json;\nconst waId = String(body.wa_id ?? '').trim();\nif (!/^[1-9][0-9]{7,14}$/.test(waId)) throw new Error('DEV_WA_ID_INVALID');\nconst occurredAt = String(Math.floor(Date.now() / 1000));\nconst eventId = String(body.event_id ?? ('dev-inbound-' + $execution.id));\nconst phoneNumberId = String(body.phone_number_id ?? 'dev-phone-number');\nconst scenario = String(body.scenario ?? 'message').trim() || 'message';\nif (!['message', 'handoff', 'send_unknown', 'delivery_status'].includes(scenario)) {\n  throw new Error('DEV_SCENARIO_INVALID');\n}\nconst status = body.status == null\n  ? scenario === 'delivery_status' ? 'delivered' : null\n  : String(body.status);\nif (status) {\n  return { json: { entry: [{ changes: [{ value: {\n    metadata: { phone_number_id: phoneNumberId },\n    statuses: [{ id: String(body.external_message_id ?? eventId), status, timestamp: occurredAt, recipient_id: waId }]\n  } }] }] } };\n}\nconst defaultText = {\n  handoff: 'Quero falar com uma pessoa da Silmer, por favor.',\n  send_unknown: 'Preciso de 120 camisetas para um evento.',\n  message: 'Preciso de 120 camisetas para um evento.'\n}[scenario] ?? '';\nconst text = String(body.message ?? body.text ?? defaultText).trim();\nif (!text) throw new Error('DEV_MESSAGE_REQUIRED');\nreturn { json: { entry: [{ changes: [{ value: {\n  metadata: { phone_number_id: phoneNumberId },\n  contacts: [{ profile: { name: String(body.customer_name ?? 'Cliente de teste') }, wa_id: waId }],\n  messages: [{ from: waId, id: eventId, timestamp: occurredAt, type: 'text', text: { body: text } }]\n} }] }] } };"
       }
     },
     {
@@ -1213,7 +1213,7 @@
       "position": [1350, -700],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const decision = $('Normalizar decisão da IA (MVP)').item.json;\nreturn { json: { ok: true, route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, briefing_patch: decision.briefing_patch } };"
+        "jsCode": "const decision = $('Normalizar decisão da IA (MVP)').item.json;\nconst input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, briefing_patch: decision.briefing_patch } };"
       }
     },
     {
@@ -1224,7 +1224,7 @@
       "position": [620, -980],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return { json: { ok: true, route: 'handoff', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, crm: $json } };"
       }
     },
     {
@@ -1235,7 +1235,7 @@
       "position": [1350, -420],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return { json: { ok: true, route: 'send_unknown', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'send_unknown', route: 'send_unknown', whatsapp_simulated: true, crm: $json } };"
       }
     },
     {
@@ -1246,7 +1246,7 @@
       "position": [-990, -80],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return { json: { ok: true, route: 'delivery_status', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route: 'delivery_status', whatsapp_simulated: true, crm: $json } };"
       }
     },
     {
@@ -1270,7 +1270,7 @@
         "width": 760,
         "height": 470,
         "color": 3,
-        "content": "# DEV | Fluxo completo sem WhatsApp\n\nMantém a lógica do workflow principal e substitui apenas o transporte WhatsApp.\n\n- Entrada: webhook `silmer/dev-mvp-flow`.\n- CRM real: inbound, briefing, handoff, reserva e callbacks.\n- IA real: mesma decisão estruturada do MVP.\n- Saída WhatsApp: simulada, com `message.sent` persistido no CRM.\n- `simulate_send_unknown: true` exercita reconciliação.\n\nRequer `SILMER_PANEL_BASE_URL` acessível pelo n8n e as credenciais Basic DEV nos dois sentidos."
+        "content": "# DEV | Fluxo completo sem WhatsApp\n\nMantém a lógica do workflow principal e substitui apenas o transporte WhatsApp.\n\n- Entrada: webhook `silmer/dev-mvp-flow`.\n- CRM real: inbound, briefing, handoff, reserva e callbacks.\n- IA real: mesma decisão estruturada do MVP.\n- Saída WhatsApp: simulada, com `message.sent` persistido no CRM.\n- `simulate_send_unknown: true` exercita reconciliação.\n\nCenários: `message`, `handoff`, `send_unknown` e `delivery_status`. Eles apenas montam a entrada sintética; a jornada do CRM, IA e fence continua igual à do workflow canônico.\n\nRequer `SILMER_PANEL_BASE_URL` acessível pelo n8n e as credenciais Basic DEV nos dois sentidos."
       }
     }
   ],

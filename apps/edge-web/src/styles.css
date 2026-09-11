@@ -663,6 +663,30 @@ summary {
   gap: 0.45rem;
   margin-block-start: 0.55rem;
 }
+.handoff-list {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.handoff-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.handoff-head h2 {
+  margin-block-end: 0.25rem;
+}
+.handoff-head p,
+.handoff-summary {
+  color: var(--color-text-muted);
+}
+.handoff-summary {
+  margin-block: 0.75rem 0;
+  overflow-wrap: anywhere;
+}
 .account-page {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

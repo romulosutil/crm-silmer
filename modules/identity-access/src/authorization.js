@@ -37,6 +37,7 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
     'handoff.accept',
     'handoff.claim',
     'handoff.create',
+    'handoff.read',
     'handoff.resolve',
     'handoff.transfer',
     'kanban.read',

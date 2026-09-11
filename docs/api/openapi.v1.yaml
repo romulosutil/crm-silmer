@@ -250,17 +250,38 @@ paths:
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
-        - { name: state, in: query, schema: { $ref: '#/components/schemas/ConversationState' } }
-        - { name: channel, in: query, schema: { $ref: '#/components/schemas/Channel' } }
-        - { name: automationState, in: query, schema: { type: string, enum: [assistant, human] } }
-        - { name: assignedUserId, in: query, schema: { type: string, minLength: 1, maxLength: 128 } }
+        - {
+            name: state,
+            in: query,
+            schema: { $ref: '#/components/schemas/ConversationState' },
+          }
+        - {
+            name: channel,
+            in: query,
+            schema: { $ref: '#/components/schemas/Channel' },
+          }
+        - {
+            name: automationState,
+            in: query,
+            schema: { type: string, enum: [assistant, human] },
+          }
+        - {
+            name: assignedUserId,
+            in: query,
+            schema: { type: string, minLength: 1, maxLength: 128 },
+          }
         - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
       responses:
         '200':
           description: Página de conversas, sem envelopes cifrados ou payload bruto
           headers:
-            Cache-Control: { schema: { type: string, const: 'private, no-cache' } }
+            Cache-Control:
+              { schema: { type: string, const: 'private, no-cache' } }
             Vary: { schema: { type: string, const: 'Origin, Cookie' } }
           content:
             application/json:
@@ -283,6 +304,30 @@ paths:
               schema: { $ref: '#/components/schemas/InboxConversationDetail' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /inbox/handoffs:
+    get:
+      operationId: listOpenHandoffs
+      summary: Lista handoffs humanos pendentes
+      description: >-
+        Projeção paginada e minimizada para a fila de atendimento. O resumo é
+        decifrado somente depois da autorização do operador autenticado.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
+      responses:
+        '200':
+          description: Página de handoffs pendentes, sem envelopes cifrados
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HandoffPage' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /contacts:
     get:
       operationId: listContacts
@@ -291,7 +336,11 @@ paths:
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
         - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
       responses:
         '200':
           description: Página de contatos, sem envelopes cifrados
@@ -1110,7 +1159,15 @@ components:
       enum: [instagram, whatsapp]
     ConversationState:
       type: string
-      enum: [nova, em_analise, em_atendimento, requer_atencao, convertida_em_lead, sem_lead]
+      enum:
+        [
+          nova,
+          em_analise,
+          em_atendimento,
+          requer_atencao,
+          convertida_em_lead,
+          sem_lead,
+        ]
     ContactIdentityView:
       type: object
       additionalProperties: false
@@ -1125,7 +1182,18 @@ components:
     ContactView:
       type: object
       additionalProperties: false
-      required: [id, label, provisional, version, identities, activeDealCount, createdAt, updatedAt, latestActivityAt]
+      required:
+        [
+          id,
+          label,
+          provisional,
+          version,
+          identities,
+          activeDealCount,
+          createdAt,
+          updatedAt,
+          latestActivityAt,
+        ]
       properties:
         id: { type: string }
         label: { type: string }
@@ -1141,7 +1209,8 @@ components:
     InboxMessageView:
       type: object
       additionalProperties: false
-      required: [id, direction, type, preview, status, deliveryStatus, occurredAt]
+      required:
+        [id, direction, type, preview, status, deliveryStatus, occurredAt]
       properties:
         id: { type: string }
         direction: { type: string, enum: [inbound, outbound] }
@@ -1156,7 +1225,20 @@ components:
     InboxConversationView:
       type: object
       additionalProperties: false
-      required: [id, state, automationState, automationEpoch, version, channel, contact, lastMessage, requiresAttention, openedAt, updatedAt]
+      required:
+        [
+          id,
+          state,
+          automationState,
+          automationEpoch,
+          version,
+          channel,
+          contact,
+          lastMessage,
+          requiresAttention,
+          openedAt,
+          updatedAt,
+        ]
       properties:
         id: { type: string }
         state: { $ref: '#/components/schemas/ConversationState' }
@@ -1173,10 +1255,24 @@ components:
             label: { type: string }
             externalId: { type: string }
             displayHandle: { type: [string, 'null'] }
-        assignedUser: { oneOf: [{ $ref: '#/components/schemas/OperationalUserRef' }, { type: 'null' }] }
+        assignedUser:
+          {
+            oneOf:
+              [
+                { $ref: '#/components/schemas/OperationalUserRef' },
+                { type: 'null' },
+              ],
+          }
         deal: { type: [object, 'null'] }
         handoff: { type: [object, 'null'] }
-        lastMessage: { oneOf: [{ $ref: '#/components/schemas/InboxMessageView' }, { type: 'null' }] }
+        lastMessage:
+          {
+            oneOf:
+              [
+                { $ref: '#/components/schemas/InboxMessageView' },
+                { type: 'null' },
+              ],
+          }
         requiresAttention: { type: boolean }
         openedAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -1201,6 +1297,58 @@ components:
           type: array
           items: { $ref: '#/components/schemas/InboxMessageView' }
         suggestion: { type: [object, 'null'] }
+    HandoffView:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          conversationId,
+          conversationVersion,
+          contact,
+          status,
+          version,
+          reasonCode,
+          summary,
+          targetRole,
+          dueAt,
+          slaMinutes,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string }
+        conversationId: { type: string }
+        conversationVersion: { type: integer, minimum: 1 }
+        contact:
+          type: object
+          additionalProperties: false
+          required: [id, label, externalId]
+          properties:
+            id: { type: string }
+            label: { type: string }
+            externalId: { type: string }
+        status: { type: string, const: pending }
+        version: { type: integer, minimum: 1 }
+        reasonCode: { type: string }
+        summary: { type: string }
+        targetRole: { type: string }
+        dueAt: { type: string, format: date-time }
+        slaMinutes: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        dealId: { type: [string, 'null'] }
+        automationEpoch: { type: integer, minimum: 0 }
+    HandoffPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor, totalCount]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/HandoffView' }
+        nextCursor: { type: [string, 'null'] }
+        totalCount: { type: integer, minimum: 0 }
     ContactPage:
       type: object
       additionalProperties: false

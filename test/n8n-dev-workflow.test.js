@@ -78,6 +78,26 @@ test('isolates workflow identity, webhook paths and persistence settings', async
   );
 });
 
+test('keeps test scenarios at the synthetic boundary', async () => {
+  const dev = await workflow();
+  const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
+  const trigger = nodes.find(
+    (node) => node.name === 'DEV - Montar evento WhatsApp sintético (MVP)',
+  );
+  const send = nodes.find(
+    (node) => node.name === 'DEV - Simular envio da IA (MVP)',
+  );
+  assert.ok(trigger);
+  assert.ok(send);
+  assert.match(
+    trigger.parameters.jsCode,
+    /'message', 'handoff', 'send_unknown', 'delivery_status'/u,
+  );
+  assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
+  assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
+  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-2');
+});
+
 test('adds only named Basic credential references for deployment output', async () => {
   const dev = await workflow({ deployment: true });
   const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);

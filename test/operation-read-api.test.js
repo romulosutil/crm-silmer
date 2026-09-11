@@ -27,6 +27,10 @@ function harness(overrides = {}) {
       calls.push(['inbox', input]);
       return { items: [], nextCursor: null, totalCount: 0 };
     },
+    async listOpenHandoffs(/** @type {any} */ input) {
+      calls.push(['handoffs', input]);
+      return { items: [], nextCursor: null, totalCount: 0 };
+    },
     ...overrides,
   };
   const api = createApi(
@@ -100,6 +104,29 @@ test('publishes authorized Contact list and detail read models', async () => {
   assert.equal(detail.statusCode, 200);
   assert.deepEqual(calls[2][1].action, 'contact.read');
   assert.deepEqual(calls[3], ['contact', { contactId: 'contact-1' }]);
+  await api.close();
+});
+
+test('publishes the pending handoff queue through the read-only contract', async () => {
+  const { api, calls, headers } = harness();
+  const response = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/inbox/handoffs?limit=25&cursor=signed',
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['cache-control'], 'private, no-cache');
+  assert.deepEqual(calls[0], [
+    'authorize',
+    {
+      action: 'handoff.read',
+      authorization: undefined,
+      cookie: headers.cookie,
+      origin: headers.origin,
+      secFetchSite: undefined,
+    },
+  ]);
+  assert.deepEqual(calls[1], ['handoffs', { cursor: 'signed', limit: 25 }]);
   await api.close();
 });
 

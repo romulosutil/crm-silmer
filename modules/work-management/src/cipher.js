@@ -1,4 +1,4 @@
-import { createCipheriv, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 
@@ -27,4 +27,48 @@ export function createHandoffCipher({ key }) {
       });
     },
   });
+}
+
+/**
+ * Decrypts the handoff summary stored by either the work-management service or
+ * the n8n integration. The two writers intentionally use a different AAD
+ * shape because the n8n handoff exists before a Deal does; the read model owns
+ * selecting the matching shape from the persisted record.
+ *
+ * @param {unknown} value
+ * @param {string} pointer
+ * @param {Buffer} key
+ */
+export function decryptHandoffSummary(value, pointer, key) {
+  if (!Buffer.isBuffer(key) || key.length !== 32) {
+    throw new TypeError('A 32-byte handoff envelope key is required');
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Invalid handoff envelope');
+  }
+  const envelope = /** @type {Record<string, unknown>} */ (value);
+  if (
+    envelope.algorithm !== 'AES-256-GCM' ||
+    Number(envelope.version) !== 1 ||
+    (envelope.keyVersion !== undefined && Number(envelope.keyVersion) !== 1)
+  ) {
+    throw new Error('Unsupported handoff envelope');
+  }
+  try {
+    const decipher = createDecipheriv(
+      ALGORITHM,
+      key,
+      Buffer.from(String(envelope.iv), 'base64url'),
+    );
+    decipher.setAAD(Buffer.from(pointer, 'utf8'));
+    decipher.setAuthTag(Buffer.from(String(envelope.tag), 'base64url'));
+    return Buffer.concat([
+      decipher.update(Buffer.from(String(envelope.ciphertext), 'base64url')),
+      decipher.final(),
+    ]).toString('utf8');
+  } catch (error) {
+    throw new Error('Unable to authenticate handoff envelope', {
+      cause: error,
+    });
+  }
 }

@@ -24,7 +24,7 @@ apenas como fixture de desenvolvimento e nunca é fallback silencioso.
 | Conversa            | `conversations`                         | Uma conversa aberta por identidade/canal; guarda modo, `automation_epoch`, revisão inbound e o snapshot atual do briefing.        |
 | Mensagem            | `messages`                              | Inbound e outbound cifrados; identidade externa ou `command_id` impede duplicidade. O estado de entrega fica na própria mensagem. |
 | Briefing            | colunas cifradas da `conversation`      | Um snapshot consolidado; `briefing_patch` ignora nulos e só aceita campos de qualificação. Não promove dado oficial de Negócio.   |
-| Handoff             | `handoffs`                              | Criado sem responsável, com papel-alvo Atendimento ou Vendedor; uma pessoa compatível o reivindica atomicamente.                  |
+| Handoff             | `handoffs`                              | Criado sem responsável para a função humana vigente `Vendedor`; uma pessoa compatível o reivindica atomicamente.                  |
 | Negócio             | `deals` e módulos canônicos             | Nunca é criado pela simples chegada de mensagem. Conversão, campos e etapas continuam nos endpoints de domínio.                   |
 | Comando humano      | `n8n_commands` + `outbox_jobs`          | Estado oficial e outbox são gravados antes de o worker chamar o webhook do n8n.                                                   |
 | Evidência técnica   | `n8n_events`, auditoria e reconciliação | Registra correlação, workflow, versão, execução e resultado sem conteúdo pessoal ou segredo técnico.                              |
@@ -95,7 +95,10 @@ Atendimento. Não há mensagem automática de confirmação no primeiro corte.
 - Workflow DEV: `0S5ZS1xeDCSoWovs` — `DEV | Silmer | Fluxo completo sem
   WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos por
   `silmer/dev-mvp-flow`, usa a API real do CRM e simula apenas os dois envios
-  pelo WhatsApp. O webhook CRM→n8n isolado é `silmer/dev-panel-command`.
+  pelo WhatsApp. O webhook CRM→n8n isolado é `silmer/dev-panel-command`. A
+  versão DEV aceita `scenario: message`, `handoff`, `send_unknown` e
+  `delivery_status`; o cenário só muda o envelope sintético, nunca grava dados
+  diretamente no PostgreSQL.
 - Baseline preservada: `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.
 - Rascunho simplificado validado: `fae803db-eef0-4074-a7ae-1a6bb786e203`,
   com 42 nós e sem avisos estruturais.

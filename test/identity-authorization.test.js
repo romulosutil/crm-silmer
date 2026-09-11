@@ -239,6 +239,7 @@ test('keeps a single operational allowlist for API guards and the policy', async
     'conversation.takeover',
     'conversation.transfer',
     'conversation.transition',
+    'handoff.read',
     'handoff.claim',
   ]) {
     assert.ok(

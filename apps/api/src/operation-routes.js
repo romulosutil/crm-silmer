@@ -48,6 +48,15 @@ export function registerOperationRoutes(api, operations, contextFor) {
       }),
   );
 
+  api.get('/api/v1/inbox/handoffs', async (request, reply) =>
+    respond(reply, async () => {
+      const input = parseListQuery(request.query, ['cursor', 'limit']);
+      await authorizeRead(request, operations, 'handoff.read');
+      privateReadHeaders(reply);
+      return reply.code(200).send(await operations.listOpenHandoffs(input));
+    }),
+  );
+
   api.get('/api/v1/contacts', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query, ['cursor', 'limit']);

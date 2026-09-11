@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
-export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-1';
+export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-2';
 
 const MAIN_WORKFLOW_ID = 'k7tI6T4RhQPyJkn9';
 const MAIN_TRIGGER = 'WhatsApp - Receber eventos (MVP)';
@@ -83,14 +83,25 @@ if (!/^[1-9][0-9]{7,14}$/.test(waId)) throw new Error('DEV_WA_ID_INVALID');
 const occurredAt = String(Math.floor(Date.now() / 1000));
 const eventId = String(body.event_id ?? ('dev-inbound-' + $execution.id));
 const phoneNumberId = String(body.phone_number_id ?? 'dev-phone-number');
-const status = body.status == null ? null : String(body.status);
+const scenario = String(body.scenario ?? 'message').trim() || 'message';
+if (!['message', 'handoff', 'send_unknown', 'delivery_status'].includes(scenario)) {
+  throw new Error('DEV_SCENARIO_INVALID');
+}
+const status = body.status == null
+  ? scenario === 'delivery_status' ? 'delivered' : null
+  : String(body.status);
 if (status) {
   return { json: { entry: [{ changes: [{ value: {
     metadata: { phone_number_id: phoneNumberId },
     statuses: [{ id: String(body.external_message_id ?? eventId), status, timestamp: occurredAt, recipient_id: waId }]
   } }] }] } };
 }
-const text = String(body.message ?? body.text ?? '').trim();
+const defaultText = {
+  handoff: 'Quero falar com uma pessoa da Silmer, por favor.',
+  send_unknown: 'Preciso de 120 camisetas para um evento.',
+  message: 'Preciso de 120 camisetas para um evento.'
+}[scenario] ?? '';
+const text = String(body.message ?? body.text ?? defaultText).trim();
 if (!text) throw new Error('DEV_MESSAGE_REQUIRED');
 return { json: { entry: [{ changes: [{ value: {
   metadata: { phone_number_id: phoneNumberId },
@@ -105,7 +116,7 @@ return { json: { entry: [{ changes: [{ value: {
     requiredNode(nodes, AI_SEND),
     DEV_AI_SEND,
     `const input = $('${DEV_TRIGGER}').item.json.body ?? {};
-if (input.simulate_send_unknown === true) throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');
+if (input.simulate_send_unknown === true || input.scenario === 'send_unknown') throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');
 const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;
 return { json: { id: 'dev-ai-' + command, messages: [{ id: 'dev-ai-' + command }], simulated: true } };`,
   );
@@ -144,22 +155,26 @@ return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-hu
       'DEV - Resultado da resposta da IA',
       [1350, -700],
       `const decision = $('Normalizar decisão da IA (MVP)').item.json;
-return { json: { ok: true, route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, briefing_patch: decision.briefing_patch } };`,
+const input = $('${DEV_TRIGGER}').item.json.body ?? {};
+return { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, briefing_patch: decision.briefing_patch } };`,
     ),
     resultNode(
       'DEV - Resultado do handoff',
       [620, -980],
-      `return { json: { ok: true, route: 'handoff', whatsapp_simulated: true, crm: $json } };`,
+      `const input = $('${DEV_TRIGGER}').item.json.body ?? {};
+return { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, crm: $json } };`,
     ),
     resultNode(
       'DEV - Resultado do envio desconhecido',
       [1350, -420],
-      `return { json: { ok: true, route: 'send_unknown', whatsapp_simulated: true, crm: $json } };`,
+      `const input = $('${DEV_TRIGGER}').item.json.body ?? {};
+return { json: { ok: true, scenario: input.scenario ?? 'send_unknown', route: 'send_unknown', whatsapp_simulated: true, crm: $json } };`,
     ),
     resultNode(
       'DEV - Resultado do status',
       [-990, -80],
-      `return { json: { ok: true, route: 'delivery_status', whatsapp_simulated: true, crm: $json } };`,
+      `const input = $('${DEV_TRIGGER}').item.json.body ?? {};
+return { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route: 'delivery_status', whatsapp_simulated: true, crm: $json } };`,
     ),
     resultNode(
       'DEV - Resultado sem novo envio',
@@ -184,6 +199,9 @@ return { json: { ok: true, route: 'ai_reply', whatsapp_simulated: true, conversa
           '- IA real: mesma decisão estruturada do MVP.\n' +
           '- Saída WhatsApp: simulada, com `message.sent` persistido no CRM.\n' +
           '- `simulate_send_unknown: true` exercita reconciliação.\n\n' +
+          'Cenários: `message`, `handoff`, `send_unknown` e `delivery_status`. ' +
+          'Eles apenas montam a entrada sintética; a jornada do CRM, IA e fence ' +
+          'continua igual à do workflow canônico.\n\n' +
           'Requer `SILMER_PANEL_BASE_URL` acessível pelo n8n e as credenciais Basic DEV nos dois sentidos.',
       },
     },

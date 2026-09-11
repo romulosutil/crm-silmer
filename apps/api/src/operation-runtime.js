@@ -8,6 +8,7 @@ import {
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { PostgresContactReadRepository } from '@crm-silmer/contacts';
 import { PostgresInboxReadRepository } from '@crm-silmer/inbox-channels';
+import { PostgresHandoffReadRepository } from '@crm-silmer/work-management';
 
 const DISPLAY_NAME_MAX_LENGTH = 120;
 
@@ -32,10 +33,11 @@ export class OperationReadError extends Error {
   }
 }
 
-/** @param {{contactRepository: any, cursorKey: Buffer, inboxRepository: any}} dependencies */
+/** @param {{contactRepository: any, cursorKey: Buffer, handoffRepository: any, inboxRepository: any}} dependencies */
 export function createOperationReadService({
   contactRepository,
   cursorKey,
+  handoffRepository,
   inboxRepository,
 }) {
   if (!contactRepository || typeof contactRepository !== 'object') {
@@ -43,6 +45,9 @@ export function createOperationReadService({
   }
   if (!inboxRepository || typeof inboxRepository !== 'object') {
     throw new TypeError('inboxRepository is required');
+  }
+  if (!handoffRepository || typeof handoffRepository !== 'object') {
+    throw new TypeError('handoffRepository is required');
   }
   if (!Buffer.isBuffer(cursorKey) || cursorKey.length < 32) {
     throw new TypeError('cursorKey must contain at least 32 bytes');
@@ -118,6 +123,22 @@ export function createOperationReadService({
         scope: 'inbox',
       });
     },
+    /** @param {any} input */
+    async listOpenHandoffs(input = {}) {
+      rejectUnknownKeys(input, ['cursor', 'limit']);
+      const limit = readLimit(input.limit);
+      const after = readCursor(input.cursor, {
+        cursorKey,
+        fingerprint: filterFingerprint({ status: 'pending' }),
+        scope: 'handoffs',
+      });
+      const result = await handoffRepository.listOpen({ after, limit });
+      return pageResponse(result, {
+        cursorKey,
+        fingerprint: filterFingerprint({ status: 'pending' }),
+        scope: 'handoffs',
+      });
+    },
   });
 }
 
@@ -139,6 +160,17 @@ export function createOperationReadRuntime(database, options = {}) {
       environment.KANBAN_CURSOR_HMAC_KEY,
       'KANBAN_CURSOR_HMAC_KEY',
     ),
+    handoffRepository: new PostgresHandoffReadRepository({
+      contactEnvelopeKey: readKey(
+        environment.CONTACT_IDENTITY_ENVELOPE_KEY,
+        'CONTACT_IDENTITY_ENVELOPE_KEY',
+      ),
+      database,
+      handoffEnvelopeKey: readKey(
+        environment.HANDOFF_ENVELOPE_KEY,
+        'HANDOFF_ENVELOPE_KEY',
+      ),
+    }),
     inboxRepository: new PostgresInboxReadRepository({
       contactEnvelopeKey: readKey(
         environment.CONTACT_IDENTITY_ENVELOPE_KEY,

@@ -55,6 +55,8 @@ const conversation = {
   lastMessage: {
     deliveryStatus: null,
     direction: 'inbound',
+    authorId: 'contact-1',
+    authorKind: 'contact',
     id: 'message-1',
     occurredAt: '2026-09-08T12:00:00.000Z',
     preview: 'Preciso de 120 camisetas.',
@@ -68,7 +70,7 @@ const conversation = {
   updatedAt: '2026-09-08T12:00:00.000Z',
   version: 3,
 };
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -93,7 +95,27 @@ async function mockCrm(page, options = {}) {
           automationState: 'assistant',
         }
       : conversation;
-  const detailMessages = options.longThread
+  const detailMessages = options.mixedAuthors
+    ? [
+        conversation.lastMessage,
+        {
+          ...conversation.lastMessage,
+          authorId: 'AUTOMATION_EXECUTOR',
+          authorKind: 'assistant',
+          direction: 'outbound',
+          id: 'message-assistant',
+          preview: 'Posso ajudar a organizar seu pedido.',
+        },
+        {
+          ...conversation.lastMessage,
+          authorId: 'operator-1',
+          authorKind: 'human',
+          direction: 'outbound',
+          id: 'message-human',
+          preview: 'Vou assumir seu atendimento agora.',
+        },
+      ]
+    : options.longThread
     ? Array.from({ length: 30 }, (_, index) => ({
         ...conversation.lastMessage,
         id: `message-${index + 1}`,
@@ -549,6 +571,23 @@ test('keeps a long conversation inside its own scrollable message area', async (
 
   expect(metrics.overflowY).toBe('auto');
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+});
+
+test('identifies customer, assistant, and seller messages in the conversation', async ({
+  page,
+}) => {
+  await mockCrm(page, { mixedAuthors: true });
+  await page.goto('/inbox');
+
+  await expect(page.locator(".message[data-from='cliente'] .msg-role")).toHaveText(
+    'Cliente',
+  );
+  await expect(page.locator(".message[data-from='agente'] .msg-role")).toHaveText(
+    'IA',
+  );
+  await expect(page.locator(".message[data-from='humano'] .msg-role")).toHaveText(
+    'Vendedor',
+  );
 });
 
 test('restores search focus after removing filter controls', async ({

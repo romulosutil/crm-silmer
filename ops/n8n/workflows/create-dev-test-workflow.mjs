@@ -125,8 +125,8 @@ const body = isChat ? {} : ($json.body ?? $json);
 const chatSessionId = String($json.sessionId ?? $execution.id);
 const syntheticWaId = (() => {
   let hash = 0;
-  for (const char of chatSessionId) hash = (hash * 31 + char.charCodeAt(0)) % 10000000000000;
-  return '9' + String(hash).padStart(13, '0');
+  for (const char of chatSessionId) hash = (hash * 31 + char.charCodeAt(0)) % 100000000;
+  return '55419' + String(hash).padStart(8, '0');
 })();
 const waId = String(body.wa_id ?? '').trim();
 const contactWaId = isChat ? syntheticWaId : waId;

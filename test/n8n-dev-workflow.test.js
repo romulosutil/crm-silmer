@@ -131,6 +131,8 @@ test('offers an authenticated manual chat that starts a fresh synthetic CRM conv
   });
   assert.match(syntheticInput.parameters.jsCode, /chatInput/u);
   assert.match(syntheticInput.parameters.jsCode, /syntheticWaId/u);
+  assert.match(syntheticInput.parameters.jsCode, /'55419'/u);
+  assert.match(syntheticInput.parameters.jsCode, /padStart\(8, '0'\)/u);
 });
 
 test('adds only named Basic credential references for deployment output', async () => {

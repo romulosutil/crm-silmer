@@ -102,6 +102,7 @@ async function mockCrm(page, options = {}) {
           ...conversation.lastMessage,
           authorId: 'AUTOMATION_EXECUTOR',
           authorKind: 'assistant',
+          deliveryStatus: 'sent',
           direction: 'outbound',
           id: 'message-assistant',
           preview: 'Posso ajudar a organizar seu pedido.',
@@ -588,6 +589,7 @@ test('identifies customer, assistant, and seller messages in the conversation', 
   await expect(page.locator(".message[data-from='humano'] .msg-role")).toHaveText(
     'Vendedor',
   );
+  await expect(page.getByText('Entrega: sent')).toHaveCount(0);
 });
 
 test('restores search focus after removing filter controls', async ({

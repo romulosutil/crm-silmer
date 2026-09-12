@@ -123,6 +123,15 @@ test('scans each local OCI layout before its only registry publication', async (
     1,
   );
   assert.match(workflow, /npm ci/u);
+  assert.match(
+    workflow,
+    /actions\/cache@5a3ec84eff668545956fd18022155c47e93e2684/u,
+  );
+  assert.match(workflow, /path:\s*~\/\.cache\/ms-playwright/u);
+  assert.match(
+    workflow,
+    /key:\s*playwright-\$\{\{ runner\.os \}\}-\$\{\{ hashFiles\('package-lock\.json'\) \}\}/u,
+  );
   assert.match(workflow, /npm run validate/u);
   assert.match(workflow, /postgres:17-alpine@sha256:[a-f0-9]{64}/u);
   assert.match(workflow, /TEST_DATABASE_URL:/u);
@@ -143,6 +152,14 @@ test('scans each local OCI layout before its only registry publication', async (
   assert.match(workflow, /timeout-minutes:\s*45/u);
   assert.equal(workflow.match(/version:\s*v0\.36\.1/gu)?.length, 1);
   assert.match(workflow, /image=moby\/buildkit@sha256:[a-f0-9]{64}/u);
+  assert.match(
+    workflow,
+    /cache-from:\s*type=gha,scope=\$\{\{ matrix\.image \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /cache-to:\s*type=gha,mode=max,scope=\$\{\{ matrix\.image \}\}/u,
+  );
   assert.match(
     workflow,
     /images:[\s\S]+permissions:\s+contents:\s+read\s+packages:\s+write/u,

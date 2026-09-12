@@ -91,6 +91,7 @@ export function createOperationReadService({
         'cursor',
         'limit',
         'state',
+        'unassignedHumanHandoff',
       ]);
       const filters = {};
       if (input.assignedUserId !== undefined) {
@@ -122,6 +123,19 @@ export function createOperationReadService({
       }
       if (input.state !== undefined) {
         filters.state = requireChoice(input.state, CONVERSATION_STATES);
+      }
+      if (input.unassignedHumanHandoff !== undefined) {
+        if (
+          input.unassignedHumanHandoff !== true &&
+          input.unassignedHumanHandoff !== false &&
+          input.unassignedHumanHandoff !== 'true' &&
+          input.unassignedHumanHandoff !== 'false'
+        ) {
+          throw new OperationReadError(400, 'INVALID_FILTER');
+        }
+        filters.unassignedHumanHandoff =
+          input.unassignedHumanHandoff === true ||
+          input.unassignedHumanHandoff === 'true';
       }
       const fingerprint = filterFingerprint(filters);
       const limit = readLimit(input.limit);

@@ -310,6 +310,14 @@ paths:
             schema: { type: string, minLength: 1, maxLength: 128 },
           }
         - {
+            name: unassignedHumanHandoff,
+            in: query,
+            schema: { type: boolean, default: false },
+            description: >-
+              Quando true, retorna somente conversas em modo humano com
+              handoff pendente e sem responsável atribuído.
+          }
+        - {
             name: archived,
             in: query,
             schema: { type: boolean, default: false },

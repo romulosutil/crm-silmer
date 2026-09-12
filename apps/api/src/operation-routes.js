@@ -79,6 +79,7 @@ export function registerOperationRoutes(api, operations, contextFor) {
         'cursor',
         'limit',
         'state',
+        'unassignedHumanHandoff',
       ]);
       await authorizeRead(request, operations, 'conversation.read');
       privateReadHeaders(reply);
@@ -191,7 +192,7 @@ function parseListQuery(value, allowed) {
       parsed[key] = Number(query[key]);
       continue;
     }
-    if (key === 'archived') {
+    if (key === 'archived' || key === 'unassignedHumanHandoff') {
       if (query[key] !== 'true' && query[key] !== 'false') {
         throw new OperationReadRequestError(400, 'INVALID_FILTER');
       }

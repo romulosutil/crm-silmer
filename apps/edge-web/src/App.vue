@@ -341,9 +341,10 @@ function onCursor(cursor) {
           :data-state="connection"
           :data-updated-at="lastUpdatedAt"
           :title="connectionDetail"
+          :aria-label="`${connectionLabel}. ${connectionDetail}`"
         >
-          <span>{{ connectionLabel }}</span>
-          <small>{{ connectionDetail }}</small>
+          {{ connectionLabel }}
+          <span class="sr-only">{{ connectionDetail }}</span>
         </span>
         <ThemeSwitcher />
       </header>

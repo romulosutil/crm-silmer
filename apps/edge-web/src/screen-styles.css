@@ -280,8 +280,13 @@ details.exact summary {
   border-block-end: 1px solid var(--color-border-subtle);
 }
 
+.data-table tbody tr:hover,
 .data-table tbody tr[data-selected='true'] {
   background: var(--color-surface-raised);
+}
+
+.users-page .data-table tbody tr:hover {
+  background: transparent;
 }
 
 .num,

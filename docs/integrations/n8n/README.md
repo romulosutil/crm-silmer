@@ -115,7 +115,13 @@ Atendimento. Não há mensagem automática de confirmação no primeiro corte.
   pelo WhatsApp. O webhook CRM→n8n isolado é `silmer/dev-panel-command`. A
   versão DEV aceita `scenario: message`, `handoff`, `send_unknown` e
   `delivery_status`; o cenário só muda o envelope sintético, nunca grava dados
-  diretamente no PostgreSQL.
+  diretamente no PostgreSQL. Além do webhook, há um **Chat Trigger** hospedado,
+  restrito ao usuário autenticado do n8n. Ele atravessa o mesmo caminho CRM → IA
+  → handoff/reserva → callback simulado e mostra a resposta no chat. Cada página
+  de chat cria uma identidade WhatsApp sintética; o n8n não recarrega a sessão
+  anterior, portanto atualizar a página inicia uma nova conversa de teste. Isso
+  preserva o histórico oficial durante a conversa aberta, sem misturá-lo com uma
+  nova sessão manual.
 - Baseline preservada: `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.
 - Rascunho simplificado validado: `fae803db-eef0-4074-a7ae-1a6bb786e203`,
   com 42 nós e sem avisos estruturais.

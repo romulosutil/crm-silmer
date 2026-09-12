@@ -30,18 +30,20 @@ test('keeps the canonical MVP path while replacing only WhatsApp transport', asy
 
   assert.equal(dev.source.id, DEV_WORKFLOW_ID);
   assert.equal(dev.source.active, false);
-  assert.ok(nodes.length < 50);
+  assert.ok(nodes.length < 51);
   assert.equal(
     nodes.some((node) => /whatsApp(?:Trigger)?$/u.test(node.type)),
     false,
   );
   assert.ok(names.has('DEV - Receber evento sintético (MVP)'));
+  assert.ok(names.has('DEV - Conversa manual no chat (MVP)'));
   assert.ok(names.has('CRM - Registrar inbound (MVP)'));
   assert.ok(names.has('CRM - Reservar envio da IA (MVP)'));
   assert.ok(names.has('CRM - Registrar message.sent da IA (MVP)'));
   assert.ok(names.has('CRM - Registrar handoff (MVP)'));
   assert.ok(names.has('Painel - Receber comando (MVP)'));
   assert.match(serialized, /simulate_send_unknown/u);
+  assert.match(serialized, /loadPreviousSession/u);
   assert.doesNotMatch(serialized, /credentials|webhookId|pinData/u);
 });
 
@@ -95,13 +97,40 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   );
   assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
   assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
-  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-3');
+  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-4');
   const result = nodes.find(
     (node) => node.name === 'DEV - Resultado da resposta da IA',
   );
   assert.ok(result);
   assert.match(result.parameters.jsCode, /handoff_ready/u);
   assert.match(result.parameters.jsCode, /missing_briefing_fields/u);
+});
+
+test('offers an authenticated manual chat that starts a fresh synthetic CRM conversation on reload', async () => {
+  const dev = await workflow();
+  const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
+  const chat = nodes.find(
+    (node) => node.name === 'DEV - Conversa manual no chat (MVP)',
+  );
+  const syntheticInput = nodes.find(
+    (node) => node.name === 'DEV - Montar evento WhatsApp sintético (MVP)',
+  );
+
+  assert.ok(chat);
+  assert.ok(syntheticInput);
+  assert.equal(chat.type, '@n8n/n8n-nodes-langchain.chatTrigger');
+  assert.equal(chat.parameters.mode, 'hostedChat');
+  assert.equal(chat.parameters.authentication, 'n8nUserAuth');
+  assert.equal(chat.parameters.requireExecuteAccess, true);
+  assert.equal(chat.parameters.options.loadPreviousSession, 'notSupported');
+  assert.equal(chat.parameters.options.responseMode, 'lastNode');
+  assert.deepEqual(dev.connections[chat.name].main[0][0], {
+    node: 'DEV - Montar evento WhatsApp sintético (MVP)',
+    type: 'main',
+    index: 0,
+  });
+  assert.match(syntheticInput.parameters.jsCode, /chatInput/u);
+  assert.match(syntheticInput.parameters.jsCode, /syntheticWaId/u);
 });
 
 test('adds only named Basic credential references for deployment output', async () => {

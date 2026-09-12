@@ -193,8 +193,16 @@ test('offers permanent deletion only for a seller without history', async ({
   await openActions(page, 'Rômulo Sutil');
 
   await openActions(page, 'Marina Duarte');
-  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Excluir' }).click();
+  const confirmation = page.getByRole('alertdialog');
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText('Excluir Marina Duarte?');
+  await confirmation.getByRole('button', { name: 'Cancelar' }).click();
+  expect(commands).toHaveLength(0);
+
+  await openActions(page, 'Marina Duarte');
+  await page.getByRole('button', { name: 'Excluir' }).click();
+  await confirmation.getByRole('button', { name: 'Excluir conta' }).click();
 
   await expect(page.getByRole('row')).toHaveCount(2);
   expect(commands.at(-1)).toMatchObject({

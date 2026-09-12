@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { ApiError, commandKey, request } from '../lib/api-client.js';
 
 const props = defineProps({
@@ -21,6 +21,9 @@ const busy = ref(false);
 const handover = ref(null);
 const editing = ref(null);
 const copied = ref(false);
+const confirmingDelete = ref(null);
+const deleteCancel = ref(null);
+const deleteTrigger = ref(null);
 
 const currentUser = computed(() => props.session.user ?? props.session);
 const isAdmin = computed(() =>
@@ -155,12 +158,21 @@ async function changeDisabled(user, disabled) {
   }
 }
 
-/** @param {Record<string, any>} user */
-async function deleteUser(user) {
-  const confirmed = globalThis.confirm(
-    `Excluir permanentemente a conta de ${user.name}? Esta ação não pode ser desfeita.`,
-  );
-  if (!confirmed) return;
+/** @param {Record<string, any>} user @param {MouseEvent} event */
+function requestDelete(user, event) {
+  event.currentTarget.closest('details')?.removeAttribute('open');
+  deleteTrigger.value = event.currentTarget;
+  confirmingDelete.value = user;
+}
+
+function cancelDelete() {
+  confirmingDelete.value = null;
+  nextTick(() => deleteTrigger.value?.focus());
+}
+
+async function deleteUser() {
+  const user = confirmingDelete.value;
+  if (!user) return;
   props.showError('');
   busy.value = true;
   try {
@@ -170,6 +182,7 @@ async function deleteUser(user) {
       body: { reason: DELETE_REASON },
     });
     await load();
+    confirmingDelete.value = null;
     props.announce(`Conta de ${user.name} excluída.`);
   } catch (error) {
     props.showError(publicMessage(error));
@@ -177,6 +190,12 @@ async function deleteUser(user) {
     busy.value = false;
   }
 }
+
+watch(confirmingDelete, async (user) => {
+  if (!user) return;
+  await nextTick();
+  deleteCancel.value?.focus();
+});
 
 async function copyMarkdown() {
   try {
@@ -319,7 +338,7 @@ function formValues(form) {
                   </span>
                 </td>
                 <td>{{ formatDate(user.createdAt) }}</td>
-                <td>
+                <td class="row-menu-cell">
                   <details class="row-menu">
                     <summary :aria-label="`Mais ações para ${user.name}`">
                       <span aria-hidden="true">⋯</span>
@@ -343,10 +362,10 @@ function formValues(form) {
                       </button>
                       <button
                         v-if="user.canDelete"
-                        class="small danger"
+                        class="small"
                         type="button"
                         :disabled="busy"
-                        @click="deleteUser(user)"
+                        @click="requestDelete(user, $event)"
                       >
                         Excluir
                       </button>
@@ -476,6 +495,49 @@ function formValues(form) {
           </div>
         </form>
       </div>
+    </div>
+
+    <div
+      v-if="confirmingDelete"
+      class="overlay"
+      @click.self="cancelDelete"
+      @keydown.esc="cancelDelete"
+    >
+      <section
+        class="dialog delete-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-title"
+        aria-describedby="delete-description"
+      >
+        <p class="section-kicker">Excluir conta</p>
+        <h2 id="delete-title">Excluir {{ confirmingDelete.name }}?</h2>
+        <p id="delete-description">
+          Esta ação remove a conta permanentemente e não pode ser desfeita.
+        </p>
+        <div class="dialog-footer">
+          <span></span>
+          <div class="button-row">
+            <button
+              ref="deleteCancel"
+              class="quiet"
+              type="button"
+              :disabled="busy"
+              @click="cancelDelete"
+            >
+              Cancelar
+            </button>
+            <button
+              class="danger"
+              type="button"
+              :disabled="busy"
+              @click="deleteUser"
+            >
+              {{ busy ? 'Excluindo…' : 'Excluir conta' }}
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>

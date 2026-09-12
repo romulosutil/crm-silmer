@@ -908,18 +908,27 @@ details.exact summary {
 }
 
 .row-menu {
+  display: inline-block;
   position: relative;
+  vertical-align: middle;
+}
+
+.data-table .row-menu-cell {
+  inline-size: 1%;
+  padding-inline: 0.5rem;
+  text-align: end;
+  vertical-align: middle;
 }
 
 .row-menu > summary {
   align-items: center;
   background: transparent;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 0.35rem;
+  border: 0;
+  border-radius: 999px;
   color: var(--color-text-muted);
   cursor: pointer;
   display: inline-flex;
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 700;
   height: 2rem;
   justify-content: center;
@@ -930,6 +939,10 @@ details.exact summary {
 
 .row-menu > summary::-webkit-details-marker {
   display: none;
+}
+
+.row-menu > summary::marker {
+  content: '';
 }
 
 .row-menu > summary:hover,
@@ -946,12 +959,12 @@ details.exact summary {
 .row-menu-actions {
   background: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
-  border-radius: 0.35rem;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-raised);
   display: grid;
-  gap: 0.25rem;
-  min-inline-size: 9rem;
-  padding: 0.35rem;
+  gap: 0.125rem;
+  min-inline-size: 10rem;
+  padding: 0.25rem;
   position: absolute;
   right: 0;
   top: calc(100% + 0.25rem);
@@ -959,9 +972,25 @@ details.exact summary {
 }
 
 .row-menu-actions .small {
+  min-block-size: 2.25rem;
+  padding-inline: 0.65rem;
   justify-content: flex-start;
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text);
   text-align: start;
   width: 100%;
+}
+
+.row-menu-actions .small:hover:not(:disabled),
+.row-menu-actions .small:focus-visible {
+  background: var(--color-surface-muted);
+  border-color: transparent;
+  color: var(--color-text);
+}
+
+.delete-dialog {
+  inline-size: min(100%, 26rem);
 }
 
 .handover-panel {

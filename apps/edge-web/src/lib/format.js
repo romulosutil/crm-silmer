@@ -4,25 +4,17 @@ const DATE_TIME = new Intl.DateTimeFormat('pt-BR', {
 });
 
 export const CONVERSATION_LABELS = Object.freeze({
-  convertida_em_lead: 'Convertida em negócio',
+  convertida_em_lead: 'Atendimento concluído',
   em_analise: 'Em análise',
   em_atendimento: 'Em atendimento',
   nova: 'Nova',
   requer_atencao: 'Requer atenção',
-  sem_lead: 'Encerrada sem negócio',
+  sem_lead: 'Atendimento encerrado',
 });
 
 export const CHANNEL_LABELS = Object.freeze({
   instagram: 'Instagram',
   whatsapp: 'WhatsApp',
-});
-
-export const STAGE_LABELS = Object.freeze({
-  especificacao: 'Especificação',
-  estampa: 'Estampa',
-  fechamento: 'Fechamento',
-  logistica: 'Logística',
-  produto: 'Produto',
 });
 
 /** @param {unknown} value */

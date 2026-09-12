@@ -37,9 +37,6 @@ export class PostgresContactReadRepository {
                   identity.identity_kind, identity.phone_status,
                   identity.external_identity_lookup_hash,
                   identity.identity_envelope,
-                  COALESCE((SELECT count(*)::integer FROM crm.deals deal
-                            WHERE deal.contact_id=contact_page.id
-                              AND deal.status='active'), 0) active_deal_count,
                   GREATEST(
                     contact_page.updated_at,
                     COALESCE((SELECT max(conversation.last_message_at)
@@ -47,9 +44,6 @@ export class PostgresContactReadRepository {
                               JOIN crm.conversations conversation
                                 ON conversation.contact_identity_id=linked_identity.id
                               WHERE linked_identity.current_contact_id=contact_page.id),
-                             contact_page.updated_at),
-                    COALESCE((SELECT max(deal.updated_at) FROM crm.deals deal
-                              WHERE deal.contact_id=contact_page.id),
                              contact_page.updated_at)
                   ) latest_activity_at
            FROM contact_page
@@ -74,7 +68,7 @@ export class PostgresContactReadRepository {
   /** @param {string} contactId */
   async get(contactId) {
     return this.#snapshot(async (database) => {
-      const [contact, identities, conversations, deals] = await runSequential([
+      const [contact, identities, conversations] = await runSequential([
         () =>
           database.query(
             `SELECT id, display_name, provisional, version, created_at,
@@ -104,18 +98,6 @@ export class PostgresContactReadRepository {
              ORDER BY conversation.last_message_at DESC, conversation.id DESC`,
             [contactId],
           ),
-        () =>
-          database.query(
-            `SELECT deal.id, deal.stage, deal.status, deal.version,
-                    deal.created_at, deal.updated_at,
-                    deal.assigned_user_id, user_function.function_name
-             FROM crm.deals deal
-             LEFT JOIN crm.user_functions user_function
-               ON user_function.user_id=deal.assigned_user_id
-             WHERE deal.contact_id=$1
-             ORDER BY deal.updated_at DESC, deal.id DESC`,
-            [contactId],
-          ),
       ]);
       const row = contact.rows[0];
       if (!row) throw notFound('CONTACT_NOT_FOUND');
@@ -123,9 +105,6 @@ export class PostgresContactReadRepository {
         mapIdentity(identity, this.envelopeKey),
       );
       return {
-        activeDealCount: deals.rows.filter(
-          (/** @type {any} */ deal) => deal.status === 'active',
-        ).length,
         contact: mapContact(row, identityViews),
         conversations: conversations.rows.map(
           (/** @type {any} */ conversation) => ({
@@ -141,20 +120,6 @@ export class PostgresContactReadRepository {
             version: Number(conversation.version),
           }),
         ),
-        deals: deals.rows.map((/** @type {any} */ deal) => ({
-          assignedUser: deal.assigned_user_id
-            ? {
-                functionName: deal.function_name,
-                id: deal.assigned_user_id,
-              }
-            : null,
-          createdAt: iso(deal.created_at),
-          id: deal.id,
-          stage: deal.stage,
-          status: deal.status,
-          updatedAt: iso(deal.updated_at),
-          version: Number(deal.version),
-        })),
         identities: identityViews,
       };
     });
@@ -181,7 +146,6 @@ function groupContacts(rows, key) {
     let current = grouped.get(row.id);
     if (!current) {
       current = {
-        activeDealCount: Number(row.active_deal_count),
         createdAt: iso(row.created_at),
         displayName: row.display_name ?? null,
         id: row.id,
@@ -207,7 +171,6 @@ function mapContact(row, identities) {
     identities[0] ??
     null;
   return Object.freeze({
-    activeDealCount: Number(row.activeDealCount ?? row.active_deal_count ?? 0),
     createdAt: row.createdAt ?? iso(row.created_at),
     displayName: row.displayName ?? row.display_name ?? null,
     id: row.id,

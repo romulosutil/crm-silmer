@@ -4,10 +4,11 @@ import {
   PostgresInboxRepository,
 } from '@crm-silmer/inbox-channels';
 
-/** @param {any} database @param {Record<string, any>} deals @param {Record<string, any>} n8n @param {Buffer} messageEnvelopeKey */
+/** @param {any} database @param {Record<string, any>} access @param {Record<string, any>} handoffs @param {Record<string, any>} n8n @param {Buffer} messageEnvelopeKey */
 export function createConversationApiRuntime(
   database,
-  deals,
+  access,
+  handoffs,
   n8n,
   messageEnvelopeKey,
 ) {
@@ -20,8 +21,8 @@ export function createConversationApiRuntime(
     }),
   });
   return Object.freeze({
-    authorize: deals.authorize,
-    claimHandoff: deals.claimHandoff,
+    authorize: access.authorize,
+    claimHandoff: handoffs.claimHandoff,
     close: service.transitionConversation,
     returnToAi: service.reactivateAgent,
     sendMessage: service.sendHumanMessage,

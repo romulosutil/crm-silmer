@@ -433,35 +433,6 @@ summary {
   max-inline-size: 65ch;
   color: var(--color-text-muted);
 }
-.mobile-stage-picker {
-  display: none;
-}
-.kanban-board {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(17rem, 1fr));
-  gap: 0.85rem;
-  overflow-x: auto;
-  padding-block-end: 1rem;
-  scroll-snap-type: x proximity;
-}
-.kanban-column {
-  min-inline-size: 0;
-  background: var(--color-surface-raised);
-  border-block-start: 3px solid var(--color-border);
-  scroll-snap-align: start;
-}
-.kanban-column > header {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.55rem;
-  min-block-size: 54px;
-  padding: 0.7rem 0.8rem;
-  border-block-end: 1px solid var(--color-border);
-}
-.kanban-column h2 {
-  margin: 0;
-}
 .stage-index {
   color: var(--color-text-muted);
   font-size: 0.78rem;
@@ -478,21 +449,6 @@ summary {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 999px;
-}
-.kanban-list {
-  display: grid;
-  gap: 0.65rem;
-  min-block-size: 10rem;
-  margin: 0;
-  padding: 0.65rem;
-  list-style: none;
-}
-.deal-card {
-  padding: 0.9rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-inline-start: 3px solid var(--color-link);
-  border-radius: 0.45rem;
 }
 .card-link {
   display: grid;
@@ -525,14 +481,6 @@ summary {
   margin: 0;
   font-size: 0.82rem;
   overflow-wrap: anywhere;
-}
-.deal-card footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-block-start: 0.7rem;
-  border-block-start: 1px solid var(--color-border-subtle);
 }
 .blocker,
 .ready {
@@ -836,14 +784,6 @@ summary {
   .page-heading > button {
     justify-self: start;
   }
-  .mobile-stage-picker {
-    display: grid;
-    gap: 0.4rem;
-    margin-block-end: 1rem;
-  }
-  .kanban-board {
-    grid-template-columns: repeat(5, minmax(82vw, 1fr));
-  }
   .detail-fields,
   .detail-operations,
   .account-page {
@@ -869,11 +809,6 @@ summary {
   .page {
     padding: 0.75rem;
     max-inline-size: 100%;
-  }
-  .kanban-board {
-    inline-size: 100%;
-    max-inline-size: 100%;
-    grid-template-columns: repeat(5, minmax(calc(100vw - 1.5rem), 1fr));
   }
   .app-topbar {
     padding-inline: 0.75rem;

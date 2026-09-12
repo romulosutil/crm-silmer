@@ -92,7 +92,7 @@ test('human conversation routes authorize, mutate state and enqueue commands', a
     payload: {
       expectedConversationVersion: 7,
       expectedHandoffVersion: 3,
-      reasonCode: 'operator_claim',
+      reasonCode: 'handoff_claimed',
     },
     url: '/api/v1/handoffs/handoff-synthetic/claim',
   });
@@ -105,6 +105,9 @@ test('human conversation routes authorize, mutate state and enqueue commands', a
     ),
     true,
   );
+  const claimCall = calls.find((call) => call.method === 'claimHandoff');
+  assert.equal(claimCall?.input.expectedDealVersion, undefined);
+  assert.equal(claimCall?.input.expectedTaskVersion, undefined);
 });
 
 test('human conversation routes reject requests without an idempotency key', async (t) => {

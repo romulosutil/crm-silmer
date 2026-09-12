@@ -32,10 +32,8 @@ test('documents and exposes a local development workflow with automatic refresh'
   assert.match(dev, /randomBytes/u);
   for (const secret of [
     'IDEMPOTENCY_ENVELOPE_KEY',
-    'DEAL_ENVELOPE_KEY',
-    'QUALIFICATION_ENVELOPE_KEY',
     'HANDOFF_ENVELOPE_KEY',
-    'KANBAN_CURSOR_HMAC_KEY',
+    'OPERATION_CURSOR_HMAC_KEY',
     'CONTACT_IDENTITY_ENVELOPE_KEY',
     'INBOX_MESSAGE_ENVELOPE_KEY',
   ]) {

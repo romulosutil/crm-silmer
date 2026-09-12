@@ -13,11 +13,6 @@ const copies = [
   ['modules/database/src', 'runtime/modules/database/src'],
   ['modules/database/migrations', 'runtime/modules/database/migrations'],
   ['modules/database/package.json', 'runtime/modules/database/package.json'],
-  ['modules/deals-pipeline/src', 'runtime/modules/deals-pipeline/src'],
-  [
-    'modules/deals-pipeline/package.json',
-    'runtime/modules/deals-pipeline/package.json',
-  ],
   ['modules/audit-privacy/src', 'runtime/modules/audit-privacy/src'],
   [
     'modules/audit-privacy/package.json',
@@ -54,11 +49,6 @@ const copies = [
   [
     'modules/n8n-integration/package.json',
     'runtime/modules/n8n-integration/package.json',
-  ],
-  ['modules/qualification/src', 'runtime/modules/qualification/src'],
-  [
-    'modules/qualification/package.json',
-    'runtime/modules/qualification/package.json',
   ],
   ['modules/work-management/src', 'runtime/modules/work-management/src'],
   [

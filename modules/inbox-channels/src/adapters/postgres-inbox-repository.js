@@ -309,19 +309,6 @@ export class PostgresInboxRepository {
           );
         }
       }
-      if (kind === 'transition' && input.state === 'sem_lead') {
-        const activeDeal = await transaction.query(
-          `SELECT id FROM crm.deals
-           WHERE conversation_id = $1 AND status = 'active'
-           LIMIT 1`,
-          [input.conversationId],
-        );
-        if (activeDeal.rows[0]) {
-          throw new InboxConflictError(
-            'A conversation with an active Deal must use the official Deal closing path',
-          );
-        }
-      }
       const occurredAt = runtime.clock().toISOString();
       let result;
       let commandResult;

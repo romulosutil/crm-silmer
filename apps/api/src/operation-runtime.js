@@ -157,8 +157,8 @@ export function createOperationReadRuntime(database, options = {}) {
       ),
     }),
     cursorKey: readKey(
-      environment.KANBAN_CURSOR_HMAC_KEY,
-      'KANBAN_CURSOR_HMAC_KEY',
+        environment.OPERATION_CURSOR_HMAC_KEY,
+        'OPERATION_CURSOR_HMAC_KEY',
     ),
     handoffRepository: new PostgresHandoffReadRepository({
       contactEnvelopeKey: readKey(

@@ -1163,8 +1163,6 @@ components:
       properties:
         expectedHandoffVersion: { type: integer, minimum: 1 }
         expectedConversationVersion: { type: integer, minimum: 1 }
-        expectedDealVersion: { type: integer, minimum: 1 }
-        expectedTaskVersion: { type: integer, minimum: 1 }
         reasonCode: { type: string, minLength: 1, maxLength: 512 }
     Channel:
       type: string

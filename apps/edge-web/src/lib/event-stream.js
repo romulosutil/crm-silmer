@@ -1,12 +1,11 @@
 /**
  * Named events published per topic by `GET /api/v1/events`. A topic that is not
  * listed here would connect but never deliver anything, so keep this in sync
- * with `formatDealSseEvent` on the API side.
+ * with the API event formatter.
  */
 /** @type {Readonly<Record<string, readonly string[]>>} */
 const TOPIC_EVENTS = Object.freeze({
   inbox: Object.freeze(['inbox.contact.changed', 'inbox.conversation.changed']),
-  kanban: Object.freeze(['kanban.card.changed']),
 });
 
 export const LIVE_TOPICS = Object.freeze(Object.keys(TOPIC_EVENTS));
@@ -20,12 +19,12 @@ export class LiveEventStream {
     // delivered.
     this.cursor = '';
     this.source = null;
-    this.topic = 'kanban';
+    this.topic = 'inbox';
   }
 
   /** @param {string} [topic] @param {string} [cursor] */
   start(topic = this.topic, cursor = this.cursor) {
-    const nextTopic = TOPIC_EVENTS[topic] ? topic : 'kanban';
+    const nextTopic = TOPIC_EVENTS[topic] ? topic : 'inbox';
     this.close();
     this.topic = nextTopic;
     this.cursor = cursor || this.cursor;
@@ -83,6 +82,3 @@ export class LiveEventStream {
     this.source = null;
   }
 }
-
-/** Retained so the legacy Kanban host keeps its original import name. */
-export { LiveEventStream as KanbanEventStream };

@@ -74,12 +74,10 @@ test('packages every runtime workspace required by the API', async () => {
     'configuration',
     'contacts',
     'database',
-    'deals-pipeline',
     'identity-access',
     'inbox-channels',
     'integration-reliability',
     'n8n-integration',
-    'qualification',
     'shared',
     'work-management',
   ];
@@ -102,6 +100,8 @@ test('packages every runtime workspace required by the API', async () => {
       `${moduleName} manifest must be copied into the runtime`,
     );
   }
+  assert.doesNotMatch(buildScript, /modules\/deals-pipeline\/src/u);
+  assert.doesNotMatch(buildScript, /modules\/qualification\/src/u);
 
   assert.match(buildScript, /modules\/database\/migrations/u);
 });

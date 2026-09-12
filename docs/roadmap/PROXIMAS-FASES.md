@@ -11,9 +11,9 @@ sem criar entidades ou requisitos paralelos.
 ## Estado de partida
 
 O frontend já possui autenticação, shell, Dashboard operacional, Inbox,
-detalhe da conversa, Kanban, detalhe do Negócio, Clientes e Conta. Inbox e
-Clientes consomem read models autorizados do PostgreSQL; Dashboard agrega
-somente Kanban e Inbox, sem fabricar vendas ou pedidos ainda inexistentes. O
+detalhe da conversa, Clientes e Conta. Inbox e Clientes consomem read models
+autorizados do PostgreSQL; Dashboard agrega somente a operação de atendimento,
+sem fabricar vendas ou pedidos ainda inexistentes. O
 read model de Handoffs está disponível na Caixa de Entrada para operadores Vendedor, assim
 como o claim atômico já existente. A migração vigente de identidade consolidou
 as funções humanas em `Vendedor`; este roadmap não volta a introduzir a antiga
@@ -50,9 +50,9 @@ handoff, fila, assumir conversa, responder manualmente, devolver à IA,
 transferir para outro Vendedor e encerrar. A fonte da verdade permanece o CRM;
 o n8n simula apenas o transporte WhatsApp no workflow de desenvolvimento.
 
-Não fazem parte deste corte conversão de Negócio, Kanban comercial, preço,
-pedido, PIX ou Ficha. A separação evita que a validação operacional dependa de
-dados comerciais ainda não homologados.
+Não fazem parte deste corte conversão comercial, Kanban, preço, pedido, PIX ou
+Ficha. A separação evita que a validação operacional dependa de dados
+comerciais ainda não homologados.
 
 | Frente                     | Dono sugerido    | Pode seguir em paralelo                                                   | Dependência / fronteira protegida                                                                   |
 | -------------------------- | ---------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -80,8 +80,8 @@ automática de Negócio.
 |     0 | OPS-1 — homologação WhatsApp    | O fluxo real é validado ainda sem nova UI; falhas são verificadas por contrato e runbook.                       | Conversa, Mensagem, briefing, Handoff e eventos técnicos.                     |
 |     1 | UI-1 — Inbox + Conversa         | A pessoa encontra conversas, lê histórico e briefing, responde, assume, devolve à IA ou encerra no mesmo fluxo. | `Contact`, `Conversation`, `Message` e estado de entrega.                     |
 |     2 | UI-2 — Handoffs na Inbox        | Vendedor vê e reivindica itens pendentes na mesma tela de atendimento.                                          | `Handoff`, papel-alvo, motivo, SLA e responsável.                             |
-|     3 | UI-3 — Detalhe do Cliente       | “Cliente” aparece como Contato, identidades, conversas e Negócios relacionados.                                 | `Contact` + `ContactIdentity`; nenhuma tabela `customers`.                    |
-|     4 | UI-4 — Evolução do Negócio      | Kanban e detalhe existentes mostram origem da conversa, dados promovidos, gates, tarefas e handoff.             | `Deal`, Contato e Conversa; Backlog continua fora do Kanban.                  |
+|     3 | UI-3 — Detalhe do Cliente       | “Cliente” aparece como Contato, identidades e conversas relacionadas.                                             | `Contact` + `ContactIdentity`; nenhuma tabela `customers`.                    |
+|     4 | COM-1 — Definição de Pedido     | Após a homologação do atendimento, especificar o Pedido e sua ficha sem reintroduzir Kanban.                     | Nova RFC/ADR, Contato e Conversa como origem verificável.                     |
 |     5 | UI-5 — Operação e reconciliação | Somente se o piloto demonstrar necessidade, a operação vê comandos falhos e resultados incertos.                | `n8n_commands`, `reconciliation_items`, Mensagem e metadados de `n8n_events`. |
 |     6 | CANAL-2 — Instagram             | O mesmo domínio recebe a segunda identidade e a jornada multicanal é homologada.                                | Nova `ContactIdentity`, sem duplicar Cliente ou Negócio.                      |
 
@@ -113,20 +113,19 @@ Rastreabilidade: AGT-03–05, AGT-08 e PRV-01.
 
 Usar `GET /api/v1/contacts` e `GET /api/v1/contacts/{id}` com ACL e
 minimização. A tela mostra dados
-canônicos, identidades verificadas, conversas, handoffs e Negócios. Não funde
+canônicos, identidades verificadas, conversas e handoffs. Não funde
 pessoas por nome, telefone parecido ou inferência de IA. Merge/unmerge, quando
 exposto, é humano, reversível, motivado e auditado.
 
 Rastreabilidade: INB-02, INB-04, ORC-09 e PRV-01–03.
 
-## UI-4 — Kanban e detalhe do Negócio
+## COM-1 — definição de Pedido
 
-Evoluir as telas existentes, sem reimplementá-las. Exibir vínculo com Contato e
-Conversa, campos que já foram promovidos ao domínio, gates, tarefas, handoffs e
-histórico. O briefing da conversa pode aparecer como referência, claramente
-separado dos dados oficiais do Negócio.
+Depois da homologação da jornada de atendimento, definir em RFC a criação de
+Pedido a partir de dados confirmados da Conversa. Não reutilizar o Kanban nem
+promover automaticamente o briefing para um registro comercial.
 
-Rastreabilidade: AGT-02, AGT-07–08 e ORD-01–05.
+Rastreabilidade: futura revisão de AGT e ORD, após aprovação de Produto.
 
 ## UI-5 — operação somente quando necessária
 
@@ -141,7 +140,7 @@ Rastreabilidade: ORC-04–05, ORC-08 e MSG-02–03.
 
 Implementar o adapter de canal e homologar a correlação explícita entre
 identidade do Instagram e telefone. A segunda identidade preserva o mesmo
-Contato e Negócio apenas após correlação verificável e auditável. Esta fase não
+Contato apenas após correlação verificável e auditável. Esta fase não
 deve reintroduzir lógica específica de canal nas entidades canônicas.
 
 Rastreabilidade: ORC-02, ORC-09 e MSG-04.

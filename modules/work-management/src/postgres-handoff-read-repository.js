@@ -36,7 +36,7 @@ export class PostgresHandoffReadRepository {
       values.push(input.limit + 1);
       const [page, count] = await Promise.all([
         database.query(
-          `SELECT handoff.id, handoff.conversation_id, handoff.deal_id,
+          `SELECT handoff.id, handoff.conversation_id,
                   handoff.status, handoff.version, handoff.reason_code,
                   handoff.summary_envelope, handoff.target_role, handoff.due_at,
                   handoff.sla_minutes, handoff.created_at, handoff.updated_at,
@@ -92,9 +92,7 @@ function mapHandoff(row, repository) {
     row.external_identity_lookup_hash,
     repository.contactEnvelopeKey,
   );
-  const pointer = row.deal_id
-    ? `${row.deal_id}:${row.conversation_id}:handoff:summary`
-    : `${row.conversation_id}:handoff:summary`;
+  const pointer = `${row.conversation_id}:handoff:summary`;
   return Object.freeze({
     automationEpoch: Number(row.automation_epoch),
     contact: {
@@ -109,7 +107,6 @@ function mapHandoff(row, repository) {
     conversationId: row.conversation_id,
     conversationVersion: Number(row.conversation_version),
     createdAt: iso(row.created_at),
-    dealId: row.deal_id ?? null,
     dueAt: iso(row.due_at),
     id: row.id,
     reasonCode: row.reason_code,

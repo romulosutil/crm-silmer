@@ -97,7 +97,9 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   );
   assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
   assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
-  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-4');
+  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-5');
+  assert.match(trigger.parameters.jsCode, /Math\.imul\(hash, 31\)/u);
+  assert.match(trigger.parameters.jsCode, /\) >>> 0;/u);
   const result = nodes.find(
     (node) => node.name === 'DEV - Resultado da resposta da IA',
   );

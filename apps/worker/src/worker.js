@@ -329,6 +329,9 @@ export function createWorkerRuntime(options) {
         'N8N_COMMAND_CLIENT_SECRET',
       ),
       endpoint: requiredEnvironment(environment, 'N8N_COMMAND_URL'),
+      allowInsecureLocal:
+        environment.APP_ENV === 'development' &&
+        environment.N8N_COMMAND_ALLOW_INSECURE_LOCAL === 'true',
       fetchImpl: options.fetchImpl,
       replaySafe: environment.N8N_COMMAND_REPLAY_SAFE === 'true',
       timeoutMs: optionalPositiveInteger(

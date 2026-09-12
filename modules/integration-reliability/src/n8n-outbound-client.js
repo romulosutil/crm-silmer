@@ -38,6 +38,7 @@ export class N8nCommandDeliveryClient {
    *   clientSecret: string,
    *   endpoint?: string|URL,
    *   baseUrl?: string|URL,
+   *   allowInsecureLocal?: boolean,
    *   fetchImpl?: (input: URL, init: RequestInit) => Promise<{status: number, json: () => Promise<unknown>}>,
    *   replaySafe?: boolean,
    *   timeoutMs?: number,
@@ -56,7 +57,11 @@ export class N8nCommandDeliveryClient {
       'clientSecret',
       1_024,
     );
-    this.#endpoint = commandEndpoint(options.endpoint, options.baseUrl);
+    this.#endpoint = commandEndpoint(
+      options.endpoint,
+      options.baseUrl,
+      options.allowInsecureLocal === true,
+    );
     this.#fetchImpl = options.fetchImpl ?? globalThis.fetch;
     if (typeof this.#fetchImpl !== 'function') {
       throw new TypeError('fetchImpl must be a function');
@@ -308,8 +313,15 @@ function opaqueExternalId(acknowledgement, fallback) {
   return fallback;
 }
 
-/** @param {unknown} endpoint @param {unknown} baseUrl */
-function commandEndpoint(endpoint, baseUrl) {
+/**
+ * HTTP is deliberately limited to an explicit loopback-only local development
+ * runtime. Every deployed endpoint continues to require HTTPS.
+ *
+ * @param {unknown} endpoint
+ * @param {unknown} baseUrl
+ * @param {boolean} allowInsecureLocal
+ */
+function commandEndpoint(endpoint, baseUrl, allowInsecureLocal = false) {
   let url;
   try {
     url = endpoint
@@ -318,11 +330,27 @@ function commandEndpoint(endpoint, baseUrl) {
   } catch {
     throw new TypeError('A valid n8n command endpoint is required');
   }
-  if (url.protocol !== 'https:' || url.username || url.password || url.search) {
+  const permitsLocalHttp =
+    allowInsecureLocal &&
+    url.protocol === 'http:' &&
+    isLoopbackHost(url.hostname);
+  if (
+    (url.protocol !== 'https:' && !permitsLocalHttp) ||
+    url.username ||
+    url.password ||
+    url.search
+  ) {
     throw new TypeError('n8n command endpoint must be credential-free HTTPS');
   }
   url.hash = '';
   return url;
+}
+
+/** @param {string} hostname */
+function isLoopbackHost(hostname) {
+  return (
+    hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+  );
 }
 
 /** @param {unknown} value @param {string} field @param {number} maximum */

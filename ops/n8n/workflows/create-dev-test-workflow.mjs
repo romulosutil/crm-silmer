@@ -1,9 +1,11 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { format } from 'prettier';
 
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
 export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-3';
+export const LOCAL_WORKFLOW_NAME = 'LOCAL | Silmer | Fluxo completo sem WhatsApp';
 
 const MAIN_WORKFLOW_ID = 'k7tI6T4RhQPyJkn9';
 const MAIN_TRIGGER = 'WhatsApp - Receber eventos (MVP)';
@@ -23,11 +25,16 @@ const N8N_TO_CRM_CREDENTIAL = 'Silmer n8n para CRM Basic DEV';
  * handoff, send fence, delivery callback and CRM-originated commands.
  *
  * @param {Record<string, any>} source
- * @param {{deployment?: boolean}} [options]
+ * @param {{deployment?: boolean, local?: boolean}} [options]
  */
 export function createDevTestWorkflow(source, options = {}) {
+  if (options.deployment && options.local) {
+    throw new Error('A workflow cannot target deployment and local n8n together');
+  }
   const workflow = structuredClone(source);
-  workflow.name = DEV_WORKFLOW_NAME;
+  const local = options.local === true;
+  const workflowName = local ? LOCAL_WORKFLOW_NAME : DEV_WORKFLOW_NAME;
+  workflow.name = workflowName;
   workflow.id = DEV_WORKFLOW_ID;
   workflow.active = false;
   delete workflow.versionId;
@@ -39,7 +46,7 @@ export function createDevTestWorkflow(source, options = {}) {
     workflow.source = {
       ...workflow.source,
       id: DEV_WORKFLOW_ID,
-      name: DEV_WORKFLOW_NAME,
+      name: workflowName,
       active: false,
       activeVersionId: null,
     };
@@ -62,7 +69,7 @@ export function createDevTestWorkflow(source, options = {}) {
   trigger.typeVersion = 2;
   trigger.parameters = {
     httpMethod: 'POST',
-    path: 'silmer/dev-mvp-flow',
+    path: local ? 'silmer/local-mvp-flow' : 'silmer/dev-mvp-flow',
     responseMode: 'lastNode',
     options: {},
   };
@@ -134,6 +141,8 @@ return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-hu
         node.credentials = {
           httpBasicAuth: { name: N8N_TO_CRM_CREDENTIAL },
         };
+      } else if (local) {
+        configureLocalCrmRequest(node);
       } else {
         delete node.credentials;
       }
@@ -141,13 +150,16 @@ return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-hu
   }
 
   const panelTrigger = requiredNode(nodes, PANEL_TRIGGER);
-  panelTrigger.parameters.path = 'silmer/dev-panel-command';
+  panelTrigger.parameters.path = local
+    ? 'silmer/local-panel-command'
+    : 'silmer/dev-panel-command';
   if (options.deployment) {
     panelTrigger.credentials = {
       httpBasicAuth: { name: CRM_TO_N8N_CREDENTIAL },
     };
   } else {
     delete panelTrigger.credentials;
+    if (local) panelTrigger.parameters.authentication = 'none';
   }
 
   nodes.push(
@@ -192,9 +204,9 @@ return { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route:
         height: 470,
         color: 3,
         content:
-          '# DEV | Fluxo completo sem WhatsApp\n\n' +
+          `# ${local ? 'LOCAL' : 'DEV'} | Fluxo completo sem WhatsApp\n\n` +
           'Mantém a lógica do workflow principal e substitui apenas o transporte WhatsApp.\n\n' +
-          '- Entrada: webhook `silmer/dev-mvp-flow`.\n' +
+          `- Entrada: webhook \`${local ? 'silmer/local-mvp-flow' : 'silmer/dev-mvp-flow'}\`.\n` +
           '- CRM real: inbound, briefing, handoff, reserva e callbacks.\n' +
           '- IA real: mesma decisão estruturada do MVP.\n' +
           '- Pré-ficha: cada mensagem atualiza os campos confirmados e a IA pergunta pelo próximo dado pendente.\n' +
@@ -203,7 +215,9 @@ return { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route:
           'Cenários: `message`, `handoff`, `send_unknown` e `delivery_status`. ' +
           'Eles apenas montam a entrada sintética; a jornada do CRM, IA e fence ' +
           'continua igual à do workflow canônico.\n\n' +
-          'Requer `SILMER_PANEL_BASE_URL` acessível pelo n8n e as credenciais Basic DEV nos dois sentidos.',
+          (local
+            ? 'Local: a credencial n8n → CRM é efêmera por variável de ambiente e o webhook do painel fica exposto somente em localhost.'
+            : 'Requer `SILMER_PANEL_BASE_URL` acessível pelo n8n e as credenciais Basic DEV nos dois sentidos.'),
       },
     },
   );
@@ -211,6 +225,19 @@ return { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route:
   workflow.connections = rewriteConnections(workflow.connections ?? {});
   workflow.nodeGroups = workflow.nodeGroups ?? [];
   return workflow;
+}
+
+/** @param {Record<string, any>} node */
+function configureLocalCrmRequest(node) {
+  node.parameters.authentication = 'none';
+  delete node.parameters.genericAuthType;
+  const headers = node.parameters.headerParameters?.parameters;
+  if (!Array.isArray(headers)) return;
+  headers.push({
+    name: 'Authorization',
+    value: '={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}',
+  });
+  delete node.credentials;
 }
 
 /**
@@ -357,16 +384,28 @@ function requiredNode(nodes, name) {
 async function runCli() {
   const args = process.argv.slice(2);
   const deployment = args.includes('--deployment');
-  const values = args.filter((argument) => argument !== '--deployment');
+  const local = args.includes('--local');
+  const values = args.filter(
+    (argument) => argument !== '--deployment' && argument !== '--local',
+  );
   const sourcePath =
     values[0] ??
     new URL('./k7tI6T4RhQPyJkn9-mvp-simple.sanitized.json', import.meta.url);
   const outputPath =
     values[1] ??
-    new URL('./0S5ZS1xeDCSoWovs-dev-test.sanitized.json', import.meta.url);
+    new URL(
+      local
+        ? './0S5ZS1xeDCSoWovs-local-test.sanitized.json'
+        : './0S5ZS1xeDCSoWovs-dev-test.sanitized.json',
+      import.meta.url,
+  );
   const source = JSON.parse(await readFile(sourcePath, 'utf8'));
-  const workflow = createDevTestWorkflow(source, { deployment });
-  await writeFile(outputPath, `${JSON.stringify(workflow, null, 2)}\n`, 'utf8');
+  const workflow = createDevTestWorkflow(source, { deployment, local });
+  await writeFile(
+    outputPath,
+    await format(JSON.stringify(workflow), { parser: 'json' }),
+    'utf8',
+  );
 }
 
 if (

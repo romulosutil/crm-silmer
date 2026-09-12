@@ -18,6 +18,7 @@ const databaseUrl =
 const shouldSeedDevelopmentUsers =
   process.env.DATABASE_URL === undefined ||
   process.env.SEED_DEVELOPMENT_USERS === 'true';
+const localN8nEnabled = process.env.N8N_LOCAL_ENABLED !== 'false';
 const localIdentityEnvironment = {
   APP_ENV: process.env.APP_ENV ?? 'development',
   APP_ORIGIN: process.env.APP_ORIGIN ?? `http://${devHost}:${devPort}`,
@@ -45,8 +46,41 @@ const localIdentityEnvironment = {
     process.env.IDENTITY_BOOTSTRAP_TOKEN ??
     'development-bootstrap-token-local-only',
 };
+const localN8nClientId = 'n8n-local-development';
+const localN8nClientSecret = randomBytes(32).toString('base64url');
+/** @type {Record<string, string>} */
+const localN8nEnvironment = localN8nEnabled
+  ? {
+      CRM_AUTOMATION_CLIENT_ID: localN8nClientId,
+      CRM_AUTOMATION_CLIENT_SECRET: localN8nClientSecret,
+      CONTACT_IDENTITY_LOOKUP_KEY: randomBytes(32).toString('base64url'),
+      MEDIA_RETENTION_SCAN_INTERVAL_MS: '60000',
+      N8N_COMMAND_ALLOW_INSECURE_LOCAL: 'true',
+      N8N_COMMAND_CLIENT_ID: 'crm-local-development',
+      N8N_COMMAND_CLIENT_SECRET: randomBytes(32).toString('base64url'),
+      N8N_COMMAND_REPLAY_SAFE: 'false',
+      N8N_COMMAND_TIMEOUT_MS: '10000',
+      N8N_COMMAND_URL:
+        'http://127.0.0.1:5678/webhook/silmer/local-panel-command',
+      N8N_INTEGRATION_ENABLED: 'true',
+      N8N_INTEGRATION_ENVELOPE_KEY: randomBytes(32).toString('base64url'),
+      PRIVATE_MEDIA_MAX_BYTES: String(64 * 1024 * 1024),
+      PRIVATE_MEDIA_MAX_FILE_BYTES: String(16 * 1024 * 1024),
+      PRIVATE_MEDIA_ROOT: resolve(root, 'tmp', 'local-n8n-media'),
+    }
+  : {};
+const localN8nComposeEnvironment = {
+  SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION: `Basic ${Buffer.from(
+    `${localN8nClientId}:${localN8nClientSecret}`,
+    'utf8',
+  ).toString('base64')}`,
+  SILMER_LOCAL_PANEL_BASE_URL:
+    process.env.SILMER_LOCAL_PANEL_BASE_URL ??
+    `http://host.docker.internal:${apiPort}`,
+};
 
 if (process.env.DATABASE_URL === undefined) await startLocalDatabase();
+if (localN8nEnabled) await startLocalN8n();
 await runMigrations();
 await runInitialBuild();
 
@@ -57,6 +91,7 @@ try {
     start('api', ['--watch', 'apps/api/src/server.js'], {
       DATABASE_URL: databaseUrl,
       ...localIdentityEnvironment,
+      ...localN8nEnvironment,
       HOST: apiHost,
       PORT: apiPort,
     }),
@@ -70,6 +105,15 @@ try {
     });
   }
   children.push(
+    ...(localN8nEnabled
+      ? [
+          start('worker', ['apps/worker/src/worker.js'], {
+            DATABASE_URL: databaseUrl,
+            ...localIdentityEnvironment,
+            ...localN8nEnvironment,
+          }),
+        ]
+      : []),
     start('edge watcher', ['scripts/watch-edge.mjs']),
     start('development edge server', ['scripts/serve-dev.mjs'], {
       API_ORIGIN: apiOrigin,
@@ -137,6 +181,28 @@ async function startLocalDatabase() {
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
   }
   throw new Error('Local PostgreSQL did not become ready in time');
+}
+
+async function startLocalN8n() {
+  await run('local n8n workflow generation', process.execPath, [
+    'ops/n8n/workflows/create-dev-test-workflow.mjs',
+    '--local',
+  ]);
+  await run(
+    'local n8n',
+    'docker',
+    [
+      'compose',
+      '-f',
+      'docker-compose.dev.yml',
+      'up',
+      '--detach',
+      '--force-recreate',
+      'n8n',
+    ],
+    true,
+    localN8nComposeEnvironment,
+  );
 }
 
 async function runMigrations() {

@@ -577,8 +577,10 @@ onBeforeUnmount(() => {
               </h2>
               <p class="conv-identity">
                 {{ active.contact.externalId }} ·
-                {{ conversationLabel(active) }} ·
-                {{ ownerLabel }}
+                {{ conversationLabel(active) }}
+                <template v-if="active.automationState === 'human'">
+                  · {{ ownerLabel }}
+                </template>
               </p>
               <button type="button" class="link-button" @click="openRename">
                 Editar nome

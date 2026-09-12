@@ -111,19 +111,19 @@ export function createServerApi(runtime = {}) {
           ),
         )
       : undefined);
-  const operationSecretNames = [
-    'CONTACT_IDENTITY_ENVELOPE_KEY',
-    'INBOX_MESSAGE_ENVELOPE_KEY',
-    'HANDOFF_ENVELOPE_KEY',
-    'OPERATION_CURSOR_HMAC_KEY',
+  const operationCursorKey =
+    environment.OPERATION_CURSOR_HMAC_KEY ?? environment.KANBAN_CURSOR_HMAC_KEY;
+  const operationSecretValues = [
+    environment.CONTACT_IDENTITY_ENVELOPE_KEY,
+    environment.INBOX_MESSAGE_ENVELOPE_KEY,
+    environment.HANDOFF_ENVELOPE_KEY,
+    operationCursorKey,
   ];
-  const operationConfigurationPresent = operationSecretNames.some((name) =>
-    Boolean(environment[name]),
-  );
+  const operationConfigurationPresent = operationSecretValues.some(Boolean);
   if (
     runtime.database &&
     operationConfigurationPresent &&
-    !operationSecretNames.every((name) => Boolean(environment[name]))
+    !operationSecretValues.every(Boolean)
   ) {
     throw new Error(
       'Operation read runtime requires CONTACT_IDENTITY_ENVELOPE_KEY, INBOX_MESSAGE_ENVELOPE_KEY, HANDOFF_ENVELOPE_KEY and OPERATION_CURSOR_HMAC_KEY together',
@@ -132,9 +132,12 @@ export function createServerApi(runtime = {}) {
   const operations =
     runtime.operations ??
     (runtime.database &&
-    operationSecretNames.every((name) => Boolean(environment[name]))
+    operationSecretValues.every(Boolean)
       ? createOperationReadRuntime(runtime.database, {
-          environment,
+          environment: {
+            ...environment,
+            OPERATION_CURSOR_HMAC_KEY: operationCursorKey,
+          },
           identity: runtime.identity,
         })
       : undefined);

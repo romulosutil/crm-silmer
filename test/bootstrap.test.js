@@ -172,6 +172,35 @@ test('wires configuration and catalog PostgreSQL runtimes when a database is pre
   assert.equal(closed, true);
 });
 
+test('accepts the legacy operation cursor key during the environment migration', async () => {
+  const { createServerApi } = await import('../apps/api/src/server.js');
+  const key = Buffer.alloc(32, 7).toString('base64url');
+  const database = /** @type {any} */ ({
+    async close() {},
+    async query() {
+      return { rows: [] };
+    },
+    /** @param {(client: any) => Promise<any>} work */
+    async transaction(work) {
+      return work(database);
+    },
+  });
+
+  const api = createServerApi({
+    database,
+    environment: {
+      N8N_INTEGRATION_ENABLED: 'false',
+      IDEMPOTENCY_ENVELOPE_KEY: key,
+      CONTACT_IDENTITY_ENVELOPE_KEY: key,
+      INBOX_MESSAGE_ENVELOPE_KEY: key,
+      HANDOFF_ENVELOPE_KEY: key,
+      KANBAN_CURSOR_HMAC_KEY: key,
+    },
+  });
+
+  await api.close();
+});
+
 test('produces byte-for-byte reproducible build output', async () => {
   assert.equal(await digestBuild(), await digestBuild());
 });

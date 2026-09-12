@@ -920,6 +920,24 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /conversations/{conversationId}/unarchive:
+    post:
+      operationId: unarchiveConversation
+      summary: Restaura uma conversa arquivada à Caixa de Entrada
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HumanConversationCommand' }
+      responses:
+        '202': { description: Conversa desarquivada, com auditoria e atualização em tempo real }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /handoffs/{handoffId}/claim:
     post:
       operationId: claimHumanHandoff

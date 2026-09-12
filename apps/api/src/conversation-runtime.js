@@ -29,5 +29,6 @@ export function createConversationApiRuntime(
     sendMessage: service.sendHumanMessage,
     takeover: service.takeover,
     transfer: service.transferConversation,
+    unarchive: service.unarchiveConversation,
   });
 }

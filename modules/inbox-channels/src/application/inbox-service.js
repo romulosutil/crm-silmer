@@ -68,6 +68,15 @@ export function createInboxService({
       );
     },
 
+    async unarchiveConversation(/** @type {any} */ command) {
+      validateArchiveCommand(command);
+      return repository.mutateConversation(
+        'unarchive',
+        normalizeHumanCommand(command),
+        runtime,
+      );
+    },
+
     async takeover(/** @type {any} */ command) {
       validateHumanCommand(command);
       return repository.mutateConversation(

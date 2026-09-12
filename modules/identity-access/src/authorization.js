@@ -27,6 +27,7 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
     'conversation.takeover',
     'conversation.transfer',
     'conversation.transition',
+    'conversation.unarchive',
     'deal.assign',
     'deal.draft.edit',
     'deal.draft.read',

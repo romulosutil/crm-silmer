@@ -116,6 +116,9 @@ const canArchive = computed(
     !isTerminal.value &&
     (isAdmin.value || owner.value?.id === currentUserId.value),
 );
+const canUnarchive = computed(
+  () => canArchive.value && Boolean(active.value?.archivedAt),
+);
 
 function listUrl() {
   return `/api/v1/inbox/conversations?limit=100&archived=${showArchived.value}`;
@@ -130,6 +133,21 @@ async function archiveConversation() {
     },
     'Conversa arquivada. Uma nova mensagem do cliente a exibirá novamente.',
   );
+}
+
+async function unarchiveConversation() {
+  const restored = await runCommand(
+    'unarchive',
+    {
+      expectedVersion: active.value.version,
+      reason: 'Conversa desarquivada na Caixa de Entrada',
+    },
+    'Conversa desarquivada e restaurada à Caixa de Entrada.',
+  );
+  if (restored) {
+    showArchived.value = false;
+    await loadInbox(true);
+  }
 }
 
 /** @param {MouseEvent} event */
@@ -300,9 +318,11 @@ async function runCommand(path, body, successMessage) {
     );
     actionMessage.value = successMessage;
     await loadInbox(true);
+    return true;
   } catch (cause) {
     error.value = describeError(cause);
     if (/** @type {any} */ (cause)?.status === 409) await loadInbox(true);
+    return false;
   } finally {
     busy.value = false;
   }
@@ -678,6 +698,14 @@ onBeforeUnmount(() => {
               @click="requestArchiveConfirmation"
             >
               Arquivar conversa
+            </button>
+            <button
+              v-if="canUnarchive && showArchived"
+              type="button"
+              :disabled="busy"
+              @click="unarchiveConversation"
+            >
+              Desarquivar conversa
             </button>
             <RouterLink
               class="button-link quiet-link"

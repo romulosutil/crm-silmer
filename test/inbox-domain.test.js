@@ -145,6 +145,19 @@ test('archives an active conversation without ending it and restores it on new i
     audits.some(({ action }) => action === 'conversation.archived'),
     true,
   );
+  const unarchived = await service.unarchiveConversation({
+    actor: ATTENDANT,
+    conversationId: received.conversation.id,
+    correlationId: 'correlation-unarchive',
+    expectedVersion: archived.version,
+    idempotencyKey: 'unarchive-key',
+    reason: 'Retomar atendimento na Caixa de Entrada',
+  });
+  assert.equal(unarchived.archivedAt, null);
+  assert.equal(
+    audits.some(({ action }) => action === 'conversation.unarchived'),
+    true,
+  );
 
   const reopened = await service.receiveInbound(
     inbound({

@@ -68,32 +68,25 @@ const conversation = {
   updatedAt: '2026-09-08T12:00:00.000Z',
   version: 3,
 };
-const handoff = {
-  automationEpoch: 3,
-  contact: {
-    externalId: '5511999999999',
-    id: contact.id,
-    label: 'Studio Malu',
-  },
-  conversationId: conversation.id,
-  conversationVersion: conversation.version,
-  createdAt: '2026-09-08T12:10:00.000Z',
-  dealId: null,
-  dueAt: '2026-09-08T16:10:00.000Z',
-  id: 'handoff-1',
-  reasonCode: 'human_requested',
-  slaMinutes: 240,
-  status: 'pending',
-  summary: 'Cliente solicitou atendimento humano.',
-  targetRole: 'Vendedor',
-  updatedAt: '2026-09-08T12:10:00.000Z',
-  version: 1,
-};
-
-/** @param {import('@playwright/test').Page} page @param {{conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
+  const inboxConversation = options.pendingHandoff
+    ? {
+        ...conversation,
+        assignedUser: null,
+        handoff: {
+          dueAt: '2026-09-08T16:10:00.000Z',
+          id: 'handoff-1',
+          status: 'pending',
+          targetRole: 'Vendedor',
+          version: 1,
+        },
+        requiresAttention: true,
+        state: 'requer_atencao',
+      }
+    : conversation;
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -148,7 +141,7 @@ async function mockCrm(page, options = {}) {
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
-          items: options.empty ? [] : [conversation],
+          items: options.empty ? [] : [inboxConversation],
           nextCursor: null,
           totalCount: options.empty ? 0 : 1,
         }),
@@ -162,20 +155,9 @@ async function mockCrm(page, options = {}) {
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
-          conversation,
+          conversation: inboxConversation,
           messages: [conversation.lastMessage],
           suggestion: null,
-        }),
-      });
-      return;
-    }
-    if (path === '/api/v1/inbox/handoffs' && request.method() === 'GET') {
-      await route.fulfill({
-        contentType: 'application/json',
-        body: JSON.stringify({
-          items: [handoff],
-          nextCursor: null,
-          totalCount: 1,
         }),
       });
       return;
@@ -486,11 +468,14 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('claims a pending handoff inside the Caixa de Entrada', async ({
+test('claims a pending handoff from its conversation in the Caixa de Entrada', async ({
   page,
 }) => {
   let claimedBody;
-  await mockCrm(page, { onHandoffClaim: (body) => (claimedBody = body) });
+  await mockCrm(page, {
+    onHandoffClaim: (body) => (claimedBody = body),
+    pendingHandoff: true,
+  });
   await page.goto('/inbox');
   await page.evaluate(() => {
     globalThis.document.cookie = 'crm_csrf=csrf-test; Path=/; SameSite=Lax';
@@ -498,15 +483,13 @@ test('claims a pending handoff inside the Caixa de Entrada', async ({
   await expect(
     page.getByRole('heading', { name: 'Caixa de Entrada' }),
   ).toBeFocused();
+  await expect(page.getByText('Aguardando vendedor')).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'Handoffs pendentes' }),
-  ).toBeVisible();
-  await expect(
-    page.getByText('Cliente solicitou atendimento humano.'),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Assumir atendimento' }).click();
   await expect(page.locator('.audit-note')).toContainText(
-    'Handoff de Studio Malu assumido.',
+    'Atendimento de Studio Malu assumido.',
   );
   expect(claimedBody).toEqual({
     expectedConversationVersion: 3,

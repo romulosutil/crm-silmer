@@ -64,6 +64,7 @@ export class PostgresInboxReadRepository {
                   contact.version contact_version,
                   assigned_function.function_name,
                   handoff.id handoff_id, handoff.status handoff_status,
+                  handoff.version handoff_version,
                   handoff.target_role, handoff.due_at handoff_due_at,
                   last_message.id last_message_id,
                   last_message.direction last_message_direction,
@@ -79,7 +80,8 @@ export class PostgresInboxReadRepository {
            LEFT JOIN crm.user_functions assigned_function
              ON assigned_function.user_id=conversation.assigned_user_id
            LEFT JOIN LATERAL (
-             SELECT candidate.id, candidate.status, candidate.target_role,
+             SELECT candidate.id, candidate.status, candidate.version,
+                    candidate.target_role,
                     candidate.due_at
              FROM crm.handoffs candidate
              WHERE candidate.conversation_id=conversation.id
@@ -136,6 +138,7 @@ export class PostgresInboxReadRepository {
                     contact.version contact_version,
                     assigned_function.function_name,
                     handoff.id handoff_id, handoff.status handoff_status,
+                    handoff.version handoff_version,
                     handoff.target_role, handoff.due_at handoff_due_at
              FROM crm.conversations conversation
              JOIN crm.contact_identities identity
@@ -144,7 +147,8 @@ export class PostgresInboxReadRepository {
              LEFT JOIN crm.user_functions assigned_function
                ON assigned_function.user_id=conversation.assigned_user_id
              LEFT JOIN LATERAL (
-               SELECT candidate.id, candidate.status, candidate.target_role,
+               SELECT candidate.id, candidate.status, candidate.version,
+                      candidate.target_role,
                       candidate.due_at
                FROM crm.handoffs candidate
                WHERE candidate.conversation_id=conversation.id
@@ -250,6 +254,7 @@ function mapConversationSummary(row, repository) {
           id: row.handoff_id,
           status: row.handoff_status,
           targetRole: row.target_role,
+          version: Number(row.handoff_version),
         }
       : null,
     id: row.id,

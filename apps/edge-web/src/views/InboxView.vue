@@ -36,9 +36,6 @@ const busy = ref(false);
 const error = ref('');
 const actionMessage = ref('');
 const conversations = ref([]);
-const handoffs = ref([]);
-const handoffLoading = ref(true);
-const claimingHandoffId = ref('');
 const totalCount = ref(0);
 const activeId = ref('');
 const detail = ref(null);
@@ -50,7 +47,6 @@ const transferTarget = ref('');
 const assignableUsers = ref([]);
 let listController;
 let detailController;
-let handoffController;
 let refreshTimer = 0;
 
 const filtered = computed(() => {
@@ -93,7 +89,13 @@ const transferOptions = computed(() =>
   assignableUsers.value.filter((user) => user.id !== currentUserId.value),
 );
 const canReply = computed(
-  () => canAct.value && active.value?.automationState === 'human',
+  () =>
+    canAct.value &&
+    !pendingHandoff.value &&
+    active.value?.automationState === 'human',
+);
+const pendingHandoff = computed(
+  () => active.value?.handoff?.status === 'pending',
 );
 
 function listUrl() {
@@ -141,27 +143,8 @@ async function loadInbox(silent = false) {
 }
 
 /** @param {boolean} [silent] */
-async function loadOpenHandoffs(silent = false) {
-  handoffController?.abort();
-  handoffController = new AbortController();
-  if (!silent) handoffLoading.value = true;
-  try {
-    const response = await request('/api/v1/inbox/handoffs?limit=100', {
-      signal: handoffController.signal,
-    });
-    handoffs.value = response.data.items ?? [];
-  } catch (cause) {
-    if (/** @type {any} */ (cause)?.name !== 'AbortError') {
-      error.value = 'Não foi possível carregar os handoffs pendentes.';
-    }
-  } finally {
-    handoffLoading.value = false;
-  }
-}
-
-/** @param {boolean} [silent] */
 async function refreshInbox(silent = false) {
-  await Promise.all([loadInbox(silent), loadOpenHandoffs(silent)]);
+  await loadInbox(silent);
 }
 
 /**
@@ -304,26 +287,26 @@ async function confirmTransfer() {
   if (!error.value) transferring.value = false;
 }
 
-/** @param {any} handoff */
-async function claimHandoff(handoff) {
-  if (busy.value || claimingHandoffId.value) return;
+async function claimHandoff() {
+  const conversation = active.value;
+  const handoff = conversation?.handoff;
+  if (!conversation || handoff?.status !== 'pending' || busy.value) return;
   busy.value = true;
-  claimingHandoffId.value = handoff.id;
   error.value = '';
   actionMessage.value = '';
   try {
     await request(`/api/v1/handoffs/${encodeURIComponent(handoff.id)}/claim`, {
       body: {
-        expectedConversationVersion: handoff.conversationVersion,
+        expectedConversationVersion: conversation.version,
         expectedHandoffVersion: handoff.version,
         reasonCode: 'handoff_claimed',
       },
       idempotencyKey: commandKey(),
       method: 'POST',
     });
-    actionMessage.value = `Handoff de ${handoff.contact.label} assumido.`;
-    await refreshInbox(true);
-    await selectConversation(handoff.conversationId);
+    actionMessage.value = `Atendimento de ${conversation.contact.label} assumido.`;
+    await loadInbox(true);
+    await selectConversation(conversation.id);
   } catch (cause) {
     if (/** @type {any} */ (cause)?.status === 409) {
       error.value =
@@ -333,7 +316,6 @@ async function claimHandoff(handoff) {
       error.value = describeError(cause);
     }
   } finally {
-    claimingHandoffId.value = '';
     busy.value = false;
   }
 }
@@ -400,7 +382,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   listController?.abort();
   detailController?.abort();
-  handoffController?.abort();
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });
 </script>
@@ -416,72 +397,6 @@ onBeforeUnmount(() => {
         </p>
       </div>
     </header>
-
-    <section class="handoff-section" aria-labelledby="handoffs-title">
-      <div class="handoff-head">
-        <div>
-          <p class="section-kicker">Atendimento humano</p>
-          <h2 id="handoffs-title">Handoffs pendentes</h2>
-          <p>Solicitações que aguardam um vendedor assumir a conversa.</p>
-        </div>
-        <p class="count" :aria-label="`${handoffs.length} handoffs pendentes`">
-          {{ handoffs.length }}
-        </p>
-      </div>
-      <p v-if="handoffLoading" class="loading-state" role="status">
-        Carregando handoffs…
-      </p>
-      <p v-else-if="!handoffs.length" class="handoff-empty">
-        Nenhum handoff pendente.
-      </p>
-      <ul v-else class="handoff-list" aria-label="Handoffs pendentes">
-        <li v-for="handoff in handoffs" :key="handoff.id" class="surface">
-          <div class="handoff-head">
-            <div>
-              <h3>{{ handoff.contact.label }}</h3>
-              <p>{{ handoff.contact.externalId }} · {{ handoff.targetRole }}</p>
-            </div>
-            <span class="badge" data-tone="error">Pendente</span>
-          </div>
-          <dl class="card-facts">
-            <div>
-              <dt>Motivo</dt>
-              <dd>{{ handoff.reasonCode }}</dd>
-            </div>
-            <div>
-              <dt>Recebido</dt>
-              <dd>{{ dateTimeBR(handoff.createdAt) }}</dd>
-            </div>
-            <div>
-              <dt>Prazo</dt>
-              <dd>{{ dateTimeBR(handoff.dueAt) }}</dd>
-            </div>
-          </dl>
-          <p class="handoff-summary">{{ handoff.summary }}</p>
-          <div class="inline-actions">
-            <button
-              type="button"
-              class="primary"
-              :disabled="busy || Boolean(claimingHandoffId)"
-              @click="claimHandoff(handoff)"
-            >
-              {{
-                claimingHandoffId === handoff.id
-                  ? 'Assumindo…'
-                  : 'Assumir atendimento'
-              }}
-            </button>
-            <button
-              type="button"
-              :disabled="busy"
-              @click="selectConversation(handoff.conversationId)"
-            >
-              Abrir conversa
-            </button>
-          </div>
-        </li>
-      </ul>
-    </section>
 
     <div class="filter-bar">
       <div class="search-control">
@@ -545,6 +460,12 @@ onBeforeUnmount(() => {
                   CONVERSATION_LABELS[conversation.state] ?? conversation.state
                 }}
               </span>
+              <span
+                v-if="conversation.handoff?.status === 'pending'"
+                class="badge"
+                data-tone="error"
+                >Aguardando vendedor</span
+              >
               <span
                 v-if="
                   conversation.assignedUser &&
@@ -614,7 +535,16 @@ onBeforeUnmount(() => {
           </div>
           <div class="conv-actions">
             <button
-              v-if="active.automationState === 'assistant'"
+              v-if="pendingHandoff"
+              type="button"
+              class="primary"
+              :disabled="busy || !canAct"
+              @click="claimHandoff"
+            >
+              Assumir atendimento
+            </button>
+            <button
+              v-else-if="active.automationState === 'assistant'"
               type="button"
               class="primary"
               :disabled="busy || !canAct"
@@ -743,6 +673,9 @@ onBeforeUnmount(() => {
               <template v-if="isTerminal">A conversa está encerrada.</template>
               <template v-else-if="!canAct"
                 >Somente o vendedor responsável pode responder.</template
+              >
+              <template v-else-if="pendingHandoff"
+                >Assuma o atendimento antes de responder.</template
               >
               <template v-else-if="active.automationState !== 'human'"
                 >Assuma o atendimento antes de responder.</template

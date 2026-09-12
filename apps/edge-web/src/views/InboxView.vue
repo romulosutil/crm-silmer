@@ -16,6 +16,7 @@ import {
   formatPhoneNumber,
   messageText,
 } from '../lib/format.js';
+import { openDialog } from '../lib/ui.js';
 
 const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
 const LIVE_REFRESH_DELAY_MS = 250;
@@ -34,6 +35,7 @@ const heading = ref(null);
 const searchInput = ref(null);
 const replyInput = ref(null);
 const nameInput = ref(null);
+const archiveConfirmationDialog = ref(null);
 const query = ref('');
 const showArchived = ref(false);
 const loading = ref(true);
@@ -128,6 +130,21 @@ async function archiveConversation() {
     },
     'Conversa arquivada. Uma nova mensagem do cliente a exibirá novamente.',
   );
+}
+
+/** @param {MouseEvent} event */
+function requestArchiveConfirmation(event) {
+  const dialog = archiveConfirmationDialog.value;
+  const trigger = event.currentTarget;
+  if (!(dialog instanceof HTMLDialogElement) || !(trigger instanceof HTMLElement)) {
+    return;
+  }
+  openDialog(dialog, trigger);
+}
+
+async function confirmArchive() {
+  archiveConfirmationDialog.value?.close();
+  await archiveConversation();
 }
 
 /** @param {{authorKind?: unknown, direction?: unknown}} message */
@@ -658,7 +675,7 @@ onBeforeUnmount(() => {
               v-if="canArchive && !showArchived"
               type="button"
               :disabled="busy"
-              @click="archiveConversation"
+              @click="requestArchiveConfirmation"
             >
               Arquivar conversa
             </button>
@@ -794,5 +811,27 @@ onBeforeUnmount(() => {
         <p>O histórico e as ações aparecerão aqui.</p>
       </section>
     </div>
+    <dialog
+      ref="archiveConfirmationDialog"
+      class="command-dialog"
+      aria-labelledby="archive-confirmation-title"
+      aria-describedby="archive-confirmation-description"
+    >
+      <form @submit.prevent="confirmArchive">
+        <h2 id="archive-confirmation-title">Arquivar conversa?</h2>
+        <p id="archive-confirmation-description">
+          A conversa sairá da Caixa de Entrada, mas não será apagada. Se o
+          cliente enviar uma nova mensagem, ela voltará a aparecer.
+        </p>
+        <div class="inline-actions">
+          <button type="button" @click="archiveConfirmationDialog?.close()">
+            Cancelar
+          </button>
+          <button type="submit" class="primary" :disabled="busy">
+            Arquivar conversa
+          </button>
+        </div>
+      </form>
+    </dialog>
   </div>
 </template>

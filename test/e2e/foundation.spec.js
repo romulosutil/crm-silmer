@@ -99,6 +99,12 @@ test('shows a seller account without exposing capabilities', async ({ page }) =>
     'E-mail',
     'Função',
   ]);
+  await expect(page.locator('.sidebar-account')).toContainText(
+    'Vendedora Silmer',
+  );
+  await expect(page.locator('.sidebar-account')).toContainText(
+    'vendedora@example.test',
+  );
 });
 
 test('offers only the login form, with no invitation path', async ({

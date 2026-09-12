@@ -48,6 +48,9 @@
     .btn-primary { color: #0c042d; background: #ff5b01; border-color: #ff5b01; }
     .btn-sm { min-block-size: 34px; padding: 0.3rem 0.7rem; font-size: 0.8rem; }
     .btn-cta { min-block-size: 48px; padding-inline: 1.5rem; font-size: 0.95rem; box-shadow: 0 0.75rem 2rem rgb(40 20 100 / 12%); }
+    .btn-off { color: #9a94ac; background: #f7f6fb; border-color: #e8e5ef; cursor: not-allowed; }
+    .btn { gap: 0.4rem; }
+    .btn svg { inline-size: 0.95rem; block-size: 0.95rem; }
     .banner {
       display: flex; align-items: center; gap: 0.75rem; margin-block-end: 1rem; padding: 0.85rem 1rem;
       color: #7a4a00; font-size: 0.85rem; background: #fff4d6; border: 1px solid #7a4a00;
@@ -139,6 +142,10 @@
           </div>
           <div class="actions">
             <span class="btn">Abrir conversa</span>
+            <span class="btn btn-off" title="Disponível depois de confirmar o pedido">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#9a94ac" stroke-width="2"><path d="M7 10V7a5 5 0 0 1 10 0v3" /><rect x="5" y="10" width="14" height="10" rx="2" /></svg>
+              Imprimir
+            </span>
           </div>
         </div>
 
@@ -231,7 +238,7 @@
           <section class="surface">
             <div class="panel-head">
               <h2>Fechamento e pagamento</h2>
-              <div class="right"><span class="st" data-s="off">sem decisão</span></div>
+              <div class="right"><span class="st" data-s="off">pedido pendente</span></div>
             </div>
             <div class="form">
               <label>Valor final
@@ -247,10 +254,10 @@
                   </select>
                   <svg viewBox="0 0 24 24" fill="none" stroke="#625b75" stroke-width="2"><path d="m6 9 6 6 6-6" stroke-linecap="round" /></svg>
                 </span>
-                <span class="help">Pix segue para cobrança automática. Cartão exige registro de quem autorizou.</span>
+                <span class="help">Fica registrada no pedido. Nenhuma cobrança é enviada pelo sistema.</span>
               </label>
               <div class="form-foot">
-                <p>Confirmar grava o valor e a condição e libera a cobrança para o cliente.</p>
+                <p>Confirmar grava o valor, a condição e quem confirmou — e libera a impressão.</p>
                 <span class="btn">Cancelar</span>
                 <span class="btn btn-primary btn-cta">Confirmar pedido</span>
               </div>

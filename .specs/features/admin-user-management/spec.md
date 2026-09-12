@@ -11,13 +11,14 @@ O que a operação precisa é direto: um administrador criado fora da aplicaçã
 - Substituir o convite por criação direta de conta pelo administrador.
 - Reduzir o modelo de papéis a dois: administrador (`COMMERCIAL_ADMIN`) e vendedor (`Vendedor`).
 - Dar ao administrador visão geral e edição de todas as contas, a qualquer momento.
+- Permitir exclusão permanente apenas de vendedores sem histórico operacional;
+  contas com histórico permanecem disponíveis para desativação.
 - Manter a autoridade de autorização no backend: a UI esconde controles, a política continua sendo o `authorize`.
 
 ## Fora de escopo
 
 Registrados explicitamente para não voltarem como suposição durante a implementação:
 
-- Exclusão permanente de usuário (a desativação é o mecanismo).
 - Autoatendimento de senha ("esqueci minha senha") e e-mail transacional.
 - MFA e políticas rígidas de senha (comprimento, complexidade, expiração, histórico).
 - Revogação de sessões ao trocar a senha — ver **USR-10**.
@@ -67,8 +68,9 @@ Registrados explicitamente para não voltarem como suposição durante a impleme
 9. **USR-09:** WHEN qualquer criação, edição, desativação ou reativação ocorre THEN o sistema SHALL registrar o evento na trilha de auditoria, na mesma transação, com ator, alvo, motivo e `correlationId`, e SHALL NOT gravar a senha nem seu hash no evento.
 10. **USR-10:** WHEN a senha de uma conta é alterada THEN as sessões já abertas dessa conta SHALL permanecer válidas até expirarem pela janela normal; a nova senha vale a partir do próximo login.
 11. **USR-11:** WHEN uma rota de mutação de usuário é chamada duas vezes com a mesma `idempotency-key` THEN o sistema SHALL retornar o resultado da primeira execução sem aplicar o efeito de novo.
+12. **USR-12:** WHEN um administrador consulta as contas THEN o sistema SHALL indicar quais vendedores não têm histórico operacional e podem ser excluídos; `DELETE /users/:id` SHALL recusar com `409 USER_HAS_HISTORY` uma conta com histórico e SHALL sempre recusar uma conta com `COMMERCIAL_ADMIN`.
 
-**Teste independente:** entrar como administrador, criar um vendedor, copiar o bloco markdown, sair, entrar com a conta criada, voltar como administrador, trocar o e-mail e a senha dessa conta, desativá-la, confirmar que o login passa a falhar e reativá-la.
+**Teste independente:** entrar como administrador, criar um vendedor sem histórico, excluí-lo e confirmar que desapareceu da lista; para um vendedor com atendimento ou handoff, confirmar que a ação disponível é desativar e que a API recusa a exclusão.
 
 ## P1.3 Remoção do convite
 
@@ -85,23 +87,23 @@ Registrados explicitamente para não voltarem como suposição durante a impleme
 
 ## Rastreabilidade
 
-| Requisito | Camada principal | Artefato |
-| --- | --- | --- |
-| ROLE-01, ROLE-02 | Banco + domínio | migration expand, `identity-access` |
-| ROLE-03 | Banco + n8n | migration expand, `n8n-integration`, `work-management` |
-| ROLE-04 | Domínio + API | `authorization.js`, `identity-runtime.js` |
-| ROLE-05 | Banco + domínio + contrato | migration expand, `authorization.js`, OpenAPI |
-| BOOT-01, BOOT-02 | Script | `scripts/create-admin.mjs` |
-| BOOT-03, BOOT-04 | API | `identity-routes.js`, `identity-runtime.js` |
-| USR-01 a USR-04 | API + frontend | rotas `/api/v1/users`, `UsersView.vue` |
-| USR-05 | Domínio | `hashPassword` |
-| USR-06 | Domínio + API | `postgres.js`, rotas de disable/enable |
-| USR-07 | Banco | `users_email_lower_unique` |
-| USR-08 | Domínio + API + frontend | `authorize`, guardas de rota, navegação |
-| USR-09 | Domínio | `PostgresAuditTrail` |
-| USR-10 | Decisão | nenhuma mudança de código; registrada aqui |
-| USR-11 | API | `PostgresIdempotencyRecordStore` |
-| INV-01 a INV-04 | API + frontend + banco + scripts | rotas, `AuthPanel.vue`, migration contract, seed |
+| Requisito        | Camada principal                 | Artefato                                               |
+| ---------------- | -------------------------------- | ------------------------------------------------------ |
+| ROLE-01, ROLE-02 | Banco + domínio                  | migration expand, `identity-access`                    |
+| ROLE-03          | Banco + n8n                      | migration expand, `n8n-integration`, `work-management` |
+| ROLE-04          | Domínio + API                    | `authorization.js`, `identity-runtime.js`              |
+| ROLE-05          | Banco + domínio + contrato       | migration expand, `authorization.js`, OpenAPI          |
+| BOOT-01, BOOT-02 | Script                           | `scripts/create-admin.mjs`                             |
+| BOOT-03, BOOT-04 | API                              | `identity-routes.js`, `identity-runtime.js`            |
+| USR-01 a USR-04  | API + frontend                   | rotas `/api/v1/users`, `UsersView.vue`                 |
+| USR-05           | Domínio                          | `hashPassword`                                         |
+| USR-06           | Domínio + API                    | `postgres.js`, rotas de disable/enable                 |
+| USR-07           | Banco                            | `users_email_lower_unique`                             |
+| USR-08           | Domínio + API + frontend         | `authorize`, guardas de rota, navegação                |
+| USR-09           | Domínio                          | `PostgresAuditTrail`                                   |
+| USR-10           | Decisão                          | nenhuma mudança de código; registrada aqui             |
+| USR-11           | API                              | `PostgresIdempotencyRecordStore`                       |
+| INV-01 a INV-04  | API + frontend + banco + scripts | rotas, `AuthPanel.vue`, migration contract, seed       |
 
 ## Decisões que fecham áreas cinzentas
 

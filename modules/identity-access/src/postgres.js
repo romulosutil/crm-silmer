@@ -5,6 +5,7 @@ const bootstrapAdvisoryLock = 0x49414d31;
  * @typedef {'Vendedor'} OperationalFunction
  * @typedef {{
  *   capabilities: IdentityCapability[],
+ *   canDelete?: boolean,
  *   createdAt?: string | null,
  *   disabledAt?: string | null,
  *   email: string,
@@ -52,6 +53,51 @@ const userSelect = `
       ),
       ARRAY[]::text[]
     ) AS capabilities
+    ,(
+      NOT EXISTS (
+        SELECT 1
+        FROM crm.conversations AS conversation
+        WHERE conversation.assigned_user_id = u.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM crm.handoffs AS handoff
+        WHERE handoff.assigned_user_id = u.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM crm.handoff_history AS history
+        WHERE history.assigned_user_id = u.id OR history.actor_id = u.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM crm.tasks AS task
+        WHERE task.assigned_user_id = u.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM crm.task_history AS history
+        WHERE history.actor_id = u.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM crm.deals AS deal
+        WHERE deal.assigned_user_id = u.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM crm.deal_assignment_history AS history
+        WHERE history.previous_user_id = u.id
+          OR history.assigned_user_id = u.id
+          OR history.actor_id = u.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM crm.user_capabilities AS capability
+        WHERE capability.granted_by = u.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM crm.configuration_versions AS configuration
+        WHERE configuration.created_by = u.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM crm.catalog_versions AS catalog
+        WHERE catalog.created_by = u.id OR catalog.published_by = u.id
+      )
+    ) AS can_delete
   FROM crm.users AS u
   JOIN crm.user_functions AS f ON f.user_id = u.id
 `;
@@ -141,6 +187,23 @@ export function createPostgresIdentityRepository(database) {
     /** @param {IdentityUser} user */
     async createUser(user) {
       await insertUser(user);
+    },
+
+    /** @param {string} id */
+    async deleteUser(id) {
+      const result = await database.query(
+        `DELETE FROM crm.users AS user_account
+         WHERE user_account.id = $1
+           AND NOT EXISTS (
+             SELECT 1
+             FROM crm.user_capabilities AS capability
+             WHERE capability.user_id = user_account.id
+               AND capability.capability = 'COMMERCIAL_ADMIN'
+           )
+         RETURNING user_account.id`,
+        [id],
+      );
+      return result.rows.length > 0;
     },
 
     /** @param {string} tokenHash */
@@ -320,6 +383,8 @@ async function reloadUser(database, id) {
 function mapUser(row) {
   return {
     capabilities: /** @type {IdentityCapability[]} */ (row.capabilities),
+    canDelete:
+      row.can_delete === undefined ? undefined : Boolean(row.can_delete),
     createdAt: toIsoString(row.created_at),
     disabledAt: toIsoString(row.disabled_at),
     email: /** @type {string} */ (row.email),

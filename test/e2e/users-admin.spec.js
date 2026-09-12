@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 
 const ADMIN = {
   capabilities: ['COMMERCIAL_ADMIN'],
+  canDelete: false,
   createdAt: '2026-03-12T12:00:00.000Z',
   disabledAt: null,
   email: 'romulo@silmer.com.br',
@@ -12,6 +13,7 @@ const ADMIN = {
 };
 const SELLER = {
   capabilities: [],
+  canDelete: true,
   createdAt: '2026-06-02T12:00:00.000Z',
   disabledAt: null,
   email: 'marina.duarte@silmer.com.br',
@@ -27,10 +29,13 @@ const SELLER = {
 async function mockUsers(page, options = {}) {
   const viewer = {
     ...ADMIN,
-    capabilities: options.capabilities ?? ADMIN.capabilities,
+    capabilities: [...(options.capabilities ?? ADMIN.capabilities)],
   };
   /** @type {Array<Record<string, any>>} */
-  const users = [ADMIN, SELLER];
+  const users = [
+    { ...ADMIN, capabilities: [...ADMIN.capabilities] },
+    { ...SELLER, capabilities: [...SELLER.capabilities] },
+  ];
   /** @type {Array<{method: string, path: string, body: any}>} */
   const commands = [];
 
@@ -59,6 +64,7 @@ async function mockUsers(page, options = {}) {
       expect(request.headers()['idempotency-key']).toBeTruthy();
       const created = {
         capabilities: [],
+        canDelete: true,
         createdAt: '2026-09-09T12:00:00.000Z',
         disabledAt: null,
         email: body.email,
@@ -77,6 +83,13 @@ async function mockUsers(page, options = {}) {
       if (target && body.name) target.name = body.name;
       return json({ user: target });
     }
+    if (path.startsWith('/api/v1/users/') && method === 'DELETE') {
+      const body = request.postDataJSON();
+      commands.push({ body, method, path });
+      const index = users.findIndex((user) => path.endsWith(user.id));
+      if (index >= 0) users.splice(index, 1);
+      return json({ deleted: true });
+    }
     if (path.endsWith('/disable') && method === 'POST') {
       const body = request.postDataJSON();
       commands.push({ body, method, path });
@@ -88,6 +101,11 @@ async function mockUsers(page, options = {}) {
   });
 
   return { commands, users };
+}
+
+/** @param {import('@playwright/test').Page} page @param {string} name */
+async function openActions(page, name) {
+  await page.getByLabel(`Mais ações para ${name}`).click();
 }
 
 test('lists accounts and hands over the created credentials as markdown', async ({
@@ -133,6 +151,10 @@ test('edits one field at a time and disables an account', async ({ page }) => {
 
   await page
     .getByRole('row', { name: /Marina Duarte/u })
+    .getByLabel('Mais ações para Marina Duarte')
+    .click();
+  await page
+    .getByRole('row', { name: /Marina Duarte/u })
     .getByRole('button', { name: 'Editar' })
     .click();
   const dialog = page.getByRole('dialog');
@@ -149,11 +171,37 @@ test('edits one field at a time and disables an account', async ({ page }) => {
 
   await page
     .getByRole('row', { name: /Marina Duarte Lima/u })
+    .getByLabel('Mais ações para Marina Duarte Lima')
+    .click();
+  await page
+    .getByRole('row', { name: /Marina Duarte Lima/u })
     .getByRole('button', { name: 'Desativar' })
     .click();
   await expect(
     page.getByText('2 contas · 1 ativas · 1 desativadas'),
   ).toBeVisible();
+});
+
+test('offers permanent deletion only for a seller without history', async ({
+  page,
+}) => {
+  const { commands } = await mockUsers(page);
+  await page.goto('/usuarios');
+
+  await openActions(page, 'Rômulo Sutil');
+  await expect(page.getByRole('button', { name: 'Excluir' })).toHaveCount(0);
+  await openActions(page, 'Rômulo Sutil');
+
+  await openActions(page, 'Marina Duarte');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Excluir' }).click();
+
+  await expect(page.getByRole('row')).toHaveCount(2);
+  expect(commands.at(-1)).toMatchObject({
+    body: { reason: expect.any(String) },
+    method: 'DELETE',
+    path: '/api/v1/users/seller-1',
+  });
 });
 
 test('redirects a non-admin away from the users screen and hides its navigation entry', async ({

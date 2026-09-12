@@ -42,6 +42,11 @@ function harness(options = {}) {
       return { user: { id: 'user-1', name: input.name } };
     },
     /** @param {Record<string, unknown>} input */
+    deleteUser: async (input) => {
+      calls.push({ input, operation: 'delete-user' });
+      return { deleted: true };
+    },
+    /** @param {Record<string, unknown>} input */
     listUsers: async (input) => {
       calls.push({ input, operation: 'list-users' });
       return { users: [] };
@@ -281,6 +286,28 @@ test('the invitation routes are gone and a patch needs at least one field', asyn
   assert.equal(calls.at(-1)?.input.name, 'Nome Novo');
   assert.equal(calls.at(-1)?.input.targetId, 'user-1');
   assert.equal(calls.at(-1)?.input.email, undefined);
+  await api.close();
+});
+
+test('deletes a user through the same authenticated idempotent command envelope', async () => {
+  const { api, calls } = harness();
+  const response = await api.inject({
+    headers: {
+      cookie: 'crm_session=session; crm_csrf=csrf',
+      'idempotency-key': 'delete-user-request-1',
+      origin: ORIGIN,
+      'x-csrf-token': 'csrf',
+    },
+    method: 'DELETE',
+    payload: { reason: 'Conta sem histórico removida' },
+    url: '/api/v1/users/seller-1',
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), { deleted: true });
+  assert.equal(calls.at(-1)?.operation, 'delete-user');
+  assert.equal(calls.at(-1)?.input.targetId, 'seller-1');
+  assert.equal(calls.at(-1)?.input.idempotencyKey, 'delete-user-request-1');
   await api.close();
 });
 

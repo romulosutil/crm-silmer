@@ -99,6 +99,24 @@ export function registerIdentityRoutes(api, identity, contextFor) {
     });
   });
 
+  api.delete('/api/v1/users/:id', async (request, reply) => {
+    return respond(reply, async () => {
+      const command = requireAuthenticatedCommand(
+        request,
+        identity.allowedOrigins,
+      );
+      const body = requireBody(request.body);
+      const result = await identity.deleteUser({
+        ...command,
+        correlationId: contextFor(request).correlationId,
+        idempotencyKey: requireHeader(request, 'idempotency-key'),
+        reason: requireString(body.reason, 'reason'),
+        targetId: requireParam(request, 'id'),
+      });
+      return reply.code(200).send(result);
+    });
+  });
+
   for (const change of ['disable', 'enable']) {
     api.post(`/api/v1/users/:id/${change}`, async (request, reply) => {
       return respond(reply, async () => {
@@ -223,9 +241,17 @@ function publicErrorCode(statusCode, error) {
   if (statusCode === 403) return 'FORBIDDEN';
   if (statusCode === 404) return 'NOT_FOUND';
   if (statusCode === 409) {
-    return readErrorCode(error) === 'EMAIL_ALREADY_REGISTERED'
-      ? 'EMAIL_ALREADY_REGISTERED'
-      : 'IDEMPOTENCY_KEY_REUSED';
+    const code = readErrorCode(error);
+    if (
+      [
+        'EMAIL_ALREADY_REGISTERED',
+        'USER_HAS_HISTORY',
+        'USER_IS_ADMINISTRATOR',
+      ].includes(code ?? '')
+    ) {
+      return code;
+    }
+    return 'IDEMPOTENCY_KEY_REUSED';
   }
   if (statusCode === 429) return 'AUTHENTICATION_THROTTLED';
   if (

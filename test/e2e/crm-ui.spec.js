@@ -641,6 +641,7 @@ test('filters the Inbox by queue and situation through the server read model', a
     page.getByRole('button', { name: 'Minhas conversas' }),
   ).toHaveAttribute('aria-pressed', 'true');
 
+  await page.locator('.inbox-state-menu summary').click();
   await page.getByRole('button', { name: 'Requer atenção' }).click();
   await expect
     .poll(() => inboxQueries.at(-1))

@@ -34,9 +34,13 @@ const INBOX_STATES = Object.freeze([
   ['sem_lead', 'Sem lead'],
 ]);
 const QUEUE_FILTERS = Object.freeze([
-  ['all', 'Todas'],
-  ['mine', 'Minhas conversas'],
-  ['unassignedHumanHandoff', 'Aguardando atendimento'],
+  { label: 'Todas as conversas', value: 'all', visualLabel: 'Todas' },
+  { label: 'Minhas conversas', value: 'mine', visualLabel: 'Minhas' },
+  {
+    label: 'Aguardando atendimento',
+    value: 'unassignedHumanHandoff',
+    visualLabel: 'Sem responsável',
+  },
 ]);
 
 const liveEvent = inject('liveEvent', ref(null));
@@ -50,6 +54,7 @@ const searchInput = ref(null);
 const replyInput = ref(null);
 const nameInput = ref(null);
 const archiveConfirmationDialog = ref(null);
+const stateFilterMenu = ref(null);
 const query = ref('');
 const showArchived = ref(false);
 const stateFilter = ref('all');
@@ -135,6 +140,11 @@ const canArchive = computed(
 const canUnarchive = computed(
   () => canArchive.value && Boolean(active.value?.archivedAt),
 );
+const selectedStateLabel = computed(
+  () =>
+    INBOX_STATES.find(([value]) => value === stateFilter.value)?.[1] ??
+    'Todas',
+);
 
 function listUrl() {
   const params = new URLSearchParams({
@@ -149,6 +159,12 @@ function listUrl() {
     params.set('unassignedHumanHandoff', 'true');
   }
   return `/api/v1/inbox/conversations?${params.toString()}`;
+}
+
+/** @param {string} value */
+function selectState(value) {
+  stateFilter.value = value;
+  stateFilterMenu.value?.removeAttribute('open');
 }
 
 async function archiveConversation() {
@@ -538,7 +554,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div class="filter-bar">
+    <div class="filter-bar inbox-filter-bar">
       <div class="search-control">
         <label for="inbox-search">Buscar contato ou mensagem</label>
         <div class="search-field">
@@ -558,44 +574,51 @@ onBeforeUnmount(() => {
           </button>
         </div>
       </div>
-      <fieldset class="inbox-filter-group">
-        <legend>Fila</legend>
-        <div class="inbox-filter-options">
+      <fieldset class="inbox-queue-switcher">
+        <legend>Fila de trabalho</legend>
+        <div class="inbox-queue-options">
           <button
-            v-for="[value, label] in QUEUE_FILTERS"
-            :key="value"
+            v-for="filter in QUEUE_FILTERS"
+            :key="filter.value"
             type="button"
-            :aria-pressed="queueFilter === value"
-            @click="queueFilter = value"
+            :aria-label="filter.label"
+            :aria-pressed="queueFilter === filter.value"
+            @click="queueFilter = filter.value"
           >
-            {{ label }}
+            {{ filter.visualLabel }}
           </button>
         </div>
       </fieldset>
-      <fieldset class="inbox-filter-group">
-        <legend>Situação</legend>
-        <div class="inbox-filter-options">
-          <button
-            v-for="[value, label] in INBOX_STATES"
-            :key="value"
-            type="button"
-            :aria-pressed="stateFilter === value"
-            @click="stateFilter = value"
-          >
-            {{ label }}
-          </button>
-        </div>
-      </fieldset>
-      <p class="filter-summary">
-        {{ filtered.length }} exibidas · {{ totalCount }} no total
-      </p>
-      <button
-        type="button"
-        :aria-pressed="showArchived"
-        @click="showArchived = !showArchived"
-      >
-        {{ showArchived ? 'Ver caixa de entrada' : 'Ver arquivadas' }}
-      </button>
+      <div class="inbox-toolbar-actions">
+        <details ref="stateFilterMenu" class="inbox-state-menu">
+          <summary>
+            <span>Situação</span>
+            <strong>{{ selectedStateLabel }}</strong>
+          </summary>
+          <div class="inbox-state-options" aria-label="Filtrar por situação">
+            <button
+              v-for="[value, label] in INBOX_STATES"
+              :key="value"
+              type="button"
+              :aria-pressed="stateFilter === value"
+              @click="selectState(value)"
+            >
+              {{ label }}
+            </button>
+          </div>
+        </details>
+        <p class="filter-summary" role="status">
+          {{ filtered.length }} exibidas · {{ totalCount }} no total
+        </p>
+        <button
+          type="button"
+          class="inbox-archive-filter"
+          :aria-pressed="showArchived"
+          @click="showArchived = !showArchived"
+        >
+          {{ showArchived ? 'Caixa de entrada' : 'Arquivadas' }}
+        </button>
+      </div>
     </div>
 
     <p v-if="error" role="alert" class="audit-note">{{ error }}</p>

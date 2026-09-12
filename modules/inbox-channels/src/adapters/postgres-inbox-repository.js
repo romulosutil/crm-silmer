@@ -551,7 +551,8 @@ function mutationAssignments(kind, input, occurredAt) {
     };
   }
   return {
-    sql: `automation_state = 'assistant', automation_epoch = automation_epoch + 1`,
+    sql: `automation_state = 'assistant', automation_epoch = automation_epoch + 1,
+          assigned_user_id = NULL`,
     values: [],
   };
 }

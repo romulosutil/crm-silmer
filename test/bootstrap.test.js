@@ -176,16 +176,16 @@ test('produces byte-for-byte reproducible build output', async () => {
   assert.equal(await digestBuild(), await digestBuild());
 });
 
-test('build artifact includes the qualification runtime workspace', async () => {
+test('build artifact excludes the retired commercial runtime workspace', async () => {
   await digestBuild();
   const result = spawnSync(
     process.execPath,
     [
       '--input-type=module',
       '--eval',
-      "import('./dist/runtime/modules/qualification/src/index.js')",
+      "import('node:fs/promises').then(({access}) => access('./dist/runtime/modules/qualification/src/index.js'))",
     ],
     { cwd: rootUrl, encoding: 'utf8' },
   );
-  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.notEqual(result.status, 0, result.stderr || result.stdout);
 });

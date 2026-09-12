@@ -50,11 +50,7 @@ const connectionLabel = computed(() => {
 // server caps concurrent SSE streams and a second connection per user would
 // halve how many people can stay online.
 const liveEvent = ref(null);
-const liveTopic = computed(() =>
-  ['/inbox', '/clientes'].some((prefix) => route.path.startsWith(prefix))
-    ? 'inbox'
-    : 'kanban',
-);
+const liveTopic = computed(() => 'inbox');
 const stream = new LiveEventStream({
   onChange(event) {
     activeView.value?.refreshFromEvent(event);
@@ -258,17 +254,6 @@ function onCursor(cursor) {
           </svg>
           <span class="nav-label">Caixa de Entrada</span>
         </RouterLink>
-        <RouterLink
-          to="/kanban"
-          :aria-current="
-            route.path.startsWith('/negocios/') ? 'page' : undefined
-          "
-        >
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path d="M4 5h4v14H4zm6 0h4v9h-4zm6 0h4v11h-4z" />
-          </svg>
-          <span class="nav-label">Kanban</span>
-        </RouterLink>
         <RouterLink to="/clientes">
           <svg aria-hidden="true" viewBox="0 0 24 24">
             <path
@@ -335,7 +320,6 @@ function onCursor(cursor) {
       >
         <RouterLink to="/dashboard">Dashboard</RouterLink>
         <RouterLink to="/inbox">Caixa de Entrada</RouterLink>
-        <RouterLink to="/kanban">Kanban</RouterLink>
         <RouterLink to="/clientes">Clientes</RouterLink>
         <RouterLink to="/conta">Conta</RouterLink>
       </nav>

@@ -12,7 +12,6 @@ import { request } from '../lib/api-client.js';
 import {
   CHANNEL_LABELS,
   CONVERSATION_LABELS,
-  STAGE_LABELS,
   dateTimeBR,
 } from '../lib/format.js';
 
@@ -239,7 +238,6 @@ onBeforeUnmount(() => {
               <tr>
                 <th scope="col">Contato</th>
                 <th scope="col">Canais</th>
-                <th scope="col" class="num">Negócios ativos</th>
                 <th scope="col">Situação</th>
                 <th scope="col">Última atividade</th>
               </tr>
@@ -263,7 +261,6 @@ onBeforeUnmount(() => {
                       .join(', ') || 'Sem canal'
                   }}
                 </td>
-                <td class="num">{{ contact.activeDealCount }}</td>
                 <td>{{ contact.provisional ? 'Provisório' : 'Canônico' }}</td>
                 <td>{{ dateTimeBR(contact.latestActivityAt) }}</td>
               </tr>
@@ -322,10 +319,6 @@ onBeforeUnmount(() => {
         <template v-else>
           <dl class="client-facts">
             <div>
-              <dt>Negócios ativos</dt>
-              <dd>{{ detail.activeDealCount }}</dd>
-            </div>
-            <div>
               <dt>Conversas</dt>
               <dd>{{ detail.conversations.length }}</dd>
             </div>
@@ -349,24 +342,6 @@ onBeforeUnmount(() => {
               >
             </li>
           </ul>
-
-          <div class="panel-head subsection-heading">
-            <h3>Negócios</h3>
-            <p>{{ detail.activeDealCount }} ativo(s)</p>
-          </div>
-          <ul v-if="detail.deals.length" class="history-list">
-            <li v-for="deal in detail.deals" :key="deal.id">
-              <RouterLink :to="`/negocios/${deal.id}`"
-                >Negócio {{ deal.id }}</RouterLink
-              >
-              <span
-                >{{ STAGE_LABELS[deal.stage] ?? deal.stage }} ·
-                {{ deal.status }}</span
-              >
-              <small>Atualizado em {{ dateTimeBR(deal.updatedAt) }}</small>
-            </li>
-          </ul>
-          <p v-else class="empty-list">Nenhum negócio associado.</p>
 
           <div class="panel-head subsection-heading">
             <h3>Conversas</h3>
@@ -393,7 +368,7 @@ onBeforeUnmount(() => {
       </section>
       <section v-else class="surface empty-list" aria-live="polite">
         <h2>Selecione um contato</h2>
-        <p>Identidades, negócios e conversas aparecerão aqui.</p>
+        <p>Identidades e conversas aparecerão aqui.</p>
       </section>
     </div>
   </div>

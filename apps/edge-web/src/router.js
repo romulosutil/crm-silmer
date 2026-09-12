@@ -1,6 +1,5 @@
 import { h } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
-import LegacyViewHost from './components/LegacyViewHost.vue';
 import AccountView from './views/AccountView.vue';
 import ClientsView from './views/ClientsView.vue';
 import DashboardView from './views/DashboardView.vue';
@@ -26,18 +25,6 @@ export const router = createRouter({
     {
       path: '/handoffs',
       redirect: '/inbox',
-    },
-    {
-      path: '/kanban',
-      component: LegacyViewHost,
-      props: { kind: 'kanban' },
-      meta: { title: 'Kanban' },
-    },
-    {
-      path: '/negocios/:dealId',
-      component: LegacyViewHost,
-      props: (route) => ({ dealId: String(route.params.dealId), kind: 'deal' }),
-      meta: { title: 'Negócio' },
     },
     {
       path: '/clientes/:clientId?',

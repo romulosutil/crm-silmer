@@ -4,7 +4,6 @@ import { request } from '../lib/api-client.js';
 import {
   CHANNEL_LABELS,
   CONVERSATION_LABELS,
-  STAGE_LABELS,
   dateTimeBR,
   messageText,
 } from '../lib/format.js';
@@ -12,16 +11,9 @@ import {
 const heading = ref(null);
 const loading = ref(true);
 const error = ref('');
-const board = ref({ columns: [] });
 const inbox = ref({ items: [], totalCount: 0 });
 let controller;
 
-const dealCount = computed(() =>
-  board.value.columns.reduce(
-    (total, column) => total + Number(column.count ?? 0),
-    0,
-  ),
-);
 const attentionCount = computed(
   () => inbox.value.items.filter((item) => item.requiresAttention).length,
 );
@@ -35,12 +27,6 @@ const channelCounts = computed(() =>
     label,
   })),
 );
-const maxStage = computed(() =>
-  Math.max(
-    1,
-    ...board.value.columns.map((column) => Number(column.count ?? 0)),
-  ),
-);
 const maxChannel = computed(() =>
   Math.max(1, ...channelCounts.value.map((channel) => channel.count)),
 );
@@ -51,13 +37,9 @@ async function loadDashboard() {
   loading.value = true;
   error.value = '';
   try {
-    const [kanbanResponse, inboxResponse] = await Promise.all([
-      request('/api/v1/kanban?limit=100', { signal: controller.signal }),
-      request('/api/v1/inbox/conversations?limit=100', {
-        signal: controller.signal,
-      }),
-    ]);
-    board.value = kanbanResponse.data;
+    const inboxResponse = await request('/api/v1/inbox/conversations?limit=100', {
+      signal: controller.signal,
+    });
     inbox.value = inboxResponse.data;
   } catch (cause) {
     if (cause?.name !== 'AbortError') {
@@ -101,11 +83,6 @@ onBeforeUnmount(() => controller?.abort());
     </div>
     <template v-else>
       <dl class="kpi-grid">
-        <div class="kpi kpi--accent">
-          <dt>Negócios em aberto</dt>
-          <dd class="kpi-value">{{ dealCount }}</dd>
-          <dd class="kpi-meta">Distribuídos nas etapas oficiais do Kanban</dd>
-        </div>
         <div class="kpi">
           <dt>Conversas</dt>
           <dd class="kpi-value">{{ inbox.totalCount }}</dd>
@@ -124,37 +101,6 @@ onBeforeUnmount(() => controller?.abort());
       </dl>
 
       <div class="dash-grid section-gap">
-        <section class="surface" aria-labelledby="pipeline-title">
-          <div class="panel-head">
-            <h2 id="pipeline-title">Funil por etapa</h2>
-            <p>Negócios ativos no PostgreSQL</p>
-          </div>
-          <dl v-if="board.columns.length" class="rank">
-            <div
-              v-for="column in board.columns"
-              :key="column.stage"
-              class="rank-row"
-            >
-              <dt>{{ STAGE_LABELS[column.stage] ?? column.label }}</dt>
-              <dd>
-                <span class="rank-track">
-                  <span
-                    class="rank-fill"
-                    :style="{
-                      '--rank-size': `${Math.round((column.count / maxStage) * 100)}%`,
-                    }"
-                  ></span>
-                </span>
-              </dd>
-              <dd class="rank-value">{{ column.count }}</dd>
-            </div>
-          </dl>
-          <p v-else class="empty-list">Nenhum negócio ativo.</p>
-          <p class="footnote">
-            <RouterLink to="/kanban">Abrir o Kanban comercial</RouterLink>
-          </p>
-        </section>
-
         <section class="surface" aria-labelledby="channels-title">
           <div class="panel-head">
             <h2 id="channels-title">Conversas por canal</h2>

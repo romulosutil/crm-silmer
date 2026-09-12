@@ -9,11 +9,11 @@ O MVP possui três objetivos que podem evoluir isoladamente e convergem no lanç
 
 | Objetivo                      | Responsabilidade                                                                                              | Não faz                                                   |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| CRM                           | Fonte oficial de contatos, conversas, negócios, etapas, catálogo, pedidos, financeiro, permissões e auditoria | Não executa prompts nem depende da UI para iniciar fluxos |
+| CRM                           | Fonte oficial de contatos, conversas, mensagens, handoffs, permissões e auditoria | Não executa prompts nem depende da UI para iniciar fluxos |
 | Inbox Multicanal              | Exibe mensagens, pendências e saúde; permite resposta manual, atribuição, takeover e reconciliação            | Não contém regra comercial nem dispara o n8n por botão    |
 | Agente Vendedor Silmer no n8n | Recebe/envia WhatsApp, chama o provedor de IA configurado e orquestra resposta, comandos canônicos e handoff  | Não escreve no banco nem decide fora dos contratos do CRM |
 
-Fluxo inicial: `Cliente → WhatsApp → n8n → API do CRM → Inbox/Kanban`.
+Fluxo inicial: `Cliente → WhatsApp → n8n → API do CRM → Inbox`.
 Respostas seguem `CRM → n8n → WhatsApp`. Instagram reutilizará a fronteira em
 fase posterior. Cada mensagem válida dispara automaticamente o n8n; a
 interface apenas observa ou assume a conversa.
@@ -35,9 +35,9 @@ interface apenas observa ou assume a conversa.
 - Frontend em Vue 3, JavaScript ESM e CSS, compilado com Vite; decisão registrada em `docs/adr/001-adotar-vue-no-frontend.md`.
 - API oficial do WhatsApp Business como canal do primeiro MVP operacional;
   Instagram Direct é a próxima fase de canal.
-- Migração entre Instagram e WhatsApp preserva o Negócio e só associa `@instagram` e telefone após correlação verificável e auditável.
-- Caixa de Entrada separada do Kanban.
-- Ficha de Pedido como contrato de dados da jornada.
+- Migração entre Instagram e WhatsApp preserva o Contato e só associa `@instagram` e telefone após correlação verificável e auditável.
+- Caixa de Entrada é a superfície operacional do atendimento e dos handoffs.
+- Pedido e sua ficha serão definidos em uma fase posterior, depois da homologação da jornada de atendimento.
 - Vendedor Silmer autônomo nas operações explicitamente concedidas ao ator `AUTOMATION_EXECUTOR`.
 - Aprovação de preço, venda, pagamento e Ficha permanece humana no caminho inicial.
 - n8n obrigatório; indisponibilidade do n8n torna a automação indisponível e visível, sem fallback silencioso para outra fonte de estado.
@@ -70,19 +70,21 @@ interface apenas observa ou assume a conversa.
 
 ## Modelagem e confiabilidade
 
-- `Deal`/`Negocio` é a única raiz do funil. Lead é classificação e Card é projeção visual.
-- Cliente é `Contact` + `ContactIdentity`; briefing de conversa não é um segundo
-  lead e só promove dados pelos endpoints canônicos.
-- Backlog pertence à Conversa e permanece fora do Kanban.
-- `convertida_em_lead` encerra a triagem, não a conversa; handoff pode existir
-  antes de Negócio, começa sem responsável e é reivindicado por papel via CAS.
+- Cliente é `Contact` + `ContactIdentity`; briefing de conversa é progressivo,
+  permanece ligado ao atendimento e não promove dados comerciais neste corte.
+- Backlog e handoff pertencem à Conversa; um handoff começa sem responsável e
+  é reivindicado por papel via CAS, sem depender de entidade comercial.
 - Dados extraídos pela IA só se tornam oficiais após validação do schema e aceitação pelo comando do CRM.
 - Auditoria de negócio é append-only e não se confunde com log técnico.
 - Perda da única cópia de mídia transitória produz `lost/unavailable`, nunca alegação de recuperação.
-- Venda, PIX, Pedido, Ficha, envio e onboarding usam chaves idempotentes e constraints transacionais.
+- Qualquer futuro Pedido, Ficha, preço ou pagamento usará chaves idempotentes e constraints transacionais.
 - Cada evento técnico correlaciona `workflow_key`, versão, `execution_id`,
   mensagem, `correlation_id` e `automation_epoch`, sem exigir entidade própria
   de execução.
+
+O Kanban e o domínio de Negócio foram aposentados do runtime atual pela
+[ADR 004](docs/adr/004-aposentar-kanban-e-negocio.md). Referências históricas
+não definem novos comportamentos.
 
 ## Caminho de lançamento
 

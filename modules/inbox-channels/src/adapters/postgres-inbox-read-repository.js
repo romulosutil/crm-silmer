@@ -63,7 +63,6 @@ export class PostgresInboxReadRepository {
                   identity.identity_envelope, contact.display_name,
                   contact.version contact_version,
                   assigned_function.function_name,
-                  deal.id deal_id, deal.stage deal_stage, deal.status deal_status,
                   handoff.id handoff_id, handoff.status handoff_status,
                   handoff.target_role, handoff.due_at handoff_due_at,
                   last_message.id last_message_id,
@@ -79,12 +78,6 @@ export class PostgresInboxReadRepository {
            JOIN crm.contacts contact ON contact.id=identity.current_contact_id
            LEFT JOIN crm.user_functions assigned_function
              ON assigned_function.user_id=conversation.assigned_user_id
-           LEFT JOIN LATERAL (
-             SELECT candidate.id, candidate.stage, candidate.status
-             FROM crm.deals candidate
-             WHERE candidate.source_conversation_id=conversation.id
-             ORDER BY candidate.updated_at DESC, candidate.id DESC LIMIT 1
-           ) deal ON true
            LEFT JOIN LATERAL (
              SELECT candidate.id, candidate.status, candidate.target_role,
                     candidate.due_at
@@ -142,7 +135,6 @@ export class PostgresInboxReadRepository {
                     identity.identity_envelope, contact.display_name,
                     contact.version contact_version,
                     assigned_function.function_name,
-                    deal.id deal_id, deal.stage deal_stage, deal.status deal_status,
                     handoff.id handoff_id, handoff.status handoff_status,
                     handoff.target_role, handoff.due_at handoff_due_at
              FROM crm.conversations conversation
@@ -151,12 +143,6 @@ export class PostgresInboxReadRepository {
              JOIN crm.contacts contact ON contact.id=identity.current_contact_id
              LEFT JOIN crm.user_functions assigned_function
                ON assigned_function.user_id=conversation.assigned_user_id
-             LEFT JOIN LATERAL (
-               SELECT candidate.id, candidate.stage, candidate.status
-               FROM crm.deals candidate
-               WHERE candidate.source_conversation_id=conversation.id
-               ORDER BY candidate.updated_at DESC, candidate.id DESC LIMIT 1
-             ) deal ON true
              LEFT JOIN LATERAL (
                SELECT candidate.id, candidate.status, candidate.target_role,
                       candidate.due_at
@@ -258,9 +244,6 @@ function mapConversationSummary(row, repository) {
       version:
         row.contact_version === undefined ? null : Number(row.contact_version),
     },
-    deal: row.deal_id
-      ? { id: row.deal_id, stage: row.deal_stage, status: row.deal_status }
-      : null,
     handoff: row.handoff_id
       ? {
           dueAt: iso(row.handoff_due_at),

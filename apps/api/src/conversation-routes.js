@@ -124,9 +124,7 @@ export function registerConversationRoutes(api, conversations, contextFor) {
       const body = requireObject(request.body);
       rejectUnknownKeys(body, [
         'expectedConversationVersion',
-        'expectedDealVersion',
         'expectedHandoffVersion',
-        'expectedTaskVersion',
         'reasonCode',
       ]);
       const command = await authorizeHumanCommand(
@@ -141,9 +139,7 @@ export function registerConversationRoutes(api, conversations, contextFor) {
         expectedConversationVersion: optionalVersion(
           body.expectedConversationVersion,
         ),
-        expectedDealVersion: optionalVersion(body.expectedDealVersion),
         expectedHandoffVersion: requireVersion(body.expectedHandoffVersion),
-        expectedTaskVersion: optionalVersion(body.expectedTaskVersion),
         reasonCode: requireString(body.reasonCode, 'REASON_CODE'),
       });
       return reply.code(200).send(result);

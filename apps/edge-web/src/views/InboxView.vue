@@ -296,10 +296,10 @@ async function confirmTransfer() {
     'transfer',
     {
       expectedVersion: active.value.version,
-      reason: 'Repasse de venda na Caixa de Entrada',
+      reason: 'Repasse de atendimento na Caixa de Entrada',
       targetUserId: transferTarget.value,
     },
-    `Venda repassada para ${targetName}.`,
+    `Atendimento repassado para ${targetName}.`,
   );
   if (!error.value) transferring.value = false;
 }
@@ -642,15 +642,8 @@ onBeforeUnmount(() => {
               :disabled="busy || !canAct"
               @click="openTransfer"
             >
-              Repassar venda
+              Repassar atendimento
             </button>
-            <RouterLink
-              v-if="active.deal"
-              class="button-link quiet-link"
-              :to="`/negocios/${active.deal.id}`"
-            >
-              Abrir negócio
-            </RouterLink>
             <RouterLink
               class="button-link quiet-link"
               :to="`/clientes/${active.contact.id}`"

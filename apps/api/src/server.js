@@ -11,11 +11,12 @@ import {
 import { createApi } from './app.js';
 import { createAutomationAuthRuntime } from './automation-auth-runtime.js';
 import { createCommercialRuntime } from './commercial-runtime.js';
+import { createConversationHandoffRuntime } from './conversation-handoff-runtime.js';
 import { createConversationApiRuntime } from './conversation-runtime.js';
-import { createDealApiRuntime } from './deal-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
 import { createN8nApiRuntime } from './n8n-runtime.js';
 import { createOperationReadRuntime } from './operation-runtime.js';
+import { createOperationalAuthRuntime } from './operational-auth-runtime.js';
 import { createWhatsAppWebhookRuntime } from './whatsapp-webhook-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
@@ -31,14 +32,15 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *     transaction: <T>(work: (client: any) => Promise<T>) => Promise<T>,
  *   },
  *   commercial?: Record<string, any>,
- *   deals?: Record<string, any>,
  *   environment?: Record<string, string|undefined>,
  *   logger?: ReturnType<typeof createSafeLogger>,
  *   readiness?: () => boolean | Promise<boolean>,
  *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>,
  *   identity?: ReturnType<typeof createIdentityApiRuntime>,
  *   automationAuth?: ReturnType<typeof createAutomationAuthRuntime>,
+ *   operationalAuth?: Record<string, any>,
  *   conversations?: Record<string, any>,
+ *   handoffs?: Record<string, any>,
  *   n8n?: Record<string, any>,
  *   operations?: Record<string, any>,
  *   trustProxy?: import('fastify').FastifyServerOptions['trustProxy']
@@ -66,47 +68,42 @@ export function createServerApi(runtime = {}) {
     (runtime.database
       ? createConfiguredAutomationAuthRuntime(runtime.database, environment)
       : undefined);
-  const dealEnvironment = environment;
-  const dealSecretNames = [
-    'IDEMPOTENCY_ENVELOPE_KEY',
-    'DEAL_ENVELOPE_KEY',
-    'QUALIFICATION_ENVELOPE_KEY',
-    'HANDOFF_ENVELOPE_KEY',
-    'KANBAN_CURSOR_HMAC_KEY',
-  ];
-  const dealConfigurationPresent = dealSecretNames.some((name) =>
-    Boolean(dealEnvironment[name]),
-  );
-  if (
-    runtime.database &&
-    dealConfigurationPresent &&
-    !dealSecretNames.every((name) => Boolean(dealEnvironment[name]))
-  ) {
-    throw new Error(
-      'Deal runtime requires IDEMPOTENCY_ENVELOPE_KEY, DEAL_ENVELOPE_KEY, QUALIFICATION_ENVELOPE_KEY, HANDOFF_ENVELOPE_KEY and KANBAN_CURSOR_HMAC_KEY together',
-    );
-  }
-  const deals =
-    runtime.deals ??
-    (runtime.database &&
-    dealSecretNames.every((name) => Boolean(dealEnvironment[name]))
-      ? createDealApiRuntime(runtime.database, {
-          automationAuth,
-          environment: dealEnvironment,
-          identity: runtime.identity,
-        })
-      : undefined);
   const n8n =
     runtime.n8n ??
     (runtime.database && n8nEnabled
       ? createN8nApiRuntime(runtime.database, { environment })
       : undefined);
+  const operationalAuth =
+    runtime.operationalAuth ??
+    (runtime.database
+      ? createOperationalAuthRuntime({
+          automationAuth,
+          identity: runtime.identity,
+        })
+      : undefined);
+  const handoffSecretNames = ['IDEMPOTENCY_ENVELOPE_KEY'];
+  const handoffConfigurationPresent = handoffSecretNames.some((name) =>
+    Boolean(environment[name]),
+  );
+  if (
+    runtime.database &&
+    handoffConfigurationPresent &&
+    !handoffSecretNames.every((name) => Boolean(environment[name]))
+  ) {
+    throw new Error('Conversation handoff runtime requires IDEMPOTENCY_ENVELOPE_KEY');
+  }
+  const handoffs =
+    runtime.handoffs ??
+    (runtime.database && handoffSecretNames.every((name) => Boolean(environment[name]))
+      ? createConversationHandoffRuntime(runtime.database, { environment })
+      : undefined);
   const conversations =
     runtime.conversations ??
-    (runtime.database && n8n && deals
+    (runtime.database && n8n && handoffs && operationalAuth
       ? createConversationApiRuntime(
           runtime.database,
-          deals,
+          operationalAuth,
+          handoffs,
           n8n,
           readEnvelopeKey(
             environment.INBOX_MESSAGE_ENVELOPE_KEY,
@@ -117,7 +114,8 @@ export function createServerApi(runtime = {}) {
   const operationSecretNames = [
     'CONTACT_IDENTITY_ENVELOPE_KEY',
     'INBOX_MESSAGE_ENVELOPE_KEY',
-    'KANBAN_CURSOR_HMAC_KEY',
+    'HANDOFF_ENVELOPE_KEY',
+    'OPERATION_CURSOR_HMAC_KEY',
   ];
   const operationConfigurationPresent = operationSecretNames.some((name) =>
     Boolean(environment[name]),
@@ -128,7 +126,7 @@ export function createServerApi(runtime = {}) {
     !operationSecretNames.every((name) => Boolean(environment[name]))
   ) {
     throw new Error(
-      'Operation read runtime requires CONTACT_IDENTITY_ENVELOPE_KEY, INBOX_MESSAGE_ENVELOPE_KEY and KANBAN_CURSOR_HMAC_KEY together',
+      'Operation read runtime requires CONTACT_IDENTITY_ENVELOPE_KEY, INBOX_MESSAGE_ENVELOPE_KEY, HANDOFF_ENVELOPE_KEY and OPERATION_CURSOR_HMAC_KEY together',
     );
   }
   const operations =
@@ -147,7 +145,7 @@ export function createServerApi(runtime = {}) {
       automationAuth,
       commercial,
       conversations,
-      deals,
+      handoffs,
       logger,
       metaWebhook,
       n8n,

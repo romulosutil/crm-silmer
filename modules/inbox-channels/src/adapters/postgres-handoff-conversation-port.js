@@ -22,7 +22,7 @@ export class PostgresHandoffConversationPort {
       value.terminalAt ||
       value.contactId !== input.contactId
     ) {
-      throw new InboxConflictError('Conversation conflicts with Deal');
+      throw new InboxConflictError('Conversation version or contact conflicts');
     }
     if (
       input.requireAutomationFence &&

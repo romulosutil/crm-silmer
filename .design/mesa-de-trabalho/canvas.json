@@ -3,7 +3,7 @@
     { "file": "Status.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Escopo dos status" },
     { "file": "Pedidos.dc.html", "x": 1600, "y": 0, "w": 1440, "h": 1000, "title": "Pedidos (confirmados e pendentes)" },
     { "file": "Main.dc.html", "x": 0, "y": 1320, "w": 1440, "h": 1060, "title": "Caixa de Entrada + Pedido" },
-    { "file": "Ficha.dc.html", "x": 1600, "y": 1320, "w": 1440, "h": 1340, "title": "Pedido" }
+    { "file": "Ficha.dc.html", "x": 1600, "y": 1320, "w": 1440, "h": 1760, "title": "Pedido" }
   ],
   "annotations": [
     {
@@ -32,7 +32,7 @@
       "x": 1600,
       "y": 1130,
       "w": 640,
-      "text": "PEDIDO — pertence a Pedidos, não à Caixa de Entrada.\nDois caminhos de entrada: \"Abrir pedido\" dentro de uma conversa, ou a lista de Pedidos. O rastro no topo mostra de onde veio.\nColuna única, edição por seção. \"Imprimir\" nasce bloqueado e só abre depois de \"Confirmar pedido\", o botão principal da tela."
+      "text": "PEDIDO — pertence a Pedidos, não à Caixa de Entrada.\nAs seções seguem os blocos do PDF aprovado (ficha-canonical-v2): Resumo do pedido, Itens e especificações, Observações, Controle de produção.\nEdição por seção. \"Imprimir\" nasce bloqueado e só abre depois de \"Confirmar pedido\", o botão principal da tela."
     },
     {
       "id": "nota-cortes",

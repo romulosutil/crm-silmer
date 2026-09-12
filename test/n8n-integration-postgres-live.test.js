@@ -182,6 +182,7 @@ if (connectionString) {
       });
       const handoff = await service.recordEvent({
         automation_epoch: secondInbound.automation_epoch,
+        briefing_patch: { customer_name: 'Ana Horizonte' },
         conversation_id: secondInbound.conversation_id,
         event_id: 'handoff-1',
         event_type: 'handoff.requested',
@@ -214,6 +215,20 @@ if (connectionString) {
         status: 'pending',
         target_role: 'Vendedor',
         to_status: 'pending',
+      });
+      const contactName = await pool.query(
+        `SELECT contact.display_name, contact.display_name_source
+         FROM crm.contacts AS contact
+         JOIN crm.contact_identities AS identity
+           ON identity.current_contact_id = contact.id
+         JOIN crm.conversations AS conversation
+           ON conversation.contact_identity_id = identity.id
+         WHERE conversation.id = $1`,
+        [secondInbound.conversation_id],
+      );
+      assert.deepEqual(contactName.rows[0], {
+        display_name: 'Ana Horizonte',
+        display_name_source: 'automation',
       });
 
       const counts = await pool.query(

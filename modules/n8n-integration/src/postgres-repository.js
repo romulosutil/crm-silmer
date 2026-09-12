@@ -8,6 +8,8 @@ import { N8nConflictError, N8nNotFoundError } from './errors.js';
 
 /** @typedef {{query(sql: string, values?: unknown[]): Promise<{rows: any[]}>}} Queryable */
 
+const CONTACT_DISPLAY_NAME_MAX_LENGTH = 120;
+
 /**
  * Mirrors the conversation change onto the shared domain event stream so the
  * `inbox` SSE topic pushes it to open panels. The n8n integration owns its own
@@ -501,6 +503,7 @@ export class PostgresN8nIntegrationRepository {
             client,
             conversation,
             eventInput.briefingPatch,
+            runtime,
             processedAt,
           );
         }
@@ -603,8 +606,8 @@ export class PostgresN8nIntegrationRepository {
     );
   }
 
-  /** @param {Queryable} client @param {any} conversation @param {Record<string, unknown>} patch @param {string} now */
-  async #mergeBriefing(client, conversation, patch, now) {
+  /** @param {Queryable} client @param {any} conversation @param {Record<string, unknown>} patch @param {any} runtime @param {string} now */
+  async #mergeBriefing(client, conversation, patch, runtime, now) {
     const current = this.#readBriefing(conversation);
     const values = Object.fromEntries(
       Object.entries(patch).filter(([, value]) => value !== null),
@@ -626,6 +629,86 @@ export class PostgresN8nIntegrationRepository {
     conversation.briefing_version = version;
     conversation.briefing_envelope = envelope;
     conversation.briefing_updated_at = now;
+    await this.#promoteCustomerName(
+      client,
+      conversation,
+      values.customer_name,
+      runtime,
+      now,
+    );
+  }
+
+  /**
+   * Exposes the name supplied by a customer on CRM readers. An operator rename
+   * remains authoritative; the guided workflow can change only a blank or
+   * automation-owned name.
+   * @param {Queryable} client
+   * @param {any} conversation
+   * @param {unknown} customerName
+   * @param {any} runtime
+   * @param {string} now
+   */
+  async #promoteCustomerName(client, conversation, customerName, runtime, now) {
+    const displayName = automationDisplayName(customerName);
+    if (!displayName) return;
+    const contact = (
+      await client.query(
+        `SELECT contact.id, contact.display_name, contact.display_name_source
+         FROM crm.contacts AS contact
+         JOIN crm.contact_identities AS identity
+           ON identity.current_contact_id = contact.id
+         WHERE identity.id = $1
+         FOR UPDATE OF contact`,
+        [conversation.contact_identity_id],
+      )
+    ).rows[0];
+    if (
+      !contact ||
+      (contact.display_name !== null &&
+        contact.display_name_source !== 'automation')
+    ) {
+      return;
+    }
+    const updated = (
+      await client.query(
+        `UPDATE crm.contacts
+         SET display_name = $2, display_name_source = 'automation',
+             version = version + 1, updated_at = $3
+         WHERE id = $1
+           AND (display_name IS NULL OR display_name_source = 'automation')
+           AND (display_name IS DISTINCT FROM $2
+                OR display_name_source IS DISTINCT FROM 'automation')
+         RETURNING id, version`,
+        [contact.id, displayName, now],
+      )
+    ).rows[0];
+    if (!updated) return;
+    const correlationId = `n8n-contact-name:${conversation.id}`;
+    await appendAudit(client, runtime, {
+      action: 'contact.name_collected',
+      actor: 'AUTOMATION_EXECUTOR',
+      correlationId,
+      occurredAt: now,
+      reason: 'customer name collected by guided workflow',
+      targetId: updated.id,
+      targetType: 'contact',
+      version: Number(updated.version),
+    });
+    await client.query(
+      `INSERT INTO crm.domain_events
+         (id, aggregate_type, aggregate_id, aggregate_version, event_type,
+          payload, correlation_id, occurred_at)
+       VALUES ($1, 'contact', $2, $3, 'contact.name_collected', $4::jsonb,
+               $5, $6)`,
+      [
+        runtime.idFactory('event'),
+        updated.id,
+        Number(updated.version),
+        JSON.stringify({ contactId: updated.id }),
+        correlationId,
+        now,
+      ],
+    );
   }
 
   /** @param {Queryable} client @param {string} conversationId */
@@ -721,7 +804,13 @@ export class PostgresN8nIntegrationRepository {
       ],
     );
     if (input.briefingPatch) {
-      await this.#mergeBriefing(client, conversation, input.briefingPatch, now);
+      await this.#mergeBriefing(
+        client,
+        conversation,
+        input.briefingPatch,
+        runtime,
+        now,
+      );
     }
     const updated = await client.query(
       `UPDATE crm.conversations
@@ -1173,6 +1262,20 @@ function safeFailureCode(value) {
   return typeof value === 'string' && /^[A-Z0-9_]{1,64}$/u.test(value)
     ? value
     : 'WORKFLOW_FAILED';
+}
+
+/** @param {unknown} value */
+function automationDisplayName(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (
+    trimmed.length < 1 ||
+    trimmed.length > CONTACT_DISPLAY_NAME_MAX_LENGTH ||
+    /[\u0000-\u001f\u007f]/u.test(trimmed)
+  ) {
+    return null;
+  }
+  return trimmed;
 }
 
 /** @param {Queryable} client */

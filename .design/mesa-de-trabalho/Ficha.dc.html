@@ -69,6 +69,18 @@
     .form label { display: grid; gap: 0.3rem; font-size: 0.78rem; font-weight: 600; }
     .form input { inline-size: 100%; min-block-size: 44px; padding: 0.65rem 0.75rem; color: #1b1530; font: inherit; font-size: 0.875rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.35rem; }
     .form input[data-focus='true'] { border-color: #5b3fd1; box-shadow: 0 0 0 3px rgb(111 80 232 / 18%); }
+    .money-field { display: flex; align-items: stretch; }
+    .money-field .prefix {
+      display: grid; place-items: center; padding-inline: 0.75rem; color: #625b75; font-size: 0.875rem; font-weight: 600;
+      background: #f0eef8; border: 1px solid #d8d4e4; border-inline-end: 0; border-start-start-radius: 0.35rem; border-end-start-radius: 0.35rem;
+    }
+    .money-field input { border-start-start-radius: 0; border-end-start-radius: 0; font-variant-numeric: tabular-nums; }
+    .select-field { position: relative; display: block; }
+    .select-field select {
+      inline-size: 100%; min-block-size: 44px; padding: 0.65rem 2.25rem 0.65rem 0.75rem; color: #1b1530; font: inherit;
+      font-size: 0.875rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.35rem; appearance: none;
+    }
+    .select-field svg { position: absolute; inset-block-start: 50%; inset-inline-end: 0.75rem; inline-size: 1rem; block-size: 1rem; margin-block-start: -0.5rem; pointer-events: none; }
     .form .help { color: #625b75; font-size: 0.72rem; font-weight: 400; }
     .form-foot { display: flex; align-items: center; gap: 0.6rem; grid-column: 1 / -1; padding-block-start: 0.35rem; }
     .form-foot p { margin: 0 auto 0 0; color: #625b75; font-size: 0.75rem; }
@@ -124,7 +136,7 @@
             <p>Uniforme escolar 2027 · WhatsApp +55 71 98812-4477 · com Marina desde 14:06</p>
           </div>
           <div class="actions">
-            <span class="btn btn-primary">Registrar orçamento</span>
+            <span class="btn">Abrir conversa</span>
           </div>
         </div>
 
@@ -137,20 +149,30 @@
           <section class="surface">
             <div class="panel-head">
               <h2>Identificação do pedido</h2>
-              <div class="right"><span class="btn btn-sm">Cancelar</span><span class="btn btn-sm btn-primary">Salvar seção</span></div>
+              <div class="right"><span class="btn btn-sm">Editar</span></div>
             </div>
-            <div class="form">
-              <label>Nome do pedido<input type="text" value="Uniforme escolar 2027" /></label>
-              <label>Cliente<input type="text" value="Colégio Ápice LTDA" /></label>
-              <label>Aplicação<input type="text" value="Sublimação total" /></label>
-              <label>Data de entrega confirmada
-                <input type="text" value="24/10/2026" data-focus="true" />
-                <span class="help">O cliente pediu 20/10. Confirme só o que a produção garantir.</span>
-              </label>
-              <div class="form-foot">
-                <p>Vendedor responsável: Marina Aguiar. Número do pedido e data são gerados na aprovação.</p>
+            <dl class="fields">
+              <div class="f">
+                <dt>Nome do pedido</dt>
+                <dd>Uniforme escolar 2027</dd>
               </div>
-            </div>
+              <div class="f">
+                <dt>Cliente</dt>
+                <dd>Colégio Ápice LTDA</dd>
+              </div>
+              <div class="f">
+                <dt>Aplicação</dt>
+                <dd>Sublimação total</dd>
+              </div>
+              <div class="f">
+                <dt>Data de entrega confirmada</dt>
+                <dd>24/10/2026</dd>
+              </div>
+              <div class="f">
+                <dt>Vendedor responsável</dt>
+                <dd>Marina Aguiar</dd>
+              </div>
+            </dl>
           </section>
 
           <section class="surface">
@@ -207,23 +229,31 @@
           <section class="surface">
             <div class="panel-head">
               <h2>Fechamento e pagamento</h2>
-              <div class="right"><span class="btn btn-sm btn-primary">Registrar orçamento</span></div>
+              <div class="right"><span class="st" data-s="off">sem decisão</span></div>
             </div>
-            <dl class="fields">
-              <div class="f">
-                <dt>Valor final</dt>
-                <dd data-empty="true">a registrar</dd>
+            <div class="form">
+              <label>Valor final
+                <span class="money-field"><span class="prefix">R$</span><input type="text" value="4.820,00" data-focus="true" inputmode="decimal" /></span>
+                <span class="help">Valor aprovado pelo cliente. O agente nunca informa preço.</span>
+              </label>
+              <label>Condição de pagamento
+                <span class="select-field">
+                  <select>
+                    <option selected>Pix</option>
+                    <option>Cartão de crédito</option>
+                    <option>Cartão de débito</option>
+                  </select>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#625b75" stroke-width="2"><path d="m6 9 6 6 6-6" stroke-linecap="round" /></svg>
+                </span>
+                <span class="help">Pix segue para cobrança automática. Cartão exige registro de quem autorizou.</span>
+              </label>
+              <div class="form-foot">
+                <p>Salvar preenche os dois campos e libera a jornada de pagamento.</p>
+                <span class="btn btn-sm">Cancelar</span>
+                <span class="btn btn-sm btn-primary">Salvar orçamento</span>
               </div>
-              <div class="f">
-                <dt>Condição de pagamento</dt>
-                <dd data-empty="true">a registrar</dd>
-              </div>
-              <div class="f">
-                <dt>Status</dt>
-                <dd><span class="st" data-s="off">sem decisão</span></dd>
-              </div>
-            </dl>
-            <p class="note">O agente nunca informa preço. Sem orçamento aprovado e PIX confirmado, a Ficha PDF não é gerada.</p>
+            </div>
+            <p class="note">Sem orçamento aprovado e pagamento confirmado, a Ficha PDF não é gerada.</p>
           </section>
         </div>
       </div>

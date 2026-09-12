@@ -167,6 +167,11 @@ function selectState(value) {
   stateFilterMenu.value?.removeAttribute('open');
 }
 
+function toggleArchived() {
+  showArchived.value = !showArchived.value;
+  stateFilterMenu.value?.removeAttribute('open');
+}
+
 async function archiveConversation() {
   await runCommand(
     'archive',
@@ -595,29 +600,32 @@ onBeforeUnmount(() => {
             <span>Situação</span>
             <strong>{{ selectedStateLabel }}</strong>
           </summary>
-          <div class="inbox-state-options" aria-label="Filtrar por situação">
-            <button
-              v-for="[value, label] in INBOX_STATES"
-              :key="value"
-              type="button"
-              :aria-pressed="stateFilter === value"
-              @click="selectState(value)"
-            >
-              {{ label }}
-            </button>
+          <div class="inbox-state-panel">
+            <div class="inbox-state-options" aria-label="Filtrar por situação">
+              <button
+                v-for="[value, label] in INBOX_STATES"
+                :key="value"
+                type="button"
+                :aria-pressed="stateFilter === value"
+                @click="selectState(value)"
+              >
+                {{ label }}
+              </button>
+            </div>
+            <div class="inbox-state-utility">
+              <button
+                type="button"
+                :aria-pressed="showArchived"
+                @click="toggleArchived"
+              >
+                {{ showArchived ? 'Ver caixa de entrada' : 'Ver arquivadas' }}
+              </button>
+            </div>
           </div>
         </details>
         <p class="filter-summary" role="status">
           {{ filtered.length }} exibidas · {{ totalCount }} no total
         </p>
-        <button
-          type="button"
-          class="inbox-archive-filter"
-          :aria-pressed="showArchived"
-          @click="showArchived = !showArchived"
-        >
-          {{ showArchived ? 'Caixa de entrada' : 'Arquivadas' }}
-        </button>
       </div>
     </div>
 

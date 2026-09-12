@@ -86,7 +86,7 @@ onBeforeUnmount(() => controller?.abort());
         <div class="kpi">
           <dt>Conversas</dt>
           <dd class="kpi-value">{{ inbox.totalCount }}</dd>
-          <dd class="kpi-meta">WhatsApp e Instagram na Caixa de Entrada</dd>
+          <dd class="kpi-meta">WhatsApp na Caixa de Entrada</dd>
         </div>
         <div class="kpi">
           <dt>Requerem atenção</dt>

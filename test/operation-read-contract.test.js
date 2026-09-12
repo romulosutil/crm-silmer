@@ -37,6 +37,13 @@ test('ships connected screens without the demonstration dataset', async () => {
   assert.match(screens[2], /\/api\/v1\/contacts/u);
   assert.ok(screens.every((screen) => !screen.includes('demo-crm')));
   assert.ok(screens.every((screen) => !/kanban|negócio/iu.test(screen)));
+  assert.ok(screens.every((screen) => !/instagram/iu.test(screen)));
+  const format = await readFile(
+    new URL('apps/edge-web/src/lib/format.js', rootUrl),
+    'utf8',
+  );
+  assert.match(format, /whatsapp: 'WhatsApp'/u);
+  assert.doesNotMatch(format, /instagram/iu);
   await assert.rejects(
     access(new URL('apps/edge-web/src/data/demo-crm.js', rootUrl)),
   );

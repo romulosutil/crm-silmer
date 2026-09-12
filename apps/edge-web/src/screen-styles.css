@@ -280,7 +280,6 @@ details.exact summary {
   border-block-end: 1px solid var(--color-border-subtle);
 }
 
-.data-table tbody tr:hover,
 .data-table tbody tr[data-selected='true'] {
   background: var(--color-surface-raised);
 }
@@ -907,20 +906,15 @@ details.exact summary {
   justify-content: flex-end;
 }
 
-.row-menu {
-  display: inline-block;
-  position: relative;
-  vertical-align: middle;
-}
-
 .data-table .row-menu-cell {
   inline-size: 1%;
   padding-inline: 0.5rem;
   text-align: end;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
-.row-menu > summary {
+.row-menu-trigger {
   align-items: center;
   background: transparent;
   border: 0;
@@ -933,27 +927,32 @@ details.exact summary {
   height: 2rem;
   justify-content: center;
   line-height: 1;
-  list-style: none;
+  padding: 0;
   width: 2rem;
 }
 
-.row-menu > summary::-webkit-details-marker {
-  display: none;
-}
-
-.row-menu > summary::marker {
-  content: '';
-}
-
-.row-menu > summary:hover,
-.row-menu[open] > summary {
+.row-menu-trigger:hover,
+.row-menu-trigger[aria-expanded='true'] {
   background: var(--color-surface-muted);
   color: var(--color-text);
 }
 
-.row-menu > summary:focus-visible {
+.row-menu-trigger:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+.action-menu-icon {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.action-menu-icon span {
+  display: block;
+  inline-size: 0.2rem;
+  block-size: 0.2rem;
+  border-radius: 999px;
+  background: currentColor;
 }
 
 .row-menu-actions {
@@ -965,10 +964,11 @@ details.exact summary {
   gap: 0.125rem;
   min-inline-size: 10rem;
   padding: 0.25rem;
-  position: absolute;
-  right: 0;
-  top: calc(100% + 0.25rem);
-  z-index: 2;
+}
+
+.row-menu-popover {
+  position: fixed;
+  z-index: 30;
 }
 
 .row-menu-actions .small {

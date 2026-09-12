@@ -61,7 +61,6 @@ onMounted(async () => {
   globalThis.document.addEventListener('pointerdown', closeActionMenuOnOutside);
   globalThis.addEventListener('keydown', closeActionMenuOnEscape);
   globalThis.addEventListener('resize', closeActionMenu);
-  globalThis.addEventListener('scroll', closeActionMenu, true);
   await load();
 });
 
@@ -72,7 +71,6 @@ onBeforeUnmount(() => {
   );
   globalThis.removeEventListener('keydown', closeActionMenuOnEscape);
   globalThis.removeEventListener('resize', closeActionMenu);
-  globalThis.removeEventListener('scroll', closeActionMenu, true);
 });
 
 async function load() {
@@ -156,6 +154,7 @@ async function submitEdit(event) {
 
 /** @param {Record<string, any>} user @param {boolean} disabled */
 async function changeDisabled(user, disabled) {
+  closeActionMenu();
   props.showError('');
   busy.value = true;
   try {
@@ -252,8 +251,7 @@ function toggleActionMenu(user, event) {
   const menuWidth = 160;
   const menuHeight = user.canDelete ? 132 : 96;
   const edge = 8;
-  const openBelow =
-    globalThis.innerHeight - bounds.bottom >= menuHeight + edge;
+  const openBelow = globalThis.innerHeight - bounds.bottom >= menuHeight + edge;
 
   actionMenuPosition.value = {
     left: Math.min(
@@ -446,11 +444,7 @@ function formValues(form) {
             top: `${actionMenuPosition.top}px`,
           }"
         >
-          <button
-            class="small"
-            type="button"
-            @click="startEdit(actionMenuFor)"
-          >
+          <button class="small" type="button" @click="startEdit(actionMenuFor)">
             Editar
           </button>
           <button

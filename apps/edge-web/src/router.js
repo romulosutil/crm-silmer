@@ -32,7 +32,11 @@ export const router = createRouter({
       props: (route) => ({ selectedId: String(route.params.clientId ?? '') }),
       meta: { title: 'Clientes' },
     },
-    { path: '/usuarios', component: UsersView, meta: { title: 'Usuários' } },
+    {
+      path: '/usuarios',
+      component: UsersView,
+      meta: { requiresAdmin: true, title: 'Usuários' },
+    },
     { path: '/conta', component: AccountView, meta: { title: 'Conta' } },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],

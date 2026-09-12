@@ -35,7 +35,7 @@ export const router = createRouter({
     {
       path: '/usuarios',
       component: UsersView,
-      meta: { requiresAdmin: true, title: 'Usuários' },
+      meta: { requiresAdmin: true, title: 'Vendedores' },
     },
     { path: '/conta', component: AccountView, meta: { title: 'Conta' } },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },

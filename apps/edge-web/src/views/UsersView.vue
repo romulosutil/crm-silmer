@@ -1,5 +1,12 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
 import { ApiError, commandKey, request } from '../lib/api-client.js';
 
 const props = defineProps({
@@ -24,6 +31,10 @@ const copied = ref(false);
 const confirmingDelete = ref(null);
 const deleteCancel = ref(null);
 const deleteTrigger = ref(null);
+const actionMenu = ref(null);
+const actionMenuFor = ref(null);
+const actionMenuPosition = ref({ left: 0, top: 0 });
+const actionMenuTrigger = ref(null);
 
 const currentUser = computed(() => props.session.user ?? props.session);
 const isAdmin = computed(() =>
@@ -47,7 +58,21 @@ const markdown = computed(() => {
 
 onMounted(async () => {
   heading.value?.focus();
+  globalThis.document.addEventListener('pointerdown', closeActionMenuOnOutside);
+  globalThis.addEventListener('keydown', closeActionMenuOnEscape);
+  globalThis.addEventListener('resize', closeActionMenu);
+  globalThis.addEventListener('scroll', closeActionMenu, true);
   await load();
+});
+
+onBeforeUnmount(() => {
+  globalThis.document.removeEventListener(
+    'pointerdown',
+    closeActionMenuOnOutside,
+  );
+  globalThis.removeEventListener('keydown', closeActionMenuOnEscape);
+  globalThis.removeEventListener('resize', closeActionMenu);
+  globalThis.removeEventListener('scroll', closeActionMenu, true);
 });
 
 async function load() {
@@ -158,10 +183,10 @@ async function changeDisabled(user, disabled) {
   }
 }
 
-/** @param {Record<string, any>} user @param {MouseEvent} event */
-function requestDelete(user, event) {
-  event.currentTarget.closest('details')?.removeAttribute('open');
-  deleteTrigger.value = event.currentTarget;
+/** @param {Record<string, any>} user */
+function requestDelete(user) {
+  deleteTrigger.value = actionMenuTrigger.value;
+  closeActionMenu();
   confirmingDelete.value = user;
 }
 
@@ -210,8 +235,60 @@ async function copyMarkdown() {
 
 /** @param {Record<string, any>} user */
 function startEdit(user) {
+  closeActionMenu();
   props.showError('');
   editing.value = user;
+}
+
+/** @param {Record<string, any>} user @param {MouseEvent} event */
+function toggleActionMenu(user, event) {
+  if (actionMenuFor.value?.id === user.id) {
+    closeActionMenu();
+    return;
+  }
+
+  const trigger = /** @type {HTMLElement} */ (event.currentTarget);
+  const bounds = trigger.getBoundingClientRect();
+  const menuWidth = 160;
+  const menuHeight = user.canDelete ? 132 : 96;
+  const edge = 8;
+  const openBelow =
+    globalThis.innerHeight - bounds.bottom >= menuHeight + edge;
+
+  actionMenuPosition.value = {
+    left: Math.min(
+      Math.max(edge, bounds.right - menuWidth),
+      globalThis.innerWidth - menuWidth - edge,
+    ),
+    top: openBelow
+      ? bounds.bottom + 4
+      : Math.max(edge, bounds.top - menuHeight - 4),
+  };
+  actionMenuTrigger.value = trigger;
+  actionMenuFor.value = user;
+}
+
+function closeActionMenu() {
+  actionMenuFor.value = null;
+  actionMenuTrigger.value = null;
+}
+
+/** @param {PointerEvent} event */
+function closeActionMenuOnOutside(event) {
+  const target = event.target;
+  if (!(target instanceof globalThis.Node)) return;
+  if (actionMenu.value?.contains(target)) return;
+  if (actionMenuTrigger.value?.contains(target)) return;
+  closeActionMenu();
+}
+
+/** @param {KeyboardEvent} event */
+function closeActionMenuOnEscape(event) {
+  if (event.key !== 'Escape' || !actionMenuFor.value) return;
+  event.preventDefault();
+  const trigger = actionMenuTrigger.value;
+  closeActionMenu();
+  nextTick(() => trigger?.focus());
 }
 
 /** @param {string | null} value */
@@ -267,7 +344,7 @@ function formValues(form) {
     <header class="page-heading">
       <div>
         <p class="eyebrow">Administração</p>
-        <h1 ref="heading" tabindex="-1">Usuários</h1>
+        <h1 ref="heading" tabindex="-1">Vendedores</h1>
         <p>
           Crie e mantenha as contas de vendedores que acessam o CRM. Só
           administradores enxergam esta tela.
@@ -284,7 +361,7 @@ function formValues(form) {
         <div class="count-line">
           <div>
             <p class="section-kicker">Visão geral</p>
-            <h2 id="users-overview">Contas do CRM</h2>
+            <h2 id="users-overview">Vendedores do CRM</h2>
           </div>
           <p v-if="!loading">
             {{ users.length }} contas · {{ activeCount }} ativas ·
@@ -339,44 +416,63 @@ function formValues(form) {
                 </td>
                 <td>{{ formatDate(user.createdAt) }}</td>
                 <td class="row-menu-cell">
-                  <details class="row-menu">
-                    <summary :aria-label="`Mais ações para ${user.name}`">
-                      <span aria-hidden="true">⋯</span>
-                    </summary>
-                    <div class="row-menu-actions">
-                      <button
-                        class="small"
-                        type="button"
-                        @click="startEdit(user)"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        v-if="user.id !== currentUser.id"
-                        class="small quiet"
-                        type="button"
-                        :disabled="busy"
-                        @click="changeDisabled(user, !user.disabledAt)"
-                      >
-                        {{ user.disabledAt ? 'Reativar' : 'Desativar' }}
-                      </button>
-                      <button
-                        v-if="user.canDelete"
-                        class="small"
-                        type="button"
-                        :disabled="busy"
-                        @click="requestDelete(user, $event)"
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </details>
+                  <button
+                    class="row-menu-trigger"
+                    type="button"
+                    :aria-label="`Mais ações para ${user.name}`"
+                    :aria-controls="`user-actions-${user.id}`"
+                    :aria-expanded="actionMenuFor?.id === user.id"
+                    @click="toggleActionMenu(user, $event)"
+                  >
+                    <span class="action-menu-icon" aria-hidden="true">
+                      <span></span><span></span><span></span>
+                    </span>
+                  </button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
+
+      <Teleport to="body">
+        <div
+          v-if="actionMenuFor"
+          :id="`user-actions-${actionMenuFor.id}`"
+          ref="actionMenu"
+          class="row-menu-actions row-menu-popover"
+          :style="{
+            left: `${actionMenuPosition.left}px`,
+            top: `${actionMenuPosition.top}px`,
+          }"
+        >
+          <button
+            class="small"
+            type="button"
+            @click="startEdit(actionMenuFor)"
+          >
+            Editar
+          </button>
+          <button
+            v-if="actionMenuFor.id !== currentUser.id"
+            class="small quiet"
+            type="button"
+            :disabled="busy"
+            @click="changeDisabled(actionMenuFor, !actionMenuFor.disabledAt)"
+          >
+            {{ actionMenuFor.disabledAt ? 'Reativar' : 'Desativar' }}
+          </button>
+          <button
+            v-if="actionMenuFor.canDelete"
+            class="small"
+            type="button"
+            :disabled="busy"
+            @click="requestDelete(actionMenuFor)"
+          >
+            Excluir
+          </button>
+        </div>
+      </Teleport>
 
       <section
         v-if="handover"

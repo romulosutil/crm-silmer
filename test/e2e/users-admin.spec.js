@@ -114,7 +114,7 @@ test('lists accounts and hands over the created credentials as markdown', async 
   const { commands } = await mockUsers(page);
   await page.goto('/usuarios');
 
-  await expect(page.getByRole('heading', { name: 'Usuários' })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Vendedores' })).toBeFocused();
   await expect(page.getByText('Administrador comercial')).toBeVisible();
   await expect(page.getByRole('row')).toHaveCount(3);
   await expect(
@@ -219,7 +219,7 @@ test('redirects a non-admin away from the users screen and hides its navigation 
   await page.goto('/usuarios');
 
   await expect(page).toHaveURL(/\/dashboard$/u);
-  await expect(page.getByRole('link', { name: 'Usuários' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Vendedores' })).toHaveCount(0);
   await expect(page.getByText('Vendedor')).toBeVisible();
   await expect(
     page.getByRole('heading', { exact: true, name: 'Dashboard' }),

@@ -130,7 +130,7 @@ async function redirectUnauthorizedAdminRoute() {
     return;
   }
   await router.replace('/dashboard');
-  announce('Você não tem acesso à área de usuários.');
+    announce('Você não tem acesso à área de vendedores.');
 }
 
 /** @param {boolean} [focus] */
@@ -286,7 +286,7 @@ function onCursor(cursor) {
               d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 12.6-4.2A7 7 0 0 0 16 20Zm16.4-4.6 1.1.5-.8 1.7-1.1-.5a3.4 3.4 0 0 1-1 .6l-.2 1.2h-1.9l-.2-1.2a3.4 3.4 0 0 1-1-.6l-1.1.5-.9-1.7 1.1-.5a3.5 3.5 0 0 1 0-1.2l-1.1-.5.9-1.7 1.1.5a3.4 3.4 0 0 1 1-.6l.2-1.2h1.9l.2 1.2a3.4 3.4 0 0 1 1 .6l1.1-.5.8 1.7-1.1.5a3.5 3.5 0 0 1 0 1.2Zm-3.9 2a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8Z"
             />
           </svg>
-          <span class="nav-label">Usuários</span>
+          <span class="nav-label">Vendedores</span>
         </RouterLink>
         <RouterLink to="/conta">
           <svg aria-hidden="true" viewBox="0 0 24 24">

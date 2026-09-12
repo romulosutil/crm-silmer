@@ -344,8 +344,8 @@ function formValues(form) {
         <p class="eyebrow">Administração</p>
         <h1 ref="heading" tabindex="-1">Vendedores</h1>
         <p>
-          Crie e mantenha as contas de vendedores que acessam o CRM. Só
-          administradores enxergam esta tela.
+          Gerencie as contas dos vendedores que acessam o CRM. O acesso a esta
+          área é exclusivo de administradores.
         </p>
       </div>
     </header>

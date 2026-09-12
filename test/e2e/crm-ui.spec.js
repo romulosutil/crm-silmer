@@ -29,7 +29,7 @@ const contact = {
       externalId: '5511999999999',
       id: 'identity-1',
       kind: 'phone',
-      phoneStatus: 'verified',
+      phoneStatus: 'confirmed',
     },
   ],
   label: 'Studio Malu',
@@ -644,6 +644,17 @@ test('simplifies the client summary without operational status or count', async 
   await expect(page.locator('.client-facts').getByText('Conversas')).toHaveCount(
     0,
   );
+});
+
+test('formats the contact phone as a read-only field', async ({ page }) => {
+  await mockCrm(page);
+
+  await page.goto('/clientes');
+
+  const phone = page.getByLabel('Telefone');
+  await expect(phone).toHaveValue('+55 (11) 99999-9999');
+  await expect(phone).toHaveAttribute('readonly', '');
+  await expect(page.getByText('Telefone: confirmed')).toHaveCount(0);
 });
 
 test('sends an authorized human reply through the official command', async ({

@@ -48,6 +48,19 @@ const filtered = computed(() => {
 });
 const selected = computed(() => detail.value?.contact ?? null);
 
+/** @param {unknown} value */
+function formatPhoneNumber(value) {
+  const digits = String(value ?? '').replace(/\D/gu, '');
+  const national = digits.startsWith('55') ? digits.slice(2) : digits;
+  if (national.length === 11) {
+    return `+55 (${national.slice(0, 2)}) ${national.slice(2, 7)}-${national.slice(7)}`;
+  }
+  if (national.length === 10) {
+    return `+55 (${national.slice(0, 2)}) ${national.slice(2, 6)}-${national.slice(6)}`;
+  }
+  return String(value ?? 'Não informado');
+}
+
 /** @param {unknown} cause */
 function describeError(cause) {
   const status = Number(/** @type {any} */ (cause)?.status);
@@ -327,9 +340,19 @@ onBeforeUnmount(() => {
                 CHANNEL_LABELS[identity.channel] ?? identity.channel
               }}</strong>
               <span>{{ identity.displayHandle ?? identity.externalId }}</span>
-              <small v-if="identity.phoneStatus"
-                >Telefone: {{ identity.phoneStatus }}</small
+              <label
+                v-if="identity.kind === 'phone'"
+                class="contact-phone"
+                :for="`contact-phone-${identity.id}`"
               >
+                <span>Telefone</span>
+                <input
+                  :id="`contact-phone-${identity.id}`"
+                  type="tel"
+                  readonly
+                  :value="formatPhoneNumber(identity.externalId)"
+                />
+              </label>
             </li>
           </ul>
 
@@ -379,5 +402,20 @@ onBeforeUnmount(() => {
 
 .client-facts--single {
   grid-template-columns: minmax(0, 1fr);
+}
+
+.contact-phone {
+  display: grid;
+  gap: 0.25rem;
+  margin-block-start: 0.35rem;
+}
+
+.contact-phone > span {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.contact-phone input {
+  max-inline-size: 18rem;
 }
 </style>

@@ -184,6 +184,7 @@ export class InMemoryInboxRepository {
       } else if (kind === 'reactivate') {
         conversation.automationState = 'assistant';
         conversation.automationEpoch += 1;
+        conversation.assignedUserId = null;
         conversation.updatedAt = occurredAt;
         conversation.version += 1;
         result = publicConversation(conversation);

@@ -217,6 +217,7 @@ test('makes takeover, human send and explicit reactivation atomic and idempotent
   });
   assert.equal(reactivated.automationState, 'assistant');
   assert.equal(reactivated.automationEpoch, 2);
+  assert.equal(reactivated.assignedUserId, null);
   assert.equal(
     audits.filter(({ action }) => action === 'conversation.takeover').length,
     1,

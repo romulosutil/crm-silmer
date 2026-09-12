@@ -29,6 +29,8 @@ test('documents and exposes a local development workflow with automatic refresh'
   assert.match(dev, /--watch/u);
   assert.match(dev, /runMigrations/u);
   assert.match(dev, /startLocalDatabase/u);
+  assert.match(dev, /readOrCreateLocalSecrets/u);
+  assert.match(dev, /local-development-secrets\.json/u);
   assert.match(dev, /randomBytes/u);
   for (const secret of [
     'IDEMPOTENCY_ENVELOPE_KEY',

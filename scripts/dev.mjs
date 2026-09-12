@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { once } from 'node:events';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { seedDevelopmentUsers } from './seed-dev-users.mjs';
 
@@ -19,47 +20,48 @@ const shouldSeedDevelopmentUsers =
   process.env.DATABASE_URL === undefined ||
   process.env.SEED_DEVELOPMENT_USERS === 'true';
 const localN8nEnabled = process.env.N8N_LOCAL_ENABLED !== 'false';
+const localSecrets = await readOrCreateLocalSecrets();
 const localIdentityEnvironment = {
   APP_ENV: process.env.APP_ENV ?? 'development',
   APP_ORIGIN: process.env.APP_ORIGIN ?? `http://${devHost}:${devPort}`,
   AUTH_THROTTLE_HMAC_KEY:
-    process.env.AUTH_THROTTLE_HMAC_KEY ?? randomBytes(32).toString('base64url'),
+    process.env.AUTH_THROTTLE_HMAC_KEY ?? localSecrets.AUTH_THROTTLE_HMAC_KEY,
   IDEMPOTENCY_ENVELOPE_KEY:
-    process.env.IDEMPOTENCY_ENVELOPE_KEY ??
-    randomBytes(32).toString('base64url'),
+    process.env.IDEMPOTENCY_ENVELOPE_KEY ?? localSecrets.IDEMPOTENCY_ENVELOPE_KEY,
   HANDOFF_ENVELOPE_KEY:
-    process.env.HANDOFF_ENVELOPE_KEY ?? randomBytes(32).toString('base64url'),
+    process.env.HANDOFF_ENVELOPE_KEY ?? localSecrets.HANDOFF_ENVELOPE_KEY,
   OPERATION_CURSOR_HMAC_KEY:
     process.env.OPERATION_CURSOR_HMAC_KEY ??
-    randomBytes(32).toString('base64url'),
+    localSecrets.OPERATION_CURSOR_HMAC_KEY,
   CONTACT_IDENTITY_ENVELOPE_KEY:
     process.env.CONTACT_IDENTITY_ENVELOPE_KEY ??
-    randomBytes(32).toString('base64url'),
+    localSecrets.CONTACT_IDENTITY_ENVELOPE_KEY,
   INBOX_MESSAGE_ENVELOPE_KEY:
     process.env.INBOX_MESSAGE_ENVELOPE_KEY ??
-    randomBytes(32).toString('base64url'),
+    localSecrets.INBOX_MESSAGE_ENVELOPE_KEY,
   IDENTITY_BOOTSTRAP_TOKEN:
     process.env.IDENTITY_BOOTSTRAP_TOKEN ??
     'development-bootstrap-token-local-only',
 };
 const localN8nClientId = 'n8n-local-development';
-const localN8nClientSecret = randomBytes(32).toString('base64url');
+const localN8nClientSecret = localSecrets.CRM_AUTOMATION_CLIENT_SECRET;
 /** @type {Record<string, string>} */
 const localN8nEnvironment = localN8nEnabled
   ? {
       CRM_AUTOMATION_CLIENT_ID: localN8nClientId,
       CRM_AUTOMATION_CLIENT_SECRET: localN8nClientSecret,
-      CONTACT_IDENTITY_LOOKUP_KEY: randomBytes(32).toString('base64url'),
+      CONTACT_IDENTITY_LOOKUP_KEY: localSecrets.CONTACT_IDENTITY_LOOKUP_KEY,
       MEDIA_RETENTION_SCAN_INTERVAL_MS: '60000',
       N8N_COMMAND_ALLOW_INSECURE_LOCAL: 'true',
       N8N_COMMAND_CLIENT_ID: 'crm-local-development',
-      N8N_COMMAND_CLIENT_SECRET: randomBytes(32).toString('base64url'),
+      N8N_COMMAND_CLIENT_SECRET: localSecrets.N8N_COMMAND_CLIENT_SECRET,
       N8N_COMMAND_REPLAY_SAFE: 'false',
       N8N_COMMAND_TIMEOUT_MS: '10000',
       N8N_COMMAND_URL:
         'http://127.0.0.1:5678/webhook/silmer/local-panel-command',
       N8N_INTEGRATION_ENABLED: 'true',
-      N8N_INTEGRATION_ENVELOPE_KEY: randomBytes(32).toString('base64url'),
+      N8N_INTEGRATION_ENVELOPE_KEY:
+        localSecrets.N8N_INTEGRATION_ENVELOPE_KEY,
       PRIVATE_MEDIA_MAX_BYTES: String(64 * 1024 * 1024),
       PRIVATE_MEDIA_MAX_FILE_BYTES: String(16 * 1024 * 1024),
       PRIVATE_MEDIA_ROOT: resolve(root, 'tmp', 'local-n8n-media'),
@@ -224,6 +226,40 @@ async function waitForApi() {
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
   }
   throw new Error('Local API did not become ready in time');
+}
+
+async function readOrCreateLocalSecrets() {
+  const path = resolve(root, 'tmp', 'local-development-secrets.json');
+  /** @type {Record<string, string>} */
+  let values = {};
+  try {
+    values = JSON.parse(await readFile(path, 'utf8'));
+  } catch (error) {
+    if (/** @type {any} */ (error)?.code !== 'ENOENT') throw error;
+  }
+  const names = [
+    'AUTH_THROTTLE_HMAC_KEY',
+    'CONTACT_IDENTITY_ENVELOPE_KEY',
+    'CONTACT_IDENTITY_LOOKUP_KEY',
+    'CRM_AUTOMATION_CLIENT_SECRET',
+    'HANDOFF_ENVELOPE_KEY',
+    'IDEMPOTENCY_ENVELOPE_KEY',
+    'INBOX_MESSAGE_ENVELOPE_KEY',
+    'N8N_COMMAND_CLIENT_SECRET',
+    'N8N_INTEGRATION_ENVELOPE_KEY',
+    'OPERATION_CURSOR_HMAC_KEY',
+  ];
+  let changed = false;
+  for (const name of names) {
+    if (typeof values[name] === 'string' && values[name].length >= 32) continue;
+    values[name] = randomBytes(32).toString('base64url');
+    changed = true;
+  }
+  if (changed) {
+    await mkdir(resolve(root, 'tmp'), { recursive: true });
+    await writeFile(path, `${JSON.stringify(values, null, 2)}\n`, 'utf8');
+  }
+  return values;
 }
 
 /** @param {string} name @param {string[]} args @param {Record<string, string>} [environment] */

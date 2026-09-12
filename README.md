@@ -94,9 +94,11 @@ efêmera, injetada somente na execução de `npm run dev`; nenhuma credencial ou
 dado do EasyPanel é reutilizado. Para iniciar só o CRM sem n8n local, use
 `$env:N8N_LOCAL_ENABLED = 'false'; npm run dev` na sessão atual.
 
-No modo local, o comando gera em memória chaves de autenticação efêmeras e
-aceita HTTP exclusivamente em `localhost`, `127.0.0.1` ou `::1`. Produção e
-qualquer origem não local continuam exigindo HTTPS e segredos configurados.
+No modo local, o comando gera chaves de autenticação e criptografia uma vez e
+as mantém em `tmp/local-development-secrets.json`, ignorado pelo Git, para que
+os dados persistentes continuem legíveis após reinícios. O ambiente aceita HTTP
+exclusivamente em `localhost`, `127.0.0.1` ou `::1`. Produção e qualquer origem
+não local continuam exigindo HTTPS e segredos configurados.
 
 Na primeira execução, o ambiente também cria contas sintéticas locais por meio
 da API de identidade. Todas usam a senha `Desenvolvimento!2026`:

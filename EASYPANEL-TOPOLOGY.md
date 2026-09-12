@@ -8,6 +8,11 @@
 
 ## 1. Decisão
 
+> **Atualização em 12/09/2026:** este é o ambiente cloud-dev, não produção.
+> A fonte de deploy rápido é a branch `dev`, conforme RFC 003/ADR 004 e
+> `ops/easypanel/CLOUD-DEV.md`. O fluxo por digest de `master` permanece como
+> referência de release e não bloqueia testes remotos.
+
 Usar o projeto EasyPanel compartilhado e duradouro `espectro-mvp`. Os serviços
 do CRM recebem o prefixo `silmer-`, que define sua fronteira operacional dentro
 do projeto. O desenvolvimento e os testes técnicos continuam locais ou no CI.
@@ -353,6 +358,18 @@ fallback.
   24 horas; idade acima de 36 horas bloqueia liberação do anexo e gera alerta.
 
 ## 8. CI/CD
+
+### Cloud-dev
+
+O EasyPanel acompanha a branch `dev` e executa auto-deploy do commit enviado.
+O desenvolvedor testa uma alteração com `git push origin HEAD:dev`, sem merge
+em `master`, tag mutável, SSH/rsync ou promoção por digest. O manifesto sem
+segredos, as rotas privadas e o provisionamento único estão em
+`ops/easypanel/cloud-dev.json` e `ops/easypanel/CLOUD-DEV.md`.
+
+Esse caminho é exclusivo do cloud-dev. API, PostgreSQL, editor n8n e banco n8n
+continuam privados; somente o edge e o webhook sintético DEV são alcançáveis
+externamente.
 
 O branch canônico atual é `master`.
 

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "task": "OPS-1",
+  "purpose": "cloud-development-only",
+  "project": "espectro-mvp",
+  "source": {
+    "repository": "romulosutil/crm-silmer",
+    "branch": "dev",
+    "autoDeploy": true,
+    "deploymentRule": "push-to-dev"
+  },
+  "services": [
+    {
+      "name": "silmer-edge-web",
+      "kind": "app",
+      "dockerfile": "docker/edge-web.cloud-dev.Dockerfile",
+      "public": true,
+      "port": 8080,
+      "healthPath": "/healthz"
+    },
+    {
+      "name": "silmer-api",
+      "kind": "app",
+      "dockerfile": "docker/runtime.Dockerfile",
+      "command": "node apps/api/src/server.js",
+      "public": false,
+      "port": 3000,
+      "healthPath": "/api/health/ready"
+    },
+    {
+      "name": "silmer-worker",
+      "kind": "app",
+      "dockerfile": "docker/runtime.Dockerfile",
+      "command": "node apps/worker/src/worker.js",
+      "public": false
+    },
+    {
+      "name": "silmer-n8n",
+      "kind": "app",
+      "imageReference": "operator-supplied-approved-version-and-digest",
+      "public": false,
+      "port": 5678,
+      "environment": {
+        "SILMER_PANEL_BASE_URL": "http://silmer-api:3000"
+      },
+      "publicPaths": ["/webhook/silmer/dev-mvp-flow"]
+    },
+    {
+      "name": "silmer-n8n-db",
+      "kind": "postgresql",
+      "public": false
+    }
+  ],
+  "security": {
+    "n8nEditorPublic": false,
+    "crmApiPublic": false,
+    "crmDatabasePublic": false,
+    "n8nDatabasePublic": false,
+    "n8nCrmDatabaseAccess": false,
+    "secretsCommitted": false
+  }
+}

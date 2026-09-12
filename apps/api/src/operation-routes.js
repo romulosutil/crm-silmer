@@ -16,7 +16,9 @@ class OperationReadRequestError extends Error {
  * @param {(request: object) => {correlationId: string, requestId: string}} contextFor
  */
 export function registerOperationRoutes(api, operations, contextFor) {
-  const dispatcher = new LiveEventDispatcher(/** @type {{readLiveEvents: Function}} */ (operations));
+  const dispatcher = new LiveEventDispatcher(
+    /** @type {{readLiveEvents: Function}} */ (operations),
+  );
   let activeStreams = 0;
 
   api.get('/api/v1/events', async (request, reply) => {
@@ -45,7 +47,9 @@ export function registerOperationRoutes(api, operations, contextFor) {
     /** @param {{cursor: number, payload: object, type: string}} event */
     const write = (event) => {
       if (closed || Number(event.cursor) <= Number(after)) return;
-      reply.raw.write(`id: ${event.cursor}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`);
+      reply.raw.write(
+        `id: ${event.cursor}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`,
+      );
     };
     const unsubscribe = dispatcher.subscribe(write);
     const heartbeat = globalThis.setInterval(() => {
@@ -69,6 +73,7 @@ export function registerOperationRoutes(api, operations, contextFor) {
     respond(reply, async () => {
       const input = parseListQuery(request.query, [
         'assignedUserId',
+        'archived',
         'automationState',
         'channel',
         'cursor',
@@ -184,6 +189,13 @@ function parseListQuery(value, allowed) {
         throw new OperationReadRequestError(400, 'INVALID_LIMIT');
       }
       parsed[key] = Number(query[key]);
+      continue;
+    }
+    if (key === 'archived') {
+      if (query[key] !== 'true' && query[key] !== 'false') {
+        throw new OperationReadRequestError(400, 'INVALID_FILTER');
+      }
+      parsed[key] = query[key] === 'true';
       continue;
     }
     parsed[key] = requireIdentifier(

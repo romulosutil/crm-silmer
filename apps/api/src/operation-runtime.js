@@ -85,6 +85,7 @@ export function createOperationReadService({
     async listInbox(input = {}) {
       rejectUnknownKeys(input, [
         'assignedUserId',
+        'archived',
         'automationState',
         'channel',
         'cursor',
@@ -97,6 +98,18 @@ export function createOperationReadService({
           input.assignedUserId,
           'ASSIGNED_USER_ID',
         );
+      }
+      if (input.archived !== undefined) {
+        if (
+          input.archived !== true &&
+          input.archived !== false &&
+          input.archived !== 'true' &&
+          input.archived !== 'false'
+        ) {
+          throw new OperationReadError(400, 'INVALID_FILTER');
+        }
+        filters.archived =
+          input.archived === true || input.archived === 'true';
       }
       if (input.automationState !== undefined) {
         filters.automationState = requireChoice(

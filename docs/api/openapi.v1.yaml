@@ -309,6 +309,12 @@ paths:
             in: query,
             schema: { type: string, minLength: 1, maxLength: 128 },
           }
+        - {
+            name: archived,
+            in: query,
+            schema: { type: boolean, default: false },
+            description: Quando true, retorna somente conversas arquivadas.
+          }
         - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
         - {
             name: limit,
@@ -896,6 +902,24 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /conversations/{conversationId}/archive:
+    post:
+      operationId: archiveConversation
+      summary: Retira uma conversa ativa da Caixa de Entrada sem encerrá-la
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HumanConversationCommand' }
+      responses:
+        '202': { description: Conversa arquivada, com auditoria e atualização em tempo real }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /handoffs/{handoffId}/claim:
     post:
       operationId: claimHumanHandoff
@@ -1241,6 +1265,7 @@ components:
           activeDealCount,
           createdAt,
           updatedAt,
+          archivedAt,
           latestActivityAt,
         ]
       properties:
@@ -1325,6 +1350,7 @@ components:
         requiresAttention: { type: boolean }
         openedAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        archivedAt: { type: [string, 'null'], format: date-time }
         terminalAt: { type: [string, 'null'], format: date-time }
     InboxPage:
       type: object

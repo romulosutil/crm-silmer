@@ -59,6 +59,15 @@ export function createInboxService({
       );
     },
 
+    async archiveConversation(/** @type {any} */ command) {
+      validateArchiveCommand(command);
+      return repository.mutateConversation(
+        'archive',
+        normalizeHumanCommand(command),
+        runtime,
+      );
+    },
+
     async takeover(/** @type {any} */ command) {
       validateHumanCommand(command);
       return repository.mutateConversation(
@@ -177,6 +186,27 @@ function validateHumanCommand(command) {
   if (
     command?.actor?.kind !== 'human' ||
     command.actor.functionName !== 'Vendedor'
+  ) {
+    throw new InboxForbiddenError();
+  }
+  requireNonEmpty(command.actor.id, 'actor.id');
+  for (const field of [
+    'conversationId',
+    'correlationId',
+    'idempotencyKey',
+    'reason',
+  ]) {
+    requireNonEmpty(command[field], field);
+  }
+  requireVersion(command.expectedVersion);
+}
+
+/** @param {any} command Archiving is also available to a commercial administrator. */
+function validateArchiveCommand(command) {
+  if (
+    command?.actor?.kind !== 'human' ||
+    (command.actor.functionName !== 'Vendedor' &&
+      ![...(command.actor.capabilities ?? [])].includes('COMMERCIAL_ADMIN'))
   ) {
     throw new InboxForbiddenError();
   }

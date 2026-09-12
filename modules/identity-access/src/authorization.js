@@ -20,6 +20,7 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
     'contact.read',
     'contact.rename',
     'conversation.convert',
+    'conversation.archive',
     'conversation.read',
     'conversation.message.send',
     'conversation.reactivate-agent',
@@ -52,6 +53,7 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
 const operationalActions = OPERATIONAL_ACTIONS;
 /** @type {Map<string, Capability>} */
 const actionCapabilities = new Map([
+  ['conversation.archive', CAPABILITIES.COMMERCIAL_ADMIN],
   ['order-form.approve', CAPABILITIES.COMMERCIAL_ADMIN],
   ['order-form.cancel', CAPABILITIES.COMMERCIAL_ADMIN],
   ['order-form.resend', CAPABILITIES.COMMERCIAL_ADMIN],

@@ -16,6 +16,10 @@ function harness() {
   /** @type {Array<{method: string, input: Record<string, unknown>}>} */
   const calls = [];
   const conversations = {
+    async archive(/** @type {Record<string, unknown>} */ input) {
+      calls.push({ input, method: 'archive' });
+      return { archivedAt: '2026-09-12T12:00:00.000Z', version: 10 };
+    },
     async authorize(/** @type {Record<string, unknown>} */ input) {
       calls.push({ input, method: 'authorize' });
       return { actor: { id: 'user-synthetic', role: 'ATENDIMENTO' } };
@@ -63,6 +67,7 @@ test('human conversation routes authorize, mutate state and enqueue commands', a
   assert.equal(message.json().commandId, 'command-synthetic');
 
   for (const [path, method, action] of [
+    ['archive', 'archive', 'conversation.archive'],
     ['takeover', 'takeover', 'conversation.takeover'],
     ['return-to-ai', 'returnToAi', 'conversation.reactivate-agent'],
     ['close', 'close', 'conversation.transition'],

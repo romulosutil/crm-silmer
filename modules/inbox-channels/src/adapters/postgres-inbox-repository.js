@@ -13,6 +13,7 @@ const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
 
 /** @type {Readonly<Record<string, string>>} */
 const STREAM_EVENT_TYPES = Object.freeze({
+  archive: 'conversation.archived',
   reactivate: 'conversation.assistant_reactivated',
   send: 'conversation.message_queued',
   takeover: 'conversation.taken_over',
@@ -197,6 +198,7 @@ export class PostgresInboxRepository {
         const updated = await transaction.query(
           `UPDATE crm.conversations
            SET last_message_at = GREATEST(last_message_at, $2),
+               archived_at = NULL,
                version = version + 1
            WHERE id = $1
            RETURNING ${CONVERSATION_SELECT}`,
@@ -513,13 +515,16 @@ export class PostgresInboxRepository {
 const CONVERSATION_SELECT = `id, contact_identity_id, provider,
   provider_account_id, external_conversation_id, cycle_number,
   previous_conversation_id, state, automation_state, automation_epoch,
-  assigned_user_id, version, opened_at, last_message_at, terminal_at`;
+  assigned_user_id, version, opened_at, last_message_at, terminal_at, archived_at`;
 const MESSAGE_SELECT = `id, conversation_id, provider, provider_account_id,
   external_message_id, command_id, direction, author_kind, author_id,
   message_type, content_envelope, status, occurred_at, created_at`;
 
 /** @param {string} kind @param {any} input @param {string} occurredAt */
 function mutationAssignments(kind, input, occurredAt) {
+  if (kind === 'archive') {
+    return { sql: 'archived_at = $2', values: [occurredAt] };
+  }
   if (kind === 'transition') {
     return {
       sql: 'state = $2, terminal_at = $3',
@@ -556,6 +561,7 @@ function mapConversation(row) {
   if (!row) throw new InboxConflictError('Stored conversation was not found');
   return freezeInboxRecord({
     assignedUserId: row.assigned_user_id,
+    archivedAt: row.archived_at === null ? null : iso(row.archived_at),
     automationEpoch: Number(row.automation_epoch),
     automationState: row.automation_state,
     createdAt: iso(row.opened_at),
@@ -693,6 +699,7 @@ function iso(value) {
 /** @param {string} kind @param {any} input @param {any} result @param {string} occurredAt */
 function createAudit(kind, input, result, occurredAt) {
   const actions = {
+    archive: 'conversation.archived',
     reactivate: 'conversation.assistant_reactivated',
     send: 'conversation.human_message_queued',
     takeover: 'conversation.takeover',

@@ -25,6 +25,11 @@ export class PostgresInboxReadRepository {
     return this.#snapshot(async (database) => {
       const values = [];
       const predicates = [];
+      predicates.push(
+        input.archived
+          ? 'conversation.archived_at IS NOT NULL'
+          : 'conversation.archived_at IS NULL',
+      );
       for (const [field, column] of [
         ['state', 'conversation.state'],
         ['channel', 'identity.channel'],
@@ -57,7 +62,7 @@ export class PostgresInboxReadRepository {
                   conversation.automation_state, conversation.automation_epoch,
                   conversation.assigned_user_id, conversation.version,
                   conversation.opened_at, conversation.last_message_at,
-                  conversation.terminal_at,
+                  conversation.terminal_at, conversation.archived_at,
                   identity.current_contact_id contact_id, identity.channel,
                   identity.external_identity_lookup_hash,
                   identity.identity_envelope, contact.display_name,
@@ -131,7 +136,7 @@ export class PostgresInboxReadRepository {
                     conversation.automation_state, conversation.automation_epoch,
                     conversation.assigned_user_id, conversation.version,
                     conversation.opened_at, conversation.last_message_at,
-                    conversation.terminal_at,
+                    conversation.terminal_at, conversation.archived_at,
                     identity.current_contact_id contact_id, identity.channel,
                     identity.external_identity_lookup_hash,
                     identity.identity_envelope, contact.display_name,
@@ -233,6 +238,7 @@ function mapConversationSummary(row, repository) {
       : null,
     automationEpoch: Number(row.automation_epoch),
     automationState: row.automation_state,
+    archivedAt: row.archived_at ? iso(row.archived_at) : null,
     channel: row.channel,
     contact: {
       displayHandle: identity.displayHandle ?? null,

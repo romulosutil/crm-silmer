@@ -21,6 +21,7 @@ export function createConversationApiRuntime(
     }),
   });
   return Object.freeze({
+    archive: service.archiveConversation,
     authorize: access.authorize,
     claimHandoff: handoffs.claimHandoff,
     close: service.transitionConversation,

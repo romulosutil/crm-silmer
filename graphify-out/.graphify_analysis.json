@@ -93,6 +93,12 @@
       "modules_work_management_src_work_management_service_validatehandoffcreate",
       "modules_work_management_src_work_management_service_validatehuman",
       "modules_work_management_src_work_management_service_validatehumancommon",
+      "test_work_management_postgres_live_test",
+      "test_work_management_postgres_live_test_append",
+      "test_work_management_postgres_live_test_handoffcommand",
+      "test_work_management_postgres_live_test_human",
+      "test_work_management_postgres_live_test_now",
+      "test_work_management_postgres_live_test_seed",
       "test_work_management_test",
       "test_work_management_test_attendant",
       "test_work_management_test_automation",
@@ -202,100 +208,6 @@
       "test_configuration_test_validvalues"
     ],
     "2": [
-      "apps_worker_src_worker",
-      "apps_worker_src_worker_createmediaretentionworkerruntime",
-      "apps_worker_src_worker_createworkerruntime",
-      "apps_worker_src_worker_loadn8ncommandstore",
-      "apps_worker_src_worker_mediaretentionscheduler",
-      "apps_worker_src_worker_mediaretentionscheduler_constructor",
-      "apps_worker_src_worker_mediaretentionscheduler_poll",
-      "apps_worker_src_worker_mediaretentionscheduler_runonce",
-      "apps_worker_src_worker_mediaretentionscheduler_start",
-      "apps_worker_src_worker_mediaretentionscheduler_stop",
-      "apps_worker_src_worker_optionalpositiveinteger",
-      "apps_worker_src_worker_requiredenvironment",
-      "apps_worker_src_worker_requiredpositiveinteger",
-      "apps_worker_src_worker_startworkerfromenvironment",
-      "apps_worker_src_worker_technicalerrorcode",
-      "apps_worker_src_worker_technicalstartuperror",
-      "apps_worker_src_worker_workerruntime",
-      "apps_worker_src_worker_workerruntime_constructor",
-      "apps_worker_src_worker_workerruntime_emitheartbeat",
-      "apps_worker_src_worker_workerruntime_poll",
-      "apps_worker_src_worker_workerruntime_processjob",
-      "apps_worker_src_worker_workerruntime_recordjobfailure",
-      "apps_worker_src_worker_workerruntime_runonce",
-      "apps_worker_src_worker_workerruntime_start",
-      "apps_worker_src_worker_workerruntime_stop",
-      "modules_integration_reliability_src_media_retention_worker",
-      "modules_integration_reliability_src_media_retention_worker_createmediadeletejobhandler",
-      "modules_integration_reliability_src_media_retention_worker_deletionreason",
-      "modules_integration_reliability_src_media_retention_worker_media_delete_job_type",
-      "modules_integration_reliability_src_media_retention_worker_media_retention_queue",
-      "modules_integration_reliability_src_media_retention_worker_technicalerror",
-      "modules_integration_reliability_src_media_retention_worker_technicalid",
-      "modules_integration_reliability_src_postgres_job_queue",
-      "modules_integration_reliability_src_postgres_job_queue_boundedstring",
-      "modules_integration_reliability_src_postgres_job_queue_calculateretrydelayms",
-      "modules_integration_reliability_src_postgres_job_queue_decideexpiredattempt",
-      "modules_integration_reliability_src_postgres_job_queue_decidefailedattempt",
-      "modules_integration_reliability_src_postgres_job_queue_errorcodevalue",
-      "modules_integration_reliability_src_postgres_job_queue_finishattempt",
-      "modules_integration_reliability_src_postgres_job_queue_finishjob",
-      "modules_integration_reliability_src_postgres_job_queue_insertreconciliation",
-      "modules_integration_reliability_src_postgres_job_queue_normalizejob",
-      "modules_integration_reliability_src_postgres_job_queue_nullablestring",
-      "modules_integration_reliability_src_postgres_job_queue_positiveinteger",
-      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue",
-      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_claim",
-      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_constructor",
-      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_heartbeat",
-      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_markeffectstarted",
-      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_recoverexpired",
-      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_settle",
-      "modules_integration_reliability_src_postgres_job_queue_providername",
-      "modules_integration_reliability_src_postgres_job_queue_settransactionbounds",
-      "modules_integration_reliability_src_postgres_job_queue_validdate",
-      "modules_integration_reliability_src_postgres_transient_media",
-      "modules_integration_reliability_src_postgres_transient_media_boundedstring",
-      "modules_integration_reliability_src_postgres_transient_media_nonnegativeinteger",
-      "modules_integration_reliability_src_postgres_transient_media_positiveinteger",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_constructor",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markavailable",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markdeleted",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markquarantined",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markrejected",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markstored",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markunavailable",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_readfordeletion",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_recorddropboxhandoff",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_scheduledeletion",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_scheduleexpireddeletions",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_scheduleimmediatedeletion",
-      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_scheduleterminaljourneydeletions",
-      "modules_integration_reliability_src_postgres_transient_media_reasoncode",
-      "modules_integration_reliability_src_postgres_transient_media_requiresinglemutation",
-      "modules_integration_reliability_src_postgres_transient_media_settransactionbounds",
-      "modules_integration_reliability_src_postgres_transient_media_sha256",
-      "modules_integration_reliability_src_postgres_transient_media_storagekey",
-      "modules_integration_reliability_src_postgres_transient_media_validdate",
-      "test_media_retention_worker_test",
-      "test_media_retention_worker_test_claim",
-      "test_media_retention_worker_test_delete",
-      "test_media_retention_worker_test_heartbeat",
-      "test_media_retention_worker_test_markdeleted",
-      "test_media_retention_worker_test_markeffectstarted",
-      "test_media_retention_worker_test_readfordeletion",
-      "test_media_retention_worker_test_scheduleexpireddeletions",
-      "test_media_retention_worker_test_scheduleterminaljourneydeletions",
-      "test_media_retention_worker_test_settle",
-      "test_worker_queue_test",
-      "test_worker_queue_test_createpostgresn8ncommandstore",
-      "test_worker_queue_test_queuefixture",
-      "test_worker_queue_test_silentlogger"
-    ],
-    "3": [
       "modules_deals_pipeline_src_adapters_in_memory_deal_repository",
       "modules_deals_pipeline_src_adapters_in_memory_deal_repository_inmemorydealrepository",
       "modules_deals_pipeline_src_adapters_in_memory_deal_repository_inmemorydealrepository_applyfields",
@@ -386,7 +298,7 @@
       "modules_deals_pipeline_src_domain_loss_reason_cipher_createdeallossreasoncipher",
       "modules_deals_pipeline_src_index"
     ],
-    "4": [
+    "3": [
       "modules_contacts_src_adapters_in_memory_contact_identity_repository",
       "modules_contacts_src_adapters_in_memory_contact_identity_repository_auditevent",
       "modules_contacts_src_adapters_in_memory_contact_identity_repository_commandreplay",
@@ -461,95 +373,25 @@
       "test_contact_identity_test_createharness",
       "test_contact_identity_test_inboundidentity",
       "test_contact_identity_test_now",
-      "test_contact_identity_test_seller",
-      "test_inbox_postgres_live_test",
-      "test_inbox_postgres_live_test_attendant",
-      "test_inbox_postgres_live_test_canonicalwebhookevent",
-      "test_inbox_postgres_live_test_databasefor",
-      "test_inbox_postgres_live_test_enqueuechannelmessage",
-      "test_inbox_postgres_live_test_identityinput",
-      "test_inbox_postgres_live_test_inboundinput",
-      "test_inbox_postgres_live_test_now",
-      "test_inbox_postgres_live_test_servicesfor"
+      "test_contact_identity_test_seller"
     ],
-    "5": [
-      "apps_api_src_operation_runtime",
-      "apps_api_src_operation_runtime_automation_states",
-      "apps_api_src_operation_runtime_channels",
-      "apps_api_src_operation_runtime_conversation_states",
-      "apps_api_src_operation_runtime_createoperationreadruntime",
-      "apps_api_src_operation_runtime_createoperationreadservice",
-      "apps_api_src_operation_runtime_encodecursor",
-      "apps_api_src_operation_runtime_filterfingerprint",
-      "apps_api_src_operation_runtime_operationreaderror",
-      "apps_api_src_operation_runtime_operationreaderror_constructor",
-      "apps_api_src_operation_runtime_pageresponse",
-      "apps_api_src_operation_runtime_parsecookies",
-      "apps_api_src_operation_runtime_readcursor",
-      "apps_api_src_operation_runtime_readdisplayname",
-      "apps_api_src_operation_runtime_readkey",
-      "apps_api_src_operation_runtime_readlimit",
-      "apps_api_src_operation_runtime_rejectunknownkeys",
-      "apps_api_src_operation_runtime_requirechoice",
-      "apps_api_src_operation_runtime_requireid",
-      "modules_contacts_src_adapters_contact_identity_envelope",
-      "modules_contacts_src_adapters_contact_identity_envelope_decryptcontactidentityenvelope",
-      "modules_contacts_src_adapters_postgres_contact_read_repository",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_groupcontacts",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_iso",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_mapcontact",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_mapidentity",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_notfound",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository_constructor",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository_get",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository_list",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository_snapshot",
-      "modules_contacts_src_adapters_postgres_contact_read_repository_runsequential",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_iso",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_mapconversationsummary",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_mapmessage",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_mapsuggestion",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_messagepreview",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_notfound",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository_constructor",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository_get",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository_list",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository_snapshot",
-      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_runsequential",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_decryptinboxmessageenvelope",
-      "modules_work_management_src_cipher",
-      "modules_work_management_src_cipher_decrypthandoffsummary",
-      "modules_work_management_src_postgres_handoff_read_repository",
-      "modules_work_management_src_postgres_handoff_read_repository_iso",
-      "modules_work_management_src_postgres_handoff_read_repository_maphandoff",
-      "modules_work_management_src_postgres_handoff_read_repository_postgreshandoffreadrepository",
-      "modules_work_management_src_postgres_handoff_read_repository_postgreshandoffreadrepository_constructor",
-      "modules_work_management_src_postgres_handoff_read_repository_postgreshandoffreadrepository_listopen",
-      "modules_work_management_src_postgres_handoff_read_repository_postgreshandoffreadrepository_snapshot",
-      "test_operation_read_model_test",
-      "test_operation_read_model_test_serviceharness",
-      "test_operation_read_postgres_live_test",
-      "test_operation_read_postgres_live_test_contact_key",
-      "test_operation_read_postgres_live_test_identityinput",
-      "test_operation_read_postgres_live_test_message_key",
-      "test_operation_read_postgres_live_test_now"
-    ],
-    "6": [
+    "4": [
       "apps_edge_web_src_views_inboxview",
       "apps_edge_web_src_views_inboxview_actionmessage",
       "apps_edge_web_src_views_inboxview_active",
       "apps_edge_web_src_views_inboxview_activeid",
+      "apps_edge_web_src_views_inboxview_archiveconfirmationdialog",
+      "apps_edge_web_src_views_inboxview_archiveconversation",
       "apps_edge_web_src_views_inboxview_assignableusers",
       "apps_edge_web_src_views_inboxview_busy",
       "apps_edge_web_src_views_inboxview_canact",
+      "apps_edge_web_src_views_inboxview_canarchive",
       "apps_edge_web_src_views_inboxview_canreply",
       "apps_edge_web_src_views_inboxview_cantransfer",
+      "apps_edge_web_src_views_inboxview_canunarchive",
       "apps_edge_web_src_views_inboxview_changeautomation",
-      "apps_edge_web_src_views_inboxview_claimhandoff",
       "apps_edge_web_src_views_inboxview_clearsearch",
+      "apps_edge_web_src_views_inboxview_confirmarchive",
       "apps_edge_web_src_views_inboxview_confirmtransfer",
       "apps_edge_web_src_views_inboxview_conversations",
       "apps_edge_web_src_views_inboxview_currentuserid",
@@ -561,6 +403,7 @@
       "apps_edge_web_src_views_inboxview_draftname",
       "apps_edge_web_src_views_inboxview_error",
       "apps_edge_web_src_views_inboxview_heading",
+      "apps_edge_web_src_views_inboxview_inbox_states",
       "apps_edge_web_src_views_inboxview_isadmin",
       "apps_edge_web_src_views_inboxview_isterminal",
       "apps_edge_web_src_views_inboxview_listurl",
@@ -580,6 +423,8 @@
       "apps_edge_web_src_views_inboxview_ownerlabel",
       "apps_edge_web_src_views_inboxview_pendinghandoff",
       "apps_edge_web_src_views_inboxview_query",
+      "apps_edge_web_src_views_inboxview_queue_filters",
+      "apps_edge_web_src_views_inboxview_queuefilter",
       "apps_edge_web_src_views_inboxview_refreshinbox",
       "apps_edge_web_src_views_inboxview_renaming",
       "apps_edge_web_src_views_inboxview_reply",
@@ -588,16 +433,94 @@
       "apps_edge_web_src_views_inboxview_savename",
       "apps_edge_web_src_views_inboxview_scheduleliverefresh",
       "apps_edge_web_src_views_inboxview_searchinput",
-      "apps_edge_web_src_views_inboxview_selectconversation",
+      "apps_edge_web_src_views_inboxview_selectedstatelabel",
+      "apps_edge_web_src_views_inboxview_selectstate",
       "apps_edge_web_src_views_inboxview_selectvisibleconversation",
       "apps_edge_web_src_views_inboxview_sendreply",
       "apps_edge_web_src_views_inboxview_sessionuser",
+      "apps_edge_web_src_views_inboxview_showarchived",
+      "apps_edge_web_src_views_inboxview_statefilter",
+      "apps_edge_web_src_views_inboxview_statefiltermenu",
+      "apps_edge_web_src_views_inboxview_togglearchived",
       "apps_edge_web_src_views_inboxview_totalcount",
       "apps_edge_web_src_views_inboxview_transferoptions",
       "apps_edge_web_src_views_inboxview_transferring",
-      "apps_edge_web_src_views_inboxview_transfertarget"
+      "apps_edge_web_src_views_inboxview_transfertarget",
+      "apps_edge_web_src_views_inboxview_unarchiveconversation",
+      "apps_edge_web_src_views_inboxview_visibleconversationlabel"
     ],
-    "7": [
+    "5": [
+      "apps_api_src_n8n_runtime",
+      "apps_api_src_n8n_runtime_createn8napiruntime",
+      "apps_api_src_n8n_runtime_n8nmediaingresserror",
+      "apps_api_src_n8n_runtime_n8nmediaingresserror_constructor",
+      "apps_api_src_n8n_runtime_positiveinteger",
+      "apps_api_src_n8n_runtime_preparetransientmedia",
+      "apps_api_src_n8n_runtime_readenvelopekey",
+      "apps_api_src_n8n_runtime_required",
+      "modules_integration_reliability_src_clamav_media_scanner",
+      "modules_integration_reliability_src_clamav_media_scanner_clamavmediascanner",
+      "modules_integration_reliability_src_clamav_media_scanner_clamavmediascanner_constructor",
+      "modules_integration_reliability_src_clamav_media_scanner_clamavmediascanner_scan",
+      "modules_integration_reliability_src_clamav_media_scanner_execute",
+      "modules_integration_reliability_src_clamav_media_scanner_newestsignaturetimestamp",
+      "modules_integration_reliability_src_clamav_media_scanner_signature_files",
+      "modules_integration_reliability_src_postgres_transient_media",
+      "modules_integration_reliability_src_postgres_transient_media_boundedstring",
+      "modules_integration_reliability_src_postgres_transient_media_nonnegativeinteger",
+      "modules_integration_reliability_src_postgres_transient_media_positiveinteger",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_constructor",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markavailable",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markdeleted",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markquarantined",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markrejected",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markstored",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_markunavailable",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_readfordeletion",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_recorddropboxhandoff",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_scheduledeletion",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_scheduleexpireddeletions",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_scheduleimmediatedeletion",
+      "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository_scheduleterminaljourneydeletions",
+      "modules_integration_reliability_src_postgres_transient_media_reasoncode",
+      "modules_integration_reliability_src_postgres_transient_media_requiresinglemutation",
+      "modules_integration_reliability_src_postgres_transient_media_settransactionbounds",
+      "modules_integration_reliability_src_postgres_transient_media_sha256",
+      "modules_integration_reliability_src_postgres_transient_media_storagekey",
+      "modules_integration_reliability_src_postgres_transient_media_validdate",
+      "modules_integration_reliability_src_private_media_volume",
+      "modules_integration_reliability_src_private_media_volume_boundedstring",
+      "modules_integration_reliability_src_private_media_volume_default_allowed_mime_types",
+      "modules_integration_reliability_src_private_media_volume_mediahashmismatcherror",
+      "modules_integration_reliability_src_private_media_volume_mediahashmismatcherror_constructor",
+      "modules_integration_reliability_src_private_media_volume_mediaquotaexceedederror",
+      "modules_integration_reliability_src_private_media_volume_mediaquotaexceedederror_constructor",
+      "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror",
+      "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror_constructor",
+      "modules_integration_reliability_src_private_media_volume_positiveinteger",
+      "modules_integration_reliability_src_private_media_volume_privatemediavolume",
+      "modules_integration_reliability_src_private_media_volume_privatemediavolume_constructor",
+      "modules_integration_reliability_src_private_media_volume_privatemediavolume_delete",
+      "modules_integration_reliability_src_private_media_volume_privatemediavolume_prepareroot",
+      "modules_integration_reliability_src_private_media_volume_privatemediavolume_resolvepath",
+      "modules_integration_reliability_src_private_media_volume_privatemediavolume_storagepath",
+      "modules_integration_reliability_src_private_media_volume_privatemediavolume_store",
+      "modules_integration_reliability_src_private_media_volume_privatemediavolume_storeserial",
+      "modules_integration_reliability_src_private_media_volume_privatemediavolume_usedbytes",
+      "modules_integration_reliability_src_private_media_volume_sha256digest",
+      "modules_integration_reliability_src_private_media_volume_toasynciterable",
+      "modules_integration_reliability_src_private_media_volume_validdate",
+      "modules_n8n_integration_src_postgres_command_outbox_postgresn8ncommandoutbox",
+      "modules_n8n_integration_src_postgres_command_outbox_postgresn8ncommandoutbox_constructor",
+      "test_clamav_media_scanner_test",
+      "test_clamav_media_scanner_test_execfileimpl",
+      "test_private_media_volume_test",
+      "test_private_media_volume_test_repositoryfixture",
+      "test_private_media_volume_test_scan",
+      "test_private_media_volume_test_withvolume"
+    ],
+    "6": [
       "package_scripts",
       "package_scripts_build",
       "package_scripts_check_boundaries",
@@ -650,7 +573,7 @@
       "package_scripts_validate_security_catalog",
       "package_scripts_validate_topology"
     ],
-    "8": [
+    "7": [
       "ops_n8n_workflows_k7ti6t4rhqpyjkn9_mvp_simple_sdk",
       "ops_n8n_workflows_k7ti6t4rhqpyjkn9_mvp_simple_sdk_agent",
       "ops_n8n_workflows_k7ti6t4rhqpyjkn9_mvp_simple_sdk_aiauthorized",
@@ -702,7 +625,7 @@
       "ops_n8n_workflows_k7ti6t4rhqpyjkn9_mvp_simple_sdk_structuredoutput",
       "ops_n8n_workflows_k7ti6t4rhqpyjkn9_mvp_simple_sdk_whatsapptext"
     ],
-    "9": [
+    "8": [
       "schemas_fixtures_external_n8n_contract_validator",
       "schemas_fixtures_external_n8n_contract_validator_assertchannelactive",
       "schemas_fixtures_external_n8n_contract_validator_attachmentkeys",
@@ -752,13 +675,15 @@
       "test_n8n_workflow_contract_test_fixtureroot",
       "test_n8n_workflow_contract_test_workflowsnapshot"
     ],
-    "10": [
+    "9": [
       "apps_edge_web_src_lib_api_client",
       "apps_edge_web_src_lib_api_client_apierror",
       "apps_edge_web_src_lib_api_client_apierror_constructor",
       "apps_edge_web_src_lib_api_client_commandkey",
       "apps_edge_web_src_lib_api_client_readcookie",
       "apps_edge_web_src_lib_api_client_request",
+      "apps_edge_web_src_views_inboxview_claimhandoff",
+      "apps_edge_web_src_views_inboxview_selectconversation",
       "apps_edge_web_src_views_usersview",
       "apps_edge_web_src_views_usersview_actionmenu",
       "apps_edge_web_src_views_usersview_actionmenufor",
@@ -798,51 +723,7 @@
       "apps_edge_web_src_views_usersview_toggleactionmenu",
       "apps_edge_web_src_views_usersview_users"
     ],
-    "11": [
-      "modules_n8n_integration_src_crypto_encryptjson",
-      "modules_n8n_integration_src_errors_n8nconflicterror",
-      "modules_n8n_integration_src_errors_n8nconflicterror_constructor",
-      "modules_n8n_integration_src_errors_n8nnotfounderror",
-      "modules_n8n_integration_src_errors_n8nnotfounderror_constructor",
-      "modules_n8n_integration_src_postgres_repository",
-      "modules_n8n_integration_src_postgres_repository_advisorylock",
-      "modules_n8n_integration_src_postgres_repository_appendaudit",
-      "modules_n8n_integration_src_postgres_repository_appendconversationstreamevent",
-      "modules_n8n_integration_src_postgres_repository_assertcurrentautomatedturn",
-      "modules_n8n_integration_src_postgres_repository_assertfingerprint",
-      "modules_n8n_integration_src_postgres_repository_assertpanelsendfence",
-      "modules_n8n_integration_src_postgres_repository_attachmentresponse",
-      "modules_n8n_integration_src_postgres_repository_automationdisplayname",
-      "modules_n8n_integration_src_postgres_repository_comparableoutbound",
-      "modules_n8n_integration_src_postgres_repository_confirmreservedsend",
-      "modules_n8n_integration_src_postgres_repository_conversationmode",
-      "modules_n8n_integration_src_postgres_repository_createunassignedhandoff",
-      "modules_n8n_integration_src_postgres_repository_insertreceipt",
-      "modules_n8n_integration_src_postgres_repository_iso",
-      "modules_n8n_integration_src_postgres_repository_jsonobject",
-      "modules_n8n_integration_src_postgres_repository_marksendunknown",
-      "modules_n8n_integration_src_postgres_repository_outboundmessagecontent",
-      "modules_n8n_integration_src_postgres_repository_outboundmessagetype",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_constructor",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_inboundresponse",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_mergebriefing",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_promotecustomername",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_readbriefing",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_receiveinbound",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_recentmessages",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_recordevent",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_reservesend",
-      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_storeattachment",
-      "modules_n8n_integration_src_postgres_repository_resolveeventconversation",
-      "modules_n8n_integration_src_postgres_repository_safefailurecode",
-      "modules_n8n_integration_src_postgres_repository_selectpanelcommand",
-      "modules_n8n_integration_src_postgres_repository_selectreceipt",
-      "modules_n8n_integration_src_postgres_repository_transactionbounds",
-      "modules_n8n_integration_src_postgres_repository_updatedeliverystatus",
-      "modules_n8n_integration_src_postgres_repository_validclock"
-    ],
-    "12": [
+    "10": [
       "architecture",
       "architecture_aprova\u00e7\u00f5es_ainda_necess\u00e1rias",
       "architecture_arquitetura_decis\u00f5es_do_mvp",
@@ -884,7 +765,7 @@
       "specs_features_crm_mvp_context_integra\u00e7\u00f5es",
       "specs_features_crm_mvp_context_limite_da_feature"
     ],
-    "13": [
+    "11": [
       "crm_meta_protect_catalog_entry",
       "crm_meta_protect_catalog_version",
       "crm_meta_protect_idempotency_record",
@@ -926,7 +807,7 @@
       "modules_database_migrations_0002_phase1_domain_expand_idempotency_records_immutable_truncate",
       "modules_database_migrations_0002_phase1_domain_expand_idempotency_records_protect_rows"
     ],
-    "14": [
+    "12": [
       "modules_integration_reliability_src_postgres_webhook_inbox",
       "modules_integration_reliability_src_postgres_webhook_inbox_boundedstring",
       "modules_integration_reliability_src_postgres_webhook_inbox_canonicaleventaad",
@@ -968,7 +849,7 @@
       "test_postgres_webhook_inbox_test_inserteddatabase",
       "test_whatsapp_webhook_test_process"
     ],
-    "15": [
+    "13": [
       "scripts_r2_live_smoke",
       "scripts_r2_live_smoke_assertnos3objectlockheaders",
       "scripts_r2_live_smoke_assertsafer2evidence",
@@ -1010,7 +891,48 @@
       "test_r2_live_smoke_test_fixeddate",
       "test_r2_live_smoke_test_rooturl"
     ],
-    "16": [
+    "14": [
+      "crazy_api",
+      "datacrazy_crm",
+      "historico_datacrazy_crm_processo_vendas",
+      "historico_datacrazy_crm_processo_vendas_1_vis\u00e3o_geral_do_fluxo",
+      "historico_datacrazy_crm_processo_vendas_2_card_r\u00e1pido_de_briefing",
+      "historico_datacrazy_crm_processo_vendas_3_roteiro_completo_de_qualifica\u00e7\u00e3o_os_13_campos",
+      "historico_datacrazy_crm_processo_vendas_4_tags_e_tipifica\u00e7\u00e3o",
+      "historico_datacrazy_crm_processo_vendas_5_pipeline_vendas_estamparia_as_5_etapas",
+      "historico_datacrazy_crm_processo_vendas_6_transfer\u00eancia_da_ia_pro_vendedor_humano",
+      "historico_datacrazy_crm_processo_vendas_7_o_que_a_ia_e_o_vendedor_nunca_afirmam",
+      "historico_datacrazy_crm_processo_vendas_8_pend\u00eancias_que_travam_o_processo_hoje",
+      "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualifica\u00e7\u00e3o_e_venda_silmer",
+      "historico_datacrazy_datacrazy_setup",
+      "historico_datacrazy_datacrazy_setup_a_validar_no_primeiro_teste_real",
+      "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer",
+      "historico_datacrazy_datacrazy_setup_ajuste_necess\u00e1rio_no_prompt_do_agente",
+      "historico_datacrazy_datacrazy_setup_alternativas_sem_o_custo_da_crazy_api",
+      "historico_datacrazy_datacrazy_setup_arquitetura_necess\u00e1ria",
+      "historico_datacrazy_datacrazy_setup_aten\u00e7\u00e3o_definir_qual_n\u00famero_vai_hospedar_o_agente",
+      "historico_datacrazy_datacrazy_setup_automa\u00e7\u00e3o",
+      "historico_datacrazy_datacrazy_setup_base_de_conhecimento",
+      "historico_datacrazy_datacrazy_setup_bloqueadores_n\u00e3o_resolvidos",
+      "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos",
+      "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta",
+      "historico_datacrazy_datacrazy_setup_cuidados_com_a_crazy_api_whatsapp_n\u00e3o_oficial",
+      "historico_datacrazy_datacrazy_setup_datacrazy_automa\u00e7\u00e3o_vendedor_silmer_sdr_whatsapp_vendedor_humano",
+      "historico_datacrazy_datacrazy_setup_esfor\u00e7o_estimado",
+      "historico_datacrazy_datacrazy_setup_fluxo_desenhado",
+      "historico_datacrazy_datacrazy_setup_o_que_a_conex\u00e3o_universal_pede",
+      "historico_datacrazy_datacrazy_setup_o_que_j\u00e1_est\u00e1_configurado",
+      "historico_datacrazy_datacrazy_setup_passo_a_passo_conectar_a_crazy_api_quando_o_cliente_aprovar",
+      "historico_datacrazy_datacrazy_setup_passos",
+      "historico_datacrazy_datacrazy_setup_pend\u00eancias_de_conte\u00fado_a_silmer_precisa_fornecer",
+      "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia",
+      "historico_datacrazy_datacrazy_setup_ponto_de_aten\u00e7\u00e3o_do_fluxo_no_site",
+      "historico_datacrazy_datacrazy_setup_pr\u00f3ximos_passos_em_ordem",
+      "historico_datacrazy_datacrazy_setup_tags_4_novas",
+      "specs_features_crm_mvp_spec",
+      "vendedor_silmer"
+    ],
+    "15": [
       "design",
       "design_10_intera\u00e7\u00e3o_e_movimento",
       "design_11_acessibilidade",
@@ -1051,47 +973,7 @@
       "ficha_pedido",
       "kanban_comercial"
     ],
-    "17": [
-      "crazy_api",
-      "datacrazy_crm",
-      "historico_datacrazy_crm_processo_vendas",
-      "historico_datacrazy_crm_processo_vendas_1_vis\u00e3o_geral_do_fluxo",
-      "historico_datacrazy_crm_processo_vendas_2_card_r\u00e1pido_de_briefing",
-      "historico_datacrazy_crm_processo_vendas_3_roteiro_completo_de_qualifica\u00e7\u00e3o_os_13_campos",
-      "historico_datacrazy_crm_processo_vendas_4_tags_e_tipifica\u00e7\u00e3o",
-      "historico_datacrazy_crm_processo_vendas_5_pipeline_vendas_estamparia_as_5_etapas",
-      "historico_datacrazy_crm_processo_vendas_6_transfer\u00eancia_da_ia_pro_vendedor_humano",
-      "historico_datacrazy_crm_processo_vendas_7_o_que_a_ia_e_o_vendedor_nunca_afirmam",
-      "historico_datacrazy_crm_processo_vendas_8_pend\u00eancias_que_travam_o_processo_hoje",
-      "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualifica\u00e7\u00e3o_e_venda_silmer",
-      "historico_datacrazy_datacrazy_setup",
-      "historico_datacrazy_datacrazy_setup_a_validar_no_primeiro_teste_real",
-      "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer",
-      "historico_datacrazy_datacrazy_setup_ajuste_necess\u00e1rio_no_prompt_do_agente",
-      "historico_datacrazy_datacrazy_setup_alternativas_sem_o_custo_da_crazy_api",
-      "historico_datacrazy_datacrazy_setup_arquitetura_necess\u00e1ria",
-      "historico_datacrazy_datacrazy_setup_aten\u00e7\u00e3o_definir_qual_n\u00famero_vai_hospedar_o_agente",
-      "historico_datacrazy_datacrazy_setup_automa\u00e7\u00e3o",
-      "historico_datacrazy_datacrazy_setup_base_de_conhecimento",
-      "historico_datacrazy_datacrazy_setup_bloqueadores_n\u00e3o_resolvidos",
-      "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos",
-      "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta",
-      "historico_datacrazy_datacrazy_setup_cuidados_com_a_crazy_api_whatsapp_n\u00e3o_oficial",
-      "historico_datacrazy_datacrazy_setup_datacrazy_automa\u00e7\u00e3o_vendedor_silmer_sdr_whatsapp_vendedor_humano",
-      "historico_datacrazy_datacrazy_setup_esfor\u00e7o_estimado",
-      "historico_datacrazy_datacrazy_setup_fluxo_desenhado",
-      "historico_datacrazy_datacrazy_setup_o_que_a_conex\u00e3o_universal_pede",
-      "historico_datacrazy_datacrazy_setup_o_que_j\u00e1_est\u00e1_configurado",
-      "historico_datacrazy_datacrazy_setup_passo_a_passo_conectar_a_crazy_api_quando_o_cliente_aprovar",
-      "historico_datacrazy_datacrazy_setup_passos",
-      "historico_datacrazy_datacrazy_setup_pend\u00eancias_de_conte\u00fado_a_silmer_precisa_fornecer",
-      "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia",
-      "historico_datacrazy_datacrazy_setup_ponto_de_aten\u00e7\u00e3o_do_fluxo_no_site",
-      "historico_datacrazy_datacrazy_setup_pr\u00f3ximos_passos_em_ordem",
-      "historico_datacrazy_datacrazy_setup_tags_4_novas",
-      "vendedor_silmer"
-    ],
-    "18": [
+    "16": [
       "apps_edge_web_src_app",
       "apps_edge_web_src_app_activeview",
       "apps_edge_web_src_app_announce",
@@ -1124,8 +1006,87 @@
       "apps_edge_web_src_app_showerror",
       "apps_edge_web_src_app_showsession",
       "apps_edge_web_src_app_showsignedout",
+      "apps_edge_web_src_app_sidebaruseremail",
+      "apps_edge_web_src_app_sidebaruserinitials",
+      "apps_edge_web_src_app_sidebarusername",
       "apps_edge_web_src_app_stream",
       "apps_edge_web_src_app_user"
+    ],
+    "17": [
+      "modules_contacts_src_adapters_contact_identity_envelope",
+      "modules_contacts_src_adapters_contact_identity_envelope_decryptcontactidentityenvelope",
+      "modules_contacts_src_adapters_postgres_contact_read_repository",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_groupcontacts",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_iso",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_mapcontact",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_mapidentity",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_notfound",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository_constructor",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository_get",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository_list",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_postgrescontactreadrepository_snapshot",
+      "modules_contacts_src_adapters_postgres_contact_read_repository_runsequential",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_iso",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_mapconversationsummary",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_mapmessage",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_mapsuggestion",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_messagepreview",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_notfound",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository_constructor",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository_get",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository_list",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_postgresinboxreadrepository_snapshot",
+      "modules_inbox_channels_src_adapters_postgres_inbox_read_repository_runsequential",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_decryptinboxmessageenvelope",
+      "modules_work_management_src_cipher",
+      "modules_work_management_src_cipher_decrypthandoffsummary",
+      "modules_work_management_src_postgres_handoff_read_repository",
+      "modules_work_management_src_postgres_handoff_read_repository_iso",
+      "modules_work_management_src_postgres_handoff_read_repository_maphandoff",
+      "modules_work_management_src_postgres_handoff_read_repository_postgreshandoffreadrepository",
+      "modules_work_management_src_postgres_handoff_read_repository_postgreshandoffreadrepository_constructor",
+      "modules_work_management_src_postgres_handoff_read_repository_postgreshandoffreadrepository_listopen",
+      "modules_work_management_src_postgres_handoff_read_repository_postgreshandoffreadrepository_snapshot"
+    ],
+    "18": [
+      "modules_inbox_channels_src_adapters_meta_whatsapp_meta_whatsapp_max_events_per_callback",
+      "modules_inbox_channels_src_adapters_meta_whatsapp_meta_whatsapp_stale_after_hours",
+      "modules_inbox_channels_src_application_channel_event_handler",
+      "modules_inbox_channels_src_application_channel_event_handler_createchanneleventhandler",
+      "modules_inbox_channels_src_application_channel_event_handler_createchanneleventjobhandler",
+      "modules_inbox_channels_src_application_channel_event_handler_safeerrorcode",
+      "modules_inbox_channels_src_application_inbox_service",
+      "modules_inbox_channels_src_application_inbox_service_createinboxservice",
+      "modules_inbox_channels_src_application_inbox_service_defaultidfactory",
+      "modules_inbox_channels_src_application_inbox_service_validatearchivecommand",
+      "modules_inbox_channels_src_application_inbox_service_validatecontent",
+      "modules_inbox_channels_src_application_inbox_service_validatehumancommand",
+      "modules_inbox_channels_src_application_inbox_service_validateinbound",
+      "modules_inbox_channels_src_domain_errors",
+      "modules_inbox_channels_src_domain_errors_inboxerror",
+      "modules_inbox_channels_src_domain_errors_inboxerror_constructor",
+      "modules_inbox_channels_src_domain_errors_inboxforbiddenerror",
+      "modules_inbox_channels_src_domain_errors_inboxforbiddenerror_constructor",
+      "modules_inbox_channels_src_domain_errors_inboxvalidationerror",
+      "modules_inbox_channels_src_domain_errors_inboxvalidationerror_constructor",
+      "modules_inbox_channels_src_domain_inbox",
+      "modules_inbox_channels_src_domain_inbox_assertinboxstate",
+      "modules_inbox_channels_src_domain_inbox_inbox_states",
+      "modules_inbox_channels_src_domain_inbox_requirenonempty",
+      "modules_inbox_channels_src_domain_inbox_requireversion",
+      "modules_inbox_channels_src_domain_inbox_terminal_inbox_states",
+      "modules_inbox_channels_src_index",
+      "modules_inbox_channels_src_ports_contracts",
+      "modules_inbox_channels_src_ports_contracts_assertchanneladaptercontract",
+      "test_channel_event_handler_test",
+      "test_channel_event_handler_test_canonicalevent",
+      "test_channel_event_handler_test_process",
+      "test_channel_event_handler_test_readcanonicaleventrecord",
+      "test_channel_event_handler_test_receiveinbound",
+      "test_channel_event_handler_test_resolveinboundidentity"
     ],
     "19": [
       "scripts_recovery_mock",
@@ -1195,6 +1156,72 @@
       "test_whatsapp_webhook_test_signature"
     ],
     "21": [
+      "modules_database_src_cli",
+      "modules_database_src_cli_pool",
+      "modules_database_src_cli_readphase",
+      "modules_database_src_database",
+      "modules_database_src_database_checkdatabasereadiness",
+      "modules_database_src_database_createdatabase",
+      "modules_database_src_index",
+      "modules_database_src_migrations",
+      "modules_database_src_migrations_applymigration",
+      "modules_database_src_migrations_checksum",
+      "modules_database_src_migrations_ensuredirectoryurl",
+      "modules_database_src_migrations_loadmigrations",
+      "modules_database_src_migrations_migrate",
+      "modules_database_src_migrations_normalizemigrationplan",
+      "modules_database_src_transactions",
+      "modules_database_src_transactions_databaseconnectiontimeouterror",
+      "modules_database_src_transactions_databaseconnectiontimeouterror_constructor",
+      "modules_database_src_transactions_withtransaction",
+      "test_database_test",
+      "test_database_test_connect",
+      "test_identity_postgres_live_test",
+      "test_identity_postgres_live_test_hash",
+      "test_migrations_live_test",
+      "test_phase1_schema_live_test",
+      "test_phase1_schema_live_test_hash",
+      "test_postgres_idempotency_live_test",
+      "test_postgres_job_queue_live_test",
+      "test_postgres_job_queue_live_test_databasefor",
+      "test_postgres_job_queue_live_test_seedjob",
+      "test_postgres_webhook_inbox_live_test",
+      "test_postgres_webhook_inbox_live_test_canonicalevent"
+    ],
+    "22": [
+      "modules_n8n_integration_src_errors_n8nconflicterror",
+      "modules_n8n_integration_src_errors_n8nconflicterror_constructor",
+      "modules_n8n_integration_src_errors_n8nnotfounderror",
+      "modules_n8n_integration_src_errors_n8nnotfounderror_constructor",
+      "modules_n8n_integration_src_postgres_repository",
+      "modules_n8n_integration_src_postgres_repository_advisorylock",
+      "modules_n8n_integration_src_postgres_repository_appendconversationstreamevent",
+      "modules_n8n_integration_src_postgres_repository_assertcurrentautomatedturn",
+      "modules_n8n_integration_src_postgres_repository_assertfingerprint",
+      "modules_n8n_integration_src_postgres_repository_assertpanelsendfence",
+      "modules_n8n_integration_src_postgres_repository_attachmentresponse",
+      "modules_n8n_integration_src_postgres_repository_comparableoutbound",
+      "modules_n8n_integration_src_postgres_repository_confirmreservedsend",
+      "modules_n8n_integration_src_postgres_repository_createunassignedhandoff",
+      "modules_n8n_integration_src_postgres_repository_insertreceipt",
+      "modules_n8n_integration_src_postgres_repository_jsonobject",
+      "modules_n8n_integration_src_postgres_repository_marksendunknown",
+      "modules_n8n_integration_src_postgres_repository_outboundmessagecontent",
+      "modules_n8n_integration_src_postgres_repository_outboundmessagetype",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_receiveinbound",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_recordevent",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_reservesend",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_storeattachment",
+      "modules_n8n_integration_src_postgres_repository_resolveeventconversation",
+      "modules_n8n_integration_src_postgres_repository_safefailurecode",
+      "modules_n8n_integration_src_postgres_repository_selectpanelcommand",
+      "modules_n8n_integration_src_postgres_repository_selectreceipt",
+      "modules_n8n_integration_src_postgres_repository_transactionbounds",
+      "modules_n8n_integration_src_postgres_repository_updatedeliverystatus",
+      "modules_n8n_integration_src_postgres_repository_validclock",
+      "modules_n8n_integration_src_service_translateconflict"
+    ],
+    "23": [
       "schemas_fixtures_external_n8n_contract_v1_schema_artwork_locations_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_artwork_status_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_artwork_technique_type",
@@ -1227,7 +1254,39 @@
       "schemas_fixtures_external_n8n_contract_v1_schema_sizes_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_sponsors_type"
     ],
-    "22": [
+    "24": [
+      "apps_worker_src_worker",
+      "apps_worker_src_worker_createmediaretentionworkerruntime",
+      "apps_worker_src_worker_createworkerruntime",
+      "apps_worker_src_worker_loadn8ncommandstore",
+      "apps_worker_src_worker_mediaretentionscheduler",
+      "apps_worker_src_worker_mediaretentionscheduler_constructor",
+      "apps_worker_src_worker_mediaretentionscheduler_poll",
+      "apps_worker_src_worker_mediaretentionscheduler_runonce",
+      "apps_worker_src_worker_mediaretentionscheduler_start",
+      "apps_worker_src_worker_mediaretentionscheduler_stop",
+      "apps_worker_src_worker_optionalpositiveinteger",
+      "apps_worker_src_worker_requiredenvironment",
+      "apps_worker_src_worker_requiredpositiveinteger",
+      "apps_worker_src_worker_startworkerfromenvironment",
+      "apps_worker_src_worker_technicalerrorcode",
+      "apps_worker_src_worker_technicalstartuperror",
+      "apps_worker_src_worker_workerruntime",
+      "apps_worker_src_worker_workerruntime_constructor",
+      "apps_worker_src_worker_workerruntime_emitheartbeat",
+      "apps_worker_src_worker_workerruntime_poll",
+      "apps_worker_src_worker_workerruntime_processjob",
+      "apps_worker_src_worker_workerruntime_recordjobfailure",
+      "apps_worker_src_worker_workerruntime_runonce",
+      "apps_worker_src_worker_workerruntime_start",
+      "apps_worker_src_worker_workerruntime_stop",
+      "modules_integration_reliability_src_n8n_outbound_client_createn8ncommanddeliveryclient",
+      "test_worker_queue_test",
+      "test_worker_queue_test_createpostgresn8ncommandstore",
+      "test_worker_queue_test_queuefixture",
+      "test_worker_queue_test_silentlogger"
+    ],
+    "25": [
       "modules_inbox_channels_src_domain_channel_envelope",
       "modules_inbox_channels_src_domain_channel_envelope_attachment_content_fields",
       "modules_inbox_channels_src_domain_channel_envelope_canonicalidentity",
@@ -1259,70 +1318,7 @@
       "test_channel_contract_test_rooturl",
       "test_channel_contract_test_tostring"
     ],
-    "23": [
-      "specs_features_crm_mvp_tasks_crit\u00e9rio_de_conclus\u00e3o_da_inbox_multicanal",
-      "specs_features_crm_mvp_tasks_crit\u00e9rio_de_conclus\u00e3o_do_agente_vendedor_silmer_no_n8n",
-      "specs_features_crm_mvp_tasks_crit\u00e9rio_de_conclus\u00e3o_do_crm",
-      "specs_features_crm_mvp_tasks_crm_silmer_mvp_plano_macro_de_entrega",
-      "specs_features_crm_mvp_tasks_entrega_transversal_n8n_mvp_1_integra\u00e7\u00e3o_simples",
-      "specs_features_crm_mvp_tasks_etapa_agente_1_implantar_o_n8n_obrigat\u00f3rio",
-      "specs_features_crm_mvp_tasks_etapa_agente_2_criar_contratos_crm_n8n",
-      "specs_features_crm_mvp_tasks_etapa_agente_3_conectar_o_provedor_de_ia",
-      "specs_features_crm_mvp_tasks_etapa_agente_4_construir_o_workflow_da_jornada",
-      "specs_features_crm_mvp_tasks_etapa_agente_5_implementar_handoff_e_desligamento_seguro",
-      "specs_features_crm_mvp_tasks_etapa_agente_6_tornar_a_automa\u00e7\u00e3o_oper\u00e1vel",
-      "specs_features_crm_mvp_tasks_etapa_canal_2_concluir_instagram_e_migra\u00e7\u00e3o_de_canal",
-      "specs_features_crm_mvp_tasks_etapa_crm_1_consolidar_a_funda\u00e7\u00e3o_j\u00e1_entregue",
-      "specs_features_crm_mvp_tasks_etapa_crm_2_concluir_contato_neg\u00f3cio_e_kanban",
-      "specs_features_crm_mvp_tasks_etapa_crm_3_concluir_fechamento_pedido_e_ficha",
-      "specs_features_crm_mvp_tasks_etapa_crm_4_concluir_gest\u00e3o_e_opera\u00e7\u00e3o",
-      "specs_features_crm_mvp_tasks_etapa_inbox_1_reaproveitar_o_n\u00facleo_de_mensagens",
-      "specs_features_crm_mvp_tasks_etapa_inbox_2_refatorar_a_fronteira_do_whatsapp",
-      "specs_features_crm_mvp_tasks_etapa_inbox_3_concluir_confiabilidade_do_canal",
-      "specs_features_crm_mvp_tasks_etapa_inbox_4_concluir_a_interface_acess\u00edvel",
-      "specs_features_crm_mvp_tasks_etapa_int_1_conectar_os_tr\u00eas_objetivos",
-      "specs_features_crm_mvp_tasks_etapa_int_2_validar_falhas_e_seguran\u00e7a",
-      "specs_features_crm_mvp_tasks_etapa_int_3_preparar_produ\u00e7\u00e3o",
-      "specs_features_crm_mvp_tasks_etapa_int_4_uat_e_lan\u00e7amento_do_mvp",
-      "specs_features_crm_mvp_tasks_integra\u00e7\u00e3o_e_lan\u00e7amento",
-      "specs_features_crm_mvp_tasks_objetivo_1_crm",
-      "specs_features_crm_mvp_tasks_objetivo_2_inbox_multicanal",
-      "specs_features_crm_mvp_tasks_objetivo_3_agente_vendedor_silmer_no_n8n",
-      "specs_features_crm_mvp_tasks_premissas_comuns",
-      "specs_features_crm_mvp_tasks_sequ\u00eancia_executiva_posterior"
-    ],
-    "24": [
-      "modules_database_src_cli",
-      "modules_database_src_cli_pool",
-      "modules_database_src_cli_readphase",
-      "modules_database_src_database",
-      "modules_database_src_database_checkdatabasereadiness",
-      "modules_database_src_database_createdatabase",
-      "modules_database_src_index",
-      "modules_database_src_migrations",
-      "modules_database_src_migrations_applymigration",
-      "modules_database_src_migrations_checksum",
-      "modules_database_src_migrations_ensuredirectoryurl",
-      "modules_database_src_migrations_loadmigrations",
-      "modules_database_src_migrations_migrate",
-      "modules_database_src_migrations_normalizemigrationplan",
-      "modules_database_src_transactions",
-      "modules_database_src_transactions_databaseconnectiontimeouterror",
-      "modules_database_src_transactions_databaseconnectiontimeouterror_constructor",
-      "modules_database_src_transactions_withtransaction",
-      "test_database_test",
-      "test_database_test_connect",
-      "test_identity_postgres_live_test",
-      "test_identity_postgres_live_test_hash",
-      "test_migrations_live_test",
-      "test_phase1_schema_live_test",
-      "test_phase1_schema_live_test_hash",
-      "test_postgres_audit_live_test",
-      "test_postgres_audit_live_test_auditinput",
-      "test_postgres_audit_live_test_createpostgresaudittrail",
-      "test_postgres_idempotency_live_test"
-    ],
-    "25": [
+    "26": [
       "scripts_ficha_pdf_review",
       "scripts_ficha_pdf_review_approvalcriteria",
       "scripts_ficha_pdf_review_buildfichahtml",
@@ -1352,7 +1348,7 @@
       "test_ficha_pdf_review_test_fixture",
       "test_ficha_pdf_review_test_rooturl"
     ],
-    "26": [
+    "27": [
       "apps_api_src_server_createmetawebhookruntime",
       "modules_integration_reliability_src_meta_sandbox",
       "modules_integration_reliability_src_meta_sandbox_createmetamessagesclient",
@@ -1381,7 +1377,36 @@
       "test_meta_sandbox_test_signature",
       "test_meta_sandbox_test_statuspayload"
     ],
-    "27": [
+    "28": [
+      "docref_rfc_8785",
+      "modules_integration_reliability_src_n8n_command_worker_immutablecommand",
+      "modules_integration_reliability_src_n8n_outbound_client",
+      "modules_integration_reliability_src_n8n_outbound_client_boundedstring",
+      "modules_integration_reliability_src_n8n_outbound_client_canonicaljsonstringify",
+      "modules_integration_reliability_src_n8n_outbound_client_commandendpoint",
+      "modules_integration_reliability_src_n8n_outbound_client_credentialpart",
+      "modules_integration_reliability_src_n8n_outbound_client_equalhexdigest",
+      "modules_integration_reliability_src_n8n_outbound_client_isloopbackhost",
+      "modules_integration_reliability_src_n8n_outbound_client_isplainobject",
+      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient",
+      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient_constructor",
+      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient_deliver",
+      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient_execute",
+      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient_preparedelivery",
+      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryerror",
+      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryerror_constructor",
+      "modules_integration_reliability_src_n8n_outbound_client_normalizejson",
+      "modules_integration_reliability_src_n8n_outbound_client_opaqueexternalid",
+      "modules_integration_reliability_src_n8n_outbound_client_positiveinteger",
+      "modules_integration_reliability_src_n8n_outbound_client_retryable_status_codes",
+      "modules_integration_reliability_src_n8n_outbound_client_safeacknowledgement",
+      "modules_integration_reliability_src_n8n_outbound_client_sha256hex",
+      "modules_integration_reliability_src_n8n_outbound_client_technicalcode",
+      "test_n8n_outbound_client_test",
+      "test_n8n_outbound_client_test_command",
+      "test_n8n_outbound_client_test_response"
+    ],
+    "29": [
       "modules_qualification_src_field_registry",
       "modules_qualification_src_field_registry_colors",
       "modules_qualification_src_field_registry_comparefieldpaths",
@@ -1410,65 +1435,35 @@
       "modules_qualification_src_in_memory_qualification_repository_latestassessments",
       "modules_qualification_src_in_memory_qualification_repository_piece_colors"
     ],
-    "28": [
-      "specs_features_admin_user_management_tasks_aum_01_migration_expand_do_papel_\u00fanico",
-      "specs_features_admin_user_management_tasks_aum_02_reduzir_pap\u00e9is_e_capacidades",
-      "specs_features_admin_user_management_tasks_aum_03_remover_o_convite_do_dom\u00ednio",
-      "specs_features_admin_user_management_tasks_aum_04_senha_sem_comprimento_m\u00ednimo_p",
-      "specs_features_admin_user_management_tasks_aum_05_opera\u00e7\u00f5es_de_usu\u00e1rio_no_servi\u00e7o",
-      "specs_features_admin_user_management_tasks_aum_06_propagar_vendedor_nos_m\u00f3dulos_consumidores",
-      "specs_features_admin_user_management_tasks_aum_07_rotas_de_gest\u00e3o_de_usu\u00e1rios",
-      "specs_features_admin_user_management_tasks_aum_08_remover_as_rotas_de_convite_e_exigir_name_no_bootstrap",
-      "specs_features_admin_user_management_tasks_aum_09_tela_de_acesso_sem_convite_p",
-      "specs_features_admin_user_management_tasks_aum_10_tela_de_usu\u00e1rios",
-      "specs_features_admin_user_management_tasks_aum_11_script_de_cria\u00e7\u00e3o_do_administrador_p",
-      "specs_features_admin_user_management_tasks_aum_12_seed_de_desenvolvimento_sem_convite_p",
-      "specs_features_admin_user_management_tasks_aum_13_contrato_openapi_p",
-      "specs_features_admin_user_management_tasks_aum_14_su\u00edte_de_testes",
-      "specs_features_admin_user_management_tasks_aum_15_migration_contract",
-      "specs_features_admin_user_management_tasks_aum_16_fechamento_do_reposit\u00f3rio",
-      "specs_features_admin_user_management_tasks_bloco_1_banco",
-      "specs_features_admin_user_management_tasks_bloco_2_dom\u00ednio",
-      "specs_features_admin_user_management_tasks_bloco_3_consumidores",
-      "specs_features_admin_user_management_tasks_bloco_4_api",
-      "specs_features_admin_user_management_tasks_bloco_5_frontend",
-      "specs_features_admin_user_management_tasks_bloco_6_scripts_e_contrato",
-      "specs_features_admin_user_management_tasks_bloco_7_fechamento",
-      "specs_features_admin_user_management_tasks_gest\u00e3o_de_usu\u00e1rios_pelo_administrador_tarefas",
-      "specs_features_admin_user_management_tasks_o_que_ainda_n\u00e3o_foi_executado_contra_um_banco_real",
-      "specs_features_admin_user_management_tasks_perda_de_cobertura_assumida",
-      "specs_features_admin_user_management_tasks_situa\u00e7\u00e3o"
-    ],
-    "29": [
-      "technical_design",
-      "technical_design_11_vendedor_silmer_e_ia",
-      "technical_design_13_performance_capacidade_e_slos_iniciais",
-      "technical_design_14_observabilidade",
-      "technical_design_15_estrat\u00e9gia_de_testes",
-      "technical_design_16_deploy_e_rollback",
-      "technical_design_17_riscos_e_mitiga\u00e7\u00e3o",
-      "technical_design_18_alternativas_consideradas",
-      "technical_design_19_plano_de_implementa\u00e7\u00e3o",
-      "technical_design_1_resumo_executivo",
-      "technical_design_20_quest\u00f5es_e_aprova\u00e7\u00f5es_pendentes",
-      "technical_design_21_refer\u00eancias_externas_verificadas_em_30_08_2026",
-      "technical_design_2_contexto_e_motiva\u00e7\u00e3o",
-      "technical_design_4_decis\u00f5es_t\u00e9cnicas",
-      "technical_design_5_arquitetura_de_runtime",
-      "technical_design_6_fronteiras_do_mon\u00f3lito",
-      "technical_design_7_modelo_de_dados_essencial",
-      "technical_design_9_contratos_centrais_da_api",
-      "technical_design_crit\u00e9rios_de_aprova\u00e7\u00e3o_do_tdd",
-      "technical_design_defaults_de_dom\u00ednio_adotados",
-      "technical_design_impacto_de_n\u00e3o_resolver",
-      "technical_design_instagram_e_handoff_de_identidade",
-      "technical_design_numera\u00e7\u00e3o_de_pedido",
-      "technical_design_problemas_resolvidos",
-      "technical_design_processos_implant\u00e1veis",
-      "technical_design_regra_de_modelagem_do_funil",
-      "technical_design_tdd_crm_silmer_mvp"
-    ],
     "30": [
+      "apps_api_src_operation_runtime",
+      "apps_api_src_operation_runtime_automation_states",
+      "apps_api_src_operation_runtime_channels",
+      "apps_api_src_operation_runtime_conversation_states",
+      "apps_api_src_operation_runtime_createoperationreadruntime",
+      "apps_api_src_operation_runtime_createoperationreadservice",
+      "apps_api_src_operation_runtime_encodecursor",
+      "apps_api_src_operation_runtime_filterfingerprint",
+      "apps_api_src_operation_runtime_operationreaderror",
+      "apps_api_src_operation_runtime_operationreaderror_constructor",
+      "apps_api_src_operation_runtime_pageresponse",
+      "apps_api_src_operation_runtime_parsecookies",
+      "apps_api_src_operation_runtime_readcursor",
+      "apps_api_src_operation_runtime_readdisplayname",
+      "apps_api_src_operation_runtime_readkey",
+      "apps_api_src_operation_runtime_readlimit",
+      "apps_api_src_operation_runtime_rejectunknownkeys",
+      "apps_api_src_operation_runtime_requirechoice",
+      "apps_api_src_operation_runtime_requireid",
+      "test_operation_read_model_test",
+      "test_operation_read_model_test_serviceharness",
+      "test_operation_read_postgres_live_test",
+      "test_operation_read_postgres_live_test_contact_key",
+      "test_operation_read_postgres_live_test_identityinput",
+      "test_operation_read_postgres_live_test_message_key",
+      "test_operation_read_postgres_live_test_now"
+    ],
+    "31": [
       "apps_edge_web_src_views_clientsview",
       "apps_edge_web_src_views_clientsview_actionmessage",
       "apps_edge_web_src_views_clientsview_busy",
@@ -1496,7 +1491,7 @@
       "apps_edge_web_src_views_clientsview_selected",
       "apps_edge_web_src_views_clientsview_totalcount"
     ],
-    "31": [
+    "32": [
       "modules_inbox_channels_src_adapters_meta_whatsapp",
       "modules_inbox_channels_src_adapters_meta_whatsapp_absoluteinstant",
       "modules_inbox_channels_src_adapters_meta_whatsapp_array",
@@ -1524,61 +1519,33 @@
       "test_meta_whatsapp_adapter_test_normalize",
       "test_meta_whatsapp_adapter_test_rooturl"
     ],
-    "32": [
-      "modules_inbox_channels_src_adapters_meta_whatsapp_meta_whatsapp_max_events_per_callback",
-      "modules_inbox_channels_src_adapters_meta_whatsapp_meta_whatsapp_stale_after_hours",
-      "modules_inbox_channels_src_application_channel_event_handler",
-      "modules_inbox_channels_src_application_channel_event_handler_createchanneleventhandler",
-      "modules_inbox_channels_src_application_channel_event_handler_createchanneleventjobhandler",
-      "modules_inbox_channels_src_application_channel_event_handler_safeerrorcode",
-      "modules_inbox_channels_src_application_inbox_service",
-      "modules_inbox_channels_src_application_inbox_service_defaultidfactory",
-      "modules_inbox_channels_src_application_inbox_service_validatecontent",
-      "modules_inbox_channels_src_application_inbox_service_validatehumancommand",
-      "modules_inbox_channels_src_application_inbox_service_validateinbound",
-      "modules_inbox_channels_src_domain_errors",
-      "modules_inbox_channels_src_domain_errors_inboxerror",
-      "modules_inbox_channels_src_domain_errors_inboxerror_constructor",
-      "modules_inbox_channels_src_domain_errors_inboxforbiddenerror",
-      "modules_inbox_channels_src_domain_errors_inboxforbiddenerror_constructor",
-      "modules_inbox_channels_src_domain_errors_inboxvalidationerror",
-      "modules_inbox_channels_src_domain_errors_inboxvalidationerror_constructor",
-      "modules_inbox_channels_src_domain_inbox",
-      "modules_inbox_channels_src_domain_inbox_assertinboxstate",
-      "modules_inbox_channels_src_domain_inbox_requirenonempty",
-      "modules_inbox_channels_src_domain_inbox_requireversion",
-      "modules_inbox_channels_src_domain_inbox_terminal_inbox_states",
-      "modules_inbox_channels_src_index",
-      "modules_inbox_channels_src_ports_contracts",
-      "modules_inbox_channels_src_ports_contracts_assertchanneladaptercontract"
-    ],
     "33": [
-      "modules_integration_reliability_src_private_media_volume",
-      "modules_integration_reliability_src_private_media_volume_boundedstring",
-      "modules_integration_reliability_src_private_media_volume_default_allowed_mime_types",
-      "modules_integration_reliability_src_private_media_volume_mediahashmismatcherror",
-      "modules_integration_reliability_src_private_media_volume_mediahashmismatcherror_constructor",
-      "modules_integration_reliability_src_private_media_volume_mediaquotaexceedederror",
-      "modules_integration_reliability_src_private_media_volume_mediaquotaexceedederror_constructor",
-      "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror",
-      "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror_constructor",
-      "modules_integration_reliability_src_private_media_volume_positiveinteger",
-      "modules_integration_reliability_src_private_media_volume_privatemediavolume",
-      "modules_integration_reliability_src_private_media_volume_privatemediavolume_constructor",
-      "modules_integration_reliability_src_private_media_volume_privatemediavolume_delete",
-      "modules_integration_reliability_src_private_media_volume_privatemediavolume_prepareroot",
-      "modules_integration_reliability_src_private_media_volume_privatemediavolume_resolvepath",
-      "modules_integration_reliability_src_private_media_volume_privatemediavolume_storagepath",
-      "modules_integration_reliability_src_private_media_volume_privatemediavolume_store",
-      "modules_integration_reliability_src_private_media_volume_privatemediavolume_storeserial",
-      "modules_integration_reliability_src_private_media_volume_privatemediavolume_usedbytes",
-      "modules_integration_reliability_src_private_media_volume_sha256digest",
-      "modules_integration_reliability_src_private_media_volume_toasynciterable",
-      "modules_integration_reliability_src_private_media_volume_validdate",
-      "test_private_media_volume_test",
-      "test_private_media_volume_test_repositoryfixture",
-      "test_private_media_volume_test_scan",
-      "test_private_media_volume_test_withvolume"
+      "technical_design_11_vendedor_silmer_e_ia",
+      "technical_design_13_performance_capacidade_e_slos_iniciais",
+      "technical_design_14_observabilidade",
+      "technical_design_15_estrat\u00e9gia_de_testes",
+      "technical_design_16_deploy_e_rollback",
+      "technical_design_17_riscos_e_mitiga\u00e7\u00e3o",
+      "technical_design_18_alternativas_consideradas",
+      "technical_design_19_plano_de_implementa\u00e7\u00e3o",
+      "technical_design_1_resumo_executivo",
+      "technical_design_20_quest\u00f5es_e_aprova\u00e7\u00f5es_pendentes",
+      "technical_design_21_refer\u00eancias_externas_verificadas_em_30_08_2026",
+      "technical_design_2_contexto_e_motiva\u00e7\u00e3o",
+      "technical_design_4_decis\u00f5es_t\u00e9cnicas",
+      "technical_design_5_arquitetura_de_runtime",
+      "technical_design_6_fronteiras_do_mon\u00f3lito",
+      "technical_design_7_modelo_de_dados_essencial",
+      "technical_design_9_contratos_centrais_da_api",
+      "technical_design_crit\u00e9rios_de_aprova\u00e7\u00e3o_do_tdd",
+      "technical_design_defaults_de_dom\u00ednio_adotados",
+      "technical_design_impacto_de_n\u00e3o_resolver",
+      "technical_design_instagram_e_handoff_de_identidade",
+      "technical_design_numera\u00e7\u00e3o_de_pedido",
+      "technical_design_problemas_resolvidos",
+      "technical_design_processos_implant\u00e1veis",
+      "technical_design_regra_de_modelagem_do_funil",
+      "technical_design_tdd_crm_silmer_mvp"
     ],
     "34": [
       "easypanel_topology",
@@ -1608,56 +1575,58 @@
       "easypanel_topology_topologia_easypanel_crm_silmer"
     ],
     "35": [
-      "apps_api_src_conversation_runtime",
-      "apps_api_src_conversation_runtime_createconversationapiruntime",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_advisorylock",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_appendconversationstreamevent",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_assertconversationownership",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_createaudit",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_decryptjson",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_encryptjson",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_hashjson",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_iso",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapconversation",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapmessage",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapsuggestion",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_mutationassignments",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_constructor",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_hydratecommand",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_mutateconversation",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_receiveinbound",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_recordsuggestion",
-      "modules_inbox_channels_src_adapters_postgres_inbox_repository_stream_event_types",
-      "modules_inbox_channels_src_application_inbox_service_createinboxservice",
-      "modules_inbox_channels_src_domain_inbox_isterminalinboxstate"
+      "modules_identity_access_src_automation_credentials",
+      "modules_identity_access_src_automation_credentials_allowedactions",
+      "modules_identity_access_src_automation_credentials_automation_executor_actions",
+      "modules_identity_access_src_automation_credentials_automation_executor_actor",
+      "modules_identity_access_src_automation_credentials_createautomationcredentials",
+      "modules_identity_access_src_automation_credentials_digest",
+      "modules_identity_access_src_automation_credentials_equaldigest",
+      "modules_identity_access_src_automation_credentials_requireclientid",
+      "modules_identity_access_src_automation_credentials_requiresecret",
+      "modules_identity_access_src_automation_credentials_unavailableprevioussecretdigest",
+      "modules_identity_access_src_index",
+      "modules_identity_access_src_index_constanttimeequal",
+      "modules_identity_access_src_index_createinmemoryidentityrepository",
+      "modules_identity_access_src_index_createinmemoryidentityrepository_activesession",
+      "modules_identity_access_src_index_default_password_parameters",
+      "modules_identity_access_src_index_deriveargon2",
+      "modules_identity_access_src_index_functions",
+      "modules_identity_access_src_index_hashpassword",
+      "modules_identity_access_src_index_verifypassword",
+      "test_automation_credentials_test",
+      "test_identity_session_test",
+      "test_identity_session_test_asasyncrepository",
+      "test_identity_session_test_finduserbyid",
+      "test_identity_session_test_harness",
+      "test_identity_session_test_now"
     ],
     "36": [
-      "apps_api_src_operational_auth_runtime",
-      "apps_api_src_operational_auth_runtime_createoperationalauthruntime",
-      "apps_api_src_operational_auth_runtime_httperror",
-      "apps_api_src_operational_auth_runtime_parsecookies",
-      "apps_api_src_server",
-      "apps_api_src_server_createconfiguredautomationauthruntime",
-      "apps_api_src_server_createdurablemetawebhookruntime",
-      "apps_api_src_server_createserverapi",
-      "apps_api_src_server_readbooleanflag",
-      "apps_api_src_server_readenvelopekey",
-      "apps_api_src_server_requireconfiguredsecret",
-      "test_automation_server_config_test",
-      "test_automation_server_config_test_basic",
-      "test_automation_server_config_test_close",
-      "test_automation_server_config_test_database",
-      "test_automation_server_config_test_environment",
-      "test_identity_api_live_test",
-      "test_identity_api_live_test_commandheaders",
-      "test_identity_api_live_test_cookies",
-      "test_whatsapp_webhook_runtime_config_test",
-      "test_whatsapp_webhook_runtime_config_test_close",
-      "test_whatsapp_webhook_runtime_config_test_key",
-      "test_whatsapp_webhook_runtime_config_test_query",
-      "test_whatsapp_webhook_runtime_config_test_transaction"
+      "modules_shared_src_index",
+      "modules_shared_src_index_services",
+      "modules_shared_src_observability",
+      "modules_shared_src_observability_allowedcontextfields",
+      "modules_shared_src_observability_allowedevents",
+      "modules_shared_src_observability_allowedmetrics",
+      "modules_shared_src_observability_allowedservices",
+      "modules_shared_src_observability_categoricalpolicies",
+      "modules_shared_src_observability_createsafelogger",
+      "modules_shared_src_observability_createsafelogrecord",
+      "modules_shared_src_observability_isfinitenumber",
+      "modules_shared_src_observability_metricregistry",
+      "modules_shared_src_observability_metricregistry_constructor",
+      "modules_shared_src_observability_metricregistry_increment",
+      "modules_shared_src_observability_metricregistry_record",
+      "modules_shared_src_observability_metricregistry_snapshot",
+      "modules_shared_src_observability_normalizetraceid",
+      "modules_shared_src_observability_redacted_field_names",
+      "modules_shared_src_observability_tracefields",
+      "test_observability_test",
+      "test_observability_test_assertnocanaries",
+      "test_observability_test_canaries",
+      "test_observability_test_capture",
+      "test_observability_test_escaperegexp",
+      "test_observability_test_rooturl"
     ],
     "37": [
       "crm_catalog_models",
@@ -1686,38 +1655,12 @@
       "modules_database_migrations_0009_phase3_qualification_expand_sql_crm_reject_deal_history_mutation"
     ],
     "38": [
-      "modules_identity_access_src_authorization_accesscontrolerror",
-      "modules_identity_access_src_authorization_accesscontrolerror_constructor",
-      "modules_identity_access_src_index_asduplicateemail",
-      "modules_identity_access_src_index_asuserhistory",
-      "modules_identity_access_src_index_createidentityaccessservice",
-      "modules_identity_access_src_index_createidentityaccessservice_assertcsrf",
-      "modules_identity_access_src_index_createidentityaccessservice_authenticate",
-      "modules_identity_access_src_index_createidentityaccessservice_bootstrapadmin",
-      "modules_identity_access_src_index_createidentityaccessservice_createoperationaluser",
-      "modules_identity_access_src_index_createidentityaccessservice_deleteoperationaluser",
-      "modules_identity_access_src_index_createidentityaccessservice_listusers",
-      "modules_identity_access_src_index_createidentityaccessservice_login",
-      "modules_identity_access_src_index_createidentityaccessservice_logout",
-      "modules_identity_access_src_index_createidentityaccessservice_record",
-      "modules_identity_access_src_index_createidentityaccessservice_requireadmin",
-      "modules_identity_access_src_index_createidentityaccessservice_sessionwindow",
-      "modules_identity_access_src_index_createidentityaccessservice_setuserdisabled",
-      "modules_identity_access_src_index_createidentityaccessservice_updateuser",
-      "modules_identity_access_src_index_createidentityaccessservice_usernotfound",
-      "modules_identity_access_src_index_digest",
-      "modules_identity_access_src_index_freezeuser",
-      "modules_identity_access_src_index_hashpassword",
-      "modules_identity_access_src_index_requirenonemptystring",
-      "modules_identity_access_src_index_userhashistory"
-    ],
-    "39": [
       "node_child_process",
       "scripts_dev",
       "scripts_dev_children",
       "scripts_dev_localidentityenvironment",
-      "scripts_dev_localn8nclientsecret",
       "scripts_dev_localn8ncomposeenvironment",
+      "scripts_dev_readorcreatelocalsecrets",
       "scripts_dev_root",
       "scripts_dev_run",
       "scripts_dev_runinitialbuild",
@@ -1737,7 +1680,57 @@
       "scripts_seed_dev_users_development_users",
       "scripts_seed_dev_users_seeddevelopmentusers"
     ],
+    "39": [
+      "apps_api_src_conversation_runtime",
+      "apps_api_src_conversation_runtime_createconversationapiruntime",
+      "apps_api_src_operational_auth_runtime",
+      "apps_api_src_operational_auth_runtime_createoperationalauthruntime",
+      "apps_api_src_operational_auth_runtime_httperror",
+      "apps_api_src_operational_auth_runtime_parsecookies",
+      "apps_api_src_server",
+      "apps_api_src_server_createconfiguredautomationauthruntime",
+      "apps_api_src_server_createdurablemetawebhookruntime",
+      "apps_api_src_server_createserverapi",
+      "apps_api_src_server_readbooleanflag",
+      "apps_api_src_server_readenvelopekey",
+      "apps_api_src_server_requireconfiguredsecret",
+      "test_automation_server_config_test",
+      "test_automation_server_config_test_basic",
+      "test_automation_server_config_test_close",
+      "test_automation_server_config_test_database",
+      "test_automation_server_config_test_environment",
+      "test_whatsapp_webhook_runtime_config_test",
+      "test_whatsapp_webhook_runtime_config_test_close",
+      "test_whatsapp_webhook_runtime_config_test_key",
+      "test_whatsapp_webhook_runtime_config_test_query",
+      "test_whatsapp_webhook_runtime_config_test_transaction"
+    ],
     "40": [
+      "apps_api_src_identity_runtime",
+      "apps_api_src_identity_runtime_createidentityapiruntime",
+      "apps_api_src_identity_runtime_createidentityapiruntime_adminmutation",
+      "apps_api_src_identity_runtime_createidentityapiruntime_authenticatedsession",
+      "apps_api_src_identity_runtime_createidentityapiruntime_executeidempotent",
+      "apps_api_src_identity_runtime_createidentityapiruntime_identityservice",
+      "apps_api_src_identity_runtime_createidentityapiruntime_preflight",
+      "apps_api_src_identity_runtime_equalsecret",
+      "apps_api_src_identity_runtime_identityhttperror",
+      "apps_api_src_identity_runtime_identityhttperror_constructor",
+      "apps_api_src_identity_runtime_isloopbackhttporigin",
+      "apps_api_src_identity_runtime_readkey",
+      "apps_api_src_identity_runtime_readorigins",
+      "apps_api_src_identity_runtime_requiresecret",
+      "modules_identity_access_src_postgres_createpostgresidentityrepository",
+      "modules_identity_access_src_postgres_createpostgresidentityrepository_insertuser",
+      "test_identity_api_live_test",
+      "test_identity_api_live_test_commandheaders",
+      "test_identity_api_live_test_cookies",
+      "test_identity_runtime_config_test",
+      "test_identity_runtime_config_test_database",
+      "test_identity_runtime_config_test_encodedkey",
+      "test_identity_runtime_config_test_environment"
+    ],
+    "41": [
       "campos_ficha_e_jornada_p0_1",
       "campos_ficha_e_jornada_p0_1_1_leitura_t\u00e9cnica_do_arquivo",
       "campos_ficha_e_jornada_p0_1_2_1_identifica\u00e7\u00e3o_do_pedido",
@@ -1762,32 +1755,32 @@
       "campos_ficha_e_jornada_p0_1_regras_transversais_da_m\u00e1quina_de_estados",
       "campos_ficha_e_jornada_p0_1_vocabul\u00e1rio_de_preenchimento"
     ],
-    "41": [
-      "modules_n8n_integration_src_errors_n8nvalidationerror",
-      "modules_n8n_integration_src_errors_n8nvalidationerror_constructor",
-      "modules_n8n_integration_src_service",
-      "modules_n8n_integration_src_service_briefing_patch_fields",
-      "modules_n8n_integration_src_service_event_types",
-      "modules_n8n_integration_src_service_events_with_resolvable_conversation",
-      "modules_n8n_integration_src_service_identifier",
-      "modules_n8n_integration_src_service_instant",
-      "modules_n8n_integration_src_service_nonnegativeinteger",
-      "modules_n8n_integration_src_service_normalizebriefingpatch",
-      "modules_n8n_integration_src_service_normalizemessagecontent",
-      "modules_n8n_integration_src_service_normalizetechnical",
-      "modules_n8n_integration_src_service_normalizewhatsappidentity",
-      "modules_n8n_integration_src_service_oneof",
-      "modules_n8n_integration_src_service_optionalstring",
-      "modules_n8n_integration_src_service_plainobject",
-      "modules_n8n_integration_src_service_positiveinteger",
-      "modules_n8n_integration_src_service_requireschema",
-      "modules_n8n_integration_src_service_safefilename",
-      "modules_n8n_integration_src_service_sha256",
-      "modules_n8n_integration_src_service_striptechnical",
-      "modules_n8n_integration_src_service_translateconflict",
-      "modules_n8n_integration_src_service_validateeventshape"
-    ],
     "42": [
+      "modules_integration_reliability_src_index",
+      "modules_integration_reliability_src_n8n_command_worker",
+      "modules_integration_reliability_src_n8n_command_worker_assertclient",
+      "modules_integration_reliability_src_n8n_command_worker_assertcommandstore",
+      "modules_integration_reliability_src_n8n_command_worker_assertn8ncommandstore",
+      "modules_integration_reliability_src_n8n_command_worker_classifyn8ncommanddeliveryfailure",
+      "modules_integration_reliability_src_n8n_command_worker_createn8ncommandjobhandler",
+      "modules_integration_reliability_src_n8n_command_worker_jobcommandid",
+      "modules_integration_reliability_src_n8n_command_worker_n8n_command_job_type",
+      "modules_integration_reliability_src_n8n_command_worker_n8n_command_queue",
+      "modules_integration_reliability_src_n8n_command_worker_readtechnicalerrorcode",
+      "modules_integration_reliability_src_n8n_command_worker_reconcilen8ncommandoutcome",
+      "modules_integration_reliability_src_n8n_command_worker_safeerrorcode",
+      "modules_integration_reliability_src_n8n_command_worker_technicalidentifier",
+      "modules_integration_reliability_src_postgres_outbound_message_outbox",
+      "modules_integration_reliability_src_postgres_outbound_message_outbox_postgresoutboundmessageoutbox",
+      "modules_integration_reliability_src_postgres_outbound_message_outbox_postgresoutboundmessageoutbox_enqueuechannelmessage",
+      "test_n8n_command_worker_test",
+      "test_n8n_command_worker_test_job",
+      "test_n8n_command_worker_test_markeffectstarted",
+      "test_n8n_command_worker_test_preparedelivery",
+      "test_n8n_command_worker_test_storefixture",
+      "test_outbound_message_outbox_test"
+    ],
+    "43": [
       "apps_edge_web_vite_config",
       "eslint_config",
       "eslint_config_nodeglobals",
@@ -1811,7 +1804,7 @@
       "ref_vite",
       "ref_vitejs_plugin_vue"
     ],
-    "43": [
+    "44": [
       "docs_phase0_external_spikes",
       "docs_phase0_external_spikes_cloudflare_r2",
       "docs_phase0_external_spikes_decis\u00f5es_seguras",
@@ -1835,7 +1828,55 @@
       "docs_phase0_r2_validation_procedimento_live",
       "docs_phase0_r2_validation_reconcilia\u00e7\u00e3o_de_putobject_incerto"
     ],
-    "44": [
+    "45": [
+      "modules_integration_reliability_src_postgres_job_queue",
+      "modules_integration_reliability_src_postgres_job_queue_boundedstring",
+      "modules_integration_reliability_src_postgres_job_queue_calculateretrydelayms",
+      "modules_integration_reliability_src_postgres_job_queue_decideexpiredattempt",
+      "modules_integration_reliability_src_postgres_job_queue_decidefailedattempt",
+      "modules_integration_reliability_src_postgres_job_queue_errorcodevalue",
+      "modules_integration_reliability_src_postgres_job_queue_finishattempt",
+      "modules_integration_reliability_src_postgres_job_queue_finishjob",
+      "modules_integration_reliability_src_postgres_job_queue_insertreconciliation",
+      "modules_integration_reliability_src_postgres_job_queue_normalizejob",
+      "modules_integration_reliability_src_postgres_job_queue_nullablestring",
+      "modules_integration_reliability_src_postgres_job_queue_positiveinteger",
+      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue",
+      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_claim",
+      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_constructor",
+      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_heartbeat",
+      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_markeffectstarted",
+      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_recoverexpired",
+      "modules_integration_reliability_src_postgres_job_queue_postgresjobqueue_settle",
+      "modules_integration_reliability_src_postgres_job_queue_providername",
+      "modules_integration_reliability_src_postgres_job_queue_settransactionbounds",
+      "modules_integration_reliability_src_postgres_job_queue_validdate"
+    ],
+    "46": [
+      "modules_n8n_integration_src_errors_n8nvalidationerror",
+      "modules_n8n_integration_src_errors_n8nvalidationerror_constructor",
+      "modules_n8n_integration_src_service",
+      "modules_n8n_integration_src_service_briefing_patch_fields",
+      "modules_n8n_integration_src_service_event_types",
+      "modules_n8n_integration_src_service_events_with_resolvable_conversation",
+      "modules_n8n_integration_src_service_identifier",
+      "modules_n8n_integration_src_service_instant",
+      "modules_n8n_integration_src_service_nonnegativeinteger",
+      "modules_n8n_integration_src_service_normalizebriefingpatch",
+      "modules_n8n_integration_src_service_normalizemessagecontent",
+      "modules_n8n_integration_src_service_normalizetechnical",
+      "modules_n8n_integration_src_service_normalizewhatsappidentity",
+      "modules_n8n_integration_src_service_oneof",
+      "modules_n8n_integration_src_service_optionalstring",
+      "modules_n8n_integration_src_service_plainobject",
+      "modules_n8n_integration_src_service_positiveinteger",
+      "modules_n8n_integration_src_service_requireschema",
+      "modules_n8n_integration_src_service_safefilename",
+      "modules_n8n_integration_src_service_sha256",
+      "modules_n8n_integration_src_service_striptechnical",
+      "modules_n8n_integration_src_service_validateeventshape"
+    ],
+    "47": [
       "modules_qualification_src_qualification_service",
       "modules_qualification_src_qualification_service_assertatomicbundle",
       "modules_qualification_src_qualification_service_assertdependencies",
@@ -1859,30 +1900,55 @@
       "modules_qualification_src_qualification_service_validatelogistics",
       "modules_qualification_src_qualification_service_withderivedassessments"
     ],
-    "45": [
-      "apps_api_src_identity_runtime",
-      "apps_api_src_identity_runtime_createidentityapiruntime",
-      "apps_api_src_identity_runtime_createidentityapiruntime_adminmutation",
-      "apps_api_src_identity_runtime_createidentityapiruntime_authenticatedsession",
-      "apps_api_src_identity_runtime_createidentityapiruntime_executeidempotent",
-      "apps_api_src_identity_runtime_createidentityapiruntime_identityservice",
-      "apps_api_src_identity_runtime_createidentityapiruntime_preflight",
-      "apps_api_src_identity_runtime_equalsecret",
-      "apps_api_src_identity_runtime_identityhttperror",
-      "apps_api_src_identity_runtime_identityhttperror_constructor",
-      "apps_api_src_identity_runtime_isloopbackhttporigin",
-      "apps_api_src_identity_runtime_readkey",
-      "apps_api_src_identity_runtime_readorigins",
-      "apps_api_src_identity_runtime_requiresecret",
-      "modules_identity_access_src_authorization_operational_actions",
-      "modules_identity_access_src_postgres_createpostgresidentityrepository",
-      "modules_identity_access_src_postgres_createpostgresidentityrepository_insertuser",
-      "test_identity_runtime_config_test",
-      "test_identity_runtime_config_test_database",
-      "test_identity_runtime_config_test_encodedkey",
-      "test_identity_runtime_config_test_environment"
+    "48": [
+      "specs_features_admin_user_management_tasks_aum_01_migration_expand_do_papel_\u00fanico",
+      "specs_features_admin_user_management_tasks_aum_06_propagar_vendedor_nos_m\u00f3dulos_consumidores",
+      "specs_features_admin_user_management_tasks_aum_07_rotas_de_gest\u00e3o_de_usu\u00e1rios",
+      "specs_features_admin_user_management_tasks_aum_08_remover_as_rotas_de_convite_e_exigir_name_no_bootstrap",
+      "specs_features_admin_user_management_tasks_aum_09_tela_de_acesso_sem_convite_p",
+      "specs_features_admin_user_management_tasks_aum_10_tela_de_usu\u00e1rios",
+      "specs_features_admin_user_management_tasks_aum_11_script_de_cria\u00e7\u00e3o_do_administrador_p",
+      "specs_features_admin_user_management_tasks_aum_12_seed_de_desenvolvimento_sem_convite_p",
+      "specs_features_admin_user_management_tasks_aum_13_contrato_openapi_p",
+      "specs_features_admin_user_management_tasks_aum_14_su\u00edte_de_testes",
+      "specs_features_admin_user_management_tasks_aum_15_migration_contract",
+      "specs_features_admin_user_management_tasks_aum_16_fechamento_do_reposit\u00f3rio",
+      "specs_features_admin_user_management_tasks_bloco_1_banco",
+      "specs_features_admin_user_management_tasks_bloco_3_consumidores",
+      "specs_features_admin_user_management_tasks_bloco_4_api",
+      "specs_features_admin_user_management_tasks_bloco_5_frontend",
+      "specs_features_admin_user_management_tasks_bloco_6_scripts_e_contrato",
+      "specs_features_admin_user_management_tasks_bloco_7_fechamento",
+      "specs_features_admin_user_management_tasks_gest\u00e3o_de_usu\u00e1rios_pelo_administrador_tarefas",
+      "specs_features_admin_user_management_tasks_o_que_ainda_n\u00e3o_foi_executado_contra_um_banco_real",
+      "specs_features_admin_user_management_tasks_perda_de_cobertura_assumida",
+      "specs_features_admin_user_management_tasks_situa\u00e7\u00e3o"
     ],
-    "46": [
+    "49": [
+      "specs_features_crm_mvp_tasks_crit\u00e9rio_de_conclus\u00e3o_da_inbox_multicanal",
+      "specs_features_crm_mvp_tasks_crit\u00e9rio_de_conclus\u00e3o_do_crm",
+      "specs_features_crm_mvp_tasks_crm_silmer_mvp_plano_macro_de_entrega",
+      "specs_features_crm_mvp_tasks_entrega_transversal_n8n_mvp_1_integra\u00e7\u00e3o_simples",
+      "specs_features_crm_mvp_tasks_etapa_canal_2_concluir_instagram_e_migra\u00e7\u00e3o_de_canal",
+      "specs_features_crm_mvp_tasks_etapa_crm_1_consolidar_a_funda\u00e7\u00e3o_j\u00e1_entregue",
+      "specs_features_crm_mvp_tasks_etapa_crm_2_concluir_contato_neg\u00f3cio_e_kanban",
+      "specs_features_crm_mvp_tasks_etapa_crm_3_concluir_fechamento_pedido_e_ficha",
+      "specs_features_crm_mvp_tasks_etapa_crm_4_concluir_gest\u00e3o_e_opera\u00e7\u00e3o",
+      "specs_features_crm_mvp_tasks_etapa_inbox_1_reaproveitar_o_n\u00facleo_de_mensagens",
+      "specs_features_crm_mvp_tasks_etapa_inbox_2_refatorar_a_fronteira_do_whatsapp",
+      "specs_features_crm_mvp_tasks_etapa_inbox_3_concluir_confiabilidade_do_canal",
+      "specs_features_crm_mvp_tasks_etapa_inbox_4_concluir_a_interface_acess\u00edvel",
+      "specs_features_crm_mvp_tasks_etapa_int_1_conectar_os_tr\u00eas_objetivos",
+      "specs_features_crm_mvp_tasks_etapa_int_2_validar_falhas_e_seguran\u00e7a",
+      "specs_features_crm_mvp_tasks_etapa_int_3_preparar_produ\u00e7\u00e3o",
+      "specs_features_crm_mvp_tasks_etapa_int_4_uat_e_lan\u00e7amento_do_mvp",
+      "specs_features_crm_mvp_tasks_integra\u00e7\u00e3o_e_lan\u00e7amento",
+      "specs_features_crm_mvp_tasks_objetivo_1_crm",
+      "specs_features_crm_mvp_tasks_objetivo_2_inbox_multicanal",
+      "specs_features_crm_mvp_tasks_premissas_comuns",
+      "specs_features_crm_mvp_tasks_sequ\u00eancia_executiva_posterior"
+    ],
+    "50": [
       "apps_api_src_n8n_routes",
       "apps_api_src_n8n_routes_assertintegration",
       "apps_api_src_n8n_routes_attachmentlimitfor",
@@ -1905,7 +1971,7 @@
       "apps_api_src_n8n_routes_sanitizefilename",
       "apps_api_src_n8n_routes_sendproblem"
     ],
-    "47": [
+    "51": [
       "apps_edge_web_src_components_themeswitcher",
       "apps_edge_web_src_components_themeswitcher_applytheme",
       "apps_edge_web_src_components_themeswitcher_options",
@@ -1928,30 +1994,7 @@
       "ref_vue",
       "ref_vue_router"
     ],
-    "48": [
-      "docref_rfc_8785",
-      "modules_integration_reliability_src_n8n_outbound_client",
-      "modules_integration_reliability_src_n8n_outbound_client_boundedstring",
-      "modules_integration_reliability_src_n8n_outbound_client_canonicaljsonstringify",
-      "modules_integration_reliability_src_n8n_outbound_client_commandendpoint",
-      "modules_integration_reliability_src_n8n_outbound_client_credentialpart",
-      "modules_integration_reliability_src_n8n_outbound_client_equalhexdigest",
-      "modules_integration_reliability_src_n8n_outbound_client_isloopbackhost",
-      "modules_integration_reliability_src_n8n_outbound_client_isplainobject",
-      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient",
-      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient_constructor",
-      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient_deliver",
-      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient_execute",
-      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryclient_preparedelivery",
-      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryerror_constructor",
-      "modules_integration_reliability_src_n8n_outbound_client_normalizejson",
-      "modules_integration_reliability_src_n8n_outbound_client_opaqueexternalid",
-      "modules_integration_reliability_src_n8n_outbound_client_positiveinteger",
-      "modules_integration_reliability_src_n8n_outbound_client_retryable_status_codes",
-      "modules_integration_reliability_src_n8n_outbound_client_safeacknowledgement",
-      "modules_integration_reliability_src_n8n_outbound_client_technicalcode"
-    ],
-    "49": [
+    "52": [
       "modules_deals_pipeline_src_adapters_postgres_deal_read_repository",
       "modules_deals_pipeline_src_adapters_postgres_deal_read_repository_dateonly",
       "modules_deals_pipeline_src_adapters_postgres_deal_read_repository_effectiveassessments",
@@ -1974,7 +2017,74 @@
       "modules_deals_pipeline_src_adapters_postgres_deal_read_repository_readrepresentationversion",
       "modules_deals_pipeline_src_adapters_postgres_deal_read_repository_runsequential"
     ],
-    "50": [
+    "53": [
+      "modules_identity_access_src_index_asduplicateemail",
+      "modules_identity_access_src_index_asuserhistory",
+      "modules_identity_access_src_index_createidentityaccessservice",
+      "modules_identity_access_src_index_createidentityaccessservice_assertcsrf",
+      "modules_identity_access_src_index_createidentityaccessservice_authenticate",
+      "modules_identity_access_src_index_createidentityaccessservice_bootstrapadmin",
+      "modules_identity_access_src_index_createidentityaccessservice_createoperationaluser",
+      "modules_identity_access_src_index_createidentityaccessservice_deleteoperationaluser",
+      "modules_identity_access_src_index_createidentityaccessservice_listusers",
+      "modules_identity_access_src_index_createidentityaccessservice_login",
+      "modules_identity_access_src_index_createidentityaccessservice_logout",
+      "modules_identity_access_src_index_createidentityaccessservice_record",
+      "modules_identity_access_src_index_createidentityaccessservice_requireadmin",
+      "modules_identity_access_src_index_createidentityaccessservice_sessionwindow",
+      "modules_identity_access_src_index_createidentityaccessservice_setuserdisabled",
+      "modules_identity_access_src_index_createidentityaccessservice_updateuser",
+      "modules_identity_access_src_index_createidentityaccessservice_usernotfound",
+      "modules_identity_access_src_index_digest",
+      "modules_identity_access_src_index_freezeuser",
+      "modules_identity_access_src_index_requirenonemptystring",
+      "modules_identity_access_src_index_userhashistory"
+    ],
+    "54": [
+      "modules_identity_access_src_authorization",
+      "modules_identity_access_src_authorization_accesscontrolerror",
+      "modules_identity_access_src_authorization_accesscontrolerror_constructor",
+      "modules_identity_access_src_authorization_actioncapabilities",
+      "modules_identity_access_src_authorization_authorize",
+      "modules_identity_access_src_authorization_capabilities",
+      "modules_identity_access_src_authorization_createaccesscontrolservice",
+      "modules_identity_access_src_authorization_createaccesscontrolservice_audit",
+      "modules_identity_access_src_authorization_createaccesscontrolservice_grantcapability",
+      "modules_identity_access_src_authorization_createaccesscontrolservice_revokecapability",
+      "modules_identity_access_src_authorization_createaccesscontrolservice_validate",
+      "modules_identity_access_src_authorization_forbidden",
+      "modules_identity_access_src_authorization_invalidrequest",
+      "modules_identity_access_src_authorization_knowncapabilities",
+      "modules_identity_access_src_authorization_notfound",
+      "modules_identity_access_src_authorization_operational_actions",
+      "modules_identity_access_src_authorization_requirenonempty",
+      "test_identity_authorization_test",
+      "test_identity_authorization_test_harness",
+      "test_identity_authorization_test_requireuser"
+    ],
+    "55": [
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_advisorylock",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_appendconversationstreamevent",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_assertconversationownership",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_createaudit",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_decryptjson",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_encryptjson",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_hashjson",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_iso",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapconversation",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapmessage",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_mapsuggestion",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_mutationassignments",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_constructor",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_hydratecommand",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_mutateconversation",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_receiveinbound",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_postgresinboxrepository_recordsuggestion",
+      "modules_inbox_channels_src_adapters_postgres_inbox_repository_stream_event_types"
+    ],
+    "56": [
       "modules_n8n_integration_src_postgres_command_store",
       "modules_n8n_integration_src_postgres_command_store_attemptowner",
       "modules_n8n_integration_src_postgres_command_store_createpostgresn8ncommandstore",
@@ -1996,29 +2106,7 @@
       "modules_n8n_integration_src_postgres_command_store_technicalid",
       "modules_n8n_integration_src_postgres_command_store_validdate"
     ],
-    "51": [
-      "modules_shared_src_index",
-      "modules_shared_src_index_services",
-      "modules_shared_src_observability",
-      "modules_shared_src_observability_allowedcontextfields",
-      "modules_shared_src_observability_allowedevents",
-      "modules_shared_src_observability_allowedmetrics",
-      "modules_shared_src_observability_allowedservices",
-      "modules_shared_src_observability_categoricalpolicies",
-      "modules_shared_src_observability_createsafelogger",
-      "modules_shared_src_observability_createsafelogrecord",
-      "modules_shared_src_observability_isfinitenumber",
-      "modules_shared_src_observability_metricregistry",
-      "modules_shared_src_observability_metricregistry_constructor",
-      "modules_shared_src_observability_metricregistry_increment",
-      "modules_shared_src_observability_metricregistry_record",
-      "modules_shared_src_observability_metricregistry_snapshot",
-      "modules_shared_src_observability_normalizetraceid",
-      "modules_shared_src_observability_redacted_field_names",
-      "modules_shared_src_observability_tracefields",
-      "test_observability_test_capture"
-    ],
-    "52": [
+    "57": [
       "scripts_gemini_privacy_smoke",
       "scripts_gemini_privacy_smoke_approved_model",
       "scripts_gemini_privacy_smoke_approved_provider",
@@ -2040,7 +2128,7 @@
       "test_gemini_privacy_smoke_test_successfulresponse",
       "test_gemini_privacy_smoke_test_validoptions"
     ],
-    "53": [
+    "58": [
       "api_health_ready",
       "api_v1_bootstrap_identity",
       "auth_throttle_hmac_key",
@@ -2061,7 +2149,7 @@
       "identity_envelope_key",
       "migration_0003_identity_api_hardening"
     ],
-    "54": [
+    "59": [
       "apps_edge_web_src_lib_format",
       "apps_edge_web_src_lib_format_channel_labels",
       "apps_edge_web_src_lib_format_conversation_labels",
@@ -2082,28 +2170,7 @@
       "apps_edge_web_src_views_dashboardview_unassignedcount",
       "apps_edge_web_src_views_inboxview_filtered"
     ],
-    "55": [
-      "modules_identity_access_src_index",
-      "modules_identity_access_src_index_constanttimeequal",
-      "modules_identity_access_src_index_createinmemoryidentityrepository",
-      "modules_identity_access_src_index_createinmemoryidentityrepository_activesession",
-      "modules_identity_access_src_index_default_password_parameters",
-      "modules_identity_access_src_index_deriveargon2",
-      "modules_identity_access_src_index_functions",
-      "modules_identity_access_src_index_verifypassword",
-      "modules_identity_access_src_postgres_access",
-      "modules_identity_access_src_postgres_access_createpostgresaccessrepository",
-      "node_crypto",
-      "test_identity_session_test",
-      "test_identity_session_test_asasyncrepository",
-      "test_identity_session_test_finduserbyid",
-      "test_identity_session_test_harness",
-      "test_identity_session_test_now",
-      "test_postgres_access_control_test",
-      "test_postgres_access_control_test_recordingdatabase",
-      "test_postgres_access_control_test_recordingdatabase_query"
-    ],
-    "56": [
+    "60": [
       "modules_qualification_src_postgres_qualification_repository",
       "modules_qualification_src_postgres_qualification_repository_invalid",
       "modules_qualification_src_postgres_qualification_repository_json",
@@ -2124,7 +2191,7 @@
       "modules_qualification_src_postgres_qualification_repository_postgresqualificationrepository_replaceorder",
       "modules_qualification_src_postgres_qualification_repository_queryable"
     ],
-    "57": [
+    "61": [
       "playwright_config",
       "ref_axe_core_playwright",
       "ref_playwright_test",
@@ -2145,7 +2212,7 @@
       "test_e2e_users_admin_spec_openactions",
       "test_e2e_users_admin_spec_seller"
     ],
-    "58": [
+    "62": [
       "schemas_fixtures_external_n8n_contract_v1_schema_accepted_const",
       "schemas_fixtures_external_n8n_contract_v1_schema_correlation_id_ref",
       "schemas_fixtures_external_n8n_contract_v1_schema_detail_minlength",
@@ -2166,7 +2233,7 @@
       "schemas_fixtures_external_n8n_contract_v1_schema_type_format",
       "schemas_fixtures_external_n8n_contract_v1_schema_type_type"
     ],
-    "59": [
+    "63": [
       "apps_api_src_identity_routes",
       "apps_api_src_identity_routes_identityrequesterror",
       "apps_api_src_identity_routes_identityrequesterror_constructor",
@@ -2186,7 +2253,27 @@
       "apps_api_src_identity_routes_requirestring",
       "apps_api_src_identity_routes_respond"
     ],
-    "60": [
+    "64": [
+      "apps_api_src_live_event_dispatcher",
+      "apps_api_src_live_event_dispatcher_liveeventdispatcher",
+      "apps_api_src_live_event_dispatcher_liveeventdispatcher_constructor",
+      "apps_api_src_live_event_dispatcher_liveeventdispatcher_emit",
+      "apps_api_src_live_event_dispatcher_liveeventdispatcher_poll",
+      "apps_api_src_live_event_dispatcher_liveeventdispatcher_subscribe",
+      "apps_api_src_operation_routes",
+      "apps_api_src_operation_routes_authorizeread",
+      "apps_api_src_operation_routes_event_streams_per_minute",
+      "apps_api_src_operation_routes_operationreadrequesterror",
+      "apps_api_src_operation_routes_operationreadrequesterror_constructor",
+      "apps_api_src_operation_routes_parselistquery",
+      "apps_api_src_operation_routes_privatereadheaders",
+      "apps_api_src_operation_routes_registeroperationroutes",
+      "apps_api_src_operation_routes_rejectunknownkeys",
+      "apps_api_src_operation_routes_requireidentifier",
+      "apps_api_src_operation_routes_requireobject",
+      "apps_api_src_operation_routes_respond"
+    ],
+    "65": [
       "crm_messages",
       "crm_reject_n8n_integration_history_mutation",
       "crm_sync_n8n_command_outbox_outcome",
@@ -2206,27 +2293,7 @@
       "modules_database_migrations_0013_n8n_integration_expand_sql_crm_conversations",
       "modules_database_migrations_0013_n8n_integration_expand_sql_crm_reject_deal_history_mutation"
     ],
-    "61": [
-      "modules_integration_reliability_src_n8n_command_worker",
-      "modules_integration_reliability_src_n8n_command_worker_assertclient",
-      "modules_integration_reliability_src_n8n_command_worker_assertcommandstore",
-      "modules_integration_reliability_src_n8n_command_worker_assertn8ncommandstore",
-      "modules_integration_reliability_src_n8n_command_worker_classifyn8ncommanddeliveryfailure",
-      "modules_integration_reliability_src_n8n_command_worker_createn8ncommandjobhandler",
-      "modules_integration_reliability_src_n8n_command_worker_immutablecommand",
-      "modules_integration_reliability_src_n8n_command_worker_jobcommandid",
-      "modules_integration_reliability_src_n8n_command_worker_readtechnicalerrorcode",
-      "modules_integration_reliability_src_n8n_command_worker_reconcilen8ncommandoutcome",
-      "modules_integration_reliability_src_n8n_command_worker_safeerrorcode",
-      "modules_integration_reliability_src_n8n_command_worker_technicalidentifier",
-      "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryerror",
-      "test_n8n_command_worker_test",
-      "test_n8n_command_worker_test_job",
-      "test_n8n_command_worker_test_markeffectstarted",
-      "test_n8n_command_worker_test_preparedelivery",
-      "test_n8n_command_worker_test_storefixture"
-    ],
-    "62": [
+    "66": [
       "ops_n8n_workflows_render_mvp_workflow",
       "ops_n8n_workflows_render_mvp_workflow_assigned",
       "ops_n8n_workflows_render_mvp_workflow_builders",
@@ -2246,64 +2313,26 @@
       "ops_n8n_workflows_render_mvp_workflow_tail",
       "ops_n8n_workflows_render_mvp_workflow_workflow"
     ],
-    "63": [
-      "apps_api_src_live_event_dispatcher",
-      "apps_api_src_live_event_dispatcher_liveeventdispatcher",
-      "apps_api_src_live_event_dispatcher_liveeventdispatcher_constructor",
-      "apps_api_src_live_event_dispatcher_liveeventdispatcher_emit",
-      "apps_api_src_live_event_dispatcher_liveeventdispatcher_poll",
-      "apps_api_src_live_event_dispatcher_liveeventdispatcher_subscribe",
-      "apps_api_src_operation_routes",
-      "apps_api_src_operation_routes_authorizeread",
-      "apps_api_src_operation_routes_operationreadrequesterror",
-      "apps_api_src_operation_routes_operationreadrequesterror_constructor",
-      "apps_api_src_operation_routes_parselistquery",
-      "apps_api_src_operation_routes_privatereadheaders",
-      "apps_api_src_operation_routes_registeroperationroutes",
-      "apps_api_src_operation_routes_rejectunknownkeys",
-      "apps_api_src_operation_routes_requireidentifier",
-      "apps_api_src_operation_routes_requireobject",
-      "apps_api_src_operation_routes_respond"
+    "67": [
+      "about",
+      "about_sobre_o_crm_silmer",
+      "agents",
+      "codex",
+      "codex_codex_contexto_do_crm_silmer",
+      "codex_fechamento",
+      "codex_forma_de_trabalhar",
+      "codex_guardrails_do_mvp",
+      "codex_inicializa\u00e7\u00e3o_obrigat\u00f3ria",
+      "docs_phase0_observability_and_hardening",
+      "docs_phase0_phase_0_approval_gate",
+      "readme",
+      "rules",
+      "rules_regras_de_produto",
+      "rules_regras_do_crm_silmer",
+      "rules_regras_t\u00e9cnicas_j\u00e1_impostas",
+      "technical_design"
     ],
-    "64": [
-      "apps_api_src_n8n_runtime",
-      "apps_api_src_n8n_runtime_createn8napiruntime",
-      "apps_api_src_n8n_runtime_n8nmediaingresserror",
-      "apps_api_src_n8n_runtime_n8nmediaingresserror_constructor",
-      "apps_api_src_n8n_runtime_positiveinteger",
-      "apps_api_src_n8n_runtime_preparetransientmedia",
-      "apps_api_src_n8n_runtime_readenvelopekey",
-      "apps_api_src_n8n_runtime_required",
-      "modules_integration_reliability_src_clamav_media_scanner",
-      "modules_integration_reliability_src_clamav_media_scanner_clamavmediascanner",
-      "modules_integration_reliability_src_clamav_media_scanner_clamavmediascanner_constructor",
-      "modules_integration_reliability_src_clamav_media_scanner_clamavmediascanner_scan",
-      "modules_integration_reliability_src_clamav_media_scanner_execute",
-      "modules_integration_reliability_src_clamav_media_scanner_newestsignaturetimestamp",
-      "modules_integration_reliability_src_clamav_media_scanner_signature_files",
-      "test_clamav_media_scanner_test",
-      "test_clamav_media_scanner_test_execfileimpl"
-    ],
-    "65": [
-      "modules_identity_access_src_authorization",
-      "modules_identity_access_src_authorization_actioncapabilities",
-      "modules_identity_access_src_authorization_authorize",
-      "modules_identity_access_src_authorization_capabilities",
-      "modules_identity_access_src_authorization_createaccesscontrolservice",
-      "modules_identity_access_src_authorization_createaccesscontrolservice_audit",
-      "modules_identity_access_src_authorization_createaccesscontrolservice_grantcapability",
-      "modules_identity_access_src_authorization_createaccesscontrolservice_revokecapability",
-      "modules_identity_access_src_authorization_createaccesscontrolservice_validate",
-      "modules_identity_access_src_authorization_forbidden",
-      "modules_identity_access_src_authorization_invalidrequest",
-      "modules_identity_access_src_authorization_knowncapabilities",
-      "modules_identity_access_src_authorization_notfound",
-      "modules_identity_access_src_authorization_requirenonempty",
-      "test_identity_authorization_test",
-      "test_identity_authorization_test_harness",
-      "test_identity_authorization_test_requireuser"
-    ],
-    "66": [
+    "68": [
       "modules_integration_reliability_src_idempotency",
       "modules_integration_reliability_src_idempotency_canonicaljson",
       "modules_integration_reliability_src_idempotency_clone",
@@ -2322,7 +2351,26 @@
       "test_audit_idempotency_test_commandmetadata",
       "test_audit_idempotency_test_createaudittrail"
     ],
-    "67": [
+    "69": [
+      "modules_integration_reliability_src_media_retention_worker",
+      "modules_integration_reliability_src_media_retention_worker_createmediadeletejobhandler",
+      "modules_integration_reliability_src_media_retention_worker_deletionreason",
+      "modules_integration_reliability_src_media_retention_worker_media_delete_job_type",
+      "modules_integration_reliability_src_media_retention_worker_media_retention_queue",
+      "modules_integration_reliability_src_media_retention_worker_technicalerror",
+      "modules_integration_reliability_src_media_retention_worker_technicalid",
+      "test_media_retention_worker_test",
+      "test_media_retention_worker_test_claim",
+      "test_media_retention_worker_test_delete",
+      "test_media_retention_worker_test_heartbeat",
+      "test_media_retention_worker_test_markdeleted",
+      "test_media_retention_worker_test_markeffectstarted",
+      "test_media_retention_worker_test_readfordeletion",
+      "test_media_retention_worker_test_scheduleexpireddeletions",
+      "test_media_retention_worker_test_scheduleterminaljourneydeletions",
+      "test_media_retention_worker_test_settle"
+    ],
+    "70": [
       "ops_n8n_workflows_create_dev_test_workflow",
       "ops_n8n_workflows_create_dev_test_workflow_appendmain",
       "ops_n8n_workflows_create_dev_test_workflow_configurelocalcrmrequest",
@@ -2341,26 +2389,7 @@
       "test_n8n_dev_workflow_test_mainsnapshot",
       "test_n8n_dev_workflow_test_workflow"
     ],
-    "68": [
-      "scripts_validate_observability",
-      "scripts_validate_observability_assertnosensitivefields",
-      "scripts_validate_observability_invariant",
-      "scripts_validate_observability_isevidencereference",
-      "scripts_validate_observability_isisotimestamp",
-      "scripts_validate_observability_isopaquereference",
-      "scripts_validate_observability_main",
-      "scripts_validate_observability_requiredalerts",
-      "scripts_validate_observability_rooturl",
-      "scripts_validate_observability_validateactivationgate",
-      "scripts_validate_observability_validatealertpolicy",
-      "scripts_validate_observability_validateruntimehardening",
-      "test_observability_test",
-      "test_observability_test_assertnocanaries",
-      "test_observability_test_canaries",
-      "test_observability_test_escaperegexp",
-      "test_observability_test_rooturl"
-    ],
-    "69": [
+    "71": [
       "scripts_validate_security_catalog",
       "scripts_validate_security_catalog_approvedreview",
       "scripts_validate_security_catalog_invariant",
@@ -2379,7 +2408,7 @@
       "test_security_catalog_test_readraw",
       "test_security_catalog_test_rooturl"
     ],
-    "70": [
+    "72": [
       "specs_features_inbox_audit_auditoria_caixa_de_entrada",
       "specs_features_inbox_audit_auditoria_caixa_de_entrada_1_veredito",
       "specs_features_inbox_audit_auditoria_caixa_de_entrada_2_o_que_funciona_verificado_no_ambiente",
@@ -2398,7 +2427,7 @@
       "specs_features_inbox_audit_auditoria_caixa_de_entrada_p1_qualidade_operacional",
       "specs_features_inbox_audit_auditoria_caixa_de_entrada_p2_evolu\u00e7\u00e3o"
     ],
-    "71": [
+    "73": [
       "apps_api_package",
       "apps_api_package_name",
       "apps_api_package_private",
@@ -2416,7 +2445,7 @@
       "ref_fastify_multipart",
       "ref_fastify_rate_limit"
     ],
-    "72": [
+    "74": [
       "jsconfig",
       "jsconfig_compileroptions",
       "jsconfig_compileroptions_allowjs",
@@ -2434,7 +2463,25 @@
       "jsconfig_exclude",
       "jsconfig_include"
     ],
-    "73": [
+    "75": [
+      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror",
+      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror_constructor",
+      "modules_audit_privacy_src_index",
+      "modules_audit_privacy_src_transient_media_retention",
+      "modules_audit_privacy_src_transient_media_retention_istransientmediaexpired",
+      "modules_audit_privacy_src_transient_media_retention_resolvetransientmediaexpiresat",
+      "modules_audit_privacy_src_transient_media_retention_timestamp",
+      "modules_audit_privacy_src_transient_media_retention_transient_media_max_age_days",
+      "modules_audit_privacy_src_transient_media_retention_transientmediaretentionerror",
+      "modules_audit_privacy_src_transient_media_retention_transientmediaretentionerror_constructor",
+      "test_postgres_audit_live_test",
+      "test_postgres_audit_live_test_auditinput",
+      "test_postgres_audit_live_test_createpostgresaudittrail",
+      "test_postgres_audit_live_test_recordingqueryable",
+      "test_postgres_audit_live_test_recordingqueryable_query",
+      "test_transient_media_retention_test"
+    ],
+    "76": [
       "modules_database_migrations_0010_phase3_work_management_expand",
       "modules_database_migrations_0010_phase3_work_management_expand_crm_deal_assignment_history",
       "modules_database_migrations_0010_phase3_work_management_expand_crm_handoff_history",
@@ -2452,7 +2499,7 @@
       "modules_database_migrations_0010_phase3_work_management_expand_task_history_immutable",
       "modules_database_migrations_0010_phase3_work_management_expand_task_history_no_truncate"
     ],
-    "74": [
+    "77": [
       "modules_integration_reliability_src_postgres_idempotency",
       "modules_integration_reliability_src_postgres_idempotency_aad",
       "modules_integration_reliability_src_postgres_idempotency_decodebase64url",
@@ -2470,7 +2517,7 @@
       "modules_integration_reliability_src_postgres_idempotency_storedstring",
       "modules_integration_reliability_src_postgres_idempotency_validateidentity"
     ],
-    "75": [
+    "78": [
       "modules_n8n_integration_src_errors",
       "modules_n8n_integration_src_errors_n8nforbiddenerror",
       "modules_n8n_integration_src_errors_n8nforbiddenerror_constructor",
@@ -2488,7 +2535,7 @@
       "test_n8n_integration_postgres_live_test_allvalues",
       "test_n8n_integration_postgres_live_test_now"
     ],
-    "76": [
+    "79": [
       "schemas_fixtures_external_manifest",
       "schemas_fixtures_external_manifest_canonicalinboundfixtures_instagram",
       "schemas_fixtures_external_manifest_canonicalinboundfixtures_whatsapp",
@@ -2506,24 +2553,7 @@
       "schemas_fixtures_external_manifest_signature_synthetic",
       "schemas_fixtures_external_manifest_syntheticonly"
     ],
-    "77": [
-      "about",
-      "about_sobre_o_crm_silmer",
-      "docs_adr_002_adotar_adaptador_de_integracao_n8n",
-      "docs_adr_003_adotar_integracao_n8n_mvp_simples",
-      "docs_integrations_n8n_readme",
-      "docs_phase0_observability_and_hardening",
-      "docs_phase0_phase_0_approval_gate",
-      "docs_rfc_001_contrato_integracao_n8n_v1",
-      "docs_rfc_002_simplificar_integracao_n8n_para_o_mvp",
-      "docs_roadmap_proximas_fases",
-      "github_workflows_ci",
-      "postgres_17_alpine",
-      "readme",
-      "specs_features_crm_mvp_spec",
-      "specs_features_crm_mvp_tasks"
-    ],
-    "78": [
+    "80": [
       "apps_api_package_dependencies",
       "apps_api_package_dependencies_crm_silmer_audit_privacy",
       "apps_api_package_dependencies_crm_silmer_catalog",
@@ -2540,7 +2570,7 @@
       "apps_api_package_dependencies_fastify_multipart",
       "apps_api_package_dependencies_fastify_rate_limit"
     ],
-    "79": [
+    "81": [
       "apps_api_src_automation_auth_runtime",
       "apps_api_src_automation_auth_runtime_automation_target",
       "apps_api_src_automation_auth_runtime_automationautherror",
@@ -2557,7 +2587,7 @@
       "test_automation_auth_runtime_test_environment",
       "test_automation_auth_runtime_test_harness"
     ],
-    "80": [
+    "82": [
       "modules_audit_privacy_src_audit_trail",
       "modules_audit_privacy_src_audit_trail_createauditeventenvelope",
       "modules_audit_privacy_src_audit_trail_deepfreeze",
@@ -2574,7 +2604,7 @@
       "modules_audit_privacy_src_postgres_audit_trail_postgresaudittrail_constructor",
       "modules_audit_privacy_src_postgres_audit_trail_requirequeryable"
     ],
-    "81": [
+    "83": [
       "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port",
       "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_iso",
       "modules_inbox_channels_src_adapters_postgres_conversation_conversion_port_mapconversionconversation",
@@ -2591,7 +2621,7 @@
       "modules_inbox_channels_src_domain_errors_inboxconflicterror",
       "modules_inbox_channels_src_domain_errors_inboxconflicterror_constructor"
     ],
-    "82": [
+    "84": [
       "scripts_observability_live_probe",
       "scripts_observability_live_probe_assertsafeprobeevidence",
       "scripts_observability_live_probe_canonicalliveurl",
@@ -2608,7 +2638,7 @@
       "scripts_observability_live_probe_writeevidence",
       "test_observability_live_probe_test"
     ],
-    "83": [
+    "85": [
       "specs_features_admin_user_management_design",
       "specs_features_admin_user_management_design_0017_expand",
       "specs_features_admin_user_management_design_0018_contract",
@@ -2625,7 +2655,7 @@
       "specs_features_admin_user_management_spec",
       "specs_features_admin_user_management_tasks"
     ],
-    "84": [
+    "86": [
       "specs_features_admin_user_management_spec_decis\u00f5es_que_fecham_\u00e1reas_cinzentas",
       "specs_features_admin_user_management_spec_gest\u00e3o_de_usu\u00e1rios_pelo_administrador_requisitos_rastre\u00e1veis",
       "specs_features_admin_user_management_spec_p1_0_papel_\u00fanico_de_opera\u00e7\u00e3o",
@@ -2642,23 +2672,7 @@
       "technical_design_em_escopo_no_mvp",
       "technical_design_fora_de_escopo"
     ],
-    "85": [
-      "apps_api_src_conversation_handoff_runtime",
-      "apps_api_src_conversation_handoff_runtime_claimconversationhandoff",
-      "apps_api_src_conversation_handoff_runtime_compactjson",
-      "apps_api_src_conversation_handoff_runtime_conflict",
-      "apps_api_src_conversation_handoff_runtime_createconversationhandoffruntime",
-      "apps_api_src_conversation_handoff_runtime_forbidden",
-      "apps_api_src_conversation_handoff_runtime_invalid",
-      "apps_api_src_conversation_handoff_runtime_maphandoff",
-      "apps_api_src_conversation_handoff_runtime_readenvelopekey",
-      "apps_api_src_conversation_handoff_runtime_validateclaim",
-      "modules_identity_access_src_postgres_operational_user_port",
-      "modules_identity_access_src_postgres_operational_user_port_postgresoperationaluserport",
-      "modules_identity_access_src_postgres_operational_user_port_postgresoperationaluserport_lockactive",
-      "modules_identity_access_src_postgres_operational_user_port_queryable"
-    ],
-    "86": [
+    "87": [
       "crm_reject_identity_link_history_mutation",
       "modules_database_migrations_0006_phase2_inbox_contacts_expand",
       "modules_database_migrations_0006_phase2_inbox_contacts_expand_crm_ai_suggestions",
@@ -2674,7 +2688,7 @@
       "modules_database_migrations_0006_phase2_inbox_contacts_expand_sql_crm_channel_events",
       "modules_database_migrations_0006_phase2_inbox_contacts_expand_sql_crm_transient_media"
     ],
-    "87": [
+    "88": [
       "docs_integrations_n8n_security_privacy_addendum",
       "docs_integrations_n8n_security_privacy_addendum_datacatalogadditions",
       "docs_integrations_n8n_security_privacy_addendum_extends",
@@ -2689,22 +2703,6 @@
       "docs_integrations_n8n_security_privacy_addendum_status",
       "docs_integrations_n8n_security_privacy_addendum_task",
       "docs_integrations_n8n_security_privacy_addendum_threatmodeladditions"
-    ],
-    "88": [
-      "modules_n8n_integration_src_crypto",
-      "modules_n8n_integration_src_crypto_decryptjson",
-      "modules_n8n_integration_src_crypto_fingerprint",
-      "modules_n8n_integration_src_crypto_identitylookuphash",
-      "modules_n8n_integration_src_crypto_requirekey",
-      "modules_n8n_integration_src_crypto_stablejson",
-      "modules_n8n_integration_src_crypto_tokenhash",
-      "modules_n8n_integration_src_postgres_command_outbox",
-      "modules_n8n_integration_src_postgres_command_outbox_enqueue",
-      "modules_n8n_integration_src_postgres_command_outbox_postgresn8ncommandoutbox",
-      "modules_n8n_integration_src_postgres_command_outbox_postgresn8ncommandoutbox_constructor",
-      "modules_n8n_integration_src_postgres_command_outbox_postgresn8ncommandoutbox_enqueuechannelmessage",
-      "modules_n8n_integration_src_postgres_command_outbox_postgresn8ncommandoutbox_enqueuepanelcommand",
-      "modules_n8n_integration_src_postgres_command_outbox_queryable"
     ],
     "89": [
       "ops_observability_alerts",
@@ -2832,6 +2830,51 @@
       "modules_database_migrations_0008_phase3_deal_state_machine_expand_sql_crm_reject_deal_history_mutation"
     ],
     "97": [
+      "modules_database_package",
+      "modules_database_package_dependencies",
+      "modules_database_package_dependencies_pg",
+      "modules_database_package_devdependencies",
+      "modules_database_package_devdependencies_types_pg",
+      "modules_database_package_exports",
+      "modules_database_package_name",
+      "modules_database_package_private",
+      "modules_database_package_scripts",
+      "modules_database_package_scripts_migrate",
+      "modules_database_package_type",
+      "modules_database_package_version",
+      "types_pg"
+    ],
+    "98": [
+      "modules_inbox_channels_src_adapters_in_memory_inbox_repository",
+      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_clone",
+      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_createaudit",
+      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository",
+      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_exclusive",
+      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_mutateconversation",
+      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_receiveinbound",
+      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_recordsuggestion",
+      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_publicconversation",
+      "modules_inbox_channels_src_application_inbox_service_normalizehumancommand",
+      "modules_inbox_channels_src_application_inbox_service_normalizeinbound",
+      "modules_inbox_channels_src_domain_inbox_freezeinboxrecord",
+      "modules_inbox_channels_src_domain_inbox_isterminalinboxstate"
+    ],
+    "99": [
+      "modules_n8n_integration_src_crypto",
+      "modules_n8n_integration_src_crypto_decryptjson",
+      "modules_n8n_integration_src_crypto_encryptjson",
+      "modules_n8n_integration_src_crypto_fingerprint",
+      "modules_n8n_integration_src_crypto_identitylookuphash",
+      "modules_n8n_integration_src_crypto_requirekey",
+      "modules_n8n_integration_src_crypto_stablejson",
+      "modules_n8n_integration_src_crypto_tokenhash",
+      "modules_n8n_integration_src_postgres_command_outbox",
+      "modules_n8n_integration_src_postgres_command_outbox_enqueue",
+      "modules_n8n_integration_src_postgres_command_outbox_postgresn8ncommandoutbox_enqueuechannelmessage",
+      "modules_n8n_integration_src_postgres_command_outbox_postgresn8ncommandoutbox_enqueuepanelcommand",
+      "modules_n8n_integration_src_postgres_command_outbox_queryable"
+    ],
+    "100": [
       "modules_qualification_src_cipher",
       "modules_qualification_src_cipher_createqualificationcipher",
       "modules_qualification_src_index",
@@ -2846,7 +2889,7 @@
       "modules_qualification_src_postgres_qualification_catalog_postgresqualificationcatalog_resolvereferences",
       "modules_qualification_src_postgres_qualification_catalog_requirequeryable"
     ],
-    "98": [
+    "101": [
       "product_readiness_tech_lead",
       "product_readiness_tech_lead_decis\u00f5es_p0_para_aprova\u00e7\u00e3o_final_e_estimativa_fechada",
       "product_readiness_tech_lead_gate_recomendado",
@@ -2861,7 +2904,7 @@
       "product_readiness_tech_lead_passagem_de_produto_para_tech_lead",
       "product_readiness_tech_lead_registro_de_fechamento"
     ],
-    "99": [
+    "102": [
       "schemas_fixtures_external_n8n_contract_v1_schema_automaticenvelope_allof",
       "schemas_fixtures_external_n8n_contract_v1_schema_briefingpatch_additionalproperties",
       "schemas_fixtures_external_n8n_contract_v1_schema_briefingpatch_type",
@@ -2876,7 +2919,7 @@
       "schemas_fixtures_external_n8n_contract_v1_schema_opaqueid_pattern",
       "schemas_fixtures_external_n8n_contract_v1_schema_opaqueid_type"
     ],
-    "100": [
+    "103": [
       "specs_features_inbox_audit_checkpoint",
       "specs_features_inbox_audit_checkpoint_ainda_por_validar_no_ambiente",
       "specs_features_inbox_audit_checkpoint_checkpoint_feat_inbox_ownership_realtime",
@@ -2891,7 +2934,7 @@
       "specs_features_inbox_audit_checkpoint_pr",
       "specs_features_inbox_audit_checkpoint_verifica\u00e7\u00e3o_no_ambiente_10_09_2026"
     ],
-    "101": [
+    "104": [
       "apps_api_src_conversation_routes",
       "apps_api_src_conversation_routes_authorizehumancommand",
       "apps_api_src_conversation_routes_conversationrequesterror",
@@ -2905,7 +2948,7 @@
       "apps_api_src_conversation_routes_requireversion",
       "apps_api_src_conversation_routes_respond"
     ],
-    "102": [
+    "105": [
       "docs_phase0_phase_0_approval_gate_como_alterar_esta_aprova\u00e7\u00e3o",
       "docs_phase0_phase_0_approval_gate_defaults_aprovados",
       "docs_phase0_phase_0_approval_gate_exce\u00e7\u00e3o_de_opera\u00e7\u00e3o_solo",
@@ -2919,7 +2962,7 @@
       "docs_phase0_transient_media_t00_4_m\u00eddia_transit\u00f3ria_do_piloto_interno",
       "docs_phase0_transient_media_verifica\u00e7\u00e3o"
     ],
-    "103": [
+    "106": [
       "docs_phase2_whatsapp_webhook_invariantes",
       "docs_rfc_001_contrato_integracao_n8n_v1_alternativas_consideradas",
       "docs_rfc_001_contrato_integracao_n8n_v1_proposta",
@@ -2933,35 +2976,7 @@
       "docs_rfc_002_simplificar_integracao_n8n_para_o_mvp_rfc_002_simplificar_a_integra\u00e7\u00e3o_n8n_para_o_mvp",
       "docs_rfc_002_simplificar_integracao_n8n_para_o_mvp_workflow_m\u00ednimo"
     ],
-    "104": [
-      "modules_inbox_channels_src_adapters_in_memory_inbox_repository",
-      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_clone",
-      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_createaudit",
-      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository",
-      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_exclusive",
-      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_mutateconversation",
-      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_receiveinbound",
-      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_inmemoryinboxrepository_recordsuggestion",
-      "modules_inbox_channels_src_adapters_in_memory_inbox_repository_publicconversation",
-      "modules_inbox_channels_src_application_inbox_service_normalizehumancommand",
-      "modules_inbox_channels_src_application_inbox_service_normalizeinbound",
-      "modules_inbox_channels_src_domain_inbox_freezeinboxrecord"
-    ],
-    "105": [
-      "modules_integration_reliability_src_index",
-      "modules_integration_reliability_src_n8n_command_worker_n8n_command_job_type",
-      "modules_integration_reliability_src_n8n_command_worker_n8n_command_queue",
-      "modules_integration_reliability_src_n8n_outbound_client_createn8ncommanddeliveryclient",
-      "modules_integration_reliability_src_n8n_outbound_client_sha256hex",
-      "modules_integration_reliability_src_postgres_outbound_message_outbox",
-      "modules_integration_reliability_src_postgres_outbound_message_outbox_postgresoutboundmessageoutbox",
-      "modules_integration_reliability_src_postgres_outbound_message_outbox_postgresoutboundmessageoutbox_enqueuechannelmessage",
-      "test_n8n_outbound_client_test",
-      "test_n8n_outbound_client_test_command",
-      "test_n8n_outbound_client_test_response",
-      "test_outbound_message_outbox_test"
-    ],
-    "106": [
+    "107": [
       "schemas_fixtures_external_n8n_contract_v1_schema_authentication_additionalproperties",
       "schemas_fixtures_external_n8n_contract_v1_schema_authentication_properties",
       "schemas_fixtures_external_n8n_contract_v1_schema_authentication_required",
@@ -2975,7 +2990,7 @@
       "schemas_fixtures_external_n8n_contract_v1_schema_scheme_const",
       "schemas_fixtures_external_n8n_contract_v1_schema_serviceactor_const"
     ],
-    "107": [
+    "108": [
       "schemas_fixtures_external_n8n_contract_v1_schema_items_properties",
       "schemas_fixtures_external_n8n_contract_v1_schema_method_const",
       "schemas_fixtures_external_n8n_contract_v1_schema_path_minlength",
@@ -2989,20 +3004,21 @@
       "schemas_fixtures_external_n8n_contract_v1_schema_responsefixture_pattern",
       "schemas_fixtures_external_n8n_contract_v1_schema_responsefixture_type"
     ],
-    "108": [
-      "agents",
-      "codex",
-      "codex_codex_contexto_do_crm_silmer",
-      "codex_fechamento",
-      "codex_forma_de_trabalhar",
-      "codex_guardrails_do_mvp",
-      "codex_inicializa\u00e7\u00e3o_obrigat\u00f3ria",
-      "rules",
-      "rules_regras_de_produto",
-      "rules_regras_do_crm_silmer",
-      "rules_regras_t\u00e9cnicas_j\u00e1_impostas"
-    ],
     "109": [
+      "scripts_validate_observability",
+      "scripts_validate_observability_assertnosensitivefields",
+      "scripts_validate_observability_invariant",
+      "scripts_validate_observability_isevidencereference",
+      "scripts_validate_observability_isisotimestamp",
+      "scripts_validate_observability_isopaquereference",
+      "scripts_validate_observability_main",
+      "scripts_validate_observability_requiredalerts",
+      "scripts_validate_observability_rooturl",
+      "scripts_validate_observability_validateactivationgate",
+      "scripts_validate_observability_validatealertpolicy",
+      "scripts_validate_observability_validateruntimehardening"
+    ],
+    "110": [
       "api_health_live",
       "ops_observability_readme",
       "ops_observability_readme_baseline_n\u00e3o_destrutiva",
@@ -3015,7 +3031,7 @@
       "silmer_api",
       "silmer_worker"
     ],
-    "110": [
+    "111": [
       "apps_api_package_json_ref_crm_silmer_audit_privacy",
       "apps_api_package_json_ref_crm_silmer_contacts",
       "modules_inbox_channels_package",
@@ -3028,7 +3044,20 @@
       "modules_inbox_channels_package_type",
       "modules_inbox_channels_package_version"
     ],
-    "111": [
+    "112": [
+      "apps_edge_web_src_lib_ui",
+      "apps_edge_web_src_lib_ui_asarray",
+      "apps_edge_web_src_lib_ui_asobject",
+      "apps_edge_web_src_lib_ui_el",
+      "apps_edge_web_src_lib_ui_formatdate",
+      "apps_edge_web_src_lib_ui_formatduration",
+      "apps_edge_web_src_lib_ui_opendialog",
+      "apps_edge_web_src_lib_ui_select",
+      "apps_edge_web_src_lib_ui_text",
+      "apps_edge_web_src_lib_ui_withbusy",
+      "apps_edge_web_src_views_inboxview_requestarchiveconfirmation"
+    ],
+    "113": [
       "docs_roadmap_proximas_fases_canal_2_instagram",
       "docs_roadmap_proximas_fases_documentos_que_guiam_os_pr\u00f3ximos_passos",
       "docs_roadmap_proximas_fases_entregue_na_conex\u00e3o_frontend_backend_de_08_09_2026",
@@ -3041,44 +3070,18 @@
       "docs_roadmap_proximas_fases_ui_4_kanban_e_detalhe_do_neg\u00f3cio",
       "docs_roadmap_proximas_fases_ui_5_opera\u00e7\u00e3o_somente_quando_necess\u00e1ria"
     ],
-    "112": [
-      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror",
-      "modules_audit_privacy_src_audit_trail_auditeventvalidationerror_constructor",
-      "modules_audit_privacy_src_index",
-      "modules_audit_privacy_src_transient_media_retention",
-      "modules_audit_privacy_src_transient_media_retention_istransientmediaexpired",
-      "modules_audit_privacy_src_transient_media_retention_resolvetransientmediaexpiresat",
-      "modules_audit_privacy_src_transient_media_retention_timestamp",
-      "modules_audit_privacy_src_transient_media_retention_transient_media_max_age_days",
-      "modules_audit_privacy_src_transient_media_retention_transientmediaretentionerror",
-      "modules_audit_privacy_src_transient_media_retention_transientmediaretentionerror_constructor",
-      "test_transient_media_retention_test"
-    ],
-    "113": [
-      "modules_database_package",
-      "modules_database_package_devdependencies",
-      "modules_database_package_devdependencies_types_pg",
-      "modules_database_package_exports",
-      "modules_database_package_name",
-      "modules_database_package_private",
-      "modules_database_package_scripts",
-      "modules_database_package_scripts_migrate",
-      "modules_database_package_type",
-      "modules_database_package_version",
-      "types_pg"
-    ],
     "114": [
-      "modules_identity_access_src_automation_credentials",
-      "modules_identity_access_src_automation_credentials_allowedactions",
-      "modules_identity_access_src_automation_credentials_automation_executor_actions",
-      "modules_identity_access_src_automation_credentials_automation_executor_actor",
-      "modules_identity_access_src_automation_credentials_createautomationcredentials",
-      "modules_identity_access_src_automation_credentials_digest",
-      "modules_identity_access_src_automation_credentials_equaldigest",
-      "modules_identity_access_src_automation_credentials_requireclientid",
-      "modules_identity_access_src_automation_credentials_requiresecret",
-      "modules_identity_access_src_automation_credentials_unavailableprevioussecretdigest",
-      "test_automation_credentials_test"
+      "modules_n8n_integration_src_postgres_repository_appendaudit",
+      "modules_n8n_integration_src_postgres_repository_automationdisplayname",
+      "modules_n8n_integration_src_postgres_repository_conversationmode",
+      "modules_n8n_integration_src_postgres_repository_iso",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_constructor",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_inboundresponse",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_mergebriefing",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_promotecustomername",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_readbriefing",
+      "modules_n8n_integration_src_postgres_repository_postgresn8nintegrationrepository_recentmessages"
     ],
     "115": [
       "scripts_validate_external_spikes",
@@ -3094,16 +3097,16 @@
       "test_external_spikes_test_text"
     ],
     "116": [
-      "apps_edge_web_src_lib_ui",
-      "apps_edge_web_src_lib_ui_asarray",
-      "apps_edge_web_src_lib_ui_asobject",
-      "apps_edge_web_src_lib_ui_el",
-      "apps_edge_web_src_lib_ui_formatdate",
-      "apps_edge_web_src_lib_ui_formatduration",
-      "apps_edge_web_src_lib_ui_opendialog",
-      "apps_edge_web_src_lib_ui_select",
-      "apps_edge_web_src_lib_ui_text",
-      "apps_edge_web_src_lib_ui_withbusy"
+      "apps_api_src_conversation_handoff_runtime",
+      "apps_api_src_conversation_handoff_runtime_claimconversationhandoff",
+      "apps_api_src_conversation_handoff_runtime_compactjson",
+      "apps_api_src_conversation_handoff_runtime_conflict",
+      "apps_api_src_conversation_handoff_runtime_createconversationhandoffruntime",
+      "apps_api_src_conversation_handoff_runtime_forbidden",
+      "apps_api_src_conversation_handoff_runtime_invalid",
+      "apps_api_src_conversation_handoff_runtime_maphandoff",
+      "apps_api_src_conversation_handoff_runtime_readenvelopekey",
+      "apps_api_src_conversation_handoff_runtime_validateclaim"
     ],
     "117": [
       "docs_phase0_observability_and_hardening_evid\u00eancia_local_versionada",
@@ -3222,6 +3225,17 @@
       "apps_edge_web_src_lib_event_stream_topic_events"
     ],
     "127": [
+      "docs_adr_002_adotar_adaptador_de_integracao_n8n",
+      "docs_adr_003_adotar_integracao_n8n_mvp_simples",
+      "docs_integrations_n8n_readme",
+      "docs_rfc_001_contrato_integracao_n8n_v1",
+      "docs_rfc_002_simplificar_integracao_n8n_para_o_mvp",
+      "docs_roadmap_proximas_fases",
+      "github_workflows_ci",
+      "postgres_17_alpine",
+      "specs_features_crm_mvp_tasks"
+    ],
+    "128": [
       "docs_integrations_n8n_readme_briefing_convers\u00e3o_e_handoff",
       "docs_integrations_n8n_readme_contrato_n8n_crm",
       "docs_integrations_n8n_readme_diagn\u00f3stico_r\u00e1pido",
@@ -3231,17 +3245,6 @@
       "docs_integrations_n8n_readme_objetivo_e_limite",
       "docs_integrations_n8n_readme_rollout_e_recupera\u00e7\u00e3o",
       "docs_integrations_n8n_readme_workflow_e_configura\u00e7\u00e3o"
-    ],
-    "128": [
-      "modules_inbox_channels_src_domain_inbox_inbox_states",
-      "test_inbox_domain_test",
-      "test_inbox_domain_test_admin",
-      "test_inbox_domain_test_attendant",
-      "test_inbox_domain_test_conversationownedbyattendant",
-      "test_inbox_domain_test_createharness",
-      "test_inbox_domain_test_inbound",
-      "test_inbox_domain_test_now",
-      "test_inbox_domain_test_other_seller"
     ],
     "129": [
       "specs_features_crm_mvp_spec_p1_0_n8n_como_motor_obrigat\u00f3rio",
@@ -3255,6 +3258,17 @@
       "specs_features_crm_mvp_spec_p1_mvp"
     ],
     "130": [
+      "test_inbox_postgres_live_test",
+      "test_inbox_postgres_live_test_attendant",
+      "test_inbox_postgres_live_test_canonicalwebhookevent",
+      "test_inbox_postgres_live_test_databasefor",
+      "test_inbox_postgres_live_test_enqueuechannelmessage",
+      "test_inbox_postgres_live_test_identityinput",
+      "test_inbox_postgres_live_test_inboundinput",
+      "test_inbox_postgres_live_test_now",
+      "test_inbox_postgres_live_test_servicesfor"
+    ],
+    "131": [
       "contributing",
       "contributing_antes_de_alterar",
       "contributing_atualiza\u00e7\u00e3o_de_branches_de_pull_request",
@@ -3263,16 +3277,6 @@
       "contributing_durante_a_implementa\u00e7\u00e3o",
       "contributing_governan\u00e7a_do_reposit\u00f3rio_p\u00fablico",
       "contributing_valida\u00e7\u00e3o"
-    ],
-    "131": [
-      "modules_database_package_dependencies",
-      "modules_database_package_dependencies_pg",
-      "pg",
-      "test_postgres_job_queue_live_test",
-      "test_postgres_job_queue_live_test_databasefor",
-      "test_postgres_job_queue_live_test_seedjob",
-      "test_postgres_webhook_inbox_live_test",
-      "test_postgres_webhook_inbox_live_test_canonicalevent"
     ],
     "132": [
       "modules_qualification_package",
@@ -3355,6 +3359,26 @@
       "scripts_create_admin_values"
     ],
     "140": [
+      "specs_features_crm_mvp_tasks_crit\u00e9rio_de_conclus\u00e3o_do_agente_vendedor_silmer_no_n8n",
+      "specs_features_crm_mvp_tasks_etapa_agente_1_implantar_o_n8n_obrigat\u00f3rio",
+      "specs_features_crm_mvp_tasks_etapa_agente_2_criar_contratos_crm_n8n",
+      "specs_features_crm_mvp_tasks_etapa_agente_3_conectar_o_provedor_de_ia",
+      "specs_features_crm_mvp_tasks_etapa_agente_4_construir_o_workflow_da_jornada",
+      "specs_features_crm_mvp_tasks_etapa_agente_5_implementar_handoff_e_desligamento_seguro",
+      "specs_features_crm_mvp_tasks_etapa_agente_6_tornar_a_automa\u00e7\u00e3o_oper\u00e1vel",
+      "specs_features_crm_mvp_tasks_objetivo_3_agente_vendedor_silmer_no_n8n"
+    ],
+    "141": [
+      "test_inbox_domain_test",
+      "test_inbox_domain_test_admin",
+      "test_inbox_domain_test_attendant",
+      "test_inbox_domain_test_conversationownedbyattendant",
+      "test_inbox_domain_test_createharness",
+      "test_inbox_domain_test_inbound",
+      "test_inbox_domain_test_now",
+      "test_inbox_domain_test_other_seller"
+    ],
+    "142": [
       "test_postgres_idempotency_test",
       "test_postgres_idempotency_test_envelope_key",
       "test_postgres_idempotency_test_fakedatabase",
@@ -3364,7 +3388,7 @@
       "test_postgres_idempotency_test_identity",
       "test_postgres_idempotency_test_recordkey"
     ],
-    "141": [
+    "143": [
       "crm_reject_transient_media_expiry_extension",
       "modules_database_migrations_0005_phase2_worker_media_expand",
       "modules_database_migrations_0005_phase2_worker_media_expand_crm_processing_attempts",
@@ -3373,7 +3397,7 @@
       "modules_database_migrations_0005_phase2_worker_media_expand_sql_crm_outbox_jobs",
       "modules_database_migrations_0005_phase2_worker_media_expand_transient_media_expiry_immutable"
     ],
-    "142": [
+    "144": [
       "docs_api_openapi_v1",
       "docs_phase1_identity_access_baseline",
       "docs_phase1_identity_access_baseline_baseline_de_identidade_e_acesso_da_fase_1",
@@ -3382,7 +3406,7 @@
       "docs_phase1_identity_access_baseline_par\u00e2metros_versionados",
       "docs_phase1_identity_access_baseline_superf\u00edcies_entregues"
     ],
-    "143": [
+    "145": [
       "docs_phase0_external_spikes_resultado_local",
       "docs_phase0_threat_model_and_data_catalog",
       "docs_phase0_threat_model_and_data_catalog_aprova\u00e7\u00e3o",
@@ -3391,7 +3415,7 @@
       "docs_phase0_threat_model_and_data_catalog_p0_6",
       "docs_phase0_threat_model_and_data_catalog_t00_5"
     ],
-    "144": [
+    "146": [
       "modules_contacts_package",
       "modules_contacts_package_exports",
       "modules_contacts_package_exports_identity_envelope",
@@ -3400,7 +3424,7 @@
       "modules_contacts_package_type",
       "modules_contacts_package_version"
     ],
-    "145": [
+    "147": [
       "ops_observability_activation_gate",
       "ops_observability_activation_gate_drills",
       "ops_observability_activation_gate_issue",
@@ -3409,7 +3433,7 @@
       "ops_observability_activation_gate_status",
       "ops_observability_activation_gate_task"
     ],
-    "146": [
+    "148": [
       "ops_observability_activation_gate_routing",
       "ops_observability_activation_gate_routing_criticalescalationminutes",
       "ops_observability_activation_gate_routing_destinations",
@@ -3418,7 +3442,7 @@
       "ops_observability_activation_gate_routing_ownerids",
       "ops_observability_activation_gate_routing_status"
     ],
-    "147": [
+    "149": [
       "schemas_fixtures_external_n8n_contract_v1_schema",
       "schemas_fixtures_external_n8n_contract_v1_schema_additionalproperties",
       "schemas_fixtures_external_n8n_contract_v1_schema_id",
@@ -3427,7 +3451,7 @@
       "schemas_fixtures_external_n8n_contract_v1_schema_title",
       "schemas_fixtures_external_n8n_contract_v1_schema_type"
     ],
-    "148": [
+    "150": [
       "schemas_fixtures_external_n8n_contract_v1_schema_endpoints_items",
       "schemas_fixtures_external_n8n_contract_v1_schema_endpoints_maxitems",
       "schemas_fixtures_external_n8n_contract_v1_schema_endpoints_minitems",
@@ -3436,7 +3460,7 @@
       "schemas_fixtures_external_n8n_contract_v1_schema_items_required",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_endpoints"
     ],
-    "149": [
+    "151": [
       "scripts_validate_media_retention",
       "scripts_validate_media_retention_invariant",
       "scripts_validate_media_retention_main",
@@ -3445,7 +3469,7 @@
       "test_media_retention_policy_test_policy",
       "test_media_retention_policy_test_policyurl"
     ],
-    "150": [
+    "152": [
       "docs_adr_readme",
       "docs_adr_readme_architecture_decision_records",
       "docs_adr_readme_conven\u00e7\u00e3o",
@@ -3453,7 +3477,7 @@
       "docs_rfc_readme",
       "docs_rfc_readme_request_for_comments"
     ],
-    "151": [
+    "153": [
       "docs_phase0_meta_sandbox_ativos_selecionados",
       "docs_phase0_meta_sandbox_escopo_e_limite",
       "docs_phase0_meta_sandbox_evid\u00eancia_de_fechamento",
@@ -3461,7 +3485,7 @@
       "docs_phase0_meta_sandbox_sequ\u00eancia_operacional",
       "docs_phase0_meta_sandbox_t00_4_sandbox_da_meta"
     ],
-    "152": [
+    "154": [
       "docs_runbooks_automation_executor",
       "docs_runbooks_automation_executor_ator_t\u00e9cnico_do_n8n",
       "docs_runbooks_automation_executor_auditoria_e_resposta_a_falhas",
@@ -3469,7 +3493,7 @@
       "docs_runbooks_automation_executor_escopo",
       "docs_runbooks_automation_executor_pend\u00eancia_independente"
     ],
-    "153": [
+    "155": [
       "modules_audit_privacy_package",
       "modules_audit_privacy_package_exports",
       "modules_audit_privacy_package_name",
@@ -3477,7 +3501,7 @@
       "modules_audit_privacy_package_type",
       "modules_audit_privacy_package_version"
     ],
-    "154": [
+    "156": [
       "modules_catalog_package",
       "modules_catalog_package_exports",
       "modules_catalog_package_name",
@@ -3485,7 +3509,7 @@
       "modules_catalog_package_type",
       "modules_catalog_package_version"
     ],
-    "155": [
+    "157": [
       "modules_configuration_package",
       "modules_configuration_package_exports",
       "modules_configuration_package_name",
@@ -3493,7 +3517,7 @@
       "modules_configuration_package_type",
       "modules_configuration_package_version"
     ],
-    "156": [
+    "158": [
       "modules_database_migrations_0004_phase2_channel_webhook_expand",
       "modules_database_migrations_0004_phase2_channel_webhook_expand_crm_channel_event_media",
       "modules_database_migrations_0004_phase2_channel_webhook_expand_crm_channel_events",
@@ -3501,7 +3525,7 @@
       "modules_database_migrations_0004_phase2_channel_webhook_expand_crm_webhook_receipts",
       "modules_database_migrations_0004_phase2_channel_webhook_expand_sql_crm_transient_media"
     ],
-    "157": [
+    "159": [
       "modules_identity_access_package",
       "modules_identity_access_package_exports",
       "modules_identity_access_package_name",
@@ -3509,7 +3533,7 @@
       "modules_identity_access_package_type",
       "modules_identity_access_package_version"
     ],
-    "158": [
+    "160": [
       "modules_identity_access_src_postgres",
       "modules_identity_access_src_postgres_mapsession",
       "modules_identity_access_src_postgres_mapuser",
@@ -3517,7 +3541,7 @@
       "modules_identity_access_src_postgres_requireisostring",
       "modules_identity_access_src_postgres_toisostring"
     ],
-    "159": [
+    "161": [
       "modules_integration_reliability_package",
       "modules_integration_reliability_package_exports",
       "modules_integration_reliability_package_name",
@@ -3525,7 +3549,7 @@
       "modules_integration_reliability_package_type",
       "modules_integration_reliability_package_version"
     ],
-    "160": [
+    "162": [
       "modules_n8n_integration_package",
       "modules_n8n_integration_package_exports",
       "modules_n8n_integration_package_name",
@@ -3533,7 +3557,7 @@
       "modules_n8n_integration_package_type",
       "modules_n8n_integration_package_version"
     ],
-    "161": [
+    "163": [
       "modules_shared_package",
       "modules_shared_package_exports",
       "modules_shared_package_name",
@@ -3541,7 +3565,7 @@
       "modules_shared_package_type",
       "modules_shared_package_version"
     ],
-    "162": [
+    "164": [
       "schemas_fixtures_external_n8n_contract_v1_schema_commonenvelope_properties",
       "schemas_fixtures_external_n8n_contract_v1_schema_commonenvelope_required",
       "schemas_fixtures_external_n8n_contract_v1_schema_commonenvelope_type",
@@ -3549,29 +3573,13 @@
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_schema_version",
       "schemas_fixtures_external_n8n_contract_v1_schema_schema_version_const"
     ],
-    "163": [
+    "165": [
       "scripts_build",
       "scripts_build_copies",
       "scripts_build_listfiles",
       "scripts_build_manifest",
       "scripts_build_output",
       "scripts_build_root"
-    ],
-    "164": [
-      "test_channel_event_handler_test",
-      "test_channel_event_handler_test_canonicalevent",
-      "test_channel_event_handler_test_process",
-      "test_channel_event_handler_test_readcanonicaleventrecord",
-      "test_channel_event_handler_test_receiveinbound",
-      "test_channel_event_handler_test_resolveinboundidentity"
-    ],
-    "165": [
-      "test_work_management_postgres_live_test",
-      "test_work_management_postgres_live_test_append",
-      "test_work_management_postgres_live_test_handoffcommand",
-      "test_work_management_postgres_live_test_human",
-      "test_work_management_postgres_live_test_now",
-      "test_work_management_postgres_live_test_seed"
     ],
     "166": [
       "apps_edge_web_package",
@@ -3595,472 +3603,487 @@
       "github_security_vers\u00f5es_suportadas"
     ],
     "169": [
+      "modules_identity_access_src_postgres_access",
+      "modules_identity_access_src_postgres_access_createpostgresaccessrepository",
+      "test_postgres_access_control_test",
+      "test_postgres_access_control_test_recordingdatabase",
+      "test_postgres_access_control_test_recordingdatabase_query"
+    ],
+    "170": [
       "ops_observability_activation_gate_completion",
       "ops_observability_activation_gate_completion_approvedat",
       "ops_observability_activation_gate_completion_approvedby",
       "ops_observability_activation_gate_completion_evidenceref",
       "ops_observability_activation_gate_completion_humanapproved"
     ],
-    "170": [
+    "171": [
       "ops_observability_activation_gate_telemetry",
       "ops_observability_activation_gate_telemetry_evidenceref",
       "ops_observability_activation_gate_telemetry_signals",
       "ops_observability_activation_gate_telemetry_source",
       "ops_observability_activation_gate_telemetry_status"
     ],
-    "171": [
+    "172": [
       "readme_ambiente_local_com_atualiza\u00e7\u00e3o_autom\u00e1tica",
       "readme_comece_por_aqui",
       "readme_crm_silmer",
       "readme_desenvolvimento",
       "readme_stack_aprovada"
     ],
-    "172": [
+    "173": [
       "scripts_check_boundaries",
       "scripts_check_boundaries_frontendpackage",
       "scripts_check_boundaries_listfrontendsources",
       "scripts_check_boundaries_root",
       "scripts_check_boundaries_workspacepackages"
     ],
-    "173": [
+    "174": [
       "scripts_check_design_tokens",
       "scripts_check_design_tokens_frontendroot",
       "scripts_check_design_tokens_liststyles",
       "scripts_check_design_tokens_root",
       "scripts_check_design_tokens_tokenpath"
     ],
-    "174": [
+    "175": [
       "scripts_serve_edge",
       "scripts_serve_edge_contenttypes",
       "scripts_serve_edge_port",
       "scripts_serve_edge_root",
       "scripts_serve_edge_server"
     ],
-    "175": [
+    "176": [
       "scripts_watch_edge",
       "scripts_watch_edge_build",
       "scripts_watch_edge_root",
       "scripts_watch_edge_schedulebuild",
       "scripts_watch_edge_sources"
     ],
-    "176": [
+    "177": [
+      "specs_features_admin_user_management_tasks_aum_02_reduzir_pap\u00e9is_e_capacidades",
+      "specs_features_admin_user_management_tasks_aum_03_remover_o_convite_do_dom\u00ednio",
+      "specs_features_admin_user_management_tasks_aum_04_senha_sem_comprimento_m\u00ednimo_p",
+      "specs_features_admin_user_management_tasks_aum_05_opera\u00e7\u00f5es_de_usu\u00e1rio_no_servi\u00e7o",
+      "specs_features_admin_user_management_tasks_bloco_2_dom\u00ednio"
+    ],
+    "178": [
       "crm_assign_domain_event_stream_cursor",
       "modules_database_migrations_0011_phase3_deal_read_models_expand",
       "modules_database_migrations_0011_phase3_deal_read_models_expand_crm_assign_domain_event_stream_cursor",
       "modules_database_migrations_0011_phase3_deal_read_models_expand_domain_events_assign_stream_cursor"
     ],
-    "177": [
+    "179": [
+      "modules_identity_access_src_postgres_operational_user_port",
+      "modules_identity_access_src_postgres_operational_user_port_postgresoperationaluserport",
+      "modules_identity_access_src_postgres_operational_user_port_postgresoperationaluserport_lockactive",
+      "modules_identity_access_src_postgres_operational_user_port_queryable"
+    ],
+    "180": [
       "schemas_fixtures_external_n8n_contract_v1_schema_additionalproperties_const",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_security",
       "schemas_fixtures_external_n8n_contract_v1_schema_security_additionalproperties",
       "schemas_fixtures_external_n8n_contract_v1_schema_security_type"
     ],
-    "178": [
+    "181": [
       "schemas_fixtures_external_n8n_contract_v1_schema_contains_const",
       "schemas_fixtures_external_n8n_contract_v1_schema_eventtypes_contains",
       "schemas_fixtures_external_n8n_contract_v1_schema_eventtypes_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_eventtypes"
     ],
-    "179": [
+    "182": [
       "schemas_fixtures_external_n8n_contract_v1_schema_defs_problem",
       "schemas_fixtures_external_n8n_contract_v1_schema_problem_additionalproperties",
       "schemas_fixtures_external_n8n_contract_v1_schema_problem_required",
       "schemas_fixtures_external_n8n_contract_v1_schema_problem_type"
     ],
-    "180": [
+    "183": [
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_status",
       "schemas_fixtures_external_n8n_contract_v1_schema_status_maximum",
       "schemas_fixtures_external_n8n_contract_v1_schema_status_minimum",
       "schemas_fixtures_external_n8n_contract_v1_schema_status_type"
     ],
-    "181": [
+    "184": [
       "technical_design_10_confiabilidade_e_processamento_ass\u00edncrono",
       "technical_design_comando_e_outbox",
       "technical_design_corrida_ia_versus_tomada_humana",
       "technical_design_webhook_inbound"
     ],
-    "182": [
+    "185": [
       "technical_design_12_seguran\u00e7a_e_lgpd",
       "technical_design_autentica\u00e7\u00e3o_e_autoriza\u00e7\u00e3o",
       "technical_design_dados_e_anexos",
       "technical_design_reten\u00e7\u00e3o"
     ],
-    "183": [
+    "186": [
       "technical_design_8_m\u00e1quinas_de_estado",
       "technical_design_estado_do_pagamento",
       "technical_design_etapa_do_neg\u00f3cio",
       "technical_design_ficha"
     ],
-    "184": [
+    "187": [
       "test_ci_images_test",
       "test_ci_images_test_json",
       "test_ci_images_test_rooturl",
       "test_ci_images_test_text"
     ],
-    "185": [
+    "188": [
       "test_database_test_transactionclient",
       "test_database_test_transactionclient_constructor",
       "test_database_test_transactionclient_query",
       "test_database_test_transactionclient_release"
     ],
-    "186": [
+    "189": [
       "test_identity_contract_test",
       "test_identity_contract_test_escape",
       "test_identity_contract_test_rooturl",
       "test_identity_contract_test_text"
     ],
-    "187": [
+    "190": [
       "modules_database_migrations_0017_identity_single_role_expand",
       "modules_database_migrations_0017_identity_single_role_expand_handoff_history_immutable",
       "modules_database_migrations_0017_identity_single_role_expand_sql_crm_reject_deal_history_mutation"
     ],
-    "188": [
+    "191": [
       "prettierrc",
       "prettierrc_singlequote",
       "prettierrc_trailingcomma"
     ],
-    "189": [
+    "192": [
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_quantity",
       "schemas_fixtures_external_n8n_contract_v1_schema_quantity_minimum",
       "schemas_fixtures_external_n8n_contract_v1_schema_quantity_type"
     ],
-    "190": [
+    "193": [
       "test_development_workflow_test",
       "test_development_workflow_test_root",
       "test_development_workflow_test_text"
     ],
-    "191": [
+    "194": [
       "test_n8n_core_planning_test",
       "test_n8n_core_planning_test_read",
       "test_n8n_core_planning_test_root"
     ],
-    "192": [
+    "195": [
       "architecture_baseline",
       "technical_design_summary"
     ],
-    "193": [
+    "196": [
       "architecture_decisions",
       "contributing_governance"
     ],
-    "194": [
+    "197": [
       "fluxo_qualificacao_generico",
       "fluxo_qualificacao_generico_fluxo_de_qualifica\u00e7\u00e3o_refer\u00eancia_substitu\u00edda"
     ],
-    "195": [
-      "github_workflow_jules",
-      "technical_design_security"
-    ],
-    "196": [
+    "198": [
       "modules_database_migrations_0003_identity_api_hardening_expand",
       "modules_database_migrations_0003_identity_api_hardening_expand_crm_authentication_throttles"
     ],
-    "197": [
+    "199": [
       "modules_database_readme",
       "modules_database_readme_database_module"
     ],
-    "198": [
+    "200": [
       "schemas_fixtures_external_n8n_contract_v1_schema_city_or_postal_code_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_city_or_postal_code"
     ],
-    "199": [
+    "201": [
       "schemas_fixtures_external_n8n_contract_v1_schema_customer_name_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_customer_name"
     ],
-    "200": [
+    "202": [
       "schemas_fixtures_external_n8n_contract_v1_schema_delivery_mode_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_delivery_mode"
     ],
-    "201": [
+    "203": [
       "schemas_fixtures_external_n8n_contract_v1_schema_fabrics_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_fabrics"
     ],
-    "202": [
+    "204": [
       "schemas_fixtures_external_n8n_contract_v1_schema_next_required_field_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_next_required_field"
     ],
-    "203": [
+    "205": [
       "schemas_fixtures_external_n8n_contract_v1_schema_notes_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_notes"
     ],
-    "204": [
+    "206": [
       "schemas_fixtures_external_n8n_contract_v1_schema_order_name_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_order_name"
     ],
-    "205": [
+    "207": [
       "schemas_fixtures_external_n8n_contract_v1_schema_product_type_type",
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_product_type"
     ],
-    "206": [
+    "208": [
       "schemas_fixtures_external_n8n_contract_v1_schema_properties_purpose",
       "schemas_fixtures_external_n8n_contract_v1_schema_purpose_type"
     ],
-    "207": [
+    "209": [
       "test_operation_read_contract_test",
       "test_operation_read_contract_test_rooturl"
     ],
-    "208": [
-      "test_postgres_audit_live_test_recordingqueryable",
-      "test_postgres_audit_live_test_recordingqueryable_query"
-    ],
-    "209": [
+    "210": [
       "api_v1_sessions_current"
     ],
-    "210": [
+    "211": [
       "apps_api"
     ],
-    "211": [
+    "212": [
       "apps_edge_web"
     ],
-    "212": [
+    "213": [
       "apps_worker"
     ],
-    "213": [
+    "214": [
       "architecture_functional_boundaries"
     ],
-    "214": [
+    "215": [
       "architecture_modeling"
     ],
-    "215": [
+    "216": [
       "caixa_de_entrada"
     ],
-    "216": [
+    "217": [
       "contributing_validation"
     ],
-    "217": [
+    "218": [
       "crm_ai_turns"
     ],
-    "218": [
+    "219": [
       "crm_deal_stage_history"
     ],
-    "219": [
+    "220": [
       "crm_domain_events"
     ],
-    "220": [
+    "221": [
       "crm_idempotency_records"
     ],
-    "221": [
+    "222": [
       "crm_n8n_events"
     ],
-    "222": [
+    "223": [
       "crm_sessions"
     ],
-    "223": [
+    "224": [
       "crm_user_capabilities"
     ],
-    "224": [
+    "225": [
       "crm_user_functions"
     ],
-    "225": [
+    "226": [
       "espectro_mvp"
     ],
-    "226": [
+    "227": [
       "github_workflows_promote_approved_sha"
     ],
-    "227": [
+    "228": [
       "google_gemini_api"
     ],
-    "228": [
+    "229": [
       "historico_datacrazy"
     ],
-    "229": [
+    "230": [
       "meta_api"
     ],
-    "230": [
+    "231": [
       "modules_database"
     ],
-    "231": [
+    "232": [
       "modules_database_migrations_0001_database_baseline_expand"
     ],
-    "232": [
+    "233": [
       "modules_database_migrations_0005_phase2_worker_media_expand_sql_crm_channel_events"
     ],
-    "233": [
+    "234": [
       "modules_database_migrations_0005_phase2_worker_media_expand_sql_crm_transient_media"
     ],
-    "234": [
+    "235": [
       "modules_database_migrations_0006_phase2_inbox_contacts_expand_sql_crm_outbox_jobs"
     ],
-    "235": [
+    "236": [
       "modules_database_migrations_0012_remove_mfa_contract"
     ],
-    "236": [
+    "237": [
       "modules_database_migrations_0013_n8n_integration_expand_sql_crm_attachments"
     ],
-    "237": [
+    "238": [
       "modules_database_migrations_0013_n8n_integration_expand_sql_crm_handoff_history"
     ],
-    "238": [
+    "239": [
       "modules_database_migrations_0013_n8n_integration_expand_sql_crm_handoffs"
     ],
-    "239": [
+    "240": [
       "modules_database_migrations_0013_n8n_integration_expand_sql_crm_outbox_jobs"
     ],
-    "240": [
+    "241": [
       "modules_database_migrations_0014_media_retention_worker_expand"
     ],
-    "241": [
+    "242": [
       "modules_database_migrations_0015_ai_turn_effect_fence_expand"
     ],
-    "242": [
+    "243": [
       "modules_database_migrations_0016_n8n_mvp_simplification_expand"
     ],
-    "243": [
+    "244": [
       "modules_database_migrations_0016_n8n_mvp_simplification_expand_sql_crm_conversations"
     ],
-    "244": [
+    "245": [
       "modules_database_migrations_0017_identity_single_role_expand_sql_crm_handoff_history"
     ],
-    "245": [
+    "246": [
       "modules_database_migrations_0017_identity_single_role_expand_sql_crm_handoffs"
     ],
-    "246": [
+    "247": [
       "modules_database_migrations_0017_identity_single_role_expand_sql_crm_users"
     ],
-    "247": [
+    "248": [
       "modules_database_migrations_0018_remove_invitations_contract"
     ],
-    "248": [
+    "249": [
       "modules_database_migrations_0019_contact_display_name_expand"
     ],
-    "249": [
+    "250": [
       "modules_database_migrations_0019_contact_display_name_expand_sql_crm_contacts"
     ],
-    "250": [
+    "251": [
       "modules_shared"
     ],
-    "251": [
+    "252": [
       "output_pdf_ficha_canonica_sintetica_v1"
     ],
-    "252": [
+    "253": [
       "output_pdf_ficha_canonica_sintetica_v2"
     ],
-    "253": [
+    "254": [
       "output_pdf_revisao_ficha"
     ],
-    "254": [
+    "255": [
       "scripts_runtime_healthcheck"
     ],
-    "255": [
+    "256": [
       "silmer_edge_web"
     ],
-    "256": [
+    "257": [
       "silmer_postgres"
     ],
-    "257": [
+    "258": [
       "technical_design_ai"
     ],
-    "258": [
+    "259": [
       "technical_design_api_contracts"
     ],
-    "259": [
+    "260": [
       "technical_design_data_model"
     ],
-    "260": [
+    "261": [
       "technical_design_modules"
     ],
-    "261": [
+    "262": [
       "technical_design_reliability"
     ],
-    "262": [
+    "263": [
       "technical_design_risks"
     ],
-    "263": [
+    "264": [
       "technical_design_runtime"
     ],
-    "264": [
+    "265": [
+      "technical_design_security"
+    ],
+    "266": [
       "technical_design_slos"
     ]
   },
   "cohesion": {
-    "0": 0.06390434961863534,
+    "0": 0.05860805860805861,
     "1": 0.053650326109825376,
-    "2": 0.051600573339703776,
-    "3": 0.059499489274770175,
-    "4": 0.05938037865748709,
-    "5": 0.06349206349206349,
-    "6": 0.04658197217180883,
-    "7": 0.0392156862745098,
-    "8": 0.04,
-    "9": 0.09840425531914894,
-    "10": 0.07822410147991543,
-    "11": 0.13240418118466898,
-    "12": 0.05,
-    "13": 0.08846153846153847,
-    "14": 0.1141025641025641,
-    "15": 0.1141025641025641,
-    "16": 0.05128205128205128,
-    "17": 0.05547652916073969,
-    "18": 0.0766488413547237,
+    "2": 0.059499489274770175,
+    "3": 0.06954954954954955,
+    "4": 0.035211267605633804,
+    "5": 0.059676044330775786,
+    "6": 0.0392156862745098,
+    "7": 0.04,
+    "8": 0.09840425531914894,
+    "9": 0.07536231884057971,
+    "10": 0.05,
+    "11": 0.08846153846153847,
+    "12": 0.1141025641025641,
+    "13": 0.1141025641025641,
+    "14": 0.05398110661268556,
+    "15": 0.05128205128205128,
+    "16": 0.06906906906906907,
+    "17": 0.11411411411411411,
+    "18": 0.12605042016806722,
     "19": 0.12701612903225806,
     "20": 0.10752688172043011,
-    "21": 0.06451612903225806,
-    "22": 0.15172413793103448,
-    "23": 0.06666666666666667,
-    "24": 0.15517241379310345,
-    "25": 0.17195767195767195,
-    "26": 0.13105413105413105,
-    "27": 0.15954415954415954,
-    "28": 0.07407407407407407,
-    "29": 0.07407407407407407,
-    "30": 0.08923076923076922,
-    "31": 0.18461538461538463,
-    "32": 0.1753846153846154,
-    "33": 0.1476923076923077,
+    "21": 0.13978494623655913,
+    "22": 0.16774193548387098,
+    "23": 0.06451612903225806,
+    "24": 0.14022988505747128,
+    "25": 0.15172413793103448,
+    "26": 0.17195767195767195,
+    "27": 0.13105413105413105,
+    "28": 0.1452991452991453,
+    "29": 0.15954415954415954,
+    "30": 0.12,
+    "31": 0.08923076923076922,
+    "32": 0.18461538461538463,
+    "33": 0.07692307692307693,
     "34": 0.08,
-    "35": 0.18478260869565216,
-    "36": 0.13405797101449277,
+    "35": 0.13333333333333333,
+    "36": 0.12333333333333334,
     "37": 0.15217391304347827,
-    "38": 0.21739130434782608,
-    "39": 0.11956521739130435,
-    "40": 0.08695652173913043,
-    "41": 0.16600790513833993,
-    "42": 0.09523809523809523,
-    "43": 0.09956709956709957,
-    "44": 0.22510822510822512,
-    "45": 0.16666666666666666,
-    "46": 0.23333333333333334,
-    "47": 0.11428571428571428,
-    "48": 0.16666666666666666,
-    "49": 0.20476190476190476,
-    "50": 0.21578947368421053,
-    "51": 0.14210526315789473,
-    "52": 0.22105263157894736,
-    "53": 0.10526315789473684,
-    "54": 0.1286549707602339,
-    "55": 0.14619883040935672,
-    "56": 0.28654970760233917,
-    "57": 0.12280701754385964,
+    "38": 0.11956521739130435,
+    "39": 0.14624505928853754,
+    "40": 0.15019762845849802,
+    "41": 0.08695652173913043,
+    "42": 0.17391304347826086,
+    "43": 0.09523809523809523,
+    "44": 0.09956709956709957,
+    "45": 0.23809523809523808,
+    "46": 0.1774891774891775,
+    "47": 0.22510822510822512,
+    "48": 0.09090909090909091,
+    "49": 0.09090909090909091,
+    "50": 0.23333333333333334,
+    "51": 0.11428571428571428,
+    "52": 0.20476190476190476,
+    "53": 0.23809523809523808,
+    "54": 0.20526315789473684,
+    "55": 0.23157894736842105,
+    "56": 0.21578947368421053,
+    "57": 0.22105263157894736,
     "58": 0.10526315789473684,
-    "59": 0.2875816993464052,
-    "60": 0.17647058823529413,
-    "61": 0.22875816993464052,
-    "62": 0.13071895424836602,
-    "63": 0.25735294117647056,
-    "64": 0.17647058823529413,
-    "65": 0.23529411764705882,
-    "66": 0.22058823529411764,
-    "67": 0.20588235294117646,
-    "68": 0.2426470588235294,
-    "69": 0.22058823529411764,
-    "70": 0.11764705882352941,
-    "71": 0.125,
-    "72": 0.125,
-    "73": 0.25,
-    "74": 0.25,
-    "75": 0.2,
-    "76": 0.125,
-    "77": 0.21904761904761905,
-    "78": 0.13333333333333333,
-    "79": 0.20952380952380953,
-    "80": 0.23809523809523808,
-    "81": 0.26666666666666666,
-    "82": 0.3523809523809524,
-    "83": 0.14285714285714285,
-    "84": 0.14285714285714285,
-    "85": 0.26373626373626374,
-    "86": 0.23076923076923078,
-    "87": 0.14285714285714285,
-    "88": 0.26373626373626374,
+    "59": 0.1286549707602339,
+    "60": 0.28654970760233917,
+    "61": 0.12280701754385964,
+    "62": 0.10526315789473684,
+    "63": 0.2875816993464052,
+    "64": 0.23529411764705882,
+    "65": 0.17647058823529413,
+    "66": 0.13071895424836602,
+    "67": 0.13970588235294118,
+    "68": 0.22058823529411764,
+    "69": 0.15441176470588236,
+    "70": 0.20588235294117646,
+    "71": 0.22058823529411764,
+    "72": 0.11764705882352941,
+    "73": 0.125,
+    "74": 0.125,
+    "75": 0.21666666666666667,
+    "76": 0.25,
+    "77": 0.25,
+    "78": 0.2,
+    "79": 0.125,
+    "80": 0.13333333333333333,
+    "81": 0.20952380952380953,
+    "82": 0.23809523809523808,
+    "83": 0.26666666666666666,
+    "84": 0.3523809523809524,
+    "85": 0.14285714285714285,
+    "86": 0.14285714285714285,
+    "87": 0.23076923076923078,
+    "88": 0.14285714285714285,
     "89": 0.14285714285714285,
     "90": 0.14285714285714285,
     "91": 0.14285714285714285,
@@ -4069,26 +4092,26 @@
     "94": 0.15384615384615385,
     "95": 0.1794871794871795,
     "96": 0.23076923076923078,
-    "97": 0.24358974358974358,
-    "98": 0.15384615384615385,
-    "99": 0.15384615384615385,
-    "100": 0.15384615384615385,
-    "101": 0.3787878787878788,
-    "102": 0.16666666666666666,
-    "103": 0.16666666666666666,
-    "104": 0.4090909090909091,
-    "105": 0.24242424242424243,
+    "97": 0.15384615384615385,
+    "98": 0.3717948717948718,
+    "99": 0.3076923076923077,
+    "100": 0.24358974358974358,
+    "101": 0.15384615384615385,
+    "102": 0.15384615384615385,
+    "103": 0.15384615384615385,
+    "104": 0.3787878787878788,
+    "105": 0.16666666666666666,
     "106": 0.16666666666666666,
     "107": 0.16666666666666666,
-    "108": 0.18181818181818182,
-    "109": 0.18181818181818182,
+    "108": 0.16666666666666666,
+    "109": 0.36363636363636365,
     "110": 0.18181818181818182,
     "111": 0.18181818181818182,
-    "112": 0.36363636363636365,
+    "112": 0.18181818181818182,
     "113": 0.18181818181818182,
-    "114": 0.2727272727272727,
+    "114": 0.2545454545454545,
     "115": 0.34545454545454546,
-    "116": 0.2,
+    "116": 0.37777777777777777,
     "117": 0.2,
     "118": 0.2222222222222222,
     "119": 0.2,
@@ -4099,8 +4122,8 @@
     "124": 0.2222222222222222,
     "125": 0.3333333333333333,
     "126": 0.3333333333333333,
-    "127": 0.2222222222222222,
-    "128": 0.25,
+    "127": 0.3333333333333333,
+    "128": 0.2222222222222222,
     "129": 0.2222222222222222,
     "130": 0.25,
     "131": 0.25,
@@ -4112,61 +4135,61 @@
     "137": 0.25,
     "138": 0.25,
     "139": 0.25,
-    "140": 0.2857142857142857,
-    "141": 0.3333333333333333,
+    "140": 0.25,
+    "141": 0.2857142857142857,
     "142": 0.2857142857142857,
-    "143": 0.2857142857142857,
+    "143": 0.3333333333333333,
     "144": 0.2857142857142857,
     "145": 0.2857142857142857,
     "146": 0.2857142857142857,
     "147": 0.2857142857142857,
     "148": 0.2857142857142857,
-    "149": 0.42857142857142855,
-    "150": 0.4,
-    "151": 0.3333333333333333,
-    "152": 0.3333333333333333,
+    "149": 0.2857142857142857,
+    "150": 0.2857142857142857,
+    "151": 0.42857142857142855,
+    "152": 0.4,
     "153": 0.3333333333333333,
     "154": 0.3333333333333333,
     "155": 0.3333333333333333,
-    "156": 0.5333333333333333,
+    "156": 0.3333333333333333,
     "157": 0.3333333333333333,
-    "158": 0.6666666666666666,
+    "158": 0.5333333333333333,
     "159": 0.3333333333333333,
-    "160": 0.3333333333333333,
+    "160": 0.6666666666666666,
     "161": 0.3333333333333333,
     "162": 0.3333333333333333,
     "163": 0.3333333333333333,
-    "164": 0.4,
+    "164": 0.3333333333333333,
     "165": 0.3333333333333333,
     "166": 0.4,
     "167": 0.4,
     "168": 0.4,
-    "169": 0.4,
+    "169": 0.5,
     "170": 0.4,
     "171": 0.4,
     "172": 0.4,
     "173": 0.4,
     "174": 0.4,
-    "175": 0.5,
+    "175": 0.4,
     "176": 0.5,
-    "177": 0.5,
+    "177": 0.4,
     "178": 0.5,
-    "179": 0.5,
+    "179": 0.6666666666666666,
     "180": 0.5,
     "181": 0.5,
     "182": 0.5,
     "183": 0.5,
-    "184": 0.6666666666666666,
+    "184": 0.5,
     "185": 0.5,
     "186": 0.5,
     "187": 0.6666666666666666,
-    "188": 0.6666666666666666,
-    "189": 0.6666666666666666,
+    "188": 0.5,
+    "189": 0.5,
     "190": 0.6666666666666666,
     "191": 0.6666666666666666,
-    "192": 1.0,
-    "193": 1.0,
-    "194": 1.0,
+    "192": 0.6666666666666666,
+    "193": 0.6666666666666666,
+    "194": 0.6666666666666666,
     "195": 1.0,
     "196": 1.0,
     "197": 1.0,
@@ -4236,7 +4259,9 @@
     "261": 1.0,
     "262": 1.0,
     "263": 1.0,
-    "264": 1.0
+    "264": 1.0,
+    "265": 1.0,
+    "266": 1.0
   },
   "gods": [
     {
@@ -4250,29 +4275,19 @@
       "degree": 29
     },
     {
-      "id": "modules_deals_pipeline_src_domain_errors_dealconflicterror",
-      "label": "DealConflictError",
+      "id": "modules_work_management_src_errors_workvalidationerror",
+      "label": "WorkValidationError",
       "degree": 26
     },
     {
-      "id": "modules_work_management_src_errors_workvalidationerror",
-      "label": "WorkValidationError",
+      "id": "modules_deals_pipeline_src_domain_errors_dealconflicterror",
+      "label": "DealConflictError",
       "degree": 26
     },
     {
       "id": "technical_design_tdd_crm_silmer_mvp",
       "label": "TDD \u2014 CRM Silmer MVP",
       "degree": 22
-    },
-    {
-      "id": "modules_inbox_channels_src_domain_errors_inboxconflicterror",
-      "label": "InboxConflictError",
-      "degree": 22
-    },
-    {
-      "id": "apps_api_src_app_createapi",
-      "label": "createApi()",
-      "degree": 21
     },
     {
       "id": "modules_work_management_src_errors_workconflicterror",
@@ -4285,12 +4300,33 @@
       "degree": 21
     },
     {
+      "id": "modules_inbox_channels_src_domain_errors_inboxconflicterror",
+      "label": "InboxConflictError",
+      "degree": 21
+    },
+    {
+      "id": "apps_api_src_app_createapi",
+      "label": "createApi()",
+      "degree": 21
+    },
+    {
       "id": "modules_integration_reliability_src_postgres_transient_media_postgrestransientmediarepository",
       "label": "PostgresTransientMediaRepository",
       "degree": 20
     }
   ],
   "surprises": [
+    {
+      "source": "prepareDelivery()",
+      "target": "N8nCommandDeliveryError",
+      "source_files": [
+        "test/n8n-command-worker.test.js",
+        "modules/integration-reliability/src/n8n-outbound-client.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities; peripheral node `prepareDelivery()` unexpectedly reaches hub `N8nCommandDeliveryError`"
+    },
     {
       "source": "createIdempotentCommandExecutor()",
       "target": "request()",
@@ -4314,37 +4350,26 @@
       "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
     },
     {
-      "source": "databaseFor()",
-      "target": "withTransaction()",
+      "source": "servicesFor()",
+      "target": "PostgresOutboundMessageOutbox",
       "source_files": [
-        "test/postgres-job-queue-live.test.js",
-        "modules/database/src/transactions.js"
+        "test/inbox-postgres-live.test.js",
+        "modules/integration-reliability/src/postgres-outbound-message-outbox.js"
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
-      "why": "connects across different repos/directories; bridges separate communities; peripheral node `databaseFor()` unexpectedly reaches hub `withTransaction()`"
+      "why": "connects across different repos/directories; bridges separate communities"
     },
     {
-      "source": "capture()",
-      "target": "createSafeLogger()",
+      "source": "createN8nApiRuntime()",
+      "target": "PostgresN8nIntegrationRepository",
       "source_files": [
-        "test/observability.test.js",
-        "modules/shared/src/observability.js"
+        "apps/api/src/n8n-runtime.js",
+        "modules/n8n-integration/src/postgres-repository.js"
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
-      "why": "connects across different repos/directories; peripheral node `capture()` unexpectedly reaches hub `createSafeLogger()`"
-    },
-    {
-      "source": "harness()",
-      "target": "createCatalogService()",
-      "source_files": [
-        "test/catalog.test.js",
-        "modules/catalog/src/application/catalog-service.js"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "connects across different repos/directories; peripheral node `harness()` unexpectedly reaches hub `createCatalogService()`"
+      "why": "connects across different repos/directories; bridges separate communities"
     }
   ],
   "tokens": {

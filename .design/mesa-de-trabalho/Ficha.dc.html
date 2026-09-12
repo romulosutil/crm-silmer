@@ -47,6 +47,7 @@
     .btn { display: inline-flex; align-items: center; justify-content: center; min-block-size: 44px; padding: 0.6rem 0.9rem; color: #1b1530; font-size: 0.875rem; font-weight: 600; background: #f0eef8; border: 1px solid #d8d4e4; border-radius: 0.35rem; }
     .btn-primary { color: #0c042d; background: #ff5b01; border-color: #ff5b01; }
     .btn-sm { min-block-size: 34px; padding: 0.3rem 0.7rem; font-size: 0.8rem; }
+    .btn-cta { min-block-size: 48px; padding-inline: 1.5rem; font-size: 0.95rem; box-shadow: 0 0.75rem 2rem rgb(40 20 100 / 12%); }
     .banner {
       display: flex; align-items: center; gap: 0.75rem; margin-block-end: 1rem; padding: 0.85rem 1rem;
       color: #7a4a00; font-size: 0.85rem; background: #fff4d6; border: 1px solid #7a4a00;
@@ -120,7 +121,7 @@
 
   <div>
     <header class="topbar">
-      <p class="topbar-title">Ficha #07-CRM</p>
+      <p class="topbar-title">Pedido #07-CRM</p>
       <span class="live">Ao vivo</span>
       <div class="theme"><span data-on>Claro</span><span>Escuro</span><span>Sistema</span></div>
     </header>
@@ -248,12 +249,12 @@
                 <span class="help">Pix segue para cobrança automática. Cartão exige registro de quem autorizou.</span>
               </label>
               <div class="form-foot">
-                <p>Salvar preenche os dois campos e libera a jornada de pagamento.</p>
-                <span class="btn btn-sm">Cancelar</span>
-                <span class="btn btn-sm btn-primary">Salvar orçamento</span>
+                <p>Confirmar grava o valor e a condição e libera a cobrança para o cliente.</p>
+                <span class="btn">Cancelar</span>
+                <span class="btn btn-primary btn-cta">Confirmar pedido</span>
               </div>
             </div>
-            <p class="note">Sem orçamento aprovado e pagamento confirmado, a Ficha PDF não é gerada.</p>
+            <p class="note">Sem pedido confirmado e pagamento recebido, o PDF do pedido não é gerado.</p>
           </section>
         </div>
       </div>

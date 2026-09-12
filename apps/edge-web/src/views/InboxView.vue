@@ -11,7 +11,7 @@ import {
 import { commandKey, request } from '../lib/api-client.js';
 import {
   CHANNEL_LABELS,
-  CONVERSATION_LABELS,
+  conversationLabel,
   dateTimeBR,
   messageText,
 } from '../lib/format.js';
@@ -96,6 +96,12 @@ const canReply = computed(
 );
 const pendingHandoff = computed(
   () => active.value?.handoff?.status === 'pending',
+);
+const canTransfer = computed(
+  () =>
+    canAct.value &&
+    active.value?.automationState === 'human' &&
+    Boolean(active.value?.assignedUser),
 );
 
 function listUrl() {
@@ -265,6 +271,7 @@ async function loadAssignableUsers() {
 }
 
 async function openTransfer() {
+  if (!canTransfer.value) return;
   await loadAssignableUsers();
   transferTarget.value = transferOptions.value[0]?.id ?? '';
   transferring.value = true;
@@ -457,7 +464,7 @@ onBeforeUnmount(() => {
                 :data-tone="conversation.requiresAttention ? 'error' : 'info'"
               >
                 {{
-                  CONVERSATION_LABELS[conversation.state] ?? conversation.state
+                  conversationLabel(conversation)
                 }}
               </span>
               <span
@@ -525,7 +532,7 @@ onBeforeUnmount(() => {
               </h2>
               <p class="conv-identity">
                 {{ active.contact.externalId }} ·
-                {{ CONVERSATION_LABELS[active.state] ?? active.state }} ·
+                {{ conversationLabel(active) }} ·
                 {{ ownerLabel }}
               </p>
               <button type="button" class="link-button" @click="openRename">
@@ -568,8 +575,9 @@ onBeforeUnmount(() => {
               Devolver à IA
             </button>
             <button
+              v-if="canTransfer"
               type="button"
-              :disabled="busy || !canAct"
+              :disabled="busy"
               @click="openTransfer"
             >
               Repassar atendimento

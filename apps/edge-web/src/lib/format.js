@@ -12,6 +12,20 @@ export const CONVERSATION_LABELS = Object.freeze({
   sem_lead: 'Atendimento encerrado',
 });
 
+/** @param {{automationState?: unknown, state?: unknown}|null|undefined} conversation */
+export function conversationLabel(conversation) {
+  if (conversation?.state === 'em_atendimento') {
+    return conversation.automationState === 'human'
+      ? 'Em atendimento por vendedor'
+      : 'Em atendimento por IA';
+  }
+  return (
+    CONVERSATION_LABELS[/** @type {keyof typeof CONVERSATION_LABELS} */ (conversation?.state)] ??
+    conversation?.state ??
+    'Não informado'
+  );
+}
+
 export const CHANNEL_LABELS = Object.freeze({
   instagram: 'Instagram',
   whatsapp: 'WhatsApp',

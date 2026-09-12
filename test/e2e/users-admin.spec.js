@@ -114,7 +114,9 @@ test('lists accounts and hands over the created credentials as markdown', async 
   const { commands } = await mockUsers(page);
   await page.goto('/usuarios');
 
-  await expect(page.getByRole('heading', { name: 'Vendedores' })).toBeFocused();
+  await expect(
+    page.getByRole('heading', { exact: true, name: 'Vendedores' }),
+  ).toBeFocused();
   await expect(page.getByText('Administrador comercial')).toBeVisible();
   await expect(page.getByRole('row')).toHaveCount(3);
   await expect(
@@ -154,7 +156,6 @@ test('edits one field at a time and disables an account', async ({ page }) => {
     .getByLabel('Mais ações para Marina Duarte')
     .click();
   await page
-    .getByRole('row', { name: /Marina Duarte/u })
     .getByRole('button', { name: 'Editar' })
     .click();
   const dialog = page.getByRole('dialog');
@@ -174,7 +175,6 @@ test('edits one field at a time and disables an account', async ({ page }) => {
     .getByLabel('Mais ações para Marina Duarte Lima')
     .click();
   await page
-    .getByRole('row', { name: /Marina Duarte Lima/u })
     .getByRole('button', { name: 'Desativar' })
     .click();
   await expect(
@@ -191,6 +191,16 @@ test('offers permanent deletion only for a seller without history', async ({
   await openActions(page, 'Rômulo Sutil');
   await expect(page.getByRole('button', { name: 'Excluir' })).toHaveCount(0);
   await openActions(page, 'Rômulo Sutil');
+
+  const sellerRow = page.getByRole('row', { name: /Marina Duarte/u });
+  const sellerRowBefore = await sellerRow.boundingBox();
+  if (!sellerRowBefore) throw new Error('Linha de Marina não encontrada.');
+  await openActions(page, 'Marina Duarte');
+  await expect(page.locator('.row-menu-popover')).toBeVisible();
+  const sellerRowAfter = await sellerRow.boundingBox();
+  if (!sellerRowAfter) throw new Error('Linha de Marina não encontrada.');
+  expect(sellerRowAfter.height).toBe(sellerRowBefore.height);
+  await page.getByLabel('Mais ações para Marina Duarte').click();
 
   await openActions(page, 'Marina Duarte');
   await page.getByRole('button', { name: 'Excluir' }).click();

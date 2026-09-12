@@ -36,6 +36,9 @@ const busy = ref(false);
 const error = ref('');
 const actionMessage = ref('');
 const conversations = ref([]);
+const handoffs = ref([]);
+const handoffLoading = ref(true);
+const claimingHandoffId = ref('');
 const totalCount = ref(0);
 const activeId = ref('');
 const detail = ref(null);
@@ -47,6 +50,7 @@ const transferTarget = ref('');
 const assignableUsers = ref([]);
 let listController;
 let detailController;
+let handoffController;
 let refreshTimer = 0;
 
 const filtered = computed(() => {
@@ -134,6 +138,30 @@ async function loadInbox(silent = false) {
   } finally {
     loading.value = false;
   }
+}
+
+/** @param {boolean} [silent] */
+async function loadOpenHandoffs(silent = false) {
+  handoffController?.abort();
+  handoffController = new AbortController();
+  if (!silent) handoffLoading.value = true;
+  try {
+    const response = await request('/api/v1/inbox/handoffs?limit=100', {
+      signal: handoffController.signal,
+    });
+    handoffs.value = response.data.items ?? [];
+  } catch (cause) {
+    if (/** @type {any} */ (cause)?.name !== 'AbortError') {
+      error.value = 'Não foi possível carregar os handoffs pendentes.';
+    }
+  } finally {
+    handoffLoading.value = false;
+  }
+}
+
+/** @param {boolean} [silent] */
+async function refreshInbox(silent = false) {
+  await Promise.all([loadInbox(silent), loadOpenHandoffs(silent)]);
 }
 
 /**
@@ -276,6 +304,40 @@ async function confirmTransfer() {
   if (!error.value) transferring.value = false;
 }
 
+/** @param {any} handoff */
+async function claimHandoff(handoff) {
+  if (busy.value || claimingHandoffId.value) return;
+  busy.value = true;
+  claimingHandoffId.value = handoff.id;
+  error.value = '';
+  actionMessage.value = '';
+  try {
+    await request(`/api/v1/handoffs/${encodeURIComponent(handoff.id)}/claim`, {
+      body: {
+        expectedConversationVersion: handoff.conversationVersion,
+        expectedHandoffVersion: handoff.version,
+        reasonCode: 'handoff_claimed',
+      },
+      idempotencyKey: commandKey(),
+      method: 'POST',
+    });
+    actionMessage.value = `Handoff de ${handoff.contact.label} assumido.`;
+    await refreshInbox(true);
+    await selectConversation(handoff.conversationId);
+  } catch (cause) {
+    if (/** @type {any} */ (cause)?.status === 409) {
+      error.value =
+        'Este handoff já foi assumido ou mudou. A Caixa de Entrada foi atualizada.';
+      await refreshInbox(true);
+    } else {
+      error.value = describeError(cause);
+    }
+  } finally {
+    claimingHandoffId.value = '';
+    busy.value = false;
+  }
+}
+
 async function openRename() {
   draftName.value = active.value?.contact.displayName ?? '';
   renaming.value = true;
@@ -322,7 +384,7 @@ function scheduleLiveRefresh() {
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
   refreshTimer = globalThis.setTimeout(() => {
     refreshTimer = 0;
-    void loadInbox(true);
+    void refreshInbox(true);
   }, LIVE_REFRESH_DELAY_MS);
 }
 
@@ -332,12 +394,13 @@ watch(liveEvent, (event) => {
 });
 onMounted(() => {
   heading.value?.focus();
-  void loadInbox();
+  void refreshInbox();
   void loadAssignableUsers();
 });
 onBeforeUnmount(() => {
   listController?.abort();
   detailController?.abort();
+  handoffController?.abort();
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });
 </script>
@@ -353,6 +416,72 @@ onBeforeUnmount(() => {
         </p>
       </div>
     </header>
+
+    <section class="handoff-section" aria-labelledby="handoffs-title">
+      <div class="handoff-head">
+        <div>
+          <p class="section-kicker">Atendimento humano</p>
+          <h2 id="handoffs-title">Handoffs pendentes</h2>
+          <p>Solicitações que aguardam um vendedor assumir a conversa.</p>
+        </div>
+        <p class="count" :aria-label="`${handoffs.length} handoffs pendentes`">
+          {{ handoffs.length }}
+        </p>
+      </div>
+      <p v-if="handoffLoading" class="loading-state" role="status">
+        Carregando handoffs…
+      </p>
+      <p v-else-if="!handoffs.length" class="handoff-empty">
+        Nenhum handoff pendente.
+      </p>
+      <ul v-else class="handoff-list" aria-label="Handoffs pendentes">
+        <li v-for="handoff in handoffs" :key="handoff.id" class="surface">
+          <div class="handoff-head">
+            <div>
+              <h3>{{ handoff.contact.label }}</h3>
+              <p>{{ handoff.contact.externalId }} · {{ handoff.targetRole }}</p>
+            </div>
+            <span class="badge" data-tone="error">Pendente</span>
+          </div>
+          <dl class="card-facts">
+            <div>
+              <dt>Motivo</dt>
+              <dd>{{ handoff.reasonCode }}</dd>
+            </div>
+            <div>
+              <dt>Recebido</dt>
+              <dd>{{ dateTimeBR(handoff.createdAt) }}</dd>
+            </div>
+            <div>
+              <dt>Prazo</dt>
+              <dd>{{ dateTimeBR(handoff.dueAt) }}</dd>
+            </div>
+          </dl>
+          <p class="handoff-summary">{{ handoff.summary }}</p>
+          <div class="inline-actions">
+            <button
+              type="button"
+              class="primary"
+              :disabled="busy || Boolean(claimingHandoffId)"
+              @click="claimHandoff(handoff)"
+            >
+              {{
+                claimingHandoffId === handoff.id
+                  ? 'Assumindo…'
+                  : 'Assumir atendimento'
+              }}
+            </button>
+            <button
+              type="button"
+              :disabled="busy"
+              @click="selectConversation(handoff.conversationId)"
+            >
+              Abrir conversa
+            </button>
+          </div>
+        </li>
+      </ul>
+    </section>
 
     <div class="filter-bar">
       <div class="search-control">

@@ -445,7 +445,8 @@ onBeforeUnmount(() => {
         <p class="eyebrow">Atendimentos</p>
         <h1 ref="heading" tabindex="-1">Caixa de Entrada</h1>
         <p>
-          Conversas persistidas dos canais oficiais, atualizadas em tempo real.
+          Acompanhe as conversas recebidas pelos canais de atendimento,
+          atualizadas em tempo real.
         </p>
       </div>
     </header>

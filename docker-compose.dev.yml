@@ -34,7 +34,7 @@ services:
       - crm-silmer-n8n-postgres-data:/var/lib/postgresql/data
 
   n8n:
-    image: n8nio/n8n:1.101.1
+    image: n8nio/n8n:1.121.0
     depends_on:
       n8n-postgres:
         condition: service_healthy

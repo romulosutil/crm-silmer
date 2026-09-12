@@ -109,8 +109,8 @@ Cada estado combina cor, ícone e rótulo. Os nomes dos tokens devem expressar f
 
 ### Aplicação do tema
 
-- O modo claro é a aparência inicial quando não existe preferência salva; `Sistema` continua respeitando `prefers-color-scheme`.
-- A escolha manual oferece `Sistema`, `Claro` e `Escuro`.
+- O modo claro é a aparência inicial quando não existe preferência salva ou a preferência legada for inválida.
+- A escolha manual oferece `Claro` e `Escuro`; a preferência do sistema não é usada.
 - Aplicar `data-theme="light|dark"` no elemento `html` e declarar `color-scheme` correspondente.
 - Persistir somente a preferência de tema, sem estado global em `window`.
 - Aplicar o tema antes da primeira pintura para evitar flash entre temas.
@@ -206,7 +206,7 @@ Base de `4px`: `4`, `8`, `12`, `16`, `20`, `24`, `32`, `40`, `48`, `64`.
 | `Skeleton` | mesma geometria do conteúdo; respeita reduced motion |
 | `DataTable` / `DataList` | cabeçalhos reais, seleção, ordenação e alternativa responsiva |
 | `Tooltip` | apoio curto; nunca guarda informação necessária para concluir tarefa |
-| `ThemeSwitcher` | `Sistema`, `Claro`, `Escuro`, com rótulo acessível |
+| `ThemeSwitcher` | `Claro`, `Escuro`, com rótulo acessível |
 
 ### Composição de domínio
 

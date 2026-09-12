@@ -299,28 +299,19 @@ onBeforeUnmount(() => {
             </div>
           </form>
           <template v-else>
-            <h2 :id="`client-${selected.id}`">{{ selected.label }}</h2>
-            <p>
-              {{
-                selected.provisional
-                  ? 'Cadastro provisório'
-                  : 'Cadastro canônico'
-              }}
-            </p>
-            <button type="button" class="link-button" @click="openRename">
-              Editar nome
-            </button>
+            <div class="client-title-row">
+              <h2 :id="`client-${selected.id}`">{{ selected.label }}</h2>
+              <button type="button" class="link-button" @click="openRename">
+                Editar nome
+              </button>
+            </div>
           </template>
         </div>
         <div v-if="detailLoading" class="loading-state" role="status">
           Carregando histórico…
         </div>
         <template v-else>
-          <dl class="client-facts">
-            <div>
-              <dt>Conversas</dt>
-              <dd>{{ detail.conversations.length }}</dd>
-            </div>
+          <dl class="client-facts client-facts--single">
             <div>
               <dt>Cadastrado em</dt>
               <dd>{{ dateTimeBR(selected.createdAt) }}</dd>
@@ -372,3 +363,21 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.client-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.client-title-row .link-button {
+  flex: none;
+}
+
+.client-facts--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+</style>

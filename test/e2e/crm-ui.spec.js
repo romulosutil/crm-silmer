@@ -632,6 +632,20 @@ test('does not expose the technical contact identifier in the client list', asyn
   await expect(page.getByText(contact.id, { exact: true })).toHaveCount(0);
 });
 
+test('simplifies the client summary without operational status or count', async ({
+  page,
+}) => {
+  await mockCrm(page);
+
+  await page.goto('/clientes');
+
+  await expect(page.getByRole('button', { name: 'Editar nome' })).toBeVisible();
+  await expect(page.getByText('Cadastro provisório')).toHaveCount(0);
+  await expect(page.locator('.client-facts').getByText('Conversas')).toHaveCount(
+    0,
+  );
+});
+
 test('sends an authorized human reply through the official command', async ({
   page,
 }) => {

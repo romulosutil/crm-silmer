@@ -60,7 +60,7 @@
 .inbox-filter-bar {
   display: grid;
   grid-template-columns: minmax(18rem, 1fr) minmax(24rem, 30rem) auto;
-  align-items: end;
+  align-items: start;
   gap: 1rem;
   padding: 1rem;
   background: var(--color-surface-raised);
@@ -72,6 +72,7 @@
   max-inline-size: none;
 }
 
+.inbox-filter-bar .search-control,
 .inbox-queue-switcher {
   display: grid;
   gap: 0.4rem;
@@ -81,16 +82,22 @@
   border: 0;
 }
 
-.inbox-queue-switcher legend {
-  padding: 0;
+.inbox-filter-bar .search-control label,
+.inbox-queue-switcher legend,
+.inbox-state-label {
+  display: block;
+  min-block-size: 1.125rem;
+  margin: 0;
   color: var(--color-text-muted);
   font-size: var(--text-xs);
   font-weight: 600;
+  line-height: 1.125rem;
 }
 
 .inbox-queue-options {
   display: flex;
   overflow: hidden;
+  margin-block-start: 0.4rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -114,6 +121,13 @@
 .inbox-queue-options button[aria-pressed='true'] {
   color: var(--color-on-accent);
   background: var(--color-accent-solid);
+}
+
+.inbox-filter-bar .search-field input,
+.inbox-queue-options,
+.inbox-state-trigger {
+  block-size: 46px;
+  min-block-size: 46px;
 }
 
 .inbox-toolbar-actions {
@@ -149,17 +163,10 @@
   display: none;
 }
 
-.inbox-state-label {
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
 .inbox-state-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-block-size: 44px;
   padding: 0.55rem 0.7rem;
   color: var(--color-text);
   font-size: var(--text-sm);
@@ -171,7 +178,7 @@
 .inbox-state-trigger::after {
   content: '⌄';
   color: var(--color-link);
-  font-size: 1rem;
+  font-size: 1.125rem;
   line-height: 1;
 }
 

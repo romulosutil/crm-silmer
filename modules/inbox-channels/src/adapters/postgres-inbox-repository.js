@@ -71,8 +71,13 @@ async function appendConversationStreamEvent(transaction, event) {
  */
 function assertConversationOwnership(kind, current, actor) {
   const owner = current.assigned_user_id;
-  if (owner === null || owner === actor.id) return;
-  if ([...(actor.capabilities ?? [])].includes(ADMIN_CAPABILITY)) return;
+  const isAdmin = [...(actor.capabilities ?? [])].includes(ADMIN_CAPABILITY);
+  if (kind === 'archive' && owner === null && !isAdmin) {
+    throw new InboxForbiddenError(
+      'Conversation must be taken over before it can be archived',
+    );
+  }
+  if (owner === null || owner === actor.id || isAdmin) return;
   throw new InboxForbiddenError(
     `Conversation is assigned to another operator and cannot be ${kind === 'transfer' ? 'transferred' : 'mutated'} by this actor`,
   );

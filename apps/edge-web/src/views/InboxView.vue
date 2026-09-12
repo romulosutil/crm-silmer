@@ -109,6 +109,11 @@ const canTransfer = computed(
     active.value?.automationState === 'human' &&
     Boolean(active.value?.assignedUser),
 );
+const canArchive = computed(
+  () =>
+    !isTerminal.value &&
+    (isAdmin.value || owner.value?.id === currentUserId.value),
+);
 
 function listUrl() {
   return `/api/v1/inbox/conversations?limit=100&archived=${showArchived.value}`;
@@ -650,7 +655,7 @@ onBeforeUnmount(() => {
               Repassar atendimento
             </button>
             <button
-              v-if="canAct && !showArchived"
+              v-if="canArchive && !showArchived"
               type="button"
               :disabled="busy"
               @click="archiveConversation"

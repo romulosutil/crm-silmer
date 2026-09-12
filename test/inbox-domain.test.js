@@ -112,11 +112,30 @@ test('updates the active conversation exactly once for each new inbound message'
 test('archives an active conversation without ending it and restores it on new inbound', async () => {
   const { audits, service } = createHarness();
   const received = await service.receiveInbound(inbound());
+  await assert.rejects(
+    service.archiveConversation({
+      actor: ATTENDANT,
+      conversationId: received.conversation.id,
+      correlationId: 'correlation-unassigned-archive',
+      expectedVersion: received.conversation.version,
+      idempotencyKey: 'unassigned-archive-key',
+      reason: 'Tentativa sem assumir atendimento',
+    }),
+    InboxForbiddenError,
+  );
+  const takeover = await service.takeover({
+    actor: ATTENDANT,
+    conversationId: received.conversation.id,
+    correlationId: 'correlation-archive-takeover',
+    expectedVersion: received.conversation.version,
+    idempotencyKey: 'archive-takeover-key',
+    reason: 'Assumir antes de arquivar',
+  });
   const archived = await service.archiveConversation({
     actor: ATTENDANT,
     conversationId: received.conversation.id,
     correlationId: 'correlation-archive',
-    expectedVersion: received.conversation.version,
+    expectedVersion: takeover.version,
     idempotencyKey: 'archive-key',
     reason: 'Resolvido por enquanto',
   });

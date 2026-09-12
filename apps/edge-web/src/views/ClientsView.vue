@@ -334,12 +334,14 @@ onBeforeUnmount(() => {
           <div class="panel-head subsection-heading">
             <h3>Canais de contato</h3>
           </div>
-          <ul class="history-list">
+          <ul class="history-list contact-channels">
             <li v-for="identity in detail.identities" :key="identity.id">
-              <strong>{{
-                CHANNEL_LABELS[identity.channel] ?? identity.channel
-              }}</strong>
-              <span>{{ identity.displayHandle ?? identity.externalId }}</span>
+              <template v-if="identity.kind !== 'phone'">
+                <strong>{{
+                  CHANNEL_LABELS[identity.channel] ?? identity.channel
+                }}</strong>
+                <span>{{ identity.displayHandle ?? identity.externalId }}</span>
+              </template>
               <label
                 v-if="identity.kind === 'phone'"
                 class="contact-phone"
@@ -417,5 +419,10 @@ onBeforeUnmount(() => {
 
 .contact-phone input {
   max-inline-size: 18rem;
+}
+
+.contact-channels li {
+  padding-inline-start: 0;
+  border-inline-start: 0;
 }
 </style>

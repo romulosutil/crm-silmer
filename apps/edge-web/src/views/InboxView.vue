@@ -146,8 +146,7 @@ const canUnarchive = computed(
 );
 const selectedStateLabel = computed(
   () =>
-    INBOX_STATES.find(([value]) => value === stateFilter.value)?.[1] ??
-    'Todas',
+    INBOX_STATES.find(([value]) => value === stateFilter.value)?.[1] ?? 'Todas',
 );
 
 function listUrl() {

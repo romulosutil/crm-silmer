@@ -27,7 +27,8 @@ const localIdentityEnvironment = {
   AUTH_THROTTLE_HMAC_KEY:
     process.env.AUTH_THROTTLE_HMAC_KEY ?? localSecrets.AUTH_THROTTLE_HMAC_KEY,
   IDEMPOTENCY_ENVELOPE_KEY:
-    process.env.IDEMPOTENCY_ENVELOPE_KEY ?? localSecrets.IDEMPOTENCY_ENVELOPE_KEY,
+    process.env.IDEMPOTENCY_ENVELOPE_KEY ??
+    localSecrets.IDEMPOTENCY_ENVELOPE_KEY,
   HANDOFF_ENVELOPE_KEY:
     process.env.HANDOFF_ENVELOPE_KEY ?? localSecrets.HANDOFF_ENVELOPE_KEY,
   OPERATION_CURSOR_HMAC_KEY:
@@ -60,8 +61,7 @@ const localN8nEnvironment = localN8nEnabled
       N8N_COMMAND_URL:
         'http://127.0.0.1:5678/webhook/silmer/local-panel-command',
       N8N_INTEGRATION_ENABLED: 'true',
-      N8N_INTEGRATION_ENVELOPE_KEY:
-        localSecrets.N8N_INTEGRATION_ENVELOPE_KEY,
+      N8N_INTEGRATION_ENVELOPE_KEY: localSecrets.N8N_INTEGRATION_ENVELOPE_KEY,
       PRIVATE_MEDIA_MAX_BYTES: String(64 * 1024 * 1024),
       PRIVATE_MEDIA_MAX_FILE_BYTES: String(16 * 1024 * 1024),
       PRIVATE_MEDIA_ROOT: resolve(root, 'tmp', 'local-n8n-media'),

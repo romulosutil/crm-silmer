@@ -155,9 +155,7 @@ test('edits one field at a time and disables an account', async ({ page }) => {
     .getByRole('row', { name: /Marina Duarte/u })
     .getByLabel('Mais ações para Marina Duarte')
     .click();
-  await page
-    .getByRole('button', { name: 'Editar' })
-    .click();
+  await page.getByRole('button', { name: 'Editar' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await dialog.getByLabel('Nome').fill('Marina Duarte Lima');
@@ -174,9 +172,7 @@ test('edits one field at a time and disables an account', async ({ page }) => {
     .getByRole('row', { name: /Marina Duarte Lima/u })
     .getByLabel('Mais ações para Marina Duarte Lima')
     .click();
-  await page
-    .getByRole('button', { name: 'Desativar' })
-    .click();
+  await page.getByRole('button', { name: 'Desativar' }).click();
   await expect(
     page.getByText('2 contas · 1 ativas · 1 desativadas'),
   ).toBeVisible();

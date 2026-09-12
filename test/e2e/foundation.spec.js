@@ -59,7 +59,9 @@ test('applies a saved dark theme before the application bundle loads', async ({
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
 });
 
-test('ignores the retired system preference and defaults to light', async ({ page }) => {
+test('ignores the retired system preference and defaults to light', async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     globalThis.localStorage.setItem('silmer-theme', 'system');
   });
@@ -69,7 +71,9 @@ test('ignores the retired system preference and defaults to light', async ({ pag
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
 
-test('shows a seller account without exposing capabilities', async ({ page }) => {
+test('shows a seller account without exposing capabilities', async ({
+  page,
+}) => {
   await page.route('**/api/v1/sessions/current', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -88,7 +92,9 @@ test('shows a seller account without exposing capabilities', async ({ page }) =>
   await page.goto('/');
   await page.getByRole('link', { name: 'Conta' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Conta e segurança' })).toBeFocused();
+  await expect(
+    page.getByRole('heading', { name: 'Conta e segurança' }),
+  ).toBeFocused();
   await expect(page.getByRole('definition')).toHaveText([
     'Vendedora Silmer',
     'vendedora@example.test',
@@ -281,7 +287,9 @@ test('submits login, restores and closes a session by keyboard without browser s
   );
 
   await page.getByRole('link', { name: 'Conta' }).click();
-  await expect(page.getByRole('heading', { name: 'Conta e segurança' })).toBeFocused();
+  await expect(
+    page.getByRole('heading', { name: 'Conta e segurança' }),
+  ).toBeFocused();
   await expect(page.getByRole('definition')).toHaveText([
     'Admin Comercial',
     'admin@example.test',

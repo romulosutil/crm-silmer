@@ -90,11 +90,14 @@ export function createServerApi(runtime = {}) {
     handoffConfigurationPresent &&
     !handoffSecretNames.every((name) => Boolean(environment[name]))
   ) {
-    throw new Error('Conversation handoff runtime requires IDEMPOTENCY_ENVELOPE_KEY');
+    throw new Error(
+      'Conversation handoff runtime requires IDEMPOTENCY_ENVELOPE_KEY',
+    );
   }
   const handoffs =
     runtime.handoffs ??
-    (runtime.database && handoffSecretNames.every((name) => Boolean(environment[name]))
+    (runtime.database &&
+    handoffSecretNames.every((name) => Boolean(environment[name]))
       ? createConversationHandoffRuntime(runtime.database, { environment })
       : undefined);
   const conversations =
@@ -131,8 +134,7 @@ export function createServerApi(runtime = {}) {
   }
   const operations =
     runtime.operations ??
-    (runtime.database &&
-    operationSecretValues.every(Boolean)
+    (runtime.database && operationSecretValues.every(Boolean)
       ? createOperationReadRuntime(runtime.database, {
           environment: {
             ...environment,

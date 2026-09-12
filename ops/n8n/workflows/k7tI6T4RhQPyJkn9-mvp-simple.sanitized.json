@@ -26,10 +26,7 @@
       "name": "Normalizar evento WhatsApp (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -1940,
-        -300
-      ],
+      "position": [-1940, -300],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const root = $json;\nconst value = root.entry?.[0]?.changes?.[0]?.value ?? root;\nconst message = value.messages?.[0] ?? null;\nconst status = value.statuses?.[0] ?? null;\nconst contact = value.contacts?.[0] ?? null;\nconst metadata = value.metadata ?? {};\nconst media = message?.audio ?? message?.image ?? message?.document ?? message?.video ?? null;\nconst occurredAt = message?.timestamp ?? status?.timestamp;\nreturn { json: {\n  event_kind: message ? 'message' : status ? 'status' : 'ignore',\n  event_id: message?.id ?? (status ? [status.id, status.status, occurredAt].join(':') : 'ignored:' + $execution.id),\n  occurred_at: occurredAt ? new Date(Number(occurredAt) * 1000).toISOString() : new Date().toISOString(),\n  from: message?.from ?? status?.recipient_id ?? '',\n  customer_name: contact?.profile?.name ?? '',\n  phone_number_id: metadata.phone_number_id ?? '',\n  message_type: message?.type ?? 'status',\n  text: message?.text?.body ?? message?.button?.text ?? message?.interactive?.button_reply?.title ?? message?.interactive?.list_reply?.title ?? message?.image?.caption ?? message?.document?.caption ?? '',\n  media_id: media?.id ?? '',\n  media_mime_type: media?.mime_type ?? '',\n  media_filename: message?.document?.filename ?? '',\n  reply_to: message?.context?.id ?? null,\n  status: status?.status ?? '',\n  external_message_id: status?.id ?? ''\n} };"
@@ -39,10 +36,7 @@
       "name": "Rotear evento WhatsApp (MVP)",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
-      "position": [
-        -1710,
-        -300
-      ],
+      "position": [-1710, -300],
       "parameters": {
         "mode": "rules",
         "rules": {
@@ -105,10 +99,7 @@
       "name": "Preparar inbound CRM (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -1470,
-        -520
-      ],
+      "position": [-1470, -520],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const n = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: {\n  payload: {\n    schema_version: '1.0',\n    event_id: n.event_id,\n    occurred_at: n.occurred_at,\n    channel: 'whatsapp',\n    contact: { wa_id: n.from, name: n.customer_name },\n    message: {\n      external_id: n.event_id,\n      type: n.message_type,\n      text: n.text,\n      reply_to: n.reply_to,\n      attachment: n.media_id ? { external_id: n.media_id, mime_type: n.media_mime_type || null, filename: n.media_filename || null } : null\n    },\n    metadata: { phone_number_id: n.phone_number_id }\n  },\n  idempotency_key: n.event_id,\n  correlation_id: correlationId\n} };"
@@ -118,10 +109,7 @@
       "name": "CRM - Registrar inbound (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        -1230,
-        -520
-      ],
+      "position": [-1230, -520],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/messages/inbound\" }}",
@@ -177,10 +165,7 @@
       "name": "Rotear conversa registrada (MVP)",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
-      "position": [
-        -990,
-        -520
-      ],
+      "position": [-990, -520],
       "parameters": {
         "mode": "rules",
         "rules": {
@@ -243,10 +228,7 @@
       "name": "Montar contexto da IA (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -750,
-        -700
-      ],
+      "position": [-750, -700],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const inbound = $json;\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nreturn { json: {\n  conversation_id: inbound.conversation_id,\n  automation_epoch: inbound.automation_epoch,\n  source_revision: inbound.source_revision,\n  wa_id: source.from,\n  phone_number_id: source.phone_number_id,\n  briefing: inbound.briefing ?? {},\n  prompt: [\n    'Mensagem atual: ' + source.text,\n    'Nome informado no perfil: ' + (source.customer_name || 'não informado'),\n    'Histórico oficial: ' + JSON.stringify(inbound.recent_messages ?? []),\n    'Briefing atual: ' + JSON.stringify(inbound.briefing ?? {})\n  ].join('\\n')\n} };"
@@ -256,10 +238,7 @@
       "name": "OpenAI - Modelo do MVP",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
-      "position": [
-        -510,
-        -430
-      ],
+      "position": [-510, -430],
       "parameters": {
         "model": {
           "__rl": true,
@@ -281,10 +260,7 @@
       "name": "Validar saída do MVP",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
-      "position": [
-        -280,
-        -430
-      ],
+      "position": [-280, -430],
       "parameters": {
         "schemaType": "manual",
         "inputSchema": "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"reply_text\":{\"type\":\"string\"},\"briefing_patch\":{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"artwork_locations\":{},\"artwork_status\":{},\"artwork_technique\":{},\"briefing_status\":{},\"city_or_postal_code\":{},\"colors\":{},\"customer_name\":{},\"customizations\":{},\"delivery_address\":{},\"delivery_mode\":{},\"fabrics\":{},\"needed_by\":{},\"next_required_field\":{},\"notes\":{},\"numbers\":{},\"order_name\":{},\"pickup_location\":{},\"product_model\":{},\"product_type\":{},\"purchase_profile\":{},\"purpose\":{},\"quantity\":{},\"segment\":{},\"sizes\":{},\"sponsors\":{}}},\"handoff_ready\":{\"type\":\"boolean\"},\"handoff_required\":{\"type\":\"boolean\"},\"handoff_reason\":{\"type\":[\"string\",\"null\"],\"enum\":[\"briefing_complete\",\"human_requested\",\"negotiation\",\"complaint\",\"urgency\",\"low_confidence\",\"unsupported\",null]},\"reasoning\":{\"type\":\"string\"}},\"required\":[\"reply_text\",\"briefing_patch\",\"handoff_ready\",\"handoff_required\",\"handoff_reason\",\"reasoning\"]}",
@@ -295,10 +271,7 @@
       "name": "Atendente virtual Silmer (MVP)",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
-      "position": [
-        -510,
-        -700
-      ],
+      "position": [-510, -700],
       "parameters": {
         "promptType": "define",
         "text": "={{ $json.prompt }}",
@@ -316,10 +289,7 @@
       "name": "Normalizar decisão da IA (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -260,
-        -700
-      ],
+      "position": [-260, -700],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const decision = $json.output ?? $json;\nconst context = $('Montar contexto da IA (MVP)').item.json;\nconst patch = Object.fromEntries(Object.entries(decision.briefing_patch ?? {})\n  .filter(([key, value]) => typeof key === 'string' && value !== null && value !== undefined));\nconst briefing = { ...(context.briefing ?? {}), ...patch };\nconst required = [\n  'customer_name', 'order_name', 'product_type', 'product_model', 'quantity',\n  'fabrics', 'colors', 'sizes', 'artwork_status', 'artwork_technique',\n  'artwork_locations', 'needed_by', 'purpose', 'purchase_profile', 'delivery_mode'\n];\nif (briefing.delivery_mode === 'entrega' || briefing.delivery_mode === 'delivery') {\n  required.push('city_or_postal_code', 'delivery_address');\n}\nif (briefing.delivery_mode === 'retirada' || briefing.delivery_mode === 'pickup') {\n  required.push('pickup_location');\n}\nconst missing = required.filter((field) => {\n  const value = briefing[field];\n  return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);\n});\nconst handoffReady = missing.length === 0;\nconst escalationReasons = new Set(['human_requested', 'negotiation', 'complaint', 'urgency', 'low_confidence', 'unsupported']);\nconst requestedReason = decision.handoff_reason ?? null;\nconst escalation = decision.handoff_required === true && escalationReasons.has(requestedReason);\nconst handoffRequired = handoffReady || escalation;\npatch.briefing_status = handoffReady ? 'ready_for_handoff' : 'collecting';\npatch.next_required_field = missing[0] ?? 'ready_for_handoff';\nreturn { json: {\n  ...context,\n  reply_text: String(decision.reply_text ?? '').slice(0, 4096),\n  briefing_patch: patch,\n  handoff_ready: handoffReady,\n  handoff_required: handoffRequired,\n  handoff_reason: handoffReady ? 'briefing_complete' : (escalation ? requestedReason : 'low_confidence'),\n  missing_briefing_fields: missing,\n  reasoning: String(decision.reasoning ?? 'Decisão do agente').slice(0, 1000)\n} };"
@@ -329,10 +299,7 @@
       "name": "Transferir para humano? (MVP)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [
-        -20,
-        -700
-      ],
+      "position": [-20, -700],
       "parameters": {
         "conditions": {
           "options": {
@@ -360,10 +327,7 @@
       "name": "Preparar handoff da IA (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        220,
-        -850
-      ],
+      "position": [220, -850],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const d = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst command = d.conversation_id + ':' + d.source_revision + ':handoff';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: d.conversation_id,\n    automation_epoch: d.automation_epoch, source_revision: d.source_revision,\n    briefing_patch: d.briefing_patch,\n    handoff: { reason: d.handoff_reason, summary: d.reasoning }\n  }, idempotency_key: command, correlation_id: correlationId\n} };"
@@ -373,10 +337,7 @@
       "name": "Preparar handoff de conteúdo (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -750,
-        -450
-      ],
+      "position": [-750, -450],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const inbound = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nconst command = inbound.conversation_id + ':' + inbound.source_revision + ':unsupported';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: inbound.conversation_id,\n    automation_epoch: inbound.automation_epoch, source_revision: inbound.source_revision,\n    handoff: { reason: 'unsupported', summary: 'Conteúdo ' + source.message_type + ' requer atendimento humano no MVP.' }\n  }, idempotency_key: command, correlation_id: correlationId\n} };"
@@ -386,10 +347,7 @@
       "name": "CRM - Registrar handoff (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        470,
-        -850
-      ],
+      "position": [470, -850],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -445,10 +403,7 @@
       "name": "Preparar reserva de envio da IA (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        220,
-        -620
-      ],
+      "position": [220, -620],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const d = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst command = d.conversation_id + ':' + d.source_revision + ':ai-response';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: d.conversation_id, automation_epoch: d.automation_epoch,\n    source_revision: d.source_revision, command_id: command,\n    message: { type: 'text', text: d.reply_text }, briefing_patch: d.briefing_patch\n  }, idempotency_key: 'reserve:' + command, correlation_id: correlationId,\n  command_id: command, reply_text: d.reply_text\n} };"
@@ -458,10 +413,7 @@
       "name": "CRM - Reservar envio da IA (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        470,
-        -620
-      ],
+      "position": [470, -620],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -517,10 +469,7 @@
       "name": "Envio da IA autorizado? (MVP)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [
-        710,
-        -620
-      ],
+      "position": [710, -620],
       "parameters": {
         "conditions": {
           "options": {
@@ -548,10 +497,7 @@
       "name": "WhatsApp - Enviar resposta da IA (MVP)",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
-      "position": [
-        950,
-        -620
-      ],
+      "position": [950, -620],
       "parameters": {
         "resource": "message",
         "operation": "send",
@@ -569,10 +515,7 @@
       "name": "Preparar message.sent da IA (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1190,
-        -690
-      ],
+      "position": [1190, -690],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command, event_type: 'message.sent',\n  occurred_at: new Date().toISOString(), command_id: command,\n  conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command, correlation_id: correlationId } };"
@@ -582,10 +525,7 @@
       "name": "CRM - Registrar message.sent da IA (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        1430,
-        -690
-      ],
+      "position": [1430, -690],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -641,10 +581,7 @@
       "name": "Preparar envio desconhecido da IA (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1190,
-        -500
-      ],
+      "position": [1190, -500],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  command_id: command, conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command, correlation_id: correlationId } };"
@@ -654,10 +591,7 @@
       "name": "CRM - Marcar envio desconhecido da IA (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        1430,
-        -500
-      ],
+      "position": [1430, -500],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -713,10 +647,7 @@
       "name": "Preparar status de entrega (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -1470,
-        -120
-      ],
+      "position": [-1470, -120],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const n = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst allowed = ['sent', 'delivered', 'read', 'failed'];\nif (!allowed.includes(n.status)) return [];\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: n.event_id,\n  event_type: 'message.' + n.status, occurred_at: n.occurred_at,\n  conversation_id: null, external_message_id: n.external_message_id\n}, idempotency_key: n.event_id, correlation_id: correlationId } };"
@@ -726,10 +657,7 @@
       "name": "CRM - Registrar status de entrega (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        -1230,
-        -120
-      ],
+      "position": [-1230, -120],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -785,10 +713,7 @@
       "name": "Painel - Receber comando (MVP)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [
-        -1940,
-        360
-      ],
+      "position": [-1940, 360],
       "parameters": {
         "httpMethod": "POST",
         "path": "silmer/panel-command",
@@ -804,10 +729,7 @@
       "name": "Normalizar comando do painel (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -1700,
-        360
-      ],
+      "position": [-1700, 360],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const payload = $json.body ?? {};\nconst headerKey = $json.headers?.['idempotency-key'] ?? '';\nconst action = payload.action;\nconst stateActions = ['take_over', 'return_to_ai', 'close'];\nconst validBase = payload.schema_version === '1.0' && typeof payload.command_id === 'string' && payload.command_id === headerKey;\nconst kind = validBase && action === 'send_message' && payload.message?.type === 'text'\n  ? 'send'\n  : validBase && stateActions.includes(action) ? 'state' : 'invalid';\nreturn { json: { payload, kind } };"
@@ -817,10 +739,7 @@
       "name": "Rotear comando do painel (MVP)",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
-      "position": [
-        -1460,
-        360
-      ],
+      "position": [-1460, 360],
       "parameters": {
         "mode": "rules",
         "rules": {
@@ -883,10 +802,7 @@
       "name": "Preparar reserva de envio humano (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -1220,
-        250
-      ],
+      "position": [-1220, 250],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const command = $json.payload;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command.command_id,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: command.conversation_id,\n    automation_epoch: command.automation_epoch,\n    source_revision: command.source_revision,\n    command_id: command.command_id, message: command.message\n  }, idempotency_key: 'reserve:' + command.command_id,\n  correlation_id: correlationId,\n  command\n} };"
@@ -896,10 +812,7 @@
       "name": "CRM - Reservar envio humano (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        -980,
-        250
-      ],
+      "position": [-980, 250],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -955,10 +868,7 @@
       "name": "Envio humano autorizado? (MVP)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [
-        -740,
-        250
-      ],
+      "position": [-740, 250],
       "parameters": {
         "conditions": {
           "options": {
@@ -986,10 +896,7 @@
       "name": "WhatsApp - Enviar texto humano (MVP)",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
-      "position": [
-        -500,
-        180
-      ],
+      "position": [-500, 180],
       "parameters": {
         "resource": "message",
         "operation": "send",
@@ -1007,10 +914,7 @@
       "name": "Preparar message.sent humano (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -260,
-        120
-      ],
+      "position": [-260, 120],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command.command_id,\n  event_type: 'message.sent', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command.command_id,\ncorrelation_id: correlationId, command_id: command.command_id } };"
@@ -1020,10 +924,7 @@
       "name": "CRM - Registrar message.sent humano (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        -20,
-        120
-      ],
+      "position": [-20, 120],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -1079,10 +980,7 @@
       "name": "Responder comando aceito (MVP)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
-      "position": [
-        220,
-        120
-      ],
+      "position": [220, 120],
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ { accepted: true, duplicate: false, command_id: $('Preparar reserva de envio humano (MVP)').item.json.command.command_id, message_id: $('Preparar message.sent humano (MVP)').item.json.payload.external_message_id } }}",
@@ -1095,10 +993,7 @@
       "name": "Responder comando sem envio (MVP)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
-      "position": [
-        -980,
-        500
-      ],
+      "position": [-980, 500],
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ { accepted: true, duplicate: $json.send_authorized === false, command_id: $('Normalizar comando do painel (MVP)').item.json.payload.command_id } }}",
@@ -1111,10 +1006,7 @@
       "name": "Rejeitar comando inválido (MVP)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
-      "position": [
-        -1220,
-        620
-      ],
+      "position": [-1220, 620],
       "parameters": {
         "respondWith": "json",
         "responseBody": "{\"accepted\":false,\"error\":\"unsupported_or_invalid_command\"}",
@@ -1127,10 +1019,7 @@
       "name": "Preparar envio humano desconhecido (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -260,
-        330
-      ],
+      "position": [-260, 330],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command.command_id,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command.command_id,\ncorrelation_id: correlationId } };"
@@ -1140,10 +1029,7 @@
       "name": "CRM - Marcar envio humano desconhecido (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        -20,
-        330
-      ],
+      "position": [-20, 330],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -1199,20 +1085,14 @@
       "name": "Capturar falha do workflow (MVP)",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [
-        700,
-        360
-      ],
+      "position": [700, 360],
       "parameters": {}
     },
     {
       "name": "Preparar workflow.failed (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        940,
-        360
-      ],
+      "position": [940, 360],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const executionId = String($json.execution?.id ?? $execution.id);\nconst correlationId = String($execution.id).padStart(16, '0');\nconst eventId = 'workflow-failed:' + executionId;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed',\n  occurred_at: new Date().toISOString(), conversation_id: null,\n  failure: { code: 'WORKFLOW_FAILED', node: String($json.execution?.lastNodeExecuted ?? 'unknown').slice(0, 128) }\n}, idempotency_key: eventId, correlation_id: correlationId } };"
@@ -1222,10 +1102,7 @@
       "name": "CRM - Registrar workflow.failed (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [
-        1180,
-        360
-      ],
+      "position": [1180, 360],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -1281,18 +1158,11 @@
       "name": "WhatsApp - Receber eventos (MVP)",
       "type": "n8n-nodes-base.whatsAppTrigger",
       "typeVersion": 1,
-      "position": [
-        -2180,
-        -300
-      ],
+      "position": [-2180, -300],
       "parameters": {
-        "updates": [
-          "messages"
-        ],
+        "updates": ["messages"],
         "options": {
-          "messageStatusUpdates": [
-            "all"
-          ]
+          "messageStatusUpdates": ["all"]
         }
       }
     }

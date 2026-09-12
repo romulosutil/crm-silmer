@@ -20,7 +20,10 @@ export class LiveEventDispatcher {
     this.listeners.add(listener);
     if (!this.timer) {
       void this.poll();
-      this.timer = globalThis.setInterval(() => void this.poll(), POLL_INTERVAL_MS);
+      this.timer = globalThis.setInterval(
+        () => void this.poll(),
+        POLL_INTERVAL_MS,
+      );
       this.timer.unref?.();
     }
     return () => {
@@ -36,10 +39,16 @@ export class LiveEventDispatcher {
     if (this.polling || this.listeners.size === 0) return;
     this.polling = true;
     try {
-      const batch = await this.operations.readLiveEvents({ after: this.cursor });
+      const batch = await this.operations.readLiveEvents({
+        after: this.cursor,
+      });
       if (batch.reset) {
         this.cursor = batch.cursor;
-        this.emit({ cursor: this.cursor, payload: { cursor: this.cursor }, type: 'stream.reset' });
+        this.emit({
+          cursor: this.cursor,
+          payload: { cursor: this.cursor },
+          type: 'stream.reset',
+        });
         return;
       }
       for (const event of batch.events) this.emit(event);

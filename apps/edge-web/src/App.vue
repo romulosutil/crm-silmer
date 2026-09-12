@@ -59,7 +59,8 @@ const canAccessCurrentRoute = computed(
 const connectionLabel = computed(() => {
   if (connection.value === 'conectado') return 'Atualizado agora';
   if (connection.value === 'reconectando') return 'Sincronizando atualizações…';
-  if (connection.value === 'indisponível') return 'Atualização automática pausada';
+  if (connection.value === 'indisponível')
+    return 'Atualização automática pausada';
   return 'Preparando atualização…';
 });
 const connectionDetail = computed(() =>
@@ -153,7 +154,7 @@ async function redirectUnauthorizedAdminRoute() {
     return;
   }
   await router.replace('/dashboard');
-    announce('Você não tem acesso à área de vendedores.');
+  announce('Você não tem acesso à área de vendedores.');
 }
 
 /** @param {boolean} [focus] */

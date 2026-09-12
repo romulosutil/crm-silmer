@@ -37,9 +37,12 @@ async function loadDashboard() {
   loading.value = true;
   error.value = '';
   try {
-    const inboxResponse = await request('/api/v1/inbox/conversations?limit=100', {
-      signal: controller.signal,
-    });
+    const inboxResponse = await request(
+      '/api/v1/inbox/conversations?limit=100',
+      {
+        signal: controller.signal,
+      },
+    );
     inbox.value = inboxResponse.data;
   } catch (cause) {
     if (cause?.name !== 'AbortError') {
@@ -153,9 +156,7 @@ onBeforeUnmount(() => controller?.abort());
                 class="badge"
                 :data-tone="conversation.requiresAttention ? 'error' : 'info'"
               >
-                {{
-                  conversationLabel(conversation)
-                }}
+                {{ conversationLabel(conversation) }}
               </span>
               <p>{{ dateTimeBR(conversation.updatedAt) }}</p>
             </div>

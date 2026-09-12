@@ -584,7 +584,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <fieldset class="inbox-queue-switcher">
-        <legend>Fila de trabalho</legend>
+        <legend>Fila de conversas</legend>
         <div class="inbox-queue-options">
           <button
             v-for="filter in QUEUE_FILTERS"

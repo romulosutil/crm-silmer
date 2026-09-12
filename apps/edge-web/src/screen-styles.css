@@ -59,7 +59,7 @@
 
 .inbox-filter-bar {
   display: grid;
-  grid-template-columns: minmax(15rem, 0.9fr) minmax(21rem, 1.1fr) auto;
+  grid-template-columns: minmax(18rem, 1fr) minmax(24rem, 30rem) auto;
   align-items: end;
   gap: 1rem;
   padding: 1rem;
@@ -237,6 +237,9 @@
 }
 
 .inbox-toolbar-actions .filter-summary {
+  display: flex;
+  align-items: center;
+  min-block-size: 44px;
   margin: 0;
   white-space: nowrap;
 }

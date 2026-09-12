@@ -1,3 +1,5 @@
+import { LiveEventDispatcher } from './live-event-dispatcher.js';
+
 class OperationReadRequestError extends Error {
   /** @param {number} statusCode @param {string} code */
   constructor(statusCode, code) {
@@ -14,6 +16,55 @@ class OperationReadRequestError extends Error {
  * @param {(request: object) => {correlationId: string, requestId: string}} contextFor
  */
 export function registerOperationRoutes(api, operations, contextFor) {
+  const dispatcher = new LiveEventDispatcher(/** @type {{readLiveEvents: Function}} */ (operations));
+  let activeStreams = 0;
+
+  api.get('/api/v1/events', async (request, reply) => {
+    const query = requireObject(request.query ?? {});
+    rejectUnknownKeys(query, ['after', 'topic']);
+    if (query.topic !== undefined && query.topic !== 'inbox') {
+      return reply.code(400).send({ error: { code: 'INVALID_REQUEST' } });
+    }
+    await authorizeRead(request, operations, 'deal.events.read');
+    if (activeStreams >= 30) {
+      reply.header('retry-after', '1');
+      return reply.code(429).send({ error: { code: 'SSE_CAPACITY_EXCEEDED' } });
+    }
+    const headerCursor = request.headers['last-event-id'];
+    const after = headerCursor ?? query.after ?? 0;
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'cache-control': 'private, no-cache',
+      connection: 'keep-alive',
+      'content-type': 'text/event-stream; charset=utf-8',
+      vary: 'Origin, Cookie',
+      'x-accel-buffering': 'no',
+    });
+    activeStreams += 1;
+    let closed = false;
+    /** @param {{cursor: number, payload: object, type: string}} event */
+    const write = (event) => {
+      if (closed || Number(event.cursor) <= Number(after)) return;
+      reply.raw.write(`id: ${event.cursor}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`);
+    };
+    const unsubscribe = dispatcher.subscribe(write);
+    const heartbeat = globalThis.setInterval(() => {
+      if (!closed) reply.raw.write(': heartbeat\n\n');
+    }, 15_000);
+    heartbeat.unref?.();
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      activeStreams = Math.max(0, activeStreams - 1);
+      globalThis.clearInterval(heartbeat);
+      unsubscribe();
+    };
+    request.raw.on('close', close);
+    reply.raw.on('close', close);
+    reply.raw.write(': connected\n\n');
+    return reply;
+  });
+
   api.get('/api/v1/inbox/conversations', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query, [

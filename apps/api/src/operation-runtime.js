@@ -33,10 +33,11 @@ export class OperationReadError extends Error {
   }
 }
 
-/** @param {{contactRepository: any, cursorKey: Buffer, handoffRepository: any, inboxRepository: any}} dependencies */
+/** @param {{contactRepository: any, cursorKey: Buffer, database?: any, handoffRepository: any, inboxRepository: any}} dependencies */
 export function createOperationReadService({
   contactRepository,
   cursorKey,
+  database,
   handoffRepository,
   inboxRepository,
 }) {
@@ -123,6 +124,45 @@ export function createOperationReadService({
         scope: 'inbox',
       });
     },
+    /** @param {{after?: unknown}} [input] */
+    async readLiveEvents(input = {}) {
+      if (!database || typeof database.query !== 'function') {
+        throw new TypeError('database is required');
+      }
+      const after = input.after === undefined || input.after === '' ? 0 : Number(input.after);
+      if (!Number.isSafeInteger(after) || after < 0) {
+        return Object.freeze({ cursor: 0, events: [], reset: true });
+      }
+      const result = await database.query(
+        `SELECT stream_cursor, aggregate_type, aggregate_id
+         FROM crm.domain_events
+         WHERE stream_cursor > $1
+           AND aggregate_type IN ('contact', 'conversation')
+         ORDER BY stream_cursor LIMIT 101`,
+        [after],
+      );
+      if (result.rows.length > 100) {
+        return Object.freeze({ cursor: after, events: [], reset: true });
+      }
+      const events = result.rows.map((/** @type {any} */ row) =>
+        Object.freeze({
+          cursor: Number(row.stream_cursor),
+          payload:
+            row.aggregate_type === 'contact'
+              ? { contactId: row.aggregate_id }
+              : { conversationId: row.aggregate_id },
+          type:
+            row.aggregate_type === 'contact'
+              ? 'inbox.contact.changed'
+              : 'inbox.conversation.changed',
+        }),
+      );
+      return Object.freeze({
+        cursor: events.at(-1)?.cursor ?? after,
+        events: Object.freeze(events),
+        reset: false,
+      });
+    },
     /** @param {any} input */
     async listOpenHandoffs(input = {}) {
       rejectUnknownKeys(input, ['cursor', 'limit']);
@@ -156,6 +196,7 @@ export function createOperationReadRuntime(database, options = {}) {
         'CONTACT_IDENTITY_ENVELOPE_KEY',
       ),
     }),
+    database,
     cursorKey: readKey(
         environment.OPERATION_CURSOR_HMAC_KEY,
         'OPERATION_CURSOR_HMAC_KEY',

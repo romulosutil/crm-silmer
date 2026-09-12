@@ -52,10 +52,7 @@
                 "conditions": [
                   {
                     "leftValue": "={{ $json.event_kind }}",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
+                    "operator": { "type": "string", "operation": "equals" },
                     "rightValue": "message"
                   }
                 ],
@@ -75,10 +72,7 @@
                 "conditions": [
                   {
                     "leftValue": "={{ $json.event_kind }}",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
+                    "operator": { "type": "string", "operation": "equals" },
                     "rightValue": "status"
                   }
                 ],
@@ -102,7 +96,7 @@
       "position": [-1470, -520],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const n = $json;\nreturn { json: {\n  payload: {\n    schema_version: '1.0',\n    event_id: n.event_id,\n    occurred_at: n.occurred_at,\n    channel: 'whatsapp',\n    contact: { wa_id: n.from, name: n.customer_name },\n    message: {\n      external_id: n.event_id,\n      type: n.message_type,\n      text: n.text,\n      reply_to: n.reply_to,\n      attachment: n.media_id ? { external_id: n.media_id, mime_type: n.media_mime_type || null, filename: n.media_filename || null } : null\n    },\n    metadata: { phone_number_id: n.phone_number_id }\n  },\n  idempotency_key: n.event_id,\n  correlation_id: 'wa:' + n.event_id\n} };"
+        "jsCode": "const n = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: {\n  payload: {\n    schema_version: '1.0',\n    event_id: n.event_id,\n    occurred_at: n.occurred_at,\n    channel: 'whatsapp',\n    contact: { wa_id: n.from, name: n.customer_name },\n    message: {\n      external_id: n.event_id,\n      type: n.message_type,\n      text: n.text,\n      reply_to: n.reply_to,\n      attachment: n.media_id ? { external_id: n.media_id, mime_type: n.media_mime_type || null, filename: n.media_filename || null } : null\n    },\n    metadata: { phone_number_id: n.phone_number_id }\n  },\n  idempotency_key: n.event_id,\n  correlation_id: correlationId\n} };"
       }
     },
     {
@@ -118,10 +112,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -130,18 +121,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -149,11 +134,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -180,12 +161,9 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.mode === 'ai_active' && ['text', 'button', 'interactive'].includes($('Normalizar evento WhatsApp (MVP)').item.json.message_type) }}",
-                    "operator": {
-                      "type": "boolean",
-                      "operation": "true"
-                    },
-                    "rightValue": ""
+                    "leftValue": "={{ $json.mode === 'ai_active' && ['text', 'button', 'interactive'].includes($('Normalizar evento WhatsApp (MVP)').item.json.message_type) ? 'ai_reply' : 'no_action' }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "ai_reply"
                   }
                 ],
                 "combinator": "and"
@@ -203,12 +181,9 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.mode === 'ai_active' }}",
-                    "operator": {
-                      "type": "boolean",
-                      "operation": "true"
-                    },
-                    "rightValue": ""
+                    "leftValue": "={{ $json.mode === 'ai_active' ? 'media_handoff' : 'no_action' }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "media_handoff"
                   }
                 ],
                 "combinator": "and"
@@ -231,7 +206,7 @@
       "position": [-750, -700],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const inbound = $json;\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nreturn { json: {\n  conversation_id: inbound.conversation_id,\n  automation_epoch: inbound.automation_epoch,\n  source_revision: inbound.source_revision,\n  wa_id: source.from,\n  phone_number_id: source.phone_number_id,\n  briefing: inbound.briefing ?? {},\n  prompt: [\n    'Mensagem atual: ' + source.text,\n    'Nome informado no perfil: ' + (source.customer_name || 'não informado'),\n    'Histórico oficial: ' + JSON.stringify(inbound.recent_messages ?? []),\n    'Briefing atual: ' + JSON.stringify(inbound.briefing ?? {})\n  ].join('\n')\n} };"
+        "jsCode": "const inbound = $json;\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nreturn { json: {\n  conversation_id: inbound.conversation_id,\n  automation_epoch: inbound.automation_epoch,\n  source_revision: inbound.source_revision,\n  wa_id: source.from,\n  phone_number_id: source.phone_number_id,\n  briefing: inbound.briefing ?? {},\n  prompt: [\n    'Mensagem atual: ' + source.text,\n    'Nome informado no perfil: ' + (source.customer_name || 'não informado'),\n    'Histórico oficial: ' + JSON.stringify(inbound.recent_messages ?? []),\n    'Briefing atual: ' + JSON.stringify(inbound.briefing ?? {})\n  ].join('\\n')\n} };"
       }
     },
     {
@@ -240,11 +215,7 @@
       "typeVersion": 1.3,
       "position": [-510, -430],
       "parameters": {
-        "model": {
-          "__rl": true,
-          "mode": "id",
-          "value": "gpt-5.6-luna"
-        },
+        "model": { "__rl": true, "mode": "id", "value": "gpt-5.6-luna" },
         "responsesApiEnabled": true,
         "builtInTools": {},
         "options": {
@@ -310,12 +281,9 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.handoff_required === true }}",
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              },
-              "rightValue": ""
+              "leftValue": "={{ ($json.handoff_required === true) ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
             }
           ],
           "combinator": "and"
@@ -330,7 +298,7 @@
       "position": [220, -850],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const d = $json;\nconst command = d.conversation_id + ':' + d.source_revision + ':handoff';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: d.conversation_id,\n    automation_epoch: d.automation_epoch, source_revision: d.source_revision,\n    briefing_patch: d.briefing_patch,\n    handoff: { reason: d.handoff_reason, summary: d.reasoning }\n  }, idempotency_key: command, correlation_id: 'handoff:' + command\n} };"
+        "jsCode": "const d = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst command = d.conversation_id + ':' + d.source_revision + ':handoff';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: d.conversation_id,\n    automation_epoch: d.automation_epoch, source_revision: d.source_revision,\n    briefing_patch: d.briefing_patch,\n    handoff: { reason: d.handoff_reason, summary: d.reasoning }\n  }, idempotency_key: command, correlation_id: correlationId\n} };"
       }
     },
     {
@@ -340,7 +308,7 @@
       "position": [-750, -450],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const inbound = $json;\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nconst command = inbound.conversation_id + ':' + inbound.source_revision + ':unsupported';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: inbound.conversation_id,\n    automation_epoch: inbound.automation_epoch, source_revision: inbound.source_revision,\n    handoff: { reason: 'unsupported', summary: 'Conteúdo ' + source.message_type + ' requer atendimento humano no MVP.' }\n  }, idempotency_key: command, correlation_id: 'handoff:' + command\n} };"
+        "jsCode": "const inbound = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nconst command = inbound.conversation_id + ':' + inbound.source_revision + ':unsupported';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: inbound.conversation_id,\n    automation_epoch: inbound.automation_epoch, source_revision: inbound.source_revision,\n    handoff: { reason: 'unsupported', summary: 'Conteúdo ' + source.message_type + ' requer atendimento humano no MVP.' }\n  }, idempotency_key: command, correlation_id: correlationId\n} };"
       }
     },
     {
@@ -356,10 +324,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -368,18 +333,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -387,11 +346,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -406,7 +361,7 @@
       "position": [220, -620],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const d = $json;\nconst command = d.conversation_id + ':' + d.source_revision + ':ai-response';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: d.conversation_id, automation_epoch: d.automation_epoch,\n    source_revision: d.source_revision, command_id: command,\n    message: { type: 'text', text: d.reply_text }, briefing_patch: d.briefing_patch\n  }, idempotency_key: 'reserve:' + command, correlation_id: 'send:' + command,\n  command_id: command, reply_text: d.reply_text\n} };"
+        "jsCode": "const d = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst command = d.conversation_id + ':' + d.source_revision + ':ai-response';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: d.conversation_id, automation_epoch: d.automation_epoch,\n    source_revision: d.source_revision, command_id: command,\n    message: { type: 'text', text: d.reply_text }, briefing_patch: d.briefing_patch\n  }, idempotency_key: 'reserve:' + command, correlation_id: correlationId,\n  command_id: command, reply_text: d.reply_text\n} };"
       }
     },
     {
@@ -422,10 +377,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -434,18 +386,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -453,11 +399,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -480,12 +422,9 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.send_authorized === true }}",
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              },
-              "rightValue": ""
+              "leftValue": "={{ ($json.send_authorized === true) ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
             }
           ],
           "combinator": "and"
@@ -500,7 +439,7 @@
       "position": [950, -620],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nif (input.simulate_send_unknown === true || input.scenario === 'send_unknown') throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');\nconst command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { id: 'dev-ai-' + command, messages: [{ id: 'dev-ai-' + command }], simulated: true } };"
+        "jsCode": "const input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nif (input.simulate_send_unknown === true || input.scenario === 'send_unknown') throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');\nconst command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { id: 'dev-ai-' + command, messages: [{ id: 'dev-ai-' + command }], simulated: true } };"
       },
       "onError": "continueErrorOutput"
     },
@@ -511,7 +450,7 @@
       "position": [1190, -690],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command, event_type: 'message.sent',\n  occurred_at: new Date().toISOString(), command_id: command,\n  conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command, correlation_id: 'send:' + command } };"
+        "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command, event_type: 'message.sent',\n  occurred_at: new Date().toISOString(), command_id: command,\n  conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command, correlation_id: correlationId } };"
       }
     },
     {
@@ -527,10 +466,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -539,18 +475,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -558,11 +488,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -577,7 +503,7 @@
       "position": [1190, -500],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  command_id: command, conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command, correlation_id: 'send:' + command } };"
+        "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  command_id: command, conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command, correlation_id: correlationId } };"
       }
     },
     {
@@ -593,10 +519,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -605,18 +528,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -624,11 +541,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -643,7 +556,7 @@
       "position": [-1470, -120],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const n = $json;\nconst allowed = ['sent', 'delivered', 'read', 'failed'];\nif (!allowed.includes(n.status)) return [];\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: n.event_id,\n  event_type: 'message.' + n.status, occurred_at: n.occurred_at,\n  conversation_id: null, external_message_id: n.external_message_id\n}, idempotency_key: n.event_id, correlation_id: 'status:' + n.event_id } };"
+        "jsCode": "const n = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst allowed = ['sent', 'delivered', 'read', 'failed'];\nif (!allowed.includes(n.status)) return [];\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: n.event_id,\n  event_type: 'message.' + n.status, occurred_at: n.occurred_at,\n  conversation_id: null, external_message_id: n.external_message_id\n}, idempotency_key: n.event_id, correlation_id: correlationId } };"
       }
     },
     {
@@ -659,10 +572,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -671,18 +581,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -690,11 +594,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -712,10 +612,7 @@
         "path": "silmer/dev-panel-command",
         "authentication": "basicAuth",
         "responseMode": "responseNode",
-        "options": {
-          "ignoreBots": true,
-          "rawBody": false
-        }
+        "options": { "ignoreBots": true, "rawBody": false }
       }
     },
     {
@@ -748,10 +645,7 @@
                 "conditions": [
                   {
                     "leftValue": "={{ $json.kind }}",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
+                    "operator": { "type": "string", "operation": "equals" },
                     "rightValue": "send"
                   }
                 ],
@@ -771,10 +665,7 @@
                 "conditions": [
                   {
                     "leftValue": "={{ $json.kind }}",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
+                    "operator": { "type": "string", "operation": "equals" },
                     "rightValue": "state"
                   }
                 ],
@@ -798,7 +689,7 @@
       "position": [-1220, 250],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $json.payload;\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command.command_id,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: command.conversation_id,\n    automation_epoch: command.automation_epoch,\n    source_revision: command.source_revision,\n    command_id: command.command_id, message: command.message\n  }, idempotency_key: 'reserve:' + command.command_id,\n  correlation_id: 'panel:' + command.command_id,\n  command\n} };"
+        "jsCode": "const command = $json.payload;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command.command_id,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: command.conversation_id,\n    automation_epoch: command.automation_epoch,\n    source_revision: command.source_revision,\n    command_id: command.command_id, message: command.message\n  }, idempotency_key: 'reserve:' + command.command_id,\n  correlation_id: correlationId,\n  command\n} };"
       }
     },
     {
@@ -814,10 +705,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -826,18 +714,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -845,11 +727,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -872,12 +750,9 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.send_authorized === true }}",
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              },
-              "rightValue": ""
+              "leftValue": "={{ ($json.send_authorized === true) ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
             }
           ],
           "combinator": "and"
@@ -903,7 +778,7 @@
       "position": [-260, 120],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command.command_id,\n  event_type: 'message.sent', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command.command_id,\ncorrelation_id: 'panel:' + command.command_id, command_id: command.command_id } };"
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command.command_id,\n  event_type: 'message.sent', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command.command_id,\ncorrelation_id: correlationId, command_id: command.command_id } };"
       }
     },
     {
@@ -919,10 +794,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -931,18 +803,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -950,11 +816,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -970,9 +832,7 @@
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ { accepted: true, duplicate: false, command_id: $('Preparar reserva de envio humano (MVP)').item.json.command.command_id, message_id: $('Preparar message.sent humano (MVP)').item.json.payload.external_message_id } }}",
-        "options": {
-          "responseCode": 202
-        }
+        "options": { "responseCode": 202 }
       }
     },
     {
@@ -983,9 +843,7 @@
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ { accepted: true, duplicate: $json.send_authorized === false, command_id: $('Normalizar comando do painel (MVP)').item.json.payload.command_id } }}",
-        "options": {
-          "responseCode": 202
-        }
+        "options": { "responseCode": 202 }
       }
     },
     {
@@ -996,9 +854,7 @@
       "parameters": {
         "respondWith": "json",
         "responseBody": "{\"accepted\":false,\"error\":\"unsupported_or_invalid_command\"}",
-        "options": {
-          "responseCode": 400
-        }
+        "options": { "responseCode": 400 }
       }
     },
     {
@@ -1008,7 +864,7 @@
       "position": [-260, 330],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command.command_id,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command.command_id,\ncorrelation_id: 'panel:' + command.command_id } };"
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command.command_id,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command.command_id,\ncorrelation_id: correlationId } };"
       }
     },
     {
@@ -1024,10 +880,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -1036,18 +889,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -1055,11 +902,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -1081,7 +924,7 @@
       "position": [940, 360],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const executionId = String($json.execution?.id ?? $execution.id);\nconst eventId = 'workflow-failed:' + executionId;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed',\n  occurred_at: new Date().toISOString(), conversation_id: null,\n  failure: { code: 'WORKFLOW_FAILED', node: String($json.execution?.lastNodeExecuted ?? 'unknown').slice(0, 128) }\n}, idempotency_key: eventId, correlation_id: 'failure:' + executionId } };"
+        "jsCode": "const executionId = String($json.execution?.id ?? $execution.id);\nconst correlationId = String($execution.id).padStart(16, '0');\nconst eventId = 'workflow-failed:' + executionId;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed',\n  occurred_at: new Date().toISOString(), conversation_id: null,\n  failure: { code: 'WORKFLOW_FAILED', node: String($json.execution?.lastNodeExecuted ?? 'unknown').slice(0, 128) }\n}, idempotency_key: eventId, correlation_id: correlationId } };"
       }
     },
     {
@@ -1097,10 +940,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
+            { "name": "Content-Type", "value": "application/json" },
             {
               "name": "Idempotency-Key",
               "value": "={{ $json.idempotency_key }}"
@@ -1109,18 +949,12 @@
               "name": "X-Correlation-Id",
               "value": "={{ $json.correlation_id }}"
             },
-            {
-              "name": "X-Silmer-Workflow-Key",
-              "value": "0S5ZS1xeDCSoWovs"
-            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            }
+            { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
         },
         "sendBody": true,
@@ -1128,11 +962,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.payload }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
+          "response": { "response": { "responseFormat": "json" } },
           "timeout": 10000
         }
       },
@@ -1153,6 +983,28 @@
       }
     },
     {
+      "id": "c38c09db-e293-4547-8d2c-807d4d18c0ea",
+      "name": "DEV - Conversa manual no chat (MVP)",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [-2180, -600],
+      "parameters": {
+        "public": true,
+        "mode": "hostedChat",
+        "authentication": "n8nUserAuth",
+        "requireExecuteAccess": true,
+        "initialMessages": "Conversa de teste do fluxo Silmer. As mensagens percorrem o CRM e a IA reais; o envio por WhatsApp é apenas simulado.",
+        "options": {
+          "loadPreviousSession": "notSupported",
+          "responseMode": "lastNode",
+          "showWelcomeScreen": true,
+          "title": "Teste manual | Silmer",
+          "subtitle": "Sessão temporária: recarregue a página para iniciar outra conversa.",
+          "inputPlaceholder": "Escreva como se fosse um cliente..."
+        }
+      }
+    },
+    {
       "id": "f321065d-4c9e-41d1-a0fe-65a94ed99351",
       "name": "DEV - Montar evento WhatsApp sintético (MVP)",
       "type": "n8n-nodes-base.code",
@@ -1160,7 +1012,7 @@
       "position": [-1950, -300],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const body = $json.body ?? $json;\nconst waId = String(body.wa_id ?? '').trim();\nif (!/^[1-9][0-9]{7,14}$/.test(waId)) throw new Error('DEV_WA_ID_INVALID');\nconst occurredAt = String(Math.floor(Date.now() / 1000));\nconst eventId = String(body.event_id ?? ('dev-inbound-' + $execution.id));\nconst phoneNumberId = String(body.phone_number_id ?? 'dev-phone-number');\nconst scenario = String(body.scenario ?? 'message').trim() || 'message';\nif (!['message', 'handoff', 'send_unknown', 'delivery_status'].includes(scenario)) {\n  throw new Error('DEV_SCENARIO_INVALID');\n}\nconst status = body.status == null\n  ? scenario === 'delivery_status' ? 'delivered' : null\n  : String(body.status);\nif (status) {\n  return { json: { entry: [{ changes: [{ value: {\n    metadata: { phone_number_id: phoneNumberId },\n    statuses: [{ id: String(body.external_message_id ?? eventId), status, timestamp: occurredAt, recipient_id: waId }]\n  } }] }] } };\n}\nconst defaultText = {\n  handoff: 'Quero falar com uma pessoa da Silmer, por favor.',\n  send_unknown: 'Preciso de 120 camisetas para um evento.',\n  message: 'Preciso de 120 camisetas para um evento.'\n}[scenario] ?? '';\nconst text = String(body.message ?? body.text ?? defaultText).trim();\nif (!text) throw new Error('DEV_MESSAGE_REQUIRED');\nreturn { json: { entry: [{ changes: [{ value: {\n  metadata: { phone_number_id: phoneNumberId },\n  contacts: [{ profile: { name: String(body.customer_name ?? 'Cliente de teste') }, wa_id: waId }],\n  messages: [{ from: waId, id: eventId, timestamp: occurredAt, type: 'text', text: { body: text } }]\n} }] }] } };"
+        "jsCode": "const chatInput = typeof $json.chatInput === 'string' ? $json.chatInput.trim() : '';\nconst isChat = chatInput.length > 0;\nconst body = isChat ? {} : ($json.body ?? $json);\nconst chatSessionId = String($json.sessionId ?? $execution.id);\nconst syntheticWaId = (() => {\n  let hash = 0;\n  for (const char of chatSessionId) hash = (hash * 31 + char.charCodeAt(0)) % 10000000000000;\n  return '9' + String(hash).padStart(13, '0');\n})();\nconst waId = String(body.wa_id ?? '').trim();\nconst contactWaId = isChat ? syntheticWaId : waId;\nif (!/^[1-9][0-9]{7,14}$/.test(contactWaId)) throw new Error('DEV_WA_ID_INVALID');\nconst occurredAt = String(Math.floor(Date.now() / 1000));\nconst eventId = String(body.event_id ?? (isChat ? ('dev-chat-' + chatSessionId + '-' + $execution.id) : ('dev-inbound-' + $execution.id)));\nconst phoneNumberId = String(body.phone_number_id ?? 'dev-phone-number');\nconst scenario = String(body.scenario ?? 'message').trim() || 'message';\nif (!['message', 'handoff', 'send_unknown', 'delivery_status'].includes(scenario)) {\n  throw new Error('DEV_SCENARIO_INVALID');\n}\nconst status = body.status == null\n  ? scenario === 'delivery_status' ? 'delivered' : null\n  : String(body.status);\nif (status) {\n  return { json: { __dev_input: { source: isChat ? 'chat' : 'webhook', scenario }, entry: [{ changes: [{ value: {\n    metadata: { phone_number_id: phoneNumberId },\n    statuses: [{ id: String(body.external_message_id ?? eventId), status, timestamp: occurredAt, recipient_id: contactWaId }]\n  } }] }] } };\n}\nconst defaultText = {\n  handoff: 'Quero falar com uma pessoa da Silmer, por favor.',\n  send_unknown: 'Preciso de 120 camisetas para um evento.',\n  message: 'Preciso de 120 camisetas para um evento.'\n}[scenario] ?? '';\nconst text = isChat ? chatInput : String(body.message ?? body.text ?? defaultText).trim();\nif (!text) throw new Error('DEV_MESSAGE_REQUIRED');\nreturn { json: { __dev_input: { source: isChat ? 'chat' : 'webhook', scenario }, entry: [{ changes: [{ value: {\n  metadata: { phone_number_id: phoneNumberId },\n  contacts: [{ profile: { name: String(body.customer_name ?? (isChat ? 'Cliente Chat DEV' : 'Cliente de teste')) }, wa_id: contactWaId }],\n  messages: [{ from: contactWaId, id: eventId, timestamp: occurredAt, type: 'text', text: { body: text } }]\n} }] }] } };"
       }
     },
     {
@@ -1171,7 +1023,7 @@
       "position": [1350, -700],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const decision = $('Normalizar decisão da IA (MVP)').item.json;\nconst input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, briefing_patch: decision.briefing_patch, handoff_ready: decision.handoff_ready, missing_briefing_fields: decision.missing_briefing_fields } };"
+        "jsCode": "const decision = $('Normalizar decisão da IA (MVP)').item.json;\nconst input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, output: decision.reply_text, briefing_patch: decision.briefing_patch, handoff_ready: decision.handoff_ready, missing_briefing_fields: decision.missing_briefing_fields } };"
       }
     },
     {
@@ -1182,7 +1034,7 @@
       "position": [620, -980],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nconst reply = $('Normalizar decisão da IA (MVP)').item.json.reply_text ?? 'Vou encaminhar seu atendimento para nossa equipe.';\nreturn { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, output: reply, crm: $json } };"
       }
     },
     {
@@ -1193,7 +1045,7 @@
       "position": [1350, -420],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'send_unknown', route: 'send_unknown', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nconst reply = $('Normalizar decisão da IA (MVP)').item.json.reply_text ?? 'O envio simulado ficou pendente de reconciliação.';\nreturn { json: { ok: true, scenario: input.scenario ?? 'send_unknown', route: 'send_unknown', whatsapp_simulated: true, output: reply, crm: $json } };"
       }
     },
     {
@@ -1204,7 +1056,7 @@
       "position": [-990, -80],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route: 'delivery_status', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route: 'delivery_status', whatsapp_simulated: true, crm: $json } };"
       }
     },
     {
@@ -1215,7 +1067,7 @@
       "position": [620, -420],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return { json: { ok: true, route: 'send_not_authorized', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const reply = $('Preparar reserva de envio da IA (MVP)').item.json.reply_text ?? 'A resposta não foi autorizada para envio.';\nreturn { json: { ok: true, route: 'send_not_authorized', whatsapp_simulated: true, output: reply, crm: $json } };"
       }
     },
     {
@@ -1228,7 +1080,7 @@
         "width": 760,
         "height": 470,
         "color": 3,
-        "content": "# DEV | Fluxo completo sem WhatsApp\n\nMantém a lógica do workflow principal e substitui apenas o transporte WhatsApp.\n\n- Entrada: webhook `silmer/dev-mvp-flow`.\n- CRM real: inbound, briefing, handoff, reserva e callbacks.\n- IA real: mesma decisão estruturada do MVP.\n- Pré-ficha: cada mensagem atualiza os campos confirmados e a IA pergunta pelo próximo dado pendente.\n- Saída WhatsApp: simulada, com `message.sent` persistido no CRM.\n- `simulate_send_unknown: true` exercita reconciliação.\n\nCenários: `message`, `handoff`, `send_unknown` e `delivery_status`. Eles apenas montam a entrada sintética; a jornada do CRM, IA e fence continua igual à do workflow canônico.\n\nRequer `SILMER_PANEL_BASE_URL` acessível pelo n8n e as credenciais Basic DEV nos dois sentidos."
+        "content": "# DEV | Fluxo completo sem WhatsApp\n\nMantém a lógica do workflow principal e substitui apenas o transporte WhatsApp.\n\n- Entrada: webhook `silmer/dev-mvp-flow`.\n- Entrada alternativa: Chat Trigger hospedado e restrito ao usuário autenticado do n8n.\n- Chat: usa uma identidade sintética por sessão; recarregar a página inicia uma conversa de teste nova.\n- CRM real: inbound, briefing, handoff, reserva e callbacks.\n- IA real: mesma decisão estruturada do MVP.\n- Pré-ficha: cada mensagem atualiza os campos confirmados e a IA pergunta pelo próximo dado pendente.\n- Saída WhatsApp: simulada, com `message.sent` persistido no CRM.\n- `simulate_send_unknown: true` exercita reconciliação.\n\nCenários: `message`, `handoff`, `send_unknown` e `delivery_status`. Eles apenas montam a entrada sintética; a jornada do CRM, IA e fence continua igual à do workflow canônico.\n\nRequer `SILMER_PANEL_BASE_URL` acessível pelo n8n e as credenciais Basic DEV nos dois sentidos."
       }
     }
   ],
@@ -1327,11 +1179,7 @@
     "Transferir para humano? (MVP)": {
       "main": [
         [
-          {
-            "node": "Preparar handoff da IA (MVP)",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Preparar handoff da IA (MVP)", "type": "main", "index": 0 }
         ],
         [
           {
@@ -1428,13 +1276,7 @@
     },
     "Rotear conversa registrada (MVP)": {
       "main": [
-        [
-          {
-            "node": "Montar contexto da IA (MVP)",
-            "type": "main",
-            "index": 0
-          }
-        ],
+        [{ "node": "Montar contexto da IA (MVP)", "type": "main", "index": 0 }],
         [
           {
             "node": "Preparar handoff de conteúdo (MVP)",
@@ -1479,13 +1321,7 @@
     },
     "Rotear evento WhatsApp (MVP)": {
       "main": [
-        [
-          {
-            "node": "Preparar inbound CRM (MVP)",
-            "type": "main",
-            "index": 0
-          }
-        ],
+        [{ "node": "Preparar inbound CRM (MVP)", "type": "main", "index": 0 }],
         [
           {
             "node": "Preparar status de entrega (MVP)",
@@ -1508,13 +1344,7 @@
     },
     "Normalizar evento WhatsApp (MVP)": {
       "main": [
-        [
-          {
-            "node": "Rotear evento WhatsApp (MVP)",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Rotear evento WhatsApp (MVP)", "type": "main", "index": 0 }]
       ]
     },
     "Painel - Receber comando (MVP)": {
@@ -1670,6 +1500,17 @@
         ]
       ]
     },
+    "DEV - Conversa manual no chat (MVP)": {
+      "main": [
+        [
+          {
+            "node": "DEV - Montar evento WhatsApp sintético (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "DEV - Montar evento WhatsApp sintético (MVP)": {
       "main": [
         [
@@ -1694,13 +1535,7 @@
     },
     "CRM - Registrar handoff (MVP)": {
       "main": [
-        [
-          {
-            "node": "DEV - Resultado do handoff",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "DEV - Resultado do handoff", "type": "main", "index": 0 }]
       ]
     },
     "CRM - Marcar envio desconhecido da IA (MVP)": {
@@ -1716,13 +1551,7 @@
     },
     "CRM - Registrar status de entrega (MVP)": {
       "main": [
-        [
-          {
-            "node": "DEV - Resultado do status",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "DEV - Resultado do status", "type": "main", "index": 0 }]
       ]
     }
   },

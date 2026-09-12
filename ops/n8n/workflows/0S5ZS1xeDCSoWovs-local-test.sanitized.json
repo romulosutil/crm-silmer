@@ -123,7 +123,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -341,7 +341,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -400,7 +400,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -457,7 +457,7 @@
       "position": [950, -620],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nif (input.simulate_send_unknown === true || input.scenario === 'send_unknown') throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');\nconst command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { id: 'dev-ai-' + command, messages: [{ id: 'dev-ai-' + command }], simulated: true } };"
+        "jsCode": "const input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nif (input.simulate_send_unknown === true || input.scenario === 'send_unknown') throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');\nconst command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { id: 'dev-ai-' + command, messages: [{ id: 'dev-ai-' + command }], simulated: true } };"
       },
       "onError": "continueErrorOutput"
     },
@@ -495,7 +495,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -554,7 +554,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -613,7 +613,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -754,7 +754,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -849,7 +849,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -941,7 +941,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1007,7 +1007,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-3"
+              "value": "dev-mvp-simple-4"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1047,6 +1047,28 @@
       "webhookId": "2d846e1d-f2f4-4862-9c24-0c1b93afda0d"
     },
     {
+      "id": "c38c09db-e293-4547-8d2c-807d4d18c0ea",
+      "name": "DEV - Conversa manual no chat (MVP)",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [-2180, -600],
+      "parameters": {
+        "public": true,
+        "mode": "hostedChat",
+        "authentication": "n8nUserAuth",
+        "requireExecuteAccess": true,
+        "initialMessages": "Conversa de teste do fluxo Silmer. As mensagens percorrem o CRM e a IA reais; o envio por WhatsApp é apenas simulado.",
+        "options": {
+          "loadPreviousSession": "notSupported",
+          "responseMode": "lastNode",
+          "showWelcomeScreen": true,
+          "title": "Teste manual | Silmer",
+          "subtitle": "Sessão temporária: recarregue a página para iniciar outra conversa.",
+          "inputPlaceholder": "Escreva como se fosse um cliente..."
+        }
+      }
+    },
+    {
       "id": "f321065d-4c9e-41d1-a0fe-65a94ed99351",
       "name": "DEV - Montar evento WhatsApp sintético (MVP)",
       "type": "n8n-nodes-base.code",
@@ -1054,7 +1076,7 @@
       "position": [-1950, -300],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const body = $json.body ?? $json;\nconst waId = String(body.wa_id ?? '').trim();\nif (!/^[1-9][0-9]{7,14}$/.test(waId)) throw new Error('DEV_WA_ID_INVALID');\nconst occurredAt = String(Math.floor(Date.now() / 1000));\nconst eventId = String(body.event_id ?? ('dev-inbound-' + $execution.id));\nconst phoneNumberId = String(body.phone_number_id ?? 'dev-phone-number');\nconst scenario = String(body.scenario ?? 'message').trim() || 'message';\nif (!['message', 'handoff', 'send_unknown', 'delivery_status'].includes(scenario)) {\n  throw new Error('DEV_SCENARIO_INVALID');\n}\nconst status = body.status == null\n  ? scenario === 'delivery_status' ? 'delivered' : null\n  : String(body.status);\nif (status) {\n  return { json: { entry: [{ changes: [{ value: {\n    metadata: { phone_number_id: phoneNumberId },\n    statuses: [{ id: String(body.external_message_id ?? eventId), status, timestamp: occurredAt, recipient_id: waId }]\n  } }] }] } };\n}\nconst defaultText = {\n  handoff: 'Quero falar com uma pessoa da Silmer, por favor.',\n  send_unknown: 'Preciso de 120 camisetas para um evento.',\n  message: 'Preciso de 120 camisetas para um evento.'\n}[scenario] ?? '';\nconst text = String(body.message ?? body.text ?? defaultText).trim();\nif (!text) throw new Error('DEV_MESSAGE_REQUIRED');\nreturn { json: { entry: [{ changes: [{ value: {\n  metadata: { phone_number_id: phoneNumberId },\n  contacts: [{ profile: { name: String(body.customer_name ?? 'Cliente de teste') }, wa_id: waId }],\n  messages: [{ from: waId, id: eventId, timestamp: occurredAt, type: 'text', text: { body: text } }]\n} }] }] } };"
+        "jsCode": "const chatInput = typeof $json.chatInput === 'string' ? $json.chatInput.trim() : '';\nconst isChat = chatInput.length > 0;\nconst body = isChat ? {} : ($json.body ?? $json);\nconst chatSessionId = String($json.sessionId ?? $execution.id);\nconst syntheticWaId = (() => {\n  let hash = 0;\n  for (const char of chatSessionId) hash = (hash * 31 + char.charCodeAt(0)) % 10000000000000;\n  return '9' + String(hash).padStart(13, '0');\n})();\nconst waId = String(body.wa_id ?? '').trim();\nconst contactWaId = isChat ? syntheticWaId : waId;\nif (!/^[1-9][0-9]{7,14}$/.test(contactWaId)) throw new Error('DEV_WA_ID_INVALID');\nconst occurredAt = String(Math.floor(Date.now() / 1000));\nconst eventId = String(body.event_id ?? (isChat ? ('dev-chat-' + chatSessionId + '-' + $execution.id) : ('dev-inbound-' + $execution.id)));\nconst phoneNumberId = String(body.phone_number_id ?? 'dev-phone-number');\nconst scenario = String(body.scenario ?? 'message').trim() || 'message';\nif (!['message', 'handoff', 'send_unknown', 'delivery_status'].includes(scenario)) {\n  throw new Error('DEV_SCENARIO_INVALID');\n}\nconst status = body.status == null\n  ? scenario === 'delivery_status' ? 'delivered' : null\n  : String(body.status);\nif (status) {\n  return { json: { __dev_input: { source: isChat ? 'chat' : 'webhook', scenario }, entry: [{ changes: [{ value: {\n    metadata: { phone_number_id: phoneNumberId },\n    statuses: [{ id: String(body.external_message_id ?? eventId), status, timestamp: occurredAt, recipient_id: contactWaId }]\n  } }] }] } };\n}\nconst defaultText = {\n  handoff: 'Quero falar com uma pessoa da Silmer, por favor.',\n  send_unknown: 'Preciso de 120 camisetas para um evento.',\n  message: 'Preciso de 120 camisetas para um evento.'\n}[scenario] ?? '';\nconst text = isChat ? chatInput : String(body.message ?? body.text ?? defaultText).trim();\nif (!text) throw new Error('DEV_MESSAGE_REQUIRED');\nreturn { json: { __dev_input: { source: isChat ? 'chat' : 'webhook', scenario }, entry: [{ changes: [{ value: {\n  metadata: { phone_number_id: phoneNumberId },\n  contacts: [{ profile: { name: String(body.customer_name ?? (isChat ? 'Cliente Chat DEV' : 'Cliente de teste')) }, wa_id: contactWaId }],\n  messages: [{ from: contactWaId, id: eventId, timestamp: occurredAt, type: 'text', text: { body: text } }]\n} }] }] } };"
       }
     },
     {
@@ -1065,7 +1087,7 @@
       "position": [1350, -700],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const decision = $('Normalizar decisão da IA (MVP)').item.json;\nconst input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, briefing_patch: decision.briefing_patch, handoff_ready: decision.handoff_ready, missing_briefing_fields: decision.missing_briefing_fields } };"
+        "jsCode": "const decision = $('Normalizar decisão da IA (MVP)').item.json;\nconst input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, output: decision.reply_text, briefing_patch: decision.briefing_patch, handoff_ready: decision.handoff_ready, missing_briefing_fields: decision.missing_briefing_fields } };"
       }
     },
     {
@@ -1076,7 +1098,7 @@
       "position": [620, -980],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nconst reply = $('Normalizar decisão da IA (MVP)').item.json.reply_text ?? 'Vou encaminhar seu atendimento para nossa equipe.';\nreturn { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, output: reply, crm: $json } };"
       }
     },
     {
@@ -1087,7 +1109,7 @@
       "position": [1350, -420],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'send_unknown', route: 'send_unknown', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nconst reply = $('Normalizar decisão da IA (MVP)').item.json.reply_text ?? 'O envio simulado ficou pendente de reconciliação.';\nreturn { json: { ok: true, scenario: input.scenario ?? 'send_unknown', route: 'send_unknown', whatsapp_simulated: true, output: reply, crm: $json } };"
       }
     },
     {
@@ -1098,7 +1120,7 @@
       "position": [-990, -80],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const input = $('DEV - Receber evento sintético (MVP)').item.json.body ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route: 'delivery_status', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const input = $('DEV - Montar evento WhatsApp sintético (MVP)').item.json.__dev_input ?? {};\nreturn { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route: 'delivery_status', whatsapp_simulated: true, crm: $json } };"
       }
     },
     {
@@ -1109,7 +1131,7 @@
       "position": [620, -420],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return { json: { ok: true, route: 'send_not_authorized', whatsapp_simulated: true, crm: $json } };"
+        "jsCode": "const reply = $('Preparar reserva de envio da IA (MVP)').item.json.reply_text ?? 'A resposta não foi autorizada para envio.';\nreturn { json: { ok: true, route: 'send_not_authorized', whatsapp_simulated: true, output: reply, crm: $json } };"
       }
     },
     {
@@ -1122,7 +1144,7 @@
         "width": 760,
         "height": 470,
         "color": 3,
-        "content": "# LOCAL | Fluxo completo sem WhatsApp\n\nMantém a lógica do workflow principal e substitui apenas o transporte WhatsApp.\n\n- Entrada: webhook `silmer/local-mvp-flow`.\n- CRM real: inbound, briefing, handoff, reserva e callbacks.\n- IA real: mesma decisão estruturada do MVP.\n- Pré-ficha: cada mensagem atualiza os campos confirmados e a IA pergunta pelo próximo dado pendente.\n- Saída WhatsApp: simulada, com `message.sent` persistido no CRM.\n- `simulate_send_unknown: true` exercita reconciliação.\n\nCenários: `message`, `handoff`, `send_unknown` e `delivery_status`. Eles apenas montam a entrada sintética; a jornada do CRM, IA e fence continua igual à do workflow canônico.\n\nLocal: a credencial n8n → CRM é efêmera por variável de ambiente e o webhook do painel fica exposto somente em localhost."
+        "content": "# LOCAL | Fluxo completo sem WhatsApp\n\nMantém a lógica do workflow principal e substitui apenas o transporte WhatsApp.\n\n- Entrada: webhook `silmer/local-mvp-flow`.\n- Entrada alternativa: Chat Trigger hospedado e restrito ao usuário autenticado do n8n.\n- Chat: usa uma identidade sintética por sessão; recarregar a página inicia uma conversa de teste nova.\n- CRM real: inbound, briefing, handoff, reserva e callbacks.\n- IA real: mesma decisão estruturada do MVP.\n- Pré-ficha: cada mensagem atualiza os campos confirmados e a IA pergunta pelo próximo dado pendente.\n- Saída WhatsApp: simulada, com `message.sent` persistido no CRM.\n- `simulate_send_unknown: true` exercita reconciliação.\n\nCenários: `message`, `handoff`, `send_unknown` e `delivery_status`. Eles apenas montam a entrada sintética; a jornada do CRM, IA e fence continua igual à do workflow canônico.\n\nLocal: a credencial n8n → CRM é efêmera por variável de ambiente e o webhook do painel fica exposto somente em localhost."
       }
     }
   ],
@@ -1537,6 +1559,17 @@
           {
             "node": "Atendente virtual Silmer (MVP)",
             "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEV - Conversa manual no chat (MVP)": {
+      "main": [
+        [
+          {
+            "node": "DEV - Montar evento WhatsApp sintético (MVP)",
+            "type": "main",
             "index": 0
           }
         ]

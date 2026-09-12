@@ -453,7 +453,6 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
   for (const name of [
     'Dashboard',
     'Caixa de Entrada',
-    'Handoffs',
     'Kanban',
     'Clientes',
     'Conta',
@@ -487,18 +486,21 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('claims a pending handoff through the official atomic command', async ({
+test('claims a pending handoff inside the Caixa de Entrada', async ({
   page,
 }) => {
   let claimedBody;
   await mockCrm(page, { onHandoffClaim: (body) => (claimedBody = body) });
-  await page.goto('/handoffs');
+  await page.goto('/inbox');
   await page.evaluate(() => {
     globalThis.document.cookie = 'crm_csrf=csrf-test; Path=/; SameSite=Lax';
   });
   await expect(
-    page.getByRole('heading', { name: 'Fila de handoffs' }),
+    page.getByRole('heading', { name: 'Caixa de Entrada' }),
   ).toBeFocused();
+  await expect(
+    page.getByRole('heading', { name: 'Handoffs pendentes' }),
+  ).toBeVisible();
   await expect(
     page.getByText('Cliente solicitou atendimento humano.'),
   ).toBeVisible();

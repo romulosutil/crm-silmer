@@ -670,6 +670,16 @@ summary {
   padding: 0;
   list-style: none;
 }
+.handoff-section {
+  display: grid;
+  gap: 0.75rem;
+  margin-block-end: 1.25rem;
+}
+.handoff-section > .handoff-head > div > p:last-child,
+.handoff-empty {
+  margin: 0.2rem 0 0;
+  color: var(--color-text-muted);
+}
 .handoff-head {
   display: flex;
   align-items: flex-start;

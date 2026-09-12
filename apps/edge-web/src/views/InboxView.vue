@@ -13,6 +13,7 @@ import {
   CHANNEL_LABELS,
   conversationLabel,
   dateTimeBR,
+  formatPhoneNumber,
   messageText,
 } from '../lib/format.js';
 
@@ -509,9 +510,7 @@ onBeforeUnmount(() => {
                 class="badge"
                 :data-tone="conversation.requiresAttention ? 'error' : 'info'"
               >
-                {{
-                  conversationLabel(conversation)
-                }}
+                {{ conversationLabel(conversation) }}
               </span>
               <span
                 v-if="conversation.handoff?.status === 'pending'"
@@ -577,7 +576,7 @@ onBeforeUnmount(() => {
                 {{ active.contact.label }}
               </h2>
               <p class="conv-identity">
-                {{ active.contact.externalId }} ·
+                {{ formatPhoneNumber(active.contact.externalId) }} ·
                 {{ conversationLabel(active) }}
                 <template v-if="active.automationState === 'human'">
                   · {{ ownerLabel }}

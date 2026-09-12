@@ -13,6 +13,7 @@ import {
   CHANNEL_LABELS,
   conversationLabel,
   dateTimeBR,
+  formatPhoneNumber,
 } from '../lib/format.js';
 
 const LIVE_REFRESH_DELAY_MS = 250;
@@ -47,19 +48,6 @@ const filtered = computed(() => {
   );
 });
 const selected = computed(() => detail.value?.contact ?? null);
-
-/** @param {unknown} value */
-function formatPhoneNumber(value) {
-  const digits = String(value ?? '').replace(/\D/gu, '');
-  const national = digits.startsWith('55') ? digits.slice(2) : digits;
-  if (national.length === 11) {
-    return `+55 (${national.slice(0, 2)}) ${national.slice(2, 7)}-${national.slice(7)}`;
-  }
-  if (national.length === 10) {
-    return `+55 (${national.slice(0, 2)}) ${national.slice(2, 6)}-${national.slice(6)}`;
-  }
-  return String(value ?? 'Não informado');
-}
 
 /** @param {unknown} cause */
 function describeError(cause) {
@@ -342,10 +330,7 @@ onBeforeUnmount(() => {
                 }}</strong>
                 <span>{{ identity.displayHandle ?? identity.externalId }}</span>
               </template>
-              <dl
-                v-if="identity.kind === 'phone'"
-                class="contact-phone"
-              >
+              <dl v-if="identity.kind === 'phone'" class="contact-phone">
                 <div>
                   <dt>Telefone</dt>
                   <dd>{{ formatPhoneNumber(identity.externalId) }}</dd>
@@ -365,9 +350,7 @@ onBeforeUnmount(() => {
               <RouterLink to="/inbox">{{
                 CHANNEL_LABELS[conversation.channel]
               }}</RouterLink>
-              <span>{{
-                conversationLabel(conversation)
-              }}</span>
+              <span>{{ conversationLabel(conversation) }}</span>
               <small
                 >Última mensagem em
                 {{ dateTimeBR(conversation.lastMessageAt) }}</small

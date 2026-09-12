@@ -1,7 +1,8 @@
 {
   "artboards": [
     { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1060, "title": "Caixa de Entrada + Pedido" },
-    { "file": "Ficha.dc.html", "x": 1600, "y": 0, "w": 1440, "h": 1280, "title": "Pedido" }
+    { "file": "Ficha.dc.html", "x": 1600, "y": 0, "w": 1440, "h": 1280, "title": "Pedido" },
+    { "file": "Pedidos.dc.html", "x": 0, "y": 1480, "w": 1440, "h": 1000, "title": "Pedidos (confirmados e pendentes)" }
   ],
   "annotations": [
     {
@@ -9,21 +10,28 @@
       "x": 0,
       "y": -210,
       "w": 640,
-      "text": "CAIXA DE ENTRADA — a única tela do MVP.\nO filtro \"Aguardando vendedor\" + ordenação por tempo parado faz o trabalho de triagem que seria da Mesa de Trabalho. O painel da direita é leitura; editar acontece no pedido."
+      "text": "CAIXA DE ENTRADA — onde o vendedor atende.\nO filtro \"Aguardando vendedor\" + ordenação por tempo parado faz a triagem. O painel da direita é leitura; editar acontece no pedido."
     },
     {
       "id": "nota-ficha",
       "x": 1600,
       "y": -210,
       "w": 640,
-      "text": "PEDIDO — coluna única, edição por seção (um form, um Salvar).\nSeções completas viram uma linha. O banner no topo diz o que trava.\n\"Confirmar pedido\" é o botão principal da tela: grava valor e condição de pagamento.\nO pedido é a fonte da verdade; o PDF é render de saída."
+      "text": "PEDIDO — coluna única, edição por seção (um form, um Salvar).\nSeções completas viram uma linha. O banner no topo diz o que trava.\n\"Confirmar pedido\" é o botão principal da tela: grava valor e condição de pagamento e move o pedido de Pendente para Confirmado."
+    },
+    {
+      "id": "nota-pedidos",
+      "x": 0,
+      "y": 1270,
+      "w": 640,
+      "text": "PEDIDOS — a carteira, com os dois status.\nConfirmado: imprime o PDF no modelo da ficha canônica v2.\nPendente: mostra o que falta e há quanto tempo parou; \"Continuar\" abre o pedido no primeiro campo pendente, para qualquer vendedor retomar."
     },
     {
       "id": "nota-cortes",
-      "x": 0,
-      "y": 1180,
+      "x": 1600,
+      "y": 1480,
       "w": 900,
-      "text": "FORA DO MVP (P2): tela Mesa de Trabalho · marcos visuais (PRO/ESP/EST/LOG/ORÇ/PAG) · anel e barra de completude · histórico de quem preencheu · coluna \"Próxima ação\" · edição campo a campo · artboard de celular (o CSS do app já é responsivo).\n\nENTRA NO MVP: desbloquear as ações do inbox (403 da allowlist duplicada) · GET/PATCH do pedido · painel de pedido na conversa · página do pedido com edição por seção · confirmação do pedido (valor + condição) · estado \"Aguardando vendedor\" · apagar kanban-view.js e a rota /negocios."
+      "text": "FORA DO MVP (P2): tela Mesa de Trabalho · marcos visuais (PRO/ESP/EST/LOG/ORÇ/PAG) · anel e barra de completude · histórico de quem preencheu · coluna \"Próxima ação\" · edição campo a campo · artboard de celular (o CSS do app já é responsivo).\n\nENTRA NO MVP: desbloquear as ações do inbox (403 da allowlist duplicada) · GET/PATCH do pedido · painel de pedido na conversa · página do pedido com edição por seção · confirmação do pedido (valor + condição) · lista de pedidos com os dois status · impressão do PDF v2 · apagar kanban-view.js e a rota /negocios."
     }
   ],
   "launch": { "view": "canvas" }

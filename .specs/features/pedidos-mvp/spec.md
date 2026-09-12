@@ -28,18 +28,18 @@ ele e por quê.
 
 ## Fora do escopo
 
-| Item | Motivo |
-| --- | --- |
-| Cobrança PIX, conferência de comprovante, status de pagamento | Toda confirmação é humana no MVP; sem automação de pagamento. |
-| Produção, entrega, pedido perdido ou cancelado | Não existem como status no MVP. |
-| Tela Mesa de Trabalho, marcos visuais, anel de completude | Cortados na revisão de escopo; a Caixa de Entrada faz a triagem. |
-| Histórico de quem preencheu cada campo (UI) | P2. A trilha fica gravada; só não aparece. |
-| Pedidos no detalhe do cliente e KPIs de pedidos no Dashboard | P2. |
-| Edição campo a campo | Edição é por seção. |
-| Impressão no template legado v1 | v1 é fallback documental; o MVP imprime v2. |
-| Validação de modelo contra catálogo | Sem catálogo autorizado no MVP. |
-| Reaproveitar tabelas e módulos de Negócio | Proibido pela ADR 004. |
-| Remover rotas mortas de Kanban/Negócio do OpenAPI | Limpeza separada (ver `design.md` → Riscos). |
+| Item                                                          | Motivo                                                           |
+| ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Cobrança PIX, conferência de comprovante, status de pagamento | Toda confirmação é humana no MVP; sem automação de pagamento.    |
+| Produção, entrega, pedido perdido ou cancelado                | Não existem como status no MVP.                                  |
+| Tela Mesa de Trabalho, marcos visuais, anel de completude     | Cortados na revisão de escopo; a Caixa de Entrada faz a triagem. |
+| Histórico de quem preencheu cada campo (UI)                   | P2. A trilha fica gravada; só não aparece.                       |
+| Pedidos no detalhe do cliente e KPIs de pedidos no Dashboard  | P2.                                                              |
+| Edição campo a campo                                          | Edição é por seção.                                              |
+| Impressão no template legado v1                               | v1 é fallback documental; o MVP imprime v2.                      |
+| Validação de modelo contra catálogo                           | Sem catálogo autorizado no MVP.                                  |
+| Reaproveitar tabelas e módulos de Negócio                     | Proibido pela ADR 004.                                           |
+| Remover rotas mortas de Kanban/Negócio do OpenAPI             | Limpeza separada (ver `design.md` → Riscos).                     |
 
 ---
 
@@ -121,8 +121,7 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
    marcados como "não saem na ficha impressa".
 9. **PFI-09** O banner do topo SHALL listar o que falta para confirmar.
 10. **PAU-01** WHEN quem não é dono da conversa nem administrador abre o pedido
-    THEN a página SHALL ser somente leitura e a API SHALL recusar edições com
-    403.
+    THEN a página SHALL ser somente leitura e a API SHALL recusar edições com 403.
 11. **PFI-10** WHEN o pedido está confirmado THEN todas as seções SHALL ficar
     em modo leitura; para alterar é preciso reabrir.
 
@@ -288,18 +287,18 @@ em Confirmados com "Confirmado por <nome> · <data hora>".
 
 ## Rastreabilidade
 
-| ID | História | Status |
-| --- | --- | --- |
-| PCL-01, PCL-02, PCL-03 | P1-1 | Pending |
-| PAG-01, PAG-02, PAG-03 | P1-1 | Pending |
-| PCL-10, PCL-11 | P1-2 | Pending |
-| PFI-01 … PFI-10, PAU-01 | P1-3 | Pending |
-| PCL-04, PCL-05, PCL-06, PCL-08, PCL-09, PFI-11, PFI-12, PFI-13 | P1-4 | Pending |
-| PIM-01 … PIM-05 | P1-5 | Pending |
-| PCL-07, PCL-12 | P1-6 | Pending |
-| PLI-01 … PLI-08, PGE-01 | P1-7 | Pending |
-| PCX-01 … PCX-05 | P1-8 | Pending |
-| PCX-06 … PCX-09 | P1-9 | Pending |
+| ID                                                             | História | Status  |
+| -------------------------------------------------------------- | -------- | ------- |
+| PCL-01, PCL-02, PCL-03                                         | P1-1     | Pending |
+| PAG-01, PAG-02, PAG-03                                         | P1-1     | Pending |
+| PCL-10, PCL-11                                                 | P1-2     | Pending |
+| PFI-01 … PFI-10, PAU-01                                        | P1-3     | Pending |
+| PCL-04, PCL-05, PCL-06, PCL-08, PCL-09, PFI-11, PFI-12, PFI-13 | P1-4     | Pending |
+| PIM-01 … PIM-05                                                | P1-5     | Pending |
+| PCL-07, PCL-12                                                 | P1-6     | Pending |
+| PLI-01 … PLI-08, PGE-01                                        | P1-7     | Pending |
+| PCX-01 … PCX-05                                                | P1-8     | Pending |
+| PCX-06 … PCX-09                                                | P1-9     | Pending |
 
 **Cobertura:** 52 requisitos · 52 mapeados em `tasks.md` · 0 sem task.
 

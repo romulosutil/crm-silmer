@@ -15,24 +15,24 @@
 
 ### Matriz de testes (derivada do repo)
 
-| Camada | Tipo | Onde | Paralelo seguro |
-| --- | --- | --- | --- |
-| Domínio e aplicação (`modules/*/src/domain`, `application`) | unit (`node:test`) | `test/orders-*.test.js` | Sim |
-| Rotas e runtime da API (com repositório em memória) | unit | `test/order-routes.test.js`, `test/*-runtime*.test.js` | Sim |
-| Migration e adapter PostgreSQL | integração live | `test/migrations*.test.js`, `test/orders-postgres-live.test.js` | **Não** (`--test-concurrency=1`) |
-| Lib pura do front (`apps/edge-web/src/lib`) | unit | `test/order-format.test.js` | Sim |
-| Views e componentes Vue | e2e (Playwright) | `test/e2e/orders.spec.js`, `test/e2e/crm-ui.spec.js` | **Não** |
-| Documentação | nenhum | — | Sim |
+| Camada                                                      | Tipo               | Onde                                                            | Paralelo seguro                  |
+| ----------------------------------------------------------- | ------------------ | --------------------------------------------------------------- | -------------------------------- |
+| Domínio e aplicação (`modules/*/src/domain`, `application`) | unit (`node:test`) | `test/orders-*.test.js`                                         | Sim                              |
+| Rotas e runtime da API (com repositório em memória)         | unit               | `test/order-routes.test.js`, `test/*-runtime*.test.js`          | Sim                              |
+| Migration e adapter PostgreSQL                              | integração live    | `test/migrations*.test.js`, `test/orders-postgres-live.test.js` | **Não** (`--test-concurrency=1`) |
+| Lib pura do front (`apps/edge-web/src/lib`)                 | unit               | `test/order-format.test.js`                                     | Sim                              |
+| Views e componentes Vue                                     | e2e (Playwright)   | `test/e2e/orders.spec.js`, `test/e2e/crm-ui.spec.js`            | **Não**                          |
+| Documentação                                                | nenhum             | —                                                               | Sim                              |
 
 ### Gates
 
-| Gate | Comando |
-| --- | --- |
-| docs | `npm run format:check` |
-| quick | `node --test <arquivos de teste da task> && npm run lint && npm run typecheck` |
-| live | `npm run test:orders:live` (mesmo pré-requisito de banco de `npm run test:identity:live`) |
-| e2e | `npm run test:e2e -- <spec>` |
-| full | `npm run validate` |
+| Gate  | Comando                                                                                   |
+| ----- | ----------------------------------------------------------------------------------------- |
+| docs  | `npm run format:check`                                                                    |
+| quick | `node --test <arquivos de teste da task> && npm run lint && npm run typecheck`            |
+| live  | `npm run test:orders:live` (mesmo pré-requisito de banco de `npm run test:identity:live`) |
+| e2e   | `npm run test:e2e -- <spec>`                                                              |
+| full  | `npm run validate`                                                                        |
 
 ---
 
@@ -40,16 +40,16 @@
 
 ### Grupos (um prompt por grupo em `PROMPTS.md`)
 
-| Grupo | Tasks | Depende de |
-| --- | --- | --- |
-| **A** Contratos e decisão | T01–T03 | — |
-| **B** Domínio e persistência | T04–T13 | A |
-| **C** Autorização, API e tempo real | T14–T20 | B |
-| **D** Agente (n8n) | T21–T23 | C |
-| **E** Impressão | T24–T25 | T04 (B) e T16 (C) |
-| **F** Tela de Pedidos | T26–T34 | C, E |
-| **G** Caixa de Entrada | T35–T38 | C, T26 (F) |
-| **H** Verificação final | T39 | todos |
+| Grupo                               | Tasks   | Depende de        |
+| ----------------------------------- | ------- | ----------------- |
+| **A** Contratos e decisão           | T01–T03 | —                 |
+| **B** Domínio e persistência        | T04–T13 | A                 |
+| **C** Autorização, API e tempo real | T14–T20 | B                 |
+| **D** Agente (n8n)                  | T21–T23 | C                 |
+| **E** Impressão                     | T24–T25 | T04 (B) e T16 (C) |
+| **F** Tela de Pedidos               | T26–T34 | C, E              |
+| **G** Caixa de Entrada              | T35–T38 | C, T26 (F)        |
+| **H** Verificação final             | T39     | todos             |
 
 Depois de C: **D, E e o início de F rodam em paralelo**. G começa assim que
 T26 estiver no branch base.
@@ -102,11 +102,12 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** formato de `docs/adr/004-aposentar-kanban-e-negocio.md`
 **Requirement:** PCL-01, PCL-08, PAG-01, PAG-02, PAG-03
 **Done when:**
+
 - [ ] ADR 005 registra D01–D09 e D24 de `context.md`
 - [ ] ADR 004 aponta para a 005 sem alterar a decisão original
 - [ ] Gate docs passa
-**Tests:** none · **Gate:** docs
-**Commit:** `docs(adr): introduce orders with two human-confirmed statuses`
+      **Tests:** none · **Gate:** docs
+      **Commit:** `docs(adr): introduce orders with two human-confirmed statuses`
 
 ### T02: Atualizar o contrato n8n ↔ CRM
 
@@ -116,12 +117,13 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** seções "Contrato n8n → CRM" e "Briefing, conversão e handoff"
 **Requirement:** PAG-01, PAG-02, PAG-03, PCL-01
 **Done when:**
+
 - [ ] Payload, cabeçalhos e idempotência do novo evento descritos
 - [ ] Regra "patch ignorado quando a conversa está com vendedor" descrita
 - [ ] Nenhuma menção a endpoints inexistentes
 - [ ] Gate docs passa
-**Tests:** none · **Gate:** docs
-**Commit:** `docs(n8n): describe order intent event and briefing projection`
+      **Tests:** none · **Gate:** docs
+      **Commit:** `docs(n8n): describe order intent event and briefing projection`
 
 ### T03: Adicionar os caminhos de pedido ao OpenAPI [P]
 
@@ -131,11 +133,12 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** esquemas e respostas de erro já definidos no arquivo
 **Requirement:** PLI-02, PFI-01, PFI-06, PCL-04, PCL-07, PCL-10, PIM-02, PCX-07
 **Done when:**
+
 - [ ] Oito operações com parâmetros, `expectedVersion`, `Idempotency-Key` e códigos 403/404/409/422
 - [ ] Rotas mortas de Kanban/Negócio **não** são alteradas (limpeza adiada)
 - [ ] `npm test` passa (inclui validações de contrato existentes, se houver)
-**Tests:** none · **Gate:** docs + `npm test`
-**Commit:** `docs(api): add order endpoints to OpenAPI`
+      **Tests:** none · **Gate:** docs + `npm test`
+      **Commit:** `docs(api): add order endpoints to OpenAPI`
 
 ---
 
@@ -149,9 +152,10 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** `modules/inbox-channels/package.json`
 **Requirement:** — (fundação)
 **Done when:**
+
 - [ ] `npm run check:boundaries` e `npm run typecheck` passam
-**Tests:** none · **Gate:** `npm run check:boundaries && npm run typecheck`
-**Commit:** `chore(orders): scaffold orders module`
+      **Tests:** none · **Gate:** `npm run check:boundaries && npm run typecheck`
+      **Commit:** `chore(orders): scaffold orders module`
 
 ### T05: Valor em reais [P]
 
@@ -160,10 +164,11 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T04
 **Requirement:** PFI-11
 **Done when:**
+
 - [ ] `4.820,00` → `482000`; `4820` → `482000`; `4,820.00`, `abc`, `0`, `-1` → erro
 - [ ] Gate quick passa com os testes novos
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(orders): parse and format BRL amounts`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(orders): parse and format BRL amounts`
 
 ### T06: Ficha — validação, totais e mapeamento da pré-ficha [P]
 
@@ -173,14 +178,15 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** forma de `docs/phase0/ficha-pdf-synthetic.json`; chaves da pré-ficha em `docs/integrations/n8n/README.md`
 **Requirement:** PFI-02, PFI-03, PFI-04, PFI-05, PFI-07, PFI-08
 **Done when:**
+
 - [ ] Item exige ≥1 malha e ≥1 linha de grade com quantidade inteira > 0
 - [ ] "NAO APLICAVEL" aceito em mangas e viés
 - [ ] Observações: 0..5 linhas
 - [ ] Snapshot sintético gera total 32
 - [ ] Campos da pré-ficha sem lugar na ficha vão para `serviceData`
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(orders): validate ficha sections and compute totals`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(orders): validate ficha sections and compute totals`
 
 ### T07: Agregado Pedido
 
@@ -189,14 +195,15 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T05, T06
 **Requirement:** PCL-04, PCL-05, PCL-07, PCL-08, PCL-12, PFI-09, PFI-12
 **Done when:**
+
 - [ ] `formatOrderNumber(1)` → `01-CRM`; `105` → `105-CRM`
 - [ ] Confirmar exige valor > 0, condição válida e ≥1 item com grade (A01); grava data, autor e horário
 - [ ] Reabrir só a partir de `confirmado`; mantém número, valor e condição; registra autor e horário
 - [ ] Nova confirmação sobrescreve autor, horário e data (PCL-12)
 - [ ] Nenhuma outra transição possível
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(orders): model order confirmation and reopening`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(orders): model order confirmation and reopening`
 
 ### T08: Porta do repositório e implementação em memória
 
@@ -206,12 +213,13 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** `modules/inbox-channels/src/adapters/in-memory-inbox-repository.js`
 **Requirement:** PCL-02, PCL-09
 **Done when:**
+
 - [ ] Segundo pendente na mesma conversa é recusado
 - [ ] Escrita com versão antiga lança conflito
 - [ ] Suíte de contrato exportável para reuso em T13
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(orders): define repository port with in-memory adapter`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(orders): define repository port with in-memory adapter`
 
 ### T09: Serviço — criação e projeção do agente
 
@@ -220,12 +228,13 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T08
 **Requirement:** PCL-01, PCL-02, PCL-03, PCL-10, PCL-11, PAG-01, PAG-02
 **Done when:**
+
 - [ ] Intenção sem pendente cria; com pendente devolve o existente; só confirmados → cria novo
 - [ ] Criação manual pré-preenche com a pré-ficha
 - [ ] Projeção só aplica com `automationState = 'assistant'`
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(orders): create pending orders from intent and briefing`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(orders): create pending orders from intent and briefing`
 
 ### T10: Serviço — edição por seção, confirmar e reabrir
 
@@ -234,13 +243,14 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T09
 **Requirement:** PFI-06, PFI-10, PCL-04, PCL-05, PCL-06, PCL-07, PCL-09, PCL-12
 **Done when:**
+
 - [ ] Seção inteira substituída e `total_pieces`/`missing_fields` recalculados
 - [ ] Edição em pedido confirmado recusada
 - [ ] Não dono e não admin → erro de permissão
 - [ ] Conflito de versão propagado
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(orders): edit sections, confirm and reopen orders`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(orders): edit sections, confirm and reopen orders`
 
 ### T11: Serviço — leituras
 
@@ -249,11 +259,12 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T10
 **Requirement:** PLI-02, PLI-03, PLI-04, PLI-05, PLI-06, PLI-07, PCX-07
 **Done when:**
+
 - [ ] Filtro por status, busca, paginação por cursor
 - [ ] `currentForConversation` devolve o pendente ou, se não houver, o último confirmado
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(orders): read and list orders`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(orders): read and list orders`
 
 ### T12: Migration `0023_orders.expand.sql`
 
@@ -262,11 +273,12 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T04
 **Requirement:** PCL-02, PCL-04, PCL-09
 **Done when:**
+
 - [ ] `npm run test:database` passa
 - [ ] Teste live confirma índice parcial de pendente e a restrição de campos do confirmado
 - [ ] Nenhuma tabela `crm.deals*` referenciada
-**Tests:** integração live · **Gate:** `npm run test:database && npm run test:database:live`
-**Commit:** `feat(database): add orders table and number sequence`
+      **Tests:** integração live · **Gate:** `npm run test:database && npm run test:database:live`
+      **Commit:** `feat(database): add orders table and number sequence`
 
 ### T13: Repositório PostgreSQL de pedidos
 
@@ -276,12 +288,13 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** `encryptJson`/`decryptJson` (padrão de `modules/n8n-integration/src/crypto.js`); suíte de contrato de T08
 **Requirement:** PCL-01, PCL-02, PCL-09, PLI-08
 **Done when:**
+
 - [ ] Suíte de contrato de T08 roda contra PostgreSQL e passa
 - [ ] Nenhum dado pessoal em coluna aberta
 - [ ] Evento gravado em toda escrita
 - [ ] Gate live passa
-**Tests:** integração live · **Gate:** live
-**Commit:** `feat(orders): persist orders in PostgreSQL`
+      **Tests:** integração live · **Gate:** live
+      **Commit:** `feat(orders): persist orders in PostgreSQL`
 
 ---
 
@@ -294,11 +307,12 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T01
 **Requirement:** PAU-01, PCL-06, PIM-05
 **Done when:**
+
 - [ ] Ações existem **só** na allowlist única
 - [ ] `order.intent` indisponível para usuários humanos
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(identity): authorize order actions`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(identity): authorize order actions`
 
 ### T15: Runtime de pedidos e composição na API
 
@@ -308,10 +322,11 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** composição de `conversation-runtime.js`
 **Requirement:** PAU-01, PCL-06
 **Done when:**
+
 - [ ] Posse resolvida pela conversa em cada comando
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(api): compose orders runtime`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(api): compose orders runtime`
 
 ### T16: Rotas de leitura de pedido
 
@@ -321,11 +336,12 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** `respond`, `rejectUnknownKeys` de `conversation-routes.js`
 **Requirement:** PLI-02, PLI-03, PLI-04, PLI-05, PLI-06, PLI-07, PFI-01, PCX-07
 **Done when:**
+
 - [ ] Parâmetros desconhecidos → 400; pedido inexistente → 404
 - [ ] Resposta segue o tipo `Order` de `design.md`
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(api): expose order read endpoints`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(api): expose order read endpoints`
 
 ### T17: Rotas de criação e edição por seção
 
@@ -334,12 +350,13 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T16
 **Requirement:** PCL-10, PCL-11, PFI-06, PAU-01
 **Done when:**
+
 - [ ] `Idempotency-Key` e `expectedVersion` obrigatórios
 - [ ] 403 fora da posse; 409 versão; 422 validação com campos
 - [ ] Criar com pendente existente → 200 com o existente
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(api): create orders and edit sections`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(api): create orders and edit sections`
 
 ### T18: Rotas de confirmar e reabrir
 
@@ -348,11 +365,12 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T17
 **Requirement:** PCL-04, PCL-05, PCL-06, PCL-07, PCL-09, PCL-12
 **Done when:**
+
 - [ ] 422 `ORDER_NOT_CONFIRMABLE` com `fields[]`
 - [ ] Confirmações concorrentes: uma 200, outra 409
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(api): confirm and reopen orders`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(api): confirm and reopen orders`
 
 ### T19: Evento ao vivo `inbox.order.changed`
 
@@ -361,10 +379,11 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T13
 **Requirement:** PLI-08
 **Done when:**
+
 - [ ] Eventos de conversa e contato continuam iguais
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(api): stream order changes`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(api): stream order changes`
 
 ### T20: Leitura do inbox — Aguardando vendedor, motivo e pedido
 
@@ -373,10 +392,11 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T13
 **Requirement:** PCX-02, PCX-03, PCX-04, PCX-06
 **Done when:**
+
 - [ ] Filtros existentes (`assignedUserId`, `archived`, `automationState`, `unassignedHumanHandoff`) intactos
 - [ ] `npm run test:operation-read:live` passa
-**Tests:** integração live · **Gate:** `npm run test:operation-read:live && npm run lint`
-**Commit:** `feat(inbox): expose waiting handoffs and order summary`
+      **Tests:** integração live · **Gate:** `npm run test:operation-read:live && npm run lint`
+      **Commit:** `feat(inbox): expose waiting handoffs and order summary`
 
 ---
 
@@ -389,10 +409,11 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T15
 **Requirement:** PCL-01, PCL-02, PCL-03
 **Done when:**
+
 - [ ] Mesmo evento com a mesma `Idempotency-Key` não duplica
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(n8n): accept order intent events`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(n8n): accept order intent events`
 
 ### T22: Projetar a pré-ficha no pedido pendente
 
@@ -401,10 +422,11 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T21
 **Requirement:** PAG-01, PAG-02, PAG-03
 **Done when:**
+
 - [ ] Conversa humana: patch não altera o pedido
 - [ ] Gate live do módulo passa
-**Tests:** integração live · **Gate:** teste live do módulo + `npm run lint`
-**Commit:** `feat(n8n): project briefing into pending order`
+      **Tests:** integração live · **Gate:** teste live do módulo + `npm run lint`
+      **Commit:** `feat(n8n): project briefing into pending order`
 
 ### T23: Workflow emite a intenção de compra
 
@@ -413,10 +435,11 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T21, T02
 **Requirement:** PCL-01
 **Done when:**
+
 - [ ] Teste existente do workflow cobre o novo nó; se não houver teste do SDK, criar asserção sobre o nó que emite o evento
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(n8n): emit order intent from MVP workflow`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(n8n): emit order intent from MVP workflow`
 
 ---
 
@@ -429,11 +452,12 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T04
 **Requirement:** PIM-02, PIM-04
 **Done when:**
+
 - [ ] Teste golden: saída com `synthetic:true` idêntica à anterior para o snapshot sintético
 - [ ] `synthetic:false` remove só a faixa de amostra
 - [ ] `npm run validate:ficha-pdf-review` passa (hashes aprovados intactos)
-**Tests:** unit · **Gate:** `npm run test:ficha-pdf-review && npm run validate:ficha-pdf-review`
-**Commit:** `refactor(orders): extract approved ficha v2 renderer`
+      **Tests:** unit · **Gate:** `npm run test:ficha-pdf-review && npm run validate:ficha-pdf-review`
+      **Commit:** `refactor(orders): extract approved ficha v2 renderer`
 
 ### T25: Rota de impressão
 
@@ -442,11 +466,12 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T16, T24
 **Requirement:** PIM-02, PIM-03, PIM-05
 **Done when:**
+
 - [ ] Documento sem valor e sem condição de pagamento
 - [ ] `vendedor` = quem confirmou; `data` = data do pedido; produção em branco
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(api): print confirmed orders`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(api): print confirmed orders`
 
 ---
 
@@ -459,10 +484,11 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T03
 **Requirement:** PFI-11, PFI-12, PLI-05, PCX-03
 **Done when:**
+
 - [ ] Todos os `reason_code` de `0013` têm rótulo
 - [ ] Gate quick passa
-**Tests:** unit · **Gate:** quick
-**Commit:** `feat(edge-web): format order labels and amounts`
+      **Tests:** unit · **Gate:** quick
+      **Commit:** `feat(edge-web): format order labels and amounts`
 
 ### T27: Rotas e item "Pedidos" no menu [P]
 
@@ -471,10 +497,11 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** —
 **Requirement:** PLI-01, PGE-01
 **Done when:**
+
 - [ ] e2e verifica a ordem do menu e o item ativo
 - [ ] Gate e2e passa
-**Tests:** e2e · **Gate:** e2e (`test/e2e/foundation.spec.js`)
-**Commit:** `feat(edge-web): add orders navigation`
+      **Tests:** e2e · **Gate:** e2e (`test/e2e/foundation.spec.js`)
+      **Commit:** `feat(edge-web): add orders navigation`
 
 ### T28: Lista de Pedidos
 
@@ -484,11 +511,12 @@ H:  T23, T34, T38 ──→ T39
 **Reuses:** `.data-table`, `.badge`, `.filter-bar`, `.chip`; padrão de `ClientsView.vue`
 **Requirement:** PLI-02, PLI-03, PLI-04, PLI-05, PLI-06, PLI-07, PLI-08
 **Done when:**
+
 - [ ] "Imprimir" só em confirmados; "Continuar" só em pendentes
 - [ ] `npm run check:design-tokens` passa
 - [ ] Gate e2e passa
-**Tests:** e2e · **Gate:** e2e (`test/e2e/orders.spec.js`)
-**Commit:** `feat(edge-web): list orders by status`
+      **Tests:** e2e · **Gate:** e2e (`test/e2e/orders.spec.js`)
+      **Commit:** `feat(edge-web): list orders by status`
 
 ### T29: Página do pedido — estrutura
 
@@ -497,11 +525,12 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T25, T28
 **Requirement:** PFI-01, PFI-09, PFI-10, PIM-01, PGE-01, PAU-01
 **Done when:**
+
 - [ ] Menu ativo "Pedidos"; rastro mostra a origem quando vem da conversa
 - [ ] Imprimir desabilitado com o motivo em pendente
 - [ ] Gate e2e passa
-**Tests:** e2e · **Gate:** e2e
-**Commit:** `feat(edge-web): add order page shell`
+      **Tests:** e2e · **Gate:** e2e
+      **Commit:** `feat(edge-web): add order page shell`
 
 ### T30: Seção Resumo do pedido
 
@@ -550,11 +579,12 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T18, T33
 **Requirement:** PCL-04, PCL-05, PCL-06, PCL-07, PFI-11, PFI-12, PFI-13
 **Done when:**
+
 - [ ] Jornada e2e: confirmar → Imprimir libera → reabrir → Imprimir trava
 - [ ] Usuário sem posse não vê Confirmar/Reabrir
 - [ ] Gate e2e passa
-**Tests:** e2e · **Gate:** e2e
-**Commit:** `feat(edge-web): confirm and reopen orders`
+      **Tests:** e2e · **Gate:** e2e
+      **Commit:** `feat(edge-web): confirm and reopen orders`
 
 ---
 
@@ -567,10 +597,11 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T20, T26
 **Requirement:** PCX-01, PCX-02, PCX-05
 **Done when:**
+
 - [ ] e2e cobre os quatro estados combinados com a fila Minhas e com arquivadas
 - [ ] Gate e2e passa
-**Tests:** e2e · **Gate:** e2e (`test/e2e/crm-ui.spec.js`)
-**Commit:** `feat(inbox): filter conversations by who must act`
+      **Tests:** e2e · **Gate:** e2e (`test/e2e/crm-ui.spec.js`)
+      **Commit:** `feat(inbox): filter conversations by who must act`
 
 ### T36: Motivo da parada e ordenação por tempo parado
 
@@ -614,12 +645,13 @@ H:  T23, T34, T38 ──→ T39
 **Depends on:** T23, T34, T38
 **Requirement:** todos
 **Done when:**
+
 - [ ] `npm run validate` passa
 - [ ] `npm run test:e2e` passa
 - [ ] `npm run test:orders:live` passa
 - [ ] Nenhum requisito sem evidência
-**Tests:** full · **Gate:** full
-**Commit:** `docs(specs): verify orders MVP traceability`
+      **Tests:** full · **Gate:** full
+      **Commit:** `docs(specs): verify orders MVP traceability`
 
 ---
 
@@ -627,78 +659,78 @@ H:  T23, T34, T38 ──→ T39
 
 ### Granularidade
 
-| Task | Escopo | Status |
-| --- | --- | --- |
-| T01–T03 | 1 documento cada | ✅ |
-| T04 | scaffold de 1 pacote | ✅ |
-| T05, T06, T07 | 1 arquivo de domínio cada | ✅ |
-| T08 | porta + adapter em memória (mesmo contrato) | ⚠️ coeso |
-| T09, T10, T11 | 1 grupo de métodos do serviço cada | ✅ |
-| T12, T13 | 1 migration / 1 adapter | ✅ |
-| T14–T20 | 1 ação, runtime ou grupo de rotas cada | ✅ |
-| T21–T23 | 1 ponto de integração cada | ✅ |
-| T24, T25 | 1 renderer / 1 rota | ✅ |
-| T26–T34 | 1 lib, view ou componente cada | ✅ |
-| T35–T38 | 1 mudança de view ou componente cada | ✅ |
-| T39 | verificação | ✅ |
+| Task          | Escopo                                      | Status   |
+| ------------- | ------------------------------------------- | -------- |
+| T01–T03       | 1 documento cada                            | ✅       |
+| T04           | scaffold de 1 pacote                        | ✅       |
+| T05, T06, T07 | 1 arquivo de domínio cada                   | ✅       |
+| T08           | porta + adapter em memória (mesmo contrato) | ⚠️ coeso |
+| T09, T10, T11 | 1 grupo de métodos do serviço cada          | ✅       |
+| T12, T13      | 1 migration / 1 adapter                     | ✅       |
+| T14–T20       | 1 ação, runtime ou grupo de rotas cada      | ✅       |
+| T21–T23       | 1 ponto de integração cada                  | ✅       |
+| T24, T25      | 1 renderer / 1 rota                         | ✅       |
+| T26–T34       | 1 lib, view ou componente cada              | ✅       |
+| T35–T38       | 1 mudança de view ou componente cada        | ✅       |
+| T39           | verificação                                 | ✅       |
 
 ### Diagrama × definições
 
-| Task | Depends on (corpo) | Diagrama | Status |
-| --- | --- | --- | --- |
-| T02 | T01 | T01→T02 | ✅ |
-| T03 | T01 | T01→T03 | ✅ |
-| T04 | T01 | (A→B) | ✅ |
-| T05, T06 | T04 | T04→T05, T04→T06 | ✅ |
-| T07 | T05, T06 | T05,T06→T07 | ✅ |
-| T08 | T07 | T07→T08 | ✅ |
-| T09 | T08 | T08→T09 | ✅ |
-| T10 | T09 | T09→T10 | ✅ |
-| T11 | T10 | T10→T11 | ✅ |
-| T12 | T04 | T04→T12 | ✅ |
-| T13 | T08, T12 | T08,T12→T13 | ✅ |
-| T14 | T01 | T01→T14 | ✅ |
-| T15 | T11, T13, T14 | T11,T13,T14→T15 | ✅ |
-| T16 | T15 | T15→T16 | ✅ |
-| T17 | T16 | T16→T17 | ✅ |
-| T18 | T17 | T17→T18 | ✅ |
-| T19 | T13 | T13→T19 | ✅ |
-| T20 | T13 | T13→T20 | ✅ |
-| T21 | T15 | T15→T21 | ✅ |
-| T22 | T21 | T21→T22 | ✅ |
-| T23 | T21, T02 | T21,T02→T23 | ✅ |
-| T24 | T04 | T04→T24 | ✅ |
-| T25 | T16, T24 | T16,T24→T25 | ✅ |
-| T26 | T03 | T03→T26 | ✅ |
-| T27 | — | T27 | ✅ |
-| T28 | T16, T19, T26, T27 | idem | ✅ |
-| T29 | T25, T28 | T25,T28→T29 | ✅ |
-| T30 | T17, T29 | T17,T29→T30 | ✅ |
-| T31 | T30 | T30→T31 | ✅ |
-| T32 | T31 | T31→T32 | ✅ |
-| T33 | T32 | T32→T33 | ✅ |
-| T34 | T18, T33 | T18,T33→T34 | ✅ |
-| T35 | T20, T26 | T20,T26→T35 | ✅ |
-| T36 | T35 | T35→T36 | ✅ |
-| T37 | T16, T17, T26 | idem | ✅ |
-| T38 | T19, T36, T37 | idem | ✅ |
-| T39 | T23, T34, T38 | idem | ✅ |
+| Task     | Depends on (corpo) | Diagrama         | Status |
+| -------- | ------------------ | ---------------- | ------ |
+| T02      | T01                | T01→T02          | ✅     |
+| T03      | T01                | T01→T03          | ✅     |
+| T04      | T01                | (A→B)            | ✅     |
+| T05, T06 | T04                | T04→T05, T04→T06 | ✅     |
+| T07      | T05, T06           | T05,T06→T07      | ✅     |
+| T08      | T07                | T07→T08          | ✅     |
+| T09      | T08                | T08→T09          | ✅     |
+| T10      | T09                | T09→T10          | ✅     |
+| T11      | T10                | T10→T11          | ✅     |
+| T12      | T04                | T04→T12          | ✅     |
+| T13      | T08, T12           | T08,T12→T13      | ✅     |
+| T14      | T01                | T01→T14          | ✅     |
+| T15      | T11, T13, T14      | T11,T13,T14→T15  | ✅     |
+| T16      | T15                | T15→T16          | ✅     |
+| T17      | T16                | T16→T17          | ✅     |
+| T18      | T17                | T17→T18          | ✅     |
+| T19      | T13                | T13→T19          | ✅     |
+| T20      | T13                | T13→T20          | ✅     |
+| T21      | T15                | T15→T21          | ✅     |
+| T22      | T21                | T21→T22          | ✅     |
+| T23      | T21, T02           | T21,T02→T23      | ✅     |
+| T24      | T04                | T04→T24          | ✅     |
+| T25      | T16, T24           | T16,T24→T25      | ✅     |
+| T26      | T03                | T03→T26          | ✅     |
+| T27      | —                  | T27              | ✅     |
+| T28      | T16, T19, T26, T27 | idem             | ✅     |
+| T29      | T25, T28           | T25,T28→T29      | ✅     |
+| T30      | T17, T29           | T17,T29→T30      | ✅     |
+| T31      | T30                | T30→T31          | ✅     |
+| T32      | T31                | T31→T32          | ✅     |
+| T33      | T32                | T32→T33          | ✅     |
+| T34      | T18, T33           | T18,T33→T34      | ✅     |
+| T35      | T20, T26           | T20,T26→T35      | ✅     |
+| T36      | T35                | T35→T36          | ✅     |
+| T37      | T16, T17, T26      | idem             | ✅     |
+| T38      | T19, T36, T37      | idem             | ✅     |
+| T39      | T23, T34, T38      | idem             | ✅     |
 
 `[P]` só em tasks sem dependência entre si na mesma fase: T03 (com T02), T05/T06/T24 (após T04), T14 (após T01), T26/T27. ✅
 
 ### Co-localização de testes
 
-| Task | Camada | Matriz exige | Task diz | Status |
-| --- | --- | --- | --- | --- |
-| T01–T03 | docs | none | none | ✅ |
-| T04 | scaffold sem lógica | none | none (gate boundaries + typecheck) | ✅ |
-| T05–T11 | domínio/aplicação | unit | unit | ✅ |
-| T12, T13 | migration/adapter PG | integração live | integração live | ✅ |
-| T14–T19 | autorização/runtime/rotas | unit | unit | ✅ |
-| T20 | adapter de leitura PG | integração live | integração live | ✅ |
-| T21, T23 | rotas/workflow | unit | unit | ✅ |
-| T22 | adapter PG | integração live | integração live | ✅ |
-| T24, T25 | renderer/rota | unit | unit | ✅ |
-| T26 | lib pura do front | unit | unit | ✅ |
-| T27–T38 | views/componentes | e2e | e2e | ✅ |
-| T39 | verificação | full | full | ✅ |
+| Task     | Camada                    | Matriz exige    | Task diz                           | Status |
+| -------- | ------------------------- | --------------- | ---------------------------------- | ------ |
+| T01–T03  | docs                      | none            | none                               | ✅     |
+| T04      | scaffold sem lógica       | none            | none (gate boundaries + typecheck) | ✅     |
+| T05–T11  | domínio/aplicação         | unit            | unit                               | ✅     |
+| T12, T13 | migration/adapter PG      | integração live | integração live                    | ✅     |
+| T14–T19  | autorização/runtime/rotas | unit            | unit                               | ✅     |
+| T20      | adapter de leitura PG     | integração live | integração live                    | ✅     |
+| T21, T23 | rotas/workflow            | unit            | unit                               | ✅     |
+| T22      | adapter PG                | integração live | integração live                    | ✅     |
+| T24, T25 | renderer/rota             | unit            | unit                               | ✅     |
+| T26      | lib pura do front         | unit            | unit                               | ✅     |
+| T27–T38  | views/componentes         | e2e             | e2e                                | ✅     |
+| T39      | verificação               | full            | full                               | ✅     |

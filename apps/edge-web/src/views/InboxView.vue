@@ -108,6 +108,38 @@ function listUrl() {
   return '/api/v1/inbox/conversations?limit=100';
 }
 
+/** @param {{authorKind?: unknown, direction?: unknown}} message */
+function messageFrom(message) {
+  if (message.authorKind === 'contact') return 'cliente';
+  if (message.authorKind === 'assistant') return 'agente';
+  if (message.authorKind === 'human') return 'humano';
+  return message.direction === 'inbound' ? 'cliente' : 'agente';
+}
+
+/** @param {{authorKind?: unknown, direction?: unknown}} message */
+function messageAuthorLabel(message) {
+  const from = messageFrom(message);
+  if (from === 'cliente') return active.value?.contact.label ?? 'Cliente';
+  if (from === 'humano') return 'Vendedor';
+  return 'Assistente Silmer';
+}
+
+/** @param {{authorKind?: unknown, direction?: unknown}} message */
+function messageRoleLabel(message) {
+  const from = messageFrom(message);
+  if (from === 'cliente') return 'Cliente';
+  if (from === 'humano') return 'Vendedor';
+  return 'IA';
+}
+
+/** @param {{authorKind?: unknown, direction?: unknown}} message */
+function messageInitials(message) {
+  const from = messageFrom(message);
+  if (from === 'cliente') return 'C';
+  if (from === 'humano') return 'V';
+  return 'IA';
+}
+
 /** @param {unknown} cause */
 function describeError(cause) {
   const status = Number(/** @type {any} */ (cause)?.status);
@@ -640,14 +672,19 @@ onBeforeUnmount(() => {
             v-for="message in detail.messages"
             :key="message.id"
             class="message"
+            :data-from="messageFrom(message)"
             :data-side="message.direction === 'outbound' ? 'out' : 'in'"
           >
             <div class="msg-head">
-              <strong>{{
-                message.direction === 'outbound'
-                  ? 'Silmer'
-                  : active.contact.label
-              }}</strong>
+              <span class="msg-sender">
+                <span class="message-avatar" aria-hidden="true">{{
+                  messageInitials(message)
+                }}</span>
+                <span>
+                  <strong>{{ messageAuthorLabel(message) }}</strong>
+                  <span class="msg-role">{{ messageRoleLabel(message) }}</span>
+                </span>
+              </span>
               <span>{{ dateTimeBR(message.occurredAt) }}</span>
             </div>
             <p>{{ message.preview }}</p>

@@ -590,6 +590,8 @@ details.exact summary {
 }
 
 .message {
+  display: grid;
+  gap: 0.35rem;
   max-inline-size: 38rem;
   padding: 0.7rem 0.85rem;
   background: var(--color-surface);
@@ -599,15 +601,20 @@ details.exact summary {
 
 .message[data-from='cliente'] {
   background: var(--color-surface-raised);
+  border-inline-start: 0.25rem solid var(--color-border);
 }
 
 .message[data-from='agente'] {
+  background: var(--status-info-surface);
+  border-color: var(--status-info-text);
   border-inline-start: 0.2rem solid var(--color-link);
 }
 
 .message[data-from='humano'] {
   margin-inline-start: auto;
   background: var(--color-surface-active);
+  border-color: var(--color-link);
+  border-inline-end: 0.25rem solid var(--color-link);
 }
 
 .msg-head {
@@ -619,6 +626,46 @@ details.exact summary {
   color: var(--color-text-muted);
   font-size: 0.72rem;
   font-weight: 600;
+}
+
+.msg-sender {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-inline-size: 0;
+}
+
+.message-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.message[data-from='agente'] .message-avatar {
+  color: var(--status-info-text);
+  border-color: var(--status-info-text);
+}
+
+.message[data-from='humano'] .message-avatar {
+  color: var(--color-link);
+  border-color: var(--color-link);
+}
+
+.msg-role {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .message p {

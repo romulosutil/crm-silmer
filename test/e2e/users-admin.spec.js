@@ -117,7 +117,11 @@ test('lists accounts and hands over the created credentials as markdown', async 
   await expect(
     page.getByRole('heading', { exact: true, name: 'Vendedores' }),
   ).toBeFocused();
-  await expect(page.getByText('Administrador')).toBeVisible();
+  await expect(
+    page
+      .getByLabel('Vendedores do CRM')
+      .getByText('Administrador', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('row')).toHaveCount(3);
   await expect(
     page.getByText('2 contas · 2 ativas · 0 desativadas'),

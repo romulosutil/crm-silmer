@@ -109,6 +109,36 @@ test('updates the active conversation exactly once for each new inbound message'
   assert.deepEqual(replay, second);
 });
 
+test('archives an active conversation without ending it and restores it on new inbound', async () => {
+  const { audits, service } = createHarness();
+  const received = await service.receiveInbound(inbound());
+  const archived = await service.archiveConversation({
+    actor: ATTENDANT,
+    conversationId: received.conversation.id,
+    correlationId: 'correlation-archive',
+    expectedVersion: received.conversation.version,
+    idempotencyKey: 'archive-key',
+    reason: 'Resolvido por enquanto',
+  });
+  assert.equal(archived.terminalAt, null);
+  assert.equal(archived.archivedAt, NOW.toISOString());
+  assert.equal(
+    audits.some(({ action }) => action === 'conversation.archived'),
+    true,
+  );
+
+  const reopened = await service.receiveInbound(
+    inbound({
+      correlationId: 'correlation-archive-inbound',
+      externalMessageId: 'external-message-archive-inbound',
+      occurredAt: '2026-09-02T12:01:00.000Z',
+    }),
+  );
+  assert.equal(reopened.conversation.id, received.conversation.id);
+  assert.equal(reopened.conversation.terminalAt, null);
+  assert.equal(reopened.conversation.archivedAt, null);
+});
+
 test('creates exactly one new cycle after terminal state and preserves the old cycle', async () => {
   const { service } = createHarness();
   const first = await service.receiveInbound(inbound());

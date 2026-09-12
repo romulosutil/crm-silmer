@@ -233,6 +233,7 @@ test('keeps a single operational allowlist for API guards and the policy', async
   // answered the whole Inbox with 403.
   for (const action of [
     'contact.rename',
+    'conversation.archive',
     'conversation.message.send',
     'conversation.reactivate-agent',
     'conversation.read',

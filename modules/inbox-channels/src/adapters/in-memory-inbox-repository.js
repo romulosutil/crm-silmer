@@ -90,6 +90,7 @@ export class InMemoryInboxRepository {
             ? input.occurredAt
             : conversation.updatedAt;
         conversation.version += 1;
+        conversation.archivedAt = null;
       }
       const message = {
         authorId: null,
@@ -159,6 +160,10 @@ export class InMemoryInboxRepository {
           ? occurredAt
           : null;
         conversation.updatedAt = occurredAt;
+        conversation.version += 1;
+        result = publicConversation(conversation);
+      } else if (kind === 'archive') {
+        conversation.archivedAt = occurredAt;
         conversation.version += 1;
         result = publicConversation(conversation);
       } else if (kind === 'takeover') {
@@ -258,6 +263,7 @@ function publicConversation(conversation) {
 /** @param {string} kind @param {any} input @param {any} conversation @param {string} occurredAt */
 function createAudit(kind, input, conversation, occurredAt) {
   const actions = {
+    archive: 'conversation.archived',
     reactivate: 'conversation.assistant_reactivated',
     send: 'conversation.human_message_queued',
     takeover: 'conversation.takeover',

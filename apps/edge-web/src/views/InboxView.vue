@@ -35,6 +35,7 @@ const searchInput = ref(null);
 const replyInput = ref(null);
 const nameInput = ref(null);
 const query = ref('');
+const showArchived = ref(false);
 const loading = ref(true);
 const detailLoading = ref(false);
 const busy = ref(false);
@@ -110,7 +111,18 @@ const canTransfer = computed(
 );
 
 function listUrl() {
-  return '/api/v1/inbox/conversations?limit=100';
+  return `/api/v1/inbox/conversations?limit=100&archived=${showArchived.value}`;
+}
+
+async function archiveConversation() {
+  await runCommand(
+    'archive',
+    {
+      expectedVersion: active.value.version,
+      reason: 'Conversa arquivada na Caixa de Entrada',
+    },
+    'Conversa arquivada. Uma nova mensagem do cliente a exibirá novamente.',
+  );
 }
 
 /** @param {{authorKind?: unknown, direction?: unknown}} message */
@@ -424,6 +436,7 @@ function scheduleLiveRefresh() {
 }
 
 watch(query, () => void selectVisibleConversation(false));
+watch(showArchived, () => void refreshInbox());
 watch(liveEvent, (event) => {
   if (event) scheduleLiveRefresh();
 });
@@ -475,6 +488,13 @@ onBeforeUnmount(() => {
       <p class="filter-summary">
         {{ filtered.length }} exibidas · {{ totalCount }} no total
       </p>
+      <button
+        type="button"
+        :aria-pressed="showArchived"
+        @click="showArchived = !showArchived"
+      >
+        {{ showArchived ? 'Ver caixa de entrada' : 'Ver arquivadas' }}
+      </button>
     </div>
 
     <p v-if="error" role="alert" class="audit-note">{{ error }}</p>
@@ -628,6 +648,14 @@ onBeforeUnmount(() => {
               @click="openTransfer"
             >
               Repassar atendimento
+            </button>
+            <button
+              v-if="canAct && !showArchived"
+              type="button"
+              :disabled="busy"
+              @click="archiveConversation"
+            >
+              Arquivar conversa
             </button>
             <RouterLink
               class="button-link quiet-link"

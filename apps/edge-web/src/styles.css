@@ -392,6 +392,15 @@ summary {
   font-size: 0.8rem;
   font-weight: 600;
 }
+.connection-state > span {
+  display: grid;
+  gap: 0.05rem;
+}
+.connection-state small {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
 .connection-state::before {
   content: '✓';
   display: grid;
@@ -406,6 +415,13 @@ summary {
 }
 .connection-state[data-state='reconectando']::before {
   content: '!';
+}
+.connection-state[data-state='reconectando']::before,
+.connection-state[data-state='conectando']::before {
+  animation: connection-pulse 1.2s ease-in-out infinite;
+}
+@keyframes connection-pulse {
+  50% { opacity: 0.4; transform: rotate(20deg); }
 }
 .icon-button,
 .mobile-nav {

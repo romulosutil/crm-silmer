@@ -70,7 +70,7 @@ const conversation = {
   updatedAt: '2026-09-08T12:00:00.000Z',
   version: 3,
 };
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -91,7 +91,9 @@ async function mockCrm(page, options = {}) {
     : options.assistant
       ? {
           ...conversation,
-          assignedUser: null,
+          assignedUser: options.assistantKeepsOwner
+            ? conversation.assignedUser
+            : null,
           automationState: 'assistant',
         }
       : conversation;
@@ -549,11 +551,12 @@ test('labels human and AI service distinctly and only permits transfer after tak
     page.getByRole('button', { name: 'Repassar atendimento' }),
   ).toBeVisible();
 
-  await mockCrm(page, { assistant: true });
+  await mockCrm(page, { assistant: true, assistantKeepsOwner: true });
   await page.reload();
   await expect(
     page.locator('.inbox-list .badge', { hasText: 'Em atendimento por IA' }),
   ).toBeVisible();
+  await expect(page.locator('.conv-identity')).not.toContainText('Você');
   await expect(
     page.getByRole('button', { name: 'Repassar atendimento' }),
   ).toHaveCount(0);

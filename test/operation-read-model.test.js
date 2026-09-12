@@ -70,6 +70,7 @@ test('binds signed Inbox cursors to closed filters', async () => {
     channel: 'whatsapp',
     limit: 20,
     state: 'requer_atencao',
+    unassignedHumanHandoff: true,
   });
   assert.equal(first.totalCount, 2);
   assert.ok(first.nextCursor);
@@ -80,6 +81,7 @@ test('binds signed Inbox cursors to closed filters', async () => {
       channel: 'whatsapp',
       limit: 20,
       state: 'requer_atencao',
+      unassignedHumanHandoff: true,
     },
   ]);
 
@@ -88,6 +90,7 @@ test('binds signed Inbox cursors to closed filters', async () => {
     cursor: first.nextCursor,
     limit: 20,
     state: 'requer_atencao',
+    unassignedHumanHandoff: true,
   });
   assert.deepEqual(calls[1][1].after, {
     id: 'conversation-1',
@@ -98,6 +101,7 @@ test('binds signed Inbox cursors to closed filters', async () => {
       channel: 'instagram',
       cursor: first.nextCursor,
       state: 'requer_atencao',
+      unassignedHumanHandoff: true,
     }),
     (error) => /** @type {any} */ (error).code === 'INVALID_CURSOR',
   );
@@ -135,6 +139,10 @@ test('rejects unsupported Inbox filter values before persistence', async () => {
   );
   await assert.rejects(
     service.listInbox({ state: 'lost' }),
+    (error) => /** @type {any} */ (error).code === 'INVALID_FILTER',
+  );
+  await assert.rejects(
+    service.listInbox({ unassignedHumanHandoff: 'sometimes' }),
     (error) => /** @type {any} */ (error).code === 'INVALID_FILTER',
   );
   assert.deepEqual(calls, []);

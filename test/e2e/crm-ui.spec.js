@@ -70,7 +70,7 @@ const conversation = {
   updatedAt: '2026-09-08T12:00:00.000Z',
   version: 3,
 };
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -176,6 +176,7 @@ async function mockCrm(page, options = {}) {
       return;
     }
     if (path === '/api/v1/inbox/conversations' && request.method() === 'GET') {
+      options.onInboxList?.(url.searchParams);
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
@@ -619,6 +620,47 @@ test('restores search focus after removing filter controls', async ({
   await clearInboxSearch.focus();
   await clearInboxSearch.press('Enter');
   await expect(inboxSearch).toBeFocused();
+});
+
+test('filters the Inbox by queue and situation through the server read model', async ({
+  page,
+}) => {
+  const inboxQueries = /** @type {Array<Record<string, string>>} */ ([]);
+  await mockCrm(page, {
+    onInboxList: (params) => inboxQueries.push(Object.fromEntries(params)),
+  });
+  await page.goto('/inbox');
+
+  await page.getByRole('button', { name: 'Minhas conversas' }).click();
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({
+      assignedUserId: 'operator-1',
+    });
+  await expect(
+    page.getByRole('button', { name: 'Minhas conversas' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByRole('button', { name: 'Requer atenção' }).click();
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({
+      assignedUserId: 'operator-1',
+      state: 'requer_atencao',
+    });
+
+  await page.getByRole('button', { name: 'Aguardando atendimento' }).click();
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({
+      state: 'requer_atencao',
+      unassignedHumanHandoff: 'true',
+    });
+  expect(inboxQueries.at(-1)?.assignedUserId).toBeUndefined();
+  await expect(
+    page.getByRole('button', { name: 'Aguardando atendimento' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('does not expose the technical contact identifier in the client list', async ({

@@ -24,6 +24,20 @@ const DELIVERY_NOTICES = Object.freeze({
   failed: 'Falha no envio',
   outcome_unknown: 'Envio aguardando confirmação',
 });
+const INBOX_STATES = Object.freeze([
+  ['all', 'Todas'],
+  ['nova', 'Novas'],
+  ['em_analise', 'Em análise'],
+  ['em_atendimento', 'Em atendimento'],
+  ['requer_atencao', 'Requer atenção'],
+  ['convertida_em_lead', 'Convertidas em lead'],
+  ['sem_lead', 'Sem lead'],
+]);
+const QUEUE_FILTERS = Object.freeze([
+  ['all', 'Todas'],
+  ['mine', 'Minhas conversas'],
+  ['unassignedHumanHandoff', 'Aguardando atendimento'],
+]);
 
 const liveEvent = inject('liveEvent', ref(null));
 const sessionUser = inject(
@@ -38,6 +52,8 @@ const nameInput = ref(null);
 const archiveConfirmationDialog = ref(null);
 const query = ref('');
 const showArchived = ref(false);
+const stateFilter = ref('all');
+const queueFilter = ref('all');
 const loading = ref(true);
 const detailLoading = ref(false);
 const busy = ref(false);
@@ -121,7 +137,18 @@ const canUnarchive = computed(
 );
 
 function listUrl() {
-  return `/api/v1/inbox/conversations?limit=100&archived=${showArchived.value}`;
+  const params = new URLSearchParams({
+    archived: String(showArchived.value),
+    limit: '100',
+  });
+  if (stateFilter.value !== 'all') params.set('state', stateFilter.value);
+  if (queueFilter.value === 'mine' && currentUserId.value) {
+    params.set('assignedUserId', currentUserId.value);
+  }
+  if (queueFilter.value === 'unassignedHumanHandoff') {
+    params.set('unassignedHumanHandoff', 'true');
+  }
+  return `/api/v1/inbox/conversations?${params.toString()}`;
 }
 
 async function archiveConversation() {
@@ -154,7 +181,10 @@ async function unarchiveConversation() {
 function requestArchiveConfirmation(event) {
   const dialog = archiveConfirmationDialog.value;
   const trigger = event.currentTarget;
-  if (!(dialog instanceof HTMLDialogElement) || !(trigger instanceof HTMLElement)) {
+  if (
+    !(dialog instanceof HTMLDialogElement) ||
+    !(trigger instanceof HTMLElement)
+  ) {
     return;
   }
   openDialog(dialog, trigger);
@@ -479,6 +509,7 @@ function scheduleLiveRefresh() {
 
 watch(query, () => void selectVisibleConversation(false));
 watch(showArchived, () => void refreshInbox());
+watch([stateFilter, queueFilter], () => void refreshInbox());
 watch(liveEvent, (event) => {
   if (event) scheduleLiveRefresh();
 });
@@ -527,6 +558,34 @@ onBeforeUnmount(() => {
           </button>
         </div>
       </div>
+      <fieldset class="inbox-filter-group">
+        <legend>Fila</legend>
+        <div class="inbox-filter-options">
+          <button
+            v-for="[value, label] in QUEUE_FILTERS"
+            :key="value"
+            type="button"
+            :aria-pressed="queueFilter === value"
+            @click="queueFilter = value"
+          >
+            {{ label }}
+          </button>
+        </div>
+      </fieldset>
+      <fieldset class="inbox-filter-group">
+        <legend>Situação</legend>
+        <div class="inbox-filter-options">
+          <button
+            v-for="[value, label] in INBOX_STATES"
+            :key="value"
+            type="button"
+            :aria-pressed="stateFilter === value"
+            @click="stateFilter = value"
+          >
+            {{ label }}
+          </button>
+        </div>
+      </fieldset>
       <p class="filter-summary">
         {{ filtered.length }} exibidas · {{ totalCount }} no total
       </p>

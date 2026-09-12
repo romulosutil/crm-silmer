@@ -52,7 +52,7 @@ test('publishes authorized Inbox list and detail read models', async () => {
   const list = await api.inject({
     headers,
     method: 'GET',
-    url: '/api/v1/inbox/conversations?state=requer_atencao&channel=whatsapp&automationState=human&assignedUserId=operator-1&archived=true&limit=25&cursor=signed',
+    url: '/api/v1/inbox/conversations?state=requer_atencao&channel=whatsapp&automationState=human&assignedUserId=operator-1&unassignedHumanHandoff=true&archived=true&limit=25&cursor=signed',
   });
   assert.equal(list.statusCode, 200);
   assert.equal(list.headers['cache-control'], 'private, no-cache');
@@ -69,6 +69,7 @@ test('publishes authorized Inbox list and detail read models', async () => {
       cursor: 'signed',
       limit: 25,
       state: 'requer_atencao',
+      unassignedHumanHandoff: true,
     },
   ]);
 

@@ -175,11 +175,16 @@
   border-radius: var(--radius-md);
 }
 
-.inbox-state-trigger::after {
-  content: '⌄';
+.inbox-state-chevron {
+  flex: none;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
   color: var(--color-link);
-  font-size: 1.125rem;
-  line-height: 1;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .inbox-state-menu[open] .inbox-state-trigger {

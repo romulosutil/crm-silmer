@@ -87,6 +87,10 @@ const filtered = computed(() => {
       .includes(needle),
   );
 });
+const visibleConversationLabel = computed(() => {
+  const count = filtered.value.length;
+  return `${count} ${count === 1 ? 'conversa' : 'conversas'}`;
+});
 const active = computed(() => detail.value?.conversation ?? null);
 const isTerminal = computed(() =>
   ['convertida_em_lead', 'sem_lead'].includes(active.value?.state),
@@ -596,9 +600,11 @@ onBeforeUnmount(() => {
       </fieldset>
       <div class="inbox-toolbar-actions">
         <details ref="stateFilterMenu" class="inbox-state-menu">
-          <summary>
-            <span>Situação</span>
-            <strong>{{ selectedStateLabel }}</strong>
+          <summary :aria-label="`Filtrar por situação: ${selectedStateLabel}`">
+            <span class="inbox-state-label">Situação</span>
+            <span class="inbox-state-trigger">
+              <strong>{{ selectedStateLabel }}</strong>
+            </span>
           </summary>
           <div class="inbox-state-panel">
             <div class="inbox-state-options" aria-label="Filtrar por situação">
@@ -624,7 +630,7 @@ onBeforeUnmount(() => {
           </div>
         </details>
         <p class="filter-summary" role="status">
-          {{ filtered.length }} exibidas · {{ totalCount }} no total
+          {{ visibleConversationLabel }}
         </p>
       </div>
     </div>

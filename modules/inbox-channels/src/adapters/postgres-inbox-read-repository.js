@@ -41,13 +41,7 @@ export class PostgresInboxReadRepository {
         predicates.push(`${column} = $${values.length}`);
       }
       if (input.unassignedHumanHandoff) {
-        predicates.push(`conversation.automation_state = 'human'`);
         predicates.push('conversation.assigned_user_id IS NULL');
-        predicates.push(`EXISTS (
-          SELECT 1 FROM crm.handoffs pending_handoff
-          WHERE pending_handoff.conversation_id = conversation.id
-            AND pending_handoff.status = 'pending'
-        )`);
       }
       if (input.after) {
         values.push(input.after.updatedAt, input.after.id);

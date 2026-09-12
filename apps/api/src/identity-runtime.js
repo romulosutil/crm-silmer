@@ -356,6 +356,29 @@ export function createIdentityApiRuntime(database, environment = process.env) {
       );
     },
 
+    /** @param {{correlationId: string, csrfToken: string, idempotencyKey: string, reason: string, sessionToken: string, targetId: string}} input */
+    async deleteUser(input) {
+      return adminMutation(
+        {
+          action: 'identity.user.delete',
+          command: { targetId: input.targetId },
+          correlationId: input.correlationId,
+          csrfToken: input.csrfToken,
+          idempotencyKey: input.idempotencyKey,
+          reason: input.reason,
+          sessionToken: input.sessionToken,
+          target: { id: input.targetId, type: 'user' },
+        },
+        (service, actorId) =>
+          service.deleteOperationalUser({
+            actorId,
+            correlationId: input.correlationId,
+            reason: input.reason,
+            targetId: input.targetId,
+          }),
+      );
+    },
+
     /** @param {{sessionToken: string}} input */
     async current(input) {
       try {

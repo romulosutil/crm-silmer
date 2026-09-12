@@ -10,6 +10,8 @@ const props = defineProps({
 
 const CREATE_REASON = 'Conta criada pelo administrador comercial';
 const UPDATE_REASON = 'Conta atualizada pelo administrador comercial';
+const DELETE_REASON =
+  'Conta sem histórico excluída pelo administrador comercial';
 
 const heading = ref(null);
 const users = ref([]);
@@ -153,6 +155,29 @@ async function changeDisabled(user, disabled) {
   }
 }
 
+/** @param {Record<string, any>} user */
+async function deleteUser(user) {
+  const confirmed = globalThis.confirm(
+    `Excluir permanentemente a conta de ${user.name}? Esta ação não pode ser desfeita.`,
+  );
+  if (!confirmed) return;
+  props.showError('');
+  busy.value = true;
+  try {
+    await request(`/api/v1/users/${encodeURIComponent(user.id)}`, {
+      method: 'DELETE',
+      idempotencyKey: commandKey(),
+      body: { reason: DELETE_REASON },
+    });
+    await load();
+    props.announce(`Conta de ${user.name} excluída.`);
+  } catch (error) {
+    props.showError(publicMessage(error));
+  } finally {
+    busy.value = false;
+  }
+}
+
 async function copyMarkdown() {
   try {
     await globalThis.navigator.clipboard.writeText(markdown.value);
@@ -196,6 +221,10 @@ function publicMessage(error) {
   if (error instanceof ApiError) {
     if (error.code === 'EMAIL_ALREADY_REGISTERED')
       return 'Esse e-mail já pertence a outra conta.';
+    if (error.code === 'USER_HAS_HISTORY')
+      return 'Essa conta possui histórico e só pode ser desativada.';
+    if (error.code === 'USER_IS_ADMINISTRATOR')
+      return 'Contas de administrador não podem ser excluídas.';
     if (error.status === 403)
       return 'Você não tem permissão para concluir esta ação.';
     if (error.status === 404) return 'Essa conta não existe mais.';
@@ -291,24 +320,38 @@ function formValues(form) {
                 </td>
                 <td>{{ formatDate(user.createdAt) }}</td>
                 <td>
-                  <div class="row-actions">
-                    <button
-                      class="small"
-                      type="button"
-                      @click="startEdit(user)"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      v-if="user.id !== currentUser.id"
-                      class="small quiet"
-                      type="button"
-                      :disabled="busy"
-                      @click="changeDisabled(user, !user.disabledAt)"
-                    >
-                      {{ user.disabledAt ? 'Reativar' : 'Desativar' }}
-                    </button>
-                  </div>
+                  <details class="row-menu">
+                    <summary :aria-label="`Mais ações para ${user.name}`">
+                      <span aria-hidden="true">⋯</span>
+                    </summary>
+                    <div class="row-menu-actions">
+                      <button
+                        class="small"
+                        type="button"
+                        @click="startEdit(user)"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        v-if="user.id !== currentUser.id"
+                        class="small quiet"
+                        type="button"
+                        :disabled="busy"
+                        @click="changeDisabled(user, !user.disabledAt)"
+                      >
+                        {{ user.disabledAt ? 'Reativar' : 'Desativar' }}
+                      </button>
+                      <button
+                        v-if="user.canDelete"
+                        class="small danger"
+                        type="button"
+                        :disabled="busy"
+                        @click="deleteUser(user)"
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </details>
                 </td>
               </tr>
             </tbody>

@@ -181,36 +181,47 @@ específicos abaixo se somam a esse.
 - **Depende de:** AUM-15
 - **Gate:** `npm run validate`
 
+### AUM-17 — Exclusão segura de contas sem histórico
+
+- **O quê:** expor `canDelete` na lista de contas e adicionar `DELETE /api/v1/users/:id`, protegido por sessão, CSRF, idempotência e `COMMERCIAL_ADMIN`. A conta é excluída somente quando não tem histórico operacional; administradores nunca podem ser excluídos. A tela usa menu de ações e confirma a exclusão destrutiva.
+- **Onde:** `modules/identity-access/src/{index.js,postgres.js}`, `apps/api/src/{identity-routes.js,identity-runtime.js}`, `apps/edge-web/src/views/UsersView.vue`, `docs/api/openapi.v1.yaml`.
+- **Pronto quando:** vendedor novo pode ser removido; vendedor ligado a atendimento, handoff ou histórico recebe `409 USER_HAS_HISTORY`; administrador não recebe ação de exclusão nem pode ser excluído por chamada direta.
+- **Testes:** `test/identity-session.test.js`, `test/identity-api.test.js`, `test/e2e/users-admin.spec.js`.
+- **Gate:** `npm run validate`.
+- **Requisitos:** USR-12.
+
 ## Rastreabilidade
 
-| Requisito | Tarefas |
-| --- | --- |
-| ROLE-01, ROLE-02 | AUM-01 |
-| ROLE-03 | AUM-01, AUM-06 |
-| ROLE-04 | AUM-02, AUM-06 |
-| ROLE-05 | AUM-01, AUM-02, AUM-13 |
-| BOOT-01, BOOT-02 | AUM-11 |
-| BOOT-03 | AUM-08 |
-| BOOT-04 | nenhuma — comportamento preservado, coberto por AUM-14 |
-| USR-01 a USR-04 | AUM-05, AUM-07, AUM-10 |
-| USR-05 | AUM-04, AUM-09 |
-| USR-06 | AUM-05, AUM-07, AUM-10 |
-| USR-07 | AUM-05, AUM-07 |
-| USR-08 | AUM-05, AUM-07, AUM-10 |
-| USR-09 | AUM-05 |
-| USR-10 | nenhuma — decisão de não fazer, registrada na spec |
-| USR-11 | AUM-07 |
-| INV-01 | AUM-08, AUM-13 |
-| INV-02 | AUM-09 |
-| INV-03 | AUM-03, AUM-15 |
-| INV-04 | AUM-12 |
+| Requisito        | Tarefas                                                |
+| ---------------- | ------------------------------------------------------ |
+| ROLE-01, ROLE-02 | AUM-01                                                 |
+| ROLE-03          | AUM-01, AUM-06                                         |
+| ROLE-04          | AUM-02, AUM-06                                         |
+| ROLE-05          | AUM-01, AUM-02, AUM-13                                 |
+| BOOT-01, BOOT-02 | AUM-11                                                 |
+| BOOT-03          | AUM-08                                                 |
+| BOOT-04          | nenhuma — comportamento preservado, coberto por AUM-14 |
+| USR-01 a USR-04  | AUM-05, AUM-07, AUM-10                                 |
+| USR-05           | AUM-04, AUM-09                                         |
+| USR-06           | AUM-05, AUM-07, AUM-10                                 |
+| USR-07           | AUM-05, AUM-07                                         |
+| USR-08           | AUM-05, AUM-07, AUM-10                                 |
+| USR-09           | AUM-05                                                 |
+| USR-10           | nenhuma — decisão de não fazer, registrada na spec     |
+| USR-11           | AUM-07                                                 |
+| USR-12           | AUM-17                                                 |
+| INV-01           | AUM-08, AUM-13                                         |
+| INV-02           | AUM-09                                                 |
+| INV-03           | AUM-03, AUM-15                                         |
+| INV-04           | AUM-12                                                 |
 
 ## Situação
 
-| Tarefa | Situação |
-| --- | --- |
-| AUM-01 a AUM-15 | Concluída |
-| AUM-16 | Commits e `graphify update` feitos; PR pendente |
+| Tarefa          | Situação                                        |
+| --------------- | ----------------------------------------------- |
+| AUM-01 a AUM-15 | Concluída                                       |
+| AUM-16          | Commits e `graphify update` feitos; PR pendente |
+| AUM-17          | Concluída                                       |
 
 ### O que ainda não foi executado contra um banco real
 

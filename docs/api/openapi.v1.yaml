@@ -83,6 +83,45 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
   /users/{userId}:
+    delete:
+      operationId: deleteUser
+      summary: Exclui permanentemente uma conta sem histórico operacional
+      description: >-
+        Contas com COMMERCIAL_ADMIN nunca podem ser excluídas. Se a conta tiver
+        histórico operacional, a API responde 409 USER_HAS_HISTORY; nesse caso,
+        a desativação é o caminho disponível.
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Conta excluída ou replay idempotente
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [deleted]
+                properties:
+                  deleted: { type: boolean, const: true }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
     patch:
       operationId: updateUser
       summary: Altera nome, e-mail ou senha de uma conta
@@ -1540,7 +1579,7 @@ components:
     User:
       type: object
       additionalProperties: false
-      required: [id, name, email, functionName, capabilities]
+      required: [id, name, email, functionName, capabilities, canDelete]
       properties:
         id: { type: string }
         name: { type: string, minLength: 1, maxLength: 120 }
@@ -1552,6 +1591,9 @@ components:
           type: array
           uniqueItems: true
           items: { $ref: '#/components/schemas/Capability' }
+        canDelete:
+          type: boolean
+          description: Indica se a conta não possui histórico operacional e pode ser excluída.
     Capability:
       type: string
       enum: [COMMERCIAL_ADMIN]

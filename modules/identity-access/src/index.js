@@ -8,6 +8,7 @@ import { AccessControlError } from './authorization.js';
  * @typedef {{ memory: number, parallelism: number, passes: number, tagLength?: number }} PasswordParameters
  * @typedef {{
  *   capabilities: IdentityCapability[],
+ *   canDelete?: boolean,
  *   createdAt?: string | null,
  *   disabledAt?: string | null,
  *   email: string,
@@ -34,6 +35,7 @@ import { AccessControlError } from './authorization.js';
  *   authenticateSession: (tokenHash: string, touchedAt: string, idleExpiresBefore: string) => IdentitySession | null | Promise<IdentitySession | null>,
  *   createSession: (session: IdentitySession) => void | Promise<void>,
  *   createUser: (user: IdentityUser) => void | Promise<void>,
+ *   deleteUser: (id: string) => boolean | Promise<boolean>,
  *   findSession: (tokenHash: string) => IdentitySession | null | Promise<IdentitySession | null>,
  *   findUserByEmail: (email: string) => IdentityUser | null | undefined | Promise<IdentityUser | null | undefined>,
  *   findUserById: (id: string) => IdentityUser | null | Promise<IdentityUser | null>,
@@ -158,6 +160,8 @@ export async function verifyPassword(password, encoded) {
 function freezeUser(user) {
   return Object.freeze({
     capabilities: Object.freeze([...user.capabilities]),
+    canDelete:
+      user.canDelete ?? !user.capabilities.includes('COMMERCIAL_ADMIN'),
     createdAt: user.createdAt ?? null,
     disabledAt: user.disabledAt ?? null,
     email: user.email,
@@ -216,6 +220,17 @@ export function createInMemoryIdentityRepository() {
         capabilities: [...user.capabilities],
       });
       emails.set(user.email.toLowerCase(), user.id);
+    },
+    /** @param {string} id */
+    deleteUser(id) {
+      const user = users.get(id);
+      if (!user || user.capabilities.includes('COMMERCIAL_ADMIN')) return false;
+      users.delete(id);
+      emails.delete(user.email.toLowerCase());
+      for (const [tokenHash, session] of sessions) {
+        if (session.userId === id) sessions.delete(tokenHash);
+      }
+      return true;
     },
     /** @param {string} tokenHash */
     findSession(tokenHash) {
@@ -491,6 +506,47 @@ export function createIdentityAccessService({
   /** @param {{
    *   actorId: string,
    *   correlationId: string,
+   *   reason: string,
+   *   targetId: string,
+   * }} input */
+  async function deleteOperationalUser(input) {
+    requireNonEmptyString(input.targetId, 'targetId');
+    requireNonEmptyString(input.reason, 'reason');
+    requireNonEmptyString(input.correlationId, 'correlationId');
+    const actor = await requireAdmin(input.actorId);
+    const target = await repository.findUserById(input.targetId);
+    if (!target) throw userNotFound(input.targetId);
+    if (target.capabilities.includes('COMMERCIAL_ADMIN')) {
+      throw new AccessControlError(
+        409,
+        'USER_IS_ADMINISTRATOR',
+        'Administrator accounts cannot be deleted',
+      );
+    }
+    if (target.canDelete === false) {
+      throw userHasHistory(input.targetId);
+    }
+    let deleted;
+    try {
+      deleted = await repository.deleteUser(input.targetId);
+    } catch (error) {
+      throw asUserHistory(error, input.targetId);
+    }
+    if (!deleted) throw userNotFound(input.targetId);
+    await record({
+      action: 'identity.user.deleted',
+      actor: actor.id,
+      correlationId: input.correlationId,
+      reason: input.reason,
+      target: { id: input.targetId, type: 'user' },
+      version: 1,
+    });
+    return Object.freeze({ deleted: true });
+  }
+
+  /** @param {{
+   *   actorId: string,
+   *   correlationId: string,
    *   email?: string,
    *   name?: string,
    *   password?: string,
@@ -621,6 +677,7 @@ export function createIdentityAccessService({
     authenticate,
     bootstrapAdmin,
     createOperationalUser,
+    deleteOperationalUser,
     listUsers,
     login,
     logout,
@@ -652,6 +709,23 @@ function asDuplicateEmail(error) {
       'EMAIL_ALREADY_REGISTERED',
       'Email already registered',
     );
+  }
+  return error;
+}
+
+/** @param {string} id */
+function userHasHistory(id) {
+  return new AccessControlError(
+    409,
+    'USER_HAS_HISTORY',
+    `User ${id} has operational history`,
+  );
+}
+
+/** @param {unknown} error @param {string} id */
+function asUserHistory(error, id) {
+  if (/** @type {{code?: unknown}} */ (error)?.code === '23503') {
+    return userHasHistory(id);
   }
   return error;
 }

@@ -229,7 +229,7 @@ test('hashes passwords with Argon2id and verifies without storing plaintext', as
 });
 
 test('bootstraps exactly one audited Admin and creates the first seller account', async () => {
-  const { auditEvents, service } = harness();
+  const { auditEvents, repository, service } = harness();
   const bootstrapAttempts = await Promise.allSettled([
     service.bootstrapAdmin({
       correlationId: 'correlation-bootstrap',
@@ -298,6 +298,74 @@ test('bootstraps exactly one audited Admin and creates the first seller account'
     service.listUsers({ actorId: created.user.id }),
     (/** @type {any} */ error) => error.statusCode === 403,
   );
+
+  const deleted = await service.deleteOperationalUser({
+    actorId: bootstrap.user.id,
+    correlationId: 'correlation-delete-seller',
+    reason: 'Conta de teste sem histórico',
+    targetId: created.user.id,
+  });
+  assert.deepEqual(deleted, { deleted: true });
+  assert.equal(await repository.findUserById(created.user.id), null);
+  assert.equal(auditEvents.at(-1)?.action, 'identity.user.deleted');
+
+  await assert.rejects(
+    service.deleteOperationalUser({
+      actorId: bootstrap.user.id,
+      correlationId: 'correlation-delete-admin',
+      reason: 'Tentativa inválida',
+      targetId: bootstrap.user.id,
+    }),
+    (/** @type {any} */ error) => error.code === 'USER_IS_ADMINISTRATOR',
+  );
+});
+
+test('keeps a seller with operational history eligible only for deactivation', async () => {
+  let sequence = 0;
+  const backingRepository = createInMemoryIdentityRepository();
+  const repository = Object.freeze({
+    ...backingRepository,
+    /** @param {string} id */
+    async findUserById(id) {
+      const user = await backingRepository.findUserById(id);
+      return user?.id === 'user-2' ? { ...user, canDelete: false } : user;
+    },
+  });
+  const service = createIdentityAccessService({
+    auditPort: { append: async () => undefined },
+    clock: () => NOW,
+    idFactory: (prefix) => `${prefix}-${++sequence}`,
+    passwordParameters: { memory: 64, parallelism: 2, passes: 2 },
+    repository,
+    tokenFactory: () => `opaque-token-${++sequence}-with-enough-entropy`,
+  });
+  const { user: admin } = await service.bootstrapAdmin({
+    correlationId: 'correlation-bootstrap-history',
+    email: 'admin@example.test',
+    functionName: 'Vendedor',
+    name: 'Admin Comercial',
+    password: 'x',
+    reason: 'Provisionamento inicial autorizado',
+  });
+  const { user: seller } = await service.createOperationalUser({
+    actorId: admin.id,
+    correlationId: 'correlation-create-history',
+    email: 'seller@example.test',
+    name: 'Vendedora com histórico',
+    password: 'x',
+    reason: 'Conta existente',
+  });
+
+  await assert.rejects(
+    service.deleteOperationalUser({
+      actorId: admin.id,
+      correlationId: 'correlation-delete-history',
+      reason: 'Tentativa de exclusão',
+      targetId: seller.id,
+    }),
+    (/** @type {any} */ error) => error.code === 'USER_HAS_HISTORY',
+  );
+  assert.ok(await backingRepository.findUserById(seller.id));
 });
 
 test('creates only hashed opaque sessions and enforces CSRF, logout and expiry', async () => {

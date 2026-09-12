@@ -31,6 +31,7 @@ let lastAnnouncement = '';
 const user = computed(() => session.value?.user ?? session.value ?? {});
 const sessionSummary = computed(
   () =>
+    (isAdmin.value ? 'Administrador comercial' : null) ??
     session.value?.functionName ??
     user.value.functionName ??
     'Conta autenticada',
@@ -38,6 +39,9 @@ const sessionSummary = computed(
 const pageTitle = computed(() => String(route.meta.title ?? 'CRM'));
 const isAdmin = computed(() =>
   (user.value.capabilities ?? []).includes('COMMERCIAL_ADMIN'),
+);
+const canAccessCurrentRoute = computed(
+  () => route.meta.requiresAdmin !== true || isAdmin.value,
 );
 const connectionLabel = computed(() => {
   if (connection.value === 'conectado') return 'Ao vivo';
@@ -79,6 +83,7 @@ watch(
   () => {
     mobileOpen.value = false;
     clearError();
+    void redirectUnauthorizedAdminRoute();
   },
 );
 
@@ -111,8 +116,21 @@ async function showSession(value, announceLogin = true) {
   session.value = value;
   phase.value = 'authenticated';
   if (route.path === '/') await router.replace('/dashboard');
+  await redirectUnauthorizedAdminRoute();
   stream.start(liveTopic.value);
   if (announceLogin) announce('Sessão iniciada com segurança.');
+}
+
+async function redirectUnauthorizedAdminRoute() {
+  if (
+    phase.value !== 'authenticated' ||
+    route.meta.requiresAdmin !== true ||
+    isAdmin.value
+  ) {
+    return;
+  }
+  await router.replace('/dashboard');
+  announce('Você não tem acesso à área de usuários.');
 }
 
 /** @param {boolean} [focus] */
@@ -326,6 +344,7 @@ function onCursor(cursor) {
       <main id="main-content" tabindex="-1">
         <RouterView v-slot="{ Component }">
           <component
+            v-if="canAccessCurrentRoute"
             :is="Component"
             :key="route.fullPath"
             :session="session"

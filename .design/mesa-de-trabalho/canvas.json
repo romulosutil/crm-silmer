@@ -32,7 +32,7 @@
       "x": 1600,
       "y": 1130,
       "w": 640,
-      "text": "PEDIDO — coluna única, edição por seção (um form, um Salvar).\n\"Imprimir\" nasce bloqueado no cabeçalho e só abre depois de \"Confirmar pedido\", que é o botão principal da tela."
+      "text": "PEDIDO — pertence a Pedidos, não à Caixa de Entrada.\nDois caminhos de entrada: \"Abrir pedido\" dentro de uma conversa, ou a lista de Pedidos. O rastro no topo mostra de onde veio.\nColuna única, edição por seção. \"Imprimir\" nasce bloqueado e só abre depois de \"Confirmar pedido\", o botão principal da tela."
     },
     {
       "id": "nota-cortes",

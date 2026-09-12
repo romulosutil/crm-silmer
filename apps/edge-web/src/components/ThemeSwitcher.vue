@@ -1,27 +1,20 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
 const options = [
-  { label: 'Sistema', shortLabel: 'S', value: 'system' },
   { label: 'Claro', shortLabel: 'C', value: 'light' },
   { label: 'Escuro', shortLabel: 'E', value: 'dark' },
 ];
 const theme = ref(readStoredTheme());
-const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
 
-onMounted(() => {
-  applyTheme();
-  mediaQuery.addEventListener('change', applyTheme);
-});
-
-onBeforeUnmount(() => mediaQuery.removeEventListener('change', applyTheme));
+onMounted(applyTheme);
 
 function readStoredTheme() {
   const stored = globalThis.localStorage.getItem('silmer-theme');
   return options.some((option) => option.value === stored) ? stored : 'light';
 }
 
-/** @param {'system' | 'light' | 'dark'} value */
+/** @param {'light' | 'dark'} value */
 function selectTheme(value) {
   theme.value = value;
   globalThis.localStorage.setItem('silmer-theme', value);
@@ -29,13 +22,7 @@ function selectTheme(value) {
 }
 
 function applyTheme() {
-  const resolved =
-    theme.value === 'system'
-      ? mediaQuery.matches
-        ? 'dark'
-        : 'light'
-      : theme.value;
-  document.documentElement.dataset.theme = resolved;
+  document.documentElement.dataset.theme = theme.value;
 }
 </script>
 

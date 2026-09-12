@@ -59,6 +59,16 @@ test('applies a saved dark theme before the application bundle loads', async ({
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
 });
 
+test('ignores the retired system preference and defaults to light', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.localStorage.setItem('silmer-theme', 'system');
+  });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/');
+
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+});
+
 test('offers only the login form, with no invitation path', async ({
   page,
 }) => {
@@ -239,10 +249,12 @@ test('submits login, restores and closes a session by keyboard without browser s
     'aria-pressed',
     'true',
   );
+  await expect(page.getByRole('button', { name: 'Sistema' })).toHaveCount(0);
 
   await page.reload();
   await expect(page.getByRole('status')).toHaveText('Sessão restaurada.');
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
   await page.getByRole('button', { name: 'Sair' }).focus();
   await page.keyboard.press('Enter');

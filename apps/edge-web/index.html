@@ -8,14 +8,8 @@
     <title>CRM Silmer</title>
     <script>
       (() => {
-        const stored = localStorage.getItem('silmer-theme') ?? 'light';
-        const resolved =
-          stored === 'system'
-            ? matchMedia('(prefers-color-scheme: dark)').matches
-              ? 'dark'
-              : 'light'
-            : stored;
-        document.documentElement.dataset.theme = resolved;
+        const stored = localStorage.getItem('silmer-theme');
+        document.documentElement.dataset.theme = stored === 'dark' ? 'dark' : 'light';
       })();
     </script>
   </head>

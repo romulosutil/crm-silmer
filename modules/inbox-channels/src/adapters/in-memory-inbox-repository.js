@@ -141,11 +141,24 @@ export class InMemoryInboxRepository {
           'Terminal conversations cannot be mutated',
         );
       }
+      const isAdmin = [...(input.actor.capabilities ?? [])].includes(
+        'COMMERCIAL_ADMIN',
+      );
+      if (
+        kind === 'archive' &&
+        (conversation.assignedUserId === null ||
+          conversation.assignedUserId === undefined) &&
+        !isAdmin
+      ) {
+        throw new InboxForbiddenError(
+          'Conversation must be taken over before it can be archived',
+        );
+      }
       if (
         conversation.assignedUserId !== null &&
         conversation.assignedUserId !== undefined &&
         conversation.assignedUserId !== input.actor.id &&
-        ![...(input.actor.capabilities ?? [])].includes('COMMERCIAL_ADMIN')
+        !isAdmin
       ) {
         throw new InboxForbiddenError(
           'Conversation is assigned to another operator',

@@ -580,8 +580,12 @@ details.exact summary {
 .thread {
   display: grid;
   gap: 0.8rem;
+  max-block-size: min(36rem, 52vh);
   margin: 0;
-  padding: 1.15rem 0 0;
+  padding: 1.15rem 0.5rem 0 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
   list-style: none;
 }
 
@@ -968,6 +972,10 @@ details.exact summary {
   .message,
   .message[data-from='humano'] {
     max-inline-size: none;
+  }
+
+  .thread {
+    max-block-size: min(28rem, 48vh);
   }
 
   .mobile-nav {

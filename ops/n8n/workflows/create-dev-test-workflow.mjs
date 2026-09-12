@@ -4,7 +4,7 @@ import { format } from 'prettier';
 
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
-export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-4';
+export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-5';
 export const LOCAL_WORKFLOW_NAME =
   'LOCAL | Silmer | Fluxo completo sem WhatsApp';
 
@@ -125,8 +125,10 @@ const body = isChat ? {} : ($json.body ?? $json);
 const chatSessionId = String($json.sessionId ?? $execution.id);
 const syntheticWaId = (() => {
   let hash = 0;
-  for (const char of chatSessionId) hash = (hash * 31 + char.charCodeAt(0)) % 100000000;
-  return '55419' + String(hash).padStart(8, '0');
+  for (const char of chatSessionId) {
+    hash = (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0;
+  }
+  return '55419' + String(hash % 100000000).padStart(8, '0');
 })();
 const waId = String(body.wa_id ?? '').trim();
 const contactWaId = isChat ? syntheticWaId : waId;

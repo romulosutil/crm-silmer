@@ -12,6 +12,23 @@ uma autorização de uso único antes de chamar a Meta. PostgreSQL continua send
 a fonte da verdade. O n8n não acessa o banco e não mantém cópia paralela de
 cliente, conversa, briefing ou memória curta.
 
+## Pré-ficha guiada antes do handoff
+
+Em cada mensagem de texto, a IA extrai somente fatos confirmados para o
+`briefing_patch` criptografado da Conversa e pergunta pelo próximo dado
+necessário. A pré-ficha reúne identificação do pedido, tipo/modelo de peça,
+quantidade, malha, cores, grade, arte, técnica, locais de aplicação, data
+desejada, finalidade, perfil de compra e modalidade logística. Entrega exige
+cidade e endereço; retirada exige o local escolhido.
+
+O workflow calcula de forma determinística os campos pendentes depois de unir o
+patch ao briefing atual. Ele só emite `briefing_complete` quando todos os campos
+aplicáveis estiverem presentes. Pedido explícito de pessoa, negociação,
+reclamação, urgência, baixa confiança ou conteúdo não suportado continuam sendo
+exceções de handoff imediato. Nenhuma informação inferida vira Ficha ou Pedido
+oficial, catálogo, preço, prazo garantido ou pagamento: essa promoção e a
+aprovação permanecem humanas.
+
 Esta entrega ativa somente WhatsApp. Instagram, leitura multimodal pela IA e
 novas telas ficam nas fases posteriores. O adapter direto Meta → CRM permanece
 apenas como fixture de desenvolvimento e nunca é fallback silencioso.

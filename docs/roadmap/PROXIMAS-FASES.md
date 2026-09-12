@@ -65,6 +65,13 @@ duplicação, devolver a automação, transferir o responsável e receber atuali
 em tempo real. O teste DEV deve cobrir `message`, `handoff`, `send_unknown` e
 `delivery_status` com identificadores de evento inéditos.
 
+Durante a automação, a Conversa também mantém uma pré-ficha criptografada. A IA
+extrai cada informação confirmada e pergunta pelo próximo campo obrigatório;
+o handoff `briefing_complete` só ocorre quando a pré-ficha de atendimento está
+completa. Ela é uma preparação para o Vendedor, não a Ficha/Pedido oficial e
+não autoriza preço, disponibilidade, prazo garantido, pagamento ou conversão
+automática de Negócio.
+
 ## Ordem recomendada
 
 | Ordem | Fase                            | Resultado para a operação                                                                                       | Dados principais                                                              |

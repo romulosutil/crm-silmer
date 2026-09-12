@@ -155,7 +155,35 @@ const imports = `import {
   workflow,
 } from '@n8n/workflow-sdk';\n\n`;
 const constants = `const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-const WORKFLOW_VERSION = 'mvp-simple-1';\n\n`;
+const WORKFLOW_VERSION = 'mvp-simple-2';
+
+const BRIEFING_FIELDS = [
+  'artwork_locations',
+  'artwork_status',
+  'artwork_technique',
+  'briefing_status',
+  'city_or_postal_code',
+  'colors',
+  'customer_name',
+  'customizations',
+  'delivery_address',
+  'delivery_mode',
+  'fabrics',
+  'needed_by',
+  'next_required_field',
+  'notes',
+  'numbers',
+  'order_name',
+  'pickup_location',
+  'product_model',
+  'product_type',
+  'purchase_profile',
+  'purpose',
+  'quantity',
+  'segment',
+  'sizes',
+  'sponsors',
+];\n\n`;
 const declarations = builders
   .filter(({ __variableName }) => !__variableName.startsWith('inline_'))
   .map((builder) => {

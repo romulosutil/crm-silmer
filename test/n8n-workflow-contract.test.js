@@ -128,6 +128,19 @@ test('merges only approved, non-null briefing fields', async () => {
   for (const forbidden of [{ payment_confirmed: true }, { price: 100 }]) {
     assert.throws(() => validateBriefingPatch(forbidden, contract));
   }
+  assert.equal(
+    validateBriefingPatch(
+      {
+        customer_name: 'Grupo Aurora',
+        fabrics: ['dry fit'],
+        next_required_field: 'sizes',
+        order_name: 'Evento Aurora',
+        product_type: 'camiseta',
+      },
+      contract,
+    ),
+    true,
+  );
 });
 
 test('never regresses delivery status when callbacks arrive out of order', async () => {
@@ -163,4 +176,7 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   );
   assert.ok(reserveNodes.length >= 1);
   assert.ok(sendNodes.length >= 1);
+  assert.match(serialized, /pré-ficha de atendimento/u);
+  assert.match(serialized, /ready_for_handoff/u);
+  assert.match(serialized, /next_required_field/u);
 });

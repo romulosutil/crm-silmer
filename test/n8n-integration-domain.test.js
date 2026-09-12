@@ -114,6 +114,56 @@ test('passes source revision, epoch and briefing patch to the event repository',
   );
 });
 
+test('accepts only the structured pre-ficha fields used by the guided agent', async () => {
+  const { calls, service } = harness();
+  await service.recordEvent({
+    automation_epoch: 3,
+    briefing_patch: {
+      customer_name: 'Associação Horizonte',
+      fabrics: ['dry fit'],
+      next_required_field: 'sizes',
+      order_name: 'Corrida Horizonte 2026',
+      product_type: 'camiseta',
+      quantity: 120,
+    },
+    command_id: 'guided-briefing-1',
+    conversation_id: 'conversation-1',
+    event_id: 'guided-briefing-event-1',
+    event_type: 'message.send.requested',
+    message: { text: 'Qual a grade por tamanho?', type: 'text' },
+    occurred_at: NOW.toISOString(),
+    source_revision: 7,
+    schema_version: '1.0',
+    technical: TECHNICAL,
+  });
+  assert.deepEqual(calls[0].input.briefingPatch, {
+    customer_name: 'Associação Horizonte',
+    fabrics: ['dry fit'],
+    next_required_field: 'sizes',
+    order_name: 'Corrida Horizonte 2026',
+    product_type: 'camiseta',
+    quantity: 120,
+  });
+  await assert.rejects(
+    service.recordEvent({
+      automation_epoch: 3,
+      briefing_patch: { price: 100 },
+      command_id: 'guided-briefing-2',
+      conversation_id: 'conversation-1',
+      event_id: 'guided-briefing-event-2',
+      event_type: 'message.send.requested',
+      message: { text: 'Mensagem segura', type: 'text' },
+      occurred_at: NOW.toISOString(),
+      source_revision: 7,
+      schema_version: '1.0',
+      technical: TECHNICAL,
+    }),
+    (error) =>
+      error instanceof N8nValidationError &&
+      error.message === 'briefing_patch.price is not allowed',
+  );
+});
+
 test('rejects Instagram until the channel-specific phase is delivered', async () => {
   const { service } = harness();
   await assert.rejects(

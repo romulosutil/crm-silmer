@@ -1085,15 +1085,27 @@ components:
           type: object
           additionalProperties: false
           properties:
+            artwork_locations: {}
             artwork_status: {}
+            artwork_technique: {}
+            briefing_status: {}
             city_or_postal_code: {}
             colors: {}
+            customer_name: {}
             customizations: {}
+            delivery_address: {}
             delivery_mode: {}
+            fabrics: {}
             needed_by: {}
+            next_required_field: {}
             notes: {}
             numbers: {}
+            order_name: {}
+            pickup_location: {}
             product_model: {}
+            product_type: {}
+            purchase_profile: {}
+            purpose: {}
             quantity: {}
             segment: {}
             sizes: {}

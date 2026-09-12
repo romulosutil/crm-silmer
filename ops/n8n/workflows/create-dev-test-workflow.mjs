@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
-export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-2';
+export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-3';
 
 const MAIN_WORKFLOW_ID = 'k7tI6T4RhQPyJkn9';
 const MAIN_TRIGGER = 'WhatsApp - Receber eventos (MVP)';
@@ -156,7 +156,7 @@ return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-hu
       [1350, -700],
       `const decision = $('Normalizar decisão da IA (MVP)').item.json;
 const input = $('${DEV_TRIGGER}').item.json.body ?? {};
-return { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, briefing_patch: decision.briefing_patch } };`,
+return { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, briefing_patch: decision.briefing_patch, handoff_ready: decision.handoff_ready, missing_briefing_fields: decision.missing_briefing_fields } };`,
     ),
     resultNode(
       'DEV - Resultado do handoff',
@@ -197,6 +197,7 @@ return { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route:
           '- Entrada: webhook `silmer/dev-mvp-flow`.\n' +
           '- CRM real: inbound, briefing, handoff, reserva e callbacks.\n' +
           '- IA real: mesma decisão estruturada do MVP.\n' +
+          '- Pré-ficha: cada mensagem atualiza os campos confirmados e a IA pergunta pelo próximo dado pendente.\n' +
           '- Saída WhatsApp: simulada, com `message.sent` persistido no CRM.\n' +
           '- `simulate_send_unknown: true` exercita reconciliação.\n\n' +
           'Cenários: `message`, `handoff`, `send_unknown` e `delivery_status`. ' +

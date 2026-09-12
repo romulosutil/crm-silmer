@@ -29,7 +29,6 @@ export function conversationLabel(conversation) {
 }
 
 export const CHANNEL_LABELS = Object.freeze({
-  instagram: 'Instagram',
   whatsapp: 'WhatsApp',
 });
 

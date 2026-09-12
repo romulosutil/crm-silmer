@@ -99,6 +99,8 @@
     .f dd[data-empty='true'] { color: #9a94ac; font-weight: 400; font-style: italic; }
     .st { display: inline-flex; align-items: center; padding: 0.15rem 0.5rem; font-size: 0.68rem; font-weight: 700; border-radius: 999px; }
     .st[data-s='off'] { color: #7a4a00; background: #fff4d6; }
+    .locked { display: inline-flex; align-items: center; gap: 0.25rem; margin-inline-start: 0.4rem; padding: 0.1rem 0.45rem; color: #9a94ac; font-size: 0.68rem; font-weight: 600; background: #f0eef8; border-radius: 999px; vertical-align: middle; }
+    .locked svg { inline-size: 0.7rem; block-size: 0.7rem; }
     .data-table { inline-size: 100%; border-collapse: collapse; font-size: 0.875rem; }
     .data-table th { padding: 0.6rem 0.75rem; color: #625b75; font-size: 0.75rem; font-weight: 600; text-align: start; text-transform: uppercase; letter-spacing: 0.06em; border-block-end: 1px solid #d8d4e4; }
     .data-table td { padding: 0.65rem 0.75rem; border-block-end: 1px solid #e8e5ef; }
@@ -176,7 +178,12 @@
               </div>
               <div class="f">
                 <dt>Cliente</dt>
-                <dd>Colégio Ápice LTDA</dd>
+                <dd>Colégio Ápice LTDA
+                  <span class="locked">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10V7a5 5 0 0 1 10 0v3" /><rect x="5" y="10" width="14" height="10" rx="2" /></svg>
+                    vem da conversa
+                  </span>
+                </dd>
               </div>
               <div class="f">
                 <dt>Aplicação</dt>

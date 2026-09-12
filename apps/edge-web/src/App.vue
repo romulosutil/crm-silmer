@@ -32,7 +32,7 @@ let lastAnnouncement = '';
 const user = computed(() => session.value?.user ?? session.value ?? {});
 const sessionSummary = computed(
   () =>
-    (isAdmin.value ? 'Administrador comercial' : null) ??
+    (isAdmin.value ? 'Administrador' : null) ??
     session.value?.functionName ??
     user.value.functionName ??
     'Conta autenticada',

@@ -120,10 +120,10 @@ H:  T23, T34, T38 ──→ T39
 
 **Done when:**
 
-- [ ] Payload, cabeçalhos e idempotência do novo evento descritos
-- [ ] Regra "patch ignorado quando a conversa está com vendedor" descrita
-- [ ] Nenhuma menção a endpoints inexistentes
-- [ ] Gate docs passa
+- [x] Payload, cabeçalhos e idempotência do novo evento descritos
+- [x] Regra "patch ignorado quando a conversa está com vendedor" descrita
+- [x] Nenhuma menção a endpoints inexistentes
+- [x] Gate docs passa
 
 **Tests:** none · **Gate:** docs · **Commit:** `docs(n8n): describe order intent event and briefing projection`
 

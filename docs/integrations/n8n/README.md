@@ -2,7 +2,8 @@
 
 > **Decisão vigente:** [RFC 002](../../rfc/002-simplificar-integracao-n8n-para-o-mvp.md)
 > e [ADR 003](../../adr/003-adotar-integracao-n8n-mvp-simples.md). RFC 001 e
-> ADR 002 são histórico da alternativa mais robusta.
+> ADR 002 são histórico da alternativa mais robusta. O Pedido criado pelo
+> agente segue a [ADR 006](../../adr/006-pedido-dois-status.md).
 
 ## Objetivo e limite
 
@@ -25,9 +26,10 @@ O workflow calcula de forma determinística os campos pendentes depois de unir o
 patch ao briefing atual. Ele só emite `briefing_complete` quando todos os campos
 aplicáveis estiverem presentes. Pedido explícito de pessoa, negociação,
 reclamação, urgência, baixa confiança ou conteúdo não suportado continuam sendo
-exceções de handoff imediato. Nenhuma informação inferida vira Ficha ou Pedido
-oficial, catálogo, preço, prazo garantido ou pagamento: essa promoção e a
-aprovação permanecem humanas.
+exceções de handoff imediato. Nenhuma informação inferida vira Pedido oficial,
+catálogo, preço, prazo garantido ou pagamento. O agente pode criar um Pedido
+`pendente`, que é rascunho não oficial; oficial é o Pedido `confirmado`, e a
+confirmação permanece humana (ADR 006).
 
 Esta entrega ativa somente WhatsApp. Instagram, leitura multimodal pela IA e
 novas telas ficam nas fases posteriores. O adapter direto Meta → CRM permanece
@@ -40,9 +42,9 @@ apenas como fixture de desenvolvimento e nunca é fallback silencioso.
 | Cliente             | `contacts` + `contact_identities`       | Criado provisoriamente na primeira identidade de WhatsApp; não existe tabela paralela `customers` ou `leads`.                     |
 | Conversa            | `conversations`                         | Uma conversa aberta por identidade/canal; guarda modo, `automation_epoch`, revisão inbound e o snapshot atual do briefing.        |
 | Mensagem            | `messages`                              | Inbound e outbound cifrados; identidade externa ou `command_id` impede duplicidade. O estado de entrega fica na própria mensagem. |
-| Briefing            | colunas cifradas da `conversation`      | Um snapshot consolidado; `briefing_patch` ignora nulos e só aceita campos de qualificação. Não promove dado oficial de Negócio.   |
+| Briefing            | colunas cifradas da `conversation`      | Um snapshot consolidado; `briefing_patch` ignora nulos e só aceita campos de qualificação. Não promove dado oficial.              |
 | Handoff             | `handoffs`                              | Criado sem responsável para a função humana vigente `Vendedor`; uma pessoa compatível o reivindica atomicamente.                  |
-| Negócio             | `deals` e módulos canônicos             | Nunca é criado pela simples chegada de mensagem. Conversão, campos e etapas continuam nos endpoints de domínio.                   |
+| Pedido              | `orders`                                | Criado `pendente` por `order.intent_confirmed`, nunca pela simples chegada de mensagem. Confirmar e reabrir são ações humanas.    |
 | Comando humano      | `n8n_commands` + `outbox_jobs`          | Estado oficial e outbox são gravados antes de o worker chamar o webhook do n8n.                                                   |
 | Evidência técnica   | `n8n_events`, auditoria e reconciliação | Registra correlação, workflow, versão, execução e resultado sem conteúdo pessoal ou segredo técnico.                              |
 
@@ -64,11 +66,13 @@ Os três endpoints usam `Authorization: Basic`, `Idempotency-Key`,
    recebe uma mídia por streaming, valida tamanho, hash, MIME e malware e só a
    vincula depois da quarentena. A IA multimodal fica diferida.
 3. `POST /api/v1/integrations/n8n/events`
-   recebe reserva de envio, callbacks de entrega, handoff e falha do workflow.
+   recebe reserva de envio, callbacks de entrega, handoff, intenção de compra e
+   falha do workflow.
 
 Eventos aceitos: `message.send.requested`, `message.sent`,
 `message.delivered`, `message.read`, `message.failed`,
-`message.send.unknown`, `handoff.requested` e `workflow.failed`.
+`message.send.unknown`, `handoff.requested`, `order.intent_confirmed` e
+`workflow.failed`.
 
 Erros usam `application/problem+json`. Replay da mesma chave com o mesmo
 payload devolve o resultado idempotente; a mesma chave com payload diferente
@@ -97,14 +101,64 @@ um `briefing_patch` junto de `message.send.requested` ou `handoff.requested`;
 nulos são ignorados. Preço, pagamento, etapa e outros campos oficiais não são
 aceitos nesse patch.
 
-Inbound não cria Negócio. Quando houver intenção comercial, o workflow usa os
-endpoints canônicos de conversão, campos e transição. `convertida_em_lead`
-encerra a triagem, não a Conversa; ela só termina por `Sem lead`, `Fechado` ou
-`Perdido` conforme as regras do domínio.
+Inbound não cria Pedido. Quando o cliente confirma que quer orçamento, o
+workflow emite `order.intent_confirmed` (ver "Pedido criado pelo agente").
+`convertida_em_lead` encerra a triagem, não a Conversa; ela só termina por
+`Sem lead`, `Fechado` ou `Perdido` conforme as regras do domínio.
 
 Handoffs de negociação ou briefing completo vão para Vendedor. Pedido humano,
 reclamação, urgência, baixa confiança e conteúdo não suportado vão para
 Atendimento. Não há mensagem automática de confirmação no primeiro corte.
+
+## Pedido criado pelo agente
+
+### Evento `order.intent_confirmed`
+
+Enviado em `POST /api/v1/integrations/n8n/events` quando o cliente confirma a
+intenção de compra. Usa os mesmos cabeçalhos dos demais eventos:
+`Authorization: Basic`, `Idempotency-Key`, `X-Correlation-Id`,
+`X-Silmer-Workflow-Key`, `X-Silmer-Workflow-Version` e `X-Silmer-Execution-Id`.
+A credencial precisa da ação de automação `order.intent`, que não existe para
+usuários humanos.
+
+```json
+{
+  "schema_version": "1.0",
+  "event_id": "<id único do evento no workflow>",
+  "event_type": "order.intent_confirmed",
+  "conversation_id": "<id da conversa devolvido pelo inbound>",
+  "occurred_at": "<ISO 8601>"
+}
+```
+
+`briefing_patch` continua aceito somente em `message.send.requested` e
+`handoff.requested`; ele não acompanha este evento.
+
+Regras:
+
+- Conversa sem pedido pendente: o CRM cria exatamente um pedido `pendente`
+  vinculado à conversa e ao contato, com número `NN-CRM` reservado.
+- Conversa com pedido pendente: o CRM reutiliza o pendente; nenhum pedido novo
+  é criado.
+- Conversa só com pedidos confirmados: o CRM cria um novo pedido `pendente`.
+- Idempotência: replay da mesma `Idempotency-Key` com o mesmo payload devolve o
+  resultado original; a mesma chave com payload diferente retorna `409`.
+  Intenções repetidas com chaves diferentes também não duplicam o pendente.
+- O evento nunca confirma, reabre nem altera valor ou condição de pagamento.
+
+### Projeção da pré-ficha no pedido pendente
+
+Depois de unir o `briefing_patch` ao briefing da conversa, o CRM projeta os
+campos da ficha no pedido `pendente` da conversa:
+
+- Conversa com o agente (`automation_state = assistant`) e com pedido
+  pendente: os campos são projetados no pedido.
+- Conversa com vendedor (`automation_state = human`): o patch é ignorado para o
+  pedido e o fato fica registrado na auditoria. Quando a conversa volta para a
+  IA, o pendente volta a receber a projeção.
+- Pedido confirmado nunca recebe projeção.
+- Preço, valor, condição de pagamento, status e outros campos oficiais
+  continuam recusados no `briefing_patch`, como antes.
 
 ## Workflow e configuração
 

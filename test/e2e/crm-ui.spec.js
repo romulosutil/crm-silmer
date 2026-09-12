@@ -621,6 +621,17 @@ test('restores search focus after removing filter controls', async ({
   await expect(inboxSearch).toBeFocused();
 });
 
+test('does not expose the technical contact identifier in the client list', async ({
+  page,
+}) => {
+  await mockCrm(page);
+
+  await page.goto('/clientes');
+
+  await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
+  await expect(page.getByText(contact.id, { exact: true })).toHaveCount(0);
+});
+
 test('sends an authorized human reply through the official command', async ({
   page,
 }) => {

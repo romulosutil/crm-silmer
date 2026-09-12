@@ -429,7 +429,7 @@ onBeforeUnmount(() => {
   <div class="page">
     <header class="page-heading">
       <div>
-        <p class="eyebrow">Backlog de conversas</p>
+        <p class="eyebrow">Atendimentos</p>
         <h1 ref="heading" tabindex="-1">Caixa de Entrada</h1>
         <p>
           Conversas persistidas dos canais oficiais, atualizadas em tempo real.

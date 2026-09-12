@@ -967,6 +967,245 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /orders:
+    get:
+      operationId: listOrders
+      summary: Lista pedidos por status, com busca e paginação
+      description: >-
+        Ação order.read. Sem status, retorna Todos. A busca aceita número do
+        pedido, cliente ou telefone e resolve cliente e telefone pelo contato da
+        conversa. `counts` traz o total de cada grupo (Confirmados e Pendentes)
+        para a busca atual, independentemente da página.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - {
+            name: status,
+            in: query,
+            schema: { $ref: '#/components/schemas/OrderStatus' },
+          }
+        - {
+            name: q,
+            in: query,
+            schema: { type: string, minLength: 1, maxLength: 128 },
+          }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
+      responses:
+        '200':
+          description: Página de pedidos
+          headers:
+            Cache-Control:
+              { schema: { type: string, const: 'private, no-cache' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderPage' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      summary: Retorna um pedido com a ficha completa
+      description: Ação order.read.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Pedido
+          headers:
+            Cache-Control:
+              { schema: { type: string, const: 'private, no-cache' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+  /conversations/{conversationId}/order:
+    get:
+      operationId: getConversationOrder
+      summary: Retorna o pedido atual da conversa
+      description: >-
+        Ação order.read. Devolve o pedido pendente da conversa ou, se não
+        houver, o último confirmado. `order` é null quando a conversa não tem
+        pedido.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Pedido atual ou null
+          headers:
+            Cache-Control:
+              { schema: { type: string, const: 'private, no-cache' } }
+          content:
+            application/json:
+              schema:
+                { $ref: '#/components/schemas/ConversationOrderResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /conversations/{conversationId}/orders:
+    post:
+      operationId: createConversationOrder
+      summary: Cria manualmente o pedido pendente da conversa
+      description: >-
+        Ação order.create, restrita ao dono da conversa ou a COMMERCIAL_ADMIN.
+        O pedido nasce pendente, com número NN-CRM reservado, pré-preenchido
+        com a pré-ficha atual da conversa. Se a conversa já tem pedido
+        pendente, responde 200 com o pedido existente.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderCreateRequest' }
+      responses:
+        '200':
+          description: Pedido pendente já existente ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '201':
+          description: Pedido pendente criado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+  /orders/{orderId}/sections/{section}:
+    patch:
+      operationId: patchOrderSection
+      summary: Substitui uma seção inteira da ficha de um pedido pendente
+      description: >-
+        Ação order.edit, restrita ao dono da conversa ou a COMMERCIAL_ADMIN.
+        `value` substitui a seção inteira; total de peças e campos faltantes
+        são recalculados. Pedido confirmado não aceita edição (409); é preciso
+        reabrir.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - name: section
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/OrderSection' }
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderSectionPatchRequest' }
+      responses:
+        '200':
+          description: Seção gravada ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '422': { $ref: '#/components/responses/OrderUnprocessable' }
+  /orders/{orderId}/confirm:
+    post:
+      operationId: confirmOrder
+      summary: Confirma o pedido com valor final e condição de pagamento
+      description: >-
+        Ação order.confirm, restrita ao dono da conversa ou a COMMERCIAL_ADMIN.
+        Exige valor final no formato brasileiro (ex.: 4.820,00) maior que zero,
+        condição de pagamento válida e ao menos um item com grade. Grava valor,
+        condição, autor, horário e data do pedido. Numa nova confirmação depois
+        de reabrir, autor, horário e data passam a ser os da nova confirmação.
+        Confirmações concorrentes sobre a mesma versão: uma vence e a outra
+        recebe 409.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderConfirmRequest' }
+      responses:
+        '200':
+          description: Pedido confirmado ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '422': { $ref: '#/components/responses/OrderUnprocessable' }
+  /orders/{orderId}/reopen:
+    post:
+      operationId: reopenOrder
+      summary: Reabre um pedido confirmado
+      description: >-
+        Ação order.reopen, restrita ao dono da conversa ou a COMMERCIAL_ADMIN.
+        Só a partir de confirmado. Volta a pendente mantendo número, valor e
+        condição, registra autor e horário da reabertura e bloqueia a
+        impressão.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderReopenRequest' }
+      responses:
+        '200':
+          description: Pedido reaberto ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+  /orders/{orderId}/print:
+    get:
+      operationId: printOrder
+      summary: Retorna a ficha de pedido no template ficha-canonical-v2
+      description: >-
+        Ação order.print, disponível a qualquer usuário operacional. Só para
+        pedido confirmado; pendente responde 409 ORDER_NOT_CONFIRMED. HTML A4
+        paisagem, duas páginas, impresso pelo navegador. O documento não traz
+        valor, condição de pagamento nem a faixa de amostra sintética; vendedor
+        é quem confirmou, data é a data do pedido e o controle de produção sai
+        em branco.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Documento HTML pronto para impressão
+          headers:
+            Cache-Control:
+              { schema: { type: string, const: 'private, no-cache' } }
+          content:
+            text/html:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
 components:
   securitySchemes:
     automationBasic:
@@ -1057,6 +1296,11 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
   schemas:
     N8nMode:
       type: string
@@ -2074,6 +2318,281 @@ components:
             type: string,
             enum: [handoff_accepted, manual_transfer, handoff_resolved],
           }
+    OrderStatus:
+      type: string
+      enum: [pendente, confirmado]
+    PaymentCondition:
+      type: string
+      enum: [pix, cartao_credito, cartao_debito]
+    OrderSection:
+      type: string
+      enum: [summary, items, observations]
+    OrderActorRef:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+    FichaGradeLine:
+      type: object
+      additionalProperties: false
+      required: [tamanho, quantidade]
+      properties:
+        tamanho: { type: string, minLength: 1 }
+        quantidade: { type: integer, minimum: 1 }
+    FichaItem:
+      type: object
+      additionalProperties: false
+      description: >-
+        Cores de manga e viés aceitam o valor explícito NAO APLICAVEL. O total
+        do item é calculado a partir da grade e nunca é enviado.
+      required:
+        [
+          tipo,
+          modelo,
+          malhas,
+          cor_frente,
+          cor_costas,
+          cor_manga_direita,
+          cor_manga_esquerda,
+          vies_gola,
+          vies_mangas,
+          grade,
+        ]
+      properties:
+        tipo: { type: string }
+        modelo: { type: string }
+        malhas:
+          type: array
+          minItems: 1
+          items: { type: string, minLength: 1 }
+        cor_frente: { type: string }
+        cor_costas: { type: string }
+        cor_manga_direita: { type: string }
+        cor_manga_esquerda: { type: string }
+        vies_gola: { type: string }
+        vies_mangas: { type: string }
+        grade:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/FichaGradeLine' }
+    FichaSummary:
+      type: object
+      additionalProperties: false
+      required: [cliente, data_entrega_confirmada, aplicacao, nome]
+      properties:
+        cliente:
+          type: string
+          readOnly: true
+          description: Vem do contato da conversa e não é editável no pedido.
+        data_entrega_confirmada: { type: [string, 'null'] }
+        aplicacao: { type: [string, 'null'] }
+        nome: { type: [string, 'null'] }
+    FichaSummaryInput:
+      type: object
+      additionalProperties: false
+      description: Resumo editável; o cliente vem do contato e não é enviado.
+      required: [data_entrega_confirmada, aplicacao, nome]
+      properties:
+        data_entrega_confirmada: { type: [string, 'null'] }
+        aplicacao: { type: [string, 'null'] }
+        nome: { type: [string, 'null'] }
+    FichaObservations:
+      type: array
+      maxItems: 5
+      items: { type: string }
+    Ficha:
+      type: object
+      additionalProperties: false
+      required: [summary, items, observations, serviceData]
+      properties:
+        summary: { $ref: '#/components/schemas/FichaSummary' }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/FichaItem' }
+        observations: { $ref: '#/components/schemas/FichaObservations' }
+        serviceData:
+          type: object
+          additionalProperties: true
+          readOnly: true
+          description: >-
+            Dados do atendimento vindos da pré-ficha (arte, locais, logística,
+            finalidade, perfil de compra). Só leitura; não saem na ficha
+            impressa.
+    Order:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          number,
+          conversationId,
+          status,
+          fabCode,
+          ficha,
+          totalPieces,
+          missingFields,
+          finalAmountCents,
+          paymentCondition,
+          orderDate,
+          confirmedAt,
+          confirmedBy,
+          reopenedAt,
+          reopenedBy,
+          seller,
+          version,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string }
+        number: { type: string, pattern: '^[0-9]{2,}-CRM$' }
+        conversationId: { type: string }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        fabCode: { type: string }
+        ficha: { $ref: '#/components/schemas/Ficha' }
+        totalPieces: { type: integer, minimum: 0 }
+        missingFields:
+          type: array
+          items: { type: string }
+        finalAmountCents: { type: [integer, 'null'], minimum: 1 }
+        paymentCondition:
+          oneOf:
+            - { $ref: '#/components/schemas/PaymentCondition' }
+            - { type: 'null' }
+        orderDate: { type: [string, 'null'], format: date }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        confirmedBy:
+          oneOf:
+            - { $ref: '#/components/schemas/OrderActorRef' }
+            - { type: 'null' }
+        reopenedAt: { type: [string, 'null'], format: date-time }
+        reopenedBy:
+          oneOf:
+            - { $ref: '#/components/schemas/OrderActorRef' }
+            - { type: 'null' }
+        seller:
+          description: Dono atual da conversa.
+          oneOf:
+            - { $ref: '#/components/schemas/OrderActorRef' }
+            - { type: 'null' }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    OrderResponse:
+      type: object
+      additionalProperties: false
+      required: [order]
+      properties:
+        order: { $ref: '#/components/schemas/Order' }
+    ConversationOrderResponse:
+      type: object
+      additionalProperties: false
+      required: [order]
+      properties:
+        order:
+          oneOf:
+            - { $ref: '#/components/schemas/Order' }
+            - { type: 'null' }
+    OrderPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor, counts]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Order' }
+        nextCursor: { type: [string, 'null'] }
+        counts:
+          type: object
+          additionalProperties: false
+          required: [pendente, confirmado]
+          properties:
+            pendente: { type: integer, minimum: 0 }
+            confirmado: { type: integer, minimum: 0 }
+    OrderCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: Versão atual da conversa.
+    OrderSectionPatchRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, value]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: Versão atual do pedido.
+        value:
+          description: >-
+            Seção inteira: FichaSummaryInput para summary, lista de FichaItem
+            para items e FichaObservations para observations.
+          oneOf:
+            - { $ref: '#/components/schemas/FichaSummaryInput' }
+            - type: array
+              items: { $ref: '#/components/schemas/FichaItem' }
+            - { $ref: '#/components/schemas/FichaObservations' }
+    OrderConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, amountText, paymentCondition]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: Versão atual do pedido.
+        amountText:
+          type: string
+          minLength: 1
+          maxLength: 32
+          description: >-
+            Valor final em reais no formato brasileiro, sem o prefixo R$ (ex.:
+            4.820,00). Armazenado em centavos inteiros maiores que zero.
+        paymentCondition: { $ref: '#/components/schemas/PaymentCondition' }
+    OrderReopenRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: Versão atual do pedido.
+    OrderError:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code]
+          properties:
+            code:
+              type: string
+              enum:
+                [
+                  ORDER_NOT_FOUND,
+                  VERSION_CONFLICT,
+                  ORDER_NOT_CONFIRMED,
+                  ORDER_NOT_CONFIRMABLE,
+                  INVALID_AMOUNT,
+                  INVALID_GRADE,
+                ]
+            fields:
+              type: array
+              description: Campos recusados em ORDER_NOT_CONFIRMABLE.
+              items: { type: string }
+            index:
+              type: integer
+              minimum: 0
+              description: Índice da linha recusada em INVALID_GRADE.
     Error:
       type: object
       additionalProperties: false
@@ -2126,3 +2645,27 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
+    OrderNotFound:
+      description: Pedido inexistente (ORDER_NOT_FOUND)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/OrderError' }
+    OrderConflict:
+      description: >-
+        Versão desatualizada (VERSION_CONFLICT), impressão de pedido pendente
+        (ORDER_NOT_CONFIRMED), edição ou reabertura fora do status permitido
+        ou chave idempotente divergente
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - { $ref: '#/components/schemas/OrderError' }
+              - { $ref: '#/components/schemas/Error' }
+    OrderUnprocessable:
+      description: >-
+        Pedido não confirmável (ORDER_NOT_CONFIRMABLE com fields), valor em
+        formato inválido (INVALID_AMOUNT) ou grade inválida (INVALID_GRADE com
+        index)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/OrderError' }

@@ -137,9 +137,9 @@ H:  T23, T34, T38 ──→ T39
 
 **Done when:**
 
-- [ ] Oito operações com parâmetros, `expectedVersion`, `Idempotency-Key` e códigos 403/404/409/422
-- [ ] Rotas mortas de Kanban/Negócio **não** são alteradas (limpeza adiada)
-- [ ] `npm test` passa (inclui validações de contrato existentes, se houver)
+- [x] Oito operações com parâmetros, `expectedVersion`, `Idempotency-Key` e códigos 403/404/409/422
+- [x] Rotas mortas de Kanban/Negócio **não** são alteradas (limpeza adiada)
+- [x] `npm test` passa (inclui validações de contrato existentes, se houver)
 
 **Tests:** none · **Gate:** docs + `npm test` · **Commit:** `docs(api): add order endpoints to OpenAPI`
 

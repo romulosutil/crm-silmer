@@ -17,6 +17,8 @@ jobs:
     name: Lint, tests, E2E and dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      image_build_required: ${{ steps.image_scope.outputs.required }}
     permissions:
       contents: read
     services:
@@ -38,6 +40,30 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Decide whether PR changes affect images
+        id: image_scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo 'required=true' >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$PR_BASE_SHA" "$PR_HEAD_SHA" -- \
+            .dockerignore \
+            .github/workflows/ci.yml \
+            jsconfig.json \
+            package.json \
+            package-lock.json \
+            apps \
+            modules \
+            scripts \
+            docker; then
+            echo 'required=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'required=true' >> "$GITHUB_OUTPUT"
+          fi
       - name: Reject merge commits in pull request history
         if: github.event_name == 'pull_request'
         shell: bash
@@ -79,6 +105,7 @@ jobs:
   images:
     name: Build and scan ${{ matrix.image }}
     needs: quality
+    if: needs.quality.outputs.image_build_required == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:

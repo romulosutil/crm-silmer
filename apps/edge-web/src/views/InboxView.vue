@@ -603,7 +603,7 @@ onBeforeUnmount(() => {
           <summary :aria-label="`Filtrar por situação: ${selectedStateLabel}`">
             <span class="inbox-state-label">Situação</span>
             <span class="inbox-state-trigger">
-              <strong>{{ selectedStateLabel }}</strong>
+              <span class="inbox-state-value">{{ selectedStateLabel }}</span>
               <svg
                 class="inbox-state-chevron"
                 aria-hidden="true"

@@ -34,7 +34,7 @@ services:
       - crm-silmer-n8n-postgres-data:/var/lib/postgresql/data
 
   n8n:
-    image: n8nio/n8n:1.121.0
+    image: n8nio/n8n:2.38.7
     depends_on:
       n8n-postgres:
         condition: service_healthy
@@ -47,16 +47,18 @@ services:
       DB_TYPE: postgresdb
       N8N_BLOCK_ENV_ACCESS_IN_NODE: 'false'
       N8N_DIAGNOSTICS_ENABLED: 'false'
+      N8N_EDITOR_BASE_URL: http://127.0.0.1:5678
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: 'true'
       N8N_HOST: 127.0.0.1
       N8N_PERSONALIZATION_ENABLED: 'false'
       N8N_PORT: 5678
       N8N_PROTOCOL: http
+      N8N_PUSH_BACKEND: websocket
       N8N_SECURE_COOKIE: 'false'
       N8N_TEMPLATES_ENABLED: 'false'
+      N8N_WEBHOOK_URL: http://127.0.0.1:5678/
       SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION: ${SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION:-}
       SILMER_PANEL_BASE_URL: ${SILMER_LOCAL_PANEL_BASE_URL:-http://host.docker.internal:3000}
-      WEBHOOK_URL: http://127.0.0.1:5678/
     ports:
       - '127.0.0.1:5678:5678'
     volumes:

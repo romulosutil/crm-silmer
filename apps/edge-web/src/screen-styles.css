@@ -123,6 +123,13 @@
   background: var(--color-accent-solid);
 }
 
+.inbox-queue-options button[aria-pressed='true']:hover:not(:disabled),
+.inbox-queue-options button[aria-pressed='true']:focus-visible {
+  color: var(--color-on-accent);
+  background: var(--color-accent-solid-hover);
+  border-color: var(--color-accent-solid-hover);
+}
+
 .inbox-filter-bar .search-field input,
 .inbox-queue-options,
 .inbox-state-trigger {

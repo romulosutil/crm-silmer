@@ -1,0 +1,46 @@
+{
+  "artboards": [
+    { "file": "Status.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Escopo dos status" },
+    { "file": "Pedidos.dc.html", "x": 1600, "y": 0, "w": 1440, "h": 1000, "title": "Pedidos (confirmados e pendentes)" },
+    { "file": "Main.dc.html", "x": 0, "y": 1320, "w": 1440, "h": 1060, "title": "Caixa de Entrada + Pedido" },
+    { "file": "Ficha.dc.html", "x": 1600, "y": 1320, "w": 1440, "h": 1760, "title": "Pedido" }
+  ],
+  "annotations": [
+    {
+      "id": "nota-status",
+      "x": 0,
+      "y": -190,
+      "w": 640,
+      "text": "COMECE POR AQUI — onde cada status começa e termina.\nDois status, uma transição, feita por uma pessoa. Nada muda de status sozinho no MVP."
+    },
+    {
+      "id": "nota-pedidos",
+      "x": 1600,
+      "y": -190,
+      "w": 640,
+      "text": "PEDIDOS — a carteira nos dois status.\nConfirmado: \"Situação\" mostra quem confirmou e quando; Imprimir liberado (PDF v2).\nPendente: mostra o que falta e há quanto tempo parou; \"Continuar\" retoma no primeiro campo pendente, por qualquer vendedor."
+    },
+    {
+      "id": "nota-inbox",
+      "x": 0,
+      "y": 1130,
+      "w": 640,
+      "text": "CAIXA DE ENTRADA — onde o vendedor atende.\nO filtro \"Aguardando vendedor\" + ordenação por tempo parado faz a triagem. O painel da direita é leitura; editar acontece no pedido."
+    },
+    {
+      "id": "nota-ficha",
+      "x": 1600,
+      "y": 1130,
+      "w": 640,
+      "text": "PEDIDO — pertence a Pedidos, não à Caixa de Entrada.\nAs seções seguem os blocos do PDF aprovado (ficha-canonical-v2): Resumo do pedido, Itens e especificações, Observações, Controle de produção.\nEdição por seção. \"Imprimir\" nasce bloqueado e só abre depois de \"Confirmar pedido\", o botão principal da tela."
+    },
+    {
+      "id": "nota-cortes",
+      "x": 0,
+      "y": 2500,
+      "w": 900,
+      "text": "FORA DO MVP (P2): tela Mesa de Trabalho · marcos visuais · anel e barra de completude · histórico de quem preencheu · edição campo a campo · artboard de celular · toda automação de pagamento (cobrança PIX, comprovante, status de pagamento) · produção e entrega · pedido perdido ou cancelado.\n\nENTRA NO MVP: desbloquear as ações do inbox (403 da allowlist duplicada) · GET/PATCH do pedido · painel de pedido na conversa · página do pedido com edição por seção · Confirmar pedido (valor + condição + autor + horário) · lista de pedidos nos dois status · impressão do PDF v2 travada até a confirmação · apagar kanban-view.js e a rota /negocios."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

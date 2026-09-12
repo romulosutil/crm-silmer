@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #1b1530;
+      font-family: Poppins, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      line-height: 1.5;
+      background: #f7f6fb;
+    }
+    a { color: #5b3fd1; }
+    a:hover { color: #4a31ad; }
+    .page { padding: 2.5rem; }
+    .eyebrow { margin: 0 0 0.4rem; color: #5b3fd1; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+    h1 { margin: 0 0 0.45rem; font-size: 2rem; line-height: 1.08; letter-spacing: -0.035em; }
+    .lede { max-inline-size: 78ch; margin: 0 0 2rem; color: #625b75; font-size: 0.92rem; }
+    .flow { display: grid; grid-template-columns: 190px 56px minmax(0, 1fr) 148px minmax(0, 1fr); align-items: stretch; gap: 0; margin-block-end: 2rem; }
+    .origin {
+      display: grid; align-content: center; gap: 0.35rem; padding: 1rem; text-align: center;
+      background: #ffffff; border: 1px dashed #d8d4e4; border-radius: 0.875rem;
+    }
+    .origin b { font-size: 0.9rem; }
+    .origin small { color: #625b75; font-size: 0.75rem; }
+    .arrow { display: grid; place-items: center; }
+    .arrow svg { inline-size: 2rem; block-size: 2rem; }
+    .gate { display: grid; align-content: center; justify-items: center; gap: 0.5rem; padding-inline: 0.5rem; text-align: center; }
+    .gate .cta {
+      display: inline-flex; align-items: center; min-block-size: 44px; padding: 0.6rem 0.9rem; color: #0c042d;
+      font-size: 0.82rem; font-weight: 700; background: #ff5b01; border: 1px solid #ff5b01; border-radius: 0.35rem;
+      box-shadow: 0 0.75rem 2rem rgb(40 20 100 / 12%);
+    }
+    .gate small { color: #625b75; font-size: 0.72rem; }
+    .state { display: grid; gap: 0.75rem; padding: 1.25rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.875rem; }
+    .state[data-tone='wait'] { border-block-start: 0.25rem solid #ff5b01; }
+    .state[data-tone='ok'] { border-block-start: 0.25rem solid #146c43; }
+    .state-head { display: flex; align-items: center; gap: 0.6rem; }
+    .state-head h2 { margin: 0; font-size: 1.1rem; }
+    .pill { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; font-size: 0.72rem; font-weight: 700; border-radius: 999px; }
+    .pill[data-tone='wait'] { color: #7a4a00; background: #fff4d6; }
+    .pill[data-tone='ok'] { color: #146c43; background: #e7f6ed; }
+    .state-head small { margin-inline-start: auto; color: #625b75; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+    .rows { display: grid; gap: 0.1rem; margin: 0; }
+    .rows div { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 0.75rem; padding: 0.6rem 0; border-block-end: 1px solid #e8e5ef; }
+    .rows div:last-child { border-block-end: 0; }
+    .rows dt { color: #625b75; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    .rows dd { margin: 0; font-size: 0.85rem; }
+    .rows dd b { font-weight: 600; }
+    .lock { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 600; }
+    .lock[data-s='off'] { color: #9a94ac; }
+    .lock[data-s='on'] { color: #146c43; }
+    .lock svg { inline-size: 0.95rem; block-size: 0.95rem; }
+    .back-arrow { display: flex; align-items: center; gap: 0.6rem; margin-block-end: 2rem; padding: 0.75rem 1rem; color: #625b75; font-size: 0.82rem; background: #ffffff; border: 1px dashed #d8d4e4; border-radius: 0.625rem; }
+    .back-arrow b { color: #1b1530; font-weight: 600; }
+    .back-arrow svg { flex: none; inline-size: 1.1rem; block-size: 1.1rem; }
+    .out { padding: 1.25rem; background: #f0eef8; border: 1px solid #d8d4e4; border-radius: 0.875rem; }
+    .out h3 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+    .out p { margin: 0 0 0.75rem; color: #625b75; font-size: 0.82rem; }
+    .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .tag { display: inline-flex; align-items: center; padding: 0.3rem 0.7rem; color: #625b75; font-size: 0.78rem; font-weight: 600; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 999px; text-decoration: line-through; }
+  </style>
+</helmet>
+
+<main class="page">
+  <p class="eyebrow">Escopo dos status</p>
+  <h1>Ciclo de vida do pedido</h1>
+  <p class="lede">Dois status, uma única transição, feita por uma pessoa. No MVP nada muda de status sozinho: nem o agente, nem o pagamento, nem a produção mexem no status do pedido.</p>
+
+  <div class="flow">
+    <div class="origin">
+      <b>Conversa no WhatsApp</b>
+      <small>o agente cria o pedido quando o cliente demonstra intenção de compra</small>
+    </div>
+
+    <div class="arrow">
+      <svg viewBox="0 0 32 32" fill="none" stroke="#a39dbe" stroke-width="2"><path d="M4 16h22m-7-7 7 7-7 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    </div>
+
+    <section class="state" data-tone="wait">
+      <div class="state-head">
+        <h2>Pendente</h2>
+        <span class="pill" data-tone="wait">status 1</span>
+        <small>4 pedidos hoje</small>
+      </div>
+      <dl class="rows">
+        <div>
+          <dt>Começa quando</dt>
+          <dd>O pedido é criado a partir da conversa, já <b>vinculado ao cliente</b> daquele contato. O status é atribuído pelo sistema — ninguém escolhe status à mão, nem troca o cliente do pedido.</dd>
+        </div>
+        <div>
+          <dt>Quem preenche</dt>
+          <dd>O agente, com o que o cliente responde. O vendedor, a qualquer momento, em qualquer ordem.</dd>
+        </div>
+        <div>
+          <dt>O vendedor pode</dt>
+          <dd>Assumir a conversa, editar qualquer seção, sair e voltar depois. Outro vendedor pode continuar o mesmo pedido.</dd>
+        </div>
+        <div>
+          <dt>Imprimir</dt>
+          <dd><span class="lock" data-s="off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10V7a5 5 0 0 1 10 0v3" /><rect x="5" y="10" width="14" height="10" rx="2" /></svg>bloqueado</span></dd>
+        </div>
+        <div>
+          <dt>Termina quando</dt>
+          <dd>O vendedor clica em <b>Confirmar pedido</b>. É a única saída.</dd>
+        </div>
+      </dl>
+    </section>
+
+    <div class="gate">
+      <svg viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="#a39dbe" stroke-width="2"><path d="M4 16h22m-7-7 7 7-7 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      <span class="cta">Confirmar pedido</span>
+      <small>exige valor final e condição de pagamento preenchidos</small>
+    </div>
+
+    <section class="state" data-tone="ok">
+      <div class="state-head">
+        <h2>Confirmado</h2>
+        <span class="pill" data-tone="ok">status 2</span>
+        <small>3 pedidos hoje</small>
+      </div>
+      <dl class="rows">
+        <div>
+          <dt>Começa quando</dt>
+          <dd>O clique acontece. O sistema grava quem confirmou e a que horas.</dd>
+        </div>
+        <div>
+          <dt>O que fica gravado</dt>
+          <dd>Valor final, condição de pagamento, autor e horário da confirmação.</dd>
+        </div>
+        <div>
+          <dt>O vendedor pode</dt>
+          <dd>Imprimir o pedido e abrir para consulta. Para corrigir algo, reabre (abaixo).</dd>
+        </div>
+        <div>
+          <dt>Imprimir</dt>
+          <dd><span class="lock" data-s="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10V7a5 5 0 0 1 9.6-2" /><rect x="5" y="10" width="14" height="10" rx="2" /></svg>liberado · PDF v2</span></dd>
+        </div>
+        <div>
+          <dt>Termina quando</dt>
+          <dd>Não termina no MVP. Pagamento, produção e entrega acontecem fora do CRM.</dd>
+        </div>
+      </dl>
+    </section>
+  </div>
+
+  <div class="back-arrow">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#625b75" stroke-width="2"><path d="M20 12H4m7-7-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    <span><b>Volta de Confirmado para Pendente:</b> só por ação humana explícita, no botão <b>Reabrir pedido</b>, que bloqueia a impressão de novo. Serve para corrigir um pedido já confirmado. — <b>a decidir:</b> entra no MVP ou o pedido confirmado é definitivo?</span>
+  </div>
+
+  <div class="out">
+    <h3>O que não existe no MVP</h3>
+    <p>Nada disso muda o status do pedido nem aparece nas telas. Se voltar à mesa, volta como status novo, não como campo escondido.</p>
+    <div class="tags">
+      <span class="tag">cobrança de PIX automática</span>
+      <span class="tag">conferência de comprovante</span>
+      <span class="tag">status de pagamento</span>
+      <span class="tag">status de produção</span>
+      <span class="tag">status de entrega</span>
+      <span class="tag">pedido perdido / cancelado</span>
+      <span class="tag">aprovação de orçamento pelo cliente</span>
+    </div>
+  </div>
+</main>
+</x-dc>
+</body>
+</html>

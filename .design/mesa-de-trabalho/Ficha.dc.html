@@ -1,0 +1,341 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #1b1530;
+      font-family: Poppins, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      line-height: 1.5;
+      background: #f7f6fb;
+    }
+    a { color: #5b3fd1; text-underline-offset: 0.2em; }
+    a:hover { color: #4a31ad; }
+    .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-block-size: 100%; }
+    .sidebar { display: flex; flex-direction: column; gap: 2rem; padding: 1rem; background: #ffffff; border-inline-end: 1px solid #e6e0fa; }
+    .brand { display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.4rem 0.3rem; text-decoration: none; }
+    .brand-word { color: #0c042d; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.055em; }
+    .brand-word span { color: #ff5b01; }
+    .product-label { padding-inline-start: 0.55rem; color: #625b75; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.13em; border-inline-start: 1px solid #cfc7ee; }
+    .nav { display: grid; gap: 0.35rem; }
+    .nav a { display: flex; align-items: center; gap: 0.75rem; min-block-size: 44px; padding: 0.7rem; color: #1b1530; font-size: 0.9rem; font-weight: 500; text-decoration: none; border-radius: 0.35rem; }
+    .nav a[aria-current] { background: #e6e0fa; border-inline-start: 3px solid #ff5b01; font-weight: 600; }
+    .nav svg { inline-size: 1.25rem; block-size: 1.25rem; fill: currentColor; }
+    .nav-count { display: grid; place-items: center; min-inline-size: 1.35rem; block-size: 1.35rem; margin-inline-start: auto; padding-inline: 0.3rem; color: #0c042d; font-size: 0.7rem; font-weight: 700; background: #ff5b01; border-radius: 999px; }
+    .topbar { display: flex; align-items: center; justify-content: flex-end; gap: 1.5rem; min-block-size: 64px; padding: 0.6rem 2.25rem; background: #f7f6fb; border-block-end: 1px solid #d8d4e4; }
+    .topbar-title { margin: 0 auto 0 0; color: #625b75; font-size: 0.875rem; }
+    .live { display: inline-flex; align-items: center; gap: 0.45rem; color: #146c43; font-size: 0.8rem; font-weight: 600; }
+    .theme { display: inline-flex; gap: 0.2rem; padding: 0.2rem; background: #f0eef8; border: 1px solid #d8d4e4; border-radius: 999px; }
+    .theme span { min-block-size: 32px; padding: 0 0.7rem; display: grid; place-items: center; color: #625b75; font-size: 0.75rem; font-weight: 600; border-radius: 999px; }
+    .theme span[data-on] { color: #1b1530; background: #ffffff; box-shadow: 0 0.75rem 2rem rgb(40 20 100 / 12%); }
+    .page { padding: 2.25rem; }
+    .wrap { max-inline-size: 66rem; }
+    .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-block-end: 1rem; font-size: 0.85rem; }
+    .crumbs a { font-weight: 600; text-decoration: none; }
+    .crumbs .sep { color: #d8d4e4; }
+    .crumbs .here { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .crumbs .from { padding-inline-start: 0.75rem; color: #625b75; font-size: 0.78rem; border-inline-start: 1px solid #d8d4e4; }
+    .detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem; margin-block-end: 1.25rem; }
+    .eyebrow { margin: 0 0 0.4rem; color: #5b3fd1; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+    h1 { margin: 0 0 0.45rem; font-size: 2rem; line-height: 1.08; letter-spacing: -0.035em; }
+    .detail-heading p:last-child { margin: 0; color: #625b75; font-size: 0.9rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-block-size: 44px; padding: 0.6rem 0.9rem; color: #1b1530; font-size: 0.875rem; font-weight: 600; background: #f0eef8; border: 1px solid #d8d4e4; border-radius: 0.35rem; }
+    .btn svg { inline-size: 0.95rem; block-size: 0.95rem; }
+    .btn-sm { min-block-size: 34px; padding: 0.3rem 0.7rem; font-size: 0.8rem; }
+    .btn-primary { color: #0c042d; background: #ff5b01; border-color: #ff5b01; }
+    .btn-cta { min-block-size: 48px; padding-inline: 1.5rem; font-size: 0.95rem; box-shadow: 0 0.75rem 2rem rgb(40 20 100 / 12%); }
+    .btn-off { color: #9a94ac; background: #f7f6fb; border-color: #e8e5ef; cursor: not-allowed; }
+    .banner {
+      display: flex; align-items: center; gap: 0.75rem; margin-block-end: 1rem; padding: 0.85rem 1rem;
+      color: #7a4a00; font-size: 0.85rem; background: #fff4d6; border: 1px solid #7a4a00;
+      border-inline-start-width: 0.25rem; border-radius: 0.625rem;
+    }
+    .banner b { font-weight: 700; }
+    .stack { display: grid; gap: 0.75rem; }
+    .surface { padding: 1.25rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.625rem; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-block-end: 1rem; }
+    .panel-head h2 { margin: 0; font-size: 1.05rem; }
+    .panel-head .right { display: flex; align-items: center; gap: 0.75rem; }
+    .panel-head p { margin: 0; color: #625b75; font-size: 0.78rem; }
+    .st { display: inline-flex; align-items: center; padding: 0.15rem 0.5rem; font-size: 0.68rem; font-weight: 700; border-radius: 999px; }
+    .st[data-s='off'] { color: #7a4a00; background: #fff4d6; }
+    .locked { display: inline-flex; align-items: center; gap: 0.25rem; margin-inline-start: 0.4rem; padding: 0.1rem 0.45rem; color: #9a94ac; font-size: 0.68rem; font-weight: 600; background: #f0eef8; border-radius: 999px; vertical-align: middle; }
+    .locked svg { inline-size: 0.7rem; block-size: 0.7rem; }
+    .fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.1rem 1.5rem; }
+    .f { display: grid; gap: 0.1rem; padding: 0.55rem 0; border-block-end: 1px solid #e8e5ef; }
+    .f dt { color: #625b75; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    .f dd { margin: 0; font-size: 0.875rem; font-weight: 500; }
+    .f dd[data-empty='true'] { color: #9a94ac; font-weight: 400; font-style: italic; }
+    .f dd.qty { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .items { display: grid; gap: 0.75rem; }
+    .item { border: 1px solid #e8e5ef; border-radius: 0.5rem; overflow: hidden; }
+    .item > header { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; background: #f7f6fb; border-block-end: 1px solid #e8e5ef; }
+    .item .ix { display: block; color: #625b75; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+    .item h3 { margin: 0; font-size: 0.98rem; }
+    .item h3 span { color: #625b75; font-weight: 500; }
+    .item .tot { display: flex; align-items: baseline; gap: 0.3rem; margin-inline-start: auto; }
+    .item .tot strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+    .item .tot span { color: #625b75; font-size: 0.75rem; }
+    .item-body { display: grid; gap: 0.9rem; padding: 0.9rem 1rem; }
+    .specs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.1rem 1.5rem; margin: 0; }
+    .specs div { display: grid; gap: 0.1rem; padding: 0.45rem 0; border-block-end: 1px solid #f0eef8; }
+    .specs dt { color: #625b75; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    .specs dd { margin: 0; font-size: 0.85rem; font-weight: 500; }
+    .specs dd[data-na='true'] { color: #9a94ac; font-weight: 400; }
+    .grade-block { display: flex; align-items: center; gap: 0.6rem; }
+    .grade-title { color: #625b75; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+    .grade { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .grade span { display: inline-flex; align-items: baseline; gap: 0.25rem; padding: 0.2rem 0.55rem; font-size: 0.78rem; background: #f0eef8; border-radius: 0.375rem; }
+    .grade b { font-variant-numeric: tabular-nums; }
+    .obs { margin: 0; padding-inline-start: 1.15rem; }
+    .obs li { padding-block: 0.25rem; font-size: 0.875rem; }
+    .obs li::marker { color: #9a94ac; font-size: 0.8rem; }
+    .strip { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1.25rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.625rem; }
+    .strip h2 { margin: 0; font-size: 1.05rem; }
+    .strip p { margin: 0; color: #625b75; font-size: 0.82rem; }
+    .strip .tick { display: grid; place-items: center; inline-size: 24px; block-size: 24px; color: #146c43; font-size: 0.75rem; font-weight: 700; background: #e7f6ed; border-radius: 50%; }
+    .strip .off { display: grid; place-items: center; inline-size: 24px; block-size: 24px; color: #9a94ac; background: #f0eef8; border-radius: 50%; }
+    .strip .off svg { inline-size: 0.8rem; block-size: 0.8rem; }
+    .strip .btn { margin-inline-start: auto; }
+    .form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1.25rem; }
+    .form label { display: grid; gap: 0.3rem; font-size: 0.78rem; font-weight: 600; }
+    .form input { inline-size: 100%; min-block-size: 44px; padding: 0.65rem 0.75rem; color: #1b1530; font: inherit; font-size: 0.875rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.35rem; }
+    .form input[data-focus='true'] { border-color: #5b3fd1; box-shadow: 0 0 0 3px rgb(111 80 232 / 18%); }
+    .form .help { color: #625b75; font-size: 0.72rem; font-weight: 400; }
+    .money-field { display: flex; align-items: stretch; }
+    .money-field .prefix { display: grid; place-items: center; padding-inline: 0.75rem; color: #625b75; font-size: 0.875rem; font-weight: 600; background: #f0eef8; border: 1px solid #d8d4e4; border-inline-end: 0; border-start-start-radius: 0.35rem; border-end-start-radius: 0.35rem; }
+    .money-field input { border-start-start-radius: 0; border-end-start-radius: 0; font-variant-numeric: tabular-nums; }
+    .select-field { position: relative; display: block; }
+    .select-field select { inline-size: 100%; min-block-size: 44px; padding: 0.65rem 2.25rem 0.65rem 0.75rem; color: #1b1530; font: inherit; font-size: 0.875rem; background: #ffffff; border: 1px solid #d8d4e4; border-radius: 0.35rem; appearance: none; }
+    .select-field svg { position: absolute; inset-block-start: 50%; inset-inline-end: 0.75rem; inline-size: 1rem; block-size: 1rem; margin-block-start: -0.5rem; pointer-events: none; }
+    .form-foot { display: flex; align-items: center; gap: 0.6rem; grid-column: 1 / -1; padding-block-start: 0.35rem; }
+    .form-foot p { margin: 0 auto 0 0; color: #625b75; font-size: 0.75rem; }
+    .note { margin: 0.85rem 0 0; color: #625b75; font-size: 0.75rem; }
+  </style>
+</helmet>
+
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="#">
+      <span class="brand-word">SILMER<span>.</span></span>
+      <span class="product-label">CRM</span>
+    </a>
+    <nav class="nav">
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M4 13h6v7H4zm10-9h6v16h-6zM4 4h6v5H4z" /></svg><span>Dashboard</span></a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M3 5h18v13H7l-4 3zm2 2v10l1.2-1H19V7z" /></svg><span>Caixa de Entrada</span><span class="nav-count">4</span></a>
+      <a href="#" aria-current="page"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zm2 2v14h9V8h-3V5z" /></svg><span>Pedidos</span></a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-4 0-8 2-8 4.5V21h16v-2.5C20 16 16 14 12 14z" /></svg><span>Clientes</span></a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm7 1a3 3 0 1 0-3-3 3 3 0 0 0 3 3zM3 20v-1.5C3 16.5 6 15 9 15s6 1.5 6 3.5V20zm14 0v-1.5c0-1.3-.7-2.4-1.8-3.2 2.6.3 4.8 1.6 4.8 3.2V20z" /></svg><span>Usuários</span></a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-6 1.8-6 4v2h12v-2c0-2.2-2.7-4-6-4z" /></svg><span>Conta</span></a>
+    </nav>
+  </aside>
+
+  <div>
+    <header class="topbar">
+      <p class="topbar-title">Pedido 07-CRM</p>
+      <span class="live">Ao vivo</span>
+      <div class="theme"><span data-on>Claro</span><span>Escuro</span><span>Sistema</span></div>
+    </header>
+
+    <main class="page">
+      <div class="wrap">
+        <nav class="crumbs">
+          <a href="#">← Pedidos</a>
+          <span class="sep">/</span>
+          <span class="here">07-CRM</span>
+          <span class="from">aberto a partir da conversa de Colégio Ápice</span>
+        </nav>
+
+        <div class="detail-heading">
+          <div>
+            <p class="eyebrow">Pedido 07-CRM · FAB 01</p>
+            <h1>Colégio Ápice</h1>
+            <p>Uniforme escolar 2027 · WhatsApp +55 71 98812-4477 · com Marina desde 14:06</p>
+          </div>
+          <div class="actions">
+            <span class="btn">Abrir conversa</span>
+            <span class="btn btn-off" title="Disponível depois de confirmar o pedido">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#9a94ac" stroke-width="2"><path d="M7 10V7a5 5 0 0 1 10 0v3" /><rect x="5" y="10" width="14" height="10" rx="2" /></svg>
+              Imprimir
+            </span>
+          </div>
+        </div>
+
+        <div class="banner">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#7a4a00" stroke-width="2"><path d="M12 3v10" stroke-linecap="round" /><circle cx="12" cy="18" r="1.2" fill="#7a4a00" stroke="none" /></svg>
+          <span><b>Faltam o valor final e a condição de pagamento.</b> Os campos da ficha impressa estão completos.</span>
+        </div>
+
+        <div class="stack">
+          <section class="surface">
+            <div class="panel-head">
+              <h2>Resumo do pedido</h2>
+              <div class="right"><span class="btn btn-sm">Editar</span></div>
+            </div>
+            <dl class="fields">
+              <div class="f">
+                <dt>Cliente</dt>
+                <dd>Colégio Ápice LTDA
+                  <span class="locked">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10V7a5 5 0 0 1 10 0v3" /><rect x="5" y="10" width="14" height="10" rx="2" /></svg>
+                    vem da conversa
+                  </span>
+                </dd>
+              </div>
+              <div class="f">
+                <dt>Entrega confirmada</dt>
+                <dd>24/10/2026</dd>
+              </div>
+              <div class="f">
+                <dt>Total de peças</dt>
+                <dd class="qty">150</dd>
+              </div>
+              <div class="f">
+                <dt>Aplicação</dt>
+                <dd>SUBLIMAÇÃO TOTAL</dd>
+              </div>
+              <div class="f">
+                <dt>Evento / Nome</dt>
+                <dd>Uniforme escolar 2027</dd>
+              </div>
+              <div class="f">
+                <dt>Vendedor</dt>
+                <dd>Marina Aguiar</dd>
+              </div>
+              <div class="f">
+                <dt>Data do pedido</dt>
+                <dd data-empty="true">gerada na confirmação</dd>
+              </div>
+              <div class="f">
+                <dt>FAB</dt>
+                <dd>FAB 01</dd>
+              </div>
+            </dl>
+            <p class="note">Total de peças é somado a partir da grade dos itens e não é digitado. Número do pedido e data saem do sistema na confirmação.</p>
+          </section>
+
+          <section class="surface">
+            <div class="panel-head">
+              <h2>Itens e especificações</h2>
+              <div class="right"><p>2 itens · 150 peças</p><span class="btn btn-sm">Editar</span></div>
+            </div>
+            <div class="items">
+              <article class="item">
+                <header>
+                  <div><span class="ix">Item 1</span><h3>CAMISETA <span>GOLA OLÍMPICA</span></h3></div>
+                  <div class="tot"><strong>100</strong><span>peças</span></div>
+                </header>
+                <div class="item-body">
+                  <dl class="specs">
+                    <div><dt>Malha</dt><dd>DRY FIT 100% POLIÉSTER / GRAMATURA 130</dd></div>
+                    <div><dt>Frente</dt><dd>BRANCA</dd></div>
+                    <div><dt>Costas</dt><dd>BRANCA</dd></div>
+                    <div><dt>Manga direita</dt><dd>VERDE BANDEIRA</dd></div>
+                    <div><dt>Manga esquerda</dt><dd>VERDE BANDEIRA</dd></div>
+                    <div><dt>Viés gola / mangas</dt><dd>OLÍMPICA - VERDE / VERDE</dd></div>
+                  </dl>
+                  <div class="grade-block">
+                    <span class="grade-title">Grade</span>
+                    <span class="grade"><span>P <b>20</b></span><span>M <b>40</b></span><span>G <b>30</b></span><span>GG <b>10</b></span></span>
+                  </div>
+                </div>
+              </article>
+
+              <article class="item">
+                <header>
+                  <div><span class="ix">Item 2</span><h3>CALÇA <span>RETA COM BOLSO</span></h3></div>
+                  <div class="tot"><strong>50</strong><span>peças</span></div>
+                </header>
+                <div class="item-body">
+                  <dl class="specs">
+                    <div><dt>Malha</dt><dd>HELANCA LIGHT</dd></div>
+                    <div><dt>Frente</dt><dd>VERDE BANDEIRA</dd></div>
+                    <div><dt>Costas</dt><dd>VERDE BANDEIRA</dd></div>
+                    <div><dt>Manga direita</dt><dd data-na="true">NÃO APLICÁVEL</dd></div>
+                    <div><dt>Manga esquerda</dt><dd data-na="true">NÃO APLICÁVEL</dd></div>
+                    <div><dt>Viés gola / mangas</dt><dd data-na="true">NÃO APLICÁVEL / NÃO APLICÁVEL</dd></div>
+                  </dl>
+                  <div class="grade-block">
+                    <span class="grade-title">Grade</span>
+                    <span class="grade"><span>P <b>10</b></span><span>M <b>20</b></span><span>G <b>20</b></span></span>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="surface">
+            <div class="panel-head">
+              <h2>Observações do pedido</h2>
+              <div class="right"><p>3 de 5 linhas</p><span class="btn btn-sm">Editar</span></div>
+            </div>
+            <ol class="obs">
+              <li>Separar os itens por tamanho e identificar cada pacote.</li>
+              <li>Entrega na secretaria do colégio, das 8h às 17h.</li>
+              <li>Brasão em dourado no peito esquerdo e nas costas.</li>
+            </ol>
+          </section>
+
+          <div class="strip">
+            <span class="off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10V7a5 5 0 0 1 10 0v3" /><rect x="5" y="10" width="14" height="10" rx="2" /></svg></span>
+            <div>
+              <h2>Controle de produção</h2>
+              <p>Arremate · Conferência e embalagem · Cores e arte — 14 campos que saem em branco na página 2 e são preenchidos à mão na fábrica.</p>
+            </div>
+          </div>
+
+          <div class="strip">
+            <span class="tick">✓</span>
+            <div>
+              <h2>Dados do atendimento</h2>
+              <p>Arte recebida do cliente · entrega em Salvador/BA · uso próprio — ficam no CRM e não saem na ficha impressa.</p>
+            </div>
+            <span class="btn btn-sm">Ver</span>
+          </div>
+
+          <section class="surface">
+            <div class="panel-head">
+              <h2>Fechamento e pagamento</h2>
+              <div class="right"><span class="st" data-s="off">pedido pendente</span></div>
+            </div>
+            <div class="form">
+              <label>Valor final
+                <span class="money-field"><span class="prefix">R$</span><input type="text" value="4.820,00" data-focus="true" inputmode="decimal" /></span>
+                <span class="help">Valor aprovado pelo cliente. O agente nunca informa preço.</span>
+              </label>
+              <label>Condição de pagamento
+                <span class="select-field">
+                  <select>
+                    <option selected>Pix</option>
+                    <option>Cartão de crédito</option>
+                    <option>Cartão de débito</option>
+                  </select>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#625b75" stroke-width="2"><path d="m6 9 6 6 6-6" stroke-linecap="round" /></svg>
+                </span>
+                <span class="help">Fica registrada no pedido. Nenhuma cobrança é enviada pelo sistema.</span>
+              </label>
+              <div class="form-foot">
+                <p>Confirmar grava o valor, a condição e quem confirmou — e libera a impressão.</p>
+                <span class="btn">Cancelar</span>
+                <span class="btn btn-primary btn-cta">Confirmar pedido</span>
+              </div>
+            </div>
+            <p class="note">Valor e condição ficam no CRM: a ficha impressa não mostra preço.</p>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -252,7 +252,6 @@ onBeforeUnmount(() => {
                   <RouterLink class="row-link" :to="`/clientes/${contact.id}`">
                     {{ contact.label }}
                   </RouterLink>
-                  <span class="table-detail">{{ contact.id }}</span>
                 </td>
                 <td>
                   {{

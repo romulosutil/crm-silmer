@@ -84,6 +84,32 @@ export function registerConversationRoutes(api, conversations, contextFor) {
   );
 
   api.post(
+    '/api/v1/conversations/:conversationId/unarchive',
+    async (request, reply) =>
+      respond(reply, request, contextFor, async () => {
+        const params = requireObject(request.params);
+        const body = requireObject(request.body);
+        rejectUnknownKeys(body, ['expectedVersion', 'reason']);
+        const command = await authorizeHumanCommand(
+          request,
+          conversations,
+          contextFor,
+          'conversation.unarchive',
+        );
+        const result = await conversations.unarchive({
+          ...command,
+          conversationId: requireString(
+            params.conversationId,
+            'CONVERSATION_ID',
+          ),
+          expectedVersion: requireVersion(body.expectedVersion),
+          reason: requireString(body.reason, 'REASON'),
+        });
+        return reply.code(202).send({ accepted: true, ...result });
+      }),
+  );
+
+  api.post(
     '/api/v1/conversations/:conversationId/transfer',
     async (request, reply) =>
       respond(reply, request, contextFor, async () => {

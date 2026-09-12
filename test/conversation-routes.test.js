@@ -20,6 +20,10 @@ function harness() {
       calls.push({ input, method: 'archive' });
       return { archivedAt: '2026-09-12T12:00:00.000Z', version: 10 };
     },
+    async unarchive(/** @type {Record<string, unknown>} */ input) {
+      calls.push({ input, method: 'unarchive' });
+      return { archivedAt: null, version: 11 };
+    },
     async authorize(/** @type {Record<string, unknown>} */ input) {
       calls.push({ input, method: 'authorize' });
       return { actor: { id: 'user-synthetic', role: 'ATENDIMENTO' } };
@@ -68,6 +72,7 @@ test('human conversation routes authorize, mutate state and enqueue commands', a
 
   for (const [path, method, action] of [
     ['archive', 'archive', 'conversation.archive'],
+    ['unarchive', 'unarchive', 'conversation.unarchive'],
     ['takeover', 'takeover', 'conversation.takeover'],
     ['return-to-ai', 'returnToAi', 'conversation.reactivate-agent'],
     ['close', 'close', 'conversation.transition'],

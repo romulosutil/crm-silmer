@@ -14,6 +14,7 @@ const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
 /** @type {Readonly<Record<string, string>>} */
 const STREAM_EVENT_TYPES = Object.freeze({
   archive: 'conversation.archived',
+  unarchive: 'conversation.unarchived',
   reactivate: 'conversation.assistant_reactivated',
   send: 'conversation.message_queued',
   takeover: 'conversation.taken_over',
@@ -72,7 +73,7 @@ async function appendConversationStreamEvent(transaction, event) {
 function assertConversationOwnership(kind, current, actor) {
   const owner = current.assigned_user_id;
   const isAdmin = [...(actor.capabilities ?? [])].includes(ADMIN_CAPABILITY);
-  if (kind === 'archive' && owner === null && !isAdmin) {
+  if ((kind === 'archive' || kind === 'unarchive') && owner === null && !isAdmin) {
     throw new InboxForbiddenError(
       'Conversation must be taken over before it can be archived',
     );
@@ -300,6 +301,9 @@ export class PostgresInboxRepository {
         throw new InboxConflictError(
           'Terminal conversations cannot be mutated',
         );
+      }
+      if (kind === 'unarchive' && current.archived_at === null) {
+        throw new InboxConflictError('Conversation is not archived');
       }
       assertConversationOwnership(kind, current, input.actor);
       if (kind === 'transfer') {
@@ -530,6 +534,9 @@ function mutationAssignments(kind, input, occurredAt) {
   if (kind === 'archive') {
     return { sql: 'archived_at = $2', values: [occurredAt] };
   }
+  if (kind === 'unarchive') {
+    return { sql: 'archived_at = NULL', values: [] };
+  }
   if (kind === 'transition') {
     return {
       sql: 'state = $2, terminal_at = $3',
@@ -706,6 +713,7 @@ function iso(value) {
 function createAudit(kind, input, result, occurredAt) {
   const actions = {
     archive: 'conversation.archived',
+    unarchive: 'conversation.unarchived',
     reactivate: 'conversation.assistant_reactivated',
     send: 'conversation.human_message_queued',
     takeover: 'conversation.takeover',

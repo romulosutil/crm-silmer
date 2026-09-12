@@ -141,11 +141,18 @@ export class InMemoryInboxRepository {
           'Terminal conversations cannot be mutated',
         );
       }
+      if (
+        kind === 'unarchive' &&
+        (conversation.archivedAt === null ||
+          conversation.archivedAt === undefined)
+      ) {
+        throw new InboxConflictError('Conversation is not archived');
+      }
       const isAdmin = [...(input.actor.capabilities ?? [])].includes(
         'COMMERCIAL_ADMIN',
       );
       if (
-        kind === 'archive' &&
+        (kind === 'archive' || kind === 'unarchive') &&
         (conversation.assignedUserId === null ||
           conversation.assignedUserId === undefined) &&
         !isAdmin
@@ -177,6 +184,10 @@ export class InMemoryInboxRepository {
         result = publicConversation(conversation);
       } else if (kind === 'archive') {
         conversation.archivedAt = occurredAt;
+        conversation.version += 1;
+        result = publicConversation(conversation);
+      } else if (kind === 'unarchive') {
+        conversation.archivedAt = null;
         conversation.version += 1;
         result = publicConversation(conversation);
       } else if (kind === 'takeover') {
@@ -278,6 +289,7 @@ function publicConversation(conversation) {
 function createAudit(kind, input, conversation, occurredAt) {
   const actions = {
     archive: 'conversation.archived',
+    unarchive: 'conversation.unarchived',
     reactivate: 'conversation.assistant_reactivated',
     send: 'conversation.human_message_queued',
     takeover: 'conversation.takeover',

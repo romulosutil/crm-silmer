@@ -110,6 +110,11 @@ if (connectionString) {
         inboxPage.items[0].lastMessage.preview,
         `PII-canary-${runId}`,
       );
+      const unassignedPage = await reads.listInbox({
+        unassignedHumanHandoff: true,
+      });
+      assert.equal(unassignedPage.totalCount, 1);
+      assert.equal(unassignedPage.items[0].id, received.conversation.id);
       const conversation = await reads.getConversation({
         conversationId: received.conversation.id,
       });

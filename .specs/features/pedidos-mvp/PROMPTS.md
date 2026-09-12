@@ -51,7 +51,7 @@ COMO TRABALHAR
   na task.
 - Rode o Gate de cada task antes do commit e só commite com o gate verde.
 - Este grupo é só documentação: não altere código.
-- A ADR 005 deve refletir exatamente as decisões D01–D09 e D24 do context.md.
+- A ADR 006 deve refletir exatamente as decisões D01–D09 e D24 do context.md.
   Não invente decisão nova; se algo estiver ambíguo, pare e pergunte.
 - No OpenAPI, apenas adicione os caminhos de pedido. Não remova as rotas mortas
   de Kanban/Negócio (limpeza adiada).
@@ -76,7 +76,7 @@ C:\Users\sutil\Documents\dev\PESSOAL\apps\crm-silmer (GitHub: romulosutil/crm-si
 
 PRÉ-REQUISITO
 - O PR do Grupo A (T01–T03) precisa estar mesclado em feat/pedidos-mvp.
-  Confirme que docs/adr/005-pedido-dois-status.md existe em origin/feat/pedidos-mvp.
+  Confirme que docs/adr/006-pedido-dois-status.md existe em origin/feat/pedidos-mvp.
   Se não existir, pare e avise.
 
 LEIA ANTES DE QUALQUER ALTERAÇÃO
@@ -84,7 +84,7 @@ LEIA ANTES DE QUALQUER ALTERAÇÃO
 - .specs/features/pedidos-mvp/tasks.md → execute SOMENTE T04 a T13, na ordem
   do diagrama (T05 e T06 podem ser feitas em qualquer ordem; T12 é independente
   de T05–T11)
-- docs/adr/004-aposentar-kanban-e-negocio.md e docs/adr/005-pedido-dois-status.md
+- docs/adr/004-aposentar-kanban-e-negocio.md e docs/adr/006-pedido-dois-status.md
 - modules/inbox-channels/src (estrutura de módulo a copiar)
 - modules/n8n-integration/src/crypto.js e postgres-repository.js (envelope cifrado)
 - docs/phase0/ficha-pdf-synthetic.json (forma da ficha)

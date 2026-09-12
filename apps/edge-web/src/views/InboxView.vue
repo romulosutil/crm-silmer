@@ -18,6 +18,10 @@ import {
 
 const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
 const LIVE_REFRESH_DELAY_MS = 250;
+const DELIVERY_NOTICES = Object.freeze({
+  failed: 'Falha no envio',
+  outcome_unknown: 'Envio aguardando confirmação',
+});
 
 const liveEvent = inject('liveEvent', ref(null));
 const sessionUser = inject(
@@ -138,6 +142,15 @@ function messageInitials(message) {
   if (from === 'cliente') return 'C';
   if (from === 'humano') return 'V';
   return 'IA';
+}
+
+/** @param {{deliveryStatus?: unknown}} message */
+function deliveryNotice(message) {
+  return (
+    DELIVERY_NOTICES[
+      /** @type {keyof typeof DELIVERY_NOTICES} */ (message.deliveryStatus)
+    ] ?? null
+  );
 }
 
 /** @param {unknown} cause */
@@ -688,9 +701,9 @@ onBeforeUnmount(() => {
               <span>{{ dateTimeBR(message.occurredAt) }}</span>
             </div>
             <p>{{ message.preview }}</p>
-            <small v-if="message.deliveryStatus"
-              >Entrega: {{ message.deliveryStatus }}</small
-            >
+            <small v-if="deliveryNotice(message)">{{
+              deliveryNotice(message)
+            }}</small>
           </li>
           <li v-if="!detail.messages.length" class="empty-list">
             Sem mensagens persistidas.

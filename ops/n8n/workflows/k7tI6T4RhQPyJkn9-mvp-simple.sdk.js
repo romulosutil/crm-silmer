@@ -105,6 +105,7 @@ function crmPost(name, position, path) {
 }
 
 function ifBoolean(name, position, expression) {
+  const condition = expression.replace(/^{{\s*|\s*}}$/g, '');
   return ifElse({
     version: 2.3,
     config: {
@@ -120,9 +121,9 @@ function ifBoolean(name, position, expression) {
           },
           conditions: [
             {
-              leftValue: expr(expression),
-              operator: { type: 'boolean', operation: 'true' },
-              rightValue: '',
+              leftValue: expr(`{{ (${condition}) ? 'true' : 'false' }}`),
+              operator: { type: 'string', operation: 'equals' },
+              rightValue: 'true',
             },
           ],
           combinator: 'and',
@@ -320,6 +321,7 @@ const prepareInbound = codeStep(
   'Preparar inbound CRM (MVP)',
   [-1470, -520],
   `const n = $json;
+const correlationId = String($execution.id).padStart(16, '0');
 return { json: {
   payload: {
     schema_version: '1.0',
@@ -337,7 +339,7 @@ return { json: {
     metadata: { phone_number_id: n.phone_number_id }
   },
   idempotency_key: n.event_id,
-  correlation_id: 'wa:' + n.event_id
+  correlation_id: correlationId
 } };`,
 );
 
@@ -356,11 +358,16 @@ const routeConversation = switchCase({
       mode: 'rules',
       rules: {
         values: [
-          booleanRule(
-            "{{ $json.mode === 'ai_active' && ['text', 'button', 'interactive'].includes($('Normalizar evento WhatsApp (MVP)').item.json.message_type) }}",
+          stringRule(
+            "{{ $json.mode === 'ai_active' && ['text', 'button', 'interactive'].includes($('Normalizar evento WhatsApp (MVP)').item.json.message_type) ? 'ai_reply' : 'no_action' }}",
+            'ai_reply',
             'Responder com IA',
           ),
-          booleanRule("{{ $json.mode === 'ai_active' }}", 'Handoff de mídia'),
+          stringRule(
+            "{{ $json.mode === 'ai_active' ? 'media_handoff' : 'no_action' }}",
+            'media_handoff',
+            'Handoff de mídia',
+          ),
         ],
       },
       options: { fallbackOutput: 'extra', renameFallbackOutput: 'Sem ação' },
@@ -385,7 +392,7 @@ return { json: {
     'Nome informado no perfil: ' + (source.customer_name || 'não informado'),
     'Histórico oficial: ' + JSON.stringify(inbound.recent_messages ?? []),
     'Briefing atual: ' + JSON.stringify(inbound.briefing ?? {})
-  ].join('\n')
+  ].join('\\n')
 } };`,
 );
 
@@ -537,6 +544,7 @@ const prepareAiHandoff = codeStep(
   'Preparar handoff da IA (MVP)',
   [220, -850],
   `const d = $json;
+const correlationId = String($execution.id).padStart(16, '0');
 const command = d.conversation_id + ':' + d.source_revision + ':handoff';
 return { json: {
   payload: {
@@ -545,7 +553,7 @@ return { json: {
     automation_epoch: d.automation_epoch, source_revision: d.source_revision,
     briefing_patch: d.briefing_patch,
     handoff: { reason: d.handoff_reason, summary: d.reasoning }
-  }, idempotency_key: command, correlation_id: 'handoff:' + command
+  }, idempotency_key: command, correlation_id: correlationId
 } };`,
 );
 
@@ -553,6 +561,7 @@ const prepareUnsupportedHandoff = codeStep(
   'Preparar handoff de conteúdo (MVP)',
   [-750, -450],
   `const inbound = $json;
+const correlationId = String($execution.id).padStart(16, '0');
 const source = $('Normalizar evento WhatsApp (MVP)').item.json;
 const command = inbound.conversation_id + ':' + inbound.source_revision + ':unsupported';
 return { json: {
@@ -561,7 +570,7 @@ return { json: {
     occurred_at: new Date().toISOString(), conversation_id: inbound.conversation_id,
     automation_epoch: inbound.automation_epoch, source_revision: inbound.source_revision,
     handoff: { reason: 'unsupported', summary: 'Conteúdo ' + source.message_type + ' requer atendimento humano no MVP.' }
-  }, idempotency_key: command, correlation_id: 'handoff:' + command
+  }, idempotency_key: command, correlation_id: correlationId
 } };`,
 );
 
@@ -575,6 +584,7 @@ const prepareAiReservation = codeStep(
   'Preparar reserva de envio da IA (MVP)',
   [220, -620],
   `const d = $json;
+const correlationId = String($execution.id).padStart(16, '0');
 const command = d.conversation_id + ':' + d.source_revision + ':ai-response';
 return { json: {
   payload: {
@@ -583,7 +593,7 @@ return { json: {
     conversation_id: d.conversation_id, automation_epoch: d.automation_epoch,
     source_revision: d.source_revision, command_id: command,
     message: { type: 'text', text: d.reply_text }, briefing_patch: d.briefing_patch
-  }, idempotency_key: 'reserve:' + command, correlation_id: 'send:' + command,
+  }, idempotency_key: 'reserve:' + command, correlation_id: correlationId,
   command_id: command, reply_text: d.reply_text
 } };`,
 );
@@ -612,12 +622,13 @@ const prepareAiSent = codeStep(
   'Preparar message.sent da IA (MVP)',
   [1190, -690],
   `const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;
+const correlationId = String($execution.id).padStart(16, '0');
 return { json: { payload: {
   schema_version: '1.0', event_id: 'sent:' + command, event_type: 'message.sent',
   occurred_at: new Date().toISOString(), command_id: command,
   conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,
   external_message_id: $json.messages?.[0]?.id ?? $json.id
-}, idempotency_key: 'sent:' + command, correlation_id: 'send:' + command } };`,
+}, idempotency_key: 'sent:' + command, correlation_id: correlationId } };`,
 );
 const crmAiSent = crmPost(
   'CRM - Registrar message.sent da IA (MVP)',
@@ -628,12 +639,13 @@ const prepareAiUnknown = codeStep(
   'Preparar envio desconhecido da IA (MVP)',
   [1190, -500],
   `const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;
+const correlationId = String($execution.id).padStart(16, '0');
 return { json: { payload: {
   schema_version: '1.0', event_id: 'unknown:' + command,
   event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),
   command_id: command, conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,
   failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }
-}, idempotency_key: 'unknown:' + command, correlation_id: 'send:' + command } };`,
+}, idempotency_key: 'unknown:' + command, correlation_id: correlationId } };`,
 );
 const crmAiUnknown = crmPost(
   'CRM - Marcar envio desconhecido da IA (MVP)',
@@ -645,13 +657,14 @@ const prepareStatus = codeStep(
   'Preparar status de entrega (MVP)',
   [-1470, -120],
   `const n = $json;
+const correlationId = String($execution.id).padStart(16, '0');
 const allowed = ['sent', 'delivered', 'read', 'failed'];
 if (!allowed.includes(n.status)) return [];
 return { json: { payload: {
   schema_version: '1.0', event_id: n.event_id,
   event_type: 'message.' + n.status, occurred_at: n.occurred_at,
   conversation_id: null, external_message_id: n.external_message_id
-}, idempotency_key: n.event_id, correlation_id: 'status:' + n.event_id } };`,
+}, idempotency_key: n.event_id, correlation_id: correlationId } };`,
 );
 const crmStatus = crmPost(
   'CRM - Registrar status de entrega (MVP)',
@@ -714,6 +727,7 @@ const prepareHumanReservation = codeStep(
   'Preparar reserva de envio humano (MVP)',
   [-1220, 250],
   `const command = $json.payload;
+const correlationId = String($execution.id).padStart(16, '0');
 return { json: {
   payload: {
     schema_version: '1.0', event_id: 'reserve:' + command.command_id,
@@ -723,7 +737,7 @@ return { json: {
     source_revision: command.source_revision,
     command_id: command.command_id, message: command.message
   }, idempotency_key: 'reserve:' + command.command_id,
-  correlation_id: 'panel:' + command.command_id,
+  correlation_id: correlationId,
   command
 } };`,
 );
@@ -750,13 +764,14 @@ const prepareHumanSent = codeStep(
   'Preparar message.sent humano (MVP)',
   [-260, 120],
   `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
+const correlationId = String($execution.id).padStart(16, '0');
 return { json: { payload: {
   schema_version: '1.0', event_id: 'sent:' + command.command_id,
   event_type: 'message.sent', occurred_at: new Date().toISOString(),
   conversation_id: command.conversation_id, command_id: command.command_id,
   external_message_id: $json.messages?.[0]?.id ?? $json.id
 }, idempotency_key: 'sent:' + command.command_id,
-correlation_id: 'panel:' + command.command_id, command_id: command.command_id } };`,
+correlation_id: correlationId, command_id: command.command_id } };`,
 );
 const crmHumanSent = crmPost(
   'CRM - Registrar message.sent humano (MVP)',
@@ -785,13 +800,14 @@ const prepareHumanUnknown = codeStep(
   'Preparar envio humano desconhecido (MVP)',
   [-260, 330],
   `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
+const correlationId = String($execution.id).padStart(16, '0');
 return { json: { payload: {
   schema_version: '1.0', event_id: 'unknown:' + command.command_id,
   event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),
   conversation_id: command.conversation_id, command_id: command.command_id,
   failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }
 }, idempotency_key: 'unknown:' + command.command_id,
-correlation_id: 'panel:' + command.command_id } };`,
+correlation_id: correlationId } };`,
 );
 const crmHumanUnknown = crmPost(
   'CRM - Marcar envio humano desconhecido (MVP)',
@@ -812,12 +828,13 @@ const prepareWorkflowFailure = codeStep(
   'Preparar workflow.failed (MVP)',
   [940, 360],
   `const executionId = String($json.execution?.id ?? $execution.id);
+const correlationId = String($execution.id).padStart(16, '0');
 const eventId = 'workflow-failed:' + executionId;
 return { json: { payload: {
   schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed',
   occurred_at: new Date().toISOString(), conversation_id: null,
   failure: { code: 'WORKFLOW_FAILED', node: String($json.execution?.lastNodeExecuted ?? 'unknown').slice(0, 128) }
-}, idempotency_key: eventId, correlation_id: 'failure:' + executionId } };`,
+}, idempotency_key: eventId, correlation_id: correlationId } };`,
 );
 const crmWorkflowFailure = crmPost(
   'CRM - Registrar workflow.failed (MVP)',
@@ -854,26 +871,26 @@ export default workflow(WORKFLOW_KEY, 'Silmer | Atendimento WhatsApp IA')
         prepareInbound.to(
           crmInbound.to(
             routeConversation
-              .onCase(
-                0,
-                buildAgentContext.to(
-                  agent.to(
-                    normalizeDecision.to(
-                      shouldHandoff
-                        .onTrue(prepareAiHandoff.to(crmHandoff))
-                        .onFalse(
-                          prepareAiReservation.to(
-                            crmReserveAi.to(
-                              aiAuthorized.onTrue(
-                                sendAi.to(prepareAiSent.to(crmAiSent)),
+                  .onCase(
+                    0,
+                    buildAgentContext.to(
+                      agent.to(
+                        normalizeDecision.to(
+                          shouldHandoff
+                            .onTrue(prepareAiHandoff.to(crmHandoff))
+                            .onFalse(
+                              prepareAiReservation.to(
+                                crmReserveAi.to(
+                                  aiAuthorized.onTrue(
+                                    sendAi.to(prepareAiSent.to(crmAiSent)),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
                         ),
+                      ),
                     ),
-                  ),
-                ),
-              )
+                  )
               .onCase(1, prepareUnsupportedHandoff.to(crmHandoff)),
           ),
         ),

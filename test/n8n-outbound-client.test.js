@@ -69,6 +69,32 @@ test('uses outbound-only Basic credentials and replays the immutable bytes', asy
   assert.equal(headers['x-silmer-signature'], undefined);
 });
 
+test('permits HTTP only for an explicitly enabled loopback development endpoint', async () => {
+  const client = createN8nCommandDeliveryClient({
+    allowInsecureLocal: true,
+    clientId: 'crm-local',
+    clientSecret: 'local-secret',
+    endpoint: 'http://127.0.0.1:5678/webhook/silmer/local-panel-command',
+    fetchImpl: async () => response(202, { accepted: true }),
+  });
+  await client.deliver(command());
+
+  for (const endpoint of [
+    'http://127.0.0.1:5678/webhook/silmer/local-panel-command',
+    'http://n8n.example.test/webhook/silmer/panel-command',
+  ]) {
+    await assert.rejects(
+      async () =>
+        createN8nCommandDeliveryClient({
+          clientId: 'crm-local',
+          clientSecret: 'local-secret',
+          endpoint,
+        }),
+      /credential-free HTTPS/u,
+    );
+  }
+});
+
 test('canonical encoding is stable and detects a changed payload before fetch', async () => {
   assert.equal(
     canonicalJsonStringify({ z: 1, nested: { z: false, a: true }, a: 2 }),

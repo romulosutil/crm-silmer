@@ -126,17 +126,39 @@ Atendimento. Não há mensagem automática de confirmação no primeiro corte.
   falhas são sanitizadas e têm expurgo técnico em até 30 dias.
 
 Gere o snapshot sanitizado da variante DEV com
-`npm run generate:n8n-dev-workflow`. Para preparar um JSON importável a partir
+`npm run generate:n8n-dev-workflow` e a variante localhost com
+`npm run generate:n8n-local-workflow`. Para preparar um JSON importável a partir
 de um export autenticado do workflow principal, execute
 `node ops/n8n/workflows/create-dev-test-workflow.mjs <origem.json>
 <destino.json> --deployment`. O arquivo de implantação preserva credenciais não
 WhatsApp já vinculadas e referencia, somente por nome, as duas credenciais
 Basic DEV. Nenhum segredo deve ser salvo no repositório.
 
-O n8n precisa alcançar `SILMER_PANEL_BASE_URL`; uma API executada apenas em
-`127.0.0.1` não é acessível pelo host remoto. Para testar uma branch local, use
-um endpoint HTTPS temporário autorizado ou um ambiente DEV publicado e aponte
-o worker do CRM para `/webhook/silmer/dev-panel-command`.
+### Loop local completo
+
+`npm run dev` inicia um n8n em `127.0.0.1:5678`, com banco PostgreSQL e volume
+próprios, sem acesso ao PostgreSQL do CRM. Ele importa uma única vez o workflow
+`LOCAL | Silmer | Fluxo completo sem WhatsApp`, que expõe
+`/webhook/silmer/local-mvp-flow` e `/webhook/silmer/local-panel-command`. O
+container alcança a API local por `host.docker.internal`; o worker local alcança
+o webhook por loopback. HTTP só é aceito neste caminho quando
+`APP_ENV=development`, a opção explícita está ativa e o host é `localhost`,
+`127.0.0.1` ou `::1`; qualquer endpoint operacional continua exigindo HTTPS.
+
+Na primeira execução, crie o proprietário do n8n, vincule a credencial OpenAI
+local ao nó `OpenAI - Modelo do MVP` e ative o workflow. A autenticação n8n →
+CRM é um header Basic efêmero gerado pelo processo local; a autenticação CRM →
+n8n continua sendo enviada pelo worker, mas o webhook local não a valida porque
+está publicado apenas no loopback. Isso é uma conveniência de desenvolvimento,
+não um substituto das duas credenciais Basic distintas dos ambientes DEV ou
+operacionais. A importação não é repetida automaticamente para não apagar a
+credencial OpenAI local.
+
+O n8n remoto precisa alcançar `SILMER_PANEL_BASE_URL`; uma API executada apenas
+em `127.0.0.1` não é acessível pelo host remoto. Para testar uma branch local
+sem o loop acima, use um endpoint HTTPS temporário autorizado ou um ambiente
+DEV publicado e aponte o worker do CRM para
+`/webhook/silmer/dev-panel-command`.
 
 ## Rollout e recuperação
 

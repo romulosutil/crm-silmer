@@ -70,12 +70,12 @@ Com Docker Desktop em execução, inicie tudo com:
 npm run dev
 ```
 
-O comando sobe um PostgreSQL local persistente, espera a disponibilidade,
-aplica as migrations, faz o build inicial, observa `apps/edge-web/src` e
-reconstrói o frontend quando ele muda. Também inicia a API com o watcher nativo
-do Node, que reinicia o processo ao mudar código carregado pela API. A aplicação fica em
-`http://127.0.0.1:4173` e encaminha chamadas `/api/*` para a API local em
-`http://127.0.0.1:3000`, preservando cookies e o mesmo origin.
+O comando sobe um PostgreSQL local persistente e um n8n local com PostgreSQL
+próprio, gera e importa a variante `LOCAL | Silmer | Fluxo completo sem
+WhatsApp`, aplica as migrations e inicia API, worker e frontend com atualização
+automática. A aplicação fica em `http://127.0.0.1:4173`, encaminha chamadas
+`/api/*` para `http://127.0.0.1:3000` e o n8n fica restrito a
+`http://127.0.0.1:5678`.
 
 O banco de desenvolvimento fica em um volume Docker nomeado. Para parar apenas
 os containers, preservando os dados locais, use `npm run dev:down`. Um
@@ -84,6 +84,15 @@ porta/origem podem ser ajustados somente para a sessão atual com `API_HOST`,
 `API_PORT`, `DEV_HOST`, `DEV_PORT` e `API_ORIGIN`. Esse fluxo é exclusivamente
 local: não substitui `npm run build`, imagens por digest nem a promoção manual
 dos ambientes operacionais.
+
+Na primeira execução, abra `http://127.0.0.1:5678`, crie o proprietário local,
+abra o workflow `LOCAL | Silmer | Fluxo completo sem WhatsApp`, vincule uma
+credencial OpenAI ao nó `OpenAI - Modelo do MVP` e ative-o. O workflow simula
+somente o transporte WhatsApp; inbound, briefing, handoff, reserva, callbacks
+e comandos do painel usam a API e o worker locais. A credencial n8n → CRM é
+efêmera, injetada somente na execução de `npm run dev`; nenhuma credencial ou
+dado do EasyPanel é reutilizado. Para iniciar só o CRM sem n8n local, use
+`$env:N8N_LOCAL_ENABLED = 'false'; npm run dev` na sessão atual.
 
 No modo local, o comando gera em memória chaves de autenticação efêmeras e
 aceita HTTP exclusivamente em `localhost`, `127.0.0.1` ou `::1`. Produção e

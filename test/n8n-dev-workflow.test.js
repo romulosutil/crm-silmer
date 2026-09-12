@@ -14,7 +14,7 @@ const mainSnapshot = new URL(
 );
 
 /**
- * @param {{deployment?: boolean}} [options]
+ * @param {{deployment?: boolean, local?: boolean}} [options]
  * @returns {Promise<Record<string, any>>}
  */
 async function workflow(options) {
@@ -124,5 +124,41 @@ test('adds only named Basic credential references for deployment output', async 
   assert.equal(
     panel.credentials.httpBasicAuth.name,
     'Silmer CRM para n8n Basic DEV',
+  );
+});
+
+test('makes a localhost-only workflow self-contained without exporting credentials', async () => {
+  const local = await workflow({ local: true });
+  const nodes = /** @type {Array<Record<string, any>>} */ (local.nodes);
+  const requests = nodes.filter(
+    (node) => node.type === 'n8n-nodes-base.httpRequest',
+  );
+  const panel = nodes.find(
+    (node) => node.name === 'Painel - Receber comando (MVP)',
+  );
+  const trigger = nodes.find(
+    (node) => node.name === 'DEV - Receber evento sintético (MVP)',
+  );
+
+  assert.ok(panel);
+  assert.ok(trigger);
+  assert.equal(local.name, 'LOCAL | Silmer | Fluxo completo sem WhatsApp');
+  assert.equal(trigger.parameters.path, 'silmer/local-mvp-flow');
+  assert.equal(panel.parameters.path, 'silmer/local-panel-command');
+  assert.equal(panel.parameters.authentication, 'none');
+  assert.ok(
+    requests.every(
+      (node) =>
+        node.parameters.authentication === 'none' &&
+        /** @type {Array<Record<string, any>>} */ (
+          node.parameters.headerParameters.parameters
+        ).some(
+          (header) =>
+            header.name === 'Authorization' &&
+            header.value ===
+              '={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}',
+        ) &&
+        node.credentials === undefined,
+    ),
   );
 });

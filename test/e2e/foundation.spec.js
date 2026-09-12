@@ -69,6 +69,38 @@ test('ignores the retired system preference and defaults to light', async ({ pag
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
 
+test('shows a seller account without exposing capabilities', async ({ page }) => {
+  await page.route('**/api/v1/sessions/current', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: {
+          capabilities: [],
+          email: 'vendedora@example.test',
+          functionName: 'Vendedor',
+          id: 'seller-1',
+          name: 'Vendedora Silmer',
+        },
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Conta' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Conta e segurança' })).toBeFocused();
+  await expect(page.getByRole('definition')).toHaveText([
+    'Vendedora Silmer',
+    'vendedora@example.test',
+    'Vendedor',
+  ]);
+  await expect(page.locator('.account-facts dt')).toHaveText([
+    'Nome',
+    'E-mail',
+    'Função',
+  ]);
+});
+
 test('offers only the login form, with no invitation path', async ({
   page,
 }) => {
@@ -152,6 +184,7 @@ test('submits login, restores and closes a session by keyboard without browser s
                 capabilities: ['COMMERCIAL_ADMIN'],
                 functionName: 'Vendedor',
                 name: 'Admin Comercial',
+                email: 'admin@example.test',
                 id: 'admin-1',
               },
             })
@@ -181,6 +214,7 @@ test('submits login, restores and closes a session by keyboard without browser s
             capabilities: ['COMMERCIAL_ADMIN'],
             functionName: 'Vendedor',
             name: 'Admin Comercial',
+            email: 'admin@example.test',
             id: 'admin-1',
           },
         }),
@@ -239,6 +273,22 @@ test('submits login, restores and closes a session by keyboard without browser s
   await expect(page.getByRole('status')).toHaveText(
     'Sessão iniciada com segurança.',
   );
+
+  await page.getByRole('link', { name: 'Conta' }).click();
+  await expect(page.getByRole('heading', { name: 'Conta e segurança' })).toBeFocused();
+  await expect(page.getByRole('definition')).toHaveText([
+    'Admin Comercial',
+    'admin@example.test',
+    'Administrador',
+  ]);
+  await expect(page.locator('.account-facts dt')).toHaveText([
+    'Nome',
+    'E-mail',
+    'Função',
+  ]);
+
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
 
   await page.getByRole('button', { name: 'Claro' }).focus();
   await page.keyboard.press('Tab');

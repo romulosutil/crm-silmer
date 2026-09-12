@@ -10,9 +10,8 @@ const capabilities = computed(() => {
   const values = props.session.capabilities ?? user.value.capabilities;
   return Array.isArray(values) ? values : [];
 });
-const functionName = computed(
-  () =>
-    props.session.functionName ?? user.value.functionName ?? 'não informada',
+const functionName = computed(() =>
+  capabilities.value.includes('COMMERCIAL_ADMIN') ? 'Administrador' : 'Vendedor',
 );
 
 onMounted(() => heading.value?.focus());
@@ -32,18 +31,16 @@ onMounted(() => heading.value?.focus());
       <h2>Sessão ativa</h2>
       <dl class="account-facts">
         <div>
-          <dt>Função</dt>
-          <dd>{{ functionName }}</dd>
+          <dt>Nome</dt>
+          <dd>{{ user.name ?? 'não informado' }}</dd>
         </div>
         <div>
-          <dt>Capacidades</dt>
-          <dd>
-            {{
-              capabilities.length
-                ? capabilities.join(', ')
-                : 'Sem capacidades administrativas.'
-            }}
-          </dd>
+          <dt>E-mail</dt>
+          <dd>{{ user.email ?? 'não informado' }}</dd>
+        </div>
+        <div>
+          <dt>Função</dt>
+          <dd>{{ functionName }}</dd>
         </div>
       </dl>
     </section>

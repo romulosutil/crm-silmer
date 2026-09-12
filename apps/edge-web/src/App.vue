@@ -24,6 +24,7 @@ const errorMessage = ref('');
 const errorSummary = ref(null);
 const runtimeStatus = ref('Verificando sua sessão…');
 const connection = ref('conectando');
+const lastUpdatedAt = ref(0);
 const mobileOpen = ref(false);
 const logoutBusy = ref(false);
 let lastAnnouncement = '';
@@ -44,11 +45,16 @@ const canAccessCurrentRoute = computed(
   () => route.meta.requiresAdmin !== true || isAdmin.value,
 );
 const connectionLabel = computed(() => {
-  if (connection.value === 'conectado') return 'Ao vivo';
-  if (connection.value === 'reconectando') return 'Reconectando…';
-  if (connection.value === 'indisponível') return 'Sem tempo real';
-  return 'Conectando…';
+  if (connection.value === 'conectado') return 'Atualizado agora';
+  if (connection.value === 'reconectando') return 'Sincronizando atualizações…';
+  if (connection.value === 'indisponível') return 'Atualização automática pausada';
+  return 'Preparando atualização…';
 });
+const connectionDetail = computed(() =>
+  connection.value === 'conectado'
+    ? 'Atualização automática ativa'
+    : 'Tentando manter os dados atualizados',
+);
 
 // One live connection per session: the topic follows the route, because the
 // server caps concurrent SSE streams and a second connection per user would
@@ -59,6 +65,8 @@ const stream = new LiveEventStream({
   onChange(event) {
     activeView.value?.refreshFromEvent(event);
     liveEvent.value = { ...event, receivedAt: Date.now() };
+    lastUpdatedAt.value = Date.now();
+    announce('Conteúdo atualizado automaticamente.');
   },
   onReset() {
     activeView.value?.reset();
@@ -67,6 +75,9 @@ const stream = new LiveEventStream({
   },
   onState(value) {
     connection.value = value;
+    if (value === 'conectado' && lastUpdatedAt.value === 0) {
+      lastUpdatedAt.value = Date.now();
+    }
   },
 });
 
@@ -325,8 +336,14 @@ function onCursor(cursor) {
         </button>
         <strong class="topbar-title">{{ pageTitle }}</strong>
         <p>{{ sessionSummary }}</p>
-        <span class="connection-state" :data-state="connection">
-          {{ connectionLabel }}
+        <span
+          class="connection-state"
+          :data-state="connection"
+          :data-updated-at="lastUpdatedAt"
+          :title="connectionDetail"
+        >
+          <span>{{ connectionLabel }}</span>
+          <small>{{ connectionDetail }}</small>
         </span>
         <ThemeSwitcher />
       </header>

@@ -15,10 +15,10 @@
     "binaryMode": "separate",
     "availableInMCP": false,
     "timezone": "America/Sao_Paulo",
-    "saveExecutionProgress": false,
+    "saveExecutionProgress": true,
     "saveManualExecutions": false,
-    "saveDataErrorExecution": "none",
-    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
     "executionTimeout": 120
   },
   "nodes": [
@@ -96,7 +96,7 @@
       "position": [-1470, -520],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const n = $json;\nreturn { json: {\n  payload: {\n    schema_version: '1.0',\n    event_id: n.event_id,\n    occurred_at: n.occurred_at,\n    channel: 'whatsapp',\n    contact: { wa_id: n.from, name: n.customer_name },\n    message: {\n      external_id: n.event_id,\n      type: n.message_type,\n      text: n.text,\n      reply_to: n.reply_to,\n      attachment: n.media_id ? { external_id: n.media_id, mime_type: n.media_mime_type || null, filename: n.media_filename || null } : null\n    },\n    metadata: { phone_number_id: n.phone_number_id }\n  },\n  idempotency_key: n.event_id,\n  correlation_id: 'wa:' + n.event_id\n} };"
+        "jsCode": "const n = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: {\n  payload: {\n    schema_version: '1.0',\n    event_id: n.event_id,\n    occurred_at: n.occurred_at,\n    channel: 'whatsapp',\n    contact: { wa_id: n.from, name: n.customer_name },\n    message: {\n      external_id: n.event_id,\n      type: n.message_type,\n      text: n.text,\n      reply_to: n.reply_to,\n      attachment: n.media_id ? { external_id: n.media_id, mime_type: n.media_mime_type || null, filename: n.media_filename || null } : null\n    },\n    metadata: { phone_number_id: n.phone_number_id }\n  },\n  idempotency_key: n.event_id,\n  correlation_id: correlationId\n} };"
       }
     },
     {
@@ -167,9 +167,9 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.mode === 'ai_active' && ['text', 'button', 'interactive'].includes($('Normalizar evento WhatsApp (MVP)').item.json.message_type) }}",
-                    "operator": { "type": "boolean", "operation": "true" },
-                    "rightValue": ""
+                    "leftValue": "={{ $json.mode === 'ai_active' && ['text', 'button', 'interactive'].includes($('Normalizar evento WhatsApp (MVP)').item.json.message_type) ? 'ai_reply' : 'no_action' }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "ai_reply"
                   }
                 ],
                 "combinator": "and"
@@ -187,9 +187,9 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.mode === 'ai_active' }}",
-                    "operator": { "type": "boolean", "operation": "true" },
-                    "rightValue": ""
+                    "leftValue": "={{ $json.mode === 'ai_active' ? 'media_handoff' : 'no_action' }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "media_handoff"
                   }
                 ],
                 "combinator": "and"
@@ -212,7 +212,7 @@
       "position": [-750, -700],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const inbound = $json;\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nreturn { json: {\n  conversation_id: inbound.conversation_id,\n  automation_epoch: inbound.automation_epoch,\n  source_revision: inbound.source_revision,\n  wa_id: source.from,\n  phone_number_id: source.phone_number_id,\n  briefing: inbound.briefing ?? {},\n  prompt: [\n    'Mensagem atual: ' + source.text,\n    'Nome informado no perfil: ' + (source.customer_name || 'não informado'),\n    'Histórico oficial: ' + JSON.stringify(inbound.recent_messages ?? []),\n    'Briefing atual: ' + JSON.stringify(inbound.briefing ?? {})\n  ].join('\n')\n} };"
+        "jsCode": "const inbound = $json;\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nreturn { json: {\n  conversation_id: inbound.conversation_id,\n  automation_epoch: inbound.automation_epoch,\n  source_revision: inbound.source_revision,\n  wa_id: source.from,\n  phone_number_id: source.phone_number_id,\n  briefing: inbound.briefing ?? {},\n  prompt: [\n    'Mensagem atual: ' + source.text,\n    'Nome informado no perfil: ' + (source.customer_name || 'não informado'),\n    'Histórico oficial: ' + JSON.stringify(inbound.recent_messages ?? []),\n    'Briefing atual: ' + JSON.stringify(inbound.briefing ?? {})\n  ].join('\\n')\n} };"
       }
     },
     {
@@ -287,9 +287,9 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.handoff_required === true }}",
-              "operator": { "type": "boolean", "operation": "true" },
-              "rightValue": ""
+              "leftValue": "={{ ($json.handoff_required === true) ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
             }
           ],
           "combinator": "and"
@@ -304,7 +304,7 @@
       "position": [220, -850],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const d = $json;\nconst command = d.conversation_id + ':' + d.source_revision + ':handoff';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: d.conversation_id,\n    automation_epoch: d.automation_epoch, source_revision: d.source_revision,\n    briefing_patch: d.briefing_patch,\n    handoff: { reason: d.handoff_reason, summary: d.reasoning }\n  }, idempotency_key: command, correlation_id: 'handoff:' + command\n} };"
+        "jsCode": "const d = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst command = d.conversation_id + ':' + d.source_revision + ':handoff';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: d.conversation_id,\n    automation_epoch: d.automation_epoch, source_revision: d.source_revision,\n    briefing_patch: d.briefing_patch,\n    handoff: { reason: d.handoff_reason, summary: d.reasoning }\n  }, idempotency_key: command, correlation_id: correlationId\n} };"
       }
     },
     {
@@ -314,7 +314,7 @@
       "position": [-750, -450],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const inbound = $json;\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nconst command = inbound.conversation_id + ':' + inbound.source_revision + ':unsupported';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: inbound.conversation_id,\n    automation_epoch: inbound.automation_epoch, source_revision: inbound.source_revision,\n    handoff: { reason: 'unsupported', summary: 'Conteúdo ' + source.message_type + ' requer atendimento humano no MVP.' }\n  }, idempotency_key: command, correlation_id: 'handoff:' + command\n} };"
+        "jsCode": "const inbound = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\nconst command = inbound.conversation_id + ':' + inbound.source_revision + ':unsupported';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: command, event_type: 'handoff.requested',\n    occurred_at: new Date().toISOString(), conversation_id: inbound.conversation_id,\n    automation_epoch: inbound.automation_epoch, source_revision: inbound.source_revision,\n    handoff: { reason: 'unsupported', summary: 'Conteúdo ' + source.message_type + ' requer atendimento humano no MVP.' }\n  }, idempotency_key: command, correlation_id: correlationId\n} };"
       }
     },
     {
@@ -373,7 +373,7 @@
       "position": [220, -620],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const d = $json;\nconst command = d.conversation_id + ':' + d.source_revision + ':ai-response';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: d.conversation_id, automation_epoch: d.automation_epoch,\n    source_revision: d.source_revision, command_id: command,\n    message: { type: 'text', text: d.reply_text }, briefing_patch: d.briefing_patch\n  }, idempotency_key: 'reserve:' + command, correlation_id: 'send:' + command,\n  command_id: command, reply_text: d.reply_text\n} };"
+        "jsCode": "const d = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst command = d.conversation_id + ':' + d.source_revision + ':ai-response';\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: d.conversation_id, automation_epoch: d.automation_epoch,\n    source_revision: d.source_revision, command_id: command,\n    message: { type: 'text', text: d.reply_text }, briefing_patch: d.briefing_patch\n  }, idempotency_key: 'reserve:' + command, correlation_id: correlationId,\n  command_id: command, reply_text: d.reply_text\n} };"
       }
     },
     {
@@ -440,9 +440,9 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.send_authorized === true }}",
-              "operator": { "type": "boolean", "operation": "true" },
-              "rightValue": ""
+              "leftValue": "={{ ($json.send_authorized === true) ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
             }
           ],
           "combinator": "and"
@@ -468,7 +468,7 @@
       "position": [1190, -690],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command, event_type: 'message.sent',\n  occurred_at: new Date().toISOString(), command_id: command,\n  conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command, correlation_id: 'send:' + command } };"
+        "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command, event_type: 'message.sent',\n  occurred_at: new Date().toISOString(), command_id: command,\n  conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command, correlation_id: correlationId } };"
       }
     },
     {
@@ -527,7 +527,7 @@
       "position": [1190, -500],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  command_id: command, conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command, correlation_id: 'send:' + command } };"
+        "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  command_id: command, conversation_id: $('Montar contexto da IA (MVP)').item.json.conversation_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command, correlation_id: correlationId } };"
       }
     },
     {
@@ -586,7 +586,7 @@
       "position": [-1470, -120],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const n = $json;\nconst allowed = ['sent', 'delivered', 'read', 'failed'];\nif (!allowed.includes(n.status)) return [];\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: n.event_id,\n  event_type: 'message.' + n.status, occurred_at: n.occurred_at,\n  conversation_id: null, external_message_id: n.external_message_id\n}, idempotency_key: n.event_id, correlation_id: 'status:' + n.event_id } };"
+        "jsCode": "const n = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\nconst allowed = ['sent', 'delivered', 'read', 'failed'];\nif (!allowed.includes(n.status)) return [];\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: n.event_id,\n  event_type: 'message.' + n.status, occurred_at: n.occurred_at,\n  conversation_id: null, external_message_id: n.external_message_id\n}, idempotency_key: n.event_id, correlation_id: correlationId } };"
       }
     },
     {
@@ -649,7 +649,9 @@
         "authentication": "none",
         "responseMode": "responseNode",
         "options": { "ignoreBots": true, "rawBody": false }
-      }
+      },
+      "id": "343ddc1c-73f5-4b8f-8ea2-cf4f8d6ca9bd",
+      "webhookId": "34edee34-4a73-494f-b7ca-69a9e48bd1b9"
     },
     {
       "name": "Normalizar comando do painel (MVP)",
@@ -725,7 +727,7 @@
       "position": [-1220, 250],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $json.payload;\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command.command_id,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: command.conversation_id,\n    automation_epoch: command.automation_epoch,\n    source_revision: command.source_revision,\n    command_id: command.command_id, message: command.message\n  }, idempotency_key: 'reserve:' + command.command_id,\n  correlation_id: 'panel:' + command.command_id,\n  command\n} };"
+        "jsCode": "const command = $json.payload;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: {\n  payload: {\n    schema_version: '1.0', event_id: 'reserve:' + command.command_id,\n    event_type: 'message.send.requested', occurred_at: new Date().toISOString(),\n    conversation_id: command.conversation_id,\n    automation_epoch: command.automation_epoch,\n    source_revision: command.source_revision,\n    command_id: command.command_id, message: command.message\n  }, idempotency_key: 'reserve:' + command.command_id,\n  correlation_id: correlationId,\n  command\n} };"
       }
     },
     {
@@ -792,9 +794,9 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.send_authorized === true }}",
-              "operator": { "type": "boolean", "operation": "true" },
-              "rightValue": ""
+              "leftValue": "={{ ($json.send_authorized === true) ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
             }
           ],
           "combinator": "and"
@@ -820,7 +822,7 @@
       "position": [-260, 120],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command.command_id,\n  event_type: 'message.sent', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command.command_id,\ncorrelation_id: 'panel:' + command.command_id, command_id: command.command_id } };"
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + command.command_id,\n  event_type: 'message.sent', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + command.command_id,\ncorrelation_id: correlationId, command_id: command.command_id } };"
       }
     },
     {
@@ -912,7 +914,7 @@
       "position": [-260, 330],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command.command_id,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command.command_id,\ncorrelation_id: 'panel:' + command.command_id } };"
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + command.command_id,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  conversation_id: command.conversation_id, command_id: command.command_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + command.command_id,\ncorrelation_id: correlationId } };"
       }
     },
     {
@@ -978,7 +980,7 @@
       "position": [940, 360],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const executionId = String($json.execution?.id ?? $execution.id);\nconst eventId = 'workflow-failed:' + executionId;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed',\n  occurred_at: new Date().toISOString(), conversation_id: null,\n  failure: { code: 'WORKFLOW_FAILED', node: String($json.execution?.lastNodeExecuted ?? 'unknown').slice(0, 128) }\n}, idempotency_key: eventId, correlation_id: 'failure:' + executionId } };"
+        "jsCode": "const executionId = String($json.execution?.id ?? $execution.id);\nconst correlationId = String($execution.id).padStart(16, '0');\nconst eventId = 'workflow-failed:' + executionId;\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed',\n  occurred_at: new Date().toISOString(), conversation_id: null,\n  failure: { code: 'WORKFLOW_FAILED', node: String($json.execution?.lastNodeExecuted ?? 'unknown').slice(0, 128) }\n}, idempotency_key: eventId, correlation_id: correlationId } };"
       }
     },
     {
@@ -1038,9 +1040,11 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "silmer/local-mvp-flow",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
-      }
+      },
+      "id": "7cbe7a1f-4442-4d4c-9dbd-8c1de2a2d6a1",
+      "webhookId": "2d846e1d-f2f4-4862-9c24-0c1b93afda0d"
     },
     {
       "id": "f321065d-4c9e-41d1-a0fe-65a94ed99351",

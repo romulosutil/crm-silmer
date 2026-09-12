@@ -5,7 +5,8 @@ import { format } from 'prettier';
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
 export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-3';
-export const LOCAL_WORKFLOW_NAME = 'LOCAL | Silmer | Fluxo completo sem WhatsApp';
+export const LOCAL_WORKFLOW_NAME =
+  'LOCAL | Silmer | Fluxo completo sem WhatsApp';
 
 const MAIN_WORKFLOW_ID = 'k7tI6T4RhQPyJkn9';
 const MAIN_TRIGGER = 'WhatsApp - Receber eventos (MVP)';
@@ -29,7 +30,9 @@ const N8N_TO_CRM_CREDENTIAL = 'Silmer n8n para CRM Basic DEV';
  */
 export function createDevTestWorkflow(source, options = {}) {
   if (options.deployment && options.local) {
-    throw new Error('A workflow cannot target deployment and local n8n together');
+    throw new Error(
+      'A workflow cannot target deployment and local n8n together',
+    );
   }
   const workflow = structuredClone(source);
   const local = options.local === true;
@@ -56,9 +59,9 @@ export function createDevTestWorkflow(source, options = {}) {
   workflow.settings = {
     ...(workflow.settings ?? {}),
     availableInMCP: false,
-    saveDataErrorExecution: 'none',
-    saveDataSuccessExecution: 'none',
-    saveExecutionProgress: false,
+    saveDataErrorExecution: local ? 'all' : 'none',
+    saveDataSuccessExecution: local ? 'all' : 'none',
+    saveExecutionProgress: local,
     saveManualExecutions: false,
   };
 
@@ -67,14 +70,20 @@ export function createDevTestWorkflow(source, options = {}) {
   trigger.name = DEV_TRIGGER;
   trigger.type = 'n8n-nodes-base.webhook';
   trigger.typeVersion = 2;
+  if (local) {
+    trigger.id = '7cbe7a1f-4442-4d4c-9dbd-8c1de2a2d6a1';
+    trigger.webhookId = '2d846e1d-f2f4-4862-9c24-0c1b93afda0d';
+  } else {
+    delete trigger.id;
+    delete trigger.webhookId;
+  }
   trigger.parameters = {
     httpMethod: 'POST',
     path: local ? 'silmer/local-mvp-flow' : 'silmer/dev-mvp-flow',
-    responseMode: 'lastNode',
+    responseMode: local ? 'onReceived' : 'lastNode',
     options: {},
   };
   delete trigger.credentials;
-  delete trigger.webhookId;
 
   const buildSyntheticEvent = {
     id: 'f321065d-4c9e-41d1-a0fe-65a94ed99351',
@@ -150,6 +159,13 @@ return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-hu
   }
 
   const panelTrigger = requiredNode(nodes, PANEL_TRIGGER);
+  if (local) {
+    panelTrigger.id = '343ddc1c-73f5-4b8f-8ea2-cf4f8d6ca9bd';
+    panelTrigger.webhookId = '34edee34-4a73-494f-b7ca-69a9e48bd1b9';
+  } else {
+    delete panelTrigger.id;
+    delete panelTrigger.webhookId;
+  }
   panelTrigger.parameters.path = local
     ? 'silmer/local-panel-command'
     : 'silmer/dev-panel-command';
@@ -398,7 +414,7 @@ async function runCli() {
         ? './0S5ZS1xeDCSoWovs-local-test.sanitized.json'
         : './0S5ZS1xeDCSoWovs-dev-test.sanitized.json',
       import.meta.url,
-  );
+    );
   const source = JSON.parse(await readFile(sourcePath, 'utf8'));
   const workflow = createDevTestWorkflow(source, { deployment, local });
   await writeFile(

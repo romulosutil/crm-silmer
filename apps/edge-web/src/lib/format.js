@@ -20,7 +20,9 @@ export function conversationLabel(conversation) {
       : 'Em atendimento por IA';
   }
   return (
-    CONVERSATION_LABELS[/** @type {keyof typeof CONVERSATION_LABELS} */ (conversation?.state)] ??
+    CONVERSATION_LABELS[
+      /** @type {keyof typeof CONVERSATION_LABELS} */ (conversation?.state)
+    ] ??
     conversation?.state ??
     'Não informado'
   );
@@ -30,6 +32,19 @@ export const CHANNEL_LABELS = Object.freeze({
   instagram: 'Instagram',
   whatsapp: 'WhatsApp',
 });
+
+/** @param {unknown} value */
+export function formatPhoneNumber(value) {
+  const digits = String(value ?? '').replace(/\D/gu, '');
+  const national = digits.startsWith('55') ? digits.slice(2) : digits;
+  if (national.length === 11) {
+    return `+55 (${national.slice(0, 2)}) ${national.slice(2, 7)}-${national.slice(7)}`;
+  }
+  if (national.length === 10) {
+    return `+55 (${national.slice(0, 2)}) ${national.slice(2, 6)}-${national.slice(6)}`;
+  }
+  return String(value ?? 'Não informado');
+}
 
 /** @param {unknown} value */
 export function dateTimeBR(value) {

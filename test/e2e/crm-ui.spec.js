@@ -119,12 +119,12 @@ async function mockCrm(page, options = {}) {
         },
       ]
     : options.longThread
-    ? Array.from({ length: 30 }, (_, index) => ({
-        ...conversation.lastMessage,
-        id: `message-${index + 1}`,
-        preview: `Mensagem de teste ${index + 1}: detalhes do atendimento.`,
-      }))
-    : [conversation.lastMessage];
+      ? Array.from({ length: 30 }, (_, index) => ({
+          ...conversation.lastMessage,
+          id: `message-${index + 1}`,
+          preview: `Mensagem de teste ${index + 1}: detalhes do atendimento.`,
+        }))
+      : [conversation.lastMessage];
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -583,15 +583,15 @@ test('identifies customer, assistant, and seller messages in the conversation', 
   await mockCrm(page, { mixedAuthors: true });
   await page.goto('/inbox');
 
-  await expect(page.locator(".message[data-from='cliente'] .msg-role")).toHaveText(
-    'Cliente',
-  );
-  await expect(page.locator(".message[data-from='agente'] .msg-role")).toHaveText(
-    'IA',
-  );
-  await expect(page.locator(".message[data-from='humano'] .msg-role")).toHaveText(
-    'Vendedor',
-  );
+  await expect(
+    page.locator(".message[data-from='cliente'] .msg-role"),
+  ).toHaveText('Cliente');
+  await expect(
+    page.locator(".message[data-from='agente'] .msg-role"),
+  ).toHaveText('IA');
+  await expect(
+    page.locator(".message[data-from='humano'] .msg-role"),
+  ).toHaveText('Vendedor');
   await expect(page.getByText('Entrega: sent')).toHaveCount(0);
 });
 
@@ -641,12 +641,14 @@ test('simplifies the client summary without operational status or count', async 
 
   await expect(page.getByRole('button', { name: 'Editar nome' })).toBeVisible();
   await expect(page.getByText('Cadastro provisório')).toHaveCount(0);
-  await expect(page.locator('.client-facts').getByText('Conversas')).toHaveCount(
-    0,
-  );
+  await expect(
+    page.locator('.client-facts').getByText('Conversas'),
+  ).toHaveCount(0);
 });
 
-test('formats the contact phone without an editable input', async ({ page }) => {
+test('formats the contact phone without an editable input', async ({
+  page,
+}) => {
   await mockCrm(page);
 
   await page.goto('/clientes');
@@ -664,6 +666,18 @@ test('formats the contact phone without an editable input', async ({ page }) => 
       .locator('.contact-channels')
       .getByText(contact.identities[0].externalId, { exact: true }),
   ).toHaveCount(0);
+});
+
+test('formats the phone in the active conversation identity', async ({
+  page,
+}) => {
+  await mockCrm(page, { assistant: true });
+
+  await page.goto('/inbox');
+
+  await expect(page.locator('.conv-identity')).toContainText(
+    '+55 (11) 99999-9999 · Em atendimento por IA',
+  );
 });
 
 test('sends an authorized human reply through the official command', async ({

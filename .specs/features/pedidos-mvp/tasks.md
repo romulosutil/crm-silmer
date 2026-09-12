@@ -94,19 +94,19 @@ H:  T23, T34, T38 ──→ T39
 
 ## Grupo A — Contratos e decisão
 
-### T01: Registrar ADR 005 — Pedido com dois status
+### T01: Registrar ADR 006 — Pedido com dois status
 
 - **What:** Criar a ADR que introduz o Pedido (Pendente/Confirmado), a criação pelo agente como rascunho não oficial e a confirmação humana; marcar a ADR 004 como parcialmente supersedida.
-- **Where:** `docs/adr/005-pedido-dois-status.md` (novo), `docs/adr/004-aposentar-kanban-e-negocio.md` (linha de status)
+- **Where:** `docs/adr/006-pedido-dois-status.md` (novo), `docs/adr/004-aposentar-kanban-e-negocio.md` (linha de status)
 - **Depends on:** —
 - **Reuses:** formato de `docs/adr/004-aposentar-kanban-e-negocio.md`
 - **Requirement:** PCL-01, PCL-08, PAG-01, PAG-02, PAG-03
 
 **Done when:**
 
-- [ ] ADR 005 registra D01–D09 e D24 de `context.md`
-- [ ] ADR 004 aponta para a 005 sem alterar a decisão original
-- [ ] Gate docs passa
+- [x] ADR 006 registra D01–D09 e D24 de `context.md`
+- [x] ADR 004 aponta para a 006 sem alterar a decisão original
+- [x] Gate docs passa
 
 **Tests:** none · **Gate:** docs · **Commit:** `docs(adr): introduce orders with two human-confirmed statuses`
 

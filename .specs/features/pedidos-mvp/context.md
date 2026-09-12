@@ -26,7 +26,7 @@ Pedidos substitui o que seria o Kanban.
   compra. Isso muda a regra atual do contrato n8n ("nenhuma informação inferida
   vira Pedido oficial"). Reconciliação: **Pendente é rascunho não oficial;
   oficial é Confirmado**, e confirmar continua sendo humano. Registrar em ADR
-  005, que supersede o trecho "Pedido será uma decisão posterior" da ADR 004.
+  006, que supersede o trecho "Pedido será uma decisão posterior" da ADR 004.
 - **D03** O vendedor (dono) ou um admin também pode **criar manualmente** quando
   o agente não detectou a intenção. Sem isso a conversa ficaria sem saída.
 - **D04** **Vários pedidos por conversa, um pendente por vez.** Nova intenção

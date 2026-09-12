@@ -346,7 +346,7 @@ a partir de `Order` (`vendedor` = quem confirmou; `data` = `orderDate`;
   `/deals/*` e `/conversations/{id}/convert`, que não existem. Esta feature só
   adiciona os caminhos de pedido; a limpeza fica adiada.
 - **README do n8n afirma endpoints que sumiram** ("usa os endpoints canônicos de
-  conversão, campos e transição"). A ADR 005 e a atualização do README corrigem
+  conversão, campos e transição"). A ADR 006 e a atualização do README corrigem
   isso.
 - **Módulo `deals-pipeline` órfão** e a ação `kanban.read` ainda existem.
   Não tocar; limpeza adiada.

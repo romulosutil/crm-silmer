@@ -1,6 +1,8 @@
 # ADR 004 — Aposentar Kanban e Negócio
 
-Status: aceito
+Status: aceito; parcialmente supersedido pela
+[ADR 006](006-pedido-dois-status.md) no trecho "Pedido será uma decisão
+posterior".
 
 ## Decisão
 

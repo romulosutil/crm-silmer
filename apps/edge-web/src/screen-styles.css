@@ -128,18 +128,16 @@
 }
 
 .inbox-state-menu summary {
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 0.45rem;
+  display: inline-flex;
+  gap: 0.35rem;
   align-items: center;
   min-block-size: 44px;
-  padding: 0.55rem 0.75rem;
+  padding: 0.55rem 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   list-style: none;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: transparent;
+  border: 0;
   cursor: pointer;
 }
 
@@ -151,12 +149,21 @@
   color: var(--color-text);
 }
 
+.inbox-state-menu summary::after {
+  content: '⌄';
+  margin-inline-start: 0.15rem;
+  color: var(--color-link);
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
 .inbox-state-menu[open] summary {
-  border-color: var(--color-link);
+  color: var(--color-link);
 }
 
 .inbox-state-options {
   position: absolute;
+  inset-inline-end: 0;
   z-index: 2;
   display: grid;
   grid-template-columns: repeat(2, minmax(9rem, 1fr));

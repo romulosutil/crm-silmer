@@ -216,7 +216,8 @@ export function createOperationReadRuntime(database, options = {}) {
         const occurredAt = new Date().toISOString();
         const updated = await transaction.query(
           `UPDATE crm.contacts
-           SET display_name = $2, version = version + 1, updated_at = $3
+           SET display_name = $2, display_name_source = 'manual',
+               version = version + 1, updated_at = $3
            WHERE id = $1 RETURNING id, display_name, version`,
           [contactId, displayName, occurredAt],
         );

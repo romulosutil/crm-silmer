@@ -342,19 +342,15 @@ onBeforeUnmount(() => {
                 }}</strong>
                 <span>{{ identity.displayHandle ?? identity.externalId }}</span>
               </template>
-              <label
+              <dl
                 v-if="identity.kind === 'phone'"
                 class="contact-phone"
-                :for="`contact-phone-${identity.id}`"
               >
-                <span>Telefone</span>
-                <input
-                  :id="`contact-phone-${identity.id}`"
-                  type="tel"
-                  readonly
-                  :value="formatPhoneNumber(identity.externalId)"
-                />
-              </label>
+                <div>
+                  <dt>Telefone</dt>
+                  <dd>{{ formatPhoneNumber(identity.externalId) }}</dd>
+                </div>
+              </dl>
             </li>
           </ul>
 
@@ -409,16 +405,18 @@ onBeforeUnmount(() => {
 .contact-phone {
   display: grid;
   gap: 0.25rem;
-  margin-block-start: 0.35rem;
+  margin: 0.35rem 0 0;
 }
 
-.contact-phone > span {
+.contact-phone dt {
   color: var(--color-text-muted);
   font-size: var(--text-xs);
 }
 
-.contact-phone input {
-  max-inline-size: 18rem;
+.contact-phone dd {
+  margin: 0.1rem 0 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
 .contact-channels li {

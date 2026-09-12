@@ -1,7 +1,7 @@
 # Ambiente cloud-dev no EasyPanel
 
 > Rastreabilidade: `OPS-1`; ORC-01–09, INB-01–04, AGT-01–08, MSG-01–03 e
-> PRV-01–03. Decisão: [ADR 004](../../docs/adr/004-adotar-auto-deploy-da-branch-dev-no-easypanel.md).
+> PRV-01–03. Decisão: [ADR 005](../../docs/adr/005-integrar-cloud-dev-ao-schedule-n8n-existente.md).
 
 O projeto `espectro-mvp` é o ambiente remoto de **desenvolvimento** do CRM
 Silmer. Ele não é produção. O objetivo é testar a integração real CRM ↔ n8n
@@ -35,27 +35,30 @@ EasyPanel, configure os serviços abaixo para a mesma fonte GitHub, branch
 | `silmer-api`      | `docker/runtime.Dockerfile`, `node apps/api/src/server.js`    | privada, porta 3000           |
 | `silmer-worker`   | `docker/runtime.Dockerfile`, `node apps/worker/src/worker.js` | privada                       |
 | `silmer-postgres` | PostgreSQL existente do ambiente DEV                          | privada                       |
-| `silmer-n8n`      | imagem n8n fixada por versão e digest no painel               | privada                       |
-| `silmer-n8n-db`   | PostgreSQL exclusivo do n8n                                   | privada                       |
+| `schedule-n8n`    | serviço n8n DEV já existente, fora deste projeto              | domínio HTTPS próprio          |
 
-O edge encaminha exclusivamente `/webhook/silmer/dev-mvp-flow` ao n8n. Editor,
-API administrativa e demais webhooks do n8n não têm rota pública. O n8n usa
-`SILMER_PANEL_BASE_URL=http://silmer-api:3000`; o DNS é privado do projeto. O
-n8n jamais recebe `DATABASE_URL` ou acesso de rede ao PostgreSQL do CRM.
+O `schedule-n8n` não pertence à rede privada de `espectro-mvp`; portanto, não
+há proxy de webhook no edge e não existe o serviço `silmer-n8n`. Ele alcança o
+CRM pelo domínio HTTPS público do edge. Configure no serviço n8n
+`SILMER_PANEL_BASE_URL=https://<dominio-cloud-dev>`; não use
+`http://silmer-api:3000`. O n8n jamais recebe `DATABASE_URL` ou acesso ao
+PostgreSQL do CRM.
 
 Crie no painel, sem versionar valores, as duas credenciais Basic DEV distintas
-(`n8n → CRM` e `CRM → n8n`), os segredos do CRM e a configuração de banco do
-n8n. Importe `ops/n8n/workflows/0S5ZS1xeDCSoWovs-dev-test.sanitized.json` e
-vincule as credenciais pelos nomes já previstos no workflow.
+(`n8n → CRM` e `CRM → n8n`). No worker do CRM, configure
+`N8N_COMMAND_URL=https://<dominio-schedule-n8n>/webhook/silmer/dev-panel-command`.
+No `schedule-n8n`, vincule a credencial `n8n → CRM` aos nós HTTP do workflow.
+Importe `ops/n8n/workflows/0S5ZS1xeDCSoWovs-dev-test.sanitized.json` e vincule
+as credenciais pelos nomes já previstos no workflow.
 
 ## Smoke mínimo
 
 Após o primeiro deploy, aplique migrações com `N8N_INTEGRATION_ENABLED=false`,
 suba API e worker, importe o workflow DEV e só então habilite a integração.
-Dispare o cenário sintético:
+Dispare o cenário sintético diretamente no `schedule-n8n`:
 
 ```text
-POST https://<cloud-dev>/webhook/silmer/dev-mvp-flow
+POST https://<dominio-schedule-n8n>/webhook/silmer/dev-mvp-flow
 {"scenario":"message","wa_id":"5511999999999"}
 ```
 

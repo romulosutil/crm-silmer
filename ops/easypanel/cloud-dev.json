@@ -35,28 +35,22 @@
       "public": false
     },
     {
-      "name": "silmer-n8n",
-      "kind": "app",
-      "imageReference": "operator-supplied-approved-version-and-digest",
-      "public": false,
-      "port": 5678,
-      "environment": {
-        "SILMER_PANEL_BASE_URL": "http://silmer-api:3000"
-      },
-      "publicPaths": ["/webhook/silmer/dev-mvp-flow"]
-    },
-    {
-      "name": "silmer-n8n-db",
-      "kind": "postgresql",
-      "public": false
+      "name": "schedule-n8n",
+      "kind": "external-n8n",
+      "managedBy": "existing-easypanel-service",
+      "access": "public-https-only",
+      "configuration": {
+        "panelBaseUrl": "operator-supplied-cloud-dev-edge-url",
+        "commandWebhookUrl": "operator-supplied-schedule-n8n-command-webhook-url"
+      }
     }
   ],
   "security": {
-    "n8nEditorPublic": false,
     "crmApiPublic": false,
     "crmDatabasePublic": false,
-    "n8nDatabasePublic": false,
+    "scheduleN8nManagedOutsideProject": true,
     "n8nCrmDatabaseAccess": false,
+    "n8nUsesCrmPublicApi": true,
     "secretsCommitted": false
   }
 }

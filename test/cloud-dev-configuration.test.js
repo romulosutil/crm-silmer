@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const root = new URL('../', import.meta.url);
 
-test('cloud-dev deploy is commit-based and keeps the CRM and n8n private', async () => {
+test('cloud-dev deploy is commit-based and connects the existing schedule-n8n by HTTPS', async () => {
   const manifest = JSON.parse(
     await readFile(new URL('ops/easypanel/cloud-dev.json', root), 'utf8'),
   );
@@ -15,29 +15,28 @@ test('cloud-dev deploy is commit-based and keeps the CRM and n8n private', async
   assert.equal(manifest.source.deploymentRule, 'push-to-dev');
   assert.equal(manifest.security.crmApiPublic, false);
   assert.equal(manifest.security.crmDatabasePublic, false);
-  assert.equal(manifest.security.n8nEditorPublic, false);
   assert.equal(manifest.security.n8nCrmDatabaseAccess, false);
+  assert.equal(manifest.security.n8nUsesCrmPublicApi, true);
 
   const n8n = manifest.services.find(
     /** @param {{ name: string }} service */ (service) =>
-      service.name === 'silmer-n8n',
+      service.name === 'schedule-n8n',
   );
-  assert.equal(n8n.public, false);
+  assert.equal(n8n.kind, 'external-n8n');
+  assert.equal(n8n.managedBy, 'existing-easypanel-service');
+  assert.equal(n8n.access, 'public-https-only');
   assert.equal(
-    n8n.imageReference,
-    'operator-supplied-approved-version-and-digest',
+    n8n.configuration.panelBaseUrl,
+    'operator-supplied-cloud-dev-edge-url',
   );
-  assert.deepEqual(n8n.publicPaths, ['/webhook/silmer/dev-mvp-flow']);
-  assert.equal(n8n.environment.SILMER_PANEL_BASE_URL, 'http://silmer-api:3000');
 });
 
-test('cloud-dev edge proxies only the synthetic n8n webhook', async () => {
+test('cloud-dev edge never proxies public webhooks to a nonexistent private n8n', async () => {
   const configuration = await readFile(
     new URL('docker/nginx.cloud-dev.conf', root),
     'utf8',
   );
 
-  assert.match(configuration, /location = \/webhook\/silmer\/dev-mvp-flow/u);
-  assert.match(configuration, /http:\/\/silmer-n8n:5678/u);
   assert.doesNotMatch(configuration, /location \/webhook\//u);
+  assert.doesNotMatch(configuration, /silmer-n8n/u);
 });

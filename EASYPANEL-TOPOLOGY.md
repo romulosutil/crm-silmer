@@ -367,9 +367,12 @@ em `master`, tag mutável, SSH/rsync ou promoção por digest. O manifesto sem
 segredos, as rotas privadas e o provisionamento único estão em
 `ops/easypanel/cloud-dev.json` e `ops/easypanel/CLOUD-DEV.md`.
 
-Esse caminho é exclusivo do cloud-dev. API, PostgreSQL, editor n8n e banco n8n
-continuam privados; somente o edge e o webhook sintético DEV são alcançáveis
-externamente.
+Esse caminho é exclusivo do cloud-dev. API e PostgreSQL continuam privados. A
+instância existente `schedule-n8n` fica fora deste projeto e usa HTTPS público
+para chamar a API do CRM; o worker usa o webhook HTTPS do `schedule-n8n` para
+enviar comandos. Cada sentido conserva sua própria credencial Basic e o n8n
+nunca recebe acesso ao banco do CRM. O procedimento está em
+`ops/easypanel/CLOUD-DEV.md`.
 
 O branch canônico atual é `master`.
 

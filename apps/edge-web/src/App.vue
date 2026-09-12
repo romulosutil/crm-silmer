@@ -30,6 +30,18 @@ const logoutBusy = ref(false);
 let lastAnnouncement = '';
 
 const user = computed(() => session.value?.user ?? session.value ?? {});
+const sidebarUserName = computed(() => user.value.name || 'Conta autenticada');
+const sidebarUserEmail = computed(() => user.value.email || '');
+const sidebarUserInitials = computed(() =>
+  sidebarUserName.value
+    .trim()
+    .split(/\s+/u)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toLocaleUpperCase('pt-BR'),
+);
 const sessionSummary = computed(
   () =>
     (isAdmin.value ? 'Administrador' : null) ??
@@ -308,19 +320,34 @@ function onCursor(cursor) {
           <span class="nav-label">Conta</span>
         </RouterLink>
       </nav>
-      <button
-        class="quiet sidebar-logout"
-        type="button"
-        :disabled="logoutBusy"
-        @click="logout"
-      >
-        <svg aria-hidden="true" viewBox="0 0 24 24">
-          <path
-            d="M10 4H4v16h6v-2H6V6h4zm5 3-1.4 1.4 2.6 2.6H9v2h7.2l-2.6 2.6L15 17l5-5z"
-          />
-        </svg>
-        <span class="nav-label">{{ logoutBusy ? 'Saindo…' : 'Sair' }}</span>
-      </button>
+      <div class="sidebar-footer">
+        <div class="sidebar-account">
+          <span class="sidebar-account-avatar" aria-hidden="true">{{
+            sidebarUserInitials
+          }}</span>
+          <span class="sidebar-account-copy">
+            <strong class="sidebar-account-name" :title="sidebarUserName">{{
+              sidebarUserName
+            }}</strong>
+            <span v-if="sidebarUserEmail" :title="sidebarUserEmail">{{
+              sidebarUserEmail
+            }}</span>
+          </span>
+        </div>
+        <button
+          class="quiet sidebar-logout"
+          type="button"
+          :disabled="logoutBusy"
+          @click="logout"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="M10 4H4v16h6v-2H6V6h4zm5 3-1.4 1.4 2.6 2.6H9v2h7.2l-2.6 2.6L15 17l5-5z"
+            />
+          </svg>
+          <span class="nav-label">{{ logoutBusy ? 'Saindo…' : 'Sair' }}</span>
+        </button>
+      </div>
     </aside>
     <div class="app-frame">
       <header class="app-topbar">

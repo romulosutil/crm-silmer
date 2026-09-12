@@ -73,7 +73,11 @@ async function appendConversationStreamEvent(transaction, event) {
 function assertConversationOwnership(kind, current, actor) {
   const owner = current.assigned_user_id;
   const isAdmin = [...(actor.capabilities ?? [])].includes(ADMIN_CAPABILITY);
-  if ((kind === 'archive' || kind === 'unarchive') && owner === null && !isAdmin) {
+  if (
+    (kind === 'archive' || kind === 'unarchive') &&
+    owner === null &&
+    !isAdmin
+  ) {
     throw new InboxForbiddenError(
       'Conversation must be taken over before it can be archived',
     );

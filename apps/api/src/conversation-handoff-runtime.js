@@ -52,11 +52,11 @@ export function createConversationHandoffRuntime(database, options = {}) {
           version: `${input.expectedHandoffVersion}->${input.expectedHandoffVersion + 1}`,
         },
         async (transaction) => {
-          const result = await claimConversationHandoff(
-            transaction,
-            users,
-            { ...input, occurredAt: new Date().toISOString(), reasonCode },
-          );
+          const result = await claimConversationHandoff(transaction, users, {
+            ...input,
+            occurredAt: new Date().toISOString(),
+            reasonCode,
+          });
           await eventPort.append(
             {
               aggregateId: result.handoff.id,
@@ -191,7 +191,10 @@ async function claimConversationHandoff(transaction, users, input) {
 /** @param {any} input */
 function validateClaim(input) {
   if (!input || typeof input !== 'object') throw invalid();
-  if (input.actor?.kind !== 'human' || input.actor.functionName !== 'Vendedor') {
+  if (
+    input.actor?.kind !== 'human' ||
+    input.actor.functionName !== 'Vendedor'
+  ) {
     throw forbidden();
   }
   for (const [value, name] of [
@@ -200,18 +203,26 @@ function validateClaim(input) {
     [input.correlationId, 'correlationId'],
     [input.idempotencyKey, 'idempotencyKey'],
   ]) {
-    if (typeof value !== 'string' || value.trim() === '') throw invalid(`${name} is required`);
+    if (typeof value !== 'string' || value.trim() === '')
+      throw invalid(`${name} is required`);
   }
-  if (!Number.isSafeInteger(input.expectedHandoffVersion) || input.expectedHandoffVersion < 1) {
+  if (
+    !Number.isSafeInteger(input.expectedHandoffVersion) ||
+    input.expectedHandoffVersion < 1
+  ) {
     throw invalid('expectedHandoffVersion is invalid');
   }
   if (
     input.expectedConversationVersion !== undefined &&
-    (!Number.isSafeInteger(input.expectedConversationVersion) || input.expectedConversationVersion < 1)
+    (!Number.isSafeInteger(input.expectedConversationVersion) ||
+      input.expectedConversationVersion < 1)
   ) {
     throw invalid('expectedConversationVersion is invalid');
   }
-  if (input.reasonCode !== undefined && input.reasonCode !== 'handoff_claimed') {
+  if (
+    input.reasonCode !== undefined &&
+    input.reasonCode !== 'handoff_claimed'
+  ) {
     throw invalid('reasonCode is invalid');
   }
 }

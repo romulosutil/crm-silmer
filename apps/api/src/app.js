@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import { performance } from 'node:perf_hooks';
+import rateLimit from '@fastify/rate-limit';
 
 import {
   createSafeLogger,
@@ -235,10 +236,13 @@ export function createApi(options = {}, runtime = {}) {
   }
 
   if (runtime.operations) {
-    registerOperationRoutes(api, runtime.operations, (request) => {
-      const context = requests.get(request);
-      if (!context) throw new Error('Missing request context');
-      return context;
+    api.register(async (operationScope) => {
+      await operationScope.register(rateLimit, { global: false });
+      registerOperationRoutes(operationScope, runtime.operations, (request) => {
+        const context = requests.get(request);
+        if (!context) throw new Error('Missing request context');
+        return context;
+      });
     });
   }
 

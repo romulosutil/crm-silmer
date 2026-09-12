@@ -9,7 +9,8 @@
     <script>
       (() => {
         const stored = localStorage.getItem('silmer-theme');
-        document.documentElement.dataset.theme = stored === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme =
+          stored === 'dark' ? 'dark' : 'light';
       })();
     </script>
   </head>

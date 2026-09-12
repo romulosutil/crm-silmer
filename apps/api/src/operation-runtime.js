@@ -109,8 +109,7 @@ export function createOperationReadService({
         ) {
           throw new OperationReadError(400, 'INVALID_FILTER');
         }
-        filters.archived =
-          input.archived === true || input.archived === 'true';
+        filters.archived = input.archived === true || input.archived === 'true';
       }
       if (input.automationState !== undefined) {
         filters.automationState = requireChoice(
@@ -156,7 +155,10 @@ export function createOperationReadService({
       if (!database || typeof database.query !== 'function') {
         throw new TypeError('database is required');
       }
-      const after = input.after === undefined || input.after === '' ? 0 : Number(input.after);
+      const after =
+        input.after === undefined || input.after === ''
+          ? 0
+          : Number(input.after);
       if (!Number.isSafeInteger(after) || after < 0) {
         return Object.freeze({ cursor: 0, events: [], reset: true });
       }
@@ -225,8 +227,8 @@ export function createOperationReadRuntime(database, options = {}) {
     }),
     database,
     cursorKey: readKey(
-        environment.OPERATION_CURSOR_HMAC_KEY,
-        'OPERATION_CURSOR_HMAC_KEY',
+      environment.OPERATION_CURSOR_HMAC_KEY,
+      'OPERATION_CURSOR_HMAC_KEY',
     ),
     handoffRepository: new PostgresHandoffReadRepository({
       contactEnvelopeKey: readKey(

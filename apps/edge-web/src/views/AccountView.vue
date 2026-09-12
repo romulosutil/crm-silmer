@@ -11,7 +11,9 @@ const capabilities = computed(() => {
   return Array.isArray(values) ? values : [];
 });
 const functionName = computed(() =>
-  capabilities.value.includes('COMMERCIAL_ADMIN') ? 'Administrador' : 'Vendedor',
+  capabilities.value.includes('COMMERCIAL_ADMIN')
+    ? 'Administrador'
+    : 'Vendedor',
 );
 
 onMounted(() => heading.value?.focus());

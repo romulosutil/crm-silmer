@@ -9,11 +9,15 @@ export function createOperationalAuthRuntime(options = {}) {
   return Object.freeze({
     async authorize(/** @type {any} */ input) {
       if (input.authorization !== undefined) {
-        if (!automationAuth) throw httpError(503, 'AUTOMATION_AUTH_UNAVAILABLE');
+        if (!automationAuth)
+          throw httpError(503, 'AUTOMATION_AUTH_UNAVAILABLE');
         return automationAuth.authorize(input);
       }
       if (!identity) throw httpError(503, 'IDENTITY_UNAVAILABLE');
-      if (typeof input.origin !== 'string' || !identity.allowedOrigins.includes(input.origin)) {
+      if (
+        typeof input.origin !== 'string' ||
+        !identity.allowedOrigins.includes(input.origin)
+      ) {
         throw httpError(403, 'FORBIDDEN');
       }
       const cookies = parseCookies(input.cookie);

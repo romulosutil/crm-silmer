@@ -68,7 +68,7 @@ const conversation = {
   updatedAt: '2026-09-08T12:00:00.000Z',
   version: 3,
 };
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -93,6 +93,13 @@ async function mockCrm(page, options = {}) {
           automationState: 'assistant',
         }
       : conversation;
+  const detailMessages = options.longThread
+    ? Array.from({ length: 30 }, (_, index) => ({
+        ...conversation.lastMessage,
+        id: `message-${index + 1}`,
+        preview: `Mensagem de teste ${index + 1}: detalhes do atendimento.`,
+      }))
+    : [conversation.lastMessage];
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -162,7 +169,7 @@ async function mockCrm(page, options = {}) {
         contentType: 'application/json',
         body: JSON.stringify({
           conversation: inboxConversation,
-          messages: [conversation.lastMessage],
+          messages: detailMessages,
           suggestion: null,
         }),
       });
@@ -527,6 +534,21 @@ test('labels human and AI service distinctly and only permits transfer after tak
   await expect(
     page.getByRole('button', { name: 'Repassar atendimento' }),
   ).toHaveCount(0);
+});
+
+test('keeps a long conversation inside its own scrollable message area', async ({
+  page,
+}) => {
+  await mockCrm(page, { longThread: true });
+  await page.goto('/inbox');
+  const metrics = await page.locator('.thread').evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    overflowY: globalThis.getComputedStyle(element).overflowY,
+    scrollHeight: element.scrollHeight,
+  }));
+
+  expect(metrics.overflowY).toBe('auto');
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
 });
 
 test('restores search focus after removing filter controls', async ({

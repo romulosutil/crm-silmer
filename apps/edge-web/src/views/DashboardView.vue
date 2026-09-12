@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { request } from '../lib/api-client.js';
 import {
   CHANNEL_LABELS,
-  CONVERSATION_LABELS,
+  conversationLabel,
   dateTimeBR,
   messageText,
 } from '../lib/format.js';
@@ -154,7 +154,7 @@ onBeforeUnmount(() => controller?.abort());
                 :data-tone="conversation.requiresAttention ? 'error' : 'info'"
               >
                 {{
-                  CONVERSATION_LABELS[conversation.state] ?? conversation.state
+                  conversationLabel(conversation)
                 }}
               </span>
               <p>{{ dateTimeBR(conversation.updatedAt) }}</p>

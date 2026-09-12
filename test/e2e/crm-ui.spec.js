@@ -68,7 +68,7 @@ const conversation = {
   updatedAt: '2026-09-08T12:00:00.000Z',
   version: 3,
 };
-/** @param {import('@playwright/test').Page} page @param {{conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -86,7 +86,13 @@ async function mockCrm(page, options = {}) {
         requiresAttention: true,
         state: 'requer_atencao',
       }
-    : conversation;
+    : options.assistant
+      ? {
+          ...conversation,
+          assignedUser: null,
+          automationState: 'assistant',
+        }
+      : conversation;
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -497,6 +503,30 @@ test('claims a pending handoff from its conversation in the Caixa de Entrada', a
     reasonCode: 'handoff_claimed',
   });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('labels human and AI service distinctly and only permits transfer after takeover', async ({
+  page,
+}) => {
+  await mockCrm(page);
+  await page.goto('/inbox');
+  await expect(
+    page.locator('.inbox-list .badge', {
+      hasText: 'Em atendimento por vendedor',
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Repassar atendimento' }),
+  ).toBeVisible();
+
+  await mockCrm(page, { assistant: true });
+  await page.reload();
+  await expect(
+    page.locator('.inbox-list .badge', { hasText: 'Em atendimento por IA' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Repassar atendimento' }),
+  ).toHaveCount(0);
 });
 
 test('restores search focus after removing filter controls', async ({

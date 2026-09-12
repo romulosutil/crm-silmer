@@ -11,7 +11,7 @@ import {
 import { request } from '../lib/api-client.js';
 import {
   CHANNEL_LABELS,
-  CONVERSATION_LABELS,
+  conversationLabel,
   dateTimeBR,
 } from '../lib/format.js';
 
@@ -355,7 +355,7 @@ onBeforeUnmount(() => {
                 CHANNEL_LABELS[conversation.channel]
               }}</RouterLink>
               <span>{{
-                CONVERSATION_LABELS[conversation.state] ?? conversation.state
+                conversationLabel(conversation)
               }}</span>
               <small
                 >Última mensagem em

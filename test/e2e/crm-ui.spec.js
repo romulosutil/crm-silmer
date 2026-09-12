@@ -655,6 +655,14 @@ test('formats the contact phone as a read-only field', async ({ page }) => {
   await expect(phone).toHaveValue('+55 (11) 99999-9999');
   await expect(phone).toHaveAttribute('readonly', '');
   await expect(page.getByText('Telefone: confirmed')).toHaveCount(0);
+  await expect(
+    page.locator('.contact-channels').getByText('WhatsApp', { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .locator('.contact-channels')
+      .getByText(contact.identities[0].externalId, { exact: true }),
+  ).toHaveCount(0);
 });
 
 test('sends an authorized human reply through the official command', async ({

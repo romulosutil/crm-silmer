@@ -30,12 +30,19 @@ const server = createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(requestUrl.pathname);
     const requestedPath = pathname === '/' ? '/index.html' : pathname;
-    const candidate = resolve(root, `.${requestedPath}`);
+    let candidate = resolve(root, `.${requestedPath}`);
     if (candidate !== root && !candidate.startsWith(`${root}${sep}`)) {
       response.writeHead(403).end();
       return;
     }
-    const file = await stat(candidate);
+    let file;
+    try {
+      file = await stat(candidate);
+    } catch (error) {
+      if (extname(pathname) !== '') throw error;
+      candidate = resolve(root, 'index.html');
+      file = await stat(candidate);
+    }
     if (!file.isFile()) throw new Error('Not a file');
     response.writeHead(200, {
       'Content-Length': file.size,

@@ -47,6 +47,8 @@ test('documents and exposes a local development workflow with automatic refresh'
   assert.doesNotMatch(seeder, /invitation/iu);
   assert.match(watcher, /watch\(source, \{ recursive: true \}/u);
   assert.match(edgeServer, /proxyApiRequest/u);
+  assert.match(edgeServer, /candidate = resolve\(root, 'index\.html'\)/u);
+  assert.match(edgeServer, /if \(extname\(pathname\) !== ''\) throw error/u);
   assert.match(edgeServer, /hostname: apiOrigin\.hostname/u);
   assert.doesNotMatch(edgeServer, /transport\.request\(\s*target/u);
   assert.match(compose, /postgres:17-alpine/u);

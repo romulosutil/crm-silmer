@@ -604,6 +604,14 @@ onBeforeUnmount(() => {
             <span class="inbox-state-label">Situação</span>
             <span class="inbox-state-trigger">
               <strong>{{ selectedStateLabel }}</strong>
+              <svg
+                class="inbox-state-chevron"
+                aria-hidden="true"
+                focusable="false"
+                viewBox="0 0 16 16"
+              >
+                <path d="m3 5.5 5 5 5-5" />
+              </svg>
             </span>
           </summary>
           <div class="inbox-state-panel">

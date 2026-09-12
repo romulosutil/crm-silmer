@@ -32,7 +32,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
 
   api.get('/api/v1/users', async (request, reply) => {
     return respond(reply, async () => {
-      requireOrigin(request, identity.allowedOrigins);
+      requireReadOriginWhenPresent(request, identity.allowedOrigins);
       const cookies = parseCookies(request.headers.cookie);
       const result = await identity.listUsers({
         sessionToken: requireSessionCookie(cookies),
@@ -43,7 +43,7 @@ export function registerIdentityRoutes(api, identity, contextFor) {
 
   api.get('/api/v1/users/assignable', async (request, reply) => {
     return respond(reply, async () => {
-      requireOrigin(request, identity.allowedOrigins);
+      requireReadOriginWhenPresent(request, identity.allowedOrigins);
       const cookies = parseCookies(request.headers.cookie);
       const result = await identity.listAssignableUsers({
         sessionToken: requireSessionCookie(cookies),
@@ -249,6 +249,18 @@ function requireOrigin(request, allowedOrigins) {
   ) {
     throw new IdentityRequestError(403, 'FORBIDDEN');
   }
+}
+
+/**
+ * Browsers omit Origin from same-origin safe-method requests. Preserve the
+ * allowlist when a caller supplies Origin, but let authenticated GET requests
+ * proceed without it; commands remain protected by Origin plus CSRF.
+ * @param {import('fastify').FastifyRequest} request
+ * @param {string[]} allowedOrigins
+ */
+function requireReadOriginWhenPresent(request, allowedOrigins) {
+  if (request.headers.origin === undefined) return;
+  requireOrigin(request, allowedOrigins);
 }
 
 /** @param {import('fastify').FastifyRequest} request @param {string[]} allowedOrigins */

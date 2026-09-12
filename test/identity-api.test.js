@@ -47,6 +47,11 @@ function harness(options = {}) {
       return { users: [] };
     },
     /** @param {Record<string, unknown>} input */
+    listAssignableUsers: async (input) => {
+      calls.push({ input, operation: 'list-assignable-users' });
+      return { users: [] };
+    },
+    /** @param {Record<string, unknown>} input */
     setUserDisabled: async (input) => {
       calls.push({ input, operation: 'set-user-disabled' });
       return { user: { id: input.targetId } };
@@ -307,5 +312,31 @@ test('current session uses only the HttpOnly session cookie and logout expires b
   });
   assert.equal(logout.statusCode, 204);
   assert.match(String(logout.headers['set-cookie']), /Max-Age=0/iu);
+  await api.close();
+});
+
+test('authenticated browser reads allow a missing same-origin Origin header', async () => {
+  const { api, calls } = harness();
+  const headers = { cookie: 'crm_session=session' };
+
+  const users = await api.inject({
+    headers,
+    url: '/api/v1/users',
+  });
+  assert.equal(users.statusCode, 200);
+  assert.equal(calls.at(-1)?.operation, 'list-users');
+
+  const assignable = await api.inject({
+    headers,
+    url: '/api/v1/users/assignable',
+  });
+  assert.equal(assignable.statusCode, 200);
+  assert.equal(calls.at(-1)?.operation, 'list-assignable-users');
+
+  const foreignOrigin = await api.inject({
+    headers: { ...headers, origin: 'https://evil.example.test' },
+    url: '/api/v1/users',
+  });
+  assert.equal(foreignOrigin.statusCode, 403);
   await api.close();
 });

@@ -646,14 +646,15 @@ test('simplifies the client summary without operational status or count', async 
   );
 });
 
-test('formats the contact phone as a read-only field', async ({ page }) => {
+test('formats the contact phone without an editable input', async ({ page }) => {
   await mockCrm(page);
 
   await page.goto('/clientes');
 
-  const phone = page.getByLabel('Telefone');
-  await expect(phone).toHaveValue('+55 (11) 99999-9999');
-  await expect(phone).toHaveAttribute('readonly', '');
+  await expect(page.locator('.contact-phone dd')).toHaveText(
+    '+55 (11) 99999-9999',
+  );
+  await expect(page.locator('.contact-phone input')).toHaveCount(0);
   await expect(page.getByText('Telefone: confirmed')).toHaveCount(0);
   await expect(
     page.locator('.contact-channels').getByText('WhatsApp', { exact: true }),

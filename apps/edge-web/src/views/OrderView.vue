@@ -9,6 +9,7 @@ import {
   ref,
   watch,
 } from 'vue';
+import OrderInfoStrips from '../components/order/OrderInfoStrips.vue';
 import OrderItemsSection from '../components/order/OrderItemsSection.vue';
 import OrderObservationsSection from '../components/order/OrderObservationsSection.vue';
 import OrderSummarySection from '../components/order/OrderSummarySection.vue';
@@ -279,22 +280,7 @@ onBeforeUnmount(() => {
       <OrderSummarySection :order="order" />
       <OrderItemsSection :order="order" />
       <OrderObservationsSection :order="order" />
-      <section
-        class="surface section-gap"
-        aria-labelledby="order-production-title"
-      >
-        <div class="panel-head">
-          <h2 id="order-production-title">Controle de produção</h2>
-        </div>
-      </section>
-      <section
-        class="surface section-gap"
-        aria-labelledby="order-service-title"
-      >
-        <div class="panel-head">
-          <h2 id="order-service-title">Dados do atendimento</h2>
-        </div>
-      </section>
+      <OrderInfoStrips :order="order" />
       <section
         class="surface section-gap"
         aria-labelledby="order-closing-title"

@@ -31,6 +31,7 @@ test('builds the fixed technical actor with only the approved CRM actions', () =
     'deal.fields.patch',
     'deal.transition',
     'handoff.create',
+    'order.intent',
   ]);
   for (const action of AUTOMATION_EXECUTOR_ACTIONS) {
     assert.equal(credentials.isActionAllowed(action), true);

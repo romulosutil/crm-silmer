@@ -334,3 +334,79 @@ test('submits login, restores and closes a session by keyboard without browser s
     })),
   ).resolves.toEqual({ local: 0, session: 0 });
 });
+
+test('keeps Pedidos in the menu after Caixa de Entrada, active across its pages', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/v1/sessions/current') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          user: {
+            capabilities: ['COMMERCIAL_ADMIN'],
+            email: 'admin@example.test',
+            functionName: 'Vendedor',
+            id: 'admin-1',
+            name: 'Admin Comercial',
+          },
+        }),
+      });
+      return;
+    }
+    if (path === '/api/v1/events') {
+      await route.fulfill({ status: 204 });
+      return;
+    }
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        counts: { confirmado: 0, pendente: 0 },
+        items: [],
+        nextCursor: null,
+        order: null,
+      }),
+    });
+  });
+
+  await page.goto('/pedidos');
+
+  const sidebar = page.getByRole('navigation', { name: 'Navegação principal' });
+  await expect(sidebar.getByRole('link')).toHaveText([
+    'Dashboard',
+    'Caixa de Entrada',
+    'Pedidos',
+    'Clientes',
+    'Vendedores',
+    'Conta',
+  ]);
+  await expect(sidebar.getByRole('link', { name: 'Pedidos' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.locator('.topbar-title')).toHaveText('Pedidos');
+
+  await page.setViewportSize({ height: 800, width: 480 });
+  await page.getByRole('button', { name: 'Menu' }).click();
+  const mobile = page.getByRole('navigation', { name: 'Navegação móvel' });
+  await expect(mobile.getByRole('link')).toHaveText([
+    'Dashboard',
+    'Caixa de Entrada',
+    'Pedidos',
+    'Clientes',
+    'Conta',
+  ]);
+
+  await page.setViewportSize({ height: 900, width: 1280 });
+  // PGE-01: the order page belongs to Pedidos, so the menu item stays lit on
+  // a route the link does not match exactly.
+  await page.goto('/pedidos/order-1');
+  await expect(sidebar.getByRole('link', { name: 'Pedidos' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(
+    sidebar.getByRole('link', { name: 'Clientes' }),
+  ).not.toHaveAttribute('aria-current', /./u);
+});

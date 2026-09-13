@@ -56,6 +56,14 @@ const isAdmin = computed(() =>
 const canAccessCurrentRoute = computed(
   () => route.meta.requiresAdmin !== true || isAdmin.value,
 );
+// PGE-01: the order page belongs to Pedidos. RouterLink only marks a link it
+// matches exactly, so `/pedidos/07-CRM` would leave the menu dark; the item
+// claims the whole section instead.
+const ordersCurrent = computed(() =>
+  route.path === '/pedidos' || route.path.startsWith('/pedidos/')
+    ? 'page'
+    : undefined,
+);
 const connectionLabel = computed(() => {
   if (connection.value === 'conectado') return 'Atualizado agora';
   if (connection.value === 'reconectando') return 'Sincronizando atualizações…';
@@ -296,6 +304,16 @@ function onCursor(cursor) {
           </svg>
           <span class="nav-label">Caixa de Entrada</span>
         </RouterLink>
+        <RouterLink v-slot="{ href, navigate }" to="/pedidos" custom>
+          <a :href="href" :aria-current="ordersCurrent" @click="navigate">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path
+                d="M7 3h7l5 5v13H7zm6 1.5V9h4.5zM9 12h8v1.6H9zm0 3.4h8V17H9z"
+              />
+            </svg>
+            <span class="nav-label">Pedidos</span>
+          </a>
+        </RouterLink>
         <RouterLink to="/clientes">
           <svg aria-hidden="true" viewBox="0 0 24 24">
             <path
@@ -384,6 +402,11 @@ function onCursor(cursor) {
       >
         <RouterLink to="/dashboard">Dashboard</RouterLink>
         <RouterLink to="/inbox">Caixa de Entrada</RouterLink>
+        <RouterLink v-slot="{ href, navigate }" to="/pedidos" custom>
+          <a :href="href" :aria-current="ordersCurrent" @click="navigate"
+            >Pedidos</a
+          >
+        </RouterLink>
         <RouterLink to="/clientes">Clientes</RouterLink>
         <RouterLink to="/conta">Conta</RouterLink>
       </nav>

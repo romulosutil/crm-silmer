@@ -1,4 +1,5 @@
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
+const ORDER_SECTIONS = new Set(['summary', 'items', 'observations']);
 
 /**
  * Codes an order route may return as they are. Anything else collapses to
@@ -8,6 +9,7 @@ const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
 const PUBLIC_CODES = new Set([
   'CONVERSATION_NOT_FOUND',
   'FORBIDDEN',
+  'IDEMPOTENCY_KEY_REUSED',
   'INVALID_AMOUNT',
   'INVALID_GRADE',
   'ORDER_INVALID',
@@ -33,9 +35,9 @@ class OrderRequestError extends Error {
  *
  * @param {import('fastify').FastifyInstance} api
  * @param {Record<string, any>} orders
- * @param {(request: object) => {correlationId: string, requestId: string}} _contextFor
+ * @param {(request: object) => {correlationId: string, requestId: string}} contextFor
  */
-export function registerOrderRoutes(api, orders, _contextFor) {
+export function registerOrderRoutes(api, orders, contextFor) {
   api.get('/api/v1/orders', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query);
@@ -71,6 +73,102 @@ export function registerOrderRoutes(api, orders, _contextFor) {
           .send(await orders.currentForConversation(conversationId));
       }),
   );
+
+  api.post(
+    '/api/v1/conversations/:conversationId/orders',
+    async (request, reply) =>
+      respond(reply, async () => {
+        const params = requireObject(request.params);
+        const conversationId = requireIdentifier(
+          params.conversationId,
+          'CONVERSATION_ID',
+        );
+        const body = requireObject(request.body);
+        rejectUnknownKeys(body, ['expectedVersion']);
+        const expectedVersion = requireVersion(body.expectedVersion);
+        const command = await authorizeCommand(
+          request,
+          orders,
+          contextFor,
+          'order.create',
+        );
+        const result = await orders.createManual({
+          ...command,
+          conversationId,
+          expectedVersion,
+        });
+        return reply
+          .code(result.created ? 201 : 200)
+          .send({ order: result.order });
+      }),
+  );
+
+  api.patch(
+    '/api/v1/orders/:orderId/sections/:section',
+    async (request, reply) =>
+      respond(reply, async () => {
+        const params = requireObject(request.params);
+        const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+        if (!ORDER_SECTIONS.has(params.section)) {
+          throw new OrderRequestError(400, 'INVALID_SECTION');
+        }
+        const body = requireObject(request.body);
+        rejectUnknownKeys(body, ['expectedVersion', 'value']);
+        const expectedVersion = requireVersion(body.expectedVersion);
+        if (!Object.hasOwn(body, 'value')) {
+          throw new OrderRequestError(400, 'INVALID_REQUEST');
+        }
+        const command = await authorizeCommand(
+          request,
+          orders,
+          contextFor,
+          'order.edit',
+        );
+        const order = await orders.patchSection({
+          ...command,
+          expectedVersion,
+          orderId,
+          section: params.section,
+          value: body.value,
+        });
+        return reply.code(200).send({ order });
+      }),
+  );
+}
+
+/**
+ * Checks the Idempotency-Key before the session so a malformed retry is
+ * refused without touching the identity store, then authorizes the action
+ * with session and CSRF.
+ *
+ * @param {any} request @param {any} orders @param {Function} contextFor @param {string} action
+ */
+async function authorizeCommand(request, orders, contextFor, action) {
+  const idempotencyKey = requireIdentifier(
+    request.headers['idempotency-key'],
+    'IDEMPOTENCY_KEY',
+    255,
+  );
+  const principal = await orders.authorizeWrite({
+    action,
+    authorization: request.headers.authorization,
+    cookie: request.headers.cookie,
+    csrfToken: request.headers['x-csrf-token'],
+    origin: request.headers.origin,
+  });
+  return {
+    actor: principal.actor,
+    correlationId: contextFor(request).correlationId,
+    idempotencyKey,
+  };
+}
+
+/** @param {unknown} value */
+function requireVersion(value) {
+  if (!Number.isSafeInteger(value) || Number(value) < 1) {
+    throw new OrderRequestError(400, 'INVALID_EXPECTED_VERSION');
+  }
+  return Number(value);
 }
 
 /** @param {any} request @param {any} orders */

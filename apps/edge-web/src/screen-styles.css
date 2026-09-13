@@ -1375,3 +1375,10 @@ details.exact summary {
     display: grid;
   }
 }
+
+.order-context {
+  display: block;
+  margin-block-start: 0.15rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}

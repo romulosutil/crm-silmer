@@ -17,7 +17,11 @@ import {
   formatPhoneNumber,
   messageText,
 } from '../lib/format.js';
-import { elapsedSince, handoffReasonLabel } from '../lib/order-format.js';
+import {
+  elapsedSince,
+  handoffReasonLabel,
+  orderStatusLabel,
+} from '../lib/order-format.js';
 import { openDialog } from '../lib/ui.js';
 
 const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
@@ -831,7 +835,9 @@ onBeforeUnmount(() => {
             </template>
           </div>
           <div class="conv-actions">
-            <button type="button" @click="openOrderDrawer">Pedido</button>
+            <button type="button" @click="openOrderDrawer">
+              Pedido · {{ orderStatusLabel(active.order?.status) }}
+            </button>
             <button
               v-if="pendingHandoff"
               type="button"

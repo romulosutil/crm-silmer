@@ -41,7 +41,8 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   n8n?: any,
  *   conversations?: any,
  *   handoffs?: any,
- *   operations?: any
+ *   operations?: any,
+ *   orders?: any
  * }} [runtime]
  */
 export function createApi(options = {}, runtime = {}) {

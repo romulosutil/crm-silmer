@@ -118,7 +118,7 @@ function confirmationBlockers(items, amountCents, paymentCondition) {
  * item with grade. Empty ficha fields are listed after the blockers so the
  * banner shows them, but they never block.
  *
- * @param {Order} order
+ * @param {Pick<Order, 'status'|'ficha'|'finalAmountCents'|'paymentCondition'>} order
  * @returns {string[]}
  */
 export function missingForConfirmation(order) {

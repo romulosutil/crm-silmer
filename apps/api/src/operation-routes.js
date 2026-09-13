@@ -93,6 +93,7 @@ export function registerOperationRoutes(api, operations, contextFor) {
         'channel',
         'cursor',
         'limit',
+        'pendingHandoff',
         'state',
         'unassignedHumanHandoff',
       ]);
@@ -207,7 +208,11 @@ function parseListQuery(value, allowed) {
       parsed[key] = Number(query[key]);
       continue;
     }
-    if (key === 'archived' || key === 'unassignedHumanHandoff') {
+    if (
+      key === 'archived' ||
+      key === 'pendingHandoff' ||
+      key === 'unassignedHumanHandoff'
+    ) {
       if (query[key] !== 'true' && query[key] !== 'false') {
         throw new OperationReadRequestError(400, 'INVALID_FILTER');
       }

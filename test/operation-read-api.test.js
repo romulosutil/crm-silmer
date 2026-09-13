@@ -87,6 +87,29 @@ test('publishes authorized Inbox list and detail read models', async () => {
   await api.close();
 });
 
+test('forwards the waiting-for-seller filter as a boolean', async () => {
+  const { api, calls, headers } = harness();
+  const list = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/inbox/conversations?pendingHandoff=true&automationState=human',
+  });
+  assert.equal(list.statusCode, 200);
+  assert.deepEqual(calls[1], [
+    'inbox',
+    { automationState: 'human', pendingHandoff: true },
+  ]);
+  const invalid = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/inbox/conversations?pendingHandoff=sim',
+  });
+  assert.equal(invalid.statusCode, 400);
+  assert.equal(invalid.json().error.code, 'INVALID_FILTER');
+  assert.equal(calls.length, 2);
+  await api.close();
+});
+
 test('publishes authorized Contact list and detail read models', async () => {
   const { api, calls, headers } = harness();
   const list = await api.inject({

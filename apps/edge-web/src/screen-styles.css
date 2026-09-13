@@ -698,6 +698,14 @@ details.exact summary {
   font-size: 0.72rem;
 }
 
+/* PCX-03: how long the agent has been stopped, beside the reason it stopped. */
+.conv-waiting {
+  color: var(--status-error-text);
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .conv-snippet {
   display: -webkit-box;
   overflow: hidden;

@@ -70,10 +70,46 @@ const conversation = {
   updatedAt: '2026-09-08T12:00:00.000Z',
   version: 3,
 };
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean, suggestion?:boolean}} [options] */
+/**
+ * PCX-03/PCX-04: three conversations the agent stopped, each for a different
+ * reason and waiting for a different length of time. They are declared out of
+ * order on purpose, so a list that renders them oldest-first proves it sorted
+ * rather than echoed the answer.
+ *
+ * @param {Date} now
+ */
+function waitingConversations(now) {
+  /** @param {number} minutes */
+  const ago = (minutes) =>
+    new Date(now.getTime() - minutes * 60_000).toISOString();
+  return [
+    ['conversation-1', 'Studio Malu', 'price_before_quote', 134],
+    ['conversation-2', 'Time Fênix Futsal', 'customer_requested_human', 1623],
+    ['conversation-3', 'Igreja Nova Aliança', 'briefing_complete', 47],
+  ].map(([id, label, reasonCode, waitedMinutes]) => ({
+    ...conversation,
+    assignedUser: null,
+    contact: { ...conversation.contact, label: String(label) },
+    handoff: {
+      createdAt: ago(Number(waitedMinutes)),
+      dueAt: '2026-09-08T16:10:00.000Z',
+      id: `handoff-${id}`,
+      reasonCode,
+      status: 'pending',
+      targetRole: 'Vendedor',
+      version: 1,
+    },
+    id: String(id),
+    requiresAttention: true,
+    state: 'requer_atencao',
+  }));
+}
+
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
+  const waiting = options.waitingQueue ? waitingConversations(new Date()) : [];
   const inboxConversation = options.pendingHandoff
     ? {
         ...conversation,
@@ -177,24 +213,40 @@ async function mockCrm(page, options = {}) {
     }
     if (path === '/api/v1/inbox/conversations' && request.method() === 'GET') {
       options.onInboxList?.(url.searchParams);
+      const items = options.empty
+        ? []
+        : waiting.length
+          ? waiting
+          : [inboxConversation];
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
-          items: options.empty ? [] : [inboxConversation],
+          items,
           nextCursor: null,
-          totalCount: options.empty ? 0 : 1,
+          totalCount: items.length,
         }),
       });
       return;
     }
-    if (
-      path === '/api/v1/inbox/conversations/conversation-1' &&
-      request.method() === 'GET'
-    ) {
+    const inboxDetail = /^\/api\/v1\/inbox\/conversations\/([^/]+)$/u.exec(
+      path,
+    );
+    if (inboxDetail && request.method() === 'GET') {
+      const selected =
+        waiting.find((item) => item.id === inboxDetail[1]) ??
+        (inboxDetail[1] === 'conversation-1' ? inboxConversation : null);
+      if (!selected) {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/problem+json',
+          body: '{}',
+        });
+        return;
+      }
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
-          conversation: inboxConversation,
+          conversation: selected,
           messages: detailMessages,
           suggestion: options.suggestion
             ? {
@@ -729,6 +781,43 @@ test('filters the Inbox by queue and by who must act through the server read mod
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({ archived: 'false' });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('names the stop reason and waits, oldest first, when the seller is due', async ({
+  page,
+}) => {
+  await mockCrm(page, { waitingQueue: true });
+  await page.goto('/inbox');
+
+  const summary = page.locator('.inbox-state-menu summary');
+  await summary.click();
+  await page
+    .locator('.inbox-state-panel')
+    .getByRole('button', { name: 'Aguardando vendedor', exact: true })
+    .click();
+
+  // PCX-04: the conversation waiting the longest leads, whatever order the
+  // page happened to receive.
+  await expect(page.locator('.inbox-list .conv-name')).toHaveText([
+    'Time Fênix Futsal',
+    'Studio Malu',
+    'Igreja Nova Aliança',
+  ]);
+
+  // PCX-03/A03: the reason the agent stopped, in the seller's words.
+  await expect(page.locator('.inbox-list .conv-meta .badge')).toContainText([
+    'Pediu um vendedor',
+    'Perguntou o valor',
+    'Pré-ficha completa',
+  ]);
+
+  // PCX-03/A02: how long it has been still, counted from the handoff.
+  await expect(page.locator('.inbox-list .conv-waiting')).toHaveText([
+    'parado há 1d 03h',
+    'parado há 2h 14min',
+    'parado há 47min',
+  ]);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 

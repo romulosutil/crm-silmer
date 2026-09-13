@@ -1,7 +1,14 @@
+import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { CAPABILITIES } from '@crm-silmer/identity-access';
 import {
+  createIdempotentCommandExecutor,
+  PostgresIdempotencyRecordStore,
+} from '@crm-silmer/integration-reliability';
+import {
   createOrderService,
+  OrderConflictError,
   OrderForbiddenError,
+  OrderInputError,
   OrderNotFoundError,
   PostgresOrderConversationPort,
   PostgresOrderRepository,
@@ -13,12 +20,14 @@ import {
  *   authorizeWrite(input: Record<string, unknown>): Promise<{actor: any}>,
  * }} OrderAccess
  * @typedef {{
- *   readAssignment(conversationId: string): Promise<{assignedUserId: string|null}|null>,
+ *   readAssignment(conversationId: string): Promise<{assignedUserId: string|null, version: number}|null>,
  *   readAssignments(conversationIds: string[]): Promise<Map<string, string|null>>,
  *   readOrderContext(conversationId: string): Promise<any>,
  *   readUserNames(userIds: string[]): Promise<Map<string, string|null>>,
  *   searchConversationIds(query: string): Promise<string[]>,
  * }} OrderConversationPort
+ * @typedef {{id: string, kind: string, capabilities?: readonly string[]}} OrderActor
+ * @typedef {{actor: OrderActor, correlationId: string, idempotencyKey: string}} OrderCommand
  */
 
 /**
@@ -27,10 +36,19 @@ import {
  * from the conversation on every command, so "Repassar atendimento" moves the
  * order with the conversation and there is no separate order ownership.
  *
+ * Every human command runs under its Idempotency-Key: a retry with the same
+ * key and body replays the first response, another body is refused. The
+ * record and the audit event share one transaction, while the order write
+ * commits in the repository's own transaction; if the process dies between
+ * them the retry re-runs and the optimistic version turns it into a 409, so a
+ * command never applies twice.
+ *
  * @param {{
  *   access: OrderAccess,
+ *   auditTrail: any,
  *   conversations: OrderConversationPort,
  *   fabCode: string,
+ *   idempotencyStore: {execute: (identity: any, operation: (transaction?: unknown) => Promise<unknown>) => Promise<unknown>},
  *   repository: any,
  *   clock?: () => Date,
  *   idFactory?: () => string,
@@ -49,23 +67,33 @@ export function createOrderRuntime(options) {
       throw new TypeError(`the conversation port must implement ${method}`);
     }
   }
+  const execute = createIdempotentCommandExecutor({
+    auditTrail: options.auditTrail,
+    idempotencyStore: options.idempotencyStore,
+  });
+
+  /** @param {OrderActor} actor @param {string} conversationId */
+  async function ownConversation(actor, conversationId) {
+    const assignment = await conversations.readAssignment(conversationId);
+    if (!assignment) {
+      throw new OrderNotFoundError(
+        'Conversation was not found',
+        'CONVERSATION_NOT_FOUND',
+      );
+    }
+    if (
+      !(actor.capabilities ?? []).includes(CAPABILITIES.COMMERCIAL_ADMIN) &&
+      assignment.assignedUserId !== actor.id
+    ) {
+      throw new OrderForbiddenError();
+    }
+    return assignment;
+  }
 
   const service = createOrderService({
-    /** @param {{actor: {id: string, capabilities?: readonly string[]}, conversationId: string}} input */
+    /** @param {{actor: OrderActor, conversationId: string}} input */
     async authorizeOwnership({ actor, conversationId }) {
-      const assignment = await conversations.readAssignment(conversationId);
-      if (!assignment) {
-        throw new OrderNotFoundError(
-          'Conversation was not found',
-          'CONVERSATION_NOT_FOUND',
-        );
-      }
-      if ((actor.capabilities ?? []).includes(CAPABILITIES.COMMERCIAL_ADMIN)) {
-        return;
-      }
-      if (assignment.assignedUserId !== actor.id) {
-        throw new OrderForbiddenError();
-      }
+      await ownConversation(actor, conversationId);
     },
     clock: options.clock,
     conversations,
@@ -127,14 +155,115 @@ export function createOrderRuntime(options) {
     return (await present([order]))[0];
   }
 
+  /**
+   * @template T
+   * @param {OrderCommand} input
+   * @param {{action: string, target: {type: string, id: string}, expectedVersion: unknown, command: unknown}} request
+   * @param {() => Promise<T>} effect
+   * @returns {Promise<T>}
+   */
+  function run(input, request, effect) {
+    return /** @type {Promise<T>} */ (
+      execute(
+        {
+          action: request.action,
+          actor: input.actor?.id,
+          command: request.command,
+          correlationId: input.correlationId,
+          key: input.idempotencyKey,
+          reason: request.action,
+          target: request.target,
+          version: String(request.expectedVersion),
+        },
+        effect,
+      )
+    );
+  }
+
   return Object.freeze({
     authorizeRead: access.authorizeRead,
     authorizeWrite: access.authorizeWrite,
-    confirm: service.confirm,
-    createManual: service.createManual,
     ensurePendingFromIntent: service.ensurePendingFromIntent,
-    patchSection: service.patchSection,
-    reopen: service.reopen,
+
+    /**
+     * PCL-10/PCL-11 behind the conversation version the seller saw; an
+     * existing pending order is answered with `created: false`.
+     *
+     * @param {OrderCommand & {conversationId: string, expectedVersion: number}} input
+     */
+    async createManual(input) {
+      const expectedVersion = requireVersion(input.expectedVersion);
+      return run(
+        input,
+        {
+          action: 'order.create',
+          command: { conversationId: input.conversationId, expectedVersion },
+          expectedVersion,
+          target: { id: input.conversationId, type: 'conversation' },
+        },
+        async () => {
+          const assignment = await ownConversation(
+            input.actor,
+            input.conversationId,
+          );
+          if (Number(assignment.version) !== expectedVersion) {
+            throw new OrderConflictError(
+              `Expected conversation version ${expectedVersion}, current version is ${assignment.version}`,
+            );
+          }
+          const result = await service.createManual(input);
+          return {
+            created: result.created,
+            order: await presentOne(result.order),
+          };
+        },
+      );
+    },
+
+    /** @param {OrderCommand & {orderId: string, section: string, value: unknown, expectedVersion: number}} input */
+    async patchSection(input) {
+      return run(
+        input,
+        {
+          action: 'order.edit',
+          command: { section: input.section, value: input.value },
+          expectedVersion: input.expectedVersion,
+          target: { id: input.orderId, type: 'order' },
+        },
+        async () => presentOne(await service.patchSection(input)),
+      );
+    },
+
+    /** @param {OrderCommand & {orderId: string, amountText: unknown, paymentCondition: unknown, expectedVersion: number}} input */
+    async confirm(input) {
+      return run(
+        input,
+        {
+          action: 'order.confirm',
+          command: {
+            amountText: input.amountText,
+            paymentCondition: input.paymentCondition,
+          },
+          expectedVersion: input.expectedVersion,
+          target: { id: input.orderId, type: 'order' },
+        },
+        async () => presentOne(await service.confirm(input)),
+      );
+    },
+
+    /** @param {OrderCommand & {orderId: string, expectedVersion: number}} input */
+    async reopen(input) {
+      return run(
+        input,
+        {
+          action: 'order.reopen',
+          command: {},
+          expectedVersion: input.expectedVersion,
+          target: { id: input.orderId, type: 'order' },
+        },
+        async () => presentOne(await service.reopen(input)),
+      );
+    },
 
     /** @param {string} orderId */
     async get(orderId) {
@@ -171,6 +300,16 @@ export function createOrderRuntime(options) {
   });
 }
 
+/** @param {unknown} value */
+function requireVersion(value) {
+  if (!Number.isSafeInteger(value) || Number(value) < 1) {
+    throw new OrderInputError('expectedVersion is required', [
+      'expectedVersion',
+    ]);
+  }
+  return Number(value);
+}
+
 /**
  * PostgreSQL wiring. The session guards come from the operation runtime so
  * order routes share the Inbox read (session) and write (session + CSRF) rules.
@@ -186,6 +325,7 @@ export function createOrderApiRuntime(database, options) {
   );
   return createOrderRuntime({
     access: options.access,
+    auditTrail: new PostgresAuditTrail(database),
     conversations: new PostgresOrderConversationPort({
       contactEnvelopeKey: readEnvelopeKey(
         environment.CONTACT_IDENTITY_ENVELOPE_KEY,
@@ -195,6 +335,13 @@ export function createOrderApiRuntime(database, options) {
       envelopeKey,
     }),
     fabCode: required(environment.FAB_CODE, 'FAB_CODE'),
+    idempotencyStore: new PostgresIdempotencyRecordStore({
+      database,
+      envelopeKey: readEnvelopeKey(
+        environment.IDEMPOTENCY_ENVELOPE_KEY,
+        'IDEMPOTENCY_ENVELOPE_KEY',
+      ),
+    }),
     repository: new PostgresOrderRepository({ database, envelopeKey }),
   });
 }

@@ -10,6 +10,7 @@ import {
   watch,
 } from 'vue';
 import OrderItemsSection from '../components/order/OrderItemsSection.vue';
+import OrderObservationsSection from '../components/order/OrderObservationsSection.vue';
 import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
@@ -277,14 +278,7 @@ onBeforeUnmount(() => {
       <!-- PFI-01: the order of the printed ficha, top to bottom. -->
       <OrderSummarySection :order="order" />
       <OrderItemsSection :order="order" />
-      <section
-        class="surface section-gap"
-        aria-labelledby="order-observations-title"
-      >
-        <div class="panel-head">
-          <h2 id="order-observations-title">Observações do pedido</h2>
-        </div>
-      </section>
+      <OrderObservationsSection :order="order" />
       <section
         class="surface section-gap"
         aria-labelledby="order-production-title"

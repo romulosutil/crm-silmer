@@ -8,6 +8,7 @@ import {
   ref,
   watch,
 } from 'vue';
+import OrderDrawer from '../components/order/OrderDrawer.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
   CHANNEL_LABELS,
@@ -70,6 +71,7 @@ const searchInput = ref(null);
 const replyInput = ref(null);
 const nameInput = ref(null);
 const archiveConfirmationDialog = ref(null);
+const orderDrawer = ref(null);
 const presenceFilterMenu = ref(null);
 const query = ref('');
 const showArchived = ref(false);
@@ -173,6 +175,10 @@ const canArchive = computed(
 const canUnarchive = computed(
   () => canArchive.value && Boolean(active.value?.archivedAt),
 );
+/** PCX-08/PCL-10: creating the order follows the owner of the conversation. */
+const canCreateOrder = computed(
+  () => isAdmin.value || owner.value?.id === currentUserId.value,
+);
 const selectedPresence = computed(
   () =>
     PRESENCE_FILTERS.find((filter) => filter.value === presenceFilter.value) ??
@@ -252,6 +258,17 @@ async function unarchiveConversation() {
     showArchived.value = false;
     await loadInbox(true);
   }
+}
+
+/**
+ * PCX-07/PCX-09: the drawer opens over the conversation and hands focus back
+ * to this button when it closes.
+ *
+ * @param {MouseEvent} event
+ */
+function openOrderDrawer(event) {
+  const trigger = event.currentTarget;
+  if (trigger instanceof HTMLElement) void orderDrawer.value?.open(trigger);
 }
 
 /** @param {MouseEvent} event */
@@ -814,6 +831,7 @@ onBeforeUnmount(() => {
             </template>
           </div>
           <div class="conv-actions">
+            <button type="button" @click="openOrderDrawer">Pedido</button>
             <button
               v-if="pendingHandoff"
               type="button"
@@ -998,6 +1016,14 @@ onBeforeUnmount(() => {
         <p>O histórico e as ações aparecerão aqui.</p>
       </section>
     </div>
+    <OrderDrawer
+      v-if="active"
+      ref="orderDrawer"
+      :can-create="canCreateOrder"
+      :conversation-id="active.id"
+      :conversation-version="active.version"
+      @changed="refreshInbox(true)"
+    />
     <dialog
       ref="archiveConfirmationDialog"
       class="command-dialog"

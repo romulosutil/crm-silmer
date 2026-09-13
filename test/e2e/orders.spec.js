@@ -138,7 +138,7 @@ function eventStreamBody(event) {
 
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{orders?: any[], liveEvent?: Record<string, unknown>|null, onList?: (params: URLSearchParams) => void, pages?: any[][]}} [options]
+ * @param {{orders?: any[], liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, pages?: any[][]}} [options]
  */
 async function mockOrders(page, options = {}) {
   const orders = options.orders ?? [confirmedOrder, pendingOrder];
@@ -186,6 +186,24 @@ async function mockOrders(page, options = {}) {
           nextCursor:
             pages && listCalls < pages.length ? `cursor-${listCalls}` : null,
         }),
+      });
+      return;
+    }
+    const detail = /^\/api\/v1\/orders\/([^/]+)$/u.exec(path);
+    if (detail && request.method() === 'GET') {
+      options.onDetail?.(detail[1]);
+      const order = orders.find((candidate) => candidate.id === detail[1]);
+      if (!order) {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: { code: 'ORDER_NOT_FOUND' } }),
+        });
+        return;
+      }
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ order }),
       });
       return;
     }
@@ -340,4 +358,159 @@ test('shows an empty list and a failure apart from each other', async ({
   await expect(page.getByRole('alert')).toContainText(
     'Não foi possível carregar os pedidos.',
   );
+});
+
+test('opens the order page inside Pedidos, with the trail and the sections in order', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente?conversa=conversation-7');
+
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeFocused();
+  await expect(page.locator('.topbar-title')).toHaveText('Pedido');
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Navegação principal' })
+      .getByRole('link', { name: 'Pedidos' }),
+  ).toHaveAttribute('aria-current', 'page');
+
+  // PGE-01: back to Pedidos, and the origin named when it came from a chat.
+  const trail = page.getByRole('navigation', { name: 'Rastro' });
+  await expect(trail.getByRole('link', { name: '← Pedidos' })).toHaveAttribute(
+    'href',
+    '/pedidos',
+  );
+  await expect(trail).toContainText('07-CRM');
+  await expect(trail).toContainText('aberto a partir da conversa');
+  await expect(
+    page.getByRole('link', { name: 'Abrir conversa' }),
+  ).toBeVisible();
+
+  await expect(page.locator('main h2')).toHaveText([
+    'Resumo do pedido',
+    'Itens e especificações',
+    'Observações do pedido',
+    'Controle de produção',
+    'Dados do atendimento',
+    'Fechamento e pagamento',
+  ]);
+
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
+});
+
+test('keeps the trail without an origin when the list opened the order', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const trail = page.getByRole('navigation', { name: 'Rastro' });
+  await expect(trail).not.toContainText('aberto a partir da conversa');
+  await expect(page.getByRole('link', { name: 'Abrir conversa' })).toHaveCount(
+    0,
+  );
+});
+
+test('locks printing while the order is pending and says why (PIM-01)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const print = page.getByRole('button', { name: 'Imprimir' });
+  await expect(print).toBeDisabled();
+  await expect(
+    page.getByText('Disponível depois de confirmar o pedido'),
+  ).toBeVisible();
+  await expect(print).toHaveAttribute('aria-describedby', /./u);
+});
+
+test('lists what is missing in the banner, and says so when nothing is (PFI-09)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const banner = page.getByRole('status').filter({ hasText: 'Falta' });
+  await expect(banner).toContainText('valor final');
+  await expect(banner).toContainText('condição de pagamento');
+
+  await page.goto('/pedidos/order-confirmado');
+  await expect(
+    page.getByText('Os campos da ficha impressa estão completos.'),
+  ).toBeVisible();
+});
+
+test('prints a confirmed order from its page', async ({ page }) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-confirmado');
+
+  const print = page.getByRole('button', { name: 'Imprimir' });
+  await expect(print).toBeEnabled();
+  const [document] = await Promise.all([
+    page.context().waitForEvent('page'),
+    print.click(),
+  ]);
+  expect(document.url()).toContain('/api/v1/orders/order-confirmado/print');
+});
+
+test('shows the order read-only to whoever does not own the conversation (PAU-01)', async ({
+  page,
+}) => {
+  await mockOrders(page, {
+    orders: [
+      {
+        ...pendingOrder,
+        seller: { id: 'seller-ricardo', name: 'Ricardo Lima' },
+      },
+    ],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  await expect(
+    page.getByText(
+      'Somente Ricardo Lima ou um administrador edita este pedido.',
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Confirmar pedido' }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Reabrir pedido' }),
+  ).toHaveCount(0);
+});
+
+test('names a missing order with the way back to the list', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-inexistente');
+
+  await expect(page.getByText('Pedido não encontrado')).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Voltar para Pedidos' }),
+  ).toHaveAttribute('href', '/pedidos');
+});
+
+test('refreshes the open order when it changes elsewhere', async ({ page }) => {
+  let detailCalls = 0;
+  await mockOrders(page, {
+    liveEvent: {
+      payload: { conversationId: 'conversation-7', orderId: 'order-pendente' },
+      type: 'inbox.order.changed',
+    },
+    onDetail: () => {
+      detailCalls += 1;
+    },
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeVisible();
+  await expect.poll(() => detailCalls).toBeGreaterThan(1);
 });

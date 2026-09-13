@@ -890,3 +890,55 @@ test('opens one section at a time (PFI-06)', async ({ page }) => {
   await summary.getByRole('button', { name: 'Cancelar' }).click();
   await expect(items.getByRole('button', { name: 'Editar' })).toBeEnabled();
 });
+
+test('edits the observations and stops at five lines (PFI-05)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const observations = page.getByRole('region', {
+    name: 'Observações do pedido',
+  });
+  await expect(observations).toContainText('1 de 5 linhas');
+  await expect(observations.getByRole('listitem')).toHaveText([
+    'Separar os itens por tamanho.',
+  ]);
+
+  await observations.getByRole('button', { name: 'Editar' }).click();
+  const addLine = observations.getByRole('button', {
+    name: 'Adicionar observação',
+  });
+  for (let line = 2; line <= 5; line += 1) {
+    await addLine.click();
+    await observations.getByLabel(`Observação ${line}`).fill(`Linha ${line}`);
+  }
+  await expect(addLine).toBeDisabled();
+
+  await observations.getByRole('button', { name: 'Salvar' }).click();
+  await expect(observations).toContainText('5 de 5 linhas');
+  expect(writes[0].section).toBe('observations');
+  expect(writes[0].body.value).toHaveLength(5);
+});
+
+test('drops a blank observation instead of storing an empty line', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const observations = page.getByRole('region', {
+    name: 'Observações do pedido',
+  });
+  await observations.getByRole('button', { name: 'Editar' }).click();
+  await observations
+    .getByRole('button', { name: 'Adicionar observação' })
+    .click();
+  await observations.getByRole('button', { name: 'Salvar' }).click();
+
+  expect(writes[0].body.value).toEqual(['Separar os itens por tamanho.']);
+});

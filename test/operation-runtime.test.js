@@ -25,6 +25,90 @@ function liveService(rows) {
   return { queries, service };
 }
 
+/** @param {Array<Record<string, any>>} items */
+function inboxService(items) {
+  /** @type {any[]} */
+  const lists = [];
+  const service = createOperationReadService({
+    contactRepository: {},
+    cursorKey: Buffer.alloc(32, 1),
+    handoffRepository: {},
+    inboxRepository: {
+      list: async (/** @type {any} */ input) => {
+        lists.push(input);
+        return { hasMore: true, items, totalCount: items.length + 1 };
+      },
+    },
+  });
+  return { lists, service };
+}
+
+test('listInbox passes pendingHandoff and pages it by the waiting time', async () => {
+  const waiting = {
+    handoff: { createdAt: '2026-09-08T09:00:00.000Z' },
+    id: 'conversation-old',
+    updatedAt: '2026-09-08T12:00:00.000Z',
+  };
+  const { lists, service } = inboxService([waiting]);
+  const first = await service.listInbox({ limit: 1, pendingHandoff: 'true' });
+  assert.equal(lists[0].pendingHandoff, true);
+  assert.ok(first.nextCursor);
+  const cursorPayload = JSON.parse(
+    Buffer.from(first.nextCursor.split('.')[0], 'base64url').toString('utf8'),
+  );
+  assert.equal(cursorPayload.updatedAt, waiting.handoff.createdAt);
+
+  await service.listInbox({
+    cursor: first.nextCursor,
+    limit: 1,
+    pendingHandoff: true,
+  });
+  assert.deepEqual(lists[1].after, {
+    id: 'conversation-old',
+    updatedAt: waiting.handoff.createdAt,
+  });
+  // A cursor from the waiting list is not valid for the default order.
+  await assert.rejects(service.listInbox({ cursor: first.nextCursor }), {
+    code: 'INVALID_CURSOR',
+  });
+  await assert.rejects(service.listInbox({ pendingHandoff: 'sim' }), {
+    code: 'INVALID_FILTER',
+  });
+});
+
+test('listInbox keeps its existing filters and last-message cursor', async () => {
+  const { lists, service } = inboxService([
+    {
+      handoff: null,
+      id: 'conversation-1',
+      updatedAt: '2026-09-08T12:00:00.000Z',
+    },
+  ]);
+  const page = await service.listInbox({
+    archived: 'false',
+    assignedUserId: 'seller-1',
+    automationState: 'assistant',
+    limit: 1,
+    unassignedHumanHandoff: 'true',
+  });
+  assert.deepEqual(
+    { ...lists[0], after: undefined },
+    {
+      after: undefined,
+      archived: false,
+      assignedUserId: 'seller-1',
+      automationState: 'assistant',
+      limit: 1,
+      unassignedHumanHandoff: true,
+    },
+  );
+  assert.ok(page.nextCursor);
+  const cursorPayload = JSON.parse(
+    Buffer.from(page.nextCursor.split('.')[0], 'base64url').toString('utf8'),
+  );
+  assert.equal(cursorPayload.updatedAt, '2026-09-08T12:00:00.000Z');
+});
+
 test('live events keep contact and conversation changes as they were', async () => {
   const { queries, service } = liveService([
     {

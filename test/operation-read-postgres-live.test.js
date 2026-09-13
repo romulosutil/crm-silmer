@@ -154,6 +154,229 @@ if (connectionString) {
           (row) => !row.envelope.includes(`identity-primary-${runId}`),
         ),
       );
+
+      // Pedidos MVP (T20): who must act, why the agent stopped, the order.
+      const sellerId = `seller-inbox-${runId}`;
+      await pool.query(
+        `INSERT INTO crm.users (id, email, password_hash, name)
+         VALUES ($1, $2, '$argon2id$synthetic', 'Vendedora Inbox')`,
+        [sellerId, `${sellerId}@example.test`],
+      );
+      await pool.query(
+        `INSERT INTO crm.user_functions (user_id, function_name)
+         VALUES ($1, 'Vendedor')`,
+        [sellerId],
+      );
+      /** @param {string} suffix @param {string} occurredAt */
+      const openConversation = async (suffix, occurredAt) => {
+        const identity = await contacts.resolveInboundIdentity(
+          identityInput(runId, suffix),
+        );
+        const opened = await inbox.receiveInbound({
+          contactId: identity.contact.id,
+          correlationId: `correlation-${suffix}-${runId}`,
+          externalConversationId: `conversation-${suffix}-${runId}`,
+          externalMessageId: `message-${suffix}-${runId}`,
+          identityId: identity.identity.id,
+          message: { content: { text: `Mensagem ${suffix}` }, type: 'text' },
+          occurredAt,
+          provider: 'meta',
+          providerAccountId: `account-${suffix}-${runId}`,
+        });
+        return opened.conversation.id;
+      };
+      // The oldest waiting conversation has the most recent message, so the
+      // waiting order cannot be mistaken for the last-message order.
+      const waitingOld = await openConversation(
+        'waitingold',
+        '2026-09-08T12:30:00.000Z',
+      );
+      const waitingNew = await openConversation(
+        'waitingnew',
+        '2026-09-08T12:10:00.000Z',
+      );
+      const primary = received.conversation.id;
+      /** @param {string} id @param {string} conversationId @param {string} reason @param {string} createdAt @param {'pending'|'accepted'} status */
+      const insertHandoff = (id, conversationId, reason, createdAt, status) =>
+        pool.query(
+          `INSERT INTO crm.handoffs
+             (id, conversation_id, assigned_user_id, status, version,
+              reason_code, summary_envelope, due_at, sla_minutes,
+              sla_policy_version, created_at, updated_at, target_role)
+           VALUES ($1, $2, $3, $4, 1, $5,
+                   '{"algorithm":"AES-256-GCM","version":"1"}'::jsonb,
+                   $6::timestamptz + interval '30 minutes', 30, 'v1', $6, $6,
+                   'Vendedor')`,
+          [
+            `handoff-${id}-${runId}`,
+            conversationId,
+            status === 'accepted' ? sellerId : null,
+            status,
+            reason,
+            createdAt,
+          ],
+        );
+      await insertHandoff(
+        'old',
+        waitingOld,
+        'price_before_quote',
+        '2026-09-08T08:00:00.000Z',
+        'pending',
+      );
+      await insertHandoff(
+        'new',
+        waitingNew,
+        'customer_requested_human',
+        '2026-09-08T10:00:00.000Z',
+        'pending',
+      );
+      await insertHandoff(
+        'claimed',
+        primary,
+        'briefing_complete',
+        '2026-09-08T07:00:00.000Z',
+        'accepted',
+      );
+      await pool.query(
+        `UPDATE crm.conversations
+         SET assigned_user_id = $2, automation_state = 'human'
+         WHERE id = $1`,
+        [primary, sellerId],
+      );
+      /** @param {number} sequence @param {string} conversationId @param {'pendente'|'confirmado'} status */
+      const insertOrder = (sequence, conversationId, status) =>
+        pool.query(
+          `INSERT INTO crm.orders
+             (id, number_sequence, number, conversation_id, status, fab_code,
+              ficha_envelope, created_by_kind, created_at, updated_at,
+              final_amount_cents, payment_condition, order_date, confirmed_at,
+              confirmed_by)
+           VALUES ($1, $2::bigint, lpad($2::bigint::text, 2, '0') || '-CRM',
+                   $3, $4, '01',
+                   '{"algorithm":"AES-256-GCM"}'::jsonb, 'user', $5, $5,
+                   $6, $7, $8, $9, $10)`,
+          [
+            `order-${sequence}-${runId}`,
+            sequence,
+            conversationId,
+            status,
+            NOW,
+            status === 'confirmado' ? 1000 : null,
+            status === 'confirmado' ? 'pix' : null,
+            status === 'confirmado' ? '2026-09-08' : null,
+            status === 'confirmado' ? NOW : null,
+            status === 'confirmado' ? sellerId : null,
+          ],
+        );
+      await insertOrder(1, primary, 'confirmado');
+      await insertOrder(2, primary, 'pendente');
+      await insertOrder(3, waitingOld, 'confirmado');
+
+      const waiting = await reads.listInbox({ pendingHandoff: true });
+      assert.equal(waiting.totalCount, 2);
+      assert.deepEqual(
+        waiting.items.map((/** @type {any} */ item) => item.id),
+        [waitingOld, waitingNew],
+        'Aguardando vendedor lists the longest wait first',
+      );
+      assert.equal(waiting.items[0].handoff.reasonCode, 'price_before_quote');
+      assert.equal(
+        waiting.items[0].handoff.createdAt,
+        '2026-09-08T08:00:00.000Z',
+      );
+      assert.deepEqual(waiting.items[0].order, {
+        id: `order-3-${runId}`,
+        number: '03-CRM',
+        status: 'confirmado',
+      });
+      assert.equal(waiting.items[1].order, null);
+
+      const firstWaiting = await reads.listInbox({
+        limit: 1,
+        pendingHandoff: true,
+      });
+      assert.equal(firstWaiting.items[0].id, waitingOld);
+      const secondWaiting = await reads.listInbox({
+        cursor: firstWaiting.nextCursor,
+        limit: 1,
+        pendingHandoff: true,
+      });
+      assert.deepEqual(
+        secondWaiting.items.map((/** @type {any} */ item) => item.id),
+        [waitingNew],
+      );
+      assert.equal(secondWaiting.nextCursor, null);
+
+      const notWaiting = await reads.listInbox({ pendingHandoff: false });
+      assert.deepEqual(
+        notWaiting.items.map((/** @type {any} */ item) => item.id),
+        [primary],
+      );
+      assert.deepEqual(notWaiting.items[0].order, {
+        id: `order-2-${runId}`,
+        number: '02-CRM',
+        status: 'pendente',
+      });
+      assert.equal(notWaiting.items[0].handoff.reasonCode, 'briefing_complete');
+      assert.equal(notWaiting.items[0].handoff.status, 'accepted');
+
+      // Existing filters keep working, alone and combined with the new one.
+      const withSeller = await reads.listInbox({ automationState: 'human' });
+      assert.deepEqual(
+        withSeller.items.map((/** @type {any} */ item) => item.id),
+        [primary],
+      );
+      const withAgent = await reads.listInbox({
+        automationState: 'assistant',
+      });
+      assert.deepEqual(
+        withAgent.items.map((/** @type {any} */ item) => item.id),
+        [waitingOld, waitingNew],
+        'the default order is still the last message',
+      );
+      const mine = await reads.listInbox({ assignedUserId: sellerId });
+      assert.deepEqual(
+        mine.items.map((/** @type {any} */ item) => item.id),
+        [primary],
+      );
+      const unassigned = await reads.listInbox({
+        unassignedHumanHandoff: true,
+      });
+      assert.deepEqual(
+        unassigned.items.map((/** @type {any} */ item) => item.id).sort(),
+        [waitingNew, waitingOld].sort(),
+      );
+      assert.equal(
+        (
+          await reads.listInbox({
+            assignedUserId: sellerId,
+            pendingHandoff: true,
+          })
+        ).totalCount,
+        0,
+      );
+      await pool.query(
+        'UPDATE crm.conversations SET archived_at = $2 WHERE id = $1',
+        [waitingNew, NOW],
+      );
+      const archived = await reads.listInbox({ archived: true });
+      assert.deepEqual(
+        archived.items.map((/** @type {any} */ item) => item.id),
+        [waitingNew],
+      );
+      assert.deepEqual(
+        (await reads.listInbox({ pendingHandoff: true })).items.map(
+          (/** @type {any} */ item) => item.id,
+        ),
+        [waitingOld],
+      );
+      const detail = await reads.getConversation({ conversationId: primary });
+      assert.deepEqual(detail.conversation.order, {
+        id: `order-2-${runId}`,
+        number: '02-CRM',
+        status: 'pendente',
+      });
+      assert.equal(detail.conversation.handoff.reasonCode, 'briefing_complete');
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

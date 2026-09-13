@@ -35,6 +35,7 @@ export {
   missingForConfirmation,
   reopenOrder,
 } from './domain/order.js';
+export { renderFichaHtml } from './print/ficha-canonical-v2.js';
 export {
   MAX_ORDER_PAGE_SIZE,
   assertOrderRepositoryContract,

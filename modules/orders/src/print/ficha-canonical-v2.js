@@ -5,6 +5,31 @@
 // template version. The only switch is the sample band, which belongs to the
 // synthetic review package and never to a printed order (PIM-04).
 
+export const PRODUCTION_FIELDS = Object.freeze([
+  'conferido_arremate_por',
+  'conferido_arremate_em',
+  'arrematado_por',
+  'arrematado_em',
+  'observacao_arremate',
+  'conferido_embalado_por',
+  'conferido_embalado_em',
+  'cores_frente',
+  'cores_costas',
+  'cores_manga_direita',
+  'cores_manga_esquerda',
+  'total_cores_partes',
+  'observacao_cores',
+  'quantidade_total_cores',
+]);
+
+/**
+ * The production block as it must reach the shop floor: every field present,
+ * in canonical order, and blank. Production and art fill them by hand.
+ */
+export function blankProduction() {
+  return Object.fromEntries(PRODUCTION_FIELDS.map((field) => [field, '']));
+}
+
 const SYNTHETIC_BAND =
   '<span class="synthetic">Amostra sintetica - nao produzir</span>';
 

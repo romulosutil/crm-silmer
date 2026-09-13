@@ -4,28 +4,16 @@ import { dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { format } from 'prettier';
 
-import { renderFichaHtml } from '../modules/orders/src/print/ficha-canonical-v2.js';
+import {
+  PRODUCTION_FIELDS,
+  renderFichaHtml,
+} from '../modules/orders/src/print/ficha-canonical-v2.js';
 
 const rootUrl = new URL('../', import.meta.url);
 const snapshotUrl = new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl);
 const gateUrl = new URL('docs/phase0/ficha-pdf-approval.json', rootUrl);
 
-export const PRODUCTION_FIELDS = Object.freeze([
-  'conferido_arremate_por',
-  'conferido_arremate_em',
-  'arrematado_por',
-  'arrematado_em',
-  'observacao_arremate',
-  'conferido_embalado_por',
-  'conferido_embalado_em',
-  'cores_frente',
-  'cores_costas',
-  'cores_manga_direita',
-  'cores_manga_esquerda',
-  'total_cores_partes',
-  'observacao_cores',
-  'quantidade_total_cores',
-]);
+export { PRODUCTION_FIELDS };
 
 const commercialOrderFields = Object.freeze([
   'numero',

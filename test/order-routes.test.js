@@ -836,3 +836,128 @@ test('confirm and reopen refuse non-owners and malformed requests', async (t) =>
     assert.deepEqual(guards, []);
   }
 });
+
+test('GET /orders/:orderId/print renders the confirmed order on the v2 template', async (t) => {
+  const { api, assignments, guards, runtime } = orderHarness();
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  // The document names who confirmed, not who owns the conversation now.
+  assignments['conversation-1'] = 'seller-2';
+  guards.length = 0;
+
+  const response = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${confirmed.id}/print`,
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(String(response.headers['content-type']), /^text\/html/u);
+  assert.equal(response.headers['cache-control'], 'private, no-cache');
+  const html = response.body;
+  assert.deepEqual(
+    guards.map((guard) => [guard.method, guard.input.action]),
+    [['authorizeRead', 'order.print']],
+  );
+  assert.match(html, /FICHA DE PEDIDO/u);
+  assert.match(html, /@page \{ size: A4 landscape/u);
+  assert.match(html, /01-CRM/u);
+  assert.match(html, /Cliente Sintetico/u);
+  assert.match(html, /Equipe Sintetica/u);
+  assert.match(html, /FAB 01/u);
+  assert.match(html, /Vendedora Um/u);
+  assert.doesNotMatch(html, /Vendedor Dois/u);
+});
+
+test('the printed order hides money, the sample band and empty fields', async (t) => {
+  const { api, runtime } = orderHarness();
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+
+  const response = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${confirmed.id}/print`,
+  });
+  const html = response.body;
+
+  // PIM-02: no final amount and no payment condition on the document.
+  assert.equal(confirmed.finalAmountCents, 482000);
+  assert.equal(confirmed.paymentCondition, 'pix');
+  assert.doesNotMatch(html, /4\.820,00|482000|R\$/u);
+  assert.doesNotMatch(html, /pix|cartao_credito|cartao_debito/iu);
+  // PIM-04: the sample band belongs to the synthetic review package.
+  assert.doesNotMatch(html, /Amostra sintetica/u);
+  // A blank field prints blank, never "null" or "undefined".
+  assert.equal(confirmed.ficha.summary.aplicacao, null);
+  assert.equal(confirmed.ficha.summary.data_entrega_confirmada, null);
+  assert.doesNotMatch(html, /null|undefined/u);
+  // The 14 production fields reach the shop floor empty.
+  assert.equal(
+    (html.match(/<span class="campo-producao-vazio"><\/span>/gu) ?? []).length,
+    14,
+  );
+});
+
+test('the printed order dates the document on the day it was confirmed', async (t) => {
+  const { api, runtime } = orderHarness();
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+
+  const response = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${confirmed.id}/print`,
+  });
+
+  assert.equal(confirmed.orderDate, '2026-09-12');
+  assert.match(response.body, /Data do pedido<\/span><strong>12\/09\/2026</u);
+});
+
+test('GET /orders/:orderId/print refuses a pending order with 409', async (t) => {
+  const { api, guards, runtime } = orderHarness();
+  t.after(() => api.close());
+  const pending = await createPending(runtime, 'conversation-1');
+  guards.length = 0;
+
+  const response = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${pending.id}/print`,
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.deepEqual(response.json(), {
+    error: { code: 'ORDER_NOT_CONFIRMED' },
+  });
+  assert.deepEqual(
+    guards.map((guard) => [guard.method, guard.input.action]),
+    [['authorizeRead', 'order.print']],
+  );
+});
+
+test('GET /orders/:orderId/print needs an order and a session', async (t) => {
+  const { api } = orderHarness();
+  t.after(() => api.close());
+
+  const missing = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: '/api/v1/orders/order-missing/print',
+  });
+
+  assert.equal(missing.statusCode, 404);
+  assert.deepEqual(missing.json(), { error: { code: 'ORDER_NOT_FOUND' } });
+
+  const guarded = orderHarness({ readActor: null });
+  t.after(() => guarded.api.close());
+  const confirmed = await createConfirmed(guarded.runtime, 'conversation-1');
+  const forbidden = await guarded.api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${confirmed.id}/print`,
+  });
+
+  assert.equal(forbidden.statusCode, 403);
+  assert.deepEqual(forbidden.json(), { error: { code: 'FORBIDDEN' } });
+});

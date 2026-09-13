@@ -54,6 +54,7 @@ async function setup() {
         briefing: { order_name: 'Evento Inicial', product_type: 'camisa' },
         customerName: 'Cliente Sintetico',
       }),
+      searchConversationIds: async () => [],
     },
     fabCode: '01',
     repository,

@@ -1,6 +1,7 @@
 // Orders module (ADR 006): the Pedido aggregate, its ficha and persistence.
 export { InMemoryOrderRepository } from './adapters/in-memory-order-repository.js';
 export {
+  DEFAULT_ORDER_PAGE_SIZE,
   ORDER_SECTIONS,
   createOrderService,
 } from './application/order-service.js';

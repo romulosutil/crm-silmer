@@ -17,6 +17,7 @@ import { createIdentityApiRuntime } from './identity-runtime.js';
 import { createN8nApiRuntime } from './n8n-runtime.js';
 import { createOperationReadRuntime } from './operation-runtime.js';
 import { createOperationalAuthRuntime } from './operational-auth-runtime.js';
+import { createOrderApiRuntime } from './order-runtime.js';
 import { createWhatsAppWebhookRuntime } from './whatsapp-webhook-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
@@ -43,6 +44,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   handoffs?: Record<string, any>,
  *   n8n?: Record<string, any>,
  *   operations?: Record<string, any>,
+ *   orders?: ReturnType<typeof createOrderApiRuntime>,
  *   trustProxy?: import('fastify').FastifyServerOptions['trustProxy']
  * }} [runtime]
  */
@@ -143,6 +145,13 @@ export function createServerApi(runtime = {}) {
           identity: runtime.identity,
         })
       : undefined);
+  const orders =
+    runtime.orders ??
+    createOrdersForServer({
+      database: runtime.database,
+      environment,
+      operations,
+    });
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
     {
@@ -155,6 +164,7 @@ export function createServerApi(runtime = {}) {
       metaWebhook,
       n8n,
       operations,
+      orders,
       readiness,
     },
   );
@@ -164,6 +174,21 @@ export function createServerApi(runtime = {}) {
     api.addHook('onClose', closeDatabase.bind(database));
   }
   return api;
+}
+
+/**
+ * Orders stay disabled until FAB_CODE is configured. They reuse the operation
+ * runtime's session guards, so they also need that runtime; once FAB_CODE is
+ * set, a missing envelope key is a startup error.
+ *
+ * @param {{database?: any, environment: Record<string, string|undefined>, operations?: Record<string, any>}} input
+ */
+export function createOrdersForServer({ database, environment, operations }) {
+  if (!database || !operations || !environment.FAB_CODE) return undefined;
+  return createOrderApiRuntime(database, {
+    access: /** @type {any} */ (operations),
+    environment,
+  });
 }
 
 /**

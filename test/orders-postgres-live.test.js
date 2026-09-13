@@ -5,10 +5,20 @@ import { after, before, test } from 'node:test';
 import { Pool } from 'pg';
 
 import {
+  PostgresContactIdentityRepository,
+  createContactIdentityService,
+} from '../modules/contacts/src/index.js';
+import {
   loadMigrations,
   migrate,
   withTransaction,
 } from '../modules/database/src/index.js';
+import {
+  PostgresInboxRepository,
+  createInboxService,
+} from '../modules/inbox-channels/src/index.js';
+import { encryptJson } from '../modules/orders/src/adapters/envelope.js';
+import { PostgresOrderConversationPort } from '../modules/orders/src/adapters/postgres-order-conversation-port.js';
 import { PostgresOrderRepository } from '../modules/orders/src/adapters/postgres-order-repository.js';
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
 import { defineOrderRepositoryContract } from './orders-repository-contract.test.js';
@@ -16,6 +26,7 @@ import { defineOrderRepositoryContract } from './orders-repository-contract.test
 const connectionString = process.env.TEST_DATABASE_URL;
 const NOW = new Date('2026-09-12T12:00:00.000Z');
 const ENVELOPE_KEY = Buffer.alloc(32, 61);
+const CONTACT_KEY = Buffer.alloc(32, 65);
 
 /** @param {Pool} pool */
 function databaseFor(pool) {
@@ -26,38 +37,65 @@ function databaseFor(pool) {
 }
 
 /** @param {Pool} pool */
-async function seedConversation(pool) {
-  const id = `conversation-${randomUUID()}`;
-  await pool.query(
-    `INSERT INTO crm.contacts (id, provisional, version, created_at, updated_at)
-     VALUES ($1, false, 1, $2, $2)`,
-    [`contact-${id}`, NOW],
-  );
-  await pool.query(
-    `INSERT INTO crm.contact_identities
-       (id, current_contact_id, provider, provider_account_id, channel,
-        external_identity_lookup_hash, identity_kind, phone_status,
-        identity_envelope, key_version, version, created_at, updated_at)
-     VALUES ($1, $2, 'meta', 'account-orders-live', 'instagram', $3, 'handle',
-             'pending', $4::jsonb, 1, 1, $5, $5)`,
-    [
-      `identity-${id}`,
-      `contact-${id}`,
-      randomUUID().replaceAll('-', '').padEnd(64, '0'),
-      JSON.stringify({ algorithm: 'AES-256-GCM', keyVersion: 1, version: 1 }),
-      NOW,
-    ],
-  );
-  await pool.query(
-    `INSERT INTO crm.conversations
-       (id, contact_identity_id, provider, provider_account_id,
-        external_conversation_id, cycle_number, state, automation_state,
-        automation_epoch, version, opened_at, last_message_at)
-     VALUES ($1, $2, 'meta', 'account-orders-live', $3, 1, 'nova',
-             'assistant', 0, 1, $4, $4)`,
-    [id, `identity-${id}`, `external-${id}`, NOW],
-  );
-  return id;
+function channelServices(pool) {
+  const database = databaseFor(pool);
+  const auditPort = { append: async () => undefined };
+  return {
+    contacts: createContactIdentityService({
+      auditPort,
+      clock: () => NOW,
+      repository: new PostgresContactIdentityRepository({
+        database,
+        envelopeKey: CONTACT_KEY,
+        lookupKey: Buffer.alloc(32, 63),
+      }),
+    }),
+    inbox: createInboxService({
+      auditPort,
+      clock: () => NOW,
+      repository: new PostgresInboxRepository({
+        database,
+        envelopeKey: Buffer.alloc(32, 64),
+        outboundMessageOutbox: { enqueueChannelMessage: async () => undefined },
+      }),
+    }),
+  };
+}
+
+/**
+ * Creates a conversation through the channel services, so its identity
+ * envelope is real and the order search can decrypt it.
+ *
+ * @param {Pool} pool
+ * @param {{channel?: 'instagram'|'whatsapp', externalIdentityId?: string}} [options]
+ */
+async function seedConversation(pool, options = {}) {
+  const runId = randomUUID().replaceAll('-', '');
+  const whatsapp = options.channel === 'whatsapp';
+  const { contacts, inbox } = channelServices(pool);
+  const resolved = await contacts.resolveInboundIdentity({
+    channel: whatsapp ? 'whatsapp' : 'instagram',
+    correlationId: `correlation-identity-${runId}`,
+    displayHandle: whatsapp ? null : `@orders_${runId.slice(0, 8)}`,
+    externalIdentityId: options.externalIdentityId ?? `identity-${runId}`,
+    identityKind: whatsapp ? 'phone' : 'handle',
+    occurredAt: NOW.toISOString(),
+    phoneStatus: whatsapp ? 'confirmed' : 'pending',
+    provider: 'meta',
+    providerAccountId: `account-orders-${runId}`,
+  });
+  const { conversation } = await inbox.receiveInbound({
+    contactId: resolved.contact.id,
+    correlationId: `correlation-message-${runId}`,
+    externalConversationId: `conversation-${runId}`,
+    externalMessageId: `message-${runId}`,
+    identityId: resolved.identity.id,
+    message: { content: { text: 'Quero orçamento' }, type: 'text' },
+    occurredAt: NOW.toISOString(),
+    provider: 'meta',
+    providerAccountId: `account-orders-${runId}`,
+  });
+  return /** @type {string} */ (conversation.id);
 }
 
 if (connectionString) {
@@ -194,6 +232,95 @@ if (connectionString) {
       }),
       { code: 'CONVERSATION_NOT_FOUND', statusCode: 404 },
     );
+  });
+
+  test('reads owner, customer, pre-ficha and search matches from the conversation', async () => {
+    const runId = randomUUID().replaceAll('-', '');
+    const database = databaseFor(pool);
+    const phone = `55119${runId.replace(/\D/gu, '').padEnd(8, '7').slice(0, 8)}`;
+    const conversation = {
+      id: await seedConversation(pool, {
+        channel: 'whatsapp',
+        externalIdentityId: phone,
+      }),
+    };
+    const sellerId = `seller-port-${runId}`;
+    await pool.query(
+      `INSERT INTO crm.users (id, email, password_hash, name)
+       VALUES ($1, $2, '$argon2id$synthetic', 'Vendedora Sintetica')`,
+      [sellerId, `${sellerId}@example.test`],
+    );
+    await pool.query(
+      `INSERT INTO crm.user_functions (user_id, function_name)
+       VALUES ($1, 'Vendedor')`,
+      [sellerId],
+    );
+    await pool.query(
+      `UPDATE crm.contacts contact SET display_name = 'Conceição Sintética'
+       FROM crm.conversations conversation
+       JOIN crm.contact_identities identity
+         ON identity.id = conversation.contact_identity_id
+       WHERE conversation.id = $1 AND contact.id = identity.current_contact_id`,
+      [conversation.id],
+    );
+    await pool.query(
+      `UPDATE crm.conversations
+       SET assigned_user_id = $2, briefing_version = 3,
+           briefing_envelope = $3::jsonb, briefing_updated_at = $4
+       WHERE id = $1`,
+      [
+        conversation.id,
+        sellerId,
+        JSON.stringify(
+          encryptJson(
+            { order_name: 'Equipe Sintetica', product_type: 'camisa' },
+            `n8n-briefing:${conversation.id}:3`,
+            ENVELOPE_KEY,
+          ),
+        ),
+        NOW,
+      ],
+    );
+    const port = new PostgresOrderConversationPort({
+      contactEnvelopeKey: CONTACT_KEY,
+      database,
+      envelopeKey: ENVELOPE_KEY,
+    });
+
+    assert.deepEqual(await port.readAssignment(conversation.id), {
+      assignedUserId: sellerId,
+    });
+    assert.equal(await port.readAssignment(`missing-${runId}`), null);
+    assert.deepEqual(await port.readOrderContext(conversation.id), {
+      briefing: { order_name: 'Equipe Sintetica', product_type: 'camisa' },
+      customerName: 'Conceição Sintética',
+    });
+    assert.equal(await port.readOrderContext(`missing-${runId}`), null);
+
+    // Search only looks at conversations that already have orders.
+    assert.deepEqual(await port.searchConversationIds('conceicao'), []);
+    const service = createOrderService({
+      authorizeOwnership: async () => {},
+      clock: () => NOW,
+      conversations: port,
+      fabCode: '01',
+      repository,
+    });
+    await service.ensurePendingFromIntent({
+      conversationId: conversation.id,
+      correlationId: `correlation-port-${runId}`,
+    });
+    assert.deepEqual(await port.searchConversationIds('CONCEICAO sint'), [
+      conversation.id,
+    ]);
+    assert.deepEqual(
+      await port.searchConversationIds(
+        `(${phone.slice(2, 4)}) ${phone.slice(4, 9)}`,
+      ),
+      [conversation.id],
+    );
+    assert.deepEqual(await port.searchConversationIds('ninguem'), []);
+    assert.deepEqual(await port.searchConversationIds('12'), []);
   });
 
   test('rejects a key that is not 32 bytes', () => {

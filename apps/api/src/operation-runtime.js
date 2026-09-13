@@ -163,10 +163,10 @@ export function createOperationReadService({
         return Object.freeze({ cursor: 0, events: [], reset: true });
       }
       const result = await database.query(
-        `SELECT stream_cursor, aggregate_type, aggregate_id
+        `SELECT stream_cursor, aggregate_type, aggregate_id, payload
          FROM crm.domain_events
          WHERE stream_cursor > $1
-           AND aggregate_type IN ('contact', 'conversation')
+           AND aggregate_type IN ('contact', 'conversation', 'order')
          ORDER BY stream_cursor LIMIT 101`,
         [after],
       );
@@ -176,14 +176,7 @@ export function createOperationReadService({
       const events = result.rows.map((/** @type {any} */ row) =>
         Object.freeze({
           cursor: Number(row.stream_cursor),
-          payload:
-            row.aggregate_type === 'contact'
-              ? { contactId: row.aggregate_id }
-              : { conversationId: row.aggregate_id },
-          type:
-            row.aggregate_type === 'contact'
-              ? 'inbox.contact.changed'
-              : 'inbox.conversation.changed',
+          ...liveEventFor(row),
         }),
       );
       return Object.freeze({
@@ -383,6 +376,35 @@ export function createOperationReadRuntime(database, options = {}) {
       });
     },
   });
+}
+
+/**
+ * Live events carry identifiers only; the page re-reads through the
+ * authorized API. An order names its conversation so the Inbox drawer and
+ * the order list can both tell whether the change is theirs.
+ *
+ * @param {{aggregate_type: string, aggregate_id: string, payload: any}} row
+ */
+function liveEventFor(row) {
+  if (row.aggregate_type === 'contact') {
+    return {
+      payload: { contactId: row.aggregate_id },
+      type: 'inbox.contact.changed',
+    };
+  }
+  if (row.aggregate_type === 'order') {
+    return {
+      payload: {
+        conversationId: String(row.payload?.conversationId ?? ''),
+        orderId: row.aggregate_id,
+      },
+      type: 'inbox.order.changed',
+    };
+  }
+  return {
+    payload: { conversationId: row.aggregate_id },
+    type: 'inbox.conversation.changed',
+  };
 }
 
 /** @param {any} result @param {{cursorKey: Buffer, fingerprint: string, scope: string}} context */

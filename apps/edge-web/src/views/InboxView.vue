@@ -16,6 +16,7 @@ import {
   formatPhoneNumber,
   messageText,
 } from '../lib/format.js';
+import { elapsedSince, handoffReasonLabel } from '../lib/order-format.js';
 import { openDialog } from '../lib/ui.js';
 
 const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
@@ -89,17 +90,30 @@ const draftName = ref('');
 const transferring = ref(false);
 const transferTarget = ref('');
 const assignableUsers = ref([]);
+// A02: the clock is read again on every load, so "parado há" does not freeze
+// at whatever the first render happened to compute.
+const now = ref(new Date());
 let listController;
 let detailController;
 let refreshTimer = 0;
 
 const filtered = computed(() => {
   const needle = query.value.trim().toLocaleLowerCase('pt-BR');
-  if (!needle) return conversations.value;
-  return conversations.value.filter((conversation) =>
-    `${conversation.contact.label} ${conversation.contact.externalId} ${messageText(conversation.lastMessage)}`
-      .toLocaleLowerCase('pt-BR')
-      .includes(needle),
+  const matching = needle
+    ? conversations.value.filter((conversation) =>
+        `${conversation.contact.label} ${conversation.contact.externalId} ${messageText(conversation.lastMessage)}`
+          .toLocaleLowerCase('pt-BR')
+          .includes(needle),
+      )
+    : conversations.value;
+  if (presenceFilter.value !== 'waiting') return matching;
+  // PCX-04: whoever has waited longest is read first. The read model already
+  // answers in this order, but the rule is kept where the waiting time is
+  // rendered so a local search or a silent refresh cannot reshuffle the queue.
+  return [...matching].sort((left, right) =>
+    String(left.handoff?.createdAt ?? '').localeCompare(
+      String(right.handoff?.createdAt ?? ''),
+    ),
   );
 });
 const visibleConversationLabel = computed(() => {
@@ -180,6 +194,27 @@ function listUrl() {
     params.set('unassignedHumanHandoff', 'true');
   }
   return `/api/v1/inbox/conversations?${params.toString()}`;
+}
+
+/**
+ * PCX-03: a conversation only stops for a reason, and the reason is what the
+ * seller needs before opening it. A code this build does not know reads as
+ * "Aguardando vendedor" instead of disappearing.
+ *
+ * @param {{handoff?: {status?: string, reasonCode?: unknown}|null}} conversation
+ */
+function stopReason(conversation) {
+  return conversation.handoff?.status === 'pending'
+    ? handoffReasonLabel(conversation.handoff.reasonCode)
+    : '';
+}
+
+/** PCX-03/A02: still since the handoff was raised, not since the last message. */
+/** @param {{handoff?: {status?: string, createdAt?: unknown}|null}} conversation */
+function waitingFor(conversation) {
+  if (conversation.handoff?.status !== 'pending') return '';
+  const elapsed = elapsedSince(conversation.handoff.createdAt, now.value);
+  return elapsed === '' ? '' : `parado há ${elapsed}`;
 }
 
 /** @param {string} value */
@@ -307,6 +342,7 @@ async function loadInbox(silent = false) {
     });
     conversations.value = response.data.items;
     totalCount.value = response.data.totalCount;
+    now.value = new Date();
     if (!silent) error.value = '';
     await selectVisibleConversation();
   } catch (cause) {
@@ -700,11 +736,14 @@ onBeforeUnmount(() => {
                 {{ conversationLabel(conversation) }}
               </span>
               <span
-                v-if="conversation.handoff?.status === 'pending'"
+                v-if="stopReason(conversation)"
                 class="badge"
                 data-tone="error"
-                >Aguardando vendedor</span
+                >{{ stopReason(conversation) }}</span
               >
+              <span v-if="waitingFor(conversation)" class="conv-waiting">{{
+                waitingFor(conversation)
+              }}</span>
               <span
                 v-if="
                   conversation.assignedUser &&

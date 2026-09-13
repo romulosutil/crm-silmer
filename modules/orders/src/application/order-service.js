@@ -29,7 +29,10 @@ import { assertOrderRepositoryContract } from '../ports/contracts.js';
  * @typedef {{briefing: Record<string, unknown>|null, customerName: string|null}} OrderConversationContext
  * @typedef {{
  *   repository: import('../ports/contracts.js').OrderRepository,
- *   conversations: {readOrderContext(conversationId: string): Promise<OrderConversationContext|null>},
+ *   conversations: {
+ *     readOrderContext(conversationId: string): Promise<OrderConversationContext|null>,
+ *     searchConversationIds(query: string): Promise<string[]>,
+ *   },
  *   authorizeOwnership(input: {actor: OrderActor, conversationId: string}): Promise<void>,
  *   fabCode: string,
  *   clock?: () => Date,
@@ -48,6 +51,11 @@ function requireId(value, name) {
 export const ORDER_SECTIONS = Object.freeze(
   /** @type {const} */ (['summary', 'items', 'observations']),
 );
+export const DEFAULT_ORDER_PAGE_SIZE = 25;
+const MAX_QUERY_LENGTH = 120;
+const LIST_KEYS = new Set(['status', 'q', 'cursor', 'limit']);
+// "12", "012" or "12-CRM" name order 12; anything else is a customer search.
+const ORDER_NUMBER_QUERY = /^0*(\d{1,15})(?:-crm)?$/iu;
 
 /**
  * Keeps the columns the list reads without decrypting in step with the ficha.
@@ -74,7 +82,10 @@ function withDerivedFields(order) {
 export function createOrderService(options) {
   const { authorizeOwnership, conversations, fabCode, repository } = options;
   assertOrderRepositoryContract(repository);
-  if (typeof conversations?.readOrderContext !== 'function') {
+  if (
+    typeof conversations?.readOrderContext !== 'function' ||
+    typeof conversations.searchConversationIds !== 'function'
+  ) {
     throw new TypeError('a conversation context port is required');
   }
   if (typeof authorizeOwnership !== 'function') {
@@ -236,6 +247,71 @@ export function createOrderService(options) {
         expectedVersion: pending.version,
       });
       return { applied: true, order, reason: null };
+    },
+
+    /** @param {string} orderId */
+    async get(orderId) {
+      const order = await repository.findById(requireId(orderId, 'orderId'));
+      if (!order) throw new OrderNotFoundError();
+      return order;
+    },
+
+    /**
+     * PLI-02..07: status filter, number/customer/phone search and "Ver mais"
+     * pages. Counts cover the search regardless of the status filter, so both
+     * groups keep their totals while one is selected.
+     *
+     * @param {{status?: string, q?: string, cursor?: string|null, limit?: number}} [input]
+     */
+    async list(input = {}) {
+      for (const key of Object.keys(input)) {
+        if (!LIST_KEYS.has(key)) {
+          throw new OrderInputError(`${key} is not allowed`, [key]);
+        }
+      }
+      if (input.q !== undefined && typeof input.q !== 'string') {
+        throw new OrderInputError('q must be text', ['q']);
+      }
+      const q = (input.q ?? '').trim();
+      if (q.length > MAX_QUERY_LENGTH) {
+        throw new OrderInputError('q is too long', ['q']);
+      }
+      /** @type {import('../ports/contracts.js').OrderListQuery} */
+      const query = {
+        cursor: input.cursor ?? null,
+        limit: input.limit ?? DEFAULT_ORDER_PAGE_SIZE,
+        status: /** @type {any} */ (input.status),
+      };
+      if (q !== '') {
+        const number = ORDER_NUMBER_QUERY.exec(q);
+        if (number && Number(number[1]) > 0) {
+          query.numberSequence = Number(number[1]);
+        }
+        query.conversationIds = await conversations.searchConversationIds(q);
+      }
+      return repository.list(query);
+    },
+
+    /**
+     * PCX-06/PCX-07: what the conversation drawer shows — the pending order,
+     * otherwise the most recently confirmed one.
+     *
+     * @param {string} conversationId
+     * @returns {Promise<Order|null>}
+     */
+    async currentForConversation(conversationId) {
+      const orders = await repository.listByConversation(
+        requireId(conversationId, 'conversationId'),
+      );
+      const pending = orders.find((order) => order.status === 'pendente');
+      if (pending) return pending;
+      return (
+        orders
+          .filter((order) => order.status === 'confirmado')
+          .sort((left, right) =>
+            String(right.confirmedAt).localeCompare(String(left.confirmedAt)),
+          )[0] ?? null
+      );
     },
 
     /**

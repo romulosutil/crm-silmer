@@ -291,6 +291,16 @@ if (connectionString) {
       assignedUserId: sellerId,
     });
     assert.equal(await port.readAssignment(`missing-${runId}`), null);
+    assert.deepEqual(
+      await port.readAssignments([conversation.id, `missing-${runId}`]),
+      new Map([[conversation.id, sellerId]]),
+    );
+    assert.deepEqual(await port.readAssignments([]), new Map());
+    assert.deepEqual(
+      await port.readUserNames([sellerId, `missing-${runId}`]),
+      new Map([[sellerId, 'Vendedora Sintetica']]),
+    );
+    assert.deepEqual(await port.readUserNames([]), new Map());
     assert.deepEqual(await port.readOrderContext(conversation.id), {
       briefing: { order_name: 'Equipe Sintetica', product_type: 'camisa' },
       customerName: 'Conceição Sintética',

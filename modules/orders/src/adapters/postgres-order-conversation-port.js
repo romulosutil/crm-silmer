@@ -66,6 +66,40 @@ export class PostgresOrderConversationPort {
   }
 
   /**
+   * Current owner of each existing conversation; unknown ids are left out.
+   *
+   * @param {string[]} conversationIds
+   * @returns {Promise<Map<string, string|null>>}
+   */
+  async readAssignments(conversationIds) {
+    if (conversationIds.length === 0) return new Map();
+    const result = await this.#database.query(
+      `SELECT id, assigned_user_id FROM crm.conversations
+       WHERE id = ANY($1::text[])`,
+      [conversationIds],
+    );
+    return new Map(
+      result.rows.map((row) => [row.id, row.assigned_user_id ?? null]),
+    );
+  }
+
+  /**
+   * Display names of the people an order mentions (seller, confirmer,
+   * reopener); unknown ids are left out.
+   *
+   * @param {string[]} userIds
+   * @returns {Promise<Map<string, string|null>>}
+   */
+  async readUserNames(userIds) {
+    if (userIds.length === 0) return new Map();
+    const result = await this.#database.query(
+      'SELECT id, name FROM crm.users WHERE id = ANY($1::text[])',
+      [userIds],
+    );
+    return new Map(result.rows.map((row) => [row.id, row.name ?? null]));
+  }
+
+  /**
    * @param {string} conversationId
    * @returns {Promise<import('../application/order-service.js').OrderConversationContext|null>}
    */

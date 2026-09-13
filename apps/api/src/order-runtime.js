@@ -14,7 +14,9 @@ import {
  * }} OrderAccess
  * @typedef {{
  *   readAssignment(conversationId: string): Promise<{assignedUserId: string|null}|null>,
+ *   readAssignments(conversationIds: string[]): Promise<Map<string, string|null>>,
  *   readOrderContext(conversationId: string): Promise<any>,
+ *   readUserNames(userIds: string[]): Promise<Map<string, string|null>>,
  *   searchConversationIds(query: string): Promise<string[]>,
  * }} OrderConversationPort
  */
@@ -42,8 +44,10 @@ export function createOrderRuntime(options) {
   ) {
     throw new TypeError('order access guards are required');
   }
-  if (typeof conversations?.readAssignment !== 'function') {
-    throw new TypeError('a conversation assignment reader is required');
+  for (const method of ['readAssignment', 'readAssignments', 'readUserNames']) {
+    if (typeof (/** @type {any} */ (conversations)?.[method]) !== 'function') {
+      throw new TypeError(`the conversation port must implement ${method}`);
+    }
   }
 
   const service = createOrderService({
@@ -70,17 +74,100 @@ export function createOrderRuntime(options) {
     repository: options.repository,
   });
 
+  /**
+   * Shapes stored orders into the public Order contract: people are named,
+   * the seller is the conversation's current owner and internal columns
+   * (sequence, creator) stay out of the response.
+   *
+   * @param {any[]} orders
+   */
+  async function present(orders) {
+    if (orders.length === 0) return [];
+    const owners = await conversations.readAssignments([
+      ...new Set(orders.map((order) => order.conversationId)),
+    ]);
+    const people = new Set();
+    for (const order of orders) {
+      for (const id of [
+        order.confirmedBy,
+        order.reopenedBy,
+        owners.get(order.conversationId),
+      ]) {
+        if (id) people.add(id);
+      }
+    }
+    const names = await conversations.readUserNames([...people]);
+    /** @param {string|null|undefined} id */
+    const person = (id) => (id ? { id, name: names.get(id) ?? '' } : null);
+    return orders.map((order) => ({
+      confirmedAt: order.confirmedAt,
+      confirmedBy: person(order.confirmedBy),
+      conversationId: order.conversationId,
+      createdAt: order.createdAt,
+      fabCode: order.fabCode,
+      ficha: order.ficha,
+      finalAmountCents: order.finalAmountCents,
+      id: order.id,
+      missingFields: order.missingFields,
+      number: order.number,
+      orderDate: order.orderDate,
+      paymentCondition: order.paymentCondition,
+      reopenedAt: order.reopenedAt,
+      reopenedBy: person(order.reopenedBy),
+      seller: person(owners.get(order.conversationId)),
+      status: order.status,
+      totalPieces: order.totalPieces,
+      updatedAt: order.updatedAt,
+      version: order.version,
+    }));
+  }
+
+  /** @param {any} order */
+  async function presentOne(order) {
+    return (await present([order]))[0];
+  }
+
   return Object.freeze({
     authorizeRead: access.authorizeRead,
     authorizeWrite: access.authorizeWrite,
     confirm: service.confirm,
     createManual: service.createManual,
-    currentForConversation: service.currentForConversation,
     ensurePendingFromIntent: service.ensurePendingFromIntent,
-    get: service.get,
-    list: service.list,
     patchSection: service.patchSection,
     reopen: service.reopen,
+
+    /** @param {string} orderId */
+    async get(orderId) {
+      return { order: await presentOne(await service.get(orderId)) };
+    },
+
+    /** @param {Parameters<typeof service.list>[0]} [filters] */
+    async list(filters) {
+      const page = await service.list(filters);
+      return {
+        counts: page.counts,
+        items: await present(page.items),
+        nextCursor: page.nextCursor,
+      };
+    },
+
+    /**
+     * The pending order, else the latest confirmed one, else null; a
+     * conversation that does not exist is a 404 rather than "no order".
+     *
+     * @param {string} conversationId
+     */
+    async currentForConversation(conversationId) {
+      const order = await service.currentForConversation(conversationId);
+      if (order) return { order: await presentOne(order) };
+      if (!(await conversations.readAssignment(conversationId))) {
+        throw new OrderNotFoundError(
+          'Conversation was not found',
+          'CONVERSATION_NOT_FOUND',
+        );
+      }
+      return { order: null };
+    },
   });
 }
 

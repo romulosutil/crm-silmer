@@ -17,6 +17,7 @@ import { registerConversationRoutes } from './conversation-routes.js';
 import { registerIdentityRoutes } from './identity-routes.js';
 import { registerN8nRoutes } from './n8n-routes.js';
 import { registerOperationRoutes } from './operation-routes.js';
+import { registerOrderRoutes } from './order-routes.js';
 import { WEBHOOK_BODY_LIMIT_BYTES } from './whatsapp-webhook-runtime.js';
 
 export const WEBHOOK_MAX_IN_FLIGHT = 8;
@@ -230,6 +231,14 @@ export function createApi(options = {}, runtime = {}) {
 
   if (runtime.conversations) {
     registerConversationRoutes(api, runtime.conversations, (request) => {
+      const context = requests.get(request);
+      if (!context) throw new Error('Missing request context');
+      return context;
+    });
+  }
+
+  if (runtime.orders) {
+    registerOrderRoutes(api, runtime.orders, (request) => {
       const context = requests.get(request);
       if (!context) throw new Error('Missing request context');
       return context;

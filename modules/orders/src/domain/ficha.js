@@ -328,3 +328,48 @@ export function briefingToFicha(briefing) {
     },
   };
 }
+
+/**
+ * PAG-01: re-applies the agent's cumulative pre-ficha onto a pending ficha.
+ * Only what the agent collects moves — event name, technique and the first
+ * item's type, model, fabrics and grade — and only when the briefing has it.
+ * Colours, the confirmed delivery date, observations and any further items
+ * are the seller's and stay as they are.
+ *
+ * @param {Ficha} ficha
+ * @param {Record<string, unknown>|null|undefined} briefing
+ * @returns {Ficha}
+ */
+export function projectBriefingOntoFicha(ficha, briefing) {
+  const draft = briefingToFicha(briefing);
+  const current = structuredClone(ficha);
+  const [draftItem] = draft.items;
+  const [firstItem, ...otherItems] = current.items;
+  let items = current.items;
+  if (draftItem && !firstItem) {
+    items = [draftItem];
+  } else if (draftItem && firstItem) {
+    items = [
+      {
+        ...firstItem,
+        grade: draftItem.grade.length > 0 ? draftItem.grade : firstItem.grade,
+        malhas:
+          draftItem.malhas.length > 0 ? draftItem.malhas : firstItem.malhas,
+        modelo: draftItem.modelo || firstItem.modelo,
+        tipo: draftItem.tipo || firstItem.tipo,
+      },
+      ...otherItems,
+    ];
+  }
+  return {
+    items,
+    observations: current.observations,
+    serviceData: draft.serviceData,
+    summary: {
+      ...current.summary,
+      aplicacao: draft.summary.aplicacao ?? current.summary.aplicacao,
+      cliente: current.summary.cliente || draft.summary.cliente,
+      nome: draft.summary.nome ?? current.summary.nome,
+    },
+  };
+}

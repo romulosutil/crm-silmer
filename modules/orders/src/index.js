@@ -1,8 +1,10 @@
 // Orders module (ADR 006): the Pedido aggregate, its ficha and persistence.
 export { InMemoryOrderRepository } from './adapters/in-memory-order-repository.js';
+export { createOrderService } from './application/order-service.js';
 export {
   OrderConflictError,
   OrderError,
+  OrderForbiddenError,
   OrderInputError,
   OrderNotFoundError,
   OrderValidationError,
@@ -13,6 +15,7 @@ export {
   briefingToFicha,
   itemTotal,
   orderTotal,
+  projectBriefingOntoFicha,
   validateItems,
   validateObservations,
   validateSummary,

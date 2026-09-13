@@ -50,9 +50,17 @@ export class OrderConflictError extends OrderError {
 }
 
 export class OrderNotFoundError extends OrderError {
+  /** @param {string} [message] @param {string} [code] */
+  constructor(message = 'Order was not found', code = 'ORDER_NOT_FOUND') {
+    super(message, code, 404);
+  }
+}
+
+/** Only the conversation owner or a commercial admin may change its orders. */
+export class OrderForbiddenError extends OrderError {
   /** @param {string} [message] */
-  constructor(message = 'Order was not found') {
-    super(message, 'ORDER_NOT_FOUND', 404);
+  constructor(message = 'Only the conversation owner or an admin may do this') {
+    super(message, 'FORBIDDEN', 403);
   }
 }
 

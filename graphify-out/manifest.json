@@ -185,8 +185,8 @@
     "semantic_hash": ""
   },
   "test/e2e/foundation.spec.js": {
-    "mtime": 1789311057.5478754,
-    "ast_hash": "fc09bf697b8271b0d0e580e64660afc5",
+    "mtime": 1789326499.9436142,
+    "ast_hash": "c5688bcc994e58edc369695a21509a8a",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -1310,9 +1310,9 @@
     "semantic_hash": "2355f8039e79296c0801e13a6d0a5919"
   },
   "apps/edge-web/src/lib/event-stream.js": {
-    "mtime": 1789311057.168744,
-    "ast_hash": "21fc7dcba2800bccfac26c4d4bef420f",
-    "semantic_hash": "21fc7dcba2800bccfac26c4d4bef420f"
+    "mtime": 1789326500.0755932,
+    "ast_hash": "4515f304a191aea5f8bf42ff0f4b7b3c",
+    "semantic_hash": ""
   },
   "apps/edge-web/src/lib/ui.js": {
     "mtime": 1789311057.1709208,
@@ -1350,8 +1350,8 @@
     "semantic_hash": ""
   },
   "apps/edge-web/src/App.vue": {
-    "mtime": 1789311057.1634655,
-    "ast_hash": "55a632baaad823d9c26395596e4559c3",
+    "mtime": 1789326499.9365826,
+    "ast_hash": "45b87f54e93843f531ea34c8cf676071",
     "semantic_hash": ""
   },
   "apps/edge-web/src/components/AuthPanel.vue": {
@@ -1370,9 +1370,9 @@
     "semantic_hash": "36dc5d6bb74e2956e8f0d7b8bf0b1767"
   },
   "apps/edge-web/src/router.js": {
-    "mtime": 1789311057.17394,
-    "ast_hash": "06754782b8a59dd9f782e7b5e250a4de",
-    "semantic_hash": "06754782b8a59dd9f782e7b5e250a4de"
+    "mtime": 1789326499.9386036,
+    "ast_hash": "8a031ab22f021639d55ddceeafe9606e",
+    "semantic_hash": ""
   },
   "apps/edge-web/src/views/AccountView.vue": {
     "mtime": 1789311057.1774564,
@@ -2107,6 +2107,61 @@
   "test/order-format.test.js": {
     "mtime": 1789311464.9343288,
     "ast_hash": "1aa0a2cc24abd57a033f55ab1cdad4ac",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/components/order/OrderClosingSection.vue": {
+    "mtime": 1789326500.4715798,
+    "ast_hash": "b1276aa8ec121d4b21835325e81f9ba2",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/components/order/OrderInfoStrips.vue": {
+    "mtime": 1789326500.4066021,
+    "ast_hash": "8378d7dfa3c95a0fe75ff0fd34b0b145",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/components/order/OrderItemsSection.vue": {
+    "mtime": 1789326500.4740987,
+    "ast_hash": "999ae1cf24dbd2a00a38e3059d45455f",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/components/order/OrderObservationsSection.vue": {
+    "mtime": 1789326500.4756093,
+    "ast_hash": "a62c1059b1b36e1ee30b559455441ca9",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/components/order/OrderSummarySection.vue": {
+    "mtime": 1789326500.476618,
+    "ast_hash": "eb2fe0da4b5af706ed1a5a0f6deaf3a4",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/views/OrderView.vue": {
+    "mtime": 1789326500.4802625,
+    "ast_hash": "7fb6d38fed6929234becae04aceb4727",
+    "semantic_hash": ""
+  },
+  "apps/edge-web/src/views/OrdersView.vue": {
+    "mtime": 1789326500.079613,
+    "ast_hash": "f3c6bbd19bed4022d0f30159ebd42359",
+    "semantic_hash": ""
+  },
+  "test/e2e/orders.spec.js": {
+    "mtime": 1789326500.4833386,
+    "ast_hash": "80bb2a35d0e800f04b2759bb42dd7e4c",
+    "semantic_hash": ""
+  },
+  "Claude outputs/grupo-f/lista-pedidos.png": {
+    "mtime": 1789314197.6071963,
+    "ast_hash": "951a47a0d29ffbd4e16409fe8e4cc622",
+    "semantic_hash": ""
+  },
+  "Claude outputs/grupo-f/pedido-confirmado.png": {
+    "mtime": 1789314198.4436316,
+    "ast_hash": "572fa8fc05164463985e22348d20ca41",
+    "semantic_hash": ""
+  },
+  "Claude outputs/grupo-f/pedido-pendente.png": {
+    "mtime": 1789314198.0958383,
+    "ast_hash": "de804f534915585165f90d3886e4e2bb",
     "semantic_hash": ""
   }
 }

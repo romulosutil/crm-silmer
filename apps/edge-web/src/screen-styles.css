@@ -1382,3 +1382,38 @@ details.exact summary {
   color: var(--color-text-muted);
   font-size: var(--text-xs);
 }
+
+.order-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-block-end: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.order-origin {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.order-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+.order-banner {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  margin-block-end: 1.25rem;
+  font-size: var(--text-sm);
+}
+
+.order-banner p {
+  margin: 0;
+}

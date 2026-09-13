@@ -50,10 +50,14 @@ function harness() {
           ? { assignedUserId: assignments[conversationId] }
           : null;
       },
+      readAssignments: async (/** @type {string[]} */ ids) =>
+        new Map(ids.map((id) => [id, assignments[id] ?? null])),
       readOrderContext: async (/** @type {string} */ conversationId) =>
         conversationId in assignments
           ? { briefing: null, customerName: 'Cliente Sintetico' }
           : null,
+      readUserNames: async (/** @type {string[]} */ ids) =>
+        new Map(ids.map((id) => [id, `Nome ${id}`])),
       searchConversationIds: async () => [],
     },
     fabCode: '01',
@@ -201,9 +205,9 @@ test('reads need no ownership and the runtime forwards session guards', async ()
     command(OWNER, { conversationId: 'conversation-1' }),
   );
   assignmentReads.length = 0;
-  assert.equal((await runtime.get(order.id)).id, order.id);
+  assert.equal((await runtime.get(order.id)).order.id, order.id);
   assert.equal(
-    (await runtime.currentForConversation('conversation-1'))?.id,
+    (await runtime.currentForConversation('conversation-1')).order?.id,
     order.id,
   );
   assert.equal((await runtime.list({})).items.length, 1);

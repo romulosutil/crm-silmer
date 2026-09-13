@@ -49,6 +49,13 @@ export class OrderConflictError extends OrderError {
   }
 }
 
+export class OrderNotFoundError extends OrderError {
+  /** @param {string} [message] */
+  constructor(message = 'Order was not found') {
+    super(message, 'ORDER_NOT_FOUND', 404);
+  }
+}
+
 /**
  * A malformed section payload (400). The UI blocks these before sending, so
  * reaching the API means a broken or hostile client.

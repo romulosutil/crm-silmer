@@ -1,8 +1,10 @@
 // Orders module (ADR 006): the Pedido aggregate, its ficha and persistence.
+export { InMemoryOrderRepository } from './adapters/in-memory-order-repository.js';
 export {
   OrderConflictError,
   OrderError,
   OrderInputError,
+  OrderNotFoundError,
   OrderValidationError,
 } from './domain/errors.js';
 export {
@@ -24,3 +26,7 @@ export {
   missingForConfirmation,
   reopenOrder,
 } from './domain/order.js';
+export {
+  MAX_ORDER_PAGE_SIZE,
+  assertOrderRepositoryContract,
+} from './ports/contracts.js';

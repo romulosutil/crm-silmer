@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Ficha de Pedido 01-CRM</title>
+    <style>
+      @page { size: A4 landscape; margin: 9mm 9mm 12mm; }
+      * { box-sizing: border-box; }
+      :root { --canvas: #f7f6fb; --surface: #ffffff; --raised: #f0eef8; --active: #e8e3fa; --text: #1b1530; --muted: #625b75; --border: #d8d4e4; --subtle: #e8e5ef; --accent: #ff5b01; --deep: #0c042d; --link: #5b3fd1; }
+      body { background: var(--canvas); color: var(--text); font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 9.5px; margin: 0; }
+      h1, h2, h3, p, dl, dd { margin: 0; }
+      .sheet-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 7px; }
+      .brand { color: var(--link); font-size: 9px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+      h1 { color: var(--deep); font-size: 21px; letter-spacing: -.03em; line-height: 1; margin-top: 2px; }
+      .header-id { align-items: center; display: flex; gap: 8px; }
+      .synthetic { background: #fff0e7; border: 1px solid #ffb88f; border-radius: 999px; color: #8b3100; font-size: 7px; font-weight: 800; padding: 4px 8px; text-transform: uppercase; }
+      .order-id { background: var(--deep); border-radius: 6px; color: white; min-width: 90px; padding: 6px 9px; text-align: right; }
+      .order-id span { display: block; font-size: 6px; letter-spacing: .08em; opacity: .75; text-transform: uppercase; }
+      .order-id strong { font-size: 13px; }
+      .section-label { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; margin-bottom: 5px; text-transform: uppercase; }
+      .summary { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; display: grid; grid-template-columns: 1.35fr 1fr .65fr 1fr; overflow: hidden; }
+      .summary > div { border-right: 1px solid var(--subtle); min-height: 48px; padding: 8px 9px; }
+      .summary > div:last-child { border-right: 0; }
+      .label { color: var(--muted); display: block; font-size: 8px; font-weight: 700; letter-spacing: .07em; margin-bottom: 3px; text-transform: uppercase; }
+      .summary strong { color: var(--deep); font-size: 12px; }
+      .summary .quantity { color: var(--accent); font-size: 20px; line-height: .9; }
+      .supporting { display: grid; gap: 6px; grid-template-columns: 1.5fr 1fr .8fr .5fr; margin: 7px 0 9px; }
+      .supporting > div { background: var(--raised); border-radius: 5px; min-height: 36px; padding: 7px 8px; }
+      .supporting strong { font-size: 9.5px; }
+      .items { display: grid; gap: 8px; }
+      .item-card { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--link); border-radius: 7px; break-inside: avoid; overflow: hidden; }
+      .item-heading { align-items: center; background: linear-gradient(90deg, var(--raised), var(--surface)); display: flex; justify-content: space-between; padding: 8px 9px; }
+      .eyebrow { color: var(--link); font-size: 7.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+      h3 { font-size: 13px; line-height: 1.1; }
+      h3 span { color: var(--muted); font-size: 9px; font-weight: 600; margin-left: 5px; }
+      .item-total { align-items: baseline; display: flex; gap: 3px; }
+      .item-total strong { color: var(--accent); font-size: 19px; }
+      .item-total span { color: var(--muted); font-size: 8px; }
+      .item-body { display: grid; gap: 9px; grid-template-columns: 1fr 240px; padding: 9px; }
+      .spec-grid { display: grid; gap: 7px; grid-template-columns: repeat(3, 1fr); }
+      .spec-grid div { border-bottom: 1px solid var(--subtle); min-height: 38px; padding-bottom: 5px; }
+      dt { color: var(--muted); font-size: 7.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+      dd { font-size: 9px; font-weight: 700; margin-top: 3px; }
+      .grade-block { border-left: 1px solid var(--subtle); padding-left: 9px; }
+      .grade-title { color: var(--muted); display: block; font-size: 8px; font-weight: 800; letter-spacing: .08em; margin-bottom: 6px; text-transform: uppercase; }
+      .grade-list { display: grid; gap: 4px; grid-template-columns: repeat(4, 1fr); }
+      .grade-cell { background: var(--active); border-radius: 5px; padding: 8px 2px; text-align: center; }
+      .grade-cell span { color: var(--muted); display: block; font-size: 7.5px; font-weight: 700; }
+      .grade-cell strong { color: var(--deep); font-size: 15px; }
+      .page-footer-content { align-items: stretch; display: grid; gap: 8px; grid-template-columns: 1fr 160px; margin-top: 8px; }
+      .observations { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; min-height: 76px; padding: 8px 9px; }
+      .observations ol { margin: 3px 0 0; padding-left: 16px; }
+      .observations li { line-height: 1.35; }
+      .grand-total { align-items: center; background: var(--deep); border-radius: 6px; color: white; display: flex; justify-content: space-between; padding: 7px 10px; }
+      .grand-total span { font-size: 7px; font-weight: 700; text-transform: uppercase; }
+      .grand-total strong { color: #ffb185; font-size: 22px; }
+      .page-break { break-before: page; }
+      .production-intro { background: #fff0e7; border-left: 4px solid var(--accent); border-radius: 0 6px 6px 0; color: #5b280a; margin-bottom: 8px; padding: 7px 9px; }
+      .production-grid { display: grid; gap: 7px; grid-template-columns: 1fr .72fr 1.25fr; }
+      .production-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; min-height: 400px; padding: 8px; }
+      .panel-number { align-items: center; background: var(--deep); border-radius: 50%; color: white; display: inline-flex; font-size: 8px; font-weight: 800; height: 20px; justify-content: center; margin-right: 5px; width: 20px; }
+      .production-panel h2 { color: var(--deep); display: inline; font-size: 12px; }
+      .panel-description { color: var(--muted); font-size: 7px; margin: 3px 0 8px 27px; }
+      .production-field { border-top: 1px solid var(--subtle); min-height: 54px; padding: 7px 2px 4px; }
+      .production-field.observation { min-height: 77px; }
+      .production-field strong { font-size: 7.5px; }
+      .campo-producao-vazio { border-bottom: 1px solid var(--text); display: block; height: 28px; margin-top: 5px; }
+      .production-field.observation .campo-producao-vazio { height: 49px; }
+      .review-box { align-items: center; background: var(--deep); border-radius: 7px; color: white; display: flex; justify-content: space-between; margin-top: 8px; padding: 8px 10px; }
+      .review-box strong { color: #ffb185; }
+      .review-box span { font-size: 7px; max-width: 590px; }
+    </style>
+  </head>
+  <body>
+    <header class="sheet-header">
+      <div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div>
+      <div class="header-id"><span class="synthetic">Amostra sintetica - nao produzir</span><div class="order-id"><span>Pedido</span><strong>01-CRM</strong></div></div>
+    </header>
+    <div class="section-label">Resumo do pedido</div>
+    <section class="summary">
+      <div><span class="label">Cliente</span><strong>Cliente Demonstracao</strong></div>
+      <div><span class="label">Entrega confirmada</span><strong>30/09/2026</strong></div>
+      <div><span class="label">Total de pecas</span><strong class="quantity">32</strong></div>
+      <div><span class="label">Aplicacao</span><strong>SUBLIMACAO TOTAL</strong></div>
+    </section>
+    <section class="supporting">
+      <div><span class="label">Evento / Nome</span><strong>Equipe Horizonte - Evento Sintetico</strong></div>
+      <div><span class="label">Vendedor</span><strong>Vendedora Exemplo</strong></div>
+      <div><span class="label">Data do pedido</span><strong>31/08/2026</strong></div>
+      <div><span class="label">FAB</span><strong>FAB 01</strong></div>
+    </section>
+    <div class="section-label">Itens e especificacoes</div>
+    <section class="items"><article class="item-card">
+        <div class="item-heading">
+          <div><span class="eyebrow">Item 1</span><h3>CAMISA <span>TRADICIONAL</span></h3></div>
+          <div class="item-total"><strong>20</strong><span>pecas</span></div>
+        </div>
+        <div class="item-body">
+          <dl class="spec-grid"><div><dt>Malha</dt><dd>DRY FIT 100% POLIESTER / GRAMATURA 130</dd></div><div><dt>Frente</dt><dd>AZUL MARINHO</dd></div><div><dt>Costas</dt><dd>AZUL MARINHO</dd></div><div><dt>Manga direita</dt><dd>BRANCA</dd></div><div><dt>Manga esquerda</dt><dd>BRANCA</dd></div><div><dt>Vies gola / mangas</dt><dd>OLIMPICA - VERDE / VERDE</dd></div></dl>
+          <div class="grade-block"><span class="grade-title">Grade</span><div class="grade-list"><div class="grade-cell"><span>P</span><strong>4</strong></div><div class="grade-cell"><span>M</span><strong>8</strong></div><div class="grade-cell"><span>G</span><strong>6</strong></div><div class="grade-cell"><span>GG</span><strong>2</strong></div></div></div>
+        </div>
+      </article><article class="item-card">
+        <div class="item-heading">
+          <div><span class="eyebrow">Item 2</span><h3>SHORT <span>ESPORTIVO</span></h3></div>
+          <div class="item-total"><strong>12</strong><span>pecas</span></div>
+        </div>
+        <div class="item-body">
+          <dl class="spec-grid"><div><dt>Malha</dt><dd>HELANCA LIGHT</dd></div><div><dt>Frente</dt><dd>PRETA</dd></div><div><dt>Costas</dt><dd>PRETA</dd></div><div><dt>Manga direita</dt><dd>NAO APLICAVEL</dd></div><div><dt>Manga esquerda</dt><dd>NAO APLICAVEL</dd></div><div><dt>Vies gola / mangas</dt><dd>NAO APLICAVEL / BRANCO</dd></div></dl>
+          <div class="grade-block"><span class="grade-title">Grade</span><div class="grade-list"><div class="grade-cell"><span>P</span><strong>3</strong></div><div class="grade-cell"><span>M</span><strong>4</strong></div><div class="grade-cell"><span>G</span><strong>3</strong></div><div class="grade-cell"><span>GG</span><strong>2</strong></div></div></div>
+        </div>
+      </article></section>
+    <section class="page-footer-content">
+      <div class="observations"><span class="label">Observacoes do pedido</span><ol><li>Arte final sintetica aprovada para teste visual.</li><li>Separar os itens por tamanho e identificar cada pacote.</li><li>Nao usar este documento para producao ou cobranca.</li></ol></div>
+      <div class="grand-total"><span>Total<br>de pecas</span><strong>32</strong></div>
+    </section>
+
+    <section class="page-break">
+      <header class="sheet-header">
+        <div><div class="brand">Silmer</div><h1>CONTROLE DE PRODUCAO</h1></div>
+        <div class="header-id"><span class="synthetic">Campos vazios para preenchimento</span><div class="order-id"><span>Pedido</span><strong>01-CRM</strong></div></div>
+      </header>
+      <p class="production-intro">Preenchimento exclusivo da equipe de producao e arte. Os 14 campos abaixo devem chegar vazios a esta etapa.</p>
+      <div class="production-grid"><section class="production-panel"><div><span class="panel-number">1</span><h2>Arremate</h2></div><p class="panel-description">Registro de conferencia e execucao.</p><div class="production-field"><strong>Conferido para arrematar por:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Data:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Arrematado:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Data:</strong><span class="campo-producao-vazio"></span></div><div class="production-field observation"><strong>OBS:</strong><span class="campo-producao-vazio"></span></div></section><section class="production-panel"><div><span class="panel-number">2</span><h2>Conferencia e embalagem</h2></div><p class="panel-description">Fechamento fisico do pedido.</p><div class="production-field"><strong>Conferido / Embalado por:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Data:</strong><span class="campo-producao-vazio"></span></div></section><section class="production-panel"><div><span class="panel-number">3</span><h2>Cores e arte</h2></div><p class="panel-description">Contagem final por parte da peca.</p><div class="production-field"><strong>Cores Frente:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Costas:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Manga Direita:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Manga Esq:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Total:</strong><span class="campo-producao-vazio"></span></div><div class="production-field observation"><strong>OBS:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Qtd total de cores do pedido:</strong><span class="campo-producao-vazio"></span></div></section></div>
+      <div class="review-box"><strong>Gate humano pendente</strong><span>Rose e Operacao devem revisar legibilidade, conteudo, ordem, grade, totais e impressao. Este arquivo nao registra aprovacao.</span></div>
+    </section>
+  </body>
+</html>

@@ -9,6 +9,7 @@ import {
   ref,
   watch,
 } from 'vue';
+import OrderClosingSection from '../components/order/OrderClosingSection.vue';
 import OrderInfoStrips from '../components/order/OrderInfoStrips.vue';
 import OrderItemsSection from '../components/order/OrderItemsSection.vue';
 import OrderObservationsSection from '../components/order/OrderObservationsSection.vue';
@@ -122,8 +123,38 @@ async function saveSection(section, value) {
   }
 }
 
+/**
+ * PCL-04/PCL-07: the only two transitions of the order, both human. They ride
+ * the version the page is showing, so a confirmation typed over a stale screen
+ * loses to a 409 instead of overwriting the winner (PCL-09).
+ *
+ * @param {'confirm'|'reopen'} action @param {Record<string, unknown>} body
+ */
+async function runCommand(action, body) {
+  try {
+    const response = await request(
+      `/api/v1/orders/${encodeURIComponent(props.orderId)}/${action}`,
+      {
+        body: { ...body, expectedVersion: order.value.version },
+        idempotencyKey: commandKey(),
+        method: 'POST',
+      },
+    );
+    order.value = response.data.order;
+    return { ok: true };
+  } catch (cause) {
+    return {
+      code: String(/** @type {any} */ (cause)?.code ?? ''),
+      fields: /** @type {any} */ (cause)?.problem?.fields ?? [],
+      message: describeWriteError(cause),
+      ok: false,
+    };
+  }
+}
+
 provide('orderEditing', {
   canEdit,
+  command: runCommand,
   editingSection,
   save: saveSection,
   /** @param {string} section */
@@ -281,14 +312,7 @@ onBeforeUnmount(() => {
       <OrderItemsSection :order="order" />
       <OrderObservationsSection :order="order" />
       <OrderInfoStrips :order="order" />
-      <section
-        class="surface section-gap"
-        aria-labelledby="order-closing-title"
-      >
-        <div class="panel-head">
-          <h2 id="order-closing-title">Fechamento e pagamento</h2>
-        </div>
-      </section>
+      <OrderClosingSection :order="order" />
     </template>
   </div>
 </template>

@@ -890,27 +890,6 @@ details.exact summary {
   font-size: var(--text-sm);
 }
 
-.suggestion {
-  display: grid;
-  gap: 0.5rem;
-  margin-block-start: 1.15rem;
-  padding: 0.9rem;
-  color: var(--status-info-text);
-  background: var(--status-info-surface);
-  border: 1px solid var(--status-info-text);
-  border-inline-start-width: 0.25rem;
-  border-radius: var(--radius-md);
-}
-
-.suggestion strong {
-  font-size: var(--text-sm);
-}
-
-.suggestion p {
-  margin: 0;
-  font-size: var(--text-xs);
-}
-
 .audit-note {
   margin-block-start: 1.15rem;
   padding: 0.85rem;

@@ -43,6 +43,15 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
     'handoff.resolve',
     'handoff.transfer',
     'kanban.read',
+    // Pedido (ADR 006). Any seller passes the allowlist; writes are further
+    // limited to the conversation owner or COMMERCIAL_ADMIN by the orders
+    // runtime, while reading and printing stay open to every seller.
+    'order.confirm',
+    'order.create',
+    'order.edit',
+    'order.print',
+    'order.read',
+    'order.reopen',
     'task.cancel',
     'task.complete',
     'task.create',
@@ -50,6 +59,13 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
     'user.assignable.read',
   ]),
 );
+
+/**
+ * Order actions only the n8n technical actor may run: the agent creates the
+ * pending order when it confirms a purchase intent. No human function or
+ * capability opens them, so `authorize` denies them to every user.
+ */
+export const AUTOMATION_ORDER_ACTIONS = Object.freeze(['order.intent']);
 
 const operationalActions = OPERATIONAL_ACTIONS;
 /** @type {Map<string, Capability>} */

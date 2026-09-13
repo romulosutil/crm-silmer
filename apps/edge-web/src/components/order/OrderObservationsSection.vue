@@ -117,7 +117,8 @@ async function save() {
         </button>
       </div>
       <div class="inline-actions">
-        <button class="primary" type="submit" :disabled="saving">
+        <!-- PFI-13: "Confirmar pedido" is the only primary button here. -->
+        <button type="submit" :disabled="saving">
           {{ saving ? 'Salvando…' : 'Salvar' }}
         </button>
         <button type="button" :disabled="saving" @click="cancel">

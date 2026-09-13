@@ -81,7 +81,12 @@ const pendingOrder = {
       },
     ],
     observations: ['Separar os itens por tamanho.'],
-    serviceData: {},
+    serviceData: {
+      artwork_status: 'Arte recebida do cliente',
+      city_or_postal_code: 'Salvador/BA',
+      purchase_profile: 'Compra recorrente',
+      purpose: 'Uso próprio',
+    },
     summary: {
       aplicacao: 'SUBLIMAÇÃO TOTAL',
       cliente: 'Colégio Ápice',
@@ -941,4 +946,41 @@ test('drops a blank observation instead of storing an empty line', async ({
   await observations.getByRole('button', { name: 'Salvar' }).click();
 
   expect(writes[0].body.value).toEqual(['Separar os itens por tamanho.']);
+});
+
+test('shows production as informative and service data as not printed (PFI-08)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const production = page.getByRole('region', { name: 'Controle de produção' });
+  await expect(production).toContainText('14 campos');
+  await expect(production).toContainText('saem em branco');
+  await expect(production.getByRole('button')).toHaveCount(0);
+
+  const service = page.getByRole('region', { name: 'Dados do atendimento' });
+  await expect(service).toContainText('não saem na ficha impressa');
+  await service.getByRole('button', { name: 'Ver' }).click();
+  await expect(service).toContainText('Arte');
+  await expect(service).toContainText('Arte recebida do cliente');
+  await expect(service).toContainText('Salvador/BA');
+  await expect(service).toContainText('Uso próprio');
+  await expect(service.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+});
+
+test('keeps the six sections in the order of the printed ficha (PFI-01)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  await expect(page.locator('main h2')).toHaveText([
+    'Resumo do pedido',
+    'Itens e especificações',
+    'Observações do pedido',
+    'Controle de produção',
+    'Dados do atendimento',
+    'Fechamento e pagamento',
+  ]);
 });

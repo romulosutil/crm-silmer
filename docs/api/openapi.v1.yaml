@@ -317,6 +317,14 @@ paths:
               Quando true, retorna somente conversas em modo humano com
               handoff pendente e sem responsável atribuído.
           }
+        - name: pendingHandoff
+          in: query
+          schema: { type: boolean }
+          description: >-
+            Estado "Aguardando vendedor". Quando true, retorna só conversas
+            com handoff pendente, ordenadas pelo tempo parado (a espera mais
+            antiga primeiro); quando false, só conversas sem handoff pendente.
+            Combina com os demais filtros.
         - {
             name: archived,
             in: query,
@@ -1608,7 +1616,35 @@ components:
               ],
           }
         deal: { type: [object, 'null'] }
-        handoff: { type: [object, 'null'] }
+        handoff:
+          type: [object, 'null']
+          description: Handoff aberto (pendente ou aceito) da conversa.
+          properties:
+            id: { type: string }
+            status: { type: string, enum: [pending, accepted] }
+            reasonCode:
+              type: string
+              description: Motivo da parada do agente (crm.handoffs.reason_code).
+            createdAt:
+              type: string
+              format: date-time
+              description: Início da espera; base do tempo parado.
+            dueAt: { type: string, format: date-time }
+            targetRole: { type: string }
+            version: { type: integer, minimum: 1 }
+        order:
+          description: >-
+            Pedido atual da conversa: o pendente ou, se não houver, o último
+            confirmado.
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [id, number, status]
+              properties:
+                id: { type: string }
+                number: { type: string, pattern: '^[0-9]{2,}-CRM$' }
+                status: { $ref: '#/components/schemas/OrderStatus' }
+            - { type: 'null' }
         lastMessage:
           {
             oneOf:

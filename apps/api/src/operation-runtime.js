@@ -90,6 +90,7 @@ export function createOperationReadService({
         'channel',
         'cursor',
         'limit',
+        'pendingHandoff',
         'state',
         'unassignedHumanHandoff',
       ]);
@@ -120,6 +121,10 @@ export function createOperationReadService({
       if (input.channel !== undefined) {
         filters.channel = requireChoice(input.channel, CHANNELS);
       }
+      if (input.pendingHandoff !== undefined) {
+        // "Aguardando vendedor": the agent stopped and nobody picked it up.
+        filters.pendingHandoff = readBooleanFilter(input.pendingHandoff);
+      }
       if (input.state !== undefined) {
         filters.state = requireChoice(input.state, CONVERSATION_STATES);
       }
@@ -148,6 +153,11 @@ export function createOperationReadService({
         cursorKey,
         fingerprint,
         scope: 'inbox',
+        // The waiting list is ordered by how long the handoff has waited,
+        // so its cursor continues from that instant instead of the last message.
+        ...(filters.pendingHandoff === true
+          ? { position: (/** @type {any} */ item) => item.handoff.createdAt }
+          : {}),
       });
     },
     /** @param {{after?: unknown}} [input] */
@@ -407,14 +417,33 @@ function liveEventFor(row) {
   };
 }
 
-/** @param {any} result @param {{cursorKey: Buffer, fingerprint: string, scope: string}} context */
+/** @param {unknown} value */
+function readBooleanFilter(value) {
+  if (
+    value !== true &&
+    value !== false &&
+    value !== 'true' &&
+    value !== 'false'
+  ) {
+    throw new OperationReadError(400, 'INVALID_FILTER');
+  }
+  return value === true || value === 'true';
+}
+
+/** @param {any} result @param {{cursorKey: Buffer, fingerprint: string, scope: string, position?: (item: any) => string}} context */
 function pageResponse(result, context) {
   const items = result.items ?? [];
+  const last = items.at(-1);
   return Object.freeze({
     items,
     nextCursor:
       result.hasMore && items.length > 0
-        ? encodeCursor(items.at(-1), context)
+        ? encodeCursor(
+            context.position
+              ? { id: last.id, updatedAt: context.position(last) }
+              : last,
+            context,
+          )
         : null,
     totalCount: Number(result.totalCount ?? items.length),
   });

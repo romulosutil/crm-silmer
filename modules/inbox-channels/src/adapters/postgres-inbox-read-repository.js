@@ -1,6 +1,22 @@
 import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-envelope';
 import { decryptInboxMessageEnvelope } from './postgres-inbox-repository.js';
 
+/**
+ * The order the Inbox shows for a conversation: the pending one, otherwise the
+ * most recently confirmed (same rule as GET /conversations/:id/order). Only
+ * plain columns are read; the ficha stays encrypted.
+ */
+const CURRENT_ORDER_JOIN = `LEFT JOIN LATERAL (
+             SELECT candidate_order.id, candidate_order.number,
+                    candidate_order.status
+             FROM crm.orders candidate_order
+             WHERE candidate_order.conversation_id=conversation.id
+             ORDER BY (candidate_order.status = 'pendente') DESC,
+                      candidate_order.confirmed_at DESC NULLS LAST,
+                      candidate_order.number_sequence DESC
+             LIMIT 1
+           ) current_order ON true`;
+
 export class PostgresInboxReadRepository {
   /** @param {{database: {query: Function, transaction?: Function}, contactEnvelopeKey: Buffer, messageEnvelopeKey: Buffer}} options */
   constructor({ database, contactEnvelopeKey, messageEnvelopeKey }) {
@@ -43,21 +59,33 @@ export class PostgresInboxReadRepository {
       if (input.unassignedHumanHandoff) {
         predicates.push('conversation.assigned_user_id IS NULL');
       }
-      if (input.after) {
-        values.push(input.after.updatedAt, input.after.id);
+      if (input.pendingHandoff !== undefined) {
+        // At most one handoff per conversation is open (pending or accepted).
         predicates.push(
-          `(conversation.last_message_at, conversation.id) < ($${values.length - 1}, $${values.length})`,
+          `${input.pendingHandoff ? '' : 'NOT '}EXISTS (
+             SELECT 1 FROM crm.handoffs waiting
+             WHERE waiting.conversation_id=conversation.id
+               AND waiting.status='pending')`,
         );
       }
-      const where = predicates.length ? predicates.join(' AND ') : 'true';
-      const countValues = input.after ? values.slice(0, -2) : [...values];
-      const countWhere =
-        predicates
-          .filter(
-            (predicate) =>
-              !predicate.startsWith('(conversation.last_message_at'),
-          )
-          .join(' AND ') || 'true';
+      const countValues = [...values];
+      const countWhere = predicates.join(' AND ');
+      // "Aguardando vendedor" puts the longest wait first; every other view
+      // keeps the most recent message first.
+      const byWaitingTime = input.pendingHandoff === true;
+      const pagePredicates = [...predicates];
+      if (input.after) {
+        values.push(input.after.updatedAt, input.after.id);
+        pagePredicates.push(
+          byWaitingTime
+            ? `(handoff.created_at, conversation.id) > ($${values.length - 1}::timestamptz, $${values.length})`
+            : `(conversation.last_message_at, conversation.id) < ($${values.length - 1}, $${values.length})`,
+        );
+      }
+      const where = pagePredicates.join(' AND ');
+      const orderBy = byWaitingTime
+        ? 'handoff.created_at ASC, conversation.id ASC'
+        : 'conversation.last_message_at DESC, conversation.id DESC';
       values.push(input.limit + 1);
       const [page, count] = await Promise.all([
         database.query(
@@ -74,6 +102,10 @@ export class PostgresInboxReadRepository {
                   handoff.id handoff_id, handoff.status handoff_status,
                   handoff.version handoff_version,
                   handoff.target_role, handoff.due_at handoff_due_at,
+                  handoff.reason_code handoff_reason_code,
+                  handoff.created_at handoff_created_at,
+                  current_order.id order_id, current_order.number order_number,
+                  current_order.status order_status,
                   last_message.id last_message_id,
                   last_message.direction last_message_direction,
                   last_message.message_type last_message_type,
@@ -90,12 +122,14 @@ export class PostgresInboxReadRepository {
            LEFT JOIN LATERAL (
              SELECT candidate.id, candidate.status, candidate.version,
                     candidate.target_role,
-                    candidate.due_at
+                    candidate.due_at, candidate.reason_code,
+                    candidate.created_at
              FROM crm.handoffs candidate
              WHERE candidate.conversation_id=conversation.id
                AND candidate.status IN ('pending','accepted')
              ORDER BY candidate.created_at DESC, candidate.id DESC LIMIT 1
            ) handoff ON true
+           ${CURRENT_ORDER_JOIN}
            LEFT JOIN LATERAL (
              SELECT message.id, message.direction, message.message_type,
                     message.content_envelope, message.status,
@@ -105,7 +139,7 @@ export class PostgresInboxReadRepository {
              ORDER BY message.occurred_at DESC, message.id DESC LIMIT 1
            ) last_message ON true
            WHERE ${where}
-           ORDER BY conversation.last_message_at DESC, conversation.id DESC
+           ORDER BY ${orderBy}
            LIMIT $${values.length}`,
           values,
         ),
@@ -147,7 +181,12 @@ export class PostgresInboxReadRepository {
                     assigned_function.function_name,
                     handoff.id handoff_id, handoff.status handoff_status,
                     handoff.version handoff_version,
-                    handoff.target_role, handoff.due_at handoff_due_at
+                    handoff.target_role, handoff.due_at handoff_due_at,
+                    handoff.reason_code handoff_reason_code,
+                    handoff.created_at handoff_created_at,
+                    current_order.id order_id,
+                    current_order.number order_number,
+                    current_order.status order_status
              FROM crm.conversations conversation
              JOIN crm.contact_identities identity
                ON identity.id=conversation.contact_identity_id
@@ -157,12 +196,14 @@ export class PostgresInboxReadRepository {
              LEFT JOIN LATERAL (
                SELECT candidate.id, candidate.status, candidate.version,
                       candidate.target_role,
-                      candidate.due_at
+                      candidate.due_at, candidate.reason_code,
+                      candidate.created_at
                FROM crm.handoffs candidate
                WHERE candidate.conversation_id=conversation.id
                  AND candidate.status IN ('pending','accepted')
                ORDER BY candidate.created_at DESC, candidate.id DESC LIMIT 1
              ) handoff ON true
+             ${CURRENT_ORDER_JOIN}
              WHERE conversation.id=$1`,
             [conversationId],
           ),
@@ -262,6 +303,8 @@ function mapConversationSummary(row, repository) {
           dueAt: iso(row.handoff_due_at),
           id: row.handoff_id,
           status: row.handoff_status,
+          createdAt: iso(row.handoff_created_at),
+          reasonCode: row.handoff_reason_code,
           targetRole: row.target_role,
           version: Number(row.handoff_version),
         }
@@ -269,6 +312,9 @@ function mapConversationSummary(row, repository) {
     id: row.id,
     lastMessage,
     openedAt: iso(row.opened_at),
+    order: row.order_id
+      ? { id: row.order_id, number: row.order_number, status: row.order_status }
+      : null,
     requiresAttention:
       row.state === 'requer_atencao' ||
       row.handoff_status === 'pending' ||

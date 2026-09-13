@@ -44,6 +44,7 @@ test('authorizes HTTP Basic credentials for every minimum n8n action', async () 
     'deal.fields.patch',
     'deal.transition',
     'handoff.create',
+    'order.intent',
   ];
 
   for (const action of allowedActions) {

@@ -1417,3 +1417,23 @@ details.exact summary {
 .order-banner p {
   margin: 0;
 }
+
+.order-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.order-form .field-list label {
+  display: block;
+  margin-block-start: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.order-form .field-list input,
+.order-form .field-list textarea,
+.order-form .field-list select {
+  inline-size: 100%;
+  max-inline-size: 24rem;
+}

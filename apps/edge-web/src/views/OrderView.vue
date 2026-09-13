@@ -9,7 +9,8 @@ import {
   ref,
   watch,
 } from 'vue';
-import { request } from '../lib/api-client.js';
+import OrderSummarySection from '../components/order/OrderSummarySection.vue';
+import { commandKey, request } from '../lib/api-client.js';
 import {
   missingFieldLabels,
   PRINT_LOCKED_REASON,
@@ -71,9 +72,57 @@ const orderContext = computed(() => {
   return seller ? `${event} · com ${seller}` : event;
 });
 
+/**
+ * What a failed write means to the seller. The message is chosen here, next
+ * to the version the page is holding, so every section says the same thing
+ * about the same code.
+ *
+ * @param {any} cause
+ */
+function describeWriteError(cause) {
+  const status = Number(cause?.status);
+  const code = String(cause?.code ?? '');
+  if (status === 409) return 'Este pedido mudou. Recarregue a seção.';
+  if (status === 403) return 'Este pedido é de outro vendedor.';
+  if (code === 'INVALID_AMOUNT') return 'Use o formato 4.820,00.';
+  if (status >= 500) return 'Serviço indisponível no momento.';
+  return 'Não foi possível salvar esta seção.';
+}
+
+/**
+ * PFI-06: a section is written whole, over the version the page is showing.
+ * The answer carries the new order, so the page never guesses what the server
+ * derived (totals, what is missing) from the change.
+ *
+ * @param {string} section @param {unknown} value
+ */
+async function saveSection(section, value) {
+  try {
+    const response = await request(
+      `/api/v1/orders/${encodeURIComponent(props.orderId)}/sections/${section}`,
+      {
+        body: { expectedVersion: order.value.version, value },
+        idempotencyKey: commandKey(),
+        method: 'PATCH',
+      },
+    );
+    order.value = response.data.order;
+    return { ok: true };
+  } catch (cause) {
+    return {
+      code: String(/** @type {any} */ (cause)?.code ?? ''),
+      fields: /** @type {any} */ (cause)?.problem?.fields ?? [],
+      index: /** @type {any} */ (cause)?.problem?.index,
+      message: describeWriteError(cause),
+      ok: false,
+    };
+  }
+}
+
 provide('orderEditing', {
   canEdit,
   editingSection,
+  save: saveSection,
   /** @param {string} section */
   start(section) {
     editingSection.value = section;
@@ -225,14 +274,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- PFI-01: the order of the printed ficha, top to bottom. -->
-      <section
-        class="surface section-gap"
-        aria-labelledby="order-summary-title"
-      >
-        <div class="panel-head">
-          <h2 id="order-summary-title">Resumo do pedido</h2>
-        </div>
-      </section>
+      <OrderSummarySection :order="order" />
       <section class="surface section-gap" aria-labelledby="order-items-title">
         <div class="panel-head">
           <h2 id="order-items-title">Itens e especificações</h2>

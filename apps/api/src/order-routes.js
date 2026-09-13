@@ -134,6 +134,63 @@ export function registerOrderRoutes(api, orders, contextFor) {
         return reply.code(200).send({ order });
       }),
   );
+
+  api.post('/api/v1/orders/:orderId/confirm', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, [
+        'amountText',
+        'expectedVersion',
+        'paymentCondition',
+      ]);
+      const expectedVersion = requireVersion(body.expectedVersion);
+      // A missing amount or condition is not malformed: the service answers
+      // 422 ORDER_NOT_CONFIRMABLE naming it, next to the other blockers.
+      for (const field of ['amountText', 'paymentCondition']) {
+        if (body[field] !== undefined && typeof body[field] !== 'string') {
+          throw new OrderRequestError(400, 'INVALID_REQUEST');
+        }
+      }
+      const command = await authorizeCommand(
+        request,
+        orders,
+        contextFor,
+        'order.confirm',
+      );
+      const order = await orders.confirm({
+        ...command,
+        amountText: body.amountText,
+        expectedVersion,
+        orderId,
+        paymentCondition: body.paymentCondition,
+      });
+      return reply.code(200).send({ order });
+    }),
+  );
+
+  api.post('/api/v1/orders/:orderId/reopen', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['expectedVersion']);
+      const expectedVersion = requireVersion(body.expectedVersion);
+      const command = await authorizeCommand(
+        request,
+        orders,
+        contextFor,
+        'order.reopen',
+      );
+      const order = await orders.reopen({
+        ...command,
+        expectedVersion,
+        orderId,
+      });
+      return reply.code(200).send({ order });
+    }),
+  );
 }
 
 /**

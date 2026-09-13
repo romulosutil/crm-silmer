@@ -263,6 +263,21 @@ test('a repeated command key replays the first response without a second effect'
   );
 });
 
+test('a confirmation without amount or condition is a 422, not a crash', async () => {
+  const { runtime } = harness();
+  const { order } = await create(runtime, OWNER, 'conversation-1');
+  await assert.rejects(
+    runtime.confirm(
+      command(OWNER, { expectedVersion: order.version, orderId: order.id }),
+    ),
+    {
+      code: 'ORDER_NOT_CONFIRMABLE',
+      fields: ['items', 'finalAmount', 'paymentCondition'],
+      statusCode: 422,
+    },
+  );
+});
+
 test('a failed command does not burn its key', async () => {
   const { runtime } = harness();
   const { order } = await create(runtime, OWNER, 'conversation-1');

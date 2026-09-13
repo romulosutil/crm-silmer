@@ -236,7 +236,13 @@ function eventStreamBody(event) {
  * @param {{orders?: any[], liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>}}} [options]
  */
 async function mockOrders(page, options = {}) {
-  const orders = options.orders ?? [confirmedOrder, pendingOrder];
+  // A write mutates the order it answers with, so each test gets its own
+  // copy: sharing the module fixture would let one test's confirmation
+  // decide what the next test in the same worker reads.
+  /** @type {any[]} */
+  const orders = JSON.parse(
+    JSON.stringify(options.orders ?? [confirmedOrder, pendingOrder]),
+  );
   const pages = options.pages ?? null;
   let listCalls = 0;
   await page.route('**/api/v1/**', async (route) => {
@@ -983,4 +989,124 @@ test('keeps the six sections in the order of the printed ficha (PFI-01)', async 
     'Dados do atendimento',
     'Fechamento e pagamento',
   ]);
+});
+
+test('confirms the order, frees printing, reopens it and locks printing again', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await expect(closing).toContainText('pedido pendente');
+  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeDisabled();
+
+  await closing.getByLabel('Valor final').fill('4.820,00');
+  await closing.getByLabel('Pix').check();
+  await closing.getByRole('button', { name: 'Confirmar pedido' }).click();
+
+  await expect(closing).toContainText('R$ 4.820,00');
+  await expect(closing).toContainText('Pix');
+  await expect(closing).toContainText('Confirmado por Marina Aguiar');
+  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeEnabled();
+  await expect(
+    page.getByText('Disponível depois de confirmar o pedido'),
+  ).toHaveCount(0);
+  expect(writes[0].action).toBe('confirm');
+  expect(writes[0].body).toEqual({
+    amountText: '4.820,00',
+    expectedVersion: 2,
+    paymentCondition: 'pix',
+  });
+
+  await closing.getByRole('button', { name: 'Reabrir pedido' }).click();
+  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeDisabled();
+  await expect(closing).toContainText('pedido pendente');
+  // PCL-07: the amount and the condition survive the reopen.
+  await expect(closing.getByLabel('Valor final')).toHaveValue('4.820,00');
+  expect(writes[1].action).toBe('reopen');
+});
+
+test('refuses a malformed amount next to the field, before the request', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await closing.getByLabel('Valor final').fill('4,820.00');
+  await closing.getByLabel('Pix').check();
+  await closing.getByRole('button', { name: 'Confirmar pedido' }).click();
+
+  await expect(closing).toContainText('Use o formato 4.820,00.');
+  expect(writes).toHaveLength(0);
+});
+
+test('names each blocker the server refused the confirmation with', async ({
+  page,
+}) => {
+  await mockOrders(page, {
+    writeFailure: {
+      body: {
+        code: 'ORDER_NOT_CONFIRMABLE',
+        fields: ['items', 'paymentCondition'],
+      },
+      status: 422,
+    },
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await closing.getByLabel('Valor final').fill('4.820,00');
+  await closing.getByLabel('Pix').check();
+  await closing.getByRole('button', { name: 'Confirmar pedido' }).click();
+
+  await expect(closing).toContainText('Escolha a condição de pagamento.');
+  await expect(closing).toContainText(
+    'O pedido precisa de ao menos um item com grade.',
+  );
+  await expect(closing).toContainText('pedido pendente');
+});
+
+test('keeps "Confirmar pedido" as the only primary button of the page (PFI-13)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  await expect(page.locator('main button.primary')).toHaveText([
+    'Confirmar pedido',
+  ]);
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await summary.getByRole('button', { name: 'Editar' }).click();
+  await expect(page.locator('main button.primary')).toHaveText([
+    'Confirmar pedido',
+  ]);
+});
+
+test('hides Confirmar and Reabrir from whoever does not own the conversation', async ({
+  page,
+}) => {
+  await mockOrders(page, {
+    orders: [
+      {
+        ...confirmedOrder,
+        seller: { id: 'seller-ricardo', name: 'Ricardo Lima' },
+      },
+    ],
+  });
+  await page.goto('/pedidos/order-confirmado');
+
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await expect(closing).toContainText('R$ 1.180,00');
+  await expect(
+    closing.getByRole('button', { name: 'Reabrir pedido' }),
+  ).toHaveCount(0);
+  // PIM-05: any operational session prints a confirmed order.
+  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeEnabled();
 });

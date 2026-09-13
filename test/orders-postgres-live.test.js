@@ -4,6 +4,9 @@ import { after, before, test } from 'node:test';
 
 import { Pool } from 'pg';
 
+import { createOrderRuntime } from '../apps/api/src/order-runtime.js';
+import { PostgresAuditTrail } from '../modules/audit-privacy/src/index.js';
+import { PostgresIdempotencyRecordStore } from '../modules/integration-reliability/src/index.js';
 import {
   PostgresContactIdentityRepository,
   createContactIdentityService,
@@ -287,8 +290,14 @@ if (connectionString) {
       envelopeKey: ENVELOPE_KEY,
     });
 
+    const { version: conversationVersion } = (
+      await pool.query('SELECT version FROM crm.conversations WHERE id = $1', [
+        conversation.id,
+      ])
+    ).rows[0];
     assert.deepEqual(await port.readAssignment(conversation.id), {
       assignedUserId: sellerId,
+      version: Number(conversationVersion),
     });
     assert.equal(await port.readAssignment(`missing-${runId}`), null);
     assert.deepEqual(
@@ -330,7 +339,120 @@ if (connectionString) {
       [conversation.id],
     );
     assert.deepEqual(await port.searchConversationIds('ninguem'), []);
-    assert.deepEqual(await port.searchConversationIds('12'), []);
+    // Fewer than four digits never match a phone; "#" never appears in a
+    // seeded name or handle, so this checks only the digit rule.
+    assert.deepEqual(await port.searchConversationIds('#12'), []);
+  });
+
+  test('the orders runtime replays a command key and audits it once in PostgreSQL', async () => {
+    const runId = randomUUID().replaceAll('-', '');
+    const database = databaseFor(pool);
+    const conversationId = await seedConversation(pool);
+    const sellerId = `seller-runtime-${runId}`;
+    await pool.query(
+      `INSERT INTO crm.users (id, email, password_hash, name)
+       VALUES ($1, $2, '$argon2id$synthetic', 'Vendedor Runtime')`,
+      [sellerId, `${sellerId}@example.test`],
+    );
+    await pool.query(
+      `INSERT INTO crm.user_functions (user_id, function_name)
+       VALUES ($1, 'Vendedor')`,
+      [sellerId],
+    );
+    await pool.query(
+      'UPDATE crm.conversations SET assigned_user_id = $2 WHERE id = $1',
+      [conversationId, sellerId],
+    );
+    const conversationVersion = Number(
+      (
+        await pool.query(
+          'SELECT version FROM crm.conversations WHERE id = $1',
+          [conversationId],
+        )
+      ).rows[0].version,
+    );
+    const runtime = createOrderRuntime({
+      access: {
+        authorizeRead: async () => ({ actor: null }),
+        authorizeWrite: async () => ({ actor: null }),
+      },
+      auditTrail: new PostgresAuditTrail(database),
+      conversations: new PostgresOrderConversationPort({
+        contactEnvelopeKey: CONTACT_KEY,
+        database,
+        envelopeKey: ENVELOPE_KEY,
+      }),
+      fabCode: '01',
+      idempotencyStore: new PostgresIdempotencyRecordStore({
+        database,
+        envelopeKey: Buffer.alloc(32, 66),
+      }),
+      repository,
+    });
+    const actor = { capabilities: [], id: sellerId, kind: 'human' };
+
+    const created = await runtime.createManual({
+      actor,
+      conversationId,
+      correlationId: `correlation-create-${runId}`,
+      expectedVersion: conversationVersion,
+      idempotencyKey: `create-${runId}`,
+    });
+    assert.equal(created.created, true);
+    assert.deepEqual(created.order.seller, {
+      id: sellerId,
+      name: 'Vendedor Runtime',
+    });
+
+    const patch = {
+      actor,
+      correlationId: `correlation-patch-${runId}`,
+      expectedVersion: created.order.version,
+      idempotencyKey: `patch-${runId}`,
+      orderId: created.order.id,
+      section: 'observations',
+      value: ['Conferir arte'],
+    };
+    const [first, concurrent] = await Promise.all([
+      runtime.patchSection(patch),
+      runtime.patchSection({ ...patch }),
+    ]);
+    assert.deepEqual(concurrent, first);
+    assert.equal(first.version, created.order.version + 1);
+    const replay = await runtime.patchSection({ ...patch });
+    assert.deepEqual(replay, first);
+    await assert.rejects(runtime.patchSection({ ...patch, value: ['Outra'] }), {
+      code: 'IDEMPOTENCY_KEY_REUSED',
+      statusCode: 409,
+    });
+
+    const stored = await pool.query(
+      `SELECT status, response::text AS response FROM crm.idempotency_records
+       WHERE idempotency_key = $1`,
+      [`patch-${runId}`],
+    );
+    assert.equal(stored.rows.length, 1);
+    assert.equal(stored.rows[0].status, 'completed');
+    assert.doesNotMatch(stored.rows[0].response, /Conferir arte/u);
+    const audits = await pool.query(
+      `SELECT action FROM crm.audit_events
+       WHERE target_id = $1 ORDER BY occurred_at`,
+      [created.order.id],
+    );
+    assert.deepEqual(
+      audits.rows.map((row) => row.action),
+      ['order.edit'],
+    );
+    const events = await pool.query(
+      `SELECT event_type FROM crm.domain_events
+       WHERE aggregate_type = 'order' AND aggregate_id = $1
+       ORDER BY stream_cursor`,
+      [created.order.id],
+    );
+    assert.deepEqual(
+      events.rows.map((row) => row.event_type),
+      ['order.created', 'order.section_saved'],
+    );
   });
 
   test('rejects a key that is not 32 bytes', () => {

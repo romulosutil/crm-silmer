@@ -53,16 +53,23 @@ export class PostgresOrderConversationPort {
   }
 
   /**
+   * The owner and the version a command must have seen.
+   *
    * @param {string} conversationId
-   * @returns {Promise<{assignedUserId: string|null}|null>}
+   * @returns {Promise<{assignedUserId: string|null, version: number}|null>}
    */
   async readAssignment(conversationId) {
     const result = await this.#database.query(
-      'SELECT assigned_user_id FROM crm.conversations WHERE id = $1',
+      'SELECT assigned_user_id, version FROM crm.conversations WHERE id = $1',
       [conversationId],
     );
     const row = result.rows[0];
-    return row ? { assignedUserId: row.assigned_user_id ?? null } : null;
+    return row
+      ? {
+          assignedUserId: row.assigned_user_id ?? null,
+          version: Number(row.version),
+        }
+      : null;
   }
 
   /**

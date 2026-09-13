@@ -6,6 +6,7 @@ import {
   createOrderApiRuntime,
   createOrderRuntime,
 } from '../apps/api/src/order-runtime.js';
+import { InMemoryIdempotencyRecordStore } from '../modules/integration-reliability/src/index.js';
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
 
 const synthetic = JSON.parse(
@@ -36,18 +37,23 @@ function harness() {
   };
   /** @type {string[]} */
   const assignmentReads = [];
+  /** @type {any[]} */
+  const audits = [];
   const access = {
     authorizeRead: async () => ({ actor: OTHER }),
     authorizeWrite: async () => ({ actor: OWNER }),
   };
   const runtime = createOrderRuntime({
     access,
+    auditTrail: {
+      append: async (/** @type {any} */ event) => void audits.push(event),
+    },
     clock: () => new Date('2026-09-12T15:00:00.000Z'),
     conversations: {
       readAssignment: async (/** @type {string} */ conversationId) => {
         assignmentReads.push(conversationId);
         return conversationId in assignments
-          ? { assignedUserId: assignments[conversationId] }
+          ? { assignedUserId: assignments[conversationId], version: 7 }
           : null;
       },
       readAssignments: async (/** @type {string[]} */ ids) =>
@@ -61,21 +67,34 @@ function harness() {
       searchConversationIds: async () => [],
     },
     fabCode: '01',
+    idempotencyStore: new InMemoryIdempotencyRecordStore(),
     repository: new InMemoryOrderRepository(),
   });
-  return { access, assignmentReads, assignments, runtime };
+  return { access, assignmentReads, assignments, audits, runtime };
 }
 
+let commandSequence = 0;
 /** @param {any} actor @param {Record<string, unknown>} extra @returns {any} */
 function command(actor, extra) {
-  return { actor, correlationId: 'correlation-command', ...extra };
+  commandSequence += 1;
+  return {
+    actor,
+    correlationId: 'correlation-command',
+    idempotencyKey: `command-${commandSequence}`,
+    ...extra,
+  };
+}
+
+/** @param {any} runtime @param {any} actor @param {string} conversationId */
+function create(runtime, actor, conversationId) {
+  return runtime.createManual(
+    command(actor, { conversationId, expectedVersion: 7 }),
+  );
 }
 
 test('the conversation owner creates, edits and confirms its order', async () => {
-  const { runtime } = harness();
-  const created = await runtime.createManual(
-    command(OWNER, { conversationId: 'conversation-1' }),
-  );
+  const { audits, runtime } = harness();
+  const created = await create(runtime, OWNER, 'conversation-1');
   assert.equal(created.created, true);
   const edited = await runtime.patchSection(
     command(OWNER, {
@@ -94,18 +113,31 @@ test('the conversation owner creates, edits and confirms its order', async () =>
     }),
   );
   assert.equal(confirmed.status, 'confirmado');
-  assert.equal(confirmed.confirmedBy, 'seller-1');
+  assert.deepEqual(confirmed.confirmedBy, {
+    id: 'seller-1',
+    name: 'Nome seller-1',
+  });
+  assert.deepEqual(
+    audits.map((event) => [event.action, event.actor, event.target]),
+    [
+      [
+        'order.create',
+        'seller-1',
+        { id: 'conversation-1', type: 'conversation' },
+      ],
+      ['order.edit', 'seller-1', { id: created.order.id, type: 'order' }],
+      ['order.confirm', 'seller-1', { id: created.order.id, type: 'order' }],
+    ],
+  );
 });
 
 test('another seller is refused with 403 on every order command', async () => {
   const { runtime } = harness();
-  await assert.rejects(
-    runtime.createManual(command(OTHER, { conversationId: 'conversation-1' })),
-    { code: 'FORBIDDEN', statusCode: 403 },
-  );
-  const { order } = await runtime.createManual(
-    command(OWNER, { conversationId: 'conversation-1' }),
-  );
+  await assert.rejects(create(runtime, OTHER, 'conversation-1'), {
+    code: 'FORBIDDEN',
+    statusCode: 403,
+  });
+  const { order } = await create(runtime, OWNER, 'conversation-1');
   for (const attempt of [
     () =>
       runtime.patchSection(
@@ -133,19 +165,15 @@ test('another seller is refused with 403 on every order command', async () => {
     await assert.rejects(attempt(), { code: 'FORBIDDEN', statusCode: 403 });
   }
   // Nobody owns an unassigned conversation, so only an admin may act on it.
-  await assert.rejects(
-    runtime.createManual(
-      command(OWNER, { conversationId: 'conversation-unassigned' }),
-    ),
-    { code: 'FORBIDDEN', statusCode: 403 },
-  );
+  await assert.rejects(create(runtime, OWNER, 'conversation-unassigned'), {
+    code: 'FORBIDDEN',
+    statusCode: 403,
+  });
 });
 
 test('a commercial admin acts on any conversation', async () => {
   const { runtime } = harness();
-  const { order } = await runtime.createManual(
-    command(ADMIN, { conversationId: 'conversation-unassigned' }),
-  );
+  const { order } = await create(runtime, ADMIN, 'conversation-unassigned');
   const saved = await runtime.patchSection(
     command(ADMIN, {
       expectedVersion: order.version,
@@ -155,13 +183,13 @@ test('a commercial admin acts on any conversation', async () => {
     }),
   );
   assert.deepEqual(saved.ficha.observations, ['Conferir arte']);
+  assert.equal(saved.seller, null);
 });
 
 test('ownership is read from the conversation on each command', async () => {
   const { assignmentReads, assignments, runtime } = harness();
-  const { order } = await runtime.createManual(
-    command(OWNER, { conversationId: 'conversation-1' }),
-  );
+  const { order } = await create(runtime, OWNER, 'conversation-1');
+  assignmentReads.length = 0;
   // "Repassar atendimento": the new owner gains the order, the old one loses it.
   assignments['conversation-1'] = 'seller-2';
   await assert.rejects(
@@ -184,26 +212,98 @@ test('ownership is read from the conversation on each command', async () => {
     }),
   );
   assert.equal(saved.version, order.version + 1);
-  assert.deepEqual(assignmentReads, [
-    'conversation-1',
-    'conversation-1',
-    'conversation-1',
-  ]);
+  assert.deepEqual(assignmentReads, ['conversation-1', 'conversation-1']);
+});
+
+test('creating checks the conversation version after ownership', async () => {
+  const { runtime } = harness();
+  await assert.rejects(
+    runtime.createManual(
+      command(OTHER, { conversationId: 'conversation-1', expectedVersion: 3 }),
+    ),
+    { code: 'FORBIDDEN', statusCode: 403 },
+  );
+  await assert.rejects(
+    runtime.createManual(
+      command(OWNER, { conversationId: 'conversation-1', expectedVersion: 3 }),
+    ),
+    { code: 'VERSION_CONFLICT', statusCode: 409 },
+  );
 });
 
 test('an order command on a missing conversation is a 404', async () => {
   const { runtime } = harness();
+  await assert.rejects(create(runtime, ADMIN, 'conversation-x'), {
+    code: 'CONVERSATION_NOT_FOUND',
+    statusCode: 404,
+  });
+});
+
+test('a repeated command key replays the first response without a second effect', async () => {
+  const { audits, runtime } = harness();
+  const { order } = await create(runtime, OWNER, 'conversation-1');
+  const patch = command(OWNER, {
+    expectedVersion: order.version,
+    orderId: order.id,
+    section: 'observations',
+    value: ['Primeira'],
+  });
+  const first = await runtime.patchSection(patch);
+  const replay = await runtime.patchSection({ ...patch });
+  assert.deepEqual(replay, first);
+  assert.equal((await runtime.get(order.id)).order.version, order.version + 1);
+  assert.equal(
+    audits.filter((event) => event.action === 'order.edit').length,
+    1,
+  );
+
   await assert.rejects(
-    runtime.createManual(command(ADMIN, { conversationId: 'conversation-x' })),
-    { code: 'CONVERSATION_NOT_FOUND', statusCode: 404 },
+    runtime.patchSection({ ...patch, value: ['Outra coisa'] }),
+    { code: 'IDEMPOTENCY_KEY_REUSED', statusCode: 409 },
+  );
+});
+
+test('a failed command does not burn its key', async () => {
+  const { runtime } = harness();
+  const { order } = await create(runtime, OWNER, 'conversation-1');
+  const stale = command(OWNER, {
+    expectedVersion: order.version + 5,
+    orderId: order.id,
+    section: 'observations',
+    value: [],
+  });
+  await assert.rejects(runtime.patchSection(stale), {
+    code: 'VERSION_CONFLICT',
+  });
+  const retried = await runtime.patchSection({
+    ...stale,
+    expectedVersion: order.version,
+  });
+  assert.equal(retried.version, order.version + 1);
+});
+
+test('commands require an idempotency key and an expected version', async () => {
+  const { runtime } = harness();
+  await assert.rejects(
+    runtime.createManual(
+      /** @type {any} */ ({
+        actor: OWNER,
+        conversationId: 'conversation-1',
+        correlationId: 'correlation-command',
+        expectedVersion: 7,
+      }),
+    ),
+    TypeError,
+  );
+  await assert.rejects(
+    runtime.createManual(command(OWNER, { conversationId: 'conversation-1' })),
+    { statusCode: 400 },
   );
 });
 
 test('reads need no ownership and the runtime forwards session guards', async () => {
   const { access, assignmentReads, runtime } = harness();
-  const { order } = await runtime.createManual(
-    command(OWNER, { conversationId: 'conversation-1' }),
-  );
+  const { order } = await create(runtime, OWNER, 'conversation-1');
   assignmentReads.length = 0;
   assert.equal((await runtime.get(order.id)).order.id, order.id);
   assert.equal(
@@ -232,23 +332,28 @@ test('the automation intent reuses the pending order without ownership', async (
   assert.deepEqual(assignmentReads, []);
 });
 
+const KEY = Buffer.alloc(32, 7).toString('base64url');
+const ENVIRONMENT = Object.freeze({
+  CONTACT_IDENTITY_ENVELOPE_KEY: KEY,
+  FAB_CODE: '01',
+  IDEMPOTENCY_ENVELOPE_KEY: KEY,
+  N8N_INTEGRATION_ENVELOPE_KEY: KEY,
+});
+const FAKE_DATABASE = Object.freeze({
+  query: async () => ({ rows: [] }),
+  transaction: async () => {},
+});
+
 test('the PostgreSQL wiring refuses incomplete configuration', () => {
-  const database = {
-    query: async () => ({ rows: [] }),
-    transaction: async () => {},
-  };
   const access = {
     authorizeRead: async () => ({ actor: OWNER }),
     authorizeWrite: async () => ({ actor: OWNER }),
   };
-  const key = Buffer.alloc(32, 7).toString('base64url');
-  const environment = {
-    CONTACT_IDENTITY_ENVELOPE_KEY: key,
-    FAB_CODE: '01',
-    N8N_INTEGRATION_ENVELOPE_KEY: key,
-  };
   assert.equal(
-    typeof createOrderApiRuntime(database, { access, environment }).confirm,
+    typeof createOrderApiRuntime(FAKE_DATABASE, {
+      access,
+      environment: ENVIRONMENT,
+    }).confirm,
     'function',
   );
   for (const [
@@ -259,12 +364,13 @@ test('the PostgreSQL wiring refuses incomplete configuration', () => {
     ['FAB_CODE', undefined, /FAB_CODE is required/u],
     ['N8N_INTEGRATION_ENVELOPE_KEY', 'c2hvcnQ', /32 bytes/u],
     ['CONTACT_IDENTITY_ENVELOPE_KEY', undefined, /CONTACT_IDENTITY/u],
+    ['IDEMPOTENCY_ENVELOPE_KEY', undefined, /IDEMPOTENCY_ENVELOPE_KEY/u],
   ])) {
     assert.throws(
       () =>
-        createOrderApiRuntime(database, {
+        createOrderApiRuntime(FAKE_DATABASE, {
           access,
-          environment: { ...environment, [name]: value },
+          environment: { ...ENVIRONMENT, [name]: value },
         }),
       message,
     );
@@ -273,29 +379,31 @@ test('the PostgreSQL wiring refuses incomplete configuration', () => {
 
 test('the server composes orders only when FAB_CODE is configured', async () => {
   const { createOrdersForServer } = await import('../apps/api/src/server.js');
-  const database = {
-    query: async () => ({ rows: [] }),
-    transaction: async () => {},
-  };
   const operations = {
     authorizeRead: async () => ({ actor: OWNER }),
     authorizeWrite: async () => ({ actor: OWNER }),
   };
-  const key = Buffer.alloc(32, 7).toString('base64url');
-  const environment = {
-    CONTACT_IDENTITY_ENVELOPE_KEY: key,
-    FAB_CODE: '01',
-    N8N_INTEGRATION_ENVELOPE_KEY: key,
-  };
   assert.equal(
-    createOrdersForServer({ database, environment: {}, operations }),
+    createOrdersForServer({
+      database: FAKE_DATABASE,
+      environment: {},
+      operations,
+    }),
     undefined,
   );
   assert.equal(
-    createOrdersForServer({ database, environment, operations: undefined }),
+    createOrdersForServer({
+      database: FAKE_DATABASE,
+      environment: ENVIRONMENT,
+      operations: undefined,
+    }),
     undefined,
   );
-  const orders = createOrdersForServer({ database, environment, operations });
+  const orders = createOrdersForServer({
+    database: FAKE_DATABASE,
+    environment: ENVIRONMENT,
+    operations,
+  });
   assert.equal(orders?.authorizeWrite, operations.authorizeWrite);
 });
 

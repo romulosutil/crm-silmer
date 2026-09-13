@@ -105,6 +105,25 @@ function waitingConversations(now) {
   }));
 }
 
+/**
+ * One SSE payload delivered on connect, with a long retry so the reconnect
+ * does not turn a single event into a refresh loop during the test.
+ *
+ * @param {Record<string, unknown>|null} event
+ */
+function eventStreamBody(event) {
+  if (!event) return 'retry: 60000\n\n: connected\n\n';
+  return [
+    'retry: 60000',
+    '',
+    `event: ${event.type}`,
+    'id: evt-2',
+    `data: ${JSON.stringify(event)}`,
+    '',
+    '',
+  ].join('\n');
+}
+
 /** The pending order of `conversation-1`, as the orders read model presents it. */
 const conversationOrder = {
   confirmedAt: null,
@@ -147,10 +166,11 @@ const conversationOrder = {
   version: 2,
 };
 
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, mixedAuthors?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
+  let inboxListCalls = 0;
   const waiting = options.waitingQueue ? waitingConversations(new Date()) : [];
   // The conversation carries the order summary the Inbox read model joins in,
   // so the header button and the drawer never disagree about which order it is.
@@ -236,7 +256,7 @@ async function mockCrm(page, options = {}) {
         status: 200,
         contentType: 'text/event-stream',
         headers: { 'Cache-Control': 'no-cache' },
-        body: ': connected\n\n',
+        body: eventStreamBody(options.liveEvent ?? null),
       });
       return;
     }
@@ -272,6 +292,12 @@ async function mockCrm(page, options = {}) {
     }
     if (path === '/api/v1/inbox/conversations' && request.method() === 'GET') {
       options.onInboxList?.(url.searchParams);
+      inboxListCalls += 1;
+      // Somebody else confirmed the order between the first read and the
+      // refresh the live event triggers.
+      if (options.confirmOnRefresh && inboxListCalls > 1 && currentOrder) {
+        currentOrder = { ...currentOrder, status: 'confirmado' };
+      }
       const items = options.empty
         ? []
         : waiting.length
@@ -916,6 +942,55 @@ test('names the stop reason and waits, oldest first, when the seller is due', as
     'parado há 47min',
   ]);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('names the order status on the button that opens the drawer', async ({
+  page,
+}) => {
+  // PCX-06: the three things the button can say, read from the conversation.
+  await mockCrm(page, { order: conversationOrder });
+  await page.goto('/inbox');
+  await expect(
+    page.getByRole('button', { name: 'Pedido · Pendente' }),
+  ).toBeVisible();
+
+  await mockCrm(page, {
+    order: { ...conversationOrder, missingFields: [], status: 'confirmado' },
+  });
+  await page.reload();
+  await expect(
+    page.getByRole('button', { name: 'Pedido · Confirmado' }),
+  ).toBeVisible();
+
+  await mockCrm(page, { order: null });
+  await page.reload();
+  await expect(
+    page.getByRole('button', { name: 'Pedido · Sem pedido' }),
+  ).toBeVisible();
+});
+
+test('updates the order button when the order changes elsewhere', async ({
+  page,
+}) => {
+  // PLI-08: the confirmation happened on the order page, in another tab. The
+  // Inbox learns it from `inbox.order.changed`, with nobody reloading.
+  await mockCrm(page, {
+    confirmOnRefresh: true,
+    liveEvent: {
+      payload: {
+        conversationId: 'conversation-1',
+        orderId: 'order-pendente',
+      },
+      type: 'inbox.order.changed',
+    },
+    order: conversationOrder,
+  });
+  await page.goto('/inbox');
+
+  await expect(
+    page.getByRole('button', { name: 'Pedido · Confirmado' }),
+  ).toBeVisible();
+  expect(page.url()).toContain('/inbox');
 });
 
 test('summarises the order in a drawer that closes with Esc and gives focus back', async ({

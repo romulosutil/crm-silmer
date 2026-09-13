@@ -1,3 +1,5 @@
+import { blankProduction, renderFichaHtml } from '@crm-silmer/orders';
+
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
 const ORDER_SECTIONS = new Set(['summary', 'items', 'observations']);
 
@@ -14,6 +16,7 @@ const PUBLIC_CODES = new Set([
   'INVALID_GRADE',
   'ORDER_INVALID',
   'ORDER_NOT_CONFIRMABLE',
+  'ORDER_NOT_CONFIRMED',
   'ORDER_NOT_FOUND',
   'ORDER_STATUS_CONFLICT',
   'VERSION_CONFLICT',
@@ -54,6 +57,29 @@ export function registerOrderRoutes(api, orders, contextFor) {
       await authorizeRead(request, orders);
       privateReadHeaders(reply);
       return reply.code(200).send(await orders.get(orderId));
+    }),
+  );
+
+  /**
+   * PIM-02/PIM-03/PIM-05: the printed document of a confirmed order. Any
+   * operational session may print one, so this read is not scoped to the
+   * conversation owner; a pending order has no document yet and is refused
+   * with 409, the same reason the page keeps the button locked.
+   */
+  api.get('/api/v1/orders/:orderId/print', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+      await authorizeRead(request, orders, 'order.print');
+      const { order } = await orders.get(orderId);
+      if (order.status !== 'confirmado') {
+        throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
+      }
+      privateReadHeaders(reply);
+      return reply
+        .code(200)
+        .type('text/html; charset=utf-8')
+        .send(renderFichaHtml(printSnapshot(order), { synthetic: false }));
     }),
   );
 
@@ -228,10 +254,10 @@ function requireVersion(value) {
   return Number(value);
 }
 
-/** @param {any} request @param {any} orders */
-async function authorizeRead(request, orders) {
+/** @param {any} request @param {any} orders @param {string} [action] */
+async function authorizeRead(request, orders, action = 'order.read') {
   return orders.authorizeRead({
-    action: 'order.read',
+    action,
     authorization: request.headers.authorization,
     cookie: request.headers.cookie,
     origin: request.headers.origin,
@@ -298,6 +324,52 @@ function rejectUnknownKeys(value, allowed) {
   if (Object.keys(value).some((key) => !accepted.has(key))) {
     throw new OrderRequestError(400, 'INVALID_REQUEST');
   }
+}
+
+/**
+ * The approved v2 snapshot built from the order (D10). `vendedor` is whoever
+ * confirmed it and `data` is the order date: both are frozen at confirmation,
+ * so passing the conversation on afterwards never rewrites the paper. The
+ * final amount and the payment condition stay out of the document (D12), and
+ * the production block reaches the shop floor blank.
+ *
+ * @param {any} order
+ */
+function printSnapshot(order) {
+  const { items, observations, summary } = order.ficha;
+  return {
+    pedido: {
+      aplicacao: printedText(summary.aplicacao),
+      cliente: printedText(summary.cliente),
+      data: printedDate(order.orderDate),
+      data_entrega_confirmada: printedText(summary.data_entrega_confirmada),
+      fab: printedText(order.fabCode),
+      itens: items,
+      nome: printedText(summary.nome),
+      numero: printedText(order.number),
+      observacoes: observations,
+      quantidade_total: order.totalPieces,
+      vendedor: printedText(order.confirmedBy?.name),
+    },
+    producao: blankProduction(),
+  };
+}
+
+/** A field nobody filled prints blank, never "null". @param {unknown} value */
+function printedText(value) {
+  return typeof value === 'string' ? value : '';
+}
+
+/**
+ * The order date is stored as an ISO day in Sao Paulo time; the approved
+ * template shows it the way the shop floor reads it.
+ *
+ * @param {unknown} value
+ */
+function printedDate(value) {
+  const text = printedText(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(text);
+  return match ? match[3] + '/' + match[2] + '/' + match[1] : text;
 }
 
 /** @param {import('fastify').FastifyReply} reply */

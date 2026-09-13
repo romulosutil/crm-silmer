@@ -5,7 +5,11 @@
  */
 /** @type {Readonly<Record<string, readonly string[]>>} */
 const TOPIC_EVENTS = Object.freeze({
-  inbox: Object.freeze(['inbox.contact.changed', 'inbox.conversation.changed']),
+  inbox: Object.freeze([
+    'inbox.contact.changed',
+    'inbox.conversation.changed',
+    'inbox.order.changed',
+  ]),
 });
 
 export const LIVE_TOPICS = Object.freeze(Object.keys(TOPIC_EVENTS));

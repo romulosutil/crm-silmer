@@ -225,6 +225,65 @@ function requireUser(users, id) {
   return user;
 }
 
+test('lets any active seller run order actions but keeps order.intent for automation', async () => {
+  const { AUTOMATION_EXECUTOR_ACTIONS, OPERATIONAL_ACTIONS } =
+    await import('../modules/identity-access/src/index.js');
+  /** @type {TestUser} */
+  const seller = {
+    capabilities: [],
+    functionName: 'Vendedor',
+    id: 'seller-1',
+    kind: 'human',
+  };
+  const admin = { ...seller, capabilities: [CAPABILITIES.COMMERCIAL_ADMIN] };
+  // Ownership (conversation owner or COMMERCIAL_ADMIN) is decided per
+  // conversation by the orders runtime; the allowlist only admits sellers.
+  for (const action of [
+    'order.confirm',
+    'order.create',
+    'order.edit',
+    'order.print',
+    'order.read',
+    'order.reopen',
+  ]) {
+    assert.ok(OPERATIONAL_ACTIONS.has(action), `${action} must be operational`);
+    assert.doesNotThrow(() => authorize(seller, action));
+  }
+  assert.equal(OPERATIONAL_ACTIONS.has('order.intent'), false);
+  assert.throws(() => authorize(seller, 'order.intent'), /forbidden/iu);
+  assert.throws(() => authorize(admin, 'order.intent'), /forbidden/iu);
+  assert.ok(AUTOMATION_EXECUTOR_ACTIONS.includes('order.intent'));
+  for (const action of AUTOMATION_EXECUTOR_ACTIONS) {
+    assert.equal(
+      action.startsWith('order.') && action !== 'order.intent',
+      false,
+    );
+  }
+});
+
+test('declares order actions only in the identity-access allowlists', async () => {
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const directory = 'apps/api/src';
+  // Using an action (`'order.read'`) is fine; a list of them is a copy that
+  // can drift from the policy the way identity-runtime once did.
+  const redeclared = /['"]order\.[a-z-]+['"]\s*,\s*['"]order\.[a-z-]+['"]/u;
+  for (const name of await fs.readdir(directory)) {
+    if (!name.endsWith('.js')) continue;
+    const source = await fs.readFile(path.join(directory, name), 'utf8');
+    assert.equal(
+      redeclared.test(source),
+      false,
+      `${name} must not redeclare order actions`,
+    );
+  }
+  const credentials = await fs.readFile(
+    'modules/identity-access/src/automation-credentials.js',
+    'utf8',
+  );
+  assert.equal(/['"]order\.intent['"]/u.test(credentials), false);
+});
+
 test('keeps a single operational allowlist for API guards and the policy', async () => {
   const { OPERATIONAL_ACTIONS } =
     await import('../modules/identity-access/src/index.js');

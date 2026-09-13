@@ -741,6 +741,7 @@ export {
 } from './automation-credentials.js';
 export {
   AccessControlError,
+  AUTOMATION_ORDER_ACTIONS,
   CAPABILITIES,
   OPERATIONAL_ACTIONS,
   authorize,

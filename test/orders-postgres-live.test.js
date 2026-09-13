@@ -453,6 +453,61 @@ if (connectionString) {
       events.rows.map((row) => row.event_type),
       ['order.created', 'order.section_saved'],
     );
+
+    // PCL-09: two confirmations race on one version in separate transactions.
+    const ready = await runtime.patchSection({
+      ...patch,
+      expectedVersion: first.version,
+      idempotencyKey: `items-${runId}`,
+      section: 'items',
+      value: [
+        {
+          cor_costas: 'AZUL',
+          cor_frente: 'AZUL',
+          cor_manga_direita: 'AZUL',
+          cor_manga_esquerda: 'AZUL',
+          grade: [{ quantidade: 3, tamanho: 'M' }],
+          malhas: ['DRY FIT'],
+          modelo: 'TRADICIONAL',
+          tipo: 'CAMISA',
+          vies_gola: 'AZUL',
+          vies_mangas: 'NAO APLICAVEL',
+        },
+      ],
+    });
+    const outcomes = await Promise.allSettled(
+      ['one', 'two'].map((suffix) =>
+        runtime.confirm({
+          actor,
+          amountText: '150,00',
+          correlationId: `correlation-confirm-${runId}`,
+          expectedVersion: ready.version,
+          idempotencyKey: `confirm-${suffix}-${runId}`,
+          orderId: ready.id,
+          paymentCondition: 'pix',
+        }),
+      ),
+    );
+    assert.deepEqual(outcomes.map((outcome) => outcome.status).sort(), [
+      'fulfilled',
+      'rejected',
+    ]);
+    const lost = /** @type {PromiseRejectedResult} */ (
+      outcomes.find((outcome) => outcome.status === 'rejected')
+    );
+    assert.equal(lost.reason.statusCode, 409);
+    const confirmedRow = await pool.query(
+      `SELECT status, final_amount_cents, version FROM crm.orders WHERE id = $1`,
+      [ready.id],
+    );
+    assert.equal(confirmedRow.rows[0].status, 'confirmado');
+    assert.equal(Number(confirmedRow.rows[0].version), ready.version + 1);
+    const confirmAudits = await pool.query(
+      `SELECT count(*)::integer AS total FROM crm.audit_events
+       WHERE target_id = $1 AND action = 'order.confirm'`,
+      [ready.id],
+    );
+    assert.equal(confirmAudits.rows[0].total, 1);
   });
 
   test('rejects a key that is not 32 bytes', () => {

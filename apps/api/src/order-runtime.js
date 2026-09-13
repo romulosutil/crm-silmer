@@ -240,9 +240,10 @@ export function createOrderRuntime(options) {
         input,
         {
           action: 'order.confirm',
+          // The fingerprint is canonical JSON, which has no undefined.
           command: {
-            amountText: input.amountText,
-            paymentCondition: input.paymentCondition,
+            amountText: input.amountText ?? null,
+            paymentCondition: input.paymentCondition ?? null,
           },
           expectedVersion: input.expectedVersion,
           target: { id: input.orderId, type: 'order' },

@@ -604,3 +604,235 @@ test('a malformed section answers 400 without echoing its content', async (t) =>
   assert.deepEqual(summary.json(), { error: { code: 'ORDER_INVALID' } });
   assert.equal(summary.body.includes('PII-canary'), false);
 });
+
+/** @param {any} runtime @param {string} conversationId */
+async function createReady(runtime, conversationId) {
+  const order = await createPending(runtime, conversationId);
+  return runtime.patchSection(
+    seed({
+      expectedVersion: order.version,
+      orderId: order.id,
+      section: 'items',
+      value: synthetic.pedido.itens,
+    }),
+  );
+}
+
+test('POST /orders/:id/confirm confirms with amount and condition', async (t) => {
+  const { api, guards, runtime } = orderHarness();
+  t.after(() => api.close());
+  const ready = await createReady(runtime, 'conversation-1');
+  const response = await api.inject({
+    headers: writeHeaders,
+    method: 'POST',
+    payload: {
+      amountText: '4.820,00',
+      expectedVersion: ready.version,
+      paymentCondition: 'cartao_credito',
+    },
+    url: `/api/v1/orders/${ready.id}/confirm`,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(Object.keys(response.json()), ['order']);
+  const { order } = response.json();
+  assert.deepEqual(Object.keys(order).sort(), ORDER_KEYS);
+  assert.equal(order.status, 'confirmado');
+  assert.equal(order.finalAmountCents, 482000);
+  assert.equal(order.paymentCondition, 'cartao_credito');
+  assert.deepEqual(order.confirmedBy, { id: 'seller-1', name: 'Vendedora Um' });
+  assert.match(order.orderDate, /^\d{4}-\d{2}-\d{2}$/u);
+  assert.equal(guards.at(-1)?.input.action, 'order.confirm');
+});
+
+test('confirming without what A01 requires answers 422 ORDER_NOT_CONFIRMABLE with fields', async (t) => {
+  const { api, runtime } = orderHarness();
+  t.after(() => api.close());
+  const pending = await createPending(runtime, 'conversation-1');
+  const blocked = await api.inject({
+    headers: writeHeaders,
+    method: 'POST',
+    payload: { expectedVersion: pending.version },
+    url: `/api/v1/orders/${pending.id}/confirm`,
+  });
+  assert.equal(blocked.statusCode, 422);
+  assert.deepEqual(blocked.json(), {
+    error: {
+      code: 'ORDER_NOT_CONFIRMABLE',
+      fields: ['items', 'finalAmount', 'paymentCondition'],
+    },
+  });
+
+  const malformed = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'malformed-amount' },
+    method: 'POST',
+    payload: {
+      amountText: '4,820.00',
+      expectedVersion: pending.version,
+      paymentCondition: 'pix',
+    },
+    url: `/api/v1/orders/${pending.id}/confirm`,
+  });
+  assert.equal(malformed.statusCode, 422);
+  assert.deepEqual(malformed.json(), {
+    error: { code: 'INVALID_AMOUNT', fields: ['finalAmount'] },
+  });
+  assert.equal(
+    (await runtime.get(pending.id)).order.status,
+    'pendente',
+    'a refused confirmation keeps the order pending',
+  );
+});
+
+test('two confirmations on the same version: one 200, the other 409', async (t) => {
+  const { api, runtime } = orderHarness();
+  t.after(() => api.close());
+  const ready = await createReady(runtime, 'conversation-1');
+  const confirm = (/** @type {string} */ key) =>
+    api.inject({
+      headers: { ...writeHeaders, 'idempotency-key': key },
+      method: 'POST',
+      payload: {
+        amountText: '100,00',
+        expectedVersion: ready.version,
+        paymentCondition: 'pix',
+      },
+      url: `/api/v1/orders/${ready.id}/confirm`,
+    });
+  const responses = await Promise.all([confirm('first'), confirm('second')]);
+  assert.deepEqual(
+    responses.map((response) => response.statusCode).sort(),
+    [200, 409],
+  );
+  const conflict = responses.find((response) => response.statusCode === 409);
+  assert.deepEqual(conflict?.json(), { error: { code: 'VERSION_CONFLICT' } });
+});
+
+test('POST /orders/:id/reopen returns a confirmed order to pending', async (t) => {
+  const { api, guards, runtime } = orderHarness();
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  const response = await api.inject({
+    headers: writeHeaders,
+    method: 'POST',
+    payload: { expectedVersion: confirmed.version },
+    url: `/api/v1/orders/${confirmed.id}/reopen`,
+  });
+  assert.equal(response.statusCode, 200);
+  const { order } = response.json();
+  assert.equal(order.status, 'pendente');
+  assert.equal(order.number, confirmed.number);
+  assert.equal(order.finalAmountCents, confirmed.finalAmountCents);
+  assert.equal(order.paymentCondition, confirmed.paymentCondition);
+  assert.deepEqual(order.reopenedBy, { id: 'seller-1', name: 'Vendedora Um' });
+  assert.equal(guards.at(-1)?.input.action, 'order.reopen');
+
+  const again = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'reopen-again' },
+    method: 'POST',
+    payload: { expectedVersion: order.version },
+    url: `/api/v1/orders/${confirmed.id}/reopen`,
+  });
+  assert.equal(again.statusCode, 409);
+  assert.deepEqual(again.json(), { error: { code: 'ORDER_STATUS_CONFLICT' } });
+
+  const reconfirmed = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'reconfirm' },
+    method: 'POST',
+    payload: {
+      amountText: '5.000,00',
+      expectedVersion: order.version,
+      paymentCondition: 'pix',
+    },
+    url: `/api/v1/orders/${confirmed.id}/confirm`,
+  });
+  assert.equal(reconfirmed.statusCode, 200);
+  assert.equal(reconfirmed.json().order.finalAmountCents, 500000);
+  assert.notEqual(
+    reconfirmed.json().order.confirmedAt,
+    confirmed.confirmedAt,
+    'PCL-12: a new confirmation records its own time',
+  );
+});
+
+test('confirm and reopen refuse non-owners and malformed requests', async (t) => {
+  const { api, guards, runtime } = orderHarness({ writeActor: OTHER });
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  const pending = await createReady(runtime, 'conversation-2');
+  for (const [url, payload] of /** @type {Array<[string, any]>} */ ([
+    [
+      `/api/v1/orders/${pending.id}/confirm`,
+      {
+        amountText: '10,00',
+        expectedVersion: pending.version,
+        paymentCondition: 'pix',
+      },
+    ],
+    [
+      `/api/v1/orders/${confirmed.id}/reopen`,
+      { expectedVersion: confirmed.version },
+    ],
+  ])) {
+    const response = await api.inject({
+      headers: writeHeaders,
+      method: 'POST',
+      payload,
+      url,
+    });
+    assert.equal(response.statusCode, 403, url);
+    assert.deepEqual(response.json(), { error: { code: 'FORBIDDEN' } });
+  }
+
+  const withoutKey = { ...writeHeaders };
+  Reflect.deleteProperty(withoutKey, 'idempotency-key');
+  const cases = /** @type {Array<[any, string, any, string]>} */ ([
+    [
+      withoutKey,
+      `/api/v1/orders/${pending.id}/confirm`,
+      { expectedVersion: pending.version },
+      'INVALID_IDEMPOTENCY_KEY',
+    ],
+    [
+      writeHeaders,
+      `/api/v1/orders/${pending.id}/confirm`,
+      { amountText: '10,00', paymentCondition: 'pix' },
+      'INVALID_EXPECTED_VERSION',
+    ],
+    [
+      writeHeaders,
+      `/api/v1/orders/${pending.id}/confirm`,
+      { amountText: 10, expectedVersion: pending.version },
+      'INVALID_REQUEST',
+    ],
+    [
+      writeHeaders,
+      `/api/v1/orders/${pending.id}/confirm`,
+      { expectedVersion: pending.version, status: 'confirmado' },
+      'INVALID_REQUEST',
+    ],
+    [
+      withoutKey,
+      `/api/v1/orders/${confirmed.id}/reopen`,
+      { expectedVersion: confirmed.version },
+      'INVALID_IDEMPOTENCY_KEY',
+    ],
+    [
+      writeHeaders,
+      `/api/v1/orders/${confirmed.id}/reopen`,
+      { expectedVersion: confirmed.version, reason: 'x' },
+      'INVALID_REQUEST',
+    ],
+  ]);
+  for (const [headers, url, payload, code] of cases) {
+    guards.length = 0;
+    const response = await api.inject({
+      headers,
+      method: 'POST',
+      payload,
+      url,
+    });
+    assert.equal(response.statusCode, 400, `${url} ${JSON.stringify(payload)}`);
+    assert.deepEqual(response.json(), { error: { code } });
+    assert.deepEqual(guards, []);
+  }
+});

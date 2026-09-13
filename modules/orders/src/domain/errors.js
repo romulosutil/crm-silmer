@@ -38,6 +38,18 @@ export class OrderValidationError extends OrderError {
 }
 
 /**
+ * The order changed under the command (409): a stale `expectedVersion`
+ * (`VERSION_CONFLICT`) or a transition the current status does not allow
+ * (`ORDER_STATUS_CONFLICT`).
+ */
+export class OrderConflictError extends OrderError {
+  /** @param {string} message @param {string} [code] */
+  constructor(message, code = 'VERSION_CONFLICT') {
+    super(message, code, 409);
+  }
+}
+
+/**
  * A malformed section payload (400). The UI blocks these before sending, so
  * reaching the API means a broken or hostile client.
  */

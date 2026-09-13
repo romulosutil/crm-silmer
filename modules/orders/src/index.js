@@ -1,5 +1,6 @@
 // Orders module (ADR 006): the Pedido aggregate, its ficha and persistence.
 export {
+  OrderConflictError,
   OrderError,
   OrderInputError,
   OrderValidationError,
@@ -15,3 +16,11 @@ export {
   validateSummary,
 } from './domain/ficha.js';
 export { formatBrlAmount, parseBrlAmount } from './domain/money.js';
+export {
+  ORDER_STATUSES,
+  PAYMENT_CONDITIONS,
+  confirmOrder,
+  formatOrderNumber,
+  missingForConfirmation,
+  reopenOrder,
+} from './domain/order.js';

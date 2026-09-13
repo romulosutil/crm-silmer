@@ -118,6 +118,96 @@ const extraPending = {
 };
 
 /**
+ * The server recomputes totals and what is missing on every write; the mock
+ * does the same, so the page is never asserted against a stale derived field.
+ *
+ * @param {any} order @param {string} section @param {any} value
+ */
+function applySection(order, section, value) {
+  const ficha = { ...order.ficha };
+  if (section === 'summary') {
+    ficha.summary = { ...ficha.summary, ...value };
+  } else if (section === 'items') {
+    ficha.items = value;
+  } else {
+    ficha.observations = value;
+  }
+  const totalPieces = ficha.items.reduce(
+    /** @param {number} total @param {any} item */
+    (total, item) =>
+      total +
+      item.grade.reduce(
+        /** @param {number} sum @param {any} line */
+        (sum, line) => sum + line.quantidade,
+        0,
+      ),
+    0,
+  );
+  return {
+    ficha,
+    missingFields: missingFor({ ...order, ficha }),
+    totalPieces,
+    updatedAt: new Date().toISOString(),
+    version: order.version + 1,
+  };
+}
+
+/** @param {any} order @param {string} action @param {any} body */
+function applyCommand(order, action, body) {
+  if (action === 'reopen') {
+    const reopened = {
+      ...order,
+      reopenedAt: '2026-09-13T12:00:00.000Z',
+      reopenedBy: { id: session.user.id, name: session.user.name },
+      status: 'pendente',
+      version: order.version + 1,
+    };
+    return { ...reopened, missingFields: missingFor(reopened) };
+  }
+  return {
+    confirmedAt: '2026-09-13T12:00:00.000Z',
+    confirmedBy: { id: session.user.id, name: session.user.name },
+    finalAmountCents: brlToCents(body.amountText),
+    missingFields: [],
+    orderDate: '2026-09-13',
+    paymentCondition: body.paymentCondition,
+    status: 'confirmado',
+    version: order.version + 1,
+  };
+}
+
+/** @param {string} text */
+function brlToCents(text) {
+  const [reais, cents = '00'] = String(text).split(',');
+  return Number(reais.replaceAll('.', '')) * 100 + Number(cents.padEnd(2, '0'));
+}
+
+/** @param {any} order */
+function missingFor(order) {
+  if (order.status === 'confirmado') return [];
+  /** @type {string[]} */
+  const missing = [];
+  if (
+    !order.ficha.items.some(
+      /** @param {any} item */ (item) => item.grade.length > 0,
+    )
+  ) {
+    missing.push('items');
+  }
+  if (!order.finalAmountCents) missing.push('finalAmount');
+  if (!order.paymentCondition) missing.push('paymentCondition');
+  for (const key of [
+    'cliente',
+    'data_entrega_confirmada',
+    'aplicacao',
+    'nome',
+  ]) {
+    if (!order.ficha.summary[key]) missing.push(`summary.${key}`);
+  }
+  return missing;
+}
+
+/**
  * One SSE payload delivered on connect, with a long retry so the reconnect
  * does not turn a single event into a refresh loop during the test.
  *
@@ -138,7 +228,7 @@ function eventStreamBody(event) {
 
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{orders?: any[], liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, pages?: any[][]}} [options]
+ * @param {{orders?: any[], liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>}}} [options]
  */
 async function mockOrders(page, options = {}) {
   const orders = options.orders ?? [confirmedOrder, pendingOrder];
@@ -189,6 +279,55 @@ async function mockOrders(page, options = {}) {
       });
       return;
     }
+    const section = /^\/api\/v1\/orders\/([^/]+)\/sections\/([^/]+)$/u.exec(
+      path,
+    );
+    if (section && request.method() === 'PATCH') {
+      const body = request.postDataJSON();
+      options.onWrite?.({ body, section: section[2] });
+      expect(request.headers()['idempotency-key']).toBeTruthy();
+      if (options.writeFailure) {
+        await route.fulfill({
+          status: options.writeFailure.status,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: options.writeFailure.body }),
+        });
+        return;
+      }
+      const current = orders.find((candidate) => candidate.id === section[1]);
+      const next = applySection(current, section[2], body.value);
+      Object.assign(current, next);
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ order: current }),
+      });
+      return;
+    }
+
+    const command = /^\/api\/v1\/orders\/([^/]+)\/(confirm|reopen)$/u.exec(
+      path,
+    );
+    if (command && request.method() === 'POST') {
+      const body = request.postDataJSON();
+      options.onWrite?.({ action: command[2], body });
+      expect(request.headers()['idempotency-key']).toBeTruthy();
+      if (options.writeFailure) {
+        await route.fulfill({
+          status: options.writeFailure.status,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: options.writeFailure.body }),
+        });
+        return;
+      }
+      const current = orders.find((candidate) => candidate.id === command[1]);
+      Object.assign(current, applyCommand(current, command[2], body));
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ order: current }),
+      });
+      return;
+    }
+
     const detail = /^\/api\/v1\/orders\/([^/]+)$/u.exec(path);
     if (detail && request.method() === 'GET') {
       options.onDetail?.(detail[1]);
@@ -513,4 +652,109 @@ test('refreshes the open order when it changes elsewhere', async ({ page }) => {
     page.getByRole('heading', { name: 'Pedido 07-CRM' }),
   ).toBeVisible();
   await expect.poll(() => detailCalls).toBeGreaterThan(1);
+});
+
+test('reads the order summary and marks the customer as locked (PFI-02)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await expect(summary.locator('dt')).toHaveText([
+    'Cliente',
+    'Entrega confirmada',
+    'Total de peças',
+    'Aplicação',
+    'Evento / Nome',
+    'Vendedor',
+    'Data do pedido',
+    'FAB',
+  ]);
+  await expect(summary).toContainText('Colégio Ápice');
+  await expect(summary).toContainText('vem da conversa');
+  await expect(summary).toContainText('24/10/2026');
+  await expect(summary).toContainText('150');
+  await expect(summary).toContainText('Marina Aguiar');
+  // D14: the number exists from creation; only the date waits for the
+  // confirmation, which corrects the supporting text of the mockup.
+  await expect(summary).toContainText('definida na confirmação');
+  await expect(summary).toContainText(
+    'O número do pedido já existe desde a criação',
+  );
+});
+
+test('edits the summary and saves the whole section at once (PFI-06)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await summary.getByRole('button', { name: 'Editar' }).click();
+
+  // D13: the customer comes from the contact and is never typed here.
+  await expect(summary.getByLabel('Cliente')).toBeDisabled();
+  await summary.getByLabel('Aplicação').fill('SILK 4 CORES');
+  await summary.getByLabel('Evento / Nome').fill('Uniforme escolar 2028');
+  await summary.getByRole('button', { name: 'Salvar' }).click();
+
+  await expect(summary.getByRole('button', { name: 'Editar' })).toBeVisible();
+  await expect(summary).toContainText('SILK 4 CORES');
+  await expect(summary).toContainText('Uniforme escolar 2028');
+  expect(writes).toHaveLength(1);
+  expect(writes[0].section).toBe('summary');
+  expect(writes[0].body).toEqual({
+    expectedVersion: 2,
+    value: {
+      aplicacao: 'SILK 4 CORES',
+      data_entrega_confirmada: '2026-10-24',
+      nome: 'Uniforme escolar 2028',
+    },
+  });
+});
+
+test('cancels an edit without writing anything', async ({ page }) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await summary.getByRole('button', { name: 'Editar' }).click();
+  await summary.getByLabel('Aplicação').fill('DESCARTAR');
+  await summary.getByRole('button', { name: 'Cancelar' }).click();
+
+  await expect(summary).toContainText('SUBLIMAÇÃO TOTAL');
+  await expect(summary).not.toContainText('DESCARTAR');
+  expect(writes).toHaveLength(0);
+});
+
+test('asks for a reload when the section was saved over an older version', async ({
+  page,
+}) => {
+  await mockOrders(page, {
+    writeFailure: { body: { code: 'VERSION_CONFLICT' }, status: 409 },
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await summary.getByRole('button', { name: 'Editar' }).click();
+  await summary.getByLabel('Aplicação').fill('SILK 4 CORES');
+  await summary.getByRole('button', { name: 'Salvar' }).click();
+
+  await expect(summary.getByRole('alert')).toContainText(
+    'Este pedido mudou. Recarregue a seção.',
+  );
+});
+
+test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-confirmado');
+
+  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(0);
 });

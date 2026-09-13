@@ -151,6 +151,18 @@ test('keeps contract migrations explicit and rejects changed history', async () 
   );
 });
 
+test('ships the orders table as an expand migration that never touches deals (ADR 004)', async () => {
+  const orders = (await loadMigrations()).find(
+    ({ version }) => version === '0023',
+  );
+  assert.ok(orders, 'migration 0023 is present');
+  assert.equal(orders.name, 'orders');
+  assert.equal(orders.phase, 'expand');
+  assert.match(orders.sql, /CREATE TABLE crm\.orders\b/u);
+  assert.match(orders.sql, /CREATE SEQUENCE crm\.order_number_seq\b/u);
+  assert.doesNotMatch(orders.sql, /crm\.deals/iu);
+});
+
 test('loads versioned forward-only migrations in deterministic order', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'crm-migrations-'));
   try {

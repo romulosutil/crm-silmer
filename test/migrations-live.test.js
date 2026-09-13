@@ -89,4 +89,176 @@ if (connectionString) {
       await pool.end();
     }
   });
+
+  test('PostgreSQL live: orders keep one pending per conversation and complete confirmations', async () => {
+    const databaseName = new URL(connectionString).pathname.slice(1);
+    assert.equal(
+      databaseName,
+      'crm_silmer_test',
+      'live migration test only resets the dedicated crm_silmer_test database',
+    );
+
+    const pool = new Pool({ connectionString, max: 2 });
+    const now = new Date('2026-09-12T12:00:00.000Z');
+    /** @param {string} conversationId @param {Record<string, unknown>} [overrides] */
+    const insertOrder = async (conversationId, overrides = {}) => {
+      const values = {
+        confirmed_at: null,
+        confirmed_by: null,
+        final_amount_cents: null,
+        order_date: null,
+        payment_condition: null,
+        status: 'pendente',
+        ...overrides,
+      };
+      const sequence = Number(
+        (await pool.query(`SELECT nextval('crm.order_number_seq') AS n`))
+          .rows[0].n,
+      );
+      await pool.query(
+        `INSERT INTO crm.orders
+           (id, number_sequence, number, conversation_id, status, fab_code,
+            ficha_envelope, final_amount_cents, payment_condition, order_date,
+            confirmed_at, confirmed_by, created_by_kind, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, '01', '{}'::jsonb, $6, $7, $8, $9, $10,
+                 'automation', $11, $11)`,
+        [
+          `order-${sequence}`,
+          sequence,
+          `${String(sequence).padStart(2, '0')}-CRM`,
+          conversationId,
+          values.status,
+          values.final_amount_cents,
+          values.payment_condition,
+          values.order_date,
+          values.confirmed_at,
+          values.confirmed_by,
+          now,
+        ],
+      );
+      return sequence;
+    };
+
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+
+      let seeded = 0;
+      /** One contact, identity and first-cycle conversation per id. */
+      const seedConversation = async (/** @type {string} */ id) => {
+        seeded += 1;
+        await pool.query(
+          `INSERT INTO crm.contacts (id, provisional, version, created_at, updated_at)
+           VALUES ($1, false, 1, $2, $2)`,
+          [`contact-${id}`, now],
+        );
+        await pool.query(
+          `INSERT INTO crm.contact_identities
+             (id, current_contact_id, provider, provider_account_id, channel,
+              external_identity_lookup_hash, identity_kind, phone_status,
+              identity_envelope, key_version, version, created_at, updated_at)
+           VALUES ($1, $2, 'meta', 'account-orders', 'instagram', $3, 'handle',
+                   'pending', $4::jsonb, 1, 1, $5, $5)`,
+          [
+            `identity-${id}`,
+            `contact-${id}`,
+            String(seeded).padStart(64, '0'),
+            JSON.stringify({
+              algorithm: 'AES-256-GCM',
+              keyVersion: 1,
+              version: 1,
+            }),
+            now,
+          ],
+        );
+        await pool.query(
+          `INSERT INTO crm.conversations
+             (id, contact_identity_id, provider, provider_account_id,
+              external_conversation_id, cycle_number, state, automation_state,
+              automation_epoch, version, opened_at, last_message_at)
+           VALUES ($1, $2, 'meta', 'account-orders', $3, 1, 'nova',
+                   'assistant', 0, 1, $4, $4)`,
+          [id, `identity-${id}`, `external-${id}`, now],
+        );
+      };
+      for (const id of [
+        'conversation-a',
+        'conversation-b',
+        'conversation-c',
+        'conversation-d',
+        'conversation-e',
+        'conversation-f',
+      ]) {
+        await seedConversation(id);
+      }
+
+      const first = await insertOrder('conversation-a');
+      await assert.rejects(insertOrder('conversation-a'), {
+        code: '23505',
+        constraint: 'orders_one_pending_per_conversation',
+      });
+      await insertOrder('conversation-b');
+
+      await assert.rejects(
+        pool.query(
+          `UPDATE crm.orders SET status = 'confirmado' WHERE number_sequence = $1`,
+          [first],
+        ),
+        { code: '23514', constraint: 'orders_confirmed_fields' },
+      );
+      await pool.query(
+        `UPDATE crm.orders
+         SET status = 'confirmado', final_amount_cents = 482000,
+             payment_condition = 'pix', order_date = '2026-09-12',
+             confirmed_at = $2, confirmed_by = 'seller-orders'
+         WHERE number_sequence = $1`,
+        [first, now],
+      );
+      await insertOrder('conversation-a');
+
+      for (const [
+        conversation,
+        overrides,
+        constraint,
+      ] of /** @type {const} */ ([
+        ['conversation-c', { status: 'cancelado' }, 'orders_status_check'],
+        [
+          'conversation-d',
+          { final_amount_cents: 0 },
+          'orders_final_amount_cents_check',
+        ],
+        [
+          'conversation-e',
+          { payment_condition: 'boleto' },
+          'orders_payment_condition_check',
+        ],
+      ])) {
+        await assert.rejects(insertOrder(conversation, overrides), {
+          code: '23514',
+          constraint,
+        });
+      }
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.orders
+             (id, number_sequence, number, conversation_id, status, fab_code,
+              ficha_envelope, created_by_kind, created_at, updated_at)
+           VALUES ('order-wrong-number', 999, '12-CRM', 'conversation-f',
+                   'pendente', '01', '{}'::jsonb, 'user', $1, $1)`,
+          [now],
+        ),
+        { code: '23514', constraint: 'orders_number_format' },
+      );
+      await assert.rejects(
+        insertOrder('conversation-missing'),
+        { code: '23503' },
+        'orders belong to an existing conversation',
+      );
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
 }

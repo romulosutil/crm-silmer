@@ -24,14 +24,29 @@ const DELIVERY_NOTICES = Object.freeze({
   failed: 'Falha no envio',
   outcome_unknown: 'Envio aguardando confirmação',
 });
-const INBOX_STATES = Object.freeze([
-  ['all', 'Todas'],
-  ['nova', 'Novas'],
-  ['em_analise', 'Em análise'],
-  ['em_atendimento', 'Em atendimento'],
-  ['requer_atencao', 'Requer atenção'],
-  ['convertida_em_lead', 'Convertidas em lead'],
-  ['sem_lead', 'Sem lead'],
+/**
+ * PCX-02 (D19): the Inbox is filtered by who has to act next, not by the
+ * internal state of the conversation. A pending handoff is the whole of
+ * "Aguardando vendedor", so the other two exclude it — an agent that stopped
+ * and is waiting must never be counted as still working the conversation.
+ */
+const PRESENCE_FILTERS = Object.freeze([
+  Object.freeze({ label: 'Todas', params: {}, value: 'all' }),
+  Object.freeze({
+    label: 'Aguardando vendedor',
+    params: { pendingHandoff: 'true' },
+    value: 'waiting',
+  }),
+  Object.freeze({
+    label: 'Com o agente',
+    params: { automationState: 'assistant', pendingHandoff: 'false' },
+    value: 'assistant',
+  }),
+  Object.freeze({
+    label: 'Com vendedor',
+    params: { automationState: 'human', pendingHandoff: 'false' },
+    value: 'human',
+  }),
 ]);
 const QUEUE_FILTERS = Object.freeze([
   { label: 'Todas as conversas', value: 'all', visualLabel: 'Todas' },
@@ -54,10 +69,10 @@ const searchInput = ref(null);
 const replyInput = ref(null);
 const nameInput = ref(null);
 const archiveConfirmationDialog = ref(null);
-const stateFilterMenu = ref(null);
+const presenceFilterMenu = ref(null);
 const query = ref('');
 const showArchived = ref(false);
-const stateFilter = ref('all');
+const presenceFilter = ref('all');
 const queueFilter = ref('all');
 const loading = ref(true);
 const detailLoading = ref(false);
@@ -144,9 +159,10 @@ const canArchive = computed(
 const canUnarchive = computed(
   () => canArchive.value && Boolean(active.value?.archivedAt),
 );
-const selectedStateLabel = computed(
+const selectedPresence = computed(
   () =>
-    INBOX_STATES.find(([value]) => value === stateFilter.value)?.[1] ?? 'Todas',
+    PRESENCE_FILTERS.find((filter) => filter.value === presenceFilter.value) ??
+    PRESENCE_FILTERS[0],
 );
 
 function listUrl() {
@@ -154,7 +170,9 @@ function listUrl() {
     archived: String(showArchived.value),
     limit: '100',
   });
-  if (stateFilter.value !== 'all') params.set('state', stateFilter.value);
+  for (const [name, value] of Object.entries(selectedPresence.value.params)) {
+    params.set(name, value);
+  }
   if (queueFilter.value === 'mine' && currentUserId.value) {
     params.set('assignedUserId', currentUserId.value);
   }
@@ -165,14 +183,14 @@ function listUrl() {
 }
 
 /** @param {string} value */
-function selectState(value) {
-  stateFilter.value = value;
-  stateFilterMenu.value?.removeAttribute('open');
+function selectPresence(value) {
+  presenceFilter.value = value;
+  presenceFilterMenu.value?.removeAttribute('open');
 }
 
 function toggleArchived() {
   showArchived.value = !showArchived.value;
-  stateFilterMenu.value?.removeAttribute('open');
+  presenceFilterMenu.value?.removeAttribute('open');
 }
 
 async function archiveConversation() {
@@ -533,7 +551,7 @@ function scheduleLiveRefresh() {
 
 watch(query, () => void selectVisibleConversation(false));
 watch(showArchived, () => void refreshInbox());
-watch([stateFilter, queueFilter], () => void refreshInbox());
+watch([presenceFilter, queueFilter], () => void refreshInbox());
 watch(liveEvent, (event) => {
   if (event) scheduleLiveRefresh();
 });
@@ -598,11 +616,15 @@ onBeforeUnmount(() => {
         </div>
       </fieldset>
       <div class="inbox-toolbar-actions">
-        <details ref="stateFilterMenu" class="inbox-state-menu">
-          <summary :aria-label="`Filtrar por situação: ${selectedStateLabel}`">
-            <span class="inbox-state-label">Situação</span>
+        <details ref="presenceFilterMenu" class="inbox-state-menu">
+          <summary
+            :aria-label="`Filtrar por estado: ${selectedPresence.label}`"
+          >
+            <span class="inbox-state-label">Estado</span>
             <span class="inbox-state-trigger">
-              <span class="inbox-state-value">{{ selectedStateLabel }}</span>
+              <span class="inbox-state-value">{{
+                selectedPresence.label
+              }}</span>
               <svg
                 class="inbox-state-chevron"
                 aria-hidden="true"
@@ -614,15 +636,15 @@ onBeforeUnmount(() => {
             </span>
           </summary>
           <div class="inbox-state-panel">
-            <div class="inbox-state-options" aria-label="Filtrar por situação">
+            <div class="inbox-state-options" aria-label="Filtrar por estado">
               <button
-                v-for="[value, label] in INBOX_STATES"
-                :key="value"
+                v-for="option in PRESENCE_FILTERS"
+                :key="option.value"
                 type="button"
-                :aria-pressed="stateFilter === value"
-                @click="selectState(value)"
+                :aria-pressed="presenceFilter === option.value"
+                @click="selectPresence(option.value)"
               >
-                {{ label }}
+                {{ option.label }}
               </button>
             </div>
             <div class="inbox-state-utility">
@@ -892,11 +914,6 @@ onBeforeUnmount(() => {
             Sem mensagens persistidas.
           </li>
         </ol>
-
-        <div v-if="detail.suggestion" class="suggestion">
-          <strong>Sugestão pendente da IA</strong>
-          <p>{{ detail.suggestion.question }}</p>
-        </div>
 
         <form class="composer" @submit.prevent="sendReply">
           <label for="reply">Responder</label>

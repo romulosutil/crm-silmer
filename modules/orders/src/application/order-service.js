@@ -1,12 +1,25 @@
 import { randomUUID } from 'node:crypto';
 
-import { OrderForbiddenError, OrderNotFoundError } from '../domain/errors.js';
+import {
+  OrderConflictError,
+  OrderForbiddenError,
+  OrderInputError,
+  OrderNotFoundError,
+} from '../domain/errors.js';
 import {
   briefingToFicha,
   orderTotal,
   projectBriefingOntoFicha,
+  validateItems,
+  validateObservations,
+  validateSummary,
 } from '../domain/ficha.js';
-import { missingForConfirmation } from '../domain/order.js';
+import { parseBrlAmount } from '../domain/money.js';
+import {
+  confirmOrder,
+  missingForConfirmation,
+  reopenOrder,
+} from '../domain/order.js';
 import { assertOrderRepositoryContract } from '../ports/contracts.js';
 
 /**
@@ -31,6 +44,10 @@ function requireId(value, name) {
   }
   return value;
 }
+
+export const ORDER_SECTIONS = Object.freeze(
+  /** @type {const} */ (['summary', 'items', 'observations']),
+);
 
 /**
  * Keeps the columns the list reads without decrypting in step with the ficha.
@@ -77,6 +94,33 @@ export function createOrderService(options) {
       throw new OrderForbiddenError('A human actor is required');
     }
     await authorizeOwnership({ actor, conversationId });
+  }
+
+  /**
+   * Resolves and authorizes a human command on an existing order. Ownership
+   * is checked before the version so a non-owner learns nothing about it; the
+   * early version check keeps a stale screen from seeing a rule error that no
+   * longer applies. The repository re-checks the version atomically.
+   *
+   * @param {{orderId: string, expectedVersion: number, actor: OrderActor, correlationId: string}} input
+   */
+  async function loadForCommand(input) {
+    const orderId = requireId(input.orderId, 'orderId');
+    requireId(input.correlationId, 'correlationId');
+    if (!Number.isSafeInteger(input.expectedVersion)) {
+      throw new OrderInputError('expectedVersion is required', [
+        'expectedVersion',
+      ]);
+    }
+    const order = await repository.findById(orderId);
+    if (!order) throw new OrderNotFoundError();
+    await requireOwner(input.actor, order.conversationId);
+    if (order.version !== input.expectedVersion) {
+      throw new OrderConflictError(
+        `Expected order version ${input.expectedVersion}, current version is ${order.version}`,
+      );
+    }
+    return order;
   }
 
   /**
@@ -192,6 +236,95 @@ export function createOrderService(options) {
         expectedVersion: pending.version,
       });
       return { applied: true, order, reason: null };
+    },
+
+    /**
+     * PFI-06: a section is saved whole; totals and what is missing follow.
+     * A confirmed order must be reopened first (PFI-10).
+     *
+     * @param {{orderId: string, section: string, value: unknown, expectedVersion: number, actor: OrderActor, correlationId: string}} input
+     */
+    async patchSection(input) {
+      const section = /** @type {typeof ORDER_SECTIONS[number]} */ (
+        input.section
+      );
+      if (!ORDER_SECTIONS.includes(section)) {
+        throw new OrderInputError('section is invalid', ['section']);
+      }
+      const order = await loadForCommand(input);
+      if (order.status !== 'pendente') {
+        throw new OrderConflictError(
+          'Reopen the order before editing it',
+          'ORDER_STATUS_CONFLICT',
+        );
+      }
+      const ficha = structuredClone(order.ficha);
+      if (section === 'summary') {
+        ficha.summary = {
+          ...validateSummary(input.value),
+          cliente: ficha.summary.cliente,
+        };
+      } else if (section === 'items') {
+        ficha.items = validateItems(input.value);
+      } else {
+        ficha.observations = validateObservations(input.value);
+      }
+      return repository.saveSection(
+        withDerivedFields({
+          ...order,
+          ficha,
+          updatedAt: clock().toISOString(),
+        }),
+        {
+          correlationId: input.correlationId,
+          expectedVersion: order.version,
+        },
+      );
+    },
+
+    /**
+     * PCL-04..06: a blank amount counts as missing (reported with the other
+     * blockers); a malformed one is refused as INVALID_AMOUNT.
+     *
+     * @param {{orderId: string, amountText: unknown, paymentCondition: unknown, expectedVersion: number, actor: OrderActor, correlationId: string}} input
+     */
+    async confirm(input) {
+      const order = await loadForCommand(input);
+      const amountCents =
+        typeof input.amountText === 'string' && input.amountText.trim() !== ''
+          ? parseBrlAmount(input.amountText)
+          : 0;
+      return repository.saveStatus(
+        confirmOrder(order, {
+          actorId: input.actor.id,
+          amountCents,
+          now: clock(),
+          paymentCondition:
+            /** @type {import('../domain/order.js').PaymentCondition} */ (
+              input.paymentCondition
+            ),
+        }),
+        {
+          correlationId: input.correlationId,
+          expectedVersion: order.version,
+        },
+      );
+    },
+
+    /**
+     * PCL-07: back to pending, keeping number, amount and condition.
+     *
+     * @param {{orderId: string, expectedVersion: number, actor: OrderActor, correlationId: string}} input
+     */
+    async reopen(input) {
+      const order = await loadForCommand(input);
+      return repository.saveStatus(
+        reopenOrder(order, { actorId: input.actor.id, now: clock() }),
+        {
+          correlationId: input.correlationId,
+          expectedVersion: order.version,
+        },
+      );
     },
   });
 }

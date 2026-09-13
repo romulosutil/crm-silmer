@@ -1437,3 +1437,44 @@ details.exact summary {
   inline-size: 100%;
   max-inline-size: 24rem;
 }
+
+.order-item {
+  padding: 0.85rem 1rem;
+  margin-block-end: 0.85rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.5rem;
+}
+
+.order-item legend,
+.order-item h3 {
+  font-size: var(--text-sm);
+}
+
+.order-subblock {
+  margin-block-start: 0.85rem;
+}
+
+.order-grade-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-block-end: 0.4rem;
+}
+
+.order-grade-line input[type='number'] {
+  inline-size: 7rem;
+}
+
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-block-start: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.checkbox-line input {
+  inline-size: auto;
+}

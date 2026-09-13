@@ -105,11 +105,62 @@ function waitingConversations(now) {
   }));
 }
 
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
+/** The pending order of `conversation-1`, as the orders read model presents it. */
+const conversationOrder = {
+  confirmedAt: null,
+  confirmedBy: null,
+  conversationId: 'conversation-1',
+  createdAt: '2026-09-08T12:30:00.000Z',
+  fabCode: 'FAB 01',
+  ficha: {
+    items: [
+      {
+        grade: [
+          { quantidade: 100, tamanho: 'M' },
+          { quantidade: 50, tamanho: 'G' },
+        ],
+        modelo: 'GOLA OLÍMPICA',
+        tipo: 'CAMISETA',
+      },
+    ],
+    observations: [],
+    serviceData: {},
+    summary: {
+      aplicacao: 'SUBLIMAÇÃO TOTAL',
+      cliente: 'Studio Malu',
+      data_entrega_confirmada: '2026-10-24',
+      nome: 'Uniforme escolar 2027',
+    },
+  },
+  finalAmountCents: null,
+  id: 'order-pendente',
+  missingFields: ['finalAmount', 'paymentCondition'],
+  number: '07-CRM',
+  orderDate: null,
+  paymentCondition: null,
+  reopenedAt: null,
+  reopenedBy: null,
+  seller: { id: 'operator-1', name: 'Marina Aguiar' },
+  status: 'pendente',
+  totalPieces: 150,
+  updatedAt: '2026-09-08T12:46:00.000Z',
+  version: 2,
+};
+
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
   const waiting = options.waitingQueue ? waitingConversations(new Date()) : [];
+  // The conversation carries the order summary the Inbox read model joins in,
+  // so the header button and the drawer never disagree about which order it is.
+  let currentOrder = options.order === undefined ? null : options.order;
+  /** @param {any} order */
+  const orderSummary = (order) =>
+    order ? { id: order.id, number: order.number, status: order.status } : null;
+  const activeSession = options.noAdmin
+    ? { user: { ...session.user, capabilities: [] } }
+    : session;
   const inboxConversation = options.pendingHandoff
     ? {
         ...conversation,
@@ -133,6 +184,14 @@ async function mockCrm(page, options = {}) {
           automationState: 'assistant',
         }
       : conversation;
+  /** The list and the detail answer the same conversation, order included. */
+  const withOrder = () => ({
+    ...inboxConversation,
+    ...(options.otherOwner
+      ? { assignedUser: { functionName: 'Vendedor', id: 'operator-2' } }
+      : {}),
+    order: orderSummary(currentOrder),
+  });
   const detailMessages = options.mixedAuthors
     ? [
         conversation.lastMessage,
@@ -168,7 +227,7 @@ async function mockCrm(page, options = {}) {
     if (path === '/api/v1/sessions/current') {
       await route.fulfill({
         contentType: 'application/json',
-        body: JSON.stringify(session),
+        body: JSON.stringify(activeSession),
       });
       return;
     }
@@ -217,7 +276,7 @@ async function mockCrm(page, options = {}) {
         ? []
         : waiting.length
           ? waiting
-          : [inboxConversation];
+          : [withOrder()];
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
@@ -234,7 +293,7 @@ async function mockCrm(page, options = {}) {
     if (inboxDetail && request.method() === 'GET') {
       const selected =
         waiting.find((item) => item.id === inboxDetail[1]) ??
-        (inboxDetail[1] === 'conversation-1' ? inboxConversation : null);
+        (inboxDetail[1] === 'conversation-1' ? withOrder() : null);
       if (!selected) {
         await route.fulfill({
           status: 404,
@@ -260,6 +319,44 @@ async function mockCrm(page, options = {}) {
               }
             : null,
         }),
+      });
+      return;
+    }
+    if (
+      path === '/api/v1/conversations/conversation-1/order' &&
+      request.method() === 'GET'
+    ) {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ order: currentOrder }),
+      });
+      return;
+    }
+    if (
+      path === '/api/v1/conversations/conversation-1/orders' &&
+      request.method() === 'POST'
+    ) {
+      expect(request.headers()['idempotency-key']).toBeTruthy();
+      expect(request.headers()['x-csrf-token']).toBe('csrf-test');
+      const body = request.postDataJSON();
+      options.onCreateOrder?.(body);
+      // PCL-11: an existing pending order is answered, never a second one.
+      const created = currentOrder === null;
+      if (created) {
+        currentOrder = {
+          ...conversationOrder,
+          id: 'order-novo',
+          missingFields: ['items', 'finalAmount', 'paymentCondition'],
+          number: '11-CRM',
+          ficha: { ...conversationOrder.ficha, items: [] },
+          totalPieces: 0,
+          version: 1,
+        };
+      }
+      await route.fulfill({
+        status: created ? 201 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ order: currentOrder }),
       });
       return;
     }
@@ -819,6 +916,134 @@ test('names the stop reason and waits, oldest first, when the seller is due', as
     'parado há 47min',
   ]);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('summarises the order in a drawer that closes with Esc and gives focus back', async ({
+  page,
+}) => {
+  await mockCrm(page, { order: conversationOrder });
+  await page.goto('/inbox');
+
+  const trigger = page.getByRole('button', { name: /^Pedido/ });
+  await trigger.click();
+
+  // PCX-07: number, status, what is missing, items, pieces, amount and the
+  // one way out of the summary and into the order itself.
+  const drawer = page.getByRole('dialog', { name: /Pedido 07-CRM/ });
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toContainText('Pendente');
+  await expect(drawer).toContainText('Falta valor e condição');
+  await expect(drawer).toContainText('CAMISETA · GOLA OLÍMPICA');
+  await expect(drawer).toContainText('150 peças');
+  await expect(drawer).toContainText('—');
+  await expect(
+    drawer.getByRole('link', { name: 'Abrir pedido' }),
+  ).toHaveAttribute('href', '/pedidos/order-pendente?conversa=conversation-1');
+  // The drawer reads the order; it never edits it.
+  await expect(drawer.locator('input, textarea, select')).toHaveCount(0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // PCX-09: Esc closes it and the button that opened it takes focus back.
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test('closes the order drawer on a click outside', async ({ page }) => {
+  await mockCrm(page, { order: conversationOrder });
+  await page.goto('/inbox');
+
+  const trigger = page.getByRole('button', { name: /^Pedido/ });
+  await trigger.click();
+  const drawer = page.getByRole('dialog', { name: /Pedido 07-CRM/ });
+  await expect(drawer).toBeVisible();
+
+  // PCX-09: the backdrop is the dialog itself outside its panel.
+  await page.mouse.click(8, 8);
+  await expect(drawer).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test('operates the order drawer with the keyboard alone', async ({ page }) => {
+  await mockCrm(page, { order: conversationOrder });
+  await page.goto('/inbox');
+
+  const trigger = page.getByRole('button', { name: /^Pedido/ });
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+
+  const drawer = page.getByRole('dialog', { name: /Pedido 07-CRM/ });
+  await expect(drawer).toBeVisible();
+
+  // PCX-09: focus opens inside the drawer, and Tab only ever reaches what the
+  // drawer offers — the Inbox behind it is inert, so nothing there can be
+  // reached or acted on while the drawer is open.
+  /** @returns {Promise<string>} */
+  const focusHere = () =>
+    page.evaluate(() => {
+      const active = globalThis.document.activeElement;
+      const dialog = globalThis.document.querySelector('.order-drawer');
+      if (active === globalThis.document.body) return 'body';
+      return dialog?.contains(active) ? 'drawer' : 'behind';
+    });
+
+  const ring = [await focusHere()];
+  for (let step = 0; step < 4; step += 1) {
+    await page.keyboard.press('Tab');
+    ring.push(await focusHere());
+  }
+  expect(ring[0]).toBe('drawer');
+  expect(ring).not.toContain('behind');
+  expect(ring.slice(1)).toContain('drawer');
+
+  await drawer.getByRole('button', { name: 'Fechar' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(drawer).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test('creates the order from the drawer only for the owner or an administrator', async ({
+  page,
+}) => {
+  // PCL-11: a conversation that already has a pending order never offers it.
+  await mockCrm(page, { order: conversationOrder });
+  await page.goto('/inbox');
+  await page.getByRole('button', { name: /^Pedido/ }).click();
+  await expect(page.getByRole('button', { name: 'Criar pedido' })).toHaveCount(
+    0,
+  );
+
+  // PCX-08: a reader who neither owns the conversation nor administrates it
+  // sees the drawer without the action the API would refuse.
+  await mockCrm(page, { noAdmin: true, order: null, otherOwner: true });
+  await page.reload();
+  await page.getByRole('button', { name: /^Pedido/ }).click();
+  const drawer = page.getByRole('dialog', { name: /pedido/i });
+  await expect(drawer).toContainText('Sem pedido');
+  await expect(
+    drawer.getByRole('button', { name: 'Criar pedido' }),
+  ).toHaveCount(0);
+
+  // PCL-10: the owner creates it, pre-filled from the conversation, and the
+  // drawer switches to the order that came back.
+  let createdBody;
+  await mockCrm(page, {
+    onCreateOrder: (body) => (createdBody = body),
+    order: null,
+  });
+  await page.reload();
+  await page.evaluate(() => {
+    globalThis.document.cookie = 'crm_csrf=csrf-test; Path=/; SameSite=Lax';
+  });
+  await page.getByRole('button', { name: /^Pedido/ }).click();
+  await page.getByRole('button', { name: 'Criar pedido' }).click();
+  await expect(
+    page.getByRole('dialog', { name: /Pedido 11-CRM/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Abrir pedido' }),
+  ).toHaveAttribute('href', '/pedidos/order-novo?conversa=conversation-1');
+  expect(createdBody).toEqual({ expectedVersion: 3 });
 });
 
 test('drops the pending AI suggestion block from the conversation', async ({

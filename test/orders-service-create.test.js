@@ -63,6 +63,7 @@ function setup(options = {}) {
     conversations: {
       readOrderContext: async (/** @type {string} */ conversationId) =>
         contexts[conversationId] ?? null,
+      searchConversationIds: async () => [],
     },
     fabCode: '01',
     idFactory: () => {

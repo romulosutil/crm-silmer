@@ -4,6 +4,8 @@ import AccountView from './views/AccountView.vue';
 import ClientsView from './views/ClientsView.vue';
 import DashboardView from './views/DashboardView.vue';
 import InboxView from './views/InboxView.vue';
+import OrdersView from './views/OrdersView.vue';
+import OrderView from './views/OrderView.vue';
 import UsersView from './views/UsersView.vue';
 
 const PublicRoute = { name: 'PublicRoute', render: () => h('span') };
@@ -25,6 +27,22 @@ export const router = createRouter({
     {
       path: '/handoffs',
       redirect: '/inbox',
+    },
+    {
+      path: '/pedidos',
+      component: OrdersView,
+      meta: { title: 'Pedidos' },
+    },
+    {
+      // PGE-01: two ways in — the list and the conversation drawer. The
+      // drawer passes the conversation it came from so the trail can name it.
+      path: '/pedidos/:orderId',
+      component: OrderView,
+      props: (route) => ({
+        fromConversationId: String(route.query.conversa ?? ''),
+        orderId: String(route.params.orderId ?? ''),
+      }),
+      meta: { title: 'Pedido' },
     },
     {
       path: '/clientes/:clientId?',

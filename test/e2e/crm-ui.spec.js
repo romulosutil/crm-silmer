@@ -70,7 +70,7 @@ const conversation = {
   updatedAt: '2026-09-08T12:00:00.000Z',
   version: 3,
 };
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, longThread?: boolean, mixedAuthors?: boolean, onBoard?:()=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, pendingHandoff?:boolean, suggestion?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -196,7 +196,17 @@ async function mockCrm(page, options = {}) {
         body: JSON.stringify({
           conversation: inboxConversation,
           messages: detailMessages,
-          suggestion: null,
+          suggestion: options.suggestion
+            ? {
+                automationEpoch: 2,
+                createdAt: '2026-09-08T12:05:00.000Z',
+                id: 'suggestion-1',
+                proposedStage: 'produto',
+                question: 'Confirmo a quantidade com o cliente?',
+                sourceMessageId: 'message-1',
+                status: 'pending',
+              }
+            : null,
         }),
       });
       return;
@@ -522,7 +532,9 @@ test('claims a pending handoff from its conversation in the Caixa de Entrada', a
   await expect(
     page.getByRole('heading', { name: 'Caixa de Entrada' }),
   ).toBeFocused();
-  await expect(page.getByText('Aguardando vendedor')).toBeVisible();
+  await expect(
+    page.locator('.inbox-list').getByText('Aguardando vendedor'),
+  ).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'Handoffs pendentes' }),
   ).toHaveCount(0);
@@ -622,7 +634,7 @@ test('restores search focus after removing filter controls', async ({
   await expect(inboxSearch).toBeFocused();
 });
 
-test('filters the Inbox by queue and situation through the server read model', async ({
+test('filters the Inbox by queue and by who must act through the server read model', async ({
   page,
 }) => {
   const inboxQueries = /** @type {Array<Record<string, string>>} */ ([]);
@@ -631,37 +643,105 @@ test('filters the Inbox by queue and situation through the server read model', a
   });
   await page.goto('/inbox');
 
+  const summary = page.locator('.inbox-state-menu summary');
+  const menu = page.locator('.inbox-state-panel');
+  /** Each menu entry closes the panel, so every pick reopens it first. */
+  /** @param {string} name */
+  const pickState = async (name) => {
+    await summary.click();
+    await menu.getByRole('button', { name, exact: true }).click();
+  };
+
+  // PCX-01: the conversation-state filter is gone, name and options alike.
+  await expect(page.getByText('Situação', { exact: true })).toHaveCount(0);
+  await summary.click();
+  await expect(
+    menu.getByRole('button', { name: 'Requer atenção' }),
+  ).toHaveCount(0);
+  await expect(menu.getByRole('button', { name: 'Em análise' })).toHaveCount(0);
+  await summary.click();
+
+  // PCX-05: the queue keeps deciding whose conversations are listed.
   await page.getByRole('button', { name: 'Minhas conversas' }).click();
   await expect
     .poll(() => inboxQueries.at(-1))
-    .toMatchObject({
-      assignedUserId: 'operator-1',
-    });
+    .toMatchObject({ assignedUserId: 'operator-1' });
   await expect(
     page.getByRole('button', { name: 'Minhas conversas' }),
   ).toHaveAttribute('aria-pressed', 'true');
 
-  await page.locator('.inbox-state-menu summary').click();
-  await page.getByRole('button', { name: 'Requer atenção' }).click();
+  // PCX-02: the four states, each combined with the queue already chosen.
+  await pickState('Aguardando vendedor');
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({ assignedUserId: 'operator-1', pendingHandoff: 'true' });
+  expect(inboxQueries.at(-1)?.automationState).toBeUndefined();
+
+  await pickState('Com o agente');
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({
       assignedUserId: 'operator-1',
-      state: 'requer_atencao',
+      automationState: 'assistant',
+      pendingHandoff: 'false',
     });
 
   await page.getByRole('button', { name: 'Aguardando atendimento' }).click();
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({
-      state: 'requer_atencao',
+      automationState: 'assistant',
+      pendingHandoff: 'false',
       unassignedHumanHandoff: 'true',
     });
   expect(inboxQueries.at(-1)?.assignedUserId).toBeUndefined();
   await expect(
     page.getByRole('button', { name: 'Aguardando atendimento' }),
   ).toHaveAttribute('aria-pressed', 'true');
+
+  await pickState('Com vendedor');
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({
+      automationState: 'human',
+      pendingHandoff: 'false',
+      unassignedHumanHandoff: 'true',
+    });
+
+  // PCX-05: archived conversations stay one click away, under any state.
+  await pickState('Ver arquivadas');
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({
+      archived: 'true',
+      automationState: 'human',
+      pendingHandoff: 'false',
+    });
+
+  await pickState('Todas');
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({ archived: 'true' });
+  expect(inboxQueries.at(-1)?.automationState).toBeUndefined();
+  expect(inboxQueries.at(-1)?.pendingHandoff).toBeUndefined();
+
+  await pickState('Ver caixa de entrada');
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({ archived: 'false' });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('drops the pending AI suggestion block from the conversation', async ({
+  page,
+}) => {
+  await mockCrm(page, { suggestion: true });
+  await page.goto('/inbox');
+
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
+  // PCX-01/D21: the block is gone even when the read model still answers one.
+  await expect(page.getByText('Sugestão pendente da IA')).toHaveCount(0);
+  await expect(page.locator('.suggestion')).toHaveCount(0);
 });
 
 test('does not expose the technical contact identifier in the client list', async ({

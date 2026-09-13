@@ -758,3 +758,135 @@ test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', as
 
   await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(0);
 });
+
+test('reads each item as a card with its own total (PFI-03, PFI-04)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await expect(items).toContainText('1 item · 150 peças');
+  const card = items.getByRole('group').first();
+  await expect(card).toContainText('CAMISETA');
+  await expect(card).toContainText('GOLA OLÍMPICA');
+  await expect(card).toContainText('DRY FIT 100% POLIÉSTER');
+  await expect(card).toContainText('150 peças');
+  await expect(card.locator('tbody tr')).toHaveText(['M100', 'G50']);
+});
+
+test('edits the grade and recomputes every total from it (PFI-04)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Quantidade do tamanho M').fill('120');
+  await expect(items).toContainText('170 peças');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  await expect(items).toContainText('1 item · 170 peças');
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await expect(summary).toContainText('170');
+  expect(writes).toHaveLength(1);
+  expect(writes[0].section).toBe('items');
+  expect(writes[0].body.value[0].grade).toEqual([
+    { quantidade: 120, tamanho: 'M' },
+    { quantidade: 50, tamanho: 'G' },
+  ]);
+});
+
+test('refuses a quantity that is not a whole piece, on the line (PFI-04)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Quantidade do tamanho M').fill('0');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  await expect(items.getByRole('alert').first()).toContainText(
+    'Use uma quantidade inteira maior que zero.',
+  );
+  expect(writes).toHaveLength(0);
+});
+
+test('accepts "Não aplicável" on sleeves and viés (PFI-07)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Manga direita não se aplica').check();
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  await expect(items).toContainText('NÃO APLICÁVEL');
+  expect(writes[0].body.value[0].cor_manga_direita).toBe('NAO APLICAVEL');
+});
+
+test('adds and removes items, fabrics and grade lines', async ({ page }) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByRole('button', { name: 'Adicionar tamanho' }).click();
+  await items.getByLabel('Tamanho da linha 3').fill('GG');
+  await items.getByLabel('Quantidade do tamanho GG').fill('10');
+  await items.getByRole('button', { name: 'Adicionar malha' }).click();
+  await items.getByLabel('Malha 2').fill('HELANCA LIGHT');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  await expect(items).toContainText('1 item · 160 peças');
+  expect(writes[0].body.value[0].grade).toHaveLength(3);
+  expect(writes[0].body.value[0].malhas).toEqual([
+    'DRY FIT 100% POLIÉSTER',
+    'HELANCA LIGHT',
+  ]);
+});
+
+test('shows the server grade error on the line it names', async ({ page }) => {
+  await mockOrders(page, {
+    writeFailure: {
+      body: { code: 'INVALID_GRADE', fields: ['items[0].grade[1]'], index: 1 },
+      status: 422,
+    },
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Quantidade do tamanho G').fill('7');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  await expect(items.getByRole('alert').first()).toContainText(
+    'Use uma quantidade inteira maior que zero.',
+  );
+});
+
+test('opens one section at a time (PFI-06)', async ({ page }) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await summary.getByRole('button', { name: 'Editar' }).click();
+
+  await expect(items.getByRole('button', { name: 'Editar' })).toBeDisabled();
+  await summary.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(items.getByRole('button', { name: 'Editar' })).toBeEnabled();
+});

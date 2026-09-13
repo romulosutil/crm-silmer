@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+import { renderFichaHtml } from '../modules/orders/src/print/ficha-canonical-v2.js';
 import {
   PRODUCTION_FIELDS,
   buildLegacyFichaHtml,
@@ -225,4 +226,70 @@ test('validates hashes and preserves the complete human approval', async () => {
       }),
     /artifact SHA-256/iu,
   );
+});
+
+test('renders the approved v2 template byte for byte from the extracted module', async () => {
+  const { snapshot } = await fixture();
+  const golden = await readFile(
+    new URL('fixtures/ficha-canonical-v2.golden.html', import.meta.url),
+    'utf8',
+  );
+
+  assert.equal(renderFichaHtml(snapshot, { synthetic: true }), golden);
+  assert.equal(buildFichaHtml(snapshot), golden);
+});
+
+test('drops only the sample band when the document is not synthetic', async () => {
+  const { snapshot } = await fixture();
+  const golden = await readFile(
+    new URL('fixtures/ficha-canonical-v2.golden.html', import.meta.url),
+    'utf8',
+  );
+  const band =
+    '<span class="synthetic">Amostra sintetica - nao produzir</span>';
+
+  const printed = renderFichaHtml(snapshot, { synthetic: false });
+
+  assert.ok(golden.includes(band));
+  assert.equal(printed, golden.replace(band, ''));
+  assert.doesNotMatch(printed, /Amostra sintetica/u);
+  assert.match(printed, /Campos vazios para preenchimento/u);
+});
+
+test('renders a real order without the synthetic review gate', () => {
+  const order = {
+    pedido: {
+      aplicacao: 'SILK',
+      cliente: 'Cliente Real',
+      data: '12/09/2026',
+      data_entrega_confirmada: '30/09/2026',
+      fab: '02',
+      itens: [
+        {
+          cor_costas: 'PRETA',
+          cor_frente: 'PRETA',
+          cor_manga_direita: 'BRANCA',
+          cor_manga_esquerda: 'BRANCA',
+          grade: [{ quantidade: 5, tamanho: 'M' }],
+          malhas: ['DRY FIT'],
+          modelo: 'TRADICIONAL',
+          tipo: 'CAMISA',
+          vies_gola: 'PRETA',
+          vies_mangas: 'PRETA',
+        },
+      ],
+      nome: 'Equipe Real',
+      numero: '07-CRM',
+      observacoes: [],
+      quantidade_total: 5,
+      vendedor: 'Vendedora Um',
+    },
+    producao: Object.fromEntries(PRODUCTION_FIELDS.map((field) => [field, ''])),
+  };
+
+  const html = renderFichaHtml(order, { synthetic: false });
+
+  assert.match(html, /07-CRM/u);
+  assert.match(html, /FAB 02/u);
+  assert.doesNotMatch(html, /Amostra sintetica/u);
 });

@@ -70,11 +70,6 @@ export function createServerApi(runtime = {}) {
     (runtime.database
       ? createConfiguredAutomationAuthRuntime(runtime.database, environment)
       : undefined);
-  const n8n =
-    runtime.n8n ??
-    (runtime.database && n8nEnabled
-      ? createN8nApiRuntime(runtime.database, { environment })
-      : undefined);
   const operationalAuth =
     runtime.operationalAuth ??
     (runtime.database
@@ -82,39 +77,6 @@ export function createServerApi(runtime = {}) {
           automationAuth,
           identity: runtime.identity,
         })
-      : undefined);
-  const handoffSecretNames = ['IDEMPOTENCY_ENVELOPE_KEY'];
-  const handoffConfigurationPresent = handoffSecretNames.some((name) =>
-    Boolean(environment[name]),
-  );
-  if (
-    runtime.database &&
-    handoffConfigurationPresent &&
-    !handoffSecretNames.every((name) => Boolean(environment[name]))
-  ) {
-    throw new Error(
-      'Conversation handoff runtime requires IDEMPOTENCY_ENVELOPE_KEY',
-    );
-  }
-  const handoffs =
-    runtime.handoffs ??
-    (runtime.database &&
-    handoffSecretNames.every((name) => Boolean(environment[name]))
-      ? createConversationHandoffRuntime(runtime.database, { environment })
-      : undefined);
-  const conversations =
-    runtime.conversations ??
-    (runtime.database && n8n && handoffs && operationalAuth
-      ? createConversationApiRuntime(
-          runtime.database,
-          operationalAuth,
-          handoffs,
-          n8n,
-          readEnvelopeKey(
-            environment.INBOX_MESSAGE_ENVELOPE_KEY,
-            'INBOX_MESSAGE_ENVELOPE_KEY',
-          ),
-        )
       : undefined);
   const operationCursorKey =
     environment.OPERATION_CURSOR_HMAC_KEY ?? environment.KANBAN_CURSOR_HMAC_KEY;
@@ -152,6 +114,44 @@ export function createServerApi(runtime = {}) {
       environment,
       operations,
     });
+  const n8n =
+    runtime.n8n ??
+    (runtime.database && n8nEnabled
+      ? createN8nApiRuntime(runtime.database, { environment, orders })
+      : undefined);
+  const handoffSecretNames = ['IDEMPOTENCY_ENVELOPE_KEY'];
+  const handoffConfigurationPresent = handoffSecretNames.some((name) =>
+    Boolean(environment[name]),
+  );
+  if (
+    runtime.database &&
+    handoffConfigurationPresent &&
+    !handoffSecretNames.every((name) => Boolean(environment[name]))
+  ) {
+    throw new Error(
+      'Conversation handoff runtime requires IDEMPOTENCY_ENVELOPE_KEY',
+    );
+  }
+  const handoffs =
+    runtime.handoffs ??
+    (runtime.database &&
+    handoffSecretNames.every((name) => Boolean(environment[name]))
+      ? createConversationHandoffRuntime(runtime.database, { environment })
+      : undefined);
+  const conversations =
+    runtime.conversations ??
+    (runtime.database && n8n && handoffs && operationalAuth
+      ? createConversationApiRuntime(
+          runtime.database,
+          operationalAuth,
+          handoffs,
+          n8n,
+          readEnvelopeKey(
+            environment.INBOX_MESSAGE_ENVELOPE_KEY,
+            'INBOX_MESSAGE_ENVELOPE_KEY',
+          ),
+        )
+      : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
     {

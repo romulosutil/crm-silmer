@@ -31,7 +31,7 @@ class N8nMediaIngressError extends Error {
  * DTO remains at this boundary; repositories receive canonical values.
  *
  * @param {any} database
- * @param {{environment?: Record<string,string|undefined>, mediaVolume?: PrivateMediaVolume, scanner?: {scan(path: string): Promise<any>}, clock?: () => Date}} [options]
+ * @param {{environment?: Record<string,string|undefined>, mediaVolume?: PrivateMediaVolume, scanner?: {scan(path: string): Promise<any>}, clock?: () => Date, orders?: {ensurePendingFromIntent(input: {conversationId: string, correlationId: string}): Promise<{created: boolean, order: {id: string}}>}}} [options]
  */
 export function createN8nApiRuntime(database, options = {}) {
   const environment = options.environment ?? process.env;
@@ -91,6 +91,36 @@ export function createN8nApiRuntime(database, options = {}) {
     commandOutbox,
     receiveInbound: service.receiveInbound,
     recordEvent: service.recordEvent,
+    /**
+     * The MVP agent's `order.intent_confirmed` event, kept out of the n8n
+     * integration service: order creation is idempotent by conversation
+     * state (ADR 006), so it needs no receipt-based replay of its own.
+     * @param {any} input
+     */
+    async recordOrderIntent(input) {
+      if (!options.orders) {
+        throw new N8nMediaIngressError(503, 'ORDERS_RUNTIME_UNAVAILABLE');
+      }
+      const technical = input?.technical;
+      const conversationId = requireIdentifier(
+        input?.conversation_id,
+        'INVALID_CONVERSATION_ID',
+      );
+      const eventId = requireIdentifier(input?.event_id, 'INVALID_EVENT_ID');
+      const { created, order } = await options.orders.ensurePendingFromIntent(
+        {
+          conversationId,
+          correlationId: technical?.correlationId,
+        },
+      );
+      return {
+        accepted: true,
+        duplicate: !created,
+        event_id: eventId,
+        order_id: order.id,
+        processed_at: clock().toISOString(),
+      };
+    },
     /** @param {any} input */
     async storeAttachment(input) {
       const media = await prepareTransientMedia(database, input, clock());
@@ -218,6 +248,20 @@ async function prepareTransientMedia(database, input, now) {
       sizeBytes: selected.size_bytes,
     });
   });
+}
+
+/** @param {unknown} value @param {string} code */
+function requireIdentifier(value, code) {
+  if (
+    typeof value !== 'string' ||
+    value.trim() === '' ||
+    value !== value.trim() ||
+    value.length > 512 ||
+    /[ -]/u.test(value)
+  ) {
+    throw new N8nMediaIngressError(400, code);
+  }
+  return value;
 }
 
 /** @param {string|undefined} value @param {string} name */

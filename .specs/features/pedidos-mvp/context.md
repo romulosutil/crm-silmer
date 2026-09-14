@@ -91,6 +91,15 @@ Pedidos substitui o que seria o Kanban.
 - **D23** Na lista de Pedidos, a coluna **"Situação"** do design novo fica
   (pendente: o que falta + tempo parado; confirmado: quem e quando).
 
+### Agente e n8n online
+
+- **D25** A criação do pedido pelo agente fica **automática em produção**: o
+  Grupo D também publica o fluxo no n8n online (T40), primeiro no workflow DEV
+  e depois no de produção, com rollback pela versão anterior.
+- **D26** A publicação só acontece depois do deploy do CRM que aceita
+  `order.intent_confirmed` e com aprovação explícita do responsável logo antes
+  de publicar produção. O nó do evento nunca bloqueia a resposta ao cliente.
+
 ### Escopo cortado
 
 - **D24** Sem cobrança/comprovante/status de pagamento, produção, entrega,

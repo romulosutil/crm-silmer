@@ -342,6 +342,12 @@ a partir de `Order` (`vendedor` = quem confirmou; `data` = `orderDate`;
 
 ## Riscos e dívidas encontradas
 
+- **Ordem de publicação no n8n online:** o fluxo que envia
+  `order.intent_confirmed` só pode ir para o n8n online depois que o CRM de
+  destino aceitar o evento; antes disso, cada intenção vira falha registrada.
+  Mitigação: T40 roda após o deploy, testa no workflow DEV, guarda a versão
+  anterior para rollback e o nó do evento não bloqueia a resposta ao cliente.
+
 - **OpenAPI desatualizado:** `docs/api/openapi.v1.yaml` ainda lista `/kanban`,
   `/deals/*` e `/conversations/{id}/convert`, que não existem. Esta feature só
   adiciona os caminhos de pedido; a limpeza fica adiada.

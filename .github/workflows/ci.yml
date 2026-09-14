@@ -110,12 +110,15 @@ jobs:
   images:
     name: Build and scan ${{ matrix.image }}
     needs: quality
-    if: needs.quality.outputs.image_build_required == 'true'
+    # Runs even when images are unaffected: a skipped matrix job never expands
+    # its name, so the required "Build and scan <image>" checks would never report.
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE_BUILD_REQUIRED: ${{ needs.quality.outputs.image_build_required }}
     strategy:
       fail-fast: false
       matrix:
@@ -126,16 +129,19 @@ jobs:
             dockerfile: docker/runtime.Dockerfile
     steps:
       - name: Check out approved source
+        if: env.IMAGE_BUILD_REQUIRED == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up Buildx
+        if: env.IMAGE_BUILD_REQUIRED == 'true'
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
         with:
           version: v0.36.1
           driver-opts: |
             image=moby/buildkit@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
       - name: Build one local OCI layout
+        if: env.IMAGE_BUILD_REQUIRED == 'true'
         id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
@@ -153,6 +159,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
       - name: Scan local OCI layout with Trivy
+        if: env.IMAGE_BUILD_REQUIRED == 'true'
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           input: /tmp/${{ matrix.image }}-oci
@@ -161,14 +168,14 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL
       - name: Log in to GHCR after the scan passes
-        if: github.event_name == 'push'
+        if: env.IMAGE_BUILD_REQUIRED == 'true' && github.event_name == 'push'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish the scanned OCI layout without rebuilding
-        if: github.event_name == 'push'
+        if: env.IMAGE_BUILD_REQUIRED == 'true' && github.event_name == 'push'
         id: release
         shell: bash
         env:
@@ -183,7 +190,7 @@ jobs:
           test "$release_digest" = "$EXPECTED_DIGEST"
           printf 'digest=%s\n' "$release_digest" >> "$GITHUB_OUTPUT"
       - name: Record immutable digest
-        if: github.event_name == 'push'
+        if: env.IMAGE_BUILD_REQUIRED == 'true' && github.event_name == 'push'
         shell: bash
         run: |
           test "${{ steps.release.outputs.digest }}" != ""
@@ -191,7 +198,7 @@ jobs:
             'ghcr.io/${{ github.repository }}/${{ matrix.image }}' \
             '${{ steps.release.outputs.digest }}' | tee digest.env
       - name: Upload digest reference
-        if: github.event_name == 'push'
+        if: env.IMAGE_BUILD_REQUIRED == 'true' && github.event_name == 'push'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: digest-${{ matrix.image }}-${{ github.sha }}

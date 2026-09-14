@@ -6,9 +6,9 @@ repositório. Os prompts são autocontidos: o agente não precisa desta conversa
 ## Ordem de execução
 
 ```
-A ──→ B ──→ C ──┬──→ D ─────────────┐
-                ├──→ E ──→ F ───────┼──→ H
-                └──→ G (após T26) ──┘
+A ──→ B ──→ C ──┬──→ D (fase 1) ─────┐
+                ├──→ E ──→ F ────────┼──→ H ──→ deploy do CRM ──→ D (fase 2: n8n online)
+                └──→ G (após T26) ───┘
 ```
 
 - **A** primeiro, sozinho.
@@ -17,7 +17,9 @@ A ──→ B ──→ C ──┬──→ D ───────────
 - **D** e **E** em paralelo depois de C.
 - **F** depois de E (precisa de T25). **G** pode começar junto com F, mas só
   depois que **T26** (primeira task de F) estiver no branch de integração.
-- **H** por último.
+- **H** depois de D (fase 1), F e G.
+- **D (fase 2)** por último: publica o fluxo no n8n online, depois de H e do
+  deploy do CRM em produção.
 
 Branch de integração: `feat/pedidos-mvp`. Cada grupo abre PR contra ele. O PR
 final `feat/pedidos-mvp → master` sai depois de H.
@@ -173,29 +175,52 @@ ENTREGA
 
 ---
 
-## Grupo D — Agente n8n (T21–T23)
+## Grupo D — Agente n8n (T21–T23 e T40)
+
+O Grupo D roda em **duas fases com o mesmo prompt**:
+
+- **Fase 1 (código, T21–T23):** assim que o Grupo C estiver no branch de
+  integração.
+- **Fase 2 (n8n online, T40):** só depois do Grupo H **e** do deploy em
+  produção do CRM com T21/T22. Cole o mesmo prompt de novo e acrescente no fim:
+  "Execute somente a Fase 2".
+
+Motivo da ordem: se o fluxo online passar a mandar `order.intent_confirmed`
+para um CRM que ainda não conhece esse evento, o CRM recusa e o agente passa a
+registrar falhas em conversas reais.
 
 ```text
 Você vai executar o Grupo D da feature "Pedidos MVP" no repositório
 C:\Users\sutil\Documents\dev\PESSOAL\apps\crm-silmer (GitHub: romulosutil/crm-silmer).
+O objetivo final do grupo é deixar a criação do pedido AUTOMÁTICA: o agente do
+WhatsApp cria o pedido pendente sozinho, inclusive no n8n online.
 
-PRÉ-REQUISITO
-- Grupo C mesclado em feat/pedidos-mvp (apps/api/src/order-runtime.js existe).
-  Se não, pare e avise.
+O grupo tem duas fases. Se a mensagem terminar com "Execute somente a Fase 2",
+pule direto para a FASE 2. Caso contrário, execute só a FASE 1 e pare.
 
 LEIA ANTES DE QUALQUER ALTERAÇÃO
 - .specs/features/pedidos-mvp/spec.md, context.md, design.md
-- .specs/features/pedidos-mvp/tasks.md → execute SOMENTE T21, T22 e T23
+- .specs/features/pedidos-mvp/tasks.md → T21, T22, T23 (Fase 1) e T40 (Fase 2)
 - docs/integrations/n8n/README.md (já atualizado pelo Grupo A)
 - apps/api/src/n8n-routes.js e n8n-runtime.js
 - modules/n8n-integration/src/postgres-repository.js (#mergeBriefing)
-- ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sdk.js e o workflow DEV derivado
+- ops/n8n/workflows/: k7tI6T4RhQPyJkn9-mvp-simple.sdk.js, render-mvp-workflow.mjs,
+  create-dev-test-workflow.mjs e os *.sanitized.json
 - CAMPOS-FICHA-E-JORNADA-P0-1.md, seção 5.1 (confirmação de intenção)
 - CLAUDE.md e AGENTS.md na raiz
+
+======================================================================
+FASE 1 — Código no repositório (T21, T22, T23)
+======================================================================
+
+PRÉ-REQUISITO
+- Grupo C no branch de integração: apps/api/src/order-runtime.js existe em
+  origin/feat/pedidos-mvp. Se não existir, pare e avise.
 
 BRANCH
 - git fetch origin
 - git worktree add ../crm-silmer-pedidos-d -b feat/pedidos-mvp-d origin/feat/pedidos-mvp
+- Trabalhe só dentro desse worktree.
 
 COMO TRABALHAR
 - Skills: tlc-spec-driven (Execute) e superpowers:test-driven-development.
@@ -203,18 +228,80 @@ COMO TRABALHAR
 - A projeção da pré-ficha no pedido só acontece com automation_state =
   'assistant'. Com vendedor, o patch não toca o pedido.
 - Preço, pagamento e status continuam recusados no briefing_patch.
-- Altere apenas os arquivos do workflow versionados no repositório. NÃO publique,
-  ative ou edite workflows na instância do n8n; isso é feito por uma pessoa.
+- O nó do fluxo que envia order.intent_confirmed NÃO pode bloquear a resposta ao
+  cliente: se o CRM recusar ou der erro, o fluxo segue normalmente e a falha fica
+  registrada. Cubra esse caminho em teste.
+- Regere os exports com os scripts existentes (render-mvp-workflow.mjs e
+  create-dev-test-workflow.mjs). Nenhuma credencial ou segredo nos arquivos.
+- Nesta fase, NÃO altere nada na instância online do n8n.
 - Descubra onde estão os testes existentes das rotas n8n, do repositório
-  PostgreSQL do n8n e do SDK do workflow antes de criar arquivos novos. Se não
-  houver teste do SDK, crie uma asserção sobre o nó que emite o evento.
+  PostgreSQL do n8n e do SDK do workflow antes de criar arquivos novos.
 - Testes live exigem o PostgreSQL de desenvolvimento. Sem banco, pare e peça.
 
-ENTREGA
+ENTREGA DA FASE 1
 - git push -u origin feat/pedidos-mvp-d
 - PR contra feat/pedidos-mvp: "Pedidos MVP — Grupo D: agente n8n".
-- Relatório por task: status, arquivos, gate e contagem de testes, desvios, e
-  os passos manuais necessários para publicar o workflow na instância.
+- Relatório por task: status, arquivos, gate e contagem de testes, desvios.
+- Termine avisando: "Fase 2 liberada depois do Grupo H e do deploy do CRM em
+  produção".
+
+======================================================================
+FASE 2 — Publicação no n8n online (T40)
+======================================================================
+
+PRÉ-REQUISITOS (confira todos; se qualquer um falhar, pare e avise)
+1. PR do Grupo D mesclado e Grupo H concluído em feat/pedidos-mvp.
+2. Conector MCP do n8n disponível nesta sessão (ferramentas de buscar workflow,
+   ver detalhes, versões, diff, atualizar, publicar, restaurar versão e buscar
+   execuções). Sem o conector, pare: não use outro caminho para alterar o n8n.
+3. Pergunte ao responsável e só siga com resposta explícita: "A versão do CRM
+   com T21 e T22 (evento order.intent_confirmed) já está em produção?"
+
+PASSO 1 — Levantamento, sem alterar nada
+- Localize os workflows "DEV | Silmer | Fluxo completo sem WhatsApp"
+  (0S5ZS1xeDCSoWovs) e "Silmer | Atendimento WhatsApp IA" (k7tI6T4RhQPyJkn9).
+- Anote o id da versão ativa de cada um. É o ponto de rollback.
+- Descubra para qual URL de CRM cada workflow envia chamadas. Nenhum workflow
+  pode ser alterado enquanto o CRM de destino dele não tiver T21/T22.
+- Compare o que está publicado com o fluxo gerado a partir do repositório.
+  Se o online tiver mudanças que não estão no repositório, pare e mostre a
+  diferença ao responsável antes de continuar: não sobrescreva ajustes feitos
+  direto no n8n sem autorização.
+
+PASSO 2 — DEV
+- Aplique no workflow DEV apenas os nós da intenção de pedido e publique.
+- Rode uma conversa sintética pelo webhook DEV em que o cliente confirma que
+  quer orçamento e envia dados da ficha.
+- Confirme no CRM de destino: pedido pendente criado uma única vez, pré-ficha
+  projetada, e nenhuma falha na execução.
+- Repita o mesmo evento e confirme que não duplica.
+- Se algo falhar, restaure a versão anotada do DEV e pare com o diagnóstico.
+
+PASSO 3 — Aprovação para produção
+- Mostre ao responsável: diff entre a versão ativa de produção e a nova (só os
+  nós da intenção de pedido devem mudar), resultado do teste DEV e o id da
+  versão de rollback.
+- Pergunte: "Posso publicar no workflow de produção agora?" e só publique com
+  um "sim" explícito nesta conversa.
+
+PASSO 4 — Produção
+- Aplique e publique no workflow de produção.
+- Acompanhe as execuções até 20 execuções ou 2 horas, o que vier primeiro.
+- Qualquer falha ligada ao nó novo, ou conversa em que o cliente deixou de
+  receber resposta: restaure imediatamente a versão anotada, confirme que a
+  restauração está ativa e reporte.
+- Confira na tela de Pedidos o primeiro pedido real criado pelo agente.
+
+PASSO 5 — Repositório
+- Atualize os *.sanitized.json para refletir exatamente o que foi publicado,
+  sem credenciais, e commite: "chore(n8n): sync published MVP workflow export".
+- Push e PR contra master (ou contra feat/pedidos-mvp, se ainda não mesclado).
+
+ENTREGA DA FASE 2
+- Ids das versões antes e depois (DEV e produção).
+- Resultado do teste DEV, execuções monitoradas em produção e o número do
+  primeiro pedido criado pelo agente.
+- Se houve rollback: quando, por quê e estado final.
 ```
 
 ---

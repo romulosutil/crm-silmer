@@ -26,13 +26,14 @@
 
 ### Gates
 
-| Gate  | Comando                                                                                   |
-| ----- | ----------------------------------------------------------------------------------------- |
-| docs  | `npm run format:check`                                                                    |
-| quick | `node --test <arquivos de teste da task> && npm run lint && npm run typecheck`            |
-| live  | `npm run test:orders:live` (mesmo pré-requisito de banco de `npm run test:identity:live`) |
-| e2e   | `npm run test:e2e -- <spec>`                                                              |
-| full  | `npm run validate`                                                                        |
+| Gate   | Comando                                                                                   |
+| ------ | ----------------------------------------------------------------------------------------- |
+| docs   | `npm run format:check`                                                                    |
+| quick  | `node --test <arquivos de teste da task> && npm run lint && npm run typecheck`            |
+| live   | `npm run test:orders:live` (mesmo pré-requisito de banco de `npm run test:identity:live`) |
+| e2e    | `npm run test:e2e -- <spec>`                                                              |
+| full   | `npm run validate`                                                                        |
+| online | Execuções do n8n online sem falha no nó novo + pedido conferido no CRM (ver T40)          |
 
 ---
 
@@ -40,19 +41,20 @@
 
 ### Grupos (um prompt por grupo em `PROMPTS.md`)
 
-| Grupo                               | Tasks   | Depende de        |
-| ----------------------------------- | ------- | ----------------- |
-| **A** Contratos e decisão           | T01–T03 | —                 |
-| **B** Domínio e persistência        | T04–T13 | A                 |
-| **C** Autorização, API e tempo real | T14–T20 | B                 |
-| **D** Agente (n8n)                  | T21–T23 | C                 |
-| **E** Impressão                     | T24–T25 | T04 (B) e T16 (C) |
-| **F** Tela de Pedidos               | T26–T34 | C, E              |
-| **G** Caixa de Entrada              | T35–T38 | C, T26 (F)        |
-| **H** Verificação final             | T39     | todos             |
+| Grupo                               | Tasks        | Depende de                                      |
+| ----------------------------------- | ------------ | ----------------------------------------------- |
+| **A** Contratos e decisão           | T01–T03      | —                                               |
+| **B** Domínio e persistência        | T04–T13      | A                                               |
+| **C** Autorização, API e tempo real | T14–T20      | B                                               |
+| **D** Agente (n8n)                  | T21–T23, T40 | C; a T40 também depende de H e do deploy do CRM |
+| **E** Impressão                     | T24–T25      | T04 (B) e T16 (C)                               |
+| **F** Tela de Pedidos               | T26–T34      | C, E                                            |
+| **G** Caixa de Entrada              | T35–T38      | C, T26 (F)                                      |
+| **H** Verificação final             | T39          | todos                                           |
 
 Depois de C: **D, E e o início de F rodam em paralelo**. G começa assim que
-T26 estiver no branch base.
+T26 estiver no branch base. A **T40** (publicação no n8n online) é a última
+task da feature: só roda depois de H e do deploy do CRM em produção.
 
 ### Diagrama de dependências
 
@@ -72,6 +74,7 @@ C:  T01 ──→ T14 [P]
 
 D:  T15 ──→ T21 ──→ T22
     T21, T02 ──→ T23
+    T23, T39, deploy do CRM ──→ T40
 
 E:  T04 ──→ T24 [P]
     T16, T24 ──→ T25
@@ -452,17 +455,39 @@ H:  T23, T34, T38 ──→ T39
 
 ### T23: Workflow emite a intenção de compra
 
-- **What:** O workflow MVP envia `order.intent_confirmed` quando o cliente confirma que quer orçamento (roteiro 5.1 de `CAMPOS-FICHA-E-JORNADA-P0-1.md`).
-- **Where:** `ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sdk.js` e o workflow DEV derivado
+- **What:** O workflow MVP envia `order.intent_confirmed` quando o cliente confirma que quer orçamento (roteiro 5.1 de `CAMPOS-FICHA-E-JORNADA-P0-1.md`). O nó que envia o evento não pode bloquear a resposta ao cliente: se o CRM recusar, o fluxo segue e registra a falha.
+- **Where:** `ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sdk.js`, exports gerados (`render-mvp-workflow.mjs`, `*.sanitized.json`) e o workflow DEV derivado (`create-dev-test-workflow.mjs`)
 - **Depends on:** T21, T02
 - **Requirement:** PCL-01
 
 **Done when:**
 
 - [ ] Teste existente do workflow cobre o novo nó; se não houver teste do SDK, criar asserção sobre o nó que emite o evento
+- [ ] Teste cobre o caminho de falha: recusa do CRM não impede a mensagem ao cliente
 - [ ] Gate quick passa
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(n8n): emit order intent from MVP workflow`
+
+### T40: Publicar o fluxo no n8n online
+
+- **What:** Levar o fluxo de T23 para a instância online do n8n: primeiro o workflow DEV `0S5ZS1xeDCSoWovs`, com teste ponta a ponta; depois o de produção `k7tI6T4RhQPyJkn9`, deixando a criação do pedido automática. Guardar a versão anterior de cada workflow para rollback e acompanhar as primeiras execuções.
+- **Where:** instância n8n online, pelo conector MCP do n8n (detalhes, versões, diff, atualizar, publicar, restaurar, execuções); `ops/n8n/workflows/*.sanitized.json` sincronizados com o que foi publicado
+- **Depends on:** T23, T39 e o deploy em produção da versão do CRM que contém T21 e T22
+- **Requirement:** PCL-01, PAG-01
+
+**Done when:**
+
+- [ ] Id da versão ativa de cada workflow anotado antes de qualquer alteração
+- [ ] Confirmado para qual CRM cada workflow aponta; nenhum dos dois é alterado enquanto o CRM de destino não aceitar `order.intent_confirmed`
+- [ ] DEV publicado e testado: conversa sintética confirma a intenção e o pedido pendente aparece no CRM de destino, com a pré-ficha projetada
+- [ ] Diff DEV × produção revisado; só os nós da intenção de pedido mudam
+- [ ] Aprovação explícita do responsável obtida imediatamente antes de publicar produção
+- [ ] Produção publicada; nenhuma falha ligada ao nó novo nas primeiras 20 execuções ou 2 horas, o que vier primeiro
+- [ ] Primeiro pedido real criado pelo agente conferido na lista de Pedidos
+- [ ] Qualquer falha em produção dispara a restauração da versão anotada
+- [ ] Exports sanitizados no repositório batem com o publicado e não contêm credenciais
+
+**Tests:** none (operação) · **Gate:** online · **Commit:** `chore(n8n): sync published MVP workflow export`
 
 ---
 
@@ -701,6 +726,7 @@ H:  T23, T34, T38 ──→ T39
 | T12, T13      | 1 migration / 1 adapter                     | ✅       |
 | T14–T20       | 1 ação, runtime ou grupo de rotas cada      | ✅       |
 | T21–T23       | 1 ponto de integração cada                  | ✅       |
+| T40           | 1 publicação (DEV → produção)               | ✅       |
 | T24, T25      | 1 renderer / 1 rota                         | ✅       |
 | T26–T34       | 1 lib, view ou componente cada              | ✅       |
 | T35–T38       | 1 mudança de view ou componente cada        | ✅       |
@@ -708,45 +734,46 @@ H:  T23, T34, T38 ──→ T39
 
 ### Diagrama × definições
 
-| Task     | Depends on (corpo) | Diagrama         | Status |
-| -------- | ------------------ | ---------------- | ------ |
-| T02      | T01                | T01→T02          | ✅     |
-| T03      | T01                | T01→T03          | ✅     |
-| T04      | T01                | (A→B)            | ✅     |
-| T05, T06 | T04                | T04→T05, T04→T06 | ✅     |
-| T07      | T05, T06           | T05,T06→T07      | ✅     |
-| T08      | T07                | T07→T08          | ✅     |
-| T09      | T08                | T08→T09          | ✅     |
-| T10      | T09                | T09→T10          | ✅     |
-| T11      | T10                | T10→T11          | ✅     |
-| T12      | T04                | T04→T12          | ✅     |
-| T13      | T08, T12           | T08,T12→T13      | ✅     |
-| T14      | T01                | T01→T14          | ✅     |
-| T15      | T11, T13, T14      | T11,T13,T14→T15  | ✅     |
-| T16      | T15                | T15→T16          | ✅     |
-| T17      | T16                | T16→T17          | ✅     |
-| T18      | T17                | T17→T18          | ✅     |
-| T19      | T13                | T13→T19          | ✅     |
-| T20      | T13                | T13→T20          | ✅     |
-| T21      | T15                | T15→T21          | ✅     |
-| T22      | T21                | T21→T22          | ✅     |
-| T23      | T21, T02           | T21,T02→T23      | ✅     |
-| T24      | T04                | T04→T24          | ✅     |
-| T25      | T16, T24           | T16,T24→T25      | ✅     |
-| T26      | T03                | T03→T26          | ✅     |
-| T27      | —                  | T27              | ✅     |
-| T28      | T16, T19, T26, T27 | idem             | ✅     |
-| T29      | T25, T28           | T25,T28→T29      | ✅     |
-| T30      | T17, T29           | T17,T29→T30      | ✅     |
-| T31      | T30                | T30→T31          | ✅     |
-| T32      | T31                | T31→T32          | ✅     |
-| T33      | T32                | T32→T33          | ✅     |
-| T34      | T18, T33           | T18,T33→T34      | ✅     |
-| T35      | T20, T26           | T20,T26→T35      | ✅     |
-| T36      | T35                | T35→T36          | ✅     |
-| T37      | T16, T17, T26      | idem             | ✅     |
-| T38      | T19, T36, T37      | idem             | ✅     |
-| T39      | T23, T34, T38      | idem             | ✅     |
+| Task     | Depends on (corpo) | Diagrama           | Status |
+| -------- | ------------------ | ------------------ | ------ |
+| T02      | T01                | T01→T02            | ✅     |
+| T03      | T01                | T01→T03            | ✅     |
+| T04      | T01                | (A→B)              | ✅     |
+| T05, T06 | T04                | T04→T05, T04→T06   | ✅     |
+| T07      | T05, T06           | T05,T06→T07        | ✅     |
+| T08      | T07                | T07→T08            | ✅     |
+| T09      | T08                | T08→T09            | ✅     |
+| T10      | T09                | T09→T10            | ✅     |
+| T11      | T10                | T10→T11            | ✅     |
+| T12      | T04                | T04→T12            | ✅     |
+| T13      | T08, T12           | T08,T12→T13        | ✅     |
+| T14      | T01                | T01→T14            | ✅     |
+| T15      | T11, T13, T14      | T11,T13,T14→T15    | ✅     |
+| T16      | T15                | T15→T16            | ✅     |
+| T17      | T16                | T16→T17            | ✅     |
+| T18      | T17                | T17→T18            | ✅     |
+| T19      | T13                | T13→T19            | ✅     |
+| T20      | T13                | T13→T20            | ✅     |
+| T21      | T15                | T15→T21            | ✅     |
+| T22      | T21                | T21→T22            | ✅     |
+| T23      | T21, T02           | T21,T02→T23        | ✅     |
+| T24      | T04                | T04→T24            | ✅     |
+| T25      | T16, T24           | T16,T24→T25        | ✅     |
+| T26      | T03                | T03→T26            | ✅     |
+| T27      | —                  | T27                | ✅     |
+| T28      | T16, T19, T26, T27 | idem               | ✅     |
+| T29      | T25, T28           | T25,T28→T29        | ✅     |
+| T30      | T17, T29           | T17,T29→T30        | ✅     |
+| T31      | T30                | T30→T31            | ✅     |
+| T32      | T31                | T31→T32            | ✅     |
+| T33      | T32                | T32→T33            | ✅     |
+| T34      | T18, T33           | T18,T33→T34        | ✅     |
+| T35      | T20, T26           | T20,T26→T35        | ✅     |
+| T36      | T35                | T35→T36            | ✅     |
+| T37      | T16, T17, T26      | idem               | ✅     |
+| T38      | T19, T36, T37      | idem               | ✅     |
+| T39      | T23, T34, T38      | idem               | ✅     |
+| T40      | T23, T39 + deploy  | T23,T39,deploy→T40 | ✅     |
 
 `[P]` só em tasks sem dependência entre si na mesma fase: T03 (com T02), T05/T06/T24 (após T04), T14 (após T01), T26/T27. ✅
 
@@ -766,3 +793,4 @@ H:  T23, T34, T38 ──→ T39
 | T26      | lib pura do front         | unit            | unit                               | ✅     |
 | T27–T38  | views/componentes         | e2e             | e2e                                | ✅     |
 | T39      | verificação               | full            | full                               | ✅     |
+| T40      | operação no n8n online    | none            | none (gate online)                 | ✅     |

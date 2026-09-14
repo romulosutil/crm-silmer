@@ -8,7 +8,6 @@ export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-4';
 export const LOCAL_WORKFLOW_NAME =
   'LOCAL | Silmer | Fluxo completo sem WhatsApp';
 
-const MAIN_WORKFLOW_ID = 'k7tI6T4RhQPyJkn9';
 const MAIN_TRIGGER = 'WhatsApp - Receber eventos (MVP)';
 const DEV_TRIGGER = 'DEV - Receber evento sintético (MVP)';
 const DEV_CHAT_TRIGGER = 'DEV - Conversa manual no chat (MVP)';

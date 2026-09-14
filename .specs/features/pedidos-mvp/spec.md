@@ -287,20 +287,99 @@ em Confirmados com "Confirmado por <nome> · <data hora>".
 
 ## Rastreabilidade
 
-| ID                                                             | História | Status  |
-| -------------------------------------------------------------- | -------- | ------- |
-| PCL-01, PCL-02, PCL-03                                         | P1-1     | Pending |
-| PAG-01, PAG-02, PAG-03                                         | P1-1     | Pending |
-| PCL-10, PCL-11                                                 | P1-2     | Pending |
-| PFI-01 … PFI-10, PAU-01                                        | P1-3     | Pending |
-| PCL-04, PCL-05, PCL-06, PCL-08, PCL-09, PFI-11, PFI-12, PFI-13 | P1-4     | Pending |
-| PIM-01 … PIM-05                                                | P1-5     | Pending |
-| PCL-07, PCL-12                                                 | P1-6     | Pending |
-| PLI-01 … PLI-08, PGE-01                                        | P1-7     | Pending |
-| PCX-01 … PCX-05                                                | P1-8     | Pending |
-| PCX-06 … PCX-09                                                | P1-9     | Pending |
+Verificado no Grupo H (T39) em 13/09/2026. Evidência = teste automatizado
+(arquivo:linha) que falha se o requisito for quebrado.
 
-**Cobertura:** 52 requisitos · 52 mapeados em `tasks.md` · 0 sem task.
+| ID     | História | Evidência                                                        | Status   |
+| ------ | -------- | ----------------------------------------------------------------- | -------- |
+| PCL-01 | P1-1     | `test/orders-service-create.test.js:78`                            | Verified |
+| PCL-02 | P1-1     | `test/orders-service-create.test.js:132`                           | Verified |
+| PCL-03 | P1-1     | `test/orders-service-create.test.js:162`                           | Verified |
+| PAG-01 | P1-1     | `test/orders-service-create.test.js:243`; `test/n8n-integration-postgres-live.test.js:116` | Verified |
+| PAG-02 | P1-1     | `test/orders-service-create.test.js:279` (ramo `ignored`)          | Verified |
+| PAG-03 | P1-1     | `test/orders-repository-contract.test.js:287`                      | Verified |
+| PCL-10 | P1-2     | `test/orders-service-create.test.js:198`; `test/e2e/crm-ui.spec.js:1102` | Verified |
+| PCL-11 | P1-2     | `test/e2e/crm-ui.spec.js:369,1083`                                  | Verified |
+| PFI-01 | P1-3     | `test/e2e/orders.spec.js:978`                                       | Verified |
+| PFI-02 | P1-3     | `test/e2e/orders.spec.js:668`                                       | Verified |
+| PFI-03 | P1-3     | `test/e2e/orders.spec.js:773`                                       | Verified |
+| PFI-04 | P1-3     | `test/e2e/orders.spec.js:773,789,814`                               | Verified |
+| PFI-05 | P1-3     | `test/e2e/orders.spec.js:905,937`                                   | Verified |
+| PFI-06 | P1-3     | `test/e2e/orders.spec.js:698,892`                                   | Verified |
+| PFI-07 | P1-3     | `test/e2e/orders.spec.js:833`                                       | Verified |
+| PFI-08 | P1-3     | `test/e2e/orders.spec.js:957`                                       | Verified |
+| PFI-09 | P1-3     | `test/e2e/orders.spec.js:581`; `test/order-format.test.js:103`      | Verified |
+| PFI-10 | P1-3     | `test/e2e/orders.spec.js:764`                                       | Verified |
+| PAU-01 | P1-3     | `test/e2e/orders.spec.js:610`                                       | Verified |
+| PCL-04 | P1-4     | `test/orders-service-commands.test.js:260` (bloco `confirmed`)      | Verified |
+| PCL-05 | P1-4     | `test/orders-service-commands.test.js:260,313`                      | Verified |
+| PCL-06 | P1-4     | `test/orders-service-commands.test.js:173`; `test/e2e/orders.spec.js:1092` | Verified |
+| PCL-08 | P1-4     | `test/orders-service-commands.test.js:336`                          | Verified |
+| PCL-09 | P1-4     | `test/orders-postgres-live.test.js:457`                             | Verified |
+| PFI-11 | P1-4     | `test/orders-service-commands.test.js:260`; `test/order-format.test.js:82` | Verified |
+| PFI-12 | P1-4     | `test/orders-service-commands.test.js:260,336`; `modules/orders/src/domain/order.js:107` | Verified |
+| PFI-13 | P1-4     | `test/e2e/orders.spec.js:1075`                                      | Verified |
+| PIM-01 | P1-5     | `test/e2e/orders.spec.js:567`; `test/order-format.test.js:170`      | Verified |
+| PIM-02 | P1-5     | `test/order-routes.test.js:884`                                     | Verified |
+| PIM-03 | P1-5     | `test/order-routes.test.js:917`                                     | Verified |
+| PIM-04 | P1-5     | `test/order-routes.test.js:889`                                     | Verified |
+| PIM-05 | P1-5     | `test/e2e/orders.spec.js:1110`                                      | Verified |
+| PCL-07 | P1-6     | `test/e2e/orders.spec.js:1027`; `test/orders-service-commands.test.js:336` | Verified |
+| PCL-12 | P1-6     | `test/order-routes.test.js:753`; `test/orders-domain.test.js:169`   | Verified |
+| PLI-01 | P1-7     | `test/e2e/foundation.spec.js:338`                                   | Verified |
+| PLI-02 | P1-7     | `test/e2e/orders.spec.js:430`                                       | Verified |
+| PLI-03 | P1-7     | `test/e2e/orders.spec.js:368,448`                                   | Verified |
+| PLI-04 | P1-7     | `test/e2e/orders.spec.js:368`                                       | Verified |
+| PLI-05 | P1-7     | `test/order-format.test.js:139`                                     | Verified |
+| PLI-06 | P1-7     | `test/e2e/orders.spec.js:409`                                       | Verified |
+| PLI-07 | P1-7     | `test/e2e/orders.spec.js:460`                                       | Verified |
+| PLI-08 | P1-7     | `test/e2e/orders.spec.js:473`; `test/e2e/crm-ui.spec.js:975`        | Verified |
+| PGE-01 | P1-7     | `test/e2e/foundation.spec.js:338,402`; `test/e2e/orders.spec.js:529` | Verified |
+| PCX-01 | P1-8     | `test/e2e/crm-ui.spec.js:830,1131`                                  | Verified |
+| PCX-02 | P1-8     | `test/e2e/crm-ui.spec.js:848`                                       | Verified |
+| PCX-03 | P1-8     | `test/e2e/crm-ui.spec.js:74,931,938`                                | Verified |
+| PCX-04 | P1-8     | `test/e2e/crm-ui.spec.js:74,923`                                    | Verified |
+| PCX-05 | P1-8     | `test/e2e/crm-ui.spec.js:839,886`                                   | Verified |
+| PCX-06 | P1-9     | `test/e2e/crm-ui.spec.js:950`                                       | Verified |
+| PCX-07 | P1-9     | `test/e2e/crm-ui.spec.js:1005`                                      | Verified |
+| PCX-08 | P1-9     | `test/e2e/crm-ui.spec.js:1091`                                      | Verified |
+| PCX-09 | P1-9     | `test/e2e/crm-ui.spec.js:1021,1036,1053`                            | Verified |
+
+**Cobertura:** 52 requisitos · 52 verificados · 0 sem evidência · 0 lacunas.
+
+**Gate desta verificação:**
+
+| Comando                            | Resultado                                    |
+| ----------------------------------- | --------------------------------------------- |
+| `npm run validate`                  | ✅ passou (format, typecheck, lint, boundaries, design-tokens, topology, r2, external-spikes, media-retention, security-catalog, ficha-pdf-review, phase0-decisions, observability, 477 unit tests, build) |
+| `npm run test:orders:live`          | ✅ passou — 16/16 (PostgreSQL, `crm_silmer_test`) |
+| `npm run test:operation-read:live`  | ✅ passou — 1/1 (PostgreSQL, `crm_silmer_test`)   |
+| `npm run test:e2e`                  | ✅ passou — 69 passed, 7 skipped (Playwright)     |
+
+Os 7 testes e2e pulados são cenários de Kanban já aposentados (ADR 004,
+`test/e2e/crm-ui.spec.js:602,1215,1238,1275,1284,1303,1315`) — não pertencem à
+Pedidos MVP e não contam como lacuna.
+
+## Roteiro de UAT
+
+1. Como agente (evento n8n `order.intent_confirmed`), confirmar intenção numa
+   conversa nova → pedido pendente `NN-CRM` aparece na gaveta da conversa e em
+   Pedidos/Pendentes.
+2. Assumir a conversa como vendedor na Caixa de Entrada.
+3. Abrir o pedido pela gaveta ("Abrir pedido").
+4. Editar a seção "Itens e especificações": ajustar grade, salvar e conferir
+   total recalculado.
+5. Editar "Observações do pedido" (até 5 linhas) e salvar.
+6. Confirmar o pedido com valor (ex. `1.180,00`) e condição (Pix); checar
+   status "Confirmado por <nome> · <data hora>".
+7. Imprimir o pedido confirmado; validar template `ficha-canonical-v2`, sem
+   valor/condição e sem faixa de amostra.
+8. Reabrir o pedido; confirmar que a impressão trava de novo e número/valor
+   são preservados.
+9. Na Caixa de Entrada, aplicar o filtro "Estado" → "Aguardando vendedor" e
+   checar ordenação por tempo parado e motivo da parada.
+10. Abrir a gaveta de uma conversa nesse filtro e confirmar resumo (itens,
+    peças, valor) sem opção de editar ali.
 
 ## Critérios de sucesso
 

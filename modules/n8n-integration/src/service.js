@@ -24,7 +24,7 @@ const EVENTS_WITH_RESOLVABLE_CONVERSATION = new Set([
   'message.send.unknown',
   'message.sent',
 ]);
-const BRIEFING_PATCH_FIELDS = new Set([
+export const BRIEFING_PATCH_FIELDS = new Set([
   'artwork_locations',
   'artwork_status',
   'artwork_technique',

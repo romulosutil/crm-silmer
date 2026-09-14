@@ -180,3 +180,44 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   assert.match(serialized, /ready_for_handoff/u);
   assert.match(serialized, /next_required_field/u);
 });
+
+test('emits order.intent_confirmed on a sibling branch that cannot block the customer reply', async () => {
+  const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
+  const byName = new Map(
+    workflow.nodes.map((/** @type {any} */ node) => [node.name, node]),
+  );
+
+  const crmOrderIntent = byName.get('CRM - Registrar intenção de pedido (MVP)');
+  assert.ok(crmOrderIntent, 'expected the order-intent CRM node to exist');
+  assert.equal(crmOrderIntent.type, 'n8n-nodes-base.httpRequest');
+  assert.equal(crmOrderIntent.parameters.method, 'POST');
+  assert.match(crmOrderIntent.parameters.url, /integrations\/n8n\/events/u);
+  assert.equal(
+    crmOrderIntent.onError,
+    'continueErrorOutput',
+    'a CRM refusal or outage must not fail the workflow execution',
+  );
+
+  const prepareOrderIntent = byName.get('Preparar intenção de pedido (MVP)');
+  assert.match(
+    prepareOrderIntent.parameters.jsCode,
+    /event_type: 'order\.intent_confirmed'/u,
+  );
+
+  const gate = byName.get('Cliente confirmou intenção de pedido? (MVP)');
+  assert.equal(gate.type, 'n8n-nodes-base.if');
+
+  const normalizeDecisionBranches =
+    workflow.connections['Normalizar decisão da IA (MVP)'].main[0];
+  const branchTargets = normalizeDecisionBranches.map(
+    (/** @type {any} */ edge) => edge.node,
+  );
+  assert.ok(
+    branchTargets.includes('Transferir para humano? (MVP)'),
+    'the existing handoff/reply decision must still run',
+  );
+  assert.ok(
+    branchTargets.includes('Cliente confirmou intenção de pedido? (MVP)'),
+    'order-intent must be a sibling branch, not chained after the reply decision',
+  );
+});

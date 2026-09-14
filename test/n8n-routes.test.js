@@ -16,8 +16,15 @@ const technicalHeaders = Object.freeze({
 function harness() {
   /** @type {Array<{method: string, input: Record<string, unknown>}>} */
   const calls = [];
+  /** @type {string[]} */
+  const authorizedActions = [];
   const integration = Object.fromEntries(
-    ['receiveInbound', 'recordEvent', 'storeAttachment'].map((method) => [
+    [
+      'receiveInbound',
+      'recordEvent',
+      'recordOrderIntent',
+      'storeAttachment',
+    ].map((method) => [
       method,
       async (/** @type {Record<string, unknown>} */ input) => {
         calls.push({ input, method });
@@ -34,13 +41,14 @@ function harness() {
             input.correlationId,
             technicalHeaders['x-correlation-id'],
           );
+          authorizedActions.push(/** @type {string} */ (input.action));
           return { actor: 'AUTOMATION_EXECUTOR', credentialVersion: 1 };
         },
       },
       n8n: integration,
     },
   );
-  return { api, calls };
+  return { api, authorizedActions, calls };
 }
 
 test('n8n inbound route authenticates the technical envelope and forwards the DTO', async (t) => {
@@ -135,4 +143,28 @@ test('n8n events route rejects event types outside the v1 allowlist', async (t) 
   assert.equal(response.statusCode, 422);
   assert.equal(response.json().error.code, 'UNSUPPORTED_EVENT_TYPE');
   assert.equal(calls.length, 0);
+});
+
+test('n8n events route sends order.intent_confirmed to recordOrderIntent under the order.intent action', async (t) => {
+  const { api, authorizedActions, calls } = harness();
+  t.after(() => api.close());
+  const response = await api.inject({
+    headers: technicalHeaders,
+    method: 'POST',
+    payload: {
+      conversation_id: 'conversation-synthetic',
+      event_id: 'event-synthetic',
+      event_type: 'order.intent_confirmed',
+      occurred_at: '2026-09-13T12:00:00.000Z',
+      schema_version: '1.0',
+    },
+    url: '/api/v1/integrations/n8n/events',
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(authorizedActions, ['order.intent']);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'recordOrderIntent');
+  assert.equal(calls[0].input.conversation_id, 'conversation-synthetic');
+  assert.equal(calls[0].input.event_id, 'event-synthetic');
 });

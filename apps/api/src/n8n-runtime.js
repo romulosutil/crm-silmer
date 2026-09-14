@@ -107,12 +107,10 @@ export function createN8nApiRuntime(database, options = {}) {
         'INVALID_CONVERSATION_ID',
       );
       const eventId = requireIdentifier(input?.event_id, 'INVALID_EVENT_ID');
-      const { created, order } = await options.orders.ensurePendingFromIntent(
-        {
-          conversationId,
-          correlationId: technical?.correlationId,
-        },
-      );
+      const { created, order } = await options.orders.ensurePendingFromIntent({
+        conversationId,
+        correlationId: technical?.correlationId,
+      });
       return {
         accepted: true,
         duplicate: !created,

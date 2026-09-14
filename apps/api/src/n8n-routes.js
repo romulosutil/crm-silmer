@@ -14,6 +14,7 @@ const EVENT_ACTIONS = Object.freeze({
   'message.send.requested': 'integration.n8n.event.create',
   'message.send.unknown': 'integration.n8n.event.create',
   'message.sent': 'integration.n8n.event.create',
+  'order.intent_confirmed': 'order.intent',
   'workflow.failed': 'integration.n8n.event.create',
 });
 
@@ -37,6 +38,7 @@ export class N8nRouteError extends Error {
  *   receiveInbound(input: Record<string, unknown>): Promise<Record<string, unknown>>,
  *   storeAttachment(input: Record<string, unknown>): Promise<Record<string, unknown>>,
  *   recordEvent(input: Record<string, unknown>): Promise<Record<string, unknown>>,
+ *   recordOrderIntent(input: Record<string, unknown>): Promise<Record<string, unknown>>,
  * }} integration
  * @param {(request: import('fastify').FastifyRequest) => {correlationId: string, requestId: string}} contextFor
  */
@@ -169,10 +171,10 @@ export function registerN8nRoutes(api, integration, contextFor) {
         ];
         if (!action) throw new N8nRouteError(422, 'UNSUPPORTED_EVENT_TYPE');
         const technical = await authorizeRequest(request, contextFor, action);
-        const result = await integration.recordEvent({
-          ...body,
-          technical,
-        });
+        const result =
+          action === 'order.intent'
+            ? await integration.recordOrderIntent({ ...body, technical })
+            : await integration.recordEvent({ ...body, technical });
         return reply.code(200).send(result);
       },
     );
@@ -369,7 +371,12 @@ function problemTitle(statusCode) {
 
 /** @param {any} integration */
 function assertIntegration(integration) {
-  for (const method of ['receiveInbound', 'recordEvent', 'storeAttachment']) {
+  for (const method of [
+    'receiveInbound',
+    'recordEvent',
+    'recordOrderIntent',
+    'storeAttachment',
+  ]) {
     if (!integration || typeof integration[method] !== 'function') {
       throw new TypeError(`n8n integration must implement ${method}`);
     }

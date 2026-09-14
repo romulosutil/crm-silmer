@@ -134,29 +134,6 @@ function ifBoolean(name, position, expression) {
   });
 }
 
-function booleanRule(expression, label) {
-  return {
-    conditions: {
-      options: {
-        caseSensitive: true,
-        leftValue: '',
-        typeValidation: 'strict',
-        version: 3,
-      },
-      conditions: [
-        {
-          leftValue: expr(expression),
-          operator: { type: 'boolean', operation: 'true' },
-          rightValue: '',
-        },
-      ],
-      combinator: 'and',
-    },
-    renameOutput: true,
-    outputKey: label,
-  };
-}
-
 function stringRule(expression, expected, label) {
   return {
     conditions: {

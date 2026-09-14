@@ -12,6 +12,11 @@ import {
   PostgresN8nIntegrationRepository,
   createN8nIntegrationService,
 } from '../modules/n8n-integration/src/index.js';
+import {
+  PostgresOrderConversationPort,
+  PostgresOrderRepository,
+  createOrderService,
+} from '../modules/orders/src/index.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const NOW = new Date('2026-09-08T15:00:00.000Z');
@@ -29,15 +34,28 @@ if (connectionString) {
         withTransaction(pool, work),
     };
     let sequence = 0;
+    const contactEnvelopeKey = Buffer.alloc(32, 72);
+    const envelopeKey = Buffer.alloc(32, 71);
+    const orders = createOrderService({
+      authorizeOwnership: async () => {},
+      conversations: new PostgresOrderConversationPort({
+        contactEnvelopeKey,
+        database,
+        envelopeKey,
+      }),
+      fabCode: 'FAB-TEST',
+      repository: new PostgresOrderRepository({ database, envelopeKey }),
+    });
     const service = createN8nIntegrationService({
       clock: () => NOW,
       idFactory: (kind) => `${kind}-${++sequence}`,
       repository: new PostgresN8nIntegrationRepository({
-        contactEnvelopeKey: Buffer.alloc(32, 72),
+        contactEnvelopeKey,
         contactLookupKey: Buffer.alloc(32, 73),
         database,
-        envelopeKey: Buffer.alloc(32, 71),
+        envelopeKey,
         messageEnvelopeKey: Buffer.alloc(32, 74),
+        orders,
       }),
     });
     /** @param {string} executionId @param {string} idempotencyKey */
@@ -95,6 +113,14 @@ if (connectionString) {
         ['conversation.message_received'],
       );
 
+      // T22/PAG-01: a pending order created before the agent's next briefing
+      // patch must absorb that patch while the conversation is still with
+      // the agent (message.send.requested's #mergeBriefing call site).
+      const { order: pendingOnFirst } = await orders.ensurePendingFromIntent({
+        conversationId: first.conversation_id,
+        correlationId: 'correlation-order-1',
+      });
+
       const reservation = {
         automation_epoch: first.automation_epoch,
         briefing_patch: { quantity: 30, segment: 'uniform' },
@@ -116,6 +142,11 @@ if (connectionString) {
         (await service.recordEvent(reservation)).send_authorized,
         false,
       );
+
+      const projectedOnFirst = await orders.get(pendingOnFirst.id);
+      assert.equal(projectedOnFirst.version, pendingOnFirst.version + 1);
+      assert.equal(projectedOnFirst.ficha.serviceData.quantity, 30);
+      assert.equal(projectedOnFirst.ficha.serviceData.segment, 'uniform');
 
       await assert.rejects(
         service.recordEvent({
@@ -180,6 +211,14 @@ if (connectionString) {
         },
         technical: technical('inbound-2', 'wamid.inbound.2'),
       });
+      // T22/PAG-01: the handoff.requested #mergeBriefing call site also
+      // projects, since automation_state is still 'assistant' at merge time
+      // (the handoff itself flips it afterwards).
+      const { order: pendingOnSecond } = await orders.ensurePendingFromIntent({
+        conversationId: secondInbound.conversation_id,
+        correlationId: 'correlation-order-2',
+      });
+
       const handoff = await service.recordEvent({
         automation_epoch: secondInbound.automation_epoch,
         briefing_patch: { customer_name: 'Ana Horizonte' },
@@ -196,6 +235,9 @@ if (connectionString) {
         technical: technical('handoff-1', 'handoff-1'),
       });
       assert.match(handoff.handoff_id, /^handoff-/u);
+      const projectedOnSecond = await orders.get(pendingOnSecond.id);
+      assert.equal(projectedOnSecond.version, pendingOnSecond.version + 1);
+      assert.equal(projectedOnSecond.ficha.summary.cliente, 'Ana Horizonte');
       const handoffState = await pool.query(
         `SELECT handoff.assigned_user_id, handoff.status, handoff.target_role,
                 conversation.automation_epoch, conversation.state,

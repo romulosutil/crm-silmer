@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const rootUrl = new URL('../', import.meta.url);
@@ -68,27 +68,59 @@ test('packages every runtime workspace required by the API', async () => {
   assert.match(healthcheck, /apps\/worker\/src\/worker\.js/u);
   assert.match(healthcheck, /\/api\/health\/live/u);
 
-  const runtimeModules = [
-    'audit-privacy',
-    'catalog',
-    'configuration',
-    'contacts',
-    'database',
-    'identity-access',
-    'inbox-channels',
-    'integration-reliability',
-    'n8n-integration',
-    'shared',
-    'work-management',
-  ];
-  for (const moduleName of runtimeModules) {
+  /** @type {Map<string, { directory: string, manifest: any }>} */
+  const workspaceModules = new Map();
+  for (const entry of await readdir(new URL('modules/', rootUrl), {
+    withFileTypes: true,
+  })) {
+    if (!entry.isDirectory()) continue;
+    const manifestPath = `modules/${entry.name}/package.json`;
+    let manifest;
+    try {
+      manifest = await json(manifestPath);
+    } catch (error) {
+      if (/** @type {NodeJS.ErrnoException} */ (error).code === 'ENOENT') {
+        continue;
+      }
+      throw error;
+    }
+    workspaceModules.set(manifest.name, { directory: entry.name, manifest });
+  }
+
+  for (const { directory } of workspaceModules.values()) {
     assert.equal(
       dockerfile.match(
-        new RegExp(`COPY modules/${moduleName}/package\\.json`, 'gu'),
+        new RegExp(`COPY modules/${directory}/package\\.json`, 'gu'),
       )?.length,
       2,
-      `both dependency stages need the ${moduleName} workspace manifest`,
+      `both dependency stages need the ${directory} workspace manifest`,
     );
+  }
+
+  const pending = [
+    await json('apps/api/package.json'),
+    await json('apps/worker/package.json'),
+  ];
+  /** @type {Set<string>} */
+  const runtimeModuleSet = new Set();
+  while (pending.length > 0) {
+    const manifest = pending.pop();
+    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+      const workspace = workspaceModules.get(dependency);
+      if (!workspace || runtimeModuleSet.has(workspace.directory)) continue;
+      runtimeModuleSet.add(workspace.directory);
+      pending.push(workspace.manifest);
+    }
+  }
+  const runtimeModules = [...runtimeModuleSet].sort();
+
+  for (const moduleName of ['database', 'orders', 'shared']) {
+    assert.ok(
+      runtimeModules.includes(moduleName),
+      `${moduleName} must be resolved as a runtime workspace dependency`,
+    );
+  }
+  for (const moduleName of runtimeModules) {
     assert.match(
       buildScript,
       new RegExp(`modules/${moduleName}/src`, 'u'),

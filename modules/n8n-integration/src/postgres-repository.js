@@ -56,6 +56,7 @@ export class PostgresN8nIntegrationRepository {
    *   contactEnvelopeKey?: Buffer,
    *   contactLookupKey?: Buffer,
    *   messageEnvelopeKey?: Buffer,
+   *   orders?: {projectAgentBriefing(input: {conversationId: string, correlationId: string, briefing: Record<string, unknown>, automationState: string}): Promise<any>} | null,
    * }} options
    */
   constructor({
@@ -64,6 +65,7 @@ export class PostgresN8nIntegrationRepository {
     contactEnvelopeKey = envelopeKey,
     contactLookupKey = envelopeKey,
     messageEnvelopeKey = envelopeKey,
+    orders = null,
   }) {
     if (
       !database ||
@@ -87,6 +89,7 @@ export class PostgresN8nIntegrationRepository {
     this.contactEnvelopeKey = Buffer.from(contactEnvelopeKey);
     this.contactLookupKey = Buffer.from(contactLookupKey);
     this.messageEnvelopeKey = Buffer.from(messageEnvelopeKey);
+    this.orders = orders;
   }
 
   /** @param {any} input @param {any} runtime */
@@ -420,7 +423,18 @@ export class PostgresN8nIntegrationRepository {
 
   /** @param {any} input @param {any} runtime */
   async recordEvent(input, runtime) {
-    return this.database.transaction(async (client) => {
+    // Order projection opens its own transaction (PostgresOrderRepository
+    // owns that) and both it and this transaction can insert into
+    // crm.domain_events, whose BEFORE INSERT trigger takes one global
+    // advisory lock to assign the stream cursor. Calling it from inside
+    // this transaction risks a cross-connection deadlock Postgres cannot
+    // detect (this connection would hold the lock while idle, waiting on
+    // the nested connection, which waits on that same lock) — a real
+    // transaction_timeout hang was reproduced. Deferring the call to after
+    // commit avoids the shared lock entirely; it already runs best-effort.
+    /** @type {any} */
+    let projectionTarget = null;
+    const result = await this.database.transaction(async (client) => {
       await transactionBounds(client);
       await advisoryLock(client, `n8n-event:${input.technical.idempotencyKey}`);
       const replay = await selectReceipt(
@@ -475,6 +489,12 @@ export class PostgresN8nIntegrationRepository {
         );
         messageId = reservation.messageId;
         outcome.sendAuthorized = true;
+        if (eventInput.briefingPatch) {
+          projectionTarget = {
+            conversation,
+            correlationId: eventInput.correlationId,
+          };
+        }
       } else if (eventInput.eventType === 'message.sent') {
         const sent = await confirmReservedSend(client, eventInput, processedAt);
         messageId = sent.messageId;
@@ -506,6 +526,10 @@ export class PostgresN8nIntegrationRepository {
             runtime,
             processedAt,
           );
+          projectionTarget = {
+            conversation,
+            correlationId: eventInput.correlationId,
+          };
         }
         const handoff = await createUnassignedHandoff(
           client,
@@ -566,6 +590,13 @@ export class PostgresN8nIntegrationRepository {
         ...(outcome.handoffId ? { handoff_id: outcome.handoffId } : {}),
       };
     });
+    if (projectionTarget) {
+      await this.#projectOrder(
+        projectionTarget.conversation,
+        projectionTarget.correlationId,
+      );
+    }
+    return result;
   }
 
   /** @param {Queryable} client @param {string} conversationId @param {boolean} duplicate */
@@ -604,6 +635,36 @@ export class PostgresN8nIntegrationRepository {
       `n8n-briefing:${conversation.id}:${conversation.briefing_version}`,
       this.envelopeKey,
     );
+  }
+
+  /**
+   * PAG-01/PAG-02: projects the merged pré-ficha onto the conversation's
+   * pending order, but only while the agent still owns the turn — the guard
+   * and the "no pending order" no-op both live in OrderService, already
+   * covered by its own tests. Runs after the caller's transaction commits
+   * (see the recordEvent doc comment): it opens its own transaction, and
+   * running it earlier, nested inside that transaction, risks a
+   * cross-connection deadlock over crm.domain_events' shared stream-cursor
+   * lock. Best-effort: never blocks or fails the n8n event.
+   *
+   * @param {any} conversation @param {string} correlationId
+   */
+  async #projectOrder(conversation, correlationId) {
+    if (!this.orders) return;
+    try {
+      await this.orders.projectAgentBriefing({
+        automationState: conversation.automation_state,
+        briefing: this.#readBriefing(conversation),
+        conversationId: conversation.id,
+        correlationId,
+      });
+    } catch (error) {
+      console.error('n8n briefing merged but order projection failed', {
+        conversationId: conversation.id,
+        correlationId,
+        message: /** @type {Error} */ (error)?.message,
+      });
+    }
   }
 
   /** @param {Queryable} client @param {any} conversation @param {Record<string, unknown>} patch @param {any} runtime @param {string} now */

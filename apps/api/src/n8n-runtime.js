@@ -31,7 +31,7 @@ class N8nMediaIngressError extends Error {
  * DTO remains at this boundary; repositories receive canonical values.
  *
  * @param {any} database
- * @param {{environment?: Record<string,string|undefined>, mediaVolume?: PrivateMediaVolume, scanner?: {scan(path: string): Promise<any>}, clock?: () => Date, orders?: {ensurePendingFromIntent(input: {conversationId: string, correlationId: string}): Promise<{created: boolean, order: {id: string}}>}}} [options]
+ * @param {{environment?: Record<string,string|undefined>, mediaVolume?: PrivateMediaVolume, scanner?: {scan(path: string): Promise<any>}, clock?: () => Date, orders?: {ensurePendingFromIntent(input: {conversationId: string, correlationId: string}): Promise<{created: boolean, order: {id: string}}>, projectAgentBriefing(input: {conversationId: string, correlationId: string, briefing: Record<string, unknown>, automationState: string}): Promise<any>}}} [options]
  */
 export function createN8nApiRuntime(database, options = {}) {
   const environment = options.environment ?? process.env;
@@ -58,6 +58,7 @@ export function createN8nApiRuntime(database, options = {}) {
     database,
     envelopeKey,
     messageEnvelopeKey,
+    orders: options.orders,
   });
   const service = createN8nIntegrationService({ repository, clock });
   const transientMediaRepository = new PostgresTransientMediaRepository({

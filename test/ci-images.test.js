@@ -229,6 +229,38 @@ test('scans each local OCI layout before its only registry publication', async (
   assert.doesNotMatch(workflow, /:\s*latest\b|:latest\b/u);
 });
 
+test('reports required image checks even when a PR does not affect images', async () => {
+  const workflow = await text('.github/workflows/ci.yml');
+  const imagesJob = workflow.slice(
+    workflow.indexOf('\n  images:'),
+    workflow.indexOf('\n    steps:', workflow.indexOf('\n  images:')),
+  );
+  const imageSteps = workflow
+    .slice(workflow.indexOf('\n    steps:', workflow.indexOf('\n  images:')))
+    .split(/\n {6}- name: /u)
+    .slice(1);
+
+  // A skipped matrix job never expands its name, so the required
+  // "Build and scan <image>" checks would stay pending forever.
+  assert.doesNotMatch(
+    imagesJob,
+    /^ {4}if:/mu,
+    'images job must always run so its matrix check names are reported',
+  );
+  assert.ok(imageSteps.length >= 8);
+  for (const step of imageSteps) {
+    assert.match(
+      step,
+      /if: .*env\.IMAGE_BUILD_REQUIRED == 'true'/u,
+      `image step must be gated by the image scope: ${step.split('\n')[0]}`,
+    );
+  }
+  assert.match(
+    imagesJob,
+    /IMAGE_BUILD_REQUIRED: \$\{\{ needs\.quality\.outputs\.image_build_required \}\}/u,
+  );
+});
+
 test('promotes one approved SHA as identical dev and hml digest references', async () => {
   const workflow = await text('.github/workflows/promote-approved-sha.yml');
 

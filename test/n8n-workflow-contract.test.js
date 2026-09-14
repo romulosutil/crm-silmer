@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import vm from 'node:vm';
 
+import { BRIEFING_PATCH_FIELDS } from '../modules/n8n-integration/src/service.js';
 import {
   ContractValidationError,
   validateBriefingPatch,
@@ -20,6 +22,31 @@ const workflowSnapshot = new URL(
 /** @param {string} name @returns {Promise<any>} */
 async function fixture(name) {
   return JSON.parse(await readFile(new URL(name, fixtureRoot), 'utf8'));
+}
+
+/** @returns {Promise<Map<string, any>>} */
+async function workflowNodesByName() {
+  const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
+  return new Map(
+    workflow.nodes.map((/** @type {any} */ node) => [node.name, node]),
+  );
+}
+
+/**
+ * Runs an n8n "run once for each item" Code node body outside n8n, with only
+ * the `$json` item and the `$('<node>')` lookups the body actually uses.
+ *
+ * @param {string} jsCode
+ * @param {any} item
+ * @param {Record<string, any>} upstream
+ * @returns {any}
+ */
+function runCodeNode(jsCode, item, upstream) {
+  const result = vm.runInNewContext(`(() => {\n${jsCode}\n})()`, {
+    $json: item,
+    $: (/** @type {string} */ name) => ({ item: { json: upstream[name] } }),
+  });
+  return JSON.parse(JSON.stringify(result.json));
 }
 
 class ConversationFenceHarness {
@@ -219,5 +246,118 @@ test('emits order.intent_confirmed on a sibling branch that cannot block the cus
   assert.ok(
     branchTargets.includes('Cliente confirmou intenção de pedido? (MVP)'),
     'order-intent must be a sibling branch, not chained after the reply decision',
+  );
+});
+
+test('agent output parser tolerates stray keys instead of failing the execution', async () => {
+  const byName = await workflowNodesByName();
+  const parser = byName.get('Validar saída do MVP');
+  assert.ok(parser, 'expected the structured output parser node to exist');
+  const schema = JSON.parse(parser.parameters.inputSchema);
+
+  assert.notEqual(
+    schema.additionalProperties,
+    false,
+    'top-level stray keys (e.g. briefing_status) must not reject the reply',
+  );
+  assert.notEqual(
+    schema.properties.briefing_patch.additionalProperties,
+    false,
+    'stray briefing_patch keys (e.g. order_intent_confirmed) must not reject the reply',
+  );
+  assert.doesNotMatch(
+    parser.parameters.inputSchema,
+    /"additionalProperties":false/u,
+  );
+  assert.deepEqual([...schema.required].sort(), [
+    'briefing_patch',
+    'handoff_ready',
+    'handoff_reason',
+    'handoff_required',
+    'order_intent_confirmed',
+    'reasoning',
+    'reply_text',
+  ]);
+
+  const agent = byName.get('Atendente virtual Silmer (MVP)');
+  assert.match(
+    agent.parameters.options.systemMessage,
+    /order_intent_confirmed=true no nível superior da resposta \(nunca dentro de briefing_patch\)/u,
+  );
+});
+
+test('decision normalizer whitelists briefing_patch keys exactly as the CRM does', async () => {
+  const byName = await workflowNodesByName();
+  const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
+  const declaration = /const briefingFields = new Set\(\[([\s\S]*?)\]\);/u.exec(
+    jsCode,
+  );
+  assert.ok(
+    declaration,
+    'expected a briefingFields whitelist in the normalizer',
+  );
+  const workflowFields = [...declaration[1].matchAll(/'([a-z_]+)'/gu)].map(
+    (match) => match[1],
+  );
+  assert.deepEqual(
+    [...workflowFields].sort(),
+    [...BRIEFING_PATCH_FIELDS].sort(),
+  );
+});
+
+test('decision normalizer accepts a misplaced order intent flag and strips stray patch keys', async () => {
+  const byName = await workflowNodesByName();
+  const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
+  const context = {
+    conversation_id: 'conversation-1',
+    automation_epoch: 1,
+    source_revision: 4,
+    briefing: {},
+  };
+  // Verbatim shape returned by the model in DEV execution 54.
+  const liveOutput = {
+    output: {
+      reply_text: 'Perfeito, Carla!',
+      briefing_patch: {
+        customer_name: 'Carla',
+        product_model: 'camiseta básica',
+        sizes: '20 M e 30 G',
+        order_intent_confirmed: true,
+        next_required_field: 'artwork_status',
+      },
+      handoff_ready: false,
+      handoff_required: false,
+      order_intent_confirmed: true,
+      handoff_reason: null,
+      reasoning: 'Cliente confirmou o orçamento.',
+      briefing_status: 'collecting',
+    },
+  };
+
+  const decision = runCodeNode(jsCode, liveOutput, {
+    'Montar contexto da IA (MVP)': context,
+  });
+  assert.equal(decision.order_intent_confirmed, true);
+  assert.equal('order_intent_confirmed' in decision.briefing_patch, false);
+  assert.equal(decision.briefing_patch.customer_name, 'Carla');
+  for (const key of Object.keys(decision.briefing_patch)) {
+    assert.ok(BRIEFING_PATCH_FIELDS.has(key), `CRM would reject ${key}`);
+  }
+
+  const onlyMisplaced = /** @type {any} */ (structuredClone(liveOutput));
+  delete onlyMisplaced.output.order_intent_confirmed;
+  const misplaced = runCodeNode(jsCode, onlyMisplaced, {
+    'Montar contexto da IA (MVP)': context,
+  });
+  assert.equal(misplaced.order_intent_confirmed, true);
+  assert.equal('order_intent_confirmed' in misplaced.briefing_patch, false);
+
+  const notConfirmed = /** @type {any} */ (structuredClone(onlyMisplaced));
+  delete notConfirmed.output.briefing_patch.order_intent_confirmed;
+  assert.equal(
+    runCodeNode(jsCode, notConfirmed, {
+      'Montar contexto da IA (MVP)': context,
+    }).order_intent_confirmed,
+    false,
   );
 });

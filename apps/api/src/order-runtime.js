@@ -184,6 +184,7 @@ export function createOrderRuntime(options) {
     authorizeRead: access.authorizeRead,
     authorizeWrite: access.authorizeWrite,
     ensurePendingFromIntent: service.ensurePendingFromIntent,
+    projectAgentBriefing: service.projectAgentBriefing,
 
     /**
      * PCL-10/PCL-11 behind the conversation version the seller saw; an

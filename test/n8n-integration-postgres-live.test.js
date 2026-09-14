@@ -305,6 +305,135 @@ if (connectionString) {
       await pool.end();
     }
   });
+
+  test('PostgreSQL seeds an order created after the agent reply with the merged briefing', async () => {
+    assert.equal(
+      new URL(connectionString).pathname.slice(1),
+      'crm_silmer_test',
+    );
+    const pool = new Pool({ connectionString, max: 12 });
+    const database = {
+      query: pool.query.bind(pool),
+      transaction: (/** @type {(client: any) => Promise<any>} */ work) =>
+        withTransaction(pool, work),
+    };
+    let sequence = 0;
+    const contactEnvelopeKey = Buffer.alloc(32, 72);
+    const envelopeKey = Buffer.alloc(32, 71);
+    const orders = createOrderService({
+      authorizeOwnership: async () => {},
+      conversations: new PostgresOrderConversationPort({
+        contactEnvelopeKey,
+        database,
+        envelopeKey,
+      }),
+      fabCode: 'FAB-TEST',
+      repository: new PostgresOrderRepository({ database, envelopeKey }),
+    });
+    const service = createN8nIntegrationService({
+      clock: () => NOW,
+      idFactory: (kind) => `${kind}-${++sequence}`,
+      repository: new PostgresN8nIntegrationRepository({
+        contactEnvelopeKey,
+        contactLookupKey: Buffer.alloc(32, 73),
+        database,
+        envelopeKey,
+        messageEnvelopeKey: Buffer.alloc(32, 74),
+        orders,
+      }),
+    });
+    /** @param {string} id */
+    const technical = (id) => ({
+      actor: 'AUTOMATION_EXECUTOR',
+      correlationId: `correlation-${id}`,
+      credentialVersion: 'current',
+      executionId: id,
+      idempotencyKey: id,
+      requestId: `request-${id}`,
+      workflowKey: 'whatsapp-mvp',
+      workflowVersion: 'mvp-simple-1',
+    });
+    /** @param {string} waId */
+    const inbound = (waId) =>
+      service.receiveInbound({
+        channel: 'whatsapp',
+        contact: { name: 'Synthetic', wa_id: waId },
+        event_id: `wamid.${waId}`,
+        message: {
+          external_id: `wamid.${waId}`,
+          text: 'Pode fechar o pedido',
+          type: 'text',
+        },
+        metadata: { phone_number_id: 'phone-account-1' },
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        technical: technical(`inbound-${waId}`),
+      });
+    const briefingPatch = {
+      order_name: 'Formatura 2026',
+      product_type: 'camiseta',
+      quantity: 30,
+    };
+
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+
+      // The MVP workflow posts the reply (or handoff) before
+      // order.intent_confirmed on the same customer message: the reply's
+      // projection finds no pending order yet, so the order the intent
+      // creates must already carry the briefing that reply merged.
+      const replied = await inbound('5527900000001');
+      await service.recordEvent({
+        automation_epoch: replied.automation_epoch,
+        briefing_patch: briefingPatch,
+        command_id: 'command-reply-first',
+        conversation_id: replied.conversation_id,
+        event_id: 'send-reply-first',
+        event_type: 'message.send.requested',
+        message: { text: 'Pedido anotado!', type: 'text' },
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        source_revision: replied.source_revision,
+        technical: technical('send-reply-first'),
+      });
+      const { order: afterReply } = await orders.ensurePendingFromIntent({
+        conversationId: replied.conversation_id,
+        correlationId: 'correlation-intent-reply-first',
+      });
+      assert.equal(afterReply.ficha.summary.nome, 'Formatura 2026');
+      assert.equal(afterReply.ficha.items[0]?.tipo, 'camiseta');
+      assert.equal(afterReply.ficha.serviceData.quantity, 30);
+
+      // Same message ending in a handoff: automation_state leaves
+      // 'assistant', so no later projection could fill the order.
+      const handedOff = await inbound('5527900000002');
+      await service.recordEvent({
+        automation_epoch: handedOff.automation_epoch,
+        briefing_patch: briefingPatch,
+        conversation_id: handedOff.conversation_id,
+        event_id: 'handoff-reply-first',
+        event_type: 'handoff.requested',
+        handoff: { reason: 'negotiation', summary: 'Cliente fechou pedido.' },
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        source_revision: handedOff.source_revision,
+        technical: technical('handoff-reply-first'),
+      });
+      const { order: afterHandoff } = await orders.ensurePendingFromIntent({
+        conversationId: handedOff.conversation_id,
+        correlationId: 'correlation-intent-handoff-first',
+      });
+      assert.equal(afterHandoff.ficha.summary.nome, 'Formatura 2026');
+      assert.equal(afterHandoff.ficha.items[0]?.tipo, 'camiseta');
+      assert.equal(afterHandoff.ficha.serviceData.quantity, 30);
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
 }
 
 /** @param {Promise<any>[]} promises */

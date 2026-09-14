@@ -703,10 +703,10 @@ H:  T23, T34, T38 ──→ T39
 
 **Done when:**
 
-- [ ] `npm run validate` passa
-- [ ] `npm run test:e2e` passa
-- [ ] `npm run test:orders:live` passa
-- [ ] Nenhum requisito sem evidência
+- [x] `npm run validate` passa
+- [x] `npm run test:e2e` passa
+- [x] `npm run test:orders:live` passa
+- [x] Nenhum requisito sem evidência
 
 **Tests:** full · **Gate:** full · **Commit:** `docs(specs): verify orders MVP traceability`
 

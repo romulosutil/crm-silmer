@@ -2,6 +2,11 @@
 
 **Status:** rascunho para revisão. Nenhuma opção desta lista está aprovada.
 
+**Planilha para revisão:**
+[baixar o arquivo XLSX com abas e menus de decisão](005-lista-de-opcoes-para-aprovacao.xlsx).
+O arquivo pode ser importado no Google Planilhas; CSV não preserva abas nem
+menus dropdown.
+
 **Objetivo da reunião:** confirmar o que a Silmer realmente vende e quais nomes
 usa no dia a dia. Esta é uma lista ampla de candidatos, não uma afirmação de que
 todo material ou serviço abaixo está disponível.

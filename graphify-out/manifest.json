@@ -2160,8 +2160,8 @@
     "semantic_hash": ""
   },
   "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md": {
-    "mtime": 1789518607.0816512,
-    "ast_hash": "1b122ca8374e0bc20a5ad9745bc3ac8f",
+    "mtime": 1789519627.006429,
+    "ast_hash": "8dd5b4479432e17439eea5090c80d2e8",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido__quais_cat\u00e1.md": {
@@ -2172,6 +2172,11 @@
   "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md": {
     "mtime": 1789518786.0748727,
     "ast_hash": "edf4d296f365a953a91e46b5ba162fd2",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260916_004924_como_disponibilizar_cada_categoria_da_lista_de_val.md": {
+    "mtime": 1789519764.8201482,
+    "ast_hash": "7bb6a77992191e4e16206bfc98dc2751",
     "semantic_hash": ""
   }
 }

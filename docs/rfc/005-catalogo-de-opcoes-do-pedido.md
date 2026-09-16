@@ -128,6 +128,12 @@ e exige retrabalho humano. **Esforço inicial:** baixo. **Risco acumulado:** alt
 
 ## 6. Catálogo candidato para aprovação
 
+Para conduzir a revisão com o cliente sem misturar arquitetura, banco de dados
+ou IA, usar a
+[Lista de opções do Pedido — validação com o cliente](005-anexo-lista-de-opcoes-para-aprovacao.md).
+Ela apresenta uma linha por opção e espaço para manter, remover, renomear ou
+indicar itens ausentes.
+
 Os códigos são provisórios. `OUTRO_PENDENTE` nunca é uma opção automaticamente
 vendável: ele cria uma pendência para decisão humana.
 

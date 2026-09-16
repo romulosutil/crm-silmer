@@ -1078,8 +1078,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_api_src_conversation_runtime",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "conversation-runtime.js"
     },
     {
@@ -1089,8 +1089,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "apps_api_src_conversation_runtime_createconversationapiruntime",
-      "community": 36,
-      "community_name": "server.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "createconversationapiruntime()"
     },
     {
@@ -3158,7 +3158,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_components_authpanel",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "authpanel.vue"
     },
     {
@@ -3169,7 +3169,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_components_authpanel_emit",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "emit"
     },
     {
@@ -3180,7 +3180,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_components_authpanel_busy",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "busy"
     },
     {
@@ -3191,7 +3191,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_components_authpanel_loginheading",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "loginheading"
     },
     {
@@ -3202,7 +3202,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_components_authpanel_submitlogin",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "submitlogin()"
     },
     {
@@ -3213,7 +3213,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_components_authpanel_focusheading",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "focusheading()"
     },
     {
@@ -3224,7 +3224,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_components_authpanel_publicmessage",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "publicmessage()"
     },
     {
@@ -3235,7 +3235,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_components_authpanel_formvalues",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "formvalues()"
     },
     {
@@ -3246,7 +3246,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_components_authpanel_compact",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "compact()"
     },
     {
@@ -4521,8 +4521,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client",
-      "community": 125,
-      "community_name": "api-client.js",
+      "community": 30,
+      "community_name": "ClientsView.vue",
       "norm_label": "api-client.js"
     },
     {
@@ -4533,7 +4533,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client_apierror",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": "apierror"
     },
     {
@@ -4544,7 +4544,7 @@
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client_apierror_constructor",
       "community": 125,
-      "community_name": "api-client.js",
+      "community_name": "AuthPanel.vue",
       "norm_label": ".constructor()"
     },
     {
@@ -4554,8 +4554,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_edge_web_src_lib_api_client_readcookie",
-      "community": 125,
-      "community_name": "api-client.js",
+      "community": 30,
+      "community_name": "ClientsView.vue",
       "norm_label": "readcookie()"
     },
     {
@@ -6358,8 +6358,8 @@
       "source_location": "L406",
       "_origin": "ast",
       "id": "apps_edge_web_src_views_inboxview_selectconversation",
-      "community": 10,
-      "community_name": "UsersView.vue",
+      "community": 6,
+      "community_name": "InboxView.vue",
       "norm_label": "selectconversation()"
     },
     {
@@ -6435,8 +6435,8 @@
       "source_location": "L526",
       "_origin": "ast",
       "id": "apps_edge_web_src_views_inboxview_claimhandoff",
-      "community": 10,
-      "community_name": "UsersView.vue",
+      "community": 6,
+      "community_name": "InboxView.vue",
       "norm_label": "claimhandoff()"
     },
     {
@@ -7667,7 +7667,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_worker_src_worker",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "worker.js"
     },
@@ -7678,8 +7678,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime",
-      "community": 181,
-      "community_name": "worker.js",
+      "community": 189,
+      "community_name": "postgres-job-queue.js",
       "norm_label": "workerruntime"
     },
     {
@@ -7689,8 +7689,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_constructor",
-      "community": 181,
-      "community_name": "worker.js",
+      "community": 189,
+      "community_name": "postgres-job-queue.js",
       "norm_label": ".constructor()"
     },
     {
@@ -7700,8 +7700,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_start",
-      "community": 181,
-      "community_name": "worker.js",
+      "community": 189,
+      "community_name": "postgres-job-queue.js",
       "norm_label": ".start()"
     },
     {
@@ -7711,8 +7711,8 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_emitheartbeat",
-      "community": 181,
-      "community_name": "worker.js",
+      "community": 189,
+      "community_name": "postgres-job-queue.js",
       "norm_label": ".emitheartbeat()"
     },
     {
@@ -7722,8 +7722,8 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_recordjobfailure",
-      "community": 181,
-      "community_name": "worker.js",
+      "community": 189,
+      "community_name": "postgres-job-queue.js",
       "norm_label": ".recordjobfailure()"
     },
     {
@@ -7733,8 +7733,8 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_poll",
-      "community": 181,
-      "community_name": "worker.js",
+      "community": 189,
+      "community_name": "postgres-job-queue.js",
       "norm_label": ".poll()"
     },
     {
@@ -7766,8 +7766,8 @@
       "source_location": "L210",
       "_origin": "ast",
       "id": "apps_worker_src_worker_workerruntime_stop",
-      "community": 181,
-      "community_name": "worker.js",
+      "community": 189,
+      "community_name": "postgres-job-queue.js",
       "norm_label": ".stop()"
     },
     {
@@ -7777,7 +7777,7 @@
       "source_location": "L224",
       "_origin": "ast",
       "id": "apps_worker_src_worker_mediaretentionscheduler",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "mediaretentionscheduler"
     },
@@ -7788,7 +7788,7 @@
       "source_location": "L226",
       "_origin": "ast",
       "id": "apps_worker_src_worker_mediaretentionscheduler_constructor",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": ".constructor()"
     },
@@ -7799,7 +7799,7 @@
       "source_location": "L255",
       "_origin": "ast",
       "id": "apps_worker_src_worker_mediaretentionscheduler_start",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": ".start()"
     },
@@ -7810,7 +7810,7 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "apps_worker_src_worker_mediaretentionscheduler_poll",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": ".poll()"
     },
@@ -7821,7 +7821,7 @@
       "source_location": "L277",
       "_origin": "ast",
       "id": "apps_worker_src_worker_mediaretentionscheduler_runonce",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": ".runonce()"
     },
@@ -7832,7 +7832,7 @@
       "source_location": "L282",
       "_origin": "ast",
       "id": "apps_worker_src_worker_mediaretentionscheduler_stop",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": ".stop()"
     },
@@ -7843,7 +7843,7 @@
       "source_location": "L313",
       "_origin": "ast",
       "id": "apps_worker_src_worker_createworkerruntime",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "createworkerruntime()"
     },
@@ -7854,7 +7854,7 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "apps_worker_src_worker_createmediaretentionworkerruntime",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "createmediaretentionworkerruntime()"
     },
@@ -7865,7 +7865,7 @@
       "source_location": "L390",
       "_origin": "ast",
       "id": "apps_worker_src_worker_loadn8ncommandstore",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "loadn8ncommandstore()"
     },
@@ -7876,7 +7876,7 @@
       "source_location": "L415",
       "_origin": "ast",
       "id": "apps_worker_src_worker_startworkerfromenvironment",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "startworkerfromenvironment()"
     },
@@ -7887,7 +7887,7 @@
       "source_location": "L488",
       "_origin": "ast",
       "id": "apps_worker_src_worker_technicalerrorcode",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "technicalerrorcode()"
     },
@@ -7898,7 +7898,7 @@
       "source_location": "L499",
       "_origin": "ast",
       "id": "apps_worker_src_worker_requiredenvironment",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "requiredenvironment()"
     },
@@ -7909,7 +7909,7 @@
       "source_location": "L508",
       "_origin": "ast",
       "id": "apps_worker_src_worker_optionalpositiveinteger",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "optionalpositiveinteger()"
     },
@@ -7920,7 +7920,7 @@
       "source_location": "L518",
       "_origin": "ast",
       "id": "apps_worker_src_worker_requiredpositiveinteger",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "requiredpositiveinteger()"
     },
@@ -7931,7 +7931,7 @@
       "source_location": "L527",
       "_origin": "ast",
       "id": "apps_worker_src_worker_technicalstartuperror",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "technicalstartuperror()"
     },
@@ -8570,7 +8570,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "audit-trail.js"
     },
     {
@@ -8580,7 +8580,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_auditeventvalidationerror",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "auditeventvalidationerror"
     },
@@ -8591,7 +8591,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_auditeventvalidationerror_constructor",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": ".constructor()"
     },
@@ -8603,7 +8603,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_immutableclone",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "immutableclone()"
     },
     {
@@ -8614,7 +8614,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_deepfreeze",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "deepfreeze()"
     },
     {
@@ -8625,7 +8625,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_requirenonemptystring",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "requirenonemptystring()"
     },
     {
@@ -8636,7 +8636,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_validateauditevent",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "validateauditevent()"
     },
     {
@@ -8647,7 +8647,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_createauditeventenvelope",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "createauditeventenvelope()"
     },
     {
@@ -8658,7 +8658,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "inmemoryaudittrail"
     },
     {
@@ -8669,7 +8669,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_constructor",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": ".constructor()"
     },
     {
@@ -8680,7 +8680,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_append",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": ".append()"
     },
     {
@@ -8691,7 +8691,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_audit_trail_inmemoryaudittrail_list",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": ".list()"
     },
     {
@@ -8701,7 +8701,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_index",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "audit-privacy/src/index.js"
     },
@@ -8713,7 +8713,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "postgres-audit-trail.js"
     },
     {
@@ -8724,7 +8724,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail_requirequeryable",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "requirequeryable()"
     },
     {
@@ -8735,7 +8735,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail_postgresaudittrail",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": "postgresaudittrail"
     },
     {
@@ -8746,7 +8746,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail_postgresaudittrail_constructor",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": ".constructor()"
     },
     {
@@ -8757,7 +8757,7 @@
       "_origin": "ast",
       "id": "modules_audit_privacy_src_postgres_audit_trail_postgresaudittrail_append",
       "community": 80,
-      "community_name": "audit-privacy/src/index.js",
+      "community_name": "PostgresAuditTrail",
       "norm_label": ".append()"
     },
     {
@@ -8767,7 +8767,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "transient-media-retention.js"
     },
@@ -8778,7 +8778,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_transientmediaretentionerror",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "transientmediaretentionerror"
     },
@@ -8789,7 +8789,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_transientmediaretentionerror_constructor",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": ".constructor()"
     },
@@ -8800,7 +8800,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_timestamp",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "timestamp()"
     },
@@ -8811,7 +8811,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_resolvetransientmediaexpiresat",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "resolvetransientmediaexpiresat()"
     },
@@ -8822,7 +8822,7 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_istransientmediaexpired",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "istransientmediaexpired()"
     },
@@ -8833,7 +8833,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "modules_audit_privacy_src_transient_media_retention_transient_media_max_age_days",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "transient_media_max_age_days"
     },
@@ -13068,8 +13068,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "modules_database_src_cli_pool",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 285,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "pool"
     },
     {
@@ -15510,8 +15510,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_metawhatsappwebhookpayloaderror",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 31,
+      "community_name": "meta-whatsapp.js",
       "norm_label": "metawhatsappwebhookpayloaderror"
     },
     {
@@ -15521,8 +15521,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_meta_whatsapp_metawhatsappwebhookpayloaderror_constructor",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 31,
+      "community_name": "meta-whatsapp.js",
       "norm_label": ".constructor()"
     },
     {
@@ -15818,8 +15818,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_handoff_conversation_port",
-      "community": 292,
-      "community_name": "InboxConflictError",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "postgres-handoff-conversation-port.js"
     },
     {
@@ -15829,8 +15829,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_handoff_conversation_port_postgreshandoffconversationport",
-      "community": 292,
-      "community_name": "InboxConflictError",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "postgreshandoffconversationport"
     },
     {
@@ -15840,8 +15840,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_handoff_conversation_port_postgreshandoffconversationport_lock",
-      "community": 292,
-      "community_name": "InboxConflictError",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": ".lock()"
     },
     {
@@ -15851,8 +15851,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_handoff_conversation_port_postgreshandoffconversationport_assignhuman",
-      "community": 292,
-      "community_name": "InboxConflictError",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": ".assignhuman()"
     },
     {
@@ -15862,8 +15862,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_handoff_conversation_port_queryable",
-      "community": 292,
-      "community_name": "InboxConflictError",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "queryable()"
     },
     {
@@ -15873,8 +15873,8 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_adapters_postgres_handoff_conversation_port_mapconversation",
-      "community": 292,
-      "community_name": "InboxConflictError",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "mapconversation()"
     },
     {
@@ -16313,8 +16313,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_createinboxservice",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "createinboxservice()"
     },
     {
@@ -16368,8 +16368,8 @@
       "source_location": "L235",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_normalizeinbound",
-      "community": 104,
-      "community_name": "freezeInboxRecord",
+      "community": 32,
+      "community_name": "inbox-service.js",
       "norm_label": "normalizeinbound()"
     },
     {
@@ -16379,8 +16379,8 @@
       "source_location": "L256",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_application_inbox_service_normalizehumancommand",
-      "community": 104,
-      "community_name": "freezeInboxRecord",
+      "community": 32,
+      "community_name": "inbox-service.js",
       "norm_label": "normalizehumancommand()"
     },
     {
@@ -16522,8 +16522,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_channelcontracterror",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 22,
+      "community_name": "channel-envelope.js",
       "norm_label": "channelcontracterror"
     },
     {
@@ -16533,8 +16533,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_channel_envelope_channelcontracterror_constructor",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 22,
+      "community_name": "channel-envelope.js",
       "norm_label": ".constructor()"
     },
     {
@@ -16665,8 +16665,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_errors",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "inbox-channels/src/domain/errors.js"
     },
     {
@@ -16676,8 +16676,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_errors_inboxerror",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "inboxerror"
     },
     {
@@ -16687,8 +16687,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_errors_inboxerror_constructor",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -16698,8 +16698,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_errors_inboxvalidationerror",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "inboxvalidationerror"
     },
     {
@@ -16709,8 +16709,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_errors_inboxvalidationerror_constructor",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -16720,8 +16720,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_errors_inboxforbiddenerror",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "inboxforbiddenerror"
     },
     {
@@ -16731,8 +16731,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_errors_inboxforbiddenerror_constructor",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -16742,8 +16742,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_errors_inboxconflicterror",
-      "community": 292,
-      "community_name": "InboxConflictError",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": "inboxconflicterror"
     },
     {
@@ -16753,8 +16753,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_errors_inboxconflicterror_constructor",
-      "community": 292,
-      "community_name": "InboxConflictError",
+      "community": 164,
+      "community_name": "inbox-channels/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -16786,8 +16786,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_terminal_inbox_states",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 35,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "terminal_inbox_states"
     },
     {
@@ -16808,8 +16808,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_domain_inbox_isterminalinboxstate",
-      "community": 104,
-      "community_name": "freezeInboxRecord",
+      "community": 35,
+      "community_name": "postgres-inbox-repository.js",
       "norm_label": "isterminalinboxstate()"
     },
     {
@@ -16863,8 +16863,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_ports_contracts",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 22,
+      "community_name": "channel-envelope.js",
       "norm_label": "inbox-channels/src/ports/contracts.js"
     },
     {
@@ -16874,8 +16874,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "modules_inbox_channels_src_ports_contracts_assertchanneladaptercontract",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 22,
+      "community_name": "channel-envelope.js",
       "norm_label": "assertchanneladaptercontract()"
     },
     {
@@ -17282,7 +17282,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_media_retention_worker",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "media-retention-worker.js"
     },
     {
@@ -17293,7 +17293,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_media_retention_worker_media_delete_job_type",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "media_delete_job_type"
     },
     {
@@ -17304,7 +17304,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_media_retention_worker_media_retention_queue",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "media_retention_queue"
     },
     {
@@ -17315,7 +17315,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_media_retention_worker_createmediadeletejobhandler",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "createmediadeletejobhandler()"
     },
     {
@@ -17326,7 +17326,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_media_retention_worker_deletionreason",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "deletionreason()"
     },
     {
@@ -17337,7 +17337,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_media_retention_worker_technicalid",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "technicalid()"
     },
     {
@@ -17348,7 +17348,7 @@
       "_origin": "ast",
       "id": "modules_integration_reliability_src_media_retention_worker_technicalerror",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "technicalerror()"
     },
     {
@@ -17369,8 +17369,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookauthenticationerror",
-      "community": 205,
-      "community_name": "whatsapp-webhook.test.js",
+      "community": 26,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": "metawebhookauthenticationerror"
     },
     {
@@ -17380,8 +17380,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_meta_sandbox_metawebhookauthenticationerror_constructor",
-      "community": 205,
-      "community_name": "whatsapp-webhook.test.js",
+      "community": 26,
+      "community_name": "meta-sandbox.test.js",
       "norm_label": ".constructor()"
     },
     {
@@ -17732,8 +17732,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_n8n_outbound_client_n8ncommanddeliveryerror",
-      "community": 48,
-      "community_name": "n8n-outbound-client.js",
+      "community": 61,
+      "community_name": "integration-reliability/src/index.js",
       "norm_label": "n8ncommanddeliveryerror"
     },
     {
@@ -17809,7 +17809,7 @@
       "source_location": "L205",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_n8n_outbound_client_createn8ncommanddeliveryclient",
-      "community": 181,
+      "community": 2,
       "community_name": "worker.js",
       "norm_label": "createn8ncommanddeliveryclient()"
     },
@@ -17974,8 +17974,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "postgres-idempotency.js"
     },
     {
@@ -17985,8 +17985,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "postgresidempotencyrecordstore"
     },
     {
@@ -17996,8 +17996,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore_constructor",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": ".constructor()"
     },
     {
@@ -18007,8 +18007,8 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore_execute",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": ".execute()"
     },
     {
@@ -18018,8 +18018,8 @@
       "source_location": "L163",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_postgresidempotencyrecordstore_get",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": ".get()"
     },
     {
@@ -18029,8 +18029,8 @@
       "source_location": "L197",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_identityvalues",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "identityvalues()"
     },
     {
@@ -18040,8 +18040,8 @@
       "source_location": "L217",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_selectrecord",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "selectrecord()"
     },
     {
@@ -18051,8 +18051,8 @@
       "source_location": "L246",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_validateidentity",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "validateidentity()"
     },
     {
@@ -18062,8 +18062,8 @@
       "source_location": "L275",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_normalizeresponse",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "normalizeresponse()"
     },
     {
@@ -18073,8 +18073,8 @@
       "source_location": "L296",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_encryptresponse",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "encryptresponse()"
     },
     {
@@ -18084,8 +18084,8 @@
       "source_location": "L318",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_decryptresponse",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "decryptresponse()"
     },
     {
@@ -18095,8 +18095,8 @@
       "source_location": "L337",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_parseenvelope",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "parseenvelope()"
     },
     {
@@ -18106,8 +18106,8 @@
       "source_location": "L358",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_decodebase64url",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "decodebase64url()"
     },
     {
@@ -18117,8 +18117,8 @@
       "source_location": "L370",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_aad",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "aad()"
     },
     {
@@ -18128,8 +18128,8 @@
       "source_location": "L378",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_requirenonempty",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "requirenonempty()"
     },
     {
@@ -18139,8 +18139,8 @@
       "source_location": "L385",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_idempotency_storedstring",
-      "community": 74,
-      "community_name": "postgres-idempotency.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "storedstring()"
     },
     {
@@ -18722,8 +18722,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_webhook_inbox_webhookeventconflicterror",
-      "community": 205,
-      "community_name": "whatsapp-webhook.test.js",
+      "community": 14,
+      "community_name": "postgres-webhook-inbox.js",
       "norm_label": "webhookeventconflicterror"
     },
     {
@@ -18733,8 +18733,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_postgres_webhook_inbox_webhookeventconflicterror_constructor",
-      "community": 205,
-      "community_name": "whatsapp-webhook.test.js",
+      "community": 14,
+      "community_name": "postgres-webhook-inbox.js",
       "norm_label": ".constructor()"
     },
     {
@@ -19085,8 +19085,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror",
-      "community": 33,
-      "community_name": "PrivateMediaVolume",
+      "community": 288,
+      "community_name": "n8n-runtime.js",
       "norm_label": "mediavolumeunavailableerror"
     },
     {
@@ -19096,8 +19096,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "modules_integration_reliability_src_private_media_volume_mediavolumeunavailableerror_constructor",
-      "community": 33,
-      "community_name": "PrivateMediaVolume",
+      "community": 288,
+      "community_name": "n8n-runtime.js",
       "norm_label": ".constructor()"
     },
     {
@@ -20097,8 +20097,8 @@
       "source_location": "L999",
       "_origin": "ast",
       "id": "modules_n8n_integration_src_postgres_repository_assertpanelsendfence",
-      "community": 88,
-      "community_name": "crypto.js",
+      "community": 11,
+      "community_name": "postgres-repository.js",
       "norm_label": "assertpanelsendfence()"
     },
     {
@@ -20108,8 +20108,8 @@
       "source_location": "L1032",
       "_origin": "ast",
       "id": "modules_n8n_integration_src_postgres_repository_comparableoutbound",
-      "community": 88,
-      "community_name": "crypto.js",
+      "community": 11,
+      "community_name": "postgres-repository.js",
       "norm_label": "comparableoutbound()"
     },
     {
@@ -20350,8 +20350,8 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "modules_n8n_integration_src_service_createn8nintegrationservice",
-      "community": 75,
-      "community_name": "n8n-integration/src/index.js",
+      "community": 288,
+      "community_name": "n8n-runtime.js",
       "norm_label": "createn8nintegrationservice()"
     },
     {
@@ -23122,8 +23122,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_shared_src_index",
-      "community": 20,
-      "community_name": "app.js",
+      "community": 203,
+      "community_name": "shared/src/index.js",
       "norm_label": "shared/src/index.js"
     },
     {
@@ -23133,8 +23133,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "modules_shared_src_index_services",
-      "community": 20,
-      "community_name": "app.js",
+      "community": 203,
+      "community_name": "shared/src/index.js",
       "norm_label": "services"
     },
     {
@@ -23145,7 +23145,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "observability.js"
     },
     {
@@ -23156,7 +23156,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_redacted_field_names",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "redacted_field_names"
     },
     {
@@ -23167,7 +23167,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedcontextfields",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "allowedcontextfields"
     },
     {
@@ -23178,7 +23178,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedservices",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "allowedservices"
     },
     {
@@ -23189,7 +23189,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedevents",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "allowedevents"
     },
     {
@@ -23200,7 +23200,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_allowedmetrics",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "allowedmetrics"
     },
     {
@@ -23211,7 +23211,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_categoricalpolicies",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "categoricalpolicies"
     },
     {
@@ -23222,7 +23222,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_tracefields",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "tracefields"
     },
     {
@@ -23232,8 +23232,8 @@
       "source_location": "L116",
       "_origin": "ast",
       "id": "modules_shared_src_observability_normalizetraceid",
-      "community": 20,
-      "community_name": "app.js",
+      "community": 203,
+      "community_name": "shared/src/index.js",
       "norm_label": "normalizetraceid()"
     },
     {
@@ -23244,7 +23244,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_isfinitenumber",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "isfinitenumber()"
     },
     {
@@ -23255,7 +23255,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_createsafelogrecord",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "createsafelogrecord()"
     },
     {
@@ -23277,7 +23277,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": "metricregistry"
     },
     {
@@ -23288,7 +23288,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_constructor",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": ".constructor()"
     },
     {
@@ -23299,7 +23299,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_record",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": ".record()"
     },
     {
@@ -23310,7 +23310,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_increment",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": ".increment()"
     },
     {
@@ -23321,7 +23321,7 @@
       "_origin": "ast",
       "id": "modules_shared_src_observability_metricregistry_snapshot",
       "community": 203,
-      "community_name": "observability.js",
+      "community_name": "shared/src/index.js",
       "norm_label": ".snapshot()"
     },
     {
@@ -27555,7 +27555,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_briefingpatch_properties",
-      "community": 21,
+      "community": 201,
       "community_name": "properties",
       "norm_label": "properties"
     },
@@ -27567,7 +27567,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_artwork_locations",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "artwork_locations"
     },
     {
@@ -27578,7 +27578,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_artwork_locations_type",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "type"
     },
     {
@@ -27589,7 +27589,7 @@
       "_origin": "ast",
       "id": "ref_array",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "array"
     },
     {
@@ -27599,7 +27599,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "ref_null",
-      "community": 201,
+      "community": 21,
       "community_name": "null",
       "norm_label": "null"
     },
@@ -27610,8 +27610,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_artwork_status",
-      "community": 311,
-      "community_name": "type",
+      "community": 21,
+      "community_name": "null",
       "norm_label": "artwork_status"
     },
     {
@@ -27621,8 +27621,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_artwork_status_type",
-      "community": 311,
-      "community_name": "type",
+      "community": 21,
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27633,7 +27633,7 @@
       "_origin": "ast",
       "id": "ref_string",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "string"
     },
     {
@@ -27644,7 +27644,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_artwork_technique",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "artwork_technique"
     },
     {
@@ -27655,7 +27655,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_artwork_technique_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27687,8 +27687,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_city_or_postal_code",
-      "community": 320,
-      "community_name": "type",
+      "community": 21,
+      "community_name": "null",
       "norm_label": "city_or_postal_code"
     },
     {
@@ -27698,8 +27698,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_city_or_postal_code_type",
-      "community": 320,
-      "community_name": "type",
+      "community": 21,
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27710,7 +27710,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_colors",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "colors"
     },
     {
@@ -27721,7 +27721,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_colors_type",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "type"
     },
     {
@@ -27731,8 +27731,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_customer_name",
-      "community": 329,
-      "community_name": "type",
+      "community": 21,
+      "community_name": "null",
       "norm_label": "customer_name"
     },
     {
@@ -27742,8 +27742,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_customer_name_type",
-      "community": 329,
-      "community_name": "type",
+      "community": 21,
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27754,7 +27754,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_customizations",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "customizations"
     },
     {
@@ -27765,7 +27765,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_customizations_type",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "type"
     },
     {
@@ -27776,7 +27776,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_delivery_address",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "delivery_address"
     },
     {
@@ -27787,7 +27787,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_delivery_address_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27798,7 +27798,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_delivery_mode",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "delivery_mode"
     },
     {
@@ -27809,7 +27809,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_delivery_mode_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27820,7 +27820,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_fabrics",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "fabrics"
     },
     {
@@ -27831,7 +27831,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_fabrics_type",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "type"
     },
     {
@@ -27842,7 +27842,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_needed_by",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "needed_by"
     },
     {
@@ -27853,7 +27853,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_needed_by_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27864,7 +27864,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_next_required_field",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "next_required_field"
     },
     {
@@ -27875,7 +27875,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_next_required_field_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27886,7 +27886,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_notes",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "notes"
     },
     {
@@ -27897,7 +27897,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_notes_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27908,7 +27908,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_numbers",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "numbers"
     },
     {
@@ -27919,7 +27919,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_numbers_type",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "type"
     },
     {
@@ -27930,7 +27930,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_order_name",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "order_name"
     },
     {
@@ -27941,7 +27941,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_order_name_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27951,8 +27951,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_pickup_location",
-      "community": 330,
-      "community_name": "type",
+      "community": 21,
+      "community_name": "null",
       "norm_label": "pickup_location"
     },
     {
@@ -27962,8 +27962,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_pickup_location_type",
-      "community": 330,
-      "community_name": "type",
+      "community": 21,
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -27973,8 +27973,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_product_model",
-      "community": 21,
-      "community_name": "properties",
+      "community": 337,
+      "community_name": "type",
       "norm_label": "product_model"
     },
     {
@@ -27984,8 +27984,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_product_model_type",
-      "community": 21,
-      "community_name": "properties",
+      "community": 337,
+      "community_name": "type",
       "norm_label": "type"
     },
     {
@@ -27996,7 +27996,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_product_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "product_type"
     },
     {
@@ -28007,7 +28007,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_product_type_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -28018,7 +28018,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_purchase_profile",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "purchase_profile"
     },
     {
@@ -28029,7 +28029,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_purchase_profile_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -28040,7 +28040,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_purpose",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "purpose"
     },
     {
@@ -28051,7 +28051,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_purpose_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -28061,7 +28061,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_quantity",
-      "community": 21,
+      "community": 201,
       "community_name": "properties",
       "norm_label": "quantity"
     },
@@ -28072,7 +28072,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_quantity_type",
-      "community": 201,
+      "community": 21,
       "community_name": "null",
       "norm_label": "type"
     },
@@ -28083,7 +28083,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "ref_integer",
-      "community": 201,
+      "community": 21,
       "community_name": "null",
       "norm_label": "integer"
     },
@@ -28094,7 +28094,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_quantity_minimum",
-      "community": 21,
+      "community": 201,
       "community_name": "properties",
       "norm_label": "minimum"
     },
@@ -28106,7 +28106,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_segment",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "segment"
     },
     {
@@ -28117,7 +28117,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_segment_type",
       "community": 21,
-      "community_name": "properties",
+      "community_name": "null",
       "norm_label": "type"
     },
     {
@@ -28128,7 +28128,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_sizes",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "sizes"
     },
     {
@@ -28139,7 +28139,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_sizes_type",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "type"
     },
     {
@@ -28150,7 +28150,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_properties_sponsors",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "sponsors"
     },
     {
@@ -28161,7 +28161,7 @@
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_sponsors_type",
       "community": 201,
-      "community_name": "null",
+      "community_name": "properties",
       "norm_label": "type"
     },
     {
@@ -28171,8 +28171,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_defs_problem",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "problem"
     },
     {
@@ -28182,8 +28182,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_problem_type",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "type"
     },
     {
@@ -28193,8 +28193,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_problem_additionalproperties",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "additionalproperties"
     },
     {
@@ -28204,8 +28204,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "schemas_fixtures_external_n8n_contract_v1_schema_problem_required",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "required"
     },
     {
@@ -28215,8 +28215,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "ref_type",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "type"
     },
     {
@@ -28226,8 +28226,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "ref_title",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "title"
     },
     {
@@ -28237,8 +28237,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "ref_status",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "status"
     },
     {
@@ -28248,8 +28248,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "ref_detail",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "detail"
     },
     {
@@ -28259,8 +28259,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "ref_instance",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "instance"
     },
     {
@@ -28270,8 +28270,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "ref_accepted",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "accepted"
     },
     {
@@ -28281,8 +28281,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "ref_error",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "error"
     },
     {
@@ -28292,8 +28292,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "ref_request_id",
-      "community": 58,
-      "community_name": "properties",
+      "community": 181,
+      "community_name": "required",
       "norm_label": "request_id"
     },
     {
@@ -31736,7 +31736,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "validate-observability.mjs"
     },
     {
@@ -31747,7 +31747,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_rooturl",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "rooturl"
     },
     {
@@ -31758,7 +31758,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_requiredalerts",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "requiredalerts"
     },
     {
@@ -31769,7 +31769,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_invariant",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "invariant()"
     },
     {
@@ -31780,7 +31780,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_assertnosensitivefields",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "assertnosensitivefields()"
     },
     {
@@ -31791,7 +31791,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_isisotimestamp",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "isisotimestamp()"
     },
     {
@@ -31802,7 +31802,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_isevidencereference",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "isevidencereference()"
     },
     {
@@ -31813,7 +31813,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_isopaquereference",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "isopaquereference()"
     },
     {
@@ -31824,7 +31824,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_validatealertpolicy",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "validatealertpolicy()"
     },
     {
@@ -31835,7 +31835,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_validateactivationgate",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "validateactivationgate()"
     },
     {
@@ -31846,7 +31846,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_validateruntimehardening",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "validateruntimehardening()"
     },
     {
@@ -31857,7 +31857,7 @@
       "_origin": "ast",
       "id": "scripts_validate_observability_main",
       "community": 68,
-      "community_name": "validate-observability.mjs",
+      "community_name": "observability.test.js",
       "norm_label": "main()"
     },
     {
@@ -33913,8 +33913,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_inbox_domain_test",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "inbox-domain.test.js"
     },
     {
@@ -33924,8 +33924,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "test_inbox_domain_test_now",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "now"
     },
     {
@@ -33935,8 +33935,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "test_inbox_domain_test_attendant",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "attendant"
     },
     {
@@ -33946,8 +33946,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "test_inbox_domain_test_createharness",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "createharness()"
     },
     {
@@ -33957,8 +33957,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "test_inbox_domain_test_inbound",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "inbound()"
     },
     {
@@ -33968,8 +33968,8 @@
       "source_location": "L338",
       "_origin": "ast",
       "id": "test_inbox_domain_test_other_seller",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "other_seller"
     },
     {
@@ -33979,8 +33979,8 @@
       "source_location": "L343",
       "_origin": "ast",
       "id": "test_inbox_domain_test_admin",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "admin"
     },
     {
@@ -33990,8 +33990,8 @@
       "source_location": "L351",
       "_origin": "ast",
       "id": "test_inbox_domain_test_conversationownedbyattendant",
-      "community": 32,
-      "community_name": "inbox-service.js",
+      "community": 204,
+      "community_name": "inbox-domain.test.js",
       "norm_label": "conversationownedbyattendant()"
     },
     {
@@ -34001,8 +34001,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 282,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "inbox-postgres-live.test.js"
     },
     {
@@ -34012,8 +34012,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_now",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 282,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "now"
     },
     {
@@ -34023,8 +34023,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_attendant",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 282,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "attendant"
     },
     {
@@ -34034,8 +34034,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_databasefor",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 282,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "databasefor()"
     },
     {
@@ -34045,8 +34045,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_servicesfor",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 282,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "servicesfor()"
     },
     {
@@ -34056,8 +34056,8 @@
       "source_location": "L93",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_identityinput",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 282,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "identityinput()"
     },
     {
@@ -34067,8 +34067,8 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_inboundinput",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 282,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "inboundinput()"
     },
     {
@@ -34078,8 +34078,8 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_canonicalwebhookevent",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 282,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "canonicalwebhookevent()"
     },
     {
@@ -34089,8 +34089,8 @@
       "source_location": "L388",
       "_origin": "ast",
       "id": "test_inbox_postgres_live_test_enqueuechannelmessage",
-      "community": 164,
-      "community_name": "inbox-channels/src/index.js",
+      "community": 282,
+      "community_name": "inbox-postgres-live.test.js",
       "norm_label": "enqueuechannelmessage()"
     },
     {
@@ -34134,7 +34134,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "media-retention-worker.test.js"
     },
     {
@@ -34145,7 +34145,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test_delete",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "delete()"
     },
     {
@@ -34156,7 +34156,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test_markdeleted",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "markdeleted()"
     },
     {
@@ -34167,7 +34167,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test_readfordeletion",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "readfordeletion()"
     },
     {
@@ -34178,7 +34178,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test_scheduleexpireddeletions",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "scheduleexpireddeletions()"
     },
     {
@@ -34189,7 +34189,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test_scheduleterminaljourneydeletions",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "scheduleterminaljourneydeletions()"
     },
     {
@@ -34200,7 +34200,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test_claim",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "claim()"
     },
     {
@@ -34211,7 +34211,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test_heartbeat",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "heartbeat()"
     },
     {
@@ -34222,7 +34222,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test_markeffectstarted",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "markeffectstarted()"
     },
     {
@@ -34233,7 +34233,7 @@
       "_origin": "ast",
       "id": "test_media_retention_worker_test_settle",
       "community": 2,
-      "community_name": "media-retention-worker.test.js",
+      "community_name": "worker.js",
       "norm_label": "settle()"
     },
     {
@@ -34342,8 +34342,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_migrations_live_test",
-      "community": 36,
-      "community_name": "server.js",
+      "community": 24,
+      "community_name": "database/src/index.js",
       "norm_label": "migrations-live.test.js"
     },
     {
@@ -34716,8 +34716,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "test_n8n_integration_domain_test_harness",
-      "community": 75,
-      "community_name": "n8n-integration/src/index.js",
+      "community": 288,
+      "community_name": "n8n-runtime.js",
       "norm_label": "harness()"
     },
     {
@@ -35068,8 +35068,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_observability_test",
-      "community": 20,
-      "community_name": "app.js",
+      "community": 68,
+      "community_name": "observability.test.js",
       "norm_label": "observability.test.js"
     },
     {
@@ -35079,8 +35079,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "test_observability_test_rooturl",
-      "community": 20,
-      "community_name": "app.js",
+      "community": 68,
+      "community_name": "observability.test.js",
       "norm_label": "rooturl"
     },
     {
@@ -35090,8 +35090,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "test_observability_test_canaries",
-      "community": 20,
-      "community_name": "app.js",
+      "community": 68,
+      "community_name": "observability.test.js",
       "norm_label": "canaries"
     },
     {
@@ -35101,8 +35101,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "test_observability_test_capture",
-      "community": 20,
-      "community_name": "app.js",
+      "community": 68,
+      "community_name": "observability.test.js",
       "norm_label": "capture()"
     },
     {
@@ -35112,8 +35112,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "test_observability_test_escaperegexp",
-      "community": 20,
-      "community_name": "app.js",
+      "community": 68,
+      "community_name": "observability.test.js",
       "norm_label": "escaperegexp()"
     },
     {
@@ -35123,8 +35123,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "test_observability_test_assertnocanaries",
-      "community": 20,
-      "community_name": "app.js",
+      "community": 68,
+      "community_name": "observability.test.js",
       "norm_label": "assertnocanaries()"
     },
     {
@@ -36102,8 +36102,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 140,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "postgres-audit-live.test.js"
     },
     {
@@ -36113,8 +36113,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_auditinput",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 140,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "auditinput"
     },
     {
@@ -36124,8 +36124,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_recordingqueryable",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 140,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "recordingqueryable"
     },
     {
@@ -36135,8 +36135,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_recordingqueryable_query",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 140,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": ".query()"
     },
     {
@@ -36146,8 +36146,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "test_postgres_audit_live_test_createpostgresaudittrail",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 140,
+      "community_name": "audit-privacy/src/index.js",
       "norm_label": "createpostgresaudittrail()"
     },
     {
@@ -36168,8 +36168,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test",
-      "community": 140,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "postgres-idempotency.test.js"
     },
     {
@@ -36179,8 +36179,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_envelope_key",
-      "community": 140,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "envelope_key"
     },
     {
@@ -36190,8 +36190,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_identity",
-      "community": 140,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "identity"
     },
     {
@@ -36201,8 +36201,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase",
-      "community": 140,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "fakedatabase"
     },
     {
@@ -36212,8 +36212,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_constructor",
-      "community": 140,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": ".constructor()"
     },
     {
@@ -36223,8 +36223,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_transaction",
-      "community": 140,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": ".transaction()"
     },
     {
@@ -36234,8 +36234,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_fakedatabase_query",
-      "community": 140,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": ".query()"
     },
     {
@@ -36245,8 +36245,8 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "test_postgres_idempotency_test_recordkey",
-      "community": 140,
-      "community_name": "postgres-idempotency.test.js",
+      "community": 66,
+      "community_name": "createIdempotentCommandExecutor",
       "norm_label": "recordkey()"
     },
     {
@@ -36278,8 +36278,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "test_postgres_job_queue_live_test_seedjob",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 285,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "seedjob()"
     },
     {
@@ -36575,7 +36575,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_transient_media_retention_test",
-      "community": 80,
+      "community": 140,
       "community_name": "audit-privacy/src/index.js",
       "norm_label": "transient-media-retention.test.js"
     },
@@ -36707,8 +36707,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_work_management_postgres_live_test",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 285,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "work-management-postgres-live.test.js"
     },
     {
@@ -36718,8 +36718,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "test_work_management_postgres_live_test_now",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 285,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "now"
     },
     {
@@ -36729,8 +36729,8 @@
       "source_location": "L132",
       "_origin": "ast",
       "id": "test_work_management_postgres_live_test_append",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 285,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "append()"
     },
     {
@@ -36740,8 +36740,8 @@
       "source_location": "L204",
       "_origin": "ast",
       "id": "test_work_management_postgres_live_test_handoffcommand",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 285,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "handoffcommand()"
     },
     {
@@ -36751,8 +36751,8 @@
       "source_location": "L226",
       "_origin": "ast",
       "id": "test_work_management_postgres_live_test_human",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 285,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "human()"
     },
     {
@@ -36762,8 +36762,8 @@
       "source_location": "L231",
       "_origin": "ast",
       "id": "test_work_management_postgres_live_test_seed",
-      "community": 24,
-      "community_name": "database/src/index.js",
+      "community": 285,
+      "community_name": "work-management-postgres-live.test.js",
       "norm_label": "seed()"
     },
     {
@@ -37532,8 +37532,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec",
-      "community": 285,
-      "community_name": "DATACRAZY-SETUP.md",
+      "community": 129,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "crm-mvp/spec.md"
     },
     {
@@ -37543,8 +37543,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_crm_silmer_mvp_requisitos_rastre\u00e1veis",
-      "community": 282,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 129,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "crm silmer mvp \u2014 requisitos rastreaveis"
     },
     {
@@ -37554,8 +37554,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_problema",
-      "community": 282,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 129,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "problema"
     },
     {
@@ -37565,8 +37565,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_objetivos",
-      "community": 282,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 129,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "objetivos"
     },
     {
@@ -37675,8 +37675,8 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_p2_depois_do_piloto",
-      "community": 282,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 129,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "p2 \u2014 depois do piloto"
     },
     {
@@ -37686,8 +37686,8 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_fora_do_escopo",
-      "community": 282,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 129,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "fora do escopo"
     },
     {
@@ -37697,8 +37697,8 @@
       "source_location": "L181",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_rastreabilidade",
-      "community": 282,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 129,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "rastreabilidade"
     },
     {
@@ -37708,8 +37708,8 @@
       "source_location": "L196",
       "_origin": "ast",
       "id": "specs_features_crm_mvp_spec_crit\u00e9rio_de_passagem",
-      "community": 282,
-      "community_name": "CRM Silmer MVP \u2014 Requisitos Rastre\u00e1veis",
+      "community": 129,
+      "community_name": "P1 \u2014 MVP",
       "norm_label": "criterio de passagem"
     },
     {
@@ -37720,7 +37720,7 @@
       "_origin": "ast",
       "id": "specs_features_crm_mvp_tasks",
       "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community_name": "README.md",
       "norm_label": "crm-mvp/tasks.md"
     },
     {
@@ -38522,7 +38522,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_context",
-      "community": 279,
+      "community": 296,
       "community_name": "006-pedido-dois-status.md",
       "norm_label": "pedidos-mvp/context.md"
     },
@@ -38676,7 +38676,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_design",
-      "community": 279,
+      "community": 296,
       "community_name": "006-pedido-dois-status.md",
       "norm_label": "pedidos-mvp/design.md"
     },
@@ -38940,7 +38940,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_spec",
-      "community": 279,
+      "community": 296,
       "community_name": "006-pedido-dois-status.md",
       "norm_label": "pedidos-mvp/spec.md"
     },
@@ -39160,7 +39160,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks",
-      "community": 279,
+      "community": 296,
       "community_name": "006-pedido-dois-status.md",
       "norm_label": "pedidos-mvp/tasks.md"
     },
@@ -39182,8 +39182,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_conven\u00e7\u00f5es",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 335,
+      "community_name": "Conven\u00e7\u00f5es",
       "norm_label": "convencoes"
     },
     {
@@ -39193,8 +39193,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_matriz_de_testes_derivada_do_repo",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 335,
+      "community_name": "Conven\u00e7\u00f5es",
       "norm_label": "matriz de testes (derivada do repo)"
     },
     {
@@ -39204,8 +39204,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_gates",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 335,
+      "community_name": "Conven\u00e7\u00f5es",
       "norm_label": "gates"
     },
     {
@@ -39556,8 +39556,8 @@
       "source_location": "L494",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_grupo_e_impress\u00e3o",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 336,
+      "community_name": "Grupo E \u2014 Impress\u00e3o",
       "norm_label": "grupo e \u2014 impressao"
     },
     {
@@ -39567,8 +39567,8 @@
       "source_location": "L496",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_t24_extrair_o_renderer_do_template_v2_p",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 336,
+      "community_name": "Grupo E \u2014 Impress\u00e3o",
       "norm_label": "t24: extrair o renderer do template v2 [p]"
     },
     {
@@ -39578,8 +39578,8 @@
       "source_location": "L511",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_t25_rota_de_impress\u00e3o",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 336,
+      "community_name": "Grupo E \u2014 Impress\u00e3o",
       "norm_label": "t25: rota de impressao"
     },
     {
@@ -39776,8 +39776,8 @@
       "source_location": "L715",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_valida\u00e7\u00e3o_das_tasks",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 333,
+      "community_name": "Valida\u00e7\u00e3o das tasks",
       "norm_label": "validacao das tasks"
     },
     {
@@ -39787,8 +39787,8 @@
       "source_location": "L717",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_granularidade",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 333,
+      "community_name": "Valida\u00e7\u00e3o das tasks",
       "norm_label": "granularidade"
     },
     {
@@ -39798,8 +39798,8 @@
       "source_location": "L735",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_diagrama_defini\u00e7\u00f5es",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 333,
+      "community_name": "Valida\u00e7\u00e3o das tasks",
       "norm_label": "diagrama \u00d7 definicoes"
     },
     {
@@ -39809,8 +39809,8 @@
       "source_location": "L780",
       "_origin": "ast",
       "id": "specs_features_pedidos_mvp_tasks_co_localiza\u00e7\u00e3o_de_testes",
-      "community": 199,
-      "community_name": "Pedidos MVP \u2014 Tasks",
+      "community": 333,
+      "community_name": "Valida\u00e7\u00e3o das tasks",
       "norm_label": "co-localizacao de testes"
     },
     {
@@ -39820,7 +39820,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "about",
-      "community": 108,
+      "community": 77,
       "community_name": "README.md",
       "norm_label": "about.md"
     },
@@ -39831,7 +39831,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "about_sobre_o_crm_silmer",
-      "community": 108,
+      "community": 77,
       "community_name": "README.md",
       "norm_label": "sobre o crm silmer"
     },
@@ -39842,7 +39842,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agents",
-      "community": 108,
+      "community": 77,
       "community_name": "README.md",
       "norm_label": "agents.md"
     },
@@ -39952,7 +39952,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "codex",
-      "community": 108,
+      "community": 77,
       "community_name": "README.md",
       "norm_label": "codex.md"
     },
@@ -39964,7 +39964,7 @@
       "_origin": "ast",
       "id": "codex_codex_contexto_do_crm_silmer",
       "community": 108,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "codex \u2014 contexto do crm silmer"
     },
     {
@@ -39975,7 +39975,7 @@
       "_origin": "ast",
       "id": "codex_inicializa\u00e7\u00e3o_obrigat\u00f3ria",
       "community": 108,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "inicializacao obrigatoria"
     },
     {
@@ -39986,7 +39986,7 @@
       "_origin": "ast",
       "id": "codex_guardrails_do_mvp",
       "community": 108,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "guardrails do mvp"
     },
     {
@@ -39997,7 +39997,7 @@
       "_origin": "ast",
       "id": "codex_forma_de_trabalhar",
       "community": 108,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "forma de trabalhar"
     },
     {
@@ -40008,7 +40008,7 @@
       "_origin": "ast",
       "id": "codex_fechamento",
       "community": 108,
-      "community_name": "README.md",
+      "community_name": "Codex \u2014 Contexto do CRM Silmer",
       "norm_label": "fechamento"
     },
     {
@@ -40458,7 +40458,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "readme",
-      "community": 108,
+      "community": 77,
       "community_name": "README.md",
       "norm_label": "readme.md"
     },
@@ -40524,7 +40524,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "rules",
-      "community": 108,
+      "community": 77,
       "community_name": "README.md",
       "norm_label": "rules.md"
     },
@@ -40535,7 +40535,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "rules_regras_do_crm_silmer",
-      "community": 108,
+      "community": 77,
       "community_name": "README.md",
       "norm_label": "regras do crm silmer"
     },
@@ -40546,7 +40546,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "rules_regras_de_produto",
-      "community": 108,
+      "community": 77,
       "community_name": "README.md",
       "norm_label": "regras de produto"
     },
@@ -40557,7 +40557,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "rules_regras_t\u00e9cnicas_j\u00e1_impostas",
-      "community": 108,
+      "community": 77,
       "community_name": "README.md",
       "norm_label": "regras tecnicas ja impostas"
     },
@@ -41086,7 +41086,7 @@
       "_origin": "ast",
       "id": "docs_adr_002_adotar_adaptador_de_integracao_n8n",
       "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community_name": "README.md",
       "norm_label": "002-adotar-adaptador-de-integracao-n8n.md"
     },
     {
@@ -41096,8 +41096,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_adr_002_adotar_adaptador_de_integracao_n8n_adr_002_adotar_adaptador_de_integra\u00e7\u00e3o_n8n",
-      "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community": 330,
+      "community_name": "ADR 002 \u2014 Adotar adaptador de integra\u00e7\u00e3o n8n",
       "norm_label": "adr 002 \u2014 adotar adaptador de integracao n8n"
     },
     {
@@ -41107,8 +41107,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "docs_adr_002_adotar_adaptador_de_integracao_n8n_decis\u00e3o",
-      "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community": 330,
+      "community_name": "ADR 002 \u2014 Adotar adaptador de integra\u00e7\u00e3o n8n",
       "norm_label": "decisao"
     },
     {
@@ -41118,8 +41118,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "docs_adr_002_adotar_adaptador_de_integracao_n8n_consequ\u00eancias",
-      "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community": 330,
+      "community_name": "ADR 002 \u2014 Adotar adaptador de integra\u00e7\u00e3o n8n",
       "norm_label": "consequencias"
     },
     {
@@ -41129,8 +41129,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "docs_adr_002_adotar_adaptador_de_integracao_n8n_opera\u00e7\u00e3o",
-      "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community": 330,
+      "community_name": "ADR 002 \u2014 Adotar adaptador de integra\u00e7\u00e3o n8n",
       "norm_label": "operacao"
     },
     {
@@ -41141,7 +41141,7 @@
       "_origin": "ast",
       "id": "docs_adr_003_adotar_integracao_n8n_mvp_simples",
       "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community_name": "README.md",
       "norm_label": "003-adotar-integracao-n8n-mvp-simples.md"
     },
     {
@@ -41151,8 +41151,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_adr_003_adotar_integracao_n8n_mvp_simples_adr_003_adotar_integra\u00e7\u00e3o_n8n_simples_para_o_mvp",
-      "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community": 293,
+      "community_name": "ADR 003 \u2014 Adotar integra\u00e7\u00e3o n8n simples para o MVP",
       "norm_label": "adr 003 \u2014 adotar integracao n8n simples para o mvp"
     },
     {
@@ -41162,8 +41162,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "docs_adr_003_adotar_integracao_n8n_mvp_simples_decis\u00e3o",
-      "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community": 293,
+      "community_name": "ADR 003 \u2014 Adotar integra\u00e7\u00e3o n8n simples para o MVP",
       "norm_label": "decisao"
     },
     {
@@ -41173,8 +41173,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "docs_adr_003_adotar_integracao_n8n_mvp_simples_consequ\u00eancias",
-      "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community": 293,
+      "community_name": "ADR 003 \u2014 Adotar integra\u00e7\u00e3o n8n simples para o MVP",
       "norm_label": "consequencias"
     },
     {
@@ -41184,8 +41184,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "docs_adr_003_adotar_integracao_n8n_mvp_simples_guardrails_mantidos",
-      "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community": 293,
+      "community_name": "ADR 003 \u2014 Adotar integra\u00e7\u00e3o n8n simples para o MVP",
       "norm_label": "guardrails mantidos"
     },
     {
@@ -41195,8 +41195,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "docs_adr_003_adotar_integracao_n8n_mvp_simples_reavalia\u00e7\u00e3o",
-      "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community": 293,
+      "community_name": "ADR 003 \u2014 Adotar integra\u00e7\u00e3o n8n simples para o MVP",
       "norm_label": "reavaliacao"
     },
     {
@@ -41207,7 +41207,7 @@
       "_origin": "ast",
       "id": "docs_adr_004_aposentar_kanban_e_negocio",
       "community": 208,
-      "community_name": "004-aposentar-kanban-e-negocio.md",
+      "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "004-aposentar-kanban-e-negocio.md"
     },
     {
@@ -41218,7 +41218,7 @@
       "_origin": "ast",
       "id": "docs_adr_004_aposentar_kanban_e_negocio_adr_004_aposentar_kanban_e_neg\u00f3cio",
       "community": 208,
-      "community_name": "004-aposentar-kanban-e-negocio.md",
+      "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "adr 004 \u2014 aposentar kanban e negocio"
     },
     {
@@ -41229,7 +41229,7 @@
       "_origin": "ast",
       "id": "docs_adr_004_aposentar_kanban_e_negocio_decis\u00e3o",
       "community": 208,
-      "community_name": "004-aposentar-kanban-e-negocio.md",
+      "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "decisao"
     },
     {
@@ -41240,7 +41240,7 @@
       "_origin": "ast",
       "id": "docs_adr_004_aposentar_kanban_e_negocio_consequ\u00eancias",
       "community": 208,
-      "community_name": "004-aposentar-kanban-e-negocio.md",
+      "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "consequencias"
     },
     {
@@ -41294,7 +41294,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_adr_006_pedido_dois_status",
-      "community": 279,
+      "community": 296,
       "community_name": "006-pedido-dois-status.md",
       "norm_label": "006-pedido-dois-status.md"
     },
@@ -41306,7 +41306,7 @@
       "_origin": "ast",
       "id": "docs_adr_006_pedido_dois_status_adr_006_pedido_com_dois_status_e_confirma\u00e7\u00e3o_humana",
       "community": 279,
-      "community_name": "006-pedido-dois-status.md",
+      "community_name": "ADR 006 \u2014 Pedido com dois status e confirma\u00e7\u00e3o humana",
       "norm_label": "adr 006 \u2014 pedido com dois status e confirmacao humana"
     },
     {
@@ -41317,7 +41317,7 @@
       "_origin": "ast",
       "id": "docs_adr_006_pedido_dois_status_contexto",
       "community": 279,
-      "community_name": "006-pedido-dois-status.md",
+      "community_name": "ADR 006 \u2014 Pedido com dois status e confirma\u00e7\u00e3o humana",
       "norm_label": "contexto"
     },
     {
@@ -41328,7 +41328,7 @@
       "_origin": "ast",
       "id": "docs_adr_006_pedido_dois_status_decis\u00e3o",
       "community": 279,
-      "community_name": "006-pedido-dois-status.md",
+      "community_name": "ADR 006 \u2014 Pedido com dois status e confirma\u00e7\u00e3o humana",
       "norm_label": "decisao"
     },
     {
@@ -41339,7 +41339,7 @@
       "_origin": "ast",
       "id": "docs_adr_006_pedido_dois_status_ciclo_de_vida",
       "community": 279,
-      "community_name": "006-pedido-dois-status.md",
+      "community_name": "ADR 006 \u2014 Pedido com dois status e confirma\u00e7\u00e3o humana",
       "norm_label": "ciclo de vida"
     },
     {
@@ -41350,7 +41350,7 @@
       "_origin": "ast",
       "id": "docs_adr_006_pedido_dois_status_posse_e_permiss\u00f5es",
       "community": 279,
-      "community_name": "006-pedido-dois-status.md",
+      "community_name": "ADR 006 \u2014 Pedido com dois status e confirma\u00e7\u00e3o humana",
       "norm_label": "posse e permissoes"
     },
     {
@@ -41361,7 +41361,7 @@
       "_origin": "ast",
       "id": "docs_adr_006_pedido_dois_status_fora_do_escopo_do_mvp",
       "community": 279,
-      "community_name": "006-pedido-dois-status.md",
+      "community_name": "ADR 006 \u2014 Pedido com dois status e confirma\u00e7\u00e3o humana",
       "norm_label": "fora do escopo do mvp"
     },
     {
@@ -41372,7 +41372,7 @@
       "_origin": "ast",
       "id": "docs_adr_006_pedido_dois_status_consequ\u00eancias",
       "community": 279,
-      "community_name": "006-pedido-dois-status.md",
+      "community_name": "ADR 006 \u2014 Pedido com dois status e confirma\u00e7\u00e3o humana",
       "norm_label": "consequencias"
     },
     {
@@ -41427,7 +41427,7 @@
       "_origin": "ast",
       "id": "docs_integrations_n8n_readme",
       "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community_name": "README.md",
       "norm_label": "n8n/readme.md"
     },
     {
@@ -41668,8 +41668,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_phase0_observability_and_hardening",
-      "community": 102,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community": 77,
+      "community_name": "README.md",
       "norm_label": "observability-and-hardening.md"
     },
     {
@@ -41723,8 +41723,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_phase0_phase_0_approval_gate",
-      "community": 102,
-      "community_name": "T00.6 \u2014 Gate de aprova\u00e7\u00e3o da Fase 0",
+      "community": 77,
+      "community_name": "README.md",
       "norm_label": "phase-0-approval-gate.md"
     },
     {
@@ -42252,7 +42252,7 @@
       "_origin": "ast",
       "id": "docs_rfc_001_contrato_integracao_n8n_v1",
       "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community_name": "README.md",
       "norm_label": "001-contrato-integracao-n8n-v1.md"
     },
     {
@@ -42340,7 +42340,7 @@
       "_origin": "ast",
       "id": "docs_rfc_002_simplificar_integracao_n8n_para_o_mvp",
       "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community_name": "README.md",
       "norm_label": "002-simplificar-integracao-n8n-para-o-mvp.md"
     },
     {
@@ -42439,7 +42439,7 @@
       "_origin": "ast",
       "id": "docs_rfc_003_aposentar_pipeline_comercial",
       "community": 208,
-      "community_name": "004-aposentar-kanban-e-negocio.md",
+      "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "003-aposentar-pipeline-comercial.md"
     },
     {
@@ -42449,7 +42449,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_rfc_003_aposentar_pipeline_comercial_rfc_003_aposentar_pipeline_comercial",
-      "community": 296,
+      "community": 208,
       "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "rfc 003 \u2014 aposentar pipeline comercial"
     },
@@ -42460,7 +42460,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "docs_rfc_003_aposentar_pipeline_comercial_contexto",
-      "community": 296,
+      "community": 208,
       "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "contexto"
     },
@@ -42471,7 +42471,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "docs_rfc_003_aposentar_pipeline_comercial_proposta",
-      "community": 296,
+      "community": 208,
       "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "proposta"
     },
@@ -42482,7 +42482,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "docs_rfc_003_aposentar_pipeline_comercial_fora_de_escopo",
-      "community": 296,
+      "community": 208,
       "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "fora de escopo"
     },
@@ -42493,7 +42493,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "docs_rfc_003_aposentar_pipeline_comercial_decis\u00e3o",
-      "community": 296,
+      "community": 208,
       "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "decisao"
     },
@@ -42504,7 +42504,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "docs_rfc_003_aposentar_pipeline_comercial_rastreabilidade",
-      "community": 296,
+      "community": 208,
       "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "rastreabilidade"
     },
@@ -42584,6 +42584,292 @@
       "community": 269,
       "community_name": "RFC 004 \u2014 Excluir contas sem hist\u00f3rico",
       "norm_label": "rastreabilidade"
+    },
+    {
+      "label": "005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao",
+      "community": 71,
+      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "norm_label": "005-anexo-lista-de-opcoes-para-aprovacao.md"
+    },
+    {
+      "label": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "lista de opcoes do pedido \u2014 validacao com o cliente"
+    },
+    {
+      "label": "1. Tipos de pe\u00e7a ou produto",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_1_tipos_de_pe\u00e7a_ou_produto",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "1. tipos de peca ou produto"
+    },
+    {
+      "label": "2. Modelagem e caimento",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L56",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_2_modelagem_e_caimento",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "2. modelagem e caimento"
+    },
+    {
+      "label": "3. Golas e decotes",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L72",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_3_golas_e_decotes",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "3. golas e decotes"
+    },
+    {
+      "label": "4. Mangas",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L92",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_4_mangas",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "4. mangas"
+    },
+    {
+      "label": "5. Malhas e tecidos",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L109",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_malhas_e_tecidos",
+      "community": 292,
+      "community_name": "5. Malhas e tecidos",
+      "norm_label": "5. malhas e tecidos"
+    },
+    {
+      "label": "5.1 Algod\u00e3o e mistos leves",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L114",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_1_algod\u00e3o_e_mistos_leves",
+      "community": 292,
+      "community_name": "5. Malhas e tecidos",
+      "norm_label": "5.1 algodao e mistos leves"
+    },
+    {
+      "label": "5.2 Piquet",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L131",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_2_piquet",
+      "community": 292,
+      "community_name": "5. Malhas e tecidos",
+      "norm_label": "5.2 piquet"
+    },
+    {
+      "label": "5.3 Dry fit e esportivos",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L142",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_3_dry_fit_e_esportivos",
+      "community": 292,
+      "community_name": "5. Malhas e tecidos",
+      "norm_label": "5.3 dry fit e esportivos"
+    },
+    {
+      "label": "5.4 Outros tecidos de vestu\u00e1rio",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L160",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_4_outros_tecidos_de_vestu\u00e1rio",
+      "community": 292,
+      "community_name": "5. Malhas e tecidos",
+      "norm_label": "5.4 outros tecidos de vestuario"
+    },
+    {
+      "label": "5.5 Moletons, forros e acabamentos",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L177",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_5_moletons_forros_e_acabamentos",
+      "community": 292,
+      "community_name": "5. Malhas e tecidos",
+      "norm_label": "5.5 moletons, forros e acabamentos"
+    },
+    {
+      "label": "6. Cores",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L199",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_6_cores",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "6. cores"
+    },
+    {
+      "label": "7. Acabamentos de gola, manga e barra",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L224",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_7_acabamentos_de_gola_manga_e_barra",
+      "community": 334,
+      "community_name": "7. Acabamentos de gola, manga e barra",
+      "norm_label": "7. acabamentos de gola, manga e barra"
+    },
+    {
+      "label": "7.1 Tipo de acabamento",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L226",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_7_1_tipo_de_acabamento",
+      "community": 334,
+      "community_name": "7. Acabamentos de gola, manga e barra",
+      "norm_label": "7.1 tipo de acabamento"
+    },
+    {
+      "label": "7.2 Perfil do acabamento",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L242",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_7_2_perfil_do_acabamento",
+      "community": 334,
+      "community_name": "7. Acabamentos de gola, manga e barra",
+      "norm_label": "7.2 perfil do acabamento"
+    },
+    {
+      "label": "8. Constru\u00e7\u00e3o e adicionais da pe\u00e7a",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L255",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_8_constru\u00e7\u00e3o_e_adicionais_da_pe\u00e7a",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "8. construcao e adicionais da peca"
+    },
+    {
+      "label": "9. Tamanhos e grades",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L269",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_9_tamanhos_e_grades",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "9. tamanhos e grades"
+    },
+    {
+      "label": "10. Tipos de estampa e personaliza\u00e7\u00e3o",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L288",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_10_tipos_de_estampa_e_personaliza\u00e7\u00e3o",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "10. tipos de estampa e personalizacao"
+    },
+    {
+      "label": "11. Locais da estampa ou personaliza\u00e7\u00e3o",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L312",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_11_locais_da_estampa_ou_personaliza\u00e7\u00e3o",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "11. locais da estampa ou personalizacao"
+    },
+    {
+      "label": "12. Situa\u00e7\u00e3o e servi\u00e7o de arte",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L327",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_12_situa\u00e7\u00e3o_e_servi\u00e7o_de_arte",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "12. situacao e servico de arte"
+    },
+    {
+      "label": "13. Finalidade do pedido",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L342",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_13_finalidade_do_pedido",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "13. finalidade do pedido"
+    },
+    {
+      "label": "14. Perfil de compra",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L359",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_14_perfil_de_compra",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "14. perfil de compra"
+    },
+    {
+      "label": "15. Entrega",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L371",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_15_entrega",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "15. entrega"
+    },
+    {
+      "label": "16. Fechamento da revis\u00e3o",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L383",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_16_fechamento_da_revis\u00e3o",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "16. fechamento da revisao"
+    },
+    {
+      "label": "Registro da valida\u00e7\u00e3o",
+      "file_type": "document",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L394",
+      "_origin": "ast",
+      "id": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_registro_da_valida\u00e7\u00e3o",
+      "community": 74,
+      "community_name": "Lista de op\u00e7\u00f5es do Pedido \u2014 valida\u00e7\u00e3o com o cliente",
+      "norm_label": "registro da validacao"
     },
     {
       "label": "005-catalogo-de-opcoes-do-pedido.md",
@@ -42669,8 +42955,8 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_5_op\u00e7\u00f5es_de_solu\u00e7\u00e3o",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 311,
+      "community_name": "5. Op\u00e7\u00f5es de solu\u00e7\u00e3o",
       "norm_label": "5. opcoes de solucao"
     },
     {
@@ -42680,8 +42966,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_op\u00e7\u00e3o_a_cat\u00e1logo_hier\u00e1rquico_versionado_com_aliases_e_exce\u00e7\u00e3o_controlada_recomendada",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 311,
+      "community_name": "5. Op\u00e7\u00f5es de solu\u00e7\u00e3o",
       "norm_label": "opcao a \u2014 catalogo hierarquico versionado com aliases e excecao controlada \u2014 recomendada"
     },
     {
@@ -42691,8 +42977,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_op\u00e7\u00e3o_b_listas_planas_nos_campos_atuais",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 311,
+      "community_name": "5. Op\u00e7\u00f5es de solu\u00e7\u00e3o",
       "norm_label": "opcao b \u2014 listas planas nos campos atuais"
     },
     {
@@ -42702,8 +42988,8 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_op\u00e7\u00e3o_c_manter_texto_livre",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 311,
+      "community_name": "5. Op\u00e7\u00f5es de solu\u00e7\u00e3o",
       "norm_label": "opcao c \u2014 manter texto livre"
     },
     {
@@ -42713,8 +42999,8 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_compara\u00e7\u00e3o",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 311,
+      "community_name": "5. Op\u00e7\u00f5es de solu\u00e7\u00e3o",
       "norm_label": "comparacao"
     },
     {
@@ -42724,169 +43010,169 @@
       "source_location": "L129",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6. catalogo candidato para aprovacao"
     },
     {
       "label": "6.1 Tipos de produto",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L134",
+      "source_location": "L140",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_1_tipos_de_produto",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6.1 tipos de produto"
     },
     {
       "label": "6.2 Dimens\u00f5es de modelo",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L164",
+      "source_location": "L170",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_2_dimens\u00f5es_de_modelo",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 320,
+      "community_name": "6.2 Dimens\u00f5es de modelo",
       "norm_label": "6.2 dimensoes de modelo"
     },
     {
       "label": "Modelagem/caimento",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L169",
+      "source_location": "L175",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_modelagem_caimento",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 320,
+      "community_name": "6.2 Dimens\u00f5es de modelo",
       "norm_label": "modelagem/caimento"
     },
     {
       "label": "Gola/decote",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L182",
+      "source_location": "L188",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_gola_decote",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 320,
+      "community_name": "6.2 Dimens\u00f5es de modelo",
       "norm_label": "gola/decote"
     },
     {
       "label": "Manga",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L197",
+      "source_location": "L203",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_manga",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 320,
+      "community_name": "6.2 Dimens\u00f5es de modelo",
       "norm_label": "manga"
     },
     {
       "label": "Constru\u00e7\u00e3o e adicionais que podem alterar pre\u00e7o",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L212",
+      "source_location": "L218",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_constru\u00e7\u00e3o_e_adicionais_que_podem_alterar_pre\u00e7o",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 320,
+      "community_name": "6.2 Dimens\u00f5es de modelo",
       "norm_label": "construcao e adicionais que podem alterar preco"
     },
     {
       "label": "6.3 Malhas e tecidos",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L223",
+      "source_location": "L229",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_3_malhas_e_tecidos",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6.3 malhas e tecidos"
     },
     {
       "label": "6.4 Cores",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L263",
+      "source_location": "L269",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_4_cores",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6.4 cores"
     },
     {
       "label": "6.5 Vi\u00e9s, gola e punho",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L287",
+      "source_location": "L293",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_5_vi\u00e9s_gola_e_punho",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6.5 vies, gola e punho"
     },
     {
       "label": "6.6 Tamanhos e grade",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L302",
+      "source_location": "L308",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_6_tamanhos_e_grade",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6.6 tamanhos e grade"
     },
     {
       "label": "6.7 T\u00e9cnicas de personaliza\u00e7\u00e3o",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L321",
+      "source_location": "L327",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_7_t\u00e9cnicas_de_personaliza\u00e7\u00e3o",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6.7 tecnicas de personalizacao"
     },
     {
       "label": "6.8 Locais de aplica\u00e7\u00e3o",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L344",
+      "source_location": "L350",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_8_locais_de_aplica\u00e7\u00e3o",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6.8 locais de aplicacao"
     },
     {
       "label": "6.9 Situa\u00e7\u00e3o e servi\u00e7o de arte",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L360",
+      "source_location": "L366",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_9_situa\u00e7\u00e3o_e_servi\u00e7o_de_arte",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6.9 situacao e servico de arte"
     },
     {
       "label": "6.10 Finalidade, perfil e log\u00edstica",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L373",
+      "source_location": "L379",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_10_finalidade_perfil_e_log\u00edstica",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 267,
+      "community_name": "6. Cat\u00e1logo candidato para aprova\u00e7\u00e3o",
       "norm_label": "6.10 finalidade, perfil e logistica"
     },
     {
       "label": "7. Campos adicionais necess\u00e1rios para pre\u00e7o por item",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L385",
+      "source_location": "L391",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_7_campos_adicionais_necess\u00e1rios_para_pre\u00e7o_por_item",
       "community": 71,
@@ -42897,51 +43183,51 @@
       "label": "8. Contrato recomendado depois da aprova\u00e7\u00e3o",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L409",
+      "source_location": "L415",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_8_contrato_recomendado_depois_da_aprova\u00e7\u00e3o",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 331,
+      "community_name": "8. Contrato recomendado depois da aprova\u00e7\u00e3o",
       "norm_label": "8. contrato recomendado depois da aprovacao"
     },
     {
       "label": "8.1 Estrutura conceitual",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L411",
+      "source_location": "L417",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_8_1_estrutura_conceitual",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 331,
+      "community_name": "8. Contrato recomendado depois da aprova\u00e7\u00e3o",
       "norm_label": "8.1 estrutura conceitual"
     },
     {
       "label": "8.2 Mapeamento da Ficha atual",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L432",
+      "source_location": "L438",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_8_2_mapeamento_da_ficha_atual",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 331,
+      "community_name": "8. Contrato recomendado depois da aprova\u00e7\u00e3o",
       "norm_label": "8.2 mapeamento da ficha atual"
     },
     {
       "label": "8.3 Contrato da IA no n8n",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L445",
+      "source_location": "L451",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_8_3_contrato_da_ia_no_n8n",
-      "community": 71,
-      "community_name": "RFC 005 \u2014 Aprovar o cat\u00e1logo de op\u00e7\u00f5es do Pedido",
+      "community": 331,
+      "community_name": "8. Contrato recomendado depois da aprova\u00e7\u00e3o",
       "norm_label": "8.3 contrato da ia no n8n"
     },
     {
       "label": "9. Perguntas bloqueantes para a reuni\u00e3o com o cliente",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L475",
+      "source_location": "L481",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_9_perguntas_bloqueantes_para_a_reuni\u00e3o_com_o_cliente",
       "community": 71,
@@ -42952,7 +43238,7 @@
       "label": "10. A\u00e7\u00f5es ap\u00f3s a decis\u00e3o",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L492",
+      "source_location": "L498",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_10_a\u00e7\u00f5es_ap\u00f3s_a_decis\u00e3o",
       "community": 71,
@@ -42963,7 +43249,7 @@
       "label": "11. Resultado",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L507",
+      "source_location": "L513",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_11_resultado",
       "community": 71,
@@ -42974,7 +43260,7 @@
       "label": "12. Refer\u00eancias",
       "file_type": "document",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L521",
+      "source_location": "L527",
       "_origin": "ast",
       "id": "docs_rfc_005_catalogo_de_opcoes_do_pedido_12_refer\u00eancias",
       "community": 71,
@@ -43033,7 +43319,7 @@
       "_origin": "ast",
       "id": "docs_roadmap_proximas_fases",
       "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community_name": "README.md",
       "norm_label": "proximas-fases.md"
     },
     {
@@ -43235,14 +43521,113 @@
       "norm_label": "pendencia independente"
     },
     {
+      "label": "query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido__quais_cat\u00e1.md",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido__quais_cat\u00e1.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1",
+      "community": 332,
+      "community_name": "Q: Quais campos comp\u00f5em a ficha de pedido, quais cat\u00e1logos e op\u00e7\u00f5es j\u00e1 existem, e como Pedido, Ficha, pre\u00e7o, IA e N8N se relacionam?",
+      "norm_label": "query_20260915_235000_quais_campos_compoem_a_ficha_de_pedido__quais_cata.md"
+    },
+    {
+      "label": "Q: Quais campos comp\u00f5em a ficha de pedido, quais cat\u00e1logos e op\u00e7\u00f5es j\u00e1 existem, e como Pedido, Ficha, pre\u00e7o, IA e N8N se relacionam?",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido__quais_cat\u00e1.md",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1_q_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1logos_e_op\u00e7\u00f5es_j\u00e1_existem_e_como_pedido_ficha_pre\u00e7o_ia_e_n8n_se_relacionam",
+      "community": 332,
+      "community_name": "Q: Quais campos comp\u00f5em a ficha de pedido, quais cat\u00e1logos e op\u00e7\u00f5es j\u00e1 existem, e como Pedido, Ficha, pre\u00e7o, IA e N8N se relacionam?",
+      "norm_label": "q: quais campos compoem a ficha de pedido, quais catalogos e opcoes ja existem, e como pedido, ficha, preco, ia e n8n se relacionam?"
+    },
+    {
+      "label": "Answer",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido__quais_cat\u00e1.md",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1_answer",
+      "community": 332,
+      "community_name": "Q: Quais campos comp\u00f5em a ficha de pedido, quais cat\u00e1logos e op\u00e7\u00f5es j\u00e1 existem, e como Pedido, Ficha, pre\u00e7o, IA e N8N se relacionam?",
+      "norm_label": "answer"
+    },
+    {
+      "label": "Source Nodes",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido__quais_cat\u00e1.md",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1_source_nodes",
+      "community": 332,
+      "community_name": "Q: Quais campos comp\u00f5em a ficha de pedido, quais cat\u00e1logos e op\u00e7\u00f5es j\u00e1 existem, e como Pedido, Ficha, pre\u00e7o, IA e N8N se relacionam?",
+      "norm_label": "source nodes"
+    },
+    {
+      "label": "query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen",
+      "community": 329,
+      "community_name": "Q: Quais categorias precisam ser aprovadas para preencher os itens e a ficha do Pedido?",
+      "norm_label": "query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md"
+    },
+    {
+      "label": "Q: Quais categorias precisam ser aprovadas para preencher os itens e a ficha do Pedido?",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_q_quais_categorias_precisam_ser_aprovadas_para_preencher_os_itens_e_a_ficha_do_pedido",
+      "community": 329,
+      "community_name": "Q: Quais categorias precisam ser aprovadas para preencher os itens e a ficha do Pedido?",
+      "norm_label": "q: quais categorias precisam ser aprovadas para preencher os itens e a ficha do pedido?"
+    },
+    {
+      "label": "Answer",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_answer",
+      "community": 329,
+      "community_name": "Q: Quais categorias precisam ser aprovadas para preencher os itens e a ficha do Pedido?",
+      "norm_label": "answer"
+    },
+    {
+      "label": "Outcome",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_outcome",
+      "community": 329,
+      "community_name": "Q: Quais categorias precisam ser aprovadas para preencher os itens e a ficha do Pedido?",
+      "norm_label": "outcome"
+    },
+    {
+      "label": "Source Nodes",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_source_nodes",
+      "community": 329,
+      "community_name": "Q: Quais categorias precisam ser aprovadas para preencher os itens e a ficha do Pedido?",
+      "norm_label": "source nodes"
+    },
+    {
       "label": "CRM-PROCESSO-VENDAS.md",
       "file_type": "document",
       "source_file": "historico-datacrazy/CRM-PROCESSO-VENDAS.md",
       "source_location": "L1",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas",
-      "community": 285,
-      "community_name": "DATACRAZY-SETUP.md",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "crm-processo-vendas.md"
     },
     {
@@ -43252,7 +43637,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_crm_processo_vendas_md_processo_de_qualifica\u00e7\u00e3o_e_venda_silmer",
-      "community": 204,
+      "community": 17,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "crm-processo-vendas.md \u2014 processo de qualificacao e venda (silmer)"
     },
@@ -43263,7 +43648,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_1_vis\u00e3o_geral_do_fluxo",
-      "community": 204,
+      "community": 17,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "1. visao geral do fluxo"
     },
@@ -43274,7 +43659,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_2_card_r\u00e1pido_de_briefing",
-      "community": 204,
+      "community": 17,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "2. card rapido de briefing"
     },
@@ -43285,7 +43670,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_3_roteiro_completo_de_qualifica\u00e7\u00e3o_os_13_campos",
-      "community": 204,
+      "community": 17,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "3. roteiro completo de qualificacao \u2014 os 13 campos"
     },
@@ -43296,7 +43681,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_4_tags_e_tipifica\u00e7\u00e3o",
-      "community": 204,
+      "community": 17,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "4. tags e tipificacao"
     },
@@ -43307,7 +43692,7 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_5_pipeline_vendas_estamparia_as_5_etapas",
-      "community": 204,
+      "community": 17,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "5. pipeline \"vendas estamparia\" \u2014 as 5 etapas"
     },
@@ -43318,7 +43703,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_6_transfer\u00eancia_da_ia_pro_vendedor_humano",
-      "community": 204,
+      "community": 17,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "6. transferencia da ia pro vendedor humano"
     },
@@ -43329,7 +43714,7 @@
       "source_location": "L132",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_7_o_que_a_ia_e_o_vendedor_nunca_afirmam",
-      "community": 204,
+      "community": 17,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "7. o que a ia e o vendedor nunca afirmam"
     },
@@ -43340,7 +43725,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "historico_datacrazy_crm_processo_vendas_8_pend\u00eancias_que_travam_o_processo_hoje",
-      "community": 204,
+      "community": 17,
       "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "8. pendencias que travam o processo hoje"
     },
@@ -43461,7 +43846,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "community": 208,
-      "community_name": "004-aposentar-kanban-e-negocio.md",
+      "community_name": "RFC 003 \u2014 Aposentar pipeline comercial",
       "norm_label": "architecture.md",
       "id": "architecture"
     },
@@ -43900,8 +44285,8 @@
       "source_file": "CRM-MVP-ESPECIFICACAO.md",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 108,
-      "community_name": "README.md",
+      "community": 12,
+      "community_name": "CRM Silmer \u2014 Especifica\u00e7\u00e3o de Produto do MVP",
       "norm_label": "crm-mvp-especificacao.md",
       "id": "crm_mvp_especificacao"
     },
@@ -44164,8 +44549,8 @@
       "source_file": "TECHNICAL-DESIGN.md",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 108,
-      "community_name": "README.md",
+      "community": 29,
+      "community_name": "TDD \u2014 CRM Silmer MVP",
       "norm_label": "technical-design.md",
       "id": "technical_design"
     },
@@ -44967,8 +45352,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 285,
-      "community_name": "DATACRAZY-SETUP.md",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "datacrazy-setup.md",
       "id": "historico_datacrazy_datacrazy_setup"
     },
@@ -44979,7 +45364,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "datacrazy \u2014 automacao \"vendedor silmer\" (sdr whatsapp \u2192 vendedor humano)",
       "id": "historico_datacrazy_datacrazy_setup_datacrazy_automa\u00e7\u00e3o_vendedor_silmer_sdr_whatsapp_vendedor_humano"
     },
@@ -44990,7 +45375,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "fluxo desenhado",
       "id": "historico_datacrazy_datacrazy_setup_fluxo_desenhado"
     },
@@ -45001,7 +45386,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "o que ja esta configurado",
       "id": "historico_datacrazy_datacrazy_setup_o_que_j\u00e1_est\u00e1_configurado"
     },
@@ -45012,7 +45397,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "campos adicionais de lead (13 novos)",
       "id": "historico_datacrazy_datacrazy_setup_campos_adicionais_de_lead_13_novos"
     },
@@ -45023,7 +45408,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "tags (4 novas)",
       "id": "historico_datacrazy_datacrazy_setup_tags_4_novas"
     },
@@ -45034,7 +45419,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "pipeline \"vendas estamparia\"",
       "id": "historico_datacrazy_datacrazy_setup_pipeline_vendas_estamparia"
     },
@@ -45045,7 +45430,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "agente \"vendedor silmer\"",
       "id": "historico_datacrazy_datacrazy_setup_agente_vendedor_silmer"
     },
@@ -45056,7 +45441,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "base de conhecimento",
       "id": "historico_datacrazy_datacrazy_setup_base_de_conhecimento"
     },
@@ -45067,7 +45452,7 @@
       "source_location": "L67",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "automacao",
       "id": "historico_datacrazy_datacrazy_setup_automa\u00e7\u00e3o"
     },
@@ -45078,7 +45463,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "community": 17,
-      "community_name": "O que j\u00e1 est\u00e1 configurado",
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "bloqueadores (nao resolvidos)",
       "id": "historico_datacrazy_datacrazy_setup_bloqueadores_n\u00e3o_resolvidos"
     },
@@ -45088,8 +45473,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L92",
       "_origin": "ast",
-      "community": 293,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "passo a passo \u2014 conectar a crazy api (quando o cliente aprovar)",
       "id": "historico_datacrazy_datacrazy_setup_passo_a_passo_conectar_a_crazy_api_quando_o_cliente_aprovar"
     },
@@ -45099,8 +45484,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L96",
       "_origin": "ast",
-      "community": 293,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "atencao \u2014 definir qual numero vai hospedar o agente",
       "id": "historico_datacrazy_datacrazy_setup_aten\u00e7\u00e3o_definir_qual_n\u00famero_vai_hospedar_o_agente"
     },
@@ -45110,8 +45495,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L108",
       "_origin": "ast",
-      "community": 293,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "passos",
       "id": "historico_datacrazy_datacrazy_setup_passos"
     },
@@ -45121,8 +45506,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L125",
       "_origin": "ast",
-      "community": 293,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "cuidados com a crazy api (whatsapp nao-oficial)",
       "id": "historico_datacrazy_datacrazy_setup_cuidados_com_a_crazy_api_whatsapp_n\u00e3o_oficial"
     },
@@ -45132,8 +45517,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L132",
       "_origin": "ast",
-      "community": 293,
-      "community_name": "PASSO A PASSO \u2014 Conectar a Crazy API (quando o cliente aprovar)",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "alternativas sem o custo da crazy api",
       "id": "historico_datacrazy_datacrazy_setup_alternativas_sem_o_custo_da_crazy_api"
     },
@@ -45143,8 +45528,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L139",
       "_origin": "ast",
-      "community": 267,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "chat na landing page \u2014 o que existe e o que falta",
       "id": "historico_datacrazy_datacrazy_setup_chat_na_landing_page_o_que_existe_e_o_que_falta"
     },
@@ -45154,8 +45539,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L149",
       "_origin": "ast",
-      "community": 267,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "arquitetura necessaria",
       "id": "historico_datacrazy_datacrazy_setup_arquitetura_necess\u00e1ria"
     },
@@ -45165,8 +45550,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L167",
       "_origin": "ast",
-      "community": 267,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "o que a conexao universal pede",
       "id": "historico_datacrazy_datacrazy_setup_o_que_a_conex\u00e3o_universal_pede"
     },
@@ -45176,8 +45561,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L189",
       "_origin": "ast",
-      "community": 267,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "ponto de atencao do fluxo no site",
       "id": "historico_datacrazy_datacrazy_setup_ponto_de_aten\u00e7\u00e3o_do_fluxo_no_site"
     },
@@ -45187,8 +45572,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L198",
       "_origin": "ast",
-      "community": 267,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "ajuste necessario no prompt do agente",
       "id": "historico_datacrazy_datacrazy_setup_ajuste_necess\u00e1rio_no_prompt_do_agente"
     },
@@ -45198,8 +45583,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L205",
       "_origin": "ast",
-      "community": 267,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "esforco estimado",
       "id": "historico_datacrazy_datacrazy_setup_esfor\u00e7o_estimado"
     },
@@ -45209,8 +45594,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L210",
       "_origin": "ast",
-      "community": 267,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "pendencias de conteudo (a silmer precisa fornecer)",
       "id": "historico_datacrazy_datacrazy_setup_pend\u00eancias_de_conte\u00fado_a_silmer_precisa_fornecer"
     },
@@ -45220,8 +45605,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L222",
       "_origin": "ast",
-      "community": 267,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "a validar no primeiro teste real",
       "id": "historico_datacrazy_datacrazy_setup_a_validar_no_primeiro_teste_real"
     },
@@ -45231,8 +45616,8 @@
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
       "source_location": "L229",
       "_origin": "ast",
-      "community": 267,
-      "community_name": "CHAT NA LANDING PAGE \u2014 o que existe e o que falta",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "norm_label": "proximos passos, em ordem",
       "id": "historico_datacrazy_datacrazy_setup_pr\u00f3ximos_passos_em_ordem"
     },
@@ -45627,8 +46012,8 @@
     {
       "label": "Crazy API (WhatsApp)",
       "_origin": "semantic",
-      "community": 285,
-      "community_name": "DATACRAZY-SETUP.md",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "file_type": "concept",
       "norm_label": "crazy api (whatsapp)",
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
@@ -45637,8 +46022,8 @@
     {
       "label": "Datacrazy CRM",
       "_origin": "semantic",
-      "community": 285,
-      "community_name": "DATACRAZY-SETUP.md",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "file_type": "concept",
       "norm_label": "datacrazy crm",
       "source_file": "historico-datacrazy/DATACRAZY-SETUP.md",
@@ -45647,8 +46032,8 @@
     {
       "label": "Vendedor Silmer (AI Agent)",
       "_origin": "semantic",
-      "community": 285,
-      "community_name": "DATACRAZY-SETUP.md",
+      "community": 17,
+      "community_name": "CRM-PROCESSO-VENDAS.md \u2014 Processo de Qualifica\u00e7\u00e3o e Venda (Silmer)",
       "file_type": "concept",
       "norm_label": "vendedor silmer (ai agent)",
       "source_file": ".specs/features/crm-mvp/context.md",
@@ -46106,7 +46491,7 @@
       "label": "CI and Immutable Images Workflow",
       "_origin": "semantic",
       "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community_name": "README.md",
       "file_type": "code",
       "norm_label": "ci and immutable images workflow",
       "source_file": ".github/workflows/ci.yml",
@@ -46116,7 +46501,7 @@
       "label": "PostgreSQL 17 Alpine Image",
       "_origin": "semantic",
       "community": 77,
-      "community_name": "crm-mvp/tasks.md",
+      "community_name": "README.md",
       "file_type": "concept",
       "norm_label": "postgresql 17 alpine image",
       "source_file": ".github/workflows/ci.yml",
@@ -122508,6 +122893,292 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
+      "source_location": "L133",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L288",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_10_tipos_de_estampa_e_personaliza\u00e7\u00e3o",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L312",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_11_locais_da_estampa_ou_personaliza\u00e7\u00e3o",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L327",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_12_situa\u00e7\u00e3o_e_servi\u00e7o_de_arte",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L342",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_13_finalidade_do_pedido",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L359",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_14_perfil_de_compra",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L371",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_15_entrega",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L383",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_16_fechamento_da_revis\u00e3o",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_1_tipos_de_pe\u00e7a_ou_produto",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L56",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_2_modelagem_e_caimento",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L72",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_3_golas_e_decotes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L92",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_4_mangas",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L109",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_malhas_e_tecidos",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L199",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_6_cores",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L224",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_7_acabamentos_de_gola_manga_e_barra",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L255",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_8_constru\u00e7\u00e3o_e_adicionais_da_pe\u00e7a",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L269",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_lista_de_op\u00e7\u00f5es_do_pedido_valida\u00e7\u00e3o_com_o_cliente",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_9_tamanhos_e_grades",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L114",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_malhas_e_tecidos",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_1_algod\u00e3o_e_mistos_leves",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L131",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_malhas_e_tecidos",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_2_piquet",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L142",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_malhas_e_tecidos",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_3_dry_fit_e_esportivos",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L160",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_malhas_e_tecidos",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_4_outros_tecidos_de_vestu\u00e1rio",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L177",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_malhas_e_tecidos",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_5_5_moletons_forros_e_acabamentos",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L226",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_7_acabamentos_de_gola_manga_e_barra",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_7_1_tipo_de_acabamento",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L242",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_7_acabamentos_de_gola_manga_e_barra",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_7_2_perfil_do_acabamento",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rfc/005-anexo-lista-de-opcoes-para-aprovacao.md",
+      "source_location": "L394",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_16_fechamento_da_revis\u00e3o",
+      "target": "docs_rfc_005_anexo_lista_de_opcoes_para_aprovacao_registro_da_valida\u00e7\u00e3o",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
       "source_location": "L1",
       "weight": 1.0,
@@ -122520,7 +123191,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L492",
+      "source_location": "L498",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_rfc_005_aprovar_o_cat\u00e1logo_de_op\u00e7\u00f5es_do_pedido",
@@ -122531,7 +123202,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L507",
+      "source_location": "L513",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_rfc_005_aprovar_o_cat\u00e1logo_de_op\u00e7\u00f5es_do_pedido",
@@ -122542,7 +123213,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L521",
+      "source_location": "L527",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_rfc_005_aprovar_o_cat\u00e1logo_de_op\u00e7\u00f5es_do_pedido",
@@ -122619,7 +123290,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L385",
+      "source_location": "L391",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_rfc_005_aprovar_o_cat\u00e1logo_de_op\u00e7\u00f5es_do_pedido",
@@ -122630,7 +123301,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L409",
+      "source_location": "L415",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_rfc_005_aprovar_o_cat\u00e1logo_de_op\u00e7\u00f5es_do_pedido",
@@ -122641,7 +123312,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L475",
+      "source_location": "L481",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_rfc_005_aprovar_o_cat\u00e1logo_de_op\u00e7\u00f5es_do_pedido",
@@ -122707,7 +123378,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L373",
+      "source_location": "L379",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122718,7 +123389,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L134",
+      "source_location": "L140",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122729,7 +123400,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L164",
+      "source_location": "L170",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122740,7 +123411,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L223",
+      "source_location": "L229",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122751,7 +123422,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L263",
+      "source_location": "L269",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122762,7 +123433,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L287",
+      "source_location": "L293",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122773,7 +123444,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L302",
+      "source_location": "L308",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122784,7 +123455,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L321",
+      "source_location": "L327",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122795,7 +123466,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L344",
+      "source_location": "L350",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122806,7 +123477,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L360",
+      "source_location": "L366",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_cat\u00e1logo_candidato_para_aprova\u00e7\u00e3o",
@@ -122817,7 +123488,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L212",
+      "source_location": "L218",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_2_dimens\u00f5es_de_modelo",
@@ -122828,7 +123499,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L182",
+      "source_location": "L188",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_2_dimens\u00f5es_de_modelo",
@@ -122839,7 +123510,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L197",
+      "source_location": "L203",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_2_dimens\u00f5es_de_modelo",
@@ -122850,7 +123521,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L169",
+      "source_location": "L175",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_6_2_dimens\u00f5es_de_modelo",
@@ -122861,7 +123532,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L411",
+      "source_location": "L417",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_8_contrato_recomendado_depois_da_aprova\u00e7\u00e3o",
@@ -122872,7 +123543,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L432",
+      "source_location": "L438",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_8_contrato_recomendado_depois_da_aprova\u00e7\u00e3o",
@@ -122883,7 +123554,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rfc/005-catalogo-de-opcoes-do-pedido.md",
-      "source_location": "L445",
+      "source_location": "L451",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_rfc_005_catalogo_de_opcoes_do_pedido_8_contrato_recomendado_depois_da_aprova\u00e7\u00e3o",
@@ -123108,6 +123779,83 @@
       "_origin": "ast",
       "source": "docs_runbooks_automation_executor_ator_t\u00e9cnico_do_n8n",
       "target": "docs_runbooks_automation_executor_pend\u00eancia_independente",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido__quais_cat\u00e1.md",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1",
+      "target": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1_q_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1logos_e_op\u00e7\u00f5es_j\u00e1_existem_e_como_pedido_ficha_pre\u00e7o_ia_e_n8n_se_relacionam",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido__quais_cat\u00e1.md",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1_q_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1logos_e_op\u00e7\u00f5es_j\u00e1_existem_e_como_pedido_ficha_pre\u00e7o_ia_e_n8n_se_relacionam",
+      "target": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1_answer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido__quais_cat\u00e1.md",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1_q_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1logos_e_op\u00e7\u00f5es_j\u00e1_existem_e_como_pedido_ficha_pre\u00e7o_ia_e_n8n_se_relacionam",
+      "target": "graphify_out_memory_query_20260915_235000_quais_campos_comp\u00f5em_a_ficha_de_pedido_quais_cat\u00e1_source_nodes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen",
+      "target": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_q_quais_categorias_precisam_ser_aprovadas_para_preencher_os_itens_e_a_ficha_do_pedido",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_q_quais_categorias_precisam_ser_aprovadas_para_preencher_os_itens_e_a_ficha_do_pedido",
+      "target": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_answer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_q_quais_categorias_precisam_ser_aprovadas_para_preencher_os_itens_e_a_ficha_do_pedido",
+      "target": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_outcome",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_q_quais_categorias_precisam_ser_aprovadas_para_preencher_os_itens_e_a_ficha_do_pedido",
+      "target": "graphify_out_memory_query_20260916_003306_quais_categorias_precisam_ser_aprovadas_para_preen_source_nodes",
       "confidence_score": 1.0
     },
     {
@@ -125743,5 +126491,5 @@
       "source_file": ".specs/features/crm-mvp/context.md"
     }
   ],
-  "built_at_commit": "e4deee0c4821bde5a64783f23e635e352c6a4dfc"
+  "built_at_commit": "d64258d12155633ad0ff58a593400558df15bda8"
 }

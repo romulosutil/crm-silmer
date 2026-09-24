@@ -32,6 +32,7 @@ test('documents and exposes a local development workflow with automatic refresh'
   assert.match(dev, /readOrCreateLocalSecrets/u);
   assert.match(dev, /local-development-secrets\.json/u);
   assert.match(dev, /randomBytes/u);
+  assert.match(dev, /FAB_CODE:\s*process\.env\.FAB_CODE\s*\?\?\s*'01'/u);
   for (const secret of [
     'IDEMPOTENCY_ENVELOPE_KEY',
     'HANDOFF_ENVELOPE_KEY',

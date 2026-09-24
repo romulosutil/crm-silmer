@@ -24,6 +24,9 @@ const localSecrets = await readOrCreateLocalSecrets();
 const localIdentityEnvironment = {
   APP_ENV: process.env.APP_ENV ?? 'development',
   APP_ORIGIN: process.env.APP_ORIGIN ?? `http://${devHost}:${devPort}`,
+  // Orders are part of the local CRM workflow. A deterministic local FAB
+  // identifier enables its runtime without borrowing any operational config.
+  FAB_CODE: process.env.FAB_CODE ?? '01',
   AUTH_THROTTLE_HMAC_KEY:
     process.env.AUTH_THROTTLE_HMAC_KEY ?? localSecrets.AUTH_THROTTLE_HMAC_KEY,
   IDEMPOTENCY_ENVELOPE_KEY:

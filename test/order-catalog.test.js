@@ -31,6 +31,15 @@ test('finds the swatch of a colour typed in any case or accent', () => {
   );
 });
 
+test('offers finishes by name without painting a chip', () => {
+  assert.ok(COLORS.some((color) => color.name === 'Neon'));
+  assert.equal(colorSwatch('NEON'), '');
+  assert.equal(
+    colorSwatch('CINZA MESCLA'),
+    COLORS.find((color) => color.name === 'Cinza mescla')?.swatch,
+  );
+});
+
 test('leaves a value without a catalog colour unmarked', () => {
   assert.equal(colorSwatch('NAO APLICAVEL'), '');
   assert.equal(colorSwatch(''), '');

@@ -1,11 +1,12 @@
 # Lista de opções do Pedido — validação com o cliente
 
-**Status:** rascunho para revisão. Nenhuma opção desta lista está aprovada.
+**Status:** em revisão com o cliente. Nenhuma opção desta lista está aprovada.
 
-**Planilha para revisão:**
-[baixar o arquivo XLSX com abas e menus de decisão](005-lista-de-opcoes-para-aprovacao.xlsx).
-O arquivo pode ser importado no Google Planilhas; CSV não preserva abas nem
-menus dropdown.
+**Onde a revisão acontece:** na planilha Google “Validação do catálogo de
+opções do Pedido”, que registra as decisões. Esta lista e o
+[arquivo XLSX com abas e menus de decisão](005-lista-de-opcoes-para-aprovacao.xlsx)
+são a versão inicial de 15/09/2026, usada para criar a planilha. Eles não
+recebem as decisões e podem divergir da planilha.
 
 **Objetivo da reunião:** confirmar o que a Silmer realmente vende e quais nomes
 usa no dia a dia. Esta é uma lista ampla de candidatos, não uma afirmação de que

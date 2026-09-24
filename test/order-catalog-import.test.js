@@ -1,4 +1,3 @@
-// test/order-catalog-import.test.js
 import assert from 'node:assert/strict';
 import test from 'node:test';
 

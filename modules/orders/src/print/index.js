@@ -1,4 +1,3 @@
-// modules/orders/src/print/index.js
 import { renderFichaHtml } from './ficha-canonical-v2.js';
 import { renderFichaHtmlV3 } from './ficha-canonical-v3.js';
 import { TEMPLATE_V2, TEMPLATE_V3, printSnapshot } from './print-snapshot.js';

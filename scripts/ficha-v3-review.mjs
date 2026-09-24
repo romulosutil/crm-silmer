@@ -1,4 +1,3 @@
-// scripts/ficha-v3-review.mjs
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';

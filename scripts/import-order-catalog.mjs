@@ -1,4 +1,3 @@
-// scripts/import-order-catalog.mjs
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';

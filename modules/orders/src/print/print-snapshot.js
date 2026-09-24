@@ -1,4 +1,3 @@
-// modules/orders/src/print/print-snapshot.js
 import { describeItem, scaleById } from '../catalog/index.js';
 import { itemTotal } from '../domain/ficha.js';
 import { blankProduction } from './ficha-canonical-v2.js';

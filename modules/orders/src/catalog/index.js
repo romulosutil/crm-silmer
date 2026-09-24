@@ -1,4 +1,3 @@
-// modules/orders/src/catalog/index.js
 // The order catalog as both the server and the screen read it. Pure, and it
 // imports nothing outside this folder: the frontend imports it too
 // (scripts/check-boundaries.mjs holds that line).

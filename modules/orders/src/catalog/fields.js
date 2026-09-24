@@ -1,4 +1,3 @@
-// modules/orders/src/catalog/fields.js
 // The item fields of the ficha (design → Campos do item). The option sheet
 // decides which of them a product has and what they are called there; this
 // file decides where each one lives in the stored item and on the paper.

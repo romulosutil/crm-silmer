@@ -1,4 +1,3 @@
-// modules/orders/src/catalog/validate.js
 import { FIELDS } from './fields.js';
 
 // CAT-06: the shape every generated catalog must have. The import script runs

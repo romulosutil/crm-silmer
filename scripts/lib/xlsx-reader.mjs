@@ -1,4 +1,3 @@
-// scripts/lib/xlsx-reader.mjs
 import { inflateRawSync } from 'node:zlib';
 
 // Just enough of the Office Open XML spreadsheet format to read the option

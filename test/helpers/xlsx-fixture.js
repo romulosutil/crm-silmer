@@ -1,4 +1,3 @@
-// test/helpers/xlsx-fixture.js
 import { crc32, deflateRawSync } from 'node:zlib';
 
 /**

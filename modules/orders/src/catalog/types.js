@@ -1,4 +1,3 @@
-// modules/orders/src/catalog/types.js
 /**
  * @typedef {'required'|'optional'} FieldRule
  * @typedef {{ rule: FieldRule, label?: string }} ProductField

@@ -43,6 +43,11 @@ const localIdentityEnvironment = {
   INBOX_MESSAGE_ENVELOPE_KEY:
     process.env.INBOX_MESSAGE_ENVELOPE_KEY ??
     localSecrets.INBOX_MESSAGE_ENVELOPE_KEY,
+  // The orders runtime seals its rows with this key, so it is needed even
+  // when local n8n is off (N8N_LOCAL_ENABLED=false).
+  N8N_INTEGRATION_ENVELOPE_KEY:
+    process.env.N8N_INTEGRATION_ENVELOPE_KEY ??
+    localSecrets.N8N_INTEGRATION_ENVELOPE_KEY,
   IDENTITY_BOOTSTRAP_TOKEN:
     process.env.IDENTITY_BOOTSTRAP_TOKEN ??
     'development-bootstrap-token-local-only',
@@ -64,7 +69,6 @@ const localN8nEnvironment = localN8nEnabled
       N8N_COMMAND_URL:
         'http://127.0.0.1:5678/webhook/silmer/local-panel-command',
       N8N_INTEGRATION_ENABLED: 'true',
-      N8N_INTEGRATION_ENVELOPE_KEY: localSecrets.N8N_INTEGRATION_ENVELOPE_KEY,
       PRIVATE_MEDIA_MAX_BYTES: String(64 * 1024 * 1024),
       PRIVATE_MEDIA_MAX_FILE_BYTES: String(16 * 1024 * 1024),
       PRIVATE_MEDIA_ROOT: resolve(root, 'tmp', 'local-n8n-media'),

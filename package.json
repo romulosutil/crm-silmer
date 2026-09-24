@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
+    "catalog:import": "node scripts/import-order-catalog.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:design-tokens": "node scripts/check-design-tokens.mjs",
     "db:migrate": "npm run migrate --workspace @crm-silmer/database --",

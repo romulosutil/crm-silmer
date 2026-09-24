@@ -33,15 +33,15 @@ function display(value) {
  */
 export function renderFichaHtmlV3(snapshot, options = {}) {
   const syntheticBand = options.synthetic ? SYNTHETIC_BAND : '';
-const itemCards = snapshot.pedido.itens
-  .map((/** @type {any} */ item, /** @type {number} */ itemIndex) => {
-    const lines = item.linhas
-      .map(
-        (/** @type {any} */ line) =>
-          `<div class="spec-wide"><dt>${display(line.rotulo)}</dt><dd>${display(line.valor)}</dd></div>`,
-      )
-      .join('');
-    return `<article class="item-card">
+  const itemCards = snapshot.pedido.itens
+    .map((/** @type {any} */ item, /** @type {number} */ itemIndex) => {
+      const lines = item.linhas
+        .map(
+          (/** @type {any} */ line) =>
+            `<div class="spec-wide"><dt>${display(line.rotulo)}</dt><dd>${display(line.valor)}</dd></div>`,
+        )
+        .join('');
+      return `<article class="item-card">
         <div class="item-heading">
           <div><span class="eyebrow">Item ${display(itemIndex + 1)}</span><h3>${display(item.tipo)} <span>${display(item.subtitulo)}</span></h3></div>
           <div class="item-total"><strong>${display(item.total)}</strong><span>pecas</span></div>
@@ -61,8 +61,8 @@ const itemCards = snapshot.pedido.itens
             .join('')}</div></div>
         </div>
       </article>`;
-  })
-  .join('');
+    })
+    .join('');
   const productionSections = [
     {
       title: 'Arremate',

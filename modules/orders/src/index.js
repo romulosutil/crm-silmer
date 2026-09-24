@@ -40,6 +40,14 @@ export {
   blankProduction,
   renderFichaHtml,
 } from './print/ficha-canonical-v2.js';
+export { renderFichaHtmlV3 } from './print/ficha-canonical-v3.js';
+export { PRINT_TEMPLATE, renderOrderFicha } from './print/index.js';
+export {
+  TEMPLATE_V2,
+  TEMPLATE_V3,
+  printSnapshot,
+  printableItem,
+} from './print/print-snapshot.js';
 export {
   MAX_ORDER_PAGE_SIZE,
   assertOrderRepositoryContract,

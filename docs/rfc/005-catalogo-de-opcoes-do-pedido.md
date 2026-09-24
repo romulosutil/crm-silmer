@@ -10,7 +10,7 @@
 | **Informados**                | Engenharia do CRM e responsável pelo workflow do n8n                                                   |
 | **Prazo da decisão**          | A definir com o cliente                                                                                |
 | **Criado em**                 | 15/09/2026                                                                                             |
-| **Última atualização**        | 15/09/2026                                                                                             |
+| **Última atualização**        | 24/09/2026                                                                                             |
 | **Rastreabilidade**           | `PFI-03`, `PFI-04`, `PFI-07`, `T31`; regras 4, 5, 6 e 8 de `RULES.md`                                  |
 
 ## 1. Objetivo da revisão com o cliente
@@ -44,7 +44,14 @@ mas não pode converter silenciosamente o texto em uma opção comercial.
   viés de gola, viés de mangas e grade por tamanho.
 - A ficha de exemplo usa `CARECA`, `HELANQUINHA`, `LIGHT`, `OLIMPICA`, tamanhos
   `P`, `M`, `G`, `GG`, `XG`, `XX` e `JEGAO`, além de `SUBLIMAÇÃO TOTAL`.
-- A tela atual do Pedido recebe esses valores em campos de texto livre.
+- A tela do Pedido continua gravando esses valores como texto livre. Desde a
+  PR #97, os campos da Ficha oferecem sugestões de tipo de peça, modelagem,
+  malha, cor, acabamento, aplicação e tamanho, definidas em
+  `apps/edge-web/src/lib/order-catalog.js`. Ver a seção
+  [Solução provisória em uso](#solução-provisória-em-uso).
+- A revisão com o cliente acontece na planilha Google “Validação do catálogo
+  de opções do Pedido”, criada a partir do XLSX anexo a esta RFC. Até o
+  resultado ser registrado na seção 11, as decisões ficam nessa planilha.
 - O catálogo técnico já versiona quatro grupos: produtos, modelos, materiais e
   técnicas. Ele ainda não representa cores, tamanhos, acabamentos,
   compatibilidades, fornecedores ou dimensões de preço.
@@ -126,13 +133,30 @@ e exige retrabalho humano. **Esforço inicial:** baixo. **Risco acumulado:** alt
 | Esforço                      | Alto           | Médio               | Baixo agora        |
 | Recomendação                 | **Sim**        | Não                 | Não                |
 
+### Solução provisória em uso
+
+Enquanto a revisão não termina, a tela do Pedido oferece listas planas de
+sugestões (PR #97, `apps/edge-web/src/lib/order-catalog.js`), com as opções
+da planilha de validação que não foram marcadas como “Remover”. Na prática, é
+uma Opção B limitada à tela:
+
+- o campo continua sendo texto livre, e um valor fora da lista é gravado como
+  foi digitado;
+- nenhum código é gravado, nenhuma combinação é validada e nada muda no banco,
+  na API ou no briefing da IA;
+- as listas são atualizadas à mão quando a planilha muda.
+
+Essas listas facilitam o preenchimento, mas não substituem a Opção A
+recomendada nem autorizam qualquer opção para uso comercial.
+
 ## 6. Catálogo candidato para aprovação
 
 Para conduzir a revisão com o cliente sem misturar arquitetura, banco de dados
 ou IA, usar a
 [Lista de opções do Pedido — validação com o cliente](005-anexo-lista-de-opcoes-para-aprovacao.md).
 Ela apresenta uma linha por opção e espaço para manter, remover, renomear ou
-indicar itens ausentes.
+indicar itens ausentes. As decisões são registradas na planilha Google
+“Validação do catálogo de opções do Pedido”, e não no anexo nem no XLSX.
 
 Os códigos são provisórios. `OUTRO_PENDENTE` nunca é uma opção automaticamente
 vendável: ele cria uma pendência para decisão humana.
@@ -499,11 +523,12 @@ Regras mínimas:
 
 | Ação                                                                                                 | Responsável              | Prazo            | Estado                     |
 | ---------------------------------------------------------------------------------------------------- | ------------------------ | ---------------- | -------------------------- |
-| Revisar todas as opções com o cliente e registrar manter/remover/adicionar.                          | Rômulo + cliente         | A definir        | NÃO INICIADO               |
+| Revisar todas as opções com o cliente e registrar manter/remover/adicionar.                          | Rômulo + cliente         | A definir        | EM ANDAMENTO (planilha)    |
 | Registrar fornecedor, código, composição, gramatura, cores e disponibilidade dos materiais mantidos. | Cliente/produção         | A definir        | NÃO INICIADO               |
 | Resolver os termos legados e a equivalência de tamanhos.                                             | Cliente/produção         | A definir        | NÃO INICIADO               |
 | Aprovar as dimensões que alteram preço e suas regras.                                                | Cliente/comercial        | A definir        | NÃO INICIADO               |
 | Atualizar esta RFC com o resultado explícito e os nomes dos aprovadores.                             | Rômulo                   | Após revisão     | NÃO INICIADO               |
+| Alinhar as sugestões provisórias de `order-catalog.js` à lista aprovada.                             | Engenharia               | Após revisão     | BLOQUEADO PELA REVISÃO     |
 | Criar ADR/TDD da estrutura final de catálogo, compatibilidade e preço.                               | Tech Lead                | Após aprovação   | BLOQUEADO PELA REVISÃO     |
 | Evoluir banco, API, tela do Pedido e snapshot versionado.                                            | Engenharia               | Após TDD         | BLOQUEADO PELA REVISÃO     |
 | Evoluir `briefing_patch` para `items[]` e validar o workflow DEV.                                    | Engenharia/n8n           | Após API         | BLOQUEADO PELA REVISÃO     |
@@ -531,6 +556,8 @@ Nenhum teste, documento ou conversa substitui a aprovação comercial explícita
 - `.specs/features/pedidos-mvp/tasks.md` — `T31`.
 - `modules/catalog/src/domain/catalog-version.js` — grupos e snapshot do catálogo atual.
 - `modules/n8n-integration/src/service.js` — campos planos atuais do briefing.
+- `apps/edge-web/src/lib/order-catalog.js` (PR #97) — sugestões provisórias da tela do Pedido.
+- Planilha Google “Validação do catálogo de opções do Pedido” — decisões do cliente em andamento.
 - [Humatex — linha de produtos](https://www.humatex.com.br/produtos) — exemplos atuais de malhas para uniformes e esporte.
 - [ITEMA — tipos, composições e especificações de malha](https://itema.com.br/) — separação entre construção, fibra, gramatura, largura e cor.
 - [Thatimalhas — catálogo de malhas](https://www.thatimalhas.com.br/downloads/CATALOGO-THATIMALHAS.pdf) — referências de PV, PP, PA, piquet, dry fit, helanca e moletom.

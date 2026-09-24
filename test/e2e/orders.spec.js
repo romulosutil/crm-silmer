@@ -1120,3 +1120,49 @@ test('hides Gerar and Reabrir from whoever does not own the conversation', async
   // PIM-05: any operational session prints a confirmed order.
   await expect(page.getByRole('button', { name: 'Imprimir' })).toBeEnabled();
 });
+
+test('suggests catalog applications in groups and keeps what is typed (F08, F21)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await summary.getByRole('button', { name: 'Editar' }).click();
+  const field = summary.getByRole('combobox', { name: 'Aplicação' });
+  await field.fill('dt');
+  await expect(summary.getByRole('listbox')).toBeVisible();
+  await expect(
+    summary.getByRole('option', { name: /DTF/u }).first(),
+  ).toBeVisible();
+  await field.press('ArrowDown');
+  await field.press('Enter');
+  await expect(field).toHaveValue('DTF');
+  await expect(field).toHaveAttribute('aria-expanded', 'false');
+
+  const results = await new AxeBuilder({ page }).include('form').analyze();
+  expect(results.violations).toEqual([]);
+
+  await summary.getByRole('button', { name: 'Salvar' }).click();
+  expect(writes[0].body.value.aplicacao).toBe('DTF');
+});
+
+test('keeps an application the catalog does not know (F08)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await summary.getByRole('button', { name: 'Editar' }).click();
+  const field = summary.getByRole('combobox', { name: 'Aplicação' });
+  await field.fill('SILK 3 CORES');
+  await field.press('Escape');
+  await summary.getByRole('button', { name: 'Salvar' }).click();
+
+  expect(writes[0].body.value.aplicacao).toBe('SILK 3 CORES');
+});

@@ -1862,6 +1862,70 @@ button.op-edit:disabled {
   display: none;
 }
 
+.op-combo-toggle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: grid;
+  inline-size: 2.4rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.op-combo:focus-within > .op-combo-toggle {
+  color: var(--color-focus);
+}
+
+.op-combo-toggle:disabled {
+  display: none;
+}
+
+.op-combo-list {
+  position: absolute;
+  z-index: 20;
+  inset-block-start: calc(100% + 0.25rem);
+  inset-inline: 0;
+  max-block-size: 16rem;
+  overflow-y: auto;
+  padding-block: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.op-combo-group {
+  padding: 0.45rem 0.75rem 0.2rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.op-combo-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.op-combo-option[aria-selected='true'],
+.op-combo-option:hover {
+  background: var(--color-surface-active);
+}
+
+.op-combo-note {
+  margin-inline-start: auto;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
 .op-form input.op-grade-qty {
   appearance: textfield;
 }

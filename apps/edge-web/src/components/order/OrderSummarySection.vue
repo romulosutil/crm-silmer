@@ -1,9 +1,12 @@
 <script setup>
 import { computed, inject, nextTick, ref } from 'vue';
+import { applicationOptions } from '../../lib/order-catalog.js';
 import { fabLabel } from '../../lib/order-format.js';
+import OrderCombobox from './OrderCombobox.vue';
 import OrderIcon from './OrderIcon.vue';
 
 const SECTION = 'summary';
+const APPLICATION_OPTIONS = applicationOptions();
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -126,17 +129,11 @@ async function save() {
 
         <div class="op-field">
           <label for="summary-aplicacao">Aplicação</label>
-          <div class="op-combo">
-            <input
-              id="summary-aplicacao"
-              v-model="draft.aplicacao"
-              type="text"
-              list="catalog-applications"
-              autocomplete="off"
-              autocapitalize="characters"
-            />
-            <OrderIcon name="chevron" />
-          </div>
+          <OrderCombobox
+            id="summary-aplicacao"
+            v-model="draft.aplicacao"
+            :groups="APPLICATION_OPTIONS"
+          />
         </div>
 
         <div class="op-field">

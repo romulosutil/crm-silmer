@@ -1,5 +1,7 @@
 <script setup>
 import { computed, inject, nextTick, ref } from 'vue';
+import { colorSwatch } from '../../lib/order-catalog.js';
+import OrderIcon from './OrderIcon.vue';
 
 const SECTION = 'items';
 // The value the ficha prints when a garment has no sleeve or no viés (PFI-07).
@@ -7,20 +9,36 @@ const NOT_APPLICABLE = 'NAO APLICAVEL';
 const NOT_APPLICABLE_LABEL = 'NÃO APLICÁVEL';
 const GRADE_MESSAGE = 'Use uma quantidade inteira maior que zero.';
 
-const TEXT_FIELDS = Object.freeze([
-  Object.freeze({ key: 'tipo', label: 'Tipo' }),
-  Object.freeze({ key: 'modelo', label: 'Modelo' }),
-  Object.freeze({ key: 'cor_frente', label: 'Frente' }),
-  Object.freeze({ key: 'cor_costas', label: 'Costas' }),
+// Tipo and modelo head the item card; the parts below follow the ficha.
+const PART_FIELDS = Object.freeze([
+  Object.freeze({ key: 'cor_frente', label: 'Frente', list: 'catalog-colors' }),
+  Object.freeze({ key: 'cor_costas', label: 'Costas', list: 'catalog-colors' }),
 ]);
 // PFI-07: only these accept "Não aplicável" — a shirt without sleeves still
 // has a front and a back.
 const OPTIONAL_FIELDS = Object.freeze([
-  Object.freeze({ key: 'cor_manga_direita', label: 'Manga direita' }),
-  Object.freeze({ key: 'cor_manga_esquerda', label: 'Manga esquerda' }),
-  Object.freeze({ key: 'vies_gola', label: 'Viés gola' }),
-  Object.freeze({ key: 'vies_mangas', label: 'Viés mangas' }),
+  Object.freeze({
+    key: 'cor_manga_direita',
+    label: 'Manga direita',
+    list: 'catalog-colors',
+  }),
+  Object.freeze({
+    key: 'cor_manga_esquerda',
+    label: 'Manga esquerda',
+    list: 'catalog-colors',
+  }),
+  Object.freeze({
+    key: 'vies_gola',
+    label: 'Viés gola',
+    list: 'catalog-finishes',
+  }),
+  Object.freeze({
+    key: 'vies_mangas',
+    label: 'Viés mangas',
+    list: 'catalog-finishes',
+  }),
 ]);
+const READ_FIELDS = Object.freeze([...PART_FIELDS, ...OPTIONAL_FIELDS]);
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -69,6 +87,27 @@ function pieces(item) {
 function shownValue(value) {
   if (value === NOT_APPLICABLE) return NOT_APPLICABLE_LABEL;
   return value || '—';
+}
+
+/**
+ * The colour chip beside a part, when the text names a catalog colour.
+ *
+ * @param {unknown} value
+ */
+function swatchOf(value) {
+  if (value === NOT_APPLICABLE) return '';
+  return colorSwatch(value);
+}
+
+/**
+ * The stepper beside the quantity moves a whole piece at a time and stops at
+ * one, since the grade rule refuses zero anyway.
+ *
+ * @param {Record<string, any>} line @param {number} delta
+ */
+function step(line, delta) {
+  const current = Number.parseInt(String(line.quantidade), 10) || 0;
+  line.quantidade = Math.max(1, current + delta);
 }
 
 /** @param {Record<string, any>} item @param {string} key */
@@ -223,21 +262,27 @@ async function save() {
 </script>
 
 <template>
-  <section class="surface section-gap" aria-labelledby="order-items-title">
-    <div class="panel-head">
+  <section
+    class="op-sheet"
+    :data-editing="isEditing || undefined"
+    aria-labelledby="order-items-title"
+  >
+    <div class="op-sheet-head">
       <h2 id="order-items-title">Itens e especificações</h2>
-      <p>{{ headline }}</p>
+      <p class="op-num">{{ headline }}</p>
+      <span v-if="isEditing" class="op-editing-tag">Editando</span>
       <button
         v-if="canEdit && !isEditing"
         type="button"
+        class="op-edit"
         :disabled="otherSectionOpen"
         @click="startEditing"
       >
-        Editar
+        <OrderIcon name="pencil" />Editar
       </button>
     </div>
 
-    <p v-if="errorMessage" role="alert" class="audit-note">
+    <p v-if="errorMessage" role="alert" class="op-alert">
       {{ errorMessage }}
     </p>
 
@@ -246,192 +291,319 @@ async function save() {
     <form
       v-if="isEditing"
       ref="form"
-      class="order-form"
+      class="op-form"
       novalidate
       @submit.prevent="save"
     >
-      <fieldset
-        v-for="(item, itemIndex) in draft"
-        :key="itemIndex"
-        class="order-item"
-      >
-        <legend>Item {{ itemIndex + 1 }} · {{ pieces(item) }} peças</legend>
-
-        <div class="field-list">
-          <template v-for="field in TEXT_FIELDS" :key="field.key">
-            <label :for="`item-${itemIndex}-${field.key}`">{{
-              field.label
-            }}</label>
-            <input
-              :id="`item-${itemIndex}-${field.key}`"
-              v-model="item[field.key]"
-              type="text"
-            />
-          </template>
-
-          <template v-for="field in OPTIONAL_FIELDS" :key="field.key">
-            <label :for="`item-${itemIndex}-${field.key}`">{{
-              field.label
-            }}</label>
-            <input
-              :id="`item-${itemIndex}-${field.key}`"
-              v-model="item[field.key]"
-              type="text"
-              :disabled="isNotApplicable(item, field.key)"
-            />
-            <label class="checkbox-line">
-              <input
-                type="checkbox"
-                :checked="isNotApplicable(item, field.key)"
-                :aria-label="`${field.label} não se aplica`"
-                @change="
-                  toggleNotApplicable(item, field.key, $event.target.checked)
-                "
-              />
-              Não aplicável
-            </label>
-          </template>
-        </div>
-
-        <div class="order-subblock">
-          <h3>Malhas</h3>
-          <div
-            v-for="(malha, malhaIndex) in item.malhas"
-            :key="malhaIndex"
-            class="inline-actions"
-          >
-            <input
-              v-model="item.malhas[malhaIndex]"
-              type="text"
-              :aria-label="`Malha ${malhaIndex + 1}`"
-            />
-            <button
-              v-if="item.malhas.length > 1"
-              type="button"
-              @click="removeMalha(item, malhaIndex)"
-            >
-              Remover malha {{ malhaIndex + 1 }}
-            </button>
-          </div>
-          <button type="button" @click="addMalha(item)">Adicionar malha</button>
-        </div>
-
-        <div class="order-subblock">
-          <h3>Grade</h3>
-          <div
-            v-for="(line, lineIndex) in item.grade"
-            :key="lineIndex"
-            class="order-grade-line"
-          >
-            <input
-              v-model="line.tamanho"
-              type="text"
-              :aria-label="`Tamanho da linha ${lineIndex + 1}`"
-            />
-            <input
-              v-model="line.quantidade"
-              type="number"
-              min="1"
-              step="1"
-              :aria-label="
-                line.tamanho
-                  ? `Quantidade do tamanho ${line.tamanho}`
-                  : `Quantidade da linha ${lineIndex + 1}`
-              "
-            />
-            <button
-              v-if="item.grade.length > 1"
-              type="button"
-              @click="removeGradeLine(item, lineIndex)"
-            >
-              Remover linha {{ lineIndex + 1 }}
-            </button>
-            <p
-              v-if="lineErrors[`${itemIndex}:${lineIndex}`]"
-              role="alert"
-              class="audit-note"
-            >
-              {{ lineErrors[`${itemIndex}:${lineIndex}`] }}
-            </p>
-          </div>
-          <button type="button" @click="addGradeLine(item)">
-            Adicionar tamanho
-          </button>
-        </div>
-
-        <button
-          v-if="draft.length > 1"
-          type="button"
-          @click="removeItem(itemIndex)"
+      <div class="op-sheet-body op-item-list">
+        <fieldset
+          v-for="(item, itemIndex) in draft"
+          :key="itemIndex"
+          class="op-item op-item-edit"
         >
-          Remover item {{ itemIndex + 1 }}
-        </button>
-      </fieldset>
+          <legend class="op-visually-hidden">Item {{ itemIndex + 1 }}</legend>
+          <div class="op-item-head">
+            <span class="op-item-index">Item {{ itemIndex + 1 }}</span>
+            <div class="op-item-names">
+              <div class="op-field">
+                <label :for="`item-${itemIndex}-tipo`">Tipo</label>
+                <input
+                  :id="`item-${itemIndex}-tipo`"
+                  v-model="item.tipo"
+                  type="text"
+                  list="catalog-piece-types"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="op-field">
+                <label :for="`item-${itemIndex}-modelo`">Modelo</label>
+                <input
+                  :id="`item-${itemIndex}-modelo`"
+                  v-model="item.modelo"
+                  type="text"
+                  list="catalog-modelings"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+            <button
+              v-if="draft.length > 1"
+              type="button"
+              class="op-icon-button op-icon-button--danger"
+              @click="removeItem(itemIndex)"
+            >
+              <OrderIcon name="trash" />
+              <span class="op-visually-hidden">{{
+                `Remover item ${itemIndex + 1}`
+              }}</span>
+            </button>
+          </div>
 
-      <div class="inline-actions">
-        <button type="button" @click="addItem">Adicionar item</button>
-      </div>
-      <div class="inline-actions">
-        <!-- PFI-13: "Confirmar pedido" is the only primary button here. -->
-        <button type="submit" :disabled="saving">
-          {{ saving ? 'Salvando…' : 'Salvar' }}
+          <div class="op-item-fields">
+            <div class="op-field op-field--wide">
+              <span class="op-label">Malhas</span>
+              <div
+                v-for="(malha, malhaIndex) in item.malhas"
+                :key="malhaIndex"
+                class="op-input-row"
+              >
+                <input
+                  v-model="item.malhas[malhaIndex]"
+                  type="text"
+                  list="catalog-fabrics"
+                  autocomplete="off"
+                  :aria-label="`Malha ${malhaIndex + 1}`"
+                />
+                <button
+                  v-if="item.malhas.length > 1"
+                  type="button"
+                  class="op-icon-button"
+                  @click="removeMalha(item, malhaIndex)"
+                >
+                  <OrderIcon name="x" />
+                  <span class="op-visually-hidden">{{
+                    `Remover malha ${malhaIndex + 1}`
+                  }}</span>
+                </button>
+              </div>
+              <button
+                type="button"
+                class="op-add-inline"
+                @click="addMalha(item)"
+              >
+                <OrderIcon name="plus" />Adicionar malha
+              </button>
+            </div>
+
+            <div v-for="field in PART_FIELDS" :key="field.key" class="op-field">
+              <label :for="`item-${itemIndex}-${field.key}`">{{
+                field.label
+              }}</label>
+              <div class="op-input-swatch">
+                <span
+                  v-if="swatchOf(item[field.key])"
+                  class="op-swatch"
+                  :style="{ background: swatchOf(item[field.key]) }"
+                  aria-hidden="true"
+                ></span>
+                <input
+                  :id="`item-${itemIndex}-${field.key}`"
+                  v-model="item[field.key]"
+                  type="text"
+                  :list="field.list"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+
+            <div
+              v-for="field in OPTIONAL_FIELDS"
+              :key="field.key"
+              class="op-field"
+            >
+              <label :for="`item-${itemIndex}-${field.key}`">{{
+                field.label
+              }}</label>
+              <div class="op-input-swatch">
+                <span
+                  v-if="swatchOf(item[field.key])"
+                  class="op-swatch"
+                  :style="{ background: swatchOf(item[field.key]) }"
+                  aria-hidden="true"
+                ></span>
+                <input
+                  :id="`item-${itemIndex}-${field.key}`"
+                  :value="
+                    isNotApplicable(item, field.key)
+                      ? NOT_APPLICABLE_LABEL
+                      : item[field.key]
+                  "
+                  type="text"
+                  :list="field.list"
+                  autocomplete="off"
+                  :disabled="isNotApplicable(item, field.key)"
+                  @input="item[field.key] = $event.target.value"
+                />
+              </div>
+              <label class="op-check">
+                <input
+                  type="checkbox"
+                  :checked="isNotApplicable(item, field.key)"
+                  :aria-label="`${field.label} não se aplica`"
+                  @change="
+                    toggleNotApplicable(item, field.key, $event.target.checked)
+                  "
+                />
+                <span aria-hidden="true">Não aplicável</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="op-grade-editor">
+            <div class="op-grade-editor-head">
+              <span class="op-label">Grade</span>
+              <span class="op-num"
+                >Total do item <strong>{{ pieces(item) }} peças</strong></span
+              >
+            </div>
+            <div class="op-grade-lines">
+              <div
+                v-for="(line, lineIndex) in item.grade"
+                :key="lineIndex"
+                class="op-grade-line"
+              >
+                <input
+                  v-model="line.tamanho"
+                  class="op-grade-size"
+                  type="text"
+                  list="catalog-sizes"
+                  autocomplete="off"
+                  :aria-label="`Tamanho da linha ${lineIndex + 1}`"
+                />
+                <button
+                  type="button"
+                  class="op-icon-button"
+                  @click="step(line, -1)"
+                >
+                  <OrderIcon name="minus" />
+                  <span class="op-visually-hidden">{{
+                    `Uma peça a menos na linha ${lineIndex + 1}`
+                  }}</span>
+                </button>
+                <input
+                  v-model="line.quantidade"
+                  class="op-grade-qty op-num"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputmode="numeric"
+                  :aria-invalid="
+                    Boolean(lineErrors[`${itemIndex}:${lineIndex}`]) ||
+                    undefined
+                  "
+                  :aria-label="
+                    line.tamanho
+                      ? `Quantidade do tamanho ${line.tamanho}`
+                      : `Quantidade da linha ${lineIndex + 1}`
+                  "
+                />
+                <button
+                  type="button"
+                  class="op-icon-button"
+                  @click="step(line, 1)"
+                >
+                  <OrderIcon name="plus" />
+                  <span class="op-visually-hidden">{{
+                    `Uma peça a mais na linha ${lineIndex + 1}`
+                  }}</span>
+                </button>
+                <button
+                  v-if="item.grade.length > 1"
+                  type="button"
+                  class="op-icon-button op-icon-button--quiet"
+                  @click="removeGradeLine(item, lineIndex)"
+                >
+                  <OrderIcon name="x" />
+                  <span class="op-visually-hidden">{{
+                    `Remover linha ${lineIndex + 1}`
+                  }}</span>
+                </button>
+                <p
+                  v-if="lineErrors[`${itemIndex}:${lineIndex}`]"
+                  role="alert"
+                  class="op-field-error"
+                >
+                  {{ lineErrors[`${itemIndex}:${lineIndex}`] }}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="op-add-inline"
+              @click="addGradeLine(item)"
+            >
+              <OrderIcon name="plus" />Adicionar tamanho
+            </button>
+          </div>
+        </fieldset>
+
+        <button type="button" class="op-add-item" @click="addItem">
+          <OrderIcon name="plus" />Adicionar item
         </button>
+      </div>
+
+      <div class="op-form-actions">
+        <p class="op-num">
+          Total do pedido: <strong>{{ draftTotal }} peças</strong>, somado da
+          grade.
+        </p>
         <button type="button" :disabled="saving" @click="cancel">
           Cancelar
+        </button>
+        <!-- PFI-13: "Gerar pedido" is the only primary button here. -->
+        <button type="submit" class="op-save" :disabled="saving">
+          {{ saving ? 'Salvando…' : 'Salvar itens' }}
         </button>
       </div>
     </form>
 
-    <template v-else>
+    <div v-else class="op-sheet-body op-item-list">
       <div
         v-for="(item, itemIndex) in shownItems"
         :key="itemIndex"
-        class="order-item"
+        class="op-item"
         role="group"
         :aria-label="`Item ${itemIndex + 1}`"
       >
-        <div class="panel-head">
-          <h3>Item {{ itemIndex + 1 }} · {{ item.tipo || '—' }}</h3>
-          <p>{{ item.modelo || '—' }} · {{ pieces(item) }} peças</p>
+        <div class="op-item-head">
+          <div class="op-item-title">
+            <span class="op-item-index">Item {{ itemIndex + 1 }}</span>
+            <h3>
+              {{ item.tipo || '—' }}
+              <span>{{ item.modelo || '' }}</span>
+            </h3>
+          </div>
+          <p class="op-item-pieces op-num">
+            <strong>{{ pieces(item) }}</strong> peças
+          </p>
         </div>
-        <dl class="client-facts">
-          <div>
-            <dt>Malhas</dt>
-            <dd>{{ item.malhas.join(' / ') || '—' }}</dd>
+        <div class="op-item-body">
+          <dl class="op-specs">
+            <div class="op-specs-wide">
+              <dt>Malhas</dt>
+              <dd>{{ item.malhas.join(' / ') || '—' }}</dd>
+            </div>
+            <div v-for="field in READ_FIELDS" :key="field.key">
+              <dt>{{ field.label }}</dt>
+              <dd :data-muted="isNotApplicable(item, field.key) || undefined">
+                <span
+                  v-if="swatchOf(item[field.key])"
+                  class="op-swatch"
+                  :style="{ background: swatchOf(item[field.key]) }"
+                  aria-hidden="true"
+                ></span>
+                {{ shownValue(item[field.key]) }}
+              </dd>
+            </div>
+          </dl>
+          <div class="op-grade">
+            <h4 class="op-label">Grade</h4>
+            <ul v-if="item.grade.length" class="op-grade-tiles">
+              <li v-for="(line, lineIndex) in item.grade" :key="lineIndex">
+                <span>{{ line.tamanho }}</span
+                ><strong class="op-num">{{ line.quantidade }}</strong>
+              </li>
+            </ul>
+            <p v-else class="op-hint">Sem grade.</p>
           </div>
-          <div v-for="field in TEXT_FIELDS.slice(2)" :key="field.key">
-            <dt>{{ field.label }}</dt>
-            <dd>{{ shownValue(item[field.key]) }}</dd>
-          </div>
-          <div v-for="field in OPTIONAL_FIELDS" :key="field.key">
-            <dt>{{ field.label }}</dt>
-            <dd>{{ shownValue(item[field.key]) }}</dd>
-          </div>
-        </dl>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Tamanho</th>
-                <th scope="col" class="num">Quantidade</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(line, lineIndex) in item.grade" :key="lineIndex">
-                <td>{{ line.tamanho }}</td>
-                <td class="num">{{ line.quantidade }}</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
-      <p v-if="!shownItems.length" class="empty-list">
+      <p v-if="!shownItems.length" class="op-empty">
         Nenhum item no pedido ainda.
       </p>
-    </template>
-
-    <p class="footnote">
-      O total do item e o total do pedido saem da grade e nunca são digitados.
-    </p>
+      <p class="op-hint">
+        O total do item e o total do pedido saem da grade e nunca são digitados.
+      </p>
+    </div>
   </section>
 </template>

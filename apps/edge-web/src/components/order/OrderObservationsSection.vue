@@ -1,5 +1,6 @@
 <script setup>
 import { computed, inject, nextTick, ref } from 'vue';
+import OrderIcon from './OrderIcon.vue';
 
 const SECTION = 'observations';
 // PFI-05: zero to five lines, the same ceiling the ficha prints.
@@ -73,65 +74,86 @@ async function save() {
 
 <template>
   <section
-    class="surface section-gap"
+    class="op-sheet"
+    :data-editing="isEditing || undefined"
     aria-labelledby="order-observations-title"
   >
-    <div class="panel-head">
+    <div class="op-sheet-head">
       <h2 id="order-observations-title">Observações do pedido</h2>
-      <p>{{ headline }}</p>
+      <p class="op-num">{{ headline }}</p>
+      <span v-if="isEditing" class="op-editing-tag">Editando</span>
       <button
         v-if="canEdit && !isEditing"
         type="button"
+        class="op-edit"
         :disabled="otherSectionOpen"
         @click="startEditing"
       >
-        Editar
+        <OrderIcon name="pencil" />Editar
       </button>
     </div>
 
-    <p v-if="errorMessage" role="alert" class="audit-note">
+    <p v-if="errorMessage" role="alert" class="op-alert">
       {{ errorMessage }}
     </p>
 
     <form
       v-if="isEditing"
       ref="form"
-      class="order-form"
+      class="op-form"
       novalidate
       @submit.prevent="save"
     >
-      <div v-for="(line, index) in draft" :key="index" class="inline-actions">
-        <input
-          v-model="draft[index]"
-          type="text"
-          maxlength="200"
-          :aria-label="`Observação ${index + 1}`"
-        />
-        <button type="button" @click="removeLine(index)">
-          Remover observação {{ index + 1 }}
+      <ol class="op-sheet-body op-observation-lines">
+        <li v-for="(line, index) in draft" :key="index" class="op-input-row">
+          <span class="op-line-number op-num" aria-hidden="true"
+            >{{ index + 1 }}.</span
+          >
+          <input
+            v-model="draft[index]"
+            type="text"
+            maxlength="200"
+            :aria-label="`Observação ${index + 1}`"
+          />
+          <button
+            type="button"
+            class="op-icon-button"
+            @click="removeLine(index)"
+          >
+            <OrderIcon name="x" />
+            <span class="op-visually-hidden">{{
+              `Remover observação ${index + 1}`
+            }}</span>
+          </button>
+        </li>
+      </ol>
+      <div class="op-sheet-body op-sheet-body--tight">
+        <button
+          type="button"
+          class="op-add-inline"
+          :disabled="!canAddLine"
+          @click="addLine"
+        >
+          <OrderIcon name="plus" />Adicionar observação
         </button>
       </div>
-      <div class="inline-actions">
-        <button type="button" :disabled="!canAddLine" @click="addLine">
-          Adicionar observação
-        </button>
-      </div>
-      <div class="inline-actions">
-        <!-- PFI-13: "Confirmar pedido" is the only primary button here. -->
-        <button type="submit" :disabled="saving">
-          {{ saving ? 'Salvando…' : 'Salvar' }}
-        </button>
+      <div class="op-form-actions">
+        <p>Até 5 linhas de 200 caracteres. Saem numeradas na ficha.</p>
         <button type="button" :disabled="saving" @click="cancel">
           Cancelar
+        </button>
+        <!-- PFI-13: "Gerar pedido" is the only primary button here. -->
+        <button type="submit" class="op-save" :disabled="saving">
+          {{ saving ? 'Salvando…' : 'Salvar observações' }}
         </button>
       </div>
     </form>
 
-    <template v-else>
-      <ol v-if="observations.length" class="order-observations">
+    <div v-else class="op-sheet-body">
+      <ol v-if="observations.length" class="op-observations">
         <li v-for="(line, index) in observations" :key="index">{{ line }}</li>
       </ol>
-      <p v-else class="empty-list">Nenhuma observação no pedido.</p>
-    </template>
+      <p v-else class="op-empty">Nenhuma observação no pedido.</p>
+    </div>
   </section>
 </template>

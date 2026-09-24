@@ -35,8 +35,20 @@ export const HANDOFF_REASON_LABELS = Object.freeze({
   urgency: 'Urgência',
 });
 
+/**
+ * The FAB as the ficha prints it. Codes arrive either bare ("01") or already
+ * prefixed ("FAB 01"); both read "FAB 01".
+ *
+ * @param {unknown} code
+ */
+export function fabLabel(code) {
+  const text = String(code ?? '').trim();
+  if (text === '') return '—';
+  return /^fab(?:\s|$)/iu.test(text) ? text.toUpperCase() : `FAB ${text}`;
+}
+
 /** PIM-01: why the button is locked, said in the place of the button. */
-export const PRINT_LOCKED_REASON = 'Disponível depois de confirmar o pedido';
+export const PRINT_LOCKED_REASON = 'Disponível depois de gerar o pedido';
 
 const SUMMARY_LABELS = Object.freeze({
   aplicacao: 'aplicação',

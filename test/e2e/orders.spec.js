@@ -573,7 +573,7 @@ test('locks printing while the order is pending and says why (PIM-01)', async ({
   const print = page.getByRole('button', { name: 'Imprimir' });
   await expect(print).toBeDisabled();
   await expect(
-    page.getByText('Disponível depois de confirmar o pedido'),
+    page.getByText('Disponível depois de gerar o pedido'),
   ).toBeVisible();
   await expect(print).toHaveAttribute('aria-describedby', /./u);
 });
@@ -626,9 +626,9 @@ test('shows the order read-only to whoever does not own the conversation (PAU-01
     ),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(0);
-  await expect(
-    page.getByRole('button', { name: 'Confirmar pedido' }),
-  ).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Gerar pedido' })).toHaveCount(
+    0,
+  );
   await expect(
     page.getByRole('button', { name: 'Reabrir pedido' }),
   ).toHaveCount(0);
@@ -689,7 +689,7 @@ test('reads the order summary and marks the customer as locked (PFI-02)', async 
   await expect(summary).toContainText('Marina Aguiar');
   // D14: the number exists from creation; only the date waits for the
   // confirmation, which corrects the supporting text of the mockup.
-  await expect(summary).toContainText('definida na confirmação');
+  await expect(summary).toContainText('definida ao gerar');
   await expect(summary).toContainText(
     'O número do pedido já existe desde a criação',
   );
@@ -783,7 +783,7 @@ test('reads each item as a card with its own total (PFI-03, PFI-04)', async ({
   await expect(card).toContainText('GOLA OLÍMPICA');
   await expect(card).toContainText('DRY FIT 100% POLIÉSTER');
   await expect(card).toContainText('150 peças');
-  await expect(card.locator('tbody tr')).toHaveText(['M100', 'G50']);
+  await expect(card.getByRole('listitem')).toHaveText(['M100', 'G50']);
 });
 
 test('edits the grade and recomputes every total from it (PFI-04)', async ({
@@ -1005,14 +1005,19 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
 
   await closing.getByLabel('Valor final').fill('4.820,00');
   await closing.getByLabel('Pix').check();
-  await closing.getByRole('button', { name: 'Confirmar pedido' }).click();
+  await closing.getByRole('button', { name: 'Gerar pedido' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
+  await expect(dialog).toContainText('R$ 4.820,00 · Pix');
+  await dialog.getByRole('button', { name: 'Confirmar e gerar ficha' }).click();
 
+  await expect(dialog).toHaveCount(0);
+  await expect(closing).toContainText('Pedido confirmado e ficha gerada.');
   await expect(closing).toContainText('R$ 4.820,00');
   await expect(closing).toContainText('Pix');
   await expect(closing).toContainText('Confirmado por Marina Aguiar');
   await expect(page.getByRole('button', { name: 'Imprimir' })).toBeEnabled();
   await expect(
-    page.getByText('Disponível depois de confirmar o pedido'),
+    page.getByText('Disponível depois de gerar o pedido'),
   ).toHaveCount(0);
   expect(writes[0].action).toBe('confirm');
   expect(writes[0].body).toEqual({
@@ -1040,9 +1045,10 @@ test('refuses a malformed amount next to the field, before the request', async (
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await closing.getByLabel('Valor final').fill('4,820.00');
   await closing.getByLabel('Pix').check();
-  await closing.getByRole('button', { name: 'Confirmar pedido' }).click();
+  await closing.getByRole('button', { name: 'Gerar pedido' }).click();
 
   await expect(closing).toContainText('Use o formato 4.820,00.');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(writes).toHaveLength(0);
 });
 
@@ -1063,7 +1069,11 @@ test('names each blocker the server refused the confirmation with', async ({
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await closing.getByLabel('Valor final').fill('4.820,00');
   await closing.getByLabel('Pix').check();
-  await closing.getByRole('button', { name: 'Confirmar pedido' }).click();
+  await closing.getByRole('button', { name: 'Gerar pedido' }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Confirmar e gerar ficha' })
+    .click();
 
   await expect(closing).toContainText('Escolha a condição de pagamento.');
   await expect(closing).toContainText(
@@ -1072,24 +1082,24 @@ test('names each blocker the server refused the confirmation with', async ({
   await expect(closing).toContainText('pedido pendente');
 });
 
-test('keeps "Confirmar pedido" as the only primary button of the page (PFI-13)', async ({
+test('keeps "Gerar pedido" as the only primary button of the page (PFI-13)', async ({
   page,
 }) => {
   await mockOrders(page);
   await page.goto('/pedidos/order-pendente');
 
   await expect(page.locator('main button.primary')).toHaveText([
-    'Confirmar pedido',
+    'Gerar pedido',
   ]);
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await summary.getByRole('button', { name: 'Editar' }).click();
   await expect(page.locator('main button.primary')).toHaveText([
-    'Confirmar pedido',
+    'Gerar pedido',
   ]);
 });
 
-test('hides Confirmar and Reabrir from whoever does not own the conversation', async ({
+test('hides Gerar and Reabrir from whoever does not own the conversation', async ({
   page,
 }) => {
   await mockOrders(page, {

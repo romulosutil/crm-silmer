@@ -9,19 +9,21 @@ import {
   ref,
   watch,
 } from 'vue';
+import OrderCatalogLists from '../components/order/OrderCatalogLists.vue';
 import OrderClosingSection from '../components/order/OrderClosingSection.vue';
+import OrderIcon from '../components/order/OrderIcon.vue';
 import OrderInfoStrips from '../components/order/OrderInfoStrips.vue';
 import OrderItemsSection from '../components/order/OrderItemsSection.vue';
 import OrderObservationsSection from '../components/order/OrderObservationsSection.vue';
 import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
-  missingFieldLabels,
+  fabLabel,
+  orderStatusLabel,
   PRINT_LOCKED_REASON,
 } from '../lib/order-format.js';
 
 const LIVE_REFRESH_DELAY_MS = 250;
-const BLOCKERS = Object.freeze(['items', 'finalAmount', 'paymentCondition']);
 
 const props = defineProps({
   fromConversationId: { type: String, default: '' },
@@ -56,17 +58,6 @@ const canEdit = computed(
     Boolean(order.value) &&
     (isAdmin.value || order.value.seller?.id === sessionUser.value?.id),
 );
-const missingFields = computed(() => order.value?.missingFields ?? []);
-const blockerLabels = computed(() =>
-  missingFieldLabels(
-    missingFields.value.filter((field) => BLOCKERS.includes(field)),
-  ),
-);
-const fichaGapLabels = computed(() =>
-  missingFieldLabels(
-    missingFields.value.filter((field) => !BLOCKERS.includes(field)),
-  ),
-);
 const customerName = computed(
   () => order.value?.ficha?.summary?.cliente || 'Cliente não informado',
 );
@@ -74,6 +65,13 @@ const orderContext = computed(() => {
   const event = order.value?.ficha?.summary?.nome || 'Sem evento';
   const seller = order.value?.seller?.name;
   return seller ? `${event} · com ${seller}` : event;
+});
+const itemCount = computed(() => order.value?.ficha?.items?.length ?? 0);
+const deliveryLabel = computed(() => {
+  const match = /^\d{4}-(\d{2})-(\d{2})$/u.exec(
+    String(order.value?.ficha?.summary?.data_entrega_confirmada ?? ''),
+  );
+  return match ? `entrega ${match[2]}/${match[1]}` : 'sem entrega confirmada';
 });
 
 /**
@@ -152,10 +150,20 @@ async function runCommand(action, body) {
   }
 }
 
+/** PIM-02: the API renders the approved document; the browser prints it. */
+function print() {
+  globalThis.open(
+    `/api/v1/orders/${encodeURIComponent(props.orderId)}/print`,
+    '_blank',
+    'noopener',
+  );
+}
+
 provide('orderEditing', {
   canEdit,
   command: runCommand,
   editingSection,
+  print,
   save: saveSection,
   /** @param {string} section */
   start(section) {
@@ -202,15 +210,6 @@ async function load(silent = false) {
   }
 }
 
-/** PIM-02: the API renders the approved document; the browser prints it. */
-function print() {
-  globalThis.open(
-    `/api/v1/orders/${encodeURIComponent(props.orderId)}/print`,
-    '_blank',
-    'noopener',
-  );
-}
-
 /** Collapses bursts of live events into one silent refresh. */
 function scheduleLiveRefresh() {
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
@@ -239,7 +238,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page op-page">
     <div v-if="loading" class="loading-state" role="status">
       Carregando pedido…
     </div>
@@ -262,15 +261,21 @@ onBeforeUnmount(() => {
         </span>
       </nav>
 
-      <header class="page-heading order-head">
-        <div>
-          <p class="eyebrow">
-            Pedido {{ order.number }} · FAB {{ order.fabCode }}
+      <header class="op-head">
+        <div class="op-head-text">
+          <div class="op-head-title">
+            <h1 ref="heading" tabindex="-1">Pedido {{ order.number }}</h1>
+            <span class="op-status" :data-status="order.status">
+              <OrderIcon :name="isPending ? 'clock' : 'check'" />
+              {{ orderStatusLabel(order.status) }}
+            </span>
+          </div>
+          <p>
+            {{ customerName }} — {{ orderContext }} ·
+            {{ fabLabel(order.fabCode) }}
           </p>
-          <h1 ref="heading" tabindex="-1">Pedido {{ order.number }}</h1>
-          <p>{{ customerName }} — {{ orderContext }}</p>
         </div>
-        <div class="inline-actions">
+        <div class="op-head-actions">
           <RouterLink
             v-if="fromConversationId"
             class="button-link quiet-link"
@@ -283,36 +288,44 @@ onBeforeUnmount(() => {
             :aria-describedby="isPending ? 'order-print-reason' : undefined"
             @click="print"
           >
-            Imprimir
+            <OrderIcon name="printer" />Imprimir
           </button>
         </div>
       </header>
 
-      <p v-if="isPending" id="order-print-reason" class="footnote">
+      <p v-if="isPending" id="order-print-reason" class="op-print-reason">
         {{ PRINT_LOCKED_REASON }}
       </p>
-      <p v-if="error" role="alert" class="audit-note">{{ error }}</p>
-      <p v-if="!canEdit" class="audit-note">
+      <p v-if="error" role="alert" class="op-alert">{{ error }}</p>
+      <p v-if="!canEdit" class="op-readonly">
+        <OrderIcon name="lock" />
         Somente {{ order.seller?.name || 'o dono da conversa' }} ou um
         administrador edita este pedido.
       </p>
 
-      <div class="surface order-banner" role="status">
-        <p v-if="blockerLabels.length">
-          Falta para confirmar: {{ blockerLabels.join(', ') }}.
-        </p>
-        <p v-if="fichaGapLabels.length">
-          Ainda em branco na ficha: {{ fichaGapLabels.join(', ') }}.
-        </p>
-        <p v-else>Os campos da ficha impressa estão completos.</p>
+      <div class="op-layout">
+        <!-- PFI-01: the order of the printed ficha, top to bottom. -->
+        <div class="op-main">
+          <OrderSummarySection :order="order" />
+          <OrderItemsSection :order="order" />
+          <OrderObservationsSection :order="order" />
+          <OrderInfoStrips :order="order" />
+        </div>
+        <aside class="op-rail" aria-label="Gerar pedido">
+          <OrderClosingSection :order="order" />
+          <p class="op-total">
+            <span class="op-total-label">
+              Total de peças
+              <span class="op-num"
+                >{{ itemCount }} {{ itemCount === 1 ? 'item' : 'itens' }} ·
+                {{ deliveryLabel }}</span
+              >
+            </span>
+            <strong class="op-num">{{ order.totalPieces }}</strong>
+          </p>
+        </aside>
       </div>
-
-      <!-- PFI-01: the order of the printed ficha, top to bottom. -->
-      <OrderSummarySection :order="order" />
-      <OrderItemsSection :order="order" />
-      <OrderObservationsSection :order="order" />
-      <OrderInfoStrips :order="order" />
-      <OrderClosingSection :order="order" />
+      <OrderCatalogLists />
     </template>
   </div>
 </template>

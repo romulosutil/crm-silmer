@@ -76,6 +76,11 @@
     --color-navigation-border-strong: #cfc7ee;
     --color-navigation-active: #f2effc;
     --color-brand-ink: #0c042d;
+    /* A dark block that states one figure, like the ficha's total box. */
+    --color-emphasis-surface: #0c042d;
+    --color-emphasis-text: #f0ecfd;
+    --color-emphasis-muted: #b5aecb;
+    --color-emphasis-figure: #ff8a4c;
   }
 
   html[data-theme='dark'] {
@@ -112,5 +117,9 @@
     --color-navigation-border-strong: #38249a;
     --color-navigation-active: #250c8d;
     --color-brand-ink: #f0ecfd;
+    --color-emphasis-surface: #250c8d;
+    --color-emphasis-text: #f0ecfd;
+    --color-emphasis-muted: #c9c2e6;
+    --color-emphasis-figure: #ff9a62;
   }
 }

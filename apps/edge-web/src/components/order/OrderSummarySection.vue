@@ -1,5 +1,7 @@
 <script setup>
 import { computed, inject, nextTick, ref } from 'vue';
+import { fabLabel } from '../../lib/order-format.js';
+import OrderIcon from './OrderIcon.vue';
 
 const SECTION = 'summary';
 
@@ -66,101 +68,144 @@ async function save() {
 </script>
 
 <template>
-  <section class="surface section-gap" aria-labelledby="order-summary-title">
-    <div class="panel-head">
+  <section
+    class="op-sheet"
+    :data-editing="isEditing || undefined"
+    aria-labelledby="order-summary-title"
+  >
+    <div class="op-sheet-head">
       <h2 id="order-summary-title">Resumo do pedido</h2>
+      <span v-if="isEditing" class="op-editing-tag">Editando</span>
       <button
         v-if="canEdit && !isEditing"
         type="button"
+        class="op-edit"
         :disabled="otherSectionOpen"
         @click="startEditing"
       >
-        Editar
+        <OrderIcon name="pencil" />Editar
       </button>
     </div>
 
-    <p v-if="errorMessage" role="alert" class="audit-note">
+    <p v-if="errorMessage" role="alert" class="op-alert">
       {{ errorMessage }}
     </p>
 
-    <form v-if="isEditing" class="order-form" @submit.prevent="save">
-      <div class="field-list">
-        <label for="summary-cliente">Cliente</label>
-        <input
-          id="summary-cliente"
-          :value="summary.cliente"
-          type="text"
-          disabled
-        />
-        <p class="footnote">Vem da conversa e não muda no pedido.</p>
+    <form v-if="isEditing" class="op-form" @submit.prevent="save">
+      <div class="op-form-grid">
+        <div class="op-field">
+          <label for="summary-cliente">Cliente</label>
+          <div class="op-input-lock">
+            <input
+              id="summary-cliente"
+              :value="summary.cliente"
+              type="text"
+              disabled
+              aria-describedby="summary-cliente-hint"
+            />
+            <OrderIcon name="lock" />
+          </div>
+          <p id="summary-cliente-hint" class="op-hint">
+            Vem da conversa e não muda no pedido.
+          </p>
+        </div>
 
-        <label for="summary-entrega">Entrega confirmada</label>
-        <input
-          id="summary-entrega"
-          ref="firstField"
-          v-model="draft.data_entrega_confirmada"
-          type="date"
-        />
+        <div class="op-field">
+          <label for="summary-entrega">Entrega confirmada</label>
+          <input
+            id="summary-entrega"
+            ref="firstField"
+            v-model="draft.data_entrega_confirmada"
+            type="date"
+            aria-describedby="summary-entrega-hint"
+          />
+          <p id="summary-entrega-hint" class="op-hint">
+            A data combinada com o cliente, não a desejada.
+          </p>
+        </div>
 
-        <label for="summary-aplicacao">Aplicação</label>
-        <input id="summary-aplicacao" v-model="draft.aplicacao" type="text" />
+        <div class="op-field">
+          <label for="summary-aplicacao">Aplicação</label>
+          <input
+            id="summary-aplicacao"
+            v-model="draft.aplicacao"
+            type="text"
+            list="catalog-applications"
+            autocomplete="off"
+          />
+        </div>
 
-        <label for="summary-nome">Evento / Nome</label>
-        <input id="summary-nome" v-model="draft.nome" type="text" />
+        <div class="op-field">
+          <label for="summary-nome">Evento / Nome</label>
+          <input id="summary-nome" v-model="draft.nome" type="text" />
+        </div>
       </div>
-      <div class="inline-actions">
-        <!-- PFI-13: "Confirmar pedido" is the only primary button here. -->
-        <button type="submit" :disabled="saving">
-          {{ saving ? 'Salvando…' : 'Salvar' }}
-        </button>
+
+      <p class="op-locked-note">
+        <OrderIcon name="lock" />
+        Calculados pelo sistema: total de peças ({{ order.totalPieces }}),
+        vendedor, data do pedido e FAB.
+      </p>
+
+      <div class="op-form-actions">
         <button type="button" :disabled="saving" @click="cancel">
           Cancelar
+        </button>
+        <!-- PFI-13: "Gerar pedido" is the only primary button here. -->
+        <button type="submit" class="op-save" :disabled="saving">
+          {{ saving ? 'Salvando…' : 'Salvar resumo' }}
         </button>
       </div>
     </form>
 
-    <dl v-else class="client-facts">
-      <div>
-        <dt>Cliente</dt>
-        <dd>
-          {{ summary.cliente || '—' }}
-          <span class="badge" data-tone="info">vem da conversa</span>
-        </dd>
-      </div>
-      <div>
-        <dt>Entrega confirmada</dt>
-        <dd>{{ dateBR(summary.data_entrega_confirmada) || '—' }}</dd>
-      </div>
-      <div>
-        <dt>Total de peças</dt>
-        <dd>{{ order.totalPieces }}</dd>
-      </div>
-      <div>
-        <dt>Aplicação</dt>
-        <dd>{{ summary.aplicacao || '—' }}</dd>
-      </div>
-      <div>
-        <dt>Evento / Nome</dt>
-        <dd>{{ summary.nome || '—' }}</dd>
-      </div>
-      <div>
-        <dt>Vendedor</dt>
-        <dd>{{ order.seller?.name || 'sem vendedor' }}</dd>
-      </div>
-      <div>
-        <dt>Data do pedido</dt>
-        <dd>{{ dateBR(order.orderDate) || 'definida na confirmação' }}</dd>
-      </div>
-      <div>
-        <dt>FAB</dt>
-        <dd>{{ order.fabCode }}</dd>
-      </div>
-    </dl>
-
-    <p class="footnote">
-      Total de peças é somado a partir da grade dos itens e não é digitado. O
-      número do pedido já existe desde a criação; só a data do pedido é definida
-      na confirmação.
-    </p>
+    <div v-else class="op-sheet-body">
+      <dl class="op-summary-main">
+        <div>
+          <dt>Cliente</dt>
+          <dd>
+            {{ summary.cliente || '—' }}
+            <span class="op-origin-note">vem da conversa</span>
+          </dd>
+        </div>
+        <div>
+          <dt>Entrega confirmada</dt>
+          <dd class="op-num">
+            {{ dateBR(summary.data_entrega_confirmada) || '—' }}
+          </dd>
+        </div>
+        <div>
+          <dt>Total de peças</dt>
+          <dd class="op-num op-pieces">{{ order.totalPieces }}</dd>
+        </div>
+        <div>
+          <dt>Aplicação</dt>
+          <dd>{{ summary.aplicacao || '—' }}</dd>
+        </div>
+      </dl>
+      <dl class="op-summary-meta">
+        <div>
+          <dt>Evento / Nome</dt>
+          <dd>{{ summary.nome || '—' }}</dd>
+        </div>
+        <div>
+          <dt>Vendedor</dt>
+          <dd>{{ order.seller?.name || 'sem vendedor' }}</dd>
+        </div>
+        <div>
+          <dt>Data do pedido</dt>
+          <dd class="op-num" :data-muted="!order.orderDate || undefined">
+            {{ dateBR(order.orderDate) || 'definida ao gerar' }}
+          </dd>
+        </div>
+        <div>
+          <dt>FAB</dt>
+          <dd>{{ fabLabel(order.fabCode) }}</dd>
+        </div>
+      </dl>
+      <p class="op-hint">
+        Total de peças é somado a partir da grade dos itens. O número do pedido
+        já existe desde a criação; a data do pedido é definida ao gerar.
+      </p>
+    </div>
   </section>
 </template>

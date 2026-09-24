@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   amountLabel,
   elapsedSince,
+  fabLabel,
   formatBrl,
   HANDOFF_REASON_LABELS,
   handoffReasonLabel,
@@ -168,5 +169,14 @@ test('measures how long the order has been still (A02)', () => {
 });
 
 test('states why printing is locked while the order is pending (PIM-01)', () => {
-  assert.equal(PRINT_LOCKED_REASON, 'Disponível depois de confirmar o pedido');
+  assert.equal(PRINT_LOCKED_REASON, 'Disponível depois de gerar o pedido');
+});
+
+test('prints the FAB the same way whether the code carries the prefix or not', () => {
+  assert.equal(fabLabel('01'), 'FAB 01');
+  assert.equal(fabLabel('FAB 01'), 'FAB 01');
+  assert.equal(fabLabel('fab 02'), 'FAB 02');
+  assert.equal(fabLabel('FABRICA'), 'FAB FABRICA');
+  assert.equal(fabLabel(''), '—');
+  assert.equal(fabLabel(null), '—');
 });

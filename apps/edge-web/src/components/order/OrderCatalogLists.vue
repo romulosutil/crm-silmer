@@ -11,31 +11,26 @@ import {
 
 // Rendered once per page: every ficha field points at one of these lists by
 // id, so the catalog is suggested without turning free text into a select.
-const COLOR_NAMES = COLORS.map((color) => color.name);
+// The ficha is written in capitals, so the suggestions are too: a picked
+// option reads like the values already on the order.
+/** @param {readonly string[]} values */
+const caps = (values) =>
+  values.map((value) => value.toLocaleUpperCase('pt-BR'));
+const LISTS = Object.freeze([
+  { id: 'catalog-piece-types', values: caps(PIECE_TYPES) },
+  { id: 'catalog-modelings', values: caps(MODELINGS) },
+  { id: 'catalog-fabrics', values: caps(FABRICS) },
+  { id: 'catalog-colors', values: caps(COLORS.map((color) => color.name)) },
+  { id: 'catalog-finishes', values: caps(FINISHES) },
+  { id: 'catalog-applications', values: caps(APPLICATIONS) },
+  { id: 'catalog-sizes', values: caps(SIZES) },
+]);
 </script>
 
 <template>
   <div hidden>
-    <datalist id="catalog-piece-types">
-      <option v-for="value in PIECE_TYPES" :key="value" :value="value" />
-    </datalist>
-    <datalist id="catalog-modelings">
-      <option v-for="value in MODELINGS" :key="value" :value="value" />
-    </datalist>
-    <datalist id="catalog-fabrics">
-      <option v-for="value in FABRICS" :key="value" :value="value" />
-    </datalist>
-    <datalist id="catalog-colors">
-      <option v-for="value in COLOR_NAMES" :key="value" :value="value" />
-    </datalist>
-    <datalist id="catalog-finishes">
-      <option v-for="value in FINISHES" :key="value" :value="value" />
-    </datalist>
-    <datalist id="catalog-applications">
-      <option v-for="value in APPLICATIONS" :key="value" :value="value" />
-    </datalist>
-    <datalist id="catalog-sizes">
-      <option v-for="value in SIZES" :key="value" :value="value" />
+    <datalist v-for="list in LISTS" :id="list.id" :key="list.id">
+      <option v-for="value in list.values" :key="value" :value="value" />
     </datalist>
   </div>
 </template>

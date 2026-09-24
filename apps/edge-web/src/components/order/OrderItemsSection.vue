@@ -8,8 +8,15 @@ import {
   productOptions,
   readField,
   resolveProduct,
+  scaleById,
+  scalesFor,
 } from '../../lib/order-catalog.js';
-import { draftItem, emptyItem, itemPayload } from '../../lib/order-items.js';
+import {
+  draftItem,
+  emptyItem,
+  gradeForScale,
+  itemPayload,
+} from '../../lib/order-items.js';
 import OrderCombobox from './OrderCombobox.vue';
 import OrderIcon from './OrderIcon.vue';
 import OrderSpecField from './OrderSpecField.vue';
@@ -78,6 +85,46 @@ function productOf(item) {
 /** FIT-02/FIT-03 @param {Record<string, any>} item */
 function fieldsOf(item) {
   return itemFields(productOf(item));
+}
+
+/** FGR-01 @param {Record<string, any>} item */
+function scaleOptions(item) {
+  return scalesFor(productOf(item));
+}
+
+/**
+ * FGR-02/FGR-05: the scale is stored on the item and its sizes join the grade.
+ * One handler does both, so the grade never reads a stale scale.
+ *
+ * @param {Record<string, any>} item @param {string} id
+ */
+function setScale(item, id) {
+  item.escala = id;
+  const scale = scaleById(id);
+  if (scale && !scale.freeText) item.grade = gradeForScale(item.grade, scale);
+}
+
+/**
+ * The sizes the grade suggests: the chosen scale, or every scale the product
+ * offers; a "Medida" scale is typed freely (FGR-03, FGR-04).
+ *
+ * @param {Record<string, any>} item
+ */
+function sizeGroups(item) {
+  const chosen = scaleById(item.escala);
+  const scales = chosen ? [chosen] : scaleOptions(item);
+  return scales
+    .filter((scale) => !scale.freeText)
+    .map((scale) => ({
+      label: scale.label,
+      options: scale.sizes.map((size) => ({ value: size, label: size })),
+    }));
+}
+
+/** @param {Record<string, any>} item */
+function gradeTitle(item) {
+  const scale = scaleById(String(item.escala ?? ''));
+  return scale && scale.id !== 'adulto' ? `Grade · ${scale.label}` : 'Grade';
 }
 
 /**
@@ -329,6 +376,21 @@ async function save() {
           <div class="op-grade-editor">
             <div class="op-grade-editor-head">
               <span class="op-label">Grade</span>
+              <select
+                :value="item.escala"
+                class="op-grade-scale"
+                :aria-label="`Escala da grade do item ${itemIndex + 1}`"
+                @change="setScale(item, $event.target.value)"
+              >
+                <option value="">Escala…</option>
+                <option
+                  v-for="scale in scaleOptions(item)"
+                  :key="scale.id"
+                  :value="scale.id"
+                >
+                  {{ scale.label }}
+                </option>
+              </select>
               <span class="op-num"
                 >Total do item <strong>{{ pieces(item) }} peças</strong></span
               >
@@ -346,23 +408,20 @@ async function save() {
                     undefined
                   "
                 >
-                  <input
+                  <OrderCombobox
+                    :id="`item-${itemIndex}-tamanho-${lineIndex}`"
                     v-model="line.tamanho"
                     class="op-grade-size"
-                    type="text"
-                    list="catalog-sizes"
-                    autocomplete="off"
-                    autocapitalize="characters"
+                    :groups="sizeGroups(item)"
                     :aria-label="`Tamanho da linha ${lineIndex + 1}`"
-                    :aria-invalid="
-                      (Boolean(lineErrors[`${itemIndex}:${lineIndex}`]) &&
-                        String(line.tamanho).trim() === '') ||
-                      undefined
+                    :invalid="
+                      Boolean(lineErrors[`${itemIndex}:${lineIndex}`]) &&
+                      String(line.tamanho).trim() === ''
                     "
                     :aria-describedby="
                       lineErrors[`${itemIndex}:${lineIndex}`]
                         ? `grade-error-${itemIndex}-${lineIndex}`
-                        : undefined
+                        : ''
                     "
                   />
                   <button
@@ -511,7 +570,7 @@ async function save() {
             </div>
           </dl>
           <div class="op-grade">
-            <h4 class="op-label">Grade</h4>
+            <h4 class="op-label">{{ gradeTitle(item) }}</h4>
             <ul v-if="item.grade.length" class="op-grade-tiles">
               <li v-for="(line, lineIndex) in item.grade" :key="lineIndex">
                 <span>{{ line.tamanho }}</span

@@ -1,6 +1,11 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
+import {
+  resolveProduct,
+  scalesFor,
+} from '../../modules/orders/src/catalog/index.js';
+
 const session = {
   user: {
     capabilities: [],
@@ -1305,4 +1310,59 @@ test('reads an item with only the fields its product has (FIT-11)', async ({
   await expect(card).toContainText('ELÁSTICO');
   await expect(card).not.toContainText('NÃO APLICÁVEL');
   await expect(card).not.toContainText('Cor manga direita');
+});
+
+test('fills the grade with the sizes of the chosen scale (FGR-02, FGR-05)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items
+    .getByRole('combobox', { name: 'Escala da grade do item 1' })
+    .selectOption('infantil');
+  await expect(items.getByLabel('Quantidade do tamanho PP')).toBeVisible();
+  await items.getByLabel('Quantidade do tamanho PP').fill('5');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  const [saved] = writes[0].body.value;
+  expect(saved.escala).toBe('infantil');
+  expect(saved.grade).toEqual([
+    { quantidade: 100, tamanho: 'M' },
+    { quantidade: 50, tamanho: 'G' },
+    { quantidade: 5, tamanho: 'PP' },
+  ]);
+});
+
+test('offers only the scales of the product (FGR-01)', async ({ page }) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  const scale = items.getByRole('combobox', {
+    name: 'Escala da grade do item 1',
+  });
+  const camiseta = scalesFor(resolveProduct('CAMISETA')).length;
+  await expect(scale.locator('option')).toHaveCount(camiseta + 1);
+
+  await chooseTipo(items, 'CAMISA DE TIME');
+  await expect(scale.locator('option')).toHaveCount(scalesFor(null).length + 1);
+});
+
+test('names the scale above the grade when it is not the adult one', async ({
+  page,
+}) => {
+  const infantil = JSON.parse(JSON.stringify(pendingOrder));
+  infantil.ficha.items[0].escala = 'infantil';
+  await mockOrders(page, { orders: [confirmedOrder, infantil] });
+  await page.goto('/pedidos/order-pendente');
+
+  await expect(
+    page.getByRole('region', { name: 'Itens e especificações' }),
+  ).toContainText('Grade · Infantil');
 });

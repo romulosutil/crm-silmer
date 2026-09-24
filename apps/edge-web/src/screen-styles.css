@@ -2075,6 +2075,15 @@ button.op-save:hover:not(:disabled) {
   gap: 0.5rem;
 }
 
+.op-grade-scale {
+  margin-inline-start: auto;
+  font-size: var(--text-sm);
+}
+
+.op-combo.op-grade-size {
+  min-inline-size: 5rem;
+}
+
 .op-input-swatch .op-swatch {
   z-index: 1;
   pointer-events: none;

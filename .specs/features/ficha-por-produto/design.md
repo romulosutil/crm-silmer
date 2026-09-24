@@ -147,8 +147,9 @@ export default {
   arquivo gerado.
 - `swatch` das cores vem de uma tabela fixa no script (a planilha não tem cor
   em hex); cor sem amostra conhecida sai sem `swatch`.
-- Schema: `schemas/catalog/order-catalog.schema.json`, validado em teste
-  (CAT-06).
+- Checagem estrutural: `catalog/validate.js` → `assertOrderCatalog(catalog)`,
+  usada pelo script antes de gravar e pelo teste de contrato (CAT-06). O repo
+  não tem validador de JSON Schema e esta feature não adiciona um.
 
 ### Resolvedor — `modules/orders/src/catalog/index.js`
 
@@ -176,10 +177,11 @@ Funções puras, sem I/O e sem dependências fora da pasta:
    Nenhuma dependência nova entra no `package.json` (política de supply chain).
 2. Localiza as abas pelo prefixo numérico (`02 `, `03 `, `04 `…), não pelo
    nome inteiro, para tolerar renomeação do título.
-3. Filtra `Decisão = Manter`. Converte "Vale para" em ids de produto
+3. Filtra `Decisão = Manter` (ou `Adicionar` com Opção preenchida). Converte "Vale para" em ids de produto
    (lista separada por vírgula; vazio ou "Todos…" = todos; "Nenhum…" = opção
-   fora do arquivo; aba 14 ignora a coluna). Produto desconhecido → erro
-   (CAT-02).
+   fora do arquivo; aba 14 ignora a coluna). Produto que existe na aba 02 mas
+   não foi mantido é ignorado; se a opção ficar sem produto, sai do arquivo.
+   Produto desconhecido → erro (CAT-02).
 4. Lê a aba 03: cabeçalho → `campo.id` pelo rótulo (tabela fixa no script);
    `Sim` → `required`, `Opcional` → `optional`, `Não` → ausente. A coluna
    "Nomes diferentes" é lida pelo padrão `<rótulo do campo> → "<novo rótulo>"`;
@@ -255,16 +257,16 @@ Erros sempre citam aba, linha e valor. Nada é gravado se houver erro.
 
 ## Frontend (`apps/edge-web/src`)
 
-| Arquivo                                    | Mudança                                                                                                                                                  |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lib/order-catalog.js`                     | Deixa de ter listas fixas. Reexporta o resolvedor de `modules/orders/src/catalog/` e mantém `colorSwatch` (agora pelos `swatch` do catálogo).            |
-| `components/order/OrderCombobox.vue`       | Novo. Padrão ARIA 1.2 combobox: `input role=combobox`, `listbox` com grupos, setas/Enter/Esc, texto livre, amostra de cor opcional.                      |
-| `components/order/OrderSpecField.vue`      | Novo. Renderiza um campo por `kind`: `text` → combobox; `multi` → lista de comboboxes com adicionar/remover; `composite` → acabamento + cor.             |
-| `components/order/OrderGradeEditor.vue`    | Novo, extraído de `OrderItemsSection`. Seletor de escala, preenchimento dos tamanhos, `freeText` para Medida.                                            |
-| `components/order/OrderItemsSection.vue`   | Tipo primeiro; campos vindos de `itemFields(resolveProduct(tipo))`; aviso "Produto fora do catálogo"; Outras especificações; leitura por `describeItem`. |
-| `components/order/OrderSummarySection.vue` | Aplicação usa `OrderCombobox` com `applications`.                                                                                                        |
-| `components/order/OrderCatalogLists.vue`   | Removido (datalists substituídos pelo combobox).                                                                                                         |
-| `lib/order-format.js`                      | `missingFieldLabel` resolve `items[i].specs.*` pelo rótulo do campo no catálogo.                                                                         |
+| Arquivo                                    | Mudança                                                                                                                                                                                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lib/order-catalog.js`                     | Deixa de ter listas fixas. Reexporta o resolvedor de `modules/orders/src/catalog/` e mantém `colorSwatch` (agora pelos `swatch` do catálogo).                                                                                                                            |
+| `components/order/OrderCombobox.vue`       | Novo. Padrão ARIA 1.2 combobox: `input role=combobox`, `listbox` com grupos, setas/Enter/Esc, texto livre, amostra de cor opcional.                                                                                                                                      |
+| `components/order/OrderSpecField.vue`      | Novo. Um campo por `kind`: `text` → combobox; `multi` → lista de comboboxes com adicionar/remover; `composite` → acabamento + cor. Recebe `modelValue` e emite `update:modelValue` (a regra `vue/no-mutating-props` do lint proíbe mutar o item recebido).               |
+| `components/order/OrderItemsSection.vue`   | Tipo primeiro; campos vindos de `itemFields(resolveProduct(tipo))`; aviso "Produto fora do catálogo"; Outras especificações; seletor de escala e tamanhos por combobox na grade (a grade continua neste componente, que é dono do rascunho); leitura por `describeItem`. |
+| `components/order/OrderSummarySection.vue` | Aplicação usa `OrderCombobox` com `applications`.                                                                                                                                                                                                                        |
+| `components/order/OrderCatalogLists.vue`   | Removido (datalists substituídos pelo combobox).                                                                                                                                                                                                                         |
+| `lib/order-items.js`                       | Novo. Funções puras do rascunho: `draftItem`, `emptyItem`, `itemPayload` (FIT-04, FGR-02), `splitComposite`/`joinComposite` (F12), `gradeForScale` (FGR-02).                                                                                                             |
+| `lib/order-format.js`                      | `missingFieldLabel` resolve `items[i].specs.*` pelo rótulo do campo no catálogo.                                                                                                                                                                                         |
 
 - O frontend importa `modules/orders/src/catalog/` por caminho relativo. É a
   única exceção permitida: `scripts/check-boundaries.mjs` passa a verificar que

@@ -29,11 +29,12 @@ cada peça.
 ### Catálogo
 
 - **F01** O catálogo aprovado é a planilha v2. Só entra no sistema a linha com
-  Decisão = **Manter** (inclui as sugestões que a Silmer marcar Manter). Linhas
+  Decisão = **Manter** (inclui as sugestões que a Silmer marcar Manter) ou
+  **Adicionar** com a Opção preenchida (linha nova escrita pela própria revisora). Linhas
   "Confirmar depois", vazias, "Remover" e a aba 90 ficam de fora.
 - **F02** A fonte única no repositório é um arquivo de dados gerado a partir
   do xlsx por um script (módulo ESM com um objeto literal), versionado em git e
-  validado por JSON Schema. O sistema **não** lê o
+  conferido por uma checagem estrutural (`assertOrderCatalog`). O sistema **não** lê o
   Google Sheets em tempo de execução.
 - **F03** O módulo `modules/catalog` não é reaproveitado: pertence ao runtime
   comercial de Negócio (ADR 004) e guarda só produto, modelo, material e

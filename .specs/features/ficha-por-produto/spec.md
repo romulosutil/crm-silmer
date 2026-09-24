@@ -50,10 +50,12 @@ planilha aprovada, para que a ficha use exatamente o que a Silmer aprovou.
 **Aceite:**
 
 1. **CAT-01** WHEN o script de importação roda sobre a planilha THEN o
-   catálogo gerado SHALL conter só linhas com Decisão = "Manter" das abas 02 e
+   catálogo gerado SHALL conter só linhas com Decisão = "Manter" (ou "Adicionar"
+   com a Opção preenchida) das abas 02 e
    04–16, e as regras da aba 03 só para produtos mantidos.
 2. **CAT-02** WHEN uma regra da aba 03 não é Sim, Opcional ou Não, um produto
-   de "Vale para" não existe na aba 02, ou o cabeçalho da aba 03 não
+   de "Vale para" não existe na aba 02 (produto que existe mas não foi mantido
+   é ignorado), ou o cabeçalho da aba 03 não
    corresponde a um campo conhecido THEN o script SHALL falhar citando aba,
    linha e valor, sem gravar o catálogo.
 3. **CAT-03** WHEN o script roda duas vezes sobre o mesmo arquivo THEN o
@@ -64,8 +66,9 @@ planilha aprovada, para que a ficha use exatamente o que a Silmer aprovou.
    coluna é ignorada: a escala liga ao produto pela aba 02.
 5. **CAT-05** WHEN "Impresso na ficha como" está vazio THEN o valor gravado
    SHALL ser a Opção em maiúsculas.
-6. **CAT-06** O catálogo gerado SHALL validar contra o JSON Schema versionado
-   no repositório, e o teste de contrato SHALL rodar em `npm test`.
+6. **CAT-06** O catálogo gerado SHALL passar pela checagem estrutural
+   `assertOrderCatalog` antes de ser gravado, e o teste de contrato SHALL rodar
+   a mesma checagem sobre o arquivo versionado em `npm test`.
 
 **Teste independente:** rodar o script sobre a planilha v2 e ver o arquivo gerado com
 os 14 produtos mantidos e as 85 opções "Manter" das abas 04–16 (mais as

@@ -114,19 +114,17 @@ git push --force-with-lease
 Não incorpore `master` com `git merge` em uma branch de PR. O CI rejeita
 commits de merge na faixa exclusiva da PR, pois o repositório exige histórico
 linear e aceita apenas integração por rebase. Resolva conflitos funcionais por
-composição. Se um commit conflitante contiver somente artefatos gerados em
-`graphify-out/`, descarte esse snapshot intermediário e execute
-`graphify update .` novamente depois de concluir o rebase; nunca resolva o
-grafo gerado manualmente.
+composição.
 
 ## Commits e publicação
 
 - Um commit representa uma tarefa ou uma mudança mecânica claramente isolada.
 - Use Conventional Commits, por exemplo `docs: add contributor and agent base`.
 - Registre no handoff os checks executados e qualquer risco residual.
-- Faça push do commit concluído e execute `graphify update .`.
-- Se a atualização modificar artefatos rastreados, publique um commit
-  `chore(graph)` separado e confirme que o worktree ficou limpo.
+- Faça push do commit concluído e confirme que o worktree ficou limpo.
+- `graphify-out/` não é versionado: só o Hermes, no worker Ubuntu, gera o grafo
+  (a cada push e toda noite) e ele volta pelo Syncthing. Não rode
+  `graphify update` nem commite o grafo.
 
 O Definition of Done completo permanece em
 `.specs/features/crm-mvp/tasks.md`; este guia não o substitui.

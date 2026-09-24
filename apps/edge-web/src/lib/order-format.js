@@ -1,3 +1,5 @@
+import { FIELDS } from './order-catalog.js';
+
 /**
  * Reading and writing an order in the browser (ADR 006). The amount rules
  * mirror `modules/orders/src/domain/money.js` on purpose: edge-web ships no
@@ -64,7 +66,7 @@ const ITEM_LABELS = Object.freeze({
   cor_manga_esquerda: 'cor da manga esquerda',
   grade: 'grade',
   malhas: 'malhas',
-  modelo: 'modelo',
+  modelo: 'modelagem',
   tipo: 'tipo',
   vies_gola: 'viés da gola',
   vies_mangas: 'viés das mangas',
@@ -157,11 +159,14 @@ function missingFieldLabel(field) {
       field
     );
   }
-  const item = /^items\[(\d+)\]\.(\w+)$/u.exec(field);
+  const item = /^items\[(\d+)\]\.([\w.]+)$/u.exec(field);
   if (item) {
-    const label =
-      ITEM_LABELS[/** @type {keyof typeof ITEM_LABELS} */ (item[2])] ?? item[2];
-    return `item ${Number(item[1]) + 1}: ${label}`;
+    const known =
+      ITEM_LABELS[/** @type {keyof typeof ITEM_LABELS} */ (item[2])] ??
+      FIELDS.find((entry) => entry.path === item[2])?.label.toLocaleLowerCase(
+        'pt-BR',
+      );
+    return `item ${Number(item[1]) + 1}: ${known ?? item[2]}`;
   }
   return field;
 }

@@ -8,6 +8,24 @@
  * this file is the one place to update.
  */
 
+// ADR 007: the screen reads the same catalog resolver as the server. The old
+// fixed lists below stay only until the datalists go away (T13).
+export {
+  FIELDS,
+  NOT_APPLICABLE,
+  ORDER_CATALOG,
+  applicationOptions,
+  describeItem,
+  fieldOptions,
+  foldText,
+  itemFields,
+  productOptions,
+  readField,
+  resolveProduct,
+  scaleById,
+  scalesFor,
+} from '../../../../modules/orders/src/catalog/index.js';
+
 export const PIECE_TYPES = Object.freeze([
   'Camiseta',
   'Camisa casual',

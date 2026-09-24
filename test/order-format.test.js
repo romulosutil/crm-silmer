@@ -123,7 +123,7 @@ test('turns missingFields into what the banner lists (PFI-09)', () => {
     ],
   );
   assert.deepEqual(missingFieldLabels(['items[0].modelo', 'items[1].grade']), [
-    'item 1: modelo',
+    'item 1: modelagem',
     'item 2: grade',
   ]);
   assert.deepEqual(missingFieldLabels(['items[0].cor_manga_direita']), [
@@ -152,7 +152,7 @@ test('summarises what is missing for the Situação column (PLI-05)', () => {
     missingHeadline(['paymentCondition']),
     'Falta a condição de pagamento',
   );
-  assert.equal(missingHeadline(['items[0].modelo']), 'Falta item 1: modelo');
+  assert.equal(missingHeadline(['items[0].modelo']), 'Falta item 1: modelagem');
   assert.equal(missingHeadline(null), 'Pronto para confirmar');
 });
 
@@ -179,4 +179,11 @@ test('prints the FAB the same way whether the code carries the prefix or not', (
   assert.equal(fabLabel('FABRICA'), 'FAB FABRICA');
   assert.equal(fabLabel(''), '—');
   assert.equal(fabLabel(null), '—');
+});
+
+test('names catalog fields of an item in the banner (FMI-01)', () => {
+  assert.deepEqual(
+    missingFieldLabels(['items[0].specs.cos', 'items[1].modelo']),
+    ['item 1: cós/cintura', 'item 2: modelagem'],
+  );
 });

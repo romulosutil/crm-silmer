@@ -124,6 +124,39 @@ watch(
   },
 );
 
+// A condition picked after the warning clears the warning.
+watch(paymentCondition, (value) => {
+  if (value === '' || !fieldErrors.value.paymentCondition) return;
+  const { paymentCondition: _cleared, ...rest } = fieldErrors.value;
+  fieldErrors.value = rest;
+});
+
+/**
+ * On leaving the field, a plain number ("4820", "4820,5") is written the way
+ * the rule reads it ("4.820,00"); anything else is left as typed and, when it
+ * still is not an amount, the message shows now instead of on "Gerar".
+ */
+function settleAmount() {
+  const text = amountText.value.trim();
+  const plain = /^(\d+)(?:,(\d{1,2}))?$/u.exec(text);
+  if (plain) {
+    const cents =
+      Number(plain[1]) * 100 + Number((plain[2] ?? '').padEnd(2, '0'));
+    if (Number.isSafeInteger(cents) && cents > 0) {
+      amountText.value = formatBrl(cents);
+    }
+  }
+  if (amountText.value.trim() !== '' && !amountValid.value) {
+    fieldErrors.value = {
+      ...fieldErrors.value,
+      finalAmount: AMOUNT_FORMAT_MESSAGE,
+    };
+    return;
+  }
+  const { finalAmount: _cleared, ...rest } = fieldErrors.value;
+  fieldErrors.value = rest;
+}
+
 /**
  * PFI-11: a malformed amount is caught here so the message lands under the
  * field; the server parses the same text again and would answer 422.
@@ -260,6 +293,8 @@ const blockerNotes = computed(() =>
                 inputmode="decimal"
                 autocomplete="off"
                 placeholder="0,00"
+                enterkeyhint="done"
+                @blur="settleAmount"
                 :aria-invalid="Boolean(fieldErrors.finalAmount) || undefined"
                 :aria-describedby="
                   fieldErrors.finalAmount

@@ -126,18 +126,27 @@ async function save() {
 
         <div class="op-field">
           <label for="summary-aplicacao">Aplicação</label>
-          <input
-            id="summary-aplicacao"
-            v-model="draft.aplicacao"
-            type="text"
-            list="catalog-applications"
-            autocomplete="off"
-          />
+          <div class="op-combo">
+            <input
+              id="summary-aplicacao"
+              v-model="draft.aplicacao"
+              type="text"
+              list="catalog-applications"
+              autocomplete="off"
+              autocapitalize="characters"
+            />
+            <OrderIcon name="chevron" />
+          </div>
         </div>
 
         <div class="op-field">
           <label for="summary-nome">Evento / Nome</label>
-          <input id="summary-nome" v-model="draft.nome" type="text" />
+          <input
+            id="summary-nome"
+            v-model="draft.nome"
+            type="text"
+            autocomplete="off"
+          />
         </div>
       </div>
 

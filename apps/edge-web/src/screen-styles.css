@@ -1802,6 +1802,81 @@ button.op-edit:disabled {
   border-color: var(--color-text-muted);
 }
 
+/*
+ * One focus treatment for every field: the border turns to the focus colour
+ * and a soft ring grows outside it, so the ring never lands on the label the
+ * way the global 2px outline did.
+ */
+.op-form input:is([type='text'], [type='date'], [type='number']):focus-visible,
+.op-closing-form input[type='text']:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 0;
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 24%, transparent);
+}
+
+.op-form input[aria-invalid='true']:focus-visible,
+.op-closing-form input[aria-invalid='true']:focus-visible {
+  border-color: var(--status-error-text);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--status-error-text) 20%, transparent);
+}
+
+/*
+ * Catalog fields: the browser's own datalist arrow only shows on hover or
+ * focus and looks different everywhere. It stays clickable (it opens the
+ * whole list) but invisible, over one steady chevron of the icon family.
+ */
+.op-combo {
+  position: relative;
+  min-inline-size: 0;
+}
+
+.op-combo > input {
+  inline-size: 100%;
+  padding-inline-end: 2.4rem;
+}
+
+.op-combo > input::-webkit-calendar-picker-indicator {
+  inline-size: 2rem;
+  margin-inline-end: -0.5rem;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.op-combo > .op-icon {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 0.8rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: color var(--duration-fast) var(--easing-standard);
+}
+
+.op-combo:focus-within > .op-icon {
+  color: var(--color-focus);
+}
+
+.op-combo:has(input:disabled) > .op-icon {
+  display: none;
+}
+
+.op-form input.op-grade-qty {
+  appearance: textfield;
+}
+
+/* Too narrow for an arrow: sizes open their list by typing or ↓. */
+.op-form input.op-grade-size::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.op-form input.op-grade-qty::-webkit-inner-spin-button,
+.op-form input.op-grade-qty::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
 .op-form input:disabled {
   color: var(--color-text-muted);
   background: var(--color-surface-raised);
@@ -1906,7 +1981,8 @@ button.op-save:hover:not(:disabled) {
 .op-check {
   display: inline-flex;
   justify-self: start;
-  min-block-size: 28px;
+  min-block-size: 32px;
+  padding-inline-end: 0.35rem;
   align-items: center;
   gap: 0.4rem;
   color: var(--color-text-muted);
@@ -1929,7 +2005,8 @@ button.op-save:hover:not(:disabled) {
   gap: 0.5rem;
 }
 
-.op-input-row input {
+.op-input-row > input,
+.op-input-row > .op-combo {
   flex: 1 1 auto;
   min-inline-size: 0;
 }
@@ -2186,6 +2263,7 @@ button.op-add-item {
 
 .op-grade-editor {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.6rem;
   margin: 0 1.1rem 1.1rem;
   padding: 0.9rem;
@@ -2212,9 +2290,22 @@ button.op-add-item {
   gap: 0.5rem;
 }
 
+.op-grade-cell {
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  max-inline-size: 100%;
+}
+
+.op-grade-cell > .op-field-error {
+  max-inline-size: 15rem;
+  padding-inline: 0.3rem;
+  font-size: var(--text-xs);
+}
+
 .op-grade-line {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.3rem;
   padding: 0.3rem;
@@ -2235,10 +2326,8 @@ button.op-add-item {
   text-align: center;
 }
 
-.op-grade-line .op-field-error {
-  flex-basis: 100%;
-  padding-inline: 0.3rem;
-  font-size: var(--text-xs);
+.op-grade-line[data-invalid] {
+  border-color: var(--status-error-text);
 }
 
 @media (width < 48rem) {
@@ -2722,7 +2811,67 @@ button.op-generate {
   gap: 0.6rem;
 }
 
+/* Fingers need 44px: phones and tablets get the full target. */
+@media (pointer: coarse) {
+  .op-form input[type='text'],
+  .op-form input[type='date'],
+  .op-form input[type='number'],
+  .op-closing-form input[type='text'] {
+    min-block-size: 48px;
+    font-size: var(--text-base);
+  }
+
+  button.op-icon-button {
+    inline-size: 44px;
+    min-block-size: 44px;
+    block-size: 44px;
+  }
+
+  .op-check,
+  button.op-add-inline {
+    min-block-size: 44px;
+  }
+
+  .op-condition span {
+    min-block-size: 44px;
+  }
+}
+
+@media (width < 48rem) {
+  .op-grade-lines {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .op-grade-cell {
+    min-inline-size: 0;
+  }
+
+  .op-grade-line {
+    inline-size: 100%;
+    box-sizing: border-box;
+  }
+
+  .op-grade-line {
+    gap: 0.2rem;
+  }
+
+  .op-form input.op-grade-size {
+    flex: 0 0 2.9rem;
+    inline-size: 2.9rem;
+    padding-inline: 0.2rem;
+  }
+
+  .op-form input.op-grade-qty {
+    flex: 1 1 0;
+    inline-size: 0;
+    min-inline-size: 3rem;
+    padding-inline: 0.2rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .op-combo > .op-icon,
   .op-sheet,
   .op-disclosure .op-icon,
   .op-condition span {

@@ -307,23 +307,31 @@ async function save() {
             <div class="op-item-names">
               <div class="op-field">
                 <label :for="`item-${itemIndex}-tipo`">Tipo</label>
-                <input
-                  :id="`item-${itemIndex}-tipo`"
-                  v-model="item.tipo"
-                  type="text"
-                  list="catalog-piece-types"
-                  autocomplete="off"
-                />
+                <div class="op-combo">
+                  <input
+                    :id="`item-${itemIndex}-tipo`"
+                    v-model="item.tipo"
+                    type="text"
+                    list="catalog-piece-types"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                  />
+                  <OrderIcon name="chevron" />
+                </div>
               </div>
               <div class="op-field">
                 <label :for="`item-${itemIndex}-modelo`">Modelo</label>
-                <input
-                  :id="`item-${itemIndex}-modelo`"
-                  v-model="item.modelo"
-                  type="text"
-                  list="catalog-modelings"
-                  autocomplete="off"
-                />
+                <div class="op-combo">
+                  <input
+                    :id="`item-${itemIndex}-modelo`"
+                    v-model="item.modelo"
+                    type="text"
+                    list="catalog-modelings"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                  />
+                  <OrderIcon name="chevron" />
+                </div>
               </div>
             </div>
             <button
@@ -347,13 +355,17 @@ async function save() {
                 :key="malhaIndex"
                 class="op-input-row"
               >
-                <input
-                  v-model="item.malhas[malhaIndex]"
-                  type="text"
-                  list="catalog-fabrics"
-                  autocomplete="off"
-                  :aria-label="`Malha ${malhaIndex + 1}`"
-                />
+                <div class="op-combo">
+                  <input
+                    v-model="item.malhas[malhaIndex]"
+                    type="text"
+                    list="catalog-fabrics"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    :aria-label="`Malha ${malhaIndex + 1}`"
+                  />
+                  <OrderIcon name="chevron" />
+                </div>
                 <button
                   v-if="item.malhas.length > 1"
                   type="button"
@@ -379,7 +391,7 @@ async function save() {
               <label :for="`item-${itemIndex}-${field.key}`">{{
                 field.label
               }}</label>
-              <div class="op-input-swatch">
+              <div class="op-input-swatch op-combo">
                 <span
                   v-if="swatchOf(item[field.key])"
                   class="op-swatch"
@@ -392,7 +404,9 @@ async function save() {
                   type="text"
                   :list="field.list"
                   autocomplete="off"
+                  autocapitalize="characters"
                 />
+                <OrderIcon name="chevron" />
               </div>
             </div>
 
@@ -404,7 +418,7 @@ async function save() {
               <label :for="`item-${itemIndex}-${field.key}`">{{
                 field.label
               }}</label>
-              <div class="op-input-swatch">
+              <div class="op-input-swatch op-combo">
                 <span
                   v-if="swatchOf(item[field.key])"
                   class="op-swatch"
@@ -421,9 +435,11 @@ async function save() {
                   type="text"
                   :list="field.list"
                   autocomplete="off"
+                  autocapitalize="characters"
                   :disabled="isNotApplicable(item, field.key)"
                   @input="item[field.key] = $event.target.value"
                 />
+                <OrderIcon name="chevron" />
               </div>
               <label class="op-check">
                 <input
@@ -450,66 +466,91 @@ async function save() {
               <div
                 v-for="(line, lineIndex) in item.grade"
                 :key="lineIndex"
-                class="op-grade-line"
+                class="op-grade-cell"
               >
-                <input
-                  v-model="line.tamanho"
-                  class="op-grade-size"
-                  type="text"
-                  list="catalog-sizes"
-                  autocomplete="off"
-                  :aria-label="`Tamanho da linha ${lineIndex + 1}`"
-                />
-                <button
-                  type="button"
-                  class="op-icon-button"
-                  @click="step(line, -1)"
-                >
-                  <OrderIcon name="minus" />
-                  <span class="op-visually-hidden">{{
-                    `Uma peça a menos na linha ${lineIndex + 1}`
-                  }}</span>
-                </button>
-                <input
-                  v-model="line.quantidade"
-                  class="op-grade-qty op-num"
-                  type="number"
-                  min="1"
-                  step="1"
-                  inputmode="numeric"
-                  :aria-invalid="
+                <div
+                  class="op-grade-line"
+                  :data-invalid="
                     Boolean(lineErrors[`${itemIndex}:${lineIndex}`]) ||
                     undefined
                   "
-                  :aria-label="
-                    line.tamanho
-                      ? `Quantidade do tamanho ${line.tamanho}`
-                      : `Quantidade da linha ${lineIndex + 1}`
-                  "
-                />
-                <button
-                  type="button"
-                  class="op-icon-button"
-                  @click="step(line, 1)"
                 >
-                  <OrderIcon name="plus" />
-                  <span class="op-visually-hidden">{{
-                    `Uma peça a mais na linha ${lineIndex + 1}`
-                  }}</span>
-                </button>
-                <button
-                  v-if="item.grade.length > 1"
-                  type="button"
-                  class="op-icon-button op-icon-button--quiet"
-                  @click="removeGradeLine(item, lineIndex)"
-                >
-                  <OrderIcon name="x" />
-                  <span class="op-visually-hidden">{{
-                    `Remover linha ${lineIndex + 1}`
-                  }}</span>
-                </button>
+                  <input
+                    v-model="line.tamanho"
+                    class="op-grade-size"
+                    type="text"
+                    list="catalog-sizes"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    :aria-label="`Tamanho da linha ${lineIndex + 1}`"
+                    :aria-invalid="
+                      (Boolean(lineErrors[`${itemIndex}:${lineIndex}`]) &&
+                        String(line.tamanho).trim() === '') ||
+                      undefined
+                    "
+                    :aria-describedby="
+                      lineErrors[`${itemIndex}:${lineIndex}`]
+                        ? `grade-error-${itemIndex}-${lineIndex}`
+                        : undefined
+                    "
+                  />
+                  <button
+                    type="button"
+                    class="op-icon-button"
+                    @click="step(line, -1)"
+                  >
+                    <OrderIcon name="minus" />
+                    <span class="op-visually-hidden">{{
+                      `Uma peça a menos na linha ${lineIndex + 1}`
+                    }}</span>
+                  </button>
+                  <input
+                    v-model="line.quantidade"
+                    class="op-grade-qty op-num"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputmode="numeric"
+                    :aria-invalid="
+                      Boolean(lineErrors[`${itemIndex}:${lineIndex}`]) ||
+                      undefined
+                    "
+                    :aria-describedby="
+                      lineErrors[`${itemIndex}:${lineIndex}`]
+                        ? `grade-error-${itemIndex}-${lineIndex}`
+                        : undefined
+                    "
+                    :aria-label="
+                      line.tamanho
+                        ? `Quantidade do tamanho ${line.tamanho}`
+                        : `Quantidade da linha ${lineIndex + 1}`
+                    "
+                  />
+                  <button
+                    type="button"
+                    class="op-icon-button"
+                    @click="step(line, 1)"
+                  >
+                    <OrderIcon name="plus" />
+                    <span class="op-visually-hidden">{{
+                      `Uma peça a mais na linha ${lineIndex + 1}`
+                    }}</span>
+                  </button>
+                  <button
+                    v-if="item.grade.length > 1"
+                    type="button"
+                    class="op-icon-button op-icon-button--quiet"
+                    @click="removeGradeLine(item, lineIndex)"
+                  >
+                    <OrderIcon name="x" />
+                    <span class="op-visually-hidden">{{
+                      `Remover linha ${lineIndex + 1}`
+                    }}</span>
+                  </button>
+                </div>
                 <p
                   v-if="lineErrors[`${itemIndex}:${lineIndex}`]"
+                  :id="`grade-error-${itemIndex}-${lineIndex}`"
                   role="alert"
                   class="op-field-error"
                 >

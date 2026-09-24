@@ -243,3 +243,50 @@ test('lists what is missing: blockers first, then empty ficha fields', () => {
     [],
   );
 });
+
+/** @param {Record<string, any>} overrides */
+function bermudaOrder(overrides = {}) {
+  const order = pendingOrder();
+  order.ficha.items = [
+    {
+      ...order.ficha.items[0],
+      tipo: 'BERMUDA',
+      modelo: '',
+      cor_manga_direita: '',
+      vies_gola: '',
+      specs: {},
+      escala: '',
+      outras: '',
+      ...overrides,
+    },
+  ];
+  return order;
+}
+
+test('lists only what the catalog product requires (FMI-01)', () => {
+  const missing = missingForConfirmation(bermudaOrder());
+
+  assert.ok(missing.includes('items[0].modelo'));
+  assert.ok(missing.includes('items[0].specs.cos'));
+  assert.ok(!missing.includes('items[0].cor_manga_direita'));
+  assert.ok(!missing.includes('items[0].vies_gola'));
+  assert.ok(!missing.includes('items[0].specs.bolso'));
+});
+
+test('keeps the full list for a product outside the catalog (FMI-02)', () => {
+  const order = pendingOrder();
+  order.ficha.items = [
+    { ...order.ficha.items[0], tipo: 'KIT', cor_costas: '' },
+  ];
+  assert.ok(missingForConfirmation(order).includes('items[0].cor_costas'));
+});
+
+test('an empty required field never blocks confirming (FMI-03)', () => {
+  const confirmed = confirmOrder(bermudaOrder(), {
+    actorId: 'seller-1',
+    amountCents: 10_000,
+    now: CONFIRMED_AT,
+    paymentCondition: 'pix',
+  });
+  assert.equal(confirmed.status, 'confirmado');
+});

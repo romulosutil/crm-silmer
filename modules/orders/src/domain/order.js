@@ -1,3 +1,4 @@
+import { describeItem } from '../catalog/index.js';
 import { OrderConflictError, OrderValidationError } from './errors.js';
 
 // ADR 006: an order is `pendente` (unofficial draft) or `confirmado`
@@ -134,6 +135,18 @@ export function missingForConfirmation(order) {
     if (value === null || value === '') missing.push(`summary.${key}`);
   }
   items.forEach((item, index) => {
+    const { cells, product } = describeItem(item);
+    if (product) {
+      // FMI-01: only what this product requires; optional fields never nag.
+      for (const cell of cells) {
+        if (cell.field.rule === 'required' && cell.empty) {
+          missing.push(`items[${index}].${cell.field.path}`);
+        }
+      }
+      if (item.grade.length === 0) missing.push(`items[${index}].grade`);
+      return;
+    }
+    // FMI-02: a product outside the catalog keeps the full list.
     for (const key of ITEM_FIELD_ORDER) {
       const value = item[/** @type {keyof typeof item} */ (key)];
       if (value === '' || (Array.isArray(value) && value.length === 0)) {

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "templateVersion": "ficha-canonical-v3",
+  "snapshotVersion": "synthetic-order-v2",
+  "requirements": [
+    "FIM-01",
+    "FIM-02",
+    "FIM-03",
+    "FIM-04",
+    "FIM-05",
+    "FIM-06",
+    "FIM-07",
+    "FIM-08",
+    "FIM-09"
+  ],
+  "fixtureSha256": "521a31427379291bced9a206d137f6da5a04566050d52d355e95bd65750e67b3",
+  "artifact": {
+    "path": "output/pdf/ficha-canonica-sintetica-v3.pdf",
+    "sha256": "e2e302f4d69b795e8c1a1db86ab35889c3c11318d3a3b5506d65eba5fa638c5b",
+    "pageCount": 3
+  },
+  "approval": {
+    "status": "pending-human-approval",
+    "approved": false,
+    "reviewedBy": null,
+    "reviewedAt": null
+  },
+  "versioning": {
+    "supersedesTemplateVersion": "ficha-canonical-v2",
+    "overwriteApprovedVersion": false
+  }
+}

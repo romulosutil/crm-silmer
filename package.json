@@ -31,6 +31,7 @@
     "smoke:observability:live": "node scripts/observability-live-probe.mjs --baseline",
     "drill:observability:api": "node scripts/observability-live-probe.mjs --watch-api-drill",
     "generate:ficha-pdf-review": "node scripts/ficha-pdf-review.mjs --generate",
+    "generate:ficha-v3-review": "node scripts/ficha-v3-review.mjs --generate",
     "generate:n8n-dev-workflow": "node ops/n8n/workflows/create-dev-test-workflow.mjs",
     "generate:n8n-local-workflow": "node ops/n8n/workflows/create-dev-test-workflow.mjs --local",
     "test": "node --test test/*.test.js",
@@ -64,7 +65,8 @@
     "validate:phase0-decisions": "node scripts/validate-phase0-decisions.mjs",
     "validate:security-catalog": "node scripts/validate-security-catalog.mjs",
     "validate:ficha-pdf-review": "node scripts/ficha-pdf-review.mjs --validate",
-    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run check:design-tokens && npm run validate:topology && npm run validate:r2 && npm run validate:external-spikes && npm run validate:media-retention && npm run validate:security-catalog && npm run validate:ficha-pdf-review && npm run validate:phase0-decisions && npm run validate:observability && npm test && npm run build"
+    "validate:ficha-v3-review": "node scripts/ficha-v3-review.mjs --validate",
+    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run check:design-tokens && npm run validate:topology && npm run validate:r2 && npm run validate:external-spikes && npm run validate:media-retention && npm run validate:security-catalog && npm run validate:ficha-pdf-review && npm run validate:ficha-v3-review && npm run validate:phase0-decisions && npm run validate:observability && npm test && npm run build"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

@@ -1,0 +1,98 @@
+{
+  "number": "02-CRM",
+  "fabCode": "01",
+  "orderDate": "2026-09-24",
+  "totalPieces": 64,
+  "confirmedBy": { "name": "Vendedora Exemplo" },
+  "ficha": {
+    "summary": {
+      "cliente": "Cliente Demonstracao",
+      "data_entrega_confirmada": "30/10/2026",
+      "aplicacao": "SUBLIMAÇÃO TOTAL",
+      "nome": "Equipe Horizonte - Evento Sintetico"
+    },
+    "observations": [
+      "Arte final sintetica aprovada para teste visual.",
+      "Nao usar este documento para producao ou cobranca."
+    ],
+    "items": [
+      {
+        "tipo": "CAMISETA",
+        "modelo": "TRADICIONAL",
+        "malhas": ["PP DRY"],
+        "cor_frente": "AZUL MARINHO",
+        "cor_costas": "AZUL MARINHO",
+        "cor_manga_direita": "BRANCO",
+        "cor_manga_esquerda": "BRANCO",
+        "vies_gola": "RIBANA · VERDE BANDEIRA",
+        "vies_mangas": "RIBANA · VERDE BANDEIRA",
+        "specs": {
+          "gola": "CARECA",
+          "manga": "RAGLAN CURTA",
+          "locais": ["COSTAS TOTAL", "OMBRO DIREITO"]
+        },
+        "escala": "adulto",
+        "outras": "",
+        "grade": [
+          { "tamanho": "P", "quantidade": 4 },
+          { "tamanho": "M", "quantidade": 8 },
+          { "tamanho": "G", "quantidade": 6 },
+          { "tamanho": "GG", "quantidade": 2 }
+        ]
+      },
+      {
+        "tipo": "REGATA",
+        "modelo": "ESPORTIVA",
+        "malhas": ["PP LISO"],
+        "cor_frente": "BRANCO",
+        "cor_costas": "BRANCO",
+        "cor_manga_direita": "",
+        "cor_manga_esquerda": "",
+        "vies_gola": "VIÉS PRÓPRIO TECIDO",
+        "vies_mangas": "VIÉS PRÓPRIO TECIDO",
+        "specs": { "gola": "GOLA V" },
+        "escala": "adulto",
+        "outras": "",
+        "grade": [
+          { "tamanho": "P", "quantidade": 5 },
+          { "tamanho": "M", "quantidade": 5 }
+        ]
+      },
+      {
+        "tipo": "BERMUDA",
+        "modelo": "ESPORTIVA",
+        "malhas": ["PP LISO"],
+        "cor_frente": "PRETO",
+        "cor_costas": "PRETO",
+        "cor_manga_direita": "",
+        "cor_manga_esquerda": "",
+        "vies_gola": "",
+        "vies_mangas": "BRANCO",
+        "specs": { "cos": "ELÁSTICO" },
+        "escala": "infantil",
+        "outras": "",
+        "grade": [
+          { "tamanho": "P", "quantidade": 3 },
+          { "tamanho": "M", "quantidade": 4 },
+          { "tamanho": "G", "quantidade": 3 },
+          { "tamanho": "GG", "quantidade": 2 }
+        ]
+      },
+      {
+        "tipo": "BONÉ",
+        "modelo": "",
+        "malhas": ["BRIM"],
+        "cor_frente": "PRETO",
+        "cor_costas": "PRETO",
+        "cor_manga_direita": "",
+        "cor_manga_esquerda": "",
+        "vies_gola": "",
+        "vies_mangas": "",
+        "specs": { "abertura": "SNAP", "locais": ["BONÉ FRENTE"] },
+        "escala": "",
+        "outras": "Aba curva preta",
+        "grade": [{ "tamanho": "ÚNICO", "quantidade": 22 }]
+      }
+    ]
+  }
+}

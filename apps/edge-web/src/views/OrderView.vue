@@ -9,7 +9,6 @@ import {
   ref,
   watch,
 } from 'vue';
-import OrderCatalogLists from '../components/order/OrderCatalogLists.vue';
 import OrderClosingSection from '../components/order/OrderClosingSection.vue';
 import OrderIcon from '../components/order/OrderIcon.vue';
 import OrderInfoStrips from '../components/order/OrderInfoStrips.vue';
@@ -325,7 +324,6 @@ onBeforeUnmount(() => {
           </p>
         </aside>
       </div>
-      <OrderCatalogLists />
     </template>
   </div>
 </template>

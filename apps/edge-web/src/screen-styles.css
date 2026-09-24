@@ -1823,9 +1823,8 @@ button.op-edit:disabled {
 }
 
 /*
- * Catalog fields: the browser's own datalist arrow only shows on hover or
- * focus and looks different everywhere. It stays clickable (it opens the
- * whole list) but invisible, over one steady chevron of the icon family.
+ * Catalog fields (OrderCombobox): the chevron is a button over the end of the
+ * input that opens the whole list of suggestions.
  */
 .op-combo {
   position: relative;
@@ -1835,31 +1834,6 @@ button.op-edit:disabled {
 .op-combo > input {
   inline-size: 100%;
   padding-inline-end: 2.4rem;
-}
-
-.op-combo > input::-webkit-calendar-picker-indicator {
-  inline-size: 2rem;
-  margin-inline-end: -0.5rem;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.op-combo > .op-icon {
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-end: 0.8rem;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  transform: translateY(-50%);
-  transition: color var(--duration-fast) var(--easing-standard);
-}
-
-.op-combo:focus-within > .op-icon {
-  color: var(--color-focus);
-}
-
-.op-combo:has(input:disabled) > .op-icon {
-  display: none;
 }
 
 .op-combo-toggle {

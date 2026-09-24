@@ -1,14 +1,23 @@
+import {
+  FIELDS,
+  ORDER_CATALOG,
+  SPEC_KEYS,
+  itemFields,
+  resolveProduct,
+} from '../catalog/index.js';
 import { OrderInputError, OrderValidationError } from './errors.js';
 
-// The ficha mirrors the approved `ficha-canonical-v2` blocks (D10): summary,
-// items with their grade, and up to five observation lines. Anything the agent
-// collected that has no place on the printed document stays as service data
-// (D11): shown read-only, never printed.
+// The ficha mirrors the approved printed blocks (D10): summary, items with
+// their grade, and up to five observation lines. Anything the agent collected
+// that has no place on the printed document stays as service data (D11). Which
+// item fields exist, and what they are called, comes from the order catalog
+// (ADR 007).
 
-export const NOT_APPLICABLE = 'NAO APLICAVEL';
+export { NOT_APPLICABLE } from '../catalog/fields.js';
 export const MAX_OBSERVATIONS = 5;
 const MAX_ITEMS = 50;
 const MAX_TEXT = 200;
+const MAX_OTHER_SPECS = 500;
 
 const SUMMARY_INPUT_KEYS = Object.freeze([
   'data_entrega_confirmada',
@@ -25,7 +34,19 @@ const ITEM_TEXT_KEYS = Object.freeze([
   'vies_gola',
   'vies_mangas',
 ]);
-const ITEM_KEYS = new Set([...ITEM_TEXT_KEYS, 'malhas', 'grade']);
+const ITEM_KEYS = new Set([
+  ...ITEM_TEXT_KEYS,
+  'malhas',
+  'grade',
+  'specs',
+  'escala',
+  'outras',
+]);
+const MULTI_SPEC_KEYS = new Set(
+  FIELDS.filter(
+    (field) => field.kind === 'multi' && field.path.startsWith('specs.'),
+  ).map((field) => field.path.slice('specs.'.length)),
+);
 const GRADE_KEYS = new Set(['tamanho', 'quantidade']);
 
 // Workflow bookkeeping, not facts about the order.
@@ -36,11 +57,13 @@ const BRIEFING_INTERNAL_KEYS = new Set([
 
 /**
  * @typedef {{tamanho: string, quantidade: number}} GradeLine
+ * @typedef {Record<string, string | string[]>} FichaSpecs
  * @typedef {{
  *   tipo: string, modelo: string, malhas: string[],
  *   cor_frente: string, cor_costas: string,
  *   cor_manga_direita: string, cor_manga_esquerda: string,
  *   vies_gola: string, vies_mangas: string,
+ *   specs: FichaSpecs, escala: string, outras: string,
  *   grade: GradeLine[],
  * }} FichaItem
  * @typedef {{
@@ -182,7 +205,91 @@ function validateItem(raw, itemIndex) {
       tamanho: tamanho.trim(),
     };
   });
-  return /** @type {FichaItem} */ (item);
+  item.specs = validateSpecs(raw.specs, prefix);
+  item.escala = validateScale(raw.escala, prefix);
+  item.outras = validateOtherSpecs(raw.outras, prefix);
+  return clearMissingFields(/** @type {FichaItem} */ (item));
+}
+
+/** @param {unknown} value @param {string} prefix @returns {FichaSpecs} */
+function validateSpecs(value, prefix) {
+  if (value === undefined) return {};
+  if (!isPlainObject(value)) {
+    throw new OrderInputError(`${prefix}.specs must be an object`, [
+      `${prefix}.specs`,
+    ]);
+  }
+  /** @type {FichaSpecs} */
+  const specs = {};
+  for (const [key, entry] of Object.entries(value)) {
+    const path = `${prefix}.specs.${key}`;
+    if (!SPEC_KEYS.includes(key)) {
+      throw new OrderInputError(`${path} is not a catalog field`, [path]);
+    }
+    if (MULTI_SPEC_KEYS.has(key)) {
+      if (!Array.isArray(entry)) {
+        throw new OrderInputError(`${path} must be a list`, [path]);
+      }
+      const values = entry
+        .map((text) => requireText(text, path))
+        .filter((text) => text !== '');
+      if (values.length > 0) specs[key] = values;
+      continue;
+    }
+    const text = requireText(entry, path);
+    if (text !== '') specs[key] = text;
+  }
+  return specs;
+}
+
+/** FGR-05 @param {unknown} value @param {string} prefix */
+function validateScale(value, prefix) {
+  if (value === undefined || value === '') return '';
+  if (
+    typeof value !== 'string' ||
+    !ORDER_CATALOG.scales.some((scale) => scale.id === value)
+  ) {
+    throw new OrderInputError(`${prefix}.escala is not a catalog scale`, [
+      `${prefix}.escala`,
+    ]);
+  }
+  return value;
+}
+
+/** FIT-09 @param {unknown} value @param {string} prefix */
+function validateOtherSpecs(value, prefix) {
+  if (value === undefined) return '';
+  if (typeof value !== 'string' || value.length > MAX_OTHER_SPECS) {
+    throw new OrderInputError(
+      `${prefix}.outras must be text up to ${MAX_OTHER_SPECS} characters`,
+      [`${prefix}.outras`],
+    );
+  }
+  return value.trim();
+}
+
+/**
+ * FIT-04: a field the product does not have is stored empty, so a value typed
+ * before the seller changed the type never reaches the paper. Fabrics stay:
+ * every item needs one, and no catalog product goes without.
+ *
+ * @param {FichaItem} item
+ * @returns {FichaItem}
+ */
+function clearMissingFields(item) {
+  const product = resolveProduct(item.tipo);
+  if (!product) return item;
+  const kept = new Set(itemFields(product).map((field) => field.id));
+  for (const field of FIELDS) {
+    if (kept.has(field.id) || field.id === 'malha') continue;
+    const [head, key] = field.path.split('.');
+    if (key === undefined) {
+      /** @type {Record<string, unknown>} */ (item)[head] = '';
+    } else {
+      delete item.specs[key];
+    }
+  }
+  return item;
 }
 
 /**
@@ -298,9 +405,12 @@ export function briefingToFicha(briefing) {
           cor_frente: '',
           cor_manga_direita: '',
           cor_manga_esquerda: '',
+          escala: '',
           grade: grade ?? [],
           malhas: malhas ?? [],
           modelo: modelo ?? '',
+          outras: '',
+          specs: {},
           tipo: tipo ?? '',
           vies_gola: '',
           vies_mangas: '',

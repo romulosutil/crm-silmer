@@ -217,12 +217,15 @@ test('maps the agent pre-ficha into ficha sections and keeps the rest as service
       cor_frente: '',
       cor_manga_direita: '',
       cor_manga_esquerda: '',
+      escala: '',
       grade: [
         { quantidade: 4, tamanho: 'P' },
         { quantidade: 16, tamanho: 'M' },
       ],
       malhas: ['dry fit'],
       modelo: 'tradicional',
+      outras: '',
+      specs: {},
       tipo: 'camisa',
       vies_gola: '',
       vies_mangas: '',
@@ -265,4 +268,94 @@ test('keeps unparseable sizes as service data and an empty briefing yields an em
     },
   });
   assert.deepEqual(briefingToFicha(null), briefingToFicha({}));
+});
+
+test('an item keeps its catalog specs, scale and other specifications (F10)', () => {
+  const [saved] = validateItems([
+    item({
+      tipo: 'CAMISETA',
+      specs: {
+        gola: ' CARECA ',
+        manga: 'RAGLAN CURTA',
+        locais: ['COSTAS TOTAL', ''],
+      },
+      escala: 'adulto',
+      outras: ' Recorte lateral ',
+    }),
+  ]);
+
+  assert.deepEqual(saved.specs, {
+    gola: 'CARECA',
+    manga: 'RAGLAN CURTA',
+    locais: ['COSTAS TOTAL'],
+  });
+  assert.equal(saved.escala, 'adulto');
+  assert.equal(saved.outras, 'Recorte lateral');
+});
+
+test('an item saved before the catalog reads with empty specs (F15)', () => {
+  const [saved] = validateItems([item()]);
+  assert.deepEqual(saved.specs, {});
+  assert.equal(saved.escala, '');
+  assert.equal(saved.outras, '');
+});
+
+test('refuses a spec, a scale or other specifications the ficha does not know', () => {
+  /** @param {string} path */
+  const refused = (path) => (/** @type {any} */ error) => {
+    assert.equal(error.name, 'OrderInputError');
+    assert.deepEqual(error.fields, [path]);
+    return true;
+  };
+  assert.throws(
+    () => validateItems([item({ specs: { capuz: 'SIM' } })]),
+    refused('items[0].specs.capuz'),
+  );
+  assert.throws(
+    () => validateItems([item({ specs: { locais: 'COSTAS' } })]),
+    refused('items[0].specs.locais'),
+  );
+  assert.throws(
+    () => validateItems([item({ escala: 'gigante' })]),
+    refused('items[0].escala'),
+  );
+  assert.throws(
+    () => validateItems([item({ outras: 'x'.repeat(501) })]),
+    refused('items[0].outras'),
+  );
+});
+
+test('stores empty the fields the product does not have (FIT-04)', () => {
+  const [saved] = validateItems([
+    item({
+      tipo: 'BERMUDA',
+      cor_manga_direita: 'BRANCA',
+      vies_gola: 'VERDE',
+      specs: { gola: 'CARECA', cos: 'ELÁSTICO' },
+    }),
+  ]);
+
+  assert.equal(saved.cor_manga_direita, '');
+  assert.equal(saved.vies_gola, '');
+  assert.deepEqual(saved.specs, { cos: 'ELÁSTICO' });
+  assert.deepEqual(saved.malhas, synthetic.pedido.itens[0].malhas);
+});
+
+test('keeps every field of a product outside the catalog (F07)', () => {
+  const [saved] = validateItems([
+    item({
+      tipo: 'CAMISA DE TIME',
+      cor_manga_direita: NOT_APPLICABLE,
+      specs: { faces: '1 FACE' },
+    }),
+  ]);
+  assert.equal(saved.cor_manga_direita, NOT_APPLICABLE);
+  assert.deepEqual(saved.specs, { faces: '1 FACE' });
+});
+
+test('the agent briefing seeds the new item keys empty', () => {
+  const ficha = briefingToFicha({ product_type: 'CAMISETA' });
+  assert.deepEqual(ficha.items[0].specs, {});
+  assert.equal(ficha.items[0].escala, '');
+  assert.equal(ficha.items[0].outras, '');
 });

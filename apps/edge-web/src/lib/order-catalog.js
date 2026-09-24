@@ -78,6 +78,7 @@ export const FABRICS = Object.freeze([
   'Cacharrel',
   'Interlock de algodão',
   'Interlock de poliéster',
+  'Interlock misto',
   'Liganete',
   'Viscolycra',
   'Suplex de poliamida com elastano',
@@ -92,6 +93,7 @@ export const FABRICS = Object.freeze([
   'Moletom 3 cabos sem felpa',
   'Moletinho de algodão',
   'Moletinho PV',
+  'Moletinho com elastano',
   'Fleece/soft',
   'Plush',
 ]);
@@ -132,6 +134,12 @@ export const COLORS = Object.freeze(
     ['Cáqui', '#b0a178'],
     ['Caramelo', '#b06a2a'],
     ['Marrom', '#5c3a21'],
+    // Finishes, not hues: offered by name, with no chip on screen.
+    ['Neon', ''],
+    ['Fluorescente', ''],
+    ['Metálico', ''],
+    ['Mescla', ''],
+    ['Estampado', ''],
   ].map(([name, swatch]) => Object.freeze({ name, swatch })),
 );
 
@@ -140,13 +148,15 @@ export const FINISHES = Object.freeze([
   'Viés do próprio tecido',
   'Viés contrastante',
   'Ribana',
+  'Ribana lisa',
+  'Ribana canelada',
   'Gola pronta',
   'Punho pronto',
-  'Gola olímpica',
   'Galão',
   'Bainha simples',
   'Galoneira',
   'Elástico',
+  'Sem acabamento separado',
 ]);
 
 export const APPLICATIONS = Object.freeze([
@@ -173,6 +183,12 @@ export const SIZES = Object.freeze([
   'XG',
   'XX',
   'JEGÃO',
+  '0–3 meses',
+  '3–6 meses',
+  '6–9 meses',
+  '9–12 meses',
+  '12–18 meses',
+  '18–24 meses',
 ]);
 
 /** @param {unknown} text */
@@ -202,5 +218,7 @@ const FOLDED_COLORS = COLORS.map((color) => ({
 export function colorSwatch(value) {
   const text = fold(value);
   if (text === '') return '';
+  // A finish without a chip ("MESCLA") still wins its match, so "PRETO
+  // MESCLA" is not painted as a plain black.
   return FOLDED_COLORS.find((color) => text.includes(color.key))?.swatch ?? '';
 }

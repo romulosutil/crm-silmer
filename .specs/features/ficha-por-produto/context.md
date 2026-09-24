@@ -17,12 +17,13 @@ cada peça.
 
 ## Fontes
 
-| Fonte                                                 | Papel                                                                                                                                                                        |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Planilha `005-lista-de-opcoes-para-aprovacao.xlsx` v2 | Catálogo aprovado. Drive `12o5yXtlgXZryQrIwOrFlGTb36zzDkGvF`, pasta `Meu Drive/Silmer`. Abas 01 (ficha), 02 (produtos), 03 (produto × campos), 04–17 (opções), 90 (arquivo). |
-| `ficha_exemplo.xlsx`                                  | Ficha usada hoje na fábrica (pedido 8528). Mostra o vocabulário real: Modelo = gola (CARECA), Viés gola = OLÍMPICA / VERDE, malhas HELANQUINHA e LIGHT.                      |
-| `output/pdf/ficha-canonica-sintetica-v2.pdf`          | Template aprovado que a v3 evolui.                                                                                                                                           |
-| `.specs/features/pedidos-mvp/`                        | Feature de origem. Decisões D10, D11 e D15 são parcialmente supersedidas aqui.                                                                                               |
+| Fonte                                                 | Papel                                                                                                                                                                                        |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Planilha `005-lista-de-opcoes-para-aprovacao.xlsx` v2 | Catálogo aprovado. Drive `12o5yXtlgXZryQrIwOrFlGTb36zzDkGvF`, pasta `Meu Drive/Silmer`. Abas 01 (ficha), 02 (produtos), 03 (produto × campos), 04–17 (opções), 90 (arquivo).                 |
+| `ficha_exemplo.xlsx`                                  | Ficha usada hoje na fábrica (pedido 8528). Mostra o vocabulário real: Modelo = gola (CARECA), Viés gola = OLÍMPICA / VERDE, malhas HELANQUINHA e LIGHT.                                      |
+| `output/pdf/ficha-canonica-sintetica-v2.pdf`          | Template aprovado que a v3 evolui.                                                                                                                                                           |
+| `docs/rfc/005-catalogo-de-opcoes-do-pedido.md`        | Proposta do catálogo (Opção A recomendada: catálogo hierárquico com códigos, aliases, snapshot e preço). Esta feature é o primeiro incremento dela; ver `design.md` → Relação com a RFC 005. |
+| `.specs/features/pedidos-mvp/`                        | Feature de origem. Decisões D10, D11 e D15 são parcialmente supersedidas aqui.                                                                                                               |
 
 ## Decisões
 
@@ -115,5 +116,8 @@ cada peça.
   Bandeira só entram se marcados Manter.
 - **Q02** Faixa Bebê tem só GG aprovado; P, M e G estão no arquivo (aba 90).
   Provável engano de revisão.
+- **Q04** A RFC 005 §11 (Resultado) continua "pendente". Registrar a decisão do
+  PO de 24/09/2026 (linhas "Manter" = aprovadas pelo cliente) e o nome de quem
+  aprovou pelo cliente, que a RFC exige.
 - **Q03** Nomes impressos longos ou com barra — revisar na coluna "Impresso na
   ficha como" antes da importação e conferir no PDF sintético v3.

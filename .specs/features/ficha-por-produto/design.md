@@ -277,6 +277,27 @@ Erros sempre citam aba, linha e valor. Nada é gravado se houver erro.
 
 ---
 
+## Relação com a RFC 005
+
+A RFC 005 recomenda a Opção A: catálogo hierárquico versionado, códigos no
+pedido, aliases, exceção pendente e livro de preços. Esta feature entrega a
+parte que a planilha aprovada já sustenta e deixa o resto para depois da
+revisão comercial que a RFC pede:
+
+| Opção A (RFC 005 §8)                          | Nesta feature                                            |
+| --------------------------------------------- | -------------------------------------------------------- |
+| Produto filtra dimensões e opções             | Sim: regras por produto (aba 03) e "Vale para"           |
+| Versão publicada do catálogo                  | Sim: arquivo gerado com `sha256` da planilha, em git     |
+| Tabela de tamanhos por produto                | Sim: escalas por produto                                 |
+| Exceção controlada                            | Texto livre aceito; produto fora do catálogo mostra tudo |
+| Código gravado e snapshot da seleção          | Não: grava o texto impresso. Fica para o ADR/TDD final   |
+| Aliases e contrato `items[]` da IA            | Não: agente n8n fora do escopo (F23)                     |
+| Compatibilidades proibidas entre opções       | Não: só "vale para produto"                              |
+| Livro de preços e dimensões que alteram preço | Não                                                      |
+
+O arquivo gerado já tem `id` estável por produto; ids por opção entram quando o
+ADR da estrutura final decidir gravar códigos.
+
 ## Tratamento de erros
 
 | Situação                                          | Resposta                                                      |

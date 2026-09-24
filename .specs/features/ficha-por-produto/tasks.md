@@ -190,6 +190,11 @@ runtime comercial de Negócio (ADR 004) e não guarda regra por campo.
   decisão futura; o modelo relacional está em
   `.specs/features/ficha-por-produto/design.md`.
 
+Decide o primeiro incremento da [RFC 005](../rfc/005-catalogo-de-opcoes-do-pedido.md)
+(Opção A): produto filtra campos e opções, catálogo versionado, tamanhos por
+produto. Códigos gravados, aliases, compatibilidades entre opções e preço
+continuam propostos na RFC 005, para o ADR da estrutura final.
+
 Links: [spec](../../.specs/features/ficha-por-produto/spec.md) ·
 [design](../../.specs/features/ficha-por-produto/design.md) ·
 [ADR 006](006-pedido-dois-status.md)
@@ -209,7 +214,7 @@ git commit -m "docs(adr): let the product define the order ficha" -m "Co-Authore
 
 **Done when:**
 
-- [ ] ADR 007 existe, formatado, com links para spec e design
+- [ ] ADR 007 existe, formatado, com links para spec, design e RFC 005
 - [ ] Gate docs passa
 
 **Tests:** nenhum · **Gate:** docs · **Commit:** `docs(adr): let the product define the order ficha`

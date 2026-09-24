@@ -2069,6 +2069,26 @@ button.op-save:hover:not(:disabled) {
   gap: 0.5rem;
 }
 
+.op-input-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.op-input-swatch .op-swatch {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.op-input-swatch .op-swatch + .op-combo > input {
+  padding-inline-start: 2.35rem;
+}
+
+.op-item-fields textarea {
+  inline-size: 100%;
+  resize: vertical;
+}
+
 .op-input-row > input,
 .op-input-row > .op-combo {
   flex: 1 1 auto;

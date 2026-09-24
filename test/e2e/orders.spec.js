@@ -830,7 +830,7 @@ test('refuses a quantity that is not a whole piece, on the line (PFI-04)', async
   expect(writes).toHaveLength(0);
 });
 
-test('accepts "Não aplicável" on sleeves and viés (PFI-07)', async ({
+test('accepts "Não aplicável" only on a product outside the catalog (PFI-07, F14)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -840,7 +840,11 @@ test('accepts "Não aplicável" on sleeves and viés (PFI-07)', async ({
 
   const items = page.getByRole('region', { name: 'Itens e especificações' });
   await items.getByRole('button', { name: 'Editar' }).click();
-  await items.getByLabel('Manga direita não se aplica').check();
+  await expect(items.getByLabel('Cor manga direita não se aplica')).toHaveCount(
+    0,
+  );
+  await chooseTipo(items, 'CAMISA DE TIME');
+  await items.getByLabel('Cor manga direita não se aplica').check();
   await items.getByRole('button', { name: 'Salvar' }).click();
 
   await expect(items).toContainText('NÃO APLICÁVEL');
@@ -1165,4 +1169,140 @@ test('keeps an application the catalog does not know (F08)', async ({
   await summary.getByRole('button', { name: 'Salvar' }).click();
 
   expect(writes[0].body.value.aplicacao).toBe('SILK 3 CORES');
+});
+
+/** @param {import('@playwright/test').Locator} items @param {string} tipo */
+async function chooseTipo(items, tipo) {
+  const field = items.getByRole('combobox', { name: 'Tipo' });
+  await field.fill(tipo);
+  await field.press('Escape');
+}
+
+test('shows only the fields of the chosen product, with its labels (FIT-02)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await chooseTipo(items, 'BERMUDA');
+  await expect(items.getByLabel('Cós/cintura')).toBeVisible();
+  await expect(
+    items.getByRole('group', { name: 'Viés barra/lateral' }),
+  ).toBeVisible();
+  await expect(items.getByLabel('Cor manga direita')).toHaveCount(0);
+  await expect(
+    items.getByRole('combobox', { name: 'Manga', exact: true }),
+  ).toHaveCount(0);
+
+  await chooseTipo(items, 'CAMISETA');
+  await expect(items.getByLabel('Cor manga direita')).toBeVisible();
+  await expect(
+    items.getByRole('combobox', { name: 'Manga', exact: true }),
+  ).toBeVisible();
+});
+
+test('warns about a product outside the catalog and shows every field (FIT-03)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await chooseTipo(items, 'CAMISA DE TIME');
+
+  await expect(items).toContainText('Produto fora do catálogo');
+  await expect(items.getByLabel('Cós/cintura')).toBeVisible();
+  await expect(items.getByLabel('Faces')).toBeVisible();
+});
+
+test('sends empty the fields the new product does not have (FIT-04)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await chooseTipo(items, 'BERMUDA');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  const [saved] = writes[0].body.value;
+  expect(saved.tipo).toBe('BERMUDA');
+  expect(saved.cor_manga_direita).toBe('');
+  expect(saved.vies_gola).toBe('');
+});
+
+test('writes the finish and the colour of the viés as one text (FIT-07)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Viés gola: acabamento').fill('RIBANA');
+  await items.getByLabel('Viés gola: cor').fill('VERDE');
+  await items.getByLabel('Viés gola: cor').press('Escape');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  expect(writes[0].body.value[0].vies_gola).toBe('RIBANA · VERDE');
+});
+
+test('keeps several application places and the other specifications (FIT-08, FIT-09)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Locais da aplicação 1').fill('COSTAS TOTAL');
+  await items.getByLabel('Locais da aplicação 1').press('Escape');
+  await items.getByRole('button', { name: 'Adicionar local' }).click();
+  await items.getByLabel('Locais da aplicação 2').fill('MANGA DIREITA');
+  await items.getByLabel('Locais da aplicação 2').press('Escape');
+  await items.getByLabel('Outras especificações').fill('Recorte lateral');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  const [saved] = writes[0].body.value;
+  expect(saved.specs.locais).toEqual(['COSTAS TOTAL', 'MANGA DIREITA']);
+  expect(saved.outras).toBe('Recorte lateral');
+});
+
+test('reads an item with only the fields its product has (FIT-11)', async ({
+  page,
+}) => {
+  const bermudaOrder = JSON.parse(JSON.stringify(pendingOrder));
+  bermudaOrder.ficha.items = [
+    {
+      ...bermudaOrder.ficha.items[0],
+      tipo: 'BERMUDA',
+      cor_manga_direita: 'NAO APLICAVEL',
+      cor_manga_esquerda: 'NAO APLICAVEL',
+      vies_gola: 'NAO APLICAVEL',
+      specs: { cos: 'ELÁSTICO' },
+      escala: '',
+      outras: '',
+    },
+  ];
+  await mockOrders(page, { orders: [confirmedOrder, bermudaOrder] });
+  await page.goto('/pedidos/order-pendente');
+
+  const card = page
+    .getByRole('region', { name: 'Itens e especificações' })
+    .getByRole('group')
+    .first();
+  await expect(card).toContainText('Cós/cintura');
+  await expect(card).toContainText('ELÁSTICO');
+  await expect(card).not.toContainText('NÃO APLICÁVEL');
+  await expect(card).not.toContainText('Cor manga direita');
 });

@@ -1,44 +1,31 @@
 <script setup>
 import { computed, inject, nextTick, ref } from 'vue';
-import { colorSwatch } from '../../lib/order-catalog.js';
+import {
+  NOT_APPLICABLE,
+  colorSwatch,
+  describeItem,
+  itemFields,
+  productOptions,
+  readField,
+  resolveProduct,
+} from '../../lib/order-catalog.js';
+import { draftItem, emptyItem, itemPayload } from '../../lib/order-items.js';
+import OrderCombobox from './OrderCombobox.vue';
 import OrderIcon from './OrderIcon.vue';
+import OrderSpecField from './OrderSpecField.vue';
 
 const SECTION = 'items';
-// The value the ficha prints when a garment has no sleeve or no viés (PFI-07).
-const NOT_APPLICABLE = 'NAO APLICAVEL';
 const NOT_APPLICABLE_LABEL = 'NÃO APLICÁVEL';
 const GRADE_MESSAGE = 'Use uma quantidade inteira maior que zero.';
-
-// Tipo and modelo head the item card; the parts below follow the ficha.
-const PART_FIELDS = Object.freeze([
-  Object.freeze({ key: 'cor_frente', label: 'Frente', list: 'catalog-colors' }),
-  Object.freeze({ key: 'cor_costas', label: 'Costas', list: 'catalog-colors' }),
+// FIT-01: every Tipo suggests the catalog products, grouped by family.
+const PRODUCT_OPTIONS = productOptions();
+// PFI-07 only where the catalog cannot say the part is missing (F14).
+const NOT_APPLICABLE_FIELDS = new Set([
+  'cor_manga_direita',
+  'cor_manga_esquerda',
+  'vies_gola',
+  'vies_mangas',
 ]);
-// PFI-07: only these accept "Não aplicável" — a shirt without sleeves still
-// has a front and a back.
-const OPTIONAL_FIELDS = Object.freeze([
-  Object.freeze({
-    key: 'cor_manga_direita',
-    label: 'Manga direita',
-    list: 'catalog-colors',
-  }),
-  Object.freeze({
-    key: 'cor_manga_esquerda',
-    label: 'Manga esquerda',
-    list: 'catalog-colors',
-  }),
-  Object.freeze({
-    key: 'vies_gola',
-    label: 'Viés gola',
-    list: 'catalog-finishes',
-  }),
-  Object.freeze({
-    key: 'vies_mangas',
-    label: 'Viés mangas',
-    list: 'catalog-finishes',
-  }),
-]);
-const READ_FIELDS = Object.freeze([...PART_FIELDS, ...OPTIONAL_FIELDS]);
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -83,20 +70,60 @@ function pieces(item) {
   );
 }
 
-/** @param {unknown} value */
-function shownValue(value) {
-  if (value === NOT_APPLICABLE) return NOT_APPLICABLE_LABEL;
-  return value || '—';
+/** @param {Record<string, any>} item */
+function productOf(item) {
+  return resolveProduct(item.tipo);
+}
+
+/** FIT-02/FIT-03 @param {Record<string, any>} item */
+function fieldsOf(item) {
+  return itemFields(productOf(item));
 }
 
 /**
- * The colour chip beside a part, when the text names a catalog colour.
- *
- * @param {unknown} value
+ * @param {Record<string, any>} item
+ * @param {{path: string}} field
+ * @param {string | string[]} value
  */
-function swatchOf(value) {
-  if (value === NOT_APPLICABLE) return '';
-  return colorSwatch(value);
+function writeValue(item, field, value) {
+  if (field.path.startsWith('specs.')) {
+    item.specs[field.path.slice('specs.'.length)] = value;
+    return;
+  }
+  item[field.path] = value;
+}
+
+/** @param {string | string[]} value */
+function joined(value) {
+  return Array.isArray(value) ? value.join(' / ') : value;
+}
+
+/** FIT-11: reading shows only what the product has and someone filled. @param {Record<string, any>} item */
+function view(item) {
+  const filled = describeItem(item).cells.filter((cell) => !cell.empty);
+  return {
+    header: filled
+      .filter((cell) => cell.field.placement === 'header')
+      .map((cell) => joined(cell.value))
+      .join(' · '),
+    grid: filled.filter((cell) => cell.field.placement === 'grid'),
+    wide: filled.filter((cell) => cell.field.placement === 'wide'),
+  };
+}
+
+/** @param {string | string[]} value */
+function shownValue(value) {
+  if (value === NOT_APPLICABLE) return NOT_APPLICABLE_LABEL;
+  return joined(value) || '—';
+}
+
+/** FIT-10 @param {{field: {list: string, colorList?: string}, value: string | string[]}} cell */
+function swatchOf(cell) {
+  if (Array.isArray(cell.value) || cell.value === NOT_APPLICABLE) return '';
+  if (cell.field.list !== 'cores' && cell.field.colorList !== 'cores') {
+    return '';
+  }
+  return colorSwatch(cell.value);
 }
 
 /**
@@ -110,30 +137,12 @@ function step(line, delta) {
   line.quantidade = Math.max(1, current + delta);
 }
 
-/** @param {Record<string, any>} item @param {string} key */
-function isNotApplicable(item, key) {
-  return item[key] === NOT_APPLICABLE;
-}
-
-/**
- * Unchecking restores what was typed before, because an unchecked box means
- * "there is a colour here", not "erase it".
- *
- * @param {Record<string, any>} item @param {string} key @param {boolean} checked
- */
-function toggleNotApplicable(item, key, checked) {
-  if (checked) {
-    item[`${key}_previous`] = item[key];
-    item[key] = NOT_APPLICABLE;
-    return;
-  }
-  item[key] = item[`${key}_previous`] ?? '';
-}
-
 async function startEditing() {
   // structuredClone refuses a reactive proxy (DataCloneError); the ficha is
   // plain JSON data, so a JSON round trip is the copy that works here.
-  draft.value = JSON.parse(JSON.stringify(props.order.ficha.items));
+  draft.value = JSON.parse(JSON.stringify(props.order.ficha.items)).map(
+    draftItem,
+  );
   lineErrors.value = {};
   errorMessage.value = '';
   editing.start(SECTION);
@@ -150,33 +159,12 @@ function cancel() {
 }
 
 function addItem() {
-  draft.value.push({
-    cor_costas: '',
-    cor_frente: '',
-    cor_manga_direita: '',
-    cor_manga_esquerda: '',
-    grade: [{ quantidade: 1, tamanho: '' }],
-    malhas: [''],
-    modelo: '',
-    tipo: '',
-    vies_gola: '',
-    vies_mangas: '',
-  });
+  draft.value.push(emptyItem());
 }
 
 /** @param {number} index */
 function removeItem(index) {
   draft.value.splice(index, 1);
-}
-
-/** @param {Record<string, any>} item */
-function addMalha(item) {
-  item.malhas.push('');
-}
-
-/** @param {Record<string, any>} item @param {number} index */
-function removeMalha(item, index) {
-  item.malhas.splice(index, 1);
 }
 
 /** @param {Record<string, any>} item */
@@ -201,6 +189,8 @@ function validate() {
     item.grade.forEach(
       /** @param {Record<string, any>} line @param {number} index */
       (line, index) => {
+        // FGR-02: a line nobody counted is dropped on save, not refused.
+        if (String(line.quantidade ?? '').trim() === '') return;
         const quantity = Number(line.quantidade);
         if (
           !Number.isSafeInteger(quantity) ||
@@ -220,30 +210,7 @@ async function save() {
   if (!validate()) return;
   saving.value = true;
   errorMessage.value = '';
-  const result = await editing.save(
-    SECTION,
-    draft.value.map((item) => ({
-      cor_costas: item.cor_costas,
-      cor_frente: item.cor_frente,
-      cor_manga_direita: item.cor_manga_direita,
-      cor_manga_esquerda: item.cor_manga_esquerda,
-      grade: item.grade.map(
-        /** @param {Record<string, any>} line */
-        (line) => ({
-          quantidade: Number(line.quantidade),
-          tamanho: String(line.tamanho).trim(),
-        }),
-      ),
-      malhas: item.malhas.filter(
-        /** @param {string} malha */
-        (malha) => String(malha).trim() !== '',
-      ),
-      modelo: item.modelo,
-      tipo: item.tipo,
-      vies_gola: item.vies_gola,
-      vies_mangas: item.vies_mangas,
-    })),
-  );
+  const result = await editing.save(SECTION, draft.value.map(itemPayload));
   saving.value = false;
   if (result.ok) {
     editing.stop();
@@ -307,31 +274,17 @@ async function save() {
             <div class="op-item-names">
               <div class="op-field">
                 <label :for="`item-${itemIndex}-tipo`">Tipo</label>
-                <div class="op-combo">
-                  <input
-                    :id="`item-${itemIndex}-tipo`"
-                    v-model="item.tipo"
-                    type="text"
-                    list="catalog-piece-types"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                  />
-                  <OrderIcon name="chevron" />
-                </div>
-              </div>
-              <div class="op-field">
-                <label :for="`item-${itemIndex}-modelo`">Modelo</label>
-                <div class="op-combo">
-                  <input
-                    :id="`item-${itemIndex}-modelo`"
-                    v-model="item.modelo"
-                    type="text"
-                    list="catalog-modelings"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                  />
-                  <OrderIcon name="chevron" />
-                </div>
+                <OrderCombobox
+                  :id="`item-${itemIndex}-tipo`"
+                  v-model="item.tipo"
+                  :groups="PRODUCT_OPTIONS"
+                />
+                <p
+                  v-if="item.tipo.trim() !== '' && !productOf(item)"
+                  class="op-hint"
+                >
+                  Produto fora do catálogo: todos os campos aparecem.
+                </p>
               </div>
             </div>
             <button
@@ -348,110 +301,28 @@ async function save() {
           </div>
 
           <div class="op-item-fields">
+            <OrderSpecField
+              v-for="field in fieldsOf(item)"
+              :key="field.id"
+              :field="field"
+              :product-id="productOf(item)?.id ?? null"
+              :input-id="`item-${itemIndex}-${field.id}`"
+              :allow-not-applicable="
+                !productOf(item) && NOT_APPLICABLE_FIELDS.has(field.id)
+              "
+              :model-value="readField(item, field)"
+              @update:model-value="(value) => writeValue(item, field, value)"
+            />
             <div class="op-field op-field--wide">
-              <span class="op-label">Malhas</span>
-              <div
-                v-for="(malha, malhaIndex) in item.malhas"
-                :key="malhaIndex"
-                class="op-input-row"
+              <label :for="`item-${itemIndex}-outras`"
+                >Outras especificações</label
               >
-                <div class="op-combo">
-                  <input
-                    v-model="item.malhas[malhaIndex]"
-                    type="text"
-                    list="catalog-fabrics"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                    :aria-label="`Malha ${malhaIndex + 1}`"
-                  />
-                  <OrderIcon name="chevron" />
-                </div>
-                <button
-                  v-if="item.malhas.length > 1"
-                  type="button"
-                  class="op-icon-button"
-                  @click="removeMalha(item, malhaIndex)"
-                >
-                  <OrderIcon name="x" />
-                  <span class="op-visually-hidden">{{
-                    `Remover malha ${malhaIndex + 1}`
-                  }}</span>
-                </button>
-              </div>
-              <button
-                type="button"
-                class="op-add-inline"
-                @click="addMalha(item)"
-              >
-                <OrderIcon name="plus" />Adicionar malha
-              </button>
-            </div>
-
-            <div v-for="field in PART_FIELDS" :key="field.key" class="op-field">
-              <label :for="`item-${itemIndex}-${field.key}`">{{
-                field.label
-              }}</label>
-              <div class="op-input-swatch op-combo">
-                <span
-                  v-if="swatchOf(item[field.key])"
-                  class="op-swatch"
-                  :style="{ background: swatchOf(item[field.key]) }"
-                  aria-hidden="true"
-                ></span>
-                <input
-                  :id="`item-${itemIndex}-${field.key}`"
-                  v-model="item[field.key]"
-                  type="text"
-                  :list="field.list"
-                  autocomplete="off"
-                  autocapitalize="characters"
-                />
-                <OrderIcon name="chevron" />
-              </div>
-            </div>
-
-            <div
-              v-for="field in OPTIONAL_FIELDS"
-              :key="field.key"
-              class="op-field"
-            >
-              <label :for="`item-${itemIndex}-${field.key}`">{{
-                field.label
-              }}</label>
-              <div class="op-input-swatch op-combo">
-                <span
-                  v-if="swatchOf(item[field.key])"
-                  class="op-swatch"
-                  :style="{ background: swatchOf(item[field.key]) }"
-                  aria-hidden="true"
-                ></span>
-                <input
-                  :id="`item-${itemIndex}-${field.key}`"
-                  :value="
-                    isNotApplicable(item, field.key)
-                      ? NOT_APPLICABLE_LABEL
-                      : item[field.key]
-                  "
-                  type="text"
-                  :list="field.list"
-                  autocomplete="off"
-                  autocapitalize="characters"
-                  :disabled="isNotApplicable(item, field.key)"
-                  @input="item[field.key] = $event.target.value"
-                />
-                <OrderIcon name="chevron" />
-              </div>
-              <label class="op-check">
-                <input
-                  type="checkbox"
-                  :checked="isNotApplicable(item, field.key)"
-                  :aria-label="`${field.label} não se aplica`"
-                  @change="
-                    toggleNotApplicable(item, field.key, $event.target.checked)
-                  "
-                />
-                <span aria-hidden="true">Não aplicável</span>
-              </label>
+              <textarea
+                :id="`item-${itemIndex}-outras`"
+                v-model="item.outras"
+                rows="2"
+                maxlength="500"
+              ></textarea>
             </div>
           </div>
 
@@ -601,7 +472,7 @@ async function save() {
             <span class="op-item-index">Item {{ itemIndex + 1 }}</span>
             <h3>
               {{ item.tipo || '—' }}
-              <span>{{ item.modelo || '' }}</span>
+              <span>{{ view(item).header }}</span>
             </h3>
           </div>
           <p class="op-item-pieces op-num">
@@ -610,21 +481,33 @@ async function save() {
         </div>
         <div class="op-item-body">
           <dl class="op-specs">
-            <div class="op-specs-wide">
-              <dt>Malhas</dt>
-              <dd>{{ item.malhas.join(' / ') || '—' }}</dd>
-            </div>
-            <div v-for="field in READ_FIELDS" :key="field.key">
-              <dt>{{ field.label }}</dt>
-              <dd :data-muted="isNotApplicable(item, field.key) || undefined">
+            <div
+              v-for="cell in view(item).grid"
+              :key="cell.field.id"
+              :class="{ 'op-specs-wide': cell.field.kind === 'multi' }"
+            >
+              <dt>{{ cell.field.label }}</dt>
+              <dd :data-muted="cell.value === NOT_APPLICABLE || undefined">
                 <span
-                  v-if="swatchOf(item[field.key])"
+                  v-if="swatchOf(cell)"
                   class="op-swatch"
-                  :style="{ background: swatchOf(item[field.key]) }"
+                  :style="{ background: swatchOf(cell) }"
                   aria-hidden="true"
                 ></span>
-                {{ shownValue(item[field.key]) }}
+                {{ shownValue(cell.value) }}
               </dd>
+            </div>
+            <div
+              v-for="cell in view(item).wide"
+              :key="cell.field.id"
+              class="op-specs-wide"
+            >
+              <dt>{{ cell.field.label }}</dt>
+              <dd>{{ shownValue(cell.value) }}</dd>
+            </div>
+            <div v-if="item.outras" class="op-specs-wide">
+              <dt>Outras especificações</dt>
+              <dd>{{ item.outras }}</dd>
             </div>
           </dl>
           <div class="op-grade">

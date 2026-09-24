@@ -80,7 +80,7 @@ function toggleNotApplicable(checked) {
   <div
     class="op-field"
     :class="{
-      'op-field--wide': field.kind === 'multi' || field.placement === 'wide',
+      'op-field--wide': field.kind !== 'text' || field.placement === 'wide',
     }"
   >
     <template v-if="field.kind === 'multi'">

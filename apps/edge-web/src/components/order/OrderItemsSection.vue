@@ -158,6 +158,16 @@ function view(item) {
   };
 }
 
+/**
+ * Catalog labels join words with a slash ("Viés barra/lateral"); a
+ * zero-width space after it lets a narrow column wrap there.
+ *
+ * @param {string} label
+ */
+function breakable(label) {
+  return label.replaceAll('/', '/​');
+}
+
 /** @param {string | string[]} value */
 function shownValue(value) {
   if (value === NOT_APPLICABLE) return NOT_APPLICABLE_LABEL;
@@ -545,7 +555,7 @@ async function save() {
               :key="cell.field.id"
               :class="{ 'op-specs-wide': cell.field.kind === 'multi' }"
             >
-              <dt>{{ cell.field.label }}</dt>
+              <dt>{{ breakable(cell.field.label) }}</dt>
               <dd :data-muted="cell.value === NOT_APPLICABLE || undefined">
                 <span
                   v-if="swatchOf(cell)"
@@ -561,7 +571,7 @@ async function save() {
               :key="cell.field.id"
               class="op-specs-wide"
             >
-              <dt>{{ cell.field.label }}</dt>
+              <dt>{{ breakable(cell.field.label) }}</dt>
               <dd>{{ shownValue(cell.value) }}</dd>
             </div>
             <div v-if="item.outras" class="op-specs-wide">

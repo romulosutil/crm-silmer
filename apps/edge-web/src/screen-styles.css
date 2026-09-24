@@ -2063,7 +2063,7 @@ button.op-add-item {
 
 .op-item-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(11rem, 13rem);
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 15.5rem);
 }
 
 .op-specs {

@@ -38,8 +38,8 @@ Quando houver conflito, use esta ordem:
 ## Protocolo obrigatório
 
 1. **Pesquisa por intenção:** para perguntas arquiteturais, relações entre
-   código e documentação ou descoberta inicial de uma área, execute `graphify
-   query` com a pergunta da tarefa. Para localizar texto, símbolo, header,
+   código e documentação ou descoberta inicial de uma área, consulte os diagramas e grafos pré-existentes
+   em `graphify-out/`. Para localizar texto, símbolo, header,
    arquivo ou mudança local, use `rg` como busca primária.
 2. **Grafo não é worktree:** trate o Graphify como mapa de descoberta, não como
    fonte da versão atual. Antes de decidir ou editar, confirme os achados no
@@ -52,9 +52,10 @@ Quando houver conflito, use esta ordem:
    locais de terceiros.
 6. **A11y e segurança:** trate teclado, foco, ARIA, autorização, PII,
    idempotência e auditoria como parte da implementação, não como revisão tardia.
-7. **1:1:1:1:** uma tarefa concluída gera uma entrega atômica, um commit, um push
-   e uma atualização `graphify update .`. Se o grafo rastreado mudar, publique-o
-   em um commit mecânico separado e deixe o worktree limpo.
+7. **1:1:1:1:** uma tarefa concluída gera uma entrega atômica, um commit e um push.
+   O grafo (`graphify-out/`) não é versionado: só o Hermes, no worker Ubuntu do
+   Rômulo, o gera (a cada push e toda noite) e ele volta pelo Syncthing. Nenhum
+   agente roda `graphify update` nem commita o grafo; máquina sem o grafo usa `rg`.
 
 Não introduza outro framework de frontend, store global, estado de domínio em
 `window`, Redis, microserviços ou nova infraestrutura sem autorização explícita
@@ -66,15 +67,15 @@ Ative somente os papéis necessários para a fatia. O Tech Lead continua dono da
 integração e da decisão final; especialistas entregam evidência, não decisões
 silenciosas.
 
-| Papel | Quando ativar | Responsabilidade | Evidência de saída |
-|---|---|---|---|
-| Tech Lead / Orquestrador | Sempre | Escopo, dependências, contratos, integração e fechamento | Plano, decisões, diff integrado e gate final |
-| Produto / Domínio | Regra ambígua, fluxo ou aceite | Mapear comportamento para PRD/spec e impedir expansão de escopo | IDs atendidos, exemplos e dúvidas bloqueantes |
-| Frontend / Acessibilidade | HTML, CSS, JS de interface | Semântica, teclado, foco, estados, ARIA e composição responsiva | Cenários por teclado e estados verificados |
-| Backend / Dados | API, domínio, SQL ou autenticação | Transações, constraints, ACL, migrações e contratos REST | Testes positivos, negativos e concorrentes |
-| Integrações / Confiabilidade | Meta, IA, storage, worker ou PDF | Adapters, assinatura, idempotência, retry, reconciliação e falhas | Fixtures, matriz de efeitos e casos de recuperação |
-| QA / Segurança / Privacidade | Toda fatia de risco | Revisão adversarial, regressão, PII, abuso, autorização e observabilidade | Findings priorizados e critérios executados |
-| DevOps / Release | CI, imagem, EasyPanel, backup ou go-live | Build reproduzível, digest, segredos, health, rollback e recovery | Logs de pipeline, digest e runbook validado |
+| Papel                        | Quando ativar                            | Responsabilidade                                                          | Evidência de saída                                 |
+| ---------------------------- | ---------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------- |
+| Tech Lead / Orquestrador     | Sempre                                   | Escopo, dependências, contratos, integração e fechamento                  | Plano, decisões, diff integrado e gate final       |
+| Produto / Domínio            | Regra ambígua, fluxo ou aceite           | Mapear comportamento para PRD/spec e impedir expansão de escopo           | IDs atendidos, exemplos e dúvidas bloqueantes      |
+| Frontend / Acessibilidade    | HTML, CSS, JS de interface               | Semântica, teclado, foco, estados, ARIA e composição responsiva           | Cenários por teclado e estados verificados         |
+| Backend / Dados              | API, domínio, SQL ou autenticação        | Transações, constraints, ACL, migrações e contratos REST                  | Testes positivos, negativos e concorrentes         |
+| Integrações / Confiabilidade | Meta, IA, storage, worker ou PDF         | Adapters, assinatura, idempotência, retry, reconciliação e falhas         | Fixtures, matriz de efeitos e casos de recuperação |
+| QA / Segurança / Privacidade | Toda fatia de risco                      | Revisão adversarial, regressão, PII, abuso, autorização e observabilidade | Findings priorizados e critérios executados        |
+| DevOps / Release             | CI, imagem, EasyPanel, backup ou go-live | Build reproduzível, digest, segredos, health, rollback e recovery         | Logs de pipeline, digest e runbook validado        |
 
 ### Composição eficiente por tipo de tarefa
 
@@ -110,4 +111,18 @@ responde pelo resultado ponta a ponta.
 - Nenhuma PII ou segredo em log, fixture, diff ou artefato.
 - Migração, idempotência, falha externa e rollback cobertos conforme o risco.
 - Documentação e runbook atualizados junto com a mudança.
-- `git diff --check`, checks do projeto, commit, push e Graphify concluídos.
+- `git diff --check`, checks do projeto, commit e push concluídos.
+
+### Architectural Context (Graphify)
+
+- READ ONLY: Always inspect and read existing graphs, AST maps, and architecture diagrams directly from:
+  `dev/graphify-out/` (or relative path to graphify-out/)
+- NEVER run graphify build, parse, or indexing commands locally on the Windows host.
+- Graph updates are handled automatically in the background by the Ubuntu Worker on git push and nightly schedules.
+
+### Remote Infrastructure Directives
+
+- Local Windows Docker service is disabled by design. All containers run exclusively on `dell-worker`.
+- Never search Windows paths for container binaries or Nginx executables.
+- Run container commands via `ssh dell-worker "docker ..."` or rely on `DOCKER_HOST="ssh://dell-worker"`.
+- Container mounts map to `~/workspace/` on Ubuntu (mirrored from `dev/` via Syncthing).

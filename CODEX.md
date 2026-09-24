@@ -51,10 +51,9 @@ dos arquivos. O diretório `historico-datacrazy/` não é fonte normativa.
 
 1. Rode os checks proporcionais ao risco e `git diff --check`.
 2. Confirme rastreabilidade e documentação afetada.
-3. Faça commit atômico e push no branch solicitado.
-4. Execute `graphify update .`.
-5. Se o grafo versionado mudar, faça um commit mecânico `chore(graph)` e novo
-   push; finalize com o worktree limpo.
+3. Faça commit atômico e push no branch solicitado; finalize com o worktree
+   limpo. Não rode `graphify update` nem commite `graphify-out/`: o grafo não é
+   versionado e só o Hermes, no worker Ubuntu, o gera.
 
 O handoff deve registrar arquivos alterados, verificações executadas, commit,
 push, riscos residuais e próximo item desbloqueado.

@@ -1,6 +1,6 @@
 # Ficha por produto — Especificação
 
-**Status:** Draft para aprovação
+**Status:** Implementado — aguardando aprovação da v3 (T15)
 **Data:** 24/09/2026
 **Decisões de produto:** [`context.md`](context.md)
 **Arquitetura:** [`design.md`](design.md) · **Tasks:** [`tasks.md`](tasks.md)
@@ -177,10 +177,39 @@ cada peça, com os nomes que usamos na oficina.
 
 ## Rastreabilidade
 
-| ID        | História | Evidência (preencher na verificação) |
-| --------- | -------- | ------------------------------------ |
-| CAT-01…06 | P1-1     |                                      |
-| FIT-01…11 | P1-2     |                                      |
-| FGR-01…05 | P1-3     |                                      |
-| FMI-01…03 | P1-4     |                                      |
-| FIM-01…09 | P1-5     |                                      |
+| ID     | História | Evidência                                                                                                                                                          |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CAT-01 | P1-1     | `test/order-catalog-import.test.js:227`                                                                                                                            |
+| CAT-02 | P1-1     | `test/order-catalog-import.test.js:311`, `test/order-catalog-import.test.js:318`, `test/order-catalog-import.test.js:338`, `test/order-catalog-import.test.js:351` |
+| CAT-03 | P1-1     | `test/order-catalog-import.test.js:371`                                                                                                                            |
+| CAT-04 | P1-1     | `test/order-catalog-import.test.js:255`                                                                                                                            |
+| CAT-05 | P1-1     | `test/order-catalog-import.test.js:255`                                                                                                                            |
+| CAT-06 | P1-1     | `test/order-catalog-contract.test.js:10`                                                                                                                           |
+| FIT-01 | P1-2     | `test/e2e/orders.spec.js:1370`                                                                                                                                     |
+| FIT-02 | P1-2     | `test/order-catalog-resolver.test.js:29`, `test/e2e/orders.spec.js:1186`                                                                                           |
+| FIT-03 | P1-2     | `test/order-catalog-resolver.test.js:45`, `test/e2e/orders.spec.js:1211`                                                                                           |
+| FIT-04 | P1-2     | `test/orders-ficha.test.js:328`, `test/order-items.test.js:26`, `test/e2e/orders.spec.js:1226`                                                                     |
+| FIT-05 | P1-2     | `test/order-catalog-resolver.test.js:51`, `test/e2e/orders.spec.js:1133`                                                                                           |
+| FIT-06 | P1-2     | `test/e2e/orders.spec.js:1133`                                                                                                                                     |
+| FIT-07 | P1-2     | `test/order-items.test.js:50`, `test/e2e/orders.spec.js:1245`                                                                                                      |
+| FIT-08 | P1-2     | `test/e2e/orders.spec.js:1263`                                                                                                                                     |
+| FIT-09 | P1-2     | `test/orders-ficha.test.js:273`, `test/e2e/orders.spec.js:1263`                                                                                                    |
+| FIT-10 | P1-2     | `test/order-catalog.test.js:15`                                                                                                                                    |
+| FIT-11 | P1-2     | `test/e2e/orders.spec.js:1286`                                                                                                                                     |
+| FGR-01 | P1-3     | `test/order-catalog-resolver.test.js:71`, `test/e2e/orders.spec.js:1341`                                                                                           |
+| FGR-02 | P1-3     | `test/order-items.test.js:60`, `test/order-items.test.js:38`, `test/e2e/orders.spec.js:1315`                                                                       |
+| FGR-03 | P1-3     | Sem escala "Medida" aprovada na planilha; `setScale` e `sizeGroups` não preenchem nem sugerem tamanhos de escala `freeText` (`OrderItemsSection.vue`).             |
+| FGR-04 | P1-3     | `test/e2e/orders.spec.js:859`                                                                                                                                      |
+| FGR-05 | P1-3     | `test/orders-ficha.test.js:273`, `test/e2e/orders.spec.js:1315`                                                                                                    |
+| FMI-01 | P1-4     | `test/orders-domain.test.js:266`, `test/order-format.test.js:184`                                                                                                  |
+| FMI-02 | P1-4     | `test/orders-domain.test.js:276`                                                                                                                                   |
+| FMI-03 | P1-4     | `test/orders-domain.test.js:284`                                                                                                                                   |
+| FIM-01 | P1-5     | `test/orders-print-v3.test.js:91`                                                                                                                                  |
+| FIM-02 | P1-5     | `test/orders-print-v3.test.js:84`                                                                                                                                  |
+| FIM-03 | P1-5     | `test/orders-print-v3.test.js:91`, `test/orders-print-v3.test.js:138`                                                                                              |
+| FIM-04 | P1-5     | `test/orders-print-v3.test.js:103`                                                                                                                                 |
+| FIM-05 | P1-5     | `test/orders-print-v3.test.js:110`, `test/e2e/orders.spec.js:1357`                                                                                                 |
+| FIM-06 | P1-5     | `test/orders-print-v3.test.js:124`                                                                                                                                 |
+| FIM-07 | P1-5     | `test/orders-print-v3.test.js:115`, `test/order-catalog-resolver.test.js:78`                                                                                       |
+| FIM-08 | P1-5     | `test/orders-print-v3.test.js:152`, `test/ficha-v3-review.test.js:46`                                                                                              |
+| FIM-09 | P1-5     | `test/ficha-v3-review.test.js:80`, `scripts/ficha-v3-review.mjs:35`                                                                                                |

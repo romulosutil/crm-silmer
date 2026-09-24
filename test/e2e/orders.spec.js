@@ -1366,3 +1366,24 @@ test('names the scale above the grade when it is not the adult one', async ({
     page.getByRole('region', { name: 'Itens e especificações' }),
   ).toContainText('Grade · Infantil');
 });
+
+test('offers the catalog products by family on Tipo, the first field (FIT-01)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  const tipo = items.getByRole('combobox', { name: 'Tipo' });
+  await expect(tipo).toBeFocused();
+  await tipo.press('ArrowDown');
+
+  const family = items.getByRole('group', { name: 'Vestuário superior' });
+  await expect(
+    family.getByRole('option', { name: 'CAMISETA', exact: true }),
+  ).toBeVisible();
+  await expect(items.getByRole('group', { name: 'Acessório' })).toContainText(
+    'BONÉ',
+  );
+});

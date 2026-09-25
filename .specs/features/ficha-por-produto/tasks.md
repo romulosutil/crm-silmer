@@ -5,15 +5,17 @@
 > task. Os passos usam checkbox (`- [ ]`) para acompanhamento.
 
 **Objetivo:** o produto escolhido em cada item define os campos, os rótulos e as
-sugestões da ficha, a partir do catálogo aprovado na planilha da Silmer, e a
-ficha impressa v3 imprime só o que vale para cada peça.
+sugestões da ficha, a partir do catálogo aprovado na planilha da Silmer; cada
+item registra o próprio tipo de serviço; e a ficha impressa v3 imprime só o
+que vale para cada peça.
 
 **Arquitetura:** um script lê o `.xlsx` aprovado e gera
 `modules/orders/src/catalog/order-catalog.data.js`. Um resolvedor puro na mesma
 pasta é importado pelo domínio (validação, faltantes, impressão) e pelo
 frontend (tela do pedido), então regra, rótulo e ordem são os mesmos em todo
-lugar. A ficha continua no `ficha_envelope`; o item ganha `specs`, `escala` e
-`outras`, todos opcionais.
+lugar. A ficha continua no `ficha_envelope`; o item ganha `specs`, `servicos`
+(Tipo de serviço), `escala` e `outras`, todos opcionais na validação. A
+Aplicação do cabeçalho só sobrevive em pedido antigo.
 
 **Stack:** Node 24 (ESM, `node:test`, `node:zlib`), Vue 3 + Vite, Playwright +
 axe, Prettier. Nenhuma dependência nova.
@@ -21,14 +23,10 @@ axe, Prettier. Nenhuma dependência nova.
 **Spec:** [`spec.md`](spec.md) · **Decisões:** [`context.md`](context.md) ·
 **Arquitetura:** [`design.md`](design.md)
 
-> ⚠️ **Replanejar antes de executar (25/09/2026).** A spec ganhou o Tipo de
-> serviço por item (P1-6, FTS-01…05, FIM-10; decisões F24–F27). Este plano
-> ainda trata a aba 15 como `applications` do cabeçalho. Tasks afetadas:
-> T01 (ADR), T03 (aba 15 → `lists.servicos`, campo `servicos` em `fields.js`,
-> contagem de opções), T04 (`applicationOptions` sai; `itemFields` inclui
-> `servicos`), T05 (`servicos` no item, `artwork_technique` no primeiro item),
-> T06 (faltantes), T07 (linha larga e cabeçalho sem Aplicação), T08 (fixture),
-> T09–T11 (Aplicação sai do Resumo, entra no card), T14 (rastreabilidade).
+> **Replanejado em 25/09/2026** para o Tipo de serviço por item (P1-6,
+> FTS-01…05, FIM-10; decisões F24–F27): a aba 15 vira a lista `servicos`,
+> `servicos` é campo fixo de todo item (fora da matriz da aba 03) e a
+> Aplicação sai da edição do Resumo.
 
 ## Restrições globais
 
@@ -110,31 +108,32 @@ antes da T15** (ver `design.md` → Riscos).
 
 ### Mapa de arquivos
 
-| Arquivo                                                    | Task     | Responsabilidade                                 |
-| ---------------------------------------------------------- | -------- | ------------------------------------------------ |
-| `docs/adr/007-ficha-por-produto.md`                        | T01      | Decisão arquitetural                             |
-| `scripts/lib/xlsx-reader.mjs`                              | T02      | Ler `.xlsx` sem dependência                      |
-| `test/helpers/xlsx-fixture.js`                             | T02      | Montar `.xlsx` em memória para testes            |
-| `modules/orders/src/catalog/text.js`                       | T03      | `foldText`                                       |
-| `modules/orders/src/catalog/fields.js`                     | T03      | Campos do item (fixos no código)                 |
-| `modules/orders/src/catalog/types.js`                      | T03      | Typedefs do catálogo                             |
-| `modules/orders/src/catalog/validate.js`                   | T03      | `assertOrderCatalog`                             |
-| `scripts/import-order-catalog.mjs`                         | T03      | Planilha → arquivo gerado                        |
-| `modules/orders/src/catalog/order-catalog.data.js`         | T03      | **Gerado**                                       |
-| `modules/orders/src/catalog/index.js`                      | T04      | Resolvedor puro                                  |
-| `modules/orders/src/domain/ficha.js`                       | T05      | `specs`, `escala`, `outras`, FIT-04              |
-| `modules/orders/src/domain/order.js`                       | T06      | Faltantes por produto                            |
-| `modules/orders/src/print/print-snapshot.js`               | T07      | Snapshot v2/v3 (movido da rota)                  |
-| `modules/orders/src/print/ficha-canonical-v3.js`           | T07      | Template v3                                      |
-| `modules/orders/src/print/index.js`                        | T07      | `PRINT_TEMPLATE`, `renderOrderFicha`             |
-| `scripts/ficha-v3-review.mjs`                              | T08      | PDF sintético v3 + gate                          |
-| `docs/phase0/ficha-pdf-synthetic-v3.json`                  | T08      | Pedido sintético da revisão                      |
-| `docs/phase0/ficha-pdf-approval-v3.json`                   | T08      | Registro de aprovação (gerado, pendente)         |
-| `apps/edge-web/src/lib/order-catalog.js`                   | T09, T13 | Ponte do front para o resolvedor + `colorSwatch` |
-| `apps/edge-web/src/lib/order-items.js`                     | T09      | Funções puras do rascunho do item                |
-| `apps/edge-web/src/components/order/OrderCombobox.vue`     | T10      | Combobox ARIA com grupos                         |
-| `apps/edge-web/src/components/order/OrderSpecField.vue`    | T11      | Um campo do item por `kind`                      |
-| `apps/edge-web/src/components/order/OrderItemsSection.vue` | T11, T12 | Card do item por produto; grade por escala       |
+| Arquivo                                                      | Task     | Responsabilidade                                     |
+| ------------------------------------------------------------ | -------- | ---------------------------------------------------- |
+| `docs/adr/007-ficha-por-produto.md`                          | T01      | Decisão arquitetural                                 |
+| `scripts/lib/xlsx-reader.mjs`                                | T02      | Ler `.xlsx` sem dependência                          |
+| `test/helpers/xlsx-fixture.js`                               | T02      | Montar `.xlsx` em memória para testes                |
+| `modules/orders/src/catalog/text.js`                         | T03      | `foldText`                                           |
+| `modules/orders/src/catalog/fields.js`                       | T03      | Campos do item (fixos no código)                     |
+| `modules/orders/src/catalog/types.js`                        | T03      | Typedefs do catálogo                                 |
+| `modules/orders/src/catalog/validate.js`                     | T03      | `assertOrderCatalog`                                 |
+| `scripts/import-order-catalog.mjs`                           | T03      | Planilha → arquivo gerado                            |
+| `modules/orders/src/catalog/order-catalog.data.js`           | T03      | **Gerado**                                           |
+| `modules/orders/src/catalog/index.js`                        | T04      | Resolvedor puro                                      |
+| `modules/orders/src/domain/ficha.js`                         | T05      | `specs`, `servicos`, `escala`, `outras`, FIT-04      |
+| `modules/orders/src/domain/order.js`                         | T06      | Faltantes por produto                                |
+| `modules/orders/src/print/print-snapshot.js`                 | T07      | Snapshot v2/v3 (movido da rota)                      |
+| `modules/orders/src/print/ficha-canonical-v3.js`             | T07      | Template v3                                          |
+| `modules/orders/src/print/index.js`                          | T07      | `PRINT_TEMPLATE`, `renderOrderFicha`                 |
+| `scripts/ficha-v3-review.mjs`                                | T08      | PDF sintético v3 + gate                              |
+| `docs/phase0/ficha-pdf-synthetic-v3.json`                    | T08      | Pedido sintético da revisão                          |
+| `docs/phase0/ficha-pdf-approval-v3.json`                     | T08      | Registro de aprovação (gerado, pendente)             |
+| `apps/edge-web/src/lib/order-catalog.js`                     | T09, T13 | Ponte do front para o resolvedor + `colorSwatch`     |
+| `apps/edge-web/src/lib/order-items.js`                       | T09      | Funções puras do rascunho do item                    |
+| `apps/edge-web/src/components/order/OrderCombobox.vue`       | T10      | Combobox ARIA com grupos                             |
+| `apps/edge-web/src/components/order/OrderSummarySection.vue` | T10      | Aplicação sai da edição; leitura só em pedido antigo |
+| `apps/edge-web/src/components/order/OrderSpecField.vue`      | T11      | Um campo do item por `kind`                          |
+| `apps/edge-web/src/components/order/OrderItemsSection.vue`   | T10–T12  | Tipo em combobox; card por produto; grade por escala |
 
 ---
 
@@ -146,7 +145,7 @@ antes da T15** (ver `design.md` → Riscos).
   ficha, template v3 atrás de gate humano.
 - **Where:** `docs/adr/007-ficha-por-produto.md`
 - **Depends on:** —
-- **Requirement:** F01–F23 (context)
+- **Requirement:** F01–F27 (context)
 
 **Files:**
 
@@ -161,7 +160,7 @@ Status: aceito
 
 Data: 24/09/2026
 
-Decisores: PO, em sessão de design de 24/09/2026.
+Decisores: PO, em sessões de design de 24 e 25/09/2026.
 
 ## Contexto
 
@@ -182,8 +181,11 @@ runtime comercial de Negócio (ADR 004) e não guarda regra por campo.
   Google Sheets em tempo de execução nem usa `modules/catalog`.
 - Backend e frontend usam o mesmo resolvedor puro
   (`modules/orders/src/catalog/index.js`).
-- Campos novos do item ficam em `specs`, `escala` e `outras` dentro do
-  `ficha_envelope`, sem migration.
+- Campos novos do item ficam em `specs`, `servicos`, `escala` e `outras`
+  dentro do `ficha_envelope`, sem migration.
+- O tipo de serviço (sublimação, serigrafia, DTF, bordado…) é do item, com
+  vários valores e regra fixa Sim em todo produto; sai do cabeçalho do pedido.
+  Pedido antigo com Aplicação no cabeçalho continua válido e impresso.
 - "Sim" entra no banner de faltantes e não bloqueia a confirmação (A01).
 - A ficha impressa ganha `ficha-canonical-v3`. A troca de template é um commit
   próprio, depois da aprovação de Rose e Operação registrada em
@@ -193,7 +195,8 @@ runtime comercial de Negócio (ADR 004) e não guarda regra por campo.
 
 - Supersede D10 e D15 da feature Pedidos MVP depois da aprovação da v3, e D11
   apenas para "locais da aplicação", que passam a ser campo do item e saem
-  impressos.
+  impressos. Supersede PFI-02 apenas para "aplicação", que vira o Tipo de
+  serviço do item.
 - Mudar o catálogo é: editar a planilha, rodar o script, fazer commit e deploy.
 - Um catálogo editável pela operação (tabelas no PostgreSQL) fica para uma
   decisão futura; o modelo relacional está em
@@ -702,7 +705,7 @@ git commit -m "feat(scripts): read xlsx sheets without dependencies" -m "Co-Auth
   que transforma a planilha no arquivo gerado, e gerar o arquivo real.
 - **Where:** `modules/orders/src/catalog/{text,fields,types,validate}.js`, `scripts/import-order-catalog.mjs`, `modules/orders/src/catalog/order-catalog.data.js`, `package.json`, `test/order-catalog-import.test.js`
 - **Depends on:** T02
-- **Requirement:** CAT-01, CAT-02, CAT-03, CAT-04, CAT-05, CAT-06
+- **Requirement:** CAT-01, CAT-02, CAT-03, CAT-04, CAT-05, CAT-06, FTS-01 (campo fixo), FTS-02 (lista da aba 15)
 
 **Files:**
 
@@ -718,13 +721,16 @@ git commit -m "feat(scripts): read xlsx sheets without dependencies" -m "Co-Auth
 **Interfaces:**
 
 - Consumes: `readXlsx` (T02).
-- Produces: `foldText(value: unknown): string`; `FIELDS: readonly FieldDefinition[]`
-  e `NOT_APPLICABLE = 'NAO APLICAVEL'` (`fields.js`); typedef `OrderCatalog`
+- Produces: `foldText(value: unknown): string`; `FIELDS: readonly FieldDefinition[]`,
+  `MATRIX_FIELDS` (os campos da aba 03, sem os de regra fixa) e
+  `NOT_APPLICABLE = 'NAO APLICAVEL'` (`fields.js`); typedef `OrderCatalog`
   (`types.js`); `assertOrderCatalog(catalog: any): void`;
   `buildOrderCatalog(sheets: Map<string, string[][]>, source: {file: string, sha256: string}): OrderCatalog`;
   `renderCatalogModule(catalog: OrderCatalog): Promise<string>`.
-- `FieldDefinition = { id, label, header, path, kind: 'text'|'multi'|'composite', list, colorList?, placement: 'header'|'grid'|'wide', addLabel? }`.
-- Ids de lista: `modelagens, golas, mangas, malhas, cores, acabamentos, aberturas, bolsos, cos, faces, fixacoes, locais`.
+- `FieldDefinition = { id, label, header, path, kind: 'text'|'multi'|'composite', list, colorList?, placement: 'header'|'grid'|'wide', addLabel?, fixedRule? }`.
+  `fixedRule: 'required'` marca campo que existe em todo item e não passa pela
+  aba 03 — hoje só `servicos` (Tipo de serviço, F25).
+- Ids de lista: `modelagens, golas, mangas, malhas, cores, acabamentos, aberturas, bolsos, cos, faces, fixacoes, servicos, locais`.
 
 - [ ] **Step 1: Escrever `text.js`, `fields.js` e `types.js`**
 
@@ -756,10 +762,14 @@ export function foldText(value) {
 export const NOT_APPLICABLE = 'NAO APLICAVEL';
 
 /**
+ * `fixedRule` marks a field every item has whatever the product, outside the
+ * tab 03 matrix (F25): the sheet cannot switch it off or rename it.
+ *
  * @typedef {{
  *   id: string, label: string, header: string, path: string,
  *   kind: 'text'|'multi'|'composite', list: string, colorList?: string,
  *   placement: 'header'|'grid'|'wide', addLabel?: string,
+ *   fixedRule?: 'required',
  * }} FieldDefinition
  */
 
@@ -905,6 +915,17 @@ export const FIELDS = Object.freeze(
       placement: 'grid',
     },
     {
+      id: 'servicos',
+      label: 'Tipo de serviço',
+      header: 'Tipo de serviço',
+      path: 'servicos',
+      kind: 'multi',
+      list: 'servicos',
+      placement: 'wide',
+      addLabel: 'Adicionar tipo de serviço',
+      fixedRule: 'required',
+    },
+    {
       id: 'locais',
       label: 'Locais da aplicação',
       header: 'Locais da aplicação',
@@ -915,6 +936,12 @@ export const FIELDS = Object.freeze(
       addLabel: 'Adicionar local',
     },
   ]).map((field) => Object.freeze(field)),
+);
+
+// The columns of tab 03: every field whose rule the sheet decides.
+/** @type {readonly FieldDefinition[]} */
+export const MATRIX_FIELDS = Object.freeze(
+  FIELDS.filter((field) => !field.fixedRule),
 );
 ```
 
@@ -938,7 +965,6 @@ export const FIELDS = Object.freeze(
  *   products: CatalogProduct[],
  *   lists: Record<string, CatalogOption[]>,
  *   scales: CatalogScale[],
- *   applications: CatalogOption[],
  * }} OrderCatalog
  */
 export {};
@@ -948,13 +974,14 @@ export {};
 
 ```js
 // modules/orders/src/catalog/validate.js
-import { FIELDS } from './fields.js';
+import { FIELDS, MATRIX_FIELDS } from './fields.js';
 
 // CAT-06: the shape every generated catalog must have. The import script runs
 // it before writing, and the contract test runs it on the versioned file.
 
 const RULES = new Set(['required', 'optional']);
-const FIELD_IDS = new Set(FIELDS.map((field) => field.id));
+// A product only sets matrix fields; a fixed-rule field is never per product.
+const FIELD_IDS = new Set(MATRIX_FIELDS.map((field) => field.id));
 const LIST_IDS = new Set(
   FIELDS.flatMap((field) =>
     field.colorList ? [field.list, field.colorList] : [field.list],
@@ -1065,7 +1092,6 @@ export function assertOrderCatalog(catalog) {
     check(LIST_IDS.has(listId), `lista desconhecida ${listId}`);
     checkOptions(options, listId, productIds);
   }
-  checkOptions(catalog.applications, 'applications', productIds);
 }
 ```
 
@@ -1076,7 +1102,7 @@ export function assertOrderCatalog(catalog) {
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { FIELDS } from '../modules/orders/src/catalog/fields.js';
+import { FIELDS, MATRIX_FIELDS } from '../modules/orders/src/catalog/fields.js';
 import {
   buildOrderCatalog,
   renderCatalogModule,
@@ -1097,13 +1123,14 @@ const OPTION_HEADER = [
 /** @param {string} title */
 const head = (title) => [[title], ['Nota da aba.']];
 /** @param {Record<string, string>} rules */
-const matrixRow = (rules) => FIELDS.map((field) => rules[field.id] ?? 'Não');
+const matrixRow = (rules) =>
+  MATRIX_FIELDS.map((field) => rules[field.id] ?? 'Não');
 
 /** @param {{products?: string[][], golas?: string[][], matrixHeader?: string[], regataViesMangas?: string}} [override] */
 function workbook(override = {}) {
   const matrixHeader = override.matrixHeader ?? [
     'Produto',
-    ...FIELDS.map((field) => field.header),
+    ...MATRIX_FIELDS.map((field) => field.header),
     'Nomes diferentes / observação',
   ];
   return buildXlsx([
@@ -1289,6 +1316,15 @@ function workbook(override = {}) {
           'Todos',
           '',
         ],
+        [
+          'Manter',
+          'Aprovado',
+          'Bordado/aplique',
+          'Bordado direto',
+          'BORDADO DIRETO',
+          'Boné',
+          '',
+        ],
       ],
     },
   ]);
@@ -1370,14 +1406,21 @@ test('reads who each option is for and what it prints (CAT-04, CAT-05)', () => {
     { id: 'adulto', label: 'Adulto', sizes: ['P', 'M'], freeText: false },
     { id: 'unico', label: 'Único', sizes: ['ÚNICO'], freeText: false },
   ]);
-  assert.deepEqual(catalog.applications, [
+  assert.deepEqual(catalog.lists.servicos, [
     {
       value: 'DTF',
       label: 'DTF — direto no filme',
       group: 'Impressão',
       products: [],
     },
+    {
+      value: 'BORDADO DIRETO',
+      label: 'Bordado direto',
+      group: 'Bordado/aplique',
+      products: ['bone'],
+    },
   ]);
+  assert.equal('applications' in catalog, false);
   for (const field of FIELDS) {
     assert.ok(Array.isArray(catalog.lists[field.list]), field.list);
   }
@@ -1413,13 +1456,26 @@ test('refuses an unknown product in "Vale para" (CAT-02)', () => {
 test('refuses a matrix header that names no field (CAT-02)', () => {
   const header = [
     'Produto',
-    ...FIELDS.map((field) => field.header),
+    ...MATRIX_FIELDS.map((field) => field.header),
     'Nomes diferentes',
   ];
   header[header.indexOf('Bolso')] = 'Capuz';
   assert.throws(
     () => build({ matrixHeader: header }),
     /cabeçalho "Capuz" não corresponde a nenhum campo/u,
+  );
+});
+
+test('keeps the service type out of the matrix (F25, FTS-01)', () => {
+  const header = [
+    'Produto',
+    ...MATRIX_FIELDS.map((field) => field.header),
+    'Tipo de serviço',
+    'Nomes diferentes',
+  ];
+  assert.throws(
+    () => build({ matrixHeader: header }),
+    /cabeçalho "Tipo de serviço" não corresponde a nenhum campo/u,
   );
 });
 
@@ -1473,7 +1529,7 @@ import { basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { format, resolveConfig } from 'prettier';
 
-import { FIELDS } from '../modules/orders/src/catalog/fields.js';
+import { FIELDS, MATRIX_FIELDS } from '../modules/orders/src/catalog/fields.js';
 import { foldText } from '../modules/orders/src/catalog/text.js';
 import { assertOrderCatalog } from '../modules/orders/src/catalog/validate.js';
 import { readXlsx } from './lib/xlsx-reader.mjs';
@@ -1507,6 +1563,7 @@ const LIST_TABS = {
   10: 'aberturas',
   11: 'bolsos',
   12: 'cos',
+  15: 'servicos',
   16: 'locais',
 };
 /** @type {Record<string, string>} */
@@ -1710,7 +1767,8 @@ function readMatrix(sheets, products) {
       labelsColumn = column;
       return;
     }
-    const field = FIELDS.find(
+    // A fixed-rule field (Tipo de serviço) is not a column: F25.
+    const field = MATRIX_FIELDS.find(
       (candidate) => foldText(candidate.header) === foldText(text),
     );
     if (!field)
@@ -1863,14 +1921,6 @@ export function buildOrderCatalog(sheets, source) {
     const option = toOption(banner.name, row, false);
     if (option) lists[listId].push(option);
   }
-  const applications = tabRows(sheets, '15', { required: true }).approved.map(
-    (row) => ({
-      value: printedValue(row),
-      label: row.option,
-      group: row.group,
-      products: /** @type {string[]} */ ([]),
-    }),
-  );
   /** @type {OrderCatalog} */
   const catalog = {
     schemaVersion: 1,
@@ -1880,7 +1930,6 @@ export function buildOrderCatalog(sheets, source) {
     scales: [...scaleInfo.scales.values()].map(
       ({ id, label, sizes, freeText }) => ({ id, label, sizes, freeText }),
     ),
-    applications,
   };
   assertOrderCatalog(catalog);
   return catalog;
@@ -1945,7 +1994,7 @@ if (
 - [ ] **Step 6: Rodar e ver passar**
 
 Run: `node --test test/order-catalog-import.test.js`
-Expected: PASS (7 testes)
+Expected: PASS (8 testes)
 
 - [ ] **Step 7: Registrar o script npm e gerar o catálogo real**
 
@@ -1956,10 +2005,10 @@ Em `package.json`, dentro de `"scripts"`, logo depois de `"build"`:
 ```
 
 Run: `npm run catalog:import -- --from "G:/Meu Drive/Silmer/005-lista-de-opcoes-para-aprovacao.xlsx"`
-Expected: `Catálogo gerado: 14 produtos, 62 opções, 4 escalas.` com a planilha
+Expected: `Catálogo gerado: 14 produtos, 69 opções, 4 escalas.` com a planilha
 v2 sem nenhuma sugestão aprovada (as 85 linhas "Manter" das abas 04–16 menos
-15 tamanhos, que viram escalas, 7 aplicações, que ficam em `applications`, e
-"Sem manga", que vale para nenhum produto). Se a Silmer já aprovou sugestões,
+15 tamanhos, que viram escalas, e "Sem manga", que vale para nenhum produto;
+as 7 da aba 15 formam a lista `servicos`). Se a Silmer já aprovou sugestões,
 os números sobem.
 
 Run: `npm run catalog:import -- --from "G:/Meu Drive/Silmer/005-lista-de-opcoes-para-aprovacao.xlsx" --check`
@@ -1977,6 +2026,7 @@ git commit -m "feat(orders): import the order catalog from the approved sheet" -
 **Done when:**
 
 - [ ] `order-catalog.data.js` gerado da planilha real, com cabeçalho "GERADO"
+- [ ] Aba 15 sai em `lists.servicos`; nenhum produto tem `servicos` em `fields`
 - [ ] `--check` confirma o arquivo em dia
 - [ ] Gate quick passa
 
@@ -1990,7 +2040,7 @@ git commit -m "feat(orders): import the order catalog from the approved sheet" -
   escalas este produto tem" e "como este item se descreve".
 - **Where:** `modules/orders/src/catalog/index.js`, `test/order-catalog-contract.test.js`, `test/order-catalog-resolver.test.js`
 - **Depends on:** T03
-- **Requirement:** CAT-06, FIT-02, FIT-03, FIT-05, FGR-01
+- **Requirement:** CAT-06, FIT-02, FIT-03, FIT-05, FGR-01, FTS-01, FTS-02
 
 **Files:**
 
@@ -2004,9 +2054,9 @@ git commit -m "feat(orders): import the order catalog from the approved sheet" -
 - Produces:
   - `ORDER_CATALOG: OrderCatalog` (congelado)
   - `resolveProduct(tipo: unknown): CatalogProduct | null`
-  - `itemFields(product: CatalogProduct | null): ItemField[]` — `ItemField = FieldDefinition & { rule: 'required'|'optional' }`, `label` já com o rótulo do produto
-  - `fieldOptions(listId: string, productId: string | null): OptionGroup[]` — `OptionGroup = { label: string, options: CatalogOption[] }`
-  - `productOptions(): OptionGroup[]`, `applicationOptions(): OptionGroup[]`
+  - `itemFields(product: CatalogProduct | null): ItemField[]` — `ItemField = FieldDefinition & { rule: 'required'|'optional' }`, `label` já com o rótulo do produto; campo com `fixedRule` (`servicos`) sempre presente com essa regra, também para `null`
+  - `fieldOptions(listId: string, productId: string | null): OptionGroup[]` — `OptionGroup = { label: string, options: CatalogOption[] }`; Tipo de serviço usa `fieldOptions('servicos', …)`
+  - `productOptions(): OptionGroup[]`
   - `scalesFor(product: CatalogProduct | null): CatalogScale[]`, `scaleById(id: string): CatalogScale | null`
   - `readField(item, field): string | string[]`
   - `describeItem(item): { product: CatalogProduct | null, cells: ItemCell[] }` — `ItemCell = { field: ItemField, value: string | string[], empty: boolean }`
@@ -2015,7 +2065,9 @@ git commit -m "feat(orders): import the order catalog from the approved sheet" -
 
 Os testes usam o catálogo real (planilha v2): Camiseta, Camisa polo, Regata,
 Bermuda e Boné são "Manter"; Gola polo vale só para Camisa polo; Regata tem
-"Viés cavas"; Camiseta oferece Adulto, Infantil, Plus size e Bebê.
+"Viés cavas"; Camiseta oferece Adulto, Infantil, Plus size e Bebê; a aba 15
+tem 7 tipos de serviço, todos para Todos (grupos Sublimação, Impressão,
+Bordado/aplique e Efeito especial).
 
 - [ ] **Step 1: Escrever os testes que falham**
 
@@ -2090,7 +2142,18 @@ test('a product shows only its fields, in catalog order, with its labels (FIT-02
 test('a product outside the catalog shows every field as optional (FIT-03)', () => {
   const fields = itemFields(null);
   assert.equal(fields.length, FIELDS.length);
-  assert.ok(fields.every((field) => field.rule === 'optional'));
+  assert.ok(
+    fields.every((field) => field.rule === (field.fixedRule ?? 'optional')),
+  );
+});
+
+test('every item has the service type, required (F25, FTS-01)', () => {
+  for (const found of [product('Camiseta'), product('Boné'), null]) {
+    const field = itemFields(found).find((entry) => entry.id === 'servicos');
+    assert.equal(field?.rule, 'required');
+    assert.equal(field?.label, 'Tipo de serviço');
+    assert.equal(field?.kind, 'multi');
+  }
 });
 
 test('offers the options that apply to the product, grouped (FIT-05)', () => {
@@ -2106,6 +2169,9 @@ test('offers the options that apply to the product, grouped (FIT-05)', () => {
   assert.ok(values('golas', null).includes('GOLA POLO'));
   const colours = fieldOptions('cores', product('Camiseta').id);
   assert.ok(colours.some((group) => group.label === 'Azuis'));
+  const services = fieldOptions('servicos', product('Boné').id);
+  assert.ok(services.some((group) => group.label === 'Sublimação'));
+  assert.ok(values('servicos', product('Boné').id).includes('DTF'));
   assert.ok(
     productOptions()
       .flatMap((group) => group.options)
@@ -2133,6 +2199,8 @@ test('describes an item saved before the catalog (FIM-07)', () => {
   assert.equal(cell('gola')?.empty, true);
   assert.deepEqual(cell('malha')?.value, ['PP DRY']);
   assert.equal(cell('modelagem')?.value, 'TRADICIONAL');
+  assert.deepEqual(cell('servicos')?.value, []);
+  assert.equal(cell('servicos')?.empty, true);
 });
 
 test('reads "Não aplicável" as empty for a catalog product only (F14)', () => {
@@ -2213,12 +2281,15 @@ export function resolveProduct(tipo) {
 /**
  * FIT-02/FIT-03: the fields of the item in catalog order, with the product's
  * rule and label; a product outside the catalog gets every field, optional.
+ * A fixed-rule field (Tipo de serviço) is on every item with its own rule
+ * (F25).
  *
  * @param {CatalogProduct | null} product
  * @returns {ItemField[]}
  */
 export function itemFields(product) {
   return FIELDS.flatMap((field) => {
+    if (field.fixedRule) return [{ ...field, rule: field.fixedRule }];
     if (!product)
       return [{ ...field, rule: /** @type {FieldRule} */ ('optional') }];
     const setting = product.fields[field.id];
@@ -2263,11 +2334,6 @@ export function productOptions() {
       products: [],
     })),
   );
-}
-
-/** @returns {OptionGroup[]} */
-export function applicationOptions() {
-  return grouped(ORDER_CATALOG.applications);
 }
 
 /** FGR-01 @param {CatalogProduct | null} product @returns {CatalogScale[]} */
@@ -2326,7 +2392,7 @@ export function describeItem(item) {
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `node --test test/order-catalog-contract.test.js test/order-catalog-resolver.test.js`
-Expected: PASS (9 testes)
+Expected: PASS (10 testes)
 
 - [ ] **Step 5: Gate e commit**
 
@@ -2346,27 +2412,35 @@ git commit -m "feat(orders): resolve item fields and options from the catalog" -
 
 ---
 
-### T05: Item da ficha com `specs`, `escala` e `outras`
+### T05: Item da ficha com `specs`, `servicos`, `escala` e `outras`
 
-- **What:** aceitar e validar os campos novos do item; zerar os campos que o
-  produto não tem (FIT-04); padrões para item antigo e para o briefing.
-- **Where:** `modules/orders/src/domain/ficha.js`, `test/orders-ficha.test.js`
+- **What:** aceitar e validar os campos novos do item, incluindo o Tipo de
+  serviço (`servicos`); zerar os campos que o produto não tem (FIT-04);
+  padrões para item antigo e para o briefing; a técnica do agente passa a ir
+  para o primeiro item.
+- **Where:** `modules/orders/src/domain/ficha.js`, `test/orders-ficha.test.js`, `test/orders-service-create.test.js`
 - **Depends on:** T04
-- **Requirement:** FIT-04, FIT-09, FGR-05, F10, F15
+- **Requirement:** FIT-04, FIT-09, FGR-05, FTS-01, FTS-05, F10, F15, F24, F26
 
 **Files:**
 
 - Modify: `modules/orders/src/domain/ficha.js`
 - Test: `test/orders-ficha.test.js`
+- Test: `test/orders-service-create.test.js`
 
 **Interfaces:**
 
 - Consumes: `FIELDS`, `ORDER_CATALOG`, `SPEC_KEYS`, `itemFields`, `resolveProduct` (T04).
 - Produces: `FichaItem` com `specs: Record<string, string | string[]>`,
-  `escala: string`, `outras: string`; `validateItems` devolve sempre os três;
-  `NOT_APPLICABLE` continua exportado de `ficha.js`.
+  `servicos: string[]`, `escala: string`, `outras: string`; `validateItems`
+  devolve sempre os quatro; `NOT_APPLICABLE` continua exportado de `ficha.js`.
+- `briefingToFicha` / `projectBriefingOntoFicha`: `artwork_technique` →
+  `items[0].servicos` (substitui, como `malhas`); sem dados de item, fica em
+  `serviceData`; `summary.aplicacao` nasce `null` e só pedido antigo o tem.
+- `validateSummary` não muda: `aplicacao` continua aceito e exigido no input
+  do Resumo, para o pedido antigo não perder o valor ao salvar (F26).
 
-- [ ] **Step 1: Escrever os testes que falham** (acrescentar ao fim de `test/orders-ficha.test.js`)
+- [ ] **Step 1: Escrever os testes que falham** (acrescentar ao fim de `test/orders-ficha.test.js`; no import de `../modules/orders/src/domain/ficha.js`, acrescentar `projectBriefingOntoFicha`)
 
 ```js
 test('an item keeps its catalog specs, scale and other specifications (F10)', () => {
@@ -2395,11 +2469,24 @@ test('an item keeps its catalog specs, scale and other specifications (F10)', ()
 test('an item saved before the catalog reads with empty specs (F15)', () => {
   const [saved] = validateItems([item()]);
   assert.deepEqual(saved.specs, {});
+  assert.deepEqual(saved.servicos, []);
   assert.equal(saved.escala, '');
   assert.equal(saved.outras, '');
 });
 
-test('refuses a spec, a scale or other specifications the ficha does not know', () => {
+test('an item keeps several service types, whatever the product (FTS-01)', () => {
+  const [bone] = validateItems([
+    item({ tipo: 'BONÉ', servicos: [' BORDADO DIRETO ', '', 'DTF'] }),
+  ]);
+  const [outside] = validateItems([
+    item({ tipo: 'CAMISA DE TIME', servicos: ['SERIGRAFIA'] }),
+  ]);
+
+  assert.deepEqual(bone.servicos, ['BORDADO DIRETO', 'DTF']);
+  assert.deepEqual(outside.servicos, ['SERIGRAFIA']);
+});
+
+test('refuses a spec, a service type, a scale or other specifications the ficha does not know', () => {
   /** @param {string} path */
   const refused = (path) => (/** @type {any} */ error) => {
     assert.equal(error.name, 'OrderInputError');
@@ -2413,6 +2500,10 @@ test('refuses a spec, a scale or other specifications the ficha does not know', 
   assert.throws(
     () => validateItems([item({ specs: { locais: 'COSTAS' } })]),
     refused('items[0].specs.locais'),
+  );
+  assert.throws(
+    () => validateItems([item({ servicos: 'DTF' })]),
+    refused('items[0].servicos'),
   );
   assert.throws(
     () => validateItems([item({ escala: 'gigante' })]),
@@ -2455,15 +2546,79 @@ test('keeps every field of a product outside the catalog (F07)', () => {
 test('the agent briefing seeds the new item keys empty', () => {
   const ficha = briefingToFicha({ product_type: 'CAMISETA' });
   assert.deepEqual(ficha.items[0].specs, {});
+  assert.deepEqual(ficha.items[0].servicos, []);
   assert.equal(ficha.items[0].escala, '');
   assert.equal(ficha.items[0].outras, '');
 });
+
+test('the agent technique becomes the service type of the first item (FTS-05)', () => {
+  const ficha = briefingToFicha({
+    artwork_technique: 'sublimação total',
+    product_type: 'CAMISETA',
+  });
+
+  assert.deepEqual(ficha.items[0].servicos, ['sublimação total']);
+  assert.equal(ficha.summary.aplicacao, null);
+  assert.equal(Object.hasOwn(ficha.serviceData, 'artwork_technique'), false);
+});
+
+test('without item facts the agent technique stays service data (FTS-05)', () => {
+  const ficha = briefingToFicha({ artwork_technique: 'DTF' });
+
+  assert.deepEqual(ficha.items, []);
+  assert.equal(ficha.serviceData.artwork_technique, 'DTF');
+  assert.equal(ficha.summary.aplicacao, null);
+});
+
+test('a new briefing replaces the first item service type and keeps an old header (FTS-05, F26)', () => {
+  const [first] = validateItems([
+    item({ tipo: 'CAMISETA', servicos: ['DTF'] }),
+  ]);
+  const ficha = {
+    items: [first],
+    observations: [],
+    serviceData: {},
+    summary: {
+      aplicacao: 'SILK',
+      cliente: 'Cliente Sintético',
+      data_entrega_confirmada: null,
+      nome: null,
+    },
+  };
+
+  const replaced = projectBriefingOntoFicha(ficha, {
+    artwork_technique: 'bordado',
+    product_type: 'CAMISETA',
+  });
+  const kept = projectBriefingOntoFicha(ficha, { product_type: 'CAMISETA' });
+
+  assert.deepEqual(replaced.items[0].servicos, ['bordado']);
+  assert.equal(replaced.summary.aplicacao, 'SILK');
+  assert.deepEqual(kept.items[0].servicos, ['DTF']);
+});
+```
+
+Ajustar os testes antigos que descrevem a técnica no cabeçalho:
+
+- Em `test/orders-ficha.test.js`, no teste `maps the agent pre-ficha into
+ficha sections and keeps the rest as service data`: no `deepEqual` de
+  `ficha.summary`, trocar `aplicacao: 'sublimação total'` por
+  `aplicacao: null`; no `deepEqual` de `ficha.items`, acrescentar ao item
+  `escala: ''` (entre `cor_manga_esquerda` e `grade`) e `outras: ''`,
+  `servicos: ['sublimação total']`, `specs: {}` (entre `modelo` e `tipo`).
+- Em `test/orders-service-create.test.js`, trocar
+  `assert.equal(order.ficha.summary.aplicacao, 'sublimação total');` por:
+
+```js
+assert.equal(order.ficha.summary.aplicacao, null);
+assert.deepEqual(order.ficha.items[0].servicos, ['sublimação total']);
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
 
-Run: `node --test test/orders-ficha.test.js`
-Expected: FAIL — `saved.specs` é `undefined` e `items[0].specs is not allowed`.
+Run: `node --test test/orders-ficha.test.js test/orders-service-create.test.js`
+Expected: FAIL — `saved.specs` é `undefined`, `items[0].specs is not allowed`
+e `summary.aplicacao` ainda recebe a técnica do agente.
 
 - [ ] **Step 3: Implementar**
 
@@ -2505,6 +2660,7 @@ const ITEM_KEYS = new Set([
   'malhas',
   'grade',
   'specs',
+  'servicos',
   'escala',
   'outras',
 ]);
@@ -2524,7 +2680,7 @@ const MULTI_SPEC_KEYS = new Set(
  *   cor_frente: string, cor_costas: string,
  *   cor_manga_direita: string, cor_manga_esquerda: string,
  *   vies_gola: string, vies_mangas: string,
- *   specs: FichaSpecs, escala: string, outras: string,
+ *   specs: FichaSpecs, servicos: string[], escala: string, outras: string,
  *   grade: GradeLine[],
  * }} FichaItem
 ```
@@ -2533,9 +2689,22 @@ const MULTI_SPEC_KEYS = new Set(
 
 ```js
   item.specs = validateSpecs(raw.specs, prefix);
+  item.servicos = validateServices(raw.servicos, prefix);
   item.escala = validateScale(raw.escala, prefix);
   item.outras = validateOtherSpecs(raw.outras, prefix);
   return clearMissingFields(/** @type {FichaItem} */ (item));
+}
+
+/** FTS-01: the service types of the item, several allowed. @param {unknown} value @param {string} prefix */
+function validateServices(value, prefix) {
+  if (value === undefined) return [];
+  const path = `${prefix}.servicos`;
+  if (!Array.isArray(value)) {
+    throw new OrderInputError(`${path} must be a list`, [path]);
+  }
+  return value
+    .map((text) => requireText(text, path))
+    .filter((text) => text !== '');
 }
 
 /** @param {unknown} value @param {string} prefix @returns {FichaSpecs} */
@@ -2598,7 +2767,8 @@ function validateOtherSpecs(value, prefix) {
 /**
  * FIT-04: a field the product does not have is stored empty, so a value typed
  * before the seller changed the type never reaches the paper. Fabrics stay:
- * every item needs one, and no catalog product goes without.
+ * every item needs one, and no catalog product goes without. The service type
+ * is on every item (F25), so `itemFields` always keeps it.
  *
  * @param {FichaItem} item
  * @returns {FichaItem}
@@ -2623,7 +2793,17 @@ function clearMissingFields(item) {
 (o `}` que fechava `validateItem` agora fecha logo depois do novo `return`;
 confira que não sobrou chave a mais)
 
-5. Em `briefingToFicha`, no objeto do item, acrescentar entre `cor_manga_esquerda` e `grade`:
+5. Em `briefingToFicha` (FTS-05, F26):
+
+- apagar a linha `const aplicacao = take('artwork_technique', briefingText) || null;`
+- logo depois do `const hasItem = …;`, acrescentar:
+
+```js
+// FTS-05: the technique is the item's; without item facts it stays service data.
+const servicos = hasItem ? take('artwork_technique', briefingList) : undefined;
+```
+
+- no objeto do item, acrescentar entre `cor_manga_esquerda` e `grade`:
 
 ```js
           escala: '',
@@ -2633,51 +2813,81 @@ e entre `modelo` e `tipo`:
 
 ```js
           outras: '',
+          servicos: servicos ?? [],
           specs: {},
 ```
+
+- no `summary` devolvido, trocar `aplicacao,` por:
+
+```js
+      // F26: only an order saved before the service type moved to the item
+      // carries a header technique.
+      aplicacao: null,
+```
+
+6. Em `projectBriefingOntoFicha`, no item mesclado, acrescentar entre
+   `modelo` e `tipo`:
+
+```js
+        servicos:
+          draftItem.servicos.length > 0
+            ? draftItem.servicos
+            : (firstItem.servicos ?? []),
+```
+
+apagar do `summary` a linha
+`aplicacao: draft.summary.aplicacao ?? current.summary.aplicacao,` (o
+`...current.summary` já mantém o valor antigo) e, no comentário da função,
+trocar `event name, technique and the first item's type, model, fabrics and
+grade` por `event name and the first item's type, model, fabrics, service
+type and grade`.
 
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `node --test test/orders-ficha.test.js test/orders-service-commands.test.js test/orders-service-create.test.js`
-Expected: PASS (inclui os testes antigos: o item sintético, `CAMISA`, está fora do catálogo e continua igual)
+Expected: PASS (inclui os testes antigos: o item sintético, `CAMISA`, está fora do catálogo e continua igual; o Resumo ainda aceita `aplicacao`)
 
 - [ ] **Step 5: Gate e commit**
 
 Run: `node --test test/orders-*.test.js test/order-*.test.js && npm run lint && npm run typecheck`
 
 ```bash
-git add modules/orders/src/domain/ficha.js test/orders-ficha.test.js
-git commit -m "feat(orders): store catalog specs, scale and notes on ficha items" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git add modules/orders/src/domain/ficha.js test/orders-ficha.test.js test/orders-service-create.test.js
+git commit -m "feat(orders): store catalog specs, service types, scale and notes on ficha items" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 **Done when:**
 
-- [ ] Item novo guarda `specs`, `escala`, `outras`; item antigo lê com padrões
-- [ ] Campo que o produto não tem é gravado vazio
+- [ ] Item novo guarda `specs`, `servicos`, `escala`, `outras`; item antigo lê com padrões
+- [ ] Campo que o produto não tem é gravado vazio; `servicos` nunca é zerado
+- [ ] Técnica do agente cai no primeiro item; `summary.aplicacao` antigo sobrevive ao merge
 - [ ] Gate quick passa
 
-**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): store catalog specs, scale and notes on ficha items`
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): store catalog specs, service types, scale and notes on ficha items`
 
 ---
 
 ### T06: Faltantes por produto
 
 - **What:** o banner lista só os campos "Sim" vazios de produto do catálogo;
-  fora do catálogo, nada muda.
-- **Where:** `modules/orders/src/domain/order.js`, `test/orders-domain.test.js`
+  fora do catálogo, a lista atual mais o Tipo de serviço. O Tipo de serviço
+  vazio entra para todo item; a Aplicação do Resumo sai da lista.
+- **Where:** `modules/orders/src/domain/order.js`, `test/orders-domain.test.js`, `test/orders-service-commands.test.js`
 - **Depends on:** T05
-- **Requirement:** FMI-01, FMI-02, FMI-03
+- **Requirement:** FMI-01, FMI-02, FMI-03, FTS-03, FTS-04
 
 **Files:**
 
 - Modify: `modules/orders/src/domain/order.js`
 - Test: `test/orders-domain.test.js`
+- Test: `test/orders-service-commands.test.js`
 
 **Interfaces:**
 
 - Consumes: `describeItem` (T04).
 - Produces: entradas de faltantes no formato `items[<i>].<path>`, por exemplo
-  `items[0].specs.cos`, `items[0].modelo`, `items[0].grade`.
+  `items[0].specs.cos`, `items[0].modelo`, `items[0].servicos`,
+  `items[0].grade`. `summary.aplicacao` nunca mais aparece.
 
 - [ ] **Step 1: Escrever os testes que falham** (acrescentar ao fim de `test/orders-domain.test.js`)
 
@@ -2693,6 +2903,7 @@ function bermudaOrder(overrides = {}) {
       cor_manga_direita: '',
       vies_gola: '',
       specs: {},
+      servicos: [],
       escala: '',
       outras: '',
       ...overrides,
@@ -2706,9 +2917,32 @@ test('lists only what the catalog product requires (FMI-01)', () => {
 
   assert.ok(missing.includes('items[0].modelo'));
   assert.ok(missing.includes('items[0].specs.cos'));
+  assert.ok(missing.includes('items[0].servicos'));
   assert.ok(!missing.includes('items[0].cor_manga_direita'));
   assert.ok(!missing.includes('items[0].vies_gola'));
   assert.ok(!missing.includes('items[0].specs.bolso'));
+});
+
+test('lists the service type of every item, in or out of the catalog (FTS-03)', () => {
+  const order = bermudaOrder();
+  const legacy = { ...pendingOrder().ficha.items[0], tipo: 'KIT' };
+  delete legacy.servicos; // saved before the service type existed
+  order.ficha.items.push(legacy);
+
+  const missing = missingForConfirmation(order);
+  assert.ok(missing.includes('items[0].servicos'));
+  assert.ok(missing.includes('items[1].servicos'));
+  assert.ok(
+    !missingForConfirmation(bermudaOrder({ servicos: ['DTF'] })).includes(
+      'items[0].servicos',
+    ),
+  );
+});
+
+test('no longer lists the header technique (FTS-04)', () => {
+  const order = pendingOrder();
+  order.ficha.summary.aplicacao = null;
+  assert.ok(!missingForConfirmation(order).includes('summary.aplicacao'));
 });
 
 test('keeps the full list for a product outside the catalog (FMI-02)', () => {
@@ -2730,10 +2964,40 @@ test('an empty required field never blocks confirming (FMI-03)', () => {
 });
 ```
 
+Ajustar os testes antigos, que usam itens sem Tipo de serviço (o JSON
+sintético da v2 não muda: está travado pela revisão da v2):
+
+- Em `test/orders-domain.test.js`, no `pendingOrder`, trocar
+  `items: structuredClone(synthetic.pedido.itens),` por:
+
+```js
+      items: structuredClone(synthetic.pedido.itens).map(
+        (/** @type {any} */ item) => ({
+          ...item,
+          servicos: ['SUBLIMACAO TOTAL'],
+        }),
+      ),
+```
+
+e, no teste `lists what is missing: blockers first, then empty ficha
+  fields`, apagar `'summary.aplicacao',` da lista esperada.
+
+- Em `test/orders-service-commands.test.js`, no teste `saving items
+recalculates total pieces and what is missing`, trocar
+  `value: synthetic.pedido.itens,` por:
+
+```js
+      value: synthetic.pedido.itens.map((/** @type {any} */ item) => ({
+        ...item,
+        servicos: ['SUBLIMACAO TOTAL'],
+      })),
+```
+
 - [ ] **Step 2: Rodar e ver falhar**
 
 Run: `node --test test/orders-domain.test.js`
-Expected: FAIL — a lista traz `items[0].cor_manga_direita` e não traz `items[0].specs.cos`.
+Expected: FAIL — a lista traz `items[0].cor_manga_direita` e
+`summary.aplicacao`, e não traz `items[0].specs.cos` nem `items[0].servicos`.
 
 - [ ] **Step 3: Implementar**
 
@@ -2741,6 +3005,31 @@ Em `modules/orders/src/domain/order.js`, acrescentar o import no topo:
 
 ```js
 import { describeItem } from '../catalog/index.js';
+```
+
+tirar `'aplicacao'` de `SUMMARY_FIELD_ORDER` e pôr `'servicos'` em
+`ITEM_FIELD_ORDER`, entre `'vies_mangas'` e `'grade'`:
+
+```js
+const ITEM_FIELD_ORDER = Object.freeze([
+  'tipo',
+  'modelo',
+  'malhas',
+  'cor_frente',
+  'cor_costas',
+  'cor_manga_direita',
+  'cor_manga_esquerda',
+  'vies_gola',
+  'vies_mangas',
+  'servicos',
+  'grade',
+]);
+// FTS-04: the technique moved to the item; an old header value stays, unlisted.
+const SUMMARY_FIELD_ORDER = Object.freeze([
+  'cliente',
+  'data_entrega_confirmada',
+  'nome',
+]);
 ```
 
 e trocar o `items.forEach(...)` de `missingForConfirmation` por:
@@ -2758,10 +3047,15 @@ items.forEach((item, index) => {
     if (item.grade.length === 0) missing.push(`items[${index}].grade`);
     return;
   }
-  // FMI-02: a product outside the catalog keeps the full list.
+  // FMI-02/FTS-03: a product outside the catalog keeps the full list, plus
+  // the service type. An item saved before it existed has no key at all.
   for (const key of ITEM_FIELD_ORDER) {
     const value = item[/** @type {keyof typeof item} */ (key)];
-    if (value === '' || (Array.isArray(value) && value.length === 0)) {
+    if (
+      value === undefined ||
+      value === '' ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
       missing.push(`items[${index}].${key}`);
     }
   }
@@ -2770,7 +3064,7 @@ items.forEach((item, index) => {
 
 - [ ] **Step 4: Rodar e ver passar**
 
-Run: `node --test test/orders-domain.test.js test/orders-service-read.test.js`
+Run: `node --test test/orders-domain.test.js test/orders-service-read.test.js test/orders-service-commands.test.js test/orders-service-create.test.js`
 Expected: PASS
 
 - [ ] **Step 5: Gate e commit**
@@ -2778,14 +3072,16 @@ Expected: PASS
 Run: `node --test test/orders-*.test.js test/order-*.test.js && npm run lint && npm run typecheck`
 
 ```bash
-git add modules/orders/src/domain/order.js test/orders-domain.test.js
+git add modules/orders/src/domain/order.js test/orders-domain.test.js test/orders-service-commands.test.js
 git commit -m "feat(orders): list missing fields by what the product requires" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 **Done when:**
 
 - [ ] Produto do catálogo: só "Sim" vazio no banner
-- [ ] Fora do catálogo e confirmação sem mudança
+- [ ] Tipo de serviço vazio listado em todo item, inclusive item antigo sem a chave
+- [ ] `summary.aplicacao` fora do banner
+- [ ] Fora do catálogo (fora o Tipo de serviço) e confirmação sem mudança
 - [ ] Gate quick passa
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): list missing fields by what the product requires`
@@ -2798,7 +3094,7 @@ git commit -m "feat(orders): list missing fields by what the product requires" -
   template por `PRINT_TEMPLATE` (ainda v2).
 - **Where:** `modules/orders/src/print/{print-snapshot,ficha-canonical-v3,index}.js`, `modules/orders/src/index.js`, `apps/api/src/order-routes.js`, `test/orders-print-v3.test.js`
 - **Depends on:** T05
-- **Requirement:** FIM-01, FIM-02, FIM-03, FIM-04, FIM-05, FIM-06, FIM-07, FIM-08
+- **Requirement:** FIM-01, FIM-02, FIM-03, FIM-04, FIM-05, FIM-06, FIM-07, FIM-08, FIM-10
 
 **Files:**
 
@@ -2814,7 +3110,8 @@ git commit -m "feat(orders): list missing fields by what the product requires" -
 - Consumes: `describeItem`, `scaleById` (T04); `itemTotal` (`ficha.js`);
   `blankProduction`, `renderFichaHtml` (v2, sem mudança).
 - Produces: `TEMPLATE_V2`, `TEMPLATE_V3`; `printSnapshot(order, templateVersion = TEMPLATE_V2)`;
-  `printableItem(item)` → `{ tipo, subtitulo, especificacoes: {rotulo, valor}[], linhas: {rotulo, valor}[], gradeTitulo, grade, total }`;
+  `printableItem(item)` → `{ tipo, subtitulo, especificacoes: {rotulo, valor}[], linhas: {rotulo, valor}[], gradeTitulo, grade, total }`
+  (`linhas` = Tipo de serviço, Locais da aplicação, Outras especificações, nessa ordem);
   `renderFichaHtmlV3(snapshot, {synthetic?})`; `PRINT_TEMPLATE: string`;
   `renderOrderFicha(order): string`.
 
@@ -2861,6 +3158,7 @@ const camiseta = {
     manga: 'RAGLAN CURTA',
     locais: ['COSTAS TOTAL', 'MANGA DIREITA'],
   },
+  servicos: ['SUBLIMAÇÃO TOTAL', 'BORDADO DIRETO'],
   escala: 'adulto',
   outras: 'Recorte lateral',
   grade: [
@@ -2879,13 +3177,14 @@ const bermuda = {
   vies_gola: 'NAO APLICAVEL',
   vies_mangas: 'BRANCO',
   specs: { cos: 'ELÁSTICO' },
+  servicos: ['SERIGRAFIA'],
   escala: 'infantil',
   outras: '',
   grade: [{ tamanho: 'P', quantidade: 3 }],
 };
 
-/** @param {any[]} items */
-function order(items) {
+/** @param {any[]} items @param {string | null} [aplicacao] */
+function order(items, aplicacao = null) {
   return {
     confirmedBy: { name: 'Vendedora Um' },
     fabCode: '01',
@@ -2893,7 +3192,7 @@ function order(items) {
       items,
       observations: ['Separar por tamanho.'],
       summary: {
-        aplicacao: 'SUBLIMAÇÃO TOTAL',
+        aplicacao,
         cliente: 'Cliente Sintetico',
         data_entrega_confirmada: '30/10/2026',
         nome: 'Equipe Sintetica',
@@ -2924,11 +3223,33 @@ test('prints only the fields the product has and someone filled (FIM-01, FIM-03)
   );
 });
 
-test('prints the locations and the other specifications on their own lines (FIM-04)', () => {
+test('prints service type, locations and other specifications on their own lines (FIM-04)', () => {
   assert.deepEqual(printableItem(camiseta).linhas, [
+    { rotulo: 'Tipo de serviço', valor: 'SUBLIMAÇÃO TOTAL / BORDADO DIRETO' },
     { rotulo: 'Locais da aplicação', valor: 'COSTAS TOTAL / MANGA DIREITA' },
     { rotulo: 'Outras especificações', valor: 'Recorte lateral' },
   ]);
+  assert.deepEqual(printableItem({ ...camiseta, servicos: [] }).linhas[0], {
+    rotulo: 'Locais da aplicação',
+    valor: 'COSTAS TOTAL / MANGA DIREITA',
+  });
+});
+
+test('prints the header technique only for an order saved with one (FIM-10)', () => {
+  /** @param {string | null} aplicacao */
+  const html = (aplicacao) =>
+    renderFichaHtmlV3(
+      printSnapshot(order([camiseta], aplicacao), TEMPLATE_V3),
+      {
+        synthetic: false,
+      },
+    );
+
+  assert.doesNotMatch(html(null), /class="label">Aplicacao</u);
+  assert.match(
+    html('SILK'),
+    /<span class="label">Aplicacao<\/span><strong>SILK<\/strong>/u,
+  );
 });
 
 test('names the scale above the grade when it is not the adult one (FIM-05)', () => {
@@ -2969,6 +3290,8 @@ test('renders the v3 item card with the product labels', () => {
 
   assert.match(html, /Viés barra\/lateral/u);
   assert.match(html, /Grade · Infantil/u);
+  assert.match(html, /Tipo de serviço/u);
+  assert.match(html, /SERIGRAFIA/u);
   assert.match(html, /Locais da aplicação/u);
   assert.doesNotMatch(html, /NAO APLICAVEL|undefined|null/u);
 });
@@ -3096,8 +3419,10 @@ No arquivo **novo** (`ficha-canonical-v3.js`), aplicar estas trocas:
 ```js
 // `ficha-canonical-v3` (ADR 007): the v2 document with the item card driven by
 // the order catalog — only the fields the product has, under its own labels,
-// the location and other specifications on full-width lines, and the scale
-// named above the grade. Page 2 is byte for byte the v2 production control.
+// the service type, location and other specifications on full-width lines,
+// and the scale named above the grade. The technique left the header for the
+// item (F24); only an order saved before that still prints it there (FIM-10).
+// Page 2 is byte for byte the v2 production control.
 ```
 
 2. Trocar `export function renderFichaHtml(snapshot, options = {}) {` por
@@ -3145,6 +3470,30 @@ const itemCards = snapshot.pedido.itens
 .spec-grid .spec-wide {
   grid-column: 1 / -1;
   min-height: 0;
+}
+```
+
+5. FIM-10 — no Resumo, trocar a linha
+   `<section class="summary">` e a célula
+   `<div><span class="label">Aplicacao</span><strong>${display(snapshot.pedido.aplicacao)}</strong></div>`
+   por:
+
+```js
+    <section class="summary${snapshot.pedido.aplicacao ? '' : ' no-technique'}">
+```
+
+(as três primeiras células ficam como estão) e, no lugar da célula da
+Aplicação:
+
+```js
+      ${snapshot.pedido.aplicacao ? `<div><span class="label">Aplicacao</span><strong>${display(snapshot.pedido.aplicacao)}</strong></div>` : ''}
+```
+
+Logo depois da linha CSS `.summary { … }`, acrescentar:
+
+```css
+.summary.no-technique {
+  grid-template-columns: 1.35fr 1fr 0.65fr;
 }
 ```
 
@@ -3223,6 +3572,7 @@ git commit -m "feat(orders): add the product-driven ficha-canonical-v3 template"
 **Done when:**
 
 - [ ] v3 imprime só o que vale para a peça; página 2 idêntica à v2
+- [ ] Tipo de serviço em linha larga; Aplicação no cabeçalho só em pedido antigo
 - [ ] Rota continua na v2; `ficha-canonical-v2.js` intacto
 - [ ] Gate quick passa
 
@@ -3236,7 +3586,7 @@ git commit -m "feat(orders): add the product-driven ficha-canonical-v3 template"
   impedir `PRINT_TEMPLATE = v3` sem aprovação.
 - **Where:** `scripts/ficha-v3-review.mjs`, `docs/phase0/ficha-pdf-synthetic-v3.json`, `docs/phase0/ficha-pdf-approval-v3.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, `package.json`, `test/ficha-v3-review.test.js`
 - **Depends on:** T07
-- **Requirement:** FIM-08, FIM-09
+- **Requirement:** FIM-08, FIM-09 (a fixture também mostra FIM-04 e FIM-10 para a revisão humana)
 
 **Files:**
 
@@ -3578,7 +3928,7 @@ Expected: PASS (4 testes)
     "summary": {
       "cliente": "Cliente Demonstracao",
       "data_entrega_confirmada": "30/10/2026",
-      "aplicacao": "SUBLIMAÇÃO TOTAL",
+      "aplicacao": null,
       "nome": "Equipe Horizonte - Evento Sintetico"
     },
     "observations": [
@@ -3601,6 +3951,7 @@ Expected: PASS (4 testes)
           "manga": "RAGLAN CURTA",
           "locais": ["COSTAS TOTAL", "OMBRO DIREITO"]
         },
+        "servicos": ["SUBLIMAÇÃO TOTAL"],
         "escala": "adulto",
         "outras": "",
         "grade": [
@@ -3621,6 +3972,7 @@ Expected: PASS (4 testes)
         "vies_gola": "VIÉS PRÓPRIO TECIDO",
         "vies_mangas": "VIÉS PRÓPRIO TECIDO",
         "specs": { "gola": "GOLA V" },
+        "servicos": ["SUBLIMAÇÃO LOCALIZADA"],
         "escala": "adulto",
         "outras": "",
         "grade": [
@@ -3639,6 +3991,7 @@ Expected: PASS (4 testes)
         "vies_gola": "",
         "vies_mangas": "BRANCO",
         "specs": { "cos": "ELÁSTICO" },
+        "servicos": ["SERIGRAFIA"],
         "escala": "infantil",
         "outras": "",
         "grade": [
@@ -3659,6 +4012,7 @@ Expected: PASS (4 testes)
         "vies_gola": "",
         "vies_mangas": "",
         "specs": { "abertura": "SNAP", "locais": ["BONÉ FRENTE"] },
+        "servicos": ["BORDADO DIRETO", "DTF"],
         "escala": "",
         "outras": "Aba curva preta",
         "grade": [{ "tamanho": "ÚNICO", "quantidade": 22 }]
@@ -3688,8 +4042,9 @@ Expected: `PDF v3 pronto para revisão: output/pdf/ficha-canonica-sintetica-v3.p
 `Pacote de revisão da v3 válido: pending-human-approval.`
 
 Abra o PDF e confira: Bermuda sem mangas nem gola, Regata com "Viés cavas",
-Boné com "Painel frontal"/"Regulagem", "Grade · Infantil" na bermuda, página 2
-igual à v2.
+Boné com "Painel frontal"/"Regulagem", "Grade · Infantil" na bermuda, "Tipo
+de serviço" em linha larga em cada item (boné com `BORDADO DIRETO / DTF`),
+Resumo sem Aplicação e sem célula vazia, página 2 igual à v2.
 
 - [ ] **Step 7: Gate e commit**
 
@@ -3716,7 +4071,7 @@ git commit -m "feat(orders): package the v3 ficha for human review" -m "Co-Autho
   item; rótulos do banner para `specs.*`; fronteira no `check:boundaries`.
 - **Where:** `apps/edge-web/src/lib/order-catalog.js`, `apps/edge-web/src/lib/order-items.js`, `apps/edge-web/src/lib/order-format.js`, `scripts/check-boundaries.mjs`, `test/order-items.test.js`, `test/order-format.test.js`
 - **Depends on:** T04
-- **Requirement:** FIT-04, FIT-07, FGR-02, FMI-01 (rótulos)
+- **Requirement:** FIT-04, FIT-07, FGR-02, FTS-01, FMI-01 e FTS-03 (rótulos)
 
 **Files:**
 
@@ -3729,8 +4084,8 @@ git commit -m "feat(orders): package the v3 ficha for human review" -m "Co-Autho
 **Interfaces:**
 
 - Consumes: resolvedor (T04).
-- Produces: `lib/order-catalog.js` reexporta `FIELDS, NOT_APPLICABLE, ORDER_CATALOG, applicationOptions, describeItem, fieldOptions, foldText, itemFields, productOptions, readField, resolveProduct, scaleById, scalesFor` (as listas antigas continuam até a T13);
-  `lib/order-items.js`: `draftItem(item)`, `emptyItem()`, `itemPayload(item)`,
+- Produces: `lib/order-catalog.js` reexporta `FIELDS, NOT_APPLICABLE, ORDER_CATALOG, describeItem, fieldOptions, foldText, itemFields, productOptions, readField, resolveProduct, scaleById, scalesFor` (as listas antigas continuam até a T13);
+  `lib/order-items.js`: `draftItem(item)`, `emptyItem()`, `itemPayload(item)` (sempre com `servicos`),
   `splitComposite(value): [string, string]`, `joinComposite(finish, color): string`,
   `gradeForScale(grade, scale)`.
 
@@ -3757,6 +4112,7 @@ const bermuda = {
   malhas: ['PP LISO', ' '],
   cor_manga_direita: 'BRANCO',
   specs: { gola: 'CARECA', cos: ' ELÁSTICO ', locais: ['', 'COSTAS TOTAL'] },
+  servicos: [' SERIGRAFIA ', ''],
   grade: [
     { quantidade: '', tamanho: 'PP' },
     { quantidade: '3', tamanho: ' P ' },
@@ -3773,6 +4129,14 @@ test('sends empty the fields the product does not have (FIT-04)', () => {
     locais: ['COSTAS TOTAL'],
   });
   assert.deepEqual(payload.malhas, ['PP LISO']);
+});
+
+test('always sends the service types, trimmed (FTS-01)', () => {
+  assert.deepEqual(itemPayload(bermuda).servicos, ['SERIGRAFIA']);
+  assert.deepEqual(itemPayload({ ...bermuda, tipo: 'KIT' }).servicos, [
+    'SERIGRAFIA',
+  ]);
+  assert.deepEqual(itemPayload(emptyItem()).servicos, []);
 });
 
 test('drops the grade lines nobody counted (FGR-02)', () => {
@@ -3817,6 +4181,7 @@ test('adds the missing sizes of a scale and replaces the blank line (FGR-02)', (
 test('a draft of an item saved before the catalog gets the new keys', () => {
   const draft = draftItem({ tipo: 'CAMISETA', malhas: [], grade: [] });
   assert.deepEqual(draft.specs, {});
+  assert.deepEqual(draft.servicos, ['']);
   assert.equal(draft.escala, '');
   assert.equal(draft.outras, '');
   assert.deepEqual(draft.malhas, ['']);
@@ -3826,10 +4191,14 @@ test('a draft of an item saved before the catalog gets the new keys', () => {
 Em `test/order-format.test.js`, acrescentar:
 
 ```js
-test('names catalog fields of an item in the banner (FMI-01)', () => {
+test('names catalog fields of an item in the banner (FMI-01, FTS-03)', () => {
   assert.deepEqual(
-    missingFieldLabels(['items[0].specs.cos', 'items[1].modelo']),
-    ['item 1: cós/cintura', 'item 2: modelagem'],
+    missingFieldLabels([
+      'items[0].specs.cos',
+      'items[1].modelo',
+      'items[1].servicos',
+    ]),
+    ['item 1: cós/cintura', 'item 2: modelagem', 'item 2: tipo de serviço'],
   );
 });
 ```
@@ -3855,7 +4224,6 @@ export {
   FIELDS,
   NOT_APPLICABLE,
   ORDER_CATALOG,
-  applicationOptions,
   describeItem,
   fieldOptions,
   foldText,
@@ -3885,9 +4253,14 @@ const CORE_TEXT_FIELDS = FIELDS.filter(
   (field) => !field.path.startsWith('specs.') && field.kind !== 'multi',
 );
 
+/** @param {unknown} values At least one input for a list field. */
+function inputs(values) {
+  return Array.isArray(values) && values.length > 0 ? [...values] : [''];
+}
+
 /**
  * A copy the form can edit; an item saved before the catalog gets the new
- * keys, and at least one fabric input.
+ * keys, and at least one fabric and one service type input.
  *
  * @param {Record<string, any>} item
  */
@@ -3896,10 +4269,8 @@ export function draftItem(item) {
     ...item,
     escala: typeof item.escala === 'string' ? item.escala : '',
     outras: typeof item.outras === 'string' ? item.outras : '',
-    malhas:
-      Array.isArray(item.malhas) && item.malhas.length > 0
-        ? [...item.malhas]
-        : [''],
+    malhas: inputs(item.malhas),
+    servicos: inputs(item.servicos),
     specs: { ...(item.specs ?? {}) },
     grade: (item.grade ?? []).map(
       (/** @type {Record<string, any>} */ line) => ({ ...line }),
@@ -3922,9 +4293,17 @@ export function emptyItem() {
   });
 }
 
+/** @param {unknown} values @returns {string[]} */
+function filledTexts(values) {
+  return (Array.isArray(values) ? values : [])
+    .map((value) => String(value).trim())
+    .filter((value) => value !== '');
+}
+
 /**
  * What "Salvar itens" sends: fields the product lacks go empty (FIT-04),
  * grade lines left without a quantity are dropped (FGR-02), text is trimmed.
+ * The service type is on every item (F25), so it always goes.
  *
  * @param {Record<string, any>} item
  */
@@ -3955,9 +4334,8 @@ export function itemPayload(item) {
   return {
     ...core,
     tipo: String(item.tipo ?? ''),
-    malhas: (item.malhas ?? [])
-      .map((/** @type {unknown} */ malha) => String(malha).trim())
-      .filter((/** @type {string} */ malha) => malha !== ''),
+    malhas: filledTexts(item.malhas),
+    servicos: filledTexts(item.servicos),
     specs,
     escala: String(item.escala ?? ''),
     outras: String(item.outras ?? '').trim(),
@@ -4080,6 +4458,7 @@ git commit -m "feat(edge-web): read the order catalog and shape item drafts" -m 
 
 **Done when:**
 
+- [ ] Rascunho e payload levam `servicos` em todo item
 - [ ] Front compila importando o resolvedor (`npm run build`)
 - [ ] Fronteira verificada no `check:boundaries`
 - [ ] Gate quick passa
@@ -4088,24 +4467,28 @@ git commit -m "feat(edge-web): read the order catalog and shape item drafts" -m 
 
 ---
 
-### T10: Combobox com grupos (e Aplicação)
+### T10: Combobox com grupos (Tipo) e Aplicação fora do Resumo
 
 - **What:** combobox ARIA editável com sugestões agrupadas e filtradas; primeiro
-  uso no campo Aplicação do Resumo.
-- **Where:** `apps/edge-web/src/components/order/OrderCombobox.vue`, `OrderSummarySection.vue`, `apps/edge-web/src/screen-styles.css`, `test/e2e/orders.spec.js`
+  uso no Tipo do item, com os produtos do catálogo. O Resumo deixa de editar a
+  Aplicação: pedido antigo mostra o valor em leitura e o reenvia intacto.
+- **Where:** `apps/edge-web/src/components/order/OrderCombobox.vue`, `OrderItemsSection.vue`, `OrderSummarySection.vue`, `apps/edge-web/src/screen-styles.css`, `test/e2e/orders.spec.js`
 - **Depends on:** T09
-- **Requirement:** F08, F21, FIT-05, FIT-06
+- **Requirement:** F08, F21, FIT-01, FIT-05, FIT-06, FTS-04, F26
 
 **Files:**
 
 - Create: `apps/edge-web/src/components/order/OrderCombobox.vue`
+- Modify: `apps/edge-web/src/components/order/OrderItemsSection.vue` (só o Tipo; a T11 reescreve o card)
 - Modify: `apps/edge-web/src/components/order/OrderSummarySection.vue`
 - Modify: `apps/edge-web/src/screen-styles.css`
 - Test: `test/e2e/orders.spec.js`
 
 **Interfaces:**
 
-- Consumes: `applicationOptions`, `foldText` (T09).
+- Consumes: `productOptions`, `foldText` (T09).
+- O `PUT` do Resumo continua levando `aplicacao` (a API exige a chave): o
+  valor gravado, ou `null` — a tela nunca mais o edita (F26).
 - Produces: `<OrderCombobox id v-model groups aria-label? aria-describedby? invalid? disabled? />`
   — `groups: {label: string, options: {value: string, label: string, swatch?: string}[]}[]`;
   emite `update:modelValue` com o texto digitado ou com o `value` escolhido.
@@ -4113,7 +4496,7 @@ git commit -m "feat(edge-web): read the order catalog and shape item drafts" -m 
 - [ ] **Step 1: Escrever os testes e2e que falham** (acrescentar em `test/e2e/orders.spec.js`)
 
 ```js
-test('suggests catalog applications in groups and keeps what is typed (F08, F21)', async ({
+test('suggests catalog products in groups and keeps what is typed (F08, F21, FIT-01)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -4121,49 +4504,89 @@ test('suggests catalog applications in groups and keeps what is typed (F08, F21)
   await mockOrders(page, { onWrite: (call) => writes.push(call) });
   await page.goto('/pedidos/order-pendente');
 
-  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
-  await summary.getByRole('button', { name: 'Editar' }).click();
-  const field = summary.getByRole('combobox', { name: 'Aplicação' });
-  await field.fill('dt');
-  await expect(summary.getByRole('listbox')).toBeVisible();
-  await expect(
-    summary.getByRole('option', { name: /DTF/u }).first(),
-  ).toBeVisible();
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  const field = items.getByRole('combobox', { name: 'Tipo' });
+  await field.fill('bon');
+  await expect(items.getByRole('listbox')).toBeVisible();
+  await expect(items.getByRole('option', { name: /BONÉ/u })).toBeVisible();
   await field.press('ArrowDown');
   await field.press('Enter');
-  await expect(field).toHaveValue('DTF');
+  await expect(field).toHaveValue('BONÉ');
   await expect(field).toHaveAttribute('aria-expanded', 'false');
 
   const results = await new AxeBuilder({ page }).include('form').analyze();
   expect(results.violations).toEqual([]);
 
-  await summary.getByRole('button', { name: 'Salvar' }).click();
-  expect(writes[0].body.value.aplicacao).toBe('DTF');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+  expect(writes[0].body.value[0].tipo).toBe('BONÉ');
 });
 
-test('keeps an application the catalog does not know (F08)', async ({
-  page,
-}) => {
+test('keeps a product the catalog does not know (F08)', async ({ page }) => {
   /** @type {any[]} */
   const writes = [];
   await mockOrders(page, { onWrite: (call) => writes.push(call) });
   await page.goto('/pedidos/order-pendente');
 
-  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
-  await summary.getByRole('button', { name: 'Editar' }).click();
-  const field = summary.getByRole('combobox', { name: 'Aplicação' });
-  await field.fill('SILK 3 CORES');
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  const field = items.getByRole('combobox', { name: 'Tipo' });
+  await field.fill('CAMISA DE TIME');
   await field.press('Escape');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  expect(writes[0].body.value[0].tipo).toBe('CAMISA DE TIME');
+});
+
+test('no longer edits the application in the summary (FTS-04)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  const fresh = structuredClone(pendingOrder);
+  fresh.ficha.summary.aplicacao = null;
+  await mockOrders(page, {
+    orders: [fresh],
+    onWrite: (call) => writes.push(call),
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await expect(summary.getByText('Aplicação', { exact: true })).toHaveCount(0);
+  await summary.getByRole('button', { name: 'Editar' }).click();
+  await expect(summary.getByLabel('Aplicação')).toHaveCount(0);
   await summary.getByRole('button', { name: 'Salvar' }).click();
 
-  expect(writes[0].body.value.aplicacao).toBe('SILK 3 CORES');
+  expect(writes[0].body.value.aplicacao).toBeNull();
 });
 ```
 
+Ajustar os testes antigos do Resumo, que editavam a Aplicação (o
+`pendingOrder` do arquivo tem `aplicacao: 'SUBLIMAÇÃO TOTAL'`: é o pedido
+antigo de F26, e o teste `reads the order summary…` continua listando
+"Aplicação"):
+
+- `edits the summary and saves the whole section at once (PFI-06)`: trocar
+  `await summary.getByLabel('Aplicação').fill('SILK 4 CORES');` por
+  `await expect(summary.getByLabel('Aplicação')).toHaveCount(0);`, trocar
+  `await expect(summary).toContainText('SILK 4 CORES');` por
+  `await expect(summary).toContainText('SUBLIMAÇÃO TOTAL');` e, no corpo
+  esperado, `aplicacao: 'SILK 4 CORES'` por `aplicacao: 'SUBLIMAÇÃO TOTAL'`.
+- `cancels an edit without writing anything`: trocar
+  `summary.getByLabel('Aplicação').fill('DESCARTAR')` por
+  `summary.getByLabel('Evento / Nome').fill('DESCARTAR')` e
+  `toContainText('SUBLIMAÇÃO TOTAL')` por
+  `toContainText('Uniforme escolar 2027')`.
+- `asks for a reload when the section was saved over an older version`:
+  trocar `summary.getByLabel('Aplicação').fill('SILK 4 CORES')` por
+  `summary.getByLabel('Evento / Nome').fill('Uniforme escolar 2028')`.
+- No `missingFor` do mock, apagar `'aplicacao',` da lista de chaves do
+  Resumo (FTS-04).
+
 - [ ] **Step 2: Rodar e ver falhar**
 
-Run: `npm run test:e2e -- test/e2e/orders.spec.js -g "applications|application the catalog"`
-Expected: FAIL — não existe `combobox` com nome "Aplicação" (o campo é `input` com `datalist`).
+Run: `npm run test:e2e -- test/e2e/orders.spec.js -g "catalog products|catalog does not know|application in the summary|edits the summary"`
+Expected: FAIL — não existe `combobox` "Tipo" (o campo é `input` com `datalist`) e o Resumo ainda tem o campo Aplicação.
 
 - [ ] **Step 3: Criar o combobox**
 
@@ -4429,65 +4852,111 @@ function toggle() {
 }
 ```
 
-- [ ] **Step 5: Usar no Resumo**
+- [ ] **Step 5: Usar no Tipo do item**
 
-Em `OrderSummarySection.vue`:
+Em `OrderItemsSection.vue` (a T11 reescreve o card inteiro e mantém este uso):
 
-1. Acrescentar aos imports:
+1. Trocar `import { colorSwatch } from '../../lib/order-catalog.js';` por:
 
 ```js
-import { applicationOptions } from '../../lib/order-catalog.js';
+import { colorSwatch, productOptions } from '../../lib/order-catalog.js';
 import OrderCombobox from './OrderCombobox.vue';
 ```
 
-e, logo depois de `const SECTION = 'summary';`:
+e, logo depois de `const SECTION = 'items';`:
 
 ```js
-const APPLICATION_OPTIONS = applicationOptions();
+// FIT-01: every Tipo suggests the catalog products, grouped by family.
+const PRODUCT_OPTIONS = productOptions();
 ```
 
-2. Trocar o bloco do campo Aplicação (`<div class="op-combo">` … `</div>` que
-   contém `id="summary-aplicacao"`) por:
+2. Trocar o bloco `<div class="op-combo">` … `</div>` que contém
+   `list="catalog-piece-types"` por:
 
 ```vue
 <OrderCombobox
-  id="summary-aplicacao"
-  v-model="draft.aplicacao"
-  :groups="APPLICATION_OPTIONS"
+  :id="`item-${itemIndex}-tipo`"
+  v-model="item.tipo"
+  :groups="PRODUCT_OPTIONS"
 />
 ```
 
-- [ ] **Step 6: Rodar e ver passar**
+- [ ] **Step 6: Tirar a Aplicação da edição do Resumo** (FTS-04, F26)
+
+Em `OrderSummarySection.vue`:
+
+1. Apagar o `<div class="op-field">` inteiro que contém `id="summary-aplicacao"`.
+2. Trocar `const draft = ref({ aplicacao: '', data_entrega_confirmada: '', nome: '' });`
+   por `const draft = ref({ data_entrega_confirmada: '', nome: '' });` e
+   apagar a linha `aplicacao: summary.value.aplicacao ?? '',` de `startEditing`.
+3. Em `save`, trocar `aplicacao: draft.value.aplicacao.trim() || null,` por:
+
+```js
+    // F26: the technique is the item's now. An old header value travels
+    // back untouched; a new order keeps it null.
+    aplicacao: summary.value.aplicacao ?? null,
+```
+
+4. Na leitura, trocar `<dl class="op-summary-main">` por
+   `<dl class="op-summary-main" :data-no-technique="!summary.aplicacao || undefined">`
+   e o `<div>` da Aplicação por:
+
+```vue
+<div v-if="summary.aplicacao">
+          <dt>Aplicação</dt>
+          <dd>{{ summary.aplicacao }}</dd>
+        </div>
+```
+
+Em `apps/edge-web/src/screen-styles.css`, logo depois de
+`.op-summary-main > div:last-child { … }`:
+
+```css
+@media (width >= 48rem) {
+  .op-summary-main[data-no-technique] {
+    grid-template-columns: 1.5fr 1.1fr 0.8fr;
+  }
+}
+
+@media (width < 48rem) {
+  .op-summary-main[data-no-technique] > div:last-child {
+    grid-column: 1 / -1;
+  }
+}
+```
+
+- [ ] **Step 7: Rodar e ver passar**
 
 Run: `npm run test:e2e -- test/e2e/orders.spec.js`
-Expected: PASS (todos, inclusive os dois novos)
+Expected: PASS (todos, inclusive os três novos)
 
-- [ ] **Step 7: Gate e commit**
+- [ ] **Step 8: Gate e commit**
 
 Run: `npm run lint && npm run typecheck && npm run check:design-tokens && npm run build`
 
 ```bash
-git add apps/edge-web/src/components/order/OrderCombobox.vue apps/edge-web/src/components/order/OrderSummarySection.vue apps/edge-web/src/screen-styles.css test/e2e/orders.spec.js
-git commit -m "feat(edge-web): suggest catalog options in a grouped combobox" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git add apps/edge-web/src/components/order/OrderCombobox.vue apps/edge-web/src/components/order/OrderItemsSection.vue apps/edge-web/src/components/order/OrderSummarySection.vue apps/edge-web/src/screen-styles.css test/e2e/orders.spec.js
+git commit -m "feat(edge-web): suggest catalog products in a grouped combobox" -m "The summary stops editing the header application: the service type moves to the item. An older order keeps showing and saving its value." -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 **Done when:**
 
-- [ ] Aplicação sugere por grupo, filtra, aceita texto livre, passa axe
+- [ ] Tipo sugere produtos por grupo, filtra, aceita texto livre, passa axe
+- [ ] Resumo sem campo Aplicação; pedido antigo mostra e reenvia o valor
 - [ ] Gates e2e e quick passam
 
-**Tests:** e2e · **Gate:** e2e + quick · **Commit:** `feat(edge-web): suggest catalog options in a grouped combobox`
+**Tests:** e2e · **Gate:** e2e + quick · **Commit:** `feat(edge-web): suggest catalog products in a grouped combobox`
 
 ---
 
 ### T11: Card do item conforme o produto
 
 - **What:** Tipo primeiro; campos do produto com rótulos e sugestões; viés em
-  duas partes; locais múltiplos; outras especificações; leitura só do que foi
-  preenchido.
+  duas partes; locais e tipos de serviço múltiplos; outras especificações;
+  leitura só do que foi preenchido.
 - **Where:** `apps/edge-web/src/components/order/OrderSpecField.vue`, `OrderItemsSection.vue`, `screen-styles.css`, `test/e2e/orders.spec.js`
 - **Depends on:** T10
-- **Requirement:** FIT-01, FIT-02, FIT-03, FIT-04, FIT-05, FIT-06, FIT-07, FIT-08, FIT-09, FIT-10, FIT-11, F14
+- **Requirement:** FIT-01, FIT-02, FIT-03, FIT-04, FIT-05, FIT-06, FIT-07, FIT-08, FIT-09, FIT-10, FIT-11, FTS-01, FTS-02, F14
 
 **Files:**
 
@@ -4505,6 +4974,10 @@ git commit -m "feat(edge-web): suggest catalog options in a grouped combobox" -m
   Nomes acessíveis: campo `text` → `<label>` com o rótulo; `multi` → `"<rótulo> <n>"`
   e botão `field.addLabel`; `composite` → grupo com o rótulo e comboboxes
   `"<rótulo>: acabamento"` / `"<rótulo>: cor"`; checkbox `"<rótulo> não se aplica"`.
+- O Tipo de serviço não tem código próprio: vem de `itemFields` em todo item
+  (T04), é desenhado como `multi` (`"Tipo de serviço <n>"`, botão "Adicionar
+  tipo de serviço"), `writeValue` grava em `item.servicos` e a leitura o
+  mostra em `view(item).wide`, antes dos locais.
 
 - [ ] **Step 1: Escrever os testes e2e que falham** (acrescentar em `test/e2e/orders.spec.js`)
 
@@ -4550,6 +5023,35 @@ test('warns about a product outside the catalog and shows every field (FIT-03)',
   await expect(items).toContainText('Produto fora do catálogo');
   await expect(items.getByLabel('Cós/cintura')).toBeVisible();
   await expect(items.getByLabel('Faces')).toBeVisible();
+  await expect(items.getByLabel('Tipo de serviço 1')).toBeVisible();
+});
+
+test('records several service types on any item (FTS-01, FTS-02)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await chooseTipo(items, 'BONÉ');
+  const first = items.getByRole('combobox', { name: 'Tipo de serviço 1' });
+  await first.fill('bord');
+  await expect(
+    items.getByRole('option', { name: /BORDADO DIRETO/u }),
+  ).toBeVisible();
+  await first.press('ArrowDown');
+  await first.press('Enter');
+  await items
+    .getByRole('button', { name: 'Adicionar tipo de serviço' })
+    .click();
+  await items.getByLabel('Tipo de serviço 2').fill('DTF');
+  await items.getByLabel('Tipo de serviço 2').press('Escape');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  expect(writes[0].body.value[0].servicos).toEqual(['BORDADO DIRETO', 'DTF']);
 });
 
 test('sends empty the fields the new product does not have (FIT-04)', async ({
@@ -4624,6 +5126,7 @@ test('reads an item with only the fields its product has (FIT-11)', async ({
       cor_manga_esquerda: 'NAO APLICAVEL',
       vies_gola: 'NAO APLICAVEL',
       specs: { cos: 'ELÁSTICO' },
+      servicos: ['SERIGRAFIA'],
       escala: '',
       outras: '',
     },
@@ -4637,6 +5140,8 @@ test('reads an item with only the fields its product has (FIT-11)', async ({
     .first();
   await expect(card).toContainText('Cós/cintura');
   await expect(card).toContainText('ELÁSTICO');
+  await expect(card).toContainText('Tipo de serviço');
+  await expect(card).toContainText('SERIGRAFIA');
   await expect(card).not.toContainText('NÃO APLICÁVEL');
   await expect(card).not.toContainText('Cor manga direita');
 });
@@ -4669,8 +5174,8 @@ test('accepts "Não aplicável" only on a product outside the catalog (PFI-07, F
 
 - [ ] **Step 2: Rodar e ver falhar**
 
-Run: `npm run test:e2e -- test/e2e/orders.spec.js -g "FIT-|PFI-07"`
-Expected: FAIL — não há combobox "Tipo" nem campos por produto.
+Run: `npm run test:e2e -- test/e2e/orders.spec.js -g "FIT-|FTS-|PFI-07"`
+Expected: FAIL — não há campos por produto (o combobox "Tipo" já existe desde a T10).
 
 - [ ] **Step 3: Criar `OrderSpecField.vue`**
 
@@ -5257,6 +5762,7 @@ git commit -m "feat(edge-web): draw each order item from its catalog product" -m
 **Done when:**
 
 - [ ] Campos, rótulos e sugestões mudam com o Tipo; fora do catálogo mostra tudo
+- [ ] Tipo de serviço em todo item, com vários valores e sugestões da aba 15
 - [ ] Viés, locais e outras especificações gravam no formato do domínio
 - [ ] Gates e2e e quick passam
 
@@ -5580,7 +6086,6 @@ export {
   FIELDS,
   NOT_APPLICABLE,
   ORDER_CATALOG,
-  applicationOptions,
   describeItem,
   fieldOptions,
   foldText,
@@ -5678,8 +6183,12 @@ desde a T03, rode sem `--check`, rode os testes de novo e faça commit
 
 Rode a aplicação (skill `run`) e, num pedido pendente: crie itens CAMISETA,
 REGATA, BERMUDA e BONÉ; confira campos, rótulos, sugestões filtradas por
-produto, escala preenchendo a grade, banner listando só campos "Sim", e a
-leitura de cada item. Tire um screenshot de cada card e anexe ao relatório.
+produto, escala preenchendo a grade, banner listando só campos "Sim" (e
+"Tipo de serviço" de cada item vazio), Tipo de serviço com mais de um valor
+no boné, Resumo sem campo Aplicação e a leitura de cada item. Abra também um
+pedido antigo com Aplicação no cabeçalho e confira que o valor aparece em
+leitura e sobrevive a salvar o Resumo. Tire um screenshot de cada card e
+anexe ao relatório.
 
 - [ ] **Step 4: Rastreabilidade**
 
@@ -5690,6 +6199,7 @@ a evidência (arquivo:linha do teste), por exemplo:
 | CAT-01 | P1-1 | `test/order-catalog-import.test.js` (keeps only approved rows) |
 | FIT-02 | P1-2 | `test/order-catalog-resolver.test.js`, `test/e2e/orders.spec.js` (shows only the fields) |
 | FIM-06 | P1-5 | `test/orders-print-v3.test.js` (keeps the production page identical) |
+| FTS-05 | P1-6 | `test/orders-ficha.test.js` (the agent technique becomes the service type) |
 ```
 
 e mudar `**Status:**` para `Implementado — aguardando aprovação da v3 (T15)`.
@@ -5703,6 +6213,9 @@ git commit -m "docs(specs): trace the product-driven ficha to its tests" -m "Co-
 
 Enviar `output/pdf/ficha-canonica-sintetica-v3.pdf` para Rose e Operação com
 os critérios da v2 (legibilidade, conteúdo, ordem, grade, totais, impressão).
+Na mesma conversa, resolver a pendência Q05 (`context.md`): confirmar que a
+oficina lê o Tipo de serviço por peça e pedir a atualização das abas 01 e 15
+da planilha.
 
 **Done when:**
 

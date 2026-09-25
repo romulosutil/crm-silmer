@@ -1,6 +1,7 @@
 # Ficha por produto — Contexto e decisões
 
 **Coletado em:** 24/09/2026, em sessão de design com o PO
+**Atualizado em:** 25/09/2026 — tipo de serviço por item (F24–F27)
 **Spec:** [`spec.md`](spec.md) · **Arquitetura:** [`design.md`](design.md) · **Tasks:** [`tasks.md`](tasks.md)
 **Status:** Pronto para arquitetura
 
@@ -23,7 +24,7 @@ cada peça.
 | `ficha_exemplo.xlsx`                                  | Ficha usada hoje na fábrica (pedido 8528). Mostra o vocabulário real: Modelo = gola (CARECA), Viés gola = OLÍMPICA / VERDE, malhas HELANQUINHA e LIGHT.                                      |
 | `output/pdf/ficha-canonica-sintetica-v2.pdf`          | Template aprovado que a v3 evolui.                                                                                                                                                           |
 | `docs/rfc/005-catalogo-de-opcoes-do-pedido.md`        | Proposta do catálogo (Opção A recomendada: catálogo hierárquico com códigos, aliases, snapshot e preço). Esta feature é o primeiro incremento dela; ver `design.md` → Relação com a RFC 005. |
-| `.specs/features/pedidos-mvp/`                        | Feature de origem. Decisões D10, D11 e D15 são parcialmente supersedidas aqui.                                                                                                               |
+| `.specs/features/pedidos-mvp/`                        | Feature de origem. Decisões D10, D11 e D15 e o requisito PFI-02 são parcialmente supersedidos aqui.                                                                                          |
 
 ## Decisões
 
@@ -63,8 +64,9 @@ cada peça.
 ### Campos do item
 
 - **F10** Campos novos por item: gola, manga, abertura/fechamento, bolso,
-  cós/cintura, faces, fixação/borda, locais da aplicação (vários), escala da
-  grade e outras especificações (texto livre, até 500 caracteres, impresso).
+  cós/cintura, faces, fixação/borda, tipo de serviço (vários, F24), locais da
+  aplicação (vários), escala da grade e outras especificações (texto livre,
+  até 500 caracteres, impresso).
 - **F11** `modelo` passa a ter o rótulo **Modelagem**. Valores antigos ficam
   como estão.
 - **F12** Viés é composto: acabamento + cor gravados como um texto só,
@@ -79,6 +81,26 @@ cada peça.
   campos novos são opcionais na validação, então fichas antigas continuam
   válidas sem migração.
 
+### Tipo de serviço
+
+- **F24** **Tipo de serviço** (sublimação, serigrafia/silk, DTF, DTG, bordado,
+  refletivo…) passa a ser campo do **item**, com mais de um valor (ex.: boné
+  `BORDADO DIRETO` + `DTF`), porque um pedido mistura peças com técnicas
+  diferentes. Rótulo "Tipo de serviço" na tela e na ficha impressa. As
+  sugestões vêm da aba 15 (hoje "Aplicação"), filtradas por "Vale para" como
+  as demais listas. O campo sai do Resumo do pedido: supersede PFI-02 da
+  feature Pedidos MVP só para "aplicação".
+- **F25** Tipo de serviço existe em **todo item**, dentro ou fora do
+  catálogo, e não passa pela matriz da aba 03: regra fixa **Sim**. Vazio entra
+  no banner de faltantes, mas não bloqueia a confirmação (F06).
+- **F26** Pedido antigo com Aplicação no cabeçalho continua válido sem
+  migração (F15): o valor aparece em leitura no Resumo e sai no cabeçalho da
+  v3 como saía na v2. A tela não oferece mais o campo em pedido que não o tem.
+- **F27** Agente: o briefing não muda (F23). O `artwork_technique` que hoje
+  vai para a Aplicação do cabeçalho passa a preencher o Tipo de serviço do
+  primeiro item, substituindo o valor como já acontece com as malhas. Sem
+  dados de item no briefing, fica em Dados do atendimento.
+
 ### Grade
 
 - **F16** Cada produto oferece escalas (Adulto, Infantil, Plus size, Bebê,
@@ -91,8 +113,10 @@ cada peça.
 
 - **F19** Template **`ficha-canonical-v3`**: especificações dinâmicas por
   produto, cabeçalho do item `TIPO  MODELAGEM · GOLA · MANGA`, viés em células
-  separadas com o rótulo do produto, Locais e Outras especificações em largura
-  total, grade com o nome da escala quando não for Adulto. Página 2 igual à v2.
+  separadas com o rótulo do produto, Tipo de serviço, Locais e Outras
+  especificações em largura total, grade com o nome da escala quando não for
+  Adulto. Cabeçalho do pedido sem Aplicação, exceto em pedido antigo (F26).
+  Página 2 igual à v2.
 - **F20** A v3 passa pelo mesmo gate humano da v2 (Rose e Operação). Até o
   registro de aprovação, a rota de impressão continua na v2. Supersede D10 e
   D15 depois da aprovação.
@@ -121,3 +145,8 @@ cada peça.
   aprovou pelo cliente, que a RFC exige.
 - **Q03** Nomes impressos longos ou com barra — revisar na coluna "Impresso na
   ficha como" antes da importação e conferir no PDF sintético v3.
+- **Q05** A planilha ainda descreve Aplicação como campo do cabeçalho (aba 01
+  e texto da aba 15). Atualizar para "Tipo de serviço", campo do item, e
+  confirmar com Rose e Operação que a oficina lê a técnica por peça. Não
+  bloqueia: o script acha a aba pelo prefixo `15`. Hoje toda linha da aba 15
+  vale para Todos; a Silmer pode restringir por produto em "Vale para".

@@ -78,9 +78,13 @@ se chamam; o código decide **onde** ficam.
 | `faces`              | Faces               | `specs.faces`        | `text`      | 13 Bandeira (grupo Faces)   | grade       |
 | `fixacao`            | Fixação/borda       | `specs.fixacao`      | `text`      | 13 Bandeira (grupo Fixação) | grade       |
 | `locais`             | Locais da aplicação | `specs.locais`       | `multi`     | 16 Locais da aplicação      | linha larga |
+| `servicos`           | Tipo de serviço     | `servicos`           | `multi`     | 15 Aplicação                | linha larga |
 
-`outras` (Outras especificações) e `escala` existem em todo item e não passam
-pela matriz. A aplicação do cabeçalho do pedido usa a lista da aba 15.
+`servicos` (Tipo de serviço), `outras` (Outras especificações) e `escala`
+existem em todo item e não passam pela matriz da aba 03. `servicos` tem regra
+fixa `required` em todo produto, dentro ou fora do catálogo (F25, FTS-01,
+FTS-03); `outras` e `escala` são opcionais. Na tela e na impressão,
+`servicos` vem logo antes de `locais`.
 
 ### Arquivo gerado
 
@@ -127,6 +131,14 @@ export default {
         swatch: '#1f2a5a',
       },
     ],
+    servicos: [
+      {
+        value: 'DTF',
+        label: 'DTF — direto no filme',
+        group: 'Impressão',
+        products: [],
+      },
+    ],
   },
   scales: [
     {
@@ -137,11 +149,11 @@ export default {
     },
     { id: 'medida', label: 'Medida', sizes: [], freeText: true },
   ],
-  applications: [
-    { value: 'DTF', label: 'DTF — direto no filme', group: 'Impressão' },
-  ],
 };
 ```
+
+- A aba 15 vira a lista `servicos`, com as mesmas regras de Decisão e "Vale
+  para" das outras listas. Não existe mais a chave `applications`.
 
 - A definição dos campos (tabela acima) fica em `catalog/fields.js`, não no
   arquivo gerado.
@@ -155,15 +167,15 @@ export default {
 
 Funções puras, sem I/O e sem dependências fora da pasta:
 
-| Função                             | Retorna                                                                                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `foldText(text)`                   | texto sem acento, minúsculo, separadores normalizados                                          |
-| `resolveProduct(tipo)`             | produto cujo `label` ou `print` casa com `foldText(tipo)`, ou `null`                           |
-| `itemFields(product)`              | campos do item em ordem, com `rule` e `label` do produto; `null` → todos, `optional`           |
-| `fieldOptions(fieldId, productId)` | opções da lista do campo que valem para o produto, agrupadas por `group`                       |
-| `scalesFor(product)`               | escalas do produto; `null` → todas                                                             |
-| `readField(item, field)`           | valor do campo no item pelo `path`, com padrão para item antigo (`specs` ausente)              |
-| `describeItem(item)`               | `{ product, cells: [{ field, label, value, rule }] }` — base de faltantes, leitura e impressão |
+| Função                             | Retorna                                                                                                                       |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `foldText(text)`                   | texto sem acento, minúsculo, separadores normalizados                                                                         |
+| `resolveProduct(tipo)`             | produto cujo `label` ou `print` casa com `foldText(tipo)`, ou `null`                                                          |
+| `itemFields(product)`              | campos do item em ordem, com `rule` e `label` do produto; `null` → todos, `optional`; `servicos` sempre presente e `required` |
+| `fieldOptions(fieldId, productId)` | opções da lista do campo que valem para o produto, agrupadas por `group`                                                      |
+| `scalesFor(product)`               | escalas do produto; `null` → todas                                                                                            |
+| `readField(item, field)`           | valor do campo no item pelo `path`, com padrão para item antigo (`specs` ausente)                                             |
+| `describeItem(item)`               | `{ product, cells: [{ field, label, value, rule }] }` — base de faltantes, leitura e impressão                                |
 
 ---
 
@@ -181,7 +193,8 @@ Funções puras, sem I/O e sem dependências fora da pasta:
    (lista separada por vírgula; vazio ou "Todos…" = todos; "Nenhum…" = opção
    fora do arquivo; aba 14 ignora a coluna). Produto que existe na aba 02 mas
    não foi mantido é ignorado; se a opção ficar sem produto, sai do arquivo.
-   Produto desconhecido → erro (CAT-02).
+   Produto desconhecido → erro (CAT-02). A aba 15 gera a lista `servicos`
+   (F24).
 4. Lê a aba 03: cabeçalho → `campo.id` pelo rótulo (tabela fixa no script);
    `Sim` → `required`, `Opcional` → `optional`, `Não` → ausente. A coluna
    "Nomes diferentes" é lida pelo padrão `<rótulo do campo> → "<novo rótulo>"`;
@@ -208,6 +221,7 @@ Erros sempre citam aba, linha e valor. Nada é gravado se houver erro.
 ```js
 /** @typedef {{
  *   tipo: string, modelo: string, malhas: string[],
+ *   servicos: string[],   // Tipo de serviço (F24)
  *   cor_frente: string, cor_costas: string,
  *   cor_manga_direita: string, cor_manga_esquerda: string,
  *   vies_gola: string, vies_mangas: string,
@@ -219,16 +233,22 @@ Erros sempre citam aba, linha e valor. Nada é gravado se houver erro.
  * }} FichaItem */
 ```
 
-- **`domain/ficha.js`** — `validateItem` aceita `specs`, `escala` e `outras`
-  opcionais (padrão `{}`, `''`, `''`). Chaves de `specs` são as dos campos
-  `specs.*` do catálogo; chave desconhecida → `OrderInputError` com o caminho.
-  `escala` precisa ser `''` ou id conhecido. Depois de validar, aplica FIT-04:
-  para produto do catálogo, zera campos com regra Não. `briefingToFicha`
-  passa a devolver os padrões novos.
+- **`domain/ficha.js`** — `validateItem` aceita `specs`, `servicos`, `escala`
+  e `outras` opcionais (padrão `{}`, `[]`, `''`, `''`). `servicos` segue a
+  mesma validação de `malhas`. Chaves de `specs` são as dos campos `specs.*`
+  do catálogo; chave desconhecida → `OrderInputError` com o caminho. `escala`
+  precisa ser `''` ou id conhecido. Depois de validar, aplica FIT-04: para
+  produto do catálogo, zera campos com regra Não (`servicos` nunca é zerado).
+  `summary.aplicacao` continua aceito (F26).
+- **`briefingToFicha` / merge da pré-ficha (PAG-01)** — `artwork_technique`
+  deixa de ir para `summary.aplicacao` e vira `items[0].servicos = [valor]`,
+  substituindo como já acontece com `malhas`; sem dados de item, fica em
+  `serviceData` (FTS-05). Pedido novo nasce com `summary.aplicacao = null`.
 - **`domain/order.js`** — `missingForConfirmation` usa `describeItem`: para
   produto do catálogo lista só `required` vazios (FMI-01); fora do catálogo
-  mantém a lista atual (FMI-02). Chave no formato `items[0].specs.gola`.
-  `confirmationBlockers` não muda (FMI-03).
+  mantém a lista atual mais `servicos` (FMI-02, FTS-03). Chave no formato
+  `items[0].specs.gola` / `items[0].servicos`. `aplicacao` sai da lista de
+  faltantes do Resumo. `confirmationBlockers` não muda (FMI-03).
 - `NOT_APPLICABLE` continua aceito (F14); `describeItem` trata como vazio para
   produto do catálogo.
 
@@ -239,7 +259,10 @@ Erros sempre citam aba, linha e valor. Nada é gravado se houver erro.
   - Cabeçalho do item: `tipo` + `modelagem · gola · manga` (FIM-02).
   - Grade de especificações em 3 colunas com as células `placement = grade`
     que têm valor, com rótulo do produto (FIM-01, FIM-03).
-  - Linhas largas: Locais da aplicação, Outras especificações (FIM-04).
+  - Linhas largas, nesta ordem: Tipo de serviço, Locais da aplicação, Outras
+    especificações (FIM-04).
+  - Cabeçalho do pedido sem Aplicação; só imprime quando `summary.aplicacao`
+    está preenchido (pedido antigo, FIM-10).
   - Título da grade `GRADE · <ESCALA>` quando escala ≠ `adulto` (FIM-05).
   - Página 2 reaproveita o bloco da v2 sem mudança (FIM-06).
 - **`apps/api/src/order-routes.js`** — `printSnapshot` monta os itens com
@@ -247,7 +270,8 @@ Erros sempre citam aba, linha e valor. Nada é gravado se houver erro.
   (`modules/orders/src/print/index.js`).
 - **Gate da v3 (FIM-08, FIM-09)** — `scripts/ficha-pdf-review.mjs` ganha a v3:
   fixture `docs/phase0/ficha-pdf-synthetic-v3.json` (camiseta, bermuda, boné,
-  bandeira), PDF `output/pdf/ficha-canonica-sintetica-v3.pdf` e registro
+  bandeira; camiseta com `SUBLIMAÇÃO TOTAL` e boné com `BORDADO DIRETO` +
+  `DTF` para a revisão ver técnicas diferentes no mesmo pedido), PDF `output/pdf/ficha-canonica-sintetica-v3.pdf` e registro
   `docs/phase0/ficha-pdf-approval-v3.json` (`status: pending`). O
   `--validate` falha se `PRINT_TEMPLATE` for v3 e o registro não estiver
   `approved`. Trocar para v3 é um commit próprio, feito só depois da aprovação
@@ -257,16 +281,16 @@ Erros sempre citam aba, linha e valor. Nada é gravado se houver erro.
 
 ## Frontend (`apps/edge-web/src`)
 
-| Arquivo                                    | Mudança                                                                                                                                                                                                                                                                  |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `lib/order-catalog.js`                     | Deixa de ter listas fixas. Reexporta o resolvedor de `modules/orders/src/catalog/` e mantém `colorSwatch` (agora pelos `swatch` do catálogo).                                                                                                                            |
-| `components/order/OrderCombobox.vue`       | Novo. Padrão ARIA 1.2 combobox: `input role=combobox`, `listbox` com grupos, setas/Enter/Esc, texto livre, amostra de cor opcional.                                                                                                                                      |
-| `components/order/OrderSpecField.vue`      | Novo. Um campo por `kind`: `text` → combobox; `multi` → lista de comboboxes com adicionar/remover; `composite` → acabamento + cor. Recebe `modelValue` e emite `update:modelValue` (a regra `vue/no-mutating-props` do lint proíbe mutar o item recebido).               |
-| `components/order/OrderItemsSection.vue`   | Tipo primeiro; campos vindos de `itemFields(resolveProduct(tipo))`; aviso "Produto fora do catálogo"; Outras especificações; seletor de escala e tamanhos por combobox na grade (a grade continua neste componente, que é dono do rascunho); leitura por `describeItem`. |
-| `components/order/OrderSummarySection.vue` | Aplicação usa `OrderCombobox` com `applications`.                                                                                                                                                                                                                        |
-| `components/order/OrderCatalogLists.vue`   | Removido (datalists substituídos pelo combobox).                                                                                                                                                                                                                         |
-| `lib/order-items.js`                       | Novo. Funções puras do rascunho: `draftItem`, `emptyItem`, `itemPayload` (FIT-04, FGR-02), `splitComposite`/`joinComposite` (F12), `gradeForScale` (FGR-02).                                                                                                             |
-| `lib/order-format.js`                      | `missingFieldLabel` resolve `items[i].specs.*` pelo rótulo do campo no catálogo.                                                                                                                                                                                         |
+| Arquivo                                    | Mudança                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/order-catalog.js`                     | Deixa de ter listas fixas. Reexporta o resolvedor de `modules/orders/src/catalog/` e mantém `colorSwatch` (agora pelos `swatch` do catálogo).                                                                                                                                                                        |
+| `components/order/OrderCombobox.vue`       | Novo. Padrão ARIA 1.2 combobox: `input role=combobox`, `listbox` com grupos, setas/Enter/Esc, texto livre, amostra de cor opcional.                                                                                                                                                                                  |
+| `components/order/OrderSpecField.vue`      | Novo. Um campo por `kind`: `text` → combobox; `multi` → lista de comboboxes com adicionar/remover; `composite` → acabamento + cor. Recebe `modelValue` e emite `update:modelValue` (a regra `vue/no-mutating-props` do lint proíbe mutar o item recebido).                                                           |
+| `components/order/OrderItemsSection.vue`   | Tipo primeiro; campos vindos de `itemFields(resolveProduct(tipo))`, com Tipo de serviço (`multi`) em todo item; aviso "Produto fora do catálogo"; Outras especificações; seletor de escala e tamanhos por combobox na grade (a grade continua neste componente, que é dono do rascunho); leitura por `describeItem`. |
+| `components/order/OrderSummarySection.vue` | Aplicação sai da edição. Em leitura, aparece só quando o pedido já tem valor gravado (formato antigo, FTS-04).                                                                                                                                                                                                       |
+| `components/order/OrderCatalogLists.vue`   | Removido (datalists substituídos pelo combobox).                                                                                                                                                                                                                                                                     |
+| `lib/order-items.js`                       | Novo. Funções puras do rascunho: `draftItem`, `emptyItem`, `itemPayload` (FIT-04, FGR-02), `splitComposite`/`joinComposite` (F12), `gradeForScale` (FGR-02).                                                                                                                                                         |
+| `lib/order-format.js`                      | `missingFieldLabel` resolve `items[i].specs.*` e `items[i].servicos` pelo rótulo do campo no catálogo.                                                                                                                                                                                                               |
 
 - O frontend importa `modules/orders/src/catalog/` por caminho relativo. É a
   única exceção permitida: `scripts/check-boundaries.mjs` passa a verificar que
@@ -300,14 +324,15 @@ ADR da estrutura final decidir gravar códigos.
 
 ## Tratamento de erros
 
-| Situação                                          | Resposta                                                      |
-| ------------------------------------------------- | ------------------------------------------------------------- |
-| Planilha com regra, produto ou cabeçalho inválido | Script falha com aba, linha e valor; arquivo gerado não muda. |
-| Chave desconhecida em `specs`                     | `400` `OrderInputError` com `items[i].specs.<chave>`.         |
-| `escala` desconhecida                             | `400` `OrderInputError` com `items[i].escala`.                |
-| `outras` acima de 500 caracteres                  | `400` `OrderInputError` com `items[i].outras`.                |
-| Item antigo sem `specs`/`escala`/`outras`         | Padrões aplicados na leitura; nenhum erro (FIM-07).           |
-| `PRINT_TEMPLATE = v3` sem aprovação registrada    | `npm run validate` falha em `validate:ficha-pdf-review`.      |
+| Situação                                             | Resposta                                                      |
+| ---------------------------------------------------- | ------------------------------------------------------------- |
+| Planilha com regra, produto ou cabeçalho inválido    | Script falha com aba, linha e valor; arquivo gerado não muda. |
+| Chave desconhecida em `specs`                        | `400` `OrderInputError` com `items[i].specs.<chave>`.         |
+| `escala` desconhecida                                | `400` `OrderInputError` com `items[i].escala`.                |
+| `outras` acima de 500 caracteres                     | `400` `OrderInputError` com `items[i].outras`.                |
+| `servicos` que não é lista de texto                  | `400` `OrderInputError` com `items[i].servicos`.              |
+| Item antigo sem `specs`/`servicos`/`escala`/`outras` | Padrões aplicados na leitura; nenhum erro (FIM-07).           |
+| `PRINT_TEMPLATE = v3` sem aprovação registrada       | `npm run validate` falha em `validate:ficha-pdf-review`.      |
 
 ## Testes
 
@@ -326,14 +351,15 @@ versionada; o teste de contrato roda sobre o arquivo gerado real.
 
 ## Decisões técnicas
 
-| Decisão                                       | Alternativa descartada                       | Motivo                                                                                   |
-| --------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Arquivo gerado em git                         | Tabelas no PostgreSQL + tela admin           | Catálogo muda pouco; revisão por diff; zero migration. Modelo relacional já documentado. |
-| ESM gerado                                    | `.json` com `import … with { type: 'json' }` | Um import igual em Node, Vite e `tsc`.                                                   |
-| `specs` no item                               | Uma chave nova no nível do item por campo    | Campo novo de catálogo não muda o formato do item nem a validação.                       |
-| Leitor xlsx próprio                           | `exceljs`/`xlsx` como devDependency          | Política de supply chain; formato de entrada controlado.                                 |
-| Regra "Sim" só no banner                      | Bloquear confirmação                         | A01 (confirmação é julgamento humano).                                                   |
-| Constante `PRINT_TEMPLATE` + gate no validate | Flag de ambiente                             | Troca auditável em commit; impossível publicar v3 sem aprovação registrada.              |
+| Decisão                                         | Alternativa descartada                       | Motivo                                                                                       |
+| ----------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Arquivo gerado em git                           | Tabelas no PostgreSQL + tela admin           | Catálogo muda pouco; revisão por diff; zero migration. Modelo relacional já documentado.     |
+| ESM gerado                                      | `.json` com `import … with { type: 'json' }` | Um import igual em Node, Vite e `tsc`.                                                       |
+| `specs` no item                                 | Uma chave nova no nível do item por campo    | Campo novo de catálogo não muda o formato do item nem a validação.                           |
+| `servicos` no item, fora de `specs` e da aba 03 | Aplicação no cabeçalho; coluna na aba 03     | Pedido mistura técnicas; campo existe em todo item com regra fixa, como `outras` (F24, F25). |
+| Leitor xlsx próprio                             | `exceljs`/`xlsx` como devDependency          | Política de supply chain; formato de entrada controlado.                                     |
+| Regra "Sim" só no banner                        | Bloquear confirmação                         | A01 (confirmação é julgamento humano).                                                       |
+| Constante `PRINT_TEMPLATE` + gate no validate   | Flag de ambiente                             | Troca auditável em commit; impossível publicar v3 sem aprovação registrada.                  |
 
 ## Riscos
 
@@ -346,3 +372,6 @@ versionada; o teste de contrato roda sobre o arquivo gerado real.
   O padrão está descrito na aba 00 da planilha.
 - **Nomes impressos longos** (Q03) podem quebrar linha na célula de 3 colunas.
   Revisar no PDF sintético v3.
+- **Pedidos pendentes antigos** passam a listar "Tipo de serviço" no banner
+  para cada item. Aceito: o banner não bloqueia (F06) e a Aplicação antiga
+  continua visível no Resumo para a vendedora copiar.

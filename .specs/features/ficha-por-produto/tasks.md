@@ -21,6 +21,15 @@ axe, Prettier. Nenhuma dependência nova.
 **Spec:** [`spec.md`](spec.md) · **Decisões:** [`context.md`](context.md) ·
 **Arquitetura:** [`design.md`](design.md)
 
+> ⚠️ **Replanejar antes de executar (25/09/2026).** A spec ganhou o Tipo de
+> serviço por item (P1-6, FTS-01…05, FIM-10; decisões F24–F27). Este plano
+> ainda trata a aba 15 como `applications` do cabeçalho. Tasks afetadas:
+> T01 (ADR), T03 (aba 15 → `lists.servicos`, campo `servicos` em `fields.js`,
+> contagem de opções), T04 (`applicationOptions` sai; `itemFields` inclui
+> `servicos`), T05 (`servicos` no item, `artwork_technique` no primeiro item),
+> T06 (faltantes), T07 (linha larga e cabeçalho sem Aplicação), T08 (fixture),
+> T09–T11 (Aplicação sai do Resumo, entra no card), T14 (rastreabilidade).
+
 ## Restrições globais
 
 - Nenhuma dependência nova em `package.json` (política de supply chain). Só

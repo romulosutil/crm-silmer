@@ -1,7 +1,7 @@
 # Ficha por produto — Especificação
 
 **Status:** Draft para aprovação
-**Data:** 24/09/2026
+**Data:** 24/09/2026 · **Atualizada:** 25/09/2026 (tipo de serviço por item, P1-6)
 **Decisões de produto:** [`context.md`](context.md)
 **Arquitetura:** [`design.md`](design.md) · **Tasks:** [`tasks.md`](tasks.md)
 **Catálogo aprovado:** planilha `005-lista-de-opcoes-para-aprovacao.xlsx` v2 (Drive `12o5yXtlgXZryQrIwOrFlGTb36zzDkGvF`)
@@ -12,9 +12,10 @@ A ficha do pedido tem os mesmos campos para qualquer peça. Uma bermuda
 imprime "NÃO APLICÁVEL" em manga direita, manga esquerda e viés gola; um boné
 não tem onde registrar a regulagem; uma bandeira não tem faces nem fixação. As
 sugestões dos campos são listas soltas, copiadas à mão da planilha de opções,
-que já divergem dela e não sabem para qual peça cada opção vale. A Silmer
-aprovou um catálogo de opções (linhas "Manter"), mas nada no sistema usa essa
-aprovação.
+que já divergem dela e não sabem para qual peça cada opção vale. O tipo de
+serviço (sublimação, silk, DTF, bordado…) é um só no cabeçalho do pedido,
+embora um pedido misture peças com técnicas diferentes. A Silmer aprovou um
+catálogo de opções (linhas "Manter"), mas nada no sistema usa essa aprovação.
 
 ## Objetivos
 
@@ -24,6 +25,8 @@ aprovação.
 - [ ] Atualizar o catálogo é rodar um script sobre a planilha e fazer commit,
       sem editar código.
 - [ ] A ficha impressa não mostra campo que não existe na peça.
+- [ ] Cada item registra o próprio tipo de serviço, e a produção lê a técnica
+      junto da peça.
 
 ## Fora do escopo
 
@@ -37,6 +40,7 @@ aprovação.
 | Recusar valor fora do catálogo                          | F08: catálogo sugere, não restringe.                    |
 | Migrar pedidos antigos para o formato novo              | F15: formato antigo continua válido.                    |
 | Tornar Dados do atendimento editáveis                   | Continua como em PFI-08, exceto "locais" (F13).         |
+| Tipo de serviço por local da aplicação                  | Decisão do PO: técnica por item (F24).                  |
 
 ---
 
@@ -143,7 +147,7 @@ peça realmente precisa.
 1. **FMI-01** WHEN o produto está no catálogo THEN o banner SHALL listar os
    campos com regra Sim vazios, e SHALL omitir campos Opcional e Não.
 2. **FMI-02** WHEN o produto está fora do catálogo THEN o banner SHALL manter
-   o comportamento atual para o item.
+   o comportamento atual para o item, mais o Tipo de serviço (FTS-03).
 3. **FMI-03** Confirmar SHALL continuar bloqueado só pelas regras de A01.
 
 ---
@@ -161,8 +165,8 @@ cada peça, com os nomes que usamos na oficina.
 2. **FIM-02** O cabeçalho do item SHALL ser `TIPO` seguido de
    `MODELAGEM · GOLA · MANGA`, omitindo partes vazias.
 3. **FIM-03** Cada campo SHALL imprimir com o rótulo do produto.
-4. **FIM-04** Locais da aplicação e Outras especificações SHALL imprimir em
-   linha de largura total quando preenchidos.
+4. **FIM-04** Tipo de serviço, Locais da aplicação e Outras especificações
+   SHALL imprimir em linha de largura total, nessa ordem, quando preenchidos.
 5. **FIM-05** WHEN a escala do item está definida e não é Adulto THEN o
    título da grade SHALL ser `GRADE · <ESCALA>`.
 6. **FIM-06** A página 2 (Controle de produção) SHALL ser idêntica à v2.
@@ -172,6 +176,39 @@ cada peça, com os nomes que usamos na oficina.
    de impressão SHALL continuar usando a v2.
 9. **FIM-09** O pacote de revisão SHALL gerar o PDF sintético v3 com hash
    registrado, no mesmo fluxo da v2.
+10. **FIM-10** O cabeçalho do pedido na v3 SHALL omitir Aplicação. WHEN o
+    pedido tem Aplicação gravada no cabeçalho (formato antigo) THEN a v3 SHALL
+    imprimi-la no cabeçalho como a v2.
+
+---
+
+### P1-6: Tipo de serviço por item ⭐ MVP
+
+**História:** Como vendedora, quero registrar em cada item o tipo de serviço
+(sublimação, serigrafia, DTF, bordado…), para que a produção saiba a técnica
+de cada peça mesmo quando o pedido mistura técnicas.
+
+**Aceite:**
+
+1. **FTS-01** Todo item SHALL ter o campo Tipo de serviço, com mais de um
+   valor, dentro ou fora do catálogo e independente da aba 03.
+2. **FTS-02** As sugestões SHALL ser as opções da aba 15 que valem para o
+   produto, agrupadas pelo Grupo da planilha; texto livre SHALL continuar
+   aceito e escolher uma sugestão SHALL gravar o "Impresso na ficha como"
+   (como FIT-05 e FIT-06).
+3. **FTS-03** WHEN o item não tem tipo de serviço THEN o banner SHALL listar
+   "Tipo de serviço" para o item, com produto dentro ou fora do catálogo.
+   Confirmar SHALL continuar bloqueado só pelas regras de A01.
+4. **FTS-04** O Resumo do pedido SHALL deixar de oferecer o campo Aplicação.
+   WHEN o pedido tem Aplicação gravada no cabeçalho (formato antigo) THEN o
+   valor SHALL continuar válido e aparecer no Resumo em modo leitura.
+5. **FTS-05** WHEN o briefing do agente traz `artwork_technique` e dados de
+   item THEN o valor SHALL substituir o Tipo de serviço do primeiro item;
+   WHEN não traz dados de item THEN SHALL ficar em Dados do atendimento.
+
+**Teste independente:** criar um pedido com uma camiseta `SUBLIMAÇÃO TOTAL` e
+um boné `BORDADO DIRETO` + `DTF`; ver cada técnica na linha do seu item na
+ficha impressa e nenhuma Aplicação no cabeçalho.
 
 ---
 
@@ -183,4 +220,5 @@ cada peça, com os nomes que usamos na oficina.
 | FIT-01…11 | P1-2     |                                      |
 | FGR-01…05 | P1-3     |                                      |
 | FMI-01…03 | P1-4     |                                      |
-| FIM-01…09 | P1-5     |                                      |
+| FIM-01…10 | P1-5     |                                      |
+| FTS-01…05 | P1-6     |                                      |

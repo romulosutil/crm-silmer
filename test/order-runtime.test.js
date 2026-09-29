@@ -117,6 +117,15 @@ test('the conversation owner creates, edits and confirms its order', async () =>
     id: 'seller-1',
     name: 'Nome seller-1',
   });
+  const paid = await runtime.recordMilestones(
+    command(OWNER, {
+      deliveredOn: null,
+      expectedVersion: confirmed.version,
+      orderId: confirmed.id,
+      paidOn: '2026-09-12',
+    }),
+  );
+  assert.equal(paid.paidOn, '2026-09-12');
   assert.deepEqual(
     audits.map((event) => [event.action, event.actor, event.target]),
     [
@@ -127,6 +136,7 @@ test('the conversation owner creates, edits and confirms its order', async () =>
       ],
       ['order.edit', 'seller-1', { id: created.order.id, type: 'order' }],
       ['order.confirm', 'seller-1', { id: created.order.id, type: 'order' }],
+      ['order.milestones', 'seller-1', { id: created.order.id, type: 'order' }],
     ],
   );
 });

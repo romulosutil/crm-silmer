@@ -1186,6 +1186,37 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/OrderNotFound' }
         '409': { $ref: '#/components/responses/OrderConflict' }
+  /orders/{orderId}/milestones:
+    patch:
+      operationId: recordOrderMilestones
+      summary: Registra quando o cliente pagou e quando o pedido foi entregue
+      description: >-
+        Ação order.milestones, restrita ao dono da conversa ou a
+        COMMERCIAL_ADMIN (ADR 008). Vale para pedido pendente ou confirmado,
+        sem reabrir, e nunca muda o status nem bloqueia a confirmação. As duas
+        datas vão sempre juntas; null limpa uma delas. Data inválida ou depois
+        de hoje (horário de São Paulo) responde 422 INVALID_DATE com os campos
+        recusados.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderMilestonesRequest' }
+      responses:
+        '200':
+          description: Datas gravadas ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '422': { $ref: '#/components/responses/OrderUnprocessable' }
   /orders/{orderId}/print:
     get:
       operationId: printOrder
@@ -2476,6 +2507,9 @@ components:
           confirmedBy,
           reopenedAt,
           reopenedBy,
+          firstContactAt,
+          paidOn,
+          deliveredOn,
           seller,
           version,
           createdAt,
@@ -2508,6 +2542,21 @@ components:
           oneOf:
             - { $ref: '#/components/schemas/OrderActorRef' }
             - { type: 'null' }
+        firstContactAt:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            Primeiro contato: abertura da conversa que originou o pedido,
+            copiada na criação. Nulo só em pedido criado durante a troca de
+            versão da API.
+        paidOn:
+          type: [string, 'null']
+          format: date
+          description: Dia do pagamento, informado por uma pessoa.
+        deliveredOn:
+          type: [string, 'null']
+          format: date
+          description: Dia da entrega realizada, informado por uma pessoa.
         seller:
           description: Dono atual da conversa.
           oneOf:
@@ -2600,6 +2649,17 @@ components:
           type: integer
           minimum: 1
           description: Versão atual do pedido.
+    OrderMilestonesRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, paidOn, deliveredOn]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: Versão atual do pedido.
+        paidOn: { type: [string, 'null'], format: date }
+        deliveredOn: { type: [string, 'null'], format: date }
     OrderError:
       type: object
       additionalProperties: false
@@ -2620,10 +2680,12 @@ components:
                   ORDER_NOT_CONFIRMABLE,
                   INVALID_AMOUNT,
                   INVALID_GRADE,
+                  INVALID_DATE,
                 ]
             fields:
               type: array
-              description: Campos recusados em ORDER_NOT_CONFIRMABLE.
+              description: >-
+                Campos recusados em ORDER_NOT_CONFIRMABLE e INVALID_DATE.
               items: { type: string }
             index:
               type: integer
@@ -2700,8 +2762,8 @@ components:
     OrderUnprocessable:
       description: >-
         Pedido não confirmável (ORDER_NOT_CONFIRMABLE com fields), valor em
-        formato inválido (INVALID_AMOUNT) ou grade inválida (INVALID_GRADE com
-        index)
+        formato inválido (INVALID_AMOUNT), grade inválida (INVALID_GRADE com
+        index) ou data inválida ou futura (INVALID_DATE com fields)
       content:
         application/json:
           schema: { $ref: '#/components/schemas/OrderError' }

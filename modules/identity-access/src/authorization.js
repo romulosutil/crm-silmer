@@ -49,6 +49,8 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
     'order.confirm',
     'order.create',
     'order.edit',
+    // ADR 008: the paid and delivered days, recorded in either status.
+    'order.milestones',
     'order.print',
     'order.read',
     'order.reopen',

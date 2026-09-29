@@ -242,6 +242,7 @@ test('lets any active seller run order actions but keeps order.intent for automa
     'order.confirm',
     'order.create',
     'order.edit',
+    'order.milestones',
     'order.print',
     'order.read',
     'order.reopen',

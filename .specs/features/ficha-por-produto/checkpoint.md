@@ -40,10 +40,20 @@ a partir de `feat/pedido-gerar-ficha`.
   na edição e a caixa "Outras especificações" usa o estilo dos inputs. Novo e2e
   para FIT-01.
 
+## Lastro de datas (29/09/2026)
+
+A v3 passou a imprimir o lastro do pedido (ADR 008, PLA-08, T47 da Pedidos
+MVP) antes da aprovação, para que Rose e Operação aprovem o documento uma vez
+só: primeiro contato, pedido fechado, pagamento, entrega prometida e entrega
+realizada, logo abaixo do resumo; dia não registrado sai como linha em branco.
+O PDF sintético v3 foi gerado de novo e segue `pending-human-approval`. As
+datas vêm do contrato do PR `romulosutil/crm-silmer#108` (`firstContactAt`,
+`paidOn`, `deliveredOn`), que precisa entrar em `master` antes deste branch.
+
 ## Falta
 
 - **T15 (gate humano):** Rose e Operação aprovam
-  `output/pdf/ficha-canonica-sintetica-v3.pdf`; depois registrar a aprovação em
-  `docs/phase0/ficha-pdf-approval-v3.json` e trocar `PRINT_TEMPLATE` para v3.
-  Até lá, nada vai para produção.
+  `output/pdf/ficha-canonica-sintetica-v3.pdf`, já com o lastro; depois
+  registrar a aprovação em `docs/phase0/ficha-pdf-approval-v3.json` e trocar
+  `PRINT_TEMPLATE` para v3. Até lá, nada vai para produção.
 - **Q04:** nome de quem aprovou pelo cliente, para a RFC 005 §11.

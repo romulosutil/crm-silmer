@@ -1,7 +1,17 @@
 // `ficha-canonical-v3` (ADR 007): the v2 document with the item card driven by
 // the order catalog — only the fields the product has, under its own labels,
 // the location and other specifications on full-width lines, and the scale
-// named above the grade. Page 2 is byte for byte the v2 production control.
+// named above the grade. ADR 008 adds the order trail under the summary.
+// Page 2 is byte for byte the v2 production control.
+
+// PLA-08: the five days of the order, in the order they happen.
+const TRAIL = Object.freeze([
+  ['Primeiro contato', 'primeiro_contato'],
+  ['Pedido fechado', 'pedido_fechado'],
+  ['Pagamento', 'pagamento'],
+  ['Entrega prometida', 'entrega_prometida'],
+  ['Entrega realizada', 'entrega_realizada'],
+]);
 
 const SYNTHETIC_BAND =
   '<span class="synthetic">Amostra sintetica - nao produzir</span>';
@@ -63,6 +73,15 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
       </article>`;
     })
     .join('');
+  const trailCells = TRAIL.map(([label, key]) => {
+    const day = String(snapshot.pedido.lastro?.[key] ?? '');
+    // A day not recorded yet reaches the paper as a line to write it in.
+    const value =
+      day === ''
+        ? '<span class="trail-blank"></span>'
+        : `<strong>${display(day)}</strong>`;
+    return `<div><span class="label">${display(label)}</span>${value}</div>`;
+  }).join('');
   const productionSections = [
     {
       title: 'Arremate',
@@ -127,6 +146,10 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
       .supporting { display: grid; gap: 6px; grid-template-columns: 1.5fr 1fr .8fr .5fr; margin: 7px 0 9px; }
       .supporting > div { background: var(--raised); border-radius: 5px; min-height: 36px; padding: 7px 8px; }
       .supporting strong { font-size: 9.5px; }
+      .trail { display: grid; gap: 6px; grid-template-columns: repeat(5, 1fr); margin-bottom: 9px; }
+      .trail > div { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; min-height: 36px; padding: 7px 8px; }
+      .trail strong { color: var(--deep); font-size: 9.5px; }
+      .trail-blank { border-bottom: 1px solid var(--text); display: block; height: 12px; }
       .items { display: grid; gap: 8px; }
       .item-card { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--link); border-radius: 7px; break-inside: avoid; overflow: hidden; }
       .item-heading { align-items: center; background: linear-gradient(90deg, var(--raised), var(--surface)); display: flex; justify-content: space-between; padding: 8px 9px; }
@@ -190,6 +213,8 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
       <div><span class="label">Data do pedido</span><strong>${display(snapshot.pedido.data)}</strong></div>
       <div><span class="label">FAB</span><strong>FAB ${display(snapshot.pedido.fab)}</strong></div>
     </section>
+    <div class="section-label">Lastro do pedido</div>
+    <section class="trail">${trailCells}</section>
     <div class="section-label">Itens e especificacoes</div>
     <section class="items">${itemCards}</section>
     <section class="page-footer-content">

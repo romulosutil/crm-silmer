@@ -149,6 +149,60 @@ test('renders the v3 item card with the product labels', () => {
   assert.doesNotMatch(html, /NAO APLICAVEL|undefined|null/u);
 });
 
+test('prints the order trail under the summary, blank where nothing was recorded (PLA-08)', () => {
+  const html = renderFichaHtmlV3(
+    printSnapshot(
+      {
+        ...order([camiseta]),
+        deliveredOn: null,
+        // 22:30 on 01/09 in São Paulo is already 02/09 in UTC.
+        firstContactAt: '2026-09-02T01:30:00.000Z',
+        paidOn: '2026-09-25',
+      },
+      TEMPLATE_V3,
+    ),
+    { synthetic: false },
+  );
+  const trail = html.slice(
+    html.indexOf('<section class="trail">'),
+    html.indexOf('Itens e especificacoes'),
+  );
+
+  assert.ok(html.indexOf('Data do pedido') < html.indexOf('Lastro do pedido'));
+  assert.deepEqual(
+    [...trail.matchAll(/<span class="label">([^<]+)<\/span>/gu)].map(
+      (match) => match[1],
+    ),
+    [
+      'Primeiro contato',
+      'Pedido fechado',
+      'Pagamento',
+      'Entrega prometida',
+      'Entrega realizada',
+    ],
+  );
+  assert.deepEqual(
+    [...trail.matchAll(/<strong>([^<]+)<\/strong>/gu)].map((match) => match[1]),
+    ['01/09/2026', '24/09/2026', '25/09/2026', '30/10/2026'],
+  );
+  assert.equal((trail.match(/class="trail-blank"/gu) ?? []).length, 1);
+  assert.doesNotMatch(html, /undefined|null/u);
+});
+
+test('prints the confirmed delivery as dd/mm/aaaa on both templates (PLA-09)', () => {
+  const iso = order([camiseta]);
+  iso.ficha.summary.data_entrega_confirmada = '2026-10-24';
+  for (const template of [TEMPLATE_V2, TEMPLATE_V3]) {
+    const snapshot = printSnapshot(iso, template);
+    assert.equal(snapshot.pedido.data_entrega_confirmada, '24/10/2026');
+  }
+  assert.doesNotMatch(
+    renderFichaHtml(printSnapshot(iso, TEMPLATE_V2), { synthetic: false }),
+    /Lastro do pedido/u,
+    'the approved v2 does not change',
+  );
+});
+
 test('prints on v2 until the v3 approval is recorded (FIM-08)', () => {
   assert.equal(PRINT_TEMPLATE, TEMPLATE_V2);
   assert.match(renderOrderFicha(order([camiseta])), /Vies gola \/ mangas/u);

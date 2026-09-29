@@ -2,6 +2,9 @@
   "number": "02-CRM",
   "fabCode": "01",
   "orderDate": "2026-09-24",
+  "firstContactAt": "2026-09-18T13:05:00.000Z",
+  "paidOn": "2026-09-24",
+  "deliveredOn": null,
   "totalPieces": 64,
   "confirmedBy": { "name": "Vendedora Exemplo" },
   "ficha": {

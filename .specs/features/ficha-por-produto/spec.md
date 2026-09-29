@@ -211,5 +211,5 @@ cada peça, com os nomes que usamos na oficina.
 | FIM-05 | P1-5     | `test/orders-print-v3.test.js:110`, `test/e2e/orders.spec.js:1357`                                                                                                 |
 | FIM-06 | P1-5     | `test/orders-print-v3.test.js:124`                                                                                                                                 |
 | FIM-07 | P1-5     | `test/orders-print-v3.test.js:115`, `test/order-catalog-resolver.test.js:78`                                                                                       |
-| FIM-08 | P1-5     | `test/orders-print-v3.test.js:152`, `test/ficha-v3-review.test.js:46`                                                                                              |
+| FIM-08 | P1-5     | `test/orders-print-v3.test.js:206`, `test/ficha-v3-review.test.js:46`                                                                                              |
 | FIM-09 | P1-5     | `test/ficha-v3-review.test.js:80`, `scripts/ficha-v3-review.mjs:35`                                                                                                |

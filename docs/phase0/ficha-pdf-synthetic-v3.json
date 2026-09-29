@@ -3,8 +3,8 @@
   "fabCode": "01",
   "orderDate": "2026-09-24",
   "firstContactAt": "2026-09-18T13:05:00.000Z",
-  "paidOn": "2026-09-24",
-  "deliveredOn": null,
+  "paidOn": "2026-09-25",
+  "deliveredOn": "2026-10-28",
   "totalPieces": 64,
   "confirmedBy": { "name": "Vendedora Exemplo" },
   "ficha": {
@@ -32,10 +32,11 @@
         "specs": {
           "gola": "CARECA",
           "manga": "RAGLAN CURTA",
+          "bolso": "SEM BOLSO",
           "locais": ["COSTAS TOTAL", "OMBRO DIREITO"]
         },
         "escala": "adulto",
-        "outras": "",
+        "outras": "Etiqueta personalizada na gola",
         "grade": [
           { "tamanho": "P", "quantidade": 4 },
           { "tamanho": "M", "quantidade": 8 },
@@ -53,9 +54,9 @@
         "cor_manga_esquerda": "",
         "vies_gola": "VIÉS PRÓPRIO TECIDO",
         "vies_mangas": "VIÉS PRÓPRIO TECIDO",
-        "specs": { "gola": "GOLA V" },
+        "specs": { "gola": "GOLA V", "locais": ["COSTAS TOTAL"] },
         "escala": "adulto",
-        "outras": "",
+        "outras": "Acabamento em viés duplo",
         "grade": [
           { "tamanho": "P", "quantidade": 5 },
           { "tamanho": "M", "quantidade": 5 }
@@ -71,9 +72,13 @@
         "cor_manga_esquerda": "",
         "vies_gola": "",
         "vies_mangas": "BRANCO",
-        "specs": { "cos": "ELÁSTICO" },
+        "specs": {
+          "cos": "ELÁSTICO",
+          "bolso": "BOLSO LATERAL",
+          "locais": ["COSTAS BARRA"]
+        },
         "escala": "infantil",
-        "outras": "",
+        "outras": "Cordão interno no cós",
         "grade": [
           { "tamanho": "P", "quantidade": 3 },
           { "tamanho": "M", "quantidade": 4 },

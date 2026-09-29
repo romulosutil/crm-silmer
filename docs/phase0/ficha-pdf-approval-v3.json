@@ -13,10 +13,10 @@
     "FIM-08",
     "FIM-09"
   ],
-  "fixtureSha256": "7ade3247501b4e83f7f143efa85535b8496f28d750d8d960d449090208030dda",
+  "fixtureSha256": "c404253483744c5bc3522c1f5f948830fbbf38f0738f27653b6b343ba898f171",
   "artifact": {
     "path": "output/pdf/ficha-canonica-sintetica-v3.pdf",
-    "sha256": "8e25a395b2cbf44d58a61ed60591e524b0c44c52a70c1e38b57f67e8bc8c1667",
+    "sha256": "58c7d0e4aeb0087fb99ba52198bb1eccc8ed2373dedc77e346083022eb142580",
     "pageCount": 3
   },
   "approval": {

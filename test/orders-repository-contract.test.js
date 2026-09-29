@@ -5,6 +5,7 @@ import { after, before, describe, test } from 'node:test';
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
 import {
   confirmOrder,
+  recordMilestones,
   reopenOrder,
 } from '../modules/orders/src/domain/order.js';
 import { assertOrderRepositoryContract } from '../modules/orders/src/ports/contracts.js';
@@ -19,6 +20,7 @@ import { assertOrderRepositoryContract } from '../modules/orders/src/ports/contr
  */
 
 const BASE_TIME = Date.parse('2026-09-12T12:00:00.000Z');
+const FIRST_CONTACT_AT = '2026-09-01T13:05:00.000Z';
 let tick = 0;
 /** Distinct, increasing timestamps keep the updated_at ordering deterministic. */
 function nextNow() {
@@ -63,6 +65,7 @@ function pendingInput(conversationId, overrides = {}) {
     createdByKind: /** @type {const} */ ('automation'),
     fabCode: '01',
     ficha: draftFicha(),
+    firstContactAt: FIRST_CONTACT_AT,
     id: randomUUID(),
     missingFields: ['finalAmount', 'paymentCondition'],
     now: nextNow(),
@@ -137,9 +140,12 @@ export function defineOrderRepositoryContract(name, setup) {
       assert.equal(created.createdByKind, 'automation');
       assert.equal(created.createdAt, input.now.toISOString());
       assert.equal(created.updatedAt, input.now.toISOString());
+      assert.equal(created.firstContactAt, FIRST_CONTACT_AT);
       for (const key of [
         'finalAmountCents',
         'paymentCondition',
+        'paidOn',
+        'deliveredOn',
         'orderDate',
         'confirmedAt',
         'confirmedBy',
@@ -332,6 +338,51 @@ export function defineOrderRepositoryContract(name, setup) {
       assert.deepEqual(await repository.findById(created.id), reopened);
     });
 
+    test('records the paid and delivered days in either status, touching nothing else', async () => {
+      const { repository } = harness;
+      const created = await repository.createPending(
+        pendingInput(await harness.newConversationId()),
+      );
+      const paid = await repository.saveMilestones(
+        recordMilestones(created, {
+          deliveredOn: null,
+          now: nextNow(),
+          paidOn: '2026-09-10',
+        }),
+        { correlationId: 'correlation-milestones', expectedVersion: 1 },
+      );
+      assert.equal(paid.version, 2);
+      assert.equal(paid.paidOn, '2026-09-10');
+      assert.equal(paid.deliveredOn, null);
+      assert.equal(paid.status, 'pendente');
+      assert.deepEqual(paid.ficha, created.ficha);
+
+      const confirmed = await confirm(repository, paid);
+      const delivered = await repository.saveMilestones(
+        recordMilestones(confirmed, {
+          deliveredOn: '2026-09-12',
+          now: nextNow(),
+          paidOn: '2026-09-10',
+        }),
+        { correlationId: 'correlation-milestones', expectedVersion: 3 },
+      );
+      assert.equal(delivered.version, 4);
+      assert.equal(delivered.deliveredOn, '2026-09-12');
+      assert.equal(delivered.status, 'confirmado');
+      assert.equal(delivered.orderDate, confirmed.orderDate);
+      assert.equal(delivered.confirmedAt, confirmed.confirmedAt);
+      assert.equal(delivered.firstContactAt, FIRST_CONTACT_AT);
+      assert.deepEqual(await repository.findById(created.id), delivered);
+
+      await assert.rejects(
+        repository.saveMilestones(
+          { ...delivered, paidOn: null },
+          { correlationId: 'correlation-milestones', expectedVersion: 3 },
+        ),
+        { code: 'VERSION_CONFLICT' },
+      );
+    });
+
     test('concurrent confirmations over the same version: one wins, one conflicts', async () => {
       const { repository } = harness;
       const created = await repository.createPending(
@@ -460,9 +511,13 @@ export function defineOrderRepositoryContract(name, setup) {
         { correlationId: 'correlation-events', expectedVersion: 2 },
       );
       const confirmed = await confirm(repository, projected);
-      await repository.saveStatus(
+      const reopened = await repository.saveStatus(
         reopenOrder(confirmed, { actorId: 'admin-contract', now: nextNow() }),
         { correlationId: 'correlation-events', expectedVersion: 4 },
+      );
+      await repository.saveMilestones(
+        { ...reopened, paidOn: '2026-09-10' },
+        { correlationId: 'correlation-events', expectedVersion: 5 },
       );
       await assert.rejects(
         repository.saveSection(
@@ -481,6 +536,7 @@ export function defineOrderRepositoryContract(name, setup) {
           ['order.briefing_projected', 3],
           ['order.confirmed', 4],
           ['order.reopened', 5],
+          ['order.milestones_saved', 6],
         ],
       );
       for (const event of events) {

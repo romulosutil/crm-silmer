@@ -8,6 +8,7 @@ import {
   confirmOrder,
   formatOrderNumber,
   missingForConfirmation,
+  recordMilestones,
   reopenOrder,
 } from '../modules/orders/src/domain/order.js';
 
@@ -48,7 +49,10 @@ function pendingOrder(overrides = {}) {
     missingFields: [],
     number: '01-CRM',
     numberSequence: 1,
+    deliveredOn: null,
+    firstContactAt: '2026-09-01T13:05:00.000Z',
     orderDate: null,
+    paidOn: null,
     paymentCondition: null,
     reopenedAt: null,
     reopenedBy: null,
@@ -203,6 +207,88 @@ test('no other transition is possible', () => {
   );
   assert.throws(
     () => confirmOrder(pendingOrder(), { ...confirmation, actorId: '' }),
+    TypeError,
+  );
+});
+
+test('records paid and delivered days in either status without moving it (PLA-04, PLA-06)', () => {
+  const confirmed = confirmOrder(pendingOrder(), confirmation);
+  const recordedAt = new Date('2026-09-20T15:00:00.000Z');
+  const recorded = recordMilestones(confirmed, {
+    deliveredOn: '2026-09-20',
+    now: recordedAt,
+    paidOn: '2026-09-12',
+  });
+
+  assert.equal(recorded.paidOn, '2026-09-12');
+  assert.equal(recorded.deliveredOn, '2026-09-20');
+  assert.equal(recorded.updatedAt, recordedAt.toISOString());
+  assert.deepEqual(
+    { ...recorded, deliveredOn: null, paidOn: null, updatedAt: '' },
+    { ...confirmed, updatedAt: '' },
+    'nothing else changes: status, order date, ficha and blockers stay',
+  );
+
+  const pending = recordMilestones(pendingOrder(), {
+    deliveredOn: null,
+    now: recordedAt,
+    paidOn: '2026-09-12',
+  });
+  assert.equal(pending.status, 'pendente');
+  assert.equal(pending.paidOn, '2026-09-12');
+  assert.equal(
+    recordMilestones(recorded, {
+      deliveredOn: null,
+      now: recordedAt,
+      paidOn: null,
+    }).paidOn,
+    null,
+    'null clears a recorded day',
+  );
+});
+
+test('a trail day is a real calendar day that has already come in São Paulo (PLA-05)', () => {
+  // 22:30 on 12/09 in São Paulo is already 13/09 in UTC.
+  const record = (/** @type {unknown} */ paidOn) =>
+    recordMilestones(pendingOrder(), {
+      deliveredOn: null,
+      now: CONFIRMED_AT,
+      paidOn,
+    });
+
+  assert.equal(record('2026-09-12').paidOn, '2026-09-12');
+  for (const paidOn of [
+    '2026-09-13',
+    '2026-02-30',
+    '12/09/2026',
+    '2026-9-12',
+    '0012-09-12',
+    '',
+    20260912,
+    undefined,
+  ]) {
+    assert.throws(
+      () => record(paidOn),
+      { code: 'INVALID_DATE', fields: ['paidOn'], statusCode: 422 },
+      String(paidOn),
+    );
+  }
+  assert.throws(
+    () =>
+      recordMilestones(pendingOrder(), {
+        deliveredOn: '2027-01-01',
+        now: CONFIRMED_AT,
+        paidOn: '2027-01-01',
+      }),
+    { code: 'INVALID_DATE', fields: ['paidOn', 'deliveredOn'] },
+  );
+  assert.throws(
+    () =>
+      recordMilestones(pendingOrder(), {
+        deliveredOn: null,
+        now: new Date('invalid'),
+        paidOn: null,
+      }),
     TypeError,
   );
 });

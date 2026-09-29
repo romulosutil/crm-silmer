@@ -84,14 +84,17 @@ export class InMemoryOrderRepository {
         createdAt: at,
         createdBy: input.createdBy,
         createdByKind: input.createdByKind,
+        deliveredOn: null,
         fabCode: input.fabCode,
         ficha: clone(input.ficha),
         finalAmountCents: null,
+        firstContactAt: input.firstContactAt,
         id: input.id,
         missingFields: [...input.missingFields],
         number: formatOrderNumber(this.#sequence),
         numberSequence: this.#sequence,
         orderDate: null,
+        paidOn: null,
         paymentCondition: null,
         reopenedAt: null,
         reopenedBy: null,
@@ -222,6 +225,21 @@ export class InMemoryOrderRepository {
           updatedAt: order.updatedAt,
         };
       },
+    );
+  }
+
+  /** @param {Order} order @param {OrderWriteOptions} options */
+  async saveMilestones(order, options) {
+    return this.#write(
+      order.id,
+      options,
+      'order.milestones_saved',
+      (current) => ({
+        ...current,
+        deliveredOn: order.deliveredOn,
+        paidOn: order.paidOn,
+        updatedAt: order.updatedAt,
+      }),
     );
   }
 

@@ -10,6 +10,11 @@ export const ORDER_STATUSES = Object.freeze(
 export const PAYMENT_CONDITIONS = Object.freeze(
   /** @type {const} */ (['pix', 'cartao_credito', 'cartao_debito']),
 );
+// ADR 008: the two days of the order trail that only a person knows.
+export const MILESTONE_FIELDS = Object.freeze(
+  /** @type {const} */ (['paidOn', 'deliveredOn']),
+);
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/u;
 
 // D00.6-05: the operation runs on São Paulo time; timestamps persist in UTC.
 const OPERATIONAL_TIME_ZONE = 'America/Sao_Paulo';
@@ -50,6 +55,7 @@ const SUMMARY_FIELD_ORDER = Object.freeze([
  *   finalAmountCents: number|null, paymentCondition: PaymentCondition|null,
  *   orderDate: string|null, confirmedAt: string|null, confirmedBy: string|null,
  *   reopenedAt: string|null, reopenedBy: string|null,
+ *   firstContactAt: string|null, paidOn: string|null, deliveredOn: string|null,
  *   createdByKind: 'automation'|'user', createdBy: string|null,
  *   version: number, createdAt: string, updatedAt: string,
  * }} Order
@@ -63,14 +69,19 @@ export function formatOrderNumber(sequence) {
   return `${String(sequence).padStart(2, '0')}-CRM`;
 }
 
+/** @param {unknown} now */
+function requireClock(now) {
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
+    throw new TypeError('now must be a valid Date');
+  }
+}
+
 /** @param {{actorId: string, now: Date}} input */
 function requireActorAndClock({ actorId, now }) {
   if (typeof actorId !== 'string' || actorId.trim() === '') {
     throw new TypeError('actorId is required');
   }
-  if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
-    throw new TypeError('now must be a valid Date');
-  }
+  requireClock(now);
 }
 
 /** @param {Order} order @param {OrderStatus} expected @param {string} command */
@@ -195,4 +206,50 @@ export function reopenOrder(order, input) {
     updatedAt: reopenedAt,
   });
   return { ...reopened, missingFields: missingForConfirmation(reopened) };
+}
+
+/**
+ * A manual day of the trail is null while nobody has recorded it, or a
+ * calendar day that has already come in São Paulo.
+ *
+ * @param {unknown} value @param {string} today
+ */
+function isMilestoneDay(value, today) {
+  if (value === null) return true;
+  const match = typeof value === 'string' ? ISO_DAY.exec(value) : null;
+  if (!match) return false;
+  const day = new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+  );
+  return day.toISOString().slice(0, 10) === value && match[0] <= today;
+}
+
+/**
+ * ADR 008: when the customer paid and when the order reached them. A person
+ * records both, pending or confirmed, without reopening: neither moves the
+ * status nor blocks the confirmation (PCL-08), so a printed ficha stays valid.
+ *
+ * @param {Order} order
+ * @param {{paidOn: unknown, deliveredOn: unknown, now: Date}} input
+ * @returns {Order}
+ */
+export function recordMilestones(order, input) {
+  requireClock(input.now);
+  const today = orderDateFormat.format(input.now);
+  const invalid = MILESTONE_FIELDS.filter(
+    (field) => !isMilestoneDay(input[field], today),
+  );
+  if (invalid.length > 0) {
+    throw new OrderValidationError(
+      'Use a calendar day that has already come',
+      'INVALID_DATE',
+      invalid,
+    );
+  }
+  return {
+    ...structuredClone(order),
+    deliveredOn: /** @type {string|null} */ (input.deliveredOn),
+    paidOn: /** @type {string|null} */ (input.paidOn),
+    updatedAt: input.now.toISOString(),
+  };
 }

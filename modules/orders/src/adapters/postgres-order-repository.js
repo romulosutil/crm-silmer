@@ -19,7 +19,8 @@ const ORDER_COLUMNS = `id, number_sequence, number, conversation_id, status,
   fab_code, ficha_envelope, total_pieces, missing_fields, final_amount_cents,
   payment_condition, order_date::text AS order_date, confirmed_at,
   confirmed_by, reopened_at, reopened_by, created_by_kind, created_by,
-  version, created_at, updated_at`;
+  first_contact_at, paid_on::text AS paid_on,
+  delivered_on::text AS delivered_on, version, created_at, updated_at`;
 
 /** @param {string} orderId */
 function fichaAad(orderId) {
@@ -109,6 +110,7 @@ export class PostgresOrderRepository {
       createdAt: /** @type {string} */ (isoOrNull(row.created_at)),
       createdBy: row.created_by,
       createdByKind: row.created_by_kind,
+      deliveredOn: row.delivered_on,
       fabCode: row.fab_code,
       ficha: decryptJson(
         row.ficha_envelope,
@@ -117,11 +119,13 @@ export class PostgresOrderRepository {
       ),
       finalAmountCents:
         row.final_amount_cents === null ? null : Number(row.final_amount_cents),
+      firstContactAt: isoOrNull(row.first_contact_at),
       id: row.id,
       missingFields: [...row.missing_fields],
       number: row.number,
       numberSequence: Number(row.number_sequence),
       orderDate: row.order_date,
+      paidOn: row.paid_on,
       paymentCondition: row.payment_condition,
       reopenedAt: isoOrNull(row.reopened_at),
       reopenedBy: row.reopened_by,
@@ -142,11 +146,12 @@ export class PostgresOrderRepository {
            INSERT INTO crm.orders
              (id, number_sequence, number, conversation_id, status, fab_code,
               ficha_version, ficha_envelope, total_pieces, missing_fields,
-              created_by_kind, created_by, version, created_at, updated_at)
+              created_by_kind, created_by, first_contact_at, version,
+              created_at, updated_at)
            SELECT $1, reserved.sequence,
                   lpad(reserved.sequence::text, 2, '0') || '-CRM',
-                  $2, 'pendente', $3, 1, $4::jsonb, $5, $6::text[], $7, $8, 1,
-                  $9, $9
+                  $2, 'pendente', $3, 1, $4::jsonb, $5, $6::text[], $7, $8,
+                  $10, 1, $9, $9
            FROM reserved
            RETURNING ${ORDER_COLUMNS}`,
           [
@@ -161,6 +166,7 @@ export class PostgresOrderRepository {
             input.createdByKind,
             input.createdBy,
             at,
+            input.firstContactAt,
           ],
         );
         const order = this.#map(inserted.rows[0]);
@@ -354,6 +360,24 @@ export class PostgresOrderRepository {
           ],
         );
       },
+    );
+  }
+
+  /** @param {Order} order @param {OrderWriteOptions} options */
+  async saveMilestones(order, options) {
+    return this.#write(
+      order.id,
+      options,
+      'order.milestones_saved',
+      async (_current, tx) =>
+        tx.query(
+          `UPDATE crm.orders
+           SET paid_on = $2::date, delivered_on = $3::date, updated_at = $4,
+               version = version + 1
+           WHERE id = $1
+           RETURNING ${ORDER_COLUMNS}`,
+          [order.id, order.paidOn, order.deliveredOn, order.updatedAt],
+        ),
     );
   }
 

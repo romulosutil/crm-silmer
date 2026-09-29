@@ -33,6 +33,7 @@ export {
   confirmOrder,
   formatOrderNumber,
   missingForConfirmation,
+  recordMilestones,
   reopenOrder,
 } from './domain/order.js';
 export {

@@ -18,15 +18,18 @@ import { parseBrlAmount } from '../domain/money.js';
 import {
   confirmOrder,
   missingForConfirmation,
+  recordMilestones,
   reopenOrder,
 } from '../domain/order.js';
 import { assertOrderRepositoryContract } from '../ports/contracts.js';
 
 /**
+ * `openedAt` is when the first inbound message opened the conversation.
+ *
  * @typedef {import('../domain/order.js').Order} Order
  * @typedef {import('../domain/ficha.js').Ficha} Ficha
  * @typedef {{id: string, kind: string, capabilities?: readonly string[]}} OrderActor
- * @typedef {{briefing: Record<string, unknown>|null, customerName: string|null}} OrderConversationContext
+ * @typedef {{briefing: Record<string, unknown>|null, customerName: string|null, openedAt?: string|null}} OrderConversationContext
  * @typedef {{
  *   repository: import('../ports/contracts.js').OrderRepository,
  *   conversations: {
@@ -167,6 +170,8 @@ export function createOrderService(options) {
         createdByKind: input.createdByKind,
         fabCode,
         ficha,
+        // ADR 008: the order keeps when its conversation began.
+        firstContactAt: context.openedAt ?? null,
         id: idFactory(),
         missingFields: derived.missingFields,
         now: clock(),
@@ -396,6 +401,28 @@ export function createOrderService(options) {
       const order = await loadForCommand(input);
       return repository.saveStatus(
         reopenOrder(order, { actorId: input.actor.id, now: clock() }),
+        {
+          correlationId: input.correlationId,
+          expectedVersion: order.version,
+        },
+      );
+    },
+
+    /**
+     * PLA-04/PLA-05: the owner or an admin records when the customer paid and
+     * when the order was delivered, in either status; both days travel in one
+     * write and null clears one.
+     *
+     * @param {{orderId: string, paidOn: unknown, deliveredOn: unknown, expectedVersion: number, actor: OrderActor, correlationId: string}} input
+     */
+    async recordMilestones(input) {
+      const order = await loadForCommand(input);
+      return repository.saveMilestones(
+        recordMilestones(order, {
+          deliveredOn: input.deliveredOn,
+          now: clock(),
+          paidOn: input.paidOn,
+        }),
         {
           correlationId: input.correlationId,
           expectedVersion: order.version,

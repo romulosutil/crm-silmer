@@ -228,6 +228,7 @@ if (connectionString) {
             nome: null,
           },
         },
+        firstContactAt: null,
         id: randomUUID(),
         missingFields: ['items'],
         now: NOW,
@@ -313,6 +314,7 @@ if (connectionString) {
     assert.deepEqual(await port.readOrderContext(conversation.id), {
       briefing: { order_name: 'Equipe Sintetica', product_type: 'camisa' },
       customerName: 'Conceição Sintética',
+      openedAt: NOW.toISOString(),
     });
     assert.equal(await port.readOrderContext(`missing-${runId}`), null);
 
@@ -325,10 +327,12 @@ if (connectionString) {
       fabCode: '01',
       repository,
     });
-    await service.ensurePendingFromIntent({
+    const { order } = await service.ensurePendingFromIntent({
       conversationId: conversation.id,
       correlationId: `correlation-port-${runId}`,
     });
+    // PLA-02: the order keeps the day its conversation opened.
+    assert.equal(order.firstContactAt, NOW.toISOString());
     assert.deepEqual(await port.searchConversationIds('CONCEICAO sint'), [
       conversation.id,
     ]);

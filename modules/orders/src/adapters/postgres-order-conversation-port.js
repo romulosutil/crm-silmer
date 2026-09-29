@@ -113,8 +113,9 @@ export class PostgresOrderConversationPort {
   async readOrderContext(conversationId) {
     const result = await this.#database.query(
       `SELECT conversation.id, conversation.briefing_version,
-              conversation.briefing_envelope, contact.display_name,
-              identity.identity_envelope, identity.external_identity_lookup_hash
+              conversation.briefing_envelope, conversation.opened_at,
+              contact.display_name, identity.identity_envelope,
+              identity.external_identity_lookup_hash
        FROM crm.conversations conversation
        JOIN crm.contact_identities identity
          ON identity.id = conversation.contact_identity_id
@@ -135,6 +136,8 @@ export class PostgresOrderConversationPort {
         : null,
       // Same precedence as the Inbox label, without falling back to the phone.
       customerName: row.display_name ?? identity.displayHandle ?? null,
+      // The first inbound message of this conversation opened it.
+      openedAt: new Date(row.opened_at).toISOString(),
     };
   }
 

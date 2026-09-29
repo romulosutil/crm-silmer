@@ -416,6 +416,85 @@ test('a confirmed order is read-only until reopened, and a new owner confirms ag
   assert.equal(reconfirmed.finalAmountCents, 12000);
 });
 
+test('the owner or an admin records the trail days of a confirmed order without reopening', async () => {
+  const { order, owners, service } = await setup();
+  const withItems = await service.patchSection(
+    command({
+      expectedVersion: order.version,
+      orderId: order.id,
+      section: 'items',
+      value: synthetic.pedido.itens,
+    }),
+  );
+  const confirmed = await service.confirm(
+    command({
+      amountText: '100,00',
+      expectedVersion: withItems.version,
+      orderId: order.id,
+      paymentCondition: 'pix',
+    }),
+  );
+
+  const paid = await service.recordMilestones(
+    command({
+      deliveredOn: null,
+      expectedVersion: confirmed.version,
+      orderId: order.id,
+      paidOn: '2026-09-11',
+    }),
+  );
+  assert.equal(paid.paidOn, '2026-09-11');
+  assert.equal(paid.status, 'confirmado');
+  assert.equal(paid.version, confirmed.version + 1);
+
+  await assert.rejects(
+    service.recordMilestones({
+      actor: OTHER,
+      correlationId: 'correlation-other',
+      deliveredOn: '2026-09-12',
+      expectedVersion: paid.version,
+      orderId: order.id,
+      paidOn: '2026-09-11',
+    }),
+    { code: 'FORBIDDEN' },
+  );
+  await assert.rejects(
+    service.recordMilestones(
+      command({
+        deliveredOn: '2026-09-12',
+        expectedVersion: confirmed.version,
+        orderId: order.id,
+        paidOn: '2026-09-11',
+      }),
+    ),
+    { code: 'VERSION_CONFLICT', statusCode: 409 },
+  );
+  await assert.rejects(
+    service.recordMilestones(
+      command({
+        deliveredOn: '2026-09-30',
+        expectedVersion: paid.version,
+        orderId: order.id,
+        paidOn: '2026-09-11',
+      }),
+    ),
+    { code: 'INVALID_DATE', fields: ['deliveredOn'], statusCode: 422 },
+  );
+
+  // The conversation was transferred; an admin still records the delivery.
+  owners['conversation-1'] = 'seller-2';
+  const delivered = await service.recordMilestones({
+    actor: ADMIN,
+    correlationId: 'correlation-admin',
+    deliveredOn: '2026-09-12',
+    expectedVersion: paid.version,
+    orderId: order.id,
+    paidOn: '2026-09-11',
+  });
+  assert.equal(delivered.deliveredOn, '2026-09-12');
+  assert.equal(delivered.orderDate, confirmed.orderDate);
+});
+
 test('commands on an unknown order are refused as not found', async () => {
   const { service } = await setup();
   await assert.rejects(

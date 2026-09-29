@@ -38,7 +38,11 @@ const BRIEFING = Object.freeze({
 function setup(options = {}) {
   const repository = new InMemoryOrderRepository();
   const contexts = options.contexts ?? {
-    'conversation-1': { briefing: BRIEFING, customerName: 'Cliente Sintetico' },
+    'conversation-1': {
+      briefing: BRIEFING,
+      customerName: 'Cliente Sintetico',
+      openedAt: '2026-09-01T13:05:00.000Z',
+    },
     'conversation-2': { briefing: null, customerName: null },
   };
   const owners = options.owners ?? {
@@ -90,6 +94,10 @@ test('an intent without a pending order creates one pre-filled from the pre-fich
   assert.equal(order.createdByKind, 'automation');
   assert.equal(order.createdBy, null);
   assert.equal(order.createdAt, NOW.toISOString());
+  // PLA-02: the first contact is copied from the conversation, not typed.
+  assert.equal(order.firstContactAt, '2026-09-01T13:05:00.000Z');
+  assert.equal(order.paidOn, null);
+  assert.equal(order.deliveredOn, null);
   assert.equal(order.ficha.summary.cliente, 'Cliente Sintetico');
   assert.equal(order.ficha.summary.nome, 'Equipe Horizonte');
   assert.equal(order.ficha.summary.aplicacao, 'sublimação total');

@@ -10,7 +10,7 @@ import { ORDER_STATUSES } from '../domain/order.js';
  *   id: string, conversationId: string, fabCode: string, ficha: Ficha,
  *   totalPieces: number, missingFields: string[],
  *   createdByKind: 'automation'|'user', createdBy: string|null,
- *   correlationId: string, now: Date,
+ *   firstContactAt: string|null, correlationId: string, now: Date,
  * }} CreatePendingOrderInput
  *
  * @typedef {{expectedVersion: number, correlationId: string}} OrderWriteOptions
@@ -35,6 +35,8 @@ import { ORDER_STATUSES } from '../domain/order.js';
  * - `saveSection`/`projectBriefing` write the ficha and its derived columns
  *   (`totalPieces`, `missingFields`, `updatedAt`) of a pending order only.
  * - `saveStatus` writes the confirmation/reopen columns of the order.
+ * - `saveMilestones` writes the manual days of the trail (`paidOn`,
+ *   `deliveredOn`, `updatedAt`) of an order in either status.
  *
  * @typedef {{
  *   createPending(input: CreatePendingOrderInput): Promise<Order>,
@@ -44,6 +46,7 @@ import { ORDER_STATUSES } from '../domain/order.js';
  *   list(query: OrderListQuery): Promise<OrderPage>,
  *   saveSection(order: Order, options: OrderWriteOptions): Promise<Order>,
  *   saveStatus(order: Order, options: OrderWriteOptions): Promise<Order>,
+ *   saveMilestones(order: Order, options: OrderWriteOptions): Promise<Order>,
  *   projectBriefing(order: Order, options: OrderWriteOptions): Promise<Order>,
  * }} OrderRepository
  */
@@ -56,6 +59,7 @@ export const ORDER_REPOSITORY_METHODS = Object.freeze([
   'list',
   'saveSection',
   'saveStatus',
+  'saveMilestones',
   'projectBriefing',
 ]);
 

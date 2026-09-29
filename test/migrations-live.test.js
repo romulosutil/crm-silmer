@@ -13,6 +13,44 @@ import { createSafeLogger } from '../modules/shared/src/index.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 
+/**
+ * One contact, identity and first-cycle conversation, written in SQL so a
+ * test can seed rows between two migrations.
+ *
+ * @param {Pool} pool @param {string} id @param {number} index @param {Date} openedAt
+ */
+async function seedLiveConversation(pool, id, index, openedAt) {
+  await pool.query(
+    `INSERT INTO crm.contacts (id, provisional, version, created_at, updated_at)
+     VALUES ($1, false, 1, $2, $2)`,
+    [`contact-${id}`, openedAt],
+  );
+  await pool.query(
+    `INSERT INTO crm.contact_identities
+       (id, current_contact_id, provider, provider_account_id, channel,
+        external_identity_lookup_hash, identity_kind, phone_status,
+        identity_envelope, key_version, version, created_at, updated_at)
+     VALUES ($1, $2, 'meta', 'account-orders', 'instagram', $3, 'handle',
+             'pending', $4::jsonb, 1, 1, $5, $5)`,
+    [
+      `identity-${id}`,
+      `contact-${id}`,
+      String(index).padStart(64, '0'),
+      JSON.stringify({ algorithm: 'AES-256-GCM', keyVersion: 1, version: 1 }),
+      openedAt,
+    ],
+  );
+  await pool.query(
+    `INSERT INTO crm.conversations
+       (id, contact_identity_id, provider, provider_account_id,
+        external_conversation_id, cycle_number, state, automation_state,
+        automation_epoch, version, opened_at, last_message_at)
+     VALUES ($1, $2, 'meta', 'account-orders', $3, 1, 'nova',
+             'assistant', 0, 1, $4, $4)`,
+    [id, `identity-${id}`, `external-${id}`, openedAt],
+  );
+}
+
 if (connectionString) {
   test('PostgreSQL live: zero, upgrade, concurrency, readiness and app rollback', async () => {
     const databaseName = new URL(connectionString).pathname.slice(1);
@@ -145,42 +183,9 @@ if (connectionString) {
       await migrate(pool, { migrations: await loadMigrations() });
 
       let seeded = 0;
-      /** One contact, identity and first-cycle conversation per id. */
       const seedConversation = async (/** @type {string} */ id) => {
         seeded += 1;
-        await pool.query(
-          `INSERT INTO crm.contacts (id, provisional, version, created_at, updated_at)
-           VALUES ($1, false, 1, $2, $2)`,
-          [`contact-${id}`, now],
-        );
-        await pool.query(
-          `INSERT INTO crm.contact_identities
-             (id, current_contact_id, provider, provider_account_id, channel,
-              external_identity_lookup_hash, identity_kind, phone_status,
-              identity_envelope, key_version, version, created_at, updated_at)
-           VALUES ($1, $2, 'meta', 'account-orders', 'instagram', $3, 'handle',
-                   'pending', $4::jsonb, 1, 1, $5, $5)`,
-          [
-            `identity-${id}`,
-            `contact-${id}`,
-            String(seeded).padStart(64, '0'),
-            JSON.stringify({
-              algorithm: 'AES-256-GCM',
-              keyVersion: 1,
-              version: 1,
-            }),
-            now,
-          ],
-        );
-        await pool.query(
-          `INSERT INTO crm.conversations
-             (id, contact_identity_id, provider, provider_account_id,
-              external_conversation_id, cycle_number, state, automation_state,
-              automation_epoch, version, opened_at, last_message_at)
-           VALUES ($1, $2, 'meta', 'account-orders', $3, 1, 'nova',
-                   'assistant', 0, 1, $4, $4)`,
-          [id, `identity-${id}`, `external-${id}`, now],
-        );
+        await seedLiveConversation(pool, id, seeded, now);
       };
       for (const id of [
         'conversation-a',
@@ -255,6 +260,58 @@ if (connectionString) {
         { code: '23503' },
         'orders belong to an existing conversation',
       );
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
+
+  test('PostgreSQL live: 0024 gives existing orders the first contact of their conversation', async () => {
+    const databaseName = new URL(connectionString).pathname.slice(1);
+    assert.equal(
+      databaseName,
+      'crm_silmer_test',
+      'live migration test only resets the dedicated crm_silmer_test database',
+    );
+
+    const pool = new Pool({ connectionString, max: 2 });
+    const openedAt = new Date('2026-09-01T13:05:00.000Z');
+    const createdAt = new Date('2026-09-12T12:00:00.000Z');
+    const migrations = await loadMigrations();
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, {
+        migrations: migrations.filter(({ version }) => version < '0024'),
+      });
+      await seedLiveConversation(pool, 'conversation-old', 1, openedAt);
+      await pool.query(
+        `INSERT INTO crm.orders
+           (id, number_sequence, number, conversation_id, status, fab_code,
+            ficha_envelope, created_by_kind, created_at, updated_at)
+         VALUES ('order-old', 1, '01-CRM', 'conversation-old', 'pendente',
+                 '01', '{}'::jsonb, 'automation', $1, $1)`,
+        [createdAt],
+      );
+
+      assert.deepEqual(await migrate(pool, { migrations }), {
+        applied: ['0024'],
+        phase: 'expand',
+      });
+      const { rows } = await pool.query(
+        `SELECT first_contact_at, paid_on, delivered_on, version, updated_at
+         FROM crm.orders WHERE id = 'order-old'`,
+      );
+      assert.deepEqual(rows, [
+        {
+          delivered_on: null,
+          first_contact_at: openedAt,
+          paid_on: null,
+          updated_at: createdAt,
+          version: 1,
+        },
+      ]);
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

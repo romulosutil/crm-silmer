@@ -217,6 +217,41 @@ export function registerOrderRoutes(api, orders, contextFor) {
       return reply.code(200).send({ order });
     }),
   );
+
+  /**
+   * PLA-04/PLA-05: the paid and delivered days, both in every write (null
+   * clears one). A confirmed order takes them without a reopen.
+   */
+  api.patch('/api/v1/orders/:orderId/milestones', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['deliveredOn', 'expectedVersion', 'paidOn']);
+      const expectedVersion = requireVersion(body.expectedVersion);
+      // A malformed or future day is not malformed JSON: the service answers
+      // 422 INVALID_DATE naming the field.
+      for (const field of ['deliveredOn', 'paidOn']) {
+        if (body[field] !== null && typeof body[field] !== 'string') {
+          throw new OrderRequestError(400, 'INVALID_REQUEST');
+        }
+      }
+      const command = await authorizeCommand(
+        request,
+        orders,
+        contextFor,
+        'order.milestones',
+      );
+      const order = await orders.recordMilestones({
+        ...command,
+        deliveredOn: body.deliveredOn,
+        expectedVersion,
+        orderId,
+        paidOn: body.paidOn,
+      });
+      return reply.code(200).send({ order });
+    }),
+  );
 }
 
 /**

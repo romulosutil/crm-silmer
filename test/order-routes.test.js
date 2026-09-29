@@ -33,13 +33,16 @@ const ORDER_KEYS = [
   'confirmedBy',
   'conversationId',
   'createdAt',
+  'deliveredOn',
   'fabCode',
   'ficha',
   'finalAmountCents',
+  'firstContactAt',
   'id',
   'missingFields',
   'number',
   'orderDate',
+  'paidOn',
   'paymentCondition',
   'reopenedAt',
   'reopenedBy',
@@ -99,6 +102,7 @@ function orderHarness(options = {}) {
           ? {
               briefing: { order_name: 'Equipe Sintetica' },
               customerName: 'Cliente Sintetico',
+              openedAt: '2026-09-01T13:05:00.000Z',
             }
           : null,
       readUserNames: async (/** @type {string[]} */ ids) =>
@@ -206,6 +210,10 @@ test('GET /orders/:orderId returns the Order contract with named actors', async 
   assert.deepEqual(order.seller, { id: 'seller-1', name: 'Vendedora Um' });
   assert.equal(order.reopenedBy, null);
   assert.equal(order.ficha.summary.cliente, 'Cliente Sintetico');
+  // PLA-02: the first contact is the day the conversation opened.
+  assert.equal(order.firstContactAt, '2026-09-01T13:05:00.000Z');
+  assert.equal(order.paidOn, null);
+  assert.equal(order.deliveredOn, null);
   assert.deepEqual(
     guards.map((guard) => [guard.method, guard.input.action]),
     [['authorizeRead', 'order.read']],
@@ -765,6 +773,122 @@ test('POST /orders/:id/reopen returns a confirmed order to pending', async (t) =
     confirmed.confirmedAt,
     'PCL-12: a new confirmation records its own time',
   );
+});
+
+test('PATCH /orders/:id/milestones records paid and delivered days without reopening', async (t) => {
+  const { api, guards, runtime } = orderHarness();
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+
+  const response = await api.inject({
+    headers: writeHeaders,
+    method: 'PATCH',
+    payload: {
+      deliveredOn: null,
+      expectedVersion: confirmed.version,
+      paidOn: '2026-09-10',
+    },
+    url: `/api/v1/orders/${confirmed.id}/milestones`,
+  });
+
+  assert.equal(response.statusCode, 200);
+  const { order } = response.json();
+  assert.equal(order.paidOn, '2026-09-10');
+  assert.equal(order.deliveredOn, null);
+  assert.equal(order.version, confirmed.version + 1);
+  // PLA-06: the trail never moves the status nor unlocks the ficha.
+  assert.equal(order.status, 'confirmado');
+  assert.equal(order.confirmedAt, confirmed.confirmedAt);
+  assert.equal(order.orderDate, confirmed.orderDate);
+  assert.equal(guards.at(-1)?.input.action, 'order.milestones');
+
+  const delivered = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'milestones-delivered' },
+    method: 'PATCH',
+    payload: {
+      deliveredOn: '2026-09-12',
+      expectedVersion: order.version,
+      paidOn: null,
+    },
+    url: `/api/v1/orders/${confirmed.id}/milestones`,
+  });
+  assert.equal(delivered.statusCode, 200);
+  assert.equal(delivered.json().order.deliveredOn, '2026-09-12');
+  assert.equal(delivered.json().order.paidOn, null, 'null clears a day');
+
+  const stale = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'milestones-stale' },
+    method: 'PATCH',
+    payload: {
+      deliveredOn: null,
+      expectedVersion: order.version,
+      paidOn: null,
+    },
+    url: `/api/v1/orders/${confirmed.id}/milestones`,
+  });
+  assert.equal(stale.statusCode, 409);
+  assert.deepEqual(stale.json(), { error: { code: 'VERSION_CONFLICT' } });
+});
+
+test('PATCH /orders/:id/milestones refuses future or malformed days with 422', async (t) => {
+  const { api, runtime } = orderHarness();
+  t.after(() => api.close());
+  const pending = await createPending(runtime, 'conversation-1');
+
+  // The harness clock reads 12/09/2026 in São Paulo.
+  const response = await api.inject({
+    headers: writeHeaders,
+    method: 'PATCH',
+    payload: {
+      deliveredOn: '2026-09-13',
+      expectedVersion: pending.version,
+      paidOn: '10/09/2026',
+    },
+    url: `/api/v1/orders/${pending.id}/milestones`,
+  });
+  assert.equal(response.statusCode, 422);
+  assert.deepEqual(response.json(), {
+    error: { code: 'INVALID_DATE', fields: ['paidOn', 'deliveredOn'] },
+  });
+
+  const unchanged = await runtime.get(pending.id);
+  assert.equal(unchanged.order.version, pending.version);
+});
+
+test('PATCH /orders/:id/milestones refuses non-owners and malformed requests', async (t) => {
+  const { api, runtime } = orderHarness({ writeActor: OTHER });
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  const patch = (/** @type {Record<string, unknown>} */ payload) =>
+    api.inject({
+      headers: writeHeaders,
+      method: 'PATCH',
+      payload,
+      url: `/api/v1/orders/${confirmed.id}/milestones`,
+    });
+
+  const forbidden = await patch({
+    deliveredOn: null,
+    expectedVersion: confirmed.version,
+    paidOn: '2026-09-10',
+  });
+  assert.equal(forbidden.statusCode, 403);
+  assert.deepEqual(forbidden.json(), { error: { code: 'FORBIDDEN' } });
+
+  for (const payload of [
+    { expectedVersion: confirmed.version, paidOn: '2026-09-10' },
+    { deliveredOn: 20260910, expectedVersion: confirmed.version, paidOn: null },
+    {
+      deliveredOn: null,
+      expectedVersion: confirmed.version,
+      paidOn: null,
+      status: 'entregue',
+    },
+  ]) {
+    const refused = await patch(payload);
+    assert.equal(refused.statusCode, 400, JSON.stringify(payload));
+    assert.deepEqual(refused.json(), { error: { code: 'INVALID_REQUEST' } });
+  }
 });
 
 test('confirm and reopen refuse non-owners and malformed requests', async (t) => {

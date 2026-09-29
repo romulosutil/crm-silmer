@@ -132,13 +132,16 @@ export function createOrderRuntime(options) {
       confirmedBy: person(order.confirmedBy),
       conversationId: order.conversationId,
       createdAt: order.createdAt,
+      deliveredOn: order.deliveredOn,
       fabCode: order.fabCode,
       ficha: order.ficha,
       finalAmountCents: order.finalAmountCents,
+      firstContactAt: order.firstContactAt,
       id: order.id,
       missingFields: order.missingFields,
       number: order.number,
       orderDate: order.orderDate,
+      paidOn: order.paidOn,
       paymentCondition: order.paymentCondition,
       reopenedAt: order.reopenedAt,
       reopenedBy: person(order.reopenedBy),
@@ -264,6 +267,20 @@ export function createOrderRuntime(options) {
           target: { id: input.orderId, type: 'order' },
         },
         async () => presentOne(await service.reopen(input)),
+      );
+    },
+
+    /** @param {OrderCommand & {orderId: string, paidOn: unknown, deliveredOn: unknown, expectedVersion: number}} input */
+    async recordMilestones(input) {
+      return run(
+        input,
+        {
+          action: 'order.milestones',
+          command: { deliveredOn: input.deliveredOn, paidOn: input.paidOn },
+          expectedVersion: input.expectedVersion,
+          target: { id: input.orderId, type: 'order' },
+        },
+        async () => presentOne(await service.recordMilestones(input)),
       );
     },
 

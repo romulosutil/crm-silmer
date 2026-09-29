@@ -1,6 +1,8 @@
 # ADR 006 — Pedido com dois status e confirmação humana
 
-Status: aceito
+Status: aceito; parcialmente supersedido pela
+[ADR 008](008-lastro-de-datas-do-pedido.md) no trecho "Fora do escopo do MVP",
+quanto aos dias de pagamento e de entrega.
 
 Data: 12/09/2026
 

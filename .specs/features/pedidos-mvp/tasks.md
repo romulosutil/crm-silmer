@@ -712,6 +712,110 @@ H:  T23, T34, T38 ──→ T39
 
 ---
 
+## Grupo I — Lastro de datas do pedido (ADR 008)
+
+Decidido pelo PO em 29/09/2026. As tasks T41–T46 partem de `master`; T47 vai no
+branch `feat/ficha-por-produto`, antes da aprovação da v3 (T15 daquele branch).
+
+### T41: ADR 008 e requisitos do lastro
+
+- **What:** Registrar a decisão, os requisitos PLA-01..09, as decisões D27–D31, o desenho e estas tasks; marcar a ADR 006 como parcialmente supersedida.
+- **Where:** `docs/adr/008-lastro-de-datas-do-pedido.md`, `docs/adr/006-pedido-dois-status.md`, `.specs/features/pedidos-mvp/{spec,context,design,tasks}.md`
+- **Depends on:** —
+- **Requirement:** PLA-01..09
+
+**Done when:**
+
+- [x] ADR 008 aceita e ligada à spec, ao contexto e às tasks
+- [x] PFI-01 e PFI-10 apontam a exceção do lastro
+
+**Tests:** none · **Gate:** docs · **Commit:** `docs(adr): record the order date trail`
+
+### T42: Guardar primeiro contato, pagamento e entrega
+
+- **What:** Migration `0024` com as três colunas e o backfill do primeiro contato; `recordMilestones` no domínio; `saveMilestones` na porta e nos dois adapters; o serviço copia a abertura da conversa na criação.
+- **Where:** `modules/database/migrations/0024_order_milestones.expand.sql`, `modules/orders/src/**`, `test/orders-{domain,service-create,service-commands,repository-contract,postgres-live}.test.js`, `test/migrations-live.test.js`
+- **Depends on:** T41
+- **Requirement:** PLA-02, PLA-04, PLA-05, PLA-06
+
+**Done when:**
+
+- [x] Contrato do repositório passa em memória e no PostgreSQL
+- [x] Backfill testado entre `0023` e `0024`
+- [x] `npm run test:orders:live` passa
+
+**Tests:** unit + integração live · **Gate:** quick + live · **Commit:** `feat(orders): keep first contact, paid and delivered days`
+
+### T43: Rota do lastro
+
+- **What:** `PATCH /api/v1/orders/:orderId/milestones` com a ação `order.milestones`, auditoria e idempotência; `firstContactAt`, `paidOn` e `deliveredOn` no contrato `Order`; OpenAPI.
+- **Where:** `apps/api/src/order-{routes,runtime}.js`, `modules/identity-access/src/authorization.js`, `docs/api/openapi.v1.yaml`, `test/order-{routes,runtime}.test.js`, `test/identity-authorization.test.js`
+- **Depends on:** T42
+- **Requirement:** PLA-04, PLA-05, PLA-06, PLA-07
+
+**Done when:**
+
+- [x] 200 em pedido confirmado sem reabrir; 400, 403, 409 e 422 cobertos
+- [x] Gate quick passa
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(api): record paid and delivered days`
+
+### T44: Entrega confirmada em dd/mm/aaaa na v2
+
+- **What:** O snapshot impresso formata a entrega confirmada como a data do pedido; o template v2 não muda.
+- **Where:** `apps/api/src/order-routes.js`, `test/order-routes.test.js`
+- **Depends on:** —
+- **Requirement:** PLA-09
+
+**Done when:**
+
+- [x] `npm run validate:ficha-pdf-review` passa (hashes aprovados intactos)
+
+**Tests:** unit · **Gate:** quick · **Commit:** `fix(api): print the confirmed delivery as dd/mm/aaaa`
+
+### T45: Seção "Lastro do pedido"
+
+- **What:** Linha do tempo das cinco datas logo depois do Resumo; "Editar" para dono e admin em qualquer status; erro junto ao campo para dia futuro ou recusado.
+- **Where:** `apps/edge-web/src/components/order/OrderMilestonesSection.vue`, `apps/edge-web/src/views/OrderView.vue`, `apps/edge-web/src/lib/order-format.js`, `apps/edge-web/src/screen-styles.css`, `test/order-format.test.js`, `test/e2e/orders.spec.js`
+- **Depends on:** T43
+- **Requirement:** PLA-01, PLA-03, PLA-04, PLA-05, PLA-07
+
+**Done when:**
+
+- [x] Teclado: "Editar" leva o foco a "Pago em"; Salvar e Cancelar funcionam
+- [x] axe sem violações
+- [x] Desktop e 390 px conferidos
+
+**Tests:** unit + e2e · **Gate:** quick + e2e · **Commit:** `feat(edge-web): show the order date trail`
+
+### T46: Verificação do lastro
+
+- **What:** Rodar os gates completos e registrar a rastreabilidade PLA em `spec.md`.
+- **Where:** `.specs/features/pedidos-mvp/spec.md`
+- **Depends on:** T42–T45
+- **Requirement:** PLA-01..07, PLA-09
+
+**Done when:**
+
+- [x] `npm run validate`, `npm run test:e2e` e `npm run test:orders:live` passam
+
+**Tests:** full · **Gate:** full · **Commit:** `docs(specs): trace the order date trail to its tests`
+
+### T47: Lastro na ficha v3
+
+- **What:** A v3 imprime as cinco datas no resumo da página 1; PDF sintético v3 gerado de novo e registro de aprovação ainda pendente.
+- **Where:** branch `feat/ficha-por-produto`: `modules/orders/src/print/{ficha-canonical-v3,print-snapshot}.js`, `docs/phase0/ficha-pdf-synthetic-v3.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, testes da v3
+- **Depends on:** T43 (nomes dos campos), T15 da ficha por produto ainda aberta
+- **Requirement:** PLA-08
+
+**Done when:**
+
+- [ ] Rose e Operação aprovam a v3 com o lastro (T15 da ficha por produto)
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): print the date trail on ficha v3`
+
+---
+
 ## Validação das tasks
 
 ### Granularidade
@@ -731,6 +835,7 @@ H:  T23, T34, T38 ──→ T39
 | T26–T34       | 1 lib, view ou componente cada              | ✅       |
 | T35–T38       | 1 mudança de view ou componente cada        | ✅       |
 | T39           | verificação                                 | ✅       |
+| T41–T47       | 1 documento, camada ou template cada        | ✅       |
 
 ### Diagrama × definições
 
@@ -774,6 +879,11 @@ H:  T23, T34, T38 ──→ T39
 | T38      | T19, T36, T37      | idem               | ✅     |
 | T39      | T23, T34, T38      | idem               | ✅     |
 | T40      | T23, T39 + deploy  | T23,T39,deploy→T40 | ✅     |
+| T42      | T41                | T41→T42            | ✅     |
+| T43      | T42                | T42→T43            | ✅     |
+| T45      | T43                | T43→T45            | ✅     |
+| T46      | T42–T45            | idem               | ✅     |
+| T47      | T43 + T15 da v3    | idem               | ✅     |
 
 `[P]` só em tasks sem dependência entre si na mesma fase: T03 (com T02), T05/T06/T24 (após T04), T14 (após T01), T26/T27. ✅
 
@@ -794,3 +904,7 @@ H:  T23, T34, T38 ──→ T39
 | T27–T38  | views/componentes         | e2e             | e2e                                | ✅     |
 | T39      | verificação               | full            | full                               | ✅     |
 | T40      | operação no n8n online    | none            | none (gate online)                 | ✅     |
+| T42      | domínio/adapter PG        | unit + live     | unit + live                        | ✅     |
+| T43, T44 | rotas/runtime             | unit            | unit                               | ✅     |
+| T45      | lib + componente          | unit + e2e      | unit + e2e                         | ✅     |
+| T47      | template impresso         | unit            | unit                               | ✅     |

@@ -104,7 +104,26 @@ Pedidos substitui o que seria o Kanban.
 
 - **D24** Sem cobrança/comprovante/status de pagamento, produção, entrega,
   perdido/cancelado, Mesa de Trabalho, marcos, anel de completude, histórico
-  visível, artboard mobile dedicado.
+  visível, artboard mobile dedicado. Revisto em 29/09/2026 por D27–D31: os dias
+  de pagamento e de entrega passam a ser registrados, sem virar status.
+
+### Lastro de datas (ADR 008, 29/09/2026)
+
+- **D27** O pedido guarda cinco datas, nesta ordem: primeiro contato, pedido
+  fechado, pagamento, entrega prometida e entrega realizada. Aparecem na ficha
+  digital e na impressa.
+- **D28** Primeiro contato é a abertura da conversa que originou o pedido
+  (primeira mensagem recebida no atendimento), copiada na criação. Pedido
+  fechado é a data do pedido; entrega prometida é a entrega confirmada do
+  resumo.
+- **D29** Pagamento é manual: o CRM não registra pagamento e não presume que
+  gerar o pedido é pagar. Entrega realizada é 100% manual.
+- **D30** Pagamento e entrega realizada são informados pelo dono da conversa ou
+  por um admin, pendente ou confirmado, sem reabrir. Nenhuma das datas muda
+  status nem bloqueia a confirmação.
+- **D31** A v2 impressa não muda (travada por hash). O lastro entra na v3
+  antes da aprovação de Rose e Operação; a v2 só passa a imprimir a entrega
+  confirmada em dd/mm/aaaa.
 
 ---
 

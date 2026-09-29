@@ -41,11 +41,14 @@ const confirmedOrder = {
       nome: 'Aventais e camisetas',
     },
   },
+  deliveredOn: null,
   finalAmountCents: 118000,
+  firstContactAt: '2026-09-02T14:12:00.000Z',
   id: 'order-confirmado',
   missingFields: [],
   number: '05-CRM',
   orderDate: '2026-09-09',
+  paidOn: '2026-09-10',
   paymentCondition: 'pix',
   reopenedAt: null,
   reopenedBy: null,
@@ -61,6 +64,7 @@ const pendingOrder = {
   confirmedBy: null,
   conversationId: 'conversation-7',
   createdAt: '2026-09-12T09:00:00.000Z',
+  deliveredOn: null,
   fabCode: 'FAB 01',
   ficha: {
     items: [
@@ -95,10 +99,12 @@ const pendingOrder = {
     },
   },
   finalAmountCents: null,
+  firstContactAt: '2026-09-11T20:40:00.000Z',
   id: 'order-pendente',
   missingFields: ['finalAmount', 'paymentCondition'],
   number: '07-CRM',
   orderDate: null,
+  paidOn: null,
   paymentCondition: null,
   reopenedAt: null,
   reopenedBy: null,
@@ -107,6 +113,13 @@ const pendingOrder = {
   totalPieces: 150,
   updatedAt: '2026-09-12T09:46:00.000Z',
   version: 2,
+};
+
+// The same confirmed order, owned by the signed-in seller: only the owner (or
+// an admin) sees the edit buttons.
+const ownConfirmedOrder = {
+  ...confirmedOrder,
+  seller: { id: session.user.id, name: session.user.name },
 };
 
 const extraPending = {
@@ -308,6 +321,34 @@ async function mockOrders(page, options = {}) {
       const current = orders.find((candidate) => candidate.id === section[1]);
       const next = applySection(current, section[2], body.value);
       Object.assign(current, next);
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ order: current }),
+      });
+      return;
+    }
+
+    const milestones = /^\/api\/v1\/orders\/([^/]+)\/milestones$/u.exec(path);
+    if (milestones && request.method() === 'PATCH') {
+      const body = request.postDataJSON();
+      options.onWrite?.({ action: 'milestones', body });
+      expect(request.headers()['idempotency-key']).toBeTruthy();
+      if (options.writeFailure) {
+        await route.fulfill({
+          status: options.writeFailure.status,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: options.writeFailure.body }),
+        });
+        return;
+      }
+      const current = orders.find(
+        (candidate) => candidate.id === milestones[1],
+      );
+      Object.assign(current, {
+        deliveredOn: body.deliveredOn,
+        paidOn: body.paidOn,
+        version: current.version + 1,
+      });
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({ order: current }),
@@ -540,6 +581,7 @@ test('opens the order page inside Pedidos, with the trail and the sections in or
 
   await expect(page.locator('main h2')).toHaveText([
     'Resumo do pedido',
+    'Lastro do pedido',
     'Itens e especificações',
     'Observações do pedido',
     'Controle de produção',
@@ -764,10 +806,134 @@ test('asks for a reload when the section was saved over an older version', async
 test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', async ({
   page,
 }) => {
+  await mockOrders(page, { orders: [ownConfirmedOrder] });
+  await page.goto('/pedidos/order-confirmado');
+
+  // ADR 008: only the trail stays editable, since payment and delivery come
+  // after the order is generated.
+  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(1);
+  await expect(
+    page
+      .getByRole('region', { name: 'Lastro do pedido' })
+      .getByRole('button', { name: 'Editar' }),
+  ).toBeVisible();
+});
+
+test('shows the trail from the first contact to the delivery (PLA-01..03)', async ({
+  page,
+}) => {
   await mockOrders(page);
   await page.goto('/pedidos/order-confirmado');
 
-  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  await expect(trail).toContainText('4 de 5 datas');
+  await expect(trail.getByRole('listitem')).toHaveText([
+    /Primeiro contato\s*02\/09\/2026\s*vem da conversa/u,
+    /Pedido fechado\s*09\/09\/2026\s*data do pedido/u,
+    /Pagamento\s*10\/09\/2026\s*informado/u,
+    /Entrega prometida\s*24\/10\/2026\s*entrega confirmada/u,
+    /Entrega realizada\s*—\s*a informar/u,
+  ]);
+
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
+});
+
+test('records payment and delivery on a confirmed order without reopening it (PLA-04, PLA-06)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [ownConfirmedOrder],
+  });
+  await page.clock.setFixedTime(new Date('2026-09-20T15:00:00.000Z'));
+  await page.goto('/pedidos/order-confirmado');
+
+  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  await trail.getByRole('button', { name: 'Editar' }).click();
+  await expect(trail.getByLabel('Pago em')).toBeFocused();
+  await expect(trail.getByLabel('Pago em')).toHaveValue('2026-09-10');
+  await expect(trail.getByLabel('Entregue em')).toHaveAttribute(
+    'max',
+    '2026-09-20',
+  );
+  await trail.getByLabel('Entregue em').fill('2026-09-19');
+  await trail.getByRole('button', { name: 'Salvar datas' }).click();
+
+  await expect(trail.getByRole('button', { name: 'Editar' })).toBeVisible();
+  await expect(trail).toContainText('5 de 5 datas');
+  await expect(trail.getByRole('listitem').last()).toContainText('19/09/2026');
+  expect(writes).toEqual([
+    {
+      action: 'milestones',
+      body: {
+        deliveredOn: '2026-09-19',
+        expectedVersion: 4,
+        paidOn: '2026-09-10',
+      },
+    },
+  ]);
+  // The order stays confirmed and printable.
+  await expect(page.locator('.op-head .op-status')).toHaveText(/Confirmado/u);
+  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeEnabled();
+});
+
+test('clears a recorded day and refuses a day after today, next to the field (PLA-05)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [ownConfirmedOrder],
+  });
+  await page.clock.setFixedTime(new Date('2026-09-20T15:00:00.000Z'));
+  await page.goto('/pedidos/order-confirmado');
+
+  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  await trail.getByRole('button', { name: 'Editar' }).click();
+  await trail.getByLabel('Entregue em').fill('2026-09-21');
+  await trail.getByRole('button', { name: 'Salvar datas' }).click();
+
+  const delivered = trail.getByLabel('Entregue em');
+  await expect(delivered).toHaveAttribute('aria-invalid', 'true');
+  await expect(trail.getByRole('alert')).toHaveText('Use uma data até hoje.');
+  expect(writes).toHaveLength(0);
+
+  await delivered.fill('');
+  await trail.getByLabel('Pago em').fill('');
+  await trail.getByRole('button', { name: 'Salvar datas' }).click();
+  await expect(trail).toContainText('3 de 5 datas');
+  expect(writes.map((write) => write.body)).toEqual([
+    { deliveredOn: null, expectedVersion: 4, paidOn: null },
+  ]);
+});
+
+test('names the day the server refused as invalid', async ({ page }) => {
+  await mockOrders(page, {
+    writeFailure: {
+      body: { code: 'INVALID_DATE', fields: ['paidOn'] },
+      status: 422,
+    },
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  await trail.getByRole('button', { name: 'Editar' }).click();
+  await trail.getByLabel('Pago em').fill('2026-09-11');
+  await trail.getByRole('button', { name: 'Salvar datas' }).click();
+
+  await expect(trail.getByLabel('Pago em')).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  );
+  await expect(trail.getByLabel('Entregue em')).not.toHaveAttribute(
+    'aria-invalid',
+    'true',
+  );
+  await expect(trail.getByRole('alert')).toHaveText('Use uma data até hoje.');
 });
 
 test('reads each item as a card with its own total (PFI-03, PFI-04)', async ({
@@ -975,7 +1141,7 @@ test('shows production as informative and service data as not printed (PFI-08)',
   await expect(service.getByRole('button', { name: 'Editar' })).toHaveCount(0);
 });
 
-test('keeps the six sections in the order of the printed ficha (PFI-01)', async ({
+test('keeps the sections in the order of the printed ficha (PFI-01, PLA-01)', async ({
   page,
 }) => {
   await mockOrders(page);
@@ -983,6 +1149,7 @@ test('keeps the six sections in the order of the printed ficha (PFI-01)', async 
 
   await expect(page.locator('main h2')).toHaveText([
     'Resumo do pedido',
+    'Lastro do pedido',
     'Itens e especificações',
     'Observações do pedido',
     'Controle de produção',

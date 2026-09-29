@@ -208,3 +208,93 @@ export function elapsedSince(since, now = new Date()) {
   const hours = Math.floor((elapsed % DAY_MS) / HOUR_MS);
   return `${days}d ${String(hours).padStart(2, '0')}h`;
 }
+
+// D00.6-05: days are read on São Paulo time, whatever the browser's zone.
+const OPERATIONAL_DAY = new Intl.DateTimeFormat('en-CA', {
+  day: '2-digit',
+  month: '2-digit',
+  timeZone: 'America/Sao_Paulo',
+  year: 'numeric',
+});
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/u;
+
+/**
+ * An ISO day (2026-10-24) the way the operation reads it (24/10/2026). Text
+ * that is not an ISO day comes back as it was typed.
+ *
+ * @param {unknown} value
+ */
+export function dayLabel(value) {
+  if (typeof value !== 'string') return '';
+  const match = ISO_DAY.exec(value);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value.trim();
+}
+
+/**
+ * The São Paulo day of an instant, as an ISO day.
+ *
+ * @param {unknown} value
+ */
+export function operationalDay(value) {
+  if (!(value instanceof Date) && typeof value !== 'string') return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : OPERATIONAL_DAY.format(date);
+}
+
+/**
+ * PLA-01..03 (ADR 008): the trail of the order, from the first contact to the
+ * delivery. Three days come from what the order already knows; payment and
+ * delivery are the two a person records.
+ *
+ * @param {Record<string, any>} order
+ * @returns {{key: string, label: string, value: string, recorded: boolean, note: string}[]}
+ */
+export function orderMilestones(order) {
+  const steps = [
+    {
+      day: operationalDay(order.firstContactAt),
+      emptyNote: 'sem registro',
+      key: 'firstContact',
+      label: 'Primeiro contato',
+      recordedNote: 'vem da conversa',
+    },
+    {
+      day: order.orderDate,
+      emptyNote: 'definida ao gerar',
+      key: 'closed',
+      label: 'Pedido fechado',
+      recordedNote: 'data do pedido',
+    },
+    {
+      day: order.paidOn,
+      emptyNote: 'a informar',
+      key: 'paid',
+      label: 'Pagamento',
+      recordedNote: 'informado',
+    },
+    {
+      day: order.ficha?.summary?.data_entrega_confirmada,
+      emptyNote: 'não combinada',
+      key: 'promised',
+      label: 'Entrega prometida',
+      recordedNote: 'entrega confirmada',
+    },
+    {
+      day: order.deliveredOn,
+      emptyNote: 'a informar',
+      key: 'delivered',
+      label: 'Entrega realizada',
+      recordedNote: 'informado',
+    },
+  ];
+  return steps.map(({ day, emptyNote, key, label, recordedNote }) => {
+    const value = dayLabel(day);
+    return {
+      key,
+      label,
+      note: value ? recordedNote : emptyNote,
+      recorded: value !== '',
+      value: value || '—',
+    };
+  });
+}

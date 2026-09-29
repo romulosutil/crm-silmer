@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   amountLabel,
+  dayLabel,
   elapsedSince,
   fabLabel,
   formatBrl,
@@ -10,6 +11,8 @@ import {
   handoffReasonLabel,
   missingFieldLabels,
   missingHeadline,
+  operationalDay,
+  orderMilestones,
   orderStatusLabel,
   parseBrl,
   PAYMENT_CONDITION_OPTIONS,
@@ -179,4 +182,78 @@ test('prints the FAB the same way whether the code carries the prefix or not', (
   assert.equal(fabLabel('FABRICA'), 'FAB FABRICA');
   assert.equal(fabLabel(''), '—');
   assert.equal(fabLabel(null), '—');
+});
+
+test('reads days the way the operation does, on São Paulo time', () => {
+  assert.equal(dayLabel('2026-10-24'), '24/10/2026');
+  assert.equal(dayLabel('30/09/2026'), '30/09/2026', 'older free text stays');
+  assert.equal(dayLabel(null), '');
+  // 01:30 UTC on 13/09 is still 12/09 in São Paulo.
+  assert.equal(operationalDay('2026-09-13T01:30:00.000Z'), '2026-09-12');
+  assert.equal(
+    operationalDay(new Date('2026-09-13T03:00:00.000Z')),
+    '2026-09-13',
+  );
+  assert.equal(operationalDay('not a date'), '');
+  assert.equal(operationalDay(null), '');
+});
+
+test('lays the order trail out from first contact to delivery (PLA-01..03)', () => {
+  const order = {
+    deliveredOn: null,
+    ficha: { summary: { data_entrega_confirmada: '2026-10-24' } },
+    firstContactAt: '2026-09-02T01:30:00.000Z',
+    orderDate: '2026-09-09',
+    paidOn: '2026-09-10',
+  };
+  assert.deepEqual(orderMilestones(order), [
+    {
+      key: 'firstContact',
+      label: 'Primeiro contato',
+      note: 'vem da conversa',
+      recorded: true,
+      value: '01/09/2026',
+    },
+    {
+      key: 'closed',
+      label: 'Pedido fechado',
+      note: 'data do pedido',
+      recorded: true,
+      value: '09/09/2026',
+    },
+    {
+      key: 'paid',
+      label: 'Pagamento',
+      note: 'informado',
+      recorded: true,
+      value: '10/09/2026',
+    },
+    {
+      key: 'promised',
+      label: 'Entrega prometida',
+      note: 'entrega confirmada',
+      recorded: true,
+      value: '24/10/2026',
+    },
+    {
+      key: 'delivered',
+      label: 'Entrega realizada',
+      note: 'a informar',
+      recorded: false,
+      value: '—',
+    },
+  ]);
+  assert.deepEqual(
+    orderMilestones({ ficha: { summary: {} } }).map((step) => [
+      step.value,
+      step.note,
+    ]),
+    [
+      ['—', 'sem registro'],
+      ['—', 'definida ao gerar'],
+      ['—', 'a informar'],
+      ['—', 'não combinada'],
+      ['—', 'a informar'],
+    ],
+  );
 });

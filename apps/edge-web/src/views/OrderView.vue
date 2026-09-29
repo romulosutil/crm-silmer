@@ -14,6 +14,7 @@ import OrderClosingSection from '../components/order/OrderClosingSection.vue';
 import OrderIcon from '../components/order/OrderIcon.vue';
 import OrderInfoStrips from '../components/order/OrderInfoStrips.vue';
 import OrderItemsSection from '../components/order/OrderItemsSection.vue';
+import OrderMilestonesSection from '../components/order/OrderMilestonesSection.vue';
 import OrderObservationsSection from '../components/order/OrderObservationsSection.vue';
 import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import { commandKey, request } from '../lib/api-client.js';
@@ -87,6 +88,7 @@ function describeWriteError(cause) {
   if (status === 409) return 'Este pedido mudou. Recarregue a seção.';
   if (status === 403) return 'Este pedido é de outro vendedor.';
   if (code === 'INVALID_AMOUNT') return 'Use o formato 4.820,00.';
+  if (code === 'INVALID_DATE') return 'Use uma data até hoje.';
   if (status >= 500) return 'Serviço indisponível no momento.';
   return 'Não foi possível salvar esta seção.';
 }
@@ -150,6 +152,34 @@ async function runCommand(action, body) {
   }
 }
 
+/**
+ * PLA-04 (ADR 008): paid and delivered travel together over the version the
+ * page is showing, pending or confirmed.
+ *
+ * @param {{paidOn: string|null, deliveredOn: string|null}} value
+ */
+async function saveMilestones(value) {
+  try {
+    const response = await request(
+      `/api/v1/orders/${encodeURIComponent(props.orderId)}/milestones`,
+      {
+        body: { ...value, expectedVersion: order.value.version },
+        idempotencyKey: commandKey(),
+        method: 'PATCH',
+      },
+    );
+    order.value = response.data.order;
+    return { ok: true };
+  } catch (cause) {
+    return {
+      code: String(/** @type {any} */ (cause)?.code ?? ''),
+      fields: /** @type {any} */ (cause)?.problem?.fields ?? [],
+      message: describeWriteError(cause),
+      ok: false,
+    };
+  }
+}
+
 /** PIM-02: the API renders the approved document; the browser prints it. */
 function print() {
   globalThis.open(
@@ -165,6 +195,7 @@ provide('orderEditing', {
   editingSection,
   print,
   save: saveSection,
+  saveMilestones,
   /** @param {string} section */
   start(section) {
     editingSection.value = section;
@@ -307,6 +338,7 @@ onBeforeUnmount(() => {
         <!-- PFI-01: the order of the printed ficha, top to bottom. -->
         <div class="op-main">
           <OrderSummarySection :order="order" />
+          <OrderMilestonesSection :order="order" />
           <OrderItemsSection :order="order" />
           <OrderObservationsSection :order="order" />
           <OrderInfoStrips :order="order" />

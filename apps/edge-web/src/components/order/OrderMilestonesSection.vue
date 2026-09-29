@@ -1,0 +1,212 @@
+<script setup>
+import { computed, inject, nextTick, ref } from 'vue';
+import { operationalDay, orderMilestones } from '../../lib/order-format.js';
+import OrderIcon from './OrderIcon.vue';
+
+const SECTION = 'milestones';
+const FUTURE_DAY_MESSAGE = 'Use uma data até hoje.';
+
+const props = defineProps({
+  order: { type: Object, required: true },
+});
+
+const editing = inject('orderEditing');
+const firstField = ref(null);
+const draft = ref({ deliveredOn: '', paidOn: '' });
+/** @type {import('vue').Ref<Record<string, string>>} */
+const fieldErrors = ref({});
+const saving = ref(false);
+const errorMessage = ref('');
+const today = ref('');
+
+const isEditing = computed(() => editing.editingSection.value === SECTION);
+// ADR 008: unlike the ficha sections, the trail stays open after the order
+// is generated — payment and delivery usually come later — and never needs a
+// reopen.
+const canEdit = computed(() => editing.canEdit.value);
+const otherSectionOpen = computed(
+  () => editing.editingSection.value !== '' && !isEditing.value,
+);
+const steps = computed(() => orderMilestones(props.order));
+const recordedCount = computed(
+  () => steps.value.filter((step) => step.recorded).length,
+);
+
+async function startEditing() {
+  draft.value = {
+    deliveredOn: props.order.deliveredOn ?? '',
+    paidOn: props.order.paidOn ?? '',
+  };
+  today.value = operationalDay(new Date());
+  fieldErrors.value = {};
+  errorMessage.value = '';
+  editing.start(SECTION);
+  await nextTick();
+  firstField.value?.focus();
+}
+
+function cancel() {
+  fieldErrors.value = {};
+  errorMessage.value = '';
+  editing.stop();
+}
+
+/**
+ * PLA-05: a day after today is caught here, next to the field; the server
+ * checks it again on São Paulo time and answers 422 INVALID_DATE.
+ */
+async function save() {
+  errorMessage.value = '';
+  /** @type {Record<string, string>} */
+  const errors = {};
+  for (const field of /** @type {const} */ (['paidOn', 'deliveredOn'])) {
+    if (draft.value[field] !== '' && draft.value[field] > today.value) {
+      errors[field] = FUTURE_DAY_MESSAGE;
+    }
+  }
+  fieldErrors.value = errors;
+  if (Object.keys(errors).length > 0) return;
+
+  saving.value = true;
+  const result = await editing.saveMilestones({
+    deliveredOn: draft.value.deliveredOn || null,
+    paidOn: draft.value.paidOn || null,
+  });
+  saving.value = false;
+  if (result.ok) {
+    editing.stop();
+    return;
+  }
+  if (result.code === 'INVALID_DATE') {
+    fieldErrors.value = Object.fromEntries(
+      result.fields.map((/** @type {string} */ field) => [
+        field,
+        FUTURE_DAY_MESSAGE,
+      ]),
+    );
+    return;
+  }
+  errorMessage.value = result.message;
+}
+</script>
+
+<template>
+  <section
+    class="op-sheet"
+    :data-editing="isEditing || undefined"
+    aria-labelledby="order-milestones-title"
+  >
+    <div class="op-sheet-head">
+      <h2 id="order-milestones-title">Lastro do pedido</h2>
+      <p class="op-num">{{ recordedCount }} de {{ steps.length }} datas</p>
+      <span v-if="isEditing" class="op-editing-tag">Editando</span>
+      <button
+        v-if="canEdit && !isEditing"
+        type="button"
+        class="op-edit"
+        :disabled="otherSectionOpen"
+        @click="startEditing"
+      >
+        <OrderIcon name="pencil" />Editar
+      </button>
+    </div>
+
+    <p v-if="errorMessage" role="alert" class="op-alert">
+      {{ errorMessage }}
+    </p>
+
+    <form v-if="isEditing" class="op-form" novalidate @submit.prevent="save">
+      <div class="op-form-grid">
+        <div class="op-field">
+          <label for="milestone-paid">Pago em</label>
+          <input
+            id="milestone-paid"
+            ref="firstField"
+            v-model="draft.paidOn"
+            type="date"
+            :max="today"
+            :aria-invalid="Boolean(fieldErrors.paidOn) || undefined"
+            :aria-describedby="
+              fieldErrors.paidOn
+                ? 'milestone-paid-error'
+                : 'milestone-paid-hint'
+            "
+          />
+          <p
+            v-if="fieldErrors.paidOn"
+            id="milestone-paid-error"
+            role="alert"
+            class="op-field-error"
+          >
+            {{ fieldErrors.paidOn }}
+          </p>
+          <p v-else id="milestone-paid-hint" class="op-hint">
+            O dia em que o pagamento entrou.
+          </p>
+        </div>
+
+        <div class="op-field">
+          <label for="milestone-delivered">Entregue em</label>
+          <input
+            id="milestone-delivered"
+            v-model="draft.deliveredOn"
+            type="date"
+            :max="today"
+            :aria-invalid="Boolean(fieldErrors.deliveredOn) || undefined"
+            :aria-describedby="
+              fieldErrors.deliveredOn
+                ? 'milestone-delivered-error'
+                : 'milestone-delivered-hint'
+            "
+          />
+          <p
+            v-if="fieldErrors.deliveredOn"
+            id="milestone-delivered-error"
+            role="alert"
+            class="op-field-error"
+          >
+            {{ fieldErrors.deliveredOn }}
+          </p>
+          <p v-else id="milestone-delivered-hint" class="op-hint">
+            O dia em que o cliente recebeu o pedido.
+          </p>
+        </div>
+      </div>
+
+      <p class="op-locked-note">
+        <OrderIcon name="lock" />
+        Primeiro contato, pedido fechado e entrega prometida vêm da conversa, da
+        data do pedido e do resumo.
+      </p>
+
+      <div class="op-form-actions">
+        <button type="button" :disabled="saving" @click="cancel">
+          Cancelar
+        </button>
+        <button type="submit" class="op-save" :disabled="saving">
+          {{ saving ? 'Salvando…' : 'Salvar datas' }}
+        </button>
+      </div>
+    </form>
+
+    <div v-else class="op-sheet-body">
+      <ol class="op-milestones">
+        <li
+          v-for="step in steps"
+          :key="step.key"
+          class="op-milestone"
+          :data-recorded="step.recorded || undefined"
+        >
+          <span class="op-milestone-dot" aria-hidden="true"></span>
+          <span class="op-label">{{ step.label }}</span>
+          <strong class="op-num">{{ step.value }}</strong>
+          <span class="op-origin-note">{{ step.note }}</span>
+        </li>
+      </ol>
+      <p class="op-hint">
+        Pagamento e entrega realizada são informados no pedido e não mudam o
+        status nem a ficha já gerada.
+      </p>
+    </div>
+  </section>
+</template>

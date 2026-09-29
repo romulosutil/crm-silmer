@@ -1766,6 +1766,94 @@ button.op-edit:disabled {
   }
 }
 
+/* Trail (ADR 008): first contact to delivery, in the order they happen */
+.op-milestones {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(4, auto);
+  row-gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Dot, label, day and note line up across the five steps. */
+.op-milestone {
+  position: relative;
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  min-inline-size: 0;
+  padding-inline-end: 0.75rem;
+}
+
+.op-milestone-dot {
+  position: relative;
+  z-index: 1;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  margin-block-end: 0.45rem;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.op-milestone:not(:last-child)::after {
+  position: absolute;
+  inset-block-start: calc(0.375rem - 1px);
+  inset-inline: 0.75rem 0;
+  block-size: 2px;
+  background: var(--color-border-subtle);
+  content: '';
+}
+
+.op-milestone[data-recorded] .op-milestone-dot {
+  background: var(--color-link);
+  border-color: var(--color-link);
+}
+
+.op-milestone strong {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.op-milestone:not([data-recorded]) strong {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+@media (width < 48rem) {
+  .op-milestones {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    gap: 0.9rem;
+  }
+
+  .op-milestone {
+    grid-row: auto;
+    grid-template-columns: 0.75rem minmax(0, 1fr);
+    grid-template-rows: none;
+    gap: 0.2rem 0.75rem;
+    padding-inline-end: 0;
+  }
+
+  .op-milestone > :not(.op-milestone-dot) {
+    grid-column: 2;
+  }
+
+  .op-milestone-dot {
+    grid-row: 1 / span 3;
+    margin-block: 0.25rem 0;
+  }
+
+  .op-milestone:not(:last-child)::after {
+    inset-block: 1rem -0.65rem;
+    inset-inline: calc(0.375rem - 1px) auto;
+    inline-size: 2px;
+    block-size: auto;
+  }
+}
+
 /* Forms inside a sheet */
 .op-form {
   display: grid;

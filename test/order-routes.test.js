@@ -138,9 +138,22 @@ async function createPending(runtime, conversationId) {
   return order;
 }
 
-/** @param {any} runtime @param {string} conversationId */
-async function createConfirmed(runtime, conversationId) {
-  const order = await createPending(runtime, conversationId);
+/**
+ * @param {any} runtime @param {string} conversationId
+ * @param {Record<string, unknown>} [summary] saved before the items
+ */
+async function createConfirmed(runtime, conversationId, summary) {
+  let order = await createPending(runtime, conversationId);
+  if (summary) {
+    order = await runtime.patchSection(
+      seed({
+        expectedVersion: order.version,
+        orderId: order.id,
+        section: 'summary',
+        value: summary,
+      }),
+    );
+  }
   const edited = await runtime.patchSection(
     seed({
       expectedVersion: order.version,
@@ -902,7 +915,11 @@ test('the printed order hides money, the sample band and empty fields', async (t
 test('the printed order dates the document on the day it was confirmed', async (t) => {
   const { api, runtime } = orderHarness();
   t.after(() => api.close());
-  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  const confirmed = await createConfirmed(runtime, 'conversation-1', {
+    aplicacao: null,
+    data_entrega_confirmada: '2026-10-24',
+    nome: null,
+  });
 
   const response = await api.inject({
     headers: readHeaders,
@@ -912,6 +929,11 @@ test('the printed order dates the document on the day it was confirmed', async (
 
   assert.equal(confirmed.orderDate, '2026-09-12');
   assert.match(response.body, /Data do pedido<\/span><strong>12\/09\/2026</u);
+  // The page stores the promised day as ISO; paper reads it like the sample.
+  assert.match(
+    response.body,
+    /Entrega confirmada<\/span><strong>24\/10\/2026</u,
+  );
 });
 
 test('GET /orders/:orderId/print refuses a pending order with 409', async (t) => {

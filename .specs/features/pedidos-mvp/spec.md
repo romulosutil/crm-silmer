@@ -408,6 +408,31 @@ Os 7 testes e2e pulados são cenários de Kanban já aposentados (ADR 004,
 `test/e2e/crm-ui.spec.js:602,1215,1238,1275,1284,1303,1315`) — não pertencem à
 Pedidos MVP e não contam como lacuna.
 
+### Lastro de datas (ADR 008)
+
+Verificado em T46, 29/09/2026.
+
+| ID     | História | Evidência                                                                                                     | Status   |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------------- | -------- |
+| PLA-01 | P1-10    | `test/e2e/orders.spec.js:822,1144`; `test/order-format.test.js:201`                                           | Verified |
+| PLA-02 | P1-10    | `test/orders-service-create.test.js:97`; `test/orders-postgres-live.test.js:334`; `test/migrations-live.test.js:270` | Verified |
+| PLA-03 | P1-10    | `test/order-format.test.js:201`; `test/e2e/orders.spec.js:822`                                                | Verified |
+| PLA-04 | P1-10    | `test/orders-domain.test.js:214`; `test/orders-repository-contract.test.js:341`; `test/order-routes.test.js:778`; `test/e2e/orders.spec.js:842` | Verified |
+| PLA-05 | P1-10    | `test/orders-domain.test.js:250`; `test/order-routes.test.js:833`; `test/e2e/orders.spec.js:883,914`          | Verified |
+| PLA-06 | P1-10    | `test/orders-domain.test.js:214`; `test/order-routes.test.js:799`; `test/e2e/orders.spec.js:842`              | Verified |
+| PLA-07 | P1-10    | `test/order-routes.test.js:858`; `test/orders-service-commands.test.js:419`; `test/e2e/orders.spec.js:652`    | Verified |
+| PLA-08 | P1-10    | T47, no branch `feat/ficha-por-produto`                                                                       | Pendente |
+| PLA-09 | P1-10    | `test/order-routes.test.js:1059`                                                                              | Verified |
+
+**Cobertura:** 9 requisitos · 8 verificados · PLA-08 depende da v3.
+
+| Comando                            | Resultado                                                  |
+| ---------------------------------- | ---------------------------------------------------------- |
+| `npm run validate`                 | ✅ passou (498 testes: 495 ok, 3 pulados; build)           |
+| `npm run test:e2e`                 | ✅ passou — 73 passed, 7 skipped (os mesmos do Kanban)      |
+| `npm run test:orders:live`         | ✅ passou — 17/17 (PostgreSQL, `crm_silmer_test`)           |
+| `test/migrations-live.test.js`     | ✅ passou — backfill de `0024` entre as migrations          |
+
 ## Roteiro de UAT
 
 1. Como agente (evento n8n `order.intent_confirmed`), confirmar intenção numa

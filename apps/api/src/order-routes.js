@@ -342,7 +342,7 @@ function printSnapshot(order) {
       aplicacao: printedText(summary.aplicacao),
       cliente: printedText(summary.cliente),
       data: printedDate(order.orderDate),
-      data_entrega_confirmada: printedText(summary.data_entrega_confirmada),
+      data_entrega_confirmada: printedDate(summary.data_entrega_confirmada),
       fab: printedText(order.fabCode),
       itens: items,
       nome: printedText(summary.nome),
@@ -361,8 +361,9 @@ function printedText(value) {
 }
 
 /**
- * The order date is stored as an ISO day in Sao Paulo time; the approved
- * template shows it the way the shop floor reads it.
+ * The order date and the confirmed delivery are stored as ISO days; the
+ * approved template shows them the way the shop floor reads them (dd/mm/aaaa,
+ * as in the approved sample). Older free text prints as it was typed.
  *
  * @param {unknown} value
  */

@@ -4,6 +4,7 @@
 **Data:** 12/09/2026
 **Decisões de produto:** [`context.md`](context.md)
 **Arquitetura:** [`design.md`](design.md) · **Tasks:** [`tasks.md`](tasks.md)
+**Lastro de datas (29/09/2026):** [ADR 008](../../../docs/adr/008-lastro-de-datas-do-pedido.md) · história P1-10
 **Mockups:** `.design/mesa-de-trabalho/` (canvas "Mesa de Trabalho Silmer")
 
 ## Problema
@@ -31,7 +32,7 @@ ele e por quê.
 | Item                                                          | Motivo                                                           |
 | ------------------------------------------------------------- | ---------------------------------------------------------------- |
 | Cobrança PIX, conferência de comprovante, status de pagamento | Toda confirmação é humana no MVP; sem automação de pagamento.    |
-| Produção, entrega, pedido perdido ou cancelado                | Não existem como status no MVP.                                  |
+| Produção, entrega, pedido perdido ou cancelado                | Não existem como status no MVP. O lastro (P1-10) guarda só datas. |
 | Tela Mesa de Trabalho, marcos visuais, anel de completude     | Cortados na revisão de escopo; a Caixa de Entrada faz a triagem. |
 | Histórico de quem preencheu cada campo (UI)                   | P2. A trilha fica gravada; só não aparece.                       |
 | Pedidos no detalhe do cliente e KPIs de pedidos no Dashboard  | P2.                                                              |
@@ -100,7 +101,8 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
 1. **PFI-01** WHEN o pedido é aberto THEN a página SHALL mostrar, nesta ordem:
    Resumo do pedido, Itens e especificações, Observações do pedido, Controle
    de produção (informativo), Dados do atendimento (não impresso), Fechamento
-   e pagamento.
+   e pagamento. Desde a ADR 008, o Lastro do pedido entra logo depois do
+   Resumo (PLA-01).
 2. **PFI-02** Resumo SHALL conter: cliente (vindo do contato, bloqueado),
    entrega confirmada, total de peças (calculado), aplicação, evento/nome,
    vendedor (dono da conversa), data do pedido (definida na confirmação) e FAB
@@ -123,7 +125,8 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
 10. **PAU-01** WHEN quem não é dono da conversa nem administrador abre o pedido
     THEN a página SHALL ser somente leitura e a API SHALL recusar edições com 403.
 11. **PFI-10** WHEN o pedido está confirmado THEN todas as seções SHALL ficar
-    em modo leitura; para alterar é preciso reabrir.
+    em modo leitura; para alterar é preciso reabrir. Exceção: o Lastro do
+    pedido (PLA-04).
 
 **Teste independente:** editar a grade de um item e ver o total do item, do
 pedido e da lista de Pedidos atualizados.
@@ -256,6 +259,45 @@ em Confirmados com "Confirmado por <nome> · <data hora>".
 
 ---
 
+### P1-10: Lastro de datas do pedido ⭐ MVP
+
+**História:** Como dono da operação, quero ver em cada pedido quando o cliente
+chegou, quando fechou, quando pagou, quando prometemos entregar e quando de
+fato entregamos, na ficha digital e na impressa.
+
+**Aceite:**
+
+1. **PLA-01** WHEN o pedido é aberto THEN a página SHALL mostrar a seção
+   "Lastro do pedido" logo depois do Resumo, com cinco datas nesta ordem:
+   Primeiro contato, Pedido fechado, Pagamento, Entrega prometida e Entrega
+   realizada, e quantas delas já existem.
+2. **PLA-02** Primeiro contato SHALL ser a abertura da conversa que originou o
+   pedido, copiada na criação e nunca digitada; pedidos criados antes da
+   migração SHALL recebê-la da conversa.
+3. **PLA-03** Pedido fechado SHALL ser a data do pedido (PCL-04, PCL-12) e
+   Entrega prometida SHALL ser a entrega confirmada do Resumo; nenhuma das duas
+   é editada no lastro.
+4. **PLA-04** WHEN o dono da conversa ou um administrador informa "Pago em" e
+   "Entregue em" THEN o sistema SHALL gravar as duas datas juntas, em pedido
+   pendente ou confirmado, sem reabrir; campo vazio limpa a data.
+5. **PLA-05** WHEN uma data não é um dia válido ou é depois de hoje (horário de
+   São Paulo) THEN a interface SHALL mostrar o erro junto ao campo e a API
+   SHALL recusar com 422 `INVALID_DATE` nomeando os campos.
+6. **PLA-06** Nenhuma data do lastro SHALL mudar o status, bloquear a
+   confirmação, entrar no que falta ou mudar a impressão (PCL-08).
+7. **PLA-07** WHEN quem não é dono nem administrador tenta gravar THEN a
+   interface SHALL não exibir "Editar" no lastro e a API SHALL responder 403;
+   uma versão desatualizada SHALL receber 409.
+8. **PLA-08** A ficha impressa SHALL trazer as cinco datas do lastro, no
+   template v3 (ficha por produto), antes da aprovação de Rose e Operação.
+9. **PLA-09** Enquanto a v2 imprime, a entrega confirmada SHALL sair como
+   dd/mm/aaaa, igual à amostra aprovada.
+
+**Teste independente:** num pedido confirmado, informar "Entregue em" e ver a
+data no lastro, com o pedido ainda confirmado e a impressão liberada.
+
+---
+
 ### P2 (fora deste corte)
 
 - Pedidos no detalhe do Cliente.
@@ -265,6 +307,12 @@ em Confirmados com "Confirmado por <nome> · <data hora>".
 ---
 
 ## Casos de borda
+
+- WHEN um pedido confirmado é reaberto e gerado de novo THEN Pedido fechado
+  SHALL passar à nova data do pedido (PCL-12), e Pagamento e Entrega
+  realizada SHALL continuar como estavam.
+- WHEN a conversa é repassada THEN o novo dono SHALL poder informar Pagamento e
+  Entrega realizada; o antigo SHALL perder essa ação.
 
 - WHEN a conversa é arquivada com pedido pendente THEN o pedido SHALL
   continuar em Pendentes.
@@ -380,6 +428,11 @@ Pedidos MVP e não contam como lacuna.
    checar ordenação por tempo parado e motivo da parada.
 10. Abrir a gaveta de uma conversa nesse filtro e confirmar resumo (itens,
     peças, valor) sem opção de editar ali.
+11. Num pedido gerado, abrir o Lastro do pedido: primeiro contato, pedido
+    fechado e entrega prometida já aparecem. Informar "Pago em", salvar e
+    conferir que o pedido continua confirmado e a impressão liberada.
+12. Tentar "Entregue em" com data de amanhã e ver o erro junto ao campo;
+    informar a data de hoje e salvar.
 
 ## Critérios de sucesso
 

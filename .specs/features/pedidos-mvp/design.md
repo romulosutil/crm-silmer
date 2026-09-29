@@ -106,6 +106,8 @@ graph TD
   - `formatOrderNumber(sequence: number): string` → `01-CRM`, `12-CRM`, `105-CRM`
   - `confirmOrder(order, {amountCents, paymentCondition, actorId, now}): Order`
   - `reopenOrder(order, {actorId, now}): Order`
+  - `recordMilestones(order, {paidOn, deliveredOn, now}): Order` — ADR 008;
+    dia válido e não futuro em São Paulo, qualquer status (PLA-04, PLA-05)
   - `missingForConfirmation(order): string[]`
 - **Depende de:** nada.
 
@@ -126,7 +128,8 @@ graph TD
 
 - Porta `OrderRepository`: `createPending`, `findById`, `findPendingByConversation`,
   `listByConversation`, `list({status, query, cursor, limit})`, `saveSection`,
-  `saveStatus`, `projectBriefing` — todas com `expectedVersion`.
+  `saveStatus`, `saveMilestones`, `projectBriefing` — todas com
+  `expectedVersion`. `createPending` recebe `firstContactAt` (ADR 008).
 
 #### `modules/orders/src/application/order-service.js`
 
@@ -135,6 +138,7 @@ graph TD
 - `patchSection({orderId, section, value, expectedVersion, actor})` (PFI-06)
 - `confirm({orderId, amountText, paymentCondition, expectedVersion, actor})` (PCL-04..09)
 - `reopen({orderId, expectedVersion, actor})` (PCL-07, PCL-12)
+- `recordMilestones({orderId, paidOn, deliveredOn, expectedVersion, actor})` (PLA-04..07)
 - `projectAgentBriefing({conversationId, briefing, automationState})` (PAG-01, PAG-02)
 - `get(orderId)`, `list(filters)`, `currentForConversation(conversationId)`
 
@@ -151,16 +155,17 @@ graph TD
 
 #### `apps/api/src/order-routes.js` + `order-runtime.js`
 
-| Método | Rota                                           | Ação                    | Req.                   |
-| ------ | ---------------------------------------------- | ----------------------- | ---------------------- |
-| GET    | `/api/v1/orders?status=&q=&cursor=&limit=`     | `order.read`            | PLI-02..07             |
-| GET    | `/api/v1/orders/:orderId`                      | `order.read`            | PFI-01                 |
-| GET    | `/api/v1/conversations/:conversationId/order`  | `order.read`            | PCX-06, PCX-07         |
-| POST   | `/api/v1/conversations/:conversationId/orders` | `order.create` (posse)  | PCL-10, PCL-11         |
-| PATCH  | `/api/v1/orders/:orderId/sections/:section`    | `order.edit` (posse)    | PFI-06                 |
-| POST   | `/api/v1/orders/:orderId/confirm`              | `order.confirm` (posse) | PCL-04..06, PCL-09     |
-| POST   | `/api/v1/orders/:orderId/reopen`               | `order.reopen` (posse)  | PCL-07                 |
-| GET    | `/api/v1/orders/:orderId/print`                | `order.print`           | PIM-02, PIM-03, PIM-05 |
+| Método | Rota                                           | Ação                       | Req.                   |
+| ------ | ---------------------------------------------- | -------------------------- | ---------------------- |
+| GET    | `/api/v1/orders?status=&q=&cursor=&limit=`     | `order.read`               | PLI-02..07             |
+| GET    | `/api/v1/orders/:orderId`                      | `order.read`               | PFI-01                 |
+| GET    | `/api/v1/conversations/:conversationId/order`  | `order.read`               | PCX-06, PCX-07         |
+| POST   | `/api/v1/conversations/:conversationId/orders` | `order.create` (posse)     | PCL-10, PCL-11         |
+| PATCH  | `/api/v1/orders/:orderId/sections/:section`    | `order.edit` (posse)       | PFI-06                 |
+| POST   | `/api/v1/orders/:orderId/confirm`              | `order.confirm` (posse)    | PCL-04..06, PCL-09     |
+| POST   | `/api/v1/orders/:orderId/reopen`               | `order.reopen` (posse)     | PCL-07                 |
+| PATCH  | `/api/v1/orders/:orderId/milestones`           | `order.milestones` (posse) | PLA-04..07             |
+| GET    | `/api/v1/orders/:orderId/print`                | `order.print`              | PIM-02, PIM-03, PIM-05 |
 
 `section ∈ {summary, items, observations}`. Escritas exigem `expectedVersion`
 e `Idempotency-Key`.
@@ -168,8 +173,8 @@ e `Idempotency-Key`.
 #### Mudanças em arquivos existentes
 
 - `modules/identity-access/src/authorization.js`: `order.read`, `order.create`,
-  `order.edit`, `order.confirm`, `order.reopen`, `order.print`; automação:
-  `order.intent`.
+  `order.edit`, `order.confirm`, `order.reopen`, `order.print` e, desde a ADR
+  008, `order.milestones`; automação: `order.intent`.
 - `apps/api/src/n8n-routes.js`: `EVENT_ACTIONS['order.intent_confirmed'] = 'order.intent'`.
 - `modules/n8n-integration/src/postgres-repository.js`: depois de `#mergeBriefing`,
   chamar a projeção do pedido quando `automation_state = 'assistant'`.
@@ -189,6 +194,7 @@ e `Idempotency-Key`.
 | `views/OrdersView.vue`                          | novo    | Lista agrupada, filtro, busca, "Ver mais", ações, SSE.                                    | PLI-02..08                     |
 | `views/OrderView.vue`                           | novo    | Rastro, cabeçalho, banner do que falta, Imprimir travado, orquestra seções, SSE.          | PFI-01, PFI-09, PIM-01, PGE-01 |
 | `components/order/OrderSummarySection.vue`      | novo    | Resumo leitura/edição; cliente bloqueado.                                                 | PFI-02                         |
+| `components/order/OrderMilestonesSection.vue`   | novo    | Lastro: cinco datas; "Pago em" e "Entregue em" editáveis em qualquer status (ADR 008).    | PLA-01..07                     |
 | `components/order/OrderItemsSection.vue`        | novo    | Cartões de item + editor de grade + totais.                                               | PFI-03, PFI-04, PFI-07         |
 | `components/order/OrderObservationsSection.vue` | novo    | 0..5 linhas.                                                                              | PFI-05                         |
 | `components/order/OrderClosingSection.vue`      | novo    | Valor R$, condição, Confirmar pedido (CTA), Reabrir.                                      | PCL-04..07, PFI-11..13         |
@@ -243,6 +249,22 @@ CREATE UNIQUE INDEX orders_one_pending_per_conversation
   ON crm.orders (conversation_id) WHERE status = 'pendente';
 CREATE INDEX orders_status_updated ON crm.orders (status, updated_at DESC);
 ```
+
+### Migration `0024_order_milestones.expand.sql` (ADR 008)
+
+```sql
+ALTER TABLE crm.orders
+  ADD COLUMN first_contact_at timestamptz,  -- abertura da conversa, copiada na criação
+  ADD COLUMN paid_on date,                  -- informado por uma pessoa
+  ADD COLUMN delivered_on date;             -- informado por uma pessoa
+
+UPDATE crm.orders SET first_contact_at = conversation.opened_at
+FROM crm.conversations conversation
+WHERE conversation.id = orders.conversation_id AND first_contact_at IS NULL;
+```
+
+As colunas são anuláveis porque a API anterior continua criando pedidos durante
+a troca de versão. Não são dado pessoal e ficam fora do envelope.
 
 O nome do cliente e demais dados pessoais ficam só dentro de `ficha_envelope`.
 A busca por cliente/telefone da lista resolve pelo contato da conversa (mesmo

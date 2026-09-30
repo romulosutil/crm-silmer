@@ -130,6 +130,9 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
 11. **PFI-10** WHEN o pedido está confirmado THEN todas as seções SHALL ficar
     em modo leitura; para alterar é preciso reabrir. Exceção: o Lastro do
     pedido (PLA-04).
+12. **PFI-14** Os campos do Resumo e dos itens SHALL ser texto digitado à mão,
+    sem lista de opções, até o catálogo de opções ser aprovado (decisão do PO
+    em 30/09/2026). A amostra de cor ao lado de uma cor digitada continua.
 
 **Teste independente:** editar a grade de um item e ver o total do item, do
 pedido e da lista de Pedidos atualizados.
@@ -361,6 +364,7 @@ Verificado no Grupo H (T39) em 13/09/2026. Evidência = teste automatizado
 | PFI-08 | P1-3     | `test/e2e/orders.spec.js:957`                                       | Verified |
 | PFI-09 | P1-3     | `test/e2e/orders.spec.js:581`; `test/order-format.test.js:103`      | Verified |
 | PFI-10 | P1-3     | `test/e2e/orders.spec.js:764`                                       | Verified |
+| PFI-14 | P1-3     | `test/e2e/orders.spec.js:1016`                                      | Verified |
 | PAU-01 | P1-3     | `test/e2e/orders.spec.js:610`                                       | Verified |
 | PCL-04 | P1-4     | `test/orders-service-commands.test.js:260` (bloco `confirmed`)      | Verified |
 | PCL-05 | P1-4     | `test/orders-service-commands.test.js:260,313`                      | Verified |

@@ -1013,6 +1013,25 @@ test('accepts "Não aplicável" on sleeves and viés (PFI-07)', async ({
   expect(writes[0].body.value[0].cor_manga_direita).toBe('NAO APLICAVEL');
 });
 
+test('keeps every summary and item field as text typed by hand (PFI-14)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+  const lists = page.locator('input[list], datalist, [role="combobox"]');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await summary.getByRole('button', { name: 'Editar' }).click();
+  await expect(summary.getByLabel('Tipo de serviço')).toBeEditable();
+  await expect(lists).toHaveCount(0);
+  await summary.getByRole('button', { name: 'Cancelar' }).click();
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await expect(items.getByLabel('Tipo', { exact: true })).toBeEditable();
+  await expect(lists).toHaveCount(0);
+});
+
 test('adds and removes items, fabrics and grade lines', async ({ page }) => {
   /** @type {any[]} */
   const writes = [];

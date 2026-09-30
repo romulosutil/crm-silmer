@@ -716,9 +716,9 @@ test('reads the order summary and marks the customer as locked (PFI-02)', async 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await expect(summary.locator('dt')).toHaveText([
     'Cliente',
-    'Entrega confirmada',
+    'Entrega prometida',
     'Total de peças',
-    'Aplicação',
+    'Tipo de serviço',
     'Evento / Nome',
     'Vendedor',
     'Data do pedido',
@@ -750,7 +750,7 @@ test('edits the summary and saves the whole section at once (PFI-06)', async ({
 
   // D13: the customer comes from the contact and is never typed here.
   await expect(summary.getByLabel('Cliente')).toBeDisabled();
-  await summary.getByLabel('Aplicação').fill('SILK 4 CORES');
+  await summary.getByLabel('Tipo de serviço').fill('SILK 4 CORES');
   await summary.getByLabel('Evento / Nome').fill('Uniforme escolar 2028');
   await summary.getByRole('button', { name: 'Salvar' }).click();
 
@@ -777,7 +777,7 @@ test('cancels an edit without writing anything', async ({ page }) => {
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await summary.getByRole('button', { name: 'Editar' }).click();
-  await summary.getByLabel('Aplicação').fill('DESCARTAR');
+  await summary.getByLabel('Tipo de serviço').fill('DESCARTAR');
   await summary.getByRole('button', { name: 'Cancelar' }).click();
 
   await expect(summary).toContainText('SUBLIMAÇÃO TOTAL');
@@ -795,7 +795,7 @@ test('asks for a reload when the section was saved over an older version', async
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await summary.getByRole('button', { name: 'Editar' }).click();
-  await summary.getByLabel('Aplicação').fill('SILK 4 CORES');
+  await summary.getByLabel('Tipo de serviço').fill('SILK 4 CORES');
   await summary.getByRole('button', { name: 'Salvar' }).click();
 
   await expect(summary.getByRole('alert')).toContainText(
@@ -831,7 +831,7 @@ test('shows the trail from the first contact to the delivery (PLA-01..03)', asyn
     /Primeiro contato\s*02\/09\/2026\s*vem da conversa/u,
     /Pedido fechado\s*09\/09\/2026\s*data do pedido/u,
     /Pagamento\s*10\/09\/2026\s*informado/u,
-    /Entrega prometida\s*24\/10\/2026\s*entrega confirmada/u,
+    /Entrega prometida\s*24\/10\/2026\s*vem do resumo/u,
     /Entrega realizada\s*—\s*a informar/u,
   ]);
 

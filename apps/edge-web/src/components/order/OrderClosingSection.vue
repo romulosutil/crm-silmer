@@ -458,7 +458,7 @@ const blockerNotes = computed(() =>
           <dd class="op-num">{{ itemsHeadline }}</dd>
         </div>
         <div>
-          <dt>Entrega confirmada</dt>
+          <dt>Entrega prometida</dt>
           <dd class="op-num">
             {{ dateBR(order.ficha?.summary?.data_entrega_confirmada) }}
           </dd>

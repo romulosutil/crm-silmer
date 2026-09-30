@@ -51,9 +51,9 @@ export function fabLabel(code) {
 export const PRINT_LOCKED_REASON = 'Disponível depois de gerar o pedido';
 
 const SUMMARY_LABELS = Object.freeze({
-  aplicacao: 'aplicação',
+  aplicacao: 'tipo de serviço',
   cliente: 'cliente',
-  data_entrega_confirmada: 'entrega confirmada',
+  data_entrega_confirmada: 'entrega prometida',
   nome: 'evento/nome',
 });
 
@@ -277,7 +277,7 @@ export function orderMilestones(order) {
       emptyNote: 'não combinada',
       key: 'promised',
       label: 'Entrega prometida',
-      recordedNote: 'entrega confirmada',
+      recordedNote: 'vem do resumo',
     },
     {
       day: order.deliveredOn,

@@ -814,6 +814,24 @@ branch `feat/ficha-por-produto`, antes da aprovação da v3 (T15 daquele branch)
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): print the date trail on ficha v3`
 
+## Grupo J — Ajustes da página do pedido (30/09/2026)
+
+Pedidos do PO ao revisar a tela do lastro.
+
+### T48: Rótulos do Resumo
+
+- **What:** Na tela, "Entrega confirmada" vira "Entrega prometida" e "Aplicação" vira "Tipo de serviço", no Resumo, no banner do que falta, no diálogo de gerar e no lastro. Campos da API e ficha v2 impressa não mudam.
+- **Where:** `apps/edge-web/src/components/order/{OrderSummarySection,OrderClosingSection}.vue`, `apps/edge-web/src/views/OrderView.vue`, `apps/edge-web/src/lib/order-format.js`, `test/order-format.test.js`, `test/e2e/orders.spec.js`
+- **Depends on:** T45
+- **Requirement:** PFI-02, PFI-09, PLA-03
+
+**Done when:**
+
+- [x] Resumo, banner, diálogo de gerar e lastro usam os rótulos novos
+- [x] Ficha v2 impressa sem mudança
+
+**Tests:** unit + e2e · **Gate:** quick + e2e · **Commit:** `fix(edge-web): name the summary fields as the PO asked`
+
 ---
 
 ## Validação das tasks

@@ -111,7 +111,7 @@ async function save() {
         </div>
 
         <div class="op-field">
-          <label for="summary-entrega">Entrega confirmada</label>
+          <label for="summary-entrega">Entrega prometida</label>
           <input
             id="summary-entrega"
             ref="firstField"
@@ -125,7 +125,7 @@ async function save() {
         </div>
 
         <div class="op-field">
-          <label for="summary-aplicacao">Aplicação</label>
+          <label for="summary-aplicacao">Tipo de serviço</label>
           <div class="op-combo">
             <input
               id="summary-aplicacao"
@@ -177,7 +177,7 @@ async function save() {
           </dd>
         </div>
         <div>
-          <dt>Entrega confirmada</dt>
+          <dt>Entrega prometida</dt>
           <dd class="op-num">
             {{ dateBR(summary.data_entrega_confirmada) || '—' }}
           </dd>
@@ -187,7 +187,7 @@ async function save() {
           <dd class="op-num op-pieces">{{ order.totalPieces }}</dd>
         </div>
         <div>
-          <dt>Aplicação</dt>
+          <dt>Tipo de serviço</dt>
           <dd>{{ summary.aplicacao || '—' }}</dd>
         </div>
       </dl>

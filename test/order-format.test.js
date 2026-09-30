@@ -120,8 +120,8 @@ test('turns missingFields into what the banner lists (PFI-09)', () => {
       'valor final',
       'condição de pagamento',
       'cliente',
-      'entrega confirmada',
-      'aplicação',
+      'entrega prometida',
+      'tipo de serviço',
       'evento/nome',
     ],
   );
@@ -231,7 +231,7 @@ test('lays the order trail out from first contact to delivery (PLA-01..03)', () 
     {
       key: 'promised',
       label: 'Entrega prometida',
-      note: 'entrega confirmada',
+      note: 'vem do resumo',
       recorded: true,
       value: '24/10/2026',
     },

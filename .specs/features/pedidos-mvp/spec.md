@@ -104,9 +104,12 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
    e pagamento. Desde a ADR 008, o Lastro do pedido entra logo depois do
    Resumo (PLA-01).
 2. **PFI-02** Resumo SHALL conter: cliente (vindo do contato, bloqueado),
-   entrega confirmada, total de peças (calculado), aplicação, evento/nome,
-   vendedor (dono da conversa), data do pedido (definida na confirmação) e FAB
-   (configuração `FAB_CODE`).
+   entrega prometida, total de peças (calculado), tipo de serviço,
+   evento/nome, vendedor (dono da conversa), data do pedido (definida na
+   confirmação) e FAB (configuração `FAB_CODE`). Desde 30/09/2026 a tela diz
+   "Entrega prometida" e "Tipo de serviço"; os campos continuam
+   `data_entrega_confirmada` e `aplicacao`, e a ficha v2 impressa, travada por
+   hash, mantém "Entrega confirmada" e "Aplicacao".
 3. **PFI-03** Cada item SHALL conter: tipo, modelo, malhas (1 ou mais), cor da
    frente, costas, manga direita, manga esquerda, viés gola, viés mangas e
    grade (tamanho + quantidade inteira > 0, ao menos uma linha).
@@ -275,8 +278,8 @@ fato entregamos, na ficha digital e na impressa.
    pedido, copiada na criação e nunca digitada; pedidos criados antes da
    migração SHALL recebê-la da conversa.
 3. **PLA-03** Pedido fechado SHALL ser a data do pedido (PCL-04, PCL-12) e
-   Entrega prometida SHALL ser a entrega confirmada do Resumo; nenhuma das duas
-   é editada no lastro.
+   Entrega prometida SHALL ser a entrega prometida do Resumo (campo
+   `data_entrega_confirmada`); nenhuma das duas é editada no lastro.
 4. **PLA-04** WHEN o dono da conversa ou um administrador informa "Pago em" e
    "Entregue em" THEN o sistema SHALL gravar as duas datas juntas, em pedido
    pendente ou confirmado, sem reabrir; campo vazio limpa a data.
@@ -349,7 +352,7 @@ Verificado no Grupo H (T39) em 13/09/2026. Evidência = teste automatizado
 | PCL-10 | P1-2     | `test/orders-service-create.test.js:198`; `test/e2e/crm-ui.spec.js:1102` | Verified |
 | PCL-11 | P1-2     | `test/e2e/crm-ui.spec.js:369,1083`                                  | Verified |
 | PFI-01 | P1-3     | `test/e2e/orders.spec.js:978`                                       | Verified |
-| PFI-02 | P1-3     | `test/e2e/orders.spec.js:668`                                       | Verified |
+| PFI-02 | P1-3     | `test/e2e/orders.spec.js:710`                                       | Verified |
 | PFI-03 | P1-3     | `test/e2e/orders.spec.js:773`                                       | Verified |
 | PFI-04 | P1-3     | `test/e2e/orders.spec.js:773,789,814`                               | Verified |
 | PFI-05 | P1-3     | `test/e2e/orders.spec.js:905,937`                                   | Verified |

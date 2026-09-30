@@ -832,6 +832,20 @@ Pedidos do PO ao revisar a tela do lastro.
 
 **Tests:** unit + e2e · **Gate:** quick + e2e · **Commit:** `fix(edge-web): name the summary fields as the PO asked`
 
+### T49: Campos só de texto
+
+- **What:** Resumo e itens sem lista de opções: some o `datalist` do catálogo e a seta dos campos; tudo é digitado à mão. A amostra de cor ao lado da cor digitada continua.
+- **Where:** `apps/edge-web/src/components/order/{OrderSummarySection,OrderItemsSection}.vue`, `apps/edge-web/src/views/OrderView.vue`, `apps/edge-web/src/lib/order-catalog.js`, `apps/edge-web/src/screen-styles.css`, `test/e2e/orders.spec.js`
+- **Depends on:** T48
+- **Requirement:** PFI-14
+
+**Done when:**
+
+- [x] Nenhum `input[list]`, `datalist` ou `combobox` na página do pedido
+- [x] axe sem violações; desktop e 390 px conferidos
+
+**Tests:** e2e · **Gate:** quick + e2e · **Commit:** `fix(edge-web): type every order field by hand`
+
 ---
 
 ## Validação das tasks
@@ -902,6 +916,8 @@ Pedidos do PO ao revisar a tela do lastro.
 | T45      | T43                | T43→T45            | ✅     |
 | T46      | T42–T45            | idem               | ✅     |
 | T47      | T43 + T15 da v3    | idem               | ✅     |
+| T48      | T45                | T45→T48            | ✅     |
+| T49      | T48                | T48→T49            | ✅     |
 
 `[P]` só em tasks sem dependência entre si na mesma fase: T03 (com T02), T05/T06/T24 (após T04), T14 (após T01), T26/T27. ✅
 
@@ -926,3 +942,5 @@ Pedidos do PO ao revisar a tela do lastro.
 | T43, T44 | rotas/runtime             | unit            | unit                               | ✅     |
 | T45      | lib + componente          | unit + e2e      | unit + e2e                         | ✅     |
 | T47      | template impresso         | unit            | unit                               | ✅     |
+| T48      | lib + componente          | unit + e2e      | unit + e2e                         | ✅     |
+| T49      | componente                | e2e             | e2e                                | ✅     |

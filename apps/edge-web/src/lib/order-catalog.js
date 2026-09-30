@@ -1,8 +1,8 @@
 /**
  * The option catalog Silmer is validating in "Validação do catálogo de opções
- * do Pedido" (Google Sheets, 2026-09). Every entry is a suggestion offered in
- * the ficha fields, never a constraint: the fields stay free text so a value
- * the catalog does not know yet is still typed and saved as it is.
+ * do Pedido" (Google Sheets, 2026-09). Until it is approved the PO keeps every
+ * ficha field as text typed by hand, with no list on screen (PFI-14): only
+ * the colour swatch beside a typed colour reads from here.
  *
  * Only options not marked "Remover" are listed. When the sheet is approved,
  * this file is the one place to update.

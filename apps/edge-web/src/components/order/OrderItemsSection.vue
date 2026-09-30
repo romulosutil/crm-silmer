@@ -11,32 +11,16 @@ const GRADE_MESSAGE = 'Use uma quantidade inteira maior que zero.';
 
 // Tipo and modelo head the item card; the parts below follow the ficha.
 const PART_FIELDS = Object.freeze([
-  Object.freeze({ key: 'cor_frente', label: 'Frente', list: 'catalog-colors' }),
-  Object.freeze({ key: 'cor_costas', label: 'Costas', list: 'catalog-colors' }),
+  Object.freeze({ key: 'cor_frente', label: 'Frente' }),
+  Object.freeze({ key: 'cor_costas', label: 'Costas' }),
 ]);
 // PFI-07: only these accept "Não aplicável" — a shirt without sleeves still
 // has a front and a back.
 const OPTIONAL_FIELDS = Object.freeze([
-  Object.freeze({
-    key: 'cor_manga_direita',
-    label: 'Manga direita',
-    list: 'catalog-colors',
-  }),
-  Object.freeze({
-    key: 'cor_manga_esquerda',
-    label: 'Manga esquerda',
-    list: 'catalog-colors',
-  }),
-  Object.freeze({
-    key: 'vies_gola',
-    label: 'Viés gola',
-    list: 'catalog-finishes',
-  }),
-  Object.freeze({
-    key: 'vies_mangas',
-    label: 'Viés mangas',
-    list: 'catalog-finishes',
-  }),
+  Object.freeze({ key: 'cor_manga_direita', label: 'Manga direita' }),
+  Object.freeze({ key: 'cor_manga_esquerda', label: 'Manga esquerda' }),
+  Object.freeze({ key: 'vies_gola', label: 'Viés gola' }),
+  Object.freeze({ key: 'vies_mangas', label: 'Viés mangas' }),
 ]);
 const READ_FIELDS = Object.freeze([...PART_FIELDS, ...OPTIONAL_FIELDS]);
 
@@ -307,31 +291,23 @@ async function save() {
             <div class="op-item-names">
               <div class="op-field">
                 <label :for="`item-${itemIndex}-tipo`">Tipo</label>
-                <div class="op-combo">
-                  <input
-                    :id="`item-${itemIndex}-tipo`"
-                    v-model="item.tipo"
-                    type="text"
-                    list="catalog-piece-types"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                  />
-                  <OrderIcon name="chevron" />
-                </div>
+                <input
+                  :id="`item-${itemIndex}-tipo`"
+                  v-model="item.tipo"
+                  type="text"
+                  autocomplete="off"
+                  autocapitalize="characters"
+                />
               </div>
               <div class="op-field">
                 <label :for="`item-${itemIndex}-modelo`">Modelo</label>
-                <div class="op-combo">
-                  <input
-                    :id="`item-${itemIndex}-modelo`"
-                    v-model="item.modelo"
-                    type="text"
-                    list="catalog-modelings"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                  />
-                  <OrderIcon name="chevron" />
-                </div>
+                <input
+                  :id="`item-${itemIndex}-modelo`"
+                  v-model="item.modelo"
+                  type="text"
+                  autocomplete="off"
+                  autocapitalize="characters"
+                />
               </div>
             </div>
             <button
@@ -355,17 +331,13 @@ async function save() {
                 :key="malhaIndex"
                 class="op-input-row"
               >
-                <div class="op-combo">
-                  <input
-                    v-model="item.malhas[malhaIndex]"
-                    type="text"
-                    list="catalog-fabrics"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                    :aria-label="`Malha ${malhaIndex + 1}`"
-                  />
-                  <OrderIcon name="chevron" />
-                </div>
+                <input
+                  v-model="item.malhas[malhaIndex]"
+                  type="text"
+                  autocomplete="off"
+                  autocapitalize="characters"
+                  :aria-label="`Malha ${malhaIndex + 1}`"
+                />
                 <button
                   v-if="item.malhas.length > 1"
                   type="button"
@@ -391,7 +363,7 @@ async function save() {
               <label :for="`item-${itemIndex}-${field.key}`">{{
                 field.label
               }}</label>
-              <div class="op-input-swatch op-combo">
+              <div class="op-input-swatch">
                 <span
                   v-if="swatchOf(item[field.key])"
                   class="op-swatch"
@@ -402,11 +374,9 @@ async function save() {
                   :id="`item-${itemIndex}-${field.key}`"
                   v-model="item[field.key]"
                   type="text"
-                  :list="field.list"
                   autocomplete="off"
                   autocapitalize="characters"
                 />
-                <OrderIcon name="chevron" />
               </div>
             </div>
 
@@ -418,7 +388,7 @@ async function save() {
               <label :for="`item-${itemIndex}-${field.key}`">{{
                 field.label
               }}</label>
-              <div class="op-input-swatch op-combo">
+              <div class="op-input-swatch">
                 <span
                   v-if="swatchOf(item[field.key])"
                   class="op-swatch"
@@ -433,13 +403,11 @@ async function save() {
                       : item[field.key]
                   "
                   type="text"
-                  :list="field.list"
                   autocomplete="off"
                   autocapitalize="characters"
                   :disabled="isNotApplicable(item, field.key)"
                   @input="item[field.key] = $event.target.value"
                 />
-                <OrderIcon name="chevron" />
               </div>
               <label class="op-check">
                 <input
@@ -479,7 +447,6 @@ async function save() {
                     v-model="line.tamanho"
                     class="op-grade-size"
                     type="text"
-                    list="catalog-sizes"
                     autocomplete="off"
                     autocapitalize="characters"
                     :aria-label="`Tamanho da linha ${lineIndex + 1}`"

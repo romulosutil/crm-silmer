@@ -1910,53 +1910,8 @@ button.op-edit:disabled {
     color-mix(in srgb, var(--status-error-text) 20%, transparent);
 }
 
-/*
- * Catalog fields: the browser's own datalist arrow only shows on hover or
- * focus and looks different everywhere. It stays clickable (it opens the
- * whole list) but invisible, over one steady chevron of the icon family.
- */
-.op-combo {
-  position: relative;
-  min-inline-size: 0;
-}
-
-.op-combo > input {
-  inline-size: 100%;
-  padding-inline-end: 2.4rem;
-}
-
-.op-combo > input::-webkit-calendar-picker-indicator {
-  inline-size: 2rem;
-  margin-inline-end: -0.5rem;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.op-combo > .op-icon {
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-end: 0.8rem;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  transform: translateY(-50%);
-  transition: color var(--duration-fast) var(--easing-standard);
-}
-
-.op-combo:focus-within > .op-icon {
-  color: var(--color-focus);
-}
-
-.op-combo:has(input:disabled) > .op-icon {
-  display: none;
-}
-
 .op-form input.op-grade-qty {
   appearance: textfield;
-}
-
-/* Too narrow for an arrow: sizes open their list by typing or ↓. */
-.op-form input.op-grade-size::-webkit-calendar-picker-indicator {
-  display: none;
 }
 
 .op-form input.op-grade-qty::-webkit-inner-spin-button,
@@ -2093,8 +2048,7 @@ button.op-save:hover:not(:disabled) {
   gap: 0.5rem;
 }
 
-.op-input-row > input,
-.op-input-row > .op-combo {
+.op-input-row > input {
   flex: 1 1 auto;
   min-inline-size: 0;
 }
@@ -2959,7 +2913,6 @@ button.op-generate {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .op-combo > .op-icon,
   .op-sheet,
   .op-disclosure .op-icon,
   .op-condition span {

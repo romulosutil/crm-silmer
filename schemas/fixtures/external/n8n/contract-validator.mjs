@@ -198,6 +198,11 @@ export function validateEvent(payload, contract) {
     epoch(payload.automation_epoch);
     positive(payload.source_revision, 'INVALID_HANDOFF_FENCE');
     object(payload.handoff, 'INVALID_HANDOFF');
+    if (payload.handoff.notice !== undefined) {
+      object(payload.handoff.notice, 'INVALID_HANDOFF_NOTICE');
+      nonEmpty(payload.handoff.notice.command_id, 'INVALID_HANDOFF_NOTICE');
+      nonEmpty(payload.handoff.notice.text, 'INVALID_HANDOFF_NOTICE');
+    }
   }
   if (payload.event_type === 'message.sent') {
     nonEmpty(payload.command_id, 'INVALID_MESSAGE_STATUS');

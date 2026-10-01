@@ -7,7 +7,10 @@ export {
   N8nValidationError,
 } from './errors.js';
 export { createN8nIntegrationService } from './service.js';
-export { PostgresN8nIntegrationRepository } from './postgres-repository.js';
+export {
+  AUTOMATION_MESSAGE_CAP,
+  PostgresN8nIntegrationRepository,
+} from './postgres-repository.js';
 export {
   createPostgresN8nCommandStore,
   PostgresN8nCommandStore,

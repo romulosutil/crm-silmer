@@ -45,6 +45,7 @@ function runCodeNode(jsCode, item, upstream) {
   const result = vm.runInNewContext(`(() => {\n${jsCode}\n})()`, {
     $json: item,
     $: (/** @type {string} */ name) => ({ item: { json: upstream[name] } }),
+    $execution: { id: '42' },
   });
   return JSON.parse(JSON.stringify(result.json));
 }
@@ -187,7 +188,8 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
   assert.equal(workflow.source.active, false);
   assert.equal(workflow.source.activeVersionId, null);
-  assert.ok(workflow.nodes.length < 50);
+  // 45 nodes plus the seven of the handoff notice chain (BOT-03).
+  assert.ok(workflow.nodes.length < 55);
   const serialized = JSON.stringify(workflow);
   assert.doesNotMatch(serialized, /claim_token|claim_id|ai-turns\/claim/u);
   assert.doesNotMatch(serialized, /silmer_failures|windowBufferMemory/u);
@@ -558,4 +560,159 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
     decide({ briefing_patch: complete }, { turn: 15 }).trigger,
     'briefing_complete',
   );
+});
+
+test('sends the handoff notice the CRM reserved, and only that one (BOT-03)', async () => {
+  const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
+  const byName = new Map(
+    workflow.nodes.map((/** @type {any} */ node) => [node.name, node]),
+  );
+  /** @param {string} source @param {number} [output] */
+  const targets = (source, output = 0) =>
+    (workflow.connections[source]?.main?.[output] ?? []).map(
+      (/** @type {any} */ edge) => edge.node,
+    );
+  assert.deepEqual(targets('CRM - Registrar handoff (MVP)'), [
+    'Preparar aviso de transferência (MVP)',
+  ]);
+  assert.deepEqual(targets('Aviso de transferência autorizado? (MVP)'), [
+    'WhatsApp - Enviar aviso de transferência (MVP)',
+  ]);
+  const send = byName.get('WhatsApp - Enviar aviso de transferência (MVP)');
+  assert.equal(send.onError, 'continueErrorOutput');
+  assert.deepEqual(targets('WhatsApp - Enviar aviso de transferência (MVP)'), [
+    'Preparar message.sent do aviso (MVP)',
+  ]);
+  assert.deepEqual(
+    targets('WhatsApp - Enviar aviso de transferência (MVP)', 1),
+    ['Preparar envio desconhecido do aviso (MVP)'],
+  );
+
+  const handoff = runCodeNode(
+    byName.get('Preparar handoff da IA (MVP)').parameters.jsCode,
+    {
+      conversation_id: 'conversation-1',
+      automation_epoch: 2,
+      source_revision: 7,
+      briefing_patch: {},
+      handoff_reason: 'negotiation',
+      reasoning: 'Motivo: Perguntou o valor.',
+      reply_text: 'Quem passa os valores é um dos nossos vendedores.',
+    },
+    {},
+  );
+  assert.deepEqual(handoff.payload.handoff.notice, {
+    command_id: 'conversation-1:7:handoff:notice',
+    text: 'Quem passa os valores é um dos nossos vendedores.',
+  });
+
+  const prepare = byName.get('Preparar aviso de transferência (MVP)').parameters
+    .jsCode;
+  const whatsapp = { from: '5511999990000', phone_number_id: 'phone-1' };
+  const reserved = runCodeNode(
+    prepare,
+    {
+      notice: {
+        command_id: 'conversation-1:7:handoff:notice',
+        send_authorized: true,
+      },
+    },
+    {
+      'Preparar handoff da IA (MVP)': handoff,
+      'Normalizar evento WhatsApp (MVP)': whatsapp,
+    },
+  );
+  assert.equal(reserved.send_authorized, true);
+  assert.equal(reserved.text, handoff.payload.handoff.notice.text);
+  assert.equal(reserved.wa_id, '5511999990000');
+  assert.equal(reserved.conversation_id, 'conversation-1');
+
+  const media = runCodeNode(
+    byName.get('Preparar handoff de conteúdo (MVP)').parameters.jsCode,
+    {
+      conversation_id: 'conversation-2',
+      automation_epoch: 0,
+      source_revision: 1,
+    },
+    { 'Normalizar evento WhatsApp (MVP)': { message_type: 'audio' } },
+  );
+  assert.match(media.payload.handoff.notice.text, /arquivo/u);
+  assert.equal(
+    runCodeNode(
+      prepare,
+      { notice: { command_id: null, send_authorized: false } },
+      {
+        'Preparar handoff de conteúdo (MVP)': media,
+        'Normalizar evento WhatsApp (MVP)': whatsapp,
+      },
+    ).send_authorized,
+    false,
+    'a replay or a spent cap never reaches Meta',
+  );
+});
+
+test('decision normalizer applies the PO decisions of 30/09 on top of BOT-03', async () => {
+  const byName = await workflowNodesByName();
+  const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
+  /** @param {any} output @param {any} [context] */
+  const decide = (output, context = {}) =>
+    runCodeNode(
+      jsCode,
+      {
+        output: {
+          reply_text: 'Resposta da IA',
+          briefing_patch: {},
+          answer_status: 'none',
+          person_request: 'none',
+          ...output,
+        },
+      },
+      {
+        'Montar contexto da IA (MVP)': {
+          conversation_id: 'conversation-1',
+          automation_epoch: 1,
+          source_revision: 3,
+          briefing: {},
+          recent_messages: [],
+          current_text: '',
+          profile_name: '',
+          sellers: [],
+          message_cap: 15,
+          turn: 3,
+          crm_counter: true,
+          ...context,
+        },
+      },
+    );
+
+  const cap = decide({}, { turn: 15 });
+  assert.equal(cap.handoff_reason, 'iteration_limit');
+  assert.match(cap.reasoning, /Limite de 15 mensagens do agente/u);
+  assert.equal(
+    decide({}, { turn: 15, crm_counter: false }).handoff_reason,
+    'low_confidence',
+    'a CRM without migration 0025 only knows low_confidence',
+  );
+
+  const deferred = decide(
+    { answer_status: 'deferred' },
+    { briefing: { next_required_field: 'sizes' } },
+  );
+  assert.equal(deferred.briefing_patch.sizes, 'Definir com o vendedor');
+  assert.equal(deferred.missing_briefing_fields.includes('sizes'), false);
+  assert.equal(
+    decide({ briefing_patch: { fabrics: 'o vendedor indica o tecido' } })
+      .briefing_patch.fabrics,
+    'Definir com o vendedor',
+  );
+
+  const pickup = decide({ briefing_patch: { delivery_mode: 'retirada' } });
+  assert.equal(pickup.briefing_patch.pickup_location, 'Loja da Silmer');
+
+  const english = decide(
+    { foreign_language: true },
+    { current_text: 'hi, do you make t-shirts?' },
+  );
+  assert.equal(english.trigger, 'foreign_language');
+  assert.equal(english.handoff_reason, 'unsupported');
 });

@@ -1416,6 +1416,24 @@ components:
           type: object
           additionalProperties: true
           description: Snapshot criptografado e consolidado da qualificação.
+        automation_message_count:
+          type: integer
+          minimum: 0
+          description: Mensagens do agente já reservadas nesta Conversa (ADR 009).
+        automation_message_cap:
+          type: integer
+          minimum: 2
+          description: Teto de mensagens do agente; a última vaga é do aviso de transferência.
+        sellers:
+          type: array
+          description: Vendedores ativos, só id e primeiro nome (ADR 009).
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name]
+            properties:
+              id: { type: string }
+              name: { type: string }
     N8nAttachmentRequest:
       type: object
       additionalProperties: false
@@ -1482,7 +1500,20 @@ components:
             segment: {}
             sizes: {}
             sponsors: {}
-        handoff: { type: object, additionalProperties: true }
+        handoff:
+          type: object
+          additionalProperties: true
+          properties:
+            reason: { type: string }
+            summary: { type: string }
+            notice:
+              type: object
+              additionalProperties: false
+              required: [command_id, text]
+              description: Aviso ao cliente reservado na mesma transação do handoff (ADR 009).
+              properties:
+                command_id: { type: string, minLength: 1, maxLength: 512 }
+                text: { type: string, minLength: 1, maxLength: 4096 }
         failure: { type: object, additionalProperties: true }
     N8nEventResponse:
       type: object
@@ -1493,6 +1524,13 @@ components:
         duplicate: { type: boolean }
         send_authorized: { type: boolean }
         reason: { type: string }
+        handoff_id: { type: string }
+        notice:
+          type: object
+          description: Só envie o aviso quando send_authorized for true; replay e teto gasto devolvem false.
+          properties:
+            send_authorized: { type: boolean }
+            command_id: { type: [string, 'null'] }
     N8nProblem:
       type: object
       additionalProperties: false

@@ -30,7 +30,8 @@ test('keeps the canonical MVP path while replacing only WhatsApp transport', asy
 
   assert.equal(dev.source.id, DEV_WORKFLOW_ID);
   assert.equal(dev.source.active, false);
-  assert.ok(nodes.length < 56);
+  // 52 canonical nodes plus the DEV triggers and results.
+  assert.ok(nodes.length < 64);
   assert.equal(
     nodes.some((node) => /whatsApp(?:Trigger)?$/u.test(node.type)),
     false,
@@ -41,6 +42,7 @@ test('keeps the canonical MVP path while replacing only WhatsApp transport', asy
   assert.ok(names.has('CRM - Reservar envio da IA (MVP)'));
   assert.ok(names.has('CRM - Registrar message.sent da IA (MVP)'));
   assert.ok(names.has('CRM - Registrar handoff (MVP)'));
+  assert.ok(names.has('DEV - Simular aviso de transferência (MVP)'));
   assert.ok(names.has('Painel - Receber comando (MVP)'));
   assert.match(serialized, /simulate_send_unknown/u);
   assert.match(serialized, /loadPreviousSession/u);
@@ -97,7 +99,7 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   );
   assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
   assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
-  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-4');
+  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-5');
   const result = nodes.find(
     (node) => node.name === 'DEV - Resultado da resposta da IA',
   );

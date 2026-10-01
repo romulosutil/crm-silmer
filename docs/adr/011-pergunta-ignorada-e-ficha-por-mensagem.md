@@ -40,17 +40,21 @@ branca!" e o bot responde "Que legal, e quer estampada onde?".
 5. **Pergunta nova recomeça.** A contagem vale enquanto o bot repete a mesma
    pergunta; se ele pergunta outro campo, a contagem recomeça.
 6. **Ficha por mensagem.** O bot grava o que cada mensagem acrescenta à ficha,
-   comenta de forma positiva e curta e emenda a próxima pergunta na mesma
-   frase. De preferência, a pergunta segue o que o cliente acabou de dizer
-   (depois da cor, a estampa).
+   reage de forma positiva, sem listar o que anotou, e emenda a próxima
+   pergunta na mesma frase. De preferência, a pergunta segue o que o cliente
+   acabou de dizer (depois da cor, a estampa).
+7. **Nome pedido uma vez.** Se o cliente pula a pergunta do nome e fala do
+   pedido, o bot segue o assunto dele. Só pede o nome de novo, uma única vez,
+   quando o resto da ficha estiver completo. O nó de contexto informa ao modelo
+   se o nome já foi pedido.
 
 ## Consequências
 
 - O estado novo `ignored` fica no próprio `briefing_status`
   (`[quote_]ignored`), sem campo novo no contrato nem migração no CRM.
 - O workflow passa a `mvp-simple-6` (DEV `dev-mvp-simple-7`).
-- Cliente que só tira dúvidas é transferido na terceira resposta do bot, em vez
-  de gastar o teto.
+- Cliente que só tira dúvidas é transferido depois de ignorar a mesma pergunta
+  duas vezes, em vez de gastar o teto.
 
 ## Alternativas descartadas
 

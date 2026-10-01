@@ -51,7 +51,7 @@ O PO revisou conversas do DEV e decidiu os pontos abaixo, registrados na [ADR 01
 | D19 | Perguntas com opções citam as opções comuns, aceitam mais de uma escolha e terminam sempre com "ou outra". | Vale para modelagem, malha, cor, técnica e local da estampa (item 4 da seção 3.1). |
 | D20 | Os avisos de transferência são acolhedores, sem gíria e sem formalidade excessiva. | Textos fixos do nó de decisão revistos; todos dizem que um vendedor continua na mesma conversa. |
 | D21 | Pergunta ignorada duas vezes transfere. Ignorar é não responder à pergunta pendente nem acrescentar nada à ficha. | Estende o D4: duas faltas na mesma pergunta, falhas ou ignoradas, transferem com `low_confidence`. Pergunta sobre o próprio campo não conta. |
-| D22 | Toda mensagem que acrescenta algo à ficha, mesmo avulsa, é gravada; o bot comenta de forma positiva e emenda a próxima pergunta na mesma frase ("Que legal, e quer estampada onde?"). | A próxima pergunta segue, de preferência, o que o cliente acabou de dizer (item 4 da seção 3.1). |
+| D22 | Toda mensagem que acrescenta algo à ficha, mesmo avulsa, é gravada; o bot comenta de forma positiva e emenda a próxima pergunta na mesma frase ("Que legal, e quer estampada onde?"). | A próxima pergunta segue, de preferência, o que o cliente acabou de dizer (item 4 da seção 3.1). Se o cliente pula o nome, o bot só volta a pedi-lo, uma vez, com o resto da ficha completo (item 2 da seção 3.1). |
 
 ## 2. Referências de mercado e custo
 

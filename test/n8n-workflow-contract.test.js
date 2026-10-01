@@ -834,6 +834,8 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
     .systemMessage;
   assert.match(prompt, /Que legal, e quer estampada onde\?/u);
   assert.match(prompt, /emende a próxima pergunta na mesma frase/u);
+  assert.match(prompt, /não comece com "Anotei"/u);
+  assert.match(prompt, /não repita a pergunta do nome em toda mensagem/u);
 
   const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
   /** @param {any} output @param {any} [context] */
@@ -959,4 +961,48 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
     },
   );
   assert.equal(ignoredThenUnsure.trigger, 'two_attempts');
+
+  const contextCode = byName.get('Montar contexto da IA (MVP)').parameters
+    .jsCode;
+  /** @param {any} inbound */
+  const contextPrompt = (inbound) =>
+    runCodeNode(
+      contextCode,
+      {
+        conversation_id: 'conversation-1',
+        automation_epoch: 1,
+        source_revision: 3,
+        automation_message_count: 2,
+        automation_message_cap: 15,
+        sellers: [],
+        ...inbound,
+      },
+      {
+        'Normalizar evento WhatsApp (MVP)': {
+          from: '5500000000000',
+          phone_number_id: 'phone-1',
+          text: 'Quero camisa branca!',
+          customer_name: '',
+        },
+      },
+    ).prompt;
+  const greeting = {
+    sender_type: 'ai',
+    text: 'Oi! Sou a assistente virtual da Silmer. Qual é o seu nome?',
+  };
+  assert.match(
+    contextPrompt({ briefing: {}, recent_messages: [greeting] }),
+    /Nome do cliente: já pedido e não respondido; não pergunte de novo agora/u,
+  );
+  assert.match(
+    contextPrompt({ briefing: {}, recent_messages: [] }),
+    /Nome do cliente: ainda não pedido/u,
+  );
+  assert.match(
+    contextPrompt({
+      briefing: { customer_name: 'Júlia' },
+      recent_messages: [greeting],
+    }),
+    /Nome do cliente: já informado/u,
+  );
 });

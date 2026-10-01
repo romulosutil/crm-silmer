@@ -836,6 +836,18 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
   assert.match(prompt, /emende a próxima pergunta na mesma frase/u);
   assert.match(prompt, /não comece com "Anotei"/u);
   assert.match(prompt, /não repita a pergunta do nome em toda mensagem/u);
+  // Plain words for people who just want a nice shirt (PO, 01/10).
+  assert.match(prompt, /palavras do dia a dia, nada de termo técnico/u);
+  assert.match(prompt, /não insista na mesma pergunta: siga o assunto dele/u);
+  assert.match(prompt, /Se ele aceitar uma sugestão sua/u);
+  assert.match(
+    prompt,
+    /Só use nomes como silk, sublimação, DTF, PV, piquet ou fio se o cliente usar primeiro/u,
+  );
+  assert.doesNotMatch(
+    prompt,
+    /Malhas: algodão|Técnicas: silk|malha mista tipo PV/u,
+  );
 
   const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
   /** @param {any} output @param {any} [context] */
@@ -931,6 +943,24 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
   assert.equal(aboutTheField.handoff_required, false);
   assert.equal(aboutTheField.briefing_patch.briefing_status, 'ignored');
 
+  const skippedWithNews = decide(
+    {
+      answer_status: 'other',
+      asked_field: 'product_model',
+      briefing_patch: { colors: 'branca' },
+    },
+    {
+      briefing: { next_required_field: 'product_model' },
+      current_text: 'branca',
+    },
+  );
+  assert.equal(skippedWithNews.handoff_required, false);
+  assert.equal(
+    skippedWithNews.briefing_patch.briefing_status,
+    'skipped',
+    'a skipped question with news makes the next reply move on',
+  );
+
   const newQuestion = decide(
     { answer_status: 'other', asked_field: 'quantity' },
     { briefing: asked, current_text: 'vocês abrem sábado?' },
@@ -997,6 +1027,16 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
   assert.match(
     contextPrompt({ briefing: {}, recent_messages: [] }),
     /Nome do cliente: ainda não pedido/u,
+  );
+  assert.match(
+    contextPrompt({
+      briefing: {
+        next_required_field: 'product_model',
+        briefing_status: 'quote_skipped',
+      },
+      recent_messages: [],
+    }),
+    /o cliente pulou a pergunta sobre product_model e contou outra coisa do pedido; não repita essa pergunta agora/u,
   );
   assert.match(
     contextPrompt({

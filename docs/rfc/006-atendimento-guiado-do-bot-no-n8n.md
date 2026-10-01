@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 | --- | --- |
-| **Status** | DECIDIDA — decisões de produto de 30/09/2026 na seção 1.1 e [ADR 009](../adr/009-regras-de-transferencia-e-teto-do-bot.md); de 01/10/2026 na seção 1.2, [ADR 010](../adr/010-intencao-de-pedido-sem-pergunta-e-tom-do-bot.md) e [ADR 011](../adr/011-pergunta-ignorada-e-ficha-por-mensagem.md); BOT-03 implementado em romulosutil/crm-silmer#111; publicação pendente da T40 |
+| **Status** | DECIDIDA — decisões de produto de 30/09/2026 na seção 1.1 e [ADR 009](../adr/009-regras-de-transferencia-e-teto-do-bot.md); de 01/10/2026 na seção 1.2, [ADR 010](../adr/010-intencao-de-pedido-sem-pergunta-e-tom-do-bot.md) e [ADR 011](../adr/011-pergunta-ignorada-e-ficha-por-mensagem.md); ficha de sete pontos e ritmo fixo na seção 1.3 e [ADR 012](../adr/012-ficha-de-sete-pontos-e-ritmo-fixo.md); BOT-03 implementado em romulosutil/crm-silmer#111; publicação pendente da T40 |
 | **Impacto** | Alto: conversa, catálogo, contrato n8n ↔ CRM e controle de envios |
 | **Responsável pela proposta** | Tech Lead |
 | **Aprovadores** | Responsável de produto/comercial da Silmer e Tech Lead; o catálogo depende também da aprovação prevista na RFC 005 |
-| **Última atualização** | 01/10/2026 — decisões do PO D17–D23 (sem pergunta de orçamento nem de nome do pedido, opções com "outra", tom dos avisos, pergunta ignorada duas vezes, ficha por mensagem, linguagem simples) |
+| **Última atualização** | 01/10/2026 — decisões do PO D17–D23 (sem pergunta de orçamento nem de nome do pedido, opções com "outra", tom dos avisos, pergunta ignorada duas vezes, ficha por mensagem, linguagem simples) e D24–D26 (ficha de sete pontos, ritmo fixo, gola como campo próprio) |
 | **Rastreabilidade** | `AGT-01`, `AGT-03`, `AGT-05`, `AGT-06`, `PCL-01`, `PAG-01`–`03`, `PFI-03`–`04`, `PFI-07`, `PFI-14`, `T21`–`23`, `T31`, `T40`; [RFC 005](005-catalogo-de-opcoes-do-pedido.md), [ADR 003](../adr/003-adotar-integracao-n8n-mvp-simples.md), [ADR 006](../adr/006-pedido-dois-status.md) |
 
 ## 1. Objetivo e ponto de partida
@@ -53,6 +53,16 @@ O PO revisou conversas do DEV e decidiu os pontos abaixo, registrados na [ADR 01
 | D21 | Pergunta ignorada duas vezes transfere. Ignorar é não responder à pergunta pendente nem acrescentar nada à ficha. | Estende o D4: duas faltas na mesma pergunta, falhas ou ignoradas, transferem com `low_confidence`. Pergunta sobre o próprio campo não conta. |
 | D22 | Toda mensagem que acrescenta algo à ficha, mesmo avulsa, é gravada; o bot comenta de forma positiva e emenda a próxima pergunta na mesma frase ("Que legal, e quer estampada onde?"). | A próxima pergunta segue, de preferência, o que o cliente acabou de dizer (item 4 da seção 3.1). Se o cliente pula o nome, o bot só volta a pedi-lo, uma vez, com o resto da ficha completo (item 2 da seção 3.1). Qualquer pergunta pulada com novidade na ficha não se repete na mensagem seguinte. |
 | D23 | Linguagem simples, para quem não entende de confecção e só quer uma camisa bonita. | Sem termos técnicos (silk, sublimação, DTF, PV, malha, grade, modelagem) a menos que o cliente use; o bot pergunta pelo resultado e o vendedor define a técnica (item 5 da seção 3.1). |
+
+### 1.3 Ficha de sete pontos e ritmo fixo (01/10/2026)
+
+O PO achou o bot "sem ritmo": eram 14 campos, mais endereço na entrega, em até 15 mensagens; o modelo escolhia a próxima pergunta e podia juntar dois assuntos; a gola, escondida em `product_model`, nunca era perguntada. As decisões abaixo estão na [ADR 012](../adr/012-ficha-de-sete-pontos-e-ritmo-fixo.md).
+
+| # | Decisão | Efeito nesta RFC |
+| --- | --- | --- |
+| D24 | `briefing_complete` exige o nome (pedido uma vez, D22) e sete pontos: tipo de roupa (`product_model`), cor (`colors`), quantidade (`quantity`), estampa (`artwork_status`, a mesma pergunta cobre estampada ou bordada e grava `artwork_technique`, que não é obrigatório), tecido (`fabrics`), tamanhos (`sizes`) e gola (`collar`). | Substitui a lista de campos aplicáveis dos itens 4 e 6 da seção 3.1. Os demais campos (`product_type`, `order_name`, `needed_by`, `purpose`, `purchase_profile`, logística, `artwork_locations`, `artwork_technique`, `notes`…) nunca são perguntados, só gravados se o cliente falar; o vendedor completa. A retirada continua "Loja da Silmer" (D15). |
+| D25 | O workflow, não o modelo, escolhe o próximo ponto: uma sequência única, pulando o que está preenchido ou deixado para o vendedor, um ponto por mensagem (a única exceção é perguntar "lisa ou com estampa?" junto do tipo). Ordem: tipo de roupa → cor → quantidade → estampa → tecido → tamanhos → gola; o nome vai com a apresentação e, se pulado, volta uma vez com os sete pontos completos. | Substitui a "ordem sugerida" e as "até duas relacionadas" do item 4 da seção 3.1. A ordem fica na constante `FICHA_RHYTHM` do SDK. No Direct do Instagram, a atendente pergunta primeiro o tipo (ou "lisa ou personalizada?"), depois cor, quantidade e arte, sempre a cor antes da quantidade; tecido, tamanhos e gola nunca são perguntados lá, então a posição deles é inferência e pode mudar com os testes. Resposta falha repete o ponto com opções (D4); ponto pulado com novidade (D22) cede a vez ao seguinte e volta depois. |
+| D26 | A gola é um campo próprio, `collar`, no CRM e na Ficha. | O CRM aceita `collar` no `briefing_patch` antes de o workflow enviá-lo; na Ficha, a gola entra no texto do modelo do item. Regata e abadá (feito na regata) gravam `collar` = "regata", e polo grava "gola polo", sem perguntar, por decisão do Tech Lead revogável pelo PO. |
 
 ## 2. Referências de mercado e custo
 
@@ -178,5 +188,7 @@ Pendências fechadas pelo PO em 30/09/2026: vendedor pedido vai para a fila (D9)
 **Implementação (30/09/2026).** O BOT-03 está na romulosutil/crm-silmer#111: o CRM conta as mensagens do agente, recusa a reserva normal quando só sobra a vaga do aviso, reserva o aviso junto do handoff, devolve contador, teto e vendedores no inbound e ganha o motivo `iteration_limit` (migração 0025). O workflow (`mvp-simple-4`) usa esses dados e, diante de um CRM sem o BOT-03, volta a contar mensagens do cliente, a ler `SILMER_PILOT_SELLERS` e a gravar o teto como `low_confidence`.
 
 **Implementação (01/10/2026).** D17–D20 estão no workflow `mvp-simple-5` (DEV `dev-mvp-simple-6`), na romulosutil/crm-silmer#113; D21–D23, no `mvp-simple-6` (DEV `dev-mvp-simple-7`). Nenhuma das duas muda o contrato com o CRM.
+
+**Implementação (01/10/2026, D24–D26).** O CRM aceita `collar` no `briefing_patch` e o compõe no modelo do item da Ficha; o workflow `mvp-simple-7` (DEV `dev-mvp-simple-8`) exige o nome e os sete pontos e segue `FICHA_RHYTHM`. O CRM com `collar` precisa estar no cloud-dev antes do workflow novo; um CRM antigo recusa a chave com `400`.
 
 **Resultado:** decidida em 30/09/2026 e registrada na [ADR 009](../adr/009-regras-de-transferencia-e-teto-do-bot.md). Esta RFC não aprova catálogo nem autoriza publicação; o catálogo segue a RFC 005 e a publicação depende do BOT-03 e do gate da T40.

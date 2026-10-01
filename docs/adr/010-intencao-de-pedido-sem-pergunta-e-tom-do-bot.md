@@ -1,6 +1,7 @@
 # ADR 010 — Intenção de pedido sem pergunta e tom do bot
 
-Status: aceito
+Status: aceito; a lista de perguntas com opções do item 4 foi substituída pela
+[ADR 012](012-ficha-de-sete-pontos-e-ritmo-fixo.md) em 01/10/2026.
 
 Data: 01/10/2026
 

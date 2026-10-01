@@ -285,7 +285,7 @@ test('agent output parser tolerates stray keys instead of failing the execution'
   );
 });
 
-test('decision normalizer whitelists briefing_patch keys exactly as the CRM does', async () => {
+test('decision normalizer only whitelists briefing_patch keys the CRM accepts', async () => {
   const byName = await workflowNodesByName();
   const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
   const declaration = /const briefingFields = new Set\(\[([\s\S]*?)\]\);/u.exec(
@@ -298,9 +298,31 @@ test('decision normalizer whitelists briefing_patch keys exactly as the CRM does
   const workflowFields = [...declaration[1].matchAll(/'([a-z_]+)'/gu)].map(
     (match) => match[1],
   );
+  // The CRM ships a new field before the workflow sends it (ADR 012), so the
+  // CRM may accept more keys than the workflow knows, never fewer.
+  for (const field of workflowFields) {
+    assert.ok(BRIEFING_PATCH_FIELDS.has(field), `CRM would reject ${field}`);
+  }
+});
+
+test('the CRM, the contract fixture and its schema list the same briefing fields', async () => {
+  const contract = await fixture('contract-v1.json');
+  const schema = await fixture('contract-v1.schema.json');
+  const crmFields = [...BRIEFING_PATCH_FIELDS].sort();
+  assert.deepEqual([...contract.briefingPatchFields].sort(), crmFields);
   assert.deepEqual(
-    [...workflowFields].sort(),
-    [...BRIEFING_PATCH_FIELDS].sort(),
+    Object.keys(schema.$defs.briefingPatch.properties).sort(),
+    crmFields,
+  );
+  // ADR 012: the collar is its own field.
+  assert.ok(BRIEFING_PATCH_FIELDS.has('collar'));
+  assert.deepEqual(schema.$defs.briefingPatch.properties.collar, {
+    type: ['string', 'null'],
+  });
+  assert.equal(validateBriefingPatch({ collar: 'gola V' }, contract), true);
+  assert.throws(
+    () => validateBriefingPatch({ gola: 'gola V' }, contract),
+    ContractValidationError,
   );
 });
 

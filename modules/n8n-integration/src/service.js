@@ -30,6 +30,7 @@ export const BRIEFING_PATCH_FIELDS = new Set([
   'artwork_technique',
   'briefing_status',
   'city_or_postal_code',
+  'collar',
   'colors',
   'customer_name',
   'customizations',

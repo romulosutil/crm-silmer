@@ -164,6 +164,42 @@ test('accepts only the structured pre-ficha fields used by the guided agent', as
   );
 });
 
+test('accepts the collar as its own pre-ficha field (ADR 012)', async () => {
+  const { calls, service } = harness();
+  /** @param {string} id @param {Record<string, unknown>} briefingPatch */
+  const handoff = (id, briefingPatch) =>
+    service.recordEvent({
+      automation_epoch: 3,
+      briefing_patch: briefingPatch,
+      conversation_id: 'conversation-1',
+      event_id: `collar-event-${id}`,
+      event_type: 'handoff.requested',
+      handoff: { reason: 'briefing_complete', summary: 'Pré-ficha completa.' },
+      occurred_at: NOW.toISOString(),
+      source_revision: 7,
+      schema_version: '1.0',
+      technical: { ...TECHNICAL, idempotencyKey: `collar-${id}` },
+    });
+
+  await handoff('1', { collar: 'gola V', product_model: 'camiseta comum' });
+  assert.deepEqual(calls[0].input.briefingPatch, {
+    collar: 'gola V',
+    product_model: 'camiseta comum',
+  });
+
+  // Only the agreed key exists: a translated or guessed name is still a 400.
+  for (const key of ['gola', 'neckline', 'collar_type']) {
+    await assert.rejects(
+      handoff(key, { [key]: 'gola V' }),
+      (error) =>
+        error instanceof N8nValidationError &&
+        error.statusCode === 400 &&
+        error.message === `briefing_patch.${key} is not allowed`,
+    );
+  }
+  assert.equal(calls.length, 1);
+});
+
 test('rejects Instagram until the channel-specific phase is delivered', async () => {
   const { service } = harness();
   await assert.rejects(

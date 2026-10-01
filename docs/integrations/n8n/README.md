@@ -16,15 +16,26 @@ cliente, conversa, briefing ou memória curta.
 ## Pré-ficha guiada antes do handoff
 
 Em cada mensagem de texto, a IA extrai somente fatos confirmados para o
-`briefing_patch` criptografado da Conversa e pergunta pelo próximo dado
-necessário. A pré-ficha reúne identificação do pedido, tipo/modelo de peça,
-quantidade, malha, cores, grade, arte, técnica, locais de aplicação, data
-desejada, finalidade, perfil de compra e modalidade logística. Entrega exige
-cidade e endereço; retirada exige o local escolhido.
+`briefing_patch` criptografado da Conversa e pergunta pelo próximo ponto da
+ficha (ADR 012). A ficha que o bot pergunta tem o nome (`customer_name`) e sete
+pontos: tipo de roupa (`product_model`), cor (`colors`), quantidade
+(`quantity`), estampa (`artwork_status`), tecido (`fabrics`), tamanhos
+(`sizes`) e gola (`collar`); regata e abadá gravam a gola "regata", e polo
+grava "gola polo", sem perguntar. Os demais campos do `briefing_patch` (identificação do
+pedido, tipo de peça, técnica e locais da estampa, data desejada, finalidade,
+perfil de compra, logística e anotações) só são gravados quando o cliente fala
+deles; o bot não os pergunta e o vendedor completa. A retirada é sempre na
+"Loja da Silmer".
 
-O workflow calcula de forma determinística os campos pendentes depois de unir o
-patch ao briefing atual. Ele só emite `briefing_complete` quando todos os campos
-aplicáveis estiverem presentes. Os gatilhos de transferência da ADR 009 são
+O workflow escolhe o próximo ponto pela constante `FICHA_RHYTHM` do SDK, o
+primeiro ponto ainda vazio, um por mensagem, e calcula de forma determinística
+os pontos pendentes depois de unir o patch ao briefing atual. Ele só emite
+`briefing_complete` quando o nome e os sete pontos estiverem presentes. Para
+trocar a ordem, reordene `FICHA_RHYTHM` em
+`ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sdk.js`, atualize o snapshot
+sanitizado principal com os nós gerados por `render-mvp-workflow.mjs` e rode
+`npm run generate:n8n-dev-workflow` e `npm run generate:n8n-local-workflow`.
+Os gatilhos de transferência da ADR 009 são
 aplicados pelo nó de decisão, não só pelo prompt: pergunta de preço, frete ou
 pagamento; pedido de pessoa ou de vendedor pelo nome; nome fora do CRM pedido
 duas vezes; duas respostas incompreensíveis ou indecisas para o mesmo item;
@@ -251,6 +262,11 @@ DEV publicado e aponte o worker do CRM para
 `/webhook/silmer/dev-panel-command`.
 
 ## Rollout e recuperação
+
+O CRM sempre aceita um campo novo do `briefing_patch` antes de o workflow
+enviá-lo, porque uma chave desconhecida volta como `400`. Para o `collar` da
+ADR 012, o CRM com o campo vai ao cloud-dev antes do workflow `mvp-simple-7`
+(DEV `dev-mvp-simple-8`).
 
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker e configurar as duas credenciais Basic.

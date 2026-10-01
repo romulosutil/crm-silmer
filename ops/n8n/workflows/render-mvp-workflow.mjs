@@ -163,6 +163,7 @@ const BRIEFING_FIELDS = [
   'artwork_technique',
   'briefing_status',
   'city_or_postal_code',
+  'collar',
   'colors',
   'customer_name',
   'customizations',

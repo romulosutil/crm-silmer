@@ -1,6 +1,7 @@
 # ADR 011 — Pergunta ignorada transfere e toda mensagem alimenta a ficha
 
-Status: aceito
+Status: aceito; a preferência de pergunta do item 6 foi substituída pelo ritmo
+fixo da [ADR 012](012-ficha-de-sete-pontos-e-ritmo-fixo.md) em 01/10/2026.
 
 Data: 01/10/2026
 

@@ -54,6 +54,7 @@ test('labels every reason_code the handoffs table accepts (A03)', () => {
     'complaint',
     'urgency',
     'unsupported',
+    'iteration_limit',
   ]) {
     assert.ok(Object.hasOwn(HANDOFF_REASON_LABELS, code), code);
     assert.notEqual(handoffReasonLabel(code), 'Aguardando vendedor', code);
@@ -71,6 +72,7 @@ test('labels every reason_code the handoffs table accepts (A03)', () => {
   assert.equal(handoffReasonLabel('complaint'), 'Reclamação');
   assert.equal(handoffReasonLabel('urgency'), 'Urgência');
   assert.equal(handoffReasonLabel('unsupported'), 'Conteúdo não suportado');
+  assert.equal(handoffReasonLabel('iteration_limit'), 'Limite de mensagens');
   assert.equal(handoffReasonLabel('inventado'), 'Aguardando vendedor');
 });
 

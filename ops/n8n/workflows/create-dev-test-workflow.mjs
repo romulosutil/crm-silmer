@@ -4,7 +4,7 @@ import { format } from 'prettier';
 
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
-export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-4';
+export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-5';
 export const LOCAL_WORKFLOW_NAME =
   'LOCAL | Silmer | Fluxo completo sem WhatsApp';
 
@@ -16,6 +16,8 @@ const NORMALIZE_EVENT = 'Normalizar evento WhatsApp (MVP)';
 const AI_SEND = 'WhatsApp - Enviar resposta da IA (MVP)';
 const DEV_AI_SEND = 'DEV - Simular envio da IA (MVP)';
 const HUMAN_SEND = 'WhatsApp - Enviar texto humano (MVP)';
+const NOTICE_SEND = 'WhatsApp - Enviar aviso de transferência (MVP)';
+const DEV_NOTICE_SEND = 'DEV - Simular aviso de transferência (MVP)';
 const DEV_HUMAN_SEND = 'DEV - Simular envio humano (MVP)';
 const PANEL_TRIGGER = 'Painel - Receber comando (MVP)';
 const CRM_TO_N8N_CREDENTIAL = 'Silmer CRM para n8n Basic DEV';
@@ -172,6 +174,12 @@ const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;
 return { json: { id: 'dev-ai-' + command, messages: [{ id: 'dev-ai-' + command }], simulated: true } };`,
   );
   transformSendNode(
+    requiredNode(nodes, NOTICE_SEND),
+    DEV_NOTICE_SEND,
+    `const notice = $('Preparar aviso de transferência (MVP)').item.json;
+return { json: { id: 'dev-notice-' + notice.command_id, messages: [{ id: 'dev-notice-' + notice.command_id }], simulated: true } };`,
+  );
+  transformSendNode(
     requiredNode(nodes, HUMAN_SEND),
     DEV_HUMAN_SEND,
     `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
@@ -227,9 +235,12 @@ return { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_rep
       `const input = $('${BUILD_SYNTHETIC_EVENT}').item.json.__dev_input ?? {};
 let decision = {};
 try { decision = $('Normalizar decisão da IA (MVP)').item.json; } catch (error) { decision = {}; }
-const reply = decision.reply_text ?? 'Vou encaminhar seu atendimento para nossa equipe.';
-// The CRM contract does not deliver a notice together with the handoff yet (RFC 006, BOT-03).
-return { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, notice_sent_on_whatsapp: false, conversation_id: decision.conversation_id, turn: decision.turn, reply_text: reply, output: reply, trigger: decision.trigger ?? 'unsupported_media', handoff_reason: decision.handoff_reason ?? 'unsupported', requested_seller: decision.requested_seller ?? null, handoff_summary: decision.reasoning ?? null, briefing_patch: decision.briefing_patch ?? null, missing_briefing_fields: decision.missing_briefing_fields ?? null, crm: $json } };`,
+let notice = {};
+try { notice = $('Preparar aviso de transferência (MVP)').item.json; } catch (error) { notice = {}; }
+let crm = null;
+try { crm = $('CRM - Registrar handoff (MVP)').item.json; } catch (error) { crm = $json; }
+const reply = notice.text || decision.reply_text || 'Vou encaminhar seu atendimento para nossa equipe.';
+return { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, notice_authorized: notice.send_authorized === true, notice_command_id: notice.command_id ?? null, conversation_id: decision.conversation_id ?? notice.conversation_id ?? null, turn: decision.turn, reply_text: reply, output: reply, trigger: decision.trigger ?? 'unsupported_media', handoff_reason: decision.handoff_reason ?? 'unsupported', requested_seller: decision.requested_seller ?? null, handoff_summary: decision.reasoning ?? null, briefing_patch: decision.briefing_patch ?? null, missing_briefing_fields: decision.missing_briefing_fields ?? null, crm } };`,
     ),
     resultNode(
       'DEV - Resultado do envio desconhecido',
@@ -357,6 +368,7 @@ function rewriteConnections(connections) {
     [MAIN_TRIGGER]: DEV_TRIGGER,
     [AI_SEND]: DEV_AI_SEND,
     [HUMAN_SEND]: DEV_HUMAN_SEND,
+    [NOTICE_SEND]: DEV_NOTICE_SEND,
   };
   /** @type {Record<string, any>} */
   const result = {};
@@ -394,10 +406,23 @@ function rewriteConnections(connections) {
     0,
     'DEV - Resultado da resposta da IA',
   );
+  // The handoff result answers after the notice chain, sent or not.
   appendMain(
     result,
-    'CRM - Registrar handoff (MVP)',
+    'CRM - Registrar message.sent do aviso (MVP)',
     0,
+    'DEV - Resultado do handoff',
+  );
+  appendMain(
+    result,
+    'CRM - Marcar envio desconhecido do aviso (MVP)',
+    0,
+    'DEV - Resultado do handoff',
+  );
+  appendMain(
+    result,
+    'Aviso de transferência autorizado? (MVP)',
+    1,
     'DEV - Resultado do handoff',
   );
   appendMain(

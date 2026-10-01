@@ -295,10 +295,12 @@ if (connectionString) {
         [createdAt],
       );
 
-      assert.deepEqual(await migrate(pool, { migrations }), {
-        applied: ['0024'],
-        phase: 'expand',
-      });
+      assert.deepEqual(
+        await migrate(pool, {
+          migrations: migrations.filter(({ version }) => version <= '0024'),
+        }),
+        { applied: ['0024'], phase: 'expand' },
+      );
       const { rows } = await pool.query(
         `SELECT first_contact_at, paid_on, delivered_on, version, updated_at
          FROM crm.orders WHERE id = 'order-old'`,

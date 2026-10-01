@@ -48,6 +48,9 @@ async function appendConversationStreamEvent(client, runtime, event) {
   );
 }
 
+/** ADR 009: automated messages per Conversation; the last one is the handoff notice. */
+export const AUTOMATION_MESSAGE_CAP = 15;
+
 export class PostgresN8nIntegrationRepository {
   /**
    * @param {{
@@ -57,6 +60,7 @@ export class PostgresN8nIntegrationRepository {
    *   contactLookupKey?: Buffer,
    *   messageEnvelopeKey?: Buffer,
    *   orders?: {projectAgentBriefing(input: {conversationId: string, correlationId: string, briefing: Record<string, unknown>, automationState: string}): Promise<any>} | null,
+   *   automationMessageCap?: number,
    * }} options
    */
   constructor({
@@ -66,6 +70,7 @@ export class PostgresN8nIntegrationRepository {
     contactLookupKey = envelopeKey,
     messageEnvelopeKey = envelopeKey,
     orders = null,
+    automationMessageCap = AUTOMATION_MESSAGE_CAP,
   }) {
     if (
       !database ||
@@ -90,6 +95,12 @@ export class PostgresN8nIntegrationRepository {
     this.contactLookupKey = Buffer.from(contactLookupKey);
     this.messageEnvelopeKey = Buffer.from(messageEnvelopeKey);
     this.orders = orders;
+    if (!Number.isInteger(automationMessageCap) || automationMessageCap < 2) {
+      throw new TypeError(
+        'automationMessageCap must be an integer of at least 2',
+      );
+    }
+    this.automationMessageCap = automationMessageCap;
   }
 
   /** @param {any} input @param {any} runtime */
@@ -454,6 +465,15 @@ export class PostgresN8nIntegrationRepository {
             ? { send_authorized: false }
             : {}),
           ...(previous.handoffId ? { handoff_id: previous.handoffId } : {}),
+          // A replay never authorizes a second notice send.
+          ...('noticeCommandId' in previous
+            ? {
+                notice: {
+                  send_authorized: false,
+                  command_id: previous.noticeCommandId,
+                },
+              }
+            : {}),
         };
       }
 
@@ -541,6 +561,15 @@ export class PostgresN8nIntegrationRepository {
         );
         outcome.handoffId = handoff.id;
         outcome.targetRole = handoff.target_role;
+        if (eventInput.handoff?.notice) {
+          outcome.noticeCommandId = await this.#reserveHandoffNotice(
+            client,
+            eventInput,
+            runtime,
+            conversation,
+            processedAt,
+          );
+        }
       } else if (eventInput.eventType === 'workflow.failed') {
         outcome.failureCode = safeFailureCode(eventInput.failure?.code);
       }
@@ -588,6 +617,14 @@ export class PostgresN8nIntegrationRepository {
           ? { send_authorized: true }
           : {}),
         ...(outcome.handoffId ? { handoff_id: outcome.handoffId } : {}),
+        ...('noticeCommandId' in outcome
+          ? {
+              notice: {
+                send_authorized: outcome.noticeCommandId !== null,
+                command_id: outcome.noticeCommandId,
+              },
+            }
+          : {}),
       };
     });
     if (projectionTarget) {
@@ -624,6 +661,12 @@ export class PostgresN8nIntegrationRepository {
       mode: conversationMode(conversation),
       recent_messages: await this.#recentMessages(client, conversation.id),
       source_revision: Number(conversation.inbound_revision),
+      automation_message_count: await countAutomationMessages(
+        client,
+        conversation.id,
+      ),
+      automation_message_cap: this.automationMessageCap,
+      sellers: await activeSellers(client),
     };
   }
 
@@ -837,6 +880,16 @@ export class PostgresN8nIntegrationRepository {
     }
 
     assertCurrentAutomatedTurn(conversation, input);
+    // The last automated slot belongs to the handoff notice (ADR 009).
+    if (
+      (await countAutomationMessages(client, conversation.id)) >=
+      this.automationMessageCap - 1
+    ) {
+      throw new N8nConflictError(
+        'Automated message cap reached',
+        'AUTOMATION_MESSAGE_CAP',
+      );
+    }
     const type = outboundMessageType(input.message);
     const messageId = runtime.idFactory('message');
     const content = outboundMessageContent(input.message, type);
@@ -889,6 +942,52 @@ export class PostgresN8nIntegrationRepository {
       );
     }
     return { messageId };
+  }
+
+  /**
+   * Reserves the notice that tells the customer a seller will take over, in
+   * the same transaction as the handoff, while the cap still has room.
+   *
+   * @param {Queryable} client @param {any} input @param {any} runtime @param {any} conversation @param {string} now
+   * @returns {Promise<string | null>} the notice command id, or null when the cap is spent
+   */
+  async #reserveHandoffNotice(client, input, runtime, conversation, now) {
+    const notice = input.handoff.notice;
+    if (
+      (await countAutomationMessages(client, conversation.id)) >=
+      this.automationMessageCap
+    ) {
+      return null;
+    }
+    const messageId = runtime.idFactory('message');
+    await client.query(
+      `INSERT INTO crm.messages
+         (id, conversation_id, provider, provider_account_id, command_id,
+          direction, author_kind, author_id, message_type, content_envelope,
+          key_version, status, occurred_at, created_at, automation_epoch,
+          n8n_execution_id)
+       VALUES ($1, $2, $3, $4, $5, 'outbound', 'assistant',
+               'AUTOMATION_EXECUTOR', 'text', $6::jsonb, 1, 'sending', $7, $7,
+               $8, $9)`,
+      [
+        messageId,
+        conversation.id,
+        conversation.provider,
+        conversation.provider_account_id,
+        notice.command_id,
+        JSON.stringify(
+          encryptJson(
+            { text: notice.text },
+            `message:${messageId}`,
+            this.messageEnvelopeKey,
+          ),
+        ),
+        now,
+        input.automationEpoch,
+        input.technical.executionId,
+      ],
+    );
+    return notice.command_id;
   }
 }
 
@@ -1367,4 +1466,39 @@ function iso(value) {
   return value instanceof Date
     ? value.toISOString()
     : new Date(String(value)).toISOString();
+}
+
+/** @param {Queryable} client @param {string} conversationId */
+async function countAutomationMessages(client, conversationId) {
+  const row = (
+    await client.query(
+      `SELECT count(*)::int AS total FROM crm.messages
+       WHERE conversation_id = $1 AND direction = 'outbound'
+         AND author_kind = 'assistant'`,
+      [conversationId],
+    )
+  ).rows[0];
+  return Number(row?.total ?? 0);
+}
+
+/**
+ * Active sellers, first name only: the agent recognises a seller the customer
+ * asks for by name (ADR 009) without seeing anything else about the team.
+ *
+ * @param {Queryable} client
+ */
+async function activeSellers(client) {
+  const rows = (
+    await client.query(
+      `SELECT u.id, split_part(u.name, ' ', 1) AS first_name
+       FROM crm.users AS u
+       JOIN crm.user_functions AS f ON f.user_id = u.id
+       WHERE u.disabled_at IS NULL AND f.function_name = 'Vendedor'
+       ORDER BY u.name, u.id`,
+    )
+  ).rows;
+  return rows.map((/** @type {any} */ row) => ({
+    id: row.id,
+    name: row.first_name,
+  }));
 }

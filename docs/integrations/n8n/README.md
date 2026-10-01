@@ -78,6 +78,10 @@ Eventos aceitos: `message.send.requested`, `message.sent`,
 `message.send.unknown`, `handoff.requested`, `order.intent_confirmed` e
 `workflow.failed`.
 
+O retorno do inbound também traz `automation_message_count` (mensagens do
+agente já reservadas na Conversa), `automation_message_cap` (15) e `sellers`
+(vendedores ativos, só id e primeiro nome), conforme a ADR 009.
+
 Erros usam `application/problem+json`. Replay da mesma chave com o mesmo
 payload devolve o resultado idempotente; a mesma chave com payload diferente
 retorna `409`.
@@ -94,6 +98,20 @@ Somente `send_authorized: true` permite chamar a Meta. Replay sempre devolve
 `send_authorized: false`. Timeout depois da autorização vira
 `message.send.unknown`; não há retry cego. Callbacks tardios de uma reserva já
 aceita podem concluir o estado mesmo após takeover.
+
+### Teto e aviso de transferência (ADR 009, BOT-03)
+
+O agente envia no máximo `automation_message_cap` (15) mensagens por Conversa,
+contadas pelo CRM nas mensagens com autor `assistant`, inclusive envios
+incertos. A última vaga é do aviso de transferência: com 14 mensagens, o CRM
+recusa um `message.send.requested` normal com `409 AUTOMATION_MESSAGE_CAP`.
+
+`handoff.requested` aceita `handoff.notice` (`command_id` e `text`). Na mesma
+transação do handoff, o CRM reserva o aviso como mensagem do agente e responde
+`notice.send_authorized: true`. Replay ou teto já gasto respondem `false`, e o
+handoff acontece mesmo assim. O workflow só chama a Meta com `true` e depois
+registra `message.sent` ou `message.send.unknown` pelo `command_id` do aviso.
+O handoff pelo teto usa o motivo `iteration_limit` (migração 0025).
 
 Takeover e handoff incrementam `automation_epoch`, invalidando decisões ainda
 não reservadas. Status segue a ordem `sent < delivered < read` e nunca regride.
@@ -186,11 +204,10 @@ campos da ficha no pedido `pendente` da conversa:
 - Rascunho simplificado validado: `fae803db-eef0-4074-a7ae-1a6bb786e203`,
   com 42 nós e sem avisos estruturais.
 - O workflow simplificado permanece inativo até credenciais e homologação.
-- Vendedores do piloto: até o CRM devolver a lista no inbound (BOT-03 da RFC
-  006), o nó `Montar contexto da IA (MVP)` lê os primeiros nomes da variável
-  `SILMER_PILOT_SELLERS` do n8n, separados por vírgula. Sem a variável, o pedido
-  por um vendedor pelo nome é tratado como nome fora do CRM. Os nomes não entram
-  no repositório.
+- Vendedores do piloto: o nó `Montar contexto da IA (MVP)` usa a lista
+  `sellers` do inbound. Diante de um CRM sem o BOT-03, ele lê os primeiros nomes
+  da variável `SILMER_PILOT_SELLERS` do n8n, separados por vírgula, e conta o
+  teto pelas mensagens do cliente. Os nomes não entram no repositório.
 - São necessárias duas credenciais Basic distintas: n8n → CRM e CRM → n8n.
 - Segredos não entram em export, repositório, log, chat ou Data Table.
 - Persistência de execuções manuais/sucesso e progresso deve ficar desabilitada;

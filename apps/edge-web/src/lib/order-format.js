@@ -21,12 +21,13 @@ export const PAYMENT_CONDITION_OPTIONS = Object.freeze([
   Object.freeze({ label: 'Cartão de débito', value: 'cartao_debito' }),
 ]);
 
-/** A03: every `reason_code` the CHECK of migration 0013 accepts. */
+/** A03: every `reason_code` the CHECK of migrations 0013 and 0025 accepts. */
 export const HANDOFF_REASON_LABELS = Object.freeze({
   briefing_complete: 'Pré-ficha completa',
   complaint: 'Reclamação',
   customer_requested_human: 'Pediu um vendedor',
   human_requested: 'Pediu um vendedor',
+  iteration_limit: 'Limite de mensagens',
   low_confidence: 'Agente sem confiança',
   negotiation: 'Perguntou o valor',
   price_before_quote: 'Perguntou o valor',

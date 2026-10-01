@@ -434,6 +434,225 @@ if (connectionString) {
       await pool.end();
     }
   });
+
+  test('PostgreSQL caps automated messages and reserves the handoff notice (ADR 009)', async () => {
+    assert.equal(
+      new URL(connectionString).pathname.slice(1),
+      'crm_silmer_test',
+    );
+    const pool = new Pool({ connectionString, max: 4 });
+    const database = {
+      query: pool.query.bind(pool),
+      transaction: (/** @type {(client: any) => Promise<any>} */ work) =>
+        withTransaction(pool, work),
+    };
+    let sequence = 0;
+    const service = createN8nIntegrationService({
+      clock: () => NOW,
+      idFactory: (kind) => `${kind}-cap-${++sequence}`,
+      repository: new PostgresN8nIntegrationRepository({
+        automationMessageCap: 3,
+        database,
+        envelopeKey: Buffer.alloc(32, 81),
+        messageEnvelopeKey: Buffer.alloc(32, 82),
+      }),
+    });
+    /** @param {string} id */
+    const technical = (id) => ({
+      actor: 'AUTOMATION_EXECUTOR',
+      correlationId: `correlation-${id}`,
+      credentialVersion: 'current',
+      executionId: id,
+      idempotencyKey: id,
+      requestId: `request-${id}`,
+      workflowKey: 'whatsapp-mvp',
+      workflowVersion: 'mvp-simple-3',
+    });
+    /** @param {number} turn */
+    const inbound = (turn) =>
+      service.receiveInbound({
+        channel: 'whatsapp',
+        contact: { name: 'Synthetic', wa_id: '5527988887777' },
+        event_id: `wamid.cap.${turn}`,
+        message: {
+          external_id: `wamid.cap.${turn}`,
+          text: `Mensagem ${turn}`,
+          type: 'text',
+        },
+        metadata: { phone_number_id: 'phone-account-cap' },
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        technical: technical(`inbound-cap-${turn}`),
+      });
+    /** @param {any} context @param {number} turn */
+    const reply = (context, turn) =>
+      service.recordEvent({
+        automation_epoch: context.automation_epoch,
+        command_id: `command-cap-${turn}`,
+        conversation_id: context.conversation_id,
+        event_id: `send-cap-${turn}`,
+        event_type: 'message.send.requested',
+        message: { text: `Resposta ${turn}`, type: 'text' },
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        source_revision: context.source_revision,
+        technical: technical(`send-cap-${turn}`),
+      });
+
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+      for (const [id, name, disabled] of [
+        ['user-seller-b', 'Marina Souza', false],
+        ['user-seller-a', 'Edson Lima', false],
+        ['user-seller-gone', 'Antigo Vendedor', true],
+      ]) {
+        await pool.query(
+          `INSERT INTO crm.users (id, email, password_hash, name, disabled_at)
+           VALUES ($1, $1 || '@example.test', '$argon2id$synthetic', $2, $3)`,
+          [id, name, disabled ? NOW : null],
+        );
+        await pool.query(
+          `INSERT INTO crm.user_functions (user_id, function_name)
+           VALUES ($1, 'Vendedor')`,
+          [id],
+        );
+      }
+
+      const first = await inbound(1);
+      assert.equal(first.automation_message_count, 0);
+      assert.equal(first.automation_message_cap, 3);
+      assert.deepEqual(first.sellers, [
+        { id: 'user-seller-a', name: 'Edson' },
+        { id: 'user-seller-b', name: 'Marina' },
+      ]);
+      assert.equal((await reply(first, 1)).send_authorized, true);
+
+      const second = await inbound(2);
+      assert.equal(second.automation_message_count, 1);
+      assert.equal((await reply(second, 2)).send_authorized, true);
+
+      // Two replies used, cap 3: the last slot belongs to the handoff notice.
+      const third = await inbound(3);
+      assert.equal(third.automation_message_count, 2);
+      await assert.rejects(reply(third, 3), (error) => {
+        assert.equal(/** @type {any} */ (error).code, 'AUTOMATION_MESSAGE_CAP');
+        return true;
+      });
+
+      const handoffEvent = {
+        automation_epoch: third.automation_epoch,
+        conversation_id: third.conversation_id,
+        event_id: 'handoff-cap',
+        event_type: 'handoff.requested',
+        handoff: {
+          notice: {
+            command_id: 'command-cap-notice',
+            text: 'Vou encaminhar seu atendimento a um vendedor da Silmer.',
+          },
+          reason: 'iteration_limit',
+          summary: 'Motivo: Limite de mensagens.',
+        },
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        source_revision: third.source_revision,
+        technical: technical('handoff-cap'),
+      };
+      const handoff = await service.recordEvent(handoffEvent);
+      assert.match(handoff.handoff_id, /^handoff-cap-/u);
+      assert.deepEqual(handoff.notice, {
+        command_id: 'command-cap-notice',
+        send_authorized: true,
+      });
+      const replay = await service.recordEvent(handoffEvent);
+      assert.equal(replay.duplicate, true);
+      assert.deepEqual(replay.notice, {
+        command_id: 'command-cap-notice',
+        send_authorized: false,
+      });
+
+      await service.recordEvent({
+        command_id: 'command-cap-notice',
+        conversation_id: third.conversation_id,
+        event_id: 'sent-cap-notice',
+        event_type: 'message.sent',
+        external_message_id: 'wamid.cap.notice',
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        technical: technical('sent-cap-notice'),
+      });
+      const stored = await pool.query(
+        `SELECT handoff.reason_code, message.status, message.author_kind,
+                conversation.automation_state
+         FROM crm.handoffs AS handoff
+         JOIN crm.conversations AS conversation
+           ON conversation.id = handoff.conversation_id
+         JOIN crm.messages AS message
+           ON message.conversation_id = conversation.id
+          AND message.command_id = 'command-cap-notice'
+         WHERE handoff.id = $1`,
+        [handoff.handoff_id],
+      );
+      assert.deepEqual(stored.rows[0], {
+        author_kind: 'assistant',
+        automation_state: 'human',
+        reason_code: 'iteration_limit',
+        status: 'sent',
+      });
+      assert.equal((await inbound(4)).automation_message_count, 3);
+
+      // With the cap already spent, a later handoff still happens but sends
+      // no notice.
+      await pool.query(
+        `UPDATE crm.handoffs SET status = 'resolved',
+                assigned_user_id = 'user-seller-a', resolved_at = $2
+         WHERE id = $1`,
+        [handoff.handoff_id, NOW],
+      );
+      await pool.query(
+        `UPDATE crm.conversations SET automation_state = 'assistant'
+         WHERE id = $1`,
+        [third.conversation_id],
+      );
+      const fifth = await inbound(5);
+      const spent = await service.recordEvent({
+        ...handoffEvent,
+        automation_epoch: fifth.automation_epoch,
+        event_id: 'handoff-cap-spent',
+        handoff: {
+          notice: { command_id: 'command-cap-notice-2', text: 'Aviso' },
+          reason: 'price_before_quote',
+          summary: 'Motivo: Perguntou o valor.',
+        },
+        source_revision: fifth.source_revision,
+        technical: technical('handoff-cap-spent'),
+      });
+      assert.match(spent.handoff_id, /^handoff-cap-/u);
+      assert.deepEqual(spent.notice, {
+        command_id: null,
+        send_authorized: false,
+      });
+      assert.equal((await inbound(6)).automation_message_count, 3);
+
+      await assert.rejects(
+        service.recordEvent({
+          ...handoffEvent,
+          event_id: 'handoff-bad-notice',
+          handoff: {
+            notice: { command_id: 'x', text: '  ' },
+            reason: 'urgency',
+          },
+          technical: technical('handoff-bad-notice'),
+        }),
+        /handoff\.notice\.text/u,
+      );
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
 }
 
 /** @param {Promise<any>[]} promises */

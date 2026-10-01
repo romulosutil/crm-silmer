@@ -298,6 +298,20 @@ function validateEventShape(input) {
   if (input.eventType === 'handoff.requested' && !input.handoff) {
     throw new N8nValidationError('handoff.requested requires handoff');
   }
+  if (input.handoff?.notice !== undefined) {
+    const notice = input.handoff.notice;
+    if (!notice || typeof notice !== 'object' || Array.isArray(notice)) {
+      throw new N8nValidationError('handoff.notice must be an object');
+    }
+    identifier(notice.command_id, 'handoff.notice.command_id', 512);
+    if (
+      typeof notice.text !== 'string' ||
+      notice.text.trim().length < 1 ||
+      notice.text.length > 4096
+    ) {
+      throw new N8nValidationError('handoff.notice.text is invalid');
+    }
+  }
   if (
     ['message.delivered', 'message.failed', 'message.read'].includes(
       input.eventType,

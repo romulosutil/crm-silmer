@@ -1,6 +1,7 @@
 # ADR 009 — Regras de transferência e teto do bot no n8n
 
-Status: aceito
+Status: aceito; o trecho do item 7 sobre `order_intent` foi substituído pela
+[ADR 010](010-intencao-de-pedido-sem-pergunta-e-tom-do-bot.md) em 01/10/2026.
 
 Data: 30/09/2026
 

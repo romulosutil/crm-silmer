@@ -4,7 +4,7 @@ import { format } from 'prettier';
 
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
-export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-6';
+export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-7';
 export const LOCAL_WORKFLOW_NAME =
   'LOCAL | Silmer | Fluxo completo sem WhatsApp';
 

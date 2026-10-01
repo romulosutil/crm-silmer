@@ -32,11 +32,10 @@
     Negócio ativo, `terminal_at` permanece nulo e o ator técnico pode continuar
     usando os endpoints canônicos de campos e transições. `Sem lead`, Fechado
     e Perdido continuam sendo os únicos encerramentos oficiais aplicáveis.
-20. Handoff automático começa sem pessoa responsável e declara
-    `target_role`. `briefing_complete` e `negotiation` vão para Vendedor;
-    `human_requested`, `complaint`, `urgency`, `low_confidence` e
-    `unsupported` vão para Atendimento. A atribuição ocorre atomicamente para
-    uma pessoa ativa com papel compatível.
+20. Handoff automático começa sem pessoa responsável e todos os motivos
+    declaram `target_role` Vendedor; a função Atendimento não recebe mais
+    handoffs (ADR 009). A atribuição ocorre atomicamente para uma pessoa ativa
+    com papel compatível.
 
 ## Regras técnicas já impostas
 

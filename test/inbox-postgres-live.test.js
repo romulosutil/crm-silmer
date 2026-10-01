@@ -40,6 +40,24 @@ function databaseFor(pool) {
   };
 }
 
+/**
+ * The attendant must exist as an operator: taking a conversation over writes
+ * its id to conversations.assigned_user_id, which references crm.users.
+ * @param {Pool} pool
+ */
+async function seedAttendant(pool) {
+  await pool.query(
+    `INSERT INTO crm.users (id, email, password_hash, name)
+     VALUES ($1, $2, '$argon2id$synthetic', 'Atendente Sintética')`,
+    [ATTENDANT.id, `${ATTENDANT.id}@example.test`],
+  );
+  await pool.query(
+    `INSERT INTO crm.user_functions (user_id, function_name)
+     VALUES ($1, $2)`,
+    [ATTENDANT.id, ATTENDANT.functionName],
+  );
+}
+
 /** @param {Pool} pool @param {{outboundMessageOutbox?: {enqueueChannelMessage: (input: any, context: {transaction: any}) => Promise<void>}}} [options] */
 function servicesFor(pool, options = {}) {
   const database = databaseFor(pool);
@@ -301,6 +319,7 @@ if (connectionString) {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
       await migrate(pool, { migrations: await loadMigrations() });
+      await seedAttendant(pool);
       const { contacts, inbox } = servicesFor(pool);
       const identity = await contacts.resolveInboundIdentity(
         identityInput(runId),
@@ -382,6 +401,7 @@ if (connectionString) {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
       await migrate(pool, { migrations: await loadMigrations() });
+      await seedAttendant(pool);
       const { contacts, inbox } = servicesFor(pool, {
         outboundMessageOutbox: {
           /** @param {any} _input @param {{transaction: any}} context */

@@ -47,11 +47,22 @@ branca!" e o bot responde "Que legal, e quer estampada onde?".
    pedido, o bot segue o assunto dele. Só pede o nome de novo, uma única vez,
    quando o resto da ficha estiver completo. O nó de contexto informa ao modelo
    se o nome já foi pedido.
+8. **Pergunta pulada não se repete.** Se o cliente pula qualquer pergunta mas
+   acrescenta algo à ficha, a resposta seguinte não insiste nela: o estado
+   `skipped` avisa o modelo para perguntar outro campo e voltar à pergunta
+   pulada mais tarde. Uma sugestão aceita ("pode ser esse") é gravada.
+9. **Linguagem simples.** O bot fala com quem não entende de confecção e só
+   quer uma camisa bonita: "tipo de camisa", "tecido", "quantas de cada
+   tamanho", "estampa", "onde vai a estampa". Nomes técnicos (silk,
+   sublimação, DTF, PV, piquet, fio, malha, grade) só aparecem se o cliente
+   usar primeiro. O bot pergunta pelo resultado que o cliente quer ("uma logo
+   simples ou algo bem colorido, com foto?"), e o vendedor define a técnica.
 
 ## Consequências
 
-- O estado novo `ignored` fica no próprio `briefing_status`
-  (`[quote_]ignored`), sem campo novo no contrato nem migração no CRM.
+- Os estados novos `ignored` e `skipped` ficam no próprio `briefing_status`
+  (`[quote_]ignored`, `[quote_]skipped`), sem campo novo no contrato nem
+  migração no CRM.
 - O workflow passa a `mvp-simple-6` (DEV `dev-mvp-simple-7`).
 - Cliente que só tira dúvidas é transferido depois de ignorar a mesma pergunta
   duas vezes, em vez de gastar o teto.

@@ -6,7 +6,7 @@
 | **Impacto** | Alto: conversa, catálogo, contrato n8n ↔ CRM e controle de envios |
 | **Responsável pela proposta** | Tech Lead |
 | **Aprovadores** | Responsável de produto/comercial da Silmer e Tech Lead; o catálogo depende também da aprovação prevista na RFC 005 |
-| **Última atualização** | 01/10/2026 — decisões do PO D17–D22 (sem pergunta de orçamento nem de nome do pedido, opções com "outra", tom dos avisos, pergunta ignorada duas vezes, ficha por mensagem) |
+| **Última atualização** | 01/10/2026 — decisões do PO D17–D23 (sem pergunta de orçamento nem de nome do pedido, opções com "outra", tom dos avisos, pergunta ignorada duas vezes, ficha por mensagem, linguagem simples) |
 | **Rastreabilidade** | `AGT-01`, `AGT-03`, `AGT-05`, `AGT-06`, `PCL-01`, `PAG-01`–`03`, `PFI-03`–`04`, `PFI-07`, `PFI-14`, `T21`–`23`, `T31`, `T40`; [RFC 005](005-catalogo-de-opcoes-do-pedido.md), [ADR 003](../adr/003-adotar-integracao-n8n-mvp-simples.md), [ADR 006](../adr/006-pedido-dois-status.md) |
 
 ## 1. Objetivo e ponto de partida
@@ -42,7 +42,7 @@ O PO (Rômulo Sutil Corrêa) decidiu os pontos abaixo. Eles prevalecem sobre a v
 
 ### 1.2 Decisões do produto em 01/10/2026
 
-O PO revisou conversas do DEV e decidiu os pontos abaixo, registrados na [ADR 010](../adr/010-intencao-de-pedido-sem-pergunta-e-tom-do-bot.md) (D17–D20) e na [ADR 011](../adr/011-pergunta-ignorada-e-ficha-por-mensagem.md) (D21–D22).
+O PO revisou conversas do DEV e decidiu os pontos abaixo, registrados na [ADR 010](../adr/010-intencao-de-pedido-sem-pergunta-e-tom-do-bot.md) (D17–D20) e na [ADR 011](../adr/011-pergunta-ignorada-e-ficha-por-mensagem.md) (D21–D23).
 
 | # | Decisão | Efeito nesta RFC |
 | --- | --- | --- |
@@ -51,7 +51,8 @@ O PO revisou conversas do DEV e decidiu os pontos abaixo, registrados na [ADR 01
 | D19 | Perguntas com opções citam as opções comuns, aceitam mais de uma escolha e terminam sempre com "ou outra". | Vale para modelagem, malha, cor, técnica e local da estampa (item 4 da seção 3.1). |
 | D20 | Os avisos de transferência são acolhedores, sem gíria e sem formalidade excessiva. | Textos fixos do nó de decisão revistos; todos dizem que um vendedor continua na mesma conversa. |
 | D21 | Pergunta ignorada duas vezes transfere. Ignorar é não responder à pergunta pendente nem acrescentar nada à ficha. | Estende o D4: duas faltas na mesma pergunta, falhas ou ignoradas, transferem com `low_confidence`. Pergunta sobre o próprio campo não conta. |
-| D22 | Toda mensagem que acrescenta algo à ficha, mesmo avulsa, é gravada; o bot comenta de forma positiva e emenda a próxima pergunta na mesma frase ("Que legal, e quer estampada onde?"). | A próxima pergunta segue, de preferência, o que o cliente acabou de dizer (item 4 da seção 3.1). Se o cliente pula o nome, o bot só volta a pedi-lo, uma vez, com o resto da ficha completo (item 2 da seção 3.1). |
+| D22 | Toda mensagem que acrescenta algo à ficha, mesmo avulsa, é gravada; o bot comenta de forma positiva e emenda a próxima pergunta na mesma frase ("Que legal, e quer estampada onde?"). | A próxima pergunta segue, de preferência, o que o cliente acabou de dizer (item 4 da seção 3.1). Se o cliente pula o nome, o bot só volta a pedi-lo, uma vez, com o resto da ficha completo (item 2 da seção 3.1). Qualquer pergunta pulada com novidade na ficha não se repete na mensagem seguinte. |
+| D23 | Linguagem simples, para quem não entende de confecção e só quer uma camisa bonita. | Sem termos técnicos (silk, sublimação, DTF, PV, malha, grade, modelagem) a menos que o cliente use; o bot pergunta pelo resultado e o vendedor define a técnica (item 5 da seção 3.1). |
 
 ## 2. Referências de mercado e custo
 
@@ -176,6 +177,6 @@ Pendências fechadas pelo PO em 30/09/2026: vendedor pedido vai para a fila (D9)
 
 **Implementação (30/09/2026).** O BOT-03 está na romulosutil/crm-silmer#111: o CRM conta as mensagens do agente, recusa a reserva normal quando só sobra a vaga do aviso, reserva o aviso junto do handoff, devolve contador, teto e vendedores no inbound e ganha o motivo `iteration_limit` (migração 0025). O workflow (`mvp-simple-4`) usa esses dados e, diante de um CRM sem o BOT-03, volta a contar mensagens do cliente, a ler `SILMER_PILOT_SELLERS` e a gravar o teto como `low_confidence`.
 
-**Implementação (01/10/2026).** D17–D20 estão no workflow `mvp-simple-5` (DEV `dev-mvp-simple-6`), na romulosutil/crm-silmer#113; D21–D22, no `mvp-simple-6` (DEV `dev-mvp-simple-7`). Nenhuma das duas muda o contrato com o CRM.
+**Implementação (01/10/2026).** D17–D20 estão no workflow `mvp-simple-5` (DEV `dev-mvp-simple-6`), na romulosutil/crm-silmer#113; D21–D23, no `mvp-simple-6` (DEV `dev-mvp-simple-7`). Nenhuma das duas muda o contrato com o CRM.
 
 **Resultado:** decidida em 30/09/2026 e registrada na [ADR 009](../adr/009-regras-de-transferencia-e-teto-do-bot.md). Esta RFC não aprova catálogo nem autoriza publicação; o catálogo segue a RFC 005 e a publicação depende do BOT-03 e do gate da T40.

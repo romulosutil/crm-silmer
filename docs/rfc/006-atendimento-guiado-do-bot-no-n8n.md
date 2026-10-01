@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 | --- | --- |
-| **Status** | DECIDIDA — decisões de produto de 30/09/2026 na seção 1.1 e [ADR 009](../adr/009-regras-de-transferencia-e-teto-do-bot.md); BOT-03 implementado em romulosutil/crm-silmer#111; publicação pendente da T40 |
+| **Status** | DECIDIDA — decisões de produto de 30/09/2026 na seção 1.1 e [ADR 009](../adr/009-regras-de-transferencia-e-teto-do-bot.md); de 01/10/2026 na seção 1.2 e [ADR 010](../adr/010-intencao-de-pedido-sem-pergunta-e-tom-do-bot.md); BOT-03 implementado em romulosutil/crm-silmer#111; publicação pendente da T40 |
 | **Impacto** | Alto: conversa, catálogo, contrato n8n ↔ CRM e controle de envios |
 | **Responsável pela proposta** | Tech Lead |
 | **Aprovadores** | Responsável de produto/comercial da Silmer e Tech Lead; o catálogo depende também da aprovação prevista na RFC 005 |
-| **Última atualização** | 30/09/2026 — decisões do PO (D1–D16), pendências da seção 7 fechadas, BOT-03 implementado |
+| **Última atualização** | 01/10/2026 — decisões do PO D17–D20 (sem pergunta de orçamento nem de nome do pedido, opções com "outra", tom dos avisos) |
 | **Rastreabilidade** | `AGT-01`, `AGT-03`, `AGT-05`, `AGT-06`, `PCL-01`, `PAG-01`–`03`, `PFI-03`–`04`, `PFI-07`, `PFI-14`, `T21`–`23`, `T31`, `T40`; [RFC 005](005-catalogo-de-opcoes-do-pedido.md), [ADR 003](../adr/003-adotar-integracao-n8n-mvp-simples.md), [ADR 006](../adr/006-pedido-dois-status.md) |
 
 ## 1. Objetivo e ponto de partida
@@ -40,6 +40,17 @@ O PO (Rômulo Sutil Corrêa) decidiu os pontos abaixo. Eles prevalecem sobre a v
 | D15 | A retirada é sempre na loja da Silmer. | O bot não pergunta o local; `pickup_location` = "Loja da Silmer". |
 | D16 | Cliente em outro idioma e qualquer reclamação, mesmo leve, transferem. | Motivos `unsupported` e `complaint`. |
 
+### 1.2 Decisões do produto em 01/10/2026
+
+O PO revisou conversas do DEV e decidiu os pontos abaixo, registrados na [ADR 010](../adr/010-intencao-de-pedido-sem-pergunta-e-tom-do-bot.md).
+
+| # | Decisão | Efeito nesta RFC |
+| --- | --- | --- |
+| D17 | O bot não pergunta se pode montar o pedido ou o orçamento; segue a conversa. A pré-ficha completa transfere direto. | Substitui a confirmação do item 3 da seção 3.1: a intenção é identificada pelo agente quando o cliente descreve o que quer, ou pela pré-ficha completa. |
+| D18 | O bot não pergunta o nome do pedido. | `order_name` só é gravado quando o cliente cita evento, empresa, time ou turma e sai dos campos exigidos para `briefing_complete`. |
+| D19 | Perguntas com opções citam as opções comuns, aceitam mais de uma escolha e terminam sempre com "ou outra". | Vale para modelagem, malha, cor, técnica e local da estampa (item 4 da seção 3.1). |
+| D20 | Os avisos de transferência são acolhedores, sem gíria e sem formalidade excessiva. | Textos fixos do nó de decisão revistos; todos dizem que um vendedor continua na mesma conversa. |
+
 ## 2. Referências de mercado e custo
 
 - A [respond.io](https://respond.io/help/ai-agent-actions/ai-agent-action-update-contact-fields) recomenda coletar dados de qualificação em campos específicos e usar fontes de conhecimento para responder sobre produtos. Sua [ação de atribuição](https://respond.io/help/ai-agent-actions/ai-agent-action-assign-to-agent-or-team) orienta cessar as respostas do agente após transferir a conversa.
@@ -53,7 +64,7 @@ O PO (Rômulo Sutil Corrêa) decidiu os pontos abaixo. Eles prevalecem sobre a v
 
 1. Ler `recent_messages`, briefing, Contato, Pedido pendente, vendedores ativos e catálogo aprovado retornados pelo CRM. Avaliar os gatilhos da seção 3.3 **antes** de continuar a coleta; quando um deles dispara, avisar e transferir, sem perguntas adicionais.
 2. Na primeira resposta útil, apresentar-se como assistente virtual, pedir o **nome pelo qual a pessoa deseja ser cadastrada** e descobrir o que deseja encomendar. O nome de perfil do WhatsApp serve como pista, nunca como confirmação do cadastro. Não pedir novamente se `customer_name` já foi fornecido pelo cliente ou se existe nome humano validado.
-3. Confirmar intenção de pedir orçamento sem transformar interesse genérico em pedido. Só após confirmação enviar `order.intent_confirmed`; o CRM cria ou reutiliza um `pendente`. Se o evento falhar, registrar a falha e não afirmar ao cliente que o pedido foi criado.
+3. Identificar a intenção de compra sem perguntar ao cliente (D17) e sem transformar interesse genérico em pedido: o cliente diz que quer fazer, encomendar ou orçar peças, ou a pré-ficha fica completa. Só então enviar `order.intent_confirmed`; o CRM cria ou reutiliza um `pendente`. Se o evento falhar, registrar a falha e não afirmar ao cliente que o pedido foi criado.
 4. Extrair em cada resposta todos os fatos explícitos, inclusive correções fora de ordem. Perguntar pelo próximo grupo de informações de maior valor, com uma pergunta principal e, quando natural, até duas relacionadas. Ordem sugerida: peça/item e quantidade; modelo e malha/tecido; cores e grade; arte e aplicação; data desejada e logística. A necessidade real é calculada por item e pela modalidade de entrega; o cliente pode antecipar qualquer campo.
 5. **Sugestões.** Antes da tabela de opções (D5 e D7), o bot pode fazer sugestões rasas a partir de conhecimento geral de estamparia: duas ou três opções no máximo, cada uma com o motivo em poucas palavras. Exemplos: para corrida, malha leve de poliéster, do tipo dry fit; arte com foto ou degradê costuma pedir sublimação ou DTF; sublimação exige tecido de poliéster claro. Sugere no máximo uma vez por assunto, aceita a escolha do cliente sem insistir e nunca afirma que a Silmer trabalha com a opção, nem fala de preço, prazo, estoque ou viabilidade; nesses pontos, "o vendedor confirma". Grava o termo literal do cliente, sem convertê-lo em opção comercial. Depois da tabela (BOT-01), oferecer somente opções aprovadas e relevantes à peça e ao que o cliente já disse, com descrição simples e sem prometer estoque, compatibilidade, preço ou prazo. Uma opção desconhecida, ambígua ou incompatível vira pendência explícita para o vendedor; nunca é normalizada silenciosamente.
 6. Seguir coletando até `briefing_complete`, um gatilho da seção 3.3 ou o teto da seção 3.2. O handoff antecipado por informação suficiente (`briefing_sufficient`) da versão anterior foi descartado (D11), porque o objetivo do PO é que o bot preencha a maior parte da Ficha. Quando todos os campos aplicáveis estiverem preenchidos, manter o motivo atual `briefing_complete`.
@@ -162,5 +173,7 @@ Roteiro mínimo para o workflow DEV. Cada conversa verifica o motivo do handoff,
 Pendências fechadas pelo PO em 30/09/2026: vendedor pedido vai para a fila (D9); nome fora do CRM transfere na segunda vez (D10); sem `briefing_sufficient` (D11); aviso junto do handoff no mesmo `handoff.requested`, conforme a ADR 009.
 
 **Implementação (30/09/2026).** O BOT-03 está na romulosutil/crm-silmer#111: o CRM conta as mensagens do agente, recusa a reserva normal quando só sobra a vaga do aviso, reserva o aviso junto do handoff, devolve contador, teto e vendedores no inbound e ganha o motivo `iteration_limit` (migração 0025). O workflow (`mvp-simple-4`) usa esses dados e, diante de um CRM sem o BOT-03, volta a contar mensagens do cliente, a ler `SILMER_PILOT_SELLERS` e a gravar o teto como `low_confidence`.
+
+**Implementação (01/10/2026).** D17–D20 estão no workflow `mvp-simple-5` (DEV `dev-mvp-simple-6`), sem mudança no contrato com o CRM.
 
 **Resultado:** decidida em 30/09/2026 e registrada na [ADR 009](../adr/009-regras-de-transferencia-e-teto-do-bot.md). Esta RFC não aprova catálogo nem autoriza publicação; o catálogo segue a RFC 005 e a publicação depende do BOT-03 e do gate da T40.

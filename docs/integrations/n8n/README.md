@@ -123,8 +123,10 @@ um `briefing_patch` junto de `message.send.requested` ou `handoff.requested`;
 nulos são ignorados. Preço, pagamento, etapa e outros campos oficiais não são
 aceitos nesse patch.
 
-Inbound não cria Pedido. Quando o cliente confirma que quer orçamento, o
-workflow emite `order.intent_confirmed` (ver "Pedido criado pelo agente").
+Inbound não cria Pedido. Quando o agente identifica a intenção de compra (o
+cliente descreve as peças que quer ou completa a pré-ficha), o workflow emite
+`order.intent_confirmed` (ver "Pedido criado pelo agente"). O bot não pergunta
+se pode montar o orçamento nem o nome do pedido (ADR 010).
 `convertida_em_lead` encerra a triagem, não a Conversa; ela só termina por
 `Sem lead`, `Fechado` ou `Perdido` conforme as regras do domínio.
 
@@ -136,7 +138,7 @@ conforme a ADR 009.
 
 ### Evento `order.intent_confirmed`
 
-Enviado em `POST /api/v1/integrations/n8n/events` quando o cliente confirma a
+Enviado em `POST /api/v1/integrations/n8n/events` quando o agente identifica a
 intenção de compra. Usa os mesmos cabeçalhos dos demais eventos:
 `Authorization: Basic`, `Idempotency-Key`, `X-Correlation-Id`,
 `X-Silmer-Workflow-Key`, `X-Silmer-Workflow-Version` e `X-Silmer-Execution-Id`.

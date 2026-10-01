@@ -528,7 +528,6 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
 
   const complete = {
     customer_name: 'Ana',
-    order_name: 'Festa',
     product_type: 'camiseta',
     product_model: 'tradicional',
     quantity: 10,
@@ -544,18 +543,18 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
     delivery_mode: 'retirada',
     pickup_location: 'loja da Silmer',
   };
-  const unconfirmed = decide({ briefing_patch: complete });
+  const done = decide({ briefing_patch: complete });
   assert.equal(
-    unconfirmed.handoff_required,
-    false,
-    'a complete briefing waits for the quote confirmation that creates the order',
-  );
-  assert.equal(unconfirmed.briefing_patch.next_required_field, 'order_intent');
-  assert.match(unconfirmed.reply_text, /pedido de orçamento/u);
-  assert.equal(
-    decide({ briefing_patch: complete, order_intent_confirmed: true }).trigger,
+    done.trigger,
     'briefing_complete',
+    'a complete briefing hands off without asking to build the quote',
   );
+  assert.equal(
+    done.order_intent_confirmed,
+    true,
+    'a complete briefing is purchase intent, so the pending order is created',
+  );
+  assert.doesNotMatch(done.reply_text, /\?/u);
   assert.equal(
     decide({ briefing_patch: complete }, { turn: 15 }).trigger,
     'briefing_complete',
@@ -715,4 +714,116 @@ test('decision normalizer applies the PO decisions of 30/09 on top of BOT-03', a
   );
   assert.equal(english.trigger, 'foreign_language');
   assert.equal(english.handoff_reason, 'unsupported');
+});
+
+test('the bot neither asks to build the quote nor asks the order name (PO, 01/10)', async () => {
+  const byName = await workflowNodesByName();
+  const prompt = byName.get('Atendente virtual Silmer (MVP)').parameters.options
+    .systemMessage;
+  assert.match(
+    prompt,
+    /Nunca pergunte se pode montar o pedido ou o orçamento/u,
+  );
+  assert.match(prompt, /Nunca pergunte o nome do pedido/u);
+  assert.match(
+    prompt,
+    /pode escolher mais de uma e termine sempre com "ou outra"/u,
+  );
+  assert.doesNotMatch(prompt, /asked_field "order_intent"/u);
+
+  const schema = JSON.parse(
+    byName.get('Validar saída do MVP').parameters.inputSchema,
+  );
+  assert.equal(
+    schema.properties.asked_field.enum.includes('order_intent'),
+    false,
+  );
+  assert.equal(
+    schema.properties.asked_field.enum.includes('order_name'),
+    false,
+  );
+
+  const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
+  /** @param {any} output @param {any} [context] */
+  const decide = (output, context = {}) =>
+    runCodeNode(
+      jsCode,
+      {
+        output: {
+          reply_text: 'Resposta da IA',
+          briefing_patch: {},
+          answer_status: 'none',
+          person_request: 'none',
+          ...output,
+        },
+      },
+      {
+        'Montar contexto da IA (MVP)': {
+          conversation_id: 'conversation-1',
+          automation_epoch: 1,
+          source_revision: 3,
+          briefing: {},
+          recent_messages: [],
+          current_text: '',
+          profile_name: '',
+          sellers: ['Marina'],
+          message_cap: 15,
+          turn: 3,
+          crm_counter: true,
+          ...context,
+        },
+      },
+    );
+
+  const start = decide({ asked_field: 'order_name' });
+  assert.equal(start.missing_briefing_fields.includes('order_name'), false);
+  assert.notEqual(start.briefing_patch.next_required_field, 'order_name');
+  assert.equal(
+    decide({ briefing_patch: { order_name: 'EC Unidos da Várzea' } })
+      .briefing_patch.order_name,
+    'EC Unidos da Várzea',
+    'an order name the customer volunteers is still kept',
+  );
+
+  const intent = decide(
+    { order_intent_confirmed: true },
+    { current_text: 'quero 30 camisetas para o evento da empresa' },
+  );
+  assert.equal(intent.order_intent_confirmed, true);
+  assert.equal(intent.handoff_required, false);
+  assert.equal(intent.briefing_patch.briefing_status, 'quote_collecting');
+
+  const legacy = decide(
+    { answer_status: 'unclear' },
+    {
+      briefing: {
+        next_required_field: 'order_intent',
+        briefing_status: 'clarifying',
+      },
+    },
+  );
+  assert.equal(
+    legacy.handoff_required,
+    false,
+    'a conversation left on the retired quote question has nothing pending',
+  );
+
+  const notices = [
+    decide({}, { current_text: 'quanto custa?' }),
+    decide(
+      { person_request: 'generic' },
+      { current_text: 'quero falar com alguém' },
+    ),
+    decide(
+      { person_request: 'named', requested_person_name: 'Marina' },
+      { current_text: 'cadê a Marina?' },
+    ),
+    decide({ handoff_required: true, handoff_reason: 'complaint' }),
+    decide({}, { turn: 15 }),
+  ].map((decision) => decision.reply_text);
+  for (const text of notices) {
+    assert.match(text, /vendedor|equipe/u);
+    assert.match(text, /aqui mesmo/u);
+    assert.doesNotMatch(text, /Quem passa|chamando alguém|Já estou chamando/u);
+  }
 });

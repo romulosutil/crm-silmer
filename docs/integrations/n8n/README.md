@@ -106,9 +106,9 @@ workflow emite `order.intent_confirmed` (ver "Pedido criado pelo agente").
 `convertida_em_lead` encerra a triagem, não a Conversa; ela só termina por
 `Sem lead`, `Fechado` ou `Perdido` conforme as regras do domínio.
 
-Handoffs de negociação ou briefing completo vão para Vendedor. Pedido humano,
-reclamação, urgência, baixa confiança e conteúdo não suportado vão para
-Atendimento. Não há mensagem automática de confirmação no primeiro corte.
+Todo handoff vai para Vendedor (ADR 009). O aviso ao cliente de que um
+vendedor vai continuar vai junto do `handoff.requested` (`handoff.notice`),
+conforme a ADR 009.
 
 ## Pedido criado pelo agente
 

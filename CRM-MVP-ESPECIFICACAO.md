@@ -139,10 +139,9 @@ O agente interrompe e abre uma fila humana por papel quando:
 - o cliente insiste em preço, promessa de prazo ou mínimo antes de concluir a jornada necessária;
 - o agente encontra um bloqueio real que não consegue resolver com os dados, catálogo e regras autorizadas, depois de registrar o motivo.
 
-`briefing_complete` e `negotiation` direcionam para Vendedor; solicitação
-humana, reclamação, urgência, baixa confiança e caso não suportado direcionam
-para Atendimento. O handoff nasce sem responsável e a primeira pessoa elegível
-o reivindica atomicamente.
+Todos os motivos de handoff direcionam para Vendedor; a função Atendimento
+não recebe mais handoffs (ADR 009). O handoff nasce sem responsável e a
+primeira pessoa elegível o reivindica atomicamente.
 
 O agente nunca inventa preço, prazo, disponibilidade, condição de pagamento ou
 regra de produção. Após a qualificação, comunica somente uma versão vigente de

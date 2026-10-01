@@ -15,6 +15,9 @@ const SERVICE_LABELS = Object.freeze({
   artwork_locations: 'Locais da arte',
   artwork_status: 'Arte',
   city_or_postal_code: 'Cidade ou CEP',
+  // ADR 012: the collar joins the item model; it lands here only when the
+  // agent sent it in a shape the ficha does not read.
+  collar: 'Gola',
   colors: 'Cores informadas',
   customizations: 'Personalizações',
   delivery_address: 'Endereço de entrega',

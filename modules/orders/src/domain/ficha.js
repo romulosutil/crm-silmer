@@ -255,6 +255,46 @@ function briefingGrade(value) {
   return grade;
 }
 
+/** @param {string} text */
+function foldText(text) {
+  return text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLocaleLowerCase('pt-BR');
+}
+
+/**
+ * True when `phrase` appears in `text` as whole words, ignoring case and
+ * accents, so a short collar like "V" is not found inside "verão".
+ *
+ * @param {string} text @param {string} phrase
+ */
+function containsWords(text, phrase) {
+  const escaped = foldText(phrase).replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+  return new RegExp(
+    `(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`,
+    'u',
+  ).test(foldText(text));
+}
+
+/**
+ * ADR 012: the collar is its own briefing field, but a ficha item has no
+ * collar field (`vies_gola` is the trim the seller sets), so the collar joins
+ * the model text ("camiseta comum, gola V"). A collar that does not say
+ * "gola" gets the label ("camiseta comum, gola: V", "gola: Definir com o
+ * vendedor"); a model that already names the collar is kept as it is.
+ *
+ * @param {string|undefined} model
+ * @param {string|undefined} collar
+ * @returns {string|undefined}
+ */
+function withCollar(model, collar) {
+  if (!collar) return model;
+  if (model && containsWords(model, collar)) return model;
+  const labelled = containsWords(collar, 'gola') ? collar : `gola: ${collar}`;
+  return model ? `${model}, ${labelled}` : labelled;
+}
+
 /**
  * Maps the agent pre-ficha onto the printed sections without guessing: a fact
  * only lands in a ficha field when its shape leaves no doubt. Colours are not
@@ -283,13 +323,20 @@ export function briefingToFicha(briefing) {
   const nome = take('order_name', briefingText) || null;
   const aplicacao = take('artwork_technique', briefingText) || null;
   const tipo = take('product_type', briefingText);
-  const modelo = take('product_model', briefingText);
+  const modelo = withCollar(
+    take('product_model', briefingText),
+    take('collar', briefingText),
+  );
   const malhas = take('fabrics', briefingList);
   const grade = take('sizes', briefingGrade);
 
-  const hasItem = ['product_type', 'product_model', 'fabrics', 'sizes'].some(
-    (key) => source[key] !== undefined && source[key] !== null,
-  );
+  const hasItem = [
+    'product_type',
+    'product_model',
+    'collar',
+    'fabrics',
+    'sizes',
+  ].some((key) => source[key] !== undefined && source[key] !== null);
   /** @type {FichaItem[]} */
   const items = hasItem
     ? [
@@ -332,7 +379,8 @@ export function briefingToFicha(briefing) {
 /**
  * PAG-01: re-applies the agent's cumulative pre-ficha onto a pending ficha.
  * Only what the agent collects moves — event name, technique and the first
- * item's type, model, fabrics and grade — and only when the briefing has it.
+ * item's type, model (with the collar), fabrics and grade — and only when the
+ * briefing has it.
  * Colours, the confirmed delivery date, observations and any further items
  * are the seller's and stay as they are.
  *

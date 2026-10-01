@@ -7,6 +7,7 @@ import {
   briefingToFicha,
   itemTotal,
   orderTotal,
+  projectBriefingOntoFicha,
   validateItems,
   validateObservations,
   validateSummary,
@@ -265,4 +266,81 @@ test('keeps unparseable sizes as service data and an empty briefing yields an em
     },
   });
   assert.deepEqual(briefingToFicha(null), briefingToFicha({}));
+});
+
+test('writes the collar into the item model without touching the printed fields (ADR 012)', () => {
+  const ficha = briefingToFicha({
+    collar: 'gola V',
+    product_model: 'camiseta comum',
+    product_type: 'camiseta',
+  });
+  assert.equal(ficha.items[0].modelo, 'camiseta comum, gola V');
+  assert.equal(ficha.items[0].vies_gola, '', 'the trim stays with the seller');
+  assert.equal('collar' in ficha.serviceData, false);
+
+  const onlyCollar = briefingToFicha({ collar: 'gola redonda' });
+  assert.equal(onlyCollar.items.length, 1, 'a collar alone opens the item');
+  assert.equal(onlyCollar.items[0].modelo, 'gola redonda');
+  assert.equal(onlyCollar.items[0].tipo, '');
+
+  assert.equal(
+    briefingToFicha({ collar: 'Gola V', product_model: 'Polo, gola v' })
+      .items[0].modelo,
+    'Polo, gola v',
+    'a model that already names the collar is not repeated',
+  );
+  /** @param {string} model @param {string} collar */
+  const modelo = (model, collar) =>
+    briefingToFicha({ collar, product_model: model }).items[0].modelo;
+  assert.equal(
+    modelo('camiseta comum', 'V'),
+    'camiseta comum, gola: V',
+    'a collar that does not say "gola" gets the label',
+  );
+  assert.equal(
+    modelo('camiseta comum', 'redonda'),
+    'camiseta comum, gola: redonda',
+  );
+  assert.equal(
+    modelo('camiseta comum', 'Definir com o vendedor'),
+    'camiseta comum, gola: Definir com o vendedor',
+  );
+  assert.equal(
+    briefingToFicha({ collar: 'V' }).items[0].modelo,
+    'gola: V',
+    'a collar alone is labelled too',
+  );
+  assert.equal(modelo('regata', 'regata'), 'regata');
+  assert.equal(modelo('camisa polo', 'gola polo'), 'camisa polo, gola polo');
+  assert.equal(
+    modelo('polo de verão', 'V'),
+    'polo de verão, gola: V',
+    'a short collar is matched as a word, not inside another word',
+  );
+  assert.equal(
+    briefingToFicha({ collar: '', product_model: 'regata' }).items[0].modelo,
+    'regata',
+  );
+  assert.equal(
+    briefingToFicha({ collar: null, product_model: 'regata' }).items[0].modelo,
+    'regata',
+  );
+
+  const unreadable = briefingToFicha({ collar: ['gola V', 'gola polo'] });
+  assert.equal(unreadable.items[0].modelo, '');
+  assert.deepEqual(
+    unreadable.serviceData.collar,
+    ['gola V', 'gola polo'],
+    'a collar in an unexpected shape stays visible as service data',
+  );
+});
+
+test('projects the collar onto a pending ficha with the model (ADR 012)', () => {
+  const pending = briefingToFicha({ product_model: 'camiseta comum' });
+  const projected = projectBriefingOntoFicha(pending, {
+    collar: 'gola V',
+    product_model: 'camiseta comum',
+  });
+  assert.equal(projected.items[0].modelo, 'camiseta comum, gola V');
+  assert.equal('collar' in projected.serviceData, false);
 });

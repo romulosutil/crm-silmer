@@ -41,6 +41,7 @@
         "artwork_technique": { "type": ["string", "null"] },
         "briefing_status": { "type": ["string", "null"] },
         "city_or_postal_code": { "type": ["string", "null"] },
+        "collar": { "type": ["string", "null"] },
         "colors": { "type": ["array", "null"] },
         "customer_name": { "type": ["string", "null"] },
         "customizations": { "type": ["array", "null"] },

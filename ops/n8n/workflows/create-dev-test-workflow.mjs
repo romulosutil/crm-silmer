@@ -104,7 +104,8 @@ export function createDevTestWorkflow(source, options = {}) {
         responseMode: 'lastNode',
         showWelcomeScreen: true,
         title: 'Teste manual | Silmer',
-        subtitle: 'Sessão temporária: recarregue a página para iniciar outra conversa.',
+        subtitle:
+          'Sessão temporária: recarregue a página para iniciar outra conversa.',
         inputPlaceholder: 'Escreva como se fosse um cliente...',
       },
     },
@@ -218,14 +219,17 @@ return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-hu
       [1350, -700],
       `const decision = $('Normalizar decisão da IA (MVP)').item.json;
 const input = $('${BUILD_SYNTHETIC_EVENT}').item.json.__dev_input ?? {};
-return { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, reply_text: decision.reply_text, output: decision.reply_text, briefing_patch: decision.briefing_patch, handoff_ready: decision.handoff_ready, missing_briefing_fields: decision.missing_briefing_fields } };`,
+return { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, turn: decision.turn, reply_text: decision.reply_text, output: decision.reply_text, answer_status: decision.answer_status, briefing_patch: decision.briefing_patch, order_intent_confirmed: decision.order_intent_confirmed, handoff_ready: decision.handoff_ready, missing_briefing_fields: decision.missing_briefing_fields } };`,
     ),
     resultNode(
       'DEV - Resultado do handoff',
       [620, -980],
       `const input = $('${BUILD_SYNTHETIC_EVENT}').item.json.__dev_input ?? {};
-const reply = $('Normalizar decisão da IA (MVP)').item.json.reply_text ?? 'Vou encaminhar seu atendimento para nossa equipe.';
-return { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, output: reply, crm: $json } };`,
+let decision = {};
+try { decision = $('Normalizar decisão da IA (MVP)').item.json; } catch (error) { decision = {}; }
+const reply = decision.reply_text ?? 'Vou encaminhar seu atendimento para nossa equipe.';
+// The CRM contract does not deliver a notice together with the handoff yet (RFC 006, BOT-03).
+return { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, notice_sent_on_whatsapp: false, conversation_id: decision.conversation_id, turn: decision.turn, reply_text: reply, output: reply, trigger: decision.trigger ?? 'unsupported_media', handoff_reason: decision.handoff_reason ?? 'unsupported', requested_seller: decision.requested_seller ?? null, handoff_summary: decision.reasoning ?? null, briefing_patch: decision.briefing_patch ?? null, missing_briefing_fields: decision.missing_briefing_fields ?? null, crm: $json } };`,
     ),
     resultNode(
       'DEV - Resultado do envio desconhecido',
@@ -245,6 +249,12 @@ return { json: { ok: true, scenario: input.scenario ?? 'delivery_status', route:
       [620, -420],
       `const reply = $('Preparar reserva de envio da IA (MVP)').item.json.reply_text ?? 'A resposta não foi autorizada para envio.';
 return { json: { ok: true, route: 'send_not_authorized', whatsapp_simulated: true, output: reply, crm: $json } };`,
+    ),
+    resultNode(
+      'DEV - Resultado sem ação',
+      [-750, -200],
+      `const inbound = $json;
+return { json: { ok: true, route: 'no_action', whatsapp_simulated: true, conversation_id: inbound.conversation_id, mode: inbound.mode, turn: inbound.source_revision, reply_text: null, output: 'A conversa está com um vendedor; o bot não responde.' } };`,
     ),
     {
       id: '4c662d98-dfd8-4b62-b08a-2826435e36ed',
@@ -407,6 +417,12 @@ function rewriteConnections(connections) {
     'Envio da IA autorizado? (MVP)',
     1,
     'DEV - Resultado sem novo envio',
+  );
+  appendMain(
+    result,
+    'Rotear conversa registrada (MVP)',
+    2,
+    'DEV - Resultado sem ação',
   );
   return result;
 }

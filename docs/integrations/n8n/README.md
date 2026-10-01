@@ -24,9 +24,13 @@ cidade e endereço; retirada exige o local escolhido.
 
 O workflow calcula de forma determinística os campos pendentes depois de unir o
 patch ao briefing atual. Ele só emite `briefing_complete` quando todos os campos
-aplicáveis estiverem presentes. Pedido explícito de pessoa, negociação,
-reclamação, urgência, baixa confiança ou conteúdo não suportado continuam sendo
-exceções de handoff imediato. Nenhuma informação inferida vira Pedido oficial,
+aplicáveis estiverem presentes. Os gatilhos de transferência da ADR 009 são
+aplicados pelo nó de decisão, não só pelo prompt: pergunta de preço, frete ou
+pagamento; pedido de pessoa ou de vendedor pelo nome; nome fora do CRM pedido
+duas vezes; duas respostas incompreensíveis ou indecisas para o mesmo item;
+reclamação; urgência; conteúdo não suportado; e o teto de 15 mensagens.
+`briefing_status` e `next_required_field` guardam o estado desses gatilhos e
+não vão para a Ficha. Nenhuma informação inferida vira Pedido oficial,
 catálogo, preço, prazo garantido ou pagamento. O agente pode criar um Pedido
 `pendente`, que é rascunho não oficial; oficial é o Pedido `confirmado`, e a
 confirmação permanece humana (ADR 006).
@@ -175,11 +179,18 @@ campos da ficha no pedido `pendente` da conversa:
   de chat cria uma identidade WhatsApp sintética; o n8n não recarrega a sessão
   anterior, portanto atualizar a página inicia uma nova conversa de teste. Isso
   preserva o histórico oficial durante a conversa aberta, sem misturá-lo com uma
-  nova sessão manual.
+  nova sessão manual. O resultado do webhook DEV devolve `route` (`ai_reply`,
+  `handoff` ou `no_action`), `trigger`, `handoff_reason`, `turn` e o
+  `briefing_patch` da rodada, para testes automatizados de conversa.
 - Baseline preservada: `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.
 - Rascunho simplificado validado: `fae803db-eef0-4074-a7ae-1a6bb786e203`,
   com 42 nós e sem avisos estruturais.
 - O workflow simplificado permanece inativo até credenciais e homologação.
+- Vendedores do piloto: até o CRM devolver a lista no inbound (BOT-03 da RFC
+  006), o nó `Montar contexto da IA (MVP)` lê os primeiros nomes da variável
+  `SILMER_PILOT_SELLERS` do n8n, separados por vírgula. Sem a variável, o pedido
+  por um vendedor pelo nome é tratado como nome fora do CRM. Os nomes não entram
+  no repositório.
 - São necessárias duas credenciais Basic distintas: n8n → CRM e CRM → n8n.
 - Segredos não entram em export, repositório, log, chat ou Data Table.
 - Persistência de execuções manuais/sucesso e progresso deve ficar desabilitada;

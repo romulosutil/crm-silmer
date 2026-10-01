@@ -203,7 +203,7 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   );
   assert.ok(reserveNodes.length >= 1);
   assert.ok(sendNodes.length >= 1);
-  assert.match(serialized, /pré-ficha de atendimento/u);
+  assert.match(serialized, /pré-ficha do pedido/u);
   assert.match(serialized, /ready_for_handoff/u);
   assert.match(serialized, /next_required_field/u);
 });
@@ -269,13 +269,10 @@ test('agent output parser tolerates stray keys instead of failing the execution'
     parser.parameters.inputSchema,
     /"additionalProperties":false/u,
   );
+  // Only the reply and the patch are required: the model sometimes nests or
+  // omits the signals, and the decision node defaults them (ADR 009).
   assert.deepEqual([...schema.required].sort(), [
     'briefing_patch',
-    'handoff_ready',
-    'handoff_reason',
-    'handoff_required',
-    'order_intent_confirmed',
-    'reasoning',
     'reply_text',
   ]);
 
@@ -359,5 +356,206 @@ test('decision normalizer accepts a misplaced order intent flag and strips stray
       'Montar contexto da IA (MVP)': context,
     }).order_intent_confirmed,
     false,
+  );
+});
+
+test('decision normalizer applies the handoff rules of ADR 009', async () => {
+  const byName = await workflowNodesByName();
+  const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
+  /** @param {any} output @param {any} [context] */
+  const decide = (output, context = {}) =>
+    runCodeNode(
+      jsCode,
+      {
+        output: {
+          reply_text: 'Resposta da IA',
+          briefing_patch: {},
+          answer_status: 'none',
+          person_request: 'none',
+          ...output,
+        },
+      },
+      {
+        'Montar contexto da IA (MVP)': {
+          conversation_id: 'conversation-1',
+          automation_epoch: 1,
+          source_revision: 3,
+          briefing: {},
+          recent_messages: [],
+          current_text: '',
+          profile_name: 'Perfil do WhatsApp',
+          sellers: ['Marina', 'Edson', 'Lúcio', 'Dario'],
+          message_cap: 15,
+          turn: 3,
+          ...context,
+        },
+      },
+    );
+
+  const price = decide({}, { current_text: 'e quanto fica isso tudo?' });
+  assert.equal(price.handoff_reason, 'negotiation');
+  assert.match(price.reply_text, /vendedores/u);
+  assert.equal(
+    decide({}, { current_text: 'aceitam pix? parcelam?' }).trigger,
+    'price',
+  );
+  assert.equal(
+    decide(
+      { asks_price: true },
+      { current_text: 'vocês fazem orçamento de camiseta?' },
+    ).handoff_required,
+    false,
+    'asking for a quote is not asking the price',
+  );
+  assert.equal(
+    decide({}, { current_text: 'em quanto tempo fica pronto?' }).trigger,
+    null,
+  );
+
+  const seller = decide(
+    { person_request: 'named', requested_person_name: 'Mari' },
+    { current_text: 'a Mari tá por aí?' },
+  );
+  assert.equal(seller.handoff_reason, 'human_requested');
+  assert.equal(seller.requested_seller, 'Marina');
+  assert.match(seller.reasoning, /Vendedor pedido: Marina/u);
+  assert.equal(
+    decide(
+      { person_request: 'named', requested_person_name: 'Lucio' },
+      { current_text: 'quero falar com o Lucio' },
+    ).requested_seller,
+    'Lúcio',
+  );
+  assert.equal(
+    decide(
+      { person_request: 'named', requested_person_name: 'Marina' },
+      { current_text: 'são 30 peças' },
+    ).trigger,
+    null,
+    'a name echoed from the history is not a new request',
+  );
+
+  const firstAsk = decide(
+    { person_request: 'named', requested_person_name: 'João' },
+    { current_text: 'quero falar com o João' },
+  );
+  assert.equal(firstAsk.handoff_required, false);
+  assert.match(firstAsk.briefing_patch.notes, /João/u);
+  const secondAsk = decide(
+    { person_request: 'named', requested_person_name: 'João' },
+    {
+      current_text: 'cadê o João?',
+      recent_messages: [
+        { sender_type: 'customer', text: 'quero falar com o João' },
+        { sender_type: 'ai', text: 'Vou avisar a equipe.' },
+        { sender_type: 'customer', text: 'cadê o João?' },
+      ],
+    },
+  );
+  assert.equal(secondAsk.trigger, 'unknown_person_repeated');
+  assert.equal(secondAsk.handoff_reason, 'human_requested');
+
+  const firstMiss = decide(
+    { answer_status: 'unclear' },
+    { briefing: { next_required_field: 'fabrics' } },
+  );
+  assert.equal(firstMiss.handoff_required, false);
+  assert.equal(firstMiss.briefing_patch.briefing_status, 'clarifying');
+  const question = decide(
+    { answer_status: 'question' },
+    {
+      briefing: {
+        next_required_field: 'fabrics',
+        briefing_status: 'clarifying',
+      },
+    },
+  );
+  assert.equal(question.handoff_required, false);
+  assert.equal(question.briefing_patch.briefing_status, 'clarifying');
+  const secondMiss = decide(
+    { answer_status: 'undecided' },
+    {
+      briefing: {
+        next_required_field: 'fabrics',
+        briefing_status: 'clarifying',
+      },
+    },
+  );
+  assert.equal(secondMiss.trigger, 'two_attempts');
+  assert.equal(secondMiss.handoff_reason, 'low_confidence');
+
+  const cap = decide({}, { turn: 15 });
+  assert.equal(cap.trigger, 'message_limit');
+  assert.match(cap.reasoning, /Limite de 15 mensagens/u);
+  assert.equal(decide({}, { turn: 14 }).handoff_required, false);
+  assert.equal(
+    decide({ asks_price: true }, { turn: 15, current_text: 'qual o valor?' })
+      .trigger,
+    'price',
+  );
+
+  const sticky = decide(
+    { order_intent_confirmed: false },
+    { briefing: { briefing_status: 'quote_collecting' } },
+  );
+  assert.equal(sticky.order_intent_confirmed, true);
+  assert.equal(sticky.briefing_patch.briefing_status, 'quote_collecting');
+
+  const profile = decide(
+    { briefing_patch: { customer_name: 'Perfil do WhatsApp' } },
+    { current_text: 'oi' },
+  );
+  assert.equal('customer_name' in profile.briefing_patch, false);
+
+  const flattened = decide({
+    briefing_patch: {
+      product_type: ['camiseta', 'boné'],
+      quantity: { camiseta: 30, bone: 30 },
+      artwork_status: 'não informado',
+    },
+  });
+  assert.equal(flattened.briefing_patch.product_type, 'camiseta, boné');
+  assert.equal(flattened.briefing_patch.quantity, 'camiseta: 30; bone: 30');
+  assert.equal('artwork_status' in flattened.briefing_patch, false);
+  assert.equal(
+    'sizes' in
+      decide({ briefing_patch: { sizes: 'a definir com o time' } })
+        .briefing_patch,
+    false,
+  );
+
+  const complete = {
+    customer_name: 'Ana',
+    order_name: 'Festa',
+    product_type: 'camiseta',
+    product_model: 'tradicional',
+    quantity: 10,
+    fabrics: 'algodão',
+    colors: 'branca',
+    sizes: 'M10',
+    artwork_status: 'pronta',
+    artwork_technique: 'silk',
+    artwork_locations: 'frente',
+    needed_by: '10/12',
+    purpose: 'evento',
+    purchase_profile: 'uso próprio',
+    delivery_mode: 'retirada',
+    pickup_location: 'loja da Silmer',
+  };
+  const unconfirmed = decide({ briefing_patch: complete });
+  assert.equal(
+    unconfirmed.handoff_required,
+    false,
+    'a complete briefing waits for the quote confirmation that creates the order',
+  );
+  assert.equal(unconfirmed.briefing_patch.next_required_field, 'order_intent');
+  assert.match(unconfirmed.reply_text, /pedido de orçamento/u);
+  assert.equal(
+    decide({ briefing_patch: complete, order_intent_confirmed: true }).trigger,
+    'briefing_complete',
+  );
+  assert.equal(
+    decide({ briefing_patch: complete }, { turn: 15 }).trigger,
+    'briefing_complete',
   );
 });

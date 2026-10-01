@@ -743,7 +743,7 @@ const summary = [
   'Motivo: ' + (labels[trigger] ?? 'sem transferência') + '.',
   requestedSeller && trigger === 'seller_requested' ? 'Vendedor pedido: ' + requestedSeller + '.' : '',
   personTrigger === 'unknown_person_repeated' ? 'Pessoa pedida: ' + requestedName + '.' : '',
-  missing.length ? 'Faltam: ' + missing.join(', ') + '.' : 'Pré-ficha completa.',
+  missing.length ? 'Faltam: ' + missing.join(', ') + '.' : (trigger === 'briefing_complete' ? '' : 'Pré-ficha completa.'),
   required.some((field) => briefing[field] === DEFERRED)
     ? 'Para o vendedor definir: ' + required.filter((field) => briefing[field] === DEFERRED).join(', ') + '.' : '',
   reasoning ? 'IA: ' + reasoning : ''

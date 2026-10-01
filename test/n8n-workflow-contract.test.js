@@ -827,3 +827,136 @@ test('the bot neither asks to build the quote nor asks the order name (PO, 01/10
     assert.doesNotMatch(text, /Quem passa|chamando alguém|Já estou chamando/u);
   }
 });
+
+test('a question ignored twice hands off, and news for the ficha is welcome (PO, 01/10)', async () => {
+  const byName = await workflowNodesByName();
+  const prompt = byName.get('Atendente virtual Silmer (MVP)').parameters.options
+    .systemMessage;
+  assert.match(prompt, /Que legal, e quer estampada onde\?/u);
+  assert.match(prompt, /emende a próxima pergunta na mesma frase/u);
+
+  const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
+  /** @param {any} output @param {any} [context] */
+  const decide = (output, context = {}) =>
+    runCodeNode(
+      jsCode,
+      {
+        output: {
+          reply_text: 'Resposta da IA',
+          briefing_patch: {},
+          answer_status: 'none',
+          person_request: 'none',
+          ...output,
+        },
+      },
+      {
+        'Montar contexto da IA (MVP)': {
+          conversation_id: 'conversation-1',
+          automation_epoch: 1,
+          source_revision: 3,
+          briefing: {},
+          recent_messages: [],
+          current_text: '',
+          profile_name: '',
+          sellers: [],
+          message_cap: 15,
+          turn: 3,
+          crm_counter: true,
+          ...context,
+        },
+      },
+    );
+
+  const asked = { next_required_field: 'customer_name' };
+  const firstIgnore = decide(
+    { answer_status: 'other', asked_field: 'customer_name' },
+    { briefing: asked, current_text: 'dtf desbota?' },
+  );
+  assert.equal(firstIgnore.handoff_required, false);
+  assert.equal(firstIgnore.briefing_patch.briefing_status, 'ignored');
+  assert.equal(firstIgnore.briefing_patch.next_required_field, 'customer_name');
+
+  const secondIgnore = decide(
+    { answer_status: 'other', asked_field: 'customer_name' },
+    {
+      briefing: { ...asked, briefing_status: 'ignored' },
+      current_text: 'bordado fica bom em boné?',
+    },
+  );
+  assert.equal(secondIgnore.trigger, 'ignored_twice');
+  assert.equal(secondIgnore.handoff_reason, 'low_confidence');
+  assert.match(
+    secondIgnore.reasoning,
+    /não respondeu à mesma pergunta duas vezes/u,
+  );
+  assert.match(secondIgnore.reply_text, /vendedores/u);
+
+  const addsInstead = decide(
+    {
+      answer_status: 'other',
+      asked_field: 'customer_name',
+      briefing_patch: { product_type: 'camisa', colors: 'branca' },
+    },
+    {
+      briefing: { ...asked, briefing_status: 'ignored' },
+      current_text: 'quero camisa branca!',
+    },
+  );
+  assert.equal(
+    addsInstead.handoff_required,
+    false,
+    'a message that adds to the ficha is progress, not an ignored question',
+  );
+  assert.equal(addsInstead.briefing_patch.colors, 'branca');
+
+  const onlyNotes = decide(
+    {
+      answer_status: 'other',
+      asked_field: 'customer_name',
+      briefing_patch: { notes: 'Perguntou sobre bordado em boné' },
+    },
+    { briefing: { ...asked, briefing_status: 'ignored' } },
+  );
+  assert.equal(onlyNotes.trigger, 'ignored_twice', 'notes alone add nothing');
+
+  const aboutTheField = decide(
+    { answer_status: 'question', asked_field: 'fabrics' },
+    {
+      briefing: { next_required_field: 'fabrics', briefing_status: 'ignored' },
+      current_text: 'qual a diferença entre algodão e dry fit?',
+    },
+  );
+  assert.equal(aboutTheField.handoff_required, false);
+  assert.equal(aboutTheField.briefing_patch.briefing_status, 'ignored');
+
+  const newQuestion = decide(
+    { answer_status: 'other', asked_field: 'quantity' },
+    { briefing: asked, current_text: 'vocês abrem sábado?' },
+  );
+  assert.equal(
+    newQuestion.briefing_patch.briefing_status,
+    'collecting',
+    'an ignored question counts only while the bot asks it again',
+  );
+
+  const missedThenIgnored = decide(
+    { answer_status: 'other', asked_field: 'fabrics' },
+    {
+      briefing: {
+        next_required_field: 'fabrics',
+        briefing_status: 'quote_clarifying',
+      },
+    },
+  );
+  assert.equal(missedThenIgnored.trigger, 'ignored_twice');
+  const ignoredThenUnsure = decide(
+    { answer_status: 'undecided', asked_field: 'fabrics' },
+    {
+      briefing: {
+        next_required_field: 'fabrics',
+        briefing_status: 'quote_ignored',
+      },
+    },
+  );
+  assert.equal(ignoredThenUnsure.trigger, 'two_attempts');
+});

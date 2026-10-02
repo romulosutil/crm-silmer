@@ -1824,3 +1824,86 @@ test('the summary measures how much of the ficha the bot filled (ADR 013)', asyn
     'type, colour and the polo collar the workflow records',
   );
 });
+
+test('"com estampa" for "lisa ou com estampa?" does not answer the artwork point (ADR 012)', async () => {
+  // DEV 01/10, KPI-01: the artwork question was never asked.
+  const typeAnswer = await rhythmDecision(
+    {
+      answer_status: 'answered',
+      briefing_patch: {
+        product_model: 'camiseta comum',
+        artwork_status: 'com estampa',
+        artwork_technique: 'estampada',
+      },
+    },
+    {
+      current_text: 'camiseta comum, com estampa',
+      briefing: {
+        customer_name: 'Dudu',
+        briefing_status: 'quote_collecting',
+        next_required_field: 'product_model',
+      },
+    },
+  );
+  assert.equal(typeAnswer.briefing_patch.artwork_status, undefined);
+  assert.equal(typeAnswer.briefing_patch.artwork_technique, 'estampada');
+  assert.ok(typeAnswer.missing_briefing_fields.includes('artwork_status'));
+  assert.equal(typeAnswer.briefing_patch.next_required_field, 'colors');
+
+  const afterQuantity = await rhythmDecision(
+    { answer_status: 'answered', briefing_patch: { quantity: 25 } },
+    {
+      current_text: '25',
+      briefing: {
+        customer_name: 'Dudu',
+        product_model: 'camiseta comum',
+        artwork_technique: 'estampada',
+        colors: 'azul marinho',
+        briefing_status: 'quote_collecting',
+        next_required_field: 'quantity',
+      },
+    },
+  );
+  assert.equal(
+    afterQuantity.briefing_patch.next_required_field,
+    'artwork_status',
+  );
+
+  for (const printOnly of [
+    'com estampa',
+    'estampada',
+    'bordado',
+    'personalizada',
+    'sim',
+  ]) {
+    const decision = await rhythmDecision({
+      briefing_patch: { artwork_status: printOnly },
+    });
+    assert.equal(decision.briefing_patch.artwork_status, undefined, printOnly);
+    assert.equal(
+      decision.briefing_patch.artwork_technique,
+      printOnly,
+      printOnly,
+    );
+  }
+  const keepsTechnique = await rhythmDecision(
+    { briefing_patch: { artwork_status: 'com estampa' } },
+    { briefing: { artwork_technique: 'bordada' } },
+  );
+  assert.equal(keepsTechnique.briefing_patch.artwork_technique, undefined);
+
+  for (const origin of [
+    'já tem a logo',
+    'vai mandar a arte depois',
+    'quer que a Silmer crie',
+    'precisa de arte',
+    'sem aplicação',
+    'não quer estampa',
+    'Definir com o vendedor',
+  ]) {
+    const decision = await rhythmDecision({
+      briefing_patch: { artwork_status: origin },
+    });
+    assert.equal(decision.briefing_patch.artwork_status, origin, origin);
+  }
+});

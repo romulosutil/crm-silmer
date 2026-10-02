@@ -38,8 +38,14 @@ sanitizado principal com os nós gerados por `render-mvp-workflow.mjs` e rode
 Os gatilhos de transferência da ADR 009 são
 aplicados pelo nó de decisão, não só pelo prompt: pergunta de preço, frete ou
 pagamento; pedido de pessoa ou de vendedor pelo nome; nome fora do CRM pedido
-duas vezes; duas respostas incompreensíveis ou indecisas para o mesmo item;
-reclamação; urgência; conteúdo não suportado; e o teto de 15 mensagens.
+duas vezes; conversa que não é pedido do zero (camisa do post, "quero essa
+camisa", pedido de contato por e-mail, WhatsApp ou telefone, algo já combinado
+com a Silmer; ADR 013); duas respostas incompreensíveis ou indecisas para o
+mesmo item; reclamação; urgência; conteúdo não suportado; e o teto de 15
+mensagens. O resumo de todo handoff traz "Ficha: X de 8 (Y%)", o indicador da
+meta de 50% da ficha; o
+[roteiro do indicador da ficha](roteiro-indicador-da-ficha.md) tem as
+mensagens para testá-lo.
 `briefing_status` e `next_required_field` guardam o estado desses gatilhos e
 não vão para a Ficha. Nenhuma informação inferida vira Pedido oficial,
 catálogo, preço, prazo garantido ou pagamento. O agente pode criar um Pedido

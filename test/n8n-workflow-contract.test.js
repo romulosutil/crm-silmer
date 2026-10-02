@@ -1677,3 +1677,150 @@ test('quantity and sizes sent together fill both points (ADR 012)', async () => 
   ]);
   assert.equal(together.briefing_patch.next_required_field, 'artwork_status');
 });
+
+test('something already going on elsewhere calls a seller at once (ADR 013)', async () => {
+  const byName = await workflowNodesByName();
+  assert.match(
+    byName.get('Atendente virtual Silmer (MVP)').parameters.options
+      .systemMessage,
+    /PEDIDO DO ZERO[\s\S]*camisa do post[\s\S]*me manda por e-mail/u,
+  );
+  assert.match(
+    byName.get('Validar saída do MVP').parameters.inputSchema,
+    /"external_context"/u,
+  );
+
+  for (const text of [
+    'Quero a camisa do post',
+    'quero essa camisa',
+    'Pode me enviar por e-mail?',
+    'me manda no whatsapp por favor',
+    'vi no story, ainda tem?',
+    'https://www.instagram.com/p/abc quero essa',
+    'Tem pronta entrega?',
+    'pode me ligar?',
+    'Já falei com a moça da loja sobre as camisas',
+  ]) {
+    const decision = await rhythmDecision(
+      { order_intent_confirmed: true, external_context: false },
+      { current_text: text, name_asked: false },
+    );
+    assert.equal(decision.trigger, 'external_context', text);
+    assert.equal(decision.handoff_required, true, text);
+    assert.equal(decision.handoff_reason, 'human_requested', text);
+    assert.match(decision.reply_text, /vendedores/u, text);
+    assert.equal(
+      decision.order_intent_confirmed,
+      false,
+      'something that already exists opens no new order: ' + text,
+    );
+    assert.match(
+      decision.reasoning,
+      /Não é um pedido do zero[\s\S]*Ficha: 0 de 8 \(0%\)/u,
+      text,
+    );
+  }
+
+  const flagged = await rhythmDecision(
+    { external_context: true },
+    { current_text: 'quero igual ao pedido do ano passado' },
+  );
+  assert.equal(flagged.trigger, 'external_context');
+
+  for (const text of [
+    'Vi vocês no Instagram e quero fazer 20 camisetas pro time',
+    'preciso das camisas prontas até dia 20',
+    'com nome e o número nas costas',
+    'Quero 30 camisetas para o posto de saúde',
+    'quero gola V',
+  ]) {
+    const decision = await rhythmDecision(
+      { external_context: false },
+      { current_text: text },
+    );
+    assert.equal(decision.trigger, null, text);
+  }
+
+  const price = await rhythmDecision(
+    { external_context: true },
+    { current_text: 'quanto custa a camisa do post?' },
+  );
+  assert.equal(price.trigger, 'price', 'a price question keeps its reason');
+
+  const midway = await rhythmDecision(
+    { external_context: true },
+    {
+      current_text: 'na verdade é igual à que vocês postaram ontem',
+      briefing: {
+        product_model: 'camiseta comum',
+        colors: 'azul',
+        quantity: 20,
+        briefing_status: 'quote_collecting',
+        next_required_field: 'artwork_status',
+      },
+    },
+  );
+  assert.equal(midway.trigger, 'external_context');
+  assert.equal(
+    midway.order_intent_confirmed,
+    true,
+    'an order already opened stays open for the seller',
+  );
+  assert.match(midway.reasoning, /Ficha: 3 de 8 \(38%\)/u);
+});
+
+test('the summary measures how much of the ficha the bot filled (ADR 013)', async () => {
+  const complete = await rhythmDecision(
+    { answer_status: 'answered' },
+    { briefing: { ...SEVEN_POINTS, customer_name: 'Ana' } },
+  );
+  assert.equal(complete.trigger, 'briefing_complete');
+  assert.equal(complete.ficha_filled, 8);
+  assert.equal(complete.ficha_total, 8);
+  assert.match(complete.reasoning, /Ficha: 8 de 8 \(100%\)/u);
+
+  const deferred = await rhythmDecision(
+    { answer_status: 'answered' },
+    {
+      briefing: {
+        ...SEVEN_POINTS,
+        fabrics: 'Definir com o vendedor',
+        customer_name: 'Ana',
+      },
+    },
+  );
+  assert.equal(deferred.trigger, 'briefing_complete');
+  assert.equal(
+    deferred.ficha_filled,
+    7,
+    'a point left to the seller is not filled by the bot',
+  );
+  assert.match(deferred.reasoning, /Ficha: 7 de 8 \(88%\)/u);
+
+  const half = await rhythmDecision(
+    { asks_price: true },
+    {
+      current_text: 'quanto fica?',
+      briefing: sevenPointsWithout(
+        'artwork_status',
+        'fabrics',
+        'sizes',
+        'collar',
+      ),
+    },
+  );
+  assert.equal(half.trigger, 'price');
+  assert.equal(half.ficha_filled, 3);
+  assert.match(half.reasoning, /Ficha: 3 de 8 \(38%\)/u);
+
+  const reply = await rhythmDecision(
+    { answer_status: 'answered', briefing_patch: { colors: 'preta' } },
+    { briefing: { product_model: 'polo' } },
+  );
+  assert.equal(reply.handoff_required, false);
+  assert.equal(
+    reply.ficha_filled,
+    3,
+    'type, colour and the polo collar the workflow records',
+  );
+});

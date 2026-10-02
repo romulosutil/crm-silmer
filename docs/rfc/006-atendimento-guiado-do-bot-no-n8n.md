@@ -209,6 +209,6 @@ Pendências fechadas pelo PO em 30/09/2026: vendedor pedido vai para a fila (D9)
 
 **Implementação (01/10/2026, D24–D26).** O CRM aceita `collar` no `briefing_patch` e o compõe no modelo do item da Ficha; o workflow `mvp-simple-7` (DEV `dev-mvp-simple-8`) exige o nome e os sete pontos e segue `FICHA_RHYTHM`. O CRM com `collar` precisa estar no cloud-dev antes do workflow novo; um CRM antigo recusa a chave com `400`.
 
-**Implementação (01/10/2026, D27–D28).** O workflow `mvp-simple-8` (DEV `dev-mvp-simple-9`) transfere o que não é pedido do zero e mede a ficha no resumo do handoff. Não muda o contrato com o CRM.
+**Implementação (01/10/2026, D27–D28).** O workflow `mvp-simple-8` (DEV `dev-mvp-simple-9`) transfere o que não é pedido do zero e mede a ficha no resumo do handoff. Não muda o contrato com o CRM. Na mesma versão, uma correção do D25 vista no primeiro teste do roteiro (KPI-01): "com estampa", em resposta a "lisa ou com estampa?", ia para `artwork_status` e o bot nunca perguntava pela arte. Agora a estampa só conta quando o cliente diz de onde vem a arte (já tem, vai mandar, quer que a Silmer crie, lisa ou deixada ao vendedor); "com estampa", "estampada" ou "bordada" sozinhos vão para `artwork_technique`.
 
 **Resultado:** decidida em 30/09/2026 e registrada na [ADR 009](../adr/009-regras-de-transferencia-e-teto-do-bot.md). Esta RFC não aprova catálogo nem autoriza publicação; o catálogo segue a RFC 005 e a publicação depende do BOT-03 e do gate da T40.

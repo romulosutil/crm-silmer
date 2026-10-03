@@ -1160,9 +1160,9 @@ paths:
         Ação order.confirm, restrita ao dono da conversa ou a COMMERCIAL_ADMIN.
         Exige valor final no formato brasileiro (ex.: 4.820,00) maior que zero,
         forma de pagamento válida (campo paymentCondition), ao menos um item e,
-        em cada item, os pontos principais da ADR 016 (tipo, cor, estampa, ao
-        menos um tecido, ao menos uma linha de tamanho e definição da gola),
-        tipo de serviço escolhido pelo vendedor em cada item e a entrega
+        em cada item, os pontos principais das ADRs 016 e 020 (tipo, cor,
+        técnica em tipo_servico, ao menos um tecido, ao menos uma linha de
+        tamanho e gola), quem faz a arte do pedido (chave artwork) e a entrega
         prometida do resumo como dia AAAA-MM-DD; paidOn e deliveredOn não
         bloqueiam. Recusa com 422 ORDER_NOT_CONFIRMABLE e as chaves de
         Order.missingFields que faltam. Grava valor, forma de pagamento,
@@ -2509,13 +2509,14 @@ components:
       type: object
       additionalProperties: false
       description: >-
-        Item da ficha (ADR 016). Principais, na ordem da tela: tipo (Tipo de
-        roupa), cor, quantidade (soma da grade; nunca enviada), estampa,
-        malhas (Tecido), grade (Tamanhos) e gola (Definição da gola). O
-        vendedor escolhe tipo_servico em cada item; é obrigatório para
-        confirmar, mas pode ficar vazio enquanto pendente. Adicionais legados
-        opcionais, que não bloqueiam: modelo, cores das partes, vies_gola e
-        vies_mangas; mangas e viés aceitam NAO APLICAVEL. Um item pode ser
+        Item da ficha (ADRs 016 e 020). Principais, na ordem da tela: tipo
+        (Tipo de roupa), cor, quantidade (soma da grade; nunca enviada),
+        tipo_servico (Técnica: silk, DTF, sublimação, bordado… ou Sem
+        estampa), malhas (Tecido), grade (Tamanhos) e gola (Gola). O bot pode
+        preencher uma técnica vazia; é obrigatória para confirmar, mas pode
+        ficar vazia enquanto pendente. Adicionais, que não bloqueiam: estampa
+        (Estampa (referência)), cores do tecido por parte e vies_mangas; modelo
+        e vies_gola são legados. Mangas e viés aceitam NAO APLICAVEL. Um item pode ser
         salvo incompleto (malhas e grade vazias, textos em branco). O servidor
         devolve todos os campos de texto, com vazio para os omitidos. Textos
         com até 200 caracteres; até 50 itens.
@@ -2543,13 +2544,16 @@ components:
       type: object
       additionalProperties: false
       description: >-
-        Origem da estampa marcada pelo vendedor. As duas opções podem ser
-        verdadeiras ou falsas. O armazenamento dos arquivos está preparado,
-        sem upload ativo; files permanece vazio até haver storage durável.
-      required: [feito_pelo_cliente, feito_pela_silmer, files]
+        Quem faz a arte do pedido (ADR 020): o cliente envia, a Silmer cria
+        (podem coexistir) ou sem estampa (exclusivo). Confirmar exige uma
+        marcação. O bot preenche quando o pedido ainda não tem marcação; o
+        vendedor corrige. O armazenamento dos arquivos está preparado, sem
+        upload ativo; files permanece vazio até haver storage durável.
+      required: [feito_pelo_cliente, feito_pela_silmer, sem_estampa, files]
       properties:
         feito_pelo_cliente: { type: boolean }
         feito_pela_silmer: { type: boolean }
+        sem_estampa: { type: boolean }
         files:
           type: array
           readOnly: true
@@ -2559,12 +2563,15 @@ components:
       type: object
       additionalProperties: false
       description: >-
-        Marcação humana da origem da estampa. Não aceita arquivos ou metadados
-        de arquivo; ambos os valores são exigidos e podem coincidir.
+        Quem faz a arte, marcado pelo vendedor. Não aceita arquivos ou
+        metadados de arquivo. feito_pelo_cliente e feito_pela_silmer são
+        exigidos e podem coincidir; sem_estampa é opcional (falso quando
+        omitido) e recusado junto de uma das outras com 400.
       required: [feito_pelo_cliente, feito_pela_silmer]
       properties:
         feito_pelo_cliente: { type: boolean }
         feito_pela_silmer: { type: boolean }
+        sem_estampa: { type: boolean }
     FichaSummary:
       type: object
       additionalProperties: false
@@ -2575,16 +2582,22 @@ components:
           readOnly: true
           description: Vem do contato da conversa e não é editável no pedido.
         data_entrega_confirmada: { type: [string, 'null'] }
-        aplicacao: { type: [string, 'null'] }
+        aplicacao:
+          type: [string, 'null']
+          description: >-
+            Técnica geral legada (ADR 020); não é mais escrita, editada nem
+            impressa a partir da v5. A técnica fica em cada item.
         nome: { type: [string, 'null'] }
     FichaSummaryInput:
       type: object
       additionalProperties: false
-      description: Resumo editável; o cliente vem do contato e não é enviado.
-      required: [data_entrega_confirmada, aplicacao, nome]
+      description: >-
+        Resumo editável; o cliente vem do contato e não é enviado. aplicacao
+        de uma tela antiga é aceita e ignorada (ADR 020).
+      required: [data_entrega_confirmada, nome]
       properties:
         data_entrega_confirmada: { type: [string, 'null'] }
-        aplicacao: { type: [string, 'null'] }
+        aplicacao: { type: [string, 'null'], deprecated: true }
         nome: { type: [string, 'null'] }
     FichaObservations:
       type: array
@@ -2649,12 +2662,12 @@ components:
         missingFields:
           type: array
           description: >-
-            O que ainda impede gerar o pedido pendente (ADR 016), nesta ordem:
-            items (nenhum item); items[N].tipo, items[N].cor,
-            items[N].estampa, items[N].malhas, items[N].grade e
+            O que ainda impede gerar o pedido pendente (ADRs 016 e 020),
+            nesta ordem: items (nenhum item); items[N].tipo, items[N].cor,
+            items[N].tipo_servico (técnica), items[N].malhas, items[N].grade e
             items[N].gola (ponto principal que falta no item N, a partir de 0;
-            a grade vale também pela quantidade); items[N].tipo_servico
-            (escolha do vendedor que falta no item N);
+            a grade vale também pela quantidade); artwork (ninguém marcou
+            quem faz a arte nem sem estampa);
             summary.data_entrega_confirmada (entrega prometida ausente ou fora
             do formato AAAA-MM-DD); finalAmount; e paymentCondition. Vazio em
             pedido confirmado. Os adicionais do item, o resto do resumo e as

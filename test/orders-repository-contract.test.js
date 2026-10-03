@@ -36,6 +36,12 @@ function nextNow() {
 /** @returns {import('../modules/orders/src/domain/ficha.js').Ficha} */
 function draftFicha() {
   return {
+    artwork: {
+      feito_pela_silmer: false,
+      feito_pelo_cliente: true,
+      files: [],
+      sem_estampa: false,
+    },
     items: [
       {
         cor: 'AZUL',

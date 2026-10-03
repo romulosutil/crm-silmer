@@ -65,19 +65,26 @@ async function setup() {
     conversationId: 'conversation-1',
     correlationId: 'correlation-intent',
   });
-  // ADR 016: the promised delivery is set, so only what each test leaves out
-  // keeps the order from being generated.
-  const order = await service.patchSection({
+  // ADR 016/020: the promised delivery and who makes the art are set, so only
+  // what each test leaves out keeps the order from being generated.
+  const dated = await service.patchSection({
     actor: OWNER,
     correlationId: 'correlation-delivery',
     expectedVersion: created.version,
     orderId: created.id,
     section: 'summary',
     value: {
-      aplicacao: null,
       data_entrega_confirmada: '2026-10-24',
       nome: 'Evento Inicial',
     },
+  });
+  const order = await service.patchSection({
+    actor: OWNER,
+    correlationId: 'correlation-artwork',
+    expectedVersion: dated.version,
+    orderId: dated.id,
+    section: 'artwork',
+    value: { feito_pela_silmer: true, feito_pelo_cliente: false },
   });
   return { order, owners, repository, service };
 }
@@ -87,21 +94,30 @@ function command(extra = {}) {
   return { actor: OWNER, correlationId: 'correlation-command', ...extra };
 }
 
-test('saving the summary replaces the whole section but keeps the locked customer', async () => {
-  const { order, service } = await setup();
+test('saving the summary replaces the whole section but keeps the locked customer and the legacy technique', async () => {
+  const { order, repository, service } = await setup();
+  // ADR 020: an order saved before the technique moved to the items.
+  const stored = /** @type {any} */ (await repository.findById(order.id));
+  stored.ficha.summary.aplicacao = 'SUBLIMACAO TOTAL';
+  await repository.saveSection(stored, {
+    actor: OWNER,
+    correlationId: 'correlation-legacy',
+    expectedVersion: stored.version,
+  });
+  const legacy = /** @type {any} */ (await repository.findById(order.id));
   const saved = await service.patchSection(
     command({
-      expectedVersion: order.version,
+      expectedVersion: legacy.version,
       orderId: order.id,
       section: 'summary',
       value: {
-        aplicacao: 'SUBLIMACAO TOTAL',
+        aplicacao: 'TEXTO DE UMA TELA ANTIGA',
         data_entrega_confirmada: '2026-09-30',
         nome: null,
       },
     }),
   );
-  assert.equal(saved.version, order.version + 1);
+  assert.equal(saved.version, legacy.version + 1);
   assert.deepEqual(saved.ficha.summary, {
     aplicacao: 'SUBLIMACAO TOTAL',
     cliente: 'Cliente Sintetico',
@@ -117,7 +133,6 @@ test('saving the summary replaces the whole section but keeps the locked custome
       orderId: order.id,
       section: 'summary',
       value: {
-        aplicacao: null,
         data_entrega_confirmada: '30/09/2026',
         nome: null,
       },
@@ -132,11 +147,10 @@ test('saving items recalculates total pieces and what is missing', async () => {
   // The bot's product opened item 1, which still lacks five points.
   assert.deepEqual(order.missingFields, [
     'items[0].cor',
-    'items[0].estampa',
+    'items[0].tipo_servico',
     'items[0].malhas',
     'items[0].grade',
     'items[0].gola',
-    'items[0].tipo_servico',
     'finalAmount',
     'paymentCondition',
   ]);
@@ -381,11 +395,10 @@ test('a half-filled item is saved, and generating names what each item lacks (AD
   assert.equal(partial.totalPieces, 20);
   assert.deepEqual(partial.missingFields, [
     'items[0].cor',
-    'items[1].estampa',
+    'items[1].tipo_servico',
     'items[1].malhas',
     'items[1].grade',
     'items[1].gola',
-    'items[1].tipo_servico',
     'finalAmount',
     'paymentCondition',
   ]);
@@ -402,11 +415,10 @@ test('a half-filled item is saved, and generating names what each item lacks (AD
       code: 'ORDER_NOT_CONFIRMABLE',
       fields: [
         'items[0].cor',
-        'items[1].estampa',
+        'items[1].tipo_servico',
         'items[1].malhas',
         'items[1].grade',
         'items[1].gola',
-        'items[1].tipo_servico',
       ],
       statusCode: 422,
     },

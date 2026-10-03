@@ -420,6 +420,8 @@ export function createOrderService(options) {
       if (section === 'summary') {
         ficha.summary = {
           ...validateSummary(input.value),
+          // ADR 020: the legacy order-wide technique is kept, never edited.
+          aplicacao: ficha.summary.aplicacao ?? null,
           cliente: ficha.summary.cliente,
         };
       } else if (section === 'items') {

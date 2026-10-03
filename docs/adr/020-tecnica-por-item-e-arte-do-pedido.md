@@ -27,7 +27,8 @@ tecido e cores da arte usavam as mesmas palavras.
    obrigatória para gerar. O bot preenche a técnica do primeiro item quando o
    cliente nomeia uma (silk, sublimação, DTF, DTG, bordado, transfer) ou diz
    que a peça é lisa (“Sem estampa”); outra descrição fica em Dados do
-   atendimento como “Técnica informada”. O vendedor confirma.
+   atendimento como “Técnica informada”. O bot só preenche uma técnica vazia;
+   o vendedor confirma e o bot nunca troca a escolha dele.
 2. **A técnica geral sai do resumo.** `summary.aplicacao` deixa de ser escrita
    pelo bot, editada ou impressa. O valor antigo continua guardado; a API
    ainda aceita a chave de um cliente antigo e a ignora.
@@ -36,8 +37,8 @@ tecido e cores da arte usavam as mesmas palavras.
    (`feito_pela_silmer`) e **Sem estampa**; as duas primeiras podem coexistir,
    “Sem estampa” exclui as outras. Gerar exige ao menos uma marcação (chave
    `artwork` em `missingFields`). O bot projeta a origem a partir de
-   `artwork_status` quando a resposta é inequívoca; o vendedor corrige e
-   anexa os arquivos. Isto supersede o item 3 da ADR 019 (“o agente não
+   `artwork_status` quando a resposta é inequívoca e o pedido ainda não tem
+   marcação; o vendedor corrige e anexa os arquivos. Isto supersede o item 3 da ADR 019 (“o agente não
    projeta essa decisão”).
 4. **Estampa do item é referência.** `items[].estampa` sai dos pontos
    principais, não bloqueia e aparece como **Estampa (referência)** nos

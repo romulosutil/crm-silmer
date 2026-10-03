@@ -175,8 +175,8 @@ async function save() {
 
       <p class="op-locked-note">
         <OrderIcon name="lock" />
-        Primeiro contato, pedido fechado e entrega prometida vêm da conversa, da
-        data do pedido e do resumo.
+        Primeiro contato vem da conversa. Data do pedido e entrega prometida
+        ficam no Resumo do pedido.
       </p>
 
       <div class="op-form-actions">

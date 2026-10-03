@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "task": "T78",
+  "adr": "019",
+  "requirements": ["REV-01", "REV-02", "REV-03", "REV-04", "REV-05", "PIM-10"],
+  "syntheticOnly": true,
+  "snapshotVersion": "synthetic-order-v4",
+  "templateVersion": "ficha-canonical-v4",
+  "snapshotSha256": "f260910181199df4be45b2c80bac5ce52e1ead998243b9ccf2c81d8d9d7c7149",
+  "renderedHtmlSha256": "29443157e3c0c1d05b292f778dc3f768cdc67432207918ae8f31e92971a29463",
+  "artifact": {
+    "path": "output/pdf/ficha-canonica-sintetica-v4.pdf",
+    "sha256": "9bddec68fcd53ae16f1c713b0edc0734f7327bdb266558408707c065c576e8f9",
+    "pageCount": 2
+  },
+  "provisionalApproval": {
+    "status": "approved",
+    "approved": true,
+    "scope": "development/cloud-dev",
+    "reviewedBy": {
+      "role": "Tech Lead",
+      "name": "Codex (decisão delegada pelo PO)"
+    },
+    "reviewedAt": "2026-10-03",
+    "snapshotSha256": "f260910181199df4be45b2c80bac5ce52e1ead998243b9ccf2c81d8d9d7c7149",
+    "renderedHtmlSha256": "29443157e3c0c1d05b292f778dc3f768cdc67432207918ae8f31e92971a29463",
+    "artifactSha256": "9bddec68fcd53ae16f1c713b0edc0734f7327bdb266558408707c065c576e8f9",
+    "decisionRef": "docs/phase0/FICHA-PDF-REVIEW-V4.md"
+  },
+  "approval": {
+    "status": "pending-human-approval",
+    "approved": false,
+    "requiredBefore": "production",
+    "signature": "physical",
+    "reviewedBy": { "rose": null, "operation": null },
+    "reviewedAt": null,
+    "signedPaperKeptAt": null,
+    "criteria": {
+      "legibility": null,
+      "content": null,
+      "order": null,
+      "grade": null,
+      "totals": null,
+      "printing": null
+    },
+    "evidenceRef": null
+  },
+  "versioning": {
+    "overwriteApprovedVersion": false,
+    "correctionsRequireNewTemplateVersion": true,
+    "supersedesTemplateVersion": "ficha-canonical-v3"
+  }
+}

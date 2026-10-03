@@ -291,7 +291,7 @@ test('reads days the way the operation does, on São Paulo time', () => {
   assert.equal(operationalDay(null), '');
 });
 
-test('lays the order trail out from first contact to delivery (PLA-01..03)', () => {
+test('shows each business date once across summary and trail (PLA-01..03, PLA-08)', () => {
   const order = {
     deliveredOn: null,
     ficha: { summary: { data_entrega_confirmada: '2026-10-24' } },
@@ -308,25 +308,11 @@ test('lays the order trail out from first contact to delivery (PLA-01..03)', () 
       value: '01/09/2026',
     },
     {
-      key: 'closed',
-      label: 'Pedido fechado',
-      note: 'data do pedido',
-      recorded: true,
-      value: '09/09/2026',
-    },
-    {
       key: 'paid',
       label: 'Pagamento',
       note: 'informado',
       recorded: true,
       value: '10/09/2026',
-    },
-    {
-      key: 'promised',
-      label: 'Entrega prometida',
-      note: 'vem do resumo',
-      recorded: true,
-      value: '24/10/2026',
     },
     {
       key: 'delivered',
@@ -343,18 +329,15 @@ test('lays the order trail out from first contact to delivery (PLA-01..03)', () 
     ]),
     [
       ['—', 'sem registro'],
-      ['—', 'definida ao gerar'],
       ['—', 'a informar'],
-      ['—', 'não combinada'],
       ['—', 'a informar'],
     ],
   );
-  // ADR 016: a pending order needs the promised delivery to be generated.
-  assert.equal(
-    orderMilestones({ ficha: { summary: {} }, status: 'pendente' }).find(
-      (step) => step.key === 'promised',
-    )?.note,
-    'exigida para gerar',
+  assert.equal(orderMilestones(order).length, 3);
+  assert.ok(
+    orderMilestones(order).every(
+      (step) => !['closed', 'promised'].includes(step.key),
+    ),
   );
 });
 

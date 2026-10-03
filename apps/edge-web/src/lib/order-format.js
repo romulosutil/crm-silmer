@@ -340,9 +340,9 @@ export function operationalDay(value) {
 }
 
 /**
- * PLA-01..03 (ADR 008): the trail of the order, from the first contact to the
- * delivery. Three days come from what the order already knows; payment and
- * delivery are the two a person records.
+ * PLA-01..03, PLA-08 (ADR 008/017): the printed trail has three days.
+ * Order date and promised delivery stay in the summary, so each of the five
+ * business dates appears only once in the ficha.
  *
  * @param {Record<string, any>} order
  * @returns {{key: string, label: string, value: string, recorded: boolean, note: string}[]}
@@ -357,27 +357,11 @@ export function orderMilestones(order) {
       recordedNote: 'vem da conversa',
     },
     {
-      day: order.orderDate,
-      emptyNote: 'definida ao gerar',
-      key: 'closed',
-      label: 'Pedido fechado',
-      recordedNote: 'data do pedido',
-    },
-    {
       day: order.paidOn,
       emptyNote: 'a informar',
       key: 'paid',
       label: 'Pagamento',
       recordedNote: 'informado',
-    },
-    {
-      day: order.ficha?.summary?.data_entrega_confirmada,
-      // ADR 016: the promised delivery is needed to generate the order.
-      emptyNote:
-        order.status === 'pendente' ? 'exigida para gerar' : 'não combinada',
-      key: 'promised',
-      label: 'Entrega prometida',
-      recordedNote: 'vem do resumo',
     },
     {
       day: order.deliveredOn,

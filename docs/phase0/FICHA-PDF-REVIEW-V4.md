@@ -7,16 +7,21 @@ repositório; o pacote abaixo usa só dados sintéticos.
 
 ## Estado
 
-**Candidata para revisão.** `PRINT_TEMPLATE` continua
-`ficha-canonical-v3`, com sua aprovação provisória e seu gate de assinatura
-física próprios. A v4 não é impressa pela rota de pedidos enquanto o PO não
-aprovar a amostra e enquanto Rose e Operação não cumprirem a revisão aplicável
-para produção. A v2/v3, os PDFs e os hashes dessas versões não foram alterados.
+**Aprovada provisoriamente para desenvolvimento e cloud-dev em 03/10/2026.**
+O PO autorizou a equipe a decidir o design da ficha como espelho da tela e,
+depois de revisar visualmente as duas páginas sintéticas, a decisão delegada
+ativou `PRINT_TEMPLATE = ficha-canonical-v4` em testes. O registro
+[`ficha-pdf-approval-v4.json`](ficha-pdf-approval-v4.json) trava os hashes
+da amostra, do HTML e do PDF. Rose e Operação ainda precisam revisar e assinar
+fisicamente a amostra impressa antes de qualquer uso em produção. A v2/v3,
+seus PDFs e seus hashes não foram alterados.
 
 O PDF sintético v3 entregue pelo PO mostra cinco campos no lastro. O PDF do
-pedido real, a ADR 017 e a ficha v3 versionada mostram três no lastro e as
-outras duas datas no resumo. Esta diferença precisa de confirmação do PO na
-revisão da v4; a candidata segue, por enquanto, a regra da ADR 017.
+pedido real, a ADR 017 e a ficha v3 versionada mostram três no lastro. O PO
+delegou a decisão final de layout para esta etapa: **primeiro contato,
+pagamento e entrega realizada ficam no lastro**; data do pedido e entrega
+prometida ficam no resumo. A escolha preserva a ficha real aprovada e evita
+duplicar datas no papel.
 
 ## Pacote sintético
 
@@ -24,14 +29,16 @@ revisão da v4; a candidata segue, por enquanto, a regra da ADR 017.
   serviços diferentes, as duas origens da arte no nível do pedido, técnica da arte como
   referência, cores específicas de frente e costas e um `vies_gola` legado.
 - [`../../output/pdf/ficha-canonica-sintetica-v4.pdf`](../../output/pdf/ficha-canonica-sintetica-v4.pdf): duas páginas A4 paisagem. A primeira contém pedido e itens; a segunda, 14 campos de produção vazios e linhas de assinatura da amostra.
-- `scripts/ficha-pdf-preview-v4.mjs`: reproduz a amostra sem tocar nos
-  artefatos v2/v3. `test/ficha-print-v4.test.js` verifica separação de versões,
-  rótulos, serviço por item, referências e páginas de continuação.
+- `scripts/ficha-pdf-preview-v4.mjs`: gerou a amostra antes da aprovação.
+  O PDF agora fica travado por hash; qualquer correção exige uma nova versão.
+- `scripts/ficha-pdf-review-v4.mjs`: valida amostra, HTML, PDF, aprovação
+  provisória e gate físico ainda pendente. O comando de revisão valida também
+  v2/v3. `test/ficha-print-v4.test.js` verifica separação de versões, rótulos,
+  serviço por item, referências e páginas de continuação.
 
-Para gerar em ambiente com Chromium do Playwright:
+Para validar o pacote aprovado provisoriamente:
 
 ```bash
-node scripts/ficha-pdf-preview-v4.mjs
 node --test test/ficha-print-v4.test.js
 npm run validate:ficha-pdf-review
 ```
@@ -70,7 +77,6 @@ Antes de ativar a v4 para pedidos antigos, o vendedor deve revisar itens cujo
 `modelo` histórico descrevia o corte e validar essa informação no campo
 **Tipo de roupa**. A v4 não imprime nem migra `modelo` automaticamente.
 
-O PO decide se esta revisão substitui a v3 ativa em desenvolvimento. Depois
-da decisão, criar registro de aprovação versionado com hashes e gate próprio,
-atualizar o seletor único da impressão e colher as assinaturas físicas antes
-do uso em produção. O envio ao Dropbox e o aviso a Rose são fluxos separados.
+A decisão provisória para testes está registrada. A revisão física por Rose e
+Operação permanece pendente antes da produção. O envio ao Dropbox e o aviso
+a Rose são fluxos separados.

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
@@ -7,6 +9,25 @@ import {
   TEMPLATE_V3,
   TEMPLATE_V4,
 } from '../modules/orders/src/print/index.js';
+import {
+  buildFichaHtmlV4,
+  validateFichaApprovalGateV4,
+  validateFichaReviewV4,
+} from '../scripts/ficha-pdf-review-v4.mjs';
+
+const sampleBytes = await readFile(
+  new URL('../docs/phase0/ficha-pdf-synthetic-v4.json', import.meta.url),
+);
+const reviewSample = JSON.parse(sampleBytes.toString('utf8'));
+const approval = JSON.parse(
+  await readFile(
+    new URL('../docs/phase0/ficha-pdf-approval-v4.json', import.meta.url),
+    'utf8',
+  ),
+);
+const pdfBytes = await readFile(
+  new URL('../output/pdf/ficha-canonica-sintetica-v4.pdf', import.meta.url),
+);
 
 const sample = JSON.parse(
   await readFile(
@@ -127,4 +148,61 @@ test('v4 summarizes long services without repeating their text in the header', (
   assert.match(html, /2 serviços · ver itens/u);
   assert.match(html, /Impressão Impressão/u);
   assert.match(html, /Costura Costura/u);
+});
+
+test('v4 approval locks the two-page synthetic package while physical signatures are pending', async () => {
+  assert.deepEqual(await validateFichaReviewV4(), approval);
+  const input = {
+    artifactBytes: pdfBytes,
+    gate: approval,
+    renderedHtml: buildFichaHtmlV4(reviewSample),
+    snapshotBytes: sampleBytes,
+  };
+  assert.doesNotThrow(() => validateFichaApprovalGateV4(input));
+  assert.throws(
+    () =>
+      validateFichaApprovalGateV4({
+        ...input,
+        renderedHtml: `${input.renderedHtml} `,
+      }),
+    /HTML changed/u,
+  );
+  assert.throws(
+    () =>
+      validateFichaApprovalGateV4({
+        ...input,
+        artifactBytes: Buffer.concat([pdfBytes, Buffer.from('change')]),
+      }),
+    /PDF changed/u,
+  );
+  const falseSignature = structuredClone(approval);
+  falseSignature.approval.approved = true;
+  assert.throws(
+    () => validateFichaApprovalGateV4({ ...input, gate: falseSignature }),
+    /signature/u,
+  );
+});
+
+test('the preview script refuses to overwrite the provisionally approved PDF', async () => {
+  const before = createHash('sha256').update(pdfBytes).digest('hex');
+  const script = new URL(
+    '../scripts/ficha-pdf-preview-v4.mjs',
+    import.meta.url,
+  );
+  const result = spawnSync(process.execPath, [script.pathname], {
+    encoding: 'utf8',
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /cannot be regenerated or overwritten/u);
+  const after = createHash('sha256')
+    .update(
+      await readFile(
+        new URL(
+          '../output/pdf/ficha-canonica-sintetica-v4.pdf',
+          import.meta.url,
+        ),
+      ),
+    )
+    .digest('hex');
+  assert.equal(after, before);
 });

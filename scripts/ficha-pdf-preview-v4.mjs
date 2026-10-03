@@ -20,6 +20,22 @@ const artifactUrl = new URL(
   '../output/pdf/ficha-canonica-sintetica-v4.pdf',
   import.meta.url,
 );
+const approvalUrl = new URL(
+  '../docs/phase0/ficha-pdf-approval-v4.json',
+  import.meta.url,
+);
+// The preview was used before provisional approval. After the versioned
+// record exists, a new design requires a new template/package version.
+const approvalRecordExists = await readFile(approvalUrl).then(
+  () => true,
+  (error) => {
+    if (error?.code === 'ENOENT') return false;
+    throw error;
+  },
+);
+if (approvalRecordExists) {
+  throw new Error('Approved v4 PDF cannot be regenerated or overwritten');
+}
 const sample = JSON.parse(await readFile(snapshotUrl, 'utf8'));
 if (sample.syntheticOnly !== true || sample.templateVersion !== TEMPLATE_V4) {
   throw new Error('Only the synthetic v4 sample may be rendered here');

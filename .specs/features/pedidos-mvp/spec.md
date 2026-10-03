@@ -478,8 +478,8 @@ Verificado na T53, 02/10/2026.
 
 | ID     | História | Evidência                                                                                                                                                                   | Status   |
 | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| PAB-01 | P1-1     | `test/n8n-workflow-contract.test.js:2101` (2105, 2113, 2146); `test/n8n-workflow-contract.test.js:468,873`                                                                  | Verified |
-| PAB-02 | P1-1     | `test/n8n-workflow-contract.test.js:2168,2176,2208`; `test/n8n-workflow-contract.test.js:213`                                                                               | Verified |
+| PAB-01 | P1-1     | `test/n8n-workflow-contract.test.js:2102` (2106, 2114, 2147); `test/n8n-workflow-contract.test.js:469,874`                                                                  | Verified |
+| PAB-02 | P1-1     | `test/n8n-workflow-contract.test.js:2169,2177,2209`; `test/n8n-workflow-contract.test.js:213`                                                                               | Verified |
 | PAB-03 | P1-1     | `test/n8n-integration-postgres-live.test.js:755,766,800,821,975`; `test/n8n-integration-domain.test.js:250`; `test/n8n-api-contract.test.js:126`; `test/n8n-routes.test.js:172` | Verified |
 | PAB-04 | P1-1     | `test/n8n-integration-postgres-live.test.js:846,894,939`; `test/n8n-workflow-contract.test.js:305`; `test/n8n-api-contract.test.js:184`; `test/n8n-dev-workflow.test.js:111` | Verified |
 

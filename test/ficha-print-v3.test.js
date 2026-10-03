@@ -561,7 +561,7 @@ test('escapes every printed text', () => {
     order([{ ...polo, cor: '<script>alert(1)</script>', modelo: '"A" & B' }]),
   );
 
-  assert.doesNotMatch(html, /<script>/u);
+  assert.doesNotMatch(html, /<script\b/iu);
   assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/u);
   assert.match(html, /&quot;A&quot; &amp; B/u);
 });

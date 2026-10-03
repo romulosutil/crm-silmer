@@ -21,7 +21,7 @@ revisão da v4; a candidata segue, por enquanto, a regra da ADR 017.
 ## Pacote sintético
 
 - [`ficha-pdf-synthetic-v4.json`](ficha-pdf-synthetic-v4.json): dois itens,
-  serviços diferentes, as duas origens da estampa, técnica da arte como
+  serviços diferentes, as duas origens da arte no nível do pedido, técnica da arte como
   referência, cores específicas de frente e costas e um `vies_gola` legado.
 - [`../../output/pdf/ficha-canonica-sintetica-v4.pdf`](../../output/pdf/ficha-canonica-sintetica-v4.pdf): duas páginas A4 paisagem. A primeira contém pedido e itens; a segunda, 14 campos de produção vazios e linhas de assinatura da amostra.
 - `scripts/ficha-pdf-preview-v4.mjs`: reproduz a amostra sem tocar nos
@@ -39,7 +39,7 @@ npm run validate:ficha-pdf-review
 ## Conferência solicitada
 
 1. Comparar a primeira página com a ficha sintética fornecida pelo PO:
-   hierarquia, sete pontos, totais, serviços por item, origem da arte e
+   hierarquia, sete pontos, totais, serviços por item, origens da arte do pedido e
    definição da gola.
 2. Conferir que “Modelo” e “Viés gola” não aparecem, mas o valor histórico de
    gola ainda é legível; as cores de frente e costas permanecem visíveis nos
@@ -57,6 +57,15 @@ npm run validate:ficha-pdf-review
 Após incluir a referência de técnica e as cores por parte, um ensaio sintético
 com quatro itens, estampas longas e ambas as origens gerou quatro páginas:
 três comerciais com cabeçalho e a última de produção, sem item cortado.
+Uma grade sintética de 100 tamanhos foi dividida em 15 partes: o total do item
+aparece só na primeira; as demais remetem a ela sem repetir a quantidade.
+Dois serviços com quase 200 caracteres cada foram impressos em três páginas:
+duas comerciais com cabeçalho e a última de produção; o resumo indica
+“2 serviços · ver itens” e conserva os textos completos nos respectivos itens.
+
+Antes de ativar a v4 para pedidos antigos, o vendedor deve revisar itens cujo
+`modelo` histórico descrevia o corte e validar essa informação no campo
+**Tipo de roupa**. A v4 não imprime nem migra `modelo` automaticamente.
 
 O PO decide se esta revisão substitui a v3 ativa em desenvolvimento. Depois
 da decisão, criar registro de aprovação versionado com hashes e gate próprio,

@@ -129,7 +129,11 @@ async function save() {
             <OrderIcon name="lock" />
           </div>
           <p id="summary-cliente-hint" class="op-hint">
-            Vem da conversa e não muda no pedido.
+            {{
+              order.status === 'pendente'
+                ? 'Acompanha o cadastro do cliente até gerar o pedido.'
+                : 'Nome registrado quando o pedido foi gerado.'
+            }}
           </p>
         </div>
 
@@ -148,14 +152,18 @@ async function save() {
         </div>
 
         <div class="op-field">
-          <label for="summary-aplicacao">Tipo de serviço</label>
+          <label for="summary-aplicacao">Técnica da arte (referência)</label>
           <input
             id="summary-aplicacao"
             v-model="draft.aplicacao"
             type="text"
             autocomplete="off"
             autocapitalize="characters"
+            aria-describedby="summary-aplicacao-hint"
           />
+          <p id="summary-aplicacao-hint" class="op-hint">
+            O tipo de serviço que será executado é definido em cada item.
+          </p>
         </div>
 
         <div class="op-field">
@@ -211,7 +219,7 @@ async function save() {
           </dd>
         </div>
         <div>
-          <dt>Tipo de serviço</dt>
+          <dt>Técnica da arte (referência)</dt>
           <dd>{{ summary.aplicacao || '—' }}</dd>
         </div>
       </dl>

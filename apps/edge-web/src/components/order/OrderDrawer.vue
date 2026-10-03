@@ -46,7 +46,7 @@ const missingLabels = computed(() =>
 const items = computed(() =>
   (order.value?.ficha?.items ?? []).map((item, index) => ({
     key: `${index}`,
-    label: [item.tipo, item.modelo].filter(Boolean).join(' · ') || 'Item',
+    label: item.tipo || 'Tipo de roupa não informado',
     pieces: (item.grade ?? []).reduce(
       (/** @type {number} */ total, /** @type {any} */ line) =>
         total + Number(line.quantidade ?? 0),

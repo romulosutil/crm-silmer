@@ -465,8 +465,23 @@ details.exact summary {
 }
 
 .table-wrap {
+  position: relative;
+  inline-size: 100%;
+  min-inline-size: 0;
   max-inline-size: 100%;
   overflow-x: auto;
+}
+
+.table-scroll-hint {
+  display: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+@media (width < 48rem) {
+  .table-scroll-hint {
+    display: block;
+  }
 }
 
 .data-table {
@@ -2059,6 +2074,30 @@ button.op-save:hover:not(:disabled) {
   block-size: 1rem;
   margin: 0;
   accent-color: var(--color-brand-ink);
+}
+
+.op-artwork-source {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border: 0;
+}
+
+.op-artwork-source legend {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.op-artwork-upload {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem 1.25rem;
+  border-block-start: 1px solid var(--color-border-subtle);
+}
+
+.op-artwork-upload code {
+  overflow-wrap: anywhere;
 }
 
 .op-input-row {

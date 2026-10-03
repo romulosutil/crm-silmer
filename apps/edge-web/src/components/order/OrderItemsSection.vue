@@ -16,10 +16,9 @@ const GRADE_MESSAGE = 'Use uma quantidade inteira maior que zero.';
 const EXTRAS_LABEL = 'Adicionais (não obrigatórios)';
 
 // PIT-02 (ADR 016): what the seller may add to an item. None of it blocks
-// the order. Only sleeves and viés accept "Não aplicável" (PFI-07): a shirt
+// the order. Only sleeves and sleeve trim accept "Não aplicável" (PFI-07): a shirt
 // without sleeves still has a front and a back.
 const EXTRA_FIELDS = Object.freeze([
-  Object.freeze({ key: 'modelo', label: 'Modelo' }),
   Object.freeze({ color: true, key: 'cor_frente', label: 'Cor frente' }),
   Object.freeze({ color: true, key: 'cor_costas', label: 'Cor costas' }),
   Object.freeze({
@@ -32,12 +31,6 @@ const EXTRA_FIELDS = Object.freeze([
     color: true,
     key: 'cor_manga_esquerda',
     label: 'Manga esquerda',
-    optional: true,
-  }),
-  Object.freeze({
-    color: true,
-    key: 'vies_gola',
-    label: 'Viés gola',
     optional: true,
   }),
   Object.freeze({
@@ -98,6 +91,16 @@ function shownValue(value) {
 function swatchOf(value) {
   if (value === NOT_APPLICABLE) return '';
   return colorSwatch(value);
+}
+
+/** Historical front/back colours imply a whole garment colour only when equal. */
+function itemColor(item) {
+  return (
+    item.cor ||
+    (item.cor_frente && item.cor_frente === item.cor_costas
+      ? item.cor_frente
+      : '')
+  );
 }
 
 /** @param {string} mode @param {number} index */
@@ -172,6 +175,10 @@ function editable(item) {
   return {
     ...blankItem(),
     ...item,
+    // Older fichas carried the collar in vies_gola. Matching front/back
+    // colours can fill the general colour; differing colours need a decision.
+    cor: itemColor(item),
+    gola: item.gola || item.vies_gola || '',
     malhas: item.malhas?.length ? [...item.malhas] : [''],
   };
 }
@@ -189,6 +196,7 @@ function blankItem() {
     malhas: [''],
     modelo: '',
     tipo: '',
+    tipo_servico: '',
     vies_gola: '',
     vies_mangas: '',
   };
@@ -300,6 +308,7 @@ async function save() {
       ),
       modelo: item.modelo,
       tipo: item.tipo,
+      tipo_servico: item.tipo_servico,
       vies_gola: item.vies_gola,
       vies_mangas: item.vies_mangas,
     })),
@@ -379,7 +388,7 @@ async function save() {
             </button>
           </div>
 
-          <!-- PIT-01: the seven points in the bot's order. -->
+          <!-- PIT-01: the seven bot points, plus the service chosen by the seller. -->
           <div class="op-item-fields">
             <div class="op-field">
               <label :for="`item-${itemIndex}-tipo`">Tipo de roupa</label>
@@ -390,6 +399,22 @@ async function save() {
                 autocomplete="off"
                 autocapitalize="characters"
               />
+            </div>
+
+            <div class="op-field">
+              <label :for="`item-${itemIndex}-tipo-servico`"
+                >Tipo de serviço</label
+              >
+              <input
+                :id="`item-${itemIndex}-tipo-servico`"
+                v-model="item.tipo_servico"
+                type="text"
+                autocomplete="off"
+                :aria-describedby="`item-${itemIndex}-service-hint`"
+              />
+              <p :id="`item-${itemIndex}-service-hint`" class="op-hint">
+                Obrigatório para gerar. Pode ser diferente dos demais itens.
+              </p>
             </div>
 
             <div class="op-field">
@@ -581,7 +606,7 @@ async function save() {
             </div>
 
             <div class="op-field">
-              <label :for="`item-${itemIndex}-gola`">Gola</label>
+              <label :for="`item-${itemIndex}-gola`">Definição da gola</label>
               <input
                 :id="`item-${itemIndex}-gola`"
                 v-model="item.gola"
@@ -690,22 +715,26 @@ async function save() {
             {{ itemHeading(item, itemIndex) }}
           </h3>
         </div>
-        <!-- PIT-01: the seven points in the bot's order. -->
+        <!-- PIT-01: the seven bot points, plus service per item. -->
         <dl class="op-points">
           <div>
             <dt>Tipo de roupa</dt>
             <dd>{{ shownValue(item.tipo) }}</dd>
           </div>
           <div>
+            <dt>Tipo de serviço</dt>
+            <dd>{{ shownValue(item.tipo_servico) }}</dd>
+          </div>
+          <div>
             <dt>Cor</dt>
             <dd>
               <span
-                v-if="swatchOf(item.cor)"
+                v-if="swatchOf(itemColor(item))"
                 class="op-swatch"
-                :style="{ background: swatchOf(item.cor) }"
+                :style="{ background: swatchOf(itemColor(item)) }"
                 aria-hidden="true"
               ></span>
-              {{ shownValue(item.cor) }}
+              {{ shownValue(itemColor(item)) }}
             </dd>
           </div>
           <div>
@@ -735,8 +764,8 @@ async function save() {
             </dd>
           </div>
           <div>
-            <dt>Gola</dt>
-            <dd>{{ shownValue(item.gola) }}</dd>
+            <dt>Definição da gola</dt>
+            <dd>{{ shownValue(item.gola || item.vies_gola) }}</dd>
           </div>
         </dl>
         <div class="op-extras">

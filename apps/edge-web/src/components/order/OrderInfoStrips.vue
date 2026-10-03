@@ -14,9 +14,9 @@ const PRODUCTION_FIELD_COUNT = 14;
 const SERVICE_LABELS = Object.freeze({
   artwork_locations: 'Locais da arte',
   artwork_status: 'Arte',
-  // ADR 016: a wish such as "estampada" or "com foto"; only a named
-  // technique becomes the type of service.
-  artwork_technique: 'Estampa desejada',
+  // ADR 016: wording collected in the conversation remains reference text;
+  // the executable service is confirmed on each order item.
+  artwork_technique: 'Técnica de estampa informada',
   city_or_postal_code: 'Cidade ou CEP',
   // ADR 016: the seven points land on the item; they show here only when
   // left to the seller or sent in a shape the order does not read.

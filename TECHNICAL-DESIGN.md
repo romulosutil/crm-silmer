@@ -390,6 +390,9 @@ será criado na implementação. OpenAPI 3.1 é gerado a partir dos mesmos JSON
 Schemas usados na validação. Campos desconhecidos em comandos críticos são
 rejeitados. SSE aceita `Last-Event-ID`, heartbeat, replay limitado e autorização
 por tópico para reconectar sem vazar eventos entre usuários.
+Se o cursor recebido estiver à frente do ledger após um restore, a API emite
+`stream.reset` com o cursor atual e continua a entregar eventos novos na mesma
+conexão. O navegador recarrega apenas suas consultas autorizadas.
 
 ## 10. Confiabilidade e processamento assíncrono
 

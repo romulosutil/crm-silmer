@@ -259,3 +259,90 @@ test('an event backlog over 100 advances the reset cursor and then resumes', asy
     type: 'inbox.conversation.changed',
   });
 });
+
+test('a cursor ahead of a restored database resets to its head and resumes', async () => {
+  let head = 100;
+  /** @type {Array<{sql:string,values:any[]|undefined}>} */
+  const queries = [];
+  const service = createOperationReadService({
+    contactRepository: {},
+    cursorKey: Buffer.alloc(32, 1),
+    database: {
+      /** @param {string} sql @param {any[]|undefined} values */
+      async query(sql, values) {
+        queries.push({ sql, values });
+        if (sql.includes('max(stream_cursor)')) {
+          return { rows: [{ cursor: String(head) }] };
+        }
+        return {
+          rows:
+            head > (values?.[0] ?? 0)
+              ? [
+                  {
+                    aggregate_id: 'order-1',
+                    aggregate_type: 'order',
+                    payload: { orderId: 'order-1' },
+                    stream_cursor: String(head),
+                  },
+                ]
+              : [],
+        };
+      },
+    },
+    handoffRepository: {},
+    inboxRepository: {},
+  });
+
+  assert.deepEqual(await service.readLiveEvents({ after: 500 }), {
+    cursor: 100,
+    events: [],
+    reset: true,
+  });
+  assert.match(queries[1].sql, /COALESCE\(max\(stream_cursor\), 0\)/u);
+  head = 101;
+  assert.deepEqual(await service.readLiveEvents({ after: 100 }), {
+    cursor: 101,
+    events: [
+      {
+        cursor: 101,
+        payload: { conversationId: '', orderId: 'order-1' },
+        type: 'inbox.order.changed',
+      },
+    ],
+    reset: false,
+  });
+  assert.equal(queries.length, 3);
+});
+
+test('an empty restored event stream resets to zero, while a current cursor does not', async () => {
+  let head = 0;
+  const service = createOperationReadService({
+    contactRepository: {},
+    cursorKey: Buffer.alloc(32, 1),
+    database: {
+      /** @param {string} sql */
+      async query(sql) {
+        return {
+          rows: sql.includes('max(stream_cursor)')
+            ? [{ cursor: String(head) }]
+            : [],
+        };
+      },
+    },
+    handoffRepository: {},
+    inboxRepository: {},
+  });
+  assert.deepEqual(await service.readLiveEvents({ after: 500 }), {
+    cursor: 0,
+    events: [],
+    reset: true,
+  });
+  // An unrelated aggregate may be newer than the Inbox projection. That
+  // still means this browser cursor belongs to the current database.
+  head = 501;
+  assert.deepEqual(await service.readLiveEvents({ after: 500 }), {
+    cursor: 500,
+    events: [],
+    reset: false,
+  });
+});

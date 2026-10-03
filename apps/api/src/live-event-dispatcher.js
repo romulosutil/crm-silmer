@@ -15,6 +15,32 @@ export class LiveEventDispatcher {
     this.polling = false;
   }
 
+  /**
+   * Probe a client cursor only when it is ahead of this process. A new API
+   * process also starts at zero, so that difference alone is not a restore.
+   * @param {number} after
+   */
+  async reconcileAhead(after) {
+    if (after <= this.cursor) return null;
+    const batch = await this.operations.readLiveEvents({ after });
+    if (!batch.reset) {
+      // The first browser may already be caught up after an API restart.
+      // Start the shared poll from its validated cursor instead of replaying
+      // a historical backlog and issuing an unnecessary reset.
+      if (this.listeners.size === 0 && !this.polling) this.cursor = after;
+      return null;
+    }
+    if (batch.cursor >= after) return null;
+    this.cursor = batch.cursor;
+    const event = {
+      cursor: this.cursor,
+      payload: { cursor: this.cursor },
+      type: 'stream.reset',
+    };
+    this.emit(event);
+    return event;
+  }
+
   /** @param {(event: any) => void} listener @param {number} [after] */
   subscribe(listener, after = 0) {
     this.listeners.add(listener);

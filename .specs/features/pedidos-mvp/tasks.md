@@ -904,7 +904,7 @@ workflow DEV `0S5ZS1xeDCSoWovs` e, com autorização do PO, o de produção
 
 ### T51: `open_order` no contrato n8n do CRM
 
-- **What:** `message.send.requested` e `handoff.requested` aceitam o booleano `open_order`; a rota exige também `order.intent`; depois do commit, o CRM cria ou reutiliza o pendente, projeta como antes e responde `order`; a falha não falha o evento, é auditada e registrada sem PII. `order.intent_confirmed` fica obsoleto. Fixtures, schema e validador do contrato, OpenAPI e README do n8n.
+- **What:** `message.send.requested` e `handoff.requested` aceitam o booleano `open_order`, sob a autorização do próprio evento; depois do commit, o CRM cria ou reutiliza o pendente, projeta como antes e responde `order`; a falha não falha o evento, é auditada e registrada sem PII. `order.intent_confirmed` fica obsoleto. Fixtures, schema e validador do contrato, OpenAPI e README do n8n.
 - **Where:** `modules/n8n-integration/src/{service,postgres-repository}.js`, `apps/api/src/n8n-{routes,runtime}.js`, `schemas/fixtures/external/n8n/**`, `docs/api/openapi.v1.yaml`, `docs/integrations/n8n/README.md`, `test/n8n-{integration-domain,api-contract,routes,integration-postgres-live}.test.js`
 - **Depends on:** T50
 - **Requirement:** PCL-01..03, PAB-03, PAB-04

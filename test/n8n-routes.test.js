@@ -169,7 +169,7 @@ test('n8n events route sends order.intent_confirmed to recordOrderIntent under t
   assert.equal(calls[0].input.event_id, 'event-synthetic');
 });
 
-test('n8n events route forwards open_order and also authorizes the order action (ADR 014)', async (t) => {
+test('n8n events route forwards open_order under the event action (ADR 014)', async (t) => {
   const { api, authorizedActions, calls } = harness();
   t.after(() => api.close());
   /** @param {Record<string, unknown>} extra */
@@ -194,10 +194,7 @@ test('n8n events route forwards open_order and also authorizes the order action 
 
   const opening = await send({ open_order: true });
   assert.equal(opening.statusCode, 200);
-  assert.deepEqual(authorizedActions, [
-    'integration.n8n.event.create',
-    'order.intent',
-  ]);
+  assert.deepEqual(authorizedActions, ['integration.n8n.event.create']);
   assert.equal(calls[0].method, 'recordEvent');
   assert.equal(calls[0].input.open_order, true);
 
@@ -208,7 +205,7 @@ test('n8n events route forwards open_order and also authorizes the order action 
     open_order: true,
   });
   assert.equal(handoff.statusCode, 200);
-  assert.deepEqual(authorizedActions, ['handoff.create', 'order.intent']);
+  assert.deepEqual(authorizedActions, ['handoff.create']);
 
   authorizedActions.length = 0;
   assert.equal((await send({ open_order: false })).statusCode, 200);

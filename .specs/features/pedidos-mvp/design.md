@@ -276,17 +276,23 @@ caminho que o inbox usa), não por texto aberto na tabela de pedidos.
 type OrderStatus = 'pendente' | 'confirmado';
 type PaymentCondition = 'pix' | 'cartao_credito' | 'cartao_debito';
 
+// ADR 016 (02/10/2026): principais na ordem da tela; a quantidade é a soma
+// da grade. Pode ser salvo incompleto; gerar exige os principais.
 interface FichaItem {
-  tipo: string;
+  tipo: string; // Tipo de roupa
+  cor: string;
+  estampa: string;
+  malhas: string[]; // Tecido; sem linha em branco
+  grade: { tamanho: string; quantidade: number }[]; // Tamanhos; inteiro > 0
+  gola: string;
+  // Adicionais (não obrigatórios)
   modelo: string;
-  malhas: string[];
   cor_frente: string;
   cor_costas: string;
-  cor_manga_direita: string;
+  cor_manga_direita: string; // 'NAO APLICAVEL' permitido
   cor_manga_esquerda: string; // 'NAO APLICAVEL' permitido
-  vies_gola: string;
-  vies_mangas: string;
-  grade: { tamanho: string; quantidade: number }[]; // ≥1 linha, inteiro > 0
+  vies_gola: string; // 'NAO APLICAVEL' permitido
+  vies_mangas: string; // 'NAO APLICAVEL' permitido
 }
 
 interface Ficha {
@@ -309,7 +315,7 @@ interface Order {
   fabCode: string;
   ficha: Ficha;
   totalPieces: number;
-  missingFields: string[];
+  missingFields: string[]; // ADR 016: items, items[N].<principal>, finalAmount, paymentCondition
   finalAmountCents: number | null;
   paymentCondition: PaymentCondition | null;
   orderDate: string | null;

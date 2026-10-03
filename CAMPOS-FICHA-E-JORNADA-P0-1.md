@@ -55,6 +55,12 @@ avançar o card até a pendência ser resolvida por cliente ou pessoa autorizada
 | `pedido.cliente` | `Cliente` | `C4:G4` | Cliente/CRM | Sim | Pessoa ou organização que contrata o pedido. |
 | `pedido.aplicacao` | `Aplicação:` | `J4:K4` | Qualificação/operação | Sim | Técnica final, por exemplo `SUBLIMAÇÃO TOTAL`; `SEM APLICAÇÃO` é valor explícito. |
 
+> **Supersedido em parte em 02/10/2026 pela
+> [ADR 016](docs/adr/016-itens-com-os-sete-pontos-da-ficha.md).** No Pedido,
+> nome, entrega confirmada, cliente e aplicação continuam editáveis, mas não
+> bloqueiam gerar o pedido nem são listados como faltando. O cliente é sempre
+> um nome confirmado.
+
 ### 2.2 Itens, partes da peça e grade
 
 Os campos abaixo se repetem nas linhas `7:27`. O CRM deve modelá-los como
@@ -82,6 +88,14 @@ Validações obrigatórias:
 3. A soma da grade é igual à quantidade total confirmada.
 4. Item, modelo e malha nunca são recuperados apenas de texto livre no momento
    da emissão: precisam estar estruturados.
+
+> **Supersedido em parte em 02/10/2026 pela
+> [ADR 016](docs/adr/016-itens-com-os-sete-pontos-da-ficha.md).** No Pedido, o
+> item ganha `itens[].cor`, `itens[].estampa` e `itens[].gola`. Os principais
+> são tipo, cor, quantidade (soma da grade), estampa, malhas, grade e gola, e
+> gerar o pedido exige todos em cada item; modelo, cor de cada parte e viés
+> passam a adicionais, que não bloqueiam. A regra 3 vira aviso: a soma da grade
+> diferente da quantidade informada não bloqueia.
 
 ### 2.3 Observações do pedido
 

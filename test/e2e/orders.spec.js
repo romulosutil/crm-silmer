@@ -281,7 +281,7 @@ function eventStreamBody(event) {
 
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{orders?: any[], liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>}}} [options]
+ * @param {{orders?: any[], failDetailOnce?: boolean, failListOnce?: boolean, liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>}}} [options]
  */
 async function mockOrders(page, options = {}) {
   // A write mutates the order it answers with, so each test gets its own
@@ -293,6 +293,7 @@ async function mockOrders(page, options = {}) {
   );
   const pages = options.pages ?? null;
   let listCalls = 0;
+  let detailCalls = 0;
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -316,14 +317,23 @@ async function mockOrders(page, options = {}) {
     }
     if (path === '/api/v1/orders' && request.method() === 'GET') {
       options.onList?.(url.searchParams);
+      const pageIndex = listCalls;
+      listCalls += 1;
+      if (options.failListOnce && listCalls === 1) {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/problem+json',
+          body: JSON.stringify({ code: 'UNAVAILABLE' }),
+        });
+        return;
+      }
       const source = pages
-        ? (pages[Math.min(listCalls, pages.length - 1)] ?? [])
+        ? (pages[Math.min(pageIndex, pages.length - 1)] ?? [])
         : orders.filter(
             (order) =>
               !url.searchParams.get('status') ||
               order.status === url.searchParams.get('status'),
           );
-      listCalls += 1;
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
@@ -418,6 +428,14 @@ async function mockOrders(page, options = {}) {
     const detail = /^\/api\/v1\/orders\/([^/]+)$/u.exec(path);
     if (detail && request.method() === 'GET') {
       options.onDetail?.(detail[1]);
+      if (options.failDetailOnce && detailCalls++ === 0) {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/problem+json',
+          body: JSON.stringify({ code: 'UNAVAILABLE' }),
+        });
+        return;
+      }
       const order = orders.find((candidate) => candidate.id === detail[1]);
       if (!order) {
         await route.fulfill({
@@ -482,27 +500,87 @@ test('groups orders by status with counts, columns and actions', async ({
   await expect(pendingRow).toContainText(
     'Falta valor final e forma de pagamento',
   );
-  await expect(pendingRow).toContainText('parado há');
+  await expect(pendingRow).toContainText('Pedido sem movimentação há');
 
   // PLI-06: printing belongs to confirmed orders, continuing to pending ones.
   await expect(
-    confirmedRow.getByRole('button', { name: 'Imprimir' }),
+    confirmedRow.getByRole('button', { name: 'Imprimir ficha' }),
   ).toBeVisible();
   await expect(
-    confirmedRow.getByRole('link', { name: 'Abrir' }),
+    confirmedRow.getByRole('link', { name: 'Abrir pedido' }),
   ).toHaveAttribute('href', '/pedidos/order-confirmado');
   await expect(
-    confirmedRow.getByRole('link', { name: 'Continuar' }),
+    confirmedRow.getByRole('link', { name: 'Continuar pedido' }),
   ).toHaveCount(0);
   await expect(
-    pendingRow.getByRole('button', { name: 'Imprimir' }),
+    pendingRow.getByRole('button', { name: 'Imprimir ficha' }),
   ).toHaveCount(0);
   await expect(
-    pendingRow.getByRole('link', { name: 'Continuar' }),
+    pendingRow.getByRole('link', { name: 'Abrir pedido' }),
   ).toHaveAttribute('href', '/pedidos/order-pendente');
 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
+});
+
+test('recovers the order list after an initial server failure without showing an empty wallet', async ({
+  page,
+}) => {
+  await mockOrders(page, { failListOnce: true });
+  await page.goto('/pedidos');
+
+  await expect(
+    page.getByRole('heading', { name: 'Pedidos indisponíveis' }),
+  ).toBeVisible();
+  await expect(page.getByText('Nenhum pedido por aqui')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(page.getByRole('row', { name: /Colégio Ápice/u })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Pedidos', exact: true }),
+  ).toBeFocused();
+});
+
+test('keeps loaded orders visible when a live refresh fails', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  let reads = 0;
+  await page.route(/\/api\/v1\/orders\?/u, async (route) => {
+    reads += 1;
+    if (reads !== 2) return route.fallback();
+    return route.fulfill({
+      body: JSON.stringify({ code: 'UNAVAILABLE' }),
+      contentType: 'application/problem+json',
+      status: 503,
+    });
+  });
+  /** @type {() => void} */
+  let sendEvent = () => {};
+  const eventGate = new Promise((resolve) => {
+    sendEvent = () => resolve(null);
+  });
+  await page.route(/\/api\/v1\/events\?/u, async (route) => {
+    await eventGate;
+    return route.fulfill({
+      body: eventStreamBody({
+        payload: { orderId: 'order-pendente' },
+        type: 'inbox.order.changed',
+      }),
+      contentType: 'text/event-stream',
+      status: 200,
+    });
+  });
+  await page.goto('/pedidos');
+  await expect(page.getByRole('row', { name: /Colégio Ápice/u })).toBeVisible();
+
+  sendEvent();
+  await expect(page.getByRole('alert')).toContainText(
+    'Os dados exibidos podem estar desatualizados.',
+  );
+  await expect(page.getByRole('row', { name: /Colégio Ápice/u })).toBeVisible();
+  await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(reads).toBe(3);
 });
 
 test('filters by status and searches by number, customer or phone', async ({
@@ -650,7 +728,7 @@ test('locks printing while the order is pending and says why (PIM-01)', async ({
   await mockOrders(page);
   await page.goto('/pedidos/order-pendente');
 
-  const print = page.getByRole('button', { name: 'Imprimir' });
+  const print = page.getByRole('button', { name: 'Imprimir ficha' });
   await expect(print).toBeDisabled();
   await expect(
     page.getByText('Disponível depois de gerar o pedido'),
@@ -743,7 +821,7 @@ test('prints a confirmed order from its page', async ({ page }) => {
   await mockOrders(page);
   await page.goto('/pedidos/order-confirmado');
 
-  const print = page.getByRole('button', { name: 'Imprimir' });
+  const print = page.getByRole('button', { name: 'Imprimir ficha' });
   await expect(print).toBeEnabled();
   const [document] = await Promise.all([
     page.context().waitForEvent('page'),
@@ -789,6 +867,68 @@ test('names a missing order with the way back to the list', async ({
   await expect(
     page.getByRole('link', { name: 'Voltar para Pedidos' }),
   ).toHaveAttribute('href', '/pedidos');
+});
+
+test('recovers the order detail after an initial server failure', async ({
+  page,
+}) => {
+  await mockOrders(page, { failDetailOnce: true });
+  await page.goto('/pedidos/order-pendente');
+
+  await expect(
+    page.getByRole('heading', { name: 'Pedido indisponível' }),
+  ).toBeFocused();
+  await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeFocused();
+});
+
+test('keeps a loaded order visible when its live refresh fails', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  let reads = 0;
+  await page.route('**/api/v1/orders/order-pendente', async (route) => {
+    reads += 1;
+    if (reads !== 2) return route.fallback();
+    return route.fulfill({
+      body: JSON.stringify({ code: 'UNAVAILABLE' }),
+      contentType: 'application/problem+json',
+      status: 503,
+    });
+  });
+  /** @type {() => void} */
+  let sendEvent = () => {};
+  const eventGate = new Promise((resolve) => {
+    sendEvent = () => resolve(null);
+  });
+  await page.route(/\/api\/v1\/events\?/u, async (route) => {
+    await eventGate;
+    return route.fulfill({
+      body: eventStreamBody({
+        payload: { orderId: 'order-pendente' },
+        type: 'inbox.order.changed',
+      }),
+      contentType: 'text/event-stream',
+      status: 200,
+    });
+  });
+  await page.goto('/pedidos/order-pendente');
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeVisible();
+
+  sendEvent();
+  await expect(page.getByRole('alert')).toContainText(
+    'Os dados exibidos podem estar desatualizados.',
+  );
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(reads).toBe(3);
 });
 
 test('refreshes the open order when it changes elsewhere', async ({ page }) => {
@@ -1106,7 +1246,9 @@ test('records payment and delivery on a confirmed order without reopening it (PL
   ]);
   // The order stays confirmed and printable.
   await expect(page.locator('.op-head .op-status')).toHaveText(/Confirmado/u);
-  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toBeEnabled();
 });
 
 test('clears a recorded day and refuses a day after today, next to the field (PLA-05)', async ({
@@ -1650,7 +1792,9 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
 
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await expect(closing).toContainText('pedido pendente');
-  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toBeDisabled();
 
   await closing.getByLabel('Valor final').fill('4.820,00');
   await closing.getByLabel('Pix').check();
@@ -1664,7 +1808,9 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
   await expect(closing).toContainText('R$ 4.820,00');
   await expect(closing).toContainText('Pix');
   await expect(closing).toContainText('Confirmado por Marina Aguiar');
-  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toBeEnabled();
   await expect(
     page.getByText('Disponível depois de gerar o pedido'),
   ).toHaveCount(0);
@@ -1676,7 +1822,9 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
   });
 
   await closing.getByRole('button', { name: 'Reabrir pedido' }).click();
-  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toBeDisabled();
   await expect(closing).toContainText('pedido pendente');
   // PCL-07: the amount and the condition survive the reopen.
   await expect(closing.getByLabel('Valor final')).toHaveValue('4.820,00');
@@ -1789,5 +1937,7 @@ test('hides Gerar and Reabrir from whoever does not own the conversation', async
     closing.getByRole('button', { name: 'Reabrir pedido' }),
   ).toHaveCount(0);
   // PIM-05: any operational session prints a confirmed order.
-  await expect(page.getByRole('button', { name: 'Imprimir' })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toBeEnabled();
 });

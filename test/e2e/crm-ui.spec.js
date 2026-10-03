@@ -1408,6 +1408,103 @@ test('opens a client by clicking the whole row while keeping its keyboard link',
   await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeFocused();
 });
 
+test('recovers the client list after an initial server failure without showing an empty list', async ({
+  page,
+}) => {
+  await mockCrm(page);
+  let reads = 0;
+  await page.route(/\/api\/v1\/contacts\?/u, async (route) => {
+    reads += 1;
+    if (reads > 1) return route.fallback();
+    return route.fulfill({
+      body: JSON.stringify({ code: 'UNAVAILABLE' }),
+      contentType: 'application/problem+json',
+      status: 503,
+    });
+  });
+  await page.goto('/clientes');
+
+  await expect(
+    page.getByRole('heading', { name: 'Clientes indisponíveis' }),
+  ).toBeVisible();
+  await expect(page.getByText('Nenhum contato encontrado')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Clientes', exact: true }),
+  ).toBeFocused();
+});
+
+test('keeps loaded clients visible when a live refresh fails', async ({
+  page,
+}) => {
+  await mockCrm(page);
+  let reads = 0;
+  await page.route(/\/api\/v1\/contacts\?/u, async (route) => {
+    reads += 1;
+    if (reads !== 2) return route.fallback();
+    return route.fulfill({
+      body: JSON.stringify({ code: 'UNAVAILABLE' }),
+      contentType: 'application/problem+json',
+      status: 503,
+    });
+  });
+  /** @type {() => void} */
+  let sendEvent = () => {};
+  const eventGate = new Promise((resolve) => {
+    sendEvent = () => resolve(null);
+  });
+  await page.route(/\/api\/v1\/events\?/u, async (route) => {
+    await eventGate;
+    return route.fulfill({
+      body: eventStreamBody({
+        contactId: 'contact-1',
+        type: 'inbox.contact.changed',
+      }),
+      contentType: 'text/event-stream',
+      status: 200,
+    });
+  });
+  await page.goto('/clientes');
+  await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
+
+  sendEvent();
+  await expect(page.getByRole('alert')).toContainText(
+    'Os dados exibidos podem estar desatualizados.',
+  );
+  await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
+  await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(reads).toBe(3);
+});
+
+test('lets a keyboard user scroll the client table on a narrow screen', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockCrm(page);
+  await page.goto('/clientes');
+
+  const tableRegion = page.getByRole('region', {
+    name: /Clientes; role horizontalmente/u,
+  });
+  await expect(tableRegion).toBeVisible();
+  await expect(
+    page.getByText('Deslize a tabela para ver todas as colunas.'),
+  ).toBeVisible();
+  expect(
+    await tableRegion.evaluate((element) => element.scrollWidth),
+  ).toBeGreaterThan(
+    await tableRegion.evaluate((element) => element.clientWidth),
+  );
+  await tableRegion.focus();
+  await expect(tableRegion).toBeFocused();
+  await tableRegion.press('ArrowRight');
+  await expect
+    .poll(() => tableRegion.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(0);
+});
+
 test('simplifies the client summary without operational status or count', async ({
   page,
 }) => {

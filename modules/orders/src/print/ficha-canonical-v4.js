@@ -62,16 +62,14 @@ function point(number, label, value, className = '') {
   return `<div class="point ${className}"><span class="point-label"><b>${number}</b> ${display(label)}</span><div class="point-value">${value}</div></div>`;
 }
 
-/** @param {any} item @param {number} index @param {any} artwork @param {any[]} visibleGrade @param {number} part @param {number} parts */
-function renderItem(item, index, artwork, visibleGrade, part, parts) {
+/** @param {any} item @param {number} index @param {any[]} visibleGrade @param {number} part @param {number} parts */
+function renderItem(item, index, visibleGrade, part, parts) {
   const total = (item.grade ?? []).reduce(
     (/** @type {number} */ sum, /** @type {any} */ line) =>
       sum + line.quantidade,
     0,
   );
-  const origins = originsOf(artwork);
   const printDescription = item.estampa ? present(item.estampa) : present('');
-  const printValue = `${printDescription}${origins.length ? `<small>Origem: ${display(origins.join(' e '))}</small>` : ''}`;
   const grade = visibleGrade
     .map(
       (/** @type {any} */ line) =>
@@ -85,8 +83,8 @@ function renderItem(item, index, artwork, visibleGrade, part, parts) {
       <div class="item-row top-row">
         ${point(1, 'Tipo de roupa', present(item.tipo))}
         ${point(2, 'Cor', present(colorOf(item)))}
-        ${point(3, 'Quantidade', `${display(total)} <small>peças</small>`, 'point-quantity')}
-        ${point(4, 'Estampa', printValue)}
+        ${point(3, 'Quantidade', part === 0 ? `${display(total)} <small>peças no item</small>` : '<small>Total do item na parte 1</small>', 'point-quantity')}
+        ${point(4, 'Estampa', printDescription)}
       </div>
       <div class="item-row bottom-row">
         ${point(5, 'Tecido', present((item.malhas ?? []).join(' / ')))}
@@ -166,12 +164,7 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
   const printableItems = fragments.map(({ item, grade }) => ({
     tipo: filledText(item.tipo),
     cor: filledText(colorOf(item)),
-    estampa: [
-      filledText(item.estampa),
-      originLabel ? `Origem: ${originLabel}` : '',
-    ]
-      .filter(Boolean)
-      .join(' '),
+    estampa: filledText(item.estampa),
     tecido: Array.isArray(item.malhas) ? item.malhas.join(' / ') : '',
     gola: filledText(item.gola || item.vies_gola),
     tamanhos: grade,
@@ -187,7 +180,7 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
     ? Math.max(0, wrappedLines(technique, 30) - 1) * 13
     : 0;
   const pages = paginateItems(printableItems, observations, {
-    firstPageTop: PAGE_ONE_TOP + techniqueHeight,
+    firstPageTop: PAGE_ONE_TOP + techniqueHeight + (originLabel ? 28 : 0),
   });
   /** @param {number} pageIndex */
   const cardsOf = (pageIndex) =>
@@ -197,7 +190,6 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
         return renderItem(
           fragment.item,
           fragment.itemIndex,
-          order.artwork,
           fragment.grade,
           fragment.part,
           fragment.parts,
@@ -220,10 +212,11 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
       items.map((/** @type {any} */ item) => item.tipo_servico).filter(Boolean),
     ),
   ];
+  const serviceList = services.join(' / ');
   const serviceSummary =
-    services.length > 2
-      ? `${services.length} serviços · ver itens`
-      : services.join(' / ');
+    services.length > 2 || serviceList.length > 42
+      ? `${services.length} ${services.length === 1 ? 'serviço' : 'serviços'} · ver itens`
+      : serviceList;
   const lastro = order.lastro ?? {};
   const lastroEntries = [
     ['Primeiro contato', lastro.primeiro_contato],
@@ -271,6 +264,9 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
     .lastro { display: grid; gap: 5px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
     .lastro > div { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; min-height: 34px; padding: 6px 8px; }
     .lastro strong { font-size: 9px; }
+    .artwork-origin { align-items: center; background: var(--active); border: 1px solid var(--border); border-radius: 5px; display: flex; gap: 8px; margin-top: 6px; min-height: 22px; padding: 5px 8px; }
+    .artwork-origin .label { margin: 0; }
+    .artwork-origin strong { font-size: 9px; }
     .empty { color: var(--muted); }
     .items { display: grid; gap: 8px; }
     .item-card { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; break-inside: avoid; display: grid; grid-template-columns: 36px 1fr; overflow: hidden; }
@@ -340,6 +336,7 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
     ${technique ? `<div><span class="label">Técnica da arte (referência)</span><strong>${present(technique)}</strong></div>` : ''}
   </section>
   <div class="section-label">Lastro do pedido</div><section class="lastro">${lastroEntries.map(([label, value]) => `<div><span class="label">${display(label)}</span><strong>${present(value)}</strong></div>`).join('')}</section>
+  ${originLabel ? `<section class="artwork-origin"><span class="label">Origens da arte do pedido</span><strong>${display(originLabel)}</strong></section>` : ''}
   <div class="section-label">Itens: os sete pontos e os adicionais</div>
   <section class="items">${cardsOf(0)}</section>${footerOn(0)}${continuationPages}
   <section class="page-break">

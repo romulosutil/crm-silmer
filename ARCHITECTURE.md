@@ -26,7 +26,7 @@ interface apenas observa ou assume a conversa.
 - O CRM valida estados e gates. O workflow decide o próximo comando permitido; não redefine a máquina de estados.
 - Logs do n8n são evidência técnica. A auditoria durável do efeito comercial pertence ao CRM.
 - OpenAI e Gemini implementam o mesmo contrato estruturado. Regras de preço, permissão, gate e handoff são determinísticas e ficam fora do prompt.
-- Tomada humana, handoff, retorno à IA, fechamento e desligamento incrementam o
+- Tomada humana, handoff, fechamento e desligamento incrementam o
   `automation_epoch`; decisões antigas são rejeitadas na reserva de envio.
 - Toda chamada à Meta exige reserva atômica `message.send.requested`; resultado incerto é reconciliado e nunca repetido às cegas.
 

@@ -84,6 +84,8 @@ Pedidos substitui o que seria o Kanban.
 - **D20** Ficam como estão: fila **Todas / Minhas / Sem responsável**,
   **Arquivar / ver arquivadas**, **Repassar atendimento**, Assumir, Devolver à
   IA, Editar nome, Ver contato.
+  Superado pela ADR 015 (02/10/2026) só quanto a "Devolver à IA": a ação saiu,
+  porque a conversa com uma pessoa não volta para o bot.
 - **D21** Sai o bloco **"Sugestão pendente da IA"**.
 - **D22** Pedido na conversa aparece numa **gaveta lateral sob demanda**, só
   **resumo + "Abrir pedido"** (e "Criar pedido" quando cabe). Edição acontece

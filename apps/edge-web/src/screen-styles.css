@@ -642,11 +642,24 @@ details.exact summary {
   gap: 1rem;
 }
 
+/*
+ * Up to 100 conversations load at once, so the list scrolls inside its own
+ * column instead of stretching the page, and stays in view below the sticky
+ * top bar beside the thread. Its height leaves room for that 1rem gap and the
+ * page's 2.25rem bottom padding, so the whole list fits on screen even when
+ * it is the taller column.
+ */
 .inbox-list {
+  position: sticky;
+  inset-block-start: calc(var(--topbar-block-size) + 1rem);
   display: grid;
+  max-block-size: calc(100dvh - var(--topbar-block-size) - 3.25rem);
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
   list-style: none;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -1269,6 +1282,12 @@ details.exact summary {
   .clients-layout,
   .users-layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Stacked above the thread, the list leaves the conversation within reach. */
+  .inbox-list {
+    position: static;
+    max-block-size: min(24rem, 50dvh);
   }
 
   .bar-chart {

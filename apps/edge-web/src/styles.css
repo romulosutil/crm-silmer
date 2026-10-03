@@ -397,7 +397,7 @@ summary {
   align-items: center;
   justify-content: flex-end;
   gap: 1.5rem;
-  min-block-size: 64px;
+  min-block-size: var(--topbar-block-size);
   padding: 0.6rem clamp(1rem, 3vw, 2.25rem);
   background: color-mix(in srgb, var(--color-canvas) 92%, transparent);
   border-block-end: 1px solid var(--color-border);

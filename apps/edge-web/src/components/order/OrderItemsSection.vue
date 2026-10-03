@@ -15,28 +15,45 @@ const NOT_APPLICABLE_LABEL = 'NÃO APLICÁVEL';
 const GRADE_MESSAGE = 'Use uma quantidade inteira maior que zero.';
 const EXTRAS_LABEL = 'Adicionais (não obrigatórios)';
 
-// PIT-02 (ADR 016): what the seller may add to an item. None of it blocks
-// the order. Only sleeves and sleeve trim accept "Não aplicável" (PFI-07): a shirt
-// without sleeves still has a front and a back.
+// PIT-02 (ADR 016/020): what the seller may add to an item. None of it
+// blocks the order. The print is a reference of what goes where; who makes
+// the art is the order's ("Estampa e arquivos"). The part colours are the
+// fabric's, never the art's colour count of the production sheet. Only
+// sleeves and sleeve trim accept "Não aplicável" (PFI-07): a shirt without
+// sleeves still has a front and a back.
 const EXTRA_FIELDS = Object.freeze([
-  Object.freeze({ color: true, key: 'cor_frente', label: 'Cor frente' }),
-  Object.freeze({ color: true, key: 'cor_costas', label: 'Cor costas' }),
+  Object.freeze({
+    hint: 'O que vai estampado e onde, se ajudar a produção.',
+    key: 'estampa',
+    label: 'Estampa (referência)',
+    text: true,
+  }),
+  Object.freeze({
+    color: true,
+    key: 'cor_frente',
+    label: 'Cor do tecido — frente',
+  }),
+  Object.freeze({
+    color: true,
+    key: 'cor_costas',
+    label: 'Cor do tecido — costas',
+  }),
   Object.freeze({
     color: true,
     key: 'cor_manga_direita',
-    label: 'Manga direita',
+    label: 'Cor do tecido — manga direita',
     optional: true,
   }),
   Object.freeze({
     color: true,
     key: 'cor_manga_esquerda',
-    label: 'Manga esquerda',
+    label: 'Cor do tecido — manga esquerda',
     optional: true,
   }),
   Object.freeze({
     color: true,
     key: 'vies_mangas',
-    label: 'Viés mangas',
+    label: 'Viés das mangas',
     optional: true,
   }),
 ]);
@@ -81,11 +98,6 @@ const headline = computed(() => {
 function shownValue(value) {
   if (value === NOT_APPLICABLE) return NOT_APPLICABLE_LABEL;
   return value || '—';
-}
-
-/** The old piece detail stays visible for review, but is never a new field. */
-function legacyPieceDetail(item) {
-  return typeof item.modelo === 'string' ? item.modelo.trim() : '';
 }
 
 /**
@@ -171,7 +183,7 @@ function toggleNotApplicable(item, key, checked) {
 }
 
 /**
- * A ficha saved before ADR 016 has no colour, artwork or collar; the form
+ * A ficha saved before ADR 016 has no colour, print or collar; the form
  * starts them blank, and an item with no fabric still offers one line.
  *
  * @param {Record<string, any>} item
@@ -393,18 +405,7 @@ async function save() {
             </button>
           </div>
 
-          <p v-if="legacyPieceDetail(item)" class="op-quantity-warning">
-            <OrderIcon name="alert" />
-            <span>
-              <strong>Detalhe antigo da peça</strong><br />
-              {{ legacyPieceDetail(item) }}<br />
-              Confira se Tipo de roupa ou Definição da gola inclui esse detalhe.
-              Se faltar, o responsável deve ajustar o item, reabrindo o pedido
-              se necessário, antes de imprimir a ficha.
-            </span>
-          </p>
-
-          <!-- PIT-01: the seven bot points, plus the service chosen by the seller. -->
+          <!-- PIT-01 (ADR 020): the seven points, in the order the ficha prints. -->
           <div class="op-item-fields">
             <div class="op-field">
               <label :for="`item-${itemIndex}-tipo`">Tipo de roupa</label>
@@ -415,22 +416,6 @@ async function save() {
                 autocomplete="off"
                 autocapitalize="characters"
               />
-            </div>
-
-            <div class="op-field">
-              <label :for="`item-${itemIndex}-tipo-servico`"
-                >Tipo de serviço</label
-              >
-              <input
-                :id="`item-${itemIndex}-tipo-servico`"
-                v-model="item.tipo_servico"
-                type="text"
-                autocomplete="off"
-                :aria-describedby="`item-${itemIndex}-service-hint`"
-              />
-              <p :id="`item-${itemIndex}-service-hint`" class="op-hint">
-                Obrigatório para gerar. Pode ser diferente dos demais itens.
-              </p>
             </div>
 
             <div class="op-field">
@@ -465,13 +450,18 @@ async function save() {
             </div>
 
             <div class="op-field op-field--wide">
-              <label :for="`item-${itemIndex}-estampa`">Estampa</label>
+              <label :for="`item-${itemIndex}-tecnica`">Técnica</label>
               <input
-                :id="`item-${itemIndex}-estampa`"
-                v-model="item.estampa"
+                :id="`item-${itemIndex}-tecnica`"
+                v-model="item.tipo_servico"
                 type="text"
                 autocomplete="off"
+                :aria-describedby="`item-${itemIndex}-tecnica-hint`"
               />
+              <p :id="`item-${itemIndex}-tecnica-hint`" class="op-hint">
+                Silk, DTF, sublimação, bordado… ou Sem estampa. Obrigatória para
+                gerar.
+              </p>
             </div>
 
             <div class="op-field op-field--wide">
@@ -622,7 +612,7 @@ async function save() {
             </div>
 
             <div class="op-field">
-              <label :for="`item-${itemIndex}-gola`">Definição da gola</label>
+              <label :for="`item-${itemIndex}-gola`">Gola</label>
               <input
                 :id="`item-${itemIndex}-gola`"
                 v-model="item.gola"
@@ -653,6 +643,7 @@ async function save() {
                 v-for="field in EXTRA_FIELDS"
                 :key="field.key"
                 class="op-field"
+                :class="{ 'op-field--wide': field.text }"
               >
                 <label :for="`item-${itemIndex}-${field.key}`">{{
                   field.label
@@ -673,11 +664,23 @@ async function save() {
                     "
                     type="text"
                     autocomplete="off"
-                    autocapitalize="characters"
+                    :autocapitalize="field.text ? 'sentences' : 'characters'"
+                    :aria-describedby="
+                      field.hint
+                        ? `item-${itemIndex}-${field.key}-hint`
+                        : undefined
+                    "
                     :disabled="isNotApplicable(item, field.key)"
                     @input="item[field.key] = $event.target.value"
                   />
                 </div>
+                <p
+                  v-if="field.hint"
+                  :id="`item-${itemIndex}-${field.key}-hint`"
+                  class="op-hint"
+                >
+                  {{ field.hint }}
+                </p>
                 <label v-if="field.optional" class="op-check">
                   <input
                     type="checkbox"
@@ -731,25 +734,11 @@ async function save() {
             {{ itemHeading(item, itemIndex) }}
           </h3>
         </div>
-        <p v-if="legacyPieceDetail(item)" class="op-quantity-warning">
-          <OrderIcon name="alert" />
-          <span>
-            <strong>Detalhe antigo da peça</strong><br />
-            {{ legacyPieceDetail(item) }}<br />
-            Confira se Tipo de roupa ou Definição da gola inclui esse detalhe.
-            Se faltar, o responsável deve ajustar o item, reabrindo o pedido se
-            necessário, antes de imprimir a ficha.
-          </span>
-        </p>
-        <!-- PIT-01: the seven bot points, plus service per item. -->
+        <!-- PIT-01 (ADR 020): the seven points, as the ficha prints them. -->
         <dl class="op-points">
           <div>
             <dt>Tipo de roupa</dt>
             <dd>{{ shownValue(item.tipo) }}</dd>
-          </div>
-          <div>
-            <dt>Tipo de serviço</dt>
-            <dd>{{ shownValue(item.tipo_servico) }}</dd>
           </div>
           <div>
             <dt>Cor</dt>
@@ -770,8 +759,8 @@ async function save() {
             </dd>
           </div>
           <div class="op-point--wide">
-            <dt>Estampa</dt>
-            <dd>{{ shownValue(item.estampa) }}</dd>
+            <dt>Técnica</dt>
+            <dd>{{ shownValue(item.tipo_servico) }}</dd>
           </div>
           <div>
             <dt>Tecido</dt>
@@ -790,7 +779,7 @@ async function save() {
             </dd>
           </div>
           <div>
-            <dt>Definição da gola</dt>
+            <dt>Gola</dt>
             <dd>{{ shownValue(item.gola || item.vies_gola) }}</dd>
           </div>
         </dl>
@@ -813,7 +802,11 @@ async function save() {
             class="op-points op-extras-body"
             :hidden="!isExtrasOpen('read', itemIndex)"
           >
-            <div v-for="field in EXTRA_FIELDS" :key="field.key">
+            <div
+              v-for="field in EXTRA_FIELDS"
+              :key="field.key"
+              :class="{ 'op-point--wide': field.text }"
+            >
               <dt>{{ field.label }}</dt>
               <dd :data-muted="isNotApplicable(item, field.key) || undefined">
                 <span

@@ -204,8 +204,8 @@ async function save() {
         </li>
       </ol>
       <p class="op-hint">
-        Pagamento e entrega realizada são informados no pedido e não mudam o
-        status nem a ficha já gerada.
+        Pago em e Entregue em são informados no pedido e não mudam o status nem
+        a ficha já gerada.
       </p>
     </div>
   </section>

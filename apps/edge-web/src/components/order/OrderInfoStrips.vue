@@ -12,28 +12,29 @@ const PRODUCTION_FIELD_COUNT = 14;
  * field appears instead of disappearing.
  */
 const SERVICE_LABELS = Object.freeze({
-  artwork_locations: 'Locais da arte',
-  artwork_status: 'Arte',
-  // ADR 016: wording collected in the conversation remains reference text;
-  // the executable service is confirmed on each order item.
-  artwork_technique: 'Técnica de estampa informada',
+  // ADR 020: what the customer said of the art when it did not name a place,
+  // who makes it or a technique; the seller decides on the order.
+  artwork_locations: 'Onde vai a estampa',
+  artwork_status: 'Arte informada',
+  artwork_technique: 'Técnica informada',
   city_or_postal_code: 'Cidade ou CEP',
   // ADR 016: the seven points land on the item; they show here only when
   // left to the seller or sent in a shape the order does not read.
   collar: 'Gola informada',
   colors: 'Cores informadas',
-  customer_name: 'Nome informado',
+  customer_name: 'Nome do cliente informado',
   customizations: 'Personalizações',
   delivery_address: 'Endereço de entrega',
   delivery_mode: 'Forma de entrega',
   fabrics: 'Tecido informado',
   needed_by: 'Data desejada',
-  notes: 'Anotações',
+  notes: 'Anotações do atendimento',
   numbers: 'Numeração',
-  order_name: 'Evento / nome informado',
+  order_name: 'Nome do pedido informado',
   pickup_location: 'Local de retirada',
   product_model: 'Tipo de roupa informado',
-  product_type: 'Tipo de peça',
+  // ADR 020: one name for the garment, whichever field the bot used.
+  product_type: 'Tipo de roupa informado',
   purchase_profile: 'Perfil de compra',
   purpose: 'Finalidade',
   quantity: 'Quantidade informada',
@@ -64,7 +65,7 @@ const serviceEntries = computed(() =>
     <div class="op-strip-text">
       <h2 id="order-production-title">Controle de produção</h2>
       <p>
-        Arremate · Conferência e embalagem · Cores e arte —
+        Arremate · Conferência e embalagem · Cores da arte —
         {{ PRODUCTION_FIELD_COUNT }} campos que saem em branco na página 2 da
         ficha e são preenchidos à mão na fábrica.
       </p>

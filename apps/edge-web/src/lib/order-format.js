@@ -51,17 +51,16 @@ export function fabLabel(code) {
 /** PIM-01: why the button is locked, said in the place of the button. */
 export const PRINT_LOCKED_REASON = 'Disponível depois de gerar o pedido';
 
-// ADR 016: the seven points an item needs before the order is generated,
+// ADR 016/020: the seven points an item needs before the order is generated,
 // named as the seller reads them ("cor do item 1"). The quantity is the sum
 // of the sizes, so the sizes stand for it.
 const ITEM_POINT_LABELS = Object.freeze({
   cor: 'cor',
-  estampa: 'estampa',
-  gola: 'definição da gola',
+  gola: 'gola',
   grade: 'tamanhos',
   malhas: 'tecido',
   tipo: 'tipo de roupa',
-  tipo_servico: 'tipo de serviço',
+  tipo_servico: 'técnica',
 });
 
 // What the bot records when the customer leaves a point to the seller.
@@ -155,6 +154,7 @@ export function missingFieldLabels(missingFields) {
 /** @param {string} field */
 function missingFieldLabel(field) {
   if (field === 'items') return 'nenhum item';
+  if (field === 'artwork') return 'quem faz a arte';
   if (field === 'summary.data_entrega_confirmada') return 'entrega prometida';
   if (field === 'finalAmount') return 'valor final';
   if (field === 'paymentCondition') return 'forma de pagamento';
@@ -180,9 +180,9 @@ export function isItemGap(field) {
 }
 
 /**
- * True for what the seller fills elsewhere on the page — the items and the
- * promised delivery of the summary — as opposed to the amount and the
- * payment method typed next to "Gerar pedido".
+ * True for what the seller fills elsewhere on the page — the items, who
+ * makes the art and the promised delivery of the summary — as opposed to the
+ * amount and the payment method typed next to "Gerar pedido".
  *
  * @param {string} field
  */
@@ -360,14 +360,14 @@ export function orderMilestones(order) {
       day: order.paidOn,
       emptyNote: 'a informar',
       key: 'paid',
-      label: 'Pagamento',
+      label: 'Pago em',
       recordedNote: 'informado',
     },
     {
       day: order.deliveredOn,
       emptyNote: 'a informar',
       key: 'delivered',
-      label: 'Entrega realizada',
+      label: 'Entregue em',
       recordedNote: 'informado',
     },
   ];

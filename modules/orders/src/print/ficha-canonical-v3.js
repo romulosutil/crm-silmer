@@ -8,6 +8,7 @@
 // orders keep printing on v2 (`PRINT_TEMPLATE` in `./index.js`).
 
 import { NOT_APPLICABLE } from '../domain/ficha.js';
+import { paginateItems } from './ficha-v3-pages.js';
 import { display, filledText } from './html.js';
 
 /** What the paper shows where the CRM has nothing (A01). */
@@ -171,9 +172,25 @@ function extrasBlock(item) {
 }
 
 /**
- * Renders the A4 landscape document in two pages: the commercial sheet and
- * the blank production control. The snapshot comes from `printSnapshot(order,
- * 'ficha-canonical-v3')`; `synthetic` marks the review package only.
+ * @param {PrintedItem} item
+ * @param {number} itemIndex position in the whole order
+ */
+function itemCard(item, itemIndex) {
+  return `<article class="item-card">
+        <div class="item-tab"><span>Item</span><strong>${display(itemIndex + 1)}</strong></div>
+        <div class="item-content">
+          <dl class="points">${principalPoints(item)}</dl>${extrasBlock(item)}
+        </div>
+      </article>`;
+}
+
+/**
+ * Renders the A4 landscape document: page 1 with the summary, the trail and
+ * the first items; a continuation page for the items that do not fit, each
+ * with the header, the order number and its page number (PIM-12); and the
+ * blank production control last. The snapshot comes from
+ * `printSnapshot(order, 'ficha-canonical-v3')`; `synthetic` marks the review
+ * package only.
  *
  * @param {any} snapshot
  * @param {{synthetic?: boolean}} [options]
@@ -187,16 +204,6 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
   const items = (Array.isArray(order.itens) ? order.itens : []).map(
     printableItem,
   );
-  const itemCards = items
-    .map(
-      (item, itemIndex) => `<article class="item-card">
-        <div class="item-tab"><span>Item</span><strong>${display(itemIndex + 1)}</strong></div>
-        <div class="item-content">
-          <dl class="points">${principalPoints(item)}</dl>${extrasBlock(item)}
-        </div>
-      </article>`,
-    )
-    .join('');
   const trailCells = TRAIL_FIELDS.map(
     ({ field, label }) =>
       `<div><span class="label">${display(label)}</span><strong>${shown(filledText(order.lastro?.[field]))}</strong></div>`,
@@ -207,6 +214,40 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
   )
     .map(filledText)
     .filter(Boolean);
+  const pages = paginateItems(items, observations);
+  /** @param {number} pageIndex */
+  const cardsOf = (pageIndex) =>
+    pages[pageIndex]
+      .map((itemIndex) => itemCard(items[itemIndex], itemIndex))
+      .join('');
+  const orderFooter = `
+    <section class="page-footer-content">
+      <div class="observations"><span class="label">Observações do pedido</span>${observations.length === 0 ? shown('') : `<ol>${observations.map((note) => `<li>${display(note)}</li>`).join('')}</ol>`}</div>
+      <div class="grand-total"><span>Total<br>de peças</span><strong>${display(order.quantidade_total)}</strong></div>
+    </section>`;
+  /** @param {number} pageIndex */
+  const footerOn = (pageIndex) =>
+    pageIndex === pages.length - 1 ? orderFooter : '';
+  const continuationPages = pages
+    .slice(1)
+    .map((page, offset) => {
+      const pageIndex = offset + 1;
+      return `
+
+    <section class="page-break continuation">
+      <header class="sheet-header">
+        <div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div>
+        <div class="header-id">${syntheticBand}<span class="page-marker"><strong>Página ${display(pageIndex + 1)}</strong> · continuação dos itens</span><div class="order-id"><span>Pedido</span><strong>${display(order.numero)}</strong></div></div>
+      </header>${
+        page.length === 0
+          ? ''
+          : `
+      <div class="section-label">Itens: continuação</div>
+      <section class="items">${cardsOf(pageIndex)}</section>`
+      }${footerOn(pageIndex)}
+    </section>`;
+    })
+    .join('');
   const productionSections = [
     {
       title: 'Arremate',
@@ -256,7 +297,7 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
       @page { size: A4 landscape; margin: 9mm 9mm 12mm; }
       * { box-sizing: border-box; }
       :root { --canvas: #f7f6fb; --surface: #ffffff; --raised: #f0eef8; --active: #e8e3fa; --text: #1b1530; --muted: #625b75; --border: #d8d4e4; --subtle: #e8e5ef; --accent: #ff5b01; --deep: #0c042d; --link: #5b3fd1; }
-      body { background: var(--canvas); color: var(--text); font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 9.5px; margin: 0; }
+      body { background: var(--canvas); color: var(--text); font-family: Arial, Helvetica, 'Liberation Sans', Arimo, sans-serif; font-size: 9.5px; margin: 0; }
       h1, h2, h3, p, dl, dd { margin: 0; }
       .sheet-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 7px; }
       .brand { color: var(--link); font-size: 9px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
@@ -266,6 +307,8 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
       .order-id { background: var(--deep); border-radius: 6px; color: white; min-width: 90px; padding: 6px 9px; text-align: right; }
       .order-id span { display: block; font-size: 6px; letter-spacing: .08em; opacity: .75; text-transform: uppercase; }
       .order-id strong { font-size: 13px; }
+      .page-marker { background: var(--active); border: 1px solid var(--link); border-radius: 999px; color: var(--deep); font-size: 8px; padding: 4px 9px; }
+      .page-marker strong { color: var(--link); }
       .section-label { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; margin-bottom: 5px; text-transform: uppercase; }
       .label { color: var(--muted); display: block; font-size: 8px; font-weight: 700; letter-spacing: .07em; margin-bottom: 3px; text-transform: uppercase; }
       .empty { color: var(--muted); font-weight: 600; }
@@ -352,11 +395,7 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
     <div class="section-label">Lastro do pedido</div>
     <section class="trail">${trailCells}</section>
     <div class="section-label">Itens: os sete pontos e os adicionais</div>
-    <section class="items">${itemCards}</section>
-    <section class="page-footer-content">
-      <div class="observations"><span class="label">Observações do pedido</span>${observations.length === 0 ? shown('') : `<ol>${observations.map((note) => `<li>${display(note)}</li>`).join('')}</ol>`}</div>
-      <div class="grand-total"><span>Total<br>de peças</span><strong>${display(order.quantidade_total)}</strong></div>
-    </section>
+    <section class="items">${cardsOf(0)}</section>${footerOn(0)}${continuationPages}
 
     <section class="page-break">
       <header class="sheet-header">

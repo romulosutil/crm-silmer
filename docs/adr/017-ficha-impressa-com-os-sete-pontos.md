@@ -36,11 +36,12 @@ nunca foi aprovada, e o catálogo saiu da tela (T49: campos só de texto). A T48
 também renomeou dois rótulos do Resumo na tela, "Tipo de serviço" e "Entrega
 prometida", sem mudar a v2.
 
-Na revisão do PDF (02/10/2026), o PO decidiu que toda data do lastro, menos a
-Entrega realizada, precisa estar preenchida para gerar o pedido: Pagamento e
-Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
-é conciliação depois da venda e nunca bloqueia. No papel, um pedido impresso
-(confirmado) traz sempre Pagamento e Entrega prometida.
+Na revisão do PDF (02 e 03/10/2026), o PO decidiu que a Entrega prometida
+precisa estar preenchida para gerar o pedido (bloqueio na ADR 016), então o
+pedido impresso sempre a traz. O Pagamento não bloqueia: por ora, gerar o
+pedido implica pagamento, e o dia fica na faixa do lastro, com "—" enquanto
+ninguém o registrar. A Entrega realizada é conciliação depois da venda e nunca
+bloqueia.
 
 ## Decisão
 
@@ -63,7 +64,7 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
      (soma da grade, nunca gravada), Estampa (`estampa`), Tecido (`malhas`,
      unidas por " / "), Tamanhos (blocos de tamanho e quantidade, da `grade`)
      e Gola (`gola`).
-   - **Observações e total de peças**, como na v2.
+   - **Observações e total de peças**, como na v2, depois do último item.
 
 3. **Adicionais só quando preenchidos** (aprovado pelo PO). Modelo, Cor
    frente, Cor costas, Manga direita, Manga esquerda, Viés gola e Viés mangas
@@ -78,13 +79,13 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
      os pontos principais", não "esquecido"; sete linhas vazias em todo item
      esconderiam o item que tem de fato um detalhe diferente.
    - Espaço: com o bloco só quando há conteúdo, resumo, lastro e dois itens
-     cabem na página 1.
+     cabem na página 1, e menos itens vão para a continuação.
    - Ordem fixa: a fábrica acha cada adicional sempre na mesma posição
      relativa, como lia a peça na v2 (modelo, corpo, mangas, viés).
 
 4. **Campo vazio sai como "—"** (A01, aprovado pelo PO): ponto principal,
-   campo do Resumo ou dia do lastro ainda não registrado, na prática a Entrega
-   realizada. Uma ficha gravada antes desta mudança não tem `cor`, `estampa`
+   campo do Resumo ou dia do lastro ainda não registrado (a Entrega realizada
+   e, enquanto ninguém o registrar, o Pagamento). Uma ficha gravada antes desta mudança não tem `cor`, `estampa`
    nem `gola`: esses três pontos saem como "—" e todos os campos da v2
    (modelo, cores por parte e viés) continuam no papel, nos adicionais. Nada
    da v2 se perde.
@@ -102,7 +103,23 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
    na amostra de revisão: um pedido impresso não diz à fábrica que há um gate
    pendente. Na v2 a caixa sai também no pedido real, porque a v2 é travada.
 
-7. **Aprovação antes de valer.** O pacote de revisão da v3 espelha o da v2:
+7. **Páginas de continuação** (pedido do PO na revisão do PDF). O navegador
+   não repete um cabeçalho nas páginas que ele mesmo quebra, então o
+   template decide as páginas: a página 1 leva o Resumo, o lastro e os
+   primeiros itens; os itens que não cabem vão para páginas de continuação,
+   cada uma com o mesmo cabeçalho (Silmer, "FICHA DE PEDIDO" e o número do
+   pedido) e a marca "Página N · continuação dos itens"; observações e total
+   fecham a última página de itens; o controle de produção vem por último,
+   com o seu cabeçalho. Item nunca se divide entre páginas e mantém o número
+   (Item 3 na página 2). A altura de cada item é estimada pelo tamanho dos
+   textos, dos tamanhos e dos adicionais, com folga: o item que talvez não
+   caiba passa para a página seguinte, em vez de cair numa página sem
+   cabeçalho. Para a estimativa valer em qualquer máquina, a v3 imprime em
+   Arial ou fonte com as mesmas medidas (Helvetica, Liberation Sans, Arimo),
+   sem a Poppins da v2. O PDF de revisão confere que tem exatamente as
+   páginas planejadas; no rodapé dele, "Página X de N" segue a mesma conta.
+
+8. **Aprovação antes de valer.** O pacote de revisão da v3 espelha o da v2:
    amostra sintética (`docs/phase0/ficha-pdf-synthetic-v3.json`, um pedido no
    contrato `Order` que passa pelo mesmo `printSnapshot` da rota), registro
    (`docs/phase0/ficha-pdf-approval-v3.json`), PDF
@@ -116,7 +133,7 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
    definir, com os seis critérios da v2 e uma evidência sem PII. Versão
    aprovada não se regera; correção depois da aprovação cria uma v4.
 
-8. **Ponto único de troca.** A constante `PRINT_TEMPLATE`, em
+9. **Ponto único de troca.** A constante `PRINT_TEMPLATE`, em
    `modules/orders/src/print/index.js`, escolhe o template de todo pedido
    impresso; a rota `GET /api/v1/orders/:orderId/print` chama
    `renderOrderFicha(order)` e não escolhe nada. Ela fica em
@@ -138,6 +155,11 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
   mais itens a página 1 transborda.
 - **Adicionais sempre impressos com "—":** sete "—" por item na maior parte
   dos pedidos, ruído sem informação.
+- **Deixar o navegador quebrar as páginas:** a página que ele cria não tem
+  cabeçalho nem número do pedido. Repetir o cabeçalho por CSS (`thead` de
+  tabela) não leva o número de cada página, e as caixas de margem de `@page`
+  só existem no Chromium; as páginas decididas pelo template valem em
+  qualquer navegador.
 - **Lastro com as cinco datas na faixa:** repetia no papel a Data do pedido e
   a Entrega prometida, que já estão no Resumo; o PO pediu cada data uma vez.
 - **Trocar a v2 direto, sem amostra:** quebraria o gate por hash da T00.4 e a
@@ -156,5 +178,9 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
 - A v2 continua sem acento, como foi aprovada; a v3 sai com acento nas duas
   páginas.
 - O PDF de revisão é gerado no Dell, com Liberation Sans no lugar de Arial
-  (mesmas medidas). O pedido impresso pelo navegador usa as fontes da máquina
-  que imprime.
+  (mesmas medidas). O pedido impresso pelo navegador usa a Arial da máquina
+  que imprime. O rodapé "Página X de N" é do PDF de revisão; no pedido real, o
+  número de cada página de continuação está no cabeçalho, e o rodapé depende
+  da opção de cabeçalho e rodapé do navegador, como na v2.
+- A estimativa de altura deixa espaço livre no pé de algumas páginas: é o
+  preço de nunca imprimir um item numa página sem cabeçalho.

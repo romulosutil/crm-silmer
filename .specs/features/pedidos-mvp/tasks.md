@@ -1147,7 +1147,7 @@ continua pendente.
 
 ### T65: Lastro sem datas repetidas
 
-- **What:** Data do pedido e Entrega prometida só no Resumo; a faixa "Lastro do pedido" fica com Primeiro contato, Pagamento e Entrega realizada. A amostra mostra o pagamento registrado (bloqueio da geração na ADR 016) e a entrega realizada vazia.
+- **What:** Data do pedido e Entrega prometida só no Resumo; a faixa "Lastro do pedido" fica com Primeiro contato, Pagamento e Entrega realizada. A amostra mostra a entrega realizada vazia. (Em 03/10/2026 o PO confirmou que o pagamento não bloqueia a geração: por ora, gerar o pedido implica pagamento; corrigido na T67.)
 - **Where:** `modules/orders/src/print/{ficha-canonical-v3,print-snapshot}.js`, `scripts/ficha-pdf-review.mjs`, `docs/phase0/ficha-pdf-approval-v3.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, `test/ficha-print-{v3,switch}.test.js`, ADR 017, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `.specs/features/pedidos-mvp/{spec,context,tasks}.md`
 - **Depends on:** T64
 - **Requirement:** PLA-08
@@ -1173,7 +1173,21 @@ continua pendente.
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): write the ficha v3 labels with their accents`
 
-### Validação T62–T66
+### T67: Páginas de continuação e amostra com três itens
+
+- **What:** O template decide as páginas: a página 1 com Resumo, lastro e os primeiros itens; cada página de continuação com o cabeçalho, o número do pedido e "Página N · continuação dos itens"; observações e total na última página de itens; controle de produção por último. Altura estimada com folga e fonte com as medidas da Arial. Amostra com três itens (a baby look vai para a página 2); o registro confere as páginas planejadas. A amostra deixa de tratar o pagamento como bloqueio.
+- **Where:** `modules/orders/src/print/{ficha-canonical-v3,ficha-v3-pages}.js`, `scripts/ficha-pdf-review.mjs`, `docs/phase0/{ficha-pdf-synthetic-v3,ficha-pdf-approval-v3}.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, `test/ficha-{print-v3,pdf-review-v3}.test.js`, ADR 017, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `.specs/features/pedidos-mvp/{spec,tasks}.md`
+- **Depends on:** T66
+- **Requirement:** PIM-12, PLA-08
+
+**Done when:**
+
+- [x] PDF da amostra com três páginas, as mesmas que o template planejou
+- [x] Conferido à parte no Chromium: 25 pedidos aleatórios de oito itens, cada PDF com as páginas planejadas e nenhuma altura estimada abaixo da real
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): repeat the ficha v3 header on continuation pages`
+
+### Validação T62–T67
 
 | Task | Escopo                  | Camada            | Testes | Depends on | Status |
 | ---- | ----------------------- | ----------------- | ------ | ---------- | ------ |
@@ -1182,6 +1196,7 @@ continua pendente.
 | T64  | 1 ponto de troca + rota | rota/print        | unit   | T63        | ✅     |
 | T65  | 1 faixa do template     | template impresso | unit   | T64        | ✅     |
 | T66  | rótulos do template     | template impresso | unit   | T65        | ✅     |
+| T67  | páginas do template     | template impresso | unit   | T66        | ✅     |
 
 ---
 

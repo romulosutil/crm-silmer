@@ -36,6 +36,7 @@ const V3_REQUIREMENTS = Object.freeze([
   'PIM-08',
   'PIM-09',
   'PIM-11',
+  'PIM-12',
   'PLA-08',
 ]);
 
@@ -585,8 +586,8 @@ function itemExtras(item) {
 /**
  * The v3 review sample: synthetic, complete in the seven points, and built to
  * show the PO every rule the paper follows (an item with and one without
- * extras, "NAO APLICAVEL", a long text, six or more sizes, and the delivery
- * that happened not recorded yet).
+ * extras, "NAO APLICAVEL", a long text, six or more sizes, the delivery that
+ * happened not recorded yet and a continuation page).
  *
  * @param {any} sample
  */
@@ -632,11 +633,12 @@ export function validateFichaSnapshotV3(sample) {
       `v3 sample ${field} must be an ISO day or null`,
     );
   }
-  // ADR 017: an order is generated only with the payment and the promised
-  // delivery recorded; the delivery that happened comes after the sale.
+  // ADR 017: for now generating the order implies payment, so the sample
+  // records it; the delivery that happened comes after the sale and shows
+  // how the paper marks a day not recorded yet.
   invariant(
-    isIsoDay(order.paidOn) && order.deliveredOn === null,
-    'v3 sample must show the payment recorded and the delivery not yet',
+    order.deliveredOn === null,
+    'v3 sample must show the delivery that happened not recorded yet',
   );
 
   const summary = order.ficha?.summary;
@@ -653,8 +655,8 @@ export function validateFichaSnapshotV3(sample) {
 
   const items = order.ficha.items;
   invariant(
-    Array.isArray(items) && items.length >= 2,
-    'v3 sample needs at least two items',
+    Array.isArray(items) && items.length >= 3,
+    'v3 sample needs at least three items',
   );
   let gradeTotal = 0;
   for (const [itemIndex, item] of items.entries()) {
@@ -745,9 +747,24 @@ export function validateFichaSnapshotV3(sample) {
  */
 export function buildFichaHtmlV3(sample) {
   validateFichaSnapshotV3(sample);
-  return renderFichaHtmlV3(printSnapshot(sample.order, TEMPLATE_V3), {
+  const html = renderFichaHtmlV3(printSnapshot(sample.order, TEMPLATE_V3), {
     synthetic: true,
   });
+  invariant(
+    html.includes('<section class="page-break continuation">'),
+    'v3 sample needs a continuation page',
+  );
+  return html;
+}
+
+/**
+ * The pages the v3 template planned: page 1, each continuation page and the
+ * production control. A PDF with another count broke a page by itself.
+ *
+ * @param {string} html
+ */
+export function plannedPages(html) {
+  return (html.match(/<section class="page-break/gu) ?? []).length + 1;
 }
 
 /**
@@ -807,6 +824,10 @@ export function validateFichaApprovalGateV3({
       gate.artifact.pageCount >= 2 &&
       gate.artifact.pageCount === countPdfPages(artifactBytes),
     'v3 artifact page count must match a PDF with at least two pages',
+  );
+  invariant(
+    gate.artifact.pageCount === plannedPages(renderedHtml),
+    'v3 PDF pages must be the pages the template planned',
   );
 
   const approval = gate.approval;

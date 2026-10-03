@@ -14,7 +14,7 @@
     "firstContactAt": "2026-09-28T13:40:00.000Z",
     "paidOn": "2026-10-02",
     "deliveredOn": null,
-    "totalPieces": 52,
+    "totalPieces": 70,
     "confirmedBy": { "name": "Vendedora Exemplo" },
     "ficha": {
       "summary": {
@@ -65,6 +65,26 @@
             { "tamanho": "GG", "quantidade": 6 },
             { "tamanho": "XG", "quantidade": 3 },
             { "tamanho": "EXG", "quantidade": 1 }
+          ]
+        },
+        {
+          "tipo": "BABY LOOK",
+          "cor": "PRETA",
+          "estampa": "SILK EM DUAS CORES NA FRENTE COM O LOGO DA EQUIPE",
+          "malhas": ["ALGODÃO PENTEADO"],
+          "gola": "GOLA V",
+          "modelo": "",
+          "cor_frente": "",
+          "cor_costas": "",
+          "cor_manga_direita": "",
+          "cor_manga_esquerda": "",
+          "vies_gola": "RIBANA PRETA",
+          "vies_mangas": "",
+          "grade": [
+            { "tamanho": "PP", "quantidade": 3 },
+            { "tamanho": "P", "quantidade": 5 },
+            { "tamanho": "M", "quantidade": 6 },
+            { "tamanho": "G", "quantidade": 4 }
           ]
         }
       ],

@@ -2,16 +2,24 @@
   "schemaVersion": 1,
   "task": "T63",
   "adr": "017",
-  "requirements": ["PIM-06", "PIM-07", "PIM-08", "PIM-09", "PIM-11", "PLA-08"],
+  "requirements": [
+    "PIM-06",
+    "PIM-07",
+    "PIM-08",
+    "PIM-09",
+    "PIM-11",
+    "PIM-12",
+    "PLA-08"
+  ],
   "syntheticOnly": true,
   "snapshotVersion": "synthetic-order-v3",
   "templateVersion": "ficha-canonical-v3",
-  "snapshotSha256": "6715b350a4a3b772ccc3ff510f9b3003db87a84beadb0a485ba021373b56cb2f",
-  "renderedHtmlSha256": "0d3e78f7f703c4dc9cf724c57a927185cb88668c5a89aa04e8b0b1a43a24b5a8",
+  "snapshotSha256": "2e0a60b70f4f54abf5924260ac2b4c4517b3ebd0e643cf2b6c7077123b28e712",
+  "renderedHtmlSha256": "6004639d557956fcb6774c1761f5b94f2b7f0b2076517c4cae36cbb4d5732c0b",
   "artifact": {
     "path": "output/pdf/ficha-canonica-sintetica-v3.pdf",
-    "sha256": "84e4e8ea8f47ce193ad9a9059adeaf5cce63c5acb59c46481309a9f761c50518",
-    "pageCount": 2
+    "sha256": "d6e58e833662c360c59f3e9fb939491de4a2691c31485c5e384f09a4e66b7dd2",
+    "pageCount": 3
   },
   "approval": {
     "status": "pending-human-approval",

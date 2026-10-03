@@ -1,7 +1,7 @@
 import { renderOrderFicha } from '@crm-silmer/orders';
 
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
-const ORDER_SECTIONS = new Set(['summary', 'items', 'observations']);
+const ORDER_SECTIONS = new Set(['summary', 'items', 'observations', 'artwork']);
 
 /**
  * Codes an order route may return as they are. Anything else collapses to
@@ -41,6 +41,13 @@ class OrderRequestError extends Error {
  * @param {(request: object) => {correlationId: string, requestId: string}} contextFor
  */
 export function registerOrderRoutes(api, orders, contextFor) {
+  api.get('/api/v1/orders/summary', async (request, reply) =>
+    respond(reply, async () => {
+      await authorizeRead(request, orders);
+      privateReadHeaders(reply);
+      return reply.code(200).send(await orders.summary());
+    }),
+  );
   api.get('/api/v1/orders', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query);

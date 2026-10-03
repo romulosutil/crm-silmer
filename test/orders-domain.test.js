@@ -10,6 +10,7 @@ import {
   recordMilestones,
   reopenOrder,
 } from '../modules/orders/src/domain/order.js';
+import { briefingToFicha } from '../modules/orders/src/domain/ficha.js';
 import { syntheticItems } from './fixtures/order-items.js';
 
 const CREATED = '2026-09-10T12:00:00.000Z';
@@ -98,6 +99,47 @@ test('confirming records amount, condition, author, time and São Paulo order da
   assert.equal(confirmed.number, '01-CRM');
   assert.equal(confirmed.version, 3, 'the repository owns the version bump');
   assert.equal(order.status, 'pendente', 'the input order is not mutated');
+});
+
+test('every item needs a seller-assigned service before confirmation', () => {
+  const draft = pendingOrder();
+  draft.ficha.items[1].tipo_servico = '';
+  assert.deepEqual(missingForConfirmation(draft), [
+    'items[1].tipo_servico',
+    'finalAmount',
+    'paymentCondition',
+  ]);
+  assert.throws(() => confirmOrder(draft, confirmation), {
+    code: 'ORDER_NOT_CONFIRMABLE',
+    fields: ['items[1].tipo_servico'],
+    statusCode: 422,
+  });
+});
+
+test('a complete seven-point briefing with technique still needs a seller service', () => {
+  const ficha = briefingToFicha({
+    artwork_status: 'Arte recebida',
+    artwork_technique: 'DTF',
+    collar: 'Redonda',
+    colors: 'Azul',
+    fabrics: 'Dry fit',
+    product_model: 'Camiseta',
+    quantity: 2,
+    sizes: '2 M',
+  });
+  ficha.summary.data_entrega_confirmada = '2026-09-30';
+  const draft = pendingOrder({ ficha });
+  assert.equal(ficha.summary.aplicacao, 'DTF');
+  assert.equal(ficha.items[0].tipo_servico, '');
+  assert.deepEqual(missingForConfirmation(draft), [
+    'items[0].tipo_servico',
+    'finalAmount',
+    'paymentCondition',
+  ]);
+  assert.throws(() => confirmOrder(draft, confirmation), {
+    code: 'ORDER_NOT_CONFIRMABLE',
+    fields: ['items[0].tipo_servico'],
+  });
 });
 
 test('generating needs an item, the seven points of every item, amount and payment method (ADR 016)', () => {

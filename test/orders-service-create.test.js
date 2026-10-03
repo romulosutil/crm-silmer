@@ -37,15 +37,19 @@ const BRIEFING = Object.freeze({
 });
 
 /**
- * The order with the promised delivery a seller would set (ADR 016).
+ * The delivery date and item service a seller would set before confirmation.
  *
  * @param {any} order
  */
-function promised(order) {
+function sellerCompleted(order) {
   return {
     ...order,
     ficha: {
       ...order.ficha,
+      items: order.ficha.items.map((/** @type {any} */ item) => ({
+        ...item,
+        tipo_servico: 'Sublimação escolhida pelo vendedor',
+      })),
       summary: {
         ...order.ficha.summary,
         data_entrega_confirmada: '2026-10-24',
@@ -135,11 +139,13 @@ test('an intent without a pending order creates one pre-filled from the pre-fich
   ]);
   assert.equal(item.gola, 'gola V');
   assert.equal(item.modelo, '');
+  assert.equal(item.tipo_servico, '', 'o agente não atribui o serviço');
   assert.equal(order.ficha.serviceData.quantity, 12);
   assert.equal(order.ficha.serviceData.product_type, 'camisa');
   assert.equal(order.totalPieces, 10);
   // The bot never knows the promised delivery: the seller sets it.
   assert.deepEqual(order.missingFields, [
+    'items[0].tipo_servico',
     'summary.data_entrega_confirmada',
     'finalAmount',
     'paymentCondition',
@@ -206,7 +212,7 @@ test('an intent on a conversation with only confirmed orders creates a new pendi
     correlationId: 'correlation-1',
   });
   await repository.saveStatus(
-    confirmOrder(promised(order), {
+    confirmOrder(sellerCompleted(order), {
       actorId: 'seller-1',
       amountCents: 1000,
       now: NOW,
@@ -348,13 +354,15 @@ test('the agent briefing is projected only while the conversation is with the ag
     { quantidade: 12, tamanho: 'GG' },
   ]);
   assert.equal(result.ficha.items[0].cor_frente, 'AZUL MARINHO');
+  assert.equal(result.ficha.items[0].tipo_servico, '');
   assert.equal(result.ficha.items[1].tipo, 'SHORT');
   // The seller's second item was saved before ADR 016 and reads blank.
   assert.equal(result.ficha.items[1].cor, '');
   assert.deepEqual(result.missingFields, [
+    'items[0].tipo_servico',
     'items[1].cor',
     'items[1].estampa',
-    'items[1].gola',
+    'items[1].tipo_servico',
     'finalAmount',
     'paymentCondition',
   ]);
@@ -381,7 +389,7 @@ test('the projection needs a pending order and never touches a confirmed one', a
     correlationId: 'correlation-1',
   });
   const confirmed = await repository.saveStatus(
-    confirmOrder(promised(order), {
+    confirmOrder(sellerCompleted(order), {
       actorId: 'seller-1',
       amountCents: 1000,
       now: NOW,

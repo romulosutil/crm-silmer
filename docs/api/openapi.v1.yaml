@@ -309,14 +309,12 @@ paths:
             in: query,
             schema: { type: string, minLength: 1, maxLength: 128 },
           }
-        - {
-            name: unassignedHumanHandoff,
-            in: query,
-            schema: { type: boolean, default: false },
-            description: >-
-              Quando true, retorna somente conversas em modo humano com
-              handoff pendente e sem responsável atribuído.
-          }
+        - name: unassignedHumanHandoff
+          in: query
+          schema: { type: boolean, default: false }
+          description: >-
+            Quando true, retorna somente conversas em modo humano com
+            handoff pendente e sem responsável atribuído.
         - name: pendingHandoff
           in: query
           schema: { type: boolean }
@@ -1020,6 +1018,28 @@ paths:
               schema: { $ref: '#/components/schemas/OrderPage' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /orders/summary:
+    get:
+      operationId: getOrdersSummary
+      summary: Retorna indicadores globais dos pedidos
+      description: >-
+        Ação order.read. Totais de todos os pedidos, sem recorte pela página,
+        busca ou status da listagem. Vendas e peças somam somente pedidos
+        confirmados; pendentes são contados à parte. Valores em centavos.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Indicadores globais de pedidos
+          headers:
+            Cache-Control:
+              { schema: { type: string, const: 'private, no-cache' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrdersSummary' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /orders/{orderId}:
     get:
       operationId: getOrder
@@ -1141,9 +1161,10 @@ paths:
         Exige valor final no formato brasileiro (ex.: 4.820,00) maior que zero,
         forma de pagamento válida (campo paymentCondition), ao menos um item e,
         em cada item, os pontos principais da ADR 016 (tipo, cor, estampa, ao
-        menos um tecido, ao menos uma linha de tamanho e gola) e a entrega
-        prometida do resumo como dia AAAA-MM-DD; nada mais bloqueia (paidOn e
-        deliveredOn, não). Recusa com 422 ORDER_NOT_CONFIRMABLE e as chaves de
+        menos um tecido, ao menos uma linha de tamanho e definição da gola),
+        tipo de serviço escolhido pelo vendedor em cada item e a entrega
+        prometida do resumo como dia AAAA-MM-DD; paidOn e deliveredOn não
+        bloqueiam. Recusa com 422 ORDER_NOT_CONFIRMABLE e as chaves de
         Order.missingFields que faltam. Grava valor, forma de pagamento,
         autor, horário e data do pedido. Numa nova confirmação depois
         de reabrir, autor, horário e data passam a ser os da nova confirmação.
@@ -1231,7 +1252,7 @@ paths:
   /orders/{orderId}/print:
     get:
       operationId: printOrder
-      summary: Retorna a ficha de pedido no template ficha-canonical-v2
+      summary: Retorna a ficha de pedido no template ficha-canonical-v3
       description: >-
         Ação order.print, disponível a qualquer usuário operacional. Só para
         pedido confirmado; pendente responde 409 ORDER_NOT_CONFIRMED. HTML A4
@@ -2469,7 +2490,7 @@ components:
       enum: [pix, cartao_credito, cartao_debito]
     OrderSection:
       type: string
-      enum: [summary, items, observations]
+      enum: [summary, items, observations, artwork]
     OrderActorRef:
       type: object
       additionalProperties: false
@@ -2490,29 +2511,18 @@ components:
       description: >-
         Item da ficha (ADR 016). Principais, na ordem da tela: tipo (Tipo de
         roupa), cor, quantidade (soma da grade; nunca enviada), estampa,
-        malhas (Tecido), grade (Tamanhos) e gola. Adicionais, que nunca
-        bloqueiam: modelo, cor_frente, cor_costas, cor_manga_direita,
-        cor_manga_esquerda, vies_gola e vies_mangas; mangas e viés aceitam o
-        valor explícito NAO APLICAVEL. O item pode ser salvo incompleto
-        (malhas e grade vazias, textos em branco); gerar o pedido exige os
-        principais. A resposta sempre traz cor, estampa e gola; por uma versão,
-        um item enviado sem elas é aceito e gravado com elas em branco. Textos
+        malhas (Tecido), grade (Tamanhos) e gola (Definição da gola). O
+        vendedor escolhe tipo_servico em cada item; é obrigatório para
+        confirmar, mas pode ficar vazio enquanto pendente. Adicionais legados
+        opcionais, que não bloqueiam: modelo, cores das partes, vies_gola e
+        vies_mangas; mangas e viés aceitam NAO APLICAVEL. Um item pode ser
+        salvo incompleto (malhas e grade vazias, textos em branco). O servidor
+        devolve todos os campos de texto, com vazio para os omitidos. Textos
         com até 200 caracteres; até 50 itens.
-      required:
-        [
-          tipo,
-          modelo,
-          malhas,
-          cor_frente,
-          cor_costas,
-          cor_manga_direita,
-          cor_manga_esquerda,
-          vies_gola,
-          vies_mangas,
-          grade,
-        ]
+      required: [tipo, malhas, grade]
       properties:
         tipo: { type: string, maxLength: 200 }
+        tipo_servico: { type: string, maxLength: 200 }
         cor: { type: string, maxLength: 200 }
         estampa: { type: string, maxLength: 200 }
         malhas:
@@ -2529,6 +2539,32 @@ components:
         cor_manga_esquerda: { type: string, maxLength: 200 }
         vies_gola: { type: string, maxLength: 200 }
         vies_mangas: { type: string, maxLength: 200 }
+    FichaArtwork:
+      type: object
+      additionalProperties: false
+      description: >-
+        Origem da estampa marcada pelo vendedor. As duas opções podem ser
+        verdadeiras ou falsas. O armazenamento dos arquivos está preparado,
+        sem upload ativo; files permanece vazio até haver storage durável.
+      required: [feito_pelo_cliente, feito_pela_silmer, files]
+      properties:
+        feito_pelo_cliente: { type: boolean }
+        feito_pela_silmer: { type: boolean }
+        files:
+          type: array
+          readOnly: true
+          maxItems: 0
+          items: { type: object }
+    FichaArtworkInput:
+      type: object
+      additionalProperties: false
+      description: >-
+        Marcação humana da origem da estampa. Não aceita arquivos ou metadados
+        de arquivo; ambos os valores são exigidos e podem coincidir.
+      required: [feito_pelo_cliente, feito_pela_silmer]
+      properties:
+        feito_pelo_cliente: { type: boolean }
+        feito_pela_silmer: { type: boolean }
     FichaSummary:
       type: object
       additionalProperties: false
@@ -2557,13 +2593,14 @@ components:
     Ficha:
       type: object
       additionalProperties: false
-      required: [summary, items, observations, serviceData]
+      required: [summary, items, observations, artwork, serviceData]
       properties:
         summary: { $ref: '#/components/schemas/FichaSummary' }
         items:
           type: array
           items: { $ref: '#/components/schemas/FichaItem' }
         observations: { $ref: '#/components/schemas/FichaObservations' }
+        artwork: { $ref: '#/components/schemas/FichaArtwork' }
         serviceData:
           type: object
           additionalProperties: true
@@ -2585,6 +2622,7 @@ components:
           ficha,
           totalPieces,
           missingFields,
+          lastMessage,
           finalAmountCents,
           paymentCondition,
           orderDate,
@@ -2615,13 +2653,21 @@ components:
             items (nenhum item); items[N].tipo, items[N].cor,
             items[N].estampa, items[N].malhas, items[N].grade e
             items[N].gola (ponto principal que falta no item N, a partir de 0;
-            a grade vale também pela quantidade);
+            a grade vale também pela quantidade); items[N].tipo_servico
+            (escolha do vendedor que falta no item N);
             summary.data_entrega_confirmada (entrega prometida ausente ou fora
             do formato AAAA-MM-DD); finalAmount; e paymentCondition. Vazio em
             pedido confirmado. Os adicionais do item, o resto do resumo e as
             outras datas do lastro (paidOn, deliveredOn) nunca aparecem aqui:
             por enquanto, gerar subentende o pagamento feito.
           items: { type: string }
+        lastMessage:
+          description: >-
+            Metadados da última mensagem da conversa, sem conteúdo ou dados
+            do contato. Nulo quando a conversa ainda não tem mensagens.
+          oneOf:
+            - { $ref: '#/components/schemas/OrderLastMessage' }
+            - { type: 'null' }
         finalAmountCents: { type: [integer, 'null'], minimum: 1 }
         paymentCondition:
           oneOf:
@@ -2661,6 +2707,32 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    OrderLastMessage:
+      type: object
+      additionalProperties: false
+      required: [direction, occurredAt, deliveryStatus, status]
+      properties:
+        direction: { type: string, enum: [inbound, outbound] }
+        occurredAt: { type: string, format: date-time }
+        deliveryStatus: { type: [string, 'null'] }
+        status: { type: string }
+    OrdersSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          confirmedCount,
+          soldAmountCents,
+          averageTicketCents,
+          pendingCount,
+          totalPiecesSold,
+        ]
+      properties:
+        confirmedCount: { type: integer, minimum: 0 }
+        soldAmountCents: { type: integer, minimum: 0 }
+        averageTicketCents: { type: integer, minimum: 0 }
+        pendingCount: { type: integer, minimum: 0 }
+        totalPiecesSold: { type: integer, minimum: 0 }
     OrderResponse:
       type: object
       additionalProperties: false
@@ -2713,12 +2785,14 @@ components:
         value:
           description: >-
             Seção inteira: FichaSummaryInput para summary, lista de FichaItem
-            para items e FichaObservations para observations.
+            para items, FichaObservations para observations ou
+            FichaArtworkInput para artwork. Arquivos não são aceitos.
           oneOf:
             - { $ref: '#/components/schemas/FichaSummaryInput' }
             - type: array
               items: { $ref: '#/components/schemas/FichaItem' }
             - { $ref: '#/components/schemas/FichaObservations' }
+            - { $ref: '#/components/schemas/FichaArtworkInput' }
     OrderConfirmRequest:
       type: object
       additionalProperties: false

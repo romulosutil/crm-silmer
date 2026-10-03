@@ -10,8 +10,9 @@ import { parseSizes } from './sizes.js';
 // principal fields, in the order the page shows them, are the type of garment
 // (`tipo`), colour (`cor`), quantity (never stored: the sum of `grade`),
 // artwork (`estampa`), fabric (`malhas`), sizes (`grade`) and collar
-// (`gola`). The model, the colour of each part and the trims are additional
-// and never block the order.
+// (`gola`). The seller also assigns a service type to every item before
+// confirmation. The model and the old collar binding remain readable for
+// legacy orders; the colour of each part and sleeve binding are additional.
 
 export const NOT_APPLICABLE = 'NAO APLICAVEL';
 // What the bot records when the customer leaves a point to the seller. It is
@@ -45,14 +46,21 @@ const SUMMARY_INPUT_KEYS = Object.freeze([
 ]);
 const ITEM_TEXT_KEYS = Object.freeze([
   'tipo',
+  'tipo_servico',
   'cor',
   'estampa',
   'gola',
   ...ITEM_EXTRA_FIELDS,
 ]);
-// ADR 016: for one release an item sent without the three new fields is
-// still accepted and saved with them blank.
-const NEW_ITEM_TEXT_KEYS = new Set(['cor', 'estampa', 'gola']);
+// Optional and legacy fields may be absent in the seven-point form, but
+// values supplied by older clients are still validated and preserved.
+const OPTIONAL_ITEM_TEXT_KEYS = new Set([
+  'tipo_servico',
+  'cor',
+  'estampa',
+  'gola',
+  ...ITEM_EXTRA_FIELDS,
+]);
 const ITEM_KEYS = new Set([...ITEM_TEXT_KEYS, 'malhas', 'grade']);
 const GRADE_KEYS = new Set(['tamanho', 'quantidade']);
 
@@ -76,7 +84,7 @@ const ITEM_BRIEFING_KEYS = Object.freeze([
 /**
  * @typedef {{tamanho: string, quantidade: number}} GradeLine
  * @typedef {{
- *   tipo: string, cor: string, estampa: string, malhas: string[],
+ *   tipo: string, tipo_servico?: string, cor: string, estampa: string, malhas: string[],
  *   grade: GradeLine[], gola: string, modelo: string,
  *   cor_frente: string, cor_costas: string,
  *   cor_manga_direita: string, cor_manga_esquerda: string,
@@ -86,9 +94,10 @@ const ITEM_BRIEFING_KEYS = Object.freeze([
  *   data_entrega_confirmada: string|null, aplicacao: string|null, nome: string|null,
  * }} FichaSummaryInput
  * @typedef {FichaSummaryInput & {cliente: string}} FichaSummary
+ * @typedef {{feito_pelo_cliente: boolean, feito_pela_silmer: boolean, files: unknown[]}} FichaArtwork
  * @typedef {{
  *   summary: FichaSummary, items: FichaItem[], observations: string[],
- *   serviceData: Record<string, unknown>,
+ *   artwork?: FichaArtwork, serviceData: Record<string, unknown>,
  * }} Ficha
  */
 
@@ -106,6 +115,7 @@ export function blankItem() {
     malhas: [],
     modelo: '',
     tipo: '',
+    tipo_servico: '',
     vies_gola: '',
     vies_mangas: '',
   };
@@ -123,9 +133,15 @@ export function normalizeFicha(ficha) {
   const copy = structuredClone(ficha);
   return {
     ...copy,
+    artwork: copy.artwork ?? {
+      feito_pelo_cliente: false,
+      feito_pela_silmer: false,
+      files: [],
+    },
     items: (copy.items ?? []).map((item) => ({
       ...blankItem(),
       ...item,
+      gola: item.gola || item.vies_gola || '',
       grade: Array.isArray(item.grade) ? item.grade : [],
       malhas: Array.isArray(item.malhas) ? item.malhas : [],
     })),
@@ -222,10 +238,11 @@ function validateItem(raw, itemIndex) {
   const item = {};
   for (const key of ITEM_TEXT_KEYS) {
     item[key] =
-      NEW_ITEM_TEXT_KEYS.has(key) && !Object.hasOwn(raw, key)
+      OPTIONAL_ITEM_TEXT_KEYS.has(key) && !Object.hasOwn(raw, key)
         ? ''
         : requireText(raw[key], `${prefix}.${key}`);
   }
+  item.gola = item.gola || item.vies_gola;
 
   const malhas = Array.isArray(raw.malhas)
     ? raw.malhas.map((value) => requireText(value, `${prefix}.malhas`))
@@ -273,6 +290,36 @@ function validateItem(raw, itemIndex) {
     };
   });
   return /** @type {FichaItem} */ (item);
+}
+
+/**
+ * Only a seller can set artwork provenance through the order section route.
+ * Neither checkbox is exclusive; absent provenance remains unknown.
+ * File bytes and metadata are not accepted until durable storage is ready.
+ * @param {unknown} input
+ * @returns {FichaArtwork}
+ */
+export function validateArtwork(input) {
+  if (!isPlainObject(input)) {
+    throw new OrderInputError('artwork must be an object', ['artwork']);
+  }
+  rejectUnknownKeys(
+    input,
+    new Set(['feito_pelo_cliente', 'feito_pela_silmer']),
+    'artwork',
+  );
+  for (const field of ['feito_pelo_cliente', 'feito_pela_silmer']) {
+    if (typeof input[field] !== 'boolean') {
+      throw new OrderInputError(`artwork.${field} must be boolean`, [
+        `artwork.${field}`,
+      ]);
+    }
+  }
+  return {
+    feito_pelo_cliente: /** @type {boolean} */ (input.feito_pelo_cliente),
+    feito_pela_silmer: /** @type {boolean} */ (input.feito_pela_silmer),
+    files: [],
+  };
 }
 
 /**
@@ -447,6 +494,7 @@ export function briefingToFicha(briefing) {
   }
 
   return {
+    artwork: { feito_pelo_cliente: false, feito_pela_silmer: false, files: [] },
     items: hasItem ? [item] : [],
     observations: [],
     serviceData,
@@ -508,6 +556,7 @@ export function projectBriefingOntoFicha(ficha, briefing) {
     ];
   }
   return {
+    artwork: current.artwork,
     items,
     observations: current.observations,
     serviceData: draft.serviceData,

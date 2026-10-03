@@ -169,6 +169,27 @@ export class InMemoryOrderRepository {
     };
   }
 
+  async summary() {
+    const orders = [...this.#orders.values()];
+    const confirmed = orders.filter((order) => order.status === 'confirmado');
+    const soldAmountCents = confirmed.reduce(
+      (total, order) => total + (order.finalAmountCents ?? 0),
+      0,
+    );
+    return {
+      confirmedCount: confirmed.length,
+      soldAmountCents,
+      averageTicketCents: confirmed.length
+        ? Math.round(soldAmountCents / confirmed.length)
+        : 0,
+      pendingCount: orders.length - confirmed.length,
+      totalPiecesSold: confirmed.reduce(
+        (total, order) => total + order.totalPieces,
+        0,
+      ),
+    };
+  }
+
   /** @param {Order} order @param {OrderWriteOptions} options */
   async saveSection(order, options) {
     return this.#writeFicha(order, options, 'order.section_saved');

@@ -13,6 +13,7 @@ import {
   orderTotal,
   projectBriefingOntoFicha,
   validateItems,
+  validateArtwork,
   validateObservations,
   validateSummary,
 } from '../domain/ficha.js';
@@ -54,7 +55,7 @@ function requireId(value, name) {
 }
 
 export const ORDER_SECTIONS = Object.freeze(
-  /** @type {const} */ (['summary', 'items', 'observations']),
+  /** @type {const} */ (['summary', 'items', 'observations', 'artwork']),
 );
 export const DEFAULT_ORDER_PAGE_SIZE = 25;
 const MAX_QUERY_LENGTH = 120;
@@ -261,6 +262,9 @@ export function createOrderService(options) {
   }
 
   return Object.freeze({
+    async summary() {
+      return repository.summary();
+    },
     /**
      * PCL-01..03: idempotent — a pending order is reused, a conversation with
      * only confirmed orders gets a new one.
@@ -418,6 +422,11 @@ export function createOrderService(options) {
         };
       } else if (section === 'items') {
         ficha.items = validateItems(input.value);
+      } else if (section === 'artwork') {
+        ficha.artwork = {
+          ...validateArtwork(input.value),
+          files: ficha.artwork?.files ?? [],
+        };
       } else {
         ficha.observations = validateObservations(input.value);
       }

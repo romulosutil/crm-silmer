@@ -22,6 +22,7 @@ import {
  * @typedef {{
  *   readAssignment(conversationId: string): Promise<{assignedUserId: string|null, version: number}|null>,
  *   readAssignments(conversationIds: string[]): Promise<Map<string, string|null>>,
+ *   readLatestMessageStates(conversationIds: string[]): Promise<Map<string, {direction: string, occurredAt: string, deliveryStatus: string|null, status: string}>>,
  *   readOrderContexts(conversationIds: string[]): Promise<Map<string, any>>,
  *   readUserNames(userIds: string[]): Promise<Map<string, string|null>>,
  *   searchConversationIds(query: string): Promise<string[]>,
@@ -62,7 +63,12 @@ export function createOrderRuntime(options) {
   ) {
     throw new TypeError('order access guards are required');
   }
-  for (const method of ['readAssignment', 'readAssignments', 'readUserNames']) {
+  for (const method of [
+    'readAssignment',
+    'readAssignments',
+    'readLatestMessageStates',
+    'readUserNames',
+  ]) {
     if (typeof (/** @type {any} */ (conversations)?.[method]) !== 'function') {
       throw new TypeError(`the conversation port must implement ${method}`);
     }
@@ -111,8 +117,12 @@ export function createOrderRuntime(options) {
    */
   async function present(orders) {
     if (orders.length === 0) return [];
-    const owners = await conversations.readAssignments([
+    const conversationIds = [
       ...new Set(orders.map((order) => order.conversationId)),
+    ];
+    const [owners, latestMessageStates] = await Promise.all([
+      conversations.readAssignments(conversationIds),
+      conversations.readLatestMessageStates(conversationIds),
     ]);
     const people = new Set();
     for (const order of orders) {
@@ -138,6 +148,7 @@ export function createOrderRuntime(options) {
       finalAmountCents: order.finalAmountCents,
       firstContactAt: order.firstContactAt,
       id: order.id,
+      lastMessage: latestMessageStates.get(order.conversationId) ?? null,
       missingFields: order.missingFields,
       number: order.number,
       orderDate: order.orderDate,
@@ -188,6 +199,7 @@ export function createOrderRuntime(options) {
     authorizeWrite: access.authorizeWrite,
     ensurePendingFromIntent: service.ensurePendingFromIntent,
     projectAgentBriefing: service.projectAgentBriefing,
+    summary: service.summary,
 
     /**
      * PCL-10/PCL-11 behind the conversation version the seller saw; an

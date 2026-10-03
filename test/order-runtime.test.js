@@ -52,6 +52,7 @@ function harness() {
       },
       readAssignments: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, assignments[id] ?? null])),
+      readLatestMessageStates: async () => new Map(),
       readOrderContexts: orderContextsFrom(
         (/** @type {string} */ conversationId) =>
           conversationId in assignments

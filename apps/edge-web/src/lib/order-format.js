@@ -57,10 +57,11 @@ export const PRINT_LOCKED_REASON = 'Disponível depois de gerar o pedido';
 const ITEM_POINT_LABELS = Object.freeze({
   cor: 'cor',
   estampa: 'estampa',
-  gola: 'gola',
+  gola: 'definição da gola',
   grade: 'tamanhos',
   malhas: 'tecido',
   tipo: 'tipo de roupa',
+  tipo_servico: 'tipo de serviço',
 });
 
 // What the bot records when the customer leaves a point to the seller.

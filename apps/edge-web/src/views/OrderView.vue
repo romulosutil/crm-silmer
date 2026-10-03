@@ -10,6 +10,7 @@ import {
   watch,
 } from 'vue';
 import OrderClosingSection from '../components/order/OrderClosingSection.vue';
+import OrderArtworkSection from '../components/order/OrderArtworkSection.vue';
 import OrderIcon from '../components/order/OrderIcon.vue';
 import OrderInfoStrips from '../components/order/OrderInfoStrips.vue';
 import OrderItemsSection from '../components/order/OrderItemsSection.vue';
@@ -46,6 +47,7 @@ const editingSection = ref('');
 const editRequest = ref(null);
 let controller;
 let refreshTimer = 0;
+let pendingLiveRefresh = false;
 let headingAnnounced = false;
 
 const isPending = computed(() => order.value?.status === 'pendente');
@@ -88,7 +90,8 @@ const deliveryLabel = computed(() => {
 function describeWriteError(cause) {
   const status = Number(cause?.status);
   const code = String(cause?.code ?? '');
-  if (status === 409) return 'Este pedido mudou. Recarregue a seção.';
+  if (status === 409)
+    return 'Este pedido mudou. Cancele a edição para ver a versão atual.';
   if (status === 403) return 'Este pedido é de outro vendedor.';
   if (code === 'INVALID_AMOUNT') return 'Use o formato 4.820,00.';
   if (code === 'INVALID_DATE') return 'Use uma data até hoje.';
@@ -116,6 +119,7 @@ async function saveSection(section, value) {
     order.value = response.data.order;
     return { ok: true };
   } catch (cause) {
+    if (Number(cause?.status) === 409) pendingLiveRefresh = true;
     return {
       code: String(/** @type {any} */ (cause)?.code ?? ''),
       fields: /** @type {any} */ (cause)?.problem?.fields ?? [],
@@ -146,6 +150,7 @@ async function runCommand(action, body) {
     order.value = response.data.order;
     return { ok: true };
   } catch (cause) {
+    if (Number(cause?.status) === 409) scheduleLiveRefresh();
     return {
       code: String(/** @type {any} */ (cause)?.code ?? ''),
       fields: /** @type {any} */ (cause)?.problem?.fields ?? [],
@@ -174,6 +179,7 @@ async function saveMilestones(value) {
     order.value = response.data.order;
     return { ok: true };
   } catch (cause) {
+    if (Number(cause?.status) === 409) scheduleLiveRefresh();
     return {
       code: String(/** @type {any} */ (cause)?.code ?? ''),
       fields: /** @type {any} */ (cause)?.problem?.fields ?? [],
@@ -206,10 +212,19 @@ provide('orderEditing', {
   saveMilestones,
   /** @param {string} section */
   start(section) {
+    if (refreshTimer) {
+      globalThis.clearTimeout(refreshTimer);
+      refreshTimer = 0;
+      pendingLiveRefresh = true;
+    }
     editingSection.value = section;
   },
   stop() {
     editingSection.value = '';
+    if (pendingLiveRefresh) {
+      pendingLiveRefresh = false;
+      scheduleLiveRefresh();
+    }
   },
 });
 
@@ -254,6 +269,10 @@ function scheduleLiveRefresh() {
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
   refreshTimer = globalThis.setTimeout(() => {
     refreshTimer = 0;
+    if (editingSection.value !== '') {
+      pendingLiveRefresh = true;
+      return;
+    }
     void load(true);
   }, LIVE_REFRESH_DELAY_MS);
 }
@@ -261,8 +280,14 @@ function scheduleLiveRefresh() {
 // A section under edit is not overwritten from under the seller: the refresh
 // waits for Salvar or Cancelar.
 watch(liveEvent, (event) => {
-  if (editingSection.value !== '') return;
-  if (event?.reset || event?.type === 'inbox.order.changed') {
+  if (
+    event?.reset ||
+    ['inbox.order.changed', 'inbox.contact.changed'].includes(event?.type)
+  ) {
+    if (editingSection.value !== '') {
+      pendingLiveRefresh = true;
+      return;
+    }
     scheduleLiveRefresh();
   }
 });
@@ -342,12 +367,18 @@ onBeforeUnmount(() => {
         administrador edita este pedido.
       </p>
 
+      <p class="op-guidance">
+        Confira o resumo, complete os itens e marque a origem da arte. O painel
+        de fechamento mostra o que falta para gerar e liberar a ficha.
+      </p>
+
       <div class="op-layout">
         <!-- PFI-01: the order of the printed ficha, top to bottom. -->
         <div class="op-main">
           <OrderSummarySection :order="order" />
           <OrderMilestonesSection :order="order" />
           <OrderItemsSection :order="order" />
+          <OrderArtworkSection :order="order" />
           <OrderObservationsSection :order="order" />
           <OrderInfoStrips :order="order" />
         </div>

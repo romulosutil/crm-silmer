@@ -67,7 +67,7 @@ apenas como fixture de desenvolvimento e nunca é fallback silencioso.
 | Mensagem            | `messages`                              | Inbound e outbound cifrados; identidade externa ou `command_id` impede duplicidade. O estado de entrega fica na própria mensagem. |
 | Briefing            | colunas cifradas da `conversation`      | Um snapshot consolidado; `briefing_patch` ignora nulos e só aceita campos de qualificação. Não promove dado oficial.              |
 | Handoff             | `handoffs`                              | Criado sem responsável para a função humana vigente `Vendedor`; uma pessoa compatível o reivindica atomicamente.                  |
-| Pedido              | `orders`                                | Criado `pendente` pelo `open_order` da reserva ou do handoff (ADR 014), nunca pela simples chegada de mensagem. Confirmar e reabrir são ações humanas. |
+| Pedido              | `orders`                                | Criado `pendente` pelo `open_order` da reserva ou do handoff (ADR 014), nunca pela chegada de mensagem. Confirmar é ação humana.  |
 | Comando humano      | `n8n_commands` + `outbox_jobs`          | Estado oficial e outbox são gravados antes de o worker chamar o webhook do n8n.                                                   |
 | Evidência técnica   | `n8n_events`, auditoria e reconciliação | Registra correlação, workflow, versão, execução e resultado sem conteúdo pessoal ou segredo técnico.                              |
 
@@ -189,7 +189,11 @@ pendente, reutiliza; só com pedidos confirmados, cria um novo: PCL-01..03) e
 responde no mesmo corpo:
 
 ```json
-{ "accepted": true, "send_authorized": true, "order": { "opened": true, "id": "<pedido>", "created": true } }
+{
+  "accepted": true,
+  "send_authorized": true,
+  "order": { "opened": true, "id": "<pedido>", "created": true }
+}
 ```
 
 - Um pedido que já existia recebe a projeção da pré-ficha (`created: false`);
@@ -277,8 +281,9 @@ campos da ficha no pedido `pendente` da conversa:
   navegador ou o webhook DEV com um `wa_id` sintético inédito; não interprete
   uma janela vazia como conversa nova. O resultado do webhook DEV devolve
   `route` (`ai_reply`,
-  `handoff` ou `no_action`), `trigger`, `handoff_reason`, `turn` e o
-  `briefing_patch` da rodada, para testes automatizados de conversa.
+  `handoff` ou `no_action`), `trigger`, `handoff_reason`, `turn`, o
+  `briefing_patch` da rodada, `open_order` e a resposta `order` do CRM (ADR
+  014), para testes automatizados de conversa.
 - Baseline preservada: `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.
 - Rascunho simplificado validado: `fae803db-eef0-4074-a7ae-1a6bb786e203`,
   com 42 nós e sem avisos estruturais.

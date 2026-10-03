@@ -937,15 +937,15 @@ workflow DEV `0S5ZS1xeDCSoWovs` e, com autorização do PO, o de produção
 ### T53: Workflows DEV e local, roteiro e rastreabilidade
 
 - **What:** `dev-mvp-simple-12` com `open_order` e `order` nos resultados do webhook DEV; snapshots DEV e local gerados de novo; roteiro do indicador com o novo momento de abertura; rastreabilidade PAB em `spec.md`.
-- **Where:** `ops/n8n/workflows/{create-dev-test-workflow.mjs,0S5ZS1xeDCSoWovs-*.sanitized.json}`, `test/n8n-dev-workflow.test.js`, `docs/integrations/n8n/{README,roteiro-indicador-da-ficha}.md`, `.specs/features/pedidos-mvp/spec.md`
+- **Where:** `ops/n8n/workflows/{create-dev-test-workflow.mjs,0S5ZS1xeDCSoWovs-*.sanitized.json}`, `test/n8n-dev-workflow.test.js`, `docs/integrations/n8n/{README,roteiro-indicador-da-ficha}.md`, `docs/runbooks/automation-executor.md` (só formatação), `.specs/features/pedidos-mvp/spec.md`
 - **Depends on:** T52
 - **Requirement:** PAB-01..04
 
 **Done when:**
 
-- [ ] Resultados DEV mostram `open_order` e a resposta `order` do CRM
-- [ ] PAB-01..04 com evidência em `spec.md`
-- [ ] `npm run validate` passa
+- [x] Resultados DEV mostram `open_order` e a resposta `order` do CRM
+- [x] PAB-01..04 com evidência em `spec.md`
+- [x] `npm run validate` passa
 
 **Tests:** unit · **Gate:** full · **Commit:** `feat(n8n): show the order opening in the DEV workflow`
 

@@ -474,14 +474,23 @@ Verificado em T46, 29/09/2026.
 
 ### Abertura no primeiro ponto da ficha (ADR 014)
 
-Tasks T50–T53, 02/10/2026. A evidência é preenchida na T53.
+Verificado na T53, 02/10/2026.
 
-| ID     | História | Evidência | Status   |
-| ------ | -------- | --------- | -------- |
-| PAB-01 | P1-1     | T52       | Pendente |
-| PAB-02 | P1-1     | T52       | Pendente |
-| PAB-03 | P1-1     | T51       | Pendente |
-| PAB-04 | P1-1     | T51, T52  | Pendente |
+| ID     | História | Evidência                                                                                                                                                                   | Status   |
+| ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| PAB-01 | P1-1     | `test/n8n-workflow-contract.test.js:2101` (2105, 2113, 2146); `test/n8n-workflow-contract.test.js:468,873`                                                                  | Verified |
+| PAB-02 | P1-1     | `test/n8n-workflow-contract.test.js:2168,2176,2208`; `test/n8n-workflow-contract.test.js:213`                                                                               | Verified |
+| PAB-03 | P1-1     | `test/n8n-integration-postgres-live.test.js:755,766,800,821,975`; `test/n8n-integration-domain.test.js:250`; `test/n8n-api-contract.test.js:126`; `test/n8n-routes.test.js:172` | Verified |
+| PAB-04 | P1-1     | `test/n8n-integration-postgres-live.test.js:846,894,939`; `test/n8n-workflow-contract.test.js:305`; `test/n8n-api-contract.test.js:184`; `test/n8n-dev-workflow.test.js:111` | Verified |
+
+**Cobertura:** 4 requisitos · 4 verificados. PCL-01..03 mantêm a evidência do
+serviço de pedidos; a abertura pelo `open_order` usa o mesmo
+`ensurePendingFromIntent` (`test/n8n-integration-postgres-live.test.js:663`).
+
+| Comando                                                                       | Resultado                                                  |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `npm run validate`                                                            | ✅ passou na T53                                            |
+| `node --test --test-concurrency=1 test/n8n-integration-postgres-live.test.js` | ✅ passou — 4/4 (PostgreSQL, `crm_silmer_test_abertura`)    |
 
 ## Roteiro de UAT
 

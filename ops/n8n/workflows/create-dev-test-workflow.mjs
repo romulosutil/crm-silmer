@@ -4,7 +4,7 @@ import { format } from 'prettier';
 
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
-export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-11';
+export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-12';
 export const LOCAL_WORKFLOW_NAME =
   'LOCAL | Silmer | Fluxo completo sem WhatsApp';
 
@@ -228,7 +228,10 @@ return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-hu
       [1350, -700],
       `const decision = $('Normalizar decisão da IA (MVP)').item.json;
 const input = $('${BUILD_SYNTHETIC_EVENT}').item.json.__dev_input ?? {};
-return { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, turn: decision.turn, reply_text: decision.reply_text, output: decision.reply_text, answer_status: decision.answer_status, briefing_patch: decision.briefing_patch, order_intent_confirmed: decision.order_intent_confirmed, handoff_ready: decision.handoff_ready, missing_briefing_fields: decision.missing_briefing_fields, ficha_filled: decision.ficha_filled ?? null, ficha_total: decision.ficha_total ?? null } };`,
+// ADR 014: whether the workflow asked to open the order and what the CRM answered.
+let order = null;
+try { order = $('CRM - Reservar envio da IA (MVP)').item.json.order ?? null; } catch (error) { order = null; }
+return { json: { ok: true, scenario: input.scenario ?? 'message', route: 'ai_reply', whatsapp_simulated: true, conversation_id: decision.conversation_id, turn: decision.turn, reply_text: decision.reply_text, output: decision.reply_text, answer_status: decision.answer_status, briefing_patch: decision.briefing_patch, open_order: decision.open_order ?? null, order, handoff_ready: decision.handoff_ready, missing_briefing_fields: decision.missing_briefing_fields, ficha_filled: decision.ficha_filled ?? null, ficha_total: decision.ficha_total ?? null } };`,
     ),
     resultNode(
       'DEV - Resultado do handoff',
@@ -241,7 +244,7 @@ try { notice = $('Preparar aviso de transferência (MVP)').item.json; } catch (e
 let crm = null;
 try { crm = $('CRM - Registrar handoff (MVP)').item.json; } catch (error) { crm = $json; }
 const reply = notice.text || decision.reply_text || 'Vou encaminhar seu atendimento para nossa equipe.';
-return { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, notice_authorized: notice.send_authorized === true, notice_command_id: notice.command_id ?? null, conversation_id: decision.conversation_id ?? notice.conversation_id ?? null, turn: decision.turn, reply_text: reply, output: reply, trigger: decision.trigger ?? 'unsupported_media', handoff_reason: decision.handoff_reason ?? 'unsupported', requested_seller: decision.requested_seller ?? null, handoff_summary: decision.reasoning ?? null, briefing_patch: decision.briefing_patch ?? null, missing_briefing_fields: decision.missing_briefing_fields ?? null, ficha_filled: decision.ficha_filled ?? null, ficha_total: decision.ficha_total ?? null, crm } };`,
+return { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handoff', whatsapp_simulated: true, notice_authorized: notice.send_authorized === true, notice_command_id: notice.command_id ?? null, conversation_id: decision.conversation_id ?? notice.conversation_id ?? null, turn: decision.turn, reply_text: reply, output: reply, trigger: decision.trigger ?? 'unsupported_media', handoff_reason: decision.handoff_reason ?? 'unsupported', requested_seller: decision.requested_seller ?? null, handoff_summary: decision.reasoning ?? null, briefing_patch: decision.briefing_patch ?? null, open_order: decision.open_order ?? null, order: crm?.order ?? null, missing_briefing_fields: decision.missing_briefing_fields ?? null, ficha_filled: decision.ficha_filled ?? null, ficha_total: decision.ficha_total ?? null, crm } };`,
     ),
     resultNode(
       'DEV - Resultado do envio desconhecido',

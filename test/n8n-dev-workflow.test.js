@@ -99,13 +99,33 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   );
   assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
   assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
-  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-11');
+  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-12');
   const result = nodes.find(
     (node) => node.name === 'DEV - Resultado da resposta da IA',
   );
   assert.ok(result);
   assert.match(result.parameters.jsCode, /handoff_ready/u);
   assert.match(result.parameters.jsCode, /missing_briefing_fields/u);
+});
+
+test('DEV results show whether the order opened, on the reply and on the handoff (ADR 014)', async () => {
+  const dev = await workflow();
+  const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
+  /** @param {string} name */
+  const code = (name) =>
+    String(nodes.find((node) => node.name === name)?.parameters.jsCode);
+  const reply = code('DEV - Resultado da resposta da IA');
+  assert.match(reply, /open_order: decision\.open_order/u);
+  assert.match(
+    reply,
+    /\$\('CRM - Reservar envio da IA \(MVP\)'\)\.item\.json\.order/u,
+  );
+  assert.doesNotMatch(reply, /order_intent_confirmed/u);
+  const handoff = code('DEV - Resultado do handoff');
+  assert.match(handoff, /open_order: decision\.open_order/u);
+  assert.match(handoff, /order: crm\?\.order/u);
+  // The failure check is canonical, so DEV raises ORDER_OPEN_FAILED too.
+  assert.ok(nodes.some((node) => node.name === 'Pedido não abriu? (MVP)'));
 });
 
 test('manual chat makes CRM session continuity explicit across reloads', async () => {

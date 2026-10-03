@@ -11,7 +11,7 @@ conta.
 
 ## Como rodar
 
-- Use o workflow DEV `dev-mvp-simple-11` ou mais novo. Cada roteiro precisa de
+- Use o workflow DEV `dev-mvp-simple-12` ou mais novo. Cada roteiro precisa de
   uma conversa independente: abra outra sessão isolada do navegador no chat
   manual ou use o webhook DEV com um `wa_id` sintético inédito. Recarregar a
   página não garante um novo `sessionId` e pode continuar a conversa no CRM.
@@ -22,6 +22,11 @@ conta.
 - Na Inbox do CRM, abra a transferência e confira o motivo, o resumo com
   "Ficha: X de 8 (Y%)" e o Pedido pendente. O webhook DEV também devolve
   `ficha_filled` e `ficha_total`.
+- O Pedido pendente abre na primeira mensagem que preenche um dos sete pontos;
+  o nome sozinho e "Definir com o vendedor" não abrem
+  ([ADR 014](../../adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md)). O
+  webhook DEV devolve `open_order` e a resposta `order` do CRM; `opened: false`
+  é uma falha, registrada como `ORDER_OPEN_FAILED`, e deve ser anotada.
 - O indicador da rodada é a média da coluna "Ficha" dos roteiros KPI-01 a
   KPI-04 na hora da transferência; a meta é cada um chegar a 4/8 ou mais. O
   KPI-05 e os roteiros EXT são transferidos pela regra do pedido do zero e
@@ -33,19 +38,19 @@ A coluna "Ficha" é o preenchimento esperado depois da mensagem.
 
 ### KPI-01 — Cliente que responde uma coisa por vez
 
-| #   | Você manda                                                          | O bot deve                                                                                                                              | Ficha  |
-| --- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 1   | Oi, boa tarde!                                                      | Apresentar-se como assistente virtual da Silmer e pedir o nome e o que você precisa                                                     | 0/8    |
-| 2   | Sou a Carla. Queria fazer uns uniformes pro time de vôlei da escola | Reagir bem e perguntar o tipo de roupa, com opções terminando em "ou outra"; pode juntar "lisa ou com estampa?". Abre o Pedido pendente | 1/8    |
-| 3   | Camiseta comum, com estampa                                         | Perguntar a cor; "com estampa" ainda não responde a estampa (falta saber se já tem a arte)                                              | 2/8    |
-| 4   | Azul marinho                                                        | Perguntar a quantidade                                                                                                                  | 3/8    |
-| 5   | 25                                                                  | Perguntar a estampa: já tem a arte ou a logo? Estampada ou bordada?                                                                     | 4/8 ✅ |
-| 6   | Já tenho a logo, vai estampada na frente                            | Perguntar o tecido: algodão, dry fit, poliéster ou outro                                                                                | 5/8    |
-| 7   | Qual a diferença entre algodão e dry fit?                           | Explicar em palavras simples, sem dizer que a Silmer tem, e perguntar o tecido de novo; não transfere                                   | 5/8    |
-| 8   | Vou de dry fit então                                                | Perguntar os tamanhos (quantas de cada)                                                                                                 | 6/8    |
-| 9   | 5 P, 10 M, 8 G e 2 GG                                               | Perguntar a gola: redonda, V, polo ou outra                                                                                             | 7/8    |
-| 10  | Gola redonda                                                        | Dizer que anotou tudo e transferir (Pré-ficha completa)                                                                                 | 8/8    |
-| 11  | Obrigada!                                                           | Ficar calado                                                                                                                            | —      |
+| #   | Você manda                                                          | O bot deve                                                                                                                                          | Ficha  |
+| --- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1   | Oi, boa tarde!                                                      | Apresentar-se como assistente virtual da Silmer e pedir o nome e o que você precisa                                                                 | 0/8    |
+| 2   | Sou a Carla. Queria fazer uns uniformes pro time de vôlei da escola | Reagir bem e perguntar o tipo de roupa, com opções terminando em "ou outra"; pode juntar "lisa ou com estampa?". Só o nome: ainda não abre o Pedido | 1/8    |
+| 3   | Camiseta comum, com estampa                                         | Perguntar a cor; "com estampa" ainda não responde a estampa (falta saber se já tem a arte). Abre o Pedido pendente (primeiro ponto)                 | 2/8    |
+| 4   | Azul marinho                                                        | Perguntar a quantidade                                                                                                                              | 3/8    |
+| 5   | 25                                                                  | Perguntar a estampa: já tem a arte ou a logo? Estampada ou bordada?                                                                                 | 4/8 ✅ |
+| 6   | Já tenho a logo, vai estampada na frente                            | Perguntar o tecido: algodão, dry fit, poliéster ou outro                                                                                            | 5/8    |
+| 7   | Qual a diferença entre algodão e dry fit?                           | Explicar em palavras simples, sem dizer que a Silmer tem, e perguntar o tecido de novo; não transfere                                               | 5/8    |
+| 8   | Vou de dry fit então                                                | Perguntar os tamanhos (quantas de cada)                                                                                                             | 6/8    |
+| 9   | 5 P, 10 M, 8 G e 2 GG                                               | Perguntar a gola: redonda, V, polo ou outra                                                                                                         | 7/8    |
+| 10  | Gola redonda                                                        | Dizer que anotou tudo e transferir (Pré-ficha completa)                                                                                             | 8/8    |
+| 11  | Obrigada!                                                           | Ficar calado                                                                                                                                        | —      |
 
 ### KPI-02 — Cliente que manda quase tudo de uma vez
 

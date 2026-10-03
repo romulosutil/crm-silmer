@@ -89,8 +89,8 @@ quatro lugares, sem dados pessoais:
    `order.error`, na saída de "CRM - Reservar envio da IA (MVP)" ou "CRM -
    Registrar handoff (MVP)". A execução passa pelo ramo "Pedido não abriu?
    (MVP)".
-2. **`workflow.failed` da conversa:** o workflow envia `failure.code =
-   ORDER_OPEN_FAILED`, com o código do CRM em `failure.reason`. No CRM:
+2. **`workflow.failed` da conversa:** o workflow envia `failure.code` igual a
+   `ORDER_OPEN_FAILED`, com o código do CRM em `failure.reason`. No CRM:
 
    ```sql
    SELECT processed_at, conversation_id, workflow_version, execution_id

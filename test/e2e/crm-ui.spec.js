@@ -138,7 +138,7 @@ const conversationOrder = {
           { quantidade: 100, tamanho: 'M' },
           { quantidade: 50, tamanho: 'G' },
         ],
-        modelo: 'GOLA OLÍMPICA',
+        gola: 'GOLA OLÍMPICA',
         tipo: 'CAMISETA',
       },
     ],
@@ -982,9 +982,7 @@ test('refreshes the Inbox manually when live updates fail and keeps focus on liv
       new globalThis.Event('error'),
     );
   });
-  await expect(
-    page.getByText(/Reconectando atualização automática/),
-  ).toBeVisible();
+  await expect(page.getByText(/Reconectando atualizações/)).toBeVisible();
   const manualRefresh = page.getByRole('button', {
     name: 'Atualizar conversas',
   });
@@ -1003,9 +1001,7 @@ test('refreshes the Inbox manually when live updates fail and keeps focus on liv
   await expect.poll(() => inboxQueries.length).toBeGreaterThan(beforeReconnect);
   expect(inboxQueries.at(-1)?.assignedUserId).toBe('operator-1');
   await expect(search).toBeFocused();
-  await expect(
-    page.getByText(/Reconectando atualização automática/),
-  ).toHaveCount(0);
+  await expect(page.getByText(/Reconectando atualizações/)).toHaveCount(0);
 
   const beforeEvent = inboxQueries.length;
   await page.evaluate(() => {

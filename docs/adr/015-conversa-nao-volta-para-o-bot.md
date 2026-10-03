@@ -1,6 +1,10 @@
 # ADR 015 — A conversa não volta para o bot
 
-Status: aceito
+Status: aceito; esclarecida pelo PO em 03/10/2026: a regra vale dentro de um
+ciclo de atendimento. Quando uma conversa encerrada como `Sem lead` recebe uma
+mensagem nova do cliente, o ciclo novo começa com o bot, como para qualquer
+cliente novo (caso de borda da
+[especificação Pedidos MVP](../../.specs/features/pedidos-mvp/spec.md)).
 
 Data: 02/10/2026
 

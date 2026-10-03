@@ -1255,6 +1255,66 @@ branch.
 | T73  | aprovação em duas etapas | gate de revisão  | unit   | T68        | ✅     |
 | T74  | 1 troca de template     | print/rota        | unit   | T73        | ✅     |
 
+## Cliente acompanha o contato (ADR 018, 03/10/2026)
+
+Decidido pelo PO em 03/10/2026: "O pedido pendente deve acompanhar quando
+alguém renomeia o contato", e o esclarecimento de que um ciclo novo depois de
+`Sem lead` começa com o bot. Branch `feat/cliente-acompanha-contato`, a partir
+de `master`; as tasks rodam em ordem, uma por commit (T50–T69 já têm dono).
+
+### T70: ADR 018 e requisitos do cliente que acompanha o contato
+
+- **What:** Registrar a decisão; história P1-12 com PCT-01..03, que promove o caso de borda "WHEN o contato muda de nome"; nota em PFI-02; caso de borda do ciclo novo depois de `Sem lead` ao lado da regra da ADR 015; status datado na ADR 015 (o esclarecimento) e na ADR 010 (item 1 substituído pela ADR 014), sem reescrever o corpo; índice das ADRs; estas tasks.
+- **Where:** `docs/adr/018-cliente-do-pedido-acompanha-o-contato.md`, `docs/adr/{010-intencao-de-pedido-sem-pergunta-e-tom-do-bot,015-conversa-nao-volta-para-o-bot}.md` (só o status), `docs/adr/README.md`, `.specs/features/pedidos-mvp/{spec,tasks}.md`
+- **Depends on:** —
+- **Requirement:** PCT-01..03, PCX-05
+
+**Done when:**
+
+- [x] ADR 018 ligada à spec e às tasks
+- [x] ADR 015 e ADR 010 com status datado, corpo intacto
+- [x] O ciclo novo depois de `Sem lead` está nos casos de borda
+
+**Tests:** none · **Gate:** docs · **Commit:** `docs(adr): let the pending order's client follow the contact`
+
+### T71: Cliente do pendente lido do contato; gerar grava
+
+- **What:** O serviço de pedidos lê o cliente de cada pendente pela regra da PIT-11 em toda saída (detalhe, lista, gaveta e respostas dos comandos), numa consulta por leitura (`readOrderContexts`, que substitui `readOrderContext`); os comandos partem desse cliente, e `saveStatus` grava a ficha junto com o status nos dois repositórios, então gerar grava o nome do momento. Sem escrita no pedido ao renomear.
+- **Where:** `modules/orders/src/{domain/ficha.js,application/order-service.js,ports/contracts.js}`, `modules/orders/src/adapters/{postgres-order-conversation-port,postgres-order-repository,in-memory-order-repository}.js`, `apps/api/src/order-runtime.js` (só o tipo da porta), `test/fixtures/order-contexts.js`, `test/orders-{service-client,service-create,service-commands,service-read,repository-contract,postgres-live}.test.js`, `test/order-{routes,runtime}.test.js`
+- **Depends on:** T70
+- **Requirement:** PCT-01..03, PIT-11
+
+**Done when:**
+
+- [ ] Pendente mostra o nome atual do contato no detalhe, na lista, na busca e na gaveta, sem mudar versão, `updatedAt` nem eventos do pedido
+- [ ] Gerado mantém e imprime o nome de quando foi gerado; reaberto volta a acompanhar
+- [ ] Nome apagado volta ao `customer_name` do briefing ou fica vazio, nunca o "@handle"
+- [ ] Gate quick e `npm run test:orders:live` passam
+
+**Tests:** unit + integração live · **Gate:** quick + live · **Commit:** `feat(orders): let the pending order's client follow the contact`
+
+### T72: Verificação do cliente que acompanha o contato
+
+- **What:** Rodar os gates completos e registrar a rastreabilidade PCT em `spec.md`.
+- **Where:** `.specs/features/pedidos-mvp/{spec,tasks}.md`
+- **Depends on:** T71
+- **Requirement:** PCT-01..03
+
+**Done when:**
+
+- [ ] `npm run validate` e `npm run test:orders:live` passam
+- [ ] Nenhum PCT sem evidência
+
+**Tests:** full · **Gate:** full · **Commit:** `docs(specs): trace the client that follows the contact`
+
+### Validação T70–T72
+
+| Task | Escopo                           | Camada                   | Testes      | Depends on | Status |
+| ---- | -------------------------------- | ------------------------ | ----------- | ---------- | ------ |
+| T70  | 1 ADR + requisitos               | docs                     | none        | —          | ✅     |
+| T71  | 1 regra de leitura e de gerar    | domínio, serviço, PG     | unit + live | T70        | ⬜     |
+| T72  | verificação                      | full                     | full        | T71        | ⬜     |
+
 ---
 
 ## Validação das tasks

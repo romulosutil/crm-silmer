@@ -1,7 +1,11 @@
 # ADR 010 — Intenção de pedido sem pergunta e tom do bot
 
 Status: aceito; a lista de perguntas com opções do item 4 foi substituída pela
-[ADR 012](012-ficha-de-sete-pontos-e-ritmo-fixo.md) em 01/10/2026.
+[ADR 012](012-ficha-de-sete-pontos-e-ritmo-fixo.md) em 01/10/2026. No item 1,
+a intenção de compra lida pelo modelo (`order_intent_confirmed`) foi
+substituída pela [ADR 014](014-pedido-abre-no-primeiro-ponto-da-ficha.md) em
+02/10/2026: o pedido abre no primeiro ponto da ficha. O bot continua sem
+perguntar se pode montar o pedido.
 
 Data: 01/10/2026
 

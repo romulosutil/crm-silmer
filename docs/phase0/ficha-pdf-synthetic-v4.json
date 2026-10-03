@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "task": "T78",
+  "adr": "019",
+  "syntheticOnly": true,
+  "snapshotVersion": "synthetic-order-v4",
+  "templateVersion": "ficha-canonical-v4",
+  "generatedAt": "2026-10-02T12:00:00-03:00",
+  "order": {
+    "number": "25-CRM",
+    "fabCode": "01",
+    "status": "confirmado",
+    "orderDate": "2026-10-02",
+    "firstContactAt": "2026-09-28T13:40:00.000Z",
+    "paidOn": "2026-10-02",
+    "deliveredOn": null,
+    "totalPieces": 52,
+    "confirmedBy": {
+      "name": "Vendedora Exemplo"
+    },
+    "ficha": {
+      "summary": {
+        "cliente": "Cliente Demonstração",
+        "data_entrega_confirmada": "2026-10-23",
+        "aplicacao": "Técnica da arte de referência",
+        "nome": "Equipe Horizonte - Evento Sintético"
+      },
+      "items": [
+        {
+          "tipo": "CAMISA POLO",
+          "cor": "AZUL MARINHO",
+          "estampa": "BORDADO DO BRASÃO NO PEITO ESQUERDO",
+          "malhas": ["PIQUÊ", "ALGODÃO 100%"],
+          "gola": "GOLA POLO",
+          "modelo": "",
+          "cor_frente": "",
+          "cor_costas": "",
+          "cor_manga_direita": "",
+          "cor_manga_esquerda": "",
+          "vies_gola": "",
+          "vies_mangas": "",
+          "grade": [
+            {
+              "tamanho": "P",
+              "quantidade": 4
+            },
+            {
+              "tamanho": "M",
+              "quantidade": 8
+            },
+            {
+              "tamanho": "G",
+              "quantidade": 6
+            },
+            {
+              "tamanho": "GG",
+              "quantidade": 2
+            }
+          ],
+          "tipo_servico": "Produção completa"
+        },
+        {
+          "tipo": "REGATA",
+          "cor": "BRANCA COM DETALHES EM VERDE BANDEIRA",
+          "estampa": "ARTE DO CLIENTE: ESCUDO GRANDE NA FRENTE, NOME E NÚMERO NAS COSTAS E TRÊS PATROCINADORES NA BARRA; ARQUIVO EM VETOR ENVIADO PELO CLIENTE",
+          "malhas": ["DRY FIT 100% POLIÉSTER"],
+          "gola": "",
+          "modelo": "CAVADA (histórico, não imprimir)",
+          "cor_frente": "",
+          "cor_costas": "",
+          "cor_manga_direita": "NAO APLICAVEL",
+          "cor_manga_esquerda": "NAO APLICAVEL",
+          "vies_gola": "VERDE BANDEIRA",
+          "vies_mangas": "",
+          "grade": [
+            {
+              "tamanho": "PP",
+              "quantidade": 2
+            },
+            {
+              "tamanho": "P",
+              "quantidade": 4
+            },
+            {
+              "tamanho": "M",
+              "quantidade": 8
+            },
+            {
+              "tamanho": "G",
+              "quantidade": 8
+            },
+            {
+              "tamanho": "GG",
+              "quantidade": 6
+            },
+            {
+              "tamanho": "XG",
+              "quantidade": 3
+            },
+            {
+              "tamanho": "EXG",
+              "quantidade": 1
+            }
+          ],
+          "tipo_servico": "Somente impressão"
+        }
+      ],
+      "observations": [
+        "Arte final sintética aprovada para teste visual.",
+        "Separar os itens por tamanho e identificar cada pacote.",
+        "Não usar este documento para produção ou cobrança."
+      ],
+      "artwork": {
+        "feito_pelo_cliente": true,
+        "feito_pela_silmer": true,
+        "files": []
+      }
+    }
+  }
+}

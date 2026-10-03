@@ -2,6 +2,7 @@ import { blankProduction } from './ficha-canonical-v2.js';
 
 export const TEMPLATE_V2 = 'ficha-canonical-v2';
 export const TEMPLATE_V3 = 'ficha-canonical-v3';
+export const TEMPLATE_V4 = 'ficha-canonical-v4';
 
 /** A field nobody filled prints blank, never "null". @param {unknown} value */
 function printedText(value) {
@@ -68,7 +69,11 @@ function printedTrail(order) {
  * @param {string} [templateVersion]
  */
 export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
-  if (templateVersion !== TEMPLATE_V2 && templateVersion !== TEMPLATE_V3) {
+  if (
+    templateVersion !== TEMPLATE_V2 &&
+    templateVersion !== TEMPLATE_V3 &&
+    templateVersion !== TEMPLATE_V4
+  ) {
     throw new Error(`Unknown ficha template: ${templateVersion}`);
   }
   const { items, observations, summary } = order.ficha;
@@ -86,6 +91,15 @@ export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
     quantidade_total: order.totalPieces,
     vendedor: printedText(order.confirmedBy?.name),
   };
-  if (templateVersion === TEMPLATE_V3) pedido.lastro = printedTrail(order);
+  if (templateVersion === TEMPLATE_V3 || templateVersion === TEMPLATE_V4) {
+    pedido.lastro = printedTrail(order);
+  }
+  if (templateVersion === TEMPLATE_V4) {
+    pedido.artwork = order.ficha.artwork ?? {
+      feito_pelo_cliente: false,
+      feito_pela_silmer: false,
+      files: [],
+    };
+  }
   return { pedido, producao: blankProduction() };
 }

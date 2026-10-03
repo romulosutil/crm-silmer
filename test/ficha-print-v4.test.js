@@ -47,7 +47,10 @@ test('v4 preserves v3 as a separate approved template', () => {
     v4,
     /Origens da arte do pedido<\/span><strong>Feita pelo cliente/u,
   );
-  assert.equal((v4.match(/Origens da arte do pedido/gu) ?? []).length, 1);
+  assert.equal(
+    (v4.match(/Origens da arte do pedido/gu) ?? []).length,
+    1 + (v4.match(/class="page-break continuation"/gu) ?? []).length,
+  );
   assert.ok(
     v4.indexOf('Origens da arte do pedido') <
       v4.indexOf('<article class="item-card">'),

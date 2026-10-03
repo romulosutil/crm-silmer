@@ -1,6 +1,11 @@
 // Proposed revision of the approved v3 layout. The v2/v3 renderers and their
 // review hashes stay immutable while this revision is reviewed.
-import { PAGE_ONE_TOP, paginateItems, wrappedLines } from './ficha-v3-pages.js';
+import {
+  CONTINUATION_TOP,
+  PAGE_ONE_TOP,
+  paginateItems,
+  wrappedLines,
+} from './ficha-v3-pages.js';
 import { filledText } from './html.js';
 import { NOT_APPLICABLE } from '../domain/ficha.js';
 
@@ -181,6 +186,8 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
     : 0;
   const pages = paginateItems(printableItems, observations, {
     firstPageTop: PAGE_ONE_TOP + techniqueHeight + (originLabel ? 28 : 0),
+    continuationTop: CONTINUATION_TOP + (originLabel ? 28 : 0),
+    extrasPerLine: 80,
   });
   /** @param {number} pageIndex */
   const cardsOf = (pageIndex) =>
@@ -204,7 +211,7 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
     .slice(1)
     .map((page, offset) => {
       const pageIndex = offset + 1;
-      return `<section class="page-break continuation"><header class="sheet-header"><div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div><div class="header-id"><span class="page-marker">Página ${pageIndex + 1} · continuação dos itens</span><div class="order-id"><span>Pedido</span><strong>${display(order.numero)}</strong></div></div></header>${page.length ? `<div class="section-label">Itens: continuação</div><section class="items">${cardsOf(pageIndex)}</section>` : ''}${footerOn(pageIndex)}</section>`;
+      return `<section class="page-break continuation"><header class="sheet-header"><div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div><div class="header-id"><span class="page-marker">Página ${pageIndex + 1} · continuação dos itens</span><div class="order-id"><span>Pedido</span><strong>${display(order.numero)}</strong></div></div></header>${originLabel ? `<section class="artwork-origin"><span class="label">Origens da arte do pedido</span><strong>${display(originLabel)}</strong></section>` : ''}${page.length ? `<div class="section-label">Itens: continuação</div><section class="items">${cardsOf(pageIndex)}</section>` : ''}${footerOn(pageIndex)}</section>`;
     })
     .join('');
   const services = [
@@ -292,7 +299,7 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
     .grade-cell strong { font-size: 13px; }
     .item-additional { align-items: center; background: var(--raised); border-top: 1px solid var(--subtle); display: flex; flex-wrap: wrap; gap: 5px 12px; padding: 5px 8px; }
     .item-additional span { color: var(--muted); font-size: 7px; font-weight: 800; text-transform: uppercase; }
-    .item-additional strong { color: var(--deep); font-size: 8px; }
+    .item-additional strong { color: var(--deep); font-size: 10px; line-height: 1.25; }
     .page-footer-content { display: grid; gap: 8px; grid-template-columns: 1fr 160px; margin-top: 8px; }
     .observations { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; min-height: 66px; padding: 8px 9px; }
     .observations ol { margin: 3px 0 0; padding-left: 16px; }

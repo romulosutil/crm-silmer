@@ -311,8 +311,9 @@ test('a failed order opening raises workflow.failed ORDER_OPEN_FAILED (ADR 014)'
   )?.[1];
   assert.ok(condition, 'expected an n8n expression on the failure check');
   /** @param {any} answer */
-  const failed = (answer) =>
-    vm.runInNewContext(condition, { $json: answer, Boolean });
+  const failed = (answer) => vm.runInNewContext(condition, { $json: answer });
+  // An expression error on this check would stop the reply: no globals.
+  assert.doesNotMatch(condition, /\b[A-Z][A-Za-z]*\(/u);
   assert.equal(
     failed({ accepted: true, order: { opened: false, error: 'X_Y' } }),
     'true',

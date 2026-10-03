@@ -197,6 +197,18 @@ export function createOperationReadService({
           reset: true,
         });
       }
+      if (result.rows.length === 0 && after > 0) {
+        // A restored database can be behind a cursor retained by EventSource
+        // or by the shared dispatcher. Reset to its current head so later
+        // events are not hidden until their cursors pass the old value.
+        const head = await database.query(
+          'SELECT COALESCE(max(stream_cursor), 0) cursor FROM crm.domain_events',
+        );
+        const cursor = Number(head.rows[0].cursor);
+        if (cursor < after) {
+          return Object.freeze({ cursor, events: [], reset: true });
+        }
+      }
       const events = result.rows.map((/** @type {any} */ row) =>
         Object.freeze({
           cursor: Number(row.stream_cursor),

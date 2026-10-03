@@ -52,6 +52,7 @@ export function registerOperationRoutes(api, operations, contextFor) {
       if (!Number.isSafeInteger(afterCursor) || afterCursor < 0) {
         return reply.code(400).send({ error: { code: 'INVALID_CURSOR' } });
       }
+      const aheadReset = await dispatcher.reconcileAhead(afterCursor);
       reply.hijack();
       reply.raw.writeHead(200, {
         'cache-control': 'private, no-cache',
@@ -62,17 +63,21 @@ export function registerOperationRoutes(api, operations, contextFor) {
       });
       activeStreams += 1;
       let closed = false;
+      let deliveredCursor = afterCursor;
       /** @param {{cursor: number, payload: object, type: string}} event */
       const write = (event) => {
         if (
           closed ||
-          (event.type !== 'stream.reset' && Number(event.cursor) <= afterCursor)
+          (event.type !== 'stream.reset' &&
+            Number(event.cursor) <= deliveredCursor)
         )
           return;
         reply.raw.write(
           `id: ${event.cursor}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`,
         );
+        deliveredCursor = Number(event.cursor);
       };
+      if (aheadReset) write(aheadReset);
       const unsubscribe = dispatcher.subscribe(write, afterCursor);
       const heartbeat = globalThis.setInterval(() => {
         if (!closed) reply.raw.write(': heartbeat\n\n');

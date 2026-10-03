@@ -2,6 +2,10 @@
 
 Status: aceita para desenvolvimento; troca da impressão depende da revisão da nova amostra.
 
+Nota de 03/10/2026: os itens 1–4 foram parcialmente superados pela
+[ADR 020](020-tecnica-por-item-e-arte-do-pedido.md) (técnica por item,
+arte do pedido e novos rótulos).
+
 Data: 03/10/2026
 
 Decisores: PO (Rômulo Sutil Corrêa) definiu os campos, as personas e autorizou ajustar o design da ficha junto da tela; Tech Lead definiu compatibilidade, cálculo e gates. Contexto e alternativas na [RFC 007](../rfc/007-revisao-da-ficha-e-leitura-operacional.md). Requisitos `REV-01`–`REV-10` da [spec](../../.specs/features/pedidos-mvp/spec.md), tarefas T76–T82 de [tasks](../../.specs/features/pedidos-mvp/tasks.md). Implementação: [PR #127](https://github.com/romulosutil/crm-silmer/pull/127).

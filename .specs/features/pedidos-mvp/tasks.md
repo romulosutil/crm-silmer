@@ -1510,3 +1510,48 @@ entrega, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-ope
   continua sujeita à aprovação física da ficha e às integrações acordadas.
 - **Gate:** `git diff --check`, format, typecheck, lint, build, gates de PDF e
   testes E2E necessários.
+
+## Técnica por item e arte do pedido (ADR 020, 03/10/2026)
+
+As tarefas partem do `master` c237200 (v4 em uso). Cada uma vira um commit e
+um push na branch `feat/tecnica-e-arte-do-pedido`; o merge espera a aprovação
+provisória do PO sobre a amostra v5.
+
+### T83: Decisão, contrato e glossário
+
+- **Requisitos:** TEC-01–TEC-08.
+- **Arquivos:** RFC 008, ADR 020 (nota na ADR 019), spec, tasks e glossário.
+- **Aceite:** decisões A–F do PO registradas sem reescrever ADRs anteriores.
+- **Gate:** links e formatação.
+
+### T84: Técnica e arte no domínio e na leitura do bot
+
+- **Requisitos:** TEC-01–TEC-04.
+- **Arquivos:** `modules/orders/src/domain/`, contrato OpenAPI e testes.
+- **Aceite:** técnica é ponto obrigatório do item e estampa não; arte do pedido
+  bloqueia a geração; “Sem estampa” exclusivo; o bot preenche técnica, origem e
+  locais sem adivinhar; `aplicacao` antiga preservada.
+- **Gate:** testes de domínio, serviço, rotas e contrato.
+
+### T85: Tela do pedido com os novos rótulos
+
+- **Requisitos:** TEC-01, TEC-03–TEC-06.
+- **Arquivos:** componentes do pedido, `order-format.js` e E2E.
+- **Aceite:** itens na ordem dos pontos, adicionais renomeados, arte com três
+  opções por teclado, checklist com a arte, datas e copy novos.
+- **Gate:** build, typecheck, lint e E2E de pedidos.
+
+### T86: Ficha impressa v5
+
+- **Requisitos:** TEC-07.
+- **Arquivos:** `ficha-canonical-v5.js`, snapshot, amostra, PDF, gate e
+  seletor da impressão.
+- **Aceite:** v2–v4 intactas; v5 com os rótulos novos e paginação; troca do
+  seletor depois da aprovação provisória do PO.
+- **Gate:** testes da impressão e `validate:ficha-pdf-review`.
+
+### T87: Revisão integrada e entrega
+
+- **Requisitos:** TEC-01–TEC-08.
+- **Aceite:** gates completos, PR e merge após a aprovação do PO.
+- **Gate:** `git diff --check`, `npm run validate` e E2E de pedidos.

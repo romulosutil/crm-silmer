@@ -44,15 +44,19 @@ const missingLabels = computed(() =>
   missingFieldLabels(order.value?.missingFields ?? []),
 );
 const items = computed(() =>
-  (order.value?.ficha?.items ?? []).map((item, index) => ({
-    key: `${index}`,
-    label: item.tipo || 'Tipo de roupa não informado',
-    pieces: (item.grade ?? []).reduce(
-      (/** @type {number} */ total, /** @type {any} */ line) =>
-        total + Number(line.quantidade ?? 0),
-      0,
-    ),
-  })),
+  (order.value?.ficha?.items ?? []).map((item, index) => {
+    const type = item.tipo || 'Tipo de roupa não informado';
+    const collar = item.gola || item.vies_gola;
+    return {
+      key: `${index}`,
+      label: collar ? `${type} · ${collar}` : type,
+      pieces: (item.grade ?? []).reduce(
+        (/** @type {number} */ total, /** @type {any} */ line) =>
+          total + Number(line.quantidade ?? 0),
+        0,
+      ),
+    };
+  }),
 );
 // PCX-08/PCL-11: offered only where the API would accept it — no pending
 // order, and a reader who owns the conversation or administrates it.

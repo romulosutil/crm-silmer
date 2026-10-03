@@ -540,9 +540,20 @@ if (connectionString) {
     );
 
     // PCL-09: two confirmations race on one version in separate transactions.
-    const ready = await runtime.patchSection({
+    const promised = await runtime.patchSection({
       ...patch,
       expectedVersion: first.version,
+      idempotencyKey: `summary-${runId}`,
+      section: 'summary',
+      value: {
+        aplicacao: null,
+        data_entrega_confirmada: '2026-10-24',
+        nome: null,
+      },
+    });
+    const ready = await runtime.patchSection({
+      ...patch,
+      expectedVersion: promised.version,
       idempotencyKey: `items-${runId}`,
       section: 'items',
       value: [
@@ -634,6 +645,7 @@ if (connectionString) {
       'items[0].malhas',
       'items[0].grade',
       'items[0].gola',
+      'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
     ]);
@@ -664,6 +676,7 @@ if (connectionString) {
     assert.equal(order.totalPieces, 30);
     assert.deepEqual(order.missingFields, [
       'items[0].gola',
+      'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
     ]);
@@ -699,6 +712,7 @@ if (connectionString) {
         'items[1].cor',
         'items[1].grade',
         'items[1].gola',
+        'summary.data_entrega_confirmada',
         'finalAmount',
         'paymentCondition',
       ],
@@ -722,19 +736,47 @@ if (connectionString) {
       ],
     });
     assert.deepEqual(complete.missingFields, [
+      'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
     ]);
     await assert.rejects(confirm(complete, { amountText: '980,00' }), {
       code: 'ORDER_NOT_CONFIRMABLE',
-      fields: ['paymentCondition'],
+      fields: ['summary.data_entrega_confirmada', 'paymentCondition'],
     });
-    const generated = await confirm(complete, {
+
+    // The promised delivery must be a real day, as the date picker stores it.
+    /** @param {any} current @param {string} day */
+    const promise = (current, day) =>
+      service.patchSection({
+        actor,
+        correlationId: `correlation-promise-${runId}-${day}`,
+        expectedVersion: current.version,
+        orderId: current.id,
+        section: 'summary',
+        value: { aplicacao: null, data_entrega_confirmada: day, nome: null },
+      });
+    const typed = await promise(complete, '24/10/2026');
+    await assert.rejects(
+      confirm(typed, { amountText: '980,00', paymentCondition: 'pix' }),
+      {
+        code: 'ORDER_NOT_CONFIRMABLE',
+        fields: ['summary.data_entrega_confirmada'],
+      },
+    );
+    const ready = await promise(typed, '2026-10-24');
+    assert.deepEqual(ready.missingFields, ['finalAmount', 'paymentCondition']);
+    // Generating means the order is paid until the CRM handles payments: no
+    // paid day is needed, and none is invented.
+    assert.equal(ready.paidOn, null);
+    const generated = await confirm(ready, {
       amountText: '980,00',
       paymentCondition: 'pix',
     });
     assert.equal(generated.status, 'confirmado');
     assert.equal(generated.totalPieces, 34);
+    assert.equal(generated.paidOn, null);
+    assert.equal(generated.deliveredOn, null);
     assert.deepEqual(generated.missingFields, []);
   });
 
@@ -802,6 +844,7 @@ if (connectionString) {
       'items[0].malhas',
       'items[0].grade',
       'items[0].gola',
+      'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
     ]);

@@ -1141,8 +1141,9 @@ paths:
         Exige valor final no formato brasileiro (ex.: 4.820,00) maior que zero,
         forma de pagamento válida (campo paymentCondition), ao menos um item e,
         em cada item, os pontos principais da ADR 016 (tipo, cor, estampa, ao
-        menos um tecido, ao menos uma linha de tamanho e gola); nada mais
-        bloqueia. Recusa com 422 ORDER_NOT_CONFIRMABLE e as chaves de
+        menos um tecido, ao menos uma linha de tamanho e gola) e a entrega
+        prometida do resumo como dia AAAA-MM-DD; nada mais bloqueia (paidOn e
+        deliveredOn, não). Recusa com 422 ORDER_NOT_CONFIRMABLE e as chaves de
         Order.missingFields que faltam. Grava valor, forma de pagamento,
         autor, horário e data do pedido. Numa nova confirmação depois
         de reabrir, autor, horário e data passam a ser os da nova confirmação.
@@ -2614,9 +2615,12 @@ components:
             items (nenhum item); items[N].tipo, items[N].cor,
             items[N].estampa, items[N].malhas, items[N].grade e
             items[N].gola (ponto principal que falta no item N, a partir de 0;
-            a grade vale também pela quantidade); finalAmount; e
-            paymentCondition. Vazio em pedido confirmado. Os adicionais do
-            item e o resumo nunca aparecem aqui.
+            a grade vale também pela quantidade);
+            summary.data_entrega_confirmada (entrega prometida ausente ou fora
+            do formato AAAA-MM-DD); finalAmount; e paymentCondition. Vazio em
+            pedido confirmado. Os adicionais do item, o resto do resumo e as
+            outras datas do lastro (paidOn, deliveredOn) nunca aparecem aqui:
+            por enquanto, gerar subentende o pagamento feito.
           items: { type: string }
         finalAmountCents: { type: [integer, 'null'], minimum: 1 }
         paymentCondition:

@@ -57,9 +57,10 @@ avançar o card até a pendência ser resolvida por cliente ou pessoa autorizada
 
 > **Supersedido em parte em 02/10/2026 pela
 > [ADR 016](docs/adr/016-itens-com-os-sete-pontos-da-ficha.md).** No Pedido,
-> nome, entrega confirmada, cliente e aplicação continuam editáveis, mas não
-> bloqueiam gerar o pedido nem são listados como faltando. O cliente é sempre
-> um nome confirmado.
+> nome, cliente e aplicação continuam editáveis, mas não bloqueiam gerar o
+> pedido nem são listados como faltando; a entrega confirmada (na tela,
+> "Entrega prometida") é exigida para gerar. O cliente é sempre um nome
+> confirmado.
 
 ### 2.2 Itens, partes da peça e grade
 

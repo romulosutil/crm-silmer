@@ -154,6 +154,7 @@ export function missingFieldLabels(missingFields) {
 /** @param {string} field */
 function missingFieldLabel(field) {
   if (field === 'items') return 'nenhum item';
+  if (field === 'summary.data_entrega_confirmada') return 'entrega prometida';
   if (field === 'finalAmount') return 'valor final';
   if (field === 'paymentCondition') return 'forma de pagamento';
   const item = /^items\[(\d+)\]\.(\w+)$/u.exec(field);
@@ -168,13 +169,24 @@ function missingFieldLabel(field) {
 }
 
 /**
- * True for the entries that belong to the items, as opposed to the amount
- * and the payment method typed when generating.
+ * True for the entries that belong to the items, as opposed to the promised
+ * delivery, the amount and the payment method.
  *
  * @param {string} field
  */
 export function isItemGap(field) {
   return field === 'items' || field.startsWith('items[');
+}
+
+/**
+ * True for what the seller fills elsewhere on the page — the items and the
+ * promised delivery of the summary — as opposed to the amount and the
+ * payment method typed next to "Gerar pedido".
+ *
+ * @param {string} field
+ */
+export function isPageGap(field) {
+  return field !== 'finalAmount' && field !== 'paymentCondition';
 }
 
 /**
@@ -359,7 +371,9 @@ export function orderMilestones(order) {
     },
     {
       day: order.ficha?.summary?.data_entrega_confirmada,
-      emptyNote: 'não combinada',
+      // ADR 016: the promised delivery is needed to generate the order.
+      emptyNote:
+        order.status === 'pendente' ? 'exigida para gerar' : 'não combinada',
       key: 'promised',
       label: 'Entrega prometida',
       recordedNote: 'vem do resumo',

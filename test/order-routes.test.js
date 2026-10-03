@@ -135,6 +135,13 @@ function seed(input) {
   };
 }
 
+// ADR 016: the promised delivery a seller sets before generating.
+const PROMISED_SUMMARY = Object.freeze({
+  aplicacao: null,
+  data_entrega_confirmada: '2026-10-24',
+  nome: 'Equipe Sintetica',
+});
+
 /** @param {any} runtime @param {string} conversationId */
 async function createPending(runtime, conversationId) {
   const { order } = await runtime.createManual(
@@ -149,16 +156,14 @@ async function createPending(runtime, conversationId) {
  */
 async function createConfirmed(runtime, conversationId, summary) {
   let order = await createPending(runtime, conversationId);
-  if (summary) {
-    order = await runtime.patchSection(
-      seed({
-        expectedVersion: order.version,
-        orderId: order.id,
-        section: 'summary',
-        value: summary,
-      }),
-    );
-  }
+  order = await runtime.patchSection(
+    seed({
+      expectedVersion: order.version,
+      orderId: order.id,
+      section: 'summary',
+      value: summary ?? PROMISED_SUMMARY,
+    }),
+  );
   const edited = await runtime.patchSection(
     seed({
       expectedVersion: order.version,
@@ -507,7 +512,11 @@ test('PATCH /orders/:id/sections/:section saves the whole section', async (t) =>
   const { order } = response.json();
   assert.equal(order.version, pending.version + 1);
   assert.equal(order.totalPieces, 32);
-  assert.deepEqual(order.missingFields, ['finalAmount', 'paymentCondition']);
+  assert.deepEqual(order.missingFields, [
+    'summary.data_entrega_confirmada',
+    'finalAmount',
+    'paymentCondition',
+  ]);
   assert.equal(guards.at(-1)?.input.action, 'order.edit');
 });
 
@@ -538,6 +547,7 @@ test('PATCH items takes a half-filled item, and one without the ADR 016 fields',
     'items[0].malhas',
     'items[0].grade',
     'items[0].gola',
+    'summary.data_entrega_confirmada',
     'finalAmount',
     'paymentCondition',
   ]);
@@ -562,6 +572,7 @@ test('PATCH items takes a half-filled item, and one without the ADR 016 fields',
         'items[0].malhas',
         'items[0].grade',
         'items[0].gola',
+        'summary.data_entrega_confirmada',
       ],
     },
   });
@@ -685,7 +696,15 @@ test('a malformed section answers 400 without echoing its content', async (t) =>
 
 /** @param {any} runtime @param {string} conversationId */
 async function createReady(runtime, conversationId) {
-  const order = await createPending(runtime, conversationId);
+  const created = await createPending(runtime, conversationId);
+  const order = await runtime.patchSection(
+    seed({
+      expectedVersion: created.version,
+      orderId: created.id,
+      section: 'summary',
+      value: PROMISED_SUMMARY,
+    }),
+  );
   return runtime.patchSection(
     seed({
       expectedVersion: order.version,
@@ -736,7 +755,12 @@ test('confirming without what ADR 016 requires answers 422 ORDER_NOT_CONFIRMABLE
   assert.deepEqual(blocked.json(), {
     error: {
       code: 'ORDER_NOT_CONFIRMABLE',
-      fields: ['items', 'finalAmount', 'paymentCondition'],
+      fields: [
+        'items',
+        'summary.data_entrega_confirmada',
+        'finalAmount',
+        'paymentCondition',
+      ],
     },
   });
 
@@ -1084,7 +1108,6 @@ test('the printed order hides money, the sample band and empty fields', async (t
   assert.doesNotMatch(html, /Amostra sintetica/u);
   // A blank field prints blank, never "null" or "undefined".
   assert.equal(confirmed.ficha.summary.aplicacao, null);
-  assert.equal(confirmed.ficha.summary.data_entrega_confirmada, null);
   assert.doesNotMatch(html, /null|undefined/u);
   // The 14 production fields reach the shop floor empty.
   assert.equal(

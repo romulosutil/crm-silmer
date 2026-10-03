@@ -1,6 +1,9 @@
 # ADR 008 — Lastro de datas do pedido
 
-Status: aceito
+Status: aceito; emendada pela
+[ADR 016](016-itens-com-os-sete-pontos-da-ficha.md) só no ponto em que
+nenhuma data bloqueia a confirmação: a entrega prometida passou a ser exigida
+para gerar o pedido.
 
 Data: 29/09/2026
 

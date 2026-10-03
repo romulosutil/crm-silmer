@@ -1,5 +1,5 @@
 <script setup>
-import { computed, inject, nextTick, ref } from 'vue';
+import { computed, inject, nextTick, ref, watch } from 'vue';
 import {
   fabLabel,
   informedQuantity,
@@ -56,6 +56,22 @@ function cancel() {
   editing.stop();
 }
 
+// ADR 016: "Informar no Resumo" from "Gerar pedido" opens this editor on
+// Entrega prometida; with another section open, it only brings the summary
+// into view.
+const heading = ref(null);
+watch(
+  () => editing.editRequest?.value,
+  (request) => {
+    if (request?.section !== SECTION || isEditing.value) return;
+    if (canEdit.value && !otherSectionOpen.value) {
+      void startEditing();
+      return;
+    }
+    heading.value?.scrollIntoView?.({ block: 'start' });
+  },
+);
+
 /** PFI-06: the whole section travels in one write. */
 async function save() {
   saving.value = true;
@@ -81,7 +97,7 @@ async function save() {
     aria-labelledby="order-summary-title"
   >
     <div class="op-sheet-head">
-      <h2 id="order-summary-title">Resumo do pedido</h2>
+      <h2 id="order-summary-title" ref="heading">Resumo do pedido</h2>
       <span v-if="isEditing" class="op-editing-tag">Editando</span>
       <button
         v-if="canEdit && !isEditing"

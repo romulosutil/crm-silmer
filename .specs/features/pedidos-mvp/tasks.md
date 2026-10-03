@@ -1039,12 +1039,29 @@ forma do item desta entrega.
 
 **Tests:** unit + e2e · **Gate:** quick + e2e · **Commit:** `feat(edge-web): show the order items on the seven ficha points`
 
-### T61: Verificação dos itens
+### T61: Entrega prometida exigida para gerar
+
+- **What:** Decisão do PO de 02 e 03/10/2026: do lastro, só a entrega prometida (dia `AAAA-MM-DD`) passa a bloquear gerar; pagamento não bloqueia (gerar subentende o pagamento feito até o CRM tratar pagamento), nem entrega realizada, primeiro contato ou pedido fechado. `summary.data_entrega_confirmada` em `missingFields` e no 422; "Gerar pedido" com a linha "Entrega prometida" e "Informar no Resumo", que abre o resumo nesse campo; nota "exigida para gerar" no lastro; ADR 016 emendada, ADR 008 marcada, PIT-12, PLA-06, PCL-05 e OpenAPI.
+- **Where:** `modules/orders/src/domain/order.js`, `apps/edge-web/src/components/order/{OrderClosingSection,OrderSummarySection}.vue`, `apps/edge-web/src/views/OrderView.vue`, `apps/edge-web/src/lib/order-format.js`, `apps/edge-web/src/screen-styles.css`, `docs/adr/{016-itens-com-os-sete-pontos-da-ficha,008-lastro-de-datas-do-pedido,README}.md`, `docs/api/openapi.v1.yaml`, `.specs/features/pedidos-mvp/{spec,context,design,tasks}.md`, `CAMPOS-FICHA-E-JORNADA-P0-1.md`, testes de domínio, serviço, rotas, runtime, live, `test/order-format.test.js` e `test/e2e/orders.spec.js`
+- **Depends on:** T60
+- **Requirement:** PIT-05, PIT-06, PIT-12, PLA-06, PCL-05
+
+**Done when:**
+
+- [ ] Entrega prometida ausente ou em texto livre bloqueia; "Pago em" e "Entregue em" vazios não
+- [ ] Live: gerar recusado sem a entrega prometida e aceito com ela, sem "Pago em"
+- [ ] e2e: "Falta para gerar" nomeia a entrega prometida, e "Informar no Resumo" abre o campo
+
+**Tests:** unit + integração live + e2e · **Gate:** quick + live + e2e · **Commit:** `feat(orders): require the promised delivery to generate an order`
+
+### T66: Verificação dos itens
+
+O número T65 é da ficha impressa (ADR 017); esta é a próxima livre.
 
 - **What:** Rodar os gates completos e registrar a rastreabilidade PIT em `spec.md`.
 - **Where:** `.specs/features/pedidos-mvp/{spec,tasks}.md`
-- **Depends on:** T57–T60
-- **Requirement:** PIT-01..11
+- **Depends on:** T57–T61
+- **Requirement:** PIT-01..12
 
 **Done when:**
 
@@ -1053,7 +1070,7 @@ forma do item desta entrega.
 
 **Tests:** full · **Gate:** full · **Commit:** `docs(specs): trace the seven-point items to their tests`
 
-### Validação T56–T61
+### Validação T56–T61 e T66
 
 | Task | Escopo                         | Camada                 | Testes             | Depends on | Status |
 | ---- | ------------------------------ | ---------------------- | ------------------ | ---------- | ------ |
@@ -1062,7 +1079,8 @@ forma do item desta entrega.
 | T58  | forma do item e regra de gerar | domínio, serviço, API  | unit + live        | T57        | ✅     |
 | T59  | 1 adapter                      | adapter PG             | live               | T58        | ✅     |
 | T60  | seção de itens e fechamento    | lib + componentes      | unit + e2e         | T58        | ✅     |
-| T61  | verificação                    | full                   | full               | T57–T60    | ✅     |
+| T61  | 1 regra de gerar, ponta a ponta | domínio, tela, docs   | unit + live + e2e  | T60        | ✅     |
+| T66  | verificação                    | full                   | full               | T57–T61    | ✅     |
 
 ---
 

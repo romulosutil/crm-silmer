@@ -40,6 +40,10 @@ const error = ref('');
 // PFI-06: one section in edit at a time, decided here so two open forms can
 // never disagree about the version they are saving over.
 const editingSection = ref('');
+// ADR 016: "Gerar pedido" sends the seller to the section that fills a
+// missing point; the section opens its own editor when it can.
+/** @type {import('vue').Ref<{section: string, at: number}|null>} */
+const editRequest = ref(null);
 let controller;
 let refreshTimer = 0;
 let headingAnnounced = false;
@@ -192,7 +196,12 @@ provide('orderEditing', {
   canEdit,
   command: runCommand,
   editingSection,
+  editRequest,
   print,
+  /** @param {string} section */
+  request(section) {
+    editRequest.value = { at: Date.now(), section };
+  },
   save: saveSection,
   saveMilestones,
   /** @param {string} section */

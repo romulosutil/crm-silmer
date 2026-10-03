@@ -35,6 +35,24 @@ const BRIEFING = Object.freeze({
   sizes: '4 P, 6 M',
 });
 
+/**
+ * The order with the promised delivery a seller would set (ADR 016).
+ *
+ * @param {any} order
+ */
+function promised(order) {
+  return {
+    ...order,
+    ficha: {
+      ...order.ficha,
+      summary: {
+        ...order.ficha.summary,
+        data_entrega_confirmada: '2026-10-24',
+      },
+    },
+  };
+}
+
 /** @param {{contexts?: Record<string, any>, owners?: Record<string, string|null>}} [options] */
 function setup(options = {}) {
   const repository = new InMemoryOrderRepository();
@@ -117,7 +135,12 @@ test('an intent without a pending order creates one pre-filled from the pre-fich
   assert.equal(order.ficha.serviceData.quantity, 12);
   assert.equal(order.ficha.serviceData.product_type, 'camisa');
   assert.equal(order.totalPieces, 10);
-  assert.deepEqual(order.missingFields, ['finalAmount', 'paymentCondition']);
+  // The bot never knows the promised delivery: the seller sets it.
+  assert.deepEqual(order.missingFields, [
+    'summary.data_entrega_confirmada',
+    'finalAmount',
+    'paymentCondition',
+  ]);
   assert.deepEqual(await repository.findById(order.id), order);
 });
 
@@ -180,7 +203,7 @@ test('an intent on a conversation with only confirmed orders creates a new pendi
     correlationId: 'correlation-1',
   });
   await repository.saveStatus(
-    confirmOrder(order, {
+    confirmOrder(promised(order), {
       actorId: 'seller-1',
       amountCents: 1000,
       now: NOW,
@@ -285,7 +308,7 @@ test('the agent briefing is projected only while the conversation is with the ag
         observations: ['Separar por tamanho'],
         summary: {
           ...order.ficha.summary,
-          data_entrega_confirmada: '30/09/2026',
+          data_entrega_confirmada: '2026-09-30',
         },
       },
     },
@@ -316,7 +339,7 @@ test('the agent briefing is projected only while the conversation is with the ag
   const result = /** @type {any} */ (projected.order);
   assert.equal(result.version, edited.version + 1);
   assert.equal(result.ficha.summary.nome, 'Equipe Horizonte 2026');
-  assert.equal(result.ficha.summary.data_entrega_confirmada, '30/09/2026');
+  assert.equal(result.ficha.summary.data_entrega_confirmada, '2026-09-30');
   assert.equal(result.ficha.summary.cliente, 'Cliente Sintetico');
   assert.deepEqual(result.ficha.items[0].grade, [
     { quantidade: 12, tamanho: 'GG' },
@@ -355,7 +378,7 @@ test('the projection needs a pending order and never touches a confirmed one', a
     correlationId: 'correlation-1',
   });
   const confirmed = await repository.saveStatus(
-    confirmOrder(order, {
+    confirmOrder(promised(order), {
       actorId: 'seller-1',
       amountCents: 1000,
       now: NOW,

@@ -98,22 +98,44 @@ function itemGaps(item, index) {
 }
 
 /**
- * ADR 016 (replaces A01): generating the order needs at least one item, the
- * seven principal points of every item, the final amount and the payment
- * method. Nothing else blocks or is listed: the additional item fields and
- * the summary stay as the seller leaves them.
+ * A real calendar day written the way the date picker stores it (ISO).
  *
- * @param {readonly Record<string, any>[]} items
+ * @param {unknown} value
+ */
+function isCalendarDay(value) {
+  const match = typeof value === 'string' ? ISO_DAY.exec(value) : null;
+  if (!match) return false;
+  const day = new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+  );
+  return day.toISOString().slice(0, 10) === value;
+}
+
+/**
+ * ADR 016 (replaces A01): generating the order needs at least one item, the
+ * seven principal points of every item, the promised delivery, the final
+ * amount and the payment method. Nothing else blocks or is listed: the
+ * additional item fields, the rest of the summary and the other days of the
+ * trail stay as the seller leaves them. Until the CRM handles payments,
+ * generating the order means the payment is done, so the paid day never
+ * blocks; the delivered day belongs to the after-sale.
+ *
+ * @param {{ficha: {items: readonly Record<string, any>[], summary: Record<string, unknown>}}} order
  * @param {unknown} amountCents
  * @param {unknown} paymentCondition
- * @returns {string[]} `items`, `items[N].<field>`, `finalAmount` and
- *   `paymentCondition`, in that order
+ * @returns {string[]} `items`, `items[N].<field>`,
+ *   `summary.data_entrega_confirmada`, `finalAmount` and `paymentCondition`,
+ *   in that order
  */
-function confirmationBlockers(items, amountCents, paymentCondition) {
+function confirmationBlockers(order, amountCents, paymentCondition) {
+  const { items, summary } = order.ficha;
   const blockers =
     items.length === 0
       ? ['items']
       : items.flatMap((item, index) => itemGaps(item, index));
+  if (!isCalendarDay(summary?.data_entrega_confirmada)) {
+    blockers.push('summary.data_entrega_confirmada');
+  }
   if (
     !Number.isSafeInteger(amountCents) ||
     /** @type {number} */ (amountCents) <= 0
@@ -140,7 +162,7 @@ function confirmationBlockers(items, amountCents, paymentCondition) {
 export function missingForConfirmation(order) {
   if (order.status === 'confirmado') return [];
   return confirmationBlockers(
-    order.ficha.items,
+    order,
     order.finalAmountCents,
     order.paymentCondition,
   );
@@ -155,7 +177,7 @@ export function confirmOrder(order, input) {
   requireActorAndClock(input);
   requireStatus(order, 'pendente', 'confirmed');
   const blockers = confirmationBlockers(
-    order.ficha.items,
+    order,
     input.amountCents,
     input.paymentCondition,
   );
@@ -207,12 +229,7 @@ export function reopenOrder(order, input) {
  */
 function isMilestoneDay(value, today) {
   if (value === null) return true;
-  const match = typeof value === 'string' ? ISO_DAY.exec(value) : null;
-  if (!match) return false;
-  const day = new Date(
-    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
-  );
-  return day.toISOString().slice(0, 10) === value && match[0] <= today;
+  return isCalendarDay(value) && /** @type {string} */ (value) <= today;
 }
 
 /**

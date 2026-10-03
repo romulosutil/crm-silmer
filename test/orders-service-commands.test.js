@@ -60,9 +60,23 @@ async function setup() {
     fabCode: '01',
     repository,
   });
-  const { order } = await service.ensurePendingFromIntent({
+  const { order: created } = await service.ensurePendingFromIntent({
     conversationId: 'conversation-1',
     correlationId: 'correlation-intent',
+  });
+  // ADR 016: the promised delivery is set, so only what each test leaves out
+  // keeps the order from being generated.
+  const order = await service.patchSection({
+    actor: OWNER,
+    correlationId: 'correlation-delivery',
+    expectedVersion: created.version,
+    orderId: created.id,
+    section: 'summary',
+    value: {
+      aplicacao: null,
+      data_entrega_confirmada: '2026-10-24',
+      nome: 'Evento Inicial',
+    },
   });
   return { order, owners, repository, service };
 }
@@ -81,7 +95,7 @@ test('saving the summary replaces the whole section but keeps the locked custome
       section: 'summary',
       value: {
         aplicacao: 'SUBLIMACAO TOTAL',
-        data_entrega_confirmada: '30/09/2026',
+        data_entrega_confirmada: '2026-09-30',
         nome: null,
       },
     }),
@@ -90,11 +104,26 @@ test('saving the summary replaces the whole section but keeps the locked custome
   assert.deepEqual(saved.ficha.summary, {
     aplicacao: 'SUBLIMACAO TOTAL',
     cliente: 'Cliente Sintetico',
-    data_entrega_confirmada: '30/09/2026',
+    data_entrega_confirmada: '2026-09-30',
     nome: null,
   });
-  // ADR 016: the summary never blocks and is never listed as missing.
+  // ADR 016: of the summary, only the promised delivery blocks, and only
+  // until it is a real day.
   assert.ok(!saved.missingFields.some((field) => field.startsWith('summary')));
+  const typed = await service.patchSection(
+    command({
+      expectedVersion: saved.version,
+      orderId: order.id,
+      section: 'summary',
+      value: {
+        aplicacao: null,
+        data_entrega_confirmada: '30/09/2026',
+        nome: null,
+      },
+    }),
+  );
+  assert.ok(typed.missingFields.includes('summary.data_entrega_confirmada'));
+  assert.ok(!typed.missingFields.includes('summary.aplicacao'));
 });
 
 test('saving items recalculates total pieces and what is missing', async () => {

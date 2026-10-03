@@ -199,7 +199,8 @@ valor e forma de pagamento, para liberar a impressão.
    tem ao menos um item com grade THEN a confirmação SHALL ser recusada (422)
    com mensagem por campo e o status SHALL continuar `pendente`. Desde a ADR
    016, também quando algum item não tem um dos sete pontos principais; o 422
-   `ORDER_NOT_CONFIRMABLE` nomeia cada um (PIT-06).
+   `ORDER_NOT_CONFIRMABLE` nomeia cada um (PIT-06), e quando falta a entrega
+   prometida (PIT-12).
 5. **PCL-06** WHEN outro usuário tenta confirmar THEN a API SHALL responder 403
    e a interface SHALL não exibir o botão.
 6. **PCL-09** WHEN duas confirmações concorrem sobre a mesma versão THEN uma
@@ -335,7 +336,10 @@ fato entregamos, na ficha digital e na impressa.
    São Paulo) THEN a interface SHALL mostrar o erro junto ao campo e a API
    SHALL recusar com 422 `INVALID_DATE` nomeando os campos.
 6. **PLA-06** Nenhuma data do lastro SHALL mudar o status, bloquear a
-   confirmação, entrar no que falta ou mudar a impressão (PCL-08).
+   confirmação, entrar no que falta ou mudar a impressão (PCL-08). Desde a
+   ADR 016, a entrega prometida é a exceção: é exigida para gerar e entra no
+   que falta (PIT-12); pagamento e entrega realizada continuam sem
+   bloquear.
 7. **PLA-07** WHEN quem não é dono nem administrador tenta gravar THEN a
    interface SHALL não exibir "Editar" no lastro e a API SHALL responder 403;
    uma versão desatualizada SHALL receber 409.
@@ -380,15 +384,18 @@ que substitui a regra A01 do [contexto](context.md).
    sem essas três chaves e gravá-las em branco.
 5. **PIT-05** Gerar o pedido SHALL exigir ao menos um item, em cada item os
    sete principais (tipo, cor, estampa, ao menos um tecido, ao menos uma linha
-   de tamanho e gola), o valor final e a forma de pagamento. Nada mais SHALL
-   bloquear nem ser listado como faltando: nem os adicionais, nem o resumo.
+   de tamanho e gola), a entrega prometida (PIT-12), o valor final e a forma
+   de pagamento. Nada mais SHALL bloquear nem ser listado como faltando: nem
+   os adicionais, nem o resto do resumo.
 6. **PIT-06** "Falta para gerar" SHALL nomear cada ponto em palavras simples
-   ("cor do item 1", "tamanhos do item 2", "valor final", "forma de
-   pagamento"), a partir de `missingFields`: `items`, `items[N].tipo`,
-   `items[N].cor`, `items[N].estampa`, `items[N].malhas`, `items[N].grade`,
-   `items[N].gola`, `finalAmount` e `paymentCondition`, nesta ordem. A
-   Situação da lista de Pedidos e a gaveta da conversa SHALL usar a mesma
-   lista.
+   ("cor do item 1", "tamanhos do item 2", "entrega prometida", "valor
+   final", "forma de pagamento"), a partir de `missingFields`: `items`,
+   `items[N].tipo`, `items[N].cor`, `items[N].estampa`, `items[N].malhas`,
+   `items[N].grade`, `items[N].gola`, `summary.data_entrega_confirmada`,
+   `finalAmount` e `paymentCondition`, nesta ordem. O que se preenche em
+   outra seção SHALL dizer onde ("Informar no Resumo" abre o resumo na
+   entrega prometida). A Situação da lista de Pedidos e a gaveta da conversa
+   SHALL usar a mesma lista.
 7. **PIT-07** WHEN o bot projeta a pré-ficha THEN o item 1 SHALL receber:
    `product_model` (ou, sem ele, `product_type`) em Tipo de roupa; `colors` em
    Cor; `artwork_status` em Estampa, com os locais de `artwork_locations`
@@ -415,11 +422,19 @@ que substitui a regra A01 do [contexto](context.md).
     contato dado por uma pessoa ou promovido do `customer_name` do bot; senão
     o `customer_name` do briefing; senão vazio. O identificador do canal e o
     nome do perfil do WhatsApp SHALL nunca ser o cliente.
+12. **PIT-12** Do lastro (ADR 008), só a entrega prometida SHALL ser exigida
+    para gerar, como um dia de calendário (`AAAA-MM-DD`, como o seletor de
+    data grava); texto livre SHALL continuar bloqueando. Pagamento ("Pago
+    em") SHALL não bloquear nem ser preenchido sozinho: até o CRM tratar
+    pagamento, gerar o pedido subentende o pagamento feito. Entrega
+    realizada (pós-venda), primeiro contato (copiado da conversa) e pedido
+    fechado (definido ao gerar) SHALL não bloquear.
 
 **Teste independente:** projetar no pedido um briefing com os sete pontos e
 "tamanhos: 10 P, 15 M e 15 G", ver o item 1 completo com 40 peças, deixar a
-gola em branco e ver "Falta para gerar: gola do item 1, valor final e forma de
-pagamento".
+gola em branco e ver "Falta para gerar: gola do item 1, entrega prometida,
+valor final e forma de pagamento"; informar a gola e a entrega prometida e
+gerar sem "Pago em".
 
 ---
 
@@ -583,7 +598,7 @@ serviço de pedidos; a abertura pelo `open_order` usa o mesmo
 
 ### Itens com os sete pontos (ADR 016)
 
-A verificar na T61, com a evidência das T57–T60.
+A verificar na T66, com a evidência das T57–T61.
 
 | ID     | História | Evidência | Status   |
 | ------ | -------- | --------- | -------- |
@@ -598,6 +613,7 @@ A verificar na T61, com a evidência das T57–T60.
 | PIT-09 | P1-11    | T60       | Pendente |
 | PIT-10 | P1-11    | T60       | Pendente |
 | PIT-11 | P1-11    | T59       | Pendente |
+| PIT-12 | P1-11    | T61       | Pendente |
 
 ## Roteiro de UAT
 

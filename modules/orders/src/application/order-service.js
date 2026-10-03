@@ -8,6 +8,7 @@ import {
 } from '../domain/errors.js';
 import {
   briefingToFicha,
+  normalizeFicha,
   orderTotal,
   projectBriefingOntoFicha,
   validateItems,
@@ -76,6 +77,18 @@ function withDerivedFields(order) {
 }
 
 /**
+ * ADR 016: an order as the current rules read it. A ficha stored before the
+ * seven-point item gets its new fields blank, and what is missing is worked
+ * out again, so an order saved under the old rule never shows the old list.
+ *
+ * @param {Order} order
+ * @returns {Order}
+ */
+function current(order) {
+  return withDerivedFields({ ...order, ficha: normalizeFicha(order.ficha) });
+}
+
+/**
  * Application service for the Pedido (ADR 006). The conversation context and
  * the ownership rule are injected: the service decides what happens to an
  * order, the API runtime decides who owns the conversation.
@@ -134,7 +147,7 @@ export function createOrderService(options) {
         `Expected order version ${input.expectedVersion}, current version is ${order.version}`,
       );
     }
-    return order;
+    return current(order);
   }
 
   /**
@@ -145,7 +158,7 @@ export function createOrderService(options) {
     const existing = await repository.findPendingByConversation(
       input.conversationId,
     );
-    if (existing) return { created: false, order: existing };
+    if (existing) return { created: false, order: current(existing) };
 
     const context = await conversations.readOrderContext(input.conversationId);
     if (!context) {
@@ -177,7 +190,7 @@ export function createOrderService(options) {
         now: clock(),
         totalPieces: derived.totalPieces,
       });
-      return { created: true, order };
+      return { created: true, order: current(order) };
     } catch (error) {
       // Two intents raced; the one that lost reuses the winner's order.
       if (/** @type {any} */ (error)?.code !== 'ORDER_PENDING_EXISTS') {
@@ -187,7 +200,7 @@ export function createOrderService(options) {
         input.conversationId,
       );
       if (!winner) throw error;
-      return { created: false, order: winner };
+      return { created: false, order: current(winner) };
     }
   }
 
@@ -251,14 +264,14 @@ export function createOrderService(options) {
         correlationId,
         expectedVersion: pending.version,
       });
-      return { applied: true, order, reason: null };
+      return { applied: true, order: current(order), reason: null };
     },
 
     /** @param {string} orderId */
     async get(orderId) {
       const order = await repository.findById(requireId(orderId, 'orderId'));
       if (!order) throw new OrderNotFoundError();
-      return order;
+      return current(order);
     },
 
     /**
@@ -294,7 +307,8 @@ export function createOrderService(options) {
         }
         query.conversationIds = await conversations.searchConversationIds(q);
       }
-      return repository.list(query);
+      const page = await repository.list(query);
+      return { ...page, items: page.items.map(current) };
     },
 
     /**
@@ -309,14 +323,13 @@ export function createOrderService(options) {
         requireId(conversationId, 'conversationId'),
       );
       const pending = orders.find((order) => order.status === 'pendente');
-      if (pending) return pending;
-      return (
-        orders
-          .filter((order) => order.status === 'confirmado')
-          .sort((left, right) =>
-            String(right.confirmedAt).localeCompare(String(left.confirmedAt)),
-          )[0] ?? null
-      );
+      if (pending) return current(pending);
+      const confirmed = orders
+        .filter((order) => order.status === 'confirmado')
+        .sort((left, right) =>
+          String(right.confirmedAt).localeCompare(String(left.confirmedAt)),
+        )[0];
+      return confirmed ? current(confirmed) : null;
     },
 
     /**
@@ -350,16 +363,18 @@ export function createOrderService(options) {
       } else {
         ficha.observations = validateObservations(input.value);
       }
-      return repository.saveSection(
-        withDerivedFields({
-          ...order,
-          ficha,
-          updatedAt: clock().toISOString(),
-        }),
-        {
-          correlationId: input.correlationId,
-          expectedVersion: order.version,
-        },
+      return current(
+        await repository.saveSection(
+          withDerivedFields({
+            ...order,
+            ficha,
+            updatedAt: clock().toISOString(),
+          }),
+          {
+            correlationId: input.correlationId,
+            expectedVersion: order.version,
+          },
+        ),
       );
     },
 
@@ -375,20 +390,22 @@ export function createOrderService(options) {
         typeof input.amountText === 'string' && input.amountText.trim() !== ''
           ? parseBrlAmount(input.amountText)
           : 0;
-      return repository.saveStatus(
-        confirmOrder(order, {
-          actorId: input.actor.id,
-          amountCents,
-          now: clock(),
-          paymentCondition:
-            /** @type {import('../domain/order.js').PaymentCondition} */ (
-              input.paymentCondition
-            ),
-        }),
-        {
-          correlationId: input.correlationId,
-          expectedVersion: order.version,
-        },
+      return current(
+        await repository.saveStatus(
+          confirmOrder(order, {
+            actorId: input.actor.id,
+            amountCents,
+            now: clock(),
+            paymentCondition:
+              /** @type {import('../domain/order.js').PaymentCondition} */ (
+                input.paymentCondition
+              ),
+          }),
+          {
+            correlationId: input.correlationId,
+            expectedVersion: order.version,
+          },
+        ),
       );
     },
 
@@ -399,12 +416,14 @@ export function createOrderService(options) {
      */
     async reopen(input) {
       const order = await loadForCommand(input);
-      return repository.saveStatus(
-        reopenOrder(order, { actorId: input.actor.id, now: clock() }),
-        {
-          correlationId: input.correlationId,
-          expectedVersion: order.version,
-        },
+      return current(
+        await repository.saveStatus(
+          reopenOrder(order, { actorId: input.actor.id, now: clock() }),
+          {
+            correlationId: input.correlationId,
+            expectedVersion: order.version,
+          },
+        ),
       );
     },
 
@@ -417,16 +436,18 @@ export function createOrderService(options) {
      */
     async recordMilestones(input) {
       const order = await loadForCommand(input);
-      return repository.saveMilestones(
-        recordMilestones(order, {
-          deliveredOn: input.deliveredOn,
-          now: clock(),
-          paidOn: input.paidOn,
-        }),
-        {
-          correlationId: input.correlationId,
-          expectedVersion: order.version,
-        },
+      return current(
+        await repository.saveMilestones(
+          recordMilestones(order, {
+            deliveredOn: input.deliveredOn,
+            now: clock(),
+            paidOn: input.paidOn,
+          }),
+          {
+            correlationId: input.correlationId,
+            expectedVersion: order.version,
+          },
+        ),
       );
     },
   });

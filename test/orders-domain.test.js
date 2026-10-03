@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -11,13 +10,7 @@ import {
   recordMilestones,
   reopenOrder,
 } from '../modules/orders/src/domain/order.js';
-
-const synthetic = JSON.parse(
-  await readFile(
-    new URL('../docs/phase0/ficha-pdf-synthetic.json', import.meta.url),
-    'utf8',
-  ),
-);
+import { syntheticItems } from './fixtures/order-items.js';
 
 const CREATED = '2026-09-10T12:00:00.000Z';
 // 22:30 in São Paulo on 12/09, already 13/09 in UTC.
@@ -34,7 +27,7 @@ function pendingOrder(overrides = {}) {
     createdByKind: 'automation',
     fabCode: '01',
     ficha: {
-      items: structuredClone(synthetic.pedido.itens),
+      items: syntheticItems(),
       observations: [],
       serviceData: {},
       summary: {
@@ -107,7 +100,7 @@ test('confirming records amount, condition, author, time and São Paulo order da
   assert.equal(order.status, 'pendente', 'the input order is not mutated');
 });
 
-test('confirmation needs amount, condition and one item with grade, reported per field', () => {
+test('generating needs an item, the seven points of every item, amount and payment method (ADR 016)', () => {
   assert.throws(
     () =>
       confirmOrder(
@@ -133,16 +126,45 @@ test('confirmation needs amount, condition and one item with grade, reported per
     },
   );
 
-  const withoutGrade = pendingOrder();
-  withoutGrade.ficha.items = withoutGrade.ficha.items.map(
-    (/** @type {any} */ item) => ({ ...item, grade: [] }),
+  // Each of the seven points blocks on its own: quantity is the grade.
+  for (const [field, blank] of /** @type {const} */ ([
+    ['tipo', ''],
+    ['cor', '  '],
+    ['estampa', ''],
+    ['malhas', []],
+    ['malhas', ['  ']],
+    ['grade', []],
+    ['gola', ''],
+  ])) {
+    const order = pendingOrder();
+    order.ficha.items[1][field] = blank;
+    assert.throws(
+      () => confirmOrder(order, confirmation),
+      { code: 'ORDER_NOT_CONFIRMABLE', fields: [`items[1].${field}`] },
+      `${field} = ${JSON.stringify(blank)}`,
+    );
+  }
+
+  // A ficha stored before ADR 016 has no colour, artwork or collar.
+  const stored = pendingOrder();
+  stored.ficha.items = stored.ficha.items.map(
+    (
+      /** @type {any} */ { cor: _cor, estampa: _estampa, gola: _gola, ...item },
+    ) => item,
   );
-  assert.throws(() => confirmOrder(withoutGrade, confirmation), {
+  assert.throws(() => confirmOrder(stored, confirmation), {
     code: 'ORDER_NOT_CONFIRMABLE',
-    fields: ['items'],
+    fields: [
+      'items[0].cor',
+      'items[0].estampa',
+      'items[0].gola',
+      'items[1].cor',
+      'items[1].estampa',
+      'items[1].gola',
+    ],
   });
 
-  // A01: empty ficha fields show in the banner but do not block confirmation.
+  // Nothing else blocks: the summary and the additional item fields.
   const sparse = pendingOrder();
   sparse.ficha.summary = {
     aplicacao: null,
@@ -150,6 +172,17 @@ test('confirmation needs amount, condition and one item with grade, reported per
     data_entrega_confirmada: null,
     nome: null,
   };
+  for (const key of [
+    'modelo',
+    'cor_frente',
+    'cor_costas',
+    'cor_manga_direita',
+    'cor_manga_esquerda',
+    'vies_gola',
+    'vies_mangas',
+  ]) {
+    sparse.ficha.items[0][key] = '';
+  }
   assert.equal(confirmOrder(sparse, confirmation).status, 'confirmado');
 });
 
@@ -293,7 +326,7 @@ test('a trail day is a real calendar day that has already come in São Paulo (PL
   );
 });
 
-test('lists what is missing: blockers first, then empty ficha fields', () => {
+test('lists what is missing to generate: the points of each item, then amount and payment method', () => {
   assert.deepEqual(missingForConfirmation(pendingOrder()), [
     'finalAmount',
     'paymentCondition',
@@ -302,28 +335,38 @@ test('lists what is missing: blockers first, then empty ficha fields', () => {
   const sparse = pendingOrder();
   sparse.ficha.summary = {
     aplicacao: null,
-    cliente: 'Cliente',
+    cliente: '',
     data_entrega_confirmada: null,
-    nome: 'Evento',
+    nome: null,
   };
   sparse.ficha.items = [
-    { ...sparse.ficha.items[0], cor_costas: '', malhas: [] },
-    { ...sparse.ficha.items[1], grade: [] },
+    { ...sparse.ficha.items[0], cor: '', cor_costas: '', malhas: [] },
+    { ...sparse.ficha.items[1], gola: '', grade: [], modelo: '' },
   ];
   assert.deepEqual(missingForConfirmation(sparse), [
+    'items[0].cor',
+    'items[0].malhas',
+    'items[1].grade',
+    'items[1].gola',
     'finalAmount',
     'paymentCondition',
-    'summary.data_entrega_confirmada',
-    'summary.aplicacao',
-    'items[0].malhas',
-    'items[0].cor_costas',
-    'items[1].grade',
   ]);
 
   const empty = pendingOrder();
   empty.ficha.items = [];
-  assert.deepEqual(missingForConfirmation(empty).slice(0, 1), ['items']);
+  assert.deepEqual(missingForConfirmation(empty), [
+    'items',
+    'finalAmount',
+    'paymentCondition',
+  ]);
 
+  // A reopened order keeps its amount and payment method.
+  assert.deepEqual(
+    missingForConfirmation(
+      pendingOrder({ finalAmountCents: 482000, paymentCondition: 'pix' }),
+    ),
+    [],
+  );
   assert.deepEqual(
     missingForConfirmation(confirmOrder(pendingOrder(), confirmation)),
     [],

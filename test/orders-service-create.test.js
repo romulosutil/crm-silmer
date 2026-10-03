@@ -17,21 +17,22 @@ const OTHER = Object.freeze({
   kind: 'human',
 });
 
+// The seven points of ADR 012, as the bot records them.
 const BRIEFING = Object.freeze({
-  artwork_locations: ['frente'],
+  artwork_locations: 'frente',
+  artwork_status: 'já tem a arte',
   artwork_technique: 'sublimação total',
   briefing_status: 'collecting',
-  colors: ['azul'],
+  collar: 'gola V',
+  colors: 'azul',
   customer_name: 'Nome Dito Na Conversa',
-  fabrics: ['dry fit'],
+  fabrics: 'dry fit',
   next_required_field: 'sizes',
   order_name: 'Equipe Horizonte',
-  product_model: 'tradicional',
+  product_model: 'camiseta comum',
   product_type: 'camisa',
-  sizes: [
-    { quantity: 4, size: 'P' },
-    { quantity: 6, size: 'M' },
-  ],
+  quantity: 12,
+  sizes: '4 P, 6 M',
 });
 
 /** @param {{contexts?: Record<string, any>, owners?: Record<string, string|null>}} [options] */
@@ -101,17 +102,22 @@ test('an intent without a pending order creates one pre-filled from the pre-fich
   assert.equal(order.ficha.summary.cliente, 'Cliente Sintetico');
   assert.equal(order.ficha.summary.nome, 'Equipe Horizonte');
   assert.equal(order.ficha.summary.aplicacao, 'sublimação total');
-  assert.deepEqual(order.ficha.items[0].grade, [
+  // ADR 016: the seven points land on item 1, with nothing left to fill.
+  const [item] = order.ficha.items;
+  assert.equal(item.tipo, 'camiseta comum');
+  assert.equal(item.cor, 'azul');
+  assert.equal(item.estampa, 'já tem a arte · frente');
+  assert.deepEqual(item.malhas, ['dry fit']);
+  assert.deepEqual(item.grade, [
     { quantidade: 4, tamanho: 'P' },
     { quantidade: 6, tamanho: 'M' },
   ]);
-  assert.deepEqual(order.ficha.serviceData.colors, ['azul']);
+  assert.equal(item.gola, 'gola V');
+  assert.equal(item.modelo, '');
+  assert.equal(order.ficha.serviceData.quantity, 12);
+  assert.equal(order.ficha.serviceData.product_type, 'camisa');
   assert.equal(order.totalPieces, 10);
-  assert.deepEqual(order.missingFields.slice(0, 3), [
-    'finalAmount',
-    'paymentCondition',
-    'summary.data_entrega_confirmada',
-  ]);
+  assert.deepEqual(order.missingFields, ['finalAmount', 'paymentCondition']);
   assert.deepEqual(await repository.findById(order.id), order);
 });
 
@@ -262,7 +268,8 @@ test('the agent briefing is projected only while the conversation is with the ag
         ...order.ficha,
         items: [
           { ...order.ficha.items[0], cor_frente: 'AZUL MARINHO' },
-          {
+          // Saved before ADR 016: no colour, artwork or collar.
+          /** @type {any} */ ({
             cor_costas: 'PRETA',
             cor_frente: 'PRETA',
             cor_manga_direita: 'NAO APLICAVEL',
@@ -273,7 +280,7 @@ test('the agent briefing is projected only while the conversation is with the ag
             tipo: 'SHORT',
             vies_gola: 'NAO APLICAVEL',
             vies_mangas: 'BRANCO',
-          },
+          }),
         ],
         observations: ['Separar por tamanho'],
         summary: {
@@ -316,6 +323,15 @@ test('the agent briefing is projected only while the conversation is with the ag
   ]);
   assert.equal(result.ficha.items[0].cor_frente, 'AZUL MARINHO');
   assert.equal(result.ficha.items[1].tipo, 'SHORT');
+  // The seller's second item was saved before ADR 016 and reads blank.
+  assert.equal(result.ficha.items[1].cor, '');
+  assert.deepEqual(result.missingFields, [
+    'items[1].cor',
+    'items[1].estampa',
+    'items[1].gola',
+    'finalAmount',
+    'paymentCondition',
+  ]);
   assert.deepEqual(result.ficha.observations, ['Separar por tamanho']);
   assert.equal(result.ficha.serviceData.notes, 'Sem gola');
   assert.equal(result.totalPieces, 14);

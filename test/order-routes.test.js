@@ -6,6 +6,7 @@ import { createApi } from '../apps/api/src/app.js';
 import { createOrderRuntime } from '../apps/api/src/order-runtime.js';
 import { InMemoryIdempotencyRecordStore } from '../modules/integration-reliability/src/index.js';
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
+import { syntheticItems } from './fixtures/order-items.js';
 
 const synthetic = JSON.parse(
   await readFile(
@@ -163,7 +164,7 @@ async function createConfirmed(runtime, conversationId, summary) {
       expectedVersion: order.version,
       orderId: order.id,
       section: 'items',
-      value: synthetic.pedido.itens,
+      value: syntheticItems(),
     }),
   );
   return runtime.confirm(
@@ -498,7 +499,7 @@ test('PATCH /orders/:id/sections/:section saves the whole section', async (t) =>
     method: 'PATCH',
     payload: {
       expectedVersion: pending.version,
-      value: synthetic.pedido.itens,
+      value: syntheticItems(),
     },
     url: `/api/v1/orders/${pending.id}/sections/items`,
   });
@@ -506,8 +507,64 @@ test('PATCH /orders/:id/sections/:section saves the whole section', async (t) =>
   const { order } = response.json();
   assert.equal(order.version, pending.version + 1);
   assert.equal(order.totalPieces, 32);
-  assert.ok(!order.missingFields.includes('items'));
+  assert.deepEqual(order.missingFields, ['finalAmount', 'paymentCondition']);
   assert.equal(guards.at(-1)?.input.action, 'order.edit');
+});
+
+test('PATCH items takes a half-filled item, and one without the ADR 016 fields', async (t) => {
+  const { api, runtime } = orderHarness();
+  t.after(() => api.close());
+  const pending = await createPending(runtime, 'conversation-1');
+  const [first] = synthetic.pedido.itens;
+  const response = await api.inject({
+    headers: writeHeaders,
+    method: 'PATCH',
+    payload: {
+      expectedVersion: pending.version,
+      // A screen from before ADR 016 sends no colour, artwork or collar.
+      value: [{ ...first, grade: [], malhas: [] }],
+    },
+    url: `/api/v1/orders/${pending.id}/sections/items`,
+  });
+  assert.equal(response.statusCode, 200);
+  const { order } = response.json();
+  assert.equal(order.ficha.items[0].cor, '');
+  assert.equal(order.ficha.items[0].estampa, '');
+  assert.equal(order.ficha.items[0].gola, '');
+  assert.equal(order.totalPieces, 0);
+  assert.deepEqual(order.missingFields, [
+    'items[0].cor',
+    'items[0].estampa',
+    'items[0].malhas',
+    'items[0].grade',
+    'items[0].gola',
+    'finalAmount',
+    'paymentCondition',
+  ]);
+
+  const blocked = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'confirm-partial' },
+    method: 'POST',
+    payload: {
+      amountText: '100,00',
+      expectedVersion: order.version,
+      paymentCondition: 'pix',
+    },
+    url: `/api/v1/orders/${order.id}/confirm`,
+  });
+  assert.equal(blocked.statusCode, 422);
+  assert.deepEqual(blocked.json(), {
+    error: {
+      code: 'ORDER_NOT_CONFIRMABLE',
+      fields: [
+        'items[0].cor',
+        'items[0].estampa',
+        'items[0].malhas',
+        'items[0].grade',
+        'items[0].gola',
+      ],
+    },
+  });
 });
 
 test('section writes answer 403 outside ownership, 409 on a stale version and 422 with fields', async (t) => {
@@ -555,7 +612,7 @@ test('section writes answer 403 outside ownership, 409 on a stale version and 42
     error: { code: 'VERSION_CONFLICT' },
   });
 
-  const items = structuredClone(synthetic.pedido.itens);
+  const items = syntheticItems();
   items[0].grade[1].quantidade = 0;
   const invalid = await owner.api.inject({
     headers: { ...writeHeaders, 'idempotency-key': 'invalid-grade' },
@@ -634,7 +691,7 @@ async function createReady(runtime, conversationId) {
       expectedVersion: order.version,
       orderId: order.id,
       section: 'items',
-      value: synthetic.pedido.itens,
+      value: syntheticItems(),
     }),
   );
 }
@@ -665,7 +722,7 @@ test('POST /orders/:id/confirm confirms with amount and condition', async (t) =>
   assert.equal(guards.at(-1)?.input.action, 'order.confirm');
 });
 
-test('confirming without what A01 requires answers 422 ORDER_NOT_CONFIRMABLE with fields', async (t) => {
+test('confirming without what ADR 016 requires answers 422 ORDER_NOT_CONFIRMABLE with fields', async (t) => {
   const { api, runtime } = orderHarness();
   t.after(() => api.close());
   const pending = await createPending(runtime, 'conversation-1');

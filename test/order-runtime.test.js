@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -8,13 +7,7 @@ import {
 } from '../apps/api/src/order-runtime.js';
 import { InMemoryIdempotencyRecordStore } from '../modules/integration-reliability/src/index.js';
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
-
-const synthetic = JSON.parse(
-  await readFile(
-    new URL('../docs/phase0/ficha-pdf-synthetic.json', import.meta.url),
-    'utf8',
-  ),
-);
+import { syntheticItems } from './fixtures/order-items.js';
 
 const OWNER = Object.freeze({
   capabilities: [],
@@ -101,7 +94,7 @@ test('the conversation owner creates, edits and confirms its order', async () =>
       expectedVersion: created.order.version,
       orderId: created.order.id,
       section: 'items',
-      value: synthetic.pedido.itens,
+      value: syntheticItems(),
     }),
   );
   const confirmed = await runtime.confirm(

@@ -103,10 +103,11 @@ async function seedConversation(pool, options = {}) {
 
 if (connectionString) {
   const databaseName = new URL(connectionString).pathname.slice(1);
-  assert.equal(
+  // A branch may run its own copy (crm_silmer_test_<branch>) next to others.
+  assert.match(
     databaseName,
-    'crm_silmer_test',
-    'orders live test only resets the dedicated crm_silmer_test database',
+    /^crm_silmer_test(?:_[a-z0-9]+)?$/u,
+    'orders live test only resets a dedicated crm_silmer_test database',
   );
   const pool = new Pool({ connectionString, max: 6 });
   const repository = new PostgresOrderRepository({
@@ -466,10 +467,13 @@ if (connectionString) {
       section: 'items',
       value: [
         {
+          cor: 'AZUL',
           cor_costas: 'AZUL',
           cor_frente: 'AZUL',
           cor_manga_direita: 'AZUL',
           cor_manga_esquerda: 'AZUL',
+          estampa: 'Arte do cliente',
+          gola: 'GOLA V',
           grade: [{ quantidade: 3, tamanho: 'M' }],
           malhas: ['DRY FIT'],
           modelo: 'TRADICIONAL',
@@ -512,6 +516,215 @@ if (connectionString) {
       [ready.id],
     );
     assert.equal(confirmAudits.rows[0].total, 1);
+  });
+
+  test('an order built on the seven points: from the briefing to generating it (ADR 016)', async () => {
+    const runId = randomUUID().replaceAll('-', '');
+    const conversationId = await seedConversation(pool);
+    /** @type {Record<string, unknown>} */
+    let briefing = {
+      colors: 'preta',
+      customer_name: 'Cliente Sete Pontos',
+      product_model: 'camiseta comum',
+      quantity: 30,
+    };
+    const service = createOrderService({
+      authorizeOwnership: async () => {},
+      clock: () => NOW,
+      conversations: {
+        readOrderContext: async () => ({ briefing, customerName: null }),
+        searchConversationIds: async () => [],
+      },
+      fabCode: '01',
+      repository,
+    });
+    const actor = { capabilities: [], id: `seller-${runId}`, kind: 'human' };
+
+    // The bot opens the order on the first points it has.
+    const { order: created } = await service.ensurePendingFromIntent({
+      conversationId,
+      correlationId: `correlation-intent-${runId}`,
+    });
+    assert.equal(created.ficha.summary.cliente, 'Cliente Sete Pontos');
+    assert.equal(created.ficha.items[0].tipo, 'camiseta comum');
+    assert.equal(created.ficha.items[0].cor, 'preta');
+    assert.equal(created.ficha.serviceData.quantity, 30);
+    assert.deepEqual(created.missingFields, [
+      'items[0].estampa',
+      'items[0].malhas',
+      'items[0].grade',
+      'items[0].gola',
+      'finalAmount',
+      'paymentCondition',
+    ]);
+
+    // ...and projects the rest while it holds the conversation.
+    briefing = {
+      ...briefing,
+      artwork_status: 'vai mandar a logo',
+      artwork_technique: 'estampada',
+      collar: 'Definir com o vendedor',
+      fabrics: 'algodão',
+      sizes: '10 P, 15 M e 5 G',
+    };
+    const projected = await service.projectAgentBriefing({
+      automationState: 'assistant',
+      briefing,
+      conversationId,
+      correlationId: `correlation-projection-${runId}`,
+    });
+    assert.equal(projected.applied, true);
+    const order = /** @type {any} */ (projected.order);
+    assert.equal(order.ficha.items[0].estampa, 'vai mandar a logo');
+    assert.deepEqual(order.ficha.items[0].malhas, ['algodão']);
+    assert.equal(order.ficha.items[0].gola, '');
+    assert.equal(order.ficha.summary.aplicacao, null);
+    assert.equal(order.ficha.serviceData.artwork_technique, 'estampada');
+    assert.equal(order.ficha.serviceData.collar, 'Definir com o vendedor');
+    assert.equal(order.totalPieces, 30);
+    assert.deepEqual(order.missingFields, [
+      'items[0].gola',
+      'finalAmount',
+      'paymentCondition',
+    ]);
+    const stored = await repository.findById(order.id);
+    assert.deepEqual(stored?.missingFields, order.missingFields);
+
+    // The seller saves a second item half filled.
+    const [first] = order.ficha.items;
+    const partial = await service.patchSection({
+      actor,
+      correlationId: `correlation-items-${runId}`,
+      expectedVersion: order.version,
+      orderId: order.id,
+      section: 'items',
+      value: [first, { ...first, cor: '', grade: [], tipo: 'regata' }],
+    });
+    assert.equal(partial.totalPieces, 30);
+
+    /** @param {any} current @param {{amountText?: string, paymentCondition?: string}} body */
+    const confirm = (current, body) =>
+      service.confirm({
+        actor,
+        amountText: body.amountText,
+        correlationId: `correlation-confirm-${runId}`,
+        expectedVersion: current.version,
+        orderId: current.id,
+        paymentCondition: body.paymentCondition,
+      });
+    await assert.rejects(confirm(partial, {}), {
+      code: 'ORDER_NOT_CONFIRMABLE',
+      fields: [
+        'items[0].gola',
+        'items[1].cor',
+        'items[1].grade',
+        'items[1].gola',
+        'finalAmount',
+        'paymentCondition',
+      ],
+    });
+
+    const complete = await service.patchSection({
+      actor,
+      correlationId: `correlation-complete-${runId}`,
+      expectedVersion: partial.version,
+      orderId: order.id,
+      section: 'items',
+      value: [
+        { ...first, gola: 'gola redonda' },
+        {
+          ...first,
+          cor: 'branca',
+          gola: 'regata',
+          grade: [{ quantidade: 4, tamanho: 'GG' }],
+          tipo: 'regata',
+        },
+      ],
+    });
+    assert.deepEqual(complete.missingFields, [
+      'finalAmount',
+      'paymentCondition',
+    ]);
+    await assert.rejects(confirm(complete, { amountText: '980,00' }), {
+      code: 'ORDER_NOT_CONFIRMABLE',
+      fields: ['paymentCondition'],
+    });
+    const generated = await confirm(complete, {
+      amountText: '980,00',
+      paymentCondition: 'pix',
+    });
+    assert.equal(generated.status, 'confirmado');
+    assert.equal(generated.totalPieces, 34);
+    assert.deepEqual(generated.missingFields, []);
+  });
+
+  test('reads a ficha stored before ADR 016 with the new item fields blank', async () => {
+    const conversationId = await seedConversation(pool);
+    const legacy = await repository.createPending({
+      conversationId,
+      correlationId: 'correlation-legacy',
+      createdBy: null,
+      createdByKind: 'automation',
+      fabCode: '01',
+      ficha: /** @type {any} */ ({
+        items: [
+          {
+            cor_costas: '',
+            cor_frente: '',
+            cor_manga_direita: '',
+            cor_manga_esquerda: '',
+            grade: [],
+            malhas: [],
+            modelo: 'camiseta comum, gola V',
+            tipo: '',
+            vies_gola: '',
+            vies_mangas: '',
+          },
+        ],
+        observations: [],
+        serviceData: { colors: 'preta' },
+        summary: {
+          aplicacao: null,
+          cliente: '',
+          data_entrega_confirmada: null,
+          nome: null,
+        },
+      }),
+      firstContactAt: null,
+      id: randomUUID(),
+      missingFields: ['items', 'finalAmount', 'summary.cliente'],
+      now: NOW,
+      totalPieces: 0,
+    });
+    const service = createOrderService({
+      authorizeOwnership: async () => {},
+      clock: () => NOW,
+      conversations: {
+        readOrderContext: async () => null,
+        searchConversationIds: async () => [],
+      },
+      fabCode: '01',
+      repository,
+    });
+    const read = await service.get(legacy.id);
+    assert.deepEqual(
+      [
+        read.ficha.items[0].cor,
+        read.ficha.items[0].estampa,
+        read.ficha.items[0].gola,
+      ],
+      ['', '', ''],
+    );
+    assert.deepEqual(read.missingFields, [
+      'items[0].tipo',
+      'items[0].cor',
+      'items[0].estampa',
+      'items[0].malhas',
+      'items[0].grade',
+      'items[0].gola',
+      'finalAmount',
+      'paymentCondition',
+    ]);
   });
 
   test('rejects a key that is not 32 bytes', () => {

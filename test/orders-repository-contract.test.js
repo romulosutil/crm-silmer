@@ -33,10 +33,13 @@ function draftFicha() {
   return {
     items: [
       {
+        cor: 'AZUL',
         cor_costas: 'AZUL',
         cor_frente: 'AZUL',
         cor_manga_direita: 'NAO APLICAVEL',
         cor_manga_esquerda: 'NAO APLICAVEL',
+        estampa: 'Arte do cliente',
+        gola: 'GOLA REDONDA',
         grade: [{ quantidade: 5, tamanho: 'M' }],
         malhas: ['DRY FIT'],
         modelo: 'TRADICIONAL',

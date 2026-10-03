@@ -1135,12 +1135,16 @@ paths:
   /orders/{orderId}/confirm:
     post:
       operationId: confirmOrder
-      summary: Confirma o pedido com valor final e condição de pagamento
+      summary: Confirma (gera) o pedido com valor final e forma de pagamento
       description: >-
         Ação order.confirm, restrita ao dono da conversa ou a COMMERCIAL_ADMIN.
         Exige valor final no formato brasileiro (ex.: 4.820,00) maior que zero,
-        condição de pagamento válida e ao menos um item com grade. Grava valor,
-        condição, autor, horário e data do pedido. Numa nova confirmação depois
+        forma de pagamento válida (campo paymentCondition), ao menos um item e,
+        em cada item, os pontos principais da ADR 016 (tipo, cor, estampa, ao
+        menos um tecido, ao menos uma linha de tamanho e gola); nada mais
+        bloqueia. Recusa com 422 ORDER_NOT_CONFIRMABLE e as chaves de
+        Order.missingFields que faltam. Grava valor, forma de pagamento,
+        autor, horário e data do pedido. Numa nova confirmação depois
         de reabrir, autor, horário e data passam a ser os da nova confirmação.
         Confirmações concorrentes sobre a mesma versão: uma vence e a outra
         recebe 409.
@@ -2483,8 +2487,16 @@ components:
       type: object
       additionalProperties: false
       description: >-
-        Cores de manga e viés aceitam o valor explícito NAO APLICAVEL. O total
-        do item é calculado a partir da grade e nunca é enviado.
+        Item da ficha (ADR 016). Principais, na ordem da tela: tipo (Tipo de
+        roupa), cor, quantidade (soma da grade; nunca enviada), estampa,
+        malhas (Tecido), grade (Tamanhos) e gola. Adicionais, que nunca
+        bloqueiam: modelo, cor_frente, cor_costas, cor_manga_direita,
+        cor_manga_esquerda, vies_gola e vies_mangas; mangas e viés aceitam o
+        valor explícito NAO APLICAVEL. O item pode ser salvo incompleto
+        (malhas e grade vazias, textos em branco); gerar o pedido exige os
+        principais. A resposta sempre traz cor, estampa e gola; por uma versão,
+        um item enviado sem elas é aceito e gravado com elas em branco. Textos
+        com até 200 caracteres; até 50 itens.
       required:
         [
           tipo,
@@ -2499,22 +2511,23 @@ components:
           grade,
         ]
       properties:
-        tipo: { type: string }
-        modelo: { type: string }
+        tipo: { type: string, maxLength: 200 }
+        cor: { type: string, maxLength: 200 }
+        estampa: { type: string, maxLength: 200 }
         malhas:
           type: array
-          minItems: 1
-          items: { type: string, minLength: 1 }
-        cor_frente: { type: string }
-        cor_costas: { type: string }
-        cor_manga_direita: { type: string }
-        cor_manga_esquerda: { type: string }
-        vies_gola: { type: string }
-        vies_mangas: { type: string }
+          items: { type: string, minLength: 1, maxLength: 200 }
         grade:
           type: array
-          minItems: 1
           items: { $ref: '#/components/schemas/FichaGradeLine' }
+        gola: { type: string, maxLength: 200 }
+        modelo: { type: string, maxLength: 200 }
+        cor_frente: { type: string, maxLength: 200 }
+        cor_costas: { type: string, maxLength: 200 }
+        cor_manga_direita: { type: string, maxLength: 200 }
+        cor_manga_esquerda: { type: string, maxLength: 200 }
+        vies_gola: { type: string, maxLength: 200 }
+        vies_mangas: { type: string, maxLength: 200 }
     FichaSummary:
       type: object
       additionalProperties: false
@@ -2596,6 +2609,14 @@ components:
         totalPieces: { type: integer, minimum: 0 }
         missingFields:
           type: array
+          description: >-
+            O que ainda impede gerar o pedido pendente (ADR 016), nesta ordem:
+            items (nenhum item); items[N].tipo, items[N].cor,
+            items[N].estampa, items[N].malhas, items[N].grade e
+            items[N].gola (ponto principal que falta no item N, a partir de 0;
+            a grade vale também pela quantidade); finalAmount; e
+            paymentCondition. Vazio em pedido confirmado. Os adicionais do
+            item e o resumo nunca aparecem aqui.
           items: { type: string }
         finalAmountCents: { type: [integer, 'null'], minimum: 1 }
         paymentCondition:
@@ -2756,7 +2777,8 @@ components:
             fields:
               type: array
               description: >-
-                Campos recusados em ORDER_NOT_CONFIRMABLE e INVALID_DATE.
+                Campos recusados em ORDER_NOT_CONFIRMABLE (as chaves de
+                Order.missingFields) e INVALID_DATE.
               items: { type: string }
             index:
               type: integer

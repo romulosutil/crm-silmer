@@ -1170,6 +1170,49 @@ async function rhythmDecision(
   );
 }
 
+test('confirmed front print is stored and never followed by a print-or-plain question', async () => {
+  const briefing = {
+    customer_name: 'Ana',
+    product_model: 'camiseta comum',
+    colors: 'branca',
+    quantity: 30,
+    next_required_field: 'artwork_status',
+  };
+  const current = await rhythmDecision(
+    {
+      reply_text: 'Você quer a camiseta com estampa ou lisa?',
+      asked_field: 'artwork_status',
+      answer_status: 'other',
+      briefing_patch: { artwork_status: 'com estampa' },
+    },
+    { briefing, current_text: 'Quero estampa na frente.' },
+  );
+  assert.equal(current.briefing_patch.artwork_locations, 'frente');
+  assert.equal(current.briefing_patch.artwork_status, undefined);
+  assert.equal(current.briefing_patch.artwork_technique, 'com estampa');
+  assert.equal(current.briefing_patch.next_required_field, 'artwork_status');
+  assert.match(current.reply_text, /Você já tem a arte ou a logo/u);
+  assert.doesNotMatch(current.reply_text, /estampa ou lisa/u);
+
+  const previous = await rhythmDecision(
+    {
+      reply_text: 'Que tipo de camisa você quer? E vai lisa ou com estampa?',
+      asked_field: 'product_model',
+    },
+    {
+      briefing: {
+        customer_name: 'Ana',
+        artwork_locations: 'frente',
+      },
+      current_text: 'Preciso de camisas para a equipe.',
+    },
+  );
+  assert.equal(previous.briefing_patch.artwork_locations, undefined);
+  assert.equal(previous.briefing_patch.next_required_field, 'product_model');
+  assert.match(previous.reply_text, /Que tipo de camisa você quer\?/u);
+  assert.doesNotMatch(previous.reply_text, /lisa ou com estampa/u);
+});
+
 test('the ficha is the name plus seven points in one rhythm, kept in one place (ADR 012)', async () => {
   const byName = await workflowNodesByName();
   for (const name of [

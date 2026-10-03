@@ -96,6 +96,13 @@ Reutiliza `POST /messages`, `/takeover`, `/return-to-ai` e `/close`. A UI não
 expõe edição manual de epoch ou revisão. O aceite cobre teclado, foco, loading,
 vazio, erro, offline, autorização e replay sem mensagem duplicada.
 
+O stream ao vivo emite `stream.reset` com cursor avançado quando há muitos
+eventos acumulados ou um operador reconecta atrás de outra sessão; a Inbox
+recarrega o read model autorizado. Se a conexão cair, a tela avisa e oferece
+atualização manual. A busca atual cobre somente as até 100 conversas carregadas
+e compara contato, telefone e última mensagem; busca em mensagens antigas
+exigirá um índice compatível com a criptografia e a política de privacidade.
+
 Rastreabilidade: INB-01, AGT-01, AGT-03, AGT-05–06, ORC-07–08 e MSG-01–03.
 
 ## UI-2 — Handoffs na Caixa de Entrada

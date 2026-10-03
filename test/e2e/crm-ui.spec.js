@@ -166,7 +166,7 @@ const conversationOrder = {
   version: 2,
 };
 
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, mixedAuthors?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -298,11 +298,23 @@ async function mockCrm(page, options = {}) {
       if (options.confirmOnRefresh && inboxListCalls > 1 && currentOrder) {
         currentOrder = { ...currentOrder, status: 'confirmado' };
       }
+      const currentConversation = withOrder();
       const items = options.empty
         ? []
         : waiting.length
           ? waiting
-          : [withOrder()];
+          : [
+              options.newMessageOnRefresh && inboxListCalls > 1
+                ? {
+                    ...currentConversation,
+                    lastMessage: {
+                      ...currentConversation.lastMessage,
+                      id: 'message-new',
+                      preview: 'Mensagem nova de teste',
+                    },
+                  }
+                : currentConversation,
+            ];
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
@@ -714,9 +726,9 @@ test('claims a pending handoff from its conversation in the Caixa de Entrada', a
     page.getByRole('heading', { name: 'Handoffs pendentes' }),
   ).toHaveCount(0);
   await page.getByRole('button', { name: 'Assumir atendimento' }).click();
-  await expect(page.locator('.audit-note')).toContainText(
-    'Atendimento de Studio Malu assumido.',
-  );
+  await expect(
+    page.getByText('Atendimento de Studio Malu assumido.', { exact: true }),
+  ).toBeVisible();
   expect(claimedBody).toEqual({
     expectedConversationVersion: 3,
     expectedHandoffVersion: 1,
@@ -807,6 +819,113 @@ test('restores search focus after removing filter controls', async ({
   await clearInboxSearch.focus();
   await clearInboxSearch.press('Enter');
   await expect(inboxSearch).toBeFocused();
+});
+
+test('refreshes the Inbox manually when live updates fail and keeps focus on live refresh', async ({
+  page,
+}) => {
+  const inboxQueries = /** @type {Array<Record<string, string>>} */ ([]);
+  await page.addInitScript(() => {
+    const testGlobal = /** @type {any} */ (globalThis);
+    class FakeEventSource extends globalThis.EventTarget {
+      constructor() {
+        super();
+        testGlobal.__inboxSource = this;
+      }
+      close() {}
+    }
+    testGlobal.EventSource = FakeEventSource;
+  });
+  await mockCrm(page, {
+    onInboxList: (params) => inboxQueries.push(Object.fromEntries(params)),
+  });
+  await page.goto('/inbox');
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Minhas conversas' }).click();
+  await expect
+    .poll(() => inboxQueries.at(-1)?.assignedUserId)
+    .toBe('operator-1');
+
+  await page.evaluate(() => {
+    /** @type {any} */ (globalThis).__inboxSource.dispatchEvent(
+      new globalThis.Event('error'),
+    );
+  });
+  await expect(
+    page.getByText(/Reconectando atualização automática/),
+  ).toBeVisible();
+  const manualRefresh = page.getByRole('button', {
+    name: 'Atualizar conversas',
+  });
+  await manualRefresh.click();
+  await expect.poll(() => inboxQueries.length).toBeGreaterThan(2);
+  expect(inboxQueries.at(-1)?.assignedUserId).toBe('operator-1');
+
+  const search = page.locator('#inbox-search');
+  await search.focus();
+  const beforeReconnect = inboxQueries.length;
+  await page.evaluate(() => {
+    /** @type {any} */ (globalThis).__inboxSource.dispatchEvent(
+      new globalThis.Event('open'),
+    );
+  });
+  await expect.poll(() => inboxQueries.length).toBeGreaterThan(beforeReconnect);
+  expect(inboxQueries.at(-1)?.assignedUserId).toBe('operator-1');
+  await expect(search).toBeFocused();
+  await expect(
+    page.getByText(/Reconectando atualização automática/),
+  ).toHaveCount(0);
+
+  const beforeEvent = inboxQueries.length;
+  await page.evaluate(() => {
+    /** @type {any} */ (globalThis).__inboxSource.dispatchEvent(
+      new globalThis.MessageEvent('inbox.conversation.changed', {
+        data: JSON.stringify({ conversationId: 'conversation-1' }),
+      }),
+    );
+  });
+  await expect.poll(() => inboxQueries.length).toBeGreaterThan(beforeEvent);
+  await expect(search).toBeFocused();
+});
+
+test('finds a new last message after the live event without moving search focus', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const testGlobal = /** @type {any} */ (globalThis);
+    class FakeEventSource extends globalThis.EventTarget {
+      constructor() {
+        super();
+        testGlobal.__inboxSource = this;
+      }
+      close() {}
+    }
+    testGlobal.EventSource = FakeEventSource;
+  });
+  await mockCrm(page, { newMessageOnRefresh: true });
+  await page.goto('/inbox');
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
+  const search = page.locator('#inbox-search');
+  await expect(page.locator('#inbox-search-help')).toContainText(
+    'até 100 conversas carregadas',
+  );
+  await search.fill('Mensagem nova');
+  await expect(search).toBeFocused();
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toHaveCount(
+    0,
+  );
+
+  await page.evaluate(() => {
+    /** @type {any} */ (globalThis).__inboxSource.dispatchEvent(
+      new globalThis.MessageEvent('inbox.conversation.changed', {
+        data: JSON.stringify({ conversationId: 'conversation-1' }),
+      }),
+    );
+  });
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toContainText(
+    'Mensagem nova de teste',
+  );
+  await expect(search).toBeFocused();
 });
 
 test('filters the Inbox by queue and by who must act through the server read model', async ({

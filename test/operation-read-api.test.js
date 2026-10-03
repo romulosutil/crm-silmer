@@ -168,6 +168,18 @@ test('rejects unknown read filters before querying a projection', async () => {
   await api.close();
 });
 
+test('rejects an invalid SSE cursor before opening a stream', async () => {
+  const { api, headers } = harness();
+  const response = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/events?topic=inbox&after=invalid',
+  });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error.code, 'INVALID_CURSOR');
+  await api.close();
+});
+
 test('maps missing projections without leaking repository details', async () => {
   const { api, headers } = harness({
     async getContact() {

@@ -1154,7 +1154,19 @@ test('keeps garment, colour and collar data from older fichas when saving an ite
   const items = page.getByRole('region', { name: 'Itens e especificações' });
   await expect(items).toContainText('Item 1 · — · 150 peças');
   await expect(items).toContainText('OLÍMPICA - VERDE');
+  const oldDetail = items.locator('.op-quantity-warning', {
+    hasText: 'Detalhe antigo da peça',
+  });
+  await expect(oldDetail).toHaveCount(1);
+  await expect(oldDetail).toContainText('GOLA OLÍMPICA');
+  await expect(oldDetail).toContainText(
+    'Confira se Tipo de roupa ou Definição da gola inclui',
+  );
+  await expect(items.getByText('Modelo', { exact: true })).toHaveCount(0);
   await items.getByRole('button', { name: 'Editar' }).click();
+  await expect(oldDetail).toHaveCount(1);
+  await expect(oldDetail).toContainText('GOLA OLÍMPICA');
+  await expect(items.getByLabel('Modelo', { exact: true })).toHaveCount(0);
   await expect(items.getByLabel('Tipo de roupa')).toHaveValue('');
   await expect(items.getByLabel('Cor', { exact: true })).toHaveValue('BRANCA');
   await expect(items.getByLabel('Definição da gola')).toHaveValue(
@@ -1162,6 +1174,8 @@ test('keeps garment, colour and collar data from older fichas when saving an ite
   );
   await items.getByLabel('Tipo de roupa').fill('CAMISETA');
   await items.getByRole('button', { name: 'Salvar itens' }).click();
+  await expect(oldDetail).toHaveCount(1);
+  await expect(items.getByText('Modelo', { exact: true })).toHaveCount(0);
 
   expect(writes[0].body.value[0]).toMatchObject({
     cor: 'BRANCA',
@@ -1170,6 +1184,26 @@ test('keeps garment, colour and collar data from older fichas when saving an ite
     tipo: 'CAMISETA',
     vies_gola: 'OLÍMPICA - VERDE',
   });
+});
+
+test('hides the old piece notice when its legacy detail is blank', async ({
+  page,
+}) => {
+  const order = {
+    ...pendingOrder,
+    ficha: {
+      ...pendingOrder.ficha,
+      items: [{ ...pendingOrder.ficha.items[0], modelo: '  ' }],
+    },
+  };
+  await mockOrders(page, { orders: [order] });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await expect(items.getByText('Detalhe antigo da peça')).toHaveCount(0);
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await expect(items.getByText('Detalhe antigo da peça')).toHaveCount(0);
+  await expect(items.getByLabel('Modelo', { exact: true })).toHaveCount(0);
 });
 
 test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', async ({

@@ -25,6 +25,7 @@ import { PostgresOrderConversationPort } from '../modules/orders/src/adapters/po
 import { PostgresOrderRepository } from '../modules/orders/src/adapters/postgres-order-repository.js';
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
 import { defineOrderRepositoryContract } from './orders-repository-contract.test.js';
+import { orderContextsFrom } from './fixtures/order-contexts.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const NOW = new Date('2026-09-12T12:00:00.000Z');
@@ -152,7 +153,7 @@ if (connectionString) {
       authorizeOwnership: async () => {},
       clock: () => NOW,
       conversations: {
-        readOrderContext: async () => ({
+        readOrderContexts: orderContextsFrom(() => ({
           briefing: {
             city_or_postal_code: `${canary}-cidade`,
             delivery_address: `${canary}-endereco`,
@@ -160,7 +161,7 @@ if (connectionString) {
             product_type: 'camisa',
           },
           customerName: `${canary}-cliente`,
-        }),
+        })),
         searchConversationIds: async () => [],
       },
       fabCode: '01',
@@ -312,12 +313,23 @@ if (connectionString) {
       new Map([[sellerId, 'Vendedora Sintetica']]),
     );
     assert.deepEqual(await port.readUserNames([]), new Map());
-    assert.deepEqual(await port.readOrderContext(conversation.id), {
-      briefing: { order_name: 'Equipe Sintetica', product_type: 'camisa' },
-      customerName: 'Conceição Sintética',
-      openedAt: NOW.toISOString(),
-    });
-    assert.equal(await port.readOrderContext(`missing-${runId}`), null);
+    assert.deepEqual(
+      await port.readOrderContexts([conversation.id, `missing-${runId}`]),
+      new Map([
+        [
+          conversation.id,
+          {
+            briefing: {
+              order_name: 'Equipe Sintetica',
+              product_type: 'camisa',
+            },
+            customerName: 'Conceição Sintética',
+            openedAt: NOW.toISOString(),
+          },
+        ],
+      ]),
+    );
+    assert.deepEqual(await port.readOrderContexts([]), new Map());
 
     // Search only looks at conversations that already have orders.
     assert.deepEqual(await port.searchConversationIds('conceicao'), []);
@@ -396,7 +408,10 @@ if (connectionString) {
 
     // An Instagram contact with no name: the "@handle" is not a name.
     const unnamed = await seedConversation(pool);
-    assert.equal((await port.readOrderContext(unnamed))?.customerName, null);
+    assert.equal(
+      (await port.readOrderContexts([unnamed])).get(unnamed)?.customerName,
+      null,
+    );
     const blank = await service.ensurePendingFromIntent({
       conversationId: unnamed,
       correlationId: 'correlation-unnamed',
@@ -417,7 +432,7 @@ if (connectionString) {
     await nameContact(promoted, 'Nome Promovido', 'automation');
     await writeBriefing(promoted, { customer_name: 'Outro Nome' });
     assert.equal(
-      (await port.readOrderContext(promoted))?.customerName,
+      (await port.readOrderContexts([promoted])).get(promoted)?.customerName,
       'Nome Promovido',
     );
     const renamed = await seedConversation(pool, { channel: 'whatsapp' });
@@ -427,6 +442,189 @@ if (connectionString) {
       correlationId: 'correlation-renamed',
     });
     assert.equal(byPerson.order.ficha.summary.cliente, 'Nome Do Vendedor');
+  });
+
+  test('the client follows the renamed contact while pending and stays on the generated order (ADR 018)', async () => {
+    const tag = randomUUID().replaceAll('-', '').slice(0, 8);
+    const port = new PostgresOrderConversationPort({
+      contactEnvelopeKey: CONTACT_KEY,
+      database: databaseFor(pool),
+      envelopeKey: ENVELOPE_KEY,
+    });
+    const service = createOrderService({
+      authorizeOwnership: async () => {},
+      clock: () => NOW,
+      conversations: port,
+      fabCode: '01',
+      repository,
+    });
+    const actor = { capabilities: [], id: `seller-${tag}`, kind: 'human' };
+    // An Instagram contact: its "@handle" must never become the client.
+    const conversationId = await seedConversation(pool);
+    await pool.query(
+      `UPDATE crm.conversations
+       SET briefing_version = 1, briefing_envelope = $2::jsonb,
+           briefing_updated_at = $3
+       WHERE id = $1`,
+      [
+        conversationId,
+        JSON.stringify(
+          encryptJson(
+            { customer_name: 'Nome Dito Ao Bot', product_type: 'camisa' },
+            `n8n-briefing:${conversationId}:1`,
+            ENVELOPE_KEY,
+          ),
+        ),
+        NOW,
+      ],
+    );
+    /** @param {string|null} name @param {'automation'|'manual'} source */
+    const nameContact = (name, source) =>
+      pool.query(
+        `UPDATE crm.contacts contact
+         SET display_name = $2, display_name_source = $3,
+             version = contact.version + 1
+         FROM crm.conversations conversation
+         JOIN crm.contact_identities identity
+           ON identity.id = conversation.contact_identity_id
+         WHERE conversation.id = $1 AND contact.id = identity.current_contact_id`,
+        [conversationId, name, source],
+      );
+    /** @param {string} orderId */
+    const shown = async (orderId) => {
+      const listed = (await service.list({})).items.find(
+        (/** @type {any} */ order) => order.id === orderId,
+      );
+      return {
+        current: (await service.currentForConversation(conversationId))?.ficha
+          .summary.cliente,
+        detail: (await service.get(orderId)).ficha.summary.cliente,
+        list: listed?.ficha.summary.cliente,
+      };
+    };
+    /** @param {string} cliente */
+    const everywhere = (cliente) => ({
+      current: cliente,
+      detail: cliente,
+      list: cliente,
+    });
+    /** @param {string} orderId */
+    const orderEvents = async (orderId) =>
+      (
+        await pool.query(
+          `SELECT event_type FROM crm.domain_events
+           WHERE aggregate_type = 'order' AND aggregate_id = $1
+           ORDER BY stream_cursor`,
+          [orderId],
+        )
+      ).rows.map((row) => row.event_type);
+
+    const { order: created } = await service.ensurePendingFromIntent({
+      conversationId,
+      correlationId: `correlation-follow-${tag}`,
+    });
+    assert.equal(created.ficha.summary.cliente, 'Nome Dito Ao Bot');
+
+    // PCT-01: the name the bot promoted, then the one a person typed, reach
+    // the pending order on every read, and the search finds it by the new
+    // name; the order itself does not change.
+    await nameContact(`Cliente Promovida ${tag}`, 'automation');
+    assert.deepEqual(
+      await shown(created.id),
+      everywhere(`Cliente Promovida ${tag}`),
+    );
+    await nameContact(`Cliente Renomeada ${tag}`, 'manual');
+    assert.deepEqual(
+      await shown(created.id),
+      everywhere(`Cliente Renomeada ${tag}`),
+    );
+    const found = await service.list({ q: `renomeada ${tag}` });
+    assert.deepEqual(
+      found.items.map((/** @type {any} */ order) => [
+        order.id,
+        order.ficha.summary.cliente,
+      ]),
+      [[created.id, `Cliente Renomeada ${tag}`]],
+    );
+    const untouched = await repository.findById(created.id);
+    assert.equal(untouched?.version, created.version);
+    assert.equal(untouched?.updatedAt, created.updatedAt);
+    assert.deepEqual(await orderEvents(created.id), ['order.created']);
+
+    // A name cleared by a person falls back to the bot's, never the handle.
+    await nameContact(null, 'manual');
+    assert.deepEqual(await shown(created.id), everywhere('Nome Dito Ao Bot'));
+
+    // PCT-02: generating writes down the name the order showed then.
+    await nameContact(`Cliente Renomeada ${tag}`, 'manual');
+    const promised = await service.patchSection({
+      actor,
+      correlationId: `correlation-follow-summary-${tag}`,
+      expectedVersion: created.version,
+      orderId: created.id,
+      section: 'summary',
+      value: {
+        aplicacao: null,
+        data_entrega_confirmada: '2026-10-24',
+        nome: null,
+      },
+    });
+    const ready = await service.patchSection({
+      actor,
+      correlationId: `correlation-follow-items-${tag}`,
+      expectedVersion: promised.version,
+      orderId: created.id,
+      section: 'items',
+      value: [
+        {
+          cor: 'AZUL',
+          cor_costas: '',
+          cor_frente: '',
+          cor_manga_direita: '',
+          cor_manga_esquerda: '',
+          estampa: 'Sem estampa',
+          gola: 'GOLA REDONDA',
+          grade: [{ quantidade: 3, tamanho: 'M' }],
+          malhas: ['DRY FIT'],
+          modelo: '',
+          tipo: 'CAMISA',
+          vies_gola: '',
+          vies_mangas: '',
+        },
+      ],
+    });
+    await nameContact(`Cliente Na Geracao ${tag}`, 'manual');
+    const generated = await service.confirm({
+      actor,
+      amountText: '150,00',
+      correlationId: `correlation-follow-confirm-${tag}`,
+      expectedVersion: ready.version,
+      orderId: created.id,
+      paymentCondition: 'pix',
+    });
+    assert.equal(generated.ficha.summary.cliente, `Cliente Na Geracao ${tag}`);
+    assert.equal(
+      (await repository.findById(created.id))?.ficha.summary.cliente,
+      `Cliente Na Geracao ${tag}`,
+    );
+    await nameContact(`Cliente Depois ${tag}`, 'manual');
+    assert.deepEqual(
+      await shown(created.id),
+      everywhere(`Cliente Na Geracao ${tag}`),
+    );
+
+    // PCT-03: reopened, it follows the contact again.
+    const reopened = await service.reopen({
+      actor,
+      correlationId: `correlation-follow-reopen-${tag}`,
+      expectedVersion: generated.version,
+      orderId: created.id,
+    });
+    assert.equal(reopened.ficha.summary.cliente, `Cliente Depois ${tag}`);
+    assert.deepEqual(
+      await shown(created.id),
+      everywhere(`Cliente Depois ${tag}`),
+    );
   });
 
   test('the orders runtime replays a command key and audits it once in PostgreSQL', async () => {
@@ -623,7 +821,10 @@ if (connectionString) {
       authorizeOwnership: async () => {},
       clock: () => NOW,
       conversations: {
-        readOrderContext: async () => ({ briefing, customerName: null }),
+        readOrderContexts: orderContextsFrom(() => ({
+          briefing,
+          customerName: null,
+        })),
         searchConversationIds: async () => [],
       },
       fabCode: '01',
@@ -822,7 +1023,7 @@ if (connectionString) {
       authorizeOwnership: async () => {},
       clock: () => NOW,
       conversations: {
-        readOrderContext: async () => null,
+        readOrderContexts: async () => new Map(),
         searchConversationIds: async () => [],
       },
       fabCode: '01',

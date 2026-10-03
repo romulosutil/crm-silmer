@@ -34,7 +34,8 @@ import { ORDER_STATUSES } from '../domain/order.js';
  *
  * - `saveSection`/`projectBriefing` write the ficha and its derived columns
  *   (`totalPieces`, `missingFields`, `updatedAt`) of a pending order only.
- * - `saveStatus` writes the confirmation/reopen columns of the order.
+ * - `saveStatus` writes the confirmation/reopen columns of the order and
+ *   its ficha, so a generated order keeps the client it showed (ADR 018).
  * - `saveMilestones` writes the manual days of the trail (`paidOn`,
  *   `deliveredOn`, `updatedAt`) of an order in either status.
  *

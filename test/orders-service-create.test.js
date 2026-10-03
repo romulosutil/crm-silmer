@@ -4,6 +4,7 @@ import test from 'node:test';
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
 import { confirmOrder } from '../modules/orders/src/domain/order.js';
+import { orderContextsFrom } from './fixtures/order-contexts.js';
 
 const NOW = new Date('2026-09-12T15:00:00.000Z');
 const OWNER = Object.freeze({
@@ -84,8 +85,10 @@ function setup(options = {}) {
     },
     clock: () => NOW,
     conversations: {
-      readOrderContext: async (/** @type {string} */ conversationId) =>
-        contexts[conversationId] ?? null,
+      readOrderContexts: orderContextsFrom(
+        (/** @type {string} */ conversationId) =>
+          contexts[conversationId] ?? null,
+      ),
       searchConversationIds: async () => [],
     },
     fabCode: '01',

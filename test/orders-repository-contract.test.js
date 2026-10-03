@@ -341,6 +341,29 @@ export function defineOrderRepositoryContract(name, setup) {
       assert.deepEqual(await repository.findById(created.id), reopened);
     });
 
+    test('generating writes down the client the order showed, and reopening keeps it (PCT-02)', async () => {
+      const { repository } = harness;
+      const created = await repository.createPending(
+        pendingInput(await harness.newConversationId()),
+      );
+      // The service hands in the order with the client it reads now (ADR 018).
+      const shown = structuredClone(created);
+      shown.ficha.summary.cliente = 'Cliente Renomeado';
+      const confirmed = await confirm(repository, shown);
+      assert.equal(confirmed.ficha.summary.cliente, 'Cliente Renomeado');
+      assert.deepEqual(confirmed.ficha.items, created.ficha.items);
+      assert.deepEqual(
+        (await repository.findById(created.id))?.ficha,
+        confirmed.ficha,
+      );
+
+      const reopened = await repository.saveStatus(
+        reopenOrder(confirmed, { actorId: 'admin-contract', now: nextNow() }),
+        { correlationId: 'correlation-reopen', expectedVersion: 2 },
+      );
+      assert.deepEqual(reopened.ficha, confirmed.ficha);
+    });
+
     test('records the paid and delivered days in either status, touching nothing else', async () => {
       const { repository } = harness;
       const created = await repository.createPending(

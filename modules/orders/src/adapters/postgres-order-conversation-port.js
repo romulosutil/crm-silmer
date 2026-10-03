@@ -112,10 +112,16 @@ export class PostgresOrderConversationPort {
   }
 
   /**
-   * @param {string} conversationId
-   * @returns {Promise<import('../application/order-service.js').OrderConversationContext|null>}
+   * What each existing conversation says about its order, read in one query:
+   * a new order is built from it, and a pending one reads its client from it
+   * again (ADR 018). The contact is the one the identity points to now, so a
+   * rename or a merge reaches the order. Unknown ids are left out.
+   *
+   * @param {string[]} conversationIds
+   * @returns {Promise<Map<string, import('../application/order-service.js').OrderConversationContext>>}
    */
-  async readOrderContext(conversationId) {
+  async readOrderContexts(conversationIds) {
+    if (conversationIds.length === 0) return new Map();
     const result = await this.#database.query(
       `SELECT conversation.id, conversation.briefing_version,
               conversation.briefing_envelope, conversation.opened_at,
@@ -124,27 +130,30 @@ export class PostgresOrderConversationPort {
        JOIN crm.contact_identities identity
          ON identity.id = conversation.contact_identity_id
        JOIN crm.contacts contact ON contact.id = identity.current_contact_id
-       WHERE conversation.id = $1`,
-      [conversationId],
+       WHERE conversation.id = ANY($1::text[])`,
+      [conversationIds],
     );
-    const row = result.rows[0];
-    if (!row) return null;
-    return {
-      briefing: row.briefing_envelope
-        ? decryptJson(
-            row.briefing_envelope,
-            `n8n-briefing:${row.id}:${row.briefing_version}`,
-            this.#envelopeKey,
-          )
-        : null,
-      // ADR 016: only a confirmed name. Without one the order falls back to
-      // the briefing's `customer_name`, then stays blank for the seller.
-      customerName: CONFIRMED_NAME_SOURCES.has(row.display_name_source)
-        ? (row.display_name ?? null)
-        : null,
-      // The first inbound message of this conversation opened it.
-      openedAt: new Date(row.opened_at).toISOString(),
-    };
+    return new Map(
+      result.rows.map((row) => [
+        row.id,
+        {
+          briefing: row.briefing_envelope
+            ? decryptJson(
+                row.briefing_envelope,
+                `n8n-briefing:${row.id}:${row.briefing_version}`,
+                this.#envelopeKey,
+              )
+            : null,
+          // ADR 016: only a confirmed name. Without one the order falls back
+          // to the briefing's `customer_name`, then stays blank for the seller.
+          customerName: CONFIRMED_NAME_SOURCES.has(row.display_name_source)
+            ? (row.display_name ?? null)
+            : null,
+          // The first inbound message of this conversation opened it.
+          openedAt: new Date(row.opened_at).toISOString(),
+        },
+      ]),
+    );
   }
 
   /**

@@ -7,6 +7,7 @@ import { createOrderRuntime } from '../apps/api/src/order-runtime.js';
 import { InMemoryIdempotencyRecordStore } from '../modules/integration-reliability/src/index.js';
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
 import { syntheticItems } from './fixtures/order-items.js';
+import { orderContextsFrom } from './fixtures/order-contexts.js';
 
 const synthetic = JSON.parse(
   await readFile(
@@ -64,6 +65,9 @@ function orderHarness(options = {}) {
   };
   /** @type {Record<string, string|null>} */
   const names = { 'seller-1': 'Vendedora Um', 'seller-2': 'Vendedor Dois' };
+  // ADR 018: the contact's confirmed name; a test renames it here.
+  /** @type {Record<string, string|null>} */
+  const contactNames = {};
   /** @type {Array<{method: string, input: any}>} */
   const guards = [];
   let clock = Date.parse('2026-09-12T15:00:00.000Z');
@@ -98,14 +102,15 @@ function orderHarness(options = {}) {
           : null,
       readAssignments: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, assignments[id] ?? null])),
-      readOrderContext: async (/** @type {string} */ id) =>
+      readOrderContexts: orderContextsFrom((/** @type {string} */ id) =>
         id in assignments
           ? {
               briefing: { order_name: 'Equipe Sintetica' },
-              customerName: 'Cliente Sintetico',
+              customerName: contactNames[id] ?? 'Cliente Sintetico',
               openedAt: '2026-09-01T13:05:00.000Z',
             }
           : null,
+      ),
       readUserNames: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, names[id] ?? null])),
       searchConversationIds: async (/** @type {string} */ query) =>
@@ -120,7 +125,15 @@ function orderHarness(options = {}) {
     repository,
   });
   const api = createApi({}, { orders: runtime });
-  return { api, assignments, guards, names, repository, runtime };
+  return {
+    api,
+    assignments,
+    contactNames,
+    guards,
+    names,
+    repository,
+    runtime,
+  };
 }
 
 let seedSequence = 0;
@@ -1085,6 +1098,73 @@ test('GET /orders/:orderId/print renders the confirmed order on the printed temp
   assert.match(html, /FAB 01/u);
   assert.match(html, /Vendedora Um/u);
   assert.doesNotMatch(html, /Vendedor Dois/u);
+});
+
+test('the client follows a renamed contact while pending and stays on the generated order and its paper (ADR 018)', async (t) => {
+  const { api, contactNames, runtime } = orderHarness();
+  t.after(() => api.close());
+  const pending = await createPending(runtime, 'conversation-1');
+  assert.equal(pending.ficha.summary.cliente, 'Cliente Sintetico');
+  /** @param {string} url */
+  const read = async (url) =>
+    (await api.inject({ headers: readHeaders, method: 'GET', url })).json();
+  const clients = async (/** @type {string} */ orderId) => {
+    const detail = await read(`/api/v1/orders/${orderId}`);
+    const list = await read('/api/v1/orders');
+    const drawer = await read('/api/v1/conversations/conversation-1/order');
+    return {
+      detail: detail.order.ficha.summary.cliente,
+      drawer: drawer.order.ficha.summary.cliente,
+      list: list.items.map((/** @type {any} */ order) => [
+        order.id,
+        order.ficha.summary.cliente,
+      ]),
+      version: detail.order.version,
+    };
+  };
+
+  // PCT-01: a rename reaches the pending order everywhere, as no change.
+  contactNames['conversation-1'] = 'Cliente Renomeado';
+  assert.deepEqual(await clients(pending.id), {
+    detail: 'Cliente Renomeado',
+    drawer: 'Cliente Renomeado',
+    list: [[pending.id, 'Cliente Renomeado']],
+    version: pending.version,
+  });
+
+  // PCT-02: generating keeps the name it showed, on screen and on paper.
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  assert.equal(confirmed.id, pending.id);
+  assert.equal(confirmed.ficha.summary.cliente, 'Cliente Renomeado');
+  contactNames['conversation-1'] = 'Outro Nome Sintetico';
+  assert.deepEqual(await clients(confirmed.id), {
+    detail: 'Cliente Renomeado',
+    drawer: 'Cliente Renomeado',
+    list: [[confirmed.id, 'Cliente Renomeado']],
+    version: confirmed.version,
+  });
+  const printed = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${confirmed.id}/print`,
+  });
+  assert.equal(printed.statusCode, 200);
+  assert.match(printed.body, /Cliente Renomeado/u);
+  assert.doesNotMatch(printed.body, /Outro Nome Sintetico/u);
+
+  // PCT-03: reopened, it follows the contact again.
+  const reopened = await api.inject({
+    headers: writeHeaders,
+    method: 'POST',
+    payload: { expectedVersion: confirmed.version },
+    url: `/api/v1/orders/${confirmed.id}/reopen`,
+  });
+  assert.equal(reopened.statusCode, 200);
+  assert.equal(
+    reopened.json().order.ficha.summary.cliente,
+    'Outro Nome Sintetico',
+  );
+  assert.equal((await clients(confirmed.id)).drawer, 'Outro Nome Sintetico');
 });
 
 test('the printed order hides money, the sample band and empty fields', async (t) => {

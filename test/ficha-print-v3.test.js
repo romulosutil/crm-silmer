@@ -389,7 +389,7 @@ test('keeps the 14 production fields of v2 and the review marks on the sample on
   /** @param {string} html */
   const withoutReviewBox = (html) =>
     productionPage(html).replace(
-      /\n\s*<div class="review-box">.*?<\/div>/u,
+      /\n\s*<div class="review-box">.*?<\/div>(?:\n\s*<div class="signatures">.*?<\/div>)?/u,
       '',
     );
 
@@ -414,7 +414,16 @@ test('keeps the 14 production fields of v2 and the review marks on the sample on
   );
   assert.match(v3.sample, /Amostra sintética — não produzir/u);
   assert.match(v3.sample, /Aprovação pendente/u);
-  assert.match(v3.sample, /O PO decide quem assina/u);
+  // Rose and Operação sign the printed sample by hand (ADR 017).
+  assert.match(
+    v3.sample,
+    /Rose e Operação aprovam a v3 assinando à mão esta amostra impressa/u,
+  );
+  assert.match(
+    v3.sample,
+    /<div class="signatures"><span>Assinatura de Rose<\/span><span>Data<\/span><span>Assinatura de Operação<\/span><span>Data<\/span><\/div>/u,
+  );
+  assert.doesNotMatch(v3.real, /<div class="signatures">/u);
 });
 
 test('writes every printed label with its accents, on both pages (PIM-11)', () => {

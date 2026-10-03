@@ -48,14 +48,19 @@ async function fixture() {
   };
 }
 
-/** A complete approval, in memory only: no one has signed the real gate. */
+/**
+ * A complete approval, in memory only: Rose and Operação have not signed the
+ * printed sample, and the real record stays pending.
+ */
 function approvedCopy(/** @type {any} */ gate) {
   const approved = structuredClone(gate);
   approved.approval = {
     status: 'approved',
     approved: true,
-    reviewedBy: [{ name: 'Pessoa Sintetica', role: 'PO' }],
+    signature: 'physical',
+    reviewedBy: { rose: 'Rose', operation: 'Operacao Silmer' },
     reviewedAt: '2026-10-03T10:00:00-03:00',
+    signedPaperKeptAt: 'Pasta de fichas aprovadas da Silmer',
     criteria: Object.fromEntries(
       Object.keys(gate.approval.criteria).map((key) => [key, true]),
     ),
@@ -74,6 +79,8 @@ function approvedCopy(/** @type {any} */ gate) {
     reviewedAt: approved.approval.reviewedAt,
     reviewedBy: approved.approval.reviewedBy,
     criteria: approved.approval.criteria,
+    signature: 'physical',
+    signedPaperKeptAt: approved.approval.signedPaperKeptAt,
     visualEvidence: [{ type: 'git', ref: 'git:abc1234', containsPii: false }],
   };
   return { approved, evidence };
@@ -178,7 +185,9 @@ test('locks the sample, the rendered HTML and the PDF by hash, approval pending'
   // Nobody signed v3: the human approval is left wholly pending.
   assert.equal(gate.approval.status, 'pending-human-approval');
   assert.equal(gate.approval.approved, false);
-  assert.equal(gate.approval.reviewedBy, null);
+  assert.equal(gate.approval.signature, 'physical');
+  assert.deepEqual(gate.approval.reviewedBy, { rose: null, operation: null });
+  assert.equal(gate.approval.signedPaperKeptAt, null);
   assert.equal(gate.approval.reviewedAt, null);
   assert.equal(gate.approval.evidenceRef, null);
   assert.ok(Object.values(gate.approval.criteria).every((v) => v === null));
@@ -230,16 +239,37 @@ test('accepts only a whole approval with evidence, never a partial one', async (
   );
 
   const partial = structuredClone(gate);
-  partial.approval.reviewedBy = [{ name: 'Pessoa Sintetica', role: 'PO' }];
+  partial.approval.reviewedBy.rose = 'Rose';
   assert.throws(
     () => validateFichaApprovalGateV3({ ...input, gate: partial }),
     /wholly pending or wholly approved/u,
   );
   const unnamed = structuredClone(approved);
-  unnamed.approval.reviewedBy = [{ name: '', role: 'PO' }];
+  unnamed.approval.reviewedBy.operation = '';
   assert.throws(
     () => validateFichaApprovalGateV3({ ...input, evidence, gate: unnamed }),
     /wholly pending or wholly approved/u,
+  );
+  const paperNowhere = structuredClone(approved);
+  paperNowhere.approval.signedPaperKeptAt = null;
+  assert.throws(
+    () =>
+      validateFichaApprovalGateV3({ ...input, evidence, gate: paperNowhere }),
+    /wholly pending or wholly approved/u,
+  );
+  // Only Rose and Operação sign, by hand on the printed sample.
+  const otherSigners = structuredClone(approved);
+  otherSigners.approval.reviewedBy = { po: 'Pessoa Sintetica' };
+  assert.throws(
+    () =>
+      validateFichaApprovalGateV3({ ...input, evidence, gate: otherSigners }),
+    /physical signature by Rose and Operação/u,
+  );
+  const digital = structuredClone(approved);
+  digital.approval.signature = 'digital';
+  assert.throws(
+    () => validateFichaApprovalGateV3({ ...input, evidence, gate: digital }),
+    /physical signature by Rose and Operação/u,
   );
   const oneCriterion = structuredClone(approved);
   oneCriterion.approval.criteria.printing = false;

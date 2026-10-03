@@ -282,10 +282,11 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
       ],
     },
   ];
-  // The review box belongs to the synthetic review package, like the band:
-  // a printed order never tells the shop floor that a gate is pending.
+  // The review box and the signature lines belong to the synthetic review
+  // package, like the band: a printed order never tells the shop floor that
+  // a gate is pending. Rose and Operação sign the printed sample by hand.
   const reviewBox = synthetic
-    ? '\n      <div class="review-box"><strong>Aprovação pendente</strong><span>Amostra para aprovar a v3 antes de valer (ADR 017). O PO decide quem assina; a aprovação fica registrada no repositório, nunca neste arquivo.</span></div>'
+    ? '\n      <div class="review-box"><strong>Aprovação pendente</strong><span>Rose e Operação aprovam a v3 assinando à mão esta amostra impressa (ADR 017). Depois que o PO confirmar a assinatura, o Tech Lead registra no repositório a data, quem assinou, o hash deste PDF e onde o papel fica guardado.</span></div>\n      <div class="signatures"><span>Assinatura de Rose</span><span>Data</span><span>Assinatura de Operação</span><span>Data</span></div>'
     : '';
 
   return `<!doctype html>
@@ -372,6 +373,8 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
       .review-box { align-items: center; background: var(--deep); border-radius: 7px; color: white; display: flex; justify-content: space-between; margin-top: 8px; padding: 8px 10px; }
       .review-box strong { color: #ffb185; }
       .review-box span { font-size: 7px; max-width: 590px; }
+      .signatures { display: grid; gap: 18px; grid-template-columns: 2fr 1fr 2fr 1fr; margin-top: 30px; }
+      .signatures span { border-top: 1px solid var(--text); font-size: 8px; font-weight: 700; padding-top: 4px; }
     </style>
   </head>
   <body>

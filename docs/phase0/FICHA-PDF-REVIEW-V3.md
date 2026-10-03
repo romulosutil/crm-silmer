@@ -6,15 +6,18 @@ troca de template é a `T64` (`PIM-10`).
 
 ## Estado do gate
 
-**Pendente.** O PDF da v3 foi gerado com dados fictícios e espera a aprovação
-do PO. Enquanto o registro estiver pendente, todo pedido impresso continua no
-template `ficha-canonical-v2`, aprovado em 31/08/2026
+**Pendente.** O PDF da v3 foi gerado com dados fictícios e espera a assinatura
+de Rose e Operação. Enquanto o registro estiver pendente, todo pedido impresso
+continua no template `ficha-canonical-v2`, aprovado em 31/08/2026
 ([revisão da v2](FICHA-PDF-REVIEW.md)), e a validação recusa a v3 no ponto de
 troca.
 
-**Quem assina é decisão do PO.** Na v2 assinaram Rose e Operação. Para a v3, o
-PO indica os papéis e as pessoas; o registro aceita essa lista como vier, desde
-que tenha ao menos um nome por papel.
+**Quem assina e como** (PO, 03/10/2026). Assinam só Rose e Operação, como na
+v2. A assinatura é física: as duas assinam à mão a amostra v3 impressa, nas
+linhas "Assinatura de Rose", "Assinatura de Operação" e "Data" da última
+página. O registro espelha o da v2 (`reviewedBy` com `rose` e `operation`) e
+marca a assinatura como física (`signature: "physical"`). Ninguém preenche o
+registro antes de o PO confirmar que o papel foi assinado.
 
 ## Pacote versionado
 
@@ -78,26 +81,30 @@ foi gerado no Dell, com Liberation Sans no lugar de Arial (mesmas medidas).
    - **Acentos:** todo rótulo impresso com acento, em todas as páginas e na faixa
      de amostra; nas mangas da regata, o valor gravado "NAO APLICAVEL" sai
      como "NÃO APLICÁVEL". O texto digitado sai como foi digitado.
-4. Registrar individualmente os seis critérios do gate: `legibility`,
-   `content`, `order`, `grade`, `totals` e `printing`.
-5. Se qualquer critério falhar, manter o gate pendente e pedir a correção: o
-   PDF é gerado de novo enquanto pendente. Depois de aprovado, correção só em
-   nova versão de template.
+4. Rose e Operação registram os seis critérios do gate (`legibility`,
+   `content`, `order`, `grade`, `totals` e `printing`) e, se todos passarem,
+   assinam à mão a amostra impressa, com a data, na última página.
+5. Se qualquer critério falhar, a amostra não é assinada e o gate fica
+   pendente: o PDF é gerado de novo enquanto pendente. Depois de aprovado,
+   correção só em nova versão de template.
 
 ## Registro do aceite
 
-Depois da revisão, na PR de aprovação:
+Só depois que o PO confirmar que Rose e Operação assinaram o papel, o Tech
+Lead registra a aprovação, na PR de aprovação:
 
 1. Criar `docs/phase0/ficha-pdf-approved-evidence-v3.json` com
    `schemaVersion`, `task` (`T63`), `adr` (`017`), `syntheticOnly`, versões e
    hashes copiados do registro (`snapshotSha256`, `renderedHtmlSha256`,
-   `artifactSha256`), `reviewedAt`, `reviewedBy`, os seis critérios `true` e ao
-   menos uma referência visual sem PII no formato `git:<sha>` ou `silmer:<id>`.
+   `artifactSha256`, o hash do PDF que foi impresso e assinado), `reviewedAt`,
+   `reviewedBy`, os seis critérios `true`, `signature: "physical"`,
+   `signedPaperKeptAt` (onde o papel assinado fica guardado) e ao menos uma
+   referência visual sem PII no formato `git:<sha>` ou `silmer:<id>`.
 2. Em `ficha-pdf-approval-v3.json`, mudar o estado inteiro para `approved`:
-   `approved: true`, `reviewedBy` com a lista que o PO definiu
-   (`[{ "role": "...", "name": "..." }]`), data ISO 8601, seis critérios `true`
-   e `evidenceRef` apontando para o arquivo de evidência. Estado parcial
-   falha.
+   `approved: true`, `reviewedBy` com `rose` e `operation` preenchidos, a data
+   da assinatura em ISO 8601, `signedPaperKeptAt`, seis critérios `true` e
+   `evidenceRef` apontando para o arquivo de evidência. Estado parcial falha,
+   e outros assinantes ou assinatura que não seja física também.
 3. `npm run validate:ficha-pdf-review` valida a transição completa.
 4. Num commit próprio, o Tech Lead troca `PRINT_TEMPLATE` para `TEMPLATE_V3`
    em `modules/orders/src/print/index.js` (T64). Com o gate pendente, essa
@@ -107,5 +114,6 @@ Depois da revisão, na PR de aprovação:
    procurar "Entrega prometida", e o teste da v2 byte a byte em
    `test/ficha-print-switch.test.js` passa a ser pulado sozinho.
 
-Não registrar telefone, e-mail, pedido real, assinatura manuscrita ou qualquer
-outro dado pessoal na evidência.
+Não registrar telefone, e-mail, pedido real, foto ou cópia da assinatura
+manuscrita nem qualquer outro dado pessoal na evidência: o papel assinado fica
+guardado fora do repositório, no lugar que o registro indica.

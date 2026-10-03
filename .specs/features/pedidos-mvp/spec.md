@@ -674,23 +674,25 @@ PIT-06, PIT-10, PIT-05, PIT-06 e PIT-12.
 ### Ficha impressa com os sete pontos (ADR 017)
 
 A evidência do template vale para a v3; o papel só muda depois da aprovação
-do PDF (PIM-10). O PDF tem as páginas que o template planejou (PIM-12). O registro da aprovação fica em
+do PDF (PIM-10). O PDF tem as páginas que o template planejou (PIM-12).
+Aprovam só Rose e Operação, com assinatura física na amostra impressa; o
+registro fica pendente até o PO confirmar a assinatura. O registro da aprovação fica em
 `docs/phase0/ficha-pdf-approval-v3.json`.
 
 | ID     | História | Evidência                                                                                   | Status                         |
 | ------ | -------- | ------------------------------------------------------------------------------------------- | ------------------------------ |
-| PIM-06 | P1-5     | `test/ficha-print-v3.test.js:168,200`; `test/ficha-pdf-review-v3.test.js:82`                | Verified · PDF a aprovar       |
-| PIM-07 | P1-5     | `test/ficha-print-v3.test.js:224`; `test/ficha-pdf-review-v3.test.js:82,101`                | Verified · PDF a aprovar       |
+| PIM-06 | P1-5     | `test/ficha-print-v3.test.js:168,200`; `test/ficha-pdf-review-v3.test.js:89`                | Verified · PDF a aprovar       |
+| PIM-07 | P1-5     | `test/ficha-print-v3.test.js:224`; `test/ficha-pdf-review-v3.test.js:89,108`                | Verified · PDF a aprovar       |
 | PIM-08 | P1-5     | `test/ficha-print-v3.test.js:251`                                                           | Verified · PDF a aprovar       |
 | PIM-09 | P1-5     | `test/ficha-print-v3.test.js:282,309,375`                                                   | Verified · PDF a aprovar       |
 | PIM-10 | P1-5     | `test/ficha-print-switch.test.js:146,155,196,203,222`; `npm run validate:ficha-pdf-review`  | Verified · v2 até a aprovação  |
-| PIM-11 | P1-5     | `test/ficha-print-v3.test.js:420,445`; `test/ficha-pdf-review-v3.test.js:138`               | Verified · PDF a aprovar       |
-| PIM-12 | P1-5     | `test/ficha-print-v3.test.js:462,470,507,517`; `test/ficha-pdf-review-v3.test.js:153`       | Verified · PDF a aprovar       |
-| PLA-08 | P1-10    | `test/ficha-print-v3.test.js:339,560`; `test/ficha-pdf-review-v3.test.js:153`               | Verified · PDF a aprovar       |
+| PIM-11 | P1-5     | `test/ficha-print-v3.test.js:429,454`; `test/ficha-pdf-review-v3.test.js:145`               | Verified · PDF a aprovar       |
+| PIM-12 | P1-5     | `test/ficha-print-v3.test.js:471,479,516,526`; `test/ficha-pdf-review-v3.test.js:160`       | Verified · PDF a aprovar       |
+| PLA-08 | P1-10    | `test/ficha-print-v3.test.js:339,569`; `test/ficha-pdf-review-v3.test.js:160`               | Verified · PDF a aprovar       |
 
 O gate do pacote (hashes da amostra, do HTML e do PDF, aprovação inteira ou
 pendente, recusa de regerar a versão aprovada) está em
-`test/ficha-pdf-review-v3.test.js:153,218,266` e em
+`test/ficha-pdf-review-v3.test.js:160,227,296` e em
 `npm run validate:ficha-pdf-review`.
 
 ## Roteiro de UAT

@@ -15,17 +15,19 @@
   "snapshotVersion": "synthetic-order-v3",
   "templateVersion": "ficha-canonical-v3",
   "snapshotSha256": "2e0a60b70f4f54abf5924260ac2b4c4517b3ebd0e643cf2b6c7077123b28e712",
-  "renderedHtmlSha256": "6004639d557956fcb6774c1761f5b94f2b7f0b2076517c4cae36cbb4d5732c0b",
+  "renderedHtmlSha256": "03cd038e138bf86ccb7a7fcdea6ab78f035ae43b499e2a4cdfc80f59343fa91d",
   "artifact": {
     "path": "output/pdf/ficha-canonica-sintetica-v3.pdf",
-    "sha256": "d6e58e833662c360c59f3e9fb939491de4a2691c31485c5e384f09a4e66b7dd2",
+    "sha256": "1e449d47b4ece26b9331eee7cd85c0059d56ec95f4c159fcbfc5ea18838b5426",
     "pageCount": 3
   },
   "approval": {
     "status": "pending-human-approval",
     "approved": false,
-    "reviewedBy": null,
+    "signature": "physical",
+    "reviewedBy": { "rose": null, "operation": null },
     "reviewedAt": null,
+    "signedPaperKeptAt": null,
     "criteria": {
       "legibility": null,
       "content": null,

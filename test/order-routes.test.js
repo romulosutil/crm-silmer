@@ -69,7 +69,7 @@ function orderHarness(options = {}) {
   // ADR 018: the contact's confirmed name; a test renames it here.
   /** @type {Record<string, string|null>} */
   const contactNames = {};
-  /** @type {Map<string, {direction: string, occurredAt: string, deliveryStatus: string|null, status: string}>} */
+  /** @type {Map<string, {direction: string, occurredAt: string, sentAt: string|null, deliveryStatus: string|null, status: string}>} */
   const latestMessageStates = new Map();
   /** @type {Array<{method: string, input: any}>} */
   const guards = [];
@@ -233,6 +233,7 @@ test('orders expose last-message delivery state without message content', async 
   latestMessageStates.set('conversation-1', {
     direction: 'outbound',
     occurredAt: '2026-10-03T12:00:00.000Z',
+    sentAt: null,
     deliveryStatus: 'failed',
     status: 'sent',
   });
@@ -245,6 +246,7 @@ test('orders expose last-message delivery state without message content', async 
   assert.deepEqual(response.json().order.lastMessage, {
     direction: 'outbound',
     occurredAt: '2026-10-03T12:00:00.000Z',
+    sentAt: null,
     deliveryStatus: 'failed',
     status: 'sent',
   });

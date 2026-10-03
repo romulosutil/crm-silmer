@@ -25,6 +25,7 @@ test('prioritizes a pending order only after a delivered outbound message and op
         direction: 'outbound',
         deliveryStatus: 'delivered',
         occurredAt: ago(50),
+        sentAt: ago(50),
       },
     },
     {
@@ -36,6 +37,31 @@ test('prioritizes a pending order only after a delivered outbound message and op
         direction: 'inbound',
         deliveryStatus: null,
         occurredAt: ago(50),
+        sentAt: null,
+      },
+    },
+    {
+      ...base,
+      ficha: { summary: { cliente: 'Envio recente', nome: 'Aventais' } },
+      id: 'order-recent-send',
+      number: '27-CRM',
+      lastMessage: {
+        direction: 'outbound',
+        deliveryStatus: 'sent',
+        occurredAt: ago(72),
+        sentAt: ago(1),
+      },
+    },
+    {
+      ...base,
+      ficha: { summary: { cliente: 'Envio incerto', nome: 'Bonés' } },
+      id: 'order-unknown-send',
+      number: '28-CRM',
+      lastMessage: {
+        direction: 'outbound',
+        deliveryStatus: 'outcome_unknown',
+        occurredAt: ago(72),
+        sentAt: null,
       },
     },
   ];
@@ -56,7 +82,7 @@ test('prioritizes a pending order only after a delivered outbound message and op
       await route.fulfill({
         json: {
           items,
-          counts: { confirmado: 0, pendente: 2 },
+          counts: { confirmado: 0, pendente: 4 },
           nextCursor: null,
         },
       });
@@ -72,6 +98,10 @@ test('prioritizes a pending order only after a delivered outbound message and op
   const replied = page.getByRole('row', { name: /Cliente respondeu/ });
   await expect(replied).not.toContainText('Cliente sem resposta há');
   await expect(replied).toContainText('Revisar pedido');
+  const recent = page.getByRole('row', { name: /Envio recente/ });
+  await expect(recent).not.toContainText('Cliente sem resposta há');
+  const unknown = page.getByRole('row', { name: /Envio incerto/ });
+  await expect(unknown).not.toContainText('Cliente sem resposta há');
   await waiting.getByRole('cell', { name: '10' }).click();
   await expect(page).toHaveURL('/pedidos/order-waiting');
 });

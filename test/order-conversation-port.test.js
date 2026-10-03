@@ -23,6 +23,17 @@ test('last message status is read in one batch without content or identity', asy
               status: 'sent',
               delivery_status: 'failed',
               occurred_at: '2026-10-03T10:00:00.000Z',
+              sent_at: '2026-10-03T10:05:00.000Z',
+            },
+            {
+              conversation_id: 'conversation-2',
+              direction: 'outbound',
+              status: 'sent',
+              delivery_status: 'read',
+              occurred_at: '2026-10-01T10:00:00.000Z',
+              // The command completed after queueing; a later read receipt
+              // must not replace this confirmed send time.
+              sent_at: '2026-10-03T09:00:00.000Z',
             },
           ],
         };
@@ -39,7 +50,18 @@ test('last message status is read in one batch without content or identity', asy
         {
           direction: 'outbound',
           occurredAt: '2026-10-03T10:00:00.000Z',
+          sentAt: '2026-10-03T10:05:00.000Z',
           deliveryStatus: 'failed',
+          status: 'sent',
+        },
+      ],
+      [
+        'conversation-2',
+        {
+          direction: 'outbound',
+          occurredAt: '2026-10-01T10:00:00.000Z',
+          sentAt: '2026-10-03T09:00:00.000Z',
+          deliveryStatus: 'read',
           status: 'sent',
         },
       ],
@@ -47,7 +69,9 @@ test('last message status is read in one batch without content or identity', asy
   );
   assert.equal(queries.length, 1);
   assert.deepEqual(queries[0].values, [ids]);
-  assert.match(queries[0].sql, /DISTINCT ON \(conversation_id\)/u);
+  assert.match(queries[0].sql, /DISTINCT ON \(message\.conversation_id\)/u);
+  assert.match(queries[0].sql, /send_command\.completed_at/u);
+  assert.match(queries[0].sql, /message\.delivery_status_at/u);
   assert.doesNotMatch(
     queries[0].sql,
     /content_envelope|author_id|external_message_id/u,

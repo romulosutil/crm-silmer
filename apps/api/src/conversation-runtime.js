@@ -25,7 +25,6 @@ export function createConversationApiRuntime(
     authorize: access.authorize,
     claimHandoff: handoffs.claimHandoff,
     close: service.transitionConversation,
-    returnToAi: service.reactivateAgent,
     sendMessage: service.sendHumanMessage,
     takeover: service.takeover,
     transfer: service.transferConversation,

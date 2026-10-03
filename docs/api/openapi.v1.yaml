@@ -899,14 +899,19 @@ paths:
   /conversations/{conversationId}/{command}:
     post:
       operationId: changeConversationAutomationMode
-      summary: Executa takeover, retorno à IA ou encerramento humano
+      summary: Executa takeover ou encerramento humano
+      description: >-
+        A conversa com uma pessoa nunca volta para o bot (ADR 015). O comando
+        `return-to-ai` foi removido: a rota não existe e responde 404, como
+        qualquer rota desconhecida, antes da autenticação e sem tocar a
+        conversa.
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
       parameters:
         - $ref: '#/components/parameters/ConversationId'
         - name: command
           in: path
           required: true
-          schema: { type: string, enum: [takeover, return-to-ai, close] }
+          schema: { type: string, enum: [takeover, close] }
         - $ref: '#/components/parameters/Origin'
       requestBody:
         required: true
@@ -917,6 +922,7 @@ paths:
         '202': { description: Estado oficial, auditoria e outbox gravados }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: 'Comando inexistente, inclusive `return-to-ai` (ADR 015)' }
         '409': { $ref: '#/components/responses/Conflict' }
   /conversations/{conversationId}/archive:
     post:

@@ -11,6 +11,32 @@ export const INBOX_STATES = Object.freeze([
 
 export const TERMINAL_INBOX_STATES = Object.freeze(['sem_lead']);
 
+/**
+ * The conversation changes a person can make. ADR 015: once a person has the
+ * conversation it never goes back to the bot, so none of them sets
+ * `automation_state` to `assistant`. The former `reactivate` ("Devolver à
+ * IA") is refused like any unknown change; its past audit entries stay as
+ * history.
+ */
+export const CONVERSATION_MUTATIONS = Object.freeze([
+  'archive',
+  'send',
+  'takeover',
+  'transfer',
+  'transition',
+  'unarchive',
+]);
+
+/** @param {unknown} kind */
+export function assertConversationMutation(kind) {
+  if (typeof kind !== 'string' || !CONVERSATION_MUTATIONS.includes(kind)) {
+    throw new InboxValidationError(
+      'kind must be an approved conversation mutation',
+    );
+  }
+  return kind;
+}
+
 /** @param {unknown} state */
 export function assertInboxState(state) {
   if (typeof state !== 'string' || !INBOX_STATES.includes(state)) {

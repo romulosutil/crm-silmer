@@ -475,7 +475,12 @@ async function runCommand(path, body, successMessage) {
   }
 }
 
-/** @param {string} path @param {string} successMessage */
+/**
+ * The only automation change a person makes is taking the conversation from
+ * the bot; ADR 015 removed handing it back.
+ *
+ * @param {string} path @param {string} successMessage
+ */
 async function changeAutomation(path, successMessage) {
   await runCommand(
     path,
@@ -901,16 +906,8 @@ onBeforeUnmount(() => {
             >
               Assumir atendimento
             </button>
-            <button
-              v-else
-              type="button"
-              :disabled="busy || !canAct"
-              @click="
-                changeAutomation('return-to-ai', 'Atendimento devolvido à IA.')
-              "
-            >
-              Devolver à IA
-            </button>
+            <!-- ADR 015: once a person has the conversation it never goes
+                 back to the bot, so there is no hand-back action here. -->
             <button
               v-if="canTransfer"
               type="button"

@@ -773,6 +773,53 @@ test('labels human and AI service distinctly and only permits transfer after tak
   ).toHaveCount(0);
 });
 
+test('never offers to hand the conversation back to the AI and keeps the actions on the keyboard', async ({
+  page,
+}) => {
+  // ADR 015: a conversation with a person never goes back to the bot.
+  /** @type {string[]} */
+  const handBackRequests = [];
+  page.on('request', (request) => {
+    if (/return-to-ai|reactivate/u.test(request.url())) {
+      handBackRequests.push(request.url());
+    }
+  });
+  await mockCrm(page);
+  await page.goto('/inbox');
+  const actions = page.locator('.conv-actions');
+  const order = actions.getByRole('button', { name: /^Pedido/ });
+  await expect(order).toBeVisible();
+  await expect(page.getByRole('button', { name: /Devolver/ })).toHaveCount(0);
+  await expect(page.getByText(/à IA/u)).toHaveCount(0);
+
+  // The remaining actions form one tab sequence, with no gap where the
+  // removed button was.
+  await order.focus();
+  for (const name of ['Repassar atendimento', 'Arquivar conversa']) {
+    await page.keyboard.press('Tab');
+    await expect(actions.getByRole('button', { name })).toBeFocused();
+  }
+  await page.keyboard.press('Tab');
+  await expect(
+    actions.getByRole('link', { name: 'Ver contato' }),
+  ).toBeFocused();
+  await actions.getByRole('button', { name: 'Repassar atendimento' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Repassar venda para')).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // With the agent, or waiting for a seller, taking over is the only change.
+  for (const state of [{ assistant: true }, { pendingHandoff: true }]) {
+    await mockCrm(page, state);
+    await page.reload();
+    await expect(
+      actions.getByRole('button', { name: 'Assumir atendimento' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: /Devolver/ })).toHaveCount(0);
+  }
+  expect(handBackRequests).toEqual([]);
+});
+
 test('keeps a long conversation inside its own scrollable message area', async ({
   page,
 }) => {

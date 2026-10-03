@@ -17,15 +17,12 @@ class ConversationRequestError extends Error {
  * @param {(request: object) => {correlationId: string, requestId: string}} contextFor
  */
 export function registerConversationRoutes(api, conversations, contextFor) {
+  // ADR 015: a conversation never goes back to the bot. `return-to-ai` is not
+  // registered, so it answers 404 like any unknown route, before
+  // authentication and without reaching the domain.
   const stateCommands =
     /** @type {Array<[string, string, string, string|undefined]>} */ ([
       ['takeover', 'conversation.takeover', 'takeover', undefined],
-      [
-        'return-to-ai',
-        'conversation.reactivate-agent',
-        'returnToAi',
-        undefined,
-      ],
       ['close', 'conversation.transition', 'close', 'sem_lead'],
     ]);
   for (const [path, action, method, state] of stateCommands) {

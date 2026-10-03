@@ -7,7 +7,11 @@ import {
 } from 'node:crypto';
 
 import { InboxConflictError, InboxForbiddenError } from '../domain/errors.js';
-import { freezeInboxRecord, isTerminalInboxState } from '../domain/inbox.js';
+import {
+  assertConversationMutation,
+  freezeInboxRecord,
+  isTerminalInboxState,
+} from '../domain/inbox.js';
 
 const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
 
@@ -15,7 +19,6 @@ const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
 const STREAM_EVENT_TYPES = Object.freeze({
   archive: 'conversation.archived',
   unarchive: 'conversation.unarchived',
-  reactivate: 'conversation.assistant_reactivated',
   send: 'conversation.message_queued',
   takeover: 'conversation.taken_over',
   transfer: 'conversation.transferred',
@@ -63,8 +66,8 @@ async function appendConversationStreamEvent(transaction, event) {
 
 /**
  * A conversation belongs to whoever took it over. Another seller must not be
- * able to answer, close, hand back to the AI, or re-take it; only an
- * administrator may override, and only a transfer moves ownership on purpose.
+ * able to answer, close or re-take it; only an administrator may override, and
+ * only a transfer moves ownership on purpose.
  *
  * @param {string} kind
  * @param {{assigned_user_id: string|null}} current
@@ -269,6 +272,9 @@ export class PostgresInboxRepository {
 
   /** @param {string} kind @param {any} input @param {any} runtime */
   async mutateConversation(kind, input, runtime) {
+    // ADR 015: refused before any lock or read, so the former `reactivate`
+    // cannot touch the conversation, the audit trail or the n8n outbox.
+    assertConversationMutation(kind);
     const fingerprint = hashJson(input);
     return this.#database.transaction(async (transaction) => {
       await advisoryLock(
@@ -410,11 +416,9 @@ export class PostgresInboxRepository {
       const panelAction =
         kind === 'takeover'
           ? 'take_over'
-          : kind === 'reactivate'
-            ? 'return_to_ai'
-            : kind === 'transition' && input.state === 'sem_lead'
-              ? 'close'
-              : null;
+          : kind === 'transition' && input.state === 'sem_lead'
+            ? 'close'
+            : null;
       if (
         panelAction !== null &&
         typeof this.#outboundMessageOutbox.enqueuePanelCommand === 'function'
@@ -566,11 +570,8 @@ function mutationAssignments(kind, input, occurredAt) {
       values: [input.targetUserId],
     };
   }
-  return {
-    sql: `automation_state = 'assistant', automation_epoch = automation_epoch + 1,
-          assigned_user_id = NULL`,
-    values: [],
-  };
+  // ADR 015: no change hands the conversation back to the assistant.
+  throw new TypeError(`Unsupported conversation mutation: ${kind}`);
 }
 
 /** @param {any} row */
@@ -718,7 +719,6 @@ function createAudit(kind, input, result, occurredAt) {
   const actions = {
     archive: 'conversation.archived',
     unarchive: 'conversation.unarchived',
-    reactivate: 'conversation.assistant_reactivated',
     send: 'conversation.human_message_queued',
     takeover: 'conversation.takeover',
     transfer: 'conversation.transferred',

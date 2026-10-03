@@ -28,4 +28,8 @@ export {
   InboxForbiddenError,
   InboxValidationError,
 } from './domain/errors.js';
-export { INBOX_STATES, TERMINAL_INBOX_STATES } from './domain/inbox.js';
+export {
+  CONVERSATION_MUTATIONS,
+  INBOX_STATES,
+  TERMINAL_INBOX_STATES,
+} from './domain/inbox.js';

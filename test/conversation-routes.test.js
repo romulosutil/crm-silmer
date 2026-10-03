@@ -36,10 +36,6 @@ function harness() {
       calls.push({ input, method: 'close' });
       return { automationEpoch: 4, version: 8 };
     },
-    async returnToAi(/** @type {Record<string, unknown>} */ input) {
-      calls.push({ input, method: 'returnToAi' });
-      return { automationEpoch: 5, version: 9 };
-    },
     async sendMessage(/** @type {Record<string, unknown>} */ input) {
       calls.push({ input, method: 'sendMessage' });
       return { commandId: 'command-synthetic', version: 6 };
@@ -74,7 +70,6 @@ test('human conversation routes authorize, mutate state and enqueue commands', a
     ['archive', 'archive', 'conversation.archive'],
     ['unarchive', 'unarchive', 'conversation.unarchive'],
     ['takeover', 'takeover', 'conversation.takeover'],
-    ['return-to-ai', 'returnToAi', 'conversation.reactivate-agent'],
     ['close', 'close', 'conversation.transition'],
   ]) {
     const response = await api.inject({
@@ -144,4 +139,39 @@ test('human conversation routes reject requests without an idempotency key', asy
     false,
   );
   assert.equal(calls.length, 0);
+});
+
+test('no route hands a conversation back to the agent (ADR 015)', async (t) => {
+  const { api, calls } = harness();
+  t.after(() => api.close());
+  // A runtime that still carried the removed method must not be reachable.
+  const legacy = createApi(
+    {},
+    {
+      conversations: {
+        async authorize(/** @type {Record<string, unknown>} */ input) {
+          calls.push({ input, method: 'authorize' });
+          return { actor: { id: 'user-synthetic', role: 'Vendedor' } };
+        },
+        async returnToAi(/** @type {Record<string, unknown>} */ input) {
+          calls.push({ input, method: 'returnToAi' });
+          return { automationEpoch: 5, version: 9 };
+        },
+      },
+    },
+  );
+  t.after(() => legacy.close());
+
+  for (const server of [api, legacy]) {
+    for (const path of ['return-to-ai', 'reactivate-agent']) {
+      const response = await server.inject({
+        headers: baseHeaders,
+        method: 'POST',
+        payload: { expectedVersion: 6, reason: 'operator_command' },
+        url: `/api/v1/conversations/conversation-synthetic/${path}`,
+      });
+      assert.equal(response.statusCode, 404, path);
+    }
+  }
+  assert.deepEqual(calls, []);
 });

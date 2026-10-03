@@ -118,15 +118,6 @@ export function createInboxService({
       );
     },
 
-    async reactivateAgent(/** @type {any} */ command) {
-      validateHumanCommand(command);
-      return repository.mutateConversation(
-        'reactivate',
-        normalizeHumanCommand(command),
-        runtime,
-      );
-    },
-
     async recordSuggestion(/** @type {any} */ input) {
       if (input?.actor?.kind !== 'assistant') {
         throw new InboxForbiddenError();

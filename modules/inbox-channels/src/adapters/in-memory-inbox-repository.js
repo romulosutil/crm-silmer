@@ -1,5 +1,9 @@
 import { InboxConflictError, InboxForbiddenError } from '../domain/errors.js';
-import { freezeInboxRecord, isTerminalInboxState } from '../domain/inbox.js';
+import {
+  assertConversationMutation,
+  freezeInboxRecord,
+  isTerminalInboxState,
+} from '../domain/inbox.js';
 
 /** @template T @param {T} value @returns {T} */
 function clone(value) {
@@ -116,6 +120,8 @@ export class InMemoryInboxRepository {
 
   /** @param {string} kind @param {any} input @param {any} runtime */
   async mutateConversation(kind, input, runtime) {
+    // ADR 015: the former `reactivate` is refused before anything is read.
+    assertConversationMutation(kind);
     return this.#exclusive(async () => {
       const commandKey = `${kind}\u0000${input.idempotencyKey}`;
       const fingerprint = JSON.stringify(input);
@@ -205,14 +211,8 @@ export class InMemoryInboxRepository {
         conversation.updatedAt = occurredAt;
         conversation.version += 1;
         result = publicConversation(conversation);
-      } else if (kind === 'reactivate') {
-        conversation.automationState = 'assistant';
-        conversation.automationEpoch += 1;
-        conversation.assignedUserId = null;
-        conversation.updatedAt = occurredAt;
-        conversation.version += 1;
-        result = publicConversation(conversation);
       } else {
+        // `send`, the last approved mutation.
         if (conversation.automationState === 'assistant') {
           conversation.automationEpoch += 1;
         }
@@ -290,7 +290,6 @@ function createAudit(kind, input, conversation, occurredAt) {
   const actions = {
     archive: 'conversation.archived',
     unarchive: 'conversation.unarchived',
-    reactivate: 'conversation.assistant_reactivated',
     send: 'conversation.human_message_queued',
     takeover: 'conversation.takeover',
     transfer: 'conversation.transferred',

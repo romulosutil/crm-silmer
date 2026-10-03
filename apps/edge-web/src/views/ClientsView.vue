@@ -27,6 +27,8 @@ const searchInput = ref(null);
 const query = ref('');
 const loading = ref(true);
 const detailLoading = ref(false);
+const refreshing = ref(false);
+const hasLoadedContacts = ref(false);
 const error = ref('');
 const contacts = ref([]);
 const totalCount = ref(0);
@@ -75,26 +77,34 @@ function describeError(cause) {
 /** @param {boolean} [silent] */
 async function loadContacts(silent = false) {
   listController?.abort();
-  listController = new AbortController();
+  const currentController = new AbortController();
+  listController = currentController;
   if (!silent) {
     loading.value = true;
     error.value = '';
-  }
+  } else refreshing.value = true;
   try {
     const response = await request('/api/v1/contacts?limit=100', {
-      signal: listController.signal,
+      signal: currentController.signal,
     });
     contacts.value = response.data.items;
     totalCount.value = response.data.totalCount;
+    hasLoadedContacts.value = true;
+    error.value = '';
     const id = props.selectedId || selected.value?.id || contacts.value[0]?.id;
     if (id) await loadContact(id, silent);
     else detail.value = null;
   } catch (cause) {
     if (cause?.name !== 'AbortError') {
-      error.value = 'Não foi possível carregar os contatos.';
+      error.value = hasLoadedContacts.value
+        ? 'Não foi possível atualizar os clientes. Os dados exibidos podem estar desatualizados.'
+        : 'Não foi possível carregar os clientes.';
     }
   } finally {
-    loading.value = false;
+    if (listController === currentController) {
+      loading.value = false;
+      refreshing.value = false;
+    }
   }
 }
 
@@ -102,7 +112,8 @@ async function loadContacts(silent = false) {
 async function loadContact(id, silent = false) {
   if (!id) return;
   detailController?.abort();
-  detailController = new AbortController();
+  const currentController = new AbortController();
+  detailController = currentController;
   if (!silent) {
     detailLoading.value = true;
     error.value = '';
@@ -111,18 +122,28 @@ async function loadContact(id, silent = false) {
     const response = await request(
       `/api/v1/contacts/${encodeURIComponent(id)}`,
       {
-        signal: detailController.signal,
+        signal: currentController.signal,
       },
     );
     detail.value = response.data;
+    error.value = '';
   } catch (cause) {
     if (cause?.name !== 'AbortError') {
-      error.value = 'Não foi possível carregar o contato selecionado.';
-      if (!silent || !renaming.value) detail.value = null;
+      error.value =
+        silent && detail.value
+          ? 'Não foi possível atualizar este cliente. Os dados exibidos podem estar desatualizados.'
+          : 'Não foi possível carregar o contato selecionado.';
+      if (!silent) detail.value = null;
     }
   } finally {
-    detailLoading.value = false;
+    if (detailController === currentController) detailLoading.value = false;
   }
+}
+
+async function retryInitialLoad() {
+  await loadContacts();
+  await nextTick();
+  heading.value?.focus();
 }
 
 function clearSearch() {
@@ -288,20 +309,43 @@ onBeforeUnmount(() => {
       </p>
     </div>
 
-    <p v-if="error" role="alert" class="audit-note">{{ error }}</p>
+    <div v-if="error && hasLoadedContacts" role="alert" class="audit-note">
+      <p>{{ error }}</p>
+      <button type="button" :disabled="refreshing" @click="loadContacts(true)">
+        Tentar novamente
+      </button>
+    </div>
     <p v-if="actionMessage" role="status" class="audit-note">
       {{ actionMessage }}
     </p>
     <div v-if="loading" class="loading-state" role="status">
       Carregando contatos…
     </div>
+    <section
+      v-else-if="error && !hasLoadedContacts"
+      class="surface empty-list"
+      role="alert"
+    >
+      <h2>Clientes indisponíveis</h2>
+      <p>{{ error }}</p>
+      <button type="button" @click="retryInitialLoad">Tentar novamente</button>
+    </section>
     <div v-else class="clients-layout">
       <section class="surface" aria-labelledby="portfolio-title">
         <div class="panel-head">
           <h2 id="portfolio-title">Lista de clientes</h2>
           <p>Ordenados pela atualização cadastral</p>
         </div>
-        <div v-if="filtered.length" class="table-wrap">
+        <p v-if="filtered.length" class="table-scroll-hint">
+          Deslize a tabela para ver todas as colunas.
+        </p>
+        <div
+          v-if="filtered.length"
+          class="table-wrap"
+          role="region"
+          tabindex="0"
+          aria-label="Clientes; role horizontalmente para ver todas as colunas"
+        >
           <table class="data-table">
             <thead>
               <tr>

@@ -231,7 +231,8 @@ provide('orderEditing', {
 /** @param {boolean} [silent] */
 async function load(silent = false) {
   controller?.abort();
-  controller = new AbortController();
+  const currentController = new AbortController();
+  controller = currentController;
   if (!silent) {
     loading.value = true;
     error.value = '';
@@ -239,7 +240,7 @@ async function load(silent = false) {
   try {
     const response = await request(
       `/api/v1/orders/${encodeURIComponent(props.orderId)}`,
-      { signal: controller.signal },
+      { signal: currentController.signal },
     );
     order.value = response.data.order;
     notFound.value = false;
@@ -251,17 +252,25 @@ async function load(silent = false) {
       order.value = null;
       return;
     }
-    error.value = 'Não foi possível carregar o pedido.';
+    error.value = order.value
+      ? 'Não foi possível atualizar o pedido. Os dados exibidos podem estar desatualizados.'
+      : 'Não foi possível carregar o pedido.';
   } finally {
-    loading.value = false;
-    // The heading only exists once the order (or its absence) is known, so
-    // focus lands after the first answer instead of on the loading state.
-    if (!headingAnnounced) {
-      headingAnnounced = true;
-      await nextTick();
-      heading.value?.focus();
+    if (controller === currentController) {
+      loading.value = false;
+      // The heading exists once the order or an error is known.
+      if (!headingAnnounced) {
+        await nextTick();
+        heading.value?.focus();
+        headingAnnounced = Boolean(heading.value);
+      }
     }
   }
+}
+
+function retryInitialLoad() {
+  headingAnnounced = false;
+  void load();
 }
 
 /** Collapses bursts of live events into one silent refresh. */
@@ -315,6 +324,16 @@ onBeforeUnmount(() => {
       >
     </section>
 
+    <section
+      v-else-if="error && !order"
+      class="surface empty-list"
+      role="alert"
+    >
+      <h1 ref="heading" tabindex="-1">Pedido indisponível</h1>
+      <p>{{ error }}</p>
+      <button type="button" @click="retryInitialLoad">Tentar novamente</button>
+    </section>
+
     <template v-else-if="order">
       <nav class="order-trail" aria-label="Rastro">
         <RouterLink to="/pedidos">← Pedidos</RouterLink>
@@ -352,7 +371,7 @@ onBeforeUnmount(() => {
             :aria-describedby="isPending ? 'order-print-reason' : undefined"
             @click="print"
           >
-            <OrderIcon name="printer" />Imprimir
+            <OrderIcon name="printer" />Imprimir ficha
           </button>
         </div>
       </header>
@@ -361,6 +380,9 @@ onBeforeUnmount(() => {
         {{ PRINT_LOCKED_REASON }}
       </p>
       <p v-if="error" role="alert" class="op-alert">{{ error }}</p>
+      <button v-if="error" type="button" @click="load(true)">
+        Tentar novamente
+      </button>
       <p v-if="!canEdit" class="op-readonly">
         <OrderIcon name="lock" />
         Somente {{ order.seller?.name || 'o dono da conversa' }} ou um

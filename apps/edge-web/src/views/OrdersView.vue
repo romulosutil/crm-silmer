@@ -1,5 +1,13 @@
 <script setup>
-import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+  computed,
+  inject,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
 import { useRouter } from 'vue-router';
 import { request } from '../lib/api-client.js';
 import { dateTimeBR } from '../lib/format.js';
@@ -29,8 +37,11 @@ const counts = ref({ confirmado: 0, pendente: 0 });
 const nextCursor = ref(null);
 const loading = ref(true);
 const loadingMore = ref(false);
+const refreshing = ref(false);
+const hasLoaded = ref(false);
 const error = ref('');
-// The clock is refreshed on every load, so "parado há" does not freeze at the
+const errorMode = ref('');
+// The clock is refreshed on every load, so the inactivity signal does not freeze at the
 // value the first render happened to compute.
 const now = ref(new Date());
 let controller;
@@ -73,7 +84,9 @@ function situation(order) {
   }
   const still = elapsedSince(order.updatedAt, now.value);
   const headline = missingHeadline(order.missingFields);
-  return still === '' ? headline : `${headline} · parado há ${still}`;
+  return still === ''
+    ? headline
+    : `${headline} · Pedido sem movimentação há ${still}`;
 }
 
 /** A confirmed send without a later reply is evidence of waiting. */
@@ -115,26 +128,35 @@ function listUrl(cursor) {
 /** @param {boolean} [silent] */
 async function load(silent = false) {
   controller?.abort();
-  controller = new AbortController();
+  const currentController = new AbortController();
+  controller = currentController;
   if (!silent) {
     loading.value = true;
     error.value = '';
-  }
+  } else refreshing.value = true;
   try {
     const response = await request(listUrl(null), {
-      signal: controller.signal,
+      signal: currentController.signal,
     });
     items.value = response.data.items;
     counts.value = response.data.counts;
     nextCursor.value = response.data.nextCursor;
+    hasLoaded.value = true;
     now.value = new Date();
     error.value = '';
+    errorMode.value = '';
   } catch (cause) {
     if (cause?.name !== 'AbortError') {
-      error.value = 'Não foi possível carregar os pedidos.';
+      error.value = hasLoaded.value
+        ? 'Não foi possível atualizar os pedidos. Os dados exibidos podem estar desatualizados.'
+        : 'Não foi possível carregar os pedidos.';
+      errorMode.value = 'list';
     }
   } finally {
-    loading.value = false;
+    if (controller === currentController) {
+      loading.value = false;
+      refreshing.value = false;
+    }
   }
 }
 
@@ -148,11 +170,25 @@ async function loadMore() {
     counts.value = response.data.counts;
     nextCursor.value = response.data.nextCursor;
     now.value = new Date();
+    error.value = '';
+    errorMode.value = '';
   } catch {
     error.value = 'Não foi possível carregar mais pedidos.';
+    errorMode.value = 'more';
   } finally {
     loadingMore.value = false;
   }
+}
+
+function retryLoadedError() {
+  if (errorMode.value === 'more') void loadMore();
+  else void load(true);
+}
+
+async function retryInitialLoad() {
+  await load();
+  await nextTick();
+  heading.value?.focus();
 }
 
 /** PIM-02: the document is the API's; the browser's own print dialog runs it. */
@@ -256,10 +292,28 @@ onBeforeUnmount(() => {
       </p>
     </div>
 
-    <p v-if="error" role="alert" class="audit-note">{{ error }}</p>
+    <div v-if="error && hasLoaded" role="alert" class="audit-note">
+      <p>{{ error }}</p>
+      <button
+        type="button"
+        :disabled="refreshing || loadingMore"
+        @click="retryLoadedError"
+      >
+        Tentar novamente
+      </button>
+    </div>
     <div v-if="loading" class="loading-state" role="status">
       Carregando pedidos…
     </div>
+    <section
+      v-else-if="error && !hasLoaded"
+      class="surface empty-list"
+      role="alert"
+    >
+      <h2>Pedidos indisponíveis</h2>
+      <p>{{ error }}</p>
+      <button type="button" @click="retryInitialLoad">Tentar novamente</button>
+    </section>
     <section v-else-if="isEmpty" class="surface empty-list" aria-live="polite">
       <h2>Nenhum pedido por aqui</h2>
       <p>Revise o filtro ou a busca informada.</p>
@@ -319,10 +373,10 @@ onBeforeUnmount(() => {
                 <td>
                   <div class="row-actions">
                     <button class="primary" type="button" @click="print(order)">
-                      Imprimir
+                      Imprimir ficha
                     </button>
                     <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
-                      >Abrir</RouterLink
+                      >Abrir pedido</RouterLink
                     >
                   </div>
                 </td>
@@ -342,7 +396,7 @@ onBeforeUnmount(() => {
             Pendentes
             <span class="badge" data-tone="warning">{{ counts.pendente }}</span>
           </h2>
-          <p>qualquer vendedor retoma do primeiro campo que falta</p>
+          <p>o vendedor responsável ou administrador pode continuar</p>
         </div>
         <p class="table-scroll-hint">
           Deslize a tabela para ver todas as colunas.
@@ -395,7 +449,7 @@ onBeforeUnmount(() => {
                 <td>
                   <div class="row-actions">
                     <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
-                      >Continuar</RouterLink
+                      >Abrir pedido</RouterLink
                     >
                   </div>
                 </td>

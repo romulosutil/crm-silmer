@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "task": "T63",
+  "adr": "017",
+  "syntheticOnly": true,
+  "snapshotVersion": "synthetic-order-v3",
+  "templateVersion": "ficha-canonical-v3",
+  "generatedAt": "2026-10-02T12:00:00-03:00",
+  "order": {
+    "number": "01-CRM",
+    "fabCode": "01",
+    "status": "confirmado",
+    "orderDate": "2026-10-02",
+    "firstContactAt": "2026-09-28T13:40:00.000Z",
+    "paidOn": "2026-10-02",
+    "deliveredOn": null,
+    "totalPieces": 52,
+    "confirmedBy": { "name": "Vendedora Exemplo" },
+    "ficha": {
+      "summary": {
+        "cliente": "Cliente Demonstracao",
+        "data_entrega_confirmada": "2026-10-23",
+        "aplicacao": "SUBLIMAÇÃO E BORDADO",
+        "nome": "Equipe Horizonte - Evento Sintetico"
+      },
+      "items": [
+        {
+          "tipo": "CAMISA POLO",
+          "cor": "AZUL MARINHO",
+          "estampa": "BORDADO DO BRASÃO NO PEITO ESQUERDO",
+          "malhas": ["PIQUET", "ALGODÃO 100%"],
+          "gola": "GOLA POLO",
+          "modelo": "",
+          "cor_frente": "",
+          "cor_costas": "",
+          "cor_manga_direita": "",
+          "cor_manga_esquerda": "",
+          "vies_gola": "",
+          "vies_mangas": "",
+          "grade": [
+            { "tamanho": "P", "quantidade": 4 },
+            { "tamanho": "M", "quantidade": 8 },
+            { "tamanho": "G", "quantidade": 6 },
+            { "tamanho": "GG", "quantidade": 2 }
+          ]
+        },
+        {
+          "tipo": "REGATA",
+          "cor": "BRANCA COM DETALHES EM VERDE BANDEIRA",
+          "estampa": "ARTE DO CLIENTE: ESCUDO GRANDE NA FRENTE, NOME E NÚMERO NAS COSTAS E TRÊS PATROCINADORES NA BARRA; ARQUIVO EM VETOR ENVIADO PELO CLIENTE",
+          "malhas": ["DRY FIT 100% POLIÉSTER"],
+          "gola": "REGATA",
+          "modelo": "CAVADA",
+          "cor_frente": "",
+          "cor_costas": "",
+          "cor_manga_direita": "NAO APLICAVEL",
+          "cor_manga_esquerda": "NAO APLICAVEL",
+          "vies_gola": "VERDE BANDEIRA",
+          "vies_mangas": "",
+          "grade": [
+            { "tamanho": "PP", "quantidade": 2 },
+            { "tamanho": "P", "quantidade": 4 },
+            { "tamanho": "M", "quantidade": 8 },
+            { "tamanho": "G", "quantidade": 8 },
+            { "tamanho": "GG", "quantidade": 6 },
+            { "tamanho": "XG", "quantidade": 3 },
+            { "tamanho": "EXG", "quantidade": 1 }
+          ]
+        }
+      ],
+      "observations": [
+        "Arte final sintetica aprovada para teste visual.",
+        "Separar os itens por tamanho e identificar cada pacote.",
+        "Nao usar este documento para producao ou cobranca."
+      ]
+    }
+  }
+}

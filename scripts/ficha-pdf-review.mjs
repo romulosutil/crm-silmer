@@ -4,14 +4,38 @@ import { dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { format } from 'prettier';
 
+import { NOT_APPLICABLE } from '../modules/orders/src/domain/ficha.js';
 import {
   PRODUCTION_FIELDS,
   renderFichaHtml,
 } from '../modules/orders/src/print/ficha-canonical-v2.js';
+import {
+  EXTRA_FIELDS,
+  renderFichaHtmlV3,
+} from '../modules/orders/src/print/ficha-canonical-v3.js';
+import {
+  TEMPLATE_V2,
+  TEMPLATE_V3,
+  printSnapshot,
+} from '../modules/orders/src/print/print-snapshot.js';
 
 const rootUrl = new URL('../', import.meta.url);
 const snapshotUrl = new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl);
 const gateUrl = new URL('docs/phase0/ficha-pdf-approval.json', rootUrl);
+const snapshotV3Url = new URL(
+  'docs/phase0/ficha-pdf-synthetic-v3.json',
+  rootUrl,
+);
+const gateV3Url = new URL('docs/phase0/ficha-pdf-approval-v3.json', rootUrl);
+const V3_ARTIFACT_PATH = 'output/pdf/ficha-canonica-sintetica-v3.pdf';
+const V3_EVIDENCE_PATH = 'docs/phase0/ficha-pdf-approved-evidence-v3.json';
+const V3_REQUIREMENTS = Object.freeze([
+  'PIM-06',
+  'PIM-07',
+  'PIM-08',
+  'PIM-09',
+  'PLA-08',
+]);
 
 export { PRODUCTION_FIELDS };
 
@@ -537,6 +561,333 @@ export function buildReviewPageHtml(gate) {
 </html>`;
 }
 
+// ficha-canonical-v3 (ADR 017): the same review discipline as v2 for the
+// sheet with the seven points. The sample is an order in the public Order
+// contract, so the reviewed PDF goes through the same `printSnapshot` the
+// print route uses; only the sample band and the review box are added.
+
+/** @param {unknown} value */
+function isIsoDay(value) {
+  return (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/u.test(value) &&
+    Number.isFinite(Date.parse(`${value}T12:00:00Z`))
+  );
+}
+
+/** @param {any} item */
+function itemExtras(item) {
+  return EXTRA_FIELDS.map(({ field }) => item[field]).filter(nonEmptyString);
+}
+
+/**
+ * The v3 review sample: synthetic, complete in the seven points, and built to
+ * show the PO every rule the paper follows (an item with and one without
+ * extras, "NAO APLICAVEL", a long text, six or more sizes and a day of the
+ * trail not recorded yet).
+ *
+ * @param {any} sample
+ */
+export function validateFichaSnapshotV3(sample) {
+  invariant(sample?.schemaVersion === 1, 'v3 sample schema version must be 1');
+  invariant(
+    sample.task === 'T63' && sample.adr === '017',
+    'v3 sample must trace to T63 and ADR 017',
+  );
+  invariant(sample.syntheticOnly === true, 'v3 sample must be synthetic only');
+  invariant(
+    sample.snapshotVersion === 'synthetic-order-v3' &&
+      sample.templateVersion === TEMPLATE_V3,
+    'v3 sample and template versions must be explicit',
+  );
+  invariant(
+    Number.isFinite(Date.parse(sample.generatedAt)),
+    'v3 sample generation time must be ISO 8601',
+  );
+
+  const order = sample.order;
+  invariant(
+    typeof order?.number === 'string' && /^\d{2,}-CRM$/u.test(order.number),
+    'v3 sample needs an NN-CRM number',
+  );
+  invariant(
+    order.fabCode === '01',
+    'v3 sample FAB must use controlled code 01',
+  );
+  invariant(order.status === 'confirmado', 'Only a confirmed order prints');
+  invariant(
+    nonEmptyString(order.confirmedBy?.name),
+    'v3 sample needs who confirmed it',
+  );
+  invariant(
+    isIsoDay(order.orderDate) &&
+      Number.isFinite(Date.parse(order.firstContactAt)),
+    'v3 sample needs the order date and the first contact',
+  );
+  for (const field of ['paidOn', 'deliveredOn']) {
+    invariant(
+      order[field] === null || isIsoDay(order[field]),
+      `v3 sample ${field} must be an ISO day or null`,
+    );
+  }
+  invariant(
+    order.paidOn === null || order.deliveredOn === null,
+    'v3 sample must show a day of the trail not recorded yet',
+  );
+
+  const summary = order.ficha?.summary;
+  for (const field of ['cliente', 'nome', 'aplicacao']) {
+    invariant(
+      nonEmptyString(summary?.[field]),
+      `Summary field ${field} is required`,
+    );
+  }
+  invariant(
+    isIsoDay(summary.data_entrega_confirmada),
+    'v3 sample needs the promised delivery day',
+  );
+
+  const items = order.ficha.items;
+  invariant(
+    Array.isArray(items) && items.length >= 2,
+    'v3 sample needs at least two items',
+  );
+  let gradeTotal = 0;
+  for (const [itemIndex, item] of items.entries()) {
+    for (const field of ['tipo', 'cor', 'estampa', 'gola']) {
+      invariant(
+        nonEmptyString(item?.[field]),
+        `Principal point items[${itemIndex}].${field} is required`,
+      );
+    }
+    invariant(
+      Array.isArray(item.malhas) &&
+        item.malhas.length > 0 &&
+        item.malhas.every(nonEmptyString),
+      `Principal point items[${itemIndex}].malhas is required`,
+    );
+    for (const { field } of EXTRA_FIELDS) {
+      invariant(
+        typeof item[field] === 'string',
+        `Extra items[${itemIndex}].${field} must be text, even when blank`,
+      );
+    }
+    invariant(
+      Array.isArray(item.grade) && item.grade.length > 0,
+      `Item ${itemIndex + 1} needs a grade`,
+    );
+    const sizes = new Set();
+    for (const [gradeIndex, grade] of item.grade.entries()) {
+      invariant(
+        nonEmptyString(grade?.tamanho) &&
+          Number.isInteger(grade.quantidade) &&
+          grade.quantidade > 0,
+        `Item ${itemIndex + 1} grade ${gradeIndex + 1} needs a size and a positive integer quantity`,
+      );
+      invariant(
+        !sizes.has(grade.tamanho),
+        `Item ${itemIndex + 1} cannot repeat size ${grade.tamanho}`,
+      );
+      sizes.add(grade.tamanho);
+      gradeTotal += grade.quantidade;
+    }
+  }
+  invariant(
+    items.some((/** @type {any} */ item) => itemExtras(item).length === 0) &&
+      items.some((/** @type {any} */ item) => itemExtras(item).length > 0),
+    'v3 sample needs an item without extras and one with extras',
+  );
+  invariant(
+    items.some((/** @type {any} */ item) =>
+      itemExtras(item).includes(NOT_APPLICABLE),
+    ),
+    `v3 sample needs an extra marked ${NOT_APPLICABLE}`,
+  );
+  invariant(
+    items.some((/** @type {any} */ item) => item.grade.length >= 6),
+    'v3 sample needs an item with six or more sizes',
+  );
+  invariant(
+    items.some((/** @type {any} */ item) =>
+      ['tipo', 'cor', 'estampa', 'gola'].some(
+        (field) => item[field].length >= 80,
+      ),
+    ),
+    'v3 sample needs a long principal text',
+  );
+  invariant(
+    order.totalPieces === gradeTotal,
+    'Order total must equal the sum of every grade quantity',
+  );
+  invariant(
+    Array.isArray(order.ficha.observations) &&
+      order.ficha.observations.length > 0 &&
+      order.ficha.observations.every(nonEmptyString),
+    'Ordered synthetic observations are required',
+  );
+  invariant(
+    !containsPersonalContact(JSON.stringify(sample)),
+    'Synthetic snapshot must not contain email addresses or phone numbers',
+  );
+  return { gradeTotal };
+}
+
+/**
+ * The v3 review document: the order goes through the print snapshot and the
+ * v3 template exactly as a printed order does, with the sample band and the
+ * review box on.
+ *
+ * @param {any} sample
+ */
+export function buildFichaHtmlV3(sample) {
+  validateFichaSnapshotV3(sample);
+  return renderFichaHtmlV3(printSnapshot(sample.order, TEMPLATE_V3), {
+    synthetic: true,
+  });
+}
+
+/**
+ * The v3 gate mirrors v2: hashes of the sample, of the rendered HTML (which a
+ * different machine reproduces byte for byte, unlike the PDF) and of the PDF,
+ * and a human approval that is wholly pending or wholly approved. Who signs
+ * is the PO's call, so the gate names roles and people instead of fixing
+ * them.
+ *
+ * @param {{artifactBytes: Buffer, evidence?: any, gate: any, renderedHtml: string, snapshotBytes: Buffer}} input
+ */
+export function validateFichaApprovalGateV3({
+  artifactBytes,
+  evidence = null,
+  gate,
+  renderedHtml,
+  snapshotBytes,
+}) {
+  invariant(gate?.schemaVersion === 1, 'v3 gate schema version must be 1');
+  invariant(
+    gate.task === 'T63' && gate.adr === '017',
+    'v3 gate must trace to T63 and ADR 017',
+  );
+  invariant(gate.syntheticOnly === true, 'v3 gate must be synthetic only');
+  invariant(
+    JSON.stringify(gate.requirements) === JSON.stringify(V3_REQUIREMENTS),
+    `v3 gate must trace ${V3_REQUIREMENTS.join(', ')}`,
+  );
+  invariant(
+    gate.snapshotVersion === 'synthetic-order-v3' &&
+      gate.templateVersion === TEMPLATE_V3,
+    'v3 gate versions must match the review package',
+  );
+  invariant(
+    gate.snapshotSha256 === sha256(snapshotBytes),
+    'v3 sample SHA-256 does not match the versioned sample',
+  );
+  invariant(
+    gate.renderedHtmlSha256 === sha256(renderedHtml),
+    'v3 rendered HTML SHA-256 does not match: the template changed after the PDF',
+  );
+  invariant(
+    artifactBytes.subarray(0, 5).toString('ascii') === '%PDF-' &&
+      artifactBytes.length > 10_000,
+    'v3 review artifact must be a non-empty PDF',
+  );
+  invariant(
+    gate.artifact?.path === V3_ARTIFACT_PATH,
+    'v3 review artifact path must be stable',
+  );
+  invariant(
+    gate.artifact.sha256 === sha256(artifactBytes),
+    'v3 artifact SHA-256 does not match the versioned PDF',
+  );
+  invariant(
+    Number.isInteger(gate.artifact.pageCount) &&
+      gate.artifact.pageCount >= 2 &&
+      gate.artifact.pageCount === countPdfPages(artifactBytes),
+    'v3 artifact page count must match a PDF with at least two pages',
+  );
+
+  const approval = gate.approval;
+  const criteria = Object.values(approval?.criteria ?? {});
+  invariant(
+    JSON.stringify(Object.keys(approval?.criteria ?? {})) ===
+      JSON.stringify(approvalCriteria),
+    'Ficha approval must record every canonical review criterion in order',
+  );
+  const pending =
+    approval?.status === 'pending-human-approval' &&
+    approval.approved === false &&
+    approval.reviewedBy === null &&
+    approval.reviewedAt === null &&
+    approval.evidenceRef === null &&
+    criteria.every((value) => value === null);
+  const approved =
+    approval?.status === 'approved' &&
+    approval.approved === true &&
+    Array.isArray(approval.reviewedBy) &&
+    approval.reviewedBy.length > 0 &&
+    approval.reviewedBy.every(
+      (/** @type {any} */ reviewer) =>
+        nonEmptyString(reviewer?.role) && nonEmptyString(reviewer?.name),
+    ) &&
+    Number.isFinite(Date.parse(approval.reviewedAt)) &&
+    criteria.every((value) => value === true) &&
+    approval.evidenceRef === V3_EVIDENCE_PATH;
+  invariant(
+    pending || approved,
+    'Ficha human approval must be wholly pending or wholly approved',
+  );
+  if (approved) validateFichaApprovalEvidenceV3(evidence, gate);
+  invariant(
+    gate.versioning?.overwriteApprovedVersion === false &&
+      gate.versioning?.correctionsRequireNewTemplateVersion === true &&
+      gate.versioning?.supersedesTemplateVersion === TEMPLATE_V2,
+    'Approved Ficha versions must never be overwritten',
+  );
+  return gate;
+}
+
+/** @param {any} evidence @param {any} gate */
+export function validateFichaApprovalEvidenceV3(evidence, gate) {
+  invariant(
+    evidence?.schemaVersion === 1 &&
+      evidence.task === 'T63' &&
+      evidence.adr === '017' &&
+      evidence.syntheticOnly === true,
+    'Approved evidence must be synthetic and trace to T63/ADR 017',
+  );
+  invariant(
+    evidence.templateVersion === gate.templateVersion &&
+      evidence.snapshotVersion === gate.snapshotVersion &&
+      evidence.snapshotSha256 === gate.snapshotSha256 &&
+      evidence.renderedHtmlSha256 === gate.renderedHtmlSha256 &&
+      evidence.artifactSha256 === gate.artifact.sha256,
+    'Approved evidence must identify the exact snapshot, template, and artifact',
+  );
+  invariant(
+    evidence.reviewedAt === gate.approval.reviewedAt &&
+      JSON.stringify(evidence.reviewedBy) ===
+        JSON.stringify(gate.approval.reviewedBy) &&
+      JSON.stringify(evidence.criteria) ===
+        JSON.stringify(gate.approval.criteria),
+    'Approved evidence must match the human review recorded in the gate',
+  );
+  invariant(
+    Array.isArray(evidence.visualEvidence) &&
+      evidence.visualEvidence.length > 0 &&
+      evidence.visualEvidence.every(
+        (/** @type {any} */ item) =>
+          item?.containsPii === false &&
+          ['git', 'silmer'].includes(item.type) &&
+          new RegExp(`^${item.type}:[a-zA-Z0-9._-]+$`, 'u').test(item.ref),
+      ),
+    'Approved evidence needs at least one PII-free git or Silmer visual reference',
+  );
+  invariant(
+    !containsPersonalContact(JSON.stringify(evidence)),
+    'Approved evidence must not contain email addresses or phone numbers',
+  );
+  return evidence;
+}
+
 /** @param {Buffer} bytes */
 function countPdfPages(bytes) {
   return (bytes.toString('latin1').match(/\/Type\s*\/Page\b/gu) ?? []).length;
@@ -636,11 +987,127 @@ async function validate() {
   );
 }
 
+async function readPackageV3() {
+  const snapshotBytes = await readFile(snapshotV3Url);
+  const sample = JSON.parse(snapshotBytes.toString('utf8'));
+  return { sample, snapshotBytes };
+}
+
+/** @param {any} gate */
+export function refuseApprovedRegeneration(gate) {
+  invariant(
+    gate?.approval?.status !== 'approved' && gate?.approval?.approved !== true,
+    'Approved PDF versions cannot be regenerated or overwritten',
+  );
+}
+
+async function generateV3() {
+  const { chromium } = await import('@playwright/test');
+  const current = await readFile(gateV3Url, 'utf8').then(
+    (text) => JSON.parse(text),
+    () => null,
+  );
+  refuseApprovedRegeneration(current);
+  const { sample, snapshotBytes } = await readPackageV3();
+  const renderedHtml = buildFichaHtmlV3(sample);
+  const artifactUrl = new URL(V3_ARTIFACT_PATH, rootUrl);
+  const artifactPath = fileURLToPath(artifactUrl);
+  await mkdir(dirname(artifactPath), { recursive: true });
+
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(renderedHtml, { waitUntil: 'load' });
+    await page.emulateMedia({ media: 'print' });
+    await page.pdf({
+      displayHeaderFooter: true,
+      footerTemplate: `<div style="box-sizing:border-box;color:#657086;display:flex;font-family:Arial,sans-serif;font-size:7px;justify-content:space-between;padding:0 9mm;width:100%"><span>Template ${display(sample.templateVersion)} | Snapshot ${display(sample.snapshotVersion)} | ADR 017 | T63</span><span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span></div>`,
+      format: 'A4',
+      headerTemplate: '<div></div>',
+      landscape: true,
+      path: artifactPath,
+      printBackground: true,
+      preferCSSPageSize: true,
+    });
+  } finally {
+    await browser.close();
+  }
+
+  const artifactBytes = await readFile(artifactUrl);
+  const gate = {
+    schemaVersion: 1,
+    task: 'T63',
+    adr: '017',
+    requirements: V3_REQUIREMENTS,
+    syntheticOnly: true,
+    snapshotVersion: sample.snapshotVersion,
+    templateVersion: sample.templateVersion,
+    snapshotSha256: sha256(snapshotBytes),
+    renderedHtmlSha256: sha256(renderedHtml),
+    artifact: {
+      path: V3_ARTIFACT_PATH,
+      sha256: sha256(artifactBytes),
+      pageCount: countPdfPages(artifactBytes),
+    },
+    approval: {
+      status: 'pending-human-approval',
+      approved: false,
+      reviewedBy: null,
+      reviewedAt: null,
+      criteria: Object.fromEntries(
+        approvalCriteria.map((criterion) => [criterion, null]),
+      ),
+      evidenceRef: null,
+    },
+    versioning: {
+      overwriteApprovedVersion: false,
+      correctionsRequireNewTemplateVersion: true,
+      supersedesTemplateVersion: TEMPLATE_V2,
+    },
+  };
+  validateFichaApprovalGateV3({
+    artifactBytes,
+    gate,
+    renderedHtml,
+    snapshotBytes,
+  });
+  await writeFile(
+    gateV3Url,
+    await format(JSON.stringify(gate), { parser: 'json' }),
+  );
+  console.log(
+    `Ficha v3 review PDF ready: ${V3_ARTIFACT_PATH} (${gate.artifact.pageCount} pages); approval pending.`,
+  );
+}
+
+async function validateV3() {
+  const { sample, snapshotBytes } = await readPackageV3();
+  const gate = JSON.parse(await readFile(gateV3Url, 'utf8'));
+  const artifactBytes = await readFile(new URL(gate.artifact.path, rootUrl));
+  const evidence = gate.approval?.evidenceRef
+    ? JSON.parse(
+        await readFile(new URL(gate.approval.evidenceRef, rootUrl), 'utf8'),
+      )
+    : null;
+  validateFichaApprovalGateV3({
+    artifactBytes,
+    evidence,
+    gate,
+    renderedHtml: buildFichaHtmlV3(sample),
+    snapshotBytes,
+  });
+  console.log(`Ficha v3 PDF review gate valid: ${gate.approval.status}.`);
+}
+
 async function main() {
   const command = process.argv[2];
-  if (command === '--generate') return generate();
-  if (command === '--validate') return validate();
-  throw new Error('Use --generate or --validate');
+  const v3 = process.argv.slice(3).includes('--v3');
+  if (command === '--generate') return v3 ? generateV3() : generate();
+  if (command === '--validate') {
+    await validate();
+    return validateV3();
+  }
+  throw new Error('Use --generate [--v3] or --validate');
 }
 
 if (

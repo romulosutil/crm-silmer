@@ -3,7 +3,8 @@
 > **Decisão vigente:** [RFC 002](../../rfc/002-simplificar-integracao-n8n-para-o-mvp.md)
 > e [ADR 003](../../adr/003-adotar-integracao-n8n-mvp-simples.md). RFC 001 e
 > ADR 002 são histórico da alternativa mais robusta. O Pedido criado pelo
-> agente segue a [ADR 006](../../adr/006-pedido-dois-status.md).
+> agente segue a [ADR 006](../../adr/006-pedido-dois-status.md) e abre como
+> manda a [ADR 014](../../adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md).
 
 ## Objetivo e limite
 
@@ -65,7 +66,7 @@ apenas como fixture de desenvolvimento e nunca é fallback silencioso.
 | Mensagem            | `messages`                              | Inbound e outbound cifrados; identidade externa ou `command_id` impede duplicidade. O estado de entrega fica na própria mensagem. |
 | Briefing            | colunas cifradas da `conversation`      | Um snapshot consolidado; `briefing_patch` ignora nulos e só aceita campos de qualificação. Não promove dado oficial.              |
 | Handoff             | `handoffs`                              | Criado sem responsável para a função humana vigente `Vendedor`; uma pessoa compatível o reivindica atomicamente.                  |
-| Pedido              | `orders`                                | Criado `pendente` por `order.intent_confirmed`, nunca pela simples chegada de mensagem. Confirmar e reabrir são ações humanas.    |
+| Pedido              | `orders`                                | Criado `pendente` pelo `open_order` da reserva ou do handoff (ADR 014), nunca pela simples chegada de mensagem. Confirmar e reabrir são ações humanas. |
 | Comando humano      | `n8n_commands` + `outbox_jobs`          | Estado oficial e outbox são gravados antes de o worker chamar o webhook do n8n.                                                   |
 | Evidência técnica   | `n8n_events`, auditoria e reconciliação | Registra correlação, workflow, versão, execução e resultado sem conteúdo pessoal ou segredo técnico.                              |
 
@@ -87,13 +88,13 @@ Os três endpoints usam `Authorization: Basic`, `Idempotency-Key`,
    recebe uma mídia por streaming, valida tamanho, hash, MIME e malware e só a
    vincula depois da quarentena. A IA multimodal fica diferida.
 3. `POST /api/v1/integrations/n8n/events`
-   recebe reserva de envio, callbacks de entrega, handoff, intenção de compra e
-   falha do workflow.
+   recebe reserva de envio, callbacks de entrega, handoff, abertura do Pedido
+   pendente (`open_order` na reserva ou no handoff) e falha do workflow.
 
 Eventos aceitos: `message.send.requested`, `message.sent`,
 `message.delivered`, `message.read`, `message.failed`,
-`message.send.unknown`, `handoff.requested`, `order.intent_confirmed` e
-`workflow.failed`.
+`message.send.unknown`, `handoff.requested`, `order.intent_confirmed`
+(obsoleto desde a ADR 014, aceito para workflows antigos) e `workflow.failed`.
 
 O retorno do inbound também traz `automation_message_count` (mensagens do
 agente já reservadas na Conversa), `automation_message_cap` (15) e `sellers`
@@ -140,10 +141,10 @@ um `briefing_patch` junto de `message.send.requested` ou `handoff.requested`;
 nulos são ignorados. Preço, pagamento, etapa e outros campos oficiais não são
 aceitos nesse patch.
 
-Inbound não cria Pedido. Quando o agente identifica a intenção de compra (o
-cliente descreve as peças que quer ou completa a pré-ficha), o workflow emite
-`order.intent_confirmed` (ver "Pedido criado pelo agente"). O bot não pergunta
-se pode montar o orçamento nem o nome do pedido (ADR 010).
+Inbound não cria Pedido. Na rodada em que a ficha ganha o primeiro dos sete
+pontos, a reserva de envio ou o handoff leva `open_order: true` (ver "Pedido
+criado pelo agente"). O bot não pergunta se pode montar o orçamento nem o nome
+do pedido (ADR 010).
 `convertida_em_lead` encerra a triagem, não a Conversa; ela só termina por
 `Sem lead`, `Fechado` ou `Perdido` conforme as regras do domínio.
 
@@ -153,7 +154,62 @@ conforme a ADR 009.
 
 ## Pedido criado pelo agente
 
-### Evento `order.intent_confirmed`
+### Abertura com `open_order` (ADR 014)
+
+`message.send.requested` e `handoff.requested` aceitam o booleano opcional
+`open_order`. O workflow o calcula pela regra da
+[ADR 014](../../adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md): `true` na
+rodada em que a ficha (briefing anterior unido ao patch da rodada) ganha o
+primeiro valor real de um dos sete pontos e em todas as seguintes; o nome
+sozinho e "Definir com o vendedor" não abrem, e o que não é pedido do zero
+(ADR 013) nunca abre. Um valor que não seja booleano, ou o campo em outro
+evento, volta `400`. Com `true`, a credencial precisa também da ação
+`order.intent`.
+
+```json
+{
+  "schema_version": "1.0",
+  "event_id": "reserve:<conversa>:<revisão>:ai-response",
+  "event_type": "message.send.requested",
+  "conversation_id": "<id da conversa>",
+  "automation_epoch": 3,
+  "source_revision": 7,
+  "command_id": "<conversa>:<revisão>:ai-response",
+  "message": { "type": "text", "text": "<resposta>" },
+  "briefing_patch": { "quantity": 30 },
+  "open_order": true,
+  "occurred_at": "<ISO 8601>"
+}
+```
+
+Depois que a transação do evento confirma, o CRM cria ou reutiliza o Pedido
+pendente da conversa a partir da ficha já unida (sem pendente, cria um; com
+pendente, reutiliza; só com pedidos confirmados, cria um novo: PCL-01..03) e
+responde no mesmo corpo:
+
+```json
+{ "accepted": true, "send_authorized": true, "order": { "opened": true, "id": "<pedido>", "created": true } }
+```
+
+- Um pedido que já existia recebe a projeção da pré-ficha (`created: false`);
+  um pedido criado agora já nasce da ficha unida.
+- Replay da mesma `Idempotency-Key` tenta de novo e devolve `order` do mesmo
+  jeito, sem novo pedido: um retry depois de uma falha abre o pedido.
+- Uma falha ao abrir não falha o evento: a reserva continua autorizada e o
+  handoff acontece. A resposta traz
+  `"order": { "opened": false, "error": "<CÓDIGO>" }`, com o código de domínio
+  (por exemplo `CONVERSATION_NOT_FOUND`), `ORDER_OPEN_FAILED` para qualquer
+  outro erro ou `ORDERS_RUNTIME_UNAVAILABLE` sem o módulo de pedidos. O CRM
+  grava a auditoria `integration.n8n.order.open_failed` na conversa e um log
+  sem dados pessoais (código, conversa, correlação e tipo do evento).
+- Sem `open_order`, ou com `false`, a resposta não traz `order` e nada muda no
+  Pedido além da projeção de antes.
+
+### Evento `order.intent_confirmed` (obsoleto)
+
+Obsoleto desde a ADR 014: os workflows a partir de `mvp-simple-11` usam
+`open_order`. O CRM continua aceitando o evento para os workflows antigos,
+com as mesmas regras de criação.
 
 Enviado em `POST /api/v1/integrations/n8n/events` quando o agente identifica a
 intenção de compra. Usa os mesmos cabeçalhos dos demais eventos:

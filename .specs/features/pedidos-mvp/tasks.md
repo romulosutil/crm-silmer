@@ -911,11 +911,11 @@ workflow DEV `0S5ZS1xeDCSoWovs` e, com autorização do PO, o de produção
 
 **Done when:**
 
-- [ ] Reserva com `open_order` cria um pendente e responde `order`; replay e retry concorrente não duplicam
-- [ ] Handoff com `open_order` cria o pendente
-- [ ] Falha do módulo de pedidos responde `opened: false`, aceita o evento e audita sem PII
-- [ ] `order.intent_confirmed` continua funcionando
-- [ ] Gate quick e suíte live do módulo passam
+- [x] Reserva com `open_order` cria um pendente e responde `order`; replay e retry concorrente não duplicam
+- [x] Handoff com `open_order` cria o pendente
+- [x] Falha do módulo de pedidos responde `opened: false`, aceita o evento e audita sem PII
+- [x] `order.intent_confirmed` continua funcionando
+- [x] Gate quick e suíte live do módulo passam
 
 **Tests:** unit + integração live · **Gate:** quick + live · **Commit:** `feat(n8n-integration): open the pending order with the agent's event`
 

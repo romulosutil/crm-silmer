@@ -14,5 +14,6 @@
   "briefing_patch": {
     "segment": "uniform",
     "quantity": 30
-  }
+  },
+  "open_order": true
 }

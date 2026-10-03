@@ -31,6 +31,7 @@ const eventKeys = Object.freeze([
   'handoff',
   'message',
   'occurred_at',
+  'open_order',
   'source_revision',
 ]);
 
@@ -85,6 +86,17 @@ export function validateContract(contract) {
   }
   if (!contract.eventTypes?.includes('message.send.requested')) {
     fail('MISSING_SEND_FENCE_EVENT');
+  }
+  // ADR 014: only the events that carry the turn's briefing open the order.
+  if (
+    !Array.isArray(contract.openOrderEvents) ||
+    contract.openOrderEvents.some(
+      (/** @type {string} */ eventType) =>
+        !['handoff.requested', 'message.send.requested'].includes(eventType) ||
+        !contract.eventTypes.includes(eventType),
+    )
+  ) {
+    fail('INVALID_OPEN_ORDER_EVENTS');
   }
   return true;
 }
@@ -218,6 +230,12 @@ export function validateEvent(payload, contract) {
   ) {
     nonEmpty(payload.external_message_id, 'INVALID_MESSAGE_STATUS');
   }
+  if (payload.open_order !== undefined) {
+    if (typeof payload.open_order !== 'boolean') fail('INVALID_OPEN_ORDER');
+    if (!contract.openOrderEvents.includes(payload.event_type)) {
+      fail('INVALID_OPEN_ORDER_EVENT');
+    }
+  }
   if (payload.briefing_patch !== undefined) {
     if (
       !['handoff.requested', 'message.send.requested'].includes(
@@ -235,6 +253,29 @@ export function validateEvent(payload, contract) {
 export function validateBriefingPatch(patch, contract) {
   object(patch, 'INVALID_BRIEFING_PATCH');
   rejectUnknown(patch, contract.briefingPatchFields);
+  return true;
+}
+
+/**
+ * ADR 014: the `order` field of an event response that asked `open_order`.
+ * @param {any} order
+ */
+export function validateOrderOpening(order) {
+  object(order, 'INVALID_ORDER_OPENING');
+  if (order.opened === true) {
+    rejectUnknown(order, ['created', 'id', 'opened']);
+    nonEmpty(order.id, 'INVALID_ORDER_OPENING');
+    if (typeof order.created !== 'boolean') fail('INVALID_ORDER_OPENING');
+    return true;
+  }
+  if (order.opened !== false) fail('INVALID_ORDER_OPENING');
+  rejectUnknown(order, ['error', 'opened']);
+  if (
+    typeof order.error !== 'string' ||
+    !/^[A-Z][A-Z0-9_]*$/u.test(order.error)
+  ) {
+    fail('INVALID_ORDER_OPENING');
+  }
   return true;
 }
 

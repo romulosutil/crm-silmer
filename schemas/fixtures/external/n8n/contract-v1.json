@@ -43,6 +43,7 @@
     "handoff.requested",
     "workflow.failed"
   ],
+  "openOrderEvents": ["message.send.requested", "handoff.requested"],
   "briefingPatchFields": [
     "artwork_locations",
     "artwork_status",

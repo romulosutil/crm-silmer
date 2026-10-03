@@ -52,6 +52,12 @@ export const BRIEFING_PATCH_FIELDS = new Set([
   'sizes',
   'sponsors',
 ]);
+// ADR 014: the agent asks the CRM to open the pending order on the same
+// event that carries the turn's briefing, never on a call of its own.
+const EVENTS_THAT_OPEN_ORDERS = new Set([
+  'handoff.requested',
+  'message.send.requested',
+]);
 
 /**
  * Small compatibility boundary for the WhatsApp MVP. Authentication happens at
@@ -252,6 +258,7 @@ export function createN8nIntegrationService({
         handoff: input?.handoff ? plainObject(input.handoff) : null,
         message: input?.message ? plainObject(input.message) : null,
         occurredAt,
+        openOrder: optionalBoolean(input?.open_order, 'open_order'),
         sourceRevision:
           input?.source_revision === undefined
             ? null
@@ -274,6 +281,14 @@ function validateEventShape(input) {
   ) {
     throw new N8nValidationError(
       'briefing_patch is only allowed on send reservation or handoff',
+    );
+  }
+  if (
+    input.openOrder !== null &&
+    !EVENTS_THAT_OPEN_ORDERS.has(input.eventType)
+  ) {
+    throw new N8nValidationError(
+      'open_order is only allowed on send reservation or handoff',
     );
   }
   if (
@@ -474,6 +489,21 @@ function instant(value, field) {
     new Date(value).toISOString() !== value
   ) {
     throw new N8nValidationError(`${field} must be a canonical ISO instant`);
+  }
+  return value;
+}
+
+/**
+ * Absent is null; a present flag must be a real boolean, so a template that
+ * renders "true" as text is refused instead of silently opening nothing.
+ *
+ * @param {unknown} value @param {string} field
+ * @returns {boolean|null}
+ */
+function optionalBoolean(value, field) {
+  if (value === undefined) return null;
+  if (typeof value !== 'boolean') {
+    throw new N8nValidationError(`${field} must be a boolean`);
   }
   return value;
 }

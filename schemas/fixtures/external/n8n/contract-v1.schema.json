@@ -64,6 +64,34 @@
         "sponsors": { "type": ["array", "null"] }
       }
     },
+    "openOrder": {
+      "description": "ADR 014: true asks the CRM to create or reuse the pending order after the event commits. Only on message.send.requested and handoff.requested.",
+      "type": "boolean"
+    },
+    "orderOpening": {
+      "description": "ADR 014: the `order` field of the event response when open_order is true. A failure never fails the event.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["opened", "id", "created"],
+          "properties": {
+            "opened": { "const": true },
+            "id": { "$ref": "#/$defs/opaqueId" },
+            "created": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["opened", "error"],
+          "properties": {
+            "opened": { "const": false },
+            "error": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+          }
+        }
+      ]
+    },
     "problem": {
       "type": "object",
       "additionalProperties": false,
@@ -107,6 +135,7 @@
     "activeChannels",
     "endpoints",
     "eventTypes",
+    "openOrderEvents",
     "briefingPatchFields",
     "deliveryStatusOrder",
     "security"
@@ -157,6 +186,11 @@
     "eventTypes": {
       "type": "array",
       "contains": { "const": "message.send.requested" }
+    },
+    "openOrderEvents": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["message.send.requested", "handoff.requested"] }
     },
     "briefingPatchFields": {
       "type": "array",

@@ -1522,6 +1522,13 @@ components:
                 command_id: { type: string, minLength: 1, maxLength: 512 }
                 text: { type: string, minLength: 1, maxLength: 4096 }
         failure: { type: object, additionalProperties: true }
+        open_order:
+          type: boolean
+          description: >-
+            ADR 014. Só em message.send.requested e handoff.requested. Com
+            true, depois de aplicar o evento o CRM cria ou reutiliza o Pedido
+            pendente da conversa a partir da ficha unida e responde em
+            `order`. Exige também a ação de automação `order.intent`.
     N8nEventResponse:
       type: object
       additionalProperties: true
@@ -1538,6 +1545,25 @@ components:
           properties:
             send_authorized: { type: boolean }
             command_id: { type: [string, 'null'] }
+        order:
+          description: >-
+            ADR 014. Presente quando o evento pediu `open_order`. Uma falha
+            ao abrir o Pedido não falha o evento: volta `opened: false` com o
+            código, auditado no CRM.
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [opened, id, created]
+              properties:
+                opened: { type: boolean, const: true }
+                id: { type: string }
+                created: { type: boolean }
+            - type: object
+              additionalProperties: false
+              required: [opened, error]
+              properties:
+                opened: { type: boolean, const: false }
+                error: { type: string, pattern: '^[A-Z][A-Z0-9_]*$' }
     N8nProblem:
       type: object
       additionalProperties: false

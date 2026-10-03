@@ -96,6 +96,9 @@ export function createN8nApiRuntime(database, options = {}) {
      * The MVP agent's `order.intent_confirmed` event, kept out of the n8n
      * integration service: order creation is idempotent by conversation
      * state (ADR 006), so it needs no receipt-based replay of its own.
+     * Deprecated by ADR 014: workflows from mvp-simple-11 on open the order
+     * with `open_order` on the reservation or the handoff instead. It stays
+     * for older workflows still synced to this CRM.
      * @param {any} input
      */
     async recordOrderIntent(input) {

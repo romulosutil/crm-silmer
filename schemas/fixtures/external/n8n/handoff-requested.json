@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "automation_epoch": 3,
+  "event_id": "conversation-synthetic-001:7:handoff",
+  "event_type": "handoff.requested",
+  "occurred_at": "2026-09-07T12:00:10.000Z",
+  "conversation_id": "conversation-synthetic-001",
+  "source_revision": 7,
+  "briefing_patch": {
+    "quantity": 30
+  },
+  "handoff": {
+    "reason": "negotiation",
+    "summary": "Motivo: Perguntou o valor. Ficha: 1 de 8 (13%).",
+    "notice": {
+      "command_id": "conversation-synthetic-001:7:handoff:notice",
+      "text": "synthetic notice content"
+    }
+  },
+  "open_order": true
+}

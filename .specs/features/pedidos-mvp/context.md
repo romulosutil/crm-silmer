@@ -127,9 +127,11 @@ Pedidos substitui o que seria o Kanban.
   antes da aprovação de Rose e Operação; a v2 só passa a imprimir a entrega
   confirmada em dd/mm/aaaa.
   - **Nota (02/10/2026, ADR 017):** a v3 que leva o lastro é a ficha com os
-    sete pontos, não mais a v3 por produto. O lastro sai na página 1, com "—"
-    no dia ainda não registrado, e a v3 só imprime depois que o PO aprovar o
-    PDF e indicar quem assina; até lá valem D15 e esta D31.
+    sete pontos, não mais a v3 por produto. Na página 1, Data do pedido e
+    Entrega prometida saem só no Resumo, e a faixa do lastro traz Primeiro
+    contato, Pagamento e Entrega realizada, com "—" no dia ainda não
+    registrado. A v3 só imprime depois que o PO aprovar o PDF; até lá valem
+    D15 e esta D31.
 
 ---
 

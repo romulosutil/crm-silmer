@@ -236,9 +236,10 @@ test('the same order renders on either template through one function (PIM-10)', 
   assert.match(v3, /Tipo de serviço<\/span><strong>SILK</u);
   assert.match(v3, /Entrega prometida<\/span><strong>24\/10\/2026</u);
   for (const label of PRINCIPAL_LABELS) assert.ok(v3.includes(label), label);
-  // The trail comes from the order: first contact, generated, paid days.
+  // The trail comes from the order: first contact and payment; the order
+  // date and the promised delivery print in the summary.
   assert.match(v3, /Primeiro contato<\/span><strong>28\/09\/2026</u);
-  assert.match(v3, /Pedido fechado<\/span><strong>02\/10\/2026</u);
+  assert.match(v3, /Data do pedido<\/span><strong>02\/10\/2026</u);
   assert.match(v3, /Pagamento<\/span><strong>02\/10\/2026</u);
   assert.match(
     v3,

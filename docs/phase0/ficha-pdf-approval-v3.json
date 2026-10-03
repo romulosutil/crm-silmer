@@ -7,10 +7,10 @@
   "snapshotVersion": "synthetic-order-v3",
   "templateVersion": "ficha-canonical-v3",
   "snapshotSha256": "6715b350a4a3b772ccc3ff510f9b3003db87a84beadb0a485ba021373b56cb2f",
-  "renderedHtmlSha256": "14710d0c08e56203a6aac360159290500f132469bc2893010f781e62648884e2",
+  "renderedHtmlSha256": "9f0782813871330958e0903c35fc4346bab0e723aa8af472aa625f1b61302d0b",
   "artifact": {
     "path": "output/pdf/ficha-canonica-sintetica-v3.pdf",
-    "sha256": "35ef7566b4c48894cb65867c042b1ddc41db827ac8f573c91b23e96ab6363b6f",
+    "sha256": "005f3ef4bf826f25f766a58d289bd3a66b06ce1ed1d0d6484923d8996a4b53b4",
     "pageCount": 2
   },
   "approval": {

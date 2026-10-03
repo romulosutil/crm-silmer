@@ -376,8 +376,9 @@ fato entregamos, na ficha digital e na impressa.
    uma versão desatualizada SHALL receber 409.
 8. **PLA-08** A ficha impressa SHALL trazer as cinco datas do lastro na
    página 1 do template `ficha-canonical-v3` com os sete pontos (ADR 017, que
-   supera a v3 por produto), antes da aprovação do PDF; dia ainda não
-   registrado SHALL sair como "—".
+   supera a v3 por produto), cada uma uma vez só: Data do pedido e Entrega
+   prometida no Resumo; Primeiro contato, Pagamento e Entrega realizada na
+   faixa "Lastro do pedido". Dia ainda não registrado SHALL sair como "—".
 9. **PLA-09** Enquanto a v2 imprime, a entrega confirmada SHALL sair como
    dd/mm/aaaa, igual à amostra aprovada.
 
@@ -671,9 +672,9 @@ do PDF (PIM-10). O registro da aprovação fica em
 | PIM-06 | P1-5     | `test/ficha-print-v3.test.js:138,170`; `test/ficha-pdf-review-v3.test.js:81`                | Verified · PDF a aprovar       |
 | PIM-07 | P1-5     | `test/ficha-print-v3.test.js:194`; `test/ficha-pdf-review-v3.test.js:81,99`                 | Verified · PDF a aprovar       |
 | PIM-08 | P1-5     | `test/ficha-print-v3.test.js:221`                                                           | Verified · PDF a aprovar       |
-| PIM-09 | P1-5     | `test/ficha-print-v3.test.js:252,279,337`                                                   | Verified · PDF a aprovar       |
+| PIM-09 | P1-5     | `test/ficha-print-v3.test.js:252,279,345`                                                   | Verified · PDF a aprovar       |
 | PIM-10 | P1-5     | `test/ficha-print-switch.test.js:146,155,196,203,222`; `npm run validate:ficha-pdf-review`  | Verified · v2 até a aprovação  |
-| PLA-08 | P1-10    | `test/ficha-print-v3.test.js:309,384`; `test/ficha-pdf-review-v3.test.js:143`               | Verified · PDF a aprovar       |
+| PLA-08 | P1-10    | `test/ficha-print-v3.test.js:309,392`; `test/ficha-pdf-review-v3.test.js:143`               | Verified · PDF a aprovar       |
 
 O gate do pacote (hashes da amostra, do HTML e do PDF, aprovação inteira ou
 pendente, recusa de regerar a versão aprovada) está em

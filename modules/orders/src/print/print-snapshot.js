@@ -37,17 +37,17 @@ function printedInstantDay(value) {
 }
 
 /**
- * PLA-08 (ADR 008): the five days of the order, in the order they happen. A
- * day nobody recorded yet is ''.
+ * PLA-08 (ADR 008, ADR 017): the days of the trail that the summary does not
+ * already print. The order date and the promised delivery stay only in the
+ * summary, so page 1 shows each of the five days once. A day nobody recorded
+ * yet is ''.
  *
  * @param {any} order
  */
 function printedTrail(order) {
   return {
     primeiro_contato: printedInstantDay(order.firstContactAt),
-    pedido_fechado: printedDate(order.orderDate),
     pagamento: printedDate(order.paidOn),
-    entrega_prometida: printedDate(order.ficha.summary.data_entrega_confirmada),
     entrega_realizada: printedDate(order.deliveredOn),
   };
 }

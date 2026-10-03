@@ -36,6 +36,12 @@ nunca foi aprovada, e o catálogo saiu da tela (T49: campos só de texto). A T48
 também renomeou dois rótulos do Resumo na tela, "Tipo de serviço" e "Entrega
 prometida", sem mudar a v2.
 
+Na revisão do PDF (02/10/2026), o PO decidiu que toda data do lastro, menos a
+Entrega realizada, precisa estar preenchida para gerar o pedido: Pagamento e
+Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
+é conciliação depois da venda e nunca bloqueia. No papel, um pedido impresso
+(confirmado) traz sempre Pagamento e Entrega prometida.
+
 ## Decisão
 
 1. **Novo template `ficha-canonical-v3`.** O arquivo
@@ -47,9 +53,11 @@ prometida", sem mudar a v2.
      de peças e Tipo de serviço (`aplicacao`); abaixo, Evento / Nome,
      Vendedor, Data do pedido e FAB. Valor final e forma de pagamento
      continuam fora do papel (D12).
-   - **Lastro do pedido:** as cinco datas da ADR 008, nesta ordem: Primeiro
-     contato (o dia em São Paulo), Pedido fechado, Pagamento, Entrega
-     prometida e Entrega realizada.
+   - **Lastro do pedido:** cada uma das cinco datas da ADR 008 sai uma vez só
+     na página 1. A data do pedido (Pedido fechado) e a Entrega prometida
+     ficam só no Resumo, como "Data do pedido" e "Entrega prometida"; a faixa
+     do lastro traz as outras três, nesta ordem: Primeiro contato (o dia em
+     São Paulo), Pagamento e Entrega realizada.
    - **Itens:** cada item traz os sete pontos numerados de 1 a 7, nesta ordem
      e com estes rótulos: Tipo de roupa (`tipo`), Cor (`cor`), Quantidade
      (soma da grade, nunca gravada), Estampa (`estampa`), Tecido (`malhas`,
@@ -57,7 +65,7 @@ prometida", sem mudar a v2.
      e Gola (`gola`).
    - **Observações e total de peças**, como na v2.
 
-3. **Adicionais só quando preenchidos.** Modelo, Cor frente, Cor costas, Manga
+3. **Adicionais só quando preenchidos** (aprovado pelo PO). Modelo, Cor frente, Cor costas, Manga
    direita, Manga esquerda, Viés gola e Viés mangas saem num bloco compacto
    "Adicionais", no pé do item, só quando ao menos um deles estiver
    preenchido, e só os preenchidos, sempre nessa ordem. "NAO APLICAVEL" é
@@ -74,8 +82,9 @@ prometida", sem mudar a v2.
    - Ordem fixa: a fábrica acha cada adicional sempre na mesma posição
      relativa, como lia a peça na v2 (modelo, corpo, mangas, viés).
 
-4. **Campo vazio sai como "—"** (A01): ponto principal, campo do Resumo ou dia
-   do lastro ainda não registrado. Uma ficha gravada antes desta mudança não
+4. **Campo vazio sai como "—"** (A01, aprovado pelo PO): ponto principal,
+   campo do Resumo ou dia do lastro ainda não registrado, na prática a Entrega
+   realizada. Uma ficha gravada antes desta mudança não
    tem `cor`, `estampa` nem `gola`: esses três pontos saem como "—" e todos os
    campos da v2 (modelo, cores por parte e viés) continuam no papel, nos
    adicionais. Nada da v2 se perde.
@@ -122,6 +131,8 @@ prometida", sem mudar a v2.
   mais itens a página 1 transborda.
 - **Adicionais sempre impressos com "—":** sete "—" por item na maior parte
   dos pedidos, ruído sem informação.
+- **Lastro com as cinco datas na faixa:** repetia no papel a Data do pedido e
+  a Entrega prometida, que já estão no Resumo; o PO pediu cada data uma vez.
 - **Trocar a v2 direto, sem amostra:** quebraria o gate por hash da T00.4 e a
   decisão do PO de aprovar antes de valer.
 

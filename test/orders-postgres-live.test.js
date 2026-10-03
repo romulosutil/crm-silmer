@@ -26,6 +26,7 @@ import { PostgresOrderRepository } from '../modules/orders/src/adapters/postgres
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
 import { defineOrderRepositoryContract } from './orders-repository-contract.test.js';
 import { orderContextsFrom } from './fixtures/order-contexts.js';
+import { syntheticItems } from './fixtures/order-items.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const NOW = new Date('2026-09-12T12:00:00.000Z');
@@ -120,6 +121,11 @@ if (connectionString) {
     await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
     await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
     await migrate(pool, { migrations: await loadMigrations() });
+    await pool.query(
+      `INSERT INTO crm.users (id, email, password_hash, name)
+       VALUES ('seller-contract', 'seller-contract@example.test',
+               '$argon2id$synthetic', 'Vendedor Contrato')`,
+    );
   });
   after(async () => {
     await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
@@ -128,7 +134,15 @@ if (connectionString) {
   });
 
   defineOrderRepositoryContract('PostgreSQL', async () => ({
-    newConversationId: () => seedConversation(pool),
+    newConversationId: async () => {
+      const id = await seedConversation(pool);
+      await pool.query(
+        `UPDATE crm.conversations SET assigned_user_id = 'seller-contract'
+         WHERE id = $1`,
+        [id],
+      );
+      return id;
+    },
     readEvents: async (orderId) =>
       (
         await pool.query(
@@ -462,6 +476,15 @@ if (connectionString) {
     // An Instagram contact: its "@handle" must never become the client.
     const conversationId = await seedConversation(pool);
     await pool.query(
+      `INSERT INTO crm.users (id, email, password_hash, name)
+       VALUES ($1, $2, '$argon2id$synthetic', 'Vendedor Nome')`,
+      [actor.id, `${actor.id}@example.test`],
+    );
+    await pool.query(
+      'UPDATE crm.conversations SET assigned_user_id = $2 WHERE id = $1',
+      [conversationId, actor.id],
+    );
+    await pool.query(
       `UPDATE crm.conversations
        SET briefing_version = 1, briefing_envelope = $2::jsonb,
            briefing_updated_at = $3
@@ -588,6 +611,7 @@ if (connectionString) {
           malhas: ['DRY FIT'],
           modelo: '',
           tipo: 'CAMISA',
+          tipo_servico: 'Produção completa',
           vies_gola: '',
           vies_mangas: '',
         },
@@ -767,6 +791,7 @@ if (connectionString) {
           malhas: ['DRY FIT'],
           modelo: 'TRADICIONAL',
           tipo: 'CAMISA',
+          tipo_servico: 'Somente impressão',
           vies_gola: 'AZUL',
           vies_mangas: 'NAO APLICAVEL',
         },
@@ -831,6 +856,15 @@ if (connectionString) {
       repository,
     });
     const actor = { capabilities: [], id: `seller-${runId}`, kind: 'human' };
+    await pool.query(
+      `INSERT INTO crm.users (id, email, password_hash, name)
+       VALUES ($1, $2, '$argon2id$synthetic', 'Vendedor Sete Pontos')`,
+      [actor.id, `${actor.id}@example.test`],
+    );
+    await pool.query(
+      'UPDATE crm.conversations SET assigned_user_id = $2 WHERE id = $1',
+      [conversationId, actor.id],
+    );
 
     // The bot opens the order on the first points it has.
     const { order: created } = await service.ensurePendingFromIntent({
@@ -846,6 +880,7 @@ if (connectionString) {
       'items[0].malhas',
       'items[0].grade',
       'items[0].gola',
+      'items[0].tipo_servico',
       'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
@@ -877,6 +912,7 @@ if (connectionString) {
     assert.equal(order.totalPieces, 30);
     assert.deepEqual(order.missingFields, [
       'items[0].gola',
+      'items[0].tipo_servico',
       'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
@@ -910,9 +946,11 @@ if (connectionString) {
       code: 'ORDER_NOT_CONFIRMABLE',
       fields: [
         'items[0].gola',
+        'items[0].tipo_servico',
         'items[1].cor',
         'items[1].grade',
         'items[1].gola',
+        'items[1].tipo_servico',
         'summary.data_entrega_confirmada',
         'finalAmount',
         'paymentCondition',
@@ -926,13 +964,14 @@ if (connectionString) {
       orderId: order.id,
       section: 'items',
       value: [
-        { ...first, gola: 'gola redonda' },
+        { ...first, gola: 'gola redonda', tipo_servico: 'Produção completa' },
         {
           ...first,
           cor: 'branca',
           gola: 'regata',
           grade: [{ quantidade: 4, tamanho: 'GG' }],
           tipo: 'regata',
+          tipo_servico: 'Somente impressão',
         },
       ],
     });
@@ -1045,6 +1084,7 @@ if (connectionString) {
       'items[0].malhas',
       'items[0].grade',
       'items[0].gola',
+      'items[0].tipo_servico',
       'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
@@ -1060,5 +1100,224 @@ if (connectionString) {
         }),
       TypeError,
     );
+  });
+
+  test('a transfer between the first owner check and the write rejects every human order mutation', async () => {
+    const tag = randomUUID().replaceAll('-', '').slice(0, 10);
+    const conversationId = await seedConversation(pool);
+    const owner = { id: `seller-old-${tag}`, kind: 'human', capabilities: [] };
+    const nextOwner = `seller-new-${tag}`;
+    const admin = {
+      id: `admin-${tag}`,
+      kind: 'human',
+      capabilities: ['COMMERCIAL_ADMIN'],
+    };
+    for (const [id, name] of [
+      [owner.id, 'Vendedor Anterior'],
+      [nextOwner, 'Vendedor Atual'],
+      [admin.id, 'Admin Sintetico'],
+    ]) {
+      await pool.query(
+        `INSERT INTO crm.users (id, email, password_hash, name)
+         VALUES ($1, $2, '$argon2id$synthetic', $3)`,
+        [id, `${id}@example.test`, name],
+      );
+    }
+    await pool.query(
+      `INSERT INTO crm.user_capabilities (user_id, capability)
+       VALUES ($1, 'COMMERCIAL_ADMIN')`,
+      [admin.id],
+    );
+    const transfer = (/** @type {string} */ userId) =>
+      pool.query(
+        `UPDATE crm.conversations
+         SET assigned_user_id = $2, version = version + 1
+         WHERE id = $1`,
+        [conversationId, userId],
+      );
+    await transfer(owner.id);
+
+    const created = await repository.createPending({
+      conversationId,
+      correlationId: `correlation-race-create-${tag}`,
+      createdBy: null,
+      createdByKind: 'automation',
+      fabCode: '01',
+      ficha: {
+        artwork: {
+          feito_pelo_cliente: false,
+          feito_pela_silmer: false,
+          files: [],
+        },
+        items: /** @type {any} */ (syntheticItems()),
+        observations: [],
+        serviceData: {},
+        summary: {
+          aplicacao: null,
+          cliente: 'Cliente Sintetico',
+          data_entrega_confirmada: '2026-10-24',
+          nome: 'Evento Sintetico',
+        },
+      },
+      firstContactAt: NOW.toISOString(),
+      id: randomUUID(),
+      missingFields: ['finalAmount', 'paymentCondition'],
+      now: NOW,
+      totalPieces: 32,
+    });
+    const port = new PostgresOrderConversationPort({
+      contactEnvelopeKey: CONTACT_KEY,
+      database: databaseFor(pool),
+      envelopeKey: ENVELOPE_KEY,
+    });
+    /** @type {{checked: {promise: Promise<void>, resolve: () => void}, resume: {promise: Promise<void>, resolve: () => void}}|null} */
+    let barrier = null;
+    const service = createOrderService({
+      async authorizeOwnership({ actor, conversationId: id }) {
+        const assignment = await port.readAssignment(id);
+        if (
+          assignment?.assignedUserId !== actor.id &&
+          !(actor.capabilities ?? []).includes('COMMERCIAL_ADMIN')
+        ) {
+          throw Object.assign(new Error('not the owner'), {
+            code: 'FORBIDDEN',
+            statusCode: 403,
+          });
+        }
+        if (barrier) {
+          const pending = barrier;
+          barrier = null;
+          pending.checked.resolve();
+          await pending.resume.promise;
+        }
+      },
+      clock: () => NOW,
+      conversations: {
+        readOrderContexts: orderContextsFrom(() => ({
+          briefing: null,
+          customerName: 'Cliente Sintetico',
+        })),
+        searchConversationIds: async () => [],
+      },
+      fabCode: '01',
+      repository,
+    });
+    const eventCount = async () =>
+      Number(
+        (
+          await pool.query(
+            `SELECT count(*) AS total FROM crm.domain_events
+             WHERE aggregate_type = 'order' AND aggregate_id = $1`,
+            [created.id],
+          )
+        ).rows[0].total,
+      );
+    const deferred = () => {
+      /** @type {() => void} */
+      let resolve = () => {};
+      /** @type {Promise<void>} */
+      const promise = new Promise((done) => {
+        resolve = () => done();
+      });
+      return { promise, resolve };
+    };
+    /** @param {() => Promise<unknown>} command */
+    const loseOwnerBeforeWrite = async (command) => {
+      const before = await repository.findById(created.id);
+      const beforeEvents = await eventCount();
+      barrier = { checked: deferred(), resume: deferred() };
+      const pending = barrier;
+      const result = command();
+      await Promise.race([
+        pending.checked.promise,
+        result.then(
+          () => {
+            throw new Error('command ended before the ownership barrier');
+          },
+          (error) => {
+            throw error;
+          },
+        ),
+      ]);
+      try {
+        await transfer(nextOwner);
+      } finally {
+        pending.resume.resolve();
+      }
+      await assert.rejects(result, { code: 'FORBIDDEN', statusCode: 403 });
+      assert.deepEqual(await repository.findById(created.id), before);
+      assert.equal(await eventCount(), beforeEvents);
+      await transfer(owner.id);
+    };
+
+    await loseOwnerBeforeWrite(() =>
+      service.patchSection({
+        actor: owner,
+        correlationId: `correlation-race-section-${tag}`,
+        expectedVersion: created.version,
+        orderId: created.id,
+        section: 'observations',
+        value: [],
+      }),
+    );
+    await loseOwnerBeforeWrite(() =>
+      service.confirm({
+        actor: owner,
+        amountText: '150,00',
+        correlationId: `correlation-race-confirm-${tag}`,
+        expectedVersion: created.version,
+        orderId: created.id,
+        paymentCondition: 'pix',
+      }),
+    );
+    const confirmed = await service.confirm({
+      actor: owner,
+      amountText: '150,00',
+      correlationId: `correlation-race-ready-${tag}`,
+      expectedVersion: created.version,
+      orderId: created.id,
+      paymentCondition: 'pix',
+    });
+    await loseOwnerBeforeWrite(() =>
+      service.recordMilestones({
+        actor: owner,
+        correlationId: `correlation-race-milestones-${tag}`,
+        deliveredOn: null,
+        expectedVersion: confirmed.version,
+        orderId: created.id,
+        paidOn: '2026-09-12',
+      }),
+    );
+    await loseOwnerBeforeWrite(() =>
+      service.reopen({
+        actor: owner,
+        correlationId: `correlation-race-reopen-${tag}`,
+        expectedVersion: confirmed.version,
+        orderId: created.id,
+      }),
+    );
+
+    // A stale capability claim cannot replace the locked database grant.
+    await transfer(nextOwner);
+    await assert.rejects(
+      service.recordMilestones({
+        actor: { ...owner, capabilities: ['COMMERCIAL_ADMIN'] },
+        correlationId: `correlation-fake-admin-${tag}`,
+        deliveredOn: null,
+        expectedVersion: confirmed.version,
+        orderId: created.id,
+        paidOn: '2026-09-12',
+      }),
+      { code: 'FORBIDDEN', statusCode: 403 },
+    );
+    const grantedAdmin = await service.recordMilestones({
+      actor: admin,
+      correlationId: `correlation-real-admin-${tag}`,
+      deliveredOn: null,
+      expectedVersion: confirmed.version,
+      orderId: created.id,
+      paidOn: '2026-09-12',
+    });
+    assert.equal(grantedAdmin.paidOn, '2026-09-12');
   });
 }

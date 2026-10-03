@@ -11,9 +11,11 @@ import { ORDER_STATUSES } from '../domain/order.js';
  *   totalPieces: number, missingFields: string[],
  *   createdByKind: 'automation'|'user', createdBy: string|null,
  *   firstContactAt: string|null, correlationId: string, now: Date,
+ *   actor?: {id: string, kind: string, capabilities?: readonly string[]},
  * }} CreatePendingOrderInput
  *
- * @typedef {{expectedVersion: number, correlationId: string}} OrderWriteOptions
+ * Human writes include `actor`; only technical briefing projection omits it.
+ * @typedef {{expectedVersion: number, correlationId: string, actor?: {id: string, kind: string, capabilities?: readonly string[]}}} OrderWriteOptions
  *
  * A search matches orders by exact number OR by conversation; with neither,
  * every order matches. Customer and phone search resolve to conversations

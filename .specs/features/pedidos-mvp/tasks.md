@@ -974,8 +974,8 @@ forma do item desta entrega.
 
 **Done when:**
 
-- [ ] ADR 016 ligada à spec, ao contexto e às tasks
-- [ ] A01, a ADR 012 e o inventário da ficha apontam para a ADR 016
+- [x] ADR 016 ligada à spec, ao contexto e às tasks
+- [x] A01, a ADR 012 e o inventário da ficha apontam para a ADR 016
 
 **Tests:** none · **Gate:** docs · **Commit:** `docs(adr): build the order items on the seven ficha points`
 
@@ -988,8 +988,8 @@ forma do item desta entrega.
 
 **Done when:**
 
-- [ ] Todos os exemplos da ADR 016 e os casos ambíguos cobertos
-- [ ] Gate quick passa
+- [x] Todos os exemplos da ADR 016 e os casos ambíguos cobertos
+- [x] Gate quick passa
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): read the sizes the customer typed`
 
@@ -1002,10 +1002,10 @@ forma do item desta entrega.
 
 **Done when:**
 
-- [ ] Cada um dos sete pontos bloqueia sozinho; resumo e adicionais não
-- [ ] Item incompleto salva; linha de tamanho inválida continua recusada
-- [ ] Ficha sem as chaves novas é lida, e o que falta é recalculado
-- [ ] Gate quick e `npm run test:orders:live` passam
+- [x] Cada um dos sete pontos bloqueia sozinho; resumo e adicionais não
+- [x] Item incompleto salva; linha de tamanho inválida continua recusada
+- [x] Ficha sem as chaves novas é lida, e o que falta é recalculado
+- [x] Gate quick e `npm run test:orders:live` passam
 
 **Tests:** unit + integração live · **Gate:** quick + live · **Commit:** `feat(orders): build items on the seven ficha points`
 
@@ -1018,9 +1018,9 @@ forma do item desta entrega.
 
 **Done when:**
 
-- [ ] Conversa sem nome confirmado dá o cliente do briefing ou vazio, nunca o "@handle"
-- [ ] Nome dado por pessoa ou promovido do bot vale
-- [ ] Gate live passa
+- [x] Conversa sem nome confirmado dá o cliente do briefing ou vazio, nunca o "@handle"
+- [x] Nome dado por pessoa ou promovido do bot vale
+- [x] Gate live passa
 
 **Tests:** integração live · **Gate:** quick + live · **Commit:** `fix(orders): name the customer only from a confirmed name`
 
@@ -1033,9 +1033,9 @@ forma do item desta entrega.
 
 **Done when:**
 
-- [ ] Teclado abre e fecha os adicionais, com `aria-expanded` e o foco no botão
-- [ ] axe sem violações; desktop e 390 px conferidos
-- [ ] Gate e2e passa
+- [x] Teclado abre e fecha os adicionais, com `aria-expanded` e o foco no botão
+- [x] axe sem violações; desktop e 390 px conferidos
+- [x] Gate e2e passa
 
 **Tests:** unit + e2e · **Gate:** quick + e2e · **Commit:** `feat(edge-web): show the order items on the seven ficha points`
 
@@ -1048,9 +1048,9 @@ forma do item desta entrega.
 
 **Done when:**
 
-- [ ] Entrega prometida ausente ou em texto livre bloqueia; "Pago em" e "Entregue em" vazios não
-- [ ] Live: gerar recusado sem a entrega prometida e aceito com ela, sem "Pago em"
-- [ ] e2e: "Falta para gerar" nomeia a entrega prometida, e "Informar no Resumo" abre o campo
+- [x] Entrega prometida ausente ou em texto livre bloqueia; "Pago em" e "Entregue em" vazios não
+- [x] Live: gerar recusado sem a entrega prometida e aceito com ela, sem "Pago em"
+- [x] e2e: "Falta para gerar" nomeia a entrega prometida, e "Informar no Resumo" abre o campo
 
 **Tests:** unit + integração live + e2e · **Gate:** quick + live + e2e · **Commit:** `feat(orders): require the promised delivery to generate an order`
 
@@ -1065,8 +1065,8 @@ O número T65 é da ficha impressa (ADR 017); esta é a próxima livre.
 
 **Done when:**
 
-- [ ] `npm run validate`, `npm run test:e2e` e `npm run test:orders:live` passam
-- [ ] Nenhum PIT sem evidência
+- [x] `npm run validate`, `npm run test:e2e` e `npm run test:orders:live` passam
+- [x] Nenhum PIT sem evidência
 
 **Tests:** full · **Gate:** full · **Commit:** `docs(specs): trace the seven-point items to their tests`
 

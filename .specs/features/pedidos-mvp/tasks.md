@@ -874,10 +874,10 @@ T54 e T55 partem de `master`, num branch próprio.
 
 **Done when:**
 
-- [ ] `POST .../return-to-ai` responde 404 sem autorizar nem chamar o domínio
-- [ ] Serviço sem `reactivateAgent`; os repositórios recusam `reactivate` sem auditoria, evento ou comando ao n8n
-- [ ] A Caixa de Entrada não mostra "Devolver à IA"; as ações restantes seguem em ordem pelo teclado; axe sem violações
-- [ ] `npm run validate`, o live do inbox e o e2e do inbox passam
+- [x] `POST .../return-to-ai` responde 404 sem autorizar nem chamar o domínio
+- [x] Serviço sem `reactivateAgent`; os repositórios recusam `reactivate` sem auditoria, evento ou comando ao n8n
+- [x] A Caixa de Entrada não mostra "Devolver à IA"; as ações restantes seguem em ordem pelo teclado; axe sem violações
+- [x] `npm run validate`, o live do inbox e o e2e do inbox passam
 
 **Tests:** unit + live + e2e · **Gate:** quick + live + e2e · **Commit:** `feat(inbox): never hand a conversation back to the bot`
 

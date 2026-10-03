@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  CONVERSATION_MUTATIONS,
   INBOX_STATES,
   InMemoryInboxRepository,
   InboxConflictError,
@@ -207,7 +208,7 @@ test('creates exactly one new cycle after terminal state and preserves the old c
   assert.equal(terminal.state, 'sem_lead');
 });
 
-test('makes takeover, human send and explicit reactivation atomic and idempotent', async () => {
+test('makes takeover and human send atomic and idempotent', async () => {
   const { audits, service } = createHarness();
   const received = await service.receiveInbound(inbound());
   const takeoverCommand = {
@@ -238,18 +239,6 @@ test('makes takeover, human send and explicit reactivation atomic and idempotent
   });
   assert.equal(sent.direction, 'outbound');
   assert.equal(sent.authorId, ATTENDANT.id);
-
-  const reactivated = await service.reactivateAgent({
-    actor: ATTENDANT,
-    conversationId: takeover.id,
-    correlationId: 'correlation-reactivate',
-    expectedVersion: sent.conversationVersion,
-    idempotencyKey: 'reactivate-key',
-    reason: 'Retomar assistência explicitamente',
-  });
-  assert.equal(reactivated.automationState, 'assistant');
-  assert.equal(reactivated.automationEpoch, 2);
-  assert.equal(reactivated.assignedUserId, null);
   assert.equal(
     audits.filter(({ action }) => action === 'conversation.takeover').length,
     1,
@@ -390,16 +379,72 @@ test('keeps an assigned conversation off limits to every other seller', async ()
     InboxForbiddenError,
   );
   await assert.rejects(
-    service.reactivateAgent({
+    service.transitionConversation({
       actor: OTHER_SELLER,
       conversationId: owned.id,
-      correlationId: 'correlation-steal-reactivate',
+      correlationId: 'correlation-steal-close',
       expectedVersion: owned.version,
-      idempotencyKey: 'steal-reactivate',
-      reason: 'Tentativa de devolver conversa alheia',
+      idempotencyKey: 'steal-close',
+      reason: 'Tentativa de encerrar conversa alheia',
+      state: 'sem_lead',
     }),
     InboxForbiddenError,
   );
+});
+
+test('never hands a conversation with a person back to the agent (ADR 015)', async () => {
+  const { audits, repository, service } = createHarness();
+  const owned = await conversationOwnedByAttendant(service);
+  const auditCount = audits.length;
+
+  assert.equal('reactivateAgent' in service, false);
+  assert.deepEqual(
+    [...CONVERSATION_MUTATIONS],
+    ['archive', 'send', 'takeover', 'transfer', 'transition', 'unarchive'],
+  );
+  // Even the repository refuses the removed change, for the owner and for an
+  // administrator alike, before it reads or writes anything.
+  for (const [kind, actor] of /** @type {Array<[string, any]>} */ ([
+    ['reactivate', ATTENDANT],
+    ['reactivate', ADMIN],
+    ['return_to_ai', ATTENDANT],
+  ])) {
+    await assert.rejects(
+      repository.mutateConversation(
+        kind,
+        {
+          actor,
+          conversationId: owned.id,
+          correlationId: `correlation-${kind}`,
+          expectedVersion: owned.version,
+          idempotencyKey: `${kind}-key`,
+          reason: 'Devolver à IA',
+        },
+        {
+          appendAudit: async (/** @type {any} */ event) => audits.push(event),
+          clock: () => NOW,
+          idFactory: (/** @type {string} */ name) => `${name}-refused`,
+        },
+      ),
+      InboxValidationError,
+    );
+  }
+  assert.equal(audits.length, auditCount);
+
+  // The conversation is untouched: same version, still with its owner.
+  const kept = await service.transitionConversation({
+    actor: ATTENDANT,
+    conversationId: owned.id,
+    correlationId: 'correlation-still-human',
+    expectedVersion: owned.version,
+    idempotencyKey: 'still-human',
+    reason: 'Segue com o vendedor',
+    state: 'em_atendimento',
+  });
+  assert.equal(kept.version, owned.version + 1);
+  assert.equal(kept.automationState, 'human');
+  assert.equal(kept.automationEpoch, owned.automationEpoch);
+  assert.equal(kept.assignedUserId, ATTENDANT.id);
 });
 
 test('lets the owner and an administrator hand a conversation to another seller', async () => {
@@ -423,12 +468,14 @@ test('lets the owner and an administrator hand a conversation to another seller'
 
   // The previous owner lost the conversation with the transfer.
   await assert.rejects(
-    service.reactivateAgent({
+    service.sendHumanMessage({
       actor: ATTENDANT,
+      content: { ciphertext: 'sealed-after-transfer' },
       conversationId: transferred.id,
       correlationId: 'correlation-after-transfer',
       expectedVersion: transferred.version,
       idempotencyKey: 'after-transfer',
+      messageType: 'text',
       reason: 'Tentativa após repasse',
     }),
     InboxForbiddenError,

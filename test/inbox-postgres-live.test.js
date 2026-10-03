@@ -14,6 +14,7 @@ import {
   createContactIdentityService,
 } from '../modules/contacts/src/index.js';
 import {
+  InboxValidationError,
   PostgresInboxRepository,
   createChannelEventHandler,
   createChannelEventJobHandler,
@@ -23,6 +24,7 @@ import {
   PostgresOutboundMessageOutbox,
   PostgresWebhookInbox,
 } from '../modules/integration-reliability/src/index.js';
+import { PostgresN8nCommandOutbox } from '../modules/n8n-integration/src/index.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const NOW = new Date('2026-09-02T12:00:00.000Z');
@@ -385,6 +387,105 @@ if (connectionString) {
         },
       );
       assert.doesNotMatch(state.rows[0].stored_content, /PII-human/u);
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
+
+  test('PostgreSQL never hands a taken-over conversation back to the agent (ADR 015)', async () => {
+    const databaseName = new URL(connectionString).pathname.slice(1);
+    assert.equal(databaseName, 'crm_silmer_test');
+    const pool = new Pool({ connectionString, max: 16 });
+    const runId = randomUUID().replaceAll('-', '');
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+      await seedAttendant(pool);
+      // The production outbox: takeover and close notify n8n through it.
+      const outboundMessageOutbox = new PostgresN8nCommandOutbox({
+        envelopeKey: Buffer.alloc(32, 44),
+      });
+      const { contacts, inbox } = servicesFor(pool, { outboundMessageOutbox });
+      const identity = await contacts.resolveInboundIdentity(
+        identityInput(runId),
+      );
+      const received = await inbox.receiveInbound(
+        inboundInput(runId, identity),
+      );
+      const taken = await inbox.takeover({
+        actor: ATTENDANT,
+        conversationId: received.conversation.id,
+        correlationId: `correlation-takeover-${runId}`,
+        expectedVersion: received.conversation.version,
+        idempotencyKey: `takeover-${runId}`,
+        reason: 'Assumir atendimento sintético',
+      });
+      assert.equal(taken.automationState, 'human');
+      assert.equal('reactivateAgent' in inbox, false);
+
+      const repository = new PostgresInboxRepository({
+        database: databaseFor(pool),
+        envelopeKey: Buffer.alloc(32, 41),
+        outboundMessageOutbox,
+      });
+      await assert.rejects(
+        repository.mutateConversation(
+          'reactivate',
+          {
+            actor: ATTENDANT,
+            conversationId: taken.id,
+            correlationId: `correlation-reactivate-${runId}`,
+            expectedVersion: taken.version,
+            idempotencyKey: `reactivate-${runId}`,
+            reason: 'Devolver à IA',
+          },
+          {
+            appendAudit: async () => assert.fail('no audit is written'),
+            clock: () => NOW,
+            idFactory: (/** @type {string} */ kind) => `${kind}-${runId}`,
+          },
+        ),
+        InboxValidationError,
+      );
+
+      const state = await pool.query(
+        `SELECT c.automation_state, c.automation_epoch, c.assigned_user_id,
+                c.version,
+                (SELECT count(*)::integer FROM crm.inbox_commands
+                 WHERE operation = 'reactivate') AS reactivations,
+                (SELECT count(*)::integer FROM crm.audit_events
+                 WHERE action = 'conversation.assistant_reactivated')
+                  AS reactivation_audits,
+                (SELECT count(*)::integer FROM crm.domain_events
+                 WHERE event_type = 'conversation.assistant_reactivated')
+                  AS reactivation_events,
+                (SELECT string_agg(action, ',' ORDER BY created_at)
+                 FROM crm.n8n_commands
+                 WHERE conversation_id = c.id) AS panel_commands
+         FROM crm.conversations c
+         WHERE c.id = $1`,
+        [taken.id],
+      );
+      assert.deepEqual(
+        {
+          ...state.rows[0],
+          automation_epoch: Number(state.rows[0].automation_epoch),
+          version: Number(state.rows[0].version),
+        },
+        {
+          assigned_user_id: ATTENDANT.id,
+          automation_epoch: taken.automationEpoch,
+          automation_state: 'human',
+          panel_commands: 'take_over',
+          reactivation_audits: 0,
+          reactivation_events: 0,
+          reactivations: 0,
+          version: taken.version,
+        },
+      );
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

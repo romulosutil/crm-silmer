@@ -135,6 +135,12 @@ O handoff pelo teto usa o motivo `iteration_limit` (migração 0025).
 Takeover e handoff incrementam `automation_epoch`, invalidando decisões ainda
 não reservadas. Status segue a ordem `sent < delivered < read` e nunca regride.
 
+Uma mudança de entrega do comando de mensagem humana (`sent`, `failed` ou
+`outcome_unknown`) atualiza a mensagem e publica um evento SSE na mesma
+transação. O evento contém só o identificador da conversa; Inbox e Pedidos
+reconsultam a API autorizada. A recuperação de lease ou fila incerta aplica o
+mesmo sinal uma vez, sem rebaixar um envio já confirmado.
+
 ## Briefing, conversão e handoff
 
 O agente recebe `recent_messages` e `briefing` na resposta inbound. Pode mandar

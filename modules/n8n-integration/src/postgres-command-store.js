@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { decryptJson } from './crypto.js';
 
 const DEFAULT_LEASE_MS = 300_000;
@@ -127,18 +128,20 @@ export class PostgresN8nCommandStore {
     const manual = typeof context.reconciledBy === 'string';
     const owner = manual ? null : attemptOwner(context);
     return this.database.transaction(async (/** @type {any} */ client) => {
+      await lockCommandConversation(client, commandId);
       const row = (
         await client.query(
-          `SELECT command_id, message_id, status, locked_by
+          `SELECT command_id, conversation_id, message_id, status, locked_by
            FROM crm.n8n_commands WHERE command_id = $1 FOR UPDATE`,
           [commandId],
         )
       ).rows[0];
       if (!row) return false;
+      if (row.status === status) return true;
       const allowed = manual
         ? row.status === 'outcome_unknown'
         : row.status === 'processing' && row.locked_by === owner;
-      if (!allowed) return row.status === status;
+      if (!allowed) return false;
       const externalMessageId = nullableTechnicalId(
         context.providerExternalId,
         'providerExternalId',
@@ -187,6 +190,12 @@ export class PostgresN8nCommandStore {
             now,
           ],
         );
+        await appendMessageDeliveryEvent(
+          client,
+          row.conversation_id,
+          commandId,
+          now,
+        );
       }
       if (status === 'outcome_unknown') {
         await insertReconciliation(client, commandId, now);
@@ -230,13 +239,14 @@ function fenceAllows(row) {
 
 /** @param {any} client @param {string} commandId @param {Date} now */
 async function recoverExpired(client, commandId, now) {
+  await lockCommandConversation(client, commandId);
   const expired = await client.query(
     `UPDATE crm.n8n_commands
      SET status = 'outcome_unknown', locked_by = NULL, locked_until = NULL,
          last_error_code = 'COMMAND_LEASE_EXPIRED', retryable = false,
          retry_safe = false, updated_at = $2, completed_at = $2
      WHERE command_id = $1 AND status = 'processing' AND locked_until <= $2
-     RETURNING command_id`,
+     RETURNING command_id, conversation_id, message_id`,
     [commandId, now],
   );
   const queueUnknown = await client.query(
@@ -249,13 +259,81 @@ async function recoverExpired(client, commandId, now) {
      WHERE command.command_id = $1
        AND job.n8n_command_id = command.command_id
        AND job.status = 'outcome_unknown'
-       AND command.status <> 'outcome_unknown'
-     RETURNING command.command_id`,
+       AND command.status IN ('pending', 'processing', 'failed')
+     RETURNING command.command_id, command.conversation_id, command.message_id`,
     [commandId],
   );
   if (expired.rows.length || queueUnknown.rows.length) {
     await insertReconciliation(client, commandId, now);
+    for (const command of [...expired.rows, ...queueUnknown.rows]) {
+      if (!command.message_id) continue;
+      const message = await client.query(
+        `UPDATE crm.messages
+         SET status = 'outcome_unknown', delivery_status = 'outcome_unknown',
+             delivery_status_at = $2
+         WHERE id = $1 AND status IN ('queued', 'sending', 'failed')
+         RETURNING id`,
+        [command.message_id, now],
+      );
+      if (message.rows.length) {
+        await appendMessageDeliveryEvent(
+          client,
+          command.conversation_id,
+          command.command_id,
+          now,
+        );
+      }
+    }
   }
+}
+
+/**
+ * A delivery status change invalidates the authorized Inbox read model. The
+ * event contains only the conversation identifier; message content stays in
+ * the encrypted message row. Callers lock the conversation before changing the
+ * command, serializing event versions and matching the other message writers'
+ * lock order.
+ *
+ * @param {any} client @param {string} conversationId @param {string} commandId @param {Date} now
+ */
+async function appendMessageDeliveryEvent(
+  client,
+  conversationId,
+  commandId,
+  now,
+) {
+  await client.query(
+    `INSERT INTO crm.domain_events
+       (id, aggregate_type, aggregate_id, aggregate_version, event_type,
+        payload, correlation_id, occurred_at)
+     SELECT $1, 'conversation', $2,
+            COALESCE((SELECT max(existing.aggregate_version)
+                      FROM crm.domain_events AS existing
+                      WHERE existing.aggregate_type = 'conversation'
+                        AND existing.aggregate_id = $2
+                        AND existing.event_type = 'conversation.message_delivery_changed'), 0) + 1,
+            'conversation.message_delivery_changed', $3::jsonb, $4, $5`,
+    [
+      `event-${randomUUID()}`,
+      conversationId,
+      JSON.stringify({ conversationId }),
+      `n8n-command:${commandId}`,
+      now,
+    ],
+  );
+}
+
+/** @param {any} client @param {string} commandId */
+async function lockCommandConversation(client, commandId) {
+  await client.query(
+    `SELECT conversation.id
+     FROM crm.conversations AS conversation
+     JOIN crm.n8n_commands AS command
+       ON command.conversation_id = conversation.id
+     WHERE command.command_id = $1
+     FOR UPDATE OF conversation`,
+    [commandId],
+  );
 }
 
 /** @param {any} client @param {string} commandId @param {Date} now */

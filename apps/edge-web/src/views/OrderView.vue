@@ -291,7 +291,11 @@ function scheduleLiveRefresh() {
 watch(liveEvent, (event) => {
   if (
     event?.reset ||
-    ['inbox.order.changed', 'inbox.contact.changed'].includes(event?.type)
+    [
+      'inbox.order.changed',
+      'inbox.conversation.changed',
+      'inbox.contact.changed',
+    ].includes(event?.type)
   ) {
     if (editingSection.value !== '') {
       pendingLiveRefresh = true;

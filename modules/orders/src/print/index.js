@@ -1,14 +1,16 @@
 import { renderFichaHtml } from './ficha-canonical-v2.js';
 import { renderFichaHtmlV3 } from './ficha-canonical-v3.js';
 import { renderFichaHtmlV4 } from './ficha-canonical-v4.js';
+import { renderFichaHtmlV5 } from './ficha-canonical-v5.js';
 import {
   TEMPLATE_V2,
   TEMPLATE_V3,
   TEMPLATE_V4,
+  TEMPLATE_V5,
   printSnapshot,
 } from './print-snapshot.js';
 
-export { TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4 };
+export { TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4, TEMPLATE_V5 };
 
 /**
  * PIM-10 (ADR 017): the single switch point for the printed ficha. Every
@@ -35,6 +37,9 @@ export const PRINT_TEMPLATE = TEMPLATE_V4;
  */
 export function renderOrderFicha(order, template = PRINT_TEMPLATE) {
   const snapshot = printSnapshot(order, template);
+  if (template === TEMPLATE_V5) {
+    return renderFichaHtmlV5(snapshot, { synthetic: false });
+  }
   if (template === TEMPLATE_V4) {
     return renderFichaHtmlV4(snapshot, { synthetic: false });
   }

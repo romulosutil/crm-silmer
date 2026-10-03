@@ -17,6 +17,7 @@ import {
   TEMPLATE_V2,
   TEMPLATE_V3,
   TEMPLATE_V4,
+  TEMPLATE_V5,
   printSnapshot,
 } from '../modules/orders/src/print/print-snapshot.js';
 import { PRINT_TEMPLATE } from '../modules/orders/src/print/index.js';
@@ -24,6 +25,10 @@ import {
   fichaV4ApprovalStages,
   validateFichaReviewV4,
 } from './ficha-pdf-review-v4.mjs';
+import {
+  fichaV5ApprovalStages,
+  validateFichaReviewV5,
+} from './ficha-pdf-review-v5.mjs';
 
 const rootUrl = new URL('../', import.meta.url);
 const snapshotUrl = new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl);
@@ -999,11 +1004,20 @@ export function validateFichaApprovalEvidenceV3(evidence, gate) {
  * printed order stays on the approved v2. Production also needs the final
  * signature: that is a go-live gate (EASYPANEL-TOPOLOGY.md, section 12).
  *
- * @param {{gate: any, gateV4?: any, printTemplate: string}} input
+ * ADR 020: v5 likewise needs the PO's provisional approval of its sample.
+ *
+ * @param {{gate: any, gateV4?: any, gateV5?: any, printTemplate: string}} input
  */
-export function validateFichaPrintSwitch({ gate, gateV4, printTemplate }) {
+export function validateFichaPrintSwitch({
+  gate,
+  gateV4,
+  gateV5,
+  printTemplate,
+}) {
   invariant(
-    [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4].includes(printTemplate),
+    [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4, TEMPLATE_V5].includes(
+      printTemplate,
+    ),
     'PRINT_TEMPLATE must name a known ficha template',
   );
   const stages = fichaV3ApprovalStages(gate);
@@ -1019,6 +1033,13 @@ export function validateFichaPrintSwitch({ gate, gateV4, printTemplate }) {
       (gateV4?.templateVersion === TEMPLATE_V4 &&
         (v4Stages.provisional || v4Stages.final)),
     'PRINT_TEMPLATE selects ficha-canonical-v4 before its approval is recorded',
+  );
+  const v5Stages = fichaV5ApprovalStages(gateV5);
+  invariant(
+    printTemplate !== TEMPLATE_V5 ||
+      (gateV5?.templateVersion === TEMPLATE_V5 &&
+        (v5Stages.provisional || v5Stages.final)),
+    'PRINT_TEMPLATE selects ficha-canonical-v5 before its approval is recorded',
   );
 }
 
@@ -1248,10 +1269,16 @@ async function validateV3() {
     snapshotBytes,
   });
   const gateV4 = await validateFichaReviewV4();
-  validateFichaPrintSwitch({ gate, gateV4, printTemplate: PRINT_TEMPLATE });
+  const gateV5 = await validateFichaReviewV5();
+  validateFichaPrintSwitch({
+    gate,
+    gateV4,
+    gateV5,
+    printTemplate: PRINT_TEMPLATE,
+  });
   const stages = fichaV3ApprovalStages(gate);
   console.log(
-    `Ficha v3 PDF review gate valid: provisional ${gate.provisionalApproval.status} (${gate.provisionalApproval.scope}); final ${gate.approval.status}${stages.final ? '' : ' (physical signature by Rose and Operação required before production)'}; v4 provisional ${gateV4.provisionalApproval.status}; v4 final ${gateV4.approval.status}; orders print on ${PRINT_TEMPLATE}.`,
+    `Ficha v3 PDF review gate valid: provisional ${gate.provisionalApproval.status} (${gate.provisionalApproval.scope}); final ${gate.approval.status}${stages.final ? '' : ' (physical signature by Rose and Operação required before production)'}; v4 provisional ${gateV4.provisionalApproval.status}; v4 final ${gateV4.approval.status}; v5 provisional ${gateV5.provisionalApproval.status}; v5 final ${gateV5.approval.status}; orders print on ${PRINT_TEMPLATE}.`,
   );
 }
 

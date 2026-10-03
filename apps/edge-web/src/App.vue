@@ -102,6 +102,11 @@ const stream = new LiveEventStream({
     liveEvent.value = { receivedAt: Date.now(), reset: true };
     announce('A conexão foi ressincronizada.');
   },
+  onSessionExpired() {
+    void refreshShellSession();
+    activeView.value?.reset();
+    liveEvent.value = { receivedAt: Date.now(), reset: true };
+  },
   onState(value) {
     connection.value = value;
     if (value === 'conectado' && lastUpdatedAt.value === 0) {

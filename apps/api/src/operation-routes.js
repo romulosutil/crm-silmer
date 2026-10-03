@@ -39,7 +39,12 @@ export function registerOperationRoutes(api, operations, contextFor) {
       if (query.topic !== undefined && query.topic !== 'inbox') {
         return reply.code(400).send({ error: { code: 'INVALID_REQUEST' } });
       }
-      await authorizeRead(request, operations, 'deal.events.read');
+      const access = await authorizeRead(
+        request,
+        operations,
+        'deal.events.read',
+      );
+      const actorId = access.actor.id;
       if (activeStreams >= 30) {
         reply.header('retry-after', '1');
         return reply
@@ -64,32 +69,84 @@ export function registerOperationRoutes(api, operations, contextFor) {
       activeStreams += 1;
       let closed = false;
       let deliveredCursor = afterCursor;
-      /** @param {{cursor: number, payload: object, type: string}} event */
-      const write = (event) => {
-        if (
-          closed ||
-          (event.type !== 'stream.reset' &&
-            Number(event.cursor) <= deliveredCursor)
-        )
-          return;
-        reply.raw.write(
-          `id: ${event.cursor}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`,
-        );
-        deliveredCursor = Number(event.cursor);
+      let unsubscribe = () => {};
+      const heartbeat = {
+        /** @type {ReturnType<typeof globalThis.setInterval>|undefined} */
+        current: undefined,
       };
-      if (aheadReset) write(aheadReset);
-      const unsubscribe = dispatcher.subscribe(write, afterCursor);
-      const heartbeat = globalThis.setInterval(() => {
-        if (!closed) reply.raw.write(': heartbeat\n\n');
-      }, 15_000);
-      heartbeat.unref?.();
       const close = () => {
         if (closed) return;
         closed = true;
         activeStreams = Math.max(0, activeStreams - 1);
-        globalThis.clearInterval(heartbeat);
+        if (heartbeat.current) globalThis.clearInterval(heartbeat.current);
         unsubscribe();
       };
+      /** @param {unknown} [cursor] */
+      const expire = (cursor) => {
+        if (closed) return;
+        // The browser rechecks its session and leaves the page if access was
+        // revoked. No domain event or identifier is sent after revocation.
+        close();
+        try {
+          const id = Number.isSafeInteger(cursor) ? `id: ${cursor}\n` : '';
+          reply.raw.write(`${id}event: session.expired\ndata: {}\n\n`);
+          reply.raw.end();
+        } catch {
+          reply.raw.destroy?.();
+        }
+      };
+      const stillAuthorized = async () => {
+        try {
+          const current = await authorizeRead(
+            request,
+            operations,
+            'deal.events.read',
+          );
+          return current.actor.id === actorId;
+        } catch {
+          return false;
+        }
+      };
+      let writes = Promise.resolve();
+      /** @param {{cursor: number, payload: object, type: string}} event */
+      const write = (event) => {
+        if (closed) return;
+        if (
+          event.type === 'identity.user.changed' &&
+          /** @type {{userId?: string}} */ (event.payload)?.userId === actorId
+        ) {
+          expire(event.cursor);
+          return;
+        }
+        writes = writes
+          .then(async () => {
+            if (closed) return;
+            if (!(await stillAuthorized())) return expire();
+            if (
+              closed ||
+              (event.type !== 'stream.reset' &&
+                Number(event.cursor) <= deliveredCursor)
+            )
+              return;
+            reply.raw.write(
+              `id: ${event.cursor}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`,
+            );
+            deliveredCursor = Number(event.cursor);
+          })
+          .catch(expire);
+      };
+      if (aheadReset) write(aheadReset);
+      unsubscribe = dispatcher.subscribe(write, afterCursor);
+      heartbeat.current = globalThis.setInterval(() => {
+        writes = writes
+          .then(async () => {
+            if (closed) return;
+            if (!(await stillAuthorized())) return expire();
+            if (!closed) reply.raw.write(': heartbeat\n\n');
+          })
+          .catch(expire);
+      }, 15_000);
+      heartbeat.current.unref?.();
       request.raw.on('close', close);
       reply.raw.on('close', close);
       reply.raw.write(': connected\n\n');

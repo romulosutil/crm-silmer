@@ -25,3 +25,36 @@ test('named SSE event keeps its type when the payload contains only identifiers'
   ]);
   assert.equal(stream.cursor, 'cursor-2');
 });
+
+test('session expiration asks the shell to recheck access', () => {
+  const previousSource = globalThis.EventSource;
+  /** @type {Map<string, Function>} */
+  const listeners = new Map();
+  globalThis.EventSource = /** @type {any} */ (
+    class {
+      /** @param {string} name @param {Function} listener */
+      addEventListener(name, listener) {
+        listeners.set(name, listener);
+      }
+      close() {}
+    }
+  );
+  let expired = 0;
+  try {
+    const stream = new LiveEventStream({
+      onChange() {},
+      onReset() {},
+      onSessionExpired() {
+        expired += 1;
+      },
+      onState() {},
+    });
+    stream.start();
+    listeners.get('session.expired')?.({ lastEventId: 'cursor-3' });
+    assert.equal(expired, 1);
+    assert.equal(stream.cursor, 'cursor-3');
+    stream.close();
+  } finally {
+    globalThis.EventSource = previousSource;
+  }
+});

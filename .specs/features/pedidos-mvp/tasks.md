@@ -881,6 +881,83 @@ T54 e T55 partem de `master`, num branch próprio.
 
 **Tests:** unit + live + e2e · **Gate:** quick + live + e2e · **Commit:** `feat(inbox): never hand a conversation back to the bot`
 
+## Grupo K — Pedido abre no primeiro ponto da ficha (ADR 014)
+
+Decidido pelo PO em 02/10/2026, depois do diagnóstico do cloud-dev. As tasks
+T50–T53 partem de `master`, em ordem; a T52 depende do CRM da T51 no ambiente
+antes de o workflow ir ao n8n. Depois do merge, o Tech Lead sincroniza o
+workflow DEV `0S5ZS1xeDCSoWovs` e, com autorização do PO, o de produção
+`k7tI6T4RhQPyJkn9`, como na T40.
+
+### T50: ADR 014 e requisitos da abertura
+
+- **What:** Registrar a decisão, as decisões D29–D30 da RFC 006, os requisitos PAB-01..04, o novo gatilho de PCL-01..03 e estas tasks.
+- **Where:** `docs/adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md`, `docs/adr/README.md`, `docs/rfc/006-atendimento-guiado-do-bot-no-n8n.md`, `.specs/features/pedidos-mvp/{spec,tasks}.md`
+- **Depends on:** —
+- **Requirement:** PCL-01..03, PAB-01..04
+
+**Done when:**
+
+- [x] ADR 014 aceita e ligada à RFC 006, à spec e às tasks
+
+**Tests:** none · **Gate:** docs · **Commit:** `docs(adr): open the order at the first ficha point`
+
+### T51: `open_order` no contrato n8n do CRM
+
+- **What:** `message.send.requested` e `handoff.requested` aceitam o booleano `open_order`; a rota exige também `order.intent`; depois do commit, o CRM cria ou reutiliza o pendente, projeta como antes e responde `order`; a falha não falha o evento, é auditada e registrada sem PII. `order.intent_confirmed` fica obsoleto. Fixtures, schema e validador do contrato, OpenAPI e README do n8n.
+- **Where:** `modules/n8n-integration/src/{service,postgres-repository}.js`, `apps/api/src/n8n-{routes,runtime}.js`, `schemas/fixtures/external/n8n/**`, `docs/api/openapi.v1.yaml`, `docs/integrations/n8n/README.md`, `test/n8n-{integration-domain,api-contract,routes,integration-postgres-live}.test.js`
+- **Depends on:** T50
+- **Requirement:** PCL-01..03, PAB-03, PAB-04
+
+**Done when:**
+
+- [ ] Reserva com `open_order` cria um pendente e responde `order`; replay e retry concorrente não duplicam
+- [ ] Handoff com `open_order` cria o pendente
+- [ ] Falha do módulo de pedidos responde `opened: false`, aceita o evento e audita sem PII
+- [ ] `order.intent_confirmed` continua funcionando
+- [ ] Gate quick e suíte live do módulo passam
+
+**Tests:** unit + integração live · **Gate:** quick + live · **Commit:** `feat(n8n-integration): open the pending order with the agent's event`
+
+### T52: Regra de abertura e falha visível no workflow
+
+- **What:** O nó de decisão calcula `open_order` pela ficha (D29) e o envia na reserva e no handoff; o handoff de arquivo usa a mesma regra; o ramo paralelo da intenção sai; o prompt perde `order_intent_confirmed`; "Pedido não abriu? (MVP)" envia `workflow.failed` com `ORDER_OPEN_FAILED`. Workflow `mvp-simple-11`, snapshot principal e runbook.
+- **Where:** `ops/n8n/workflows/{k7tI6T4RhQPyJkn9-mvp-simple.sdk.js,render-mvp-workflow.mjs,k7tI6T4RhQPyJkn9-mvp-simple.sanitized.json}`, `docs/runbooks/automation-executor.md`, `docs/integrations/n8n/README.md`, `test/n8n-workflow-contract.test.js`
+- **Depends on:** T51
+- **Requirement:** PAB-01, PAB-02, PAB-04
+
+**Done when:**
+
+- [ ] Primeiro ponto real abre; nome sozinho e "Definir com o vendedor" não; contexto externo nunca; handoff com ponto abre; aberto fica
+- [ ] `opened: false` gera `workflow.failed` com `ORDER_OPEN_FAILED` sem bloquear a resposta
+- [ ] Gate quick passa
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(n8n): open the order at the first ficha point`
+
+### T53: Workflows DEV e local, roteiro e rastreabilidade
+
+- **What:** `dev-mvp-simple-12` com `open_order` e `order` nos resultados do webhook DEV; snapshots DEV e local gerados de novo; roteiro do indicador com o novo momento de abertura; rastreabilidade PAB em `spec.md`.
+- **Where:** `ops/n8n/workflows/{create-dev-test-workflow.mjs,0S5ZS1xeDCSoWovs-*.sanitized.json}`, `test/n8n-dev-workflow.test.js`, `docs/integrations/n8n/{README,roteiro-indicador-da-ficha}.md`, `.specs/features/pedidos-mvp/spec.md`
+- **Depends on:** T52
+- **Requirement:** PAB-01..04
+
+**Done when:**
+
+- [ ] Resultados DEV mostram `open_order` e a resposta `order` do CRM
+- [ ] PAB-01..04 com evidência em `spec.md`
+- [ ] `npm run validate` passa
+
+**Tests:** unit · **Gate:** full · **Commit:** `feat(n8n): show the order opening in the DEV workflow`
+
+### Validação do Grupo K
+
+| Task | Camada                   | Matriz exige    | Task diz                | Depends on | Status |
+| ---- | ------------------------ | --------------- | ----------------------- | ---------- | ------ |
+| T50  | docs                     | none            | none                    | —          | ✅     |
+| T51  | contrato, rota e adapter | unit + live     | unit + integração live  | T50        | ✅     |
+| T52  | workflow                 | unit            | unit                    | T51        | ✅     |
+| T53  | workflow DEV e docs      | unit            | unit                    | T52        | ✅     |
+
 ---
 
 ## Validação das tasks

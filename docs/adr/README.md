@@ -37,4 +37,5 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [011 — Pergunta ignorada transfere e toda mensagem alimenta a ficha](011-pergunta-ignorada-e-ficha-por-mensagem.md)
 - [012 — Ficha de sete pontos e ritmo fixo do bot](012-ficha-de-sete-pontos-e-ritmo-fixo.md)
 - [013 — Só pedido do zero no bot e meta de meia ficha](013-pedido-do-zero-e-meta-de-meia-ficha.md)
+- [014 — Pedido abre no primeiro ponto da ficha](014-pedido-abre-no-primeiro-ponto-da-ficha.md)
 - [015 — A conversa não volta para o bot](015-conversa-nao-volta-para-o-bot.md)

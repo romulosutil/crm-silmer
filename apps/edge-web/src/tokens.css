@@ -36,6 +36,7 @@
     --focus-ring-offset: 0.2rem;
     --duration-fast: 140ms;
     --easing-standard: ease;
+    --topbar-block-size: 64px;
   }
 
   :root,

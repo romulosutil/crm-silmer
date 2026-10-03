@@ -166,7 +166,7 @@ const conversationOrder = {
   version: 2,
 };
 
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -303,18 +303,29 @@ async function mockCrm(page, options = {}) {
         ? []
         : waiting.length
           ? waiting
-          : [
-              options.newMessageOnRefresh && inboxListCalls > 1
-                ? {
-                    ...currentConversation,
-                    lastMessage: {
-                      ...currentConversation.lastMessage,
-                      id: 'message-new',
-                      preview: 'Mensagem nova de teste',
-                    },
-                  }
-                : currentConversation,
-            ];
+          : options.manyConversations
+            ? Array.from({ length: 40 }, (_, index) => ({
+                ...currentConversation,
+                contact: {
+                  ...currentConversation.contact,
+                  label: `Cliente de teste ${index + 1}`,
+                },
+                id: index
+                  ? `conversation-${index + 1}`
+                  : currentConversation.id,
+              }))
+            : [
+                options.newMessageOnRefresh && inboxListCalls > 1
+                  ? {
+                      ...currentConversation,
+                      lastMessage: {
+                        ...currentConversation.lastMessage,
+                        id: 'message-new',
+                        preview: 'Mensagem nova de teste',
+                      },
+                    }
+                  : currentConversation,
+              ];
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
@@ -775,6 +786,58 @@ test('keeps a long conversation inside its own scrollable message area', async (
 
   expect(metrics.overflowY).toBe('auto');
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+});
+
+test('keeps a long conversation list inside its own scrollable column', async ({
+  page,
+}) => {
+  await mockCrm(page, { manyConversations: true });
+  await page.goto('/inbox');
+  await expect(page.locator('.inbox-list .conversation-row')).toHaveCount(40);
+  const listMetrics = () =>
+    page.locator('.inbox-list').evaluate((element) => {
+      const root = globalThis.document.documentElement;
+      // Scrolled to the bottom of the page, where the top bar overlaps most.
+      globalThis.scrollTo(0, root.scrollHeight);
+      return {
+        clientHeight: element.clientHeight,
+        listTop: element.getBoundingClientRect().top,
+        overflowY: globalThis.getComputedStyle(element).overflowY,
+        pageHeight: root.scrollHeight,
+        scrollHeight: element.scrollHeight,
+        topbarBottom: globalThis.document
+          .querySelector('.app-topbar')
+          ?.getBoundingClientRect().bottom,
+        viewportHeight: globalThis.innerHeight,
+      };
+    });
+
+  for (const viewport of [
+    { height: 720, width: 1280 },
+    { height: 844, width: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const metrics = await listMetrics();
+    expect(metrics.overflowY).toBe('auto');
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+    expect(metrics.clientHeight).toBeLessThan(metrics.viewportHeight);
+    // The page no longer grows with the list it holds.
+    expect(metrics.pageHeight).toBeLessThan(metrics.scrollHeight);
+    if (viewport.width >= 1200) {
+      // Beside the thread, the list stays fully below the sticky top bar.
+      expect(metrics.listTop).toBeGreaterThanOrEqual(
+        Number(metrics.topbarBottom),
+      );
+    }
+  }
+  await page.evaluate(() => globalThis.scrollTo(0, 0));
+
+  const lastConversation = page.getByRole('button', {
+    name: /Cliente de teste 40/u,
+  });
+  await lastConversation.focus();
+  await expect(lastConversation).toBeInViewport();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('identifies customer, assistant, and seller messages in the conversation', async ({

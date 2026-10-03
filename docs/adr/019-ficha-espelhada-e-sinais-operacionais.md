@@ -4,7 +4,7 @@ Status: aceita para desenvolvimento; troca da impressão depende da revisão da 
 
 Data: 03/10/2026
 
-Decisores: PO (Rômulo Sutil Corrêa) definiu os campos, as personas e autorizou ajustar o design da ficha junto da tela; Tech Lead definiu compatibilidade, cálculo e gates. Contexto e alternativas na [RFC 007](../rfc/007-revisao-da-ficha-e-leitura-operacional.md). Requisitos `REV-01`–`REV-10` da [spec](../../.specs/features/pedidos-mvp/spec.md), tarefas T76–T82 de [tasks](../../.specs/features/pedidos-mvp/tasks.md). PR: vincular após recuperação do checkout Git.
+Decisores: PO (Rômulo Sutil Corrêa) definiu os campos, as personas e autorizou ajustar o design da ficha junto da tela; Tech Lead definiu compatibilidade, cálculo e gates. Contexto e alternativas na [RFC 007](../rfc/007-revisao-da-ficha-e-leitura-operacional.md). Requisitos `REV-01`–`REV-10` da [spec](../../.specs/features/pedidos-mvp/spec.md), tarefas T76–T82 de [tasks](../../.specs/features/pedidos-mvp/tasks.md). Implementação: [PR #127](https://github.com/romulosutil/crm-silmer/pull/127).
 
 ## Contexto
 

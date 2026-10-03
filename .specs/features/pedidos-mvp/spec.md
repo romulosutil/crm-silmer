@@ -685,7 +685,7 @@ registro fica pendente até o PO confirmar a assinatura. O registro da aprovaç�
 | PIM-07 | P1-5     | `test/ficha-print-v3.test.js:224`; `test/ficha-pdf-review-v3.test.js:89,108`                | Verified · PDF a aprovar       |
 | PIM-08 | P1-5     | `test/ficha-print-v3.test.js:251`                                                           | Verified · PDF a aprovar       |
 | PIM-09 | P1-5     | `test/ficha-print-v3.test.js:282,309,375`                                                   | Verified · PDF a aprovar       |
-| PIM-10 | P1-5     | `test/ficha-print-switch.test.js:146,155,196,203,222`; `npm run validate:ficha-pdf-review`  | Verified · v2 até a aprovação  |
+| PIM-10 | P1-5     | `test/ficha-print-switch.test.js:141,150,191,198,217`; `npm run validate:ficha-pdf-review`  | Verified · v2 até a aprovação  |
 | PIM-11 | P1-5     | `test/ficha-print-v3.test.js:429,454`; `test/ficha-pdf-review-v3.test.js:145`               | Verified · PDF a aprovar       |
 | PIM-12 | P1-5     | `test/ficha-print-v3.test.js:471,479,516,526`; `test/ficha-pdf-review-v3.test.js:160`       | Verified · PDF a aprovar       |
 | PLA-08 | P1-10    | `test/ficha-print-v3.test.js:339,569`; `test/ficha-pdf-review-v3.test.js:160`               | Verified · PDF a aprovar       |

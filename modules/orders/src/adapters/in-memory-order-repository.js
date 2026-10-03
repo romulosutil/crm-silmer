@@ -215,6 +215,7 @@ export class InMemoryOrderRepository {
           ...current,
           confirmedAt: order.confirmedAt,
           confirmedBy: order.confirmedBy,
+          ficha: clone(order.ficha),
           finalAmountCents: order.finalAmountCents,
           missingFields: [...order.missingFields],
           orderDate: order.orderDate,

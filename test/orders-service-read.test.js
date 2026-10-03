@@ -4,6 +4,7 @@ import test from 'node:test';
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
 import { confirmOrder } from '../modules/orders/src/domain/order.js';
+import { orderContextsFrom } from './fixtures/order-contexts.js';
 
 async function setup() {
   const repository = new InMemoryOrderRepository();
@@ -23,10 +24,10 @@ async function setup() {
     authorizeOwnership: async () => {},
     clock,
     conversations: {
-      readOrderContext: async () => ({
+      readOrderContexts: orderContextsFrom(() => ({
         briefing: { product_type: 'camisa' },
         customerName: 'Cliente Sintetico',
-      }),
+      })),
       searchConversationIds: async (/** @type {string} */ query) => {
         searches.push(query);
         return customerIndex[query.toLowerCase()] ?? [];

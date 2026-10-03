@@ -1286,10 +1286,10 @@ de `master`; as tasks rodam em ordem, uma por commit (T50–T69 já têm dono).
 
 **Done when:**
 
-- [ ] Pendente mostra o nome atual do contato no detalhe, na lista, na busca e na gaveta, sem mudar versão, `updatedAt` nem eventos do pedido
-- [ ] Gerado mantém e imprime o nome de quando foi gerado; reaberto volta a acompanhar
-- [ ] Nome apagado volta ao `customer_name` do briefing ou fica vazio, nunca o "@handle"
-- [ ] Gate quick e `npm run test:orders:live` passam
+- [x] Pendente mostra o nome atual do contato no detalhe, na lista, na busca e na gaveta, sem mudar versão, `updatedAt` nem eventos do pedido
+- [x] Gerado mantém e imprime o nome de quando foi gerado; reaberto volta a acompanhar
+- [x] Nome apagado volta ao `customer_name` do briefing ou fica vazio, nunca o "@handle"
+- [x] Gate quick e `npm run test:orders:live` passam
 
 **Tests:** unit + integração live · **Gate:** quick + live · **Commit:** `feat(orders): let the pending order's client follow the contact`
 
@@ -1312,7 +1312,7 @@ de `master`; as tasks rodam em ordem, uma por commit (T50–T69 já têm dono).
 | Task | Escopo                           | Camada                   | Testes      | Depends on | Status |
 | ---- | -------------------------------- | ------------------------ | ----------- | ---------- | ------ |
 | T70  | 1 ADR + requisitos               | docs                     | none        | —          | ✅     |
-| T71  | 1 regra de leitura e de gerar    | domínio, serviço, PG     | unit + live | T70        | ⬜     |
+| T71  | 1 regra de leitura e de gerar    | domínio, serviço, PG     | unit + live | T70        | ✅     |
 | T72  | verificação                      | full                     | full        | T71        | ⬜     |
 
 ---

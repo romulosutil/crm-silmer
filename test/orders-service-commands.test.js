@@ -5,6 +5,7 @@ import test from 'node:test';
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
 import { syntheticItems } from './fixtures/order-items.js';
+import { orderContextsFrom } from './fixtures/order-contexts.js';
 
 const synthetic = JSON.parse(
   await readFile(
@@ -51,10 +52,10 @@ async function setup() {
       return new Date(now);
     },
     conversations: {
-      readOrderContext: async () => ({
+      readOrderContexts: orderContextsFrom(() => ({
         briefing: { order_name: 'Evento Inicial', product_type: 'camisa' },
         customerName: 'Cliente Sintetico',
-      }),
+      })),
       searchConversationIds: async () => [],
     },
     fabCode: '01',

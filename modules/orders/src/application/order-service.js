@@ -9,6 +9,7 @@ import {
 import {
   briefingToFicha,
   normalizeFicha,
+  orderClient,
   orderTotal,
   projectBriefingOntoFicha,
   validateItems,
@@ -34,7 +35,7 @@ import { assertOrderRepositoryContract } from '../ports/contracts.js';
  * @typedef {{
  *   repository: import('../ports/contracts.js').OrderRepository,
  *   conversations: {
- *     readOrderContext(conversationId: string): Promise<OrderConversationContext|null>,
+ *     readOrderContexts(conversationIds: string[]): Promise<Map<string, OrderConversationContext>>,
  *     searchConversationIds(query: string): Promise<string[]>,
  *   },
  *   authorizeOwnership(input: {actor: OrderActor, conversationId: string}): Promise<void>,
@@ -99,7 +100,7 @@ export function createOrderService(options) {
   const { authorizeOwnership, conversations, fabCode, repository } = options;
   assertOrderRepositoryContract(repository);
   if (
-    typeof conversations?.readOrderContext !== 'function' ||
+    typeof conversations?.readOrderContexts !== 'function' ||
     typeof conversations.searchConversationIds !== 'function'
   ) {
     throw new TypeError('a conversation context port is required');
@@ -110,6 +111,57 @@ export function createOrderService(options) {
   requireId(fabCode, 'fabCode');
   const clock = options.clock ?? (() => new Date());
   const idFactory = options.idFactory ?? randomUUID;
+
+  /**
+   * PCT-01 (ADR 018): a pending order reads its client from its conversation
+   * again (PIT-11: the contact's confirmed name, else the bot's
+   * `customer_name`, else blank), so renaming the contact reaches it without
+   * writing the order: its version and the time it last changed stay as they
+   * were. A confirmed order keeps the client written when it was generated
+   * (PCT-02). One query covers every pending order handed in.
+   *
+   * @param {Order[]} orders
+   * @returns {Promise<Order[]>}
+   */
+  async function withCurrentClient(orders) {
+    const pendingConversations = [
+      ...new Set(
+        orders
+          .filter((order) => order.status === 'pendente')
+          .map((order) => order.conversationId),
+      ),
+    ];
+    if (pendingConversations.length === 0) return orders;
+    const contexts =
+      await conversations.readOrderContexts(pendingConversations);
+    return orders.map((order) => {
+      const context = contexts.get(order.conversationId);
+      if (order.status !== 'pendente' || !context) return order;
+      return {
+        ...order,
+        ficha: {
+          ...order.ficha,
+          summary: { ...order.ficha.summary, cliente: orderClient(context) },
+        },
+      };
+    });
+  }
+
+  /**
+   * Orders as people see them: under the current rules, with the current
+   * client.
+   *
+   * @param {Order[]} orders
+   */
+  async function readAll(orders) {
+    return (await withCurrentClient(orders)).map(current);
+  }
+
+  /** @param {Order} order */
+  async function readOne(order) {
+    const [read] = await readAll([order]);
+    return read;
+  }
 
   /** @param {OrderActor} actor @param {string} conversationId */
   async function requireOwner(actor, conversationId) {
@@ -147,7 +199,9 @@ export function createOrderService(options) {
         `Expected order version ${input.expectedVersion}, current version is ${order.version}`,
       );
     }
-    return current(order);
+    // A command works on the client the order shows now, so saving a
+    // section writes it and generating keeps it (ADR 018).
+    return readOne(order);
   }
 
   /**
@@ -158,9 +212,11 @@ export function createOrderService(options) {
     const existing = await repository.findPendingByConversation(
       input.conversationId,
     );
-    if (existing) return { created: false, order: current(existing) };
+    if (existing) return { created: false, order: await readOne(existing) };
 
-    const context = await conversations.readOrderContext(input.conversationId);
+    const context = (
+      await conversations.readOrderContexts([input.conversationId])
+    ).get(input.conversationId);
     if (!context) {
       throw new OrderNotFoundError(
         'Conversation was not found',
@@ -168,7 +224,7 @@ export function createOrderService(options) {
       );
     }
     const ficha = briefingToFicha(context.briefing);
-    if (context.customerName) ficha.summary.cliente = context.customerName;
+    ficha.summary.cliente = orderClient(context);
     const derived = withDerivedFields({
       finalAmountCents: null,
       ficha,
@@ -200,7 +256,7 @@ export function createOrderService(options) {
         input.conversationId,
       );
       if (!winner) throw error;
-      return { created: false, order: current(winner) };
+      return { created: false, order: await readOne(winner) };
     }
   }
 
@@ -255,9 +311,11 @@ export function createOrderService(options) {
       if (!pending) {
         return { applied: false, order: null, reason: 'no_pending_order' };
       }
+      // The projection writes the client the order shows now (ADR 018).
+      const [shown] = await withCurrentClient([pending]);
       const next = withDerivedFields({
-        ...pending,
-        ficha: projectBriefingOntoFicha(pending.ficha, input.briefing),
+        ...shown,
+        ficha: projectBriefingOntoFicha(shown.ficha, input.briefing),
         updatedAt: clock().toISOString(),
       });
       const order = await repository.projectBriefing(next, {
@@ -271,7 +329,7 @@ export function createOrderService(options) {
     async get(orderId) {
       const order = await repository.findById(requireId(orderId, 'orderId'));
       if (!order) throw new OrderNotFoundError();
-      return current(order);
+      return readOne(order);
     },
 
     /**
@@ -308,7 +366,7 @@ export function createOrderService(options) {
         query.conversationIds = await conversations.searchConversationIds(q);
       }
       const page = await repository.list(query);
-      return { ...page, items: page.items.map(current) };
+      return { ...page, items: await readAll(page.items) };
     },
 
     /**
@@ -323,13 +381,13 @@ export function createOrderService(options) {
         requireId(conversationId, 'conversationId'),
       );
       const pending = orders.find((order) => order.status === 'pendente');
-      if (pending) return current(pending);
+      if (pending) return readOne(pending);
       const confirmed = orders
         .filter((order) => order.status === 'confirmado')
         .sort((left, right) =>
           String(right.confirmedAt).localeCompare(String(left.confirmedAt)),
         )[0];
-      return confirmed ? current(confirmed) : null;
+      return confirmed ? readOne(confirmed) : null;
     },
 
     /**
@@ -380,7 +438,9 @@ export function createOrderService(options) {
 
     /**
      * PCL-04..06: a blank amount counts as missing (reported with the other
-     * blockers); a malformed one is refused as INVALID_AMOUNT.
+     * blockers); a malformed one is refused as INVALID_AMOUNT. The ficha is
+     * written with the status, so the order keeps the client it showed when
+     * it was generated, on screen and on paper (PCT-02, ADR 018).
      *
      * @param {{orderId: string, amountText: unknown, paymentCondition: unknown, expectedVersion: number, actor: OrderActor, correlationId: string}} input
      */
@@ -410,13 +470,14 @@ export function createOrderService(options) {
     },
 
     /**
-     * PCL-07: back to pending, keeping number, amount and condition.
+     * PCL-07: back to pending, keeping number, amount and condition. Pending
+     * again, the order follows the contact's name again (PCT-03).
      *
      * @param {{orderId: string, expectedVersion: number, actor: OrderActor, correlationId: string}} input
      */
     async reopen(input) {
       const order = await loadForCommand(input);
-      return current(
+      return readOne(
         await repository.saveStatus(
           reopenOrder(order, { actorId: input.actor.id, now: clock() }),
           {
@@ -436,7 +497,7 @@ export function createOrderService(options) {
      */
     async recordMilestones(input) {
       const order = await loadForCommand(input);
-      return current(
+      return readOne(
         await repository.saveMilestones(
           recordMilestones(order, {
             deliveredOn: input.deliveredOn,

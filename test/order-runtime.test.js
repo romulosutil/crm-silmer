@@ -8,6 +8,7 @@ import {
 import { InMemoryIdempotencyRecordStore } from '../modules/integration-reliability/src/index.js';
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
 import { syntheticItems } from './fixtures/order-items.js';
+import { orderContextsFrom } from './fixtures/order-contexts.js';
 
 const OWNER = Object.freeze({
   capabilities: [],
@@ -51,10 +52,12 @@ function harness() {
       },
       readAssignments: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, assignments[id] ?? null])),
-      readOrderContext: async (/** @type {string} */ conversationId) =>
-        conversationId in assignments
-          ? { briefing: null, customerName: 'Cliente Sintetico' }
-          : null,
+      readOrderContexts: orderContextsFrom(
+        (/** @type {string} */ conversationId) =>
+          conversationId in assignments
+            ? { briefing: null, customerName: 'Cliente Sintetico' }
+            : null,
+      ),
       readUserNames: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, `Nome ${id}`])),
       searchConversationIds: async () => [],

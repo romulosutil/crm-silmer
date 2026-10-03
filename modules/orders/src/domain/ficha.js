@@ -460,6 +460,20 @@ export function briefingToFicha(briefing) {
 }
 
 /**
+ * PIT-11 and ADR 018: who the order is for — the contact's confirmed name,
+ * else the name the customer gave the bot, else blank for the seller. A
+ * pending order reads it again on every read; generating writes it down.
+ *
+ * @param {{customerName: string|null, briefing: Record<string, unknown>|null}} context
+ * @returns {string}
+ */
+export function orderClient(context) {
+  if (context.customerName) return context.customerName;
+  const { briefing } = context;
+  return (isPlainObject(briefing) && fichaText(briefing.customer_name)) || '';
+}
+
+/**
  * PAG-01: re-applies the agent's cumulative pre-ficha onto a pending ficha.
  * Only what the agent collects moves — event name, technique and the seven
  * points of the first item — and only when the briefing has a value for it.

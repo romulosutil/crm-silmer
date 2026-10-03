@@ -323,7 +323,12 @@ export class PostgresOrderRepository {
     });
   }
 
-  /** @param {Order} order @param {OrderWriteOptions} options */
+  /**
+   * The ficha travels with the status: generating writes down the client
+   * the order showed then (ADR 018); reopening writes it back unchanged.
+   *
+   * @param {Order} order @param {OrderWriteOptions} options
+   */
   async saveStatus(order, options) {
     return this.#write(
       order.id,
@@ -342,7 +347,7 @@ export class PostgresOrderRepository {
                order_date = $5::date, confirmed_at = $6, confirmed_by = $7,
                reopened_at = $8, reopened_by = $9,
                missing_fields = $10::text[], updated_at = $11,
-               version = version + 1
+               ficha_envelope = $12::jsonb, version = version + 1
            WHERE id = $1
            RETURNING ${ORDER_COLUMNS}`,
           [
@@ -357,6 +362,9 @@ export class PostgresOrderRepository {
             order.reopenedBy,
             order.missingFields,
             order.updatedAt,
+            JSON.stringify(
+              encryptJson(order.ficha, fichaAad(order.id), this.#envelopeKey),
+            ),
           ],
         );
       },

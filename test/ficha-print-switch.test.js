@@ -16,17 +16,12 @@ import {
 } from '../modules/orders/src/print/index.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
 import { validateFichaPrintSwitch } from '../scripts/ficha-pdf-review.mjs';
+import { syntheticItems } from './fixtures/order-items.js';
 
 // PIM-10 (ADR 017): one switch decides the printed template, and it stays on
 // v2 until the v3 approval is recorded. Fixtures are synthetic.
 
 const rootUrl = new URL('../', import.meta.url);
-const v2Sample = JSON.parse(
-  await readFile(
-    new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl),
-    'utf8',
-  ),
-);
 const v3Gate = JSON.parse(
   await readFile(
     new URL('docs/phase0/ficha-pdf-approval-v3.json', rootUrl),
@@ -117,7 +112,7 @@ async function confirmedOrder(runtime, summary) {
       expectedVersion: order.version,
       orderId: order.id,
       section: 'items',
-      value: v2Sample.pedido.itens,
+      value: syntheticItems(),
     }),
   );
   order = await runtime.confirm(

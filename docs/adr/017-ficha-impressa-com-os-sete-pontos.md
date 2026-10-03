@@ -14,10 +14,11 @@ pelo PO na revisão do PDF.
 
 Relacionadas: [ADR 008](008-lastro-de-datas-do-pedido.md) (lastro de datas),
 [ADR 012](012-ficha-de-sete-pontos-e-ritmo-fixo.md) (ficha de sete pontos do
-bot) e ADR 016 (itens do pedido com os sete pontos, em branch paralela, sem
-link até entrar no `master`). Requisitos: `PIM-06` a `PIM-10` e `PLA-08` em
+bot) e [ADR 016](016-itens-com-os-sete-pontos-da-ficha.md) (itens do
+pedido com os sete pontos). Requisitos: `PIM-06` a `PIM-12` e `PLA-08` em
 [especificação Pedidos MVP](../../.specs/features/pedidos-mvp/spec.md);
-tarefas T62 a T64 em [tasks](../../.specs/features/pedidos-mvp/tasks.md).
+tarefas T62 a T65 e T67 a T69 em
+[tasks](../../.specs/features/pedidos-mvp/tasks.md).
 Revisão do PDF: [roteiro da v3](../phase0/FICHA-PDF-REVIEW-V3.md).
 
 ## Contexto
@@ -179,9 +180,9 @@ bloqueia.
   referência.
 - D15 ("impressão só no template v2") vale até a troca. `PLA-08` passa a
   apontar para esta v3, e a T47 fica superada pela T63.
-- Enquanto a ADR 016 não grava `cor`, `estampa` e `gola`, todo pedido real
-  impresso na v3 sairia com "—" nesses pontos; a troca de template deve vir
-  depois dela.
+- A ADR 016 já grava `cor`, `estampa` e `gola` (no `master` desde
+  03/10/2026), e um pedido só é gerado com os pontos principais preenchidos;
+  na v3, "—" nesses pontos fica para fichas gravadas antes dela.
 - A v2 continua sem acento, como foi aprovada; a v3 sai com acento nas duas
   páginas.
 - O PDF de revisão é gerado no Dell, com Liberation Sans no lugar de Arial

@@ -1159,7 +1159,21 @@ continua pendente.
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): print each trail day once on the ficha v3`
 
-### Validação T62–T65
+### T66: Português com acento na v3
+
+- **What:** Todo rótulo impresso com acento, nas duas páginas e na faixa de amostra; o valor gravado "NAO APLICAVEL" sai como "NÃO APLICÁVEL" só no papel; texto digitado sai como foi digitado.
+- **Where:** `modules/orders/src/print/ficha-canonical-v3.js`, `scripts/ficha-pdf-review.mjs`, `docs/phase0/ficha-pdf-approval-v3.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, `test/ficha-{print-v3,pdf-review-v3,print-switch}.test.js`, ADR 017, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `.specs/features/pedidos-mvp/{spec,tasks}.md`
+- **Depends on:** T65
+- **Requirement:** PIM-07, PIM-11
+
+**Done when:**
+
+- [x] Rótulos com acento nas duas páginas; a v2 continua sem acento e sem mudança
+- [x] PDF e registro gerados de novo, aprovação pendente
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): write the ficha v3 labels with their accents`
+
+### Validação T62–T66
 
 | Task | Escopo                  | Camada            | Testes | Depends on | Status |
 | ---- | ----------------------- | ----------------- | ------ | ---------- | ------ |
@@ -1167,6 +1181,7 @@ continua pendente.
 | T63  | 1 template + seu pacote | template impresso | unit   | T62        | ✅     |
 | T64  | 1 ponto de troca + rota | rota/print        | unit   | T63        | ✅     |
 | T65  | 1 faixa do template     | template impresso | unit   | T64        | ✅     |
+| T66  | rótulos do template     | template impresso | unit   | T65        | ✅     |
 
 ---
 

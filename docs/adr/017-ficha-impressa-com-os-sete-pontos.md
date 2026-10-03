@@ -65,11 +65,11 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
      e Gola (`gola`).
    - **Observações e total de peças**, como na v2.
 
-3. **Adicionais só quando preenchidos** (aprovado pelo PO). Modelo, Cor frente, Cor costas, Manga
-   direita, Manga esquerda, Viés gola e Viés mangas saem num bloco compacto
-   "Adicionais", no pé do item, só quando ao menos um deles estiver
-   preenchido, e só os preenchidos, sempre nessa ordem. "NAO APLICAVEL" é
-   valor preenchido e sai como foi gravado. Motivos:
+3. **Adicionais só quando preenchidos** (aprovado pelo PO). Modelo, Cor
+   frente, Cor costas, Manga direita, Manga esquerda, Viés gola e Viés mangas
+   saem num bloco compacto "Adicionais", no pé do item, só quando ao menos um
+   deles estiver preenchido, e só os preenchidos, sempre nessa ordem. "NAO
+   APLICAVEL" é valor preenchido. Motivos:
    - A ficha do CRM é a fonte da verdade (RULES 4). Linhas em branco para
      escrever à mão convidariam a decidir especificação comercial no papel,
      fora do CRM, sem autor nem auditoria (RULES 8 e 10). O que se preenche à
@@ -84,18 +84,25 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
 
 4. **Campo vazio sai como "—"** (A01, aprovado pelo PO): ponto principal,
    campo do Resumo ou dia do lastro ainda não registrado, na prática a Entrega
-   realizada. Uma ficha gravada antes desta mudança não
-   tem `cor`, `estampa` nem `gola`: esses três pontos saem como "—" e todos os
-   campos da v2 (modelo, cores por parte e viés) continuam no papel, nos
-   adicionais. Nada da v2 se perde.
+   realizada. Uma ficha gravada antes desta mudança não tem `cor`, `estampa`
+   nem `gola`: esses três pontos saem como "—" e todos os campos da v2
+   (modelo, cores por parte e viés) continuam no papel, nos adicionais. Nada
+   da v2 se perde.
 
-5. **Página 2 como na v2.** Os 14 campos de produção chegam em branco, com os
-   mesmos rótulos, ordem e leiaute da v2 aprovada (sem acento, como lá). A
-   faixa "Amostra sintética" e a caixa de aprovação pendente saem só na
-   amostra de revisão: um pedido impresso não diz à fábrica que há um gate
+5. **Português com acento** (pedido do PO na revisão do PDF). A v3 passa
+   por uma aprovação nova, então todo rótulo impresso sai com acento, nas duas
+   páginas e na faixa de amostra ("Amostra sintética — não produzir",
+   "Controle de produção", "Conferência e embalagem"...). O valor gravado
+   "NAO APLICAVEL" sai como "NÃO APLICÁVEL" só no papel; o dado gravado não
+   muda. O que as pessoas digitam sai como foi digitado.
+
+6. **Controle de produção como na v2.** Os 14 campos de produção chegam em
+   branco, com os mesmos rótulos, ordem e leiaute da v2 aprovada; só os
+   acentos mudam. A faixa de amostra e a caixa de aprovação pendente saem só
+   na amostra de revisão: um pedido impresso não diz à fábrica que há um gate
    pendente. Na v2 a caixa sai também no pedido real, porque a v2 é travada.
 
-6. **Aprovação antes de valer.** O pacote de revisão da v3 espelha o da v2:
+7. **Aprovação antes de valer.** O pacote de revisão da v3 espelha o da v2:
    amostra sintética (`docs/phase0/ficha-pdf-synthetic-v3.json`, um pedido no
    contrato `Order` que passa pelo mesmo `printSnapshot` da rota), registro
    (`docs/phase0/ficha-pdf-approval-v3.json`), PDF
@@ -109,7 +116,7 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
    definir, com os seis critérios da v2 e uma evidência sem PII. Versão
    aprovada não se regera; correção depois da aprovação cria uma v4.
 
-7. **Ponto único de troca.** A constante `PRINT_TEMPLATE`, em
+8. **Ponto único de troca.** A constante `PRINT_TEMPLATE`, em
    `modules/orders/src/print/index.js`, escolhe o template de todo pedido
    impresso; a rota `GET /api/v1/orders/:orderId/print` chama
    `renderOrderFicha(order)` e não escolhe nada. Ela fica em
@@ -146,8 +153,8 @@ Entrega prometida passam a bloquear a geração na ADR 016; a Entrega realizada
 - Enquanto a ADR 016 não grava `cor`, `estampa` e `gola`, todo pedido real
   impresso na v3 sairia com "—" nesses pontos; a troca de template deve vir
   depois dela.
-- A página 1 usa os rótulos da tela, com acento; a página 2 mantém os rótulos
-  sem acento da v2 aprovada.
+- A v2 continua sem acento, como foi aprovada; a v3 sai com acento nas duas
+  páginas.
 - O PDF de revisão é gerado no Dell, com Liberation Sans no lugar de Arial
   (mesmas medidas). O pedido impresso pelo navegador usa as fontes da máquina
   que imprime.

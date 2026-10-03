@@ -1,7 +1,8 @@
 # T63 - Revisão do PDF da ficha v3 (sete pontos)
 
 Rastreabilidade: [ADR 017](../adr/017-ficha-impressa-com-os-sete-pontos.md);
-`T63`; `PIM-06..09` e `PLA-08`. A troca de template é a `T64` (`PIM-10`).
+`T63` e a revisão do PO (`T65` a `T68`); `PIM-06..09`, `PIM-11` e `PLA-08`. A
+troca de template é a `T64` (`PIM-10`).
 
 ## Estado do gate
 
@@ -29,7 +30,7 @@ que tenha ao menos um nome por papel.
   hashes, transição de aprovação e regras do template.
 
 A amostra tem dois itens: uma camisa polo com os sete pontos e sem adicionais,
-e uma regata com adicionais, "NAO APLICAVEL" nas mangas, estampa com texto
+e uma regata com adicionais, "NÃO APLICÁVEL" nas mangas, estampa com texto
 longo e sete tamanhos. O total é 52 peças. O pagamento está registrado, como
 em todo pedido gerado; a entrega realizada ainda não, para mostrar como o papel
 marca um dia vazio.
@@ -67,6 +68,9 @@ foi gerado no Dell, com Liberation Sans no lugar de Arial (mesmas medidas).
      direita, Manga esquerda e Viés gola, que são os preenchidos.
    - **Observações e total** (52 peças).
    - **Página 2:** os 14 campos de produção vazios, como na v2.
+   - **Acentos:** todo rótulo impresso com acento, nas duas páginas e na faixa
+     de amostra; nas mangas da regata, o valor gravado "NAO APLICAVEL" sai
+     como "NÃO APLICÁVEL". O texto digitado sai como foi digitado.
 4. Registrar individualmente os seis critérios do gate: `legibility`,
    `content`, `order`, `grade`, `totals` e `printing`.
 5. Se qualquer critério falhar, manter o gate pendente e pedir a correção: o

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
@@ -203,7 +205,9 @@ test('v5 divides a large grade into numbered item parts', () => {
   }
 });
 
-test('v5 package is locked by hash while the PO reviews it', async () => {
+test('v5 package is locked by hash and approved by the PO for development', async () => {
+  assert.equal(gate.provisionalApproval.status, 'approved');
+  assert.equal(gate.provisionalApproval.reviewedBy.role, 'PO');
   assert.deepEqual(await validateFichaReviewV5(), gate);
   const input = {
     artifactBytes: pdfBytes,
@@ -229,9 +233,16 @@ test('v5 package is locked by hash while the PO reviews it', async () => {
     /PDF changed/u,
   );
   const halfApproved = structuredClone(gate);
-  halfApproved.provisionalApproval.status = 'approved';
+  halfApproved.provisionalApproval.approved = false;
   assert.throws(
     () => validateFichaApprovalGateV5({ ...input, gate: halfApproved }),
+    /review by the PO/u,
+  );
+  const pendingWithReviewer = structuredClone(gate);
+  pendingWithReviewer.provisionalApproval.status = 'pending-po-review';
+  pendingWithReviewer.provisionalApproval.approved = false;
+  assert.throws(
+    () => validateFichaApprovalGateV5({ ...input, gate: pendingWithReviewer }),
     /review by the PO/u,
   );
   const falseSignature = structuredClone(gate);
@@ -242,8 +253,8 @@ test('v5 package is locked by hash while the PO reviews it', async () => {
   );
 });
 
-test('orders print on v5 only after the PO approves its sample (PIM-10)', () => {
-  const stages = fichaV5ApprovalStages(gate);
+test('orders print on v5 only with the PO approval recorded (PIM-10)', () => {
+  assert.equal(fichaV5ApprovalStages(gate).provisional, true);
   const switchTo = (/** @type {any} */ gateV5) =>
     validateFichaPrintSwitch({
       gate: v3Gate,
@@ -251,11 +262,34 @@ test('orders print on v5 only after the PO approves its sample (PIM-10)', () => 
       gateV5,
       printTemplate: TEMPLATE_V5,
     });
-  if (!stages.provisional) {
-    assert.throws(() => switchTo(gate), /before its approval is recorded/u);
-  }
-  const approved = structuredClone(gate);
-  approved.provisionalApproval.status = 'approved';
-  approved.provisionalApproval.approved = true;
-  assert.doesNotThrow(() => switchTo(approved));
+  assert.doesNotThrow(() => switchTo(gate));
+  const pending = structuredClone(gate);
+  pending.provisionalApproval.status = 'pending-po-review';
+  pending.provisionalApproval.approved = false;
+  assert.throws(() => switchTo(pending), /before its approval is recorded/u);
+  assert.throws(() => switchTo(undefined), /before its approval is recorded/u);
+});
+
+test('the preview script refuses to overwrite the approved v5 PDF', async () => {
+  const before = createHash('sha256').update(pdfBytes).digest('hex');
+  const script = new URL(
+    '../scripts/ficha-pdf-preview-v5.mjs',
+    import.meta.url,
+  );
+  const result = spawnSync(process.execPath, [script.pathname], {
+    encoding: 'utf8',
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /cannot be regenerated or overwritten/u);
+  const after = createHash('sha256')
+    .update(
+      await readFile(
+        new URL(
+          '../output/pdf/ficha-canonica-sintetica-v5.pdf',
+          import.meta.url,
+        ),
+      ),
+    )
+    .digest('hex');
+  assert.equal(after, before);
 });

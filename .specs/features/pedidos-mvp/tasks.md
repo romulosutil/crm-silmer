@@ -1547,7 +1547,7 @@ provisória do PO sobre a amostra v5.
 - **Arquivos:** `ficha-canonical-v5.js`, snapshot, amostra, PDF, gate e
   seletor da impressão.
 - **Aceite:** v2–v4 intactas; v5 com os rótulos novos e paginação; troca do
-  seletor depois da aprovação provisória do PO.
+  seletor depois da aprovação provisória do PO (concedida em 03/10/2026).
 - **Gate:** testes da impressão e `validate:ficha-pdf-review`.
 
 ### T87: Revisão integrada e entrega

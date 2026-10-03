@@ -123,6 +123,7 @@ test('names each point missing to generate in plain words (PIT-06)', () => {
       'items[0].malhas',
       'items[1].grade',
       'items[1].gola',
+      'items[1].tipo_servico',
       'finalAmount',
       'paymentCondition',
     ]),
@@ -132,7 +133,8 @@ test('names each point missing to generate in plain words (PIT-06)', () => {
       'estampa do item 1',
       'tecido do item 1',
       'tamanhos do item 2',
-      'gola do item 2',
+      'definição da gola do item 2',
+      'tipo de serviço do item 2',
       'valor final',
       'forma de pagamento',
     ],
@@ -176,7 +178,7 @@ test('summarises what is missing for the Situação column (PLI-05)', () => {
       'finalAmount',
       'paymentCondition',
     ]),
-    'Falta cor do item 1, gola do item 1 e mais 2 pontos',
+    'Falta cor do item 1, definição da gola do item 1 e mais 2 pontos',
   );
   assert.equal(missingHeadline(null), 'Pronto para confirmar');
 });

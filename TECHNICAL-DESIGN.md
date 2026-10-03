@@ -356,7 +356,6 @@ rotacionável e capacidades mínimas. Conflitos de versão retornam `409`; erros
 | `GET /api/v1/contacts`                                         | Listar contatos e identidades por canal              | Atendimento ou Vendedor                        |
 | `GET /api/v1/contacts/{id}`                                    | Consultar contato, conversas e Negócios              | Atendimento ou Vendedor                        |
 | `POST /api/v1/conversations/{id}/takeover`                     | Suspender IA e assumir                              | Atendimento ou Vendedor                        |
-| `POST /api/v1/conversations/{id}/return-to-ai`                 | Reativar IA explicitamente                          | Atendimento ou Vendedor                        |
 | `POST /api/v1/conversations/{id}/close`                        | Encerrar atendimento                                | Atendimento ou Vendedor                        |
 | `POST /api/v1/handoffs/{id}/claim`                             | Assumir handoff não atribuído por CAS               | Papel compatível com `target_role`             |
 | `POST /api/v1/conversations/{id}/convert`                      | Criar/vincular contato e Negócio                    | `AUTOMATION_EXECUTOR` ou humano autorizado     |
@@ -442,8 +441,10 @@ nem repetido às cegas.
 
 ### Corrida IA versus tomada humana
 
-Cada conversa possui `automation_epoch`. Takeover, handoff, retorno à IA,
-fechamento e desligamento incrementam o epoch e invalidam decisões antigas.
+Cada conversa possui `automation_epoch`. Takeover, handoff, fechamento e
+desligamento incrementam o epoch e invalidam decisões antigas. Não existe
+retorno à IA: depois do handoff ou do takeover, a conversa segue com uma
+pessoa (ADR 015), e a rota `return-to-ai` não existe mais.
 Antes do envio automático, o n8n apresenta epoch e `source_revision` no
 `message.send.requested`; o CRM revalida modo e revisão e consome cada revisão
 uma única vez. Resposta calculada sob epoch antigo é descartada e

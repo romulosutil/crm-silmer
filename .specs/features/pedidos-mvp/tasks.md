@@ -846,6 +846,41 @@ Pedidos do PO ao revisar a tela do lastro.
 
 **Tests:** e2e · **Gate:** quick + e2e · **Commit:** `fix(edge-web): type every order field by hand`
 
+## Grupo ADR 015 — A conversa não volta para o bot (02/10/2026)
+
+Decidido pelo PO em 02/10/2026: "A conversa nunca volta para o bot." As tasks
+T54 e T55 partem de `master`, num branch próprio.
+
+### T54: ADR 015 e requisitos da conversa que não volta
+
+- **What:** Registrar a decisão; tirar "Devolver à IA" de PCX-05; trocar o caso de borda "WHEN a conversa volta para a IA" pela regra nova; tirar o retorno à IA da especificação do produto, do TDD e do contrato n8n.
+- **Where:** `docs/adr/015-conversa-nao-volta-para-o-bot.md`, `docs/adr/README.md`, `.specs/features/pedidos-mvp/{spec,tasks}.md`, `CRM-MVP-ESPECIFICACAO.md`, `TECHNICAL-DESIGN.md`, `docs/integrations/n8n/README.md`
+- **Depends on:** —
+- **Requirement:** PCX-05, ORC-07, AGT-03
+
+**Done when:**
+
+- [x] ADR 015 aceita e ligada à spec e às tasks
+- [x] Nenhum documento normativo descreve devolver a conversa à IA
+
+**Tests:** none · **Gate:** docs · **Commit:** `docs(adr): record that a conversation never returns to the bot`
+
+### T55: Remover "Devolver à IA" de ponta a ponta
+
+- **What:** Tirar o botão da Caixa de Entrada, a rota `return-to-ai`, `returnToAi` no runtime, `reactivateAgent` no serviço e o ramo `reactivate` dos repositórios PostgreSQL e em memória; o domínio aceita só `CONVERSATION_MUTATIONS`; OpenAPI só com `takeover` e `close`. Histórico gravado fica como está, sem migração.
+- **Where:** `apps/edge-web/src/views/InboxView.vue`, `apps/api/src/conversation-{routes,runtime}.js`, `modules/inbox-channels/src/**`, `docs/api/openapi.v1.yaml`, `test/{conversation-routes,inbox-domain,inbox-postgres-live}.test.js`, `test/e2e/crm-ui.spec.js`
+- **Depends on:** T54
+- **Requirement:** PCX-05, ORC-07, AGT-03
+
+**Done when:**
+
+- [ ] `POST .../return-to-ai` responde 404 sem autorizar nem chamar o domínio
+- [ ] Serviço sem `reactivateAgent`; os repositórios recusam `reactivate` sem auditoria, evento ou comando ao n8n
+- [ ] A Caixa de Entrada não mostra "Devolver à IA"; as ações restantes seguem em ordem pelo teclado; axe sem violações
+- [ ] `npm run validate`, o live do inbox e o e2e do inbox passam
+
+**Tests:** unit + live + e2e · **Gate:** quick + live + e2e · **Commit:** `feat(inbox): never hand a conversation back to the bot`
+
 ---
 
 ## Validação das tasks
@@ -918,6 +953,7 @@ Pedidos do PO ao revisar a tela do lastro.
 | T47      | T43 + T15 da v3    | idem               | ✅     |
 | T48      | T45                | T45→T48            | ✅     |
 | T49      | T48                | T48→T49            | ✅     |
+| T55      | T54                | T54→T55            | ✅     |
 
 `[P]` só em tasks sem dependência entre si na mesma fase: T03 (com T02), T05/T06/T24 (após T04), T14 (após T01), T26/T27. ✅
 
@@ -944,3 +980,5 @@ Pedidos do PO ao revisar a tela do lastro.
 | T47      | template impresso         | unit            | unit                               | ✅     |
 | T48      | lib + componente          | unit + e2e      | unit + e2e                         | ✅     |
 | T49      | componente                | e2e             | e2e                                | ✅     |
+| T54      | docs                      | none            | none                               | ✅     |
+| T55      | view, rota, domínio e PG  | unit + live + e2e | unit + live + e2e                | ✅     |

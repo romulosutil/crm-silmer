@@ -691,7 +691,9 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
   await mockCrm(page);
   await page.goto('/dashboard');
 
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
+  await expect(
+    page.getByRole('heading', { name: 'Dashboard', level: 1 }),
+  ).toBeFocused();
   for (const name of [
     'Dashboard',
     'Caixa de Entrada',
@@ -730,7 +732,9 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
     .getByRole('link', { name: 'Clientes' })
     .press('Enter');
   await expect(page).toHaveURL('/clientes');
-  await expect(page.getByRole('heading', { name: 'Clientes' })).toBeFocused();
+  await expect(
+    page.getByRole('heading', { name: 'Clientes', level: 1 }),
+  ).toBeFocused();
   await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);

@@ -256,6 +256,20 @@ test('submits login, restores and closes a session by keyboard without browser s
       return;
     }
 
+    if (path === '/api/v1/orders/summary' && method === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          confirmedCount: 0,
+          soldAmountCents: 0,
+          averageTicketCents: 0,
+          pendingCount: 0,
+          totalPiecesSold: 0,
+        }),
+      });
+      return;
+    }
+
     if (path === '/api/v1/events' && method === 'GET') {
       await route.fulfill({ status: 204 });
       return;
@@ -281,7 +295,9 @@ test('submits login, restores and closes a session by keyboard without browser s
 
   await loginPanel.getByLabel('Senha').fill('correct horse battery staple');
   await loginPanel.getByLabel('Senha').press('Enter');
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
+  await expect(
+    page.getByRole('heading', { name: 'Dashboard', level: 1 }),
+  ).toBeFocused();
   await expect(page.getByRole('status')).toHaveText(
     'Sessão iniciada com segurança.',
   );
@@ -302,7 +318,9 @@ test('submits login, restores and closes a session by keyboard without browser s
   ]);
 
   await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
+  await expect(
+    page.getByRole('heading', { name: 'Dashboard', level: 1 }),
+  ).toBeFocused();
 
   await page.getByRole('button', { name: 'Claro' }).focus();
   await page.keyboard.press('Tab');
@@ -317,7 +335,9 @@ test('submits login, restores and closes a session by keyboard without browser s
 
   await page.reload();
   await expect(page.getByRole('status')).toHaveText('Sessão restaurada.');
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
+  await expect(
+    page.getByRole('heading', { name: 'Dashboard', level: 1 }),
+  ).toBeFocused();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
   await page.getByRole('button', { name: 'Sair' }).focus();

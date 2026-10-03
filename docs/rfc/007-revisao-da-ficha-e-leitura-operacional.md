@@ -4,7 +4,7 @@ Status: decidida para desenvolvimento pela [ADR 019](../adr/019-ficha-espelhada-
 
 Data: 03/10/2026
 
-Origem: pedido do PO com as referências `25-CRM-ficha-v3.pdf` (pedido real, fora do versionamento) e `ficha-canonica-sintetica-v3.pdf` (amostra). Requisitos `REV-01` a `REV-10` da [spec](../../.specs/features/pedidos-mvp/spec.md), tarefas T76–T82. PR: vincular quando o checkout Git for restaurado.
+Origem: pedido do PO com as referências `25-CRM-ficha-v3.pdf` (pedido real, fora do versionamento) e `ficha-canonica-sintetica-v3.pdf` (amostra). Requisitos `REV-01` a `REV-10` da [spec](../../.specs/features/pedidos-mvp/spec.md), tarefas T76–T82. Implementação: [PR #127](https://github.com/romulosutil/crm-silmer/pull/127).
 
 ## Problema observado
 

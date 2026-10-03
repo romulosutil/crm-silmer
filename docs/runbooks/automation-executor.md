@@ -15,6 +15,9 @@ As ações autorizadas pelo contrato v1 são:
 - armazenar anexo seguro e reivindicar rodada de IA;
 - reservar envio antes da Meta, atualizar briefing e registrar falha;
 - criar handoff sem responsável para a fila do papel-alvo;
+- abrir o Pedido pendente da conversa (`order.intent`), pelo `open_order` da
+  reserva de envio ou do handoff (ADR 014), ou pelo evento obsoleto
+  `order.intent_confirmed`;
 - converter uma conversa em Negócio;
 - atualizar campos oficiais de um Negócio;
 - registrar transição de etapa validada pelo CRM.
@@ -73,6 +76,58 @@ repita o envio. Comando CRM→n8n em `outcome_unknown` segue para reconciliaçã
 Se houver suspeita de comprometimento, pausar o workflow, revogar as duas
 credenciais, elevar o epoch das conversas afetadas e reconciliar reservas antes
 de retomar.
+
+### Pedido que não abriu (`ORDER_OPEN_FAILED`)
+
+Pela [ADR 014](../adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md), a
+reserva de envio ou o handoff com `open_order: true` abre o Pedido pendente
+depois que o evento confirma. Se o módulo de pedidos falhar, o evento continua
+aceito (a resposta ao cliente sai e o handoff acontece) e a falha aparece em
+quatro lugares, sem dados pessoais:
+
+1. **Resposta do evento no n8n:** `order.opened = false` e o código em
+   `order.error`, na saída de "CRM - Reservar envio da IA (MVP)" ou "CRM -
+   Registrar handoff (MVP)". A execução passa pelo ramo "Pedido não abriu?
+   (MVP)".
+2. **`workflow.failed` da conversa:** o workflow envia `failure.code =
+   ORDER_OPEN_FAILED`, com o código do CRM em `failure.reason`. No CRM:
+
+   ```sql
+   SELECT processed_at, conversation_id, workflow_version, execution_id
+   FROM crm.n8n_events
+   WHERE event_type = 'workflow.failed'
+     AND outcome ->> 'failureCode' = 'ORDER_OPEN_FAILED'
+   ORDER BY processed_at DESC
+   LIMIT 50;
+   ```
+
+3. **Auditoria do CRM:** gravada pelo próprio CRM, mesmo que o
+   `workflow.failed` não chegue:
+
+   ```sql
+   SELECT occurred_at, target_id AS conversation_id, reason AS code,
+          correlation_id
+   FROM crm.audit_events
+   WHERE action = 'integration.n8n.order.open_failed'
+   ORDER BY occurred_at DESC
+   LIMIT 50;
+   ```
+
+4. **Log da API:** `n8n event accepted but the pending order did not open`,
+   com `code`, `conversationId`, `correlationId` e `eventType`.
+
+Códigos: um código de domínio do módulo de pedidos (por exemplo
+`CONVERSATION_NOT_FOUND`), `ORDER_OPEN_FAILED` para qualquer outro erro
+(inclusive do banco, como uma API à frente da migração) e
+`ORDERS_RUNTIME_UNAVAILABLE` quando a API sobe sem o módulo de pedidos.
+
+O que fazer: corrigir a causa pelo `correlation_id` no log da API. No meio da
+conversa, a rodada seguinte pede a abertura de novo e o pedido abre sozinho.
+Depois de um handoff não há rodada seguinte: o vendedor que assumir a conversa usa "Criar
+pedido" na gaveta (PCL-10), que parte da mesma pré-ficha. Se a chamada do
+`workflow.failed` também falhar, o n8n mostra o erro na saída do nó "CRM -
+Registrar falha ao abrir pedido (MVP)", sem interromper a execução, e a
+auditoria do item 3 continua valendo.
 
 ## Pendência independente
 

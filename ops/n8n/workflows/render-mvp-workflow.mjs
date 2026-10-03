@@ -155,7 +155,7 @@ const imports = `import {
   workflow,
 } from '@n8n/workflow-sdk';\n\n`;
 const constants = `const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-const WORKFLOW_VERSION = 'mvp-simple-10';
+const WORKFLOW_VERSION = 'mvp-simple-11';
 
 const BRIEFING_FIELDS = [
   'artwork_locations',

@@ -50,7 +50,8 @@ mensagens para testá-lo.
 `briefing_status` e `next_required_field` guardam o estado desses gatilhos e
 não vão para a Ficha. Nenhuma informação inferida vira Pedido oficial,
 catálogo, preço, prazo garantido ou pagamento. O agente pode criar um Pedido
-`pendente`, que é rascunho não oficial; oficial é o Pedido `confirmado`, e a
+`pendente`, que é rascunho não oficial, na rodada em que a ficha ganha o
+primeiro dos sete pontos (ADR 014); oficial é o Pedido `confirmado`, e a
 confirmação permanece humana (ADR 006).
 
 Esta entrega ativa somente WhatsApp. Instagram, leitura multimodal pela IA e
@@ -331,7 +332,10 @@ DEV publicado e aponte o worker do CRM para
 O CRM sempre aceita um campo novo do `briefing_patch` antes de o workflow
 enviá-lo, porque uma chave desconhecida volta como `400`. Para o `collar` da
 ADR 012, o CRM com o campo vai ao cloud-dev antes do workflow `mvp-simple-7`
-(DEV `dev-mvp-simple-8`).
+(DEV `dev-mvp-simple-8`). Pelo mesmo motivo, o CRM que aceita `open_order`
+(ADR 014) vai antes do workflow `mvp-simple-11` (DEV `dev-mvp-simple-12`); o
+workflow anterior continua funcionando com o CRM novo, que ainda aceita
+`order.intent_confirmed`.
 
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker e configurar as duas credenciais Basic.
@@ -349,6 +353,10 @@ incertos para reconciliação. A rota direta não é reativada automaticamente.
   revisão já foi respondida; não enviar.
 - `send_authorized: false`: replay; não chamar a Meta novamente.
 - `message.send.unknown`: reconciliar pelo `command_id` antes de qualquer ação.
+- `order.opened: false` na reserva ou no handoff: o Pedido pendente não abriu,
+  mas a resposta saiu e o handoff aconteceu. O workflow registra
+  `workflow.failed` com `ORDER_OPEN_FAILED`; onde ver e o que fazer estão no
+  [runbook do ator técnico](../../runbooks/automation-executor.md).
 - mídia em quarentena/indisponível: abrir handoff e não afirmar que os bytes
   foram recuperados.
 

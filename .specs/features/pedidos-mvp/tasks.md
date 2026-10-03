@@ -922,17 +922,17 @@ workflow DEV `0S5ZS1xeDCSoWovs` e, com autorização do PO, o de produção
 ### T52: Regra de abertura e falha visível no workflow
 
 - **What:** O nó de decisão calcula `open_order` pela ficha (D29) e o envia na reserva e no handoff; o handoff de arquivo usa a mesma regra; o ramo paralelo da intenção sai; o prompt perde `order_intent_confirmed`; "Pedido não abriu? (MVP)" envia `workflow.failed` com `ORDER_OPEN_FAILED`. Workflow `mvp-simple-11`, snapshot principal e runbook.
-- **Where:** `ops/n8n/workflows/{k7tI6T4RhQPyJkn9-mvp-simple.sdk.js,render-mvp-workflow.mjs,k7tI6T4RhQPyJkn9-mvp-simple.sanitized.json}`, `docs/runbooks/automation-executor.md`, `docs/integrations/n8n/README.md`, `test/n8n-workflow-contract.test.js`
+- **Where:** `ops/n8n/workflows/{k7tI6T4RhQPyJkn9-mvp-simple.sdk.js,render-mvp-workflow.mjs,k7tI6T4RhQPyJkn9-mvp-simple.sanitized.json}`, `docs/runbooks/automation-executor.md`, `docs/integrations/n8n/README.md`, `test/n8n-workflow-contract.test.js`, `test/n8n-integration-postgres-live.test.js` (o `workflow.failed` gravado)
 - **Depends on:** T51
 - **Requirement:** PAB-01, PAB-02, PAB-04
 
 **Done when:**
 
-- [ ] Primeiro ponto real abre; nome sozinho e "Definir com o vendedor" não; contexto externo nunca; handoff com ponto abre; aberto fica
-- [ ] `opened: false` gera `workflow.failed` com `ORDER_OPEN_FAILED` sem bloquear a resposta
-- [ ] Gate quick passa
+- [x] Primeiro ponto real abre; nome sozinho e "Definir com o vendedor" não; contexto externo nunca; handoff com ponto abre; aberto fica
+- [x] `opened: false` gera `workflow.failed` com `ORDER_OPEN_FAILED` sem bloquear a resposta
+- [x] Gate quick passa
 
-**Tests:** unit · **Gate:** quick · **Commit:** `feat(n8n): open the order at the first ficha point`
+**Tests:** unit + integração live · **Gate:** quick + live · **Commit:** `feat(n8n): open the order at the first ficha point`
 
 ### T53: Workflows DEV e local, roteiro e rastreabilidade
 
@@ -955,7 +955,7 @@ workflow DEV `0S5ZS1xeDCSoWovs` e, com autorização do PO, o de produção
 | ---- | ------------------------ | --------------- | ----------------------- | ---------- | ------ |
 | T50  | docs                     | none            | none                    | —          | ✅     |
 | T51  | contrato, rota e adapter | unit + live     | unit + integração live  | T50        | ✅     |
-| T52  | workflow                 | unit            | unit                    | T51        | ✅     |
+| T52  | workflow                 | unit            | unit + integração live  | T51        | ✅     |
 | T53  | workflow DEV e docs      | unit            | unit                    | T52        | ✅     |
 
 ---

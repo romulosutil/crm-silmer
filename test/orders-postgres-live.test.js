@@ -605,24 +605,36 @@ if (connectionString) {
           cor_frente: '',
           cor_manga_direita: '',
           cor_manga_esquerda: '',
-          estampa: 'Sem estampa',
+          estampa: '',
           gola: 'GOLA REDONDA',
           grade: [{ quantidade: 3, tamanho: 'M' }],
           malhas: ['DRY FIT'],
           modelo: '',
           tipo: 'CAMISA',
-          tipo_servico: 'Produção completa',
+          tipo_servico: 'Sem estampa',
           vies_gola: '',
           vies_mangas: '',
         },
       ],
+    });
+    const marked = await service.patchSection({
+      actor,
+      correlationId: `correlation-follow-artwork-${tag}`,
+      expectedVersion: ready.version,
+      orderId: created.id,
+      section: 'artwork',
+      value: {
+        feito_pela_silmer: false,
+        feito_pelo_cliente: false,
+        sem_estampa: true,
+      },
     });
     await nameContact(`Cliente Na Geracao ${tag}`, 'manual');
     const generated = await service.confirm({
       actor,
       amountText: '150,00',
       correlationId: `correlation-follow-confirm-${tag}`,
-      expectedVersion: ready.version,
+      expectedVersion: marked.version,
       orderId: created.id,
       paymentCondition: 'pix',
     });
@@ -773,7 +785,7 @@ if (connectionString) {
         nome: null,
       },
     });
-    const ready = await runtime.patchSection({
+    const withItems = await runtime.patchSection({
       ...patch,
       expectedVersion: promised.version,
       idempotencyKey: `items-${runId}`,
@@ -785,17 +797,24 @@ if (connectionString) {
           cor_frente: 'AZUL',
           cor_manga_direita: 'AZUL',
           cor_manga_esquerda: 'AZUL',
-          estampa: 'Arte do cliente',
+          estampa: 'Logo · frente',
           gola: 'GOLA V',
           grade: [{ quantidade: 3, tamanho: 'M' }],
           malhas: ['DRY FIT'],
           modelo: 'TRADICIONAL',
           tipo: 'CAMISA',
-          tipo_servico: 'Somente impressão',
+          tipo_servico: 'DTF',
           vies_gola: 'AZUL',
           vies_mangas: 'NAO APLICAVEL',
         },
       ],
+    });
+    const ready = await runtime.patchSection({
+      ...patch,
+      expectedVersion: withItems.version,
+      idempotencyKey: `artwork-${runId}`,
+      section: 'artwork',
+      value: { feito_pela_silmer: false, feito_pelo_cliente: true },
     });
     const outcomes = await Promise.allSettled(
       ['one', 'two'].map((suffix) =>
@@ -876,11 +895,11 @@ if (connectionString) {
     assert.equal(created.ficha.items[0].cor, 'preta');
     assert.equal(created.ficha.serviceData.quantity, 30);
     assert.deepEqual(created.missingFields, [
-      'items[0].estampa',
+      'items[0].tipo_servico',
       'items[0].malhas',
       'items[0].grade',
       'items[0].gola',
-      'items[0].tipo_servico',
+      'artwork',
       'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
@@ -903,7 +922,9 @@ if (connectionString) {
     });
     assert.equal(projected.applied, true);
     const order = /** @type {any} */ (projected.order);
-    assert.equal(order.ficha.items[0].estampa, 'vai mandar a logo');
+    // ADR 020: who makes the art lands on the order; no place was said.
+    assert.equal(order.ficha.items[0].estampa, '');
+    assert.equal(order.ficha.artwork.feito_pelo_cliente, true);
     assert.deepEqual(order.ficha.items[0].malhas, ['algodão']);
     assert.equal(order.ficha.items[0].gola, '');
     assert.equal(order.ficha.summary.aplicacao, null);
@@ -911,8 +932,8 @@ if (connectionString) {
     assert.equal(order.ficha.serviceData.collar, 'Definir com o vendedor');
     assert.equal(order.totalPieces, 30);
     assert.deepEqual(order.missingFields, [
-      'items[0].gola',
       'items[0].tipo_servico',
+      'items[0].gola',
       'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
@@ -945,12 +966,12 @@ if (connectionString) {
     await assert.rejects(confirm(partial, {}), {
       code: 'ORDER_NOT_CONFIRMABLE',
       fields: [
-        'items[0].gola',
         'items[0].tipo_servico',
+        'items[0].gola',
         'items[1].cor',
+        'items[1].tipo_servico',
         'items[1].grade',
         'items[1].gola',
-        'items[1].tipo_servico',
         'summary.data_entrega_confirmada',
         'finalAmount',
         'paymentCondition',
@@ -964,14 +985,14 @@ if (connectionString) {
       orderId: order.id,
       section: 'items',
       value: [
-        { ...first, gola: 'gola redonda', tipo_servico: 'Produção completa' },
+        { ...first, gola: 'gola redonda', tipo_servico: 'Silk' },
         {
           ...first,
           cor: 'branca',
           gola: 'regata',
           grade: [{ quantidade: 4, tamanho: 'GG' }],
           tipo: 'regata',
-          tipo_servico: 'Somente impressão',
+          tipo_servico: 'DTF',
         },
       ],
     });
@@ -1080,11 +1101,11 @@ if (connectionString) {
     assert.deepEqual(read.missingFields, [
       'items[0].tipo',
       'items[0].cor',
-      'items[0].estampa',
+      'items[0].tipo_servico',
       'items[0].malhas',
       'items[0].grade',
       'items[0].gola',
-      'items[0].tipo_servico',
+      'artwork',
       'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
@@ -1145,9 +1166,10 @@ if (connectionString) {
       fabCode: '01',
       ficha: {
         artwork: {
-          feito_pelo_cliente: false,
+          feito_pelo_cliente: true,
           feito_pela_silmer: false,
           files: [],
+          sem_estampa: false,
         },
         items: /** @type {any} */ (syntheticItems()),
         observations: [],

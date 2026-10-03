@@ -2,34 +2,36 @@
 
 Rastreabilidade: `PCL-01..12`, `PFI-01..13`, `PLI-01..08`, `PCX-01..09`,
 `ORD-01..04`, tarefas `T24..T38` de Pedidos MVP. As alterações solicitadas em
-03/10/2026 acrescentam tipo de serviço por item, origem da estampa e a leitura
-operacional de vendas e inatividade. Este glossário fixa a redação; as regras de
+03/10/2026 acrescentam técnica por item, arte do pedido (ADR 020) e a
+leitura operacional de vendas e inatividade. Este glossário fixa a redação; as regras de
 permissão e estado continuam em `RULES.md` e na especificação.
 
-| Termo na interface               | Significado e uso                                                                                                                           | Evitar                                                                         |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **Cliente**                      | Pessoa ou organização atendida; o cadastro técnico é `Contact`.                                                                             | Alternar entre lead, contato e cliente na mesma tela.                          |
-| **Conversa**                     | Histórico do canal e local de atendimento.                                                                                                  | Tratar chegada de mensagem como venda ou pedido.                               |
-| **Atendimento**                  | Trabalho do agente ou de uma pessoa sobre a conversa.                                                                                       | Usar “concluído” para indicar pedido confirmado.                               |
-| **Pedido**                       | Registro comercial ligado à conversa, com número `NN-CRM`, itens e situação.                                                                | “Ficha” como nome do registro editável.                                        |
-| **Pendente**                     | Pedido em edição; ainda não foi confirmado por pessoa autorizada.                                                                           | “Aprovado”, “em produção” ou “pago”.                                           |
-| **Confirmado**                   | Pedido gerado por pessoa autorizada, com valor e condição registrados; permite imprimir.                                                    | Inferir recebimento ou início da produção.                                     |
-| **Ficha de pedido**              | Documento impresso a partir de pedido confirmado.                                                                                           | Chamar o formulário de edição de ficha impressa.                               |
-| **Item**                         | Um tipo de roupa, cor, descrição da estampa, tecido, tamanhos, definição da gola, grade e tipo de serviço. Um pedido pode ter vários itens. | Aplicar um serviço único ao pedido inteiro.                                    |
-| **Tipo de roupa**                | Nome da peça no item. O campo anterior “Modelo” sai do fluxo comercial.                                                                     | “Modelo” como segundo campo obrigatório ou sinônimo.                           |
-| **Definição da gola**            | Descrição da gola que a produção deve executar; substitui “Viés gola”.                                                                      | Presumir que toda gola usa viés.                                               |
-| **Viés das mangas**              | Acabamento das mangas quando aplicável.                                                                                                     | Confundir com a definição da gola.                                             |
-| **Tipo de serviço**              | Serviço específico daquele item, descrito para produção e designers.                                                                        | Colocar apenas no resumo do pedido.                                            |
-| **Técnica da arte (referência)** | Informação geral coletada no atendimento sobre como a arte será aplicada; não substitui o tipo de serviço de cada item.                     | Tratar como serviço único para todos os itens.                                 |
-| **Estampa do item**              | Descrição do que será impresso, bordado ou aplicado naquele item.                                                                           | Usar a origem da arte como descrição suficiente.                               |
-| **Estampa feita pelo cliente**   | Origem informada e marcada pelo vendedor após conferir a referência.                                                                        | Inferir origem pela IA ou pelo nome do arquivo.                                |
-| **Estampa feita pela Silmer**    | Origem informada e marcada pelo vendedor quando a Silmer faz a arte.                                                                        | Tratar a marcação como aprovação da arte.                                      |
-| **Arquivo da estampa**           | Arquivo fornecido ou produzido para orientar designers e impressão; vínculo ao pedido e localização visível.                                | Expor link público, nome com PII ou prometer Dropbox antes do envio concluído. |
-| **Peças**                        | Soma das quantidades da grade dos itens.                                                                                                    | Valor digitado manualmente.                                                    |
-| **Vendas**                       | Número de pedidos confirmados.                                                                                                              | Contar pendentes como vendas ou confundir com recebimentos.                    |
-| **Valor vendido**                | Soma do valor final dos pedidos confirmados.                                                                                                | Chamar de faturamento recebido ou saldo.                                       |
-| **Cliente sem resposta**         | Sinal de acompanhamento 48 horas após o envio confirmado da última mensagem da Silmer, sem resposta posterior. O tempo na fila não conta.   | Contar envio falho/incerto ou afirmar que o cliente desistiu.                  |
-| **Pedido sem movimentação**      | Tempo desde a última alteração do pedido.                                                                                                   | Apresentar como probabilidade de fechamento.                                   |
+| Termo na interface                       | Significado e uso                                                                                                                                                                                        | Evitar                                                                         |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Cliente**                              | Pessoa ou organização atendida; o cadastro técnico é `Contact`.                                                                                                                                          | Alternar entre lead, contato e cliente na mesma tela.                          |
+| **Conversa**                             | Histórico do canal e local de atendimento.                                                                                                                                                               | Tratar chegada de mensagem como venda ou pedido.                               |
+| **Atendimento**                          | Trabalho do agente ou de uma pessoa sobre a conversa.                                                                                                                                                    | Usar “concluído” para indicar pedido confirmado.                               |
+| **Pedido**                               | Registro comercial ligado à conversa, com número `NN-CRM`, itens e situação.                                                                                                                             | “Ficha” como nome do registro editável.                                        |
+| **Pendente**                             | Pedido em edição; ainda não foi confirmado por pessoa autorizada.                                                                                                                                        | “Aprovado”, “em produção” ou “pago”.                                           |
+| **Confirmado**                           | Pedido gerado por pessoa autorizada, com valor e condição registrados; permite imprimir.                                                                                                                 | Inferir recebimento ou início da produção.                                     |
+| **Ficha de pedido**                      | Documento impresso a partir de pedido confirmado.                                                                                                                                                        | Chamar o formulário de edição de ficha impressa.                               |
+| **Item**                                 | Uma peça do pedido com sete pontos: tipo de roupa, cor, quantidade, técnica, tecido, tamanhos e gola. Um pedido pode ter vários itens.                                                                   | Aplicar uma técnica única ao pedido inteiro.                                   |
+| **Tipo de roupa**                        | Nome da peça no item (camiseta, polo, regata…). O que o cliente disse ao bot aparece como “Tipo de roupa informado”.                                                                                     | “Modelo” ou “Tipo de peça” como segundo campo.                                 |
+| **Técnica**                              | Como a arte é aplicada naquele item: silk, DTF, sublimação, bordado… ou “Sem estampa”. Obrigatória para gerar; o bot pode sugerir.                                                                       | “Tipo de serviço”, “Técnica da arte” ou uma técnica no resumo.                 |
+| **Gola**                                 | A gola que a produção deve executar.                                                                                                                                                                     | Presumir que toda gola usa viés.                                               |
+| **Estampa (referência)**                 | Adicional do item: o que vai estampado e onde, quando ajuda a produção. Não bloqueia.                                                                                                                    | Usar para dizer quem faz a arte.                                               |
+| **Cor do tecido — frente/costas/mangas** | Adicionais com a cor do tecido de cada parte, quando difere da cor do item.                                                                                                                              | Confundir com o número de cores da arte.                                       |
+| **Viés das mangas**                      | Acabamento das mangas quando aplicável.                                                                                                                                                                  | Confundir com a gola.                                                          |
+| **Arte do pedido**                       | Quem faz a arte, em Estampa e arquivos: “O cliente envia a arte”, “A Silmer cria a arte” (podem coexistir) ou “Sem estampa”. Uma marcação é obrigatória para gerar; o bot preenche e o vendedor confere. | Repetir a origem da arte dentro do item.                                       |
+| **Arquivo da arte**                      | Arquivo fornecido ou produzido para orientar designers e impressão; vínculo ao pedido e localização visível.                                                                                             | Expor link público, nome com PII ou prometer Dropbox antes do envio concluído. |
+| **Cores da arte**                        | Bloco do controle de produção: número de cores de tinta por parte da peça, preenchido à mão.                                                                                                             | “Cor frente”, que é a cor do tecido.                                           |
+| **Nome do pedido**                       | Evento, empresa, time ou turma do pedido.                                                                                                                                                                | “Nome” sozinho, que se confunde com o cliente.                                 |
+| **Pago em / Entregue em**                | Datas do lastro informadas pelo vendedor; o mesmo nome na tela e no papel.                                                                                                                               | “Pagamento” para uma data.                                                     |
+| **Peças**                                | Soma das quantidades da grade dos itens.                                                                                                                                                                 | Valor digitado manualmente.                                                    |
+| **Vendas**                               | Número de pedidos confirmados.                                                                                                                                                                           | Contar pendentes como vendas ou confundir com recebimentos.                    |
+| **Valor vendido**                        | Soma do valor final dos pedidos confirmados.                                                                                                                                                             | Chamar de faturamento recebido ou saldo.                                       |
+| **Cliente sem resposta**                 | Sinal de acompanhamento 48 horas após o envio confirmado da última mensagem da Silmer, sem resposta posterior. O tempo na fila não conta.                                                                | Contar envio falho/incerto ou afirmar que o cliente desistiu.                  |
+| **Pedido sem movimentação**              | Tempo desde a última alteração do pedido.                                                                                                                                                                | Apresentar como probabilidade de fechamento.                                   |
 
 ## Verbos das ações
 
@@ -44,16 +46,15 @@ permissão e estado continuam em `RULES.md` e na especificação.
 
 ## Para quem cada informação serve
 
-- **Vendedor:** resolve pendências, confirma os dados e marca a origem da
-  estampa. A IA apenas coleta relatos e sugere dados dentro de sua capacidade.
+- **Vendedor:** resolve pendências, confirma os dados e a arte do pedido. A IA apenas coleta relatos e sugere dados dentro de sua capacidade.
 - **Rômulo:** acompanha valor vendido, quantidade de vendas e pontos que pedem
   intervenção. Indicadores devem declarar período e universo considerado.
 - **Rose:** recebe a ficha confirmada e confere o financeiro. Qualquer aviso
   automático por e-mail ou n8n requer fluxo próprio acordado com a operação.
-- **Designers:** precisam da ficha, do tipo de serviço de cada item, da origem
-  da estampa e da localização dos arquivos ou referências.
-- **Costureiras:** usam tipo de roupa, malha, cores, definição da gola, mangas e
-  grade do item.
+- **Designers:** precisam da ficha, da técnica de cada item, de quem faz a arte
+  e da localização dos arquivos ou referências.
+- **Costureiras:** usam tipo de roupa, tecido, cores, gola, mangas e tamanhos do
+  item.
 - **Embalador:** usa o número `NN-CRM` e a ficha impressa para identificar e
   conferir o pacote.
 

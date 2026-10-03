@@ -119,22 +119,22 @@ test('names each point missing to generate in plain words (PIT-06)', () => {
     missingFieldLabels([
       'items[0].tipo',
       'items[0].cor',
-      'items[0].estampa',
+      'items[0].tipo_servico',
       'items[0].malhas',
       'items[1].grade',
       'items[1].gola',
-      'items[1].tipo_servico',
+      'artwork',
       'finalAmount',
       'paymentCondition',
     ]),
     [
       'tipo de roupa do item 1',
       'cor do item 1',
-      'estampa do item 1',
+      'técnica do item 1',
       'tecido do item 1',
       'tamanhos do item 2',
-      'definição da gola do item 2',
-      'tipo de serviço do item 2',
+      'gola do item 2',
+      'quem faz a arte',
       'valor final',
       'forma de pagamento',
     ],
@@ -149,11 +149,13 @@ test('names each point missing to generate in plain words (PIT-06)', () => {
 
 test('names an unmapped missing field instead of hiding it', () => {
   assert.deepEqual(missingFieldLabels(['summary.futuro']), ['summary.futuro']);
-  assert.deepEqual(
-    missingFieldLabels(['items[0].modelo']),
-    ['items[0].modelo'],
-    'an extra never blocks, so it has no label of its own',
-  );
+  for (const extra of ['items[0].modelo', 'items[0].estampa']) {
+    assert.deepEqual(
+      missingFieldLabels([extra]),
+      [extra],
+      'an extra never blocks, so it has no label of its own',
+    );
+  }
 });
 
 test('summarises what is missing for the Situação column (PLI-05)', () => {
@@ -178,7 +180,7 @@ test('summarises what is missing for the Situação column (PLI-05)', () => {
       'finalAmount',
       'paymentCondition',
     ]),
-    'Falta cor do item 1, definição da gola do item 1 e mais 2 pontos',
+    'Falta cor do item 1, gola do item 1 e mais 2 pontos',
   );
   assert.equal(missingHeadline(null), 'Pronto para confirmar');
 });
@@ -309,14 +311,14 @@ test('shows each business date once across summary and trail (PLA-01..03, PLA-08
     },
     {
       key: 'paid',
-      label: 'Pagamento',
+      label: 'Pago em',
       note: 'informado',
       recorded: true,
       value: '10/09/2026',
     },
     {
       key: 'delivered',
-      label: 'Entrega realizada',
+      label: 'Entregue em',
       note: 'a informar',
       recorded: false,
       value: '—',

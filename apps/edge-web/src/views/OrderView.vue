@@ -394,7 +394,7 @@ onBeforeUnmount(() => {
       </p>
 
       <p class="op-guidance">
-        Confira o resumo, complete os itens e marque a origem da arte. O painel
+        Confira o resumo, complete os itens e marque quem faz a arte. O painel
         de fechamento mostra o que falta para gerar e liberar a ficha.
       </p>
 

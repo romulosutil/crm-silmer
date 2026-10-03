@@ -72,13 +72,21 @@ function setup() {
         nome: null,
       },
     });
-    const ready = await service.patchSection({
+    const items = await service.patchSection({
       actor: OWNER,
       correlationId: 'correlation-items',
       expectedVersion: promised.version,
       orderId: order.id,
       section: 'items',
       value: syntheticItems(),
+    });
+    const ready = await service.patchSection({
+      actor: OWNER,
+      correlationId: 'correlation-artwork',
+      expectedVersion: items.version,
+      orderId: order.id,
+      section: 'artwork',
+      value: { feito_pela_silmer: false, feito_pelo_cliente: true },
     });
     beforeGenerating?.();
     return service.confirm({

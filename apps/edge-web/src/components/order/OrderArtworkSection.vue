@@ -1,15 +1,26 @@
 <script setup>
-import { computed, inject, nextTick, ref } from 'vue';
+import { computed, inject, nextTick, ref, watch } from 'vue';
 import OrderIcon from './OrderIcon.vue';
 
 const SECTION = 'artwork';
+// ADR 020: who makes the art of the whole order. The customer and Silmer may
+// both be marked; "Sem estampa" stands alone. One mark is needed to generate.
+const ORIGINS = Object.freeze([
+  Object.freeze({ key: 'feito_pelo_cliente', label: 'O cliente envia a arte' }),
+  Object.freeze({ key: 'feito_pela_silmer', label: 'A Silmer cria a arte' }),
+  Object.freeze({ key: 'sem_estampa', label: 'Sem estampa' }),
+]);
 const props = defineProps({
   order: { type: Object, required: true },
 });
 
 const editing = inject('orderEditing');
 const firstField = ref(null);
-const draft = ref({ feito_pelo_cliente: false, feito_pela_silmer: false });
+const draft = ref({
+  feito_pela_silmer: false,
+  feito_pelo_cliente: false,
+  sem_estampa: false,
+});
 const saving = ref(false);
 const errorMessage = ref('');
 const artwork = computed(() => props.order.ficha?.artwork ?? {});
@@ -23,20 +34,21 @@ const canEdit = computed(
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
 );
-const sources = computed(() => {
-  const selected = [];
-  if (artwork.value.feito_pelo_cliente) selected.push('Feito pelo cliente');
-  if (artwork.value.feito_pela_silmer) selected.push('Feito pela Silmer');
-  return selected.join(' · ') || 'Origem ainda não informada';
-});
+const sources = computed(
+  () =>
+    ORIGINS.filter((origin) => artwork.value[origin.key] === true)
+      .map((origin) => origin.label)
+      .join(' · ') || 'Falta marcar quem faz a arte.',
+);
 const files = computed(() =>
   Array.isArray(artwork.value.files) ? artwork.value.files : [],
 );
 
 async function startEditing() {
   draft.value = {
-    feito_pelo_cliente: artwork.value.feito_pelo_cliente === true,
     feito_pela_silmer: artwork.value.feito_pela_silmer === true,
+    feito_pelo_cliente: artwork.value.feito_pelo_cliente === true,
+    sem_estampa: artwork.value.sem_estampa === true,
   };
   errorMessage.value = '';
   editing.start(SECTION);
@@ -49,12 +61,45 @@ function cancel() {
   editing.stop();
 }
 
+/**
+ * "Sem estampa" clears the two origins, and an origin clears "Sem estampa",
+ * so the form never holds a pair the server refuses.
+ *
+ * @param {string} key @param {boolean} checked
+ */
+function mark(key, checked) {
+  const next = { ...draft.value, [key]: checked };
+  if (checked && key === 'sem_estampa') {
+    next.feito_pela_silmer = false;
+    next.feito_pelo_cliente = false;
+  } else if (checked) {
+    next.sem_estampa = false;
+  }
+  draft.value = next;
+}
+
+// "Informar em Estampa e arquivos" from "Gerar pedido" opens this editor;
+// with another section open, it only brings the section into view.
+const heading = ref(null);
+watch(
+  () => editing.editRequest?.value,
+  (request) => {
+    if (request?.section !== SECTION || isEditing.value) return;
+    if (canEdit.value && !otherSectionOpen.value) {
+      void startEditing();
+      return;
+    }
+    heading.value?.scrollIntoView?.({ block: 'start' });
+  },
+);
+
 async function save() {
   saving.value = true;
   errorMessage.value = '';
   const result = await editing.save(SECTION, {
-    feito_pelo_cliente: draft.value.feito_pelo_cliente,
     feito_pela_silmer: draft.value.feito_pela_silmer,
+    feito_pelo_cliente: draft.value.feito_pelo_cliente,
+    sem_estampa: draft.value.sem_estampa,
   });
   saving.value = false;
   if (result.ok) editing.stop();
@@ -65,7 +110,7 @@ async function save() {
 <template>
   <section class="op-sheet" aria-labelledby="order-artwork-title">
     <div class="op-sheet-head">
-      <h2 id="order-artwork-title">Estampa e arquivos</h2>
+      <h2 id="order-artwork-title" ref="heading">Estampa e arquivos</h2>
       <span v-if="isEditing" class="op-editing-tag">Editando</span>
       <button
         v-if="canEdit && !isEditing"
@@ -74,7 +119,7 @@ async function save() {
         :disabled="otherSectionOpen"
         @click="startEditing"
       >
-        <OrderIcon name="pencil" />Editar origem
+        <OrderIcon name="pencil" />Editar
       </button>
     </div>
 
@@ -83,22 +128,31 @@ async function save() {
     </p>
 
     <form v-if="isEditing" class="op-form" @submit.prevent="save">
-      <fieldset class="op-artwork-source">
-        <legend>Quem fez a arte?</legend>
-        <p class="op-hint">
-          O vendedor marca as origens confirmadas. É possível marcar as duas.
+      <fieldset
+        class="op-artwork-source"
+        aria-describedby="order-artwork-source-hint"
+      >
+        <legend>Quem faz a arte?</legend>
+        <p id="order-artwork-source-hint" class="op-hint">
+          Obrigatório para gerar. O cliente e a Silmer podem ser marcados
+          juntos; “Sem estampa” vale sozinho.
         </p>
-        <label class="op-check">
+        <label
+          v-for="(origin, index) in ORIGINS"
+          :key="origin.key"
+          class="op-check"
+        >
           <input
-            ref="firstField"
-            v-model="draft.feito_pelo_cliente"
+            :ref="
+              (element) => {
+                if (index === 0) firstField = element;
+              }
+            "
             type="checkbox"
+            :checked="draft[origin.key]"
+            @change="mark(origin.key, $event.target.checked)"
           />
-          <span>Feito pelo cliente</span>
-        </label>
-        <label class="op-check">
-          <input v-model="draft.feito_pela_silmer" type="checkbox" />
-          <span>Feito pela Silmer</span>
+          <span>{{ origin.label }}</span>
         </label>
       </fieldset>
       <div class="op-form-actions">
@@ -106,7 +160,7 @@ async function save() {
           Cancelar
         </button>
         <button type="submit" class="op-save" :disabled="saving">
-          {{ saving ? 'Salvando…' : 'Salvar origem da arte' }}
+          {{ saving ? 'Salvando…' : 'Salvar arte' }}
         </button>
       </div>
     </form>

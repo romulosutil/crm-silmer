@@ -8,6 +8,7 @@ import {
   TEMPLATE_V2,
   TEMPLATE_V3,
   TEMPLATE_V4,
+  TEMPLATE_V5,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 
@@ -31,7 +32,7 @@ test('the print route alone permits the exact styles of supported ficha template
   assert.doesNotMatch(nginx, /unsafe-inline/u);
 
   const permittedHashes = new Set(routePolicy[1].split(' '));
-  for (const template of [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4]) {
+  for (const template of [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4, TEMPLATE_V5]) {
     const html = renderOrderFicha(fixture.order, template);
     const styles = [...html.matchAll(/<style>([\s\S]*?)<\/style>/gu)];
     assert.equal(styles.length, 1, `${template} has one static style block`);
@@ -62,12 +63,14 @@ test('the print route alone permits the exact styles of supported ficha template
     );
   }
   assert.ok(
-    [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4].includes(PRINT_TEMPLATE),
+    [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4, TEMPLATE_V5].includes(
+      PRINT_TEMPLATE,
+    ),
     'the active template must be included in the permitted set',
   );
   assert.equal(
     permittedHashes.size,
-    3,
+    4,
     'no other inline stylesheet is allowed',
   );
 });

@@ -13,6 +13,7 @@ import {
   TEMPLATE_V2,
   TEMPLATE_V3,
   TEMPLATE_V4,
+  TEMPLATE_V5,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
@@ -37,6 +38,12 @@ const v3Gate = JSON.parse(
 const v4Gate = JSON.parse(
   await readFile(
     new URL('docs/phase0/ficha-pdf-approval-v4.json', rootUrl),
+    'utf8',
+  ),
+);
+const v5Gate = JSON.parse(
+  await readFile(
+    new URL('docs/phase0/ficha-pdf-approval-v5.json', rootUrl),
     'utf8',
   ),
 );
@@ -128,6 +135,14 @@ async function confirmedOrder(runtime, summary) {
       value: syntheticItems(),
     }),
   );
+  order = await runtime.patchSection(
+    seed({
+      expectedVersion: order.version,
+      orderId: order.id,
+      section: 'artwork',
+      value: { feito_pela_silmer: false, feito_pelo_cliente: true },
+    }),
+  );
   order = await runtime.confirm(
     seed({
       amountText: '4.820,00',
@@ -151,11 +166,12 @@ async function get(api, url) {
   return api.inject({ headers: readHeaders, method: 'GET', url });
 }
 
-test('the switch agrees with the recorded v4 approval (PIM-10)', () => {
+test('the switch agrees with the recorded v5 approval (PIM-10)', () => {
   assert.doesNotThrow(() =>
     validateFichaPrintSwitch({
       gate: v3Gate,
       gateV4: v4Gate,
+      gateV5: v5Gate,
       printTemplate: PRINT_TEMPLATE,
     }),
   );
@@ -245,12 +261,17 @@ test('the print route prints whatever the switch names (PIM-10)', async (t) => {
   assert.equal(response.body, renderOrderFicha(order, PRINT_TEMPLATE));
 });
 
-test('orders print on v4 in tests since the delegated provisional approval (T78, PIM-10)', async (t) => {
+test('orders print on v5 since the PO approved its sample (T86, PIM-10)', async (t) => {
   const { order, response } = await printedThroughRoute(t);
 
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V4);
-  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V4));
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V5);
+  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V5));
   assert.match(response.body, /Tipo de roupa/u);
+  assert.match(response.body, /4<\/b> Técnica/u);
+  assert.match(
+    response.body,
+    /Arte do pedido<\/span><strong>O cliente envia a arte/u,
+  );
   assert.match(response.body, /Lastro do pedido/u);
   assert.match(response.body, /Data do pedido<\/span><strong>02\/10\/2026</u);
   assert.match(
@@ -258,12 +279,15 @@ test('orders print on v4 in tests since the delegated provisional approval (T78,
     /Entrega prometida<\/span><strong>24\/10\/2026</u,
   );
   assert.match(response.body, /Primeiro contato<\/span><strong>28\/09\/2026</u);
-  assert.match(response.body, /Pagamento<\/span><strong>02\/10\/2026</u);
+  assert.match(response.body, /Pago em<\/span><strong>02\/10\/2026</u);
   assert.match(
     response.body,
-    /Entrega realizada<\/span><strong><span class="empty">—<\/span>/u,
+    /Entregue em<\/span><strong><span class="empty">—<\/span>/u,
   );
-  assert.doesNotMatch(response.body, />Modelo|>Viés gola/u);
+  assert.doesNotMatch(
+    response.body,
+    />Modelo|>Viés gola|Tipo de serviço|Serviços dos itens/u,
+  );
   // A printed order carries no sample band, review box or signature lines.
   assert.doesNotMatch(
     response.body,
@@ -289,7 +313,6 @@ test('the same order renders on all three templates through one function (PIM-10
   const { api, runtime } = harness();
   t.after(() => api.close());
   const confirmed = await confirmedOrder(runtime, {
-    aplicacao: 'SILK',
     data_entrega_confirmada: '2026-10-24',
     nome: 'Equipe Sintetica',
   });
@@ -298,9 +321,12 @@ test('the same order renders on all three templates through one function (PIM-10
   const v2 = renderOrderFicha(order, TEMPLATE_V2);
   const v3 = renderOrderFicha(order, TEMPLATE_V3);
   const v4 = renderOrderFicha(order, TEMPLATE_V4);
+  const v5 = renderOrderFicha(order, TEMPLATE_V5);
 
   assert.match(v2, /Entrega confirmada/u);
-  assert.match(v3, /Tipo de serviço<\/span><strong>SILK</u);
+  // ADR 020: the order-wide technique is no longer written; v3 prints its
+  // legacy cell empty.
+  assert.match(v3, /Tipo de serviço<\/span><strong><span class="empty">—/u);
   assert.match(v3, /Entrega prometida<\/span><strong>24\/10\/2026</u);
   for (const label of PRINCIPAL_LABELS) assert.ok(v3.includes(label), label);
   // The trail comes from the order: first contact and payment; the order
@@ -313,7 +339,13 @@ test('the same order renders on all three templates through one function (PIM-10
     /Entrega realizada<\/span><strong><span class="empty">—<\/span>/u,
   );
   assert.match(v4, /Definição da gola/u);
-  for (const html of [v2, v3, v4]) {
+  // ADR 020: v5 prints who makes the art and the technique of each item.
+  assert.match(v5, /Arte do pedido<\/span><strong>O cliente envia a arte/u);
+  assert.match(
+    v5,
+    /4<\/b> Técnica<\/span><div class="point-value">SUBLIMAÇÃO/u,
+  );
+  for (const html of [v2, v3, v4, v5]) {
     assert.doesNotMatch(html, /Amostra sint|4\.820,00|R\$|pix/iu);
     assert.doesNotMatch(html, /null|undefined/u);
   }

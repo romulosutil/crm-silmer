@@ -816,3 +816,21 @@ uso até a revisão da candidata v4, conforme [RFC 007](../../../docs/rfc/007-re
 | REV-08 | Pedidos diferencia **Cliente sem resposta** (última saída enviada há pelo menos 48 horas) de **Pedido sem movimentação** (`updatedAt`); envio falho/incerto não acende o sinal. Nenhuma probabilidade de fechamento é inventada. |
 | REV-09 | Páginas observam eventos seguros do CRM e atualizam sem botão normal de atualização. Edição em andamento preserva rascunho; conflito de versão permite recuperar a leitura atual após cancelar. Nova tentativa manual continua para falha real. |
 | REV-10 | O [glossário](../../../docs/product/GLOSSARIO.md) fixa termos e verbos; a [revisão heurística](../../../docs/product/REVISAO-HEURISTICA.md) documenta achados e verificação. Aviso a Rose por n8n ou e-mail é proposta para fluxo conjunto, sem implantação nesta etapa. |
+
+## Técnica por item e arte do pedido (ADR 020, 03/10/2026)
+
+O PO revisou as labels da ficha por seção ([RFC 008](../../../docs/rfc/008-rotulos-da-ficha-tecnica-e-arte.md))
+e decidiu um nome por conceito. A coleta do bot e o indicador da ficha não
+mudam; muda onde o CRM grava cada resposta e como a tela e o papel a chamam.
+Estes critérios superam REV-02–REV-05 onde divergem.
+
+| ID | Critério de aceite |
+| --- | --- |
+| TEC-01 | `items[].tipo_servico` aparece como **Técnica**, ponto 4 do item, na tela e no papel; é obrigatória para gerar. O bot preenche o primeiro item quando o cliente nomeia uma técnica (silk, sublimação, DTF, DTG, bordado, transfer) ou diz que a peça é lisa (“Sem estampa”); outra descrição fica em Dados do atendimento como “Técnica informada”. |
+| TEC-02 | `summary.aplicacao` não é escrita pelo bot, editada nem impressa a partir da v5. O valor antigo continua guardado e a API aceita a chave de um cliente antigo sem usá-la. |
+| TEC-03 | **Estampa e arquivos** oferece **O cliente envia a arte**, **A Silmer cria a arte** e **Sem estampa**. As duas primeiras coexistem; “Sem estampa” exclui as outras (a API recusa a combinação). **Gerar pedido** exige uma marcação (`artwork` em `missingFields`). O bot projeta a origem a partir de `artwork_status` só quando a resposta é inequívoca; o vendedor corrige. |
+| TEC-04 | `items[].estampa` deixa os pontos principais, não bloqueia e aparece como **Estampa (referência)** nos adicionais. O bot grava ali só os locais da estampa. |
+| TEC-05 | Pontos do item: Tipo de roupa, Cor, Quantidade, Técnica, Tecido, Tamanhos e **Gola**. Adicionais: Estampa (referência), **Cor do tecido — frente/costas/manga direita/manga esquerda** e **Viés das mangas**. “Tipo de peça” do bot aparece como “Tipo de roupa informado”; o aviso do `modelo` antigo sai da tela, e o valor continua guardado. |
+| TEC-06 | Lastro com **Pago em** e **Entregue em** na tela e no papel; resumo com **Nome do pedido**; a dica da entrega prometida diz “A data combinada com o cliente.”; o total de peças não mostra “cliente informou N” (o aviso de diferença continua). |
+| TEC-07 | `ficha-canonical-v5`: resumo com Cliente, Entrega prometida e Total de peças; apoio com Nome do pedido, Vendedor, Data do pedido e FAB; lastro com Primeiro contato, Pago em e Entregue em; **Arte do pedido** em toda página comercial; itens com os pontos de TEC-05; produção com **Cores da arte** e **Nº de cores — …**. V2–v4, PDFs e hashes intactos. `PRINT_TEMPLATE` muda para v5 só após a aprovação provisória do PO; a assinatura física de Rose e Operação continua antes da produção. |
+| TEC-08 | O [glossário](../../../docs/product/GLOSSARIO.md) fixa Técnica, Arte do pedido, Estampa (referência), Cor do tecido, Cores da arte, Nome do pedido, Pago em e Entregue em. |

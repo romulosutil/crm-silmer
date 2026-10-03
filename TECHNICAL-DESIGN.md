@@ -770,9 +770,12 @@ com recibos posteriores de entrega ou leitura. O histórico é preenchido apenas
 com `message.sent` ou comando de envio concluído; sem essa prova, `sentAt`
 permanece nulo e o sinal de cliente sem resposta não é exibido.
 
-A impressão passa por `modules/orders/src/print/index.js`. A v3 e seu gate
-continuam ativos; `ficha-canonical-v4` é uma candidata isolada com amostra
-sintética para revisão. V2/v3 não são modificadas. A ativação de upload no
+A impressão passa por `modules/orders/src/print/index.js`. Desde a
+[ADR 020](docs/adr/020-tecnica-por-item-e-arte-do-pedido.md), os pedidos
+imprimem na `ficha-canonical-v5`, aprovada provisoriamente pelo PO para
+desenvolvimento e cloud-dev; a assinatura física de Rose e Operação continua
+exigida antes da produção. V2, v3 e v4 seguem endereçáveis e não são
+modificadas. A ativação de upload no
 Dropbox exige contrato e operação durável conforme
 [RFC 007](docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md); a mídia
 transitória de canal não é usada como arquivo de pedido.

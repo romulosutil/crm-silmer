@@ -11,7 +11,7 @@ import {
   reopenOrder,
 } from '../modules/orders/src/domain/order.js';
 import { briefingToFicha } from '../modules/orders/src/domain/ficha.js';
-import { syntheticItems } from './fixtures/order-items.js';
+import { syntheticArtwork, syntheticItems } from './fixtures/order-items.js';
 
 const CREATED = '2026-09-10T12:00:00.000Z';
 // 22:30 in São Paulo on 12/09, already 13/09 in UTC.
@@ -28,6 +28,7 @@ function pendingOrder(overrides = {}) {
     createdByKind: 'automation',
     fabCode: '01',
     ficha: {
+      artwork: syntheticArtwork(),
       items: syntheticItems(),
       observations: [],
       serviceData: {},
@@ -101,7 +102,7 @@ test('confirming records amount, condition, author, time and São Paulo order da
   assert.equal(order.status, 'pendente', 'the input order is not mutated');
 });
 
-test('every item needs a seller-assigned service before confirmation', () => {
+test('every item needs a technique before confirmation (ADR 020)', () => {
   const draft = pendingOrder();
   draft.ficha.items[1].tipo_servico = '';
   assert.deepEqual(missingForConfirmation(draft), [
@@ -116,7 +117,7 @@ test('every item needs a seller-assigned service before confirmation', () => {
   });
 });
 
-test('a complete seven-point briefing with technique still needs a seller service', () => {
+test('a complete briefing fills the technique of the item and who makes the art (ADR 020)', () => {
   const ficha = briefingToFicha({
     artwork_status: 'Arte recebida',
     artwork_technique: 'DTF',
@@ -129,17 +130,44 @@ test('a complete seven-point briefing with technique still needs a seller servic
   });
   ficha.summary.data_entrega_confirmada = '2026-09-30';
   const draft = pendingOrder({ ficha });
-  assert.equal(ficha.summary.aplicacao, 'DTF');
-  assert.equal(ficha.items[0].tipo_servico, '');
+  assert.equal(ficha.summary.aplicacao, null);
+  assert.equal(ficha.items[0].tipo_servico, 'DTF');
+  assert.equal(ficha.artwork?.feito_pelo_cliente, true);
   assert.deepEqual(missingForConfirmation(draft), [
-    'items[0].tipo_servico',
     'finalAmount',
     'paymentCondition',
   ]);
-  assert.throws(() => confirmOrder(draft, confirmation), {
+  assert.equal(confirmOrder(draft, confirmation).status, 'confirmado');
+});
+
+test('generating needs who makes the art; "Sem estampa" is an answer (ADR 020)', () => {
+  const unknown = pendingOrder();
+  unknown.ficha.artwork = {
+    feito_pela_silmer: false,
+    feito_pelo_cliente: false,
+    files: [],
+    sem_estampa: false,
+  };
+  assert.throws(() => confirmOrder(unknown, confirmation), {
     code: 'ORDER_NOT_CONFIRMABLE',
-    fields: ['items[0].tipo_servico'],
+    fields: ['artwork'],
   });
+  const stored = pendingOrder();
+  delete stored.ficha.artwork;
+  assert.deepEqual(missingForConfirmation(stored), [
+    'artwork',
+    'finalAmount',
+    'paymentCondition',
+  ]);
+  for (const origin of [
+    'feito_pelo_cliente',
+    'feito_pela_silmer',
+    'sem_estampa',
+  ]) {
+    const order = pendingOrder();
+    order.ficha.artwork = { ...unknown.ficha.artwork, [origin]: true };
+    assert.equal(confirmOrder(order, confirmation).status, 'confirmado');
+  }
 });
 
 test('generating needs an item, the seven points of every item, amount and payment method (ADR 016)', () => {
@@ -172,7 +200,7 @@ test('generating needs an item, the seven points of every item, amount and payme
   for (const [field, blank] of /** @type {const} */ ([
     ['tipo', ''],
     ['cor', '  '],
-    ['estampa', ''],
+    ['tipo_servico', ''],
     ['malhas', []],
     ['malhas', ['  ']],
     ['grade', []],
@@ -187,7 +215,8 @@ test('generating needs an item, the seven points of every item, amount and payme
     );
   }
 
-  // A ficha stored before ADR 016 has no colour, artwork or collar.
+  // A ficha stored before ADR 016 has no colour, print or collar; the print
+  // is a reference since ADR 020 and never blocks.
   const stored = pendingOrder();
   stored.ficha.items = stored.ficha.items.map(
     (
@@ -196,14 +225,7 @@ test('generating needs an item, the seven points of every item, amount and payme
   );
   assert.throws(() => confirmOrder(stored, confirmation), {
     code: 'ORDER_NOT_CONFIRMABLE',
-    fields: [
-      'items[0].cor',
-      'items[0].estampa',
-      'items[0].gola',
-      'items[1].cor',
-      'items[1].estampa',
-      'items[1].gola',
-    ],
+    fields: ['items[0].cor', 'items[0].gola', 'items[1].cor', 'items[1].gola'],
   });
 
   // Nothing else blocks: the rest of the summary, the additional item
@@ -216,6 +238,7 @@ test('generating needs an item, the seven points of every item, amount and payme
     nome: null,
   };
   for (const key of [
+    'estampa',
     'modelo',
     'cor_frente',
     'cor_costas',

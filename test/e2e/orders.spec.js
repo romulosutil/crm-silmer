@@ -22,6 +22,7 @@ const confirmedOrder = {
       feito_pelo_cliente: false,
       feito_pela_silmer: true,
       files: [],
+      sem_estampa: false,
     },
     items: [
       {
@@ -79,6 +80,7 @@ const pendingOrder = {
       feito_pelo_cliente: true,
       feito_pela_silmer: false,
       files: [],
+      sem_estampa: false,
     },
     items: [
       {
@@ -87,7 +89,7 @@ const pendingOrder = {
         cor_frente: 'BRANCA',
         cor_manga_direita: 'VERDE BANDEIRA',
         cor_manga_esquerda: 'VERDE BANDEIRA',
-        estampa: 'Arte do cliente · frente',
+        estampa: 'Logo · frente',
         gola: 'GOLA REDONDA',
         grade: [
           { quantidade: 100, tamanho: 'M' },
@@ -219,17 +221,11 @@ function brlToCents(text) {
   return Number(reais.replaceAll('.', '')) * 100 + Number(cents.padEnd(2, '0'));
 }
 
-// ADR 016: the seven points of every item, the promised delivery, the
-// amount and the payment method — the same rule and order the server applies.
-const ITEM_POINTS = [
-  'tipo',
-  'cor',
-  'estampa',
-  'malhas',
-  'grade',
-  'gola',
-  'tipo_servico',
-];
+// ADR 016/020: the seven points of every item, who makes the art, the
+// promised delivery, the amount and the payment method — the same rule and
+// order the server applies.
+const ITEM_POINTS = ['tipo', 'cor', 'tipo_servico', 'malhas', 'grade', 'gola'];
+const ART_ORIGINS = ['feito_pelo_cliente', 'feito_pela_silmer', 'sem_estampa'];
 
 /** @param {any} order */
 function missingFor(order) {
@@ -248,6 +244,9 @@ function missingFor(order) {
       }
     },
   );
+  if (!ART_ORIGINS.some((origin) => order.ficha.artwork?.[origin] === true)) {
+    missing.push('artwork');
+  }
   if (
     !/^\d{4}-\d{2}-\d{2}$/u.test(
       order.ficha.summary.data_entrega_confirmada ?? '',
@@ -736,13 +735,19 @@ test('locks printing while the order is pending and says why (PIM-01)', async ({
   await expect(print).toHaveAttribute('aria-describedby', /./u);
 });
 
-test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05, PIT-06)', async ({
+test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05, PIT-06, TEC-03)', async ({
   page,
 }) => {
   const incomplete = {
     ...pendingOrder,
     ficha: {
       ...pendingOrder.ficha,
+      artwork: {
+        feito_pelo_cliente: false,
+        feito_pela_silmer: false,
+        files: [],
+        sem_estampa: false,
+      },
       items: [
         { ...pendingOrder.ficha.items[0], cor: '', gola: '', vies_gola: '' },
       ],
@@ -757,6 +762,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05,
     missingFields: [
       'items[0].cor',
       'items[0].gola',
+      'artwork',
       'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
@@ -768,20 +774,23 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05,
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   const readiness = closing.locator('#closing-readiness');
   await expect(readiness).toHaveText(
-    'Falta para gerar: cor do item 1, definição da gola do item 1, entrega prometida, valor final e forma de pagamento.',
+    'Falta para gerar: cor do item 1, gola do item 1, quem faz a arte, entrega prometida, valor final e forma de pagamento.',
   );
   await expect(page.getByText('Ainda em branco na ficha')).toHaveCount(0);
 
   await closing.getByLabel('Valor final').fill('4.820,00');
   await closing.getByLabel('Pix').check();
   await expect(readiness).toHaveText(
-    'Falta para gerar: cor do item 1, definição da gola do item 1 e entrega prometida.',
+    'Falta para gerar: cor do item 1, gola do item 1, quem faz a arte e entrega prometida.',
   );
   // What is filled elsewhere keeps the order from being sent to be generated.
   await closing.getByRole('button', { name: 'Gerar pedido' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(closing).toContainText(
-    'Complete os itens antes de gerar: cor do item 1 e definição da gola do item 1.',
+    'Complete os itens antes de gerar: cor do item 1 e gola do item 1.',
+  );
+  await expect(closing).toContainText(
+    'Marque quem faz a arte em Estampa e arquivos.',
   );
   await expect(closing).toContainText(
     'Informe a entrega prometida no Resumo do pedido.',
@@ -790,8 +799,20 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05,
   const items = page.getByRole('region', { name: 'Itens e especificações' });
   await items.getByRole('button', { name: 'Editar' }).click();
   await items.getByLabel('Cor', { exact: true }).fill('BRANCA');
-  await items.getByLabel('Definição da gola').fill('GOLA V');
+  await items.getByLabel('Gola', { exact: true }).fill('GOLA V');
   await items.getByRole('button', { name: 'Salvar itens' }).click();
+  await expect(readiness).toHaveText(
+    'Falta para gerar: quem faz a arte e entrega prometida.',
+  );
+
+  // ADR 020: the checklist sends the seller to who makes the art.
+  await closing
+    .getByRole('button', { name: 'Informar na Estampa (quem faz a arte)' })
+    .click();
+  const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
+  await expect(artwork.getByLabel('O cliente envia a arte')).toBeFocused();
+  await artwork.getByLabel('Sem estampa').check();
+  await artwork.getByRole('button', { name: 'Salvar arte' }).click();
   await expect(readiness).toHaveText('Falta para gerar: entrega prometida.');
 
   // The checklist sends the seller to the summary, on the promised delivery.
@@ -810,7 +831,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05,
   // payments.
   await expect(
     page.getByRole('region', { name: 'Lastro do pedido' }),
-  ).toContainText('Pagamento');
+  ).toContainText('Pago em');
   await closing.getByRole('button', { name: 'Gerar pedido' }).click();
   await expect(
     page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' }),
@@ -995,16 +1016,17 @@ test('reads the order summary and marks the customer as locked (PFI-02)', async 
   await page.goto('/pedidos/order-pendente');
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  // ADR 020: the technique lives on each item, not in the summary.
   await expect(summary.locator('dt')).toHaveText([
     'Cliente',
     'Entrega prometida',
     'Total de peças',
-    'Técnica da arte (referência)',
-    'Evento / Nome',
+    'Nome do pedido',
     'Vendedor',
     'Data do pedido',
     'FAB',
   ]);
+  await expect(summary).not.toContainText('SUBLIMAÇÃO TOTAL');
   await expect(summary).toContainText('Colégio Ápice');
   await expect(summary).toContainText('vem da conversa');
   await expect(summary).toContainText('24/10/2026');
@@ -1031,19 +1053,24 @@ test('edits the summary and saves the whole section at once (PFI-06)', async ({
 
   // D13: the customer comes from the contact and is never typed here.
   await expect(summary.getByLabel('Cliente')).toBeDisabled();
-  await summary.getByLabel('Técnica da arte (referência)').fill('SILK 4 CORES');
-  await summary.getByLabel('Evento / Nome').fill('Uniforme escolar 2028');
+  await expect(
+    summary.getByLabel('Entrega prometida'),
+  ).toHaveAccessibleDescription('A data combinada com o cliente.');
+  await expect(summary.getByLabel(/Técnica/u)).toHaveCount(0);
+  const name = summary.getByLabel('Nome do pedido');
+  await expect(name).toHaveAccessibleDescription(
+    'Evento, empresa, time ou turma.',
+  );
+  await name.fill('Uniforme escolar 2028');
   await summary.getByRole('button', { name: 'Salvar' }).click();
 
   await expect(summary.getByRole('button', { name: 'Editar' })).toBeVisible();
-  await expect(summary).toContainText('SILK 4 CORES');
   await expect(summary).toContainText('Uniforme escolar 2028');
   expect(writes).toHaveLength(1);
   expect(writes[0].section).toBe('summary');
   expect(writes[0].body).toEqual({
     expectedVersion: 2,
     value: {
-      aplicacao: 'SILK 4 CORES',
       data_entrega_confirmada: '2026-10-24',
       nome: 'Uniforme escolar 2028',
     },
@@ -1058,10 +1085,10 @@ test('cancels an edit without writing anything', async ({ page }) => {
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await summary.getByRole('button', { name: 'Editar' }).click();
-  await summary.getByLabel('Técnica da arte (referência)').fill('DESCARTAR');
+  await summary.getByLabel('Nome do pedido').fill('DESCARTAR');
   await summary.getByRole('button', { name: 'Cancelar' }).click();
 
-  await expect(summary).toContainText('SUBLIMAÇÃO TOTAL');
+  await expect(summary).toContainText('Uniforme escolar 2027');
   await expect(summary).not.toContainText('DESCARTAR');
   expect(writes).toHaveLength(0);
 });
@@ -1080,7 +1107,7 @@ test('refreshes after leaving an edit saved over an older version', async ({
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await summary.getByRole('button', { name: 'Editar' }).click();
-  await summary.getByLabel('Técnica da arte (referência)').fill('SILK 4 CORES');
+  await summary.getByLabel('Nome do pedido').fill('Uniforme escolar 2028');
   await summary.getByRole('button', { name: 'Salvar' }).click();
 
   await expect(summary.getByRole('alert')).toContainText(
@@ -1090,7 +1117,7 @@ test('refreshes after leaving an edit saved over an older version', async ({
   await expect.poll(() => detailCalls).toBeGreaterThan(1);
 });
 
-test('records the artwork origin and prepares its Dropbox folder without uploading yet', async ({
+test('records who makes the art and prepares its Dropbox folder without uploading yet (TEC-03)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -1099,34 +1126,47 @@ test('records the artwork origin and prepares its Dropbox folder without uploadi
   await page.goto('/pedidos/order-pendente');
 
   const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
-  await expect(artwork).toContainText('Feito pelo cliente');
+  await expect(artwork).toContainText('O cliente envia a arte');
   await expect(artwork).toContainText('CRM/07-crm/');
   await expect(artwork.getByLabel('Adicionar arquivos da arte')).toBeDisabled();
   await expect(artwork).toContainText('PNG, JPEG, CDR');
 
-  await artwork.getByRole('button', { name: 'Editar origem' }).click();
-  const client = artwork.getByLabel('Feito pelo cliente');
+  await artwork.getByRole('button', { name: 'Editar' }).click();
+  const client = artwork.getByLabel('O cliente envia a arte');
+  const silmer = artwork.getByLabel('A Silmer cria a arte');
+  const plain = artwork.getByLabel('Sem estampa');
   await expect(client).toBeFocused();
   await expect(client).toBeChecked();
-  await artwork.getByLabel('Feito pela Silmer').check();
-  await artwork.getByRole('button', { name: 'Salvar origem da arte' }).click();
+  // "Sem estampa" stands alone; an origin clears it again.
+  await plain.check();
+  await expect(client).not.toBeChecked();
+  await client.check();
+  await expect(plain).not.toBeChecked();
+  await silmer.check();
+  await artwork.getByRole('button', { name: 'Salvar arte' }).click();
 
-  await expect(artwork).toContainText('Feito pelo cliente · Feito pela Silmer');
+  await expect(artwork).toContainText(
+    'O cliente envia a arte · A Silmer cria a arte',
+  );
   expect(writes).toHaveLength(1);
   expect(writes[0]).toEqual({
     section: 'artwork',
     body: {
       expectedVersion: 2,
-      value: { feito_pelo_cliente: true, feito_pela_silmer: true },
+      value: {
+        feito_pela_silmer: true,
+        feito_pelo_cliente: true,
+        sem_estampa: false,
+      },
     },
   });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('requires a service for each item before the seller can generate the order', async ({
+test('requires a technique for each item before the seller can generate the order (TEC-01)', async ({
   page,
 }) => {
-  const withoutService = {
+  const withoutTechnique = {
     ...pendingOrder,
     ficha: {
       ...pendingOrder.ficha,
@@ -1134,16 +1174,20 @@ test('requires a service for each item before the seller can generate the order'
     },
     missingFields: ['items[0].tipo_servico', 'finalAmount', 'paymentCondition'],
   };
-  await mockOrders(page, { orders: [withoutService] });
+  await mockOrders(page, { orders: [withoutTechnique] });
   await page.goto('/pedidos/order-pendente');
 
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
-  await expect(closing).toContainText('tipo de serviço do item 1');
+  await expect(closing).toContainText('técnica do item 1');
   const items = page.getByRole('region', { name: 'Itens e especificações' });
   await items.getByRole('button', { name: 'Editar' }).click();
-  await items.getByLabel('Tipo de serviço').fill('BORDADO');
+  const technique = items.getByLabel('Técnica', { exact: true });
+  await expect(technique).toHaveAccessibleDescription(
+    'Silk, DTF, sublimação, bordado… ou Sem estampa. Obrigatória para gerar.',
+  );
+  await technique.fill('BORDADO');
   await items.getByRole('button', { name: 'Salvar itens' }).click();
-  await expect(closing).not.toContainText('tipo de serviço do item 1');
+  await expect(closing).not.toContainText('técnica do item 1');
   await expect(items).toContainText('BORDADO');
 });
 
@@ -1175,27 +1219,18 @@ test('keeps garment, colour and collar data from older fichas when saving an ite
   const items = page.getByRole('region', { name: 'Itens e especificações' });
   await expect(items).toContainText('Item 1 · — · 150 peças');
   await expect(items).toContainText('OLÍMPICA - VERDE');
-  const oldDetail = items.locator('.op-quantity-warning', {
-    hasText: 'Detalhe antigo da peça',
-  });
-  await expect(oldDetail).toHaveCount(1);
-  await expect(oldDetail).toContainText('GOLA OLÍMPICA');
-  await expect(oldDetail).toContainText(
-    'Confira se Tipo de roupa ou Definição da gola inclui',
-  );
+  // ADR 020: the old model stays stored, without a field or a notice.
+  await expect(items).not.toContainText('GOLA OLÍMPICA');
   await expect(items.getByText('Modelo', { exact: true })).toHaveCount(0);
   await items.getByRole('button', { name: 'Editar' }).click();
-  await expect(oldDetail).toHaveCount(1);
-  await expect(oldDetail).toContainText('GOLA OLÍMPICA');
   await expect(items.getByLabel('Modelo', { exact: true })).toHaveCount(0);
   await expect(items.getByLabel('Tipo de roupa')).toHaveValue('');
   await expect(items.getByLabel('Cor', { exact: true })).toHaveValue('BRANCA');
-  await expect(items.getByLabel('Definição da gola')).toHaveValue(
+  await expect(items.getByLabel('Gola', { exact: true })).toHaveValue(
     'OLÍMPICA - VERDE',
   );
   await items.getByLabel('Tipo de roupa').fill('CAMISETA');
   await items.getByRole('button', { name: 'Salvar itens' }).click();
-  await expect(oldDetail).toHaveCount(1);
   await expect(items.getByText('Modelo', { exact: true })).toHaveCount(0);
 
   expect(writes[0].body.value[0]).toMatchObject({
@@ -1205,26 +1240,6 @@ test('keeps garment, colour and collar data from older fichas when saving an ite
     tipo: 'CAMISETA',
     vies_gola: 'OLÍMPICA - VERDE',
   });
-});
-
-test('hides the old piece notice when its legacy detail is blank', async ({
-  page,
-}) => {
-  const order = {
-    ...pendingOrder,
-    ficha: {
-      ...pendingOrder.ficha,
-      items: [{ ...pendingOrder.ficha.items[0], modelo: '  ' }],
-    },
-  };
-  await mockOrders(page, { orders: [order] });
-  await page.goto('/pedidos/order-pendente');
-
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await expect(items.getByText('Detalhe antigo da peça')).toHaveCount(0);
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await expect(items.getByText('Detalhe antigo da peça')).toHaveCount(0);
-  await expect(items.getByLabel('Modelo', { exact: true })).toHaveCount(0);
 });
 
 test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', async ({
@@ -1253,8 +1268,8 @@ test('shows the three trail dates without repeating the summary (PLA-01..03, PLA
   await expect(trail).toContainText('2 de 3 datas');
   await expect(trail.getByRole('listitem')).toHaveText([
     /Primeiro contato\s*02\/09\/2026\s*vem da conversa/u,
-    /Pagamento\s*10\/09\/2026\s*informado/u,
-    /Entrega realizada\s*—\s*a informar/u,
+    /Pago em\s*10\/09\/2026\s*informado/u,
+    /Entregue em\s*—\s*a informar/u,
   ]);
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await expect(summary).toContainText('Data do pedido');
@@ -1385,20 +1400,18 @@ test('reads each item with the seven points in order and the extras closed (PFI-
   const points = card.locator('dl').first();
   await expect(points.locator(':scope > div > dt')).toHaveText([
     'Tipo de roupa',
-    'Tipo de serviço',
     'Cor',
     'Quantidade',
-    'Estampa',
+    'Técnica',
     'Tecido',
     'Tamanhos',
-    'Definição da gola',
+    'Gola',
   ]);
   await expect(points.locator(':scope > div > dd')).toHaveText([
     'CAMISETA',
-    'SUBLIMAÇÃO TOTAL',
     'BRANCA',
     '150 peças',
-    'Arte do cliente · frente',
+    'SUBLIMAÇÃO TOTAL',
     'DRY FIT 100% POLIÉSTER',
     'M100G50',
     'GOLA REDONDA',
@@ -1410,18 +1423,27 @@ test('reads each item with the seven points in order and the extras closed (PFI-
     name: /Adicionais \(não obrigatórios\)/u,
   });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(card.getByText('Cor frente', { exact: true })).toBeHidden();
+  await expect(
+    card.getByText('Cor do tecido — frente', { exact: true }),
+  ).toBeHidden();
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await expect(card.getByText('Cor frente', { exact: true })).toBeVisible();
+  await expect(
+    card.getByText('Cor do tecido — frente', { exact: true }),
+  ).toBeVisible();
   await expect(card.getByText('Modelo', { exact: true })).toHaveCount(0);
+  // ADR 020: the print is a reference; the part colours are the fabric's.
   await expect(card.locator('dl').nth(1).locator('dt')).toHaveText([
-    'Cor frente',
-    'Cor costas',
-    'Manga direita',
-    'Manga esquerda',
-    'Viés mangas',
+    'Estampa (referência)',
+    'Cor do tecido — frente',
+    'Cor do tecido — costas',
+    'Cor do tecido — manga direita',
+    'Cor do tecido — manga esquerda',
+    'Viés das mangas',
   ]);
+  await expect(card.locator('dl').nth(1).locator('dd').first()).toHaveText(
+    'Logo · frente',
+  );
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
@@ -1455,13 +1477,17 @@ test('opens and closes the extras with the keyboard, keeping the focus (PIT-02)'
     name: 'Adicionais (não obrigatórios)',
   });
   await expect(editToggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(items.getByLabel('Cor frente')).toBeHidden();
+  const reference = items.getByLabel('Estampa (referência)');
+  await expect(reference).toBeHidden();
   await editToggle.focus();
   await page.keyboard.press('Enter');
-  await expect(items.getByLabel('Cor frente')).toBeVisible();
+  await expect(reference).toBeVisible();
+  await expect(reference).toHaveAccessibleDescription(
+    'O que vai estampado e onde, se ajudar a produção.',
+  );
   await expect(editToggle).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(items.getByLabel('Cor frente')).toBeFocused();
+  await expect(reference).toBeFocused();
 });
 
 test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)', async ({
@@ -1477,19 +1503,19 @@ test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)'
   await expect(items.getByText('Quantidade', { exact: true })).toBeVisible();
   await items.getByLabel('Tipo de roupa').fill('REGATA');
   await items.getByLabel('Cor', { exact: true }).fill('PRETA');
-  await items.getByLabel('Estampa').fill('Silmer cria a arte');
+  await items.getByLabel('Técnica', { exact: true }).fill('SILK 4 CORES');
   await items.getByLabel('Tecido 1').fill('ALGODÃO');
-  await items.getByLabel('Definição da gola').fill('REGATA');
-  await items.getByLabel('Tipo de serviço').fill('SILK 4 CORES');
+  await items.getByLabel('Gola', { exact: true }).fill('REGATA');
   await items
     .getByRole('button', { name: 'Adicionais (não obrigatórios)' })
     .click();
-  await items.getByLabel('Cor frente').fill('PRETA');
+  await items.getByLabel('Estampa (referência)').fill('Logo · costas');
+  await items.getByLabel('Cor do tecido — frente').fill('PRETA');
 
   // A second item stays half filled: it saves and is listed as missing.
   await items.getByRole('button', { name: 'Adicionar item' }).click();
   await page.locator('#item-1-tipo').fill('BONÉ');
-  await page.locator('#item-1-tipo-servico').fill('BORDADO');
+  await page.locator('#item-1-tecnica').fill('BORDADO');
   await items.getByRole('button', { name: 'Salvar itens' }).click();
 
   await expect(
@@ -1502,7 +1528,7 @@ test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)'
   expect(first).toMatchObject({
     cor: 'PRETA',
     cor_frente: 'PRETA',
-    estampa: 'Silmer cria a arte',
+    estampa: 'Logo · costas',
     gola: 'REGATA',
     malhas: ['ALGODÃO'],
     tipo: 'REGATA',
@@ -1516,11 +1542,11 @@ test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)'
   });
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await expect(closing).toContainText(
-    'Falta para gerar: cor do item 2, estampa do item 2, tecido do item 2, tamanhos do item 2, definição da gola do item 2, valor final e forma de pagamento.',
+    'Falta para gerar: cor do item 2, tecido do item 2, tamanhos do item 2, gola do item 2, valor final e forma de pagamento.',
   );
 });
 
-test('shows the quantity the customer said next to the total, and warns when the sizes differ (PIT-09)', async ({
+test('warns when the sizes differ from what the customer said, without repeating it beside the total (PIT-09, TEC-06)', async ({
   page,
 }) => {
   const told = {
@@ -1545,7 +1571,7 @@ test('shows the quantity the customer said next to the total, and warns when the
   await page.goto('/pedidos/order-pendente');
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
-  await expect(summary).toContainText('cliente informou 140');
+  await expect(summary).not.toContainText('cliente informou');
   await expect(summary).toContainText(
     'A soma dos tamanhos (150) é diferente da quantidade informada (140)',
   );
@@ -1580,6 +1606,13 @@ test('names the fields the way the PO asked (PIT-10)', async ({ page }) => {
     'Grade',
     'Malhas',
     'Ainda em branco na ficha',
+    // ADR 020: one name per concept.
+    'Tipo de serviço',
+    'Técnica da arte (referência)',
+    'Definição da gola',
+    'Evento / Nome',
+    'Pagamento',
+    'Entrega realizada',
   ]) {
     await expect(main.getByText(old, { exact: true })).toHaveCount(0);
   }
@@ -1601,7 +1634,7 @@ test('names the fields the way the PO asked (PIT-10)', async ({ page }) => {
   await page.reload();
   await service.getByRole('button', { name: 'Ver' }).click();
   await expect(service.locator('dt')).toHaveText([
-    'Técnica de estampa informada',
+    'Técnica informada',
     'Tamanhos informados',
   ]);
 });
@@ -1663,7 +1696,7 @@ test('accepts "Não aplicável" on sleeves and viés (PFI-07)', async ({
   await items
     .getByRole('button', { name: 'Adicionais (não obrigatórios)' })
     .click();
-  await items.getByLabel('Manga direita não se aplica').check();
+  await items.getByLabel('Cor do tecido — manga direita não se aplica').check();
   await items.getByRole('button', { name: 'Salvar' }).click();
 
   await items
@@ -1682,9 +1715,7 @@ test('keeps every summary and item field as text typed by hand (PFI-14)', async 
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await summary.getByRole('button', { name: 'Editar' }).click();
-  await expect(
-    summary.getByLabel('Técnica da arte (referência)'),
-  ).toBeEditable();
+  await expect(summary.getByLabel('Nome do pedido')).toBeEditable();
   await expect(lists).toHaveCount(0);
   await summary.getByRole('button', { name: 'Cancelar' }).click();
 
@@ -1914,7 +1945,12 @@ test('names each blocker the server refused the confirmation with', async ({
     writeFailure: {
       body: {
         code: 'ORDER_NOT_CONFIRMABLE',
-        fields: ['items[0].cor', 'items[0].gola', 'paymentCondition'],
+        fields: [
+          'items[0].cor',
+          'items[0].gola',
+          'artwork',
+          'paymentCondition',
+        ],
       },
       status: 422,
     },
@@ -1932,7 +1968,10 @@ test('names each blocker the server refused the confirmation with', async ({
 
   await expect(closing).toContainText('Escolha a forma de pagamento.');
   await expect(closing).toContainText(
-    'Complete os itens antes de gerar: cor do item 1 e definição da gola do item 1.',
+    'Complete os itens antes de gerar: cor do item 1 e gola do item 1.',
+  );
+  await expect(closing).toContainText(
+    'Marque quem faz a arte em Estampa e arquivos.',
   );
   await expect(closing).toContainText('pedido pendente');
 });

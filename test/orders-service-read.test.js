@@ -53,6 +53,7 @@ async function setup() {
         ...order,
         ficha: {
           ...order.ficha,
+          artwork: { ...order.ficha.artwork, sem_estampa: true },
           summary: {
             ...order.ficha.summary,
             data_entrega_confirmada: '2026-10-24',
@@ -61,11 +62,10 @@ async function setup() {
             {
               ...order.ficha.items[0],
               cor: 'BRANCA',
-              estampa: 'Sem estampa',
               gola: 'GOLA REDONDA',
               grade: [{ quantidade: 1, tamanho: 'M' }],
               malhas: ['ALGODÃO'],
-              tipo_servico: 'COSTURA',
+              tipo_servico: 'SEM ESTAMPA',
             },
           ],
         },
@@ -248,10 +248,10 @@ test('reads an order saved before ADR 016 under the current rules', async () => 
   const expectedMissing = [
     'items[0].tipo',
     'items[0].cor',
-    'items[0].estampa',
+    'items[0].tipo_servico',
     'items[0].grade',
     'items[0].gola',
-    'items[0].tipo_servico',
+    'artwork',
     'summary.data_entrega_confirmada',
     'finalAmount',
     'paymentCondition',

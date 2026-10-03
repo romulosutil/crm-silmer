@@ -6,13 +6,14 @@ import { parseSizes } from './sizes.js';
 // collected that has no place on the printed document stays as service data
 // (D11): shown read-only, never printed.
 //
-// ADR 016: an item is built around the seven points the bot asks for. The
-// principal fields, in the order the page shows them, are the type of garment
-// (`tipo`), colour (`cor`), quantity (never stored: the sum of `grade`),
-// artwork (`estampa`), fabric (`malhas`), sizes (`grade`) and collar
-// (`gola`). The seller also assigns a service type to every item before
-// confirmation. The model and the old collar binding remain readable for
-// legacy orders; the colour of each part and sleeve binding are additional.
+// ADR 016/020: an item is built around seven points. The principal fields,
+// in the order the page shows them, are the type of garment (`tipo`), colour
+// (`cor`), quantity (never stored: the sum of `grade`), technique
+// (`tipo_servico`, read as "Técnica"), fabric (`malhas`), sizes (`grade`) and
+// collar (`gola`). Who makes the art belongs to the whole order (`artwork`).
+// The print description (`estampa`), the colour of each part and the sleeve
+// binding are additional; the model and the old collar binding stay stored
+// for legacy orders.
 
 export const NOT_APPLICABLE = 'NAO APLICAVEL';
 // What the bot records when the customer leaves a point to the seller. It is
@@ -25,7 +26,14 @@ const MAX_TEXT = 200;
 // The stored principal fields that must be filled to generate the order, in
 // the order the page shows them; a missing grade is also the missing quantity.
 export const ITEM_REQUIRED_FIELDS = Object.freeze(
-  /** @type {const} */ (['tipo', 'cor', 'estampa', 'malhas', 'grade', 'gola']),
+  /** @type {const} */ ([
+    'tipo',
+    'cor',
+    'tipo_servico',
+    'malhas',
+    'grade',
+    'gola',
+  ]),
 );
 export const ITEM_EXTRA_FIELDS = Object.freeze(
   /** @type {const} */ ([
@@ -39,11 +47,17 @@ export const ITEM_EXTRA_FIELDS = Object.freeze(
   ]),
 );
 
-const SUMMARY_INPUT_KEYS = Object.freeze([
-  'data_entrega_confirmada',
-  'aplicacao',
-  'nome',
-]);
+const SUMMARY_INPUT_KEYS = Object.freeze(['data_entrega_confirmada', 'nome']);
+// ADR 020: the order-wide technique is no longer edited. An older client may
+// still send it; the key is accepted and ignored, and the stored value stays.
+const LEGACY_SUMMARY_KEYS = Object.freeze(['aplicacao']);
+const ARTWORK_ORIGINS = Object.freeze(
+  /** @type {const} */ ([
+    'feito_pelo_cliente',
+    'feito_pela_silmer',
+    'sem_estampa',
+  ]),
+);
 const ITEM_TEXT_KEYS = Object.freeze([
   'tipo',
   'tipo_servico',
@@ -69,13 +83,14 @@ const BRIEFING_INTERNAL_KEYS = new Set([
   'briefing_status',
   'next_required_field',
 ]);
-// The briefing fields that describe the first item: any of them opens it.
+// The briefing fields that describe the first item: any of them opens it, as
+// does a named technique. Who makes the art (`artwork_status`) belongs to the
+// order, and where the print goes only rides along an item already open.
 const ITEM_BRIEFING_KEYS = Object.freeze([
   'product_model',
   'product_type',
   'colors',
   'quantity',
-  'artwork_status',
   'fabrics',
   'sizes',
   'collar',
@@ -90,11 +105,12 @@ const ITEM_BRIEFING_KEYS = Object.freeze([
  *   cor_manga_direita: string, cor_manga_esquerda: string,
  *   vies_gola: string, vies_mangas: string,
  * }} FichaItem
+ * @typedef {{data_entrega_confirmada: string|null, nome: string|null}} FichaSummaryInput
+ * @typedef {FichaSummaryInput & {cliente: string, aplicacao?: string|null}} FichaSummary
  * @typedef {{
- *   data_entrega_confirmada: string|null, aplicacao: string|null, nome: string|null,
- * }} FichaSummaryInput
- * @typedef {FichaSummaryInput & {cliente: string}} FichaSummary
- * @typedef {{feito_pelo_cliente: boolean, feito_pela_silmer: boolean, files: unknown[]}} FichaArtwork
+ *   feito_pelo_cliente: boolean, feito_pela_silmer: boolean,
+ *   sem_estampa: boolean, files: unknown[],
+ * }} FichaArtwork
  * @typedef {{
  *   summary: FichaSummary, items: FichaItem[], observations: string[],
  *   artwork?: FichaArtwork, serviceData: Record<string, unknown>,
@@ -121,10 +137,29 @@ export function blankItem() {
   };
 }
 
+/** @returns {FichaArtwork} */
+export function blankArtwork() {
+  return {
+    feito_pela_silmer: false,
+    feito_pelo_cliente: false,
+    files: [],
+    sem_estampa: false,
+  };
+}
+
+/**
+ * ADR 020: the order says who makes the art once it has one mark.
+ *
+ * @param {Partial<FichaArtwork>|null|undefined} artwork
+ */
+export function hasArtworkOrigin(artwork) {
+  return ARTWORK_ORIGINS.some((origin) => artwork?.[origin] === true);
+}
+
 /**
  * ADR 016: a ficha stored before the seven-point item has no `cor`,
- * `estampa` or `gola`. It is read with them blank, so nothing is migrated
- * and the encrypted envelope keeps its version.
+ * `estampa` or `gola`; ADR 020 adds `sem_estampa` to the art. They are read
+ * blank, so nothing is migrated and the encrypted envelope keeps its version.
  *
  * @param {Ficha} ficha
  * @returns {Ficha}
@@ -133,11 +168,7 @@ export function normalizeFicha(ficha) {
   const copy = structuredClone(ficha);
   return {
     ...copy,
-    artwork: copy.artwork ?? {
-      feito_pelo_cliente: false,
-      feito_pela_silmer: false,
-      files: [],
-    },
+    artwork: { ...blankArtwork(), ...copy.artwork },
     items: (copy.items ?? []).map((item) => ({
       ...blankItem(),
       ...item,
@@ -194,7 +225,11 @@ export function validateSummary(input) {
   if (!isPlainObject(input)) {
     throw new OrderInputError('summary must be an object', ['summary']);
   }
-  rejectUnknownKeys(input, new Set(SUMMARY_INPUT_KEYS), 'summary');
+  rejectUnknownKeys(
+    input,
+    new Set([...SUMMARY_INPUT_KEYS, ...LEGACY_SUMMARY_KEYS]),
+    'summary',
+  );
   /** @type {Record<string, string|null>} */
   const summary = {};
   for (const key of SUMMARY_INPUT_KEYS) {
@@ -293,9 +328,12 @@ function validateItem(raw, itemIndex) {
 }
 
 /**
- * Only a seller can set artwork provenance through the order section route.
- * Neither checkbox is exclusive; absent provenance remains unknown.
- * File bytes and metadata are not accepted until durable storage is ready.
+ * ADR 020: who makes the art, as the seller confirms it in "Estampa e
+ * arquivos". The customer sending art and Silmer creating it may both be
+ * true; "Sem estampa" excludes them. An older client that does not send
+ * `sem_estampa` reads it as false. File bytes and metadata are not accepted
+ * until durable storage is ready.
+ *
  * @param {unknown} input
  * @returns {FichaArtwork}
  */
@@ -303,23 +341,27 @@ export function validateArtwork(input) {
   if (!isPlainObject(input)) {
     throw new OrderInputError('artwork must be an object', ['artwork']);
   }
-  rejectUnknownKeys(
-    input,
-    new Set(['feito_pelo_cliente', 'feito_pela_silmer']),
-    'artwork',
-  );
-  for (const field of ['feito_pelo_cliente', 'feito_pela_silmer']) {
+  rejectUnknownKeys(input, new Set(ARTWORK_ORIGINS), 'artwork');
+  const artwork = blankArtwork();
+  for (const field of ARTWORK_ORIGINS) {
+    if (field === 'sem_estampa' && !Object.hasOwn(input, field)) continue;
     if (typeof input[field] !== 'boolean') {
       throw new OrderInputError(`artwork.${field} must be boolean`, [
         `artwork.${field}`,
       ]);
     }
+    artwork[field] = /** @type {boolean} */ (input[field]);
   }
-  return {
-    feito_pelo_cliente: /** @type {boolean} */ (input.feito_pelo_cliente),
-    feito_pela_silmer: /** @type {boolean} */ (input.feito_pela_silmer),
-    files: [],
-  };
+  if (
+    artwork.sem_estampa &&
+    (artwork.feito_pelo_cliente || artwork.feito_pela_silmer)
+  ) {
+    throw new OrderInputError(
+      'artwork.sem_estampa cannot be combined with an art origin',
+      ['artwork.sem_estampa'],
+    );
+  }
+  return artwork;
 }
 
 /**
@@ -371,7 +413,7 @@ function isDeferred(text) {
 
 /** "Sem aplicação" is how the bot records a plain garment. @param {string} text */
 function isPlain(text) {
-  return /^sem (aplicacao|estampa)[.!]?$/u.test(foldText(text));
+  return /^(sem (aplicacao|estampa)|lis[ao]s?)[.!]?$/u.test(foldText(text));
 }
 
 /**
@@ -405,21 +447,78 @@ function fichaText(value) {
   return briefingParts(value)?.join(', ');
 }
 
-// A briefing technique reaches "Tipo de serviço" only when it names one;
-// "estampada", "com foto" or a description stay with the seller.
+// ADR 020: a briefing technique reaches the item's "Técnica" only when it
+// names one, or says the garment is plain; "estampada", "com foto" or a
+// description stay with the seller as service data.
 const TECHNIQUE =
-  /(^|[^a-z0-9])(silk|silk ?screen|serigrafia|sublimacao|sublimatica|sublimad[oa]|dtf|dtg|bordad[oa]s?|transfer|sem aplicacao)($|[^a-z0-9])/u;
+  /(^|[^a-z0-9])(silk|silk ?screen|serigrafia|sublimacao|sublimatica|sublimad[oa]|dtf|dtg|bordad[oa]s?|transfer)($|[^a-z0-9])/u;
+export const NO_PRINT = 'Sem estampa';
 
 /** @param {unknown} value @returns {string|undefined} */
 function techniqueText(value) {
   const text = fichaText(value);
-  return text && TECHNIQUE.test(foldText(text)) ? text : undefined;
+  if (!text) return undefined;
+  if (isPlain(text)) return NO_PRINT;
+  return TECHNIQUE.test(foldText(text)) ? text : undefined;
 }
 
-/** Where the artwork goes, when it says a place. @param {unknown} value */
+/**
+ * Where the print goes, kept as the item's print reference. A plain garment
+ * has no place: the answer is taken, and the item keeps no reference.
+ *
+ * @param {unknown} value
+ */
 function artworkPlaces(value) {
   const text = fichaText(value);
-  return text && !isPlain(text) ? text : undefined;
+  if (text === undefined) return undefined;
+  return isPlain(text) ? '' : text;
+}
+
+const NO_PRINT_ANSWER =
+  /\bsem (estampa|aplicacao)\b|\bnao (tem|tera|vai ter|quer) estampa\b/u;
+const ART_WORD = String.raw`.{0,20}\b(arte|logo|logotipo|desenho|imagem|arquivo)`;
+const CUSTOMER_HAS_ART = new RegExp(
+  String.raw`\b(ja tem|tem|tenho|temos|possui|possuo)\b${ART_WORD}|\b(pront[ao]s?|mand\w*|envi\w*|receb\w*)\b`,
+  'u',
+);
+const LACKS_ART = String.raw`\bnao (tem|tenho|temos|possui|possuo)\b${ART_WORD}`;
+const CUSTOMER_LACKS_ART = new RegExp(LACKS_ART, 'u');
+const CUSTOMER_LACKS_ART_ALL = new RegExp(LACKS_ART, 'gu');
+const SILMER_CREATES =
+  /\b(silmer|cri(a|e|am|em|ar|ando|acao|ada|ado|ara|arao)|desenv\w*)\b/u;
+
+/**
+ * ADR 020: who makes the art, read from the bot's `artwork_status` only when
+ * the answer leaves no doubt ("já tem a logo", "vai mandar", "quer que a
+ * Silmer crie", "sem aplicação"). Anything else ("com estampa", "a definir")
+ * stays as service data for the seller.
+ *
+ * @param {unknown} value
+ * @returns {Pick<FichaArtwork, 'feito_pelo_cliente'|'feito_pela_silmer'|'sem_estampa'>|undefined}
+ */
+function artworkOrigin(value) {
+  const text = fichaText(value);
+  if (!text) return undefined;
+  const folded = foldText(text);
+  if (isPlain(text) || NO_PRINT_ANSWER.test(folded)) {
+    return {
+      feito_pela_silmer: false,
+      feito_pelo_cliente: false,
+      sem_estampa: true,
+    };
+  }
+  // "Não tem a logo" asks Silmer to create it and says nothing of a file.
+  const feitoPelaSilmer =
+    CUSTOMER_LACKS_ART.test(folded) || SILMER_CREATES.test(folded);
+  const feitoPeloCliente = CUSTOMER_HAS_ART.test(
+    folded.replace(CUSTOMER_LACKS_ART_ALL, ' '),
+  );
+  if (!feitoPelaSilmer && !feitoPeloCliente) return undefined;
+  return {
+    feito_pela_silmer: feitoPelaSilmer,
+    feito_pelo_cliente: feitoPeloCliente,
+    sem_estampa: false,
+  };
 }
 
 /** @param {unknown} value @returns {GradeLine[]|undefined} */
@@ -428,14 +527,16 @@ function briefingGrade(value) {
 }
 
 /**
- * ADR 016: maps the agent pre-ficha onto the order without guessing. The
- * seven points land on the first item — type of garment (`product_model`,
- * else `product_type`), colour, artwork (with its places), fabric, sizes
- * when they read without doubt, and collar — and the order name and a named
- * technique on the summary. A point left to the seller ("Definir com o
- * vendedor") is never a ficha value: the field stays blank, so it keeps
- * blocking the order, and the text stays as service data. So does anything
- * else the bot collected, including the quantity the customer said.
+ * ADR 016/020: maps the agent pre-ficha onto the order without guessing. The
+ * item points land on the first item — type of garment (`product_model`,
+ * else `product_type`), colour, a named technique, fabric, sizes when they
+ * read without doubt and collar — with the places of the print as its
+ * reference. Who makes the art lands on the order when the answer is
+ * unambiguous, and the order name on the summary. A point left to the seller
+ * ("Definir com o vendedor") is never a ficha value: the field stays blank,
+ * so it keeps blocking the order, and the text stays as service data. So
+ * does anything else the bot collected, including the quantity the customer
+ * said.
  *
  * @param {Record<string, unknown>|null|undefined} briefing
  * @returns {Ficha}
@@ -457,33 +558,28 @@ export function briefingToFicha(briefing) {
 
   const cliente = take('customer_name', fichaText) ?? '';
   const nome = take('order_name', fichaText) || null;
-  const aplicacao = take('artwork_technique', techniqueText) || null;
   // The type of garment is what the bot asks; the kind of product only
   // stands in for it when the customer never said the type.
   const tipo =
     take('product_model', fichaText) || take('product_type', fichaText);
-  const status = take('artwork_status', fichaText);
-  let estampa = status;
-  if (status && isPlain(status)) {
-    estampa = 'Sem estampa';
-  } else if (status) {
-    const places = take('artwork_locations', artworkPlaces);
-    if (places) estampa = `${status} · ${places}`;
-  }
+  const origin = take('artwork_status', artworkOrigin);
 
   /** @type {FichaItem} */
   const item = {
     ...blankItem(),
     cor: take('colors', fichaText) ?? '',
-    estampa: estampa ?? '',
     gola: take('collar', fichaText) ?? '',
     grade: take('sizes', briefingGrade) ?? [],
     malhas: take('fabrics', briefingParts) ?? [],
     tipo: tipo ?? '',
+    tipo_servico: take('artwork_technique', techniqueText) ?? '',
   };
-  const hasItem = ITEM_BRIEFING_KEYS.some(
-    (key) => source[key] !== undefined && source[key] !== null,
-  );
+  const hasItem =
+    item.tipo_servico !== '' ||
+    ITEM_BRIEFING_KEYS.some(
+      (key) => source[key] !== undefined && source[key] !== null,
+    );
+  if (hasItem) item.estampa = take('artwork_locations', artworkPlaces) ?? '';
 
   /** @type {Record<string, unknown>} */
   const serviceData = {};
@@ -494,12 +590,14 @@ export function briefingToFicha(briefing) {
   }
 
   return {
-    artwork: { feito_pelo_cliente: false, feito_pela_silmer: false, files: [] },
+    artwork: { ...blankArtwork(), ...origin },
     items: hasItem ? [item] : [],
     observations: [],
     serviceData,
     summary: {
-      aplicacao,
+      // ADR 020: the order-wide technique is legacy; the bot no longer
+      // writes it.
+      aplicacao: null,
       cliente,
       data_entrega_confirmada: null,
       nome,
@@ -523,10 +621,12 @@ export function orderClient(context) {
 
 /**
  * PAG-01: re-applies the agent's cumulative pre-ficha onto a pending ficha.
- * Only what the agent collects moves — event name, technique and the seven
- * points of the first item — and only when the briefing has a value for it.
- * The model, the colour of each part, the trims, the confirmed delivery date,
- * observations and any further items are the seller's and stay as they are.
+ * Only what the agent collects moves — event name, the points and print
+ * reference of the first item, and its technique and who makes the art while
+ * they are blank — and only when the briefing has a value for it. The model,
+ * the colour of each part, the trims, the confirmed delivery date,
+ * observations, files and any further items are the seller's and stay as
+ * they are.
  *
  * @param {Ficha} ficha
  * @param {Record<string, unknown>|null|undefined} briefing
@@ -551,18 +651,31 @@ export function projectBriefingOntoFicha(ficha, briefing) {
         malhas:
           draftItem.malhas.length > 0 ? draftItem.malhas : firstItem.malhas,
         tipo: draftItem.tipo || firstItem.tipo,
+        // ADR 020: the bot fills a blank technique, never the seller's.
+        tipo_servico: firstItem.tipo_servico || draftItem.tipo_servico,
       },
       ...otherItems,
     ];
   }
+  // ADR 020: likewise, the bot marks who makes the art only while the order
+  // has no mark.
+  const said = draft.artwork ?? blankArtwork();
   return {
-    artwork: current.artwork,
+    artwork:
+      hasArtworkOrigin(said) && !hasArtworkOrigin(current.artwork)
+        ? {
+            ...blankArtwork(),
+            ...current.artwork,
+            feito_pela_silmer: said.feito_pela_silmer,
+            feito_pelo_cliente: said.feito_pelo_cliente,
+            sem_estampa: said.sem_estampa,
+          }
+        : current.artwork,
     items,
     observations: current.observations,
     serviceData: draft.serviceData,
     summary: {
       ...current.summary,
-      aplicacao: draft.summary.aplicacao ?? current.summary.aplicacao,
       cliente: current.summary.cliente || draft.summary.cliente,
       nome: draft.summary.nome ?? current.summary.nome,
     },

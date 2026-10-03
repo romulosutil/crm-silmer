@@ -37,7 +37,7 @@ const BRIEFING = Object.freeze({
 });
 
 /**
- * The delivery date and item service a seller would set before confirmation.
+ * The delivery date and item technique a seller would set before confirmation.
  *
  * @param {any} order
  */
@@ -126,12 +126,19 @@ test('an intent without a pending order creates one pre-filled from the pre-fich
   assert.equal(order.deliveredOn, null);
   assert.equal(order.ficha.summary.cliente, 'Cliente Sintetico');
   assert.equal(order.ficha.summary.nome, 'Equipe Horizonte');
-  assert.equal(order.ficha.summary.aplicacao, 'sublimação total');
-  // ADR 016: the seven points land on item 1, with nothing left to fill.
+  assert.equal(order.ficha.summary.aplicacao, null);
+  // ADR 016/020: the points land on item 1 and the art on the order, with
+  // nothing left to fill.
+  assert.deepEqual(order.ficha.artwork, {
+    feito_pela_silmer: false,
+    feito_pelo_cliente: true,
+    files: [],
+    sem_estampa: false,
+  });
   const [item] = order.ficha.items;
   assert.equal(item.tipo, 'camiseta comum');
   assert.equal(item.cor, 'azul');
-  assert.equal(item.estampa, 'já tem a arte · frente');
+  assert.equal(item.estampa, 'frente');
   assert.deepEqual(item.malhas, ['dry fit']);
   assert.deepEqual(item.grade, [
     { quantidade: 4, tamanho: 'P' },
@@ -139,13 +146,12 @@ test('an intent without a pending order creates one pre-filled from the pre-fich
   ]);
   assert.equal(item.gola, 'gola V');
   assert.equal(item.modelo, '');
-  assert.equal(item.tipo_servico, '', 'o agente não atribui o serviço');
+  assert.equal(item.tipo_servico, 'sublimação total', 'o bot sugere a técnica');
   assert.equal(order.ficha.serviceData.quantity, 12);
   assert.equal(order.ficha.serviceData.product_type, 'camisa');
   assert.equal(order.totalPieces, 10);
   // The bot never knows the promised delivery: the seller sets it.
   assert.deepEqual(order.missingFields, [
-    'items[0].tipo_servico',
     'summary.data_entrega_confirmada',
     'finalAmount',
     'paymentCondition',
@@ -354,14 +360,12 @@ test('the agent briefing is projected only while the conversation is with the ag
     { quantidade: 12, tamanho: 'GG' },
   ]);
   assert.equal(result.ficha.items[0].cor_frente, 'AZUL MARINHO');
-  assert.equal(result.ficha.items[0].tipo_servico, '');
+  assert.equal(result.ficha.items[0].tipo_servico, 'sublimação total');
   assert.equal(result.ficha.items[1].tipo, 'SHORT');
   // The seller's second item was saved before ADR 016 and reads blank.
   assert.equal(result.ficha.items[1].cor, '');
   assert.deepEqual(result.missingFields, [
-    'items[0].tipo_servico',
     'items[1].cor',
-    'items[1].estampa',
     'items[1].tipo_servico',
     'finalAmount',
     'paymentCondition',

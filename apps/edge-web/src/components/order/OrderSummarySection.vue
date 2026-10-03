@@ -1,10 +1,6 @@
 <script setup>
 import { computed, inject, nextTick, ref, watch } from 'vue';
-import {
-  fabLabel,
-  informedQuantity,
-  quantityWarning,
-} from '../../lib/order-format.js';
+import { fabLabel, quantityWarning } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
 
 const SECTION = 'summary';
@@ -15,7 +11,7 @@ const props = defineProps({
 
 const editing = inject('orderEditing');
 const firstField = ref(null);
-const draft = ref({ aplicacao: '', data_entrega_confirmada: '', nome: '' });
+const draft = ref({ data_entrega_confirmada: '', nome: '' });
 const saving = ref(false);
 const errorMessage = ref('');
 
@@ -25,8 +21,8 @@ const canEdit = computed(
   () => editing.canEdit.value && props.order.status === 'pendente',
 );
 const summary = computed(() => props.order.ficha.summary);
-// PIT-09: what the customer said, beside what the sizes add up to.
-const informed = computed(() => informedQuantity(props.order));
+// PIT-09: a warning only when the sizes add up to something other than what
+// the customer said (ADR 020: the figure itself is not repeated beside it).
 const warning = computed(() => quantityWarning(props.order));
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
@@ -41,7 +37,6 @@ function dateBR(value) {
 
 async function startEditing() {
   draft.value = {
-    aplicacao: summary.value.aplicacao ?? '',
     data_entrega_confirmada: summary.value.data_entrega_confirmada ?? '',
     nome: summary.value.nome ?? '',
   };
@@ -72,12 +67,14 @@ watch(
   },
 );
 
-/** PFI-06: the whole section travels in one write. */
+/**
+ * PFI-06: the whole section travels in one write. ADR 020: the technique
+ * lives on each item, so the summary no longer sends one.
+ */
 async function save() {
   saving.value = true;
   errorMessage.value = '';
   const result = await editing.save(SECTION, {
-    aplicacao: draft.value.aplicacao.trim() || null,
     data_entrega_confirmada: draft.value.data_entrega_confirmada.trim() || null,
     nome: draft.value.nome.trim() || null,
   });
@@ -147,33 +144,22 @@ async function save() {
             aria-describedby="summary-entrega-hint"
           />
           <p id="summary-entrega-hint" class="op-hint">
-            A data combinada com o cliente, não a desejada.
+            A data combinada com o cliente.
           </p>
         </div>
 
         <div class="op-field">
-          <label for="summary-aplicacao">Técnica da arte (referência)</label>
-          <input
-            id="summary-aplicacao"
-            v-model="draft.aplicacao"
-            type="text"
-            autocomplete="off"
-            autocapitalize="characters"
-            aria-describedby="summary-aplicacao-hint"
-          />
-          <p id="summary-aplicacao-hint" class="op-hint">
-            O tipo de serviço que será executado é definido em cada item.
-          </p>
-        </div>
-
-        <div class="op-field">
-          <label for="summary-nome">Evento / Nome</label>
+          <label for="summary-nome">Nome do pedido</label>
           <input
             id="summary-nome"
             v-model="draft.nome"
             type="text"
             autocomplete="off"
+            aria-describedby="summary-nome-hint"
           />
+          <p id="summary-nome-hint" class="op-hint">
+            Evento, empresa, time ou turma.
+          </p>
         </div>
       </div>
 
@@ -211,16 +197,7 @@ async function save() {
         </div>
         <div>
           <dt>Total de peças</dt>
-          <dd class="op-num op-pieces">
-            {{ order.totalPieces }}
-            <span v-if="informed" class="op-origin-note"
-              >cliente informou {{ informed.text }}</span
-            >
-          </dd>
-        </div>
-        <div>
-          <dt>Técnica da arte (referência)</dt>
-          <dd>{{ summary.aplicacao || '—' }}</dd>
+          <dd class="op-num op-pieces">{{ order.totalPieces }}</dd>
         </div>
       </dl>
       <p v-if="warning" class="op-quantity-warning">
@@ -228,7 +205,7 @@ async function save() {
       </p>
       <dl class="op-summary-meta">
         <div>
-          <dt>Evento / Nome</dt>
+          <dt>Nome do pedido</dt>
           <dd>{{ summary.nome || '—' }}</dd>
         </div>
         <div>

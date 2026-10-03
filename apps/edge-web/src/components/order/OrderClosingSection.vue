@@ -17,12 +17,14 @@ import OrderIcon from './OrderIcon.vue';
 // PCL-05: what each blocker outside the items means to the seller when the
 // server refuses it; the item points are named one by one (PIT-06).
 const BLOCKER_MESSAGES = Object.freeze({
+  artwork: 'Marque quem faz a arte em Estampa e arquivos.',
   finalAmount: 'Informe o valor final aprovado pelo cliente.',
   paymentCondition: 'Escolha a forma de pagamento.',
   'summary.data_entrega_confirmada':
     'Informe a entrega prometida no Resumo do pedido.',
 });
 const DELIVERY = 'summary.data_entrega_confirmada';
+const ARTWORK = 'artwork';
 const AMOUNT_FORMAT_MESSAGE = 'Use o formato 4.820,00.';
 
 const props = defineProps({
@@ -52,6 +54,17 @@ const itemGaps = computed(() =>
   missingFieldLabels(missing.value.filter(isItemGap)),
 );
 const deliveryMissing = computed(() => missing.value.includes(DELIVERY));
+const artworkMissing = computed(() => missing.value.includes(ARTWORK));
+const artworkLabel = computed(() => {
+  const artwork = props.order.ficha?.artwork ?? {};
+  if (artwork.sem_estampa) return 'sem estampa';
+  return [
+    artwork.feito_pelo_cliente && 'cliente envia',
+    artwork.feito_pela_silmer && 'Silmer cria',
+  ]
+    .filter(Boolean)
+    .join(' e ');
+});
 const deliveryDay = computed(() =>
   dateBR(props.order.ficha?.summary?.data_entrega_confirmada),
 );
@@ -77,6 +90,18 @@ const checks = computed(() => [
     key: 'items',
     label: 'Itens completos',
     ok: itemGaps.value.length === 0,
+  },
+  {
+    // ADR 020: who makes the art is marked once, for the whole order.
+    go: {
+      label: 'Informar na Estampa',
+      name: 'quem faz a arte',
+      section: 'artwork',
+    },
+    hint: artworkMissing.value ? 'em Estampa e arquivos' : artworkLabel.value,
+    key: 'artwork',
+    label: 'Arte do pedido',
+    ok: !artworkMissing.value,
   },
   {
     // ADR 016: filled in the summary; the row says where.
@@ -105,8 +130,8 @@ const checks = computed(() => [
     ok: paymentCondition.value !== '',
   },
 ]);
-// PIT-06: "Falta para gerar" names every point, item by item, then the
-// promised delivery, the amount and the payment method.
+// PIT-06: "Falta para gerar" names every point, item by item, then who makes
+// the art, the promised delivery, the amount and the payment method.
 const pendingLabels = computed(() => [
   ...missingFieldLabels(missing.value.filter(isPageGap)),
   ...(amountValid.value ? [] : ['valor final']),

@@ -1720,7 +1720,9 @@ button.op-edit:disabled {
   margin: 0;
 }
 
+/* ADR 020: client, promised delivery and pieces; the technique is per item. */
 .op-summary-main {
+  grid-template-columns: 1.5fr 1.1fr 0.8fr;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -1791,11 +1793,9 @@ button.op-edit:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .op-summary-main > div:nth-child(2) {
+  .op-summary-main > div:first-child {
+    grid-column: 1 / -1;
     border-inline-end: 0;
-  }
-
-  .op-summary-main > div:nth-child(-n + 2) {
     border-block-end: 1px solid var(--color-border-subtle);
   }
 }

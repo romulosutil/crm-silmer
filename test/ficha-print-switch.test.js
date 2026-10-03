@@ -41,6 +41,12 @@ const v4Gate = JSON.parse(
     'utf8',
   ),
 );
+const v5Gate = JSON.parse(
+  await readFile(
+    new URL('docs/phase0/ficha-pdf-approval-v5.json', rootUrl),
+    'utf8',
+  ),
+);
 
 const SELLER = Object.freeze({
   capabilities: [],
@@ -160,11 +166,12 @@ async function get(api, url) {
   return api.inject({ headers: readHeaders, method: 'GET', url });
 }
 
-test('the switch agrees with the recorded v4 approval (PIM-10)', () => {
+test('the switch agrees with the recorded v5 approval (PIM-10)', () => {
   assert.doesNotThrow(() =>
     validateFichaPrintSwitch({
       gate: v3Gate,
       gateV4: v4Gate,
+      gateV5: v5Gate,
       printTemplate: PRINT_TEMPLATE,
     }),
   );
@@ -254,12 +261,17 @@ test('the print route prints whatever the switch names (PIM-10)', async (t) => {
   assert.equal(response.body, renderOrderFicha(order, PRINT_TEMPLATE));
 });
 
-test('orders print on v4 in tests since the delegated provisional approval (T78, PIM-10)', async (t) => {
+test('orders print on v5 since the PO approved its sample (T86, PIM-10)', async (t) => {
   const { order, response } = await printedThroughRoute(t);
 
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V4);
-  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V4));
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V5);
+  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V5));
   assert.match(response.body, /Tipo de roupa/u);
+  assert.match(response.body, /4<\/b> Técnica/u);
+  assert.match(
+    response.body,
+    /Arte do pedido<\/span><strong>O cliente envia a arte/u,
+  );
   assert.match(response.body, /Lastro do pedido/u);
   assert.match(response.body, /Data do pedido<\/span><strong>02\/10\/2026</u);
   assert.match(
@@ -267,12 +279,15 @@ test('orders print on v4 in tests since the delegated provisional approval (T78,
     /Entrega prometida<\/span><strong>24\/10\/2026</u,
   );
   assert.match(response.body, /Primeiro contato<\/span><strong>28\/09\/2026</u);
-  assert.match(response.body, /Pagamento<\/span><strong>02\/10\/2026</u);
+  assert.match(response.body, /Pago em<\/span><strong>02\/10\/2026</u);
   assert.match(
     response.body,
-    /Entrega realizada<\/span><strong><span class="empty">—<\/span>/u,
+    /Entregue em<\/span><strong><span class="empty">—<\/span>/u,
   );
-  assert.doesNotMatch(response.body, />Modelo|>Viés gola/u);
+  assert.doesNotMatch(
+    response.body,
+    />Modelo|>Viés gola|Tipo de serviço|Serviços dos itens/u,
+  );
   // A printed order carries no sample band, review box or signature lines.
   assert.doesNotMatch(
     response.body,

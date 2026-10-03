@@ -6,12 +6,11 @@ O pacote usa só dados sintéticos.
 
 ## Estado
 
-**Aguardando a revisão do PO.** O registro
+**Aprovada provisoriamente pelo PO para desenvolvimento e cloud-dev em
+03/10/2026.** O registro
 [`ficha-pdf-approval-v5.json`](ficha-pdf-approval-v5.json) trava os hashes da
-amostra, do HTML e do PDF com `provisionalApproval.status` igual a
-`pending-po-review`. Enquanto isso, `PRINT_TEMPLATE` continua
-`ficha-canonical-v4`; o validador recusa a troca para a v5 antes da aprovação
-do PO. Rose e Operação ainda precisam revisar e assinar fisicamente a amostra
+amostra, do HTML e do PDF e grava a aprovação do PO; `PRINT_TEMPLATE` passou a
+`ficha-canonical-v5`. O validador recusaria a troca sem essa aprovação. Rose e Operação ainda precisam revisar e assinar fisicamente a amostra
 impressa antes de qualquer uso em produção. A v2, a v3, a v4, seus PDFs e seus
 hashes não foram alterados.
 
@@ -48,11 +47,10 @@ sintéticos com seis itens e adicionais longos, textos de 200 caracteres e uma
 grade de 40 tamanhos geraram exatamente as páginas planejadas, com cabeçalho
 em toda continuação e nenhum item cortado.
 
-## Para aprovar
+## Validação
 
-O PO confere o PDF. Com a aprovação, o Tech Lead grava `status: approved`,
-`approved: true`, nome e data em `provisionalApproval`, troca
-`PRINT_TEMPLATE` para `ficha-canonical-v5` e roda:
+Qualquer correção do layout exige uma nova versão do template e do pacote. Para
+validar o pacote aprovado:
 
 ```bash
 node --test test/ficha-print-v5.test.js

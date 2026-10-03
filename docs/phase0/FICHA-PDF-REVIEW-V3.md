@@ -6,14 +6,25 @@ Rastreabilidade: [ADR 017](../adr/017-ficha-impressa-com-os-sete-pontos.md);
 
 ## Estado do gate
 
-**Pendente.** O PDF da v3 foi gerado com dados fictícios e espera a assinatura
-de Rose e Operação. Enquanto o registro estiver pendente, todo pedido impresso
-continua no template `ficha-canonical-v2`, aprovado em 31/08/2026
-([revisão da v2](FICHA-PDF-REVIEW.md)), e a validação recusa a v3 no ponto de
-troca.
+A aprovação tem duas etapas (ADR 017; PO, 03/10/2026: "Essa assinatura será
+apenas em produção; por enquanto, aprovada.").
 
-**Quem assina e como** (PO, 03/10/2026). Assinam só Rose e Operação, como na
-v2. A assinatura é física: as duas assinam à mão a amostra v3 impressa, nas
+1. **Aprovação provisória: registrada.** O PO (papel PO, Rômulo Sutil) aprovou
+   a v3 em 03/10/2026 para desenvolvimento e cloud-dev. O registro
+   (`provisionalApproval`) trava os hashes da amostra, do HTML renderizado e
+   do PDF desta revisão: qualquer mudança quebra a validação, e o script
+   recusa gerar o PDF de novo. Ela libera a v3 no ponto de troca.
+2. **Aprovação final: pendente.** A assinatura física de Rose e Operação na
+   amostra impressa é obrigatória antes da produção
+   (`approval.requiredBefore: "production"`). É um gate de go-live na seção 12
+   do [`EASYPANEL-TOPOLOGY.md`](../../EASYPANEL-TOPOLOGY.md), e
+   `npm run validate:ficha-pdf-review` mostra a pendência em toda execução.
+
+A v2, aprovada em 31/08/2026 ([revisão da v2](FICHA-PDF-REVIEW.md)), continua
+no repositório, travada por hash.
+
+**Quem assina a final e como** (PO, 03/10/2026). Assinam só Rose e Operação,
+como na v2. A assinatura é física: as duas assinam à mão a amostra v3 impressa, nas
 linhas "Assinatura de Rose", "Assinatura de Operação" e "Data" da última
 página. O registro espelha o da v2 (`reviewedBy` com `rose` e `operation`) e
 marca a assinatura como física (`signature: "physical"`). Ninguém preenche o
@@ -90,8 +101,8 @@ foi gerado no Dell, com Liberation Sans no lugar de Arial (mesmas medidas).
 
 ## Registro do aceite
 
-Só depois que o PO confirmar que Rose e Operação assinaram o papel, o Tech
-Lead registra a aprovação, na PR de aprovação:
+Esta é a aprovação final, antes da produção. Só depois que o PO confirmar que
+Rose e Operação assinaram o papel, o Tech Lead a registra, numa PR própria:
 
 1. Criar `docs/phase0/ficha-pdf-approved-evidence-v3.json` com
    `schemaVersion`, `task` (`T63`), `adr` (`017`), `syntheticOnly`, versões e
@@ -106,13 +117,9 @@ Lead registra a aprovação, na PR de aprovação:
    `evidenceRef` apontando para o arquivo de evidência. Estado parcial falha,
    e outros assinantes ou assinatura que não seja física também.
 3. `npm run validate:ficha-pdf-review` valida a transição completa.
-4. Num commit próprio, o Tech Lead troca `PRINT_TEMPLATE` para `TEMPLATE_V3`
-   em `modules/orders/src/print/index.js` (T64). Com o gate pendente, essa
-   troca falha em `npm run validate:ficha-pdf-review` e em
-   `test/ficha-print-switch.test.js`. No mesmo commit, a asserção da v2 em
-   `test/order-routes.test.js` que procura "Entrega confirmada" passa a
-   procurar "Entrega prometida", e o teste da v2 byte a byte em
-   `test/ficha-print-switch.test.js` passa a ser pulado sozinho.
+4. Marcar como feito o gate da ficha v3 na seção 12 do
+   `EASYPANEL-TOPOLOGY.md`. A troca do `PRINT_TEMPLATE` para a v3 já foi feita
+   com a aprovação provisória (T74).
 
 Não registrar telefone, e-mail, pedido real, foto ou cópia da assinatura
 manuscrita nem qualquer outro dado pessoal na evidência: o papel assinado fica

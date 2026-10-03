@@ -30,6 +30,11 @@ const snapshotV3Url = new URL(
 const gateV3Url = new URL('docs/phase0/ficha-pdf-approval-v3.json', rootUrl);
 const V3_ARTIFACT_PATH = 'output/pdf/ficha-canonica-sintetica-v3.pdf';
 const V3_EVIDENCE_PATH = 'docs/phase0/ficha-pdf-approved-evidence-v3.json';
+const V3_ADR_PATH = 'docs/adr/017-ficha-impressa-com-os-sete-pontos.md';
+// ADR 017: the PO's provisional approval covers development and cloud-dev;
+// the physical signature by Rose and Operação is required before production.
+const V3_PROVISIONAL_SCOPE = 'development/cloud-dev';
+const V3_FINAL_REQUIRED_BEFORE = 'production';
 const V3_REQUIREMENTS = Object.freeze([
   'PIM-06',
   'PIM-07',
@@ -870,12 +875,71 @@ export function validateFichaApprovalGateV3({
   );
   if (approved) validateFichaApprovalEvidenceV3(evidence, gate);
   invariant(
+    approval.requiredBefore === V3_FINAL_REQUIRED_BEFORE,
+    'The physical signature by Rose and Operação is required before production',
+  );
+  validateFichaProvisionalApprovalV3(gate);
+  invariant(
     gate.versioning?.overwriteApprovedVersion === false &&
       gate.versioning?.correctionsRequireNewTemplateVersion === true &&
       gate.versioning?.supersedesTemplateVersion === TEMPLATE_V2,
     'Approved Ficha versions must never be overwritten',
   );
   return gate;
+}
+
+/**
+ * ADR 017 (PO, 03/10/2026): the first of the two approval stages. The PO
+ * approves the v3 for development and cloud-dev, locking the sample, the
+ * rendered HTML and the PDF he approved; the final approval, the physical
+ * signature by Rose and Operação, stays required before production.
+ *
+ * @param {any} gate
+ */
+export function validateFichaProvisionalApprovalV3(gate) {
+  const provisional = gate?.provisionalApproval;
+  invariant(
+    provisional?.scope === V3_PROVISIONAL_SCOPE &&
+      provisional.decisionRef === V3_ADR_PATH,
+    `v3 provisional approval covers ${V3_PROVISIONAL_SCOPE} only and traces to ADR 017`,
+  );
+  const pending =
+    provisional.status === 'pending-human-approval' &&
+    provisional.approved === false &&
+    provisional.reviewedBy === null &&
+    provisional.reviewedAt === null &&
+    provisional.snapshotSha256 === null &&
+    provisional.renderedHtmlSha256 === null &&
+    provisional.artifactSha256 === null;
+  const approved =
+    provisional.status === 'approved' &&
+    provisional.approved === true &&
+    provisional.reviewedBy?.role === 'PO' &&
+    nonEmptyString(provisional.reviewedBy?.name) &&
+    Number.isFinite(Date.parse(provisional.reviewedAt));
+  invariant(
+    pending || approved,
+    'v3 provisional approval must be wholly pending or wholly approved',
+  );
+  if (approved) {
+    invariant(
+      provisional.snapshotSha256 === gate.snapshotSha256 &&
+        provisional.renderedHtmlSha256 === gate.renderedHtmlSha256 &&
+        provisional.artifactSha256 === gate.artifact?.sha256,
+      'v3 provisional approval locks the sample, HTML and PDF the PO approved',
+    );
+  }
+  return provisional;
+}
+
+/** @param {any} gate the v3 record: which approvals hold, stage by stage */
+export function fichaV3ApprovalStages(gate) {
+  return {
+    final: gate?.approval?.status === 'approved' && gate.approval.approved,
+    provisional:
+      gate?.provisionalApproval?.status === 'approved' &&
+      gate.provisionalApproval.approved === true,
+  };
 }
 
 /** @param {any} evidence @param {any} gate */
@@ -924,8 +988,11 @@ export function validateFichaApprovalEvidenceV3(evidence, gate) {
 }
 
 /**
- * PIM-10 (ADR 017): `PRINT_TEMPLATE` may name v3 only once the v3 approval is
- * recorded; until then every printed order stays on the approved v2.
+ * PIM-10 (ADR 017): `PRINT_TEMPLATE` may name v3 only once an approval of v3
+ * is recorded: the PO's provisional one (development and cloud-dev) or the
+ * final physical signature by Rose and Operação. Without either, every
+ * printed order stays on the approved v2. Production also needs the final
+ * signature: that is a go-live gate (EASYPANEL-TOPOLOGY.md, section 12).
  *
  * @param {{gate: any, printTemplate: string}} input
  */
@@ -934,11 +1001,11 @@ export function validateFichaPrintSwitch({ gate, printTemplate }) {
     printTemplate === TEMPLATE_V2 || printTemplate === TEMPLATE_V3,
     'PRINT_TEMPLATE must name a known ficha template',
   );
+  const stages = fichaV3ApprovalStages(gate);
   invariant(
     printTemplate !== TEMPLATE_V3 ||
       (gate?.templateVersion === TEMPLATE_V3 &&
-        gate.approval?.status === 'approved' &&
-        gate.approval.approved === true),
+        (stages.provisional || stages.final)),
     'PRINT_TEMPLATE selects ficha-canonical-v3 before its approval is recorded',
   );
 }
@@ -1051,7 +1118,10 @@ async function readPackageV3() {
 /** @param {any} gate */
 export function refuseApprovedRegeneration(gate) {
   invariant(
-    gate?.approval?.status !== 'approved' && gate?.approval?.approved !== true,
+    gate?.approval?.status !== 'approved' &&
+      gate?.approval?.approved !== true &&
+      gate?.provisionalApproval?.status !== 'approved' &&
+      gate?.provisionalApproval?.approved !== true,
     'Approved PDF versions cannot be regenerated or overwritten',
   );
 }
@@ -1104,9 +1174,21 @@ async function generateV3() {
       sha256: sha256(artifactBytes),
       pageCount: countPdfPages(artifactBytes),
     },
+    provisionalApproval: {
+      status: 'pending-human-approval',
+      approved: false,
+      scope: V3_PROVISIONAL_SCOPE,
+      reviewedBy: null,
+      reviewedAt: null,
+      snapshotSha256: null,
+      renderedHtmlSha256: null,
+      artifactSha256: null,
+      decisionRef: V3_ADR_PATH,
+    },
     approval: {
       status: 'pending-human-approval',
       approved: false,
+      requiredBefore: V3_FINAL_REQUIRED_BEFORE,
       signature: 'physical',
       reviewedBy: { rose: null, operation: null },
       reviewedAt: null,
@@ -1154,8 +1236,9 @@ async function validateV3() {
     snapshotBytes,
   });
   validateFichaPrintSwitch({ gate, printTemplate: PRINT_TEMPLATE });
+  const stages = fichaV3ApprovalStages(gate);
   console.log(
-    `Ficha v3 PDF review gate valid: ${gate.approval.status}; orders print on ${PRINT_TEMPLATE}.`,
+    `Ficha v3 PDF review gate valid: provisional ${gate.provisionalApproval.status} (${gate.provisionalApproval.scope}); final ${gate.approval.status}${stages.final ? '' : ' (physical signature by Rose and Operação required before production)'}; orders print on ${PRINT_TEMPLATE}.`,
   );
 }
 

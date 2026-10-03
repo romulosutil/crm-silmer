@@ -10,6 +10,7 @@ import {
 } from '../modules/orders/src/print/print-snapshot.js';
 import {
   buildFichaHtmlV3,
+  fichaV3ApprovalStages,
   plannedPages,
   refuseApprovedRegeneration,
   validateFichaApprovalEvidenceV3,
@@ -57,6 +58,7 @@ function approvedCopy(/** @type {any} */ gate) {
   approved.approval = {
     status: 'approved',
     approved: true,
+    requiredBefore: 'production',
     signature: 'physical',
     reviewedBy: { rose: 'Rose', operation: 'Operacao Silmer' },
     reviewedAt: '2026-10-03T10:00:00-03:00',
@@ -157,7 +159,7 @@ test('the review HTML is the print path of the sample with the review marks on',
   assert.match(renderedHtml, /Adicionais/u);
 });
 
-test('locks the sample, the rendered HTML and the PDF by hash, approval pending', async () => {
+test('locks the sample, the rendered HTML and the PDF by hash, final approval pending', async () => {
   const { artifactBytes, gate, renderedHtml, snapshotBytes } = await fixture();
   const input = { artifactBytes, renderedHtml, snapshotBytes };
 
@@ -182,7 +184,22 @@ test('locks the sample, the rendered HTML and the PDF by hash, approval pending'
     'PIM-12',
     'PLA-08',
   ]);
-  // Nobody signed v3: the human approval is left wholly pending.
+  // Stage 1 (ADR 017): the PO approved v3 for development and cloud-dev,
+  // locking exactly this sample, HTML and PDF.
+  assert.deepEqual(gate.provisionalApproval, {
+    status: 'approved',
+    approved: true,
+    scope: 'development/cloud-dev',
+    reviewedBy: { role: 'PO', name: 'Rômulo Sutil' },
+    reviewedAt: '2026-10-03',
+    snapshotSha256: gate.snapshotSha256,
+    renderedHtmlSha256: gate.renderedHtmlSha256,
+    artifactSha256: gate.artifact.sha256,
+    decisionRef: 'docs/adr/017-ficha-impressa-com-os-sete-pontos.md',
+  });
+  // Stage 2: nobody signed the printed sample; the final approval, required
+  // before production, is left wholly pending.
+  assert.equal(gate.approval.requiredBefore, 'production');
   assert.equal(gate.approval.status, 'pending-human-approval');
   assert.equal(gate.approval.approved, false);
   assert.equal(gate.approval.signature, 'physical');
@@ -293,13 +310,72 @@ test('accepts only a whole approval with evidence, never a partial one', async (
   );
 });
 
-test('refuses to regenerate an approved v3 PDF', async () => {
-  const { gate } = await fixture();
+test('keeps the provisional approval whole and bound to what the PO approved', async () => {
+  const { artifactBytes, gate, renderedHtml, snapshotBytes } = await fixture();
+  const input = { artifactBytes, renderedHtml, snapshotBytes };
+  /** @param {(copy: any) => void} change @param {RegExp} message */
+  const refuses = (change, message) => {
+    const copy = structuredClone(gate);
+    change(copy);
+    assert.throws(
+      () => validateFichaApprovalGateV3({ ...input, gate: copy }),
+      message,
+    );
+  };
 
-  assert.doesNotThrow(() => refuseApprovedRegeneration(gate));
+  assert.deepEqual(fichaV3ApprovalStages(gate), {
+    final: false,
+    provisional: true,
+  });
+  refuses((copy) => {
+    copy.provisionalApproval.artifactSha256 = '0'.repeat(64);
+  }, /locks the sample, HTML and PDF the PO approved/u);
+  refuses((copy) => {
+    copy.provisionalApproval.reviewedBy.role = 'Vendedor';
+  }, /wholly pending or wholly approved/u);
+  refuses((copy) => {
+    copy.provisionalApproval.reviewedAt = null;
+  }, /wholly pending or wholly approved/u);
+  refuses((copy) => {
+    copy.provisionalApproval.scope = 'production';
+  }, /development\/cloud-dev only/u);
+  refuses((copy) => {
+    delete copy.approval.requiredBefore;
+  }, /required before production/u);
+  // A fresh package starts with both stages pending.
+  const fresh = structuredClone(gate);
+  Object.assign(fresh.provisionalApproval, {
+    approved: false,
+    artifactSha256: null,
+    renderedHtmlSha256: null,
+    reviewedAt: null,
+    reviewedBy: null,
+    snapshotSha256: null,
+    status: 'pending-human-approval',
+  });
+  assert.doesNotThrow(() =>
+    validateFichaApprovalGateV3({ ...input, gate: fresh }),
+  );
+  assert.deepEqual(fichaV3ApprovalStages(fresh), {
+    final: false,
+    provisional: false,
+  });
+});
+
+test('refuses to regenerate a v3 PDF approved at either stage', async () => {
+  const { gate } = await fixture();
+  const fresh = structuredClone(gate);
+  fresh.provisionalApproval.status = 'pending-human-approval';
+  fresh.provisionalApproval.approved = false;
+
+  assert.doesNotThrow(() => refuseApprovedRegeneration(fresh));
   assert.doesNotThrow(() => refuseApprovedRegeneration(null));
   assert.throws(
-    () => refuseApprovedRegeneration(approvedCopy(gate).approved),
+    () => refuseApprovedRegeneration(gate),
+    /cannot be regenerated/u,
+  );
+  assert.throws(
+    () => refuseApprovedRegeneration(approvedCopy(fresh).approved),
     /cannot be regenerated/u,
   );
 });

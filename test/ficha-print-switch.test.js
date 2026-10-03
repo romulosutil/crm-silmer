@@ -15,7 +15,10 @@ import {
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
-import { validateFichaPrintSwitch } from '../scripts/ficha-pdf-review.mjs';
+import {
+  fichaV3ApprovalStages,
+  validateFichaPrintSwitch,
+} from '../scripts/ficha-pdf-review.mjs';
 import { syntheticItems } from './fixtures/order-items.js';
 
 // PIM-10 (ADR 017): one switch decides the printed template, and it stays on
@@ -142,20 +145,40 @@ test('the switch agrees with the recorded v3 approval (PIM-10)', () => {
   assert.doesNotThrow(() =>
     validateFichaPrintSwitch({ gate: v3Gate, printTemplate: PRINT_TEMPLATE }),
   );
-  if (v3Gate.approval.status !== 'approved') {
+  const stages = fichaV3ApprovalStages(v3Gate);
+  if (!stages.provisional && !stages.final) {
     assert.equal(PRINT_TEMPLATE, TEMPLATE_V2, 'v2 prints while v3 is pending');
   }
 });
 
-test('the switch refuses v3 without a recorded approval and accepts it after (PIM-10)', () => {
+test('the switch takes v3 with the provisional or the final approval, never without (PIM-10)', () => {
+  /** @param {{provisional: boolean, final: boolean}} stages */
+  const gateWith = (stages) => {
+    const gate = structuredClone(v3Gate);
+    gate.provisionalApproval.status = stages.provisional
+      ? 'approved'
+      : 'pending-human-approval';
+    gate.provisionalApproval.approved = stages.provisional;
+    gate.approval.status = stages.final ? 'approved' : 'pending-human-approval';
+    gate.approval.approved = stages.final;
+    return gate;
+  };
+  /** @param {any} gate */
+  const v3With = (gate) => () =>
+    validateFichaPrintSwitch({ gate, printTemplate: TEMPLATE_V3 });
+
   assert.throws(
-    () =>
-      validateFichaPrintSwitch({ gate: v3Gate, printTemplate: TEMPLATE_V3 }),
+    v3With(gateWith({ final: false, provisional: false })),
     /before its approval is recorded/u,
   );
-  assert.throws(
-    () => validateFichaPrintSwitch({ gate: null, printTemplate: TEMPLATE_V3 }),
-    /before its approval is recorded/u,
+  assert.throws(v3With(null), /before its approval is recorded/u);
+  assert.doesNotThrow(v3With(gateWith({ final: false, provisional: true })));
+  assert.doesNotThrow(v3With(gateWith({ final: true, provisional: false })));
+  assert.doesNotThrow(() =>
+    validateFichaPrintSwitch({
+      gate: gateWith({ final: false, provisional: false }),
+      printTemplate: TEMPLATE_V2,
+    }),
   );
   assert.throws(
     () =>
@@ -164,12 +187,6 @@ test('the switch refuses v3 without a recorded approval and accepts it after (PI
         printTemplate: 'ficha-legacy-v1',
       }),
     /known ficha template/u,
-  );
-  const approved = structuredClone(v3Gate);
-  approved.approval.status = 'approved';
-  approved.approval.approved = true;
-  assert.doesNotThrow(() =>
-    validateFichaPrintSwitch({ gate: approved, printTemplate: TEMPLATE_V3 }),
   );
 });
 

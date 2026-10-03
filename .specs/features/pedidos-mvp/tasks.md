@@ -1203,7 +1203,30 @@ pendente. T66 é da ADR 016; a task dos acentos, feita antes da T67, é a T69.
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): sign the ficha v3 on paper by Rose and Operação`
 
-### Validação T62–T65 e T67–T69
+### Aprovação em duas etapas e troca para a v3 (03/10/2026)
+
+O PO aprovou a v3 para desenvolvimento e cloud-dev ("Essa assinatura será
+apenas em produção; por enquanto, aprovada."); a assinatura física de Rose e
+Operação passa a ser exigida só antes da produção. A ADR 016 já está no
+`master`, então pedidos reais gravam cor, estampa e gola. T70–T72 são de outro
+branch.
+
+### T73: Aprovação provisória do PO e aprovação final antes da produção
+
+- **What:** O registro da v3 ganha a aprovação provisória do PO (papel PO, Rômulo Sutil, 03/10/2026, escopo desenvolvimento/cloud-dev), que trava os hashes da amostra, do HTML e do PDF; a aprovação final (assinatura física de Rose e Operação) continua pendente, com `requiredBefore: production`. O ponto de troca aceita a v3 com a provisória ou a final; a validação mostra a final pendente; gerar o PDF de novo é recusado com qualquer etapa aprovada. Gate de go-live na seção 12 do `EASYPANEL-TOPOLOGY.md`.
+- **Where:** `scripts/ficha-pdf-review.mjs`, `docs/phase0/ficha-pdf-approval-v3.json`, `test/ficha-{pdf-review-v3,print-switch}.test.js`, `EASYPANEL-TOPOLOGY.md`, ADR 017, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `.specs/features/pedidos-mvp/{spec,context,tasks}.md`
+- **Depends on:** T68
+- **Requirement:** PIM-10
+
+**Done when:**
+
+- [x] Provisória registrada e presa aos hashes; final pendente e visível na validação
+- [x] Gate de go-live da assinatura física no checklist de produção
+- [ ] Rose e Operação assinam a amostra impressa antes da produção (fora desta task)
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): approve the ficha v3 for development, sign it before production`
+
+### Validação T62–T65, T67–T69 e T73–T74
 
 | Task | Escopo                  | Camada            | Testes | Depends on | Status |
 | ---- | ----------------------- | ----------------- | ------ | ---------- | ------ |
@@ -1214,6 +1237,7 @@ pendente. T66 é da ADR 016; a task dos acentos, feita antes da T67, é a T69.
 | T69  | rótulos do template     | template impresso | unit   | T65        | ✅     |
 | T67  | páginas do template     | template impresso | unit   | T69        | ✅     |
 | T68  | registro de aprovação   | gate de revisão   | unit   | T67        | ✅     |
+| T73  | aprovação em duas etapas | gate de revisão  | unit   | T68        | ✅     |
 
 ---
 

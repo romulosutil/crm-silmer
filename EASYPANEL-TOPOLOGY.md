@@ -544,6 +544,10 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Instagram oficial e migração de canal aprovados na fase `CANAL-2`.
 - [ ] Persistência de execução/manual do n8n desabilitada ou expurgada em até 30 dias, sem PII.
 - [ ] Falha de Ficha aparece na reconciliação e retry não duplica envio.
+- [ ] Ficha impressa v3 com aprovação final: assinatura física de Rose e
+      Operação na amostra impressa registrada em
+      `docs/phase0/ficha-pdf-approval-v3.json` (ADR 017). A aprovação provisória
+      do PO vale só para desenvolvimento e cloud-dev.
 - [ ] Monitor externo detecta parada da VPS.
 - [ ] Responsável de Privacidade aprova storage, IA e observabilidade.
 

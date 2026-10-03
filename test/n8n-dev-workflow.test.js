@@ -99,7 +99,7 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   );
   assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
   assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
-  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-10');
+  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-11');
   const result = nodes.find(
     (node) => node.name === 'DEV - Resultado da resposta da IA',
   );
@@ -108,7 +108,7 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   assert.match(result.parameters.jsCode, /missing_briefing_fields/u);
 });
 
-test('offers an authenticated manual chat that starts a fresh synthetic CRM conversation on reload', async () => {
+test('manual chat makes CRM session continuity explicit across reloads', async () => {
   const dev = await workflow();
   const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
   const chat = nodes.find(
@@ -126,6 +126,16 @@ test('offers an authenticated manual chat that starts a fresh synthetic CRM conv
   assert.equal(chat.parameters.requireExecuteAccess, true);
   assert.equal(chat.parameters.options.loadPreviousSession, 'notSupported');
   assert.equal(chat.parameters.options.responseMode, 'lastNode');
+  assert.match(
+    chat.parameters.initialMessages,
+    /mesma conversa continua no CRM/u,
+  );
+  assert.match(chat.parameters.options.subtitle, /conversa continua no CRM/u);
+  assert.equal(chat.parameters.options.getStarted, 'Continuar sessão de teste');
+  assert.doesNotMatch(
+    chat.parameters.initialMessages,
+    /recarregar.*nova conversa/u,
+  );
   assert.deepEqual(dev.connections[chat.name].main[0][0], {
     node: 'DEV - Montar evento WhatsApp sintético (MVP)',
     type: 'main',

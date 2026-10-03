@@ -65,6 +65,7 @@ const QUEUE_FILTERS = Object.freeze([
 ]);
 
 const liveEvent = inject('liveEvent', ref(null));
+const liveConnection = inject('liveConnection', ref('indisponível'));
 const sessionUser = inject(
   'sessionUser',
   computed(() => ({})),
@@ -85,6 +86,7 @@ const loading = ref(true);
 const detailLoading = ref(false);
 const busy = ref(false);
 const error = ref('');
+const listError = ref('');
 const actionMessage = ref('');
 const conversations = ref([]);
 const totalCount = ref(0);
@@ -125,6 +127,16 @@ const filtered = computed(() => {
 const visibleConversationLabel = computed(() => {
   const count = filtered.value.length;
   return `${count} ${count === 1 ? 'conversa' : 'conversas'}`;
+});
+const liveStatusMessage = computed(() => {
+  if (liveConnection.value === 'conectado') return '';
+  if (liveConnection.value === 'reconectando') {
+    return 'Reconectando atualização automática. Use o botão Atualizar para consultar o estado atual.';
+  }
+  if (liveConnection.value === 'conectando') {
+    return 'Conectando atualização automática. Use o botão Atualizar para consultar o estado atual.';
+  }
+  return 'Atualização automática indisponível. Use o botão Atualizar para consultar o estado atual.';
 });
 const active = computed(() => detail.value?.conversation ?? null);
 const isTerminal = computed(() =>
@@ -355,23 +367,29 @@ function describeError(cause) {
 /** @param {boolean} [silent] */
 async function loadInbox(silent = false) {
   listController?.abort();
-  listController = new AbortController();
+  const controller = new AbortController();
+  listController = controller;
   if (!silent) loading.value = true;
   try {
     const response = await request(listUrl(), {
-      signal: listController.signal,
+      signal: controller.signal,
     });
+    if (controller !== listController) return;
     conversations.value = response.data.items;
     totalCount.value = response.data.totalCount;
     now.value = new Date();
-    if (!silent) error.value = '';
+    listError.value = '';
     await selectVisibleConversation();
   } catch (cause) {
-    if (/** @type {any} */ (cause)?.name !== 'AbortError') {
-      error.value = 'Não foi possível carregar a Caixa de Entrada.';
+    if (
+      controller === listController &&
+      /** @type {any} */ (cause)?.name !== 'AbortError'
+    ) {
+      listError.value =
+        'Não foi possível atualizar a Caixa de Entrada. Os resultados exibidos podem estar desatualizados.';
     }
   } finally {
-    loading.value = false;
+    if (controller === listController) loading.value = false;
   }
 }
 
@@ -612,6 +630,11 @@ watch([presenceFilter, queueFilter], () => void refreshInbox());
 watch(liveEvent, (event) => {
   if (event) scheduleLiveRefresh();
 });
+watch(liveConnection, (state, previous) => {
+  if (state === 'conectado' && previous !== 'conectado') {
+    void refreshInbox(true);
+  }
+});
 onMounted(() => {
   heading.value?.focus();
   void refreshInbox();
@@ -631,21 +654,22 @@ onBeforeUnmount(() => {
         <p class="eyebrow">Atendimentos</p>
         <h1 ref="heading" tabindex="-1">Caixa de Entrada</h1>
         <p>
-          Acompanhe as conversas recebidas pelos canais de atendimento,
-          atualizadas em tempo real.
+          Acompanhe as conversas recebidas pelos canais de atendimento, com
+          atualização automática quando a conexão estiver ativa.
         </p>
       </div>
     </header>
 
     <div class="filter-bar inbox-filter-bar">
       <div class="search-control">
-        <label for="inbox-search">Buscar contato ou mensagem</label>
+        <label for="inbox-search">Buscar nas conversas exibidas</label>
         <div class="search-field">
           <input
             id="inbox-search"
             ref="searchInput"
             v-model="query"
             type="search"
+            aria-describedby="inbox-search-help"
           />
           <button
             v-if="query"
@@ -656,6 +680,10 @@ onBeforeUnmount(() => {
             Limpar
           </button>
         </div>
+        <p id="inbox-search-help" class="muted">
+          Busca em até 100 conversas carregadas: contato, telefone ou última
+          mensagem.
+        </p>
       </div>
       <fieldset class="inbox-queue-switcher">
         <legend>Fila de conversas</legend>
@@ -673,6 +701,14 @@ onBeforeUnmount(() => {
         </div>
       </fieldset>
       <div class="inbox-toolbar-actions">
+        <button
+          type="button"
+          aria-label="Atualizar conversas"
+          :disabled="loading"
+          @click="refreshInbox()"
+        >
+          Atualizar
+        </button>
         <details ref="presenceFilterMenu" class="inbox-state-menu">
           <summary
             :aria-label="`Filtrar por estado: ${selectedPresence.label}`"
@@ -721,6 +757,10 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <p v-if="liveStatusMessage" role="status" class="audit-note">
+      {{ liveStatusMessage }}
+    </p>
+    <p v-if="listError" role="alert" class="audit-note">{{ listError }}</p>
     <p v-if="error" role="alert" class="audit-note">{{ error }}</p>
     <p v-if="actionMessage" role="status" class="audit-note">
       {{ actionMessage }}

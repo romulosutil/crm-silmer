@@ -4,7 +4,7 @@ import { format } from 'prettier';
 
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
-export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-10';
+export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-11';
 export const LOCAL_WORKFLOW_NAME =
   'LOCAL | Silmer | Fluxo completo sem WhatsApp';
 
@@ -100,14 +100,15 @@ export function createDevTestWorkflow(source, options = {}) {
       authentication: 'n8nUserAuth',
       requireExecuteAccess: true,
       initialMessages:
-        'Conversa de teste do fluxo Silmer. As mensagens percorrem o CRM e a IA reais; o envio por WhatsApp é apenas simulado.',
+        'Teste Silmer: as mensagens passam pelo CRM e pela IA reais; o WhatsApp é simulado. Ao recarregar, o histórico pode sumir da tela, mas a mesma conversa continua no CRM. Para uma conversa independente, use outra sessão do navegador.',
       options: {
         loadPreviousSession: 'notSupported',
         responseMode: 'lastNode',
         showWelcomeScreen: true,
         title: 'Teste manual | Silmer',
         subtitle:
-          'Sessão temporária: recarregue a página para iniciar outra conversa.',
+          'Recarregar pode ocultar o histórico; a conversa continua no CRM.',
+        getStarted: 'Continuar sessão de teste',
         inputPlaceholder: 'Escreva como se fosse um cliente...',
       },
     },
@@ -282,7 +283,7 @@ return { json: { ok: true, route: 'no_action', whatsapp_simulated: true, convers
           'Mantém a lógica do workflow principal e substitui apenas o transporte WhatsApp.\n\n' +
           `- Entrada: webhook \`${local ? 'silmer/local-mvp-flow' : 'silmer/dev-mvp-flow'}\`.\n` +
           '- Entrada alternativa: Chat Trigger hospedado e restrito ao usuário autenticado do n8n.\n' +
-          '- Chat: usa uma identidade sintética por sessão; recarregar a página inicia uma conversa de teste nova.\n' +
+          '- Chat: usa uma identidade sintética por sessionId. Recarregar pode ocultar o histórico visual sem trocar o sessionId; use outra sessão do navegador para isolar uma nova conversa.\n' +
           '- CRM real: inbound, briefing, handoff, reserva e callbacks.\n' +
           '- IA real: mesma decisão estruturada do MVP.\n' +
           '- Pré-ficha: cada mensagem atualiza os campos confirmados e a IA pergunta pelo próximo dado pendente.\n' +

@@ -184,3 +184,58 @@ test('an order event never forwards more than its identifiers', async () => {
     orderId: 'order-2',
   });
 });
+
+test('an event backlog over 100 advances the reset cursor and then resumes', async () => {
+  /** @type {Array<{sql:string,values:any[]}>} */
+  const queries = [];
+  let nextEvent = 1;
+  const service = createOperationReadService({
+    contactRepository: {},
+    cursorKey: Buffer.alloc(32, 1),
+    database: {
+      /** @param {string} sql @param {any[]} values */
+      async query(sql, values) {
+        queries.push({ sql, values });
+        if (sql.includes('max(stream_cursor)')) {
+          return { rows: [{ cursor: '120' }] };
+        }
+        if (values[0] === 0) {
+          return {
+            rows: Array.from({ length: 101 }, (_, index) => ({
+              aggregate_id: `conversation-${index}`,
+              aggregate_type: 'conversation',
+              payload: {},
+              stream_cursor: String(index + 1),
+            })),
+          };
+        }
+        return {
+          rows: [
+            {
+              aggregate_id: `conversation-next-${nextEvent++}`,
+              aggregate_type: 'conversation',
+              payload: {},
+              stream_cursor: '121',
+            },
+          ],
+        };
+      },
+    },
+    handoffRepository: {},
+    inboxRepository: {},
+  });
+
+  const reset = await service.readLiveEvents({ after: 0 });
+  assert.deepEqual(reset, { cursor: 120, events: [], reset: true });
+  assert.match(queries[1].sql, /max\(stream_cursor\)/u);
+  assert.deepEqual(queries[1].values, [0]);
+
+  const resumed = await service.readLiveEvents({ after: reset.cursor });
+  assert.equal(resumed.reset, false);
+  assert.equal(resumed.cursor, 121);
+  assert.deepEqual(resumed.events[0], {
+    cursor: 121,
+    payload: { conversationId: 'conversation-next-1' },
+    type: 'inbox.conversation.changed',
+  });
+});

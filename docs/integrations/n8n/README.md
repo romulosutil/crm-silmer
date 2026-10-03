@@ -212,11 +212,13 @@ campos da ficha no pedido `pendente` da conversa:
   `delivery_status`; o cenário só muda o envelope sintético, nunca grava dados
   diretamente no PostgreSQL. Além do webhook, há um **Chat Trigger** hospedado,
   restrito ao usuário autenticado do n8n. Ele atravessa o mesmo caminho CRM → IA
-  → handoff/reserva → callback simulado e mostra a resposta no chat. Cada página
-  de chat cria uma identidade WhatsApp sintética; o n8n não recarrega a sessão
-  anterior, portanto atualizar a página inicia uma nova conversa de teste. Isso
-  preserva o histórico oficial durante a conversa aberta, sem misturá-lo com uma
-  nova sessão manual. O resultado do webhook DEV devolve `route` (`ai_reply`,
+  → handoff/reserva → callback simulado e mostra a resposta no chat. A identidade
+  WhatsApp sintética deriva do `sessionId` do Chat Trigger. Recarregar pode
+  limpar o histórico visível sem trocar esse identificador: nesse caso, o CRM
+  continua a conversa anterior. Para isolar um novo teste, use outra sessão do
+  navegador ou o webhook DEV com um `wa_id` sintético inédito; não interprete
+  uma janela vazia como conversa nova. O resultado do webhook DEV devolve
+  `route` (`ai_reply`,
   `handoff` ou `no_action`), `trigger`, `handoff_reason`, `turn` e o
   `briefing_patch` da rodada, para testes automatizados de conversa.
 - Baseline preservada: `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.

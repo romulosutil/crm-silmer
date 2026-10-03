@@ -181,7 +181,21 @@ export function createOperationReadService({
         [after],
       );
       if (result.rows.length > 100) {
-        return Object.freeze({ cursor: after, events: [], reset: true });
+        // A fresh SSE connection can be further than one batch behind. Jump to
+        // the latest committed event and tell the UI to reload its authorized
+        // read model. Keeping `after` here traps the dispatcher in a reset loop.
+        const latest = await database.query(
+          `SELECT max(stream_cursor) cursor
+           FROM crm.domain_events
+           WHERE stream_cursor > $1
+             AND aggregate_type IN ('contact', 'conversation', 'order')`,
+          [after],
+        );
+        return Object.freeze({
+          cursor: Number(latest.rows[0].cursor),
+          events: [],
+          reset: true,
+        });
       }
       const events = result.rows.map((/** @type {any} */ row) =>
         Object.freeze({

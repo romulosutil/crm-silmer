@@ -48,6 +48,10 @@ export function registerOperationRoutes(api, operations, contextFor) {
       }
       const headerCursor = request.headers['last-event-id'];
       const after = headerCursor ?? query.after ?? 0;
+      const afterCursor = Number(after);
+      if (!Number.isSafeInteger(afterCursor) || afterCursor < 0) {
+        return reply.code(400).send({ error: { code: 'INVALID_CURSOR' } });
+      }
       reply.hijack();
       reply.raw.writeHead(200, {
         'cache-control': 'private, no-cache',
@@ -60,12 +64,16 @@ export function registerOperationRoutes(api, operations, contextFor) {
       let closed = false;
       /** @param {{cursor: number, payload: object, type: string}} event */
       const write = (event) => {
-        if (closed || Number(event.cursor) <= Number(after)) return;
+        if (
+          closed ||
+          (event.type !== 'stream.reset' && Number(event.cursor) <= afterCursor)
+        )
+          return;
         reply.raw.write(
           `id: ${event.cursor}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`,
         );
       };
-      const unsubscribe = dispatcher.subscribe(write);
+      const unsubscribe = dispatcher.subscribe(write, afterCursor);
       const heartbeat = globalThis.setInterval(() => {
         if (!closed) reply.raw.write(': heartbeat\n\n');
       }, 15_000);

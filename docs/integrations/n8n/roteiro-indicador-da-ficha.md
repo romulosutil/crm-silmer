@@ -11,8 +11,10 @@ conta.
 
 ## Como rodar
 
-- Use o workflow DEV `dev-mvp-simple-10` ou mais novo. Cada roteiro é uma
-  conversa nova: no chat manual do DEV, recarregue a página antes de começar.
+- Use o workflow DEV `dev-mvp-simple-11` ou mais novo. Cada roteiro precisa de
+  uma conversa independente: abra outra sessão isolada do navegador no chat
+  manual ou use o webhook DEV com um `wa_id` sintético inédito. Recarregar a
+  página não garante um novo `sessionId` e pode continuar a conversa no CRM.
 - Mande as mensagens na ordem, uma por vez, e espere a resposta. Se o bot
   perguntar outra coisa, responda com o fato do roteiro que couber.
 - Depois da transferência, mande a última mensagem do roteiro: o bot deve ficar

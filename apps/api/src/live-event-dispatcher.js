@@ -15,9 +15,18 @@ export class LiveEventDispatcher {
     this.polling = false;
   }
 
-  /** @param {(event: any) => void} listener */
-  subscribe(listener) {
+  /** @param {(event: any) => void} listener @param {number} [after] */
+  subscribe(listener, after = 0) {
     this.listeners.add(listener);
+    // Another operator may have kept this shared dispatcher ahead while this
+    // reader was disconnected. Force a fresh authorized read on reconnection.
+    if (after < this.cursor) {
+      listener({
+        cursor: this.cursor,
+        payload: { cursor: this.cursor },
+        type: 'stream.reset',
+      });
+    }
     if (!this.timer) {
       void this.poll();
       this.timer = globalThis.setInterval(

@@ -33,7 +33,7 @@ function pendingOrder(overrides = {}) {
       summary: {
         aplicacao: 'SUBLIMACAO TOTAL',
         cliente: 'Cliente Demonstracao',
-        data_entrega_confirmada: '30/09/2026',
+        data_entrega_confirmada: '2026-09-30',
         nome: 'Equipe Horizonte',
       },
     },
@@ -164,12 +164,13 @@ test('generating needs an item, the seven points of every item, amount and payme
     ],
   });
 
-  // Nothing else blocks: the summary and the additional item fields.
-  const sparse = pendingOrder();
+  // Nothing else blocks: the rest of the summary, the additional item
+  // fields, and the paid and delivered days (generating means paid).
+  const sparse = pendingOrder({ deliveredOn: null, paidOn: null });
   sparse.ficha.summary = {
     aplicacao: null,
     cliente: '',
-    data_entrega_confirmada: null,
+    data_entrega_confirmada: '2026-09-30',
     nome: null,
   };
   for (const key of [
@@ -184,6 +185,45 @@ test('generating needs an item, the seven points of every item, amount and payme
     sparse.ficha.items[0][key] = '';
   }
   assert.equal(confirmOrder(sparse, confirmation).status, 'confirmado');
+});
+
+test('generating needs a promised delivery written as a real day; the other trail days never block (ADR 016)', () => {
+  for (const day of [
+    null,
+    '',
+    '30/09/2026',
+    '2026-02-30',
+    '2026-9-30',
+    'outubro',
+  ]) {
+    const order = pendingOrder();
+    order.ficha.summary.data_entrega_confirmada = day;
+    assert.throws(
+      () => confirmOrder(order, confirmation),
+      {
+        code: 'ORDER_NOT_CONFIRMABLE',
+        fields: ['summary.data_entrega_confirmada'],
+      },
+      String(day),
+    );
+  }
+  // Until the CRM handles payments, generating means the order is paid; the
+  // delivered day is the after-sale's. Neither blocks, empty or filled.
+  for (const days of [
+    { deliveredOn: null, paidOn: null },
+    { deliveredOn: '2026-09-11', paidOn: '2026-09-10' },
+  ]) {
+    const order = pendingOrder(days);
+    assert.deepEqual(missingForConfirmation(order), [
+      'finalAmount',
+      'paymentCondition',
+    ]);
+    assert.equal(confirmOrder(order, confirmation).status, 'confirmado');
+  }
+  // A promised day in the past still is a day: the seller decides.
+  const late = pendingOrder();
+  late.ficha.summary.data_entrega_confirmada = '2020-01-01';
+  assert.equal(confirmOrder(late, confirmation).status, 'confirmado');
 });
 
 test('reopening keeps number, amount and condition and records who reopened', () => {
@@ -348,6 +388,7 @@ test('lists what is missing to generate: the points of each item, then amount an
     'items[0].malhas',
     'items[1].grade',
     'items[1].gola',
+    'summary.data_entrega_confirmada',
     'finalAmount',
     'paymentCondition',
   ]);

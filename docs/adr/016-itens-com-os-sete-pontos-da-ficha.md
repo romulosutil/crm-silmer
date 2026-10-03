@@ -5,17 +5,21 @@ Status: aceito
 Data: 02/10/2026
 
 Decisores: PO (Rômulo Sutil Corrêa), em 02/10/2026, depois do diagnóstico dos
-pedidos do cloud-dev. A leitura dos tamanhos, a regra do nome do cliente, a
-compatibilidade das fichas gravadas e as chaves de `missingFields` são do Tech
-Lead.
+pedidos do cloud-dev; a entrega prometida exigida para gerar e o pagamento
+subentendido (item 10) foram decididos pelo PO em 02 e 03/10/2026. A leitura
+dos tamanhos, a regra do nome do cliente, a compatibilidade das fichas
+gravadas e as chaves de `missingFields` são do Tech Lead.
 
-Requisitos: `PFI-01..14`, `PCL-04`, `PCL-05` e os novos `PIT-01..11` da
+Requisitos: `PFI-01..14`, `PCL-04`, `PCL-05`, `PLA-06` e os novos
+`PIT-01..12` da
 [especificação Pedidos MVP](../../.specs/features/pedidos-mvp/spec.md);
-tarefas T56–T61 em [tasks](../../.specs/features/pedidos-mvp/tasks.md).
+tarefas T56–T61 e T66 em [tasks](../../.specs/features/pedidos-mvp/tasks.md).
 Substitui a regra A01 do
-[contexto](../../.specs/features/pedidos-mvp/context.md) e, na
+[contexto](../../.specs/features/pedidos-mvp/context.md); na
 [ADR 012](012-ficha-de-sete-pontos-e-ritmo-fixo.md), só o trecho do item 3
-(D26) que põe a gola no texto do modelo. A ficha impressa com os mesmos pontos
+(D26) que põe a gola no texto do modelo; e, na
+[ADR 008](008-lastro-de-datas-do-pedido.md), só a regra de que nenhuma data do
+lastro bloqueia a confirmação, quanto à entrega prometida. A ficha impressa com os mesmos pontos
 é a [ADR 017](017-ficha-impressa-com-os-sete-pontos.md), que usa a forma do
 item desta decisão.
 
@@ -61,18 +65,20 @@ condição: um pedido sem cor, sem estampa ou sem gola podia ir para a fábrica.
 2. **Gerar pedido.** Para gerar (confirmar) o pedido, é preciso ao menos um
    item e, em todo item, os sete principais: tipo, cor, estampa, ao menos um
    tecido não vazio, ao menos uma linha de tamanho (logo, quantidade maior que
-   zero) e gola; além do valor final e da forma de pagamento. Nada mais
-   bloqueia nem aparece como faltando: os adicionais nunca, e o resumo
-   (cliente, evento/nome, tipo de serviço, entrega prometida) deixa de ser
-   listado como "em branco", embora continue editável.
+   zero) e gola; a entrega prometida (item 10); o valor final e a forma de
+   pagamento. Nada mais bloqueia nem aparece como faltando: os adicionais
+   nunca, e o resto do resumo (cliente, evento/nome, tipo de serviço) deixa de
+   ser listado como "em branco", embora continue editável.
    - `missingFields`, nesta ordem: `items` (nenhum item);
      `items[N].tipo`, `items[N].cor`, `items[N].estampa`, `items[N].malhas`,
      `items[N].grade` e `items[N].gola` (N a partir de 0; a grade vale também
-     pela quantidade, que não tem chave própria); `finalAmount`;
-     `paymentCondition`. Os mesmos nomes voltam em `fields` do 422
-     `ORDER_NOT_CONFIRMABLE`.
+     pela quantidade, que não tem chave própria);
+     `summary.data_entrega_confirmada`; `finalAmount`; `paymentCondition`. Os
+     mesmos nomes voltam em `fields` do 422 `ORDER_NOT_CONFIRMABLE`.
    - "Falta para gerar: …" diz cada ponto em palavras simples: "cor do item
-     1", "tamanhos do item 2", "valor final", "forma de pagamento".
+     1", "tamanhos do item 2", "entrega prometida", "valor final", "forma de
+     pagamento". O que se preenche em outra seção diz onde: a entrega
+     prometida tem "Informar no Resumo", que abre o resumo nesse campo.
 
 3. **Salvar itens.** A seção Itens aceita item incompleto, porque o bot abre o
    pedido com o que tem
@@ -157,10 +163,36 @@ condição: um pedido sem cor, sem estampa ou sem gola podia ir para a fábrica.
    as três chaves novas e grava as três vazias; a versão seguinte passa a
    exigi-las, como as demais.
 
+10. **Lastro para gerar (PO, 02 e 03/10/2026).** Do lastro da ADR 008, a
+    entrega prometida (`summary.data_entrega_confirmada`, editada no Resumo)
+    passa a ser exigida para gerar, e só vale um dia de calendário gravado
+    como o seletor de data grava (`AAAA-MM-DD`); texto livre antigo, como
+    "30/09/2026", continua bloqueando até o vendedor escolher o dia. As outras
+    datas não bloqueiam:
+    - **Pagamento** (`paidOn`): o CRM ainda não trata pagamento, e, por
+      enquanto, gerar o pedido subentende que o pagamento está feito. "Pago
+      em" continua opcional, digitado por uma pessoa e sem mudar o status,
+      como na ADR 008, e não é preenchido sozinho. Quando o CRM ganhar
+      pagamento, esta regra deve ser revista.
+    - **Entrega realizada** (`deliveredOn`): é conciliação do pós-venda.
+    - **Primeiro contato** é copiado da conversa na criação (a coluna da
+      conversa é obrigatória, e a migração 0024 preencheu os pedidos
+      anteriores) e **Pedido fechado** é a data gravada ao gerar: nenhum dos
+      dois é algo que o vendedor possa resolver, e nenhum bloqueia. O único
+      primeiro contato vazio possível é o de um pedido criado pela versão
+      anterior da API durante a troca de versão da 0024; ele continua sem
+      bloquear.
+
 ## Consequências
 
 - A regra A01 do contexto está substituída: além de valor e forma de
-  pagamento, todo item precisa dos sete principais. Um pedido pendente que
+  pagamento, todo item precisa dos sete principais, e o pedido precisa da
+  entrega prometida.
+- Na ADR 008, o trecho "Nenhuma data do lastro muda o status, bloqueia a
+  confirmação, entra no que falta" (e PLA-06) vale para todas as datas menos a
+  entrega prometida, que agora bloqueia e entra no que falta. As demais regras
+  da ADR 008 (quem informa, dia válido, "Pago em" até hoje, edição sem
+  reabrir) não mudam. Um pedido pendente que
   hoje mostra "Pronto para confirmar" pode passar a mostrar o que falta.
 - Na ADR 012, o item 3 (D26) continua valendo para o `briefing_patch`; só a
   parte em que a gola entra no texto do modelo é substituída: a gola é campo

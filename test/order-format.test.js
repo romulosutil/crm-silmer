@@ -11,6 +11,7 @@ import {
   handoffReasonLabel,
   informedQuantity,
   isItemGap,
+  isPageGap,
   itemHeading,
   itemPieces,
   itemQuantityLabel,
@@ -345,5 +346,32 @@ test('lays the order trail out from first contact to delivery (PLA-01..03)', () 
       ['—', 'não combinada'],
       ['—', 'a informar'],
     ],
+  );
+  // ADR 016: a pending order needs the promised delivery to be generated.
+  assert.equal(
+    orderMilestones({ ficha: { summary: {} }, status: 'pendente' }).find(
+      (step) => step.key === 'promised',
+    )?.note,
+    'exigida para gerar',
+  );
+});
+
+test('names the promised delivery and tells it apart from the amount and payment method', () => {
+  assert.deepEqual(
+    missingFieldLabels([
+      'items[0].cor',
+      'summary.data_entrega_confirmada',
+      'finalAmount',
+      'paymentCondition',
+    ]),
+    ['cor do item 1', 'entrega prometida', 'valor final', 'forma de pagamento'],
+  );
+  assert.equal(isPageGap('summary.data_entrega_confirmada'), true);
+  assert.equal(isPageGap('items[0].cor'), true);
+  assert.equal(isPageGap('finalAmount'), false);
+  assert.equal(isPageGap('paymentCondition'), false);
+  assert.equal(
+    missingHeadline(['summary.data_entrega_confirmada']),
+    'Falta entrega prometida',
   );
 });

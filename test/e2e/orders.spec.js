@@ -206,8 +206,8 @@ function brlToCents(text) {
   return Number(reais.replaceAll('.', '')) * 100 + Number(cents.padEnd(2, '0'));
 }
 
-// ADR 016: the seven points of every item, the amount and the payment
-// method — the same rule and order the server applies.
+// ADR 016: the seven points of every item, the promised delivery, the
+// amount and the payment method — the same rule and order the server applies.
 const ITEM_POINTS = ['tipo', 'cor', 'estampa', 'malhas', 'grade', 'gola'];
 
 /** @param {any} order */
@@ -227,6 +227,13 @@ function missingFor(order) {
       }
     },
   );
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/u.test(
+      order.ficha.summary.data_entrega_confirmada ?? '',
+    )
+  ) {
+    missing.push('summary.data_entrega_confirmada');
+  }
   if (!order.finalAmountCents) missing.push('finalAmount');
   if (!order.paymentCondition) missing.push('paymentCondition');
   return missing;
@@ -637,7 +644,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05,
     ficha: {
       ...pendingOrder.ficha,
       items: [{ ...pendingOrder.ficha.items[0], cor: '', gola: '' }],
-      // ADR 016: the summary never blocks, even blank.
+      // ADR 016: of the summary, only the promised delivery blocks.
       summary: {
         aplicacao: null,
         cliente: 'Colégio Ápice',
@@ -648,6 +655,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05,
     missingFields: [
       'items[0].cor',
       'items[0].gola',
+      'summary.data_entrega_confirmada',
       'finalAmount',
       'paymentCondition',
     ],
@@ -656,22 +664,25 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05,
   await page.goto('/pedidos/order-pendente');
 
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
-  const readiness = closing.getByRole('status').filter({ hasText: 'Falta' });
+  const readiness = closing.locator('#closing-readiness');
   await expect(readiness).toHaveText(
-    'Falta para gerar: cor do item 1, gola do item 1, valor final e forma de pagamento.',
+    'Falta para gerar: cor do item 1, gola do item 1, entrega prometida, valor final e forma de pagamento.',
   );
   await expect(page.getByText('Ainda em branco na ficha')).toHaveCount(0);
 
   await closing.getByLabel('Valor final').fill('4.820,00');
   await closing.getByLabel('Pix').check();
   await expect(readiness).toHaveText(
-    'Falta para gerar: cor do item 1 e gola do item 1.',
+    'Falta para gerar: cor do item 1, gola do item 1 e entrega prometida.',
   );
-  // The items are not complete, so the order is not sent to be generated.
+  // What is filled elsewhere keeps the order from being sent to be generated.
   await closing.getByRole('button', { name: 'Gerar pedido' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(closing.getByRole('alert')).toHaveText(
+  await expect(closing).toContainText(
     'Complete os itens antes de gerar: cor do item 1 e gola do item 1.',
+  );
+  await expect(closing).toContainText(
+    'Informe a entrega prometida no Resumo do pedido.',
   );
 
   const items = page.getByRole('region', { name: 'Itens e especificações' });
@@ -679,8 +690,28 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05,
   await items.getByLabel('Cor', { exact: true }).fill('BRANCA');
   await items.getByLabel('Gola', { exact: true }).fill('GOLA V');
   await items.getByRole('button', { name: 'Salvar itens' }).click();
+  await expect(readiness).toHaveText('Falta para gerar: entrega prometida.');
+
+  // The checklist sends the seller to the summary, on the promised delivery.
+  await closing
+    .getByRole('button', { name: 'Informar no Resumo (entrega prometida)' })
+    .click();
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const delivery = summary.getByLabel('Entrega prometida');
+  await expect(delivery).toBeFocused();
+  await delivery.fill('2026-10-24');
+  await summary.getByRole('button', { name: 'Salvar resumo' }).click();
+  await expect(readiness).toHaveText(
+    'Tudo pronto. Gerar confirma o pedido e libera a ficha.',
+  );
+  // The paid day stays empty: generating means paid until the CRM handles
+  // payments.
   await expect(
-    closing.getByText('Tudo pronto. Gerar confirma o pedido e libera a ficha.'),
+    page.getByRole('region', { name: 'Lastro do pedido' }),
+  ).toContainText('Pagamento');
+  await closing.getByRole('button', { name: 'Gerar pedido' }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' }),
   ).toBeVisible();
 });
 

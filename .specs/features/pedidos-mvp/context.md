@@ -139,8 +139,10 @@ Pedidos substitui o que seria o Kanban.
   [ADR 016](../../../docs/adr/016-itens-com-os-sete-pontos-da-ficha.md):**
   gerar exige ao menos um item, os sete pontos principais de cada item (tipo,
   cor, estampa, tecido, tamanhos e gola; a quantidade é a soma dos tamanhos),
-  o valor final e a forma de pagamento. O resumo e os adicionais do item
-  continuam sem bloquear e deixam de ser listados como em branco.
+  a entrega prometida, o valor final e a forma de pagamento. O resto do resumo
+  e os adicionais do item continuam sem bloquear e deixam de ser listados como
+  em branco. Até o CRM tratar pagamento, gerar subentende o pagamento feito:
+  "Pago em" não bloqueia.
 - **A02** "Tempo parado": no inbox, desde a criação do handoff pendente; na
   lista de Pedidos, desde a última alteração do pedido.
 - **A03** Rótulos de motivo a partir de `handoffs.reason_code`:

@@ -53,7 +53,7 @@ function draftFicha() {
     summary: {
       aplicacao: null,
       cliente: 'Cliente Sintetico',
-      data_entrega_confirmada: null,
+      data_entrega_confirmada: '2026-10-24',
       nome: 'Evento Sintetico',
     },
   };

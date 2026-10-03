@@ -315,7 +315,7 @@ interface Order {
   fabCode: string;
   ficha: Ficha;
   totalPieces: number;
-  missingFields: string[]; // ADR 016: items, items[N].<principal>, finalAmount, paymentCondition
+  missingFields: string[]; // ADR 016: items, items[N].<principal>, summary.data_entrega_confirmada, finalAmount, paymentCondition
   finalAmountCents: number | null;
   paymentCondition: PaymentCondition | null;
   orderDate: string | null;

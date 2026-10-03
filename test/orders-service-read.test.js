@@ -52,6 +52,10 @@ async function setup() {
         ...order,
         ficha: {
           ...order.ficha,
+          summary: {
+            ...order.ficha.summary,
+            data_entrega_confirmada: '2026-10-24',
+          },
           items: [
             {
               ...order.ficha.items[0],
@@ -245,6 +249,7 @@ test('reads an order saved before ADR 016 under the current rules', async () => 
     'items[0].estampa',
     'items[0].grade',
     'items[0].gola',
+    'summary.data_entrega_confirmada',
     'finalAmount',
     'paymentCondition',
   ];

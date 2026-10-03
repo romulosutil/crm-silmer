@@ -5,6 +5,7 @@ import {
   amountLabel,
   formatBrl,
   isItemGap,
+  isPageGap,
   joinPt,
   missingFieldLabels,
   parseBrl,
@@ -13,12 +14,15 @@ import {
 } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
 
-// PCL-05: what the amount and the payment method mean to the seller when the
-// server refuses them; the item points are named one by one (PIT-06).
+// PCL-05: what each blocker outside the items means to the seller when the
+// server refuses it; the item points are named one by one (PIT-06).
 const BLOCKER_MESSAGES = Object.freeze({
   finalAmount: 'Informe o valor final aprovado pelo cliente.',
   paymentCondition: 'Escolha a forma de pagamento.',
+  'summary.data_entrega_confirmada':
+    'Informe a entrega prometida no Resumo do pedido.',
 });
+const DELIVERY = 'summary.data_entrega_confirmada';
 const AMOUNT_FORMAT_MESSAGE = 'Use o formato 4.820,00.';
 
 const props = defineProps({
@@ -47,6 +51,10 @@ const amountValid = computed(() => parseBrl(amountText.value) !== null);
 const itemGaps = computed(() =>
   missingFieldLabels(missing.value.filter(isItemGap)),
 );
+const deliveryMissing = computed(() => missing.value.includes(DELIVERY));
+const deliveryDay = computed(() =>
+  dateBR(props.order.ficha?.summary?.data_entrega_confirmada),
+);
 const items = computed(() => props.order.ficha?.items ?? []);
 const itemsHeadline = computed(() => {
   const count = items.value.length;
@@ -71,6 +79,18 @@ const checks = computed(() => [
     ok: itemGaps.value.length === 0,
   },
   {
+    // ADR 016: filled in the summary; the row says where.
+    go: {
+      label: 'Informar no Resumo',
+      name: 'entrega prometida',
+      section: 'summary',
+    },
+    hint: deliveryMissing.value ? 'no Resumo do pedido' : deliveryDay.value,
+    key: 'delivery',
+    label: 'Entrega prometida',
+    ok: !deliveryMissing.value,
+  },
+  {
     hint: amountValid.value ? `R$ ${amountText.value.trim()}` : 'pendente',
     key: 'finalAmount',
     label: 'Valor final',
@@ -85,9 +105,10 @@ const checks = computed(() => [
     ok: paymentCondition.value !== '',
   },
 ]);
-// PIT-06: "Falta para gerar" names every point, item by item.
+// PIT-06: "Falta para gerar" names every point, item by item, then the
+// promised delivery, the amount and the payment method.
 const pendingLabels = computed(() => [
-  ...itemGaps.value,
+  ...missingFieldLabels(missing.value.filter(isPageGap)),
   ...(amountValid.value ? [] : ['valor final']),
   ...(paymentCondition.value === '' ? ['forma de pagamento'] : []),
 ]);
@@ -166,6 +187,26 @@ function itemsMessage(fields) {
 }
 
 /**
+ * One message per blocker: the item points together, the rest each on its
+ * own, next to the field when it has one.
+ *
+ * @param {string[]} fields
+ * @returns {Record<string, string>}
+ */
+function blockerErrors(fields) {
+  /** @type {Record<string, string>} */
+  const errors = {};
+  const gaps = fields.filter(isItemGap);
+  if (gaps.length > 0) errors.items = itemsMessage(gaps);
+  for (const field of fields.filter((name) => !isItemGap(name))) {
+    errors[field] =
+      BLOCKER_MESSAGES[/** @type {keyof typeof BLOCKER_MESSAGES} */ (field)] ??
+      field;
+  }
+  return errors;
+}
+
+/**
  * PFI-11: a malformed amount is caught here so the message lands under the
  * field; the server parses the same text again and would answer 422.
  */
@@ -181,10 +222,9 @@ async function requestGenerate() {
     fieldErrors.value = { paymentCondition: BLOCKER_MESSAGES.paymentCondition };
     return;
   }
-  if (itemGaps.value.length > 0) {
-    fieldErrors.value = {
-      items: itemsMessage(missing.value.filter(isItemGap)),
-    };
+  const pageGaps = missing.value.filter(isPageGap);
+  if (pageGaps.length > 0) {
+    fieldErrors.value = blockerErrors(pageGaps);
     return;
   }
   confirmOpen.value = true;
@@ -211,18 +251,7 @@ async function generate() {
     return;
   }
   if (result.code === 'ORDER_NOT_CONFIRMABLE') {
-    const fields = (result.fields ?? []).map(String);
-    /** @type {Record<string, string>} */
-    const errors = {};
-    const gaps = fields.filter(isItemGap);
-    if (gaps.length > 0) errors.items = itemsMessage(gaps);
-    for (const field of fields.filter((name) => !isItemGap(name))) {
-      errors[field] =
-        BLOCKER_MESSAGES[
-          /** @type {keyof typeof BLOCKER_MESSAGES} */ (field)
-        ] ?? field;
-    }
-    fieldErrors.value = errors;
+    fieldErrors.value = blockerErrors((result.fields ?? []).map(String));
     return;
   }
   if (result.code === 'INVALID_AMOUNT') {
@@ -288,7 +317,19 @@ const blockerNotes = computed(() =>
                   check.ok ? '— pronto' : '— pendente'
                 }}</span>
               </span>
-              <span class="op-check-hint op-num">{{ check.hint }}</span>
+              <button
+                v-if="!check.ok && check.go"
+                type="button"
+                class="op-check-go"
+                :disabled="sectionOpenElsewhere"
+                @click="editing.request(check.go.section)"
+              >
+                {{ check.go.label
+                }}<span class="op-visually-hidden">{{
+                  ` (${check.go.name})`
+                }}</span>
+              </button>
+              <span v-else class="op-check-hint op-num">{{ check.hint }}</span>
             </li>
           </ul>
         </div>

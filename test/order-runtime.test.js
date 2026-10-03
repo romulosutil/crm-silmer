@@ -89,9 +89,21 @@ test('the conversation owner creates, edits and confirms its order', async () =>
   const { audits, runtime } = harness();
   const created = await create(runtime, OWNER, 'conversation-1');
   assert.equal(created.created, true);
-  const edited = await runtime.patchSection(
+  const promised = await runtime.patchSection(
     command(OWNER, {
       expectedVersion: created.order.version,
+      orderId: created.order.id,
+      section: 'summary',
+      value: {
+        aplicacao: null,
+        data_entrega_confirmada: '2026-10-24',
+        nome: null,
+      },
+    }),
+  );
+  const edited = await runtime.patchSection(
+    command(OWNER, {
+      expectedVersion: promised.version,
       orderId: created.order.id,
       section: 'items',
       value: syntheticItems(),
@@ -127,6 +139,7 @@ test('the conversation owner creates, edits and confirms its order', async () =>
         'seller-1',
         { id: 'conversation-1', type: 'conversation' },
       ],
+      ['order.edit', 'seller-1', { id: created.order.id, type: 'order' }],
       ['order.edit', 'seller-1', { id: created.order.id, type: 'order' }],
       ['order.confirm', 'seller-1', { id: created.order.id, type: 'order' }],
       ['order.milestones', 'seller-1', { id: created.order.id, type: 'order' }],
@@ -275,7 +288,12 @@ test('a confirmation without amount or condition is a 422, not a crash', async (
     ),
     {
       code: 'ORDER_NOT_CONFIRMABLE',
-      fields: ['items', 'finalAmount', 'paymentCondition'],
+      fields: [
+        'items',
+        'summary.data_entrega_confirmada',
+        'finalAmount',
+        'paymentCondition',
+      ],
       statusCode: 422,
     },
   );

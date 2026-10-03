@@ -95,6 +95,10 @@ const detail = ref(null);
 const reply = ref('');
 const renaming = ref(false);
 const draftName = ref('');
+const renameBase = ref(null);
+const renameConflict = ref(false);
+const renameCurrentKnown = ref(false);
+const renameTrigger = ref(null);
 const transferring = ref(false);
 const transferTarget = ref('');
 const assignableUsers = ref([]);
@@ -428,6 +432,8 @@ async function selectConversation(id, silent = false) {
   if (activeId.value !== id) {
     detail.value = null;
     renaming.value = false;
+    renameBase.value = null;
+    renameConflict.value = false;
     transferring.value = false;
   }
   activeId.value = id;
@@ -441,7 +447,7 @@ async function selectConversation(id, silent = false) {
   } catch (cause) {
     if (/** @type {any} */ (cause)?.name !== 'AbortError') {
       error.value = 'Não foi possível carregar a conversa selecionada.';
-      detail.value = null;
+      if (!silent || !renaming.value) detail.value = null;
     }
   } finally {
     detailLoading.value = false;
@@ -580,32 +586,94 @@ async function claimHandoff() {
 }
 
 async function openRename() {
+  if (!active.value) return;
   draftName.value = active.value?.contact.displayName ?? '';
+  renameBase.value = {
+    contactId: active.value.contact.id,
+    conversationId: active.value.id,
+    expectedVersion: active.value.contact.version,
+  };
+  renameConflict.value = false;
+  renameCurrentKnown.value = false;
+  error.value = '';
   renaming.value = true;
   await nextTick();
   nameInput.value?.focus();
 }
 
+async function refreshConflictName() {
+  const base = renameBase.value;
+  if (!base) return;
+  try {
+    const response = await request(
+      `/api/v1/inbox/conversations/${encodeURIComponent(base.conversationId)}`,
+    );
+    if (
+      renameBase.value !== base ||
+      activeId.value !== base.conversationId ||
+      response.data.conversation?.contact?.id !== base.contactId
+    )
+      return;
+    detail.value = response.data;
+    renameCurrentKnown.value = true;
+  } catch {
+    renameCurrentKnown.value = false;
+  }
+}
+
+async function cancelRename() {
+  const base = renameBase.value;
+  const hadConflict = renameConflict.value;
+  renaming.value = false;
+  renameBase.value = null;
+  renameConflict.value = false;
+  renameCurrentKnown.value = false;
+  if (hadConflict && base && activeId.value === base.conversationId) {
+    await selectConversation(base.conversationId, true);
+  }
+  await nextTick();
+  renameTrigger.value?.focus();
+}
+
 async function saveName() {
-  if (!active.value || busy.value) return;
-  const contact = active.value.contact;
+  const base = renameBase.value;
+  if (
+    !base ||
+    active.value?.id !== base.conversationId ||
+    busy.value ||
+    renameConflict.value
+  )
+    return;
   busy.value = true;
   error.value = '';
   actionMessage.value = '';
   try {
-    await request(`/api/v1/contacts/${encodeURIComponent(contact.id)}/name`, {
-      body: {
-        displayName: draftName.value.trim(),
-        expectedVersion: contact.version,
-        reason: 'Nome do contato ajustado na Caixa de Entrada',
+    await request(
+      `/api/v1/contacts/${encodeURIComponent(base.contactId)}/name`,
+      {
+        body: {
+          displayName: draftName.value.trim(),
+          expectedVersion: base.expectedVersion,
+          reason: 'Nome do contato ajustado na Caixa de Entrada',
+        },
+        method: 'POST',
       },
-      method: 'POST',
-    });
+    );
     actionMessage.value = 'Nome do contato atualizado.';
     renaming.value = false;
+    renameBase.value = null;
     await loadInbox(true);
+    await nextTick();
+    renameTrigger.value?.focus();
   } catch (cause) {
-    error.value = describeError(cause);
+    if (Number(cause?.status) === 409) {
+      renameConflict.value = true;
+      await refreshConflictName();
+      await nextTick();
+      nameInput.value?.focus();
+    } else {
+      error.value = describeError(cause);
+    }
   } finally {
     busy.value = false;
   }
@@ -845,6 +913,9 @@ onBeforeUnmount(() => {
               class="rename-form"
               @submit.prevent="saveName"
             >
+              <h2 :id="`conversation-${active.id}`" class="sr-only">
+                {{ active.contact.label }}
+              </h2>
               <label :for="`name-${active.id}`">Nome do contato</label>
               <input
                 :id="`name-${active.id}`"
@@ -854,15 +925,31 @@ onBeforeUnmount(() => {
                 maxlength="120"
                 placeholder="Sem nome definido"
               />
+              <div v-if="renameConflict" class="audit-note" role="alert">
+                <p>
+                  O nome mudou enquanto você editava. Seu texto foi mantido.
+                </p>
+                <p v-if="renameCurrentKnown">
+                  Nome atual: {{ active.contact.label }}. Cancele e abra a
+                  edição novamente para revisar antes de salvar.
+                </p>
+                <p v-else>
+                  Não foi possível consultar o nome atual. Consulte novamente ou
+                  cancele para atualizar.
+                </p>
+                <button type="button" @click="refreshConflictName">
+                  Consultar nome atual
+                </button>
+              </div>
               <div class="inline-actions">
-                <button type="submit" class="primary" :disabled="busy">
+                <button
+                  type="submit"
+                  class="primary"
+                  :disabled="busy || renameConflict"
+                >
                   Salvar nome
                 </button>
-                <button
-                  type="button"
-                  :disabled="busy"
-                  @click="renaming = false"
-                >
+                <button type="button" :disabled="busy" @click="cancelRename">
                   Cancelar
                 </button>
               </div>
@@ -878,7 +965,12 @@ onBeforeUnmount(() => {
                   · {{ ownerLabel }}
                 </template>
               </p>
-              <button type="button" class="link-button" @click="openRename">
+              <button
+                ref="renameTrigger"
+                type="button"
+                class="link-button"
+                @click="openRename"
+              >
                 Editar nome
               </button>
             </template>

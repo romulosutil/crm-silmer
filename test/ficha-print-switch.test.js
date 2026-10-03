@@ -21,8 +21,9 @@ import {
 } from '../scripts/ficha-pdf-review.mjs';
 import { syntheticItems } from './fixtures/order-items.js';
 
-// PIM-10 (ADR 017): one switch decides the printed template, and it stays on
-// v2 until the v3 approval is recorded. Fixtures are synthetic.
+// PIM-10 (ADR 017): one switch decides the printed template. It names v3 since
+// the PO's provisional approval (T74); without a recorded approval it must
+// name v2. Fixtures are synthetic.
 
 const rootUrl = new URL('../', import.meta.url);
 const v3Gate = JSON.parse(
@@ -212,24 +213,37 @@ test('the print route prints whatever the switch names (PIM-10)', async (t) => {
   assert.equal(response.body, renderOrderFicha(order, PRINT_TEMPLATE));
 });
 
-test(
-  'on v2 the route prints byte for byte the document it printed before the switch',
-  { skip: PRINT_TEMPLATE !== TEMPLATE_V2 && 'the switch already names v3' },
-  async (t) => {
-    const { order, response } = await printedThroughRoute(t);
+test('orders print on v3 since the provisional approval (T74, PIM-10)', async (t) => {
+  const { order, response } = await printedThroughRoute(t);
 
-    assert.equal(
-      response.body,
-      renderFichaHtml(printSnapshot(order, TEMPLATE_V2), { synthetic: false }),
-    );
-    assert.match(
-      response.body,
-      /Entrega confirmada<\/span><strong>24\/10\/2026</u,
-    );
-    assert.match(response.body, /Vies gola \/ mangas/u);
-    assert.doesNotMatch(response.body, /Lastro do pedido|Tipo de roupa/u);
-  },
-);
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V3);
+  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V3));
+  assert.match(response.body, /Tipo de roupa/u);
+  assert.match(response.body, /Lastro do pedido/u);
+  assert.match(
+    response.body,
+    /Entrega prometida<\/span><strong>24\/10\/2026</u,
+  );
+  // A printed order carries no sample band, review box or signature lines.
+  assert.doesNotMatch(
+    response.body,
+    /Amostra sint|<div class="review-box">|<div class="signatures">/u,
+  );
+});
+
+test('v2 still renders byte for byte through the switch function', async (t) => {
+  const { order } = await printedThroughRoute(t);
+
+  const v2 = renderOrderFicha(order, TEMPLATE_V2);
+
+  assert.equal(
+    v2,
+    renderFichaHtml(printSnapshot(order, TEMPLATE_V2), { synthetic: false }),
+  );
+  assert.match(v2, /Entrega confirmada<\/span><strong>24\/10\/2026</u);
+  assert.match(v2, /Vies gola \/ mangas/u);
+  assert.doesNotMatch(v2, /Lastro do pedido|Tipo de roupa/u);
+});
 
 test('the same order renders on either template through one function (PIM-10)', async (t) => {
   const { api, runtime } = harness();

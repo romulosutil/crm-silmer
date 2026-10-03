@@ -176,7 +176,7 @@ export function createOperationReadService({
         `SELECT stream_cursor, aggregate_type, aggregate_id, payload
          FROM crm.domain_events
          WHERE stream_cursor > $1
-           AND aggregate_type IN ('contact', 'conversation', 'order')
+           AND aggregate_type IN ('contact', 'conversation', 'order', 'user')
          ORDER BY stream_cursor LIMIT 101`,
         [after],
       );
@@ -188,7 +188,7 @@ export function createOperationReadService({
           `SELECT max(stream_cursor) cursor
            FROM crm.domain_events
            WHERE stream_cursor > $1
-             AND aggregate_type IN ('contact', 'conversation', 'order')`,
+             AND aggregate_type IN ('contact', 'conversation', 'order', 'user')`,
           [after],
         );
         return Object.freeze({
@@ -423,6 +423,12 @@ function liveEventFor(row) {
         orderId: row.aggregate_id,
       },
       type: 'inbox.order.changed',
+    };
+  }
+  if (row.aggregate_type === 'user') {
+    return {
+      payload: { userId: row.aggregate_id },
+      type: 'identity.user.changed',
     };
   }
   return {

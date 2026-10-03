@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import {
@@ -44,6 +44,30 @@ const OPERATIONAL_READ_ACTIONS = new Set([
   ...[...OPERATIONAL_ACTIONS].filter((action) => action.endsWith('.read')),
   'order.print',
 ]);
+
+/**
+ * The user table has no version column. Serialize changes to one user and
+ * assign a positive event version inside the mutation transaction. The
+ * durable payload has no personal data; readers re-fetch through their ACL.
+ * @param {{query: (sql: string, values?: unknown[]) => Promise<unknown>}} client
+ * @param {{userId: string, correlationId: string}} input
+ */
+export async function appendIdentityUserChangedEvent(client, input) {
+  await client.query(
+    `SELECT pg_advisory_xact_lock(hashtextextended('identity-user:' || $1, 0))`,
+    [input.userId],
+  );
+  await client.query(
+    `INSERT INTO crm.domain_events
+       (id, aggregate_type, aggregate_id, aggregate_version, event_type,
+        payload, correlation_id, occurred_at)
+     SELECT $1, 'user', $2, coalesce(max(aggregate_version), 0) + 1,
+            'identity.user.changed', '{}'::jsonb, $3, now()
+     FROM crm.domain_events
+     WHERE aggregate_type = 'user' AND aggregate_id = $2`,
+    [`event-${randomUUID()}`, input.userId, input.correlationId],
+  );
+}
 
 /**
  * Composes the identity HTTP port with transaction-bound PostgreSQL adapters.
@@ -168,7 +192,19 @@ export function createIdentityApiRuntime(database, environment = process.env) {
         if (session.userId !== actorId) {
           throw new IdentityHttpError(403, 'FORBIDDEN');
         }
-        return effect(identityService(client), actorId);
+        const result = await effect(identityService(client), actorId);
+        const userId =
+          metadata.target.type === 'user-request'
+            ? /** @type {any} */ (result)?.user?.id
+            : metadata.target.id;
+        if (typeof userId !== 'string' || userId === '') {
+          throw new Error('User mutation did not identify a user');
+        }
+        await appendIdentityUserChangedEvent(client, {
+          correlationId: metadata.correlationId,
+          userId,
+        });
+        return result;
       },
     );
   }
@@ -330,6 +366,10 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           } else {
             await service.revokeCapability(command);
           }
+          await appendIdentityUserChangedEvent(client, {
+            correlationId: input.correlationId,
+            userId: input.targetId,
+          });
           return { changed: true };
         },
       );

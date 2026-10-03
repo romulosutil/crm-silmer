@@ -131,12 +131,12 @@ const visibleConversationLabel = computed(() => {
 const liveStatusMessage = computed(() => {
   if (liveConnection.value === 'conectado') return '';
   if (liveConnection.value === 'reconectando') {
-    return 'Reconectando atualização automática. Use o botão Atualizar para consultar o estado atual.';
+    return 'Reconectando atualizações. Você pode consultar as conversas agora.';
   }
   if (liveConnection.value === 'conectando') {
-    return 'Conectando atualização automática. Use o botão Atualizar para consultar o estado atual.';
+    return 'Conectando atualizações automáticas.';
   }
-  return 'Atualização automática indisponível. Use o botão Atualizar para consultar o estado atual.';
+  return 'Atualizações automáticas indisponíveis. Você pode consultar as conversas agora.';
 });
 const active = computed(() => detail.value?.conversation ?? null);
 const isTerminal = computed(() =>
@@ -707,6 +707,10 @@ onBeforeUnmount(() => {
       </fieldset>
       <div class="inbox-toolbar-actions">
         <button
+          v-if="
+            liveConnection === 'indisponível' ||
+            liveConnection === 'reconectando'
+          "
           type="button"
           aria-label="Atualizar conversas"
           :disabled="loading"

@@ -24,7 +24,7 @@ const SELLER = {
 
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{capabilities?: string[]}} [options]
+ * @param {{capabilities?: string[], revokeSelfOnEvent?: boolean}} [options]
  */
 async function mockUsers(page, options = {}) {
   const viewer = {
@@ -38,6 +38,12 @@ async function mockUsers(page, options = {}) {
   ];
   /** @type {Array<{method: string, path: string, body: any}>} */
   const commands = [];
+  let sessionReads = 0;
+  /** @type {() => void} */
+  let releaseEvent = () => {};
+  const eventGate = new Promise((resolve) => {
+    releaseEvent = () => resolve(null);
+  });
 
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
@@ -51,9 +57,18 @@ async function mockUsers(page, options = {}) {
       });
 
     if (path === '/api/v1/sessions/current' && method === 'GET') {
+      sessionReads += 1;
       return json({ user: viewer });
     }
-    if (path === '/api/v1/events') return route.fulfill({ status: 204 });
+    if (path === '/api/v1/events') {
+      if (!options.revokeSelfOnEvent) return route.fulfill({ status: 204 });
+      await eventGate;
+      return route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: 'retry: 60000\n\nevent: identity.user.changed\nid: evt-2\ndata: {"userId":"admin-1"}\n\n',
+      });
+    }
     if (path === '/api/v1/kanban') {
       return json({ columns: [], eventCursor: 'evt-1' });
     }
@@ -100,7 +115,15 @@ async function mockUsers(page, options = {}) {
     return route.fulfill({ body: '{}', status: 404 });
   });
 
-  return { commands, users };
+  return {
+    commands,
+    users,
+    sessionReads: () => sessionReads,
+    revokeSelf() {
+      viewer.capabilities = [];
+      releaseEvent();
+    },
+  };
 }
 
 /** @param {import('@playwright/test').Page} page @param {string} name */
@@ -231,6 +254,27 @@ test('redirects a non-admin away from the users screen and hides its navigation 
   await expect(page).toHaveURL(/\/dashboard$/u);
   await expect(page.getByRole('link', { name: 'Vendedores' })).toHaveCount(0);
   await expect(page.getByText('Vendedor')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { exact: true, name: 'Dashboard' }),
+  ).toBeVisible();
+});
+
+test('removes own admin navigation and route after a named SSE role change', async ({
+  page,
+}) => {
+  const mock = await mockUsers(page, { revokeSelfOnEvent: true });
+  await page.goto('/usuarios');
+  await expect(
+    page.getByRole('heading', { exact: true, name: 'Vendedores' }),
+  ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Vendedores' })).toBeVisible();
+  expect(mock.sessionReads()).toBe(1);
+
+  mock.revokeSelf();
+
+  await expect.poll(mock.sessionReads).toBeGreaterThan(1);
+  await expect(page).toHaveURL(/\/dashboard$/u);
+  await expect(page.getByRole('link', { name: 'Vendedores' })).toHaveCount(0);
   await expect(
     page.getByRole('heading', { exact: true, name: 'Dashboard' }),
   ).toBeVisible();

@@ -1,13 +1,17 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { request } from '../lib/api-client.js';
 
 const props = defineProps({
   session: { type: Object, required: true },
 });
+const liveEvent = inject('liveEvent', ref(null));
+const liveConnection = inject('liveConnection', ref('indisponível'));
 const heading = ref(null);
-const user = computed(() => props.session.user ?? props.session);
+const currentSession = ref(props.session);
+const user = computed(() => currentSession.value.user ?? currentSession.value);
 const capabilities = computed(() => {
-  const values = props.session.capabilities ?? user.value.capabilities;
+  const values = currentSession.value.capabilities ?? user.value.capabilities;
   return Array.isArray(values) ? values : [];
 });
 const functionName = computed(() =>
@@ -16,7 +20,46 @@ const functionName = computed(() =>
     : 'Vendedor',
 );
 
-onMounted(() => heading.value?.focus());
+let fallbackTimer = 0;
+let controller;
+
+async function refreshSession() {
+  controller?.abort();
+  controller = new AbortController();
+  try {
+    const response = await request('/api/v1/sessions/current', {
+      signal: controller.signal,
+    });
+    currentSession.value = response.data;
+  } catch {
+    // Keep the last authorized session while the event stream reconnects.
+  }
+}
+
+watch(
+  () => props.session,
+  (session) => {
+    currentSession.value = session;
+  },
+);
+watch(liveEvent, (event) => {
+  if (event?.reset || event?.type === 'identity.user.changed')
+    void refreshSession();
+});
+onMounted(() => {
+  heading.value?.focus();
+  fallbackTimer = globalThis.setInterval(() => {
+    if (
+      liveConnection.value !== 'conectado' &&
+      globalThis.document.visibilityState === 'visible'
+    )
+      void refreshSession();
+  }, 30_000);
+});
+onBeforeUnmount(() => {
+  controller?.abort();
+  if (fallbackTimer) globalThis.clearInterval(fallbackTimer);
+});
 </script>
 
 <template>

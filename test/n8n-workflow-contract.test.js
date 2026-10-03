@@ -2182,11 +2182,11 @@ test('the pending order opens at the first real point of the ficha (ADR 014)', a
   assert.equal(price.trigger, 'price');
   assert.equal(price.open_order, true);
   const named = await rhythmDecision(
-    { person_request: 'named', requested_person_name: 'Marina' },
+    { person_request: 'named', requested_person_name: 'Vendedora Teste' },
     {
       briefing: { quantity: 30, customer_name: 'Ana' },
-      current_text: 'quero falar com a Marina',
-      sellers: ['Marina'],
+      current_text: 'quero falar com a Vendedora Teste',
+      sellers: ['Vendedora'],
     },
   );
   assert.equal(named.handoff_required, true);

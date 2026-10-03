@@ -185,6 +185,26 @@ test('an order event never forwards more than its identifiers', async () => {
   });
 });
 
+test('a user change streams only its internal identifier', async () => {
+  const { queries, service } = liveService([
+    {
+      aggregate_id: 'user-1',
+      aggregate_type: 'user',
+      payload: { email: 'PII-canary@example.test' },
+      stream_cursor: '13',
+    },
+  ]);
+  const batch = await service.readLiveEvents({ after: '12' });
+  assert.deepEqual(batch.events, [
+    {
+      cursor: 13,
+      payload: { userId: 'user-1' },
+      type: 'identity.user.changed',
+    },
+  ]);
+  assert.match(queries[0].sql, /aggregate_type IN \([^)]*'user'[^)]*\)/u);
+});
+
 test('an event backlog over 100 advances the reset cursor and then resumes', async () => {
   /** @type {Array<{sql:string,values:any[]}>} */
   const queries = [];

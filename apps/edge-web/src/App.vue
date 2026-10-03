@@ -28,6 +28,7 @@ const lastUpdatedAt = ref(0);
 const mobileOpen = ref(false);
 const logoutBusy = ref(false);
 let lastAnnouncement = '';
+let sessionRefreshInFlight = false;
 
 const user = computed(() => session.value?.user ?? session.value ?? {});
 const sidebarUserName = computed(() => user.value.name || 'Conta autenticada');
@@ -84,12 +85,19 @@ const liveEvent = ref(null);
 const liveTopic = computed(() => 'inbox');
 const stream = new LiveEventStream({
   onChange(event) {
+    if (
+      event.type === 'identity.user.changed' &&
+      event.userId === user.value.id
+    ) {
+      void refreshShellSession();
+    }
     activeView.value?.refreshFromEvent(event);
     liveEvent.value = { ...event, receivedAt: Date.now() };
     lastUpdatedAt.value = Date.now();
     announce('Conteúdo atualizado automaticamente.');
   },
   onReset() {
+    void refreshShellSession();
     activeView.value?.reset();
     liveEvent.value = { receivedAt: Date.now(), reset: true };
     announce('A conexão foi ressincronizada.');
@@ -140,6 +148,24 @@ async function restoreSession() {
     }
     phase.value = 'unavailable';
     announce('Não foi possível verificar sua sessão.');
+  }
+}
+
+async function refreshShellSession() {
+  if (phase.value !== 'authenticated' || sessionRefreshInFlight) return;
+  sessionRefreshInFlight = true;
+  try {
+    const response = await request('/api/v1/sessions/current');
+    session.value = response.data;
+    await redirectUnauthorizedAdminRoute();
+  } catch (error) {
+    if (error instanceof ApiError && [401, 403].includes(error.status)) {
+      await showSignedOut(false);
+    } else {
+      announce('Não foi possível atualizar seu acesso. Tentaremos novamente.');
+    }
+  } finally {
+    sessionRefreshInFlight = false;
   }
 }
 

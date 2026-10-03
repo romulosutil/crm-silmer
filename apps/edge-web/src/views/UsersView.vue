@@ -1,6 +1,7 @@
 <script setup>
 import {
   computed,
+  inject,
   nextTick,
   onBeforeUnmount,
   onMounted,
@@ -14,6 +15,8 @@ const props = defineProps({
   session: { type: Object, required: true },
   showError: { type: Function, required: true },
 });
+const liveEvent = inject('liveEvent', ref(null));
+const liveConnection = inject('liveConnection', ref('indisponível'));
 
 const CREATE_REASON = 'Conta criada pelo administrador comercial';
 const UPDATE_REASON = 'Conta atualizada pelo administrador comercial';
@@ -35,6 +38,7 @@ const actionMenu = ref(null);
 const actionMenuFor = ref(null);
 const actionMenuPosition = ref({ left: 0, top: 0 });
 const actionMenuTrigger = ref(null);
+let fallbackTimer = 0;
 
 const currentUser = computed(() => props.session.user ?? props.session);
 const isAdmin = computed(() =>
@@ -62,6 +66,13 @@ onMounted(async () => {
   globalThis.addEventListener('keydown', closeActionMenuOnEscape);
   globalThis.addEventListener('resize', closeActionMenu);
   await load();
+  fallbackTimer = globalThis.setInterval(() => {
+    if (
+      liveConnection.value !== 'conectado' &&
+      globalThis.document.visibilityState === 'visible'
+    )
+      void load(true);
+  }, 30_000);
 });
 
 onBeforeUnmount(() => {
@@ -71,19 +82,32 @@ onBeforeUnmount(() => {
   );
   globalThis.removeEventListener('keydown', closeActionMenuOnEscape);
   globalThis.removeEventListener('resize', closeActionMenu);
+  if (fallbackTimer) globalThis.clearInterval(fallbackTimer);
 });
 
-async function load() {
-  loading.value = true;
+async function load(silent = false) {
+  if (!silent) loading.value = true;
   try {
     const response = await request('/api/v1/users');
     users.value = response.data.users ?? [];
   } catch (error) {
-    props.showError(publicMessage(error));
+    if (!silent) props.showError(publicMessage(error));
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 }
+
+watch(liveEvent, (event) => {
+  if (
+    (event?.reset || event?.type === 'identity.user.changed') &&
+    !busy.value &&
+    !editing.value &&
+    !confirmingDelete.value &&
+    !actionMenuFor.value
+  ) {
+    void load(true);
+  }
+});
 
 /** @param {SubmitEvent} event */
 async function submitCreate(event) {

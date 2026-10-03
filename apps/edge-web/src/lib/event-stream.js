@@ -9,6 +9,7 @@ const TOPIC_EVENTS = Object.freeze({
     'inbox.contact.changed',
     'inbox.conversation.changed',
     'inbox.order.changed',
+    'identity.user.changed',
   ]),
 });
 
@@ -69,7 +70,12 @@ export class LiveEventStream {
     if (event.lastEventId) this.cursor = event.lastEventId;
     const payload = this.parse(event.data);
     if (payload.cursor) this.cursor = String(payload.cursor);
-    reset ? this.handlers.onReset() : this.handlers.onChange(payload);
+    reset
+      ? this.handlers.onReset()
+      : this.handlers.onChange({
+          ...payload,
+          type: event.type === 'message' ? payload.type : event.type,
+        });
   }
 
   /** @param {string} value */

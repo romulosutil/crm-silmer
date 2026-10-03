@@ -1118,8 +1118,8 @@ com o contrato combinado do item.
 
 **Done when:**
 
-- [ ] `ficha-canonical-v2.js` e o PDF v2 sem mudança; testes da v2 passam
-- [ ] `npm run validate:ficha-pdf-review` valida v2 aprovada e v3 pendente
+- [x] `ficha-canonical-v2.js` e o PDF v2 sem mudança; testes da v2 passam
+- [x] `npm run validate:ficha-pdf-review` valida v2 aprovada e v3 pendente
 - [ ] O PO aprova o PDF v3 e indica quem assina (fora desta task)
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): add the ficha v3 with the seven points for review`

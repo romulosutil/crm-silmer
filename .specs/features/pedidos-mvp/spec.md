@@ -597,10 +597,11 @@ Verificado em T46, 29/09/2026.
 | PLA-05 | P1-10    | `test/orders-domain.test.js:250`; `test/order-routes.test.js:833`; `test/e2e/orders.spec.js:883,914`          | Verified |
 | PLA-06 | P1-10    | `test/orders-domain.test.js:214`; `test/order-routes.test.js:799`; `test/e2e/orders.spec.js:842`              | Verified |
 | PLA-07 | P1-10    | `test/order-routes.test.js:858`; `test/orders-service-commands.test.js:419`; `test/e2e/orders.spec.js:652`    | Verified |
-| PLA-08 | P1-10    | Ver "Ficha impressa com os sete pontos (ADR 017)" abaixo; T63                                                 | Pendente |
+| PLA-08 | P1-10    | Ver "Ficha impressa com os sete pontos (ADR 017)" abaixo                                                      | Verified · PDF a aprovar |
 | PLA-09 | P1-10    | `test/order-routes.test.js:1059`                                                                              | Verified |
 
-**Cobertura:** 9 requisitos · 8 verificados · PLA-08 depende da v3.
+**Cobertura:** 9 requisitos · 9 verificados · PLA-08 sai no papel depois da
+aprovação do PDF da v3 (ADR 017).
 
 | Comando                            | Resultado                                                  |
 | ---------------------------------- | ---------------------------------------------------------- |
@@ -665,14 +666,19 @@ A evidência do template vale para a v3; o papel só muda depois da aprovação
 do PDF (PIM-10). O registro da aprovação fica em
 `docs/phase0/ficha-pdf-approval-v3.json`.
 
-| ID     | História | Evidência | Status   |
-| ------ | -------- | --------- | -------- |
-| PIM-06 | P1-5     | T63       | Pendente |
-| PIM-07 | P1-5     | T63       | Pendente |
-| PIM-08 | P1-5     | T63       | Pendente |
-| PIM-09 | P1-5     | T63       | Pendente |
-| PIM-10 | P1-5     | T64       | Pendente |
-| PLA-08 | P1-10    | T63       | Pendente |
+| ID     | História | Evidência                                                                                   | Status                         |
+| ------ | -------- | ------------------------------------------------------------------------------------------- | ------------------------------ |
+| PIM-06 | P1-5     | `test/ficha-print-v3.test.js:138,170`; `test/ficha-pdf-review-v3.test.js:81`                | Verified · PDF a aprovar       |
+| PIM-07 | P1-5     | `test/ficha-print-v3.test.js:194`; `test/ficha-pdf-review-v3.test.js:81,99`                 | Verified · PDF a aprovar       |
+| PIM-08 | P1-5     | `test/ficha-print-v3.test.js:221`                                                           | Verified · PDF a aprovar       |
+| PIM-09 | P1-5     | `test/ficha-print-v3.test.js:252,279,337`                                                   | Verified · PDF a aprovar       |
+| PIM-10 | P1-5     | T64                                                                                         | Pendente                       |
+| PLA-08 | P1-10    | `test/ficha-print-v3.test.js:309,384`; `test/ficha-pdf-review-v3.test.js:143`               | Verified · PDF a aprovar       |
+
+O gate do pacote (hashes da amostra, do HTML e do PDF, aprovação inteira ou
+pendente, recusa de regerar a versão aprovada) está em
+`test/ficha-pdf-review-v3.test.js:143,204,252` e em
+`npm run validate:ficha-pdf-review`.
 
 ## Roteiro de UAT
 

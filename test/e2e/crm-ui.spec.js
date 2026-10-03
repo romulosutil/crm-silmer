@@ -260,6 +260,19 @@ async function mockCrm(page, options = {}) {
       });
       return;
     }
+    if (path === '/api/v1/orders/summary' && request.method() === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          averageTicketCents: 125000,
+          confirmedCount: 2,
+          pendingCount: 1,
+          soldAmountCents: 250000,
+          totalPiecesSold: 300,
+        }),
+      });
+      return;
+    }
     if (path === '/api/v1/kanban' && request.method() === 'GET') {
       options.onBoard?.();
       if (options.failBoard) {
@@ -693,6 +706,14 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
     ).toBeVisible();
   }
   await expect(page.getByText('Studio Malu').first()).toBeVisible();
+  await expect(page.getByText('R$ 2.500,00')).toBeVisible();
+  await expect(
+    page
+      .getByText('Vendas', { exact: true })
+      .locator('..')
+      .locator('.kpi-value'),
+  ).toHaveText('2');
+  await expect(page.getByText('Peças por venda')).toBeVisible();
 
   await page
     .getByRole('navigation', { name: 'Navegação principal' })
@@ -1371,6 +1392,20 @@ test('does not expose the technical contact identifier in the client list', asyn
 
   await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
   await expect(page.getByText(contact.id, { exact: true })).toHaveCount(0);
+});
+
+test('opens a client by clicking the whole row while keeping its keyboard link', async ({
+  page,
+}) => {
+  await mockCrm(page);
+  await page.goto('/clientes');
+  await page
+    .getByRole('row', { name: /Studio Malu/ })
+    .getByRole('cell', { name: /Canônico/ })
+    .click();
+  await expect(page).toHaveURL('/clientes/contact-1');
+  await page.getByRole('link', { name: 'Studio Malu' }).focus();
+  await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeFocused();
 });
 
 test('simplifies the client summary without operational status or count', async ({

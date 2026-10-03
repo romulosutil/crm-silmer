@@ -1,5 +1,6 @@
 <script setup>
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { request } from '../lib/api-client.js';
 import { dateTimeBR } from '../lib/format.js';
 import {
@@ -19,6 +20,7 @@ const FILTERS = Object.freeze([
 ]);
 
 const liveEvent = inject('liveEvent', ref(null));
+const router = useRouter();
 const heading = ref(null);
 const filter = ref('');
 const query = ref('');
@@ -34,6 +36,7 @@ const now = ref(new Date());
 let controller;
 let refreshTimer = 0;
 let searchTimer = 0;
+let clockTimer = 0;
 
 const confirmedOrders = computed(() =>
   items.value.filter((order) => order.status === 'confirmado'),
@@ -71,6 +74,32 @@ function situation(order) {
   const still = elapsedSince(order.updatedAt, now.value);
   const headline = missingHeadline(order.missingFields);
   return still === '' ? headline : `${headline} · parado há ${still}`;
+}
+
+/** A delivered outbound message without a later reply is evidence of waiting. */
+function clientWaiting(order) {
+  if (order.status !== 'pendente') return '';
+  const message = order.lastMessage;
+  if (message?.direction !== 'outbound') return '';
+  if (!['sent', 'delivered', 'read'].includes(message.deliveryStatus))
+    return '';
+  if (typeof message.occurredAt !== 'string') return '';
+  const lastAt = new Date(message.occurredAt).getTime();
+  if (!Number.isFinite(lastAt) || now.value.getTime() - lastAt < 48 * 3_600_000)
+    return '';
+  return `Cliente sem resposta há ${elapsedSince(message.occurredAt, now.value)}`;
+}
+
+function priority(order) {
+  if (order.status !== 'pendente') return '';
+  if (clientWaiting(order)) return 'Retomar contato';
+  const age = now.value.getTime() - new Date(order.updatedAt).getTime();
+  return Number.isFinite(age) && age >= 72 * 3_600_000 ? 'Revisar pedido' : '';
+}
+
+function openOrder(order, event) {
+  if (event.target?.closest?.('a, button, input, select, textarea')) return;
+  void router.push(`/pedidos/${order.id}`);
 }
 
 /** @param {string|null} cursor */
@@ -160,10 +189,17 @@ watch(query, () => {
   }, SEARCH_DELAY_MS);
 });
 
-// PLI-08: an order created, edited, confirmed or reopened anywhere reaches
-// this list; a conversation or contact event never moves a pedido.
+// PLI-08: order, conversation and contact changes may change the list's labels
+// or the last message used to prioritize contact.
 watch(liveEvent, (event) => {
-  if (event?.reset || event?.type === 'inbox.order.changed') {
+  if (
+    event?.reset ||
+    [
+      'inbox.order.changed',
+      'inbox.conversation.changed',
+      'inbox.contact.changed',
+    ].includes(event?.type)
+  ) {
     scheduleLiveRefresh();
   }
 });
@@ -171,11 +207,15 @@ watch(liveEvent, (event) => {
 onMounted(() => {
   heading.value?.focus();
   void load();
+  clockTimer = globalThis.setInterval(() => {
+    now.value = new Date();
+  }, 60_000);
 });
 onBeforeUnmount(() => {
   controller?.abort();
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
   if (searchTimer) globalThis.clearTimeout(searchTimer);
+  if (clockTimer) globalThis.clearInterval(clockTimer);
 });
 </script>
 
@@ -186,8 +226,8 @@ onBeforeUnmount(() => {
         <p class="eyebrow">Carteira</p>
         <h1 ref="heading" tabindex="-1">Pedidos</h1>
         <p>
-          Confirmados já podem ser impressos. Pendentes são pedidos não
-          concluídos — qualquer vendedor pode retomar de onde parou.
+          Confirmados já podem ter a ficha impressa. Pedidos pendentes podem ser
+          retomados pelo vendedor responsável ou administrador.
         </p>
       </div>
     </header>
@@ -239,7 +279,15 @@ onBeforeUnmount(() => {
           </h2>
           <p>valor e forma de pagamento registrados</p>
         </div>
-        <div class="table-wrap">
+        <p class="table-scroll-hint">
+          Deslize a tabela para ver todas as colunas.
+        </p>
+        <div
+          class="table-wrap"
+          role="region"
+          tabindex="0"
+          aria-label="Pedidos confirmados; role horizontalmente para ver todas as colunas"
+        >
           <table class="data-table">
             <thead>
               <tr>
@@ -252,7 +300,12 @@ onBeforeUnmount(() => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="order in confirmedOrders" :key="order.id">
+              <tr
+                v-for="order in confirmedOrders"
+                :key="order.id"
+                class="clickable-row"
+                @click="openOrder(order, $event)"
+              >
                 <td>#{{ order.number }}</td>
                 <td>
                   <strong>{{ customerName(order) }}</strong>
@@ -291,7 +344,15 @@ onBeforeUnmount(() => {
           </h2>
           <p>qualquer vendedor retoma do primeiro campo que falta</p>
         </div>
-        <div class="table-wrap">
+        <p class="table-scroll-hint">
+          Deslize a tabela para ver todas as colunas.
+        </p>
+        <div
+          class="table-wrap"
+          role="region"
+          tabindex="0"
+          aria-label="Pedidos pendentes; role horizontalmente para ver todas as colunas"
+        >
           <table class="data-table">
             <thead>
               <tr>
@@ -304,7 +365,12 @@ onBeforeUnmount(() => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="order in pendingOrders" :key="order.id">
+              <tr
+                v-for="order in pendingOrders"
+                :key="order.id"
+                class="clickable-row"
+                @click="openOrder(order, $event)"
+              >
                 <td>#{{ order.number }}</td>
                 <td>
                   <strong>{{ customerName(order) }}</strong>
@@ -314,7 +380,18 @@ onBeforeUnmount(() => {
                 </td>
                 <td class="num">{{ order.totalPieces }}</td>
                 <td class="num">{{ amountLabel(order.finalAmountCents) }}</td>
-                <td>{{ situation(order) }}</td>
+                <td>
+                  <span
+                    v-if="priority(order)"
+                    class="badge"
+                    :data-tone="clientWaiting(order) ? 'warning' : 'info'"
+                    >{{ priority(order) }}</span
+                  >
+                  <small v-if="clientWaiting(order)" class="order-context">{{
+                    clientWaiting(order)
+                  }}</small>
+                  <small class="order-context">{{ situation(order) }}</small>
+                </td>
                 <td>
                   <div class="row-actions">
                     <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
@@ -340,3 +417,9 @@ onBeforeUnmount(() => {
     </template>
   </div>
 </template>
+
+<style scoped>
+.clickable-row {
+  cursor: pointer;
+}
+</style>

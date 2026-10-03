@@ -8,6 +8,7 @@ import {
   ref,
   watch,
 } from 'vue';
+import { useRouter } from 'vue-router';
 import { request } from '../lib/api-client.js';
 import {
   CHANNEL_LABELS,
@@ -20,6 +21,7 @@ const LIVE_REFRESH_DELAY_MS = 250;
 
 const props = defineProps({ selectedId: { type: String, default: '' } });
 const liveEvent = inject('liveEvent', ref(null));
+const router = useRouter();
 const heading = ref(null);
 const searchInput = ref(null);
 const query = ref('');
@@ -48,6 +50,11 @@ const filtered = computed(() => {
   );
 });
 const selected = computed(() => detail.value?.contact ?? null);
+
+function openContact(contact, event) {
+  if (event.target?.closest?.('a, button, input, select, textarea')) return;
+  void router.push(`/clientes/${contact.id}`);
+}
 
 /** @param {unknown} cause */
 function describeError(cause) {
@@ -189,8 +196,8 @@ onBeforeUnmount(() => {
         <p class="eyebrow">Relacionamento</p>
         <h1 ref="heading" tabindex="-1">Clientes</h1>
         <p>
-          Contatos canônicos, canais e histórico operacional, atualizados em
-          tempo real.
+          Clientes, canais de contato e histórico de atendimento, atualizados
+          automaticamente.
         </p>
       </div>
     </header>
@@ -230,7 +237,7 @@ onBeforeUnmount(() => {
     <div v-else class="clients-layout">
       <section class="surface" aria-labelledby="portfolio-title">
         <div class="panel-head">
-          <h2 id="portfolio-title">Contatos</h2>
+          <h2 id="portfolio-title">Lista de clientes</h2>
           <p>Ordenados pela atualização cadastral</p>
         </div>
         <div v-if="filtered.length" class="table-wrap">
@@ -247,7 +254,9 @@ onBeforeUnmount(() => {
               <tr
                 v-for="contact in filtered"
                 :key="contact.id"
+                class="clickable-row"
                 :data-selected="selected?.id === contact.id"
+                @click="openContact(contact, $event)"
               >
                 <td>
                   <RouterLink class="row-link" :to="`/clientes/${contact.id}`">
@@ -367,6 +376,12 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.clickable-row {
+  cursor: pointer;
+}
+</style>
 
 <style scoped>
 .client-title-row {

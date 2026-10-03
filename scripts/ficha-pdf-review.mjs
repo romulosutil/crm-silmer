@@ -35,6 +35,7 @@ const V3_REQUIREMENTS = Object.freeze([
   'PIM-07',
   'PIM-08',
   'PIM-09',
+  'PIM-11',
   'PLA-08',
 ]);
 

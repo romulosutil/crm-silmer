@@ -247,7 +247,7 @@ aprovação do PDF da v3; PIM-03 a PIM-05 valem para os dois templates.
 7. **PIM-07** Os adicionais (Modelo, Cor frente, Cor costas, Manga direita,
    Manga esquerda, Viés gola e Viés mangas) SHALL sair num bloco "Adicionais"
    do item só quando ao menos um estiver preenchido, só os preenchidos e nessa
-   ordem; "NAO APLICAVEL" SHALL sair como valor preenchido.
+   ordem; o valor gravado "NAO APLICAVEL" é preenchido e SHALL sair.
 8. **PIM-08** WHEN a ficha foi gravada antes dos sete pontos (sem `cor`,
    `estampa` e `gola`) THEN a v3 SHALL imprimir "—" nesses pontos e manter no
    papel todos os campos da v2.
@@ -261,6 +261,10 @@ aprovação do PDF da v3; PIM-03 a PIM-05 valem para os dois templates.
     PDF da v3 ficar registrada; a troca SHALL acontecer num único ponto
     (`PRINT_TEMPLATE`), e a validação SHALL recusar a v3 nesse ponto com a
     aprovação pendente.
+11. **PIM-11** Todo rótulo impresso da v3, nas duas páginas e na faixa de
+    amostra, SHALL ter os acentos do português. O valor gravado
+    "NAO APLICAVEL" SHALL sair como "NÃO APLICÁVEL" sem mudar o dado gravado;
+    o texto digitado por pessoas SHALL sair como foi digitado.
 
 **Teste independente (v3):** abrir `output/pdf/ficha-canonica-sintetica-v3.pdf`
 e conferir os sete pontos, os adicionais e o lastro na página 1, com o roteiro
@@ -669,16 +673,17 @@ do PDF (PIM-10). O registro da aprovação fica em
 
 | ID     | História | Evidência                                                                                   | Status                         |
 | ------ | -------- | ------------------------------------------------------------------------------------------- | ------------------------------ |
-| PIM-06 | P1-5     | `test/ficha-print-v3.test.js:138,170`; `test/ficha-pdf-review-v3.test.js:81`                | Verified · PDF a aprovar       |
-| PIM-07 | P1-5     | `test/ficha-print-v3.test.js:194`; `test/ficha-pdf-review-v3.test.js:81,99`                 | Verified · PDF a aprovar       |
-| PIM-08 | P1-5     | `test/ficha-print-v3.test.js:221`                                                           | Verified · PDF a aprovar       |
-| PIM-09 | P1-5     | `test/ficha-print-v3.test.js:252,279,345`                                                   | Verified · PDF a aprovar       |
+| PIM-06 | P1-5     | `test/ficha-print-v3.test.js:154,186`; `test/ficha-pdf-review-v3.test.js:81`                | Verified · PDF a aprovar       |
+| PIM-07 | P1-5     | `test/ficha-print-v3.test.js:210`; `test/ficha-pdf-review-v3.test.js:81,99`                 | Verified · PDF a aprovar       |
+| PIM-08 | P1-5     | `test/ficha-print-v3.test.js:237`                                                           | Verified · PDF a aprovar       |
+| PIM-09 | P1-5     | `test/ficha-print-v3.test.js:268,295,361`                                                   | Verified · PDF a aprovar       |
 | PIM-10 | P1-5     | `test/ficha-print-switch.test.js:146,155,196,203,222`; `npm run validate:ficha-pdf-review`  | Verified · v2 até a aprovação  |
-| PLA-08 | P1-10    | `test/ficha-print-v3.test.js:309,392`; `test/ficha-pdf-review-v3.test.js:143`               | Verified · PDF a aprovar       |
+| PIM-11 | P1-5     | `test/ficha-print-v3.test.js:406,431`; `test/ficha-pdf-review-v3.test.js:129`               | Verified · PDF a aprovar       |
+| PLA-08 | P1-10    | `test/ficha-print-v3.test.js:325,458`; `test/ficha-pdf-review-v3.test.js:144`               | Verified · PDF a aprovar       |
 
 O gate do pacote (hashes da amostra, do HTML e do PDF, aprovação inteira ou
 pendente, recusa de regerar a versão aprovada) está em
-`test/ficha-pdf-review-v3.test.js:143,204,252` e em
+`test/ficha-pdf-review-v3.test.js:144,206,254` e em
 `npm run validate:ficha-pdf-review`.
 
 ## Roteiro de UAT

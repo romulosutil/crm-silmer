@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "task": "T63",
   "adr": "017",
-  "requirements": ["PIM-06", "PIM-07", "PIM-08", "PIM-09", "PLA-08"],
+  "requirements": ["PIM-06", "PIM-07", "PIM-08", "PIM-09", "PIM-11", "PLA-08"],
   "syntheticOnly": true,
   "snapshotVersion": "synthetic-order-v3",
   "templateVersion": "ficha-canonical-v3",
   "snapshotSha256": "6715b350a4a3b772ccc3ff510f9b3003db87a84beadb0a485ba021373b56cb2f",
-  "renderedHtmlSha256": "9f0782813871330958e0903c35fc4346bab0e723aa8af472aa625f1b61302d0b",
+  "renderedHtmlSha256": "0d3e78f7f703c4dc9cf724c57a927185cb88668c5a89aa04e8b0b1a43a24b5a8",
   "artifact": {
     "path": "output/pdf/ficha-canonica-sintetica-v3.pdf",
-    "sha256": "005f3ef4bf826f25f766a58d289bd3a66b06ce1ed1d0d6484923d8996a4b53b4",
+    "sha256": "84e4e8ea8f47ce193ad9a9059adeaf5cce63c5acb59c46481309a9f761c50518",
     "pageCount": 2
   },
   "approval": {

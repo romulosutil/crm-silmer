@@ -246,7 +246,7 @@ test('the same order renders on either template through one function (PIM-10)', 
     /Entrega realizada<\/span><strong><span class="empty">—<\/span>/u,
   );
   for (const html of [v2, v3]) {
-    assert.doesNotMatch(html, /Amostra sintetica|4\.820,00|R\$|pix/iu);
+    assert.doesNotMatch(html, /Amostra sint|4\.820,00|R\$|pix/iu);
     assert.doesNotMatch(html, /null|undefined/u);
   }
   assert.doesNotMatch(v3, /<div class="review-box">/u);

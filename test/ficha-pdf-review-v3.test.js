@@ -135,7 +135,8 @@ test('the review HTML is the print path of the sample with the review marks on',
       synthetic: true,
     }),
   );
-  assert.match(renderedHtml, /Amostra sintetica - nao produzir/u);
+  assert.match(renderedHtml, /Amostra sintética — não produzir/u);
+  assert.match(renderedHtml, /NÃO APLICÁVEL/u);
   assert.match(renderedHtml, /Lastro do pedido/u);
   assert.match(renderedHtml, /Adicionais/u);
 });
@@ -159,6 +160,7 @@ test('locks the sample, the rendered HTML and the PDF by hash, approval pending'
     'PIM-07',
     'PIM-08',
     'PIM-09',
+    'PIM-11',
     'PLA-08',
   ]);
   // Nobody signed v3: the human approval is left wholly pending.

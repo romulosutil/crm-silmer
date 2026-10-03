@@ -130,6 +130,22 @@ function pageOne(html) {
   return html.slice(0, html.indexOf('<section class="page-break">'));
 }
 
+/** @param {string} text */
+function withoutAccents(text) {
+  return text
+    .normalize('NFD')
+    .replace(/\p{Mn}/gu, '')
+    .replaceAll('—', '-');
+}
+
+/** What the paper reads: the document without its style and its tags. */
+function printedText(/** @type {string} */ html) {
+  return html
+    .replace(/<style>[\s\S]*?<\/style>/u, '')
+    .replace(/<[^>]+>/gu, ' ')
+    .replace(/\s+/gu, ' ');
+}
+
 /** @param {string} html */
 function productionPage(html) {
   return html.slice(html.indexOf('<section class="page-break">'));
@@ -205,8 +221,8 @@ test('prints the extras block only when an extra is filled, with only the filled
     [
       'Modelo=CAVADA',
       'Cor costas=VERDE',
-      'Manga direita=NAO APLICAVEL',
-      'Manga esquerda=NAO APLICAVEL',
+      'Manga direita=NÃO APLICÁVEL',
+      'Manga esquerda=NÃO APLICÁVEL',
       'Viés mangas=VERDE',
     ],
   );
@@ -342,7 +358,7 @@ test('prints each of the five days once on page 1: two in the summary, three in 
   assert.match(page, /Entrega prometida<\/span><strong>24\/10\/2026</u);
 });
 
-test('keeps page 2 as the approved v2 and the review marks on the sample only (PIM-09)', () => {
+test('keeps the 14 production fields of v2 and the review marks on the sample only (PIM-09)', () => {
   const source = order([polo, regata]);
   const v2 = {
     real: renderFichaHtml(printSnapshot(source, TEMPLATE_V2), {
@@ -363,8 +379,16 @@ test('keeps page 2 as the approved v2 and the review marks on the sample only (P
       '',
     );
 
-  assert.equal(withoutReviewBox(v3.sample), withoutReviewBox(v2.sample));
-  assert.equal(productionPage(v3.real), withoutReviewBox(v2.real));
+  // Same fields, order and layout as the approved v2; only the accents of
+  // the printed labels change (PIM-11).
+  assert.equal(
+    withoutAccents(withoutReviewBox(v3.sample)),
+    withoutReviewBox(v2.sample),
+  );
+  assert.equal(
+    withoutAccents(productionPage(v3.real)),
+    withoutReviewBox(v2.real),
+  );
   assert.equal(
     (v3.real.match(/<span class="campo-producao-vazio"><\/span>/gu) ?? [])
       .length,
@@ -372,11 +396,53 @@ test('keeps page 2 as the approved v2 and the review marks on the sample only (P
   );
   assert.doesNotMatch(
     v3.real,
-    /Amostra sintetica|<div class="review-box">|Aprovação pendente/u,
+    /Amostra sint|<div class="review-box">|Aprovação pendente/u,
   );
-  assert.match(v3.sample, /Amostra sintetica - nao produzir/u);
+  assert.match(v3.sample, /Amostra sintética — não produzir/u);
   assert.match(v3.sample, /Aprovação pendente/u);
   assert.match(v3.sample, /O PO decide quem assina/u);
+});
+
+test('writes every printed label with its accents, on both pages (PIM-11)', () => {
+  const text = printedText(printed(order([polo, regata]), { synthetic: true }));
+
+  for (const label of [
+    'Amostra sintética — não produzir',
+    'Total de peças',
+    'Tipo de serviço',
+    'Itens: os sete pontos e os adicionais',
+    'Viés mangas',
+    'Observações do pedido',
+    'CONTROLE DE PRODUÇÃO',
+    'Preenchimento exclusivo da equipe de produção e arte.',
+    'Conferência e embalagem',
+    'Registro de conferência e execução.',
+    'Fechamento físico do pedido.',
+    'Contagem final por parte da peça.',
+  ]) {
+    assert.ok(text.includes(label), label);
+  }
+  assert.doesNotMatch(
+    text,
+    /sintetica|nao produzir|PRODUCAO|producao e arte|Conferencia|conferencia|execucao|fisico|\bpecas?\b|Observacoes|servico|Vies/u,
+  );
+});
+
+test('prints the stored NAO APLICAVEL as NÃO APLICÁVEL and typed text as typed (PIM-11)', () => {
+  const item = {
+    ...regata,
+    gola: 'NAO APLICAVEL',
+    vies_gola: 'nao aplicavel',
+    vies_mangas: 'NAO APLICAVEL NA MANGA CURTA',
+  };
+  const card = itemCard(printed(order([item])), 0);
+
+  assert.match(card, /Gola<\/dt><dd>NÃO APLICÁVEL</u);
+  assert.match(card, /Manga direita<\/dt><dd>NÃO APLICÁVEL</u);
+  assert.match(card, /Viés gola<\/dt><dd>nao aplicavel</u);
+  assert.match(card, /Viés mangas<\/dt><dd>NAO APLICAVEL NA MANGA CURTA</u);
+  // The stored value does not change: only the paper spells it out.
+  assert.equal(printableItem(item).gola, 'NAO APLICAVEL');
 });
 
 test('escapes every printed text', () => {

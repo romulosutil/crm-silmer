@@ -3,9 +3,11 @@
 // ficha (ADR 012) in their order and under the screen's labels, the optional
 // extras only when someone filled them, and page 1 carries each of the five
 // days of ADR 008 once. The summary takes the screen's labels (T48). The
-// production page keeps the 14 blank fields of v2. Until the review PDF is
-// approved, orders keep printing on v2 (`PRINT_TEMPLATE` in `./index.js`).
+// production page keeps the 14 blank fields of v2. Every printed label is
+// written with its Portuguese accents. Until the review PDF is approved,
+// orders keep printing on v2 (`PRINT_TEMPLATE` in `./index.js`).
 
+import { NOT_APPLICABLE } from '../domain/ficha.js';
 import { display, filledText } from './html.js';
 
 /** What the paper shows where the CRM has nothing (A01). */
@@ -27,7 +29,8 @@ export const PRINCIPAL_LABELS = Object.freeze([
 
 /**
  * The optional extras, in the order the factory reads a piece: model, body,
- * sleeves, then the bindings. `NAO APLICAVEL` is a filled value.
+ * sleeves, then the bindings. `NAO APLICAVEL` is a filled value and prints
+ * as `NÃO APLICÁVEL`.
  */
 export const EXTRA_FIELDS = Object.freeze([
   Object.freeze({ field: 'modelo', label: 'Modelo' }),
@@ -51,7 +54,7 @@ export const TRAIL_FIELDS = Object.freeze([
 ]);
 
 const SYNTHETIC_BAND =
-  '<span class="synthetic">Amostra sintetica - nao produzir</span>';
+  '<span class="synthetic">Amostra sintética — não produzir</span>';
 
 /**
  * @typedef {{tamanho: string, quantidade: number}} PrintedSize
@@ -95,11 +98,17 @@ export function printableItem(item) {
   };
 }
 
+/**
+ * The stored "not applicable" mark, as the paper spells it. Only the exact
+ * stored value changes, and only on paper; text typed by people prints as
+ * it was typed.
+ */
+export const NOT_APPLICABLE_LABEL = 'NÃO APLICÁVEL';
+
 /** @param {string} value */
 function shown(value) {
-  return value === ''
-    ? `<span class="empty">${EMPTY_MARK}</span>`
-    : display(value);
+  if (value === '') return `<span class="empty">${EMPTY_MARK}</span>`;
+  return display(value === NOT_APPLICABLE ? NOT_APPLICABLE_LABEL : value);
 }
 
 /** The FAB as the screen shows it: "01" and "FAB 01" both read "FAB 01". */
@@ -156,7 +165,7 @@ function extrasBlock(item) {
   return `<div class="extras"><span class="extras-title">Adicionais</span><dl>${item.adicionais
     .map(
       (extra) =>
-        `<div><dt>${display(extra.label)}</dt><dd>${display(extra.value)}</dd></div>`,
+        `<div><dt>${display(extra.label)}</dt><dd>${shown(extra.value)}</dd></div>`,
     )
     .join('')}</dl></div>`;
 }
@@ -201,7 +210,7 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
   const productionSections = [
     {
       title: 'Arremate',
-      description: 'Registro de conferencia e execucao.',
+      description: 'Registro de conferência e execução.',
       fields: [
         ['Conferido para arrematar por:', 'conferido_arremate_por'],
         ['Data:', 'conferido_arremate_em'],
@@ -211,8 +220,8 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
       ],
     },
     {
-      title: 'Conferencia e embalagem',
-      description: 'Fechamento fisico do pedido.',
+      title: 'Conferência e embalagem',
+      description: 'Fechamento físico do pedido.',
       fields: [
         ['Conferido / Embalado por:', 'conferido_embalado_por'],
         ['Data:', 'conferido_embalado_em'],
@@ -220,7 +229,7 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
     },
     {
       title: 'Cores e arte',
-      description: 'Contagem final por parte da peca.',
+      description: 'Contagem final por parte da peça.',
       fields: [
         ['Cores Frente:', 'cores_frente'],
         ['Costas:', 'cores_costas'],
@@ -351,10 +360,10 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
 
     <section class="page-break">
       <header class="sheet-header">
-        <div><div class="brand">Silmer</div><h1>CONTROLE DE PRODUCAO</h1></div>
+        <div><div class="brand">Silmer</div><h1>CONTROLE DE PRODUÇÃO</h1></div>
         <div class="header-id"><span class="synthetic">Campos vazios para preenchimento</span><div class="order-id"><span>Pedido</span><strong>${display(order.numero)}</strong></div></div>
       </header>
-      <p class="production-intro">Preenchimento exclusivo da equipe de producao e arte. Os 14 campos abaixo devem chegar vazios a esta etapa.</p>
+      <p class="production-intro">Preenchimento exclusivo da equipe de produção e arte. Os 14 campos abaixo devem chegar vazios a esta etapa.</p>
       <div class="production-grid">${productionSections
         .map(
           (section, sectionIndex) =>

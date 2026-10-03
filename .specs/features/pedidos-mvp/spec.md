@@ -740,6 +740,24 @@ pendente, recusa de regerar a versão aprovada) está em
 `test/ficha-pdf-review-v3.test.js:162,244,313,365` e em
 `npm run validate:ficha-pdf-review`.
 
+### Cliente acompanha o contato (ADR 018)
+
+Verificado em T72, 03/10/2026. Nenhuma tela mudou, então não há e2e novo.
+
+| ID     | História | Evidência                                                                                                                                                       | Status   |
+| ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| PCT-01 | P1-12    | `test/orders-service-client.test.js:127,153,242`; `test/order-routes.test.js:1126`; `test/orders-postgres-live.test.js:528,554`                                 | Verified |
+| PCT-02 | P1-12    | `test/orders-service-client.test.js:187`; `test/orders-repository-contract.test.js:344`; `test/order-routes.test.js:1135`; `test/orders-postgres-live.test.js:558` | Verified |
+| PCT-03 | P1-12    | `test/orders-service-client.test.js:207`; `test/order-routes.test.js:1155`; `test/orders-postgres-live.test.js:616`                                             | Verified |
+
+**Cobertura:** 3 requisitos · 3 verificados.
+
+| Comando                                      | Resultado                                                 |
+| -------------------------------------------- | --------------------------------------------------------- |
+| `npm run validate`                           | ✅ passou (562 testes: 559 ok, 3 pulados; build)          |
+| `npm run test:orders:live`                   | ✅ passou — 22/22 (PostgreSQL, `crm_silmer_test_cliente`) |
+| `test/n8n-integration-postgres-live.test.js` | ✅ passou — 4/4 (PostgreSQL, `crm_silmer_test_cliente`)   |
+
 ## Roteiro de UAT
 
 1. Como cliente no workflow DEV, mandar numa conversa nova uma mensagem com um
@@ -766,6 +784,10 @@ pendente, recusa de regerar a versão aprovada) está em
     conferir que o pedido continua confirmado e a impressão liberada.
 12. Tentar "Entregue em" com data de amanhã e ver o erro junto ao campo;
     informar a data de hoje e salvar.
+13. Com um pedido pendente, renomear o contato em "Editar nome" na Caixa de
+    Entrada e abrir de novo o pedido, a lista (buscando pelo nome novo) e a
+    gaveta: o cliente é o nome novo. Gerar, renomear de novo e conferir que o
+    pedido e a impressão mantêm o nome da geração (ADR 018).
 
 ## Critérios de sucesso
 

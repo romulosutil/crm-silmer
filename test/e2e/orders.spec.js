@@ -1243,21 +1243,24 @@ test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', as
   ).toBeVisible();
 });
 
-test('shows the trail from the first contact to the delivery (PLA-01..03)', async ({
+test('shows the three trail dates without repeating the summary (PLA-01..03, PLA-08)', async ({
   page,
 }) => {
   await mockOrders(page);
   await page.goto('/pedidos/order-confirmado');
 
   const trail = page.getByRole('region', { name: 'Lastro do pedido' });
-  await expect(trail).toContainText('4 de 5 datas');
+  await expect(trail).toContainText('2 de 3 datas');
   await expect(trail.getByRole('listitem')).toHaveText([
     /Primeiro contato\s*02\/09\/2026\s*vem da conversa/u,
-    /Pedido fechado\s*09\/09\/2026\s*data do pedido/u,
     /Pagamento\s*10\/09\/2026\s*informado/u,
-    /Entrega prometida\s*24\/10\/2026\s*vem do resumo/u,
     /Entrega realizada\s*—\s*a informar/u,
   ]);
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await expect(summary).toContainText('Data do pedido');
+  await expect(summary).toContainText('Entrega prometida');
+  await expect(trail).not.toContainText('Pedido fechado');
+  await expect(trail).not.toContainText('Entrega prometida');
 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
@@ -1287,7 +1290,7 @@ test('records payment and delivery on a confirmed order without reopening it (PL
   await trail.getByRole('button', { name: 'Salvar datas' }).click();
 
   await expect(trail.getByRole('button', { name: 'Editar' })).toBeVisible();
-  await expect(trail).toContainText('5 de 5 datas');
+  await expect(trail).toContainText('3 de 3 datas');
   await expect(trail.getByRole('listitem').last()).toContainText('19/09/2026');
   expect(writes).toEqual([
     {
@@ -1331,7 +1334,7 @@ test('clears a recorded day and refuses a day after today, next to the field (PL
   await delivered.fill('');
   await trail.getByLabel('Pago em').fill('');
   await trail.getByRole('button', { name: 'Salvar datas' }).click();
-  await expect(trail).toContainText('3 de 5 datas');
+  await expect(trail).toContainText('1 de 3 datas');
   expect(writes.map((write) => write.body)).toEqual([
     { deliveredOn: null, expectedVersion: 4, paidOn: null },
   ]);

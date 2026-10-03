@@ -12,6 +12,7 @@ import {
   PRINT_TEMPLATE,
   TEMPLATE_V2,
   TEMPLATE_V3,
+  TEMPLATE_V4,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
@@ -30,6 +31,12 @@ const rootUrl = new URL('../', import.meta.url);
 const v3Gate = JSON.parse(
   await readFile(
     new URL('docs/phase0/ficha-pdf-approval-v3.json', rootUrl),
+    'utf8',
+  ),
+);
+const v4Gate = JSON.parse(
+  await readFile(
+    new URL('docs/phase0/ficha-pdf-approval-v4.json', rootUrl),
     'utf8',
   ),
 );
@@ -144,14 +151,37 @@ async function get(api, url) {
   return api.inject({ headers: readHeaders, method: 'GET', url });
 }
 
-test('the switch agrees with the recorded v3 approval (PIM-10)', () => {
+test('the switch agrees with the recorded v4 approval (PIM-10)', () => {
   assert.doesNotThrow(() =>
-    validateFichaPrintSwitch({ gate: v3Gate, printTemplate: PRINT_TEMPLATE }),
+    validateFichaPrintSwitch({
+      gate: v3Gate,
+      gateV4: v4Gate,
+      printTemplate: PRINT_TEMPLATE,
+    }),
   );
   const stages = fichaV3ApprovalStages(v3Gate);
   if (!stages.provisional && !stages.final) {
     assert.equal(PRINT_TEMPLATE, TEMPLATE_V2, 'v2 prints while v3 is pending');
   }
+});
+
+test('v4 switch fails closed without a recorded provisional approval', () => {
+  assert.throws(
+    () =>
+      validateFichaPrintSwitch({ gate: v3Gate, printTemplate: TEMPLATE_V4 }),
+    /before its approval is recorded/u,
+  );
+  const unapproved = structuredClone(v4Gate);
+  unapproved.provisionalApproval.approved = false;
+  assert.throws(
+    () =>
+      validateFichaPrintSwitch({
+        gate: v3Gate,
+        gateV4: unapproved,
+        printTemplate: TEMPLATE_V4,
+      }),
+    /before its approval is recorded/u,
+  );
 });
 
 test('the switch takes v3 with the provisional or the final approval, never without (PIM-10)', () => {
@@ -215,17 +245,25 @@ test('the print route prints whatever the switch names (PIM-10)', async (t) => {
   assert.equal(response.body, renderOrderFicha(order, PRINT_TEMPLATE));
 });
 
-test('orders print on v3 since the provisional approval (T74, PIM-10)', async (t) => {
+test('orders print on v4 in tests since the delegated provisional approval (T78, PIM-10)', async (t) => {
   const { order, response } = await printedThroughRoute(t);
 
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V3);
-  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V3));
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V4);
+  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V4));
   assert.match(response.body, /Tipo de roupa/u);
   assert.match(response.body, /Lastro do pedido/u);
+  assert.match(response.body, /Data do pedido<\/span><strong>02\/10\/2026</u);
   assert.match(
     response.body,
     /Entrega prometida<\/span><strong>24\/10\/2026</u,
   );
+  assert.match(response.body, /Primeiro contato<\/span><strong>28\/09\/2026</u);
+  assert.match(response.body, /Pagamento<\/span><strong>02\/10\/2026</u);
+  assert.match(
+    response.body,
+    /Entrega realizada<\/span><strong><span class="empty">—<\/span>/u,
+  );
+  assert.doesNotMatch(response.body, />Modelo|>Viés gola/u);
   // A printed order carries no sample band, review box or signature lines.
   assert.doesNotMatch(
     response.body,
@@ -247,7 +285,7 @@ test('v2 still renders byte for byte through the switch function', async (t) => 
   assert.doesNotMatch(v2, /Lastro do pedido|Tipo de roupa/u);
 });
 
-test('the same order renders on either template through one function (PIM-10)', async (t) => {
+test('the same order renders on all three templates through one function (PIM-10)', async (t) => {
   const { api, runtime } = harness();
   t.after(() => api.close());
   const confirmed = await confirmedOrder(runtime, {
@@ -259,6 +297,7 @@ test('the same order renders on either template through one function (PIM-10)', 
 
   const v2 = renderOrderFicha(order, TEMPLATE_V2);
   const v3 = renderOrderFicha(order, TEMPLATE_V3);
+  const v4 = renderOrderFicha(order, TEMPLATE_V4);
 
   assert.match(v2, /Entrega confirmada/u);
   assert.match(v3, /Tipo de serviço<\/span><strong>SILK</u);
@@ -273,7 +312,8 @@ test('the same order renders on either template through one function (PIM-10)', 
     v3,
     /Entrega realizada<\/span><strong><span class="empty">—<\/span>/u,
   );
-  for (const html of [v2, v3]) {
+  assert.match(v4, /Definição da gola/u);
+  for (const html of [v2, v3, v4]) {
     assert.doesNotMatch(html, /Amostra sint|4\.820,00|R\$|pix/iu);
     assert.doesNotMatch(html, /null|undefined/u);
   }

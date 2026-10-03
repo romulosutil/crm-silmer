@@ -14,17 +14,15 @@ export { TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4 };
  * PIM-10 (ADR 017): the single switch point for the printed ficha. Every
  * printed order uses this template; the print route never chooses one.
  *
- * It names `ficha-canonical-v3` since the PO's provisional approval of
- * 03/10/2026 (development and cloud-dev, T74). The final approval, the
- * physical signature by Rose and Operação in
- * `docs/phase0/ficha-pdf-approval-v3.json`, is a production go-live gate.
- * `npm run validate:ficha-pdf-review` and `test/ficha-print-switch.test.js`
- * refuse v3 here without a recorded approval; flipping back to
- * `TEMPLATE_V2` prints the locked v2 again.
+ * It names `ficha-canonical-v4` after the PO delegated the visual decision
+ * on 03/10/2026 (development and cloud-dev, T78). The physical signature by
+ * Rose and Operação in `docs/phase0/ficha-pdf-approval-v4.json` remains a
+ * production go-live gate. The validator refuses an unapproved switch;
+ * v2/v3 stay addressable and their approved artifacts remain unchanged.
  *
  * @type {string}
  */
-export const PRINT_TEMPLATE = TEMPLATE_V3;
+export const PRINT_TEMPLATE = TEMPLATE_V4;
 
 /**
  * The printed document of an order in the public Order contract. The

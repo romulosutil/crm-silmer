@@ -68,9 +68,11 @@ dois problemas na abertura do Pedido pendente.
    evento que leva a ficha da rodada, não numa chamada à parte.
    - **Contrato:** `message.send.requested` e `handoff.requested` do contrato
      n8n v1 aceitam o booleano opcional `open_order`. Outro tipo de valor, ou o
-     campo em outro evento, é recusado com `400`. Com `open_order: true`, a
-     rota exige também a ação de automação `order.intent`, a mesma do evento
-     antigo.
+     campo em outro evento, é recusado com `400`. A autorização continua a
+     do evento (`integration.n8n.event.create` ou `handoff.create`): abrir o
+     pedido faz parte do evento, e o ator técnico tem uma lista fixa de ações.
+     Uma segunda checagem de permissão ligada pelo próprio corpo da requisição
+     seria um controle que o chamador decide quando roda.
    - **CRM:** depois que a transação do evento confirma, o CRM cria ou
      reutiliza o pedido pendente da conversa com a semântica de
      `ensurePendingFromIntent` (PCL-01..03), a partir da ficha já unida. Um

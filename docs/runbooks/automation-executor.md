@@ -15,9 +15,9 @@ As ações autorizadas pelo contrato v1 são:
 - armazenar anexo seguro e reivindicar rodada de IA;
 - reservar envio antes da Meta, atualizar briefing e registrar falha;
 - criar handoff sem responsável para a fila do papel-alvo;
-- abrir o Pedido pendente da conversa (`order.intent`), pelo `open_order` da
-  reserva de envio ou do handoff (ADR 014), ou pelo evento obsoleto
-  `order.intent_confirmed`;
+- abrir o Pedido pendente da conversa, pelo `open_order` da reserva de envio
+  ou do handoff (ADR 014), ou pelo evento obsoleto `order.intent_confirmed`
+  (ação `order.intent`);
 - converter uma conversa em Negócio;
 - atualizar campos oficiais de um Negócio;
 - registrar transição de etapa validada pelo CRM.

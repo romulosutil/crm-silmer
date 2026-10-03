@@ -1528,7 +1528,7 @@ components:
             ADR 014. Só em message.send.requested e handoff.requested. Com
             true, depois de aplicar o evento o CRM cria ou reutiliza o Pedido
             pendente da conversa a partir da ficha unida e responde em
-            `order`. Exige também a ação de automação `order.intent`.
+            `order`. A autorização é a do próprio evento.
     N8nEventResponse:
       type: object
       additionalProperties: true

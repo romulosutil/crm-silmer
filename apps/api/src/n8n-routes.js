@@ -19,9 +19,6 @@ const EVENT_ACTIONS = Object.freeze({
   'order.intent_confirmed': 'order.intent',
   'workflow.failed': 'integration.n8n.event.create',
 });
-// ADR 014: an event that opens the pending order also needs the agent's
-// order action, the same one `order.intent_confirmed` always required.
-const OPEN_ORDER_ACTION = 'order.intent';
 
 export class N8nRouteError extends Error {
   /** @param {number} statusCode @param {string} code */
@@ -177,9 +174,6 @@ export function registerN8nRoutes(api, integration, contextFor) {
         ];
         if (!action) throw new N8nRouteError(422, 'UNSUPPORTED_EVENT_TYPE');
         const technical = await authorizeRequest(request, contextFor, action);
-        if (body.open_order === true && action !== OPEN_ORDER_ACTION) {
-          await authorizeRequest(request, contextFor, OPEN_ORDER_ACTION);
-        }
         const result =
           action === 'order.intent'
             ? await integration.recordOrderIntent({ ...body, technical })

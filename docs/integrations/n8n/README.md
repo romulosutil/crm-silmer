@@ -164,8 +164,7 @@ rodada em que a ficha (briefing anterior unido ao patch da rodada) ganha o
 primeiro valor real de um dos sete pontos e em todas as seguintes; o nome
 sozinho e "Definir com o vendedor" não abrem, e o que não é pedido do zero
 (ADR 013) nunca abre. Um valor que não seja booleano, ou o campo em outro
-evento, volta `400`. Com `true`, a credencial precisa também da ação
-`order.intent`.
+evento, volta `400`. A autorização é a do próprio evento.
 
 ```json
 {

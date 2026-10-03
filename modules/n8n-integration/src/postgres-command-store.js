@@ -171,7 +171,9 @@ export class PostgresN8nCommandStore {
         await client.query(
           `UPDATE crm.messages
            SET external_message_id = COALESCE(external_message_id, $2),
-               status = $3, delivery_status = $4, delivery_status_at = $5
+               status = $3, delivery_status = $4, delivery_status_at = $5,
+               sent_at = CASE WHEN $3 = 'sent' THEN COALESCE(sent_at, $5)
+                              ELSE sent_at END
            WHERE id = $1`,
           [
             row.message_id,

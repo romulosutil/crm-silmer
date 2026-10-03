@@ -760,6 +760,11 @@ para calcular o tempo desde uma saída confirmada. SSE publica só IDs; as
 views reconsultam por API autorizada. Uma edição aberta adia a atualização
 visual até salvar ou cancelar, mantendo recuperação de conflito 409.
 
+`crm.messages.sent_at` registra a primeira confirmação de envio e não muda
+com recibos posteriores de entrega ou leitura. O histórico é preenchido apenas
+com `message.sent` ou comando de envio concluído; sem essa prova, `sentAt`
+permanece nulo e o sinal de cliente sem resposta não é exibido.
+
 A impressão passa por `modules/orders/src/print/index.js`. A v3 e seu gate
 continuam ativos; `ficha-canonical-v4` é uma candidata isolada com amostra
 sintética para revisão. V2/v3 não são modificadas. A ativação de upload no

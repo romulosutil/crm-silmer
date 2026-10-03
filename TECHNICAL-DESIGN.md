@@ -738,3 +738,25 @@ e auditoria permanecem obrigatórios. A evidência está em
 - Gemini Developer API, modelo, preço e saída estruturada:
   <https://ai.google.dev/gemini-api/docs/pricing> e
   <https://ai.google.dev/gemini-api/docs/structured-output>
+
+## 22. Revisão da ficha e leitura operacional (ADR 019)
+
+`modules/orders` mantém serviço em `items[].tipo_servico`, salva a ficha
+parcial sem esse campo e exige preenchimento por item ao gerar. `gola` é o
+campo canônico do ponto 7, com leitura compatível de `vies_gola` antigo.
+`ficha.artwork` guarda apenas as duas escolhas humanas de origem; sua rota de
+seção não recebe bytes nem escreve `files`. A API aplica autorização de
+pedido antes dessas mutações.
+
+O resumo do dashboard agrega confirmados, valor final e peças no backend. A
+lista recebe metadados da última mensagem por consulta em lote, sem conteúdo,
+para calcular o tempo desde uma saída confirmada. SSE publica só IDs; as
+views reconsultam por API autorizada. Uma edição aberta adia a atualização
+visual até salvar ou cancelar, mantendo recuperação de conflito 409.
+
+A impressão passa por `modules/orders/src/print/index.js`. A v3 e seu gate
+continuam ativos; `ficha-canonical-v4` é uma candidata isolada com amostra
+sintética para revisão. V2/v3 não são modificadas. A ativação de upload no
+Dropbox exige contrato e operação durável conforme
+[RFC 007](docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md); a mídia
+transitória de canal não é usada como arquivo de pedido.

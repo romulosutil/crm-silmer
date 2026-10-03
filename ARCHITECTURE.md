@@ -95,3 +95,13 @@ não definem novos comportamentos.
 5. Após o primeiro MVP, implementar e homologar Instagram como `CANAL-2`.
 
 As aprovações externas de IA, observabilidade, storage e recovery permanecem gates próprios. Testes e documentação não substituem evidência operacional nem aprovação humana.
+
+## Pedido e ficha na revisão de 03/10/2026
+
+O módulo de Pedidos já integra a operação após a baseline acima. A
+[ADR 019](docs/adr/019-ficha-espelhada-e-sinais-operacionais.md) registra
+serviço por item, decisão humana da origem da estampa, sinais observáveis de
+acompanhamento e uma candidata v4 da ficha. A impressão continua selecionando
+a v3 aprovada provisoriamente por um único ponto de troca; v2/v3 e seus hashes
+permanecem intactos até nova revisão. O upload de arte exige storage durável e
+contrato Dropbox próprio antes de ser ativado.

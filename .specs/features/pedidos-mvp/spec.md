@@ -796,3 +796,23 @@ Verificado em T72, 03/10/2026. Nenhuma tela mudou, então não há e2e novo.
 - [ ] 100% dos pedidos impressos têm autor e horário de confirmação.
 - [ ] O documento impresso passa pelos seis critérios do gate da ficha
       (legibilidade, conteúdo, ordem, grade, totais, impressão).
+
+## Revisão da ficha e leitura operacional (ADR 019, 03/10/2026)
+
+Esta seção registra a nova decisão do PO. A coleta do bot continua com os sete
+pontos da ADR 016; o vendedor completa as escolhas operacionais antes de
+**Gerar pedido**. A v3 aprovada para desenvolvimento permanece o template em
+uso até a revisão da candidata v4, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md).
+
+| ID | Critério de aceite |
+| --- | --- |
+| REV-01 | A tela e a nova ficha usam **Tipo de roupa** para `item.tipo`, sem editar ou imprimir `modelo`; dados históricos de modelo continuam preservados. |
+| REV-02 | O ponto 7 aparece como **Definição da gola**, usa `item.gola` e lê `vies_gola` antigo quando aquele estiver vazio; salvar outro campo não apaga essa definição. |
+| REV-03 | Cada item tem `tipo_servico`. É possível salvar um rascunho sem ele, mas **Gerar pedido** informa qual item falta; itens do mesmo pedido podem ter serviços diferentes. Gerados antigos seguem legíveis. |
+| REV-04 | O vendedor autorizado marca separadamente **Feito pelo cliente** e **Feito pela Silmer**. A automação não define a origem. O upload informa formatos e destino `CRM/<numero-lowercase>/`, mas fica desativado até armazenamento durável, validação e integração Dropbox em produção. |
+| REV-05 | A revisão impressa candidata preserva lastro, paginação e 14 campos vazios de produção; mostra serviço por item, origem da estampa e definição da gola. V2, v3 e seus hashes não mudam. A troca do template depende de aprovação própria. |
+| REV-06 | Dashboard mostra número de vendas confirmadas e valor final vendido, com período e universo explícitos; análises derivadas não contam pendentes como venda nem valor recebido. |
+| REV-07 | Linhas de Pedidos e Clientes abrem ao clicar na área não interativa e mantêm link, foco e operação por teclado. Tabela larga rola dentro de região focável no celular. |
+| REV-08 | Pedidos diferencia **Cliente sem resposta** (última saída enviada há pelo menos 48 horas) de **Pedido sem movimentação** (`updatedAt`); envio falho/incerto não acende o sinal. Nenhuma probabilidade de fechamento é inventada. |
+| REV-09 | Páginas observam eventos seguros do CRM e atualizam sem botão normal de atualização. Edição em andamento preserva rascunho; conflito de versão permite recuperar a leitura atual após cancelar. Nova tentativa manual continua para falha real. |
+| REV-10 | O [glossário](../../../docs/product/GLOSSARIO.md) fixa termos e verbos; a [revisão heurística](../../../docs/product/REVISAO-HEURISTICA.md) documenta achados e verificação. Aviso a Rose por n8n ou e-mail é proposta para fluxo conjunto, sem implantação nesta etapa. |

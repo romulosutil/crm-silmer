@@ -210,45 +210,173 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   assert.match(serialized, /next_required_field/u);
 });
 
-test('emits order.intent_confirmed on a sibling branch that cannot block the customer reply', async () => {
+test('opens the order with the reply or the handoff, never on a call of its own (ADR 014)', async () => {
+  const contract = await fixture('contract-v1.json');
   const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
   const byName = new Map(
     workflow.nodes.map((/** @type {any} */ node) => [node.name, node]),
   );
+  /** @param {string} source @param {number} [output] */
+  const targets = (source, output = 0) =>
+    (workflow.connections[source]?.main?.[output] ?? []).map(
+      (/** @type {any} */ edge) => edge.node,
+    );
+  const serialized = JSON.stringify(workflow);
 
-  const crmOrderIntent = byName.get('CRM - Registrar intenção de pedido (MVP)');
-  assert.ok(crmOrderIntent, 'expected the order-intent CRM node to exist');
-  assert.equal(crmOrderIntent.type, 'n8n-nodes-base.httpRequest');
-  assert.equal(crmOrderIntent.parameters.method, 'POST');
-  assert.match(crmOrderIntent.parameters.url, /integrations\/n8n\/events/u);
+  // The parallel, fire-and-forget intent branch is gone.
+  assert.doesNotMatch(serialized, /event_type: 'order\.intent_confirmed'/u);
+  for (const retired of [
+    'Cliente confirmou intenção de pedido? (MVP)',
+    'Preparar intenção de pedido (MVP)',
+    'CRM - Registrar intenção de pedido (MVP)',
+  ]) {
+    assert.equal(byName.has(retired), false, retired);
+  }
+  assert.deepEqual(targets('Normalizar decisão da IA (MVP)'), [
+    'Transferir para humano? (MVP)',
+  ]);
+
+  // open_order rides on the reservation and on the handoff.
+  const decision = {
+    conversation_id: 'conversation-1',
+    automation_epoch: 2,
+    source_revision: 7,
+    briefing_patch: { quantity: 30 },
+    handoff_reason: 'negotiation',
+    reasoning: 'Motivo: Perguntou o valor.',
+    reply_text: 'Qual a cor da camisa?',
+    open_order: true,
+  };
+  const reservation = runCodeNode(
+    byName.get('Preparar reserva de envio da IA (MVP)').parameters.jsCode,
+    decision,
+    {},
+  );
+  const handoff = runCodeNode(
+    byName.get('Preparar handoff da IA (MVP)').parameters.jsCode,
+    decision,
+    {},
+  );
+  for (const event of [reservation.payload, handoff.payload]) {
+    assert.equal(event.open_order, true, event.event_type);
+    assert.equal(validateEvent(event, contract), true);
+  }
   assert.equal(
-    crmOrderIntent.onError,
-    'continueErrorOutput',
-    'a CRM refusal or outage must not fail the workflow execution',
+    runCodeNode(
+      byName.get('Preparar reserva de envio da IA (MVP)').parameters.jsCode,
+      { ...decision, open_order: false },
+      {},
+    ).payload.open_order,
+    false,
   );
 
-  const prepareOrderIntent = byName.get('Preparar intenção de pedido (MVP)');
-  assert.match(
-    prepareOrderIntent.parameters.jsCode,
-    /event_type: 'order\.intent_confirmed'/u,
-  );
+  // The CRM answers on the same call; both answers reach the failure check.
+  assert.deepEqual(targets('CRM - Reservar envio da IA (MVP)').sort(), [
+    'Envio da IA autorizado? (MVP)',
+    'Pedido não abriu? (MVP)',
+  ]);
+  assert.deepEqual(targets('CRM - Registrar handoff (MVP)').sort(), [
+    'Pedido não abriu? (MVP)',
+    'Preparar aviso de transferência (MVP)',
+  ]);
+  assert.deepEqual(targets('Pedido não abriu? (MVP)'), [
+    'Preparar falha ao abrir pedido (MVP)',
+  ]);
+  assert.deepEqual(targets('Pedido não abriu? (MVP)', 1), []);
+  assert.deepEqual(targets('Preparar falha ao abrir pedido (MVP)'), [
+    'CRM - Registrar falha ao abrir pedido (MVP)',
+  ]);
+  // n8n (executionOrder v1) runs sibling branches top to bottom: the check
+  // sits above the reply and the notice, so they still end the execution.
+  assert.equal(workflow.settings.executionOrder, 'v1');
+  const check = byName.get('Pedido não abriu? (MVP)');
+  for (const sibling of [
+    'Envio da IA autorizado? (MVP)',
+    'Preparar aviso de transferência (MVP)',
+  ]) {
+    assert.ok(check.position[1] < byName.get(sibling).position[1], sibling);
+  }
+  // Reporting the failure can never block what the customer receives.
+  const report = byName.get('CRM - Registrar falha ao abrir pedido (MVP)');
+  assert.equal(report.onError, 'continueErrorOutput');
+  assert.match(report.parameters.url, /integrations\/n8n\/events/u);
+});
 
-  const gate = byName.get('Cliente confirmou intenção de pedido? (MVP)');
-  assert.equal(gate.type, 'n8n-nodes-base.if');
+test('a failed order opening raises workflow.failed ORDER_OPEN_FAILED (ADR 014)', async () => {
+  const contract = await fixture('contract-v1.json');
+  const byName = await workflowNodesByName();
+  const condition = /^=\{\{ (.*) \}\}$/u.exec(
+    byName.get('Pedido não abriu? (MVP)').parameters.conditions.conditions[0]
+      .leftValue,
+  )?.[1];
+  assert.ok(condition, 'expected an n8n expression on the failure check');
+  /** @param {any} answer */
+  const failed = (answer) =>
+    vm.runInNewContext(condition, { $json: answer, Boolean });
+  assert.equal(
+    failed({ accepted: true, order: { opened: false, error: 'X_Y' } }),
+    'true',
+  );
+  assert.equal(
+    failed({
+      accepted: true,
+      order: { opened: true, id: 'order-1', created: true },
+    }),
+    'false',
+  );
+  assert.equal(failed({ accepted: true, send_authorized: true }), 'false');
+  assert.equal(failed({ accepted: true, order: null }), 'false');
 
-  const normalizeDecisionBranches =
-    workflow.connections['Normalizar decisão da IA (MVP)'].main[0];
-  const branchTargets = normalizeDecisionBranches.map(
-    (/** @type {any} */ edge) => edge.node,
+  const prepare = byName.get('Preparar falha ao abrir pedido (MVP)').parameters
+    .jsCode;
+  const answer = {
+    accepted: true,
+    send_authorized: true,
+    order: { opened: false, error: 'ORDER_OPEN_FAILED' },
+  };
+  const fromReply = runCodeNode(prepare, answer, {
+    'Preparar reserva de envio da IA (MVP)': {
+      payload: {
+        conversation_id: 'conversation-1',
+        event_id: 'reserve:conversation-1:7:ai-response',
+        event_type: 'message.send.requested',
+      },
+    },
+  });
+  assert.deepEqual(fromReply.payload.failure, {
+    code: 'ORDER_OPEN_FAILED',
+    event_type: 'message.send.requested',
+    reason: 'ORDER_OPEN_FAILED',
+  });
+  assert.equal(fromReply.payload.event_type, 'workflow.failed');
+  assert.equal(fromReply.payload.conversation_id, 'conversation-1');
+  assert.equal(
+    fromReply.idempotency_key,
+    'order-open-failed:reserve:conversation-1:7:ai-response',
   );
-  assert.ok(
-    branchTargets.includes('Transferir para humano? (MVP)'),
-    'the existing handoff/reply decision must still run',
+  assert.equal(fromReply.payload.event_id, fromReply.idempotency_key);
+  assert.equal(validateEvent(fromReply.payload, contract), true);
+
+  const fromMedia = runCodeNode(
+    prepare,
+    {
+      ...answer,
+      order: { opened: false, error: 'ORDERS_RUNTIME_UNAVAILABLE' },
+    },
+    {
+      'Preparar handoff de conteúdo (MVP)': {
+        payload: {
+          conversation_id: 'conversation-2',
+          event_id: 'conversation-2:4:unsupported',
+          event_type: 'handoff.requested',
+        },
+      },
+    },
   );
-  assert.ok(
-    branchTargets.includes('Cliente confirmou intenção de pedido? (MVP)'),
-    'order-intent must be a sibling branch, not chained after the reply decision',
-  );
+  assert.equal(fromMedia.payload.conversation_id, 'conversation-2');
+  assert.equal(fromMedia.payload.failure.event_type, 'handoff.requested');
+  assert.equal(fromMedia.payload.failure.reason, 'ORDERS_RUNTIME_UNAVAILABLE');
+  assert.equal(validateEvent(fromMedia.payload, contract), true);
 });
 
 test('agent output parser tolerates stray keys instead of failing the execution', async () => {
@@ -278,10 +406,20 @@ test('agent output parser tolerates stray keys instead of failing the execution'
     'reply_text',
   ]);
 
+  // ADR 014: the model no longer reports the intent; a stray flag still parses.
+  assert.equal('order_intent_confirmed' in schema.properties, false);
+  assert.equal(
+    'order_intent_confirmed' in schema.properties.briefing_patch.properties,
+    false,
+  );
   const agent = byName.get('Atendente virtual Silmer (MVP)');
-  assert.match(
+  assert.doesNotMatch(
     agent.parameters.options.systemMessage,
-    /order_intent_confirmed=true no nível superior da resposta \(nunca dentro de briefing_patch\)/u,
+    /order_intent_confirmed/u,
+  );
+  assert.doesNotMatch(
+    byName.get('Montar contexto da IA (MVP)').parameters.jsCode,
+    /Intenção de pedido|order_intent_confirmed/u,
   );
 });
 
@@ -327,7 +465,7 @@ test('the CRM, the contract fixture and its schema list the same briefing fields
   );
 });
 
-test('decision normalizer accepts a misplaced order intent flag and strips stray patch keys', async () => {
+test('decision normalizer ignores the retired order intent flag and strips stray patch keys (ADR 014)', async () => {
   const byName = await workflowNodesByName();
   const jsCode = byName.get('Normalizar decisão da IA (MVP)').parameters.jsCode;
   const context = {
@@ -359,29 +497,27 @@ test('decision normalizer accepts a misplaced order intent flag and strips stray
   const decision = runCodeNode(jsCode, liveOutput, {
     'Montar contexto da IA (MVP)': context,
   });
-  assert.equal(decision.order_intent_confirmed, true);
+  // The type of shirt is a ficha point: that, not the flag, opens the order.
+  assert.equal(decision.open_order, true);
+  assert.equal('order_intent_confirmed' in decision, false);
   assert.equal('order_intent_confirmed' in decision.briefing_patch, false);
   assert.equal(decision.briefing_patch.customer_name, 'Carla');
   for (const key of Object.keys(decision.briefing_patch)) {
     assert.ok(BRIEFING_PATCH_FIELDS.has(key), `CRM would reject ${key}`);
   }
 
-  const onlyMisplaced = /** @type {any} */ (structuredClone(liveOutput));
-  delete onlyMisplaced.output.order_intent_confirmed;
-  const misplaced = runCodeNode(jsCode, onlyMisplaced, {
+  // The flag alone, at the top level or inside the patch, opens nothing.
+  const flagOnly = /** @type {any} */ (structuredClone(liveOutput));
+  flagOnly.output.briefing_patch = {
+    customer_name: 'Carla',
+    order_intent_confirmed: true,
+  };
+  const ignored = runCodeNode(jsCode, flagOnly, {
     'Montar contexto da IA (MVP)': context,
   });
-  assert.equal(misplaced.order_intent_confirmed, true);
-  assert.equal('order_intent_confirmed' in misplaced.briefing_patch, false);
-
-  const notConfirmed = /** @type {any} */ (structuredClone(onlyMisplaced));
-  delete notConfirmed.output.briefing_patch.order_intent_confirmed;
-  assert.equal(
-    runCodeNode(jsCode, notConfirmed, {
-      'Montar contexto da IA (MVP)': context,
-    }).order_intent_confirmed,
-    false,
-  );
+  assert.equal(ignored.open_order, false);
+  assert.equal('order_intent_confirmed' in ignored.briefing_patch, false);
+  assert.equal(ignored.briefing_patch.briefing_status, 'collecting');
 });
 
 test('decision normalizer applies the handoff rules of ADR 009', async () => {
@@ -523,7 +659,7 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
     { order_intent_confirmed: false },
     { briefing: { briefing_status: 'quote_collecting' } },
   );
-  assert.equal(sticky.order_intent_confirmed, true);
+  assert.equal(sticky.open_order, true, 'an order once opened stays open');
   assert.equal(sticky.briefing_patch.briefing_status, 'quote_collecting');
 
   const profile = decide(
@@ -567,9 +703,9 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
     'a complete briefing hands off without asking to build the quote',
   );
   assert.equal(
-    done.order_intent_confirmed,
+    done.open_order,
     true,
-    'a complete briefing is purchase intent, so the pending order is created',
+    'a complete ficha holds the seven points, so the handoff opens the order',
   );
   assert.doesNotMatch(done.reply_text, /\?/u);
   assert.equal(
@@ -588,7 +724,8 @@ test('sends the handoff notice the CRM reserved, and only that one (BOT-03)', as
     (workflow.connections[source]?.main?.[output] ?? []).map(
       (/** @type {any} */ edge) => edge.node,
     );
-  assert.deepEqual(targets('CRM - Registrar handoff (MVP)'), [
+  assert.deepEqual(targets('CRM - Registrar handoff (MVP)').sort(), [
+    'Pedido não abriu? (MVP)',
     'Preparar aviso de transferência (MVP)',
   ]);
   assert.deepEqual(targets('Aviso de transferência autorizado? (MVP)'), [
@@ -802,13 +939,21 @@ test('the bot neither asks to build the quote nor asks the order name (PO, 01/10
     'an order name the customer volunteers is still kept',
   );
 
+  // ADR 014: the quantity is a ficha point and opens the order; the model's
+  // retired flag alone does not.
   const intent = decide(
-    { order_intent_confirmed: true },
+    { order_intent_confirmed: true, briefing_patch: { quantity: 30 } },
     { current_text: 'quero 30 camisetas para o evento da empresa' },
   );
-  assert.equal(intent.order_intent_confirmed, true);
+  assert.equal(intent.open_order, true);
   assert.equal(intent.handoff_required, false);
   assert.equal(intent.briefing_patch.briefing_status, 'quote_collecting');
+  const flagOnly = decide(
+    { order_intent_confirmed: true },
+    { current_text: 'quero fazer uns uniformes' },
+  );
+  assert.equal(flagOnly.open_order, false);
+  assert.equal(flagOnly.briefing_patch.briefing_status, 'collecting');
 
   const legacy = decide(
     { answer_status: 'unclear' },
@@ -980,7 +1125,8 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
   assert.equal(skippedWithNews.handoff_required, false);
   assert.equal(
     skippedWithNews.briefing_patch.briefing_status,
-    'skipped',
+    // ADR 014: the colour is a ficha point, so the order opens too (quote_).
+    'quote_skipped',
     'a skipped question with news makes the next reply move on',
   );
 
@@ -1533,7 +1679,8 @@ test('a skipped point waits at the end of the rhythm (ADR 011 item 8, ADR 012)',
     },
   );
   assert.equal(skip.handoff_required, false);
-  assert.equal(skip.briefing_patch.briefing_status, 'skipped');
+  // ADR 014: the colour is the first ficha point, so the order opens (quote_).
+  assert.equal(skip.briefing_patch.briefing_status, 'quote_skipped');
   assert.equal(
     skip.briefing_patch.next_required_field,
     'quantity',
@@ -1551,7 +1698,7 @@ test('a skipped point waits at the end of the rhythm (ADR 011 item 8, ADR 012)',
       },
     },
   );
-  assert.equal(after.briefing_patch.briefing_status, 'collecting');
+  assert.equal(after.briefing_patch.briefing_status, 'quote_collecting');
   assert.equal(after.briefing_patch.next_required_field, 'artwork_status');
 
   const back = await rhythmDecision(
@@ -1585,7 +1732,7 @@ test('a skipped point waits at the end of the rhythm (ADR 011 item 8, ADR 012)',
       },
     },
   );
-  assert.equal(onlyOneLeft.briefing_patch.briefing_status, 'skipped');
+  assert.equal(onlyOneLeft.briefing_patch.briefing_status, 'quote_skipped');
   assert.equal(onlyOneLeft.briefing_patch.next_required_field, 'collar');
 });
 
@@ -1753,7 +1900,7 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
     assert.equal(decision.handoff_reason, 'human_requested', text);
     assert.match(decision.reply_text, /vendedores/u, text);
     assert.equal(
-      decision.order_intent_confirmed,
+      decision.open_order,
       false,
       'something that already exists opens no new order: ' + text,
     );
@@ -1805,7 +1952,7 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
   );
   assert.equal(midway.trigger, 'external_context');
   assert.equal(
-    midway.order_intent_confirmed,
+    midway.open_order,
     true,
     'an order already opened stays open for the seller',
   );
@@ -1949,4 +2096,141 @@ test('"com estampa" for "lisa ou com estampa?" does not answer the artwork point
     });
     assert.equal(decision.briefing_patch.artwork_status, origin, origin);
   }
+});
+
+test('the pending order opens at the first real point of the ficha (ADR 014)', async () => {
+  const contract = await fixture('contract-v1.json');
+  const byName = await workflowNodesByName();
+
+  // The name alone does not open it.
+  const nameOnly = await rhythmDecision(
+    { answer_status: 'none', briefing_patch: { customer_name: 'Carla' } },
+    { current_text: 'Oi, sou a Carla', name_asked: false },
+  );
+  assert.equal(nameOnly.open_order, false);
+  assert.equal(nameOnly.briefing_patch.briefing_status, 'collecting');
+
+  // Nor does a point left to the seller, asked or volunteered.
+  const deferred = await rhythmDecision(
+    { answer_status: 'deferred' },
+    {
+      briefing: {
+        customer_name: 'Carla',
+        next_required_field: 'product_model',
+      },
+      current_text: 'o vendedor me indica',
+    },
+  );
+  assert.equal(deferred.briefing_patch.product_model, 'Definir com o vendedor');
+  assert.equal(deferred.open_order, false);
+  assert.equal(
+    (
+      await rhythmDecision(
+        { briefing_patch: { fabrics: 'o vendedor decide' } },
+        { current_text: 'o tecido o vendedor decide' },
+      )
+    ).open_order,
+    false,
+  );
+
+  // The first real point opens it, whichever of the seven it is.
+  for (const [field, value] of Object.entries(SEVEN_POINTS)) {
+    const first = await rhythmDecision(
+      { answer_status: 'answered', briefing_patch: { [field]: value } },
+      { briefing: { customer_name: 'Carla' }, current_text: String(value) },
+    );
+    assert.equal(first.open_order, true, field);
+    assert.match(first.briefing_patch.briefing_status, /^quote_/u, field);
+  }
+
+  // A point the ficha already holds keeps asking, and once opened it stays,
+  // even if a later answer leaves that point to the seller.
+  assert.equal(
+    (
+      await rhythmDecision(
+        { answer_status: 'question' },
+        { briefing: { quantity: 30, next_required_field: 'artwork_status' } },
+      )
+    ).open_order,
+    true,
+  );
+  const stays = await rhythmDecision(
+    { briefing_patch: { product_model: 'o vendedor escolhe' } },
+    {
+      briefing: {
+        product_model: 'camiseta comum',
+        briefing_status: 'quote_collecting',
+      },
+    },
+  );
+  assert.equal(stays.open_order, true);
+
+  // What is not an order from scratch never opens one (ADR 013)...
+  const external = await rhythmDecision(
+    { external_context: true, briefing_patch: { quantity: 10 } },
+    { current_text: 'Quero 10 da camisa do Outubro Rosa que vocês postaram' },
+  );
+  assert.equal(external.trigger, 'external_context');
+  assert.equal(external.open_order, false);
+
+  // ...but any other handoff opens it when the ficha holds a point.
+  const price = await rhythmDecision(
+    { briefing_patch: { quantity: 100 } },
+    { current_text: 'Umas 100. Quanto fica cada?' },
+  );
+  assert.equal(price.trigger, 'price');
+  assert.equal(price.open_order, true);
+  const named = await rhythmDecision(
+    { person_request: 'named', requested_person_name: 'Marina' },
+    {
+      briefing: { quantity: 30, customer_name: 'Ana' },
+      current_text: 'quero falar com a Marina',
+      sellers: ['Marina'],
+    },
+  );
+  assert.equal(named.handoff_required, true);
+  assert.equal(named.open_order, true);
+  const complaintFirst = await rhythmDecision(
+    { handoff_required: true, handoff_reason: 'complaint' },
+    { current_text: 'vocês demoraram muito pra responder' },
+  );
+  assert.equal(complaintFirst.handoff_required, true);
+  assert.equal(complaintFirst.open_order, false);
+
+  const handoff = runCodeNode(
+    byName.get('Preparar handoff da IA (MVP)').parameters.jsCode,
+    price,
+    {},
+  );
+  assert.equal(handoff.payload.open_order, true);
+  assert.equal(validateEvent(handoff.payload, contract), true);
+
+  // A file or audio hands off without the model: the same rule reads the
+  // briefing the CRM returned.
+  const media = byName.get('Preparar handoff de conteúdo (MVP)').parameters
+    .jsCode;
+  /** @param {any} briefing */
+  const mediaHandoff = (briefing) =>
+    runCodeNode(
+      media,
+      {
+        conversation_id: 'conversation-3',
+        automation_epoch: 1,
+        source_revision: 4,
+        briefing,
+      },
+      { 'Normalizar evento WhatsApp (MVP)': { message_type: 'image' } },
+    ).payload;
+  assert.equal(mediaHandoff({ colors: 'azul' }).open_order, true);
+  assert.equal(mediaHandoff({ customer_name: 'Ana' }).open_order, false);
+  assert.equal(
+    mediaHandoff({ sizes: 'Definir com o vendedor' }).open_order,
+    false,
+  );
+  assert.equal(
+    mediaHandoff({ briefing_status: 'quote_collecting' }).open_order,
+    true,
+  );
+  assert.equal(mediaHandoff(undefined).open_order, false);
+  assert.equal(validateEvent(mediaHandoff({ colors: 'azul' }), contract), true);
 });

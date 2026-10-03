@@ -891,6 +891,29 @@ if (connectionString) {
             target_type: 'conversation',
           },
         ]);
+        // The workflow then raises workflow.failed for the conversation; the
+        // runbook finds it by its failure code.
+        await broken.recordEvent({
+          conversation_id: customer.conversation_id,
+          event_id: 'order-open-failed:reserve:broken-1',
+          event_type: 'workflow.failed',
+          failure: {
+            code: 'ORDER_OPEN_FAILED',
+            event_type: 'message.send.requested',
+            reason: 'ORDER_OPEN_FAILED',
+          },
+          occurred_at: NOW.toISOString(),
+          schema_version: '1.0',
+          technical: technical('order-open-failed-broken-1'),
+        });
+        const raised = await pool.query(
+          `SELECT conversation_id FROM crm.n8n_events
+           WHERE event_type = 'workflow.failed'
+             AND outcome ->> 'failureCode' = 'ORDER_OPEN_FAILED'`,
+        );
+        assert.deepEqual(raised.rows, [
+          { conversation_id: customer.conversation_id },
+        ]);
 
         const noOrders = serviceWith(null);
         const other = await inbound('5527900000104', 1);

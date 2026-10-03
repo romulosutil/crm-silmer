@@ -803,6 +803,11 @@ branch `feat/ficha-por-produto`, antes da aprovação da v3 (T15 daquele branch)
 
 ### T47: Lastro na ficha v3
 
+> **Superada em 02/10/2026 pela [T63](#t63-template-v3-e-pacote-de-revisão)
+> ([ADR 017](../../../docs/adr/017-ficha-impressa-com-os-sete-pontos.md)).**
+> A v3 por produto não foi aprovada; o lastro entra na v3 com os sete pontos.
+> O branch `feat/ficha-por-produto` não é mais a base.
+
 - **What:** A v3 imprime as cinco datas no resumo da página 1; PDF sintético v3 gerado de novo e registro de aprovação ainda pendente.
 - **Where:** branch `feat/ficha-por-produto`: `modules/orders/src/print/{ficha-canonical-v3,print-snapshot}.js`, `docs/phase0/ficha-pdf-synthetic-v3.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, testes da v3
 - **Depends on:** T43 (nomes dos campos), T15 da ficha por produto ainda aberta
@@ -1081,6 +1086,66 @@ O número T65 é da ficha impressa (ADR 017); esta é a próxima livre.
 | T60  | seção de itens e fechamento    | lib + componentes      | unit + e2e         | T58        | ✅     |
 | T61  | 1 regra de gerar, ponta a ponta | domínio, tela, docs   | unit + live + e2e  | T60        | ✅     |
 | T66  | verificação                    | full                   | full               | T57–T61    | ✅     |
+
+## Ficha impressa com os sete pontos (ADR 017, 02/10/2026)
+
+Decidido pelo PO em 02/10/2026: a ficha impressa muda junto com a tela dos
+itens, e a v3 só vale depois que o PO aprovar o PDF. Branch
+`feat/ficha-impressa-sete-pontos`, a partir de `master`. Os itens com os sete
+pontos (ADR 016) correm em paralelo; esta entrega usa só fixtures sintéticas
+com o contrato combinado do item.
+
+### T62: ADR 017 e requisitos da ficha v3
+
+- **What:** Registrar a decisão, a regra dos adicionais e o gate; requisitos PIM-06..10 e a nova redação de PLA-08; nota na D31; estas tasks; T47 superada.
+- **Where:** `docs/adr/017-ficha-impressa-com-os-sete-pontos.md`, `docs/adr/README.md`, `.specs/features/pedidos-mvp/{spec,context,tasks}.md`
+- **Depends on:** —
+- **Requirement:** PIM-06..10, PLA-08
+
+**Done when:**
+
+- [x] ADR 017 ligada à spec, ao contexto e às tasks
+- [x] PLA-08 e T47 apontam para a v3 com os sete pontos
+
+**Tests:** none · **Gate:** docs · **Commit:** `docs(adr): print the order ficha with the seven points`
+
+### T63: Template v3 e pacote de revisão
+
+- **What:** `ficha-canonical-v3` com os sete pontos, adicionais só preenchidos, lastro na página 1 e página 2 da v2; `printSnapshot` fora da rota; amostra sintética, PDF e registro de aprovação pendente pelo script de revisão (`--generate --v3`); o `--validate` cobre v2 e v3.
+- **Where:** `modules/orders/src/print/{ficha-canonical-v3,print-snapshot,html}.js`, `scripts/ficha-pdf-review.mjs`, `docs/phase0/{ficha-pdf-synthetic-v3,ficha-pdf-approval-v3}.json`, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, `test/ficha-print-v3.test.js`, `test/ficha-pdf-review-v3.test.js`
+- **Depends on:** T62
+- **Requirement:** PIM-06, PIM-07, PIM-08, PIM-09, PLA-08
+
+**Done when:**
+
+- [ ] `ficha-canonical-v2.js` e o PDF v2 sem mudança; testes da v2 passam
+- [ ] `npm run validate:ficha-pdf-review` valida v2 aprovada e v3 pendente
+- [ ] O PO aprova o PDF v3 e indica quem assina (fora desta task)
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): add the ficha v3 with the seven points for review`
+
+### T64: Ponto único de troca da impressão
+
+- **What:** `PRINT_TEMPLATE` e `renderOrderFicha(order)` em `modules/orders/src/print/index.js`; a rota de impressão chama `renderOrderFicha` e continua na v2; a validação recusa a v3 nesse ponto com o gate pendente.
+- **Where:** `modules/orders/src/print/index.js`, `modules/orders/src/index.js`, `apps/api/src/order-routes.js`, `scripts/ficha-pdf-review.mjs`, `test/ficha-print-switch.test.js`
+- **Depends on:** T63
+- **Requirement:** PIM-10
+
+**Done when:**
+
+- [ ] A rota imprime exatamente o mesmo HTML v2 de antes
+- [ ] Testes cobrem os dois templates e a recusa da v3 sem aprovação
+- [ ] Depois da aprovação, o Tech Lead troca `PRINT_TEMPLATE` num commit próprio
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(api): print through one ficha template switch`
+
+### Validação T62–T64
+
+| Task | Escopo                  | Camada            | Testes | Depends on | Status |
+| ---- | ----------------------- | ----------------- | ------ | ---------- | ------ |
+| T62  | 1 ADR + requisitos      | docs              | none   | —          | ✅     |
+| T63  | 1 template + seu pacote | template impresso | unit   | T62        | ✅     |
+| T64  | 1 ponto de troca + rota | rota/print        | unit   | T63        | ✅     |
 
 ---
 

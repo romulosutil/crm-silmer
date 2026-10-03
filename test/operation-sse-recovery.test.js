@@ -20,7 +20,10 @@ function streamHarness(readLiveEvents) {
   };
   registerOperationRoutes(
     /** @type {any} */ (api),
-    { authorizeRead: async () => ({}), readLiveEvents },
+    {
+      authorizeRead: async () => ({ actor: { id: 'operator-1' } }),
+      readLiveEvents,
+    },
     () => ({ correlationId: 'test', requestId: 'test' }),
   );
   /** @type {string[]} */

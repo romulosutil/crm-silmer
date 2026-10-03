@@ -16,7 +16,7 @@ const TOPIC_EVENTS = Object.freeze({
 export const LIVE_TOPICS = Object.freeze(Object.keys(TOPIC_EVENTS));
 
 export class LiveEventStream {
-  /** @param {{onChange:(event:Record<string,any>)=>void,onReset:()=>void,onState:(state:string)=>void}} handlers */
+  /** @param {{onChange:(event:Record<string,any>)=>void,onReset:()=>void,onSessionExpired?:()=>void,onState:(state:string)=>void}} handlers */
   constructor(handlers) {
     this.handlers = handlers;
     // stream_cursor is a single global sequence, so one cursor stays valid
@@ -53,6 +53,10 @@ export class LiveEventStream {
     this.source.addEventListener('stream.reset', (event) =>
       this.consume(event, true),
     );
+    this.source.addEventListener('session.expired', (event) => {
+      if (event.lastEventId) this.cursor = event.lastEventId;
+      this.handlers.onSessionExpired?.();
+    });
     this.source.addEventListener('message', (event) => {
       const parsed = this.parse(event.data);
       if (parsed.type === 'stream.reset') this.consume(event, true);

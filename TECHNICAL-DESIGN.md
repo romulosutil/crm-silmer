@@ -393,6 +393,9 @@ por tópico para reconectar sem vazar eventos entre usuários.
 Se o cursor recebido estiver à frente do ledger após um restore, a API emite
 `stream.reset` com o cursor atual e continua a entregar eventos novos na mesma
 conexão. O navegador recarrega apenas suas consultas autorizadas.
+O stream revalida a sessão antes de entregar cada evento e no heartbeat;
+revogação encerra a conexão com `session.expired`, sem entregar novos IDs de
+domínio. O navegador verifica a sessão antes de continuar.
 
 ## 10. Confiabilidade e processamento assíncrono
 

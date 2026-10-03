@@ -1142,9 +1142,9 @@ com o contrato combinado do item.
 ### Revisão do PDF pelo PO (02/10/2026)
 
 O PO aprovou a regra dos adicionais e o "—" no dia não registrado, e pediu as
-mudanças das tasks T65 a T68 (em 03/10/2026 corrigiu quem assina: só Rose e
-Operação, à mão). Cada uma gera de novo o PDF e o registro, que
-continua pendente.
+mudanças das tasks T65, T67, T68 e T69 (em 03/10/2026 corrigiu quem assina: só
+Rose e Operação, à mão). Cada uma gera de novo o PDF e o registro, que continua
+pendente. T66 é da ADR 016; a task dos acentos, feita antes da T67, é a T69.
 
 ### T65: Lastro sem datas repetidas
 
@@ -1160,9 +1160,9 @@ continua pendente.
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): print each trail day once on the ficha v3`
 
-### T66: Português com acento na v3
+### T69: Português com acento na v3
 
-- **What:** Todo rótulo impresso com acento, nas duas páginas e na faixa de amostra; o valor gravado "NAO APLICAVEL" sai como "NÃO APLICÁVEL" só no papel; texto digitado sai como foi digitado.
+- **What:** (Numerada T69 porque T66 é da ADR 016.) Todo rótulo impresso com acento, nas duas páginas e na faixa de amostra; o valor gravado "NAO APLICAVEL" sai como "NÃO APLICÁVEL" só no papel; texto digitado sai como foi digitado.
 - **Where:** `modules/orders/src/print/ficha-canonical-v3.js`, `scripts/ficha-pdf-review.mjs`, `docs/phase0/ficha-pdf-approval-v3.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, `test/ficha-{print-v3,pdf-review-v3,print-switch}.test.js`, ADR 017, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `.specs/features/pedidos-mvp/{spec,tasks}.md`
 - **Depends on:** T65
 - **Requirement:** PIM-07, PIM-11
@@ -1178,7 +1178,7 @@ continua pendente.
 
 - **What:** O template decide as páginas: a página 1 com Resumo, lastro e os primeiros itens; cada página de continuação com o cabeçalho, o número do pedido e "Página N · continuação dos itens"; observações e total na última página de itens; controle de produção por último. Altura estimada com folga e fonte com as medidas da Arial. Amostra com três itens (a baby look vai para a página 2); o registro confere as páginas planejadas. A amostra deixa de tratar o pagamento como bloqueio.
 - **Where:** `modules/orders/src/print/{ficha-canonical-v3,ficha-v3-pages}.js`, `scripts/ficha-pdf-review.mjs`, `docs/phase0/{ficha-pdf-synthetic-v3,ficha-pdf-approval-v3}.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, `test/ficha-{print-v3,pdf-review-v3}.test.js`, ADR 017, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `.specs/features/pedidos-mvp/{spec,tasks}.md`
-- **Depends on:** T66
+- **Depends on:** T69
 - **Requirement:** PIM-12, PLA-08
 
 **Done when:**
@@ -1203,7 +1203,7 @@ continua pendente.
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): sign the ficha v3 on paper by Rose and Operação`
 
-### Validação T62–T68
+### Validação T62–T65 e T67–T69
 
 | Task | Escopo                  | Camada            | Testes | Depends on | Status |
 | ---- | ----------------------- | ----------------- | ------ | ---------- | ------ |
@@ -1211,8 +1211,8 @@ continua pendente.
 | T63  | 1 template + seu pacote | template impresso | unit   | T62        | ✅     |
 | T64  | 1 ponto de troca + rota | rota/print        | unit   | T63        | ✅     |
 | T65  | 1 faixa do template     | template impresso | unit   | T64        | ✅     |
-| T66  | rótulos do template     | template impresso | unit   | T65        | ✅     |
-| T67  | páginas do template     | template impresso | unit   | T66        | ✅     |
+| T69  | rótulos do template     | template impresso | unit   | T65        | ✅     |
+| T67  | páginas do template     | template impresso | unit   | T69        | ✅     |
 | T68  | registro de aprovação   | gate de revisão   | unit   | T67        | ✅     |
 
 ---

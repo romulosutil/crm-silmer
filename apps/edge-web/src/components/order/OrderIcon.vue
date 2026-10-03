@@ -1,6 +1,7 @@
 <script setup>
 // One stroke family for the order page, drawn at 24×24 and sized by CSS.
 const PATHS = Object.freeze({
+  alert: ['M12 3.5 2.5 20h19Z', 'M12 10v4.5', 'M12 17.25v.25'],
   check: ['M20 6 9 17l-5-5'],
   chevron: ['m6 9 6 6 6-6'],
   clock: ['M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z', 'M12 8v4l2.5 2'],

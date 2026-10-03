@@ -3,14 +3,12 @@ import { computed, ref } from 'vue';
 import { commandKey, request } from '../../lib/api-client.js';
 import {
   amountLabel,
+  joinPt,
   missingFieldLabels,
   missingHeadline,
   orderStatusLabel,
 } from '../../lib/order-format.js';
 import { openDialog } from '../../lib/ui.js';
-
-/** PFI-09: what keeps "Confirmar pedido" out of reach, as the order page reads it. */
-const BLOCKERS = Object.freeze(['items', 'finalAmount', 'paymentCondition']);
 
 /**
  * PCX-07/D22: the order beside the conversation, on demand and read only. It
@@ -39,16 +37,11 @@ const title = computed(() =>
 const statusLabel = computed(() => orderStatusLabel(order.value?.status));
 const headline = computed(() => missingHeadline(order.value?.missingFields));
 /**
- * The headline already names what blocks the confirmation, so repeating it
- * underneath would waste the only column this drawer has. The second line is
- * for the ficha fields nothing blocks on — the part the headline drops.
+ * PIT-06: the headline names the first two points still missing; when there
+ * are more, the line underneath names all of them.
  */
-const fichaGapLabels = computed(() =>
-  missingFieldLabels(
-    (order.value?.missingFields ?? []).filter(
-      (/** @type {string} */ field) => !BLOCKERS.includes(field),
-    ),
-  ),
+const missingLabels = computed(() =>
+  missingFieldLabels(order.value?.missingFields ?? []),
 );
 const items = computed(() =>
   (order.value?.ficha?.items ?? []).map((item, index) => ({
@@ -170,8 +163,8 @@ defineExpose({ open });
 
       <template v-if="!loading && order">
         <p class="order-drawer-headline">{{ headline }}</p>
-        <p v-if="fichaGapLabels.length" class="footnote">
-          Em branco na ficha: {{ fichaGapLabels.join(', ') }}.
+        <p v-if="missingLabels.length > 2" class="footnote">
+          Falta para gerar: {{ joinPt(missingLabels) }}.
         </p>
 
         <ul class="order-drawer-items" aria-label="Itens do pedido">

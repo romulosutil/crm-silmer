@@ -4,6 +4,8 @@ import { dateTimeBR } from '../../lib/format.js';
 import {
   amountLabel,
   formatBrl,
+  isItemGap,
+  joinPt,
   missingFieldLabels,
   parseBrl,
   PAYMENT_CONDITION_OPTIONS,
@@ -11,13 +13,12 @@ import {
 } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
 
-// PCL-05: what each blocker the server may name means to the seller.
+// PCL-05: what the amount and the payment method mean to the seller when the
+// server refuses them; the item points are named one by one (PIT-06).
 const BLOCKER_MESSAGES = Object.freeze({
   finalAmount: 'Informe o valor final aprovado pelo cliente.',
-  items: 'O pedido precisa de ao menos um item com grade.',
-  paymentCondition: 'Escolha a condição de pagamento.',
+  paymentCondition: 'Escolha a forma de pagamento.',
 });
-const BLOCKERS = Object.freeze(['items', 'finalAmount', 'paymentCondition']);
 const AMOUNT_FORMAT_MESSAGE = 'Use o formato 4.820,00.';
 
 const props = defineProps({
@@ -42,10 +43,9 @@ const sectionOpenElsewhere = computed(
 );
 const missing = computed(() => (props.order.missingFields ?? []).map(String));
 const amountValid = computed(() => parseBrl(amountText.value) !== null);
-const fichaGaps = computed(() =>
-  missingFieldLabels(
-    missing.value.filter((field) => !BLOCKERS.includes(field)),
-  ),
+// ADR 016: the points the items still lack, as the server listed them.
+const itemGaps = computed(() =>
+  missingFieldLabels(missing.value.filter(isItemGap)),
 );
 const items = computed(() => props.order.ficha?.items ?? []);
 const itemsHeadline = computed(() => {
@@ -54,16 +54,21 @@ const itemsHeadline = computed(() => {
 });
 
 /**
- * PFI-09: the checklist next to the button. The grade is judged by the
- * server; amount and condition by what the seller is typing right now, since
- * both only reach the order when it is generated.
+ * PFI-09/PIT-05: the checklist next to the button. The items are judged by
+ * the server; amount and payment method by what the seller is typing right
+ * now, since both only reach the order when it is generated.
  */
 const checks = computed(() => [
   {
-    hint: itemsHeadline.value,
+    hint:
+      itemGaps.value.length === 0
+        ? itemsHeadline.value
+        : missing.value.includes('items')
+          ? 'nenhum item'
+          : `${itemGaps.value.length} ${itemGaps.value.length === 1 ? 'ponto' : 'pontos'} a preencher`,
     key: 'items',
-    label: 'Itens com grade',
-    ok: !missing.value.includes('items'),
+    label: 'Itens completos',
+    ok: itemGaps.value.length === 0,
   },
   {
     hint: amountValid.value ? `R$ ${amountText.value.trim()}` : 'pendente',
@@ -76,19 +81,16 @@ const checks = computed(() => [
       ? paymentConditionLabel(paymentCondition.value)
       : 'pendente',
     key: 'paymentCondition',
-    label: 'Condição de pagamento',
+    label: 'Forma de pagamento',
     ok: paymentCondition.value !== '',
   },
 ]);
-const pendingLabels = computed(() =>
-  checks.value
-    .filter((check) => !check.ok)
-    .map((check) =>
-      check.key === 'items'
-        ? 'nenhum item com grade'
-        : check.label.toLowerCase(),
-    ),
-);
+// PIT-06: "Falta para gerar" names every point, item by item.
+const pendingLabels = computed(() => [
+  ...itemGaps.value,
+  ...(amountValid.value ? [] : ['valor final']),
+  ...(paymentCondition.value === '' ? ['forma de pagamento'] : []),
+]);
 const readyCount = computed(
   () => checks.value.filter((check) => check.ok).length,
 );
@@ -102,12 +104,6 @@ const readiness = computed(() => {
   return 'Tudo pronto. Gerar confirma o pedido e libera a ficha.';
 });
 
-/** @param {string[]} parts */
-function joinPt(parts) {
-  if (parts.length < 2) return parts.join('');
-  return `${parts.slice(0, -1).join(', ')} e ${parts.at(-1)}`;
-}
-
 /** @param {unknown} value */
 function dateBR(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(String(value ?? ''));
@@ -115,9 +111,11 @@ function dateBR(value) {
 }
 
 // PCL-07: reopening keeps the amount and the condition already recorded, so
-// the form comes back filled with what was confirmed.
+// the form comes back filled with what was confirmed. Only a change of those
+// two values rewrites the form: saving another section while the items are
+// completed (ADR 016) keeps what the seller already typed here.
 watch(
-  () => [props.order.finalAmountCents, props.order.paymentCondition],
+  [() => props.order.finalAmountCents, () => props.order.paymentCondition],
   ([cents, condition]) => {
     amountText.value = formatBrl(cents);
     paymentCondition.value = condition ?? '';
@@ -158,6 +156,16 @@ function settleAmount() {
 }
 
 /**
+ * The item points in one sentence, from the keys the server uses.
+ *
+ * @param {string[]} fields
+ */
+function itemsMessage(fields) {
+  if (fields.includes('items')) return 'O pedido precisa de ao menos um item.';
+  return `Complete os itens antes de gerar: ${joinPt(missingFieldLabels(fields))}.`;
+}
+
+/**
  * PFI-11: a malformed amount is caught here so the message lands under the
  * field; the server parses the same text again and would answer 422.
  */
@@ -171,6 +179,12 @@ async function requestGenerate() {
   }
   if (paymentCondition.value === '') {
     fieldErrors.value = { paymentCondition: BLOCKER_MESSAGES.paymentCondition };
+    return;
+  }
+  if (itemGaps.value.length > 0) {
+    fieldErrors.value = {
+      items: itemsMessage(missing.value.filter(isItemGap)),
+    };
     return;
   }
   confirmOpen.value = true;
@@ -197,9 +211,12 @@ async function generate() {
     return;
   }
   if (result.code === 'ORDER_NOT_CONFIRMABLE') {
+    const fields = (result.fields ?? []).map(String);
     /** @type {Record<string, string>} */
     const errors = {};
-    for (const field of result.fields ?? []) {
+    const gaps = fields.filter(isItemGap);
+    if (gaps.length > 0) errors.items = itemsMessage(gaps);
+    for (const field of fields.filter((name) => !isItemGap(name))) {
       errors[field] =
         BLOCKER_MESSAGES[
           /** @type {keyof typeof BLOCKER_MESSAGES} */ (field)
@@ -317,7 +334,7 @@ const blockerNotes = computed(() =>
           </div>
 
           <fieldset class="op-conditions">
-            <legend>Condição de pagamento</legend>
+            <legend>Forma de pagamento</legend>
             <div class="op-condition-chips">
               <label
                 v-for="option in PAYMENT_CONDITION_OPTIONS"
@@ -384,7 +401,7 @@ const blockerNotes = computed(() =>
             <dd class="op-num">{{ amountLabel(order.finalAmountCents) }}</dd>
           </div>
           <div>
-            <dt>Condição de pagamento</dt>
+            <dt>Forma de pagamento</dt>
             <dd>{{ paymentConditionLabel(order.paymentCondition) }}</dd>
           </div>
           <div v-if="order.confirmedAt">
@@ -426,13 +443,6 @@ const blockerNotes = computed(() =>
           </p>
         </div>
       </template>
-
-      <p class="op-ficha-gaps" :data-complete="!fichaGaps.length || undefined">
-        <template v-if="fichaGaps.length">
-          Ainda em branco na ficha: {{ fichaGaps.join(', ') }}.
-        </template>
-        <template v-else>Os campos da ficha impressa estão completos.</template>
-      </p>
     </div>
 
     <dialog

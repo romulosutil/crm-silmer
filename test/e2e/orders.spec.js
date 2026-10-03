@@ -20,10 +20,13 @@ const confirmedOrder = {
   ficha: {
     items: [
       {
+        cor: 'BRANCA',
         cor_costas: 'BRANCA',
         cor_frente: 'BRANCA',
         cor_manga_direita: 'VERDE BANDEIRA',
         cor_manga_esquerda: 'VERDE BANDEIRA',
+        estampa: 'Sem estampa',
+        gola: 'GOLA V',
         grade: [{ quantidade: 60, tamanho: 'M' }],
         malhas: ['DRY FIT 100% POLIÉSTER'],
         modelo: 'GOLA OLÍMPICA',
@@ -69,10 +72,13 @@ const pendingOrder = {
   ficha: {
     items: [
       {
+        cor: 'BRANCA',
         cor_costas: 'BRANCA',
         cor_frente: 'BRANCA',
         cor_manga_direita: 'VERDE BANDEIRA',
         cor_manga_esquerda: 'VERDE BANDEIRA',
+        estampa: 'Arte do cliente · frente',
+        gola: 'GOLA REDONDA',
         grade: [
           { quantidade: 100, tamanho: 'M' },
           { quantidade: 50, tamanho: 'G' },
@@ -130,7 +136,7 @@ const extraPending = {
     ...pendingOrder.ficha,
     summary: { ...pendingOrder.ficha.summary, cliente: 'Loja Vitória Sports' },
   },
-  missingFields: ['items[0].modelo', 'finalAmount', 'paymentCondition'],
+  missingFields: ['items[0].gola', 'finalAmount', 'paymentCondition'],
   number: '09-CRM',
   totalPieces: 45,
 };
@@ -200,28 +206,29 @@ function brlToCents(text) {
   return Number(reais.replaceAll('.', '')) * 100 + Number(cents.padEnd(2, '0'));
 }
 
+// ADR 016: the seven points of every item, the amount and the payment
+// method — the same rule and order the server applies.
+const ITEM_POINTS = ['tipo', 'cor', 'estampa', 'malhas', 'grade', 'gola'];
+
 /** @param {any} order */
 function missingFor(order) {
   if (order.status === 'confirmado') return [];
   /** @type {string[]} */
   const missing = [];
-  if (
-    !order.ficha.items.some(
-      /** @param {any} item */ (item) => item.grade.length > 0,
-    )
-  ) {
-    missing.push('items');
-  }
+  if (order.ficha.items.length === 0) missing.push('items');
+  order.ficha.items.forEach(
+    /** @param {any} item @param {number} index */ (item, index) => {
+      for (const key of ITEM_POINTS) {
+        const value = item[key];
+        const blank = Array.isArray(value)
+          ? value.length === 0
+          : !String(value ?? '').trim();
+        if (blank) missing.push(`items[${index}].${key}`);
+      }
+    },
+  );
   if (!order.finalAmountCents) missing.push('finalAmount');
   if (!order.paymentCondition) missing.push('paymentCondition');
-  for (const key of [
-    'cliente',
-    'data_entrega_confirmada',
-    'aplicacao',
-    'nome',
-  ]) {
-    if (!order.ficha.summary[key]) missing.push(`summary.${key}`);
-  }
   return missing;
 }
 
@@ -444,7 +451,9 @@ test('groups orders by status with counts, columns and actions', async ({
   await expect(pendingRow).toContainText('07-CRM');
   await expect(pendingRow).toContainText('Colégio Ápice');
   await expect(pendingRow).toContainText('150');
-  await expect(pendingRow).toContainText('Falta valor e condição');
+  await expect(pendingRow).toContainText(
+    'Falta valor final e forma de pagamento',
+  );
   await expect(pendingRow).toContainText('parado há');
 
   // PLI-06: printing belongs to confirmed orders, continuing to pending ones.
@@ -620,19 +629,58 @@ test('locks printing while the order is pending and says why (PIM-01)', async ({
   await expect(print).toHaveAttribute('aria-describedby', /./u);
 });
 
-test('lists what is missing in the banner, and says so when nothing is (PFI-09)', async ({
+test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05, PIT-06)', async ({
   page,
 }) => {
-  await mockOrders(page);
+  const incomplete = {
+    ...pendingOrder,
+    ficha: {
+      ...pendingOrder.ficha,
+      items: [{ ...pendingOrder.ficha.items[0], cor: '', gola: '' }],
+      // ADR 016: the summary never blocks, even blank.
+      summary: {
+        aplicacao: null,
+        cliente: 'Colégio Ápice',
+        data_entrega_confirmada: null,
+        nome: null,
+      },
+    },
+    missingFields: [
+      'items[0].cor',
+      'items[0].gola',
+      'finalAmount',
+      'paymentCondition',
+    ],
+  };
+  await mockOrders(page, { orders: [incomplete] });
   await page.goto('/pedidos/order-pendente');
 
-  const banner = page.getByRole('status').filter({ hasText: 'Falta' });
-  await expect(banner).toContainText('valor final');
-  await expect(banner).toContainText('condição de pagamento');
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  const readiness = closing.getByRole('status').filter({ hasText: 'Falta' });
+  await expect(readiness).toHaveText(
+    'Falta para gerar: cor do item 1, gola do item 1, valor final e forma de pagamento.',
+  );
+  await expect(page.getByText('Ainda em branco na ficha')).toHaveCount(0);
 
-  await page.goto('/pedidos/order-confirmado');
+  await closing.getByLabel('Valor final').fill('4.820,00');
+  await closing.getByLabel('Pix').check();
+  await expect(readiness).toHaveText(
+    'Falta para gerar: cor do item 1 e gola do item 1.',
+  );
+  // The items are not complete, so the order is not sent to be generated.
+  await closing.getByRole('button', { name: 'Gerar pedido' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(closing.getByRole('alert')).toHaveText(
+    'Complete os itens antes de gerar: cor do item 1 e gola do item 1.',
+  );
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Cor', { exact: true }).fill('BRANCA');
+  await items.getByLabel('Gola', { exact: true }).fill('GOLA V');
+  await items.getByRole('button', { name: 'Salvar itens' }).click();
   await expect(
-    page.getByText('Os campos da ficha impressa estão completos.'),
+    closing.getByText('Tudo pronto. Gerar confirma o pedido e libera a ficha.'),
   ).toBeVisible();
 });
 
@@ -936,7 +984,7 @@ test('names the day the server refused as invalid', async ({ page }) => {
   await expect(trail.getByRole('alert')).toHaveText('Use uma data até hoje.');
 });
 
-test('reads each item as a card with its own total (PFI-03, PFI-04)', async ({
+test('reads each item with the seven points in order and the extras closed (PFI-03, PIT-01, PIT-02)', async ({
   page,
 }) => {
   await mockOrders(page);
@@ -944,12 +992,230 @@ test('reads each item as a card with its own total (PFI-03, PFI-04)', async ({
 
   const items = page.getByRole('region', { name: 'Itens e especificações' });
   await expect(items).toContainText('1 item · 150 peças');
-  const card = items.getByRole('group').first();
-  await expect(card).toContainText('CAMISETA');
-  await expect(card).toContainText('GOLA OLÍMPICA');
-  await expect(card).toContainText('DRY FIT 100% POLIÉSTER');
-  await expect(card).toContainText('150 peças');
+  const card = items.getByRole('group', {
+    name: 'Item 1 · CAMISETA · 150 peças',
+  });
+  await expect(
+    card.getByRole('heading', {
+      level: 3,
+      name: 'Item 1 · CAMISETA · 150 peças',
+    }),
+  ).toBeVisible();
+  const points = card.locator('dl').first();
+  await expect(points.locator(':scope > div > dt')).toHaveText([
+    'Tipo de roupa',
+    'Cor',
+    'Quantidade',
+    'Estampa',
+    'Tecido',
+    'Tamanhos',
+    'Gola',
+  ]);
+  await expect(points.locator(':scope > div > dd')).toHaveText([
+    'CAMISETA',
+    'BRANCA',
+    '150 peças',
+    'Arte do cliente · frente',
+    'DRY FIT 100% POLIÉSTER',
+    'M100G50',
+    'GOLA REDONDA',
+  ]);
   await expect(card.getByRole('listitem')).toHaveText(['M100', 'G50']);
+
+  // PIT-02: the extras start closed and do not show their values.
+  const toggle = card.getByRole('button', {
+    name: /Adicionais \(não obrigatórios\)/u,
+  });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(card.getByText('GOLA OLÍMPICA', { exact: true })).toBeHidden();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(card.getByText('GOLA OLÍMPICA', { exact: true })).toBeVisible();
+  await expect(card.locator('dl').nth(1).locator('dt')).toHaveText([
+    'Modelo',
+    'Cor frente',
+    'Cor costas',
+    'Manga direita',
+    'Manga esquerda',
+    'Viés gola',
+    'Viés mangas',
+  ]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('opens and closes the extras with the keyboard, keeping the focus (PIT-02)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const toggle = items.getByRole('button', {
+    name: /Adicionais \(não obrigatórios\)/u,
+  });
+  const extras = items.locator(
+    `#${await toggle.getAttribute('aria-controls')}`,
+  );
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(extras).toBeVisible();
+  await expect(toggle).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(extras).toBeHidden();
+  await expect(toggle).toBeFocused();
+
+  // While editing, the extras are closed again and open the same way.
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await expect(items.getByLabel('Tipo de roupa')).toBeFocused();
+  const editToggle = items.getByRole('button', {
+    name: 'Adicionais (não obrigatórios)',
+  });
+  await expect(editToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(items.getByLabel('Modelo')).toBeHidden();
+  await editToggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(items.getByLabel('Modelo')).toBeVisible();
+  await expect(editToggle).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(items.getByLabel('Modelo')).toBeFocused();
+});
+
+test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await expect(items.getByText('Quantidade', { exact: true })).toBeVisible();
+  await items.getByLabel('Tipo de roupa').fill('REGATA');
+  await items.getByLabel('Cor', { exact: true }).fill('PRETA');
+  await items.getByLabel('Estampa').fill('Silmer cria a arte');
+  await items.getByLabel('Tecido 1').fill('ALGODÃO');
+  await items.getByLabel('Gola', { exact: true }).fill('REGATA');
+  await items
+    .getByRole('button', { name: 'Adicionais (não obrigatórios)' })
+    .click();
+  await items.getByLabel('Modelo').fill('CAVADA');
+  await items.getByLabel('Cor frente').fill('PRETA');
+
+  // A second item stays half filled: it saves and is listed as missing.
+  await items.getByRole('button', { name: 'Adicionar item' }).click();
+  await page.locator('#item-1-tipo').fill('BONÉ');
+  await items.getByRole('button', { name: 'Salvar itens' }).click();
+
+  await expect(
+    items.getByRole('heading', { name: 'Item 1 · REGATA · 150 peças' }),
+  ).toBeVisible();
+  await expect(
+    items.getByRole('heading', { name: 'Item 2 · BONÉ · 0 peças' }),
+  ).toBeVisible();
+  const [first, second] = writes[0].body.value;
+  expect(first).toMatchObject({
+    cor: 'PRETA',
+    cor_frente: 'PRETA',
+    estampa: 'Silmer cria a arte',
+    gola: 'REGATA',
+    malhas: ['ALGODÃO'],
+    modelo: 'CAVADA',
+    tipo: 'REGATA',
+  });
+  expect(second).toMatchObject({ grade: [], malhas: [], tipo: 'BONÉ' });
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await expect(closing).toContainText(
+    'Falta para gerar: cor do item 2, estampa do item 2, tecido do item 2, tamanhos do item 2, gola do item 2, valor final e forma de pagamento.',
+  );
+});
+
+test('shows the quantity the customer said next to the total, and warns when the sizes differ (PIT-09)', async ({
+  page,
+}) => {
+  const told = {
+    ...pendingOrder,
+    ficha: {
+      ...pendingOrder.ficha,
+      serviceData: { ...pendingOrder.ficha.serviceData, quantity: 140 },
+    },
+  };
+  const noSizes = {
+    ...pendingOrder,
+    ficha: {
+      ...pendingOrder.ficha,
+      items: [{ ...pendingOrder.ficha.items[0], grade: [] }],
+      serviceData: { quantity: '30 peças' },
+    },
+    id: 'order-sem-tamanhos',
+    missingFields: ['items[0].grade', 'finalAmount', 'paymentCondition'],
+    totalPieces: 0,
+  };
+  await mockOrders(page, { orders: [told, noSizes] });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await expect(summary).toContainText('cliente informou 140');
+  await expect(summary).toContainText(
+    'A soma dos tamanhos (150) é diferente da quantidade informada (140)',
+  );
+  // Non-blocking: generating is still only about the points, amount and method.
+  await expect(
+    page.getByRole('region', { name: 'Fechamento e pagamento' }),
+  ).not.toContainText('quantidade informada');
+
+  await page.goto('/pedidos/order-sem-tamanhos');
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await expect(items.locator('dl').first()).toContainText(
+    '— (cliente informou 30 peças)',
+  );
+  await expect(summary).not.toContainText('é diferente');
+});
+
+test('names the fields the way the PO asked (PIT-10)', async ({ page }) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const main = page.locator('main');
+  for (const label of [
+    'Tipo de roupa',
+    'Tamanhos',
+    'Tecido',
+    'Forma de pagamento',
+  ]) {
+    await expect(main.getByText(label, { exact: true }).first()).toBeVisible();
+  }
+  for (const old of [
+    'Condição de pagamento',
+    'Grade',
+    'Malhas',
+    'Ainda em branco na ficha',
+  ]) {
+    await expect(main.getByText(old, { exact: true })).toHaveCount(0);
+  }
+
+  const service = page.getByRole('region', { name: 'Dados do atendimento' });
+  await page.route('**/api/v1/orders/order-pendente', async (route) => {
+    const order = {
+      ...pendingOrder,
+      ficha: {
+        ...pendingOrder.ficha,
+        serviceData: { artwork_technique: 'estampada', sizes: '10 de cada' },
+      },
+    };
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ order }),
+    });
+  });
+  await page.reload();
+  await service.getByRole('button', { name: 'Ver' }).click();
+  await expect(service.locator('dt')).toHaveText([
+    'Estampa desejada',
+    'Tamanhos informados',
+  ]);
 });
 
 test('edits the grade and recomputes every total from it (PFI-04)', async ({
@@ -1006,10 +1272,16 @@ test('accepts "Não aplicável" on sleeves and viés (PFI-07)', async ({
 
   const items = page.getByRole('region', { name: 'Itens e especificações' });
   await items.getByRole('button', { name: 'Editar' }).click();
+  await items
+    .getByRole('button', { name: 'Adicionais (não obrigatórios)' })
+    .click();
   await items.getByLabel('Manga direita não se aplica').check();
   await items.getByRole('button', { name: 'Salvar' }).click();
 
-  await expect(items).toContainText('NÃO APLICÁVEL');
+  await items
+    .getByRole('button', { name: /Adicionais \(não obrigatórios\)/u })
+    .click();
+  await expect(items.getByText('NÃO APLICÁVEL')).toBeVisible();
   expect(writes[0].body.value[0].cor_manga_direita).toBe('NAO APLICAVEL');
 });
 
@@ -1028,7 +1300,7 @@ test('keeps every summary and item field as text typed by hand (PFI-14)', async 
 
   const items = page.getByRole('region', { name: 'Itens e especificações' });
   await items.getByRole('button', { name: 'Editar' }).click();
-  await expect(items.getByLabel('Tipo', { exact: true })).toBeEditable();
+  await expect(items.getByLabel('Tipo de roupa')).toBeEditable();
   await expect(lists).toHaveCount(0);
 });
 
@@ -1043,8 +1315,8 @@ test('adds and removes items, fabrics and grade lines', async ({ page }) => {
   await items.getByRole('button', { name: 'Adicionar tamanho' }).click();
   await items.getByLabel('Tamanho da linha 3').fill('GG');
   await items.getByLabel('Quantidade do tamanho GG').fill('10');
-  await items.getByRole('button', { name: 'Adicionar malha' }).click();
-  await items.getByLabel('Malha 2').fill('HELANCA LIGHT');
+  await items.getByRole('button', { name: 'Adicionar tecido' }).click();
+  await items.getByLabel('Tecido 2').fill('HELANCA LIGHT');
   await items.getByRole('button', { name: 'Salvar' }).click();
 
   await expect(items).toContainText('1 item · 160 peças');
@@ -1245,7 +1517,7 @@ test('names each blocker the server refused the confirmation with', async ({
     writeFailure: {
       body: {
         code: 'ORDER_NOT_CONFIRMABLE',
-        fields: ['items', 'paymentCondition'],
+        fields: ['items[0].cor', 'items[0].gola', 'paymentCondition'],
       },
       status: 422,
     },
@@ -1261,11 +1533,33 @@ test('names each blocker the server refused the confirmation with', async ({
     .getByRole('button', { name: 'Confirmar e gerar ficha' })
     .click();
 
-  await expect(closing).toContainText('Escolha a condição de pagamento.');
+  await expect(closing).toContainText('Escolha a forma de pagamento.');
   await expect(closing).toContainText(
-    'O pedido precisa de ao menos um item com grade.',
+    'Complete os itens antes de gerar: cor do item 1 e gola do item 1.',
   );
   await expect(closing).toContainText('pedido pendente');
+});
+
+test('says an order needs an item when the server refuses one without items', async ({
+  page,
+}) => {
+  await mockOrders(page, {
+    writeFailure: {
+      body: { code: 'ORDER_NOT_CONFIRMABLE', fields: ['items'] },
+      status: 422,
+    },
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await closing.getByLabel('Valor final').fill('4.820,00');
+  await closing.getByLabel('Pix').check();
+  await closing.getByRole('button', { name: 'Gerar pedido' }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Confirmar e gerar ficha' })
+    .click();
+  await expect(closing).toContainText('O pedido precisa de ao menos um item.');
 });
 
 test('keeps "Gerar pedido" as the only primary button of the page (PFI-13)', async ({

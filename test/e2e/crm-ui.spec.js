@@ -1236,7 +1236,7 @@ test('summarises the order in a drawer that closes with Esc and gives focus back
   const drawer = page.getByRole('dialog', { name: /Pedido 07-CRM/ });
   await expect(drawer).toBeVisible();
   await expect(drawer).toContainText('Pendente');
-  await expect(drawer).toContainText('Falta valor e condição');
+  await expect(drawer).toContainText('Falta valor final e forma de pagamento');
   await expect(drawer).toContainText('CAMISETA · GOLA OLÍMPICA');
   await expect(drawer).toContainText('150 peças');
   await expect(drawer).toContainText('—');

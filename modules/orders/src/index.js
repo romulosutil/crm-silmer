@@ -16,16 +16,22 @@ export {
   OrderValidationError,
 } from './domain/errors.js';
 export {
+  DEFERRED,
+  ITEM_EXTRA_FIELDS,
+  ITEM_REQUIRED_FIELDS,
   MAX_OBSERVATIONS,
   NOT_APPLICABLE,
+  blankItem,
   briefingToFicha,
   itemTotal,
+  normalizeFicha,
   orderTotal,
   projectBriefingOntoFicha,
   validateItems,
   validateObservations,
   validateSummary,
 } from './domain/ficha.js';
+export { parseSizes } from './domain/sizes.js';
 export { formatBrlAmount, parseBrlAmount } from './domain/money.js';
 export {
   ORDER_STATUSES,

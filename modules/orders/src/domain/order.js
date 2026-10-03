@@ -1,4 +1,5 @@
 import { OrderConflictError, OrderValidationError } from './errors.js';
+import { ITEM_REQUIRED_FIELDS } from './ficha.js';
 
 // ADR 006: an order is `pendente` (unofficial draft) or `confirmado`
 // (official). The only way forward is a human confirmation and the only way
@@ -24,25 +25,6 @@ const orderDateFormat = new Intl.DateTimeFormat('en-CA', {
   timeZone: OPERATIONAL_TIME_ZONE,
   year: 'numeric',
 });
-
-const ITEM_FIELD_ORDER = Object.freeze([
-  'tipo',
-  'modelo',
-  'malhas',
-  'cor_frente',
-  'cor_costas',
-  'cor_manga_direita',
-  'cor_manga_esquerda',
-  'vies_gola',
-  'vies_mangas',
-  'grade',
-]);
-const SUMMARY_FIELD_ORDER = Object.freeze([
-  'cliente',
-  'data_entrega_confirmada',
-  'aplicacao',
-  'nome',
-]);
 
 /**
  * @typedef {typeof ORDER_STATUSES[number]} OrderStatus
@@ -94,20 +76,44 @@ function requireStatus(order, expected, command) {
   }
 }
 
-/** @param {readonly {grade: readonly unknown[]}[]} items */
-function hasItemWithGrade(items) {
-  return items.some((item) => item.grade.length > 0);
+/**
+ * The principal points an item still lacks, as `items[N].<field>`. A size
+ * line always carries a quantity above zero, so the grade stands for both the
+ * sizes and the quantity.
+ *
+ * @param {Record<string, unknown>} item @param {number} index
+ */
+function itemGaps(item, index) {
+  return ITEM_REQUIRED_FIELDS.filter((key) => {
+    const value = item?.[key];
+    if (key === 'grade') return !Array.isArray(value) || value.length === 0;
+    if (key === 'malhas') {
+      return (
+        !Array.isArray(value) ||
+        !value.some((entry) => typeof entry === 'string' && entry.trim() !== '')
+      );
+    }
+    return typeof value !== 'string' || value.trim() === '';
+  }).map((key) => `items[${index}].${key}`);
 }
 
 /**
- * @param {readonly {grade: readonly unknown[]}[]} items
+ * ADR 016 (replaces A01): generating the order needs at least one item, the
+ * seven principal points of every item, the final amount and the payment
+ * method. Nothing else blocks or is listed: the additional item fields and
+ * the summary stay as the seller leaves them.
+ *
+ * @param {readonly Record<string, any>[]} items
  * @param {unknown} amountCents
  * @param {unknown} paymentCondition
- * @returns {string[]}
+ * @returns {string[]} `items`, `items[N].<field>`, `finalAmount` and
+ *   `paymentCondition`, in that order
  */
 function confirmationBlockers(items, amountCents, paymentCondition) {
-  const blockers = [];
-  if (!hasItemWithGrade(items)) blockers.push('items');
+  const blockers =
+    items.length === 0
+      ? ['items']
+      : items.flatMap((item, index) => itemGaps(item, index));
   if (
     !Number.isSafeInteger(amountCents) ||
     /** @type {number} */ (amountCents) <= 0
@@ -125,34 +131,19 @@ function confirmationBlockers(items, amountCents, paymentCondition) {
 }
 
 /**
- * A01: confirmation is blocked only by amount, condition and at least one
- * item with grade. Empty ficha fields are listed after the blockers so the
- * banner shows them, but they never block.
+ * PFI-09: what still keeps a pending order from being generated. A
+ * confirmed order lacks nothing.
  *
  * @param {Pick<Order, 'status'|'ficha'|'finalAmountCents'|'paymentCondition'>} order
  * @returns {string[]}
  */
 export function missingForConfirmation(order) {
   if (order.status === 'confirmado') return [];
-  const { items, summary } = order.ficha;
-  const missing = confirmationBlockers(
-    items,
+  return confirmationBlockers(
+    order.ficha.items,
     order.finalAmountCents,
     order.paymentCondition,
   );
-  for (const key of SUMMARY_FIELD_ORDER) {
-    const value = summary[/** @type {keyof typeof summary} */ (key)];
-    if (value === null || value === '') missing.push(`summary.${key}`);
-  }
-  items.forEach((item, index) => {
-    for (const key of ITEM_FIELD_ORDER) {
-      const value = item[/** @type {keyof typeof item} */ (key)];
-      if (value === '' || (Array.isArray(value) && value.length === 0)) {
-        missing.push(`items[${index}].${key}`);
-      }
-    }
-  });
-  return missing;
 }
 
 /**

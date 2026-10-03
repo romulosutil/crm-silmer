@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
+import { syntheticItems } from './fixtures/order-items.js';
 
 const synthetic = JSON.parse(
   await readFile(
@@ -92,25 +93,33 @@ test('saving the summary replaces the whole section but keeps the locked custome
     data_entrega_confirmada: '30/09/2026',
     nome: null,
   });
-  assert.ok(saved.missingFields.includes('summary.nome'));
-  assert.ok(!saved.missingFields.includes('summary.aplicacao'));
+  // ADR 016: the summary never blocks and is never listed as missing.
+  assert.ok(!saved.missingFields.some((field) => field.startsWith('summary')));
 });
 
 test('saving items recalculates total pieces and what is missing', async () => {
   const { order, service } = await setup();
-  assert.ok(order.missingFields.includes('items'));
+  // The bot's product opened item 1, which still lacks five points.
+  assert.deepEqual(order.missingFields, [
+    'items[0].cor',
+    'items[0].estampa',
+    'items[0].malhas',
+    'items[0].grade',
+    'items[0].gola',
+    'finalAmount',
+    'paymentCondition',
+  ]);
   const saved = await service.patchSection(
     command({
       expectedVersion: order.version,
       orderId: order.id,
       section: 'items',
-      value: synthetic.pedido.itens,
+      value: syntheticItems(),
     }),
   );
   assert.equal(saved.totalPieces, 32);
   assert.equal(saved.ficha.items.length, 2);
-  assert.ok(!saved.missingFields.includes('items'));
-  assert.ok(!saved.missingFields.some((field) => field.startsWith('items[')));
+  assert.deepEqual(saved.missingFields, ['finalAmount', 'paymentCondition']);
 
   const observations = await service.patchSection(
     command({
@@ -264,7 +273,7 @@ test('confirming parses the amount and refuses what is missing per field', async
       expectedVersion: order.version,
       orderId: order.id,
       section: 'items',
-      value: synthetic.pedido.itens,
+      value: syntheticItems(),
     }),
   );
 
@@ -310,6 +319,67 @@ test('confirming parses the amount and refuses what is missing per field', async
   assert.deepEqual(confirmed.missingFields, []);
 });
 
+test('a half-filled item is saved, and generating names what each item lacks (ADR 016)', async () => {
+  const { order, service } = await setup();
+  const [complete] = syntheticItems();
+  const partial = await service.patchSection(
+    command({
+      expectedVersion: order.version,
+      orderId: order.id,
+      section: 'items',
+      value: [
+        { ...complete, cor: '', modelo: '' },
+        {
+          cor: 'BRANCA',
+          cor_costas: '',
+          cor_frente: '',
+          cor_manga_direita: '',
+          cor_manga_esquerda: '',
+          estampa: '',
+          gola: '',
+          grade: [],
+          malhas: [],
+          modelo: '',
+          tipo: 'REGATA',
+          vies_gola: '',
+          vies_mangas: '',
+        },
+      ],
+    }),
+  );
+  assert.equal(partial.totalPieces, 20);
+  assert.deepEqual(partial.missingFields, [
+    'items[0].cor',
+    'items[1].estampa',
+    'items[1].malhas',
+    'items[1].grade',
+    'items[1].gola',
+    'finalAmount',
+    'paymentCondition',
+  ]);
+  await assert.rejects(
+    service.confirm(
+      command({
+        amountText: '10,00',
+        expectedVersion: partial.version,
+        orderId: order.id,
+        paymentCondition: 'pix',
+      }),
+    ),
+    {
+      code: 'ORDER_NOT_CONFIRMABLE',
+      fields: [
+        'items[0].cor',
+        'items[1].estampa',
+        'items[1].malhas',
+        'items[1].grade',
+        'items[1].gola',
+      ],
+      statusCode: 422,
+    },
+  );
+});
+
 test('a pending order without items cannot be confirmed', async () => {
   const { order, service } = await setup();
   const empty = await service.patchSection(
@@ -340,7 +410,7 @@ test('a confirmed order is read-only until reopened, and a new owner confirms ag
       expectedVersion: order.version,
       orderId: order.id,
       section: 'items',
-      value: synthetic.pedido.itens,
+      value: syntheticItems(),
     }),
   );
   const confirmed = await service.confirm(
@@ -423,7 +493,7 @@ test('the owner or an admin records the trail days of a confirmed order without 
       expectedVersion: order.version,
       orderId: order.id,
       section: 'items',
-      value: synthetic.pedido.itens,
+      value: syntheticItems(),
     }),
   );
   const confirmed = await service.confirm(

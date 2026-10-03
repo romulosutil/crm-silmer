@@ -55,10 +55,15 @@ async function setup() {
           items: [
             {
               ...order.ficha.items[0],
+              cor: 'BRANCA',
+              estampa: 'Sem estampa',
+              gola: 'GOLA REDONDA',
               grade: [{ quantidade: 1, tamanho: 'M' }],
+              malhas: ['ALGODÃO'],
             },
           ],
         },
+        totalPieces: 1,
         updatedAt: clock().toISOString(),
       },
       { correlationId: 'correlation-grade', expectedVersion: order.version },
@@ -191,5 +196,77 @@ test('the current order of a conversation is its pending one, else the last conf
   assert.deepEqual(
     await service.currentForConversation('conversation-1'),
     open,
+  );
+});
+
+test('reads an order saved before ADR 016 under the current rules', async () => {
+  const { repository, service } = await setup();
+  // As stored on 02/10/2026: no colour, artwork or collar, and the list of
+  // what was missing under rule A01.
+  const stored = await repository.createPending({
+    conversationId: 'conversation-old',
+    correlationId: 'correlation-old',
+    createdBy: null,
+    createdByKind: 'automation',
+    fabCode: '01',
+    ficha: /** @type {any} */ ({
+      items: [
+        {
+          cor_costas: '',
+          cor_frente: '',
+          cor_manga_direita: '',
+          cor_manga_esquerda: '',
+          grade: [],
+          malhas: ['Definir com o vendedor'],
+          modelo: 'camiseta comum, gola V',
+          tipo: '',
+          vies_gola: '',
+          vies_mangas: '',
+        },
+      ],
+      observations: [],
+      serviceData: { colors: 'preta', quantity: 30 },
+      summary: {
+        aplicacao: 'estampada',
+        cliente: 'Cliente Sintetico',
+        data_entrega_confirmada: null,
+        nome: null,
+      },
+    }),
+    firstContactAt: null,
+    id: 'order-old',
+    missingFields: ['items', 'finalAmount', 'summary.nome'],
+    now: new Date('2026-10-02T12:00:00.000Z'),
+    totalPieces: 0,
+  });
+  const expectedMissing = [
+    'items[0].tipo',
+    'items[0].cor',
+    'items[0].estampa',
+    'items[0].grade',
+    'items[0].gola',
+    'finalAmount',
+    'paymentCondition',
+  ];
+
+  const read = await service.get(stored.id);
+  assert.equal(read.ficha.items[0].cor, '');
+  assert.equal(read.ficha.items[0].estampa, '');
+  assert.equal(read.ficha.items[0].gola, '');
+  assert.equal(read.ficha.items[0].modelo, 'camiseta comum, gola V');
+  assert.deepEqual(read.missingFields, expectedMissing);
+  assert.equal(read.totalPieces, 0);
+
+  const listed = await service.list({});
+  assert.deepEqual(listed.items[0].missingFields, expectedMissing);
+  assert.equal(listed.items[0].ficha.items[0].gola, '');
+  assert.deepEqual(
+    (await service.currentForConversation('conversation-old'))?.missingFields,
+    expectedMissing,
+  );
+  assert.deepEqual(
+    (await repository.findById(stored.id))?.missingFields,
+    ['items', 'finalAmount', 'summary.nome'],
+    'nothing is rewritten by a read',
   );
 });

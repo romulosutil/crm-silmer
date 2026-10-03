@@ -236,8 +236,11 @@ em Confirmados com "Confirmado por <nome> · <data hora>".
 **Teste independente:** confirmar e imprimir; comparar o documento com
 `output/pdf/ficha-canonica-sintetica-v2.pdf`.
 
-**Ficha v3 com os sete pontos (ADR 017, 02/10/2026).** PIM-02 vale até a
-aprovação do PDF da v3; PIM-03 a PIM-05 valem para os dois templates.
+**Ficha v3 com os sete pontos (ADR 017, 02/10/2026).** Desde a T74
+(03/10/2026, aprovação provisória do PO), "Imprimir" abre o documento no
+template `ficha-canonical-v3` (A4 paisagem, duas páginas ou mais), com o
+resto de PIM-02 igual; PIM-03 a PIM-05 valem para os dois templates. A v2
+continua no repositório, travada por hash.
 
 6. **PIM-06** No template `ficha-canonical-v3`, cada item SHALL trazer os sete
    pontos numerados, nesta ordem e com estes rótulos: Tipo de roupa (`tipo`),
@@ -688,7 +691,7 @@ Operação na amostra impressa, pendente e obrigatória antes da produção
 | PIM-07 | P1-5     | `test/ficha-print-v3.test.js:224`; `test/ficha-pdf-review-v3.test.js:91,110`                | Verified · PDF a aprovar       |
 | PIM-08 | P1-5     | `test/ficha-print-v3.test.js:251`                                                           | Verified · PDF a aprovar       |
 | PIM-09 | P1-5     | `test/ficha-print-v3.test.js:282,309,375`                                                   | Verified · PDF a aprovar       |
-| PIM-10 | P1-5     | `test/ficha-print-switch.test.js:144,154,208,215,234`; `test/ficha-pdf-review-v3.test.js:313`; `npm run validate:ficha-pdf-review` | Verified · v2 até a aprovação  |
+| PIM-10 | P1-5     | `test/ficha-print-switch.test.js:145,155,209,216,234,248`; `test/ficha-pdf-review-v3.test.js:313`; `npm run validate:ficha-pdf-review` | Verified · v3 desde a T74      |
 | PIM-11 | P1-5     | `test/ficha-print-v3.test.js:429,454`; `test/ficha-pdf-review-v3.test.js:147`               | Verified · PDF a aprovar       |
 | PIM-12 | P1-5     | `test/ficha-print-v3.test.js:471,479,516,526`; `test/ficha-pdf-review-v3.test.js:162`       | Verified · PDF a aprovar       |
 | PLA-08 | P1-10    | `test/ficha-print-v3.test.js:339,569`; `test/ficha-pdf-review-v3.test.js:162`               | Verified · PDF a aprovar       |
@@ -711,8 +714,8 @@ pendente, recusa de regerar a versão aprovada) está em
 5. Editar "Observações do pedido" (até 5 linhas) e salvar.
 6. Confirmar o pedido com valor (ex. `1.180,00`) e forma de pagamento (Pix);
    checar status "Confirmado por <nome> · <data hora>".
-7. Imprimir o pedido confirmado; validar template `ficha-canonical-v2`, sem
-   valor/condição e sem faixa de amostra.
+7. Imprimir o pedido confirmado; validar template `ficha-canonical-v3` (ADR
+   017), sem valor/condição e sem faixa de amostra.
 8. Reabrir o pedido; confirmar que a impressão trava de novo e número/valor
    são preservados.
 9. Na Caixa de Entrada, aplicar o filtro "Estado" → "Aguardando vendedor" e

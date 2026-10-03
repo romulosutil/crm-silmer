@@ -1135,7 +1135,7 @@ com o contrato combinado do item.
 
 - [x] A rota imprime exatamente o mesmo HTML v2 de antes
 - [x] Testes cobrem os dois templates e a recusa da v3 sem aprovação
-- [ ] Depois da aprovação, o Tech Lead troca `PRINT_TEMPLATE` num commit próprio
+- [x] Depois da aprovação, a troca de `PRINT_TEMPLATE` num commit próprio (T74, 03/10/2026)
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(api): print through one ficha template switch`
 
@@ -1226,6 +1226,21 @@ branch.
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): approve the ficha v3 for development, sign it before production`
 
+### T74: Impressão na v3
+
+- **What:** `PRINT_TEMPLATE = TEMPLATE_V3`: todo pedido impresso sai na v3 em desenvolvimento e cloud-dev, com a aprovação provisória do PO. A asserção da v2 em `test/order-routes.test.js` passa de "Entrega confirmada" a "Entrega prometida"; a v2 continua renderizando byte a byte nos testes.
+- **Where:** `modules/orders/src/print/index.js`, `test/order-routes.test.js`, `test/ficha-print-switch.test.js`, ADR 017, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `.specs/features/pedidos-mvp/{spec,context,tasks}.md`
+- **Depends on:** T73
+- **Requirement:** PIM-02, PIM-10
+
+**Done when:**
+
+- [x] A rota imprime a v3; sem aprovação registrada, a validação recusa a v3
+- [x] `ficha-canonical-v2.js` e o PDF v2 sem mudança, v2 ainda testada byte a byte
+- [ ] Produção só depois da aprovação final (gate de go-live, fora desta task)
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): print orders on the ficha v3`
+
 ### Validação T62–T65, T67–T69 e T73–T74
 
 | Task | Escopo                  | Camada            | Testes | Depends on | Status |
@@ -1238,6 +1253,7 @@ branch.
 | T67  | páginas do template     | template impresso | unit   | T69        | ✅     |
 | T68  | registro de aprovação   | gate de revisão   | unit   | T67        | ✅     |
 | T73  | aprovação em duas etapas | gate de revisão  | unit   | T68        | ✅     |
+| T74  | 1 troca de template     | print/rota        | unit   | T73        | ✅     |
 
 ---
 

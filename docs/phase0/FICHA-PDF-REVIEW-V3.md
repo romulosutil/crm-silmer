@@ -13,7 +13,8 @@ apenas em produção; por enquanto, aprovada.").
    a v3 em 03/10/2026 para desenvolvimento e cloud-dev. O registro
    (`provisionalApproval`) trava os hashes da amostra, do HTML renderizado e
    do PDF desta revisão: qualquer mudança quebra a validação, e o script
-   recusa gerar o PDF de novo. Ela libera a v3 no ponto de troca.
+   recusa gerar o PDF de novo. Com ela, os pedidos imprimem na v3 desde a
+   T74 (`PRINT_TEMPLATE = TEMPLATE_V3`).
 2. **Aprovação final: pendente.** A assinatura física de Rose e Operação na
    amostra impressa é obrigatória antes da produção
    (`approval.requiredBefore: "production"`). É um gate de go-live na seção 12

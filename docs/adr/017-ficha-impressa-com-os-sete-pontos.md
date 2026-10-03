@@ -158,10 +158,11 @@ bloqueia.
 9. **Ponto único de troca.** A constante `PRINT_TEMPLATE`, em
    `modules/orders/src/print/index.js`, escolhe o template de todo pedido
    impresso; a rota `GET /api/v1/orders/:orderId/print` chama
-   `renderOrderFicha(order)` e não escolhe nada. Ela fica em
-   `ficha-canonical-v2`. Depois de registrar a aprovação, o Tech Lead troca a
-   constante para `TEMPLATE_V3` num commit próprio. A validação e os testes recusam a v3 nesse ponto enquanto o gate
-   estiver pendente.
+   `renderOrderFicha(order)` e não escolhe nada. A validação e os testes
+   recusam a v3 nesse ponto sem uma aprovação registrada. Com a aprovação
+   provisória do PO, a constante passou a `TEMPLATE_V3` em 03/10/2026, num
+   commit próprio (T74); voltar para `TEMPLATE_V2` imprime de novo a v2
+   travada.
 
 ## Alternativas descartadas
 
@@ -188,11 +189,12 @@ bloqueia.
 
 ## Consequências
 
-- Até a aprovação nada muda no papel: a v2 imprime como hoje (PIM-02,
-  PLA-09). Depois da troca, a v2 continua no repositório, travada, como
-  referência.
-- D15 ("impressão só no template v2") vale até a troca. `PLA-08` passa a
-  apontar para esta v3, e a T47 fica superada pela T63.
+- Desde 03/10/2026 (T74) os pedidos imprimem na v3, em desenvolvimento e no
+  cloud-dev. A produção depende da aprovação final, a assinatura física de
+  Rose e Operação, que é gate de go-live. A v2 continua no repositório,
+  travada, como referência.
+- D15 ("impressão só no template v2") deixou de valer com a troca. `PLA-08`
+  passa a apontar para esta v3, e a T47 fica superada pela T63.
 - A ADR 016 já grava `cor`, `estampa` e `gola` (no `master` desde
   03/10/2026), e um pedido só é gerado com os pontos principais preenchidos;
   na v3, "—" nesses pontos fica para fichas gravadas antes dela.

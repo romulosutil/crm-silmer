@@ -1055,7 +1055,7 @@ test('confirm and reopen refuse non-owners and malformed requests', async (t) =>
   }
 });
 
-test('GET /orders/:orderId/print renders the confirmed order on the v2 template', async (t) => {
+test('GET /orders/:orderId/print renders the confirmed order on the printed template', async (t) => {
   const { api, assignments, guards, runtime } = orderHarness();
   t.after(() => api.close());
   const confirmed = await createConfirmed(runtime, 'conversation-1');
@@ -1105,7 +1105,7 @@ test('the printed order hides money, the sample band and empty fields', async (t
   assert.doesNotMatch(html, /4\.820,00|482000|R\$/u);
   assert.doesNotMatch(html, /pix|cartao_credito|cartao_debito/iu);
   // PIM-04: the sample band belongs to the synthetic review package.
-  assert.doesNotMatch(html, /Amostra sintetica/u);
+  assert.doesNotMatch(html, /Amostra sint[eé]tica/u);
   // A blank field prints blank, never "null" or "undefined".
   assert.equal(confirmed.ficha.summary.aplicacao, null);
   assert.doesNotMatch(html, /null|undefined/u);
@@ -1136,7 +1136,7 @@ test('the printed order dates the document on the day it was confirmed', async (
   // The page stores the promised day as ISO; paper reads it like the sample.
   assert.match(
     response.body,
-    /Entrega confirmada<\/span><strong>24\/10\/2026</u,
+    /Entrega prometida<\/span><strong>24\/10\/2026</u,
   );
 });
 

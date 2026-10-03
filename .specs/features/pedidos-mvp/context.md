@@ -133,7 +133,8 @@ Pedidos substitui o que seria o Kanban.
     registrado. A aprovação tem duas etapas (03/10/2026): o PO aprovou a v3
     para desenvolvimento e cloud-dev; antes da produção, Rose e Operação
     assinam à mão a amostra impressa e o Tech Lead registra a aprovação final,
-    confirmada pelo PO. D15 vale até a troca do template.
+    confirmada pelo PO. D15 deixou de valer em 03/10/2026: desde a T74 a
+    impressão usa a v3.
 
 ---
 

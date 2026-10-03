@@ -41,6 +41,7 @@ const ORDER_KEYS = [
   'finalAmountCents',
   'firstContactAt',
   'id',
+  'lastMessage',
   'missingFields',
   'number',
   'orderDate',
@@ -68,6 +69,8 @@ function orderHarness(options = {}) {
   // ADR 018: the contact's confirmed name; a test renames it here.
   /** @type {Record<string, string|null>} */
   const contactNames = {};
+  /** @type {Map<string, {direction: string, occurredAt: string, deliveryStatus: string|null, status: string}>} */
+  const latestMessageStates = new Map();
   /** @type {Array<{method: string, input: any}>} */
   const guards = [];
   let clock = Date.parse('2026-09-12T15:00:00.000Z');
@@ -102,6 +105,8 @@ function orderHarness(options = {}) {
           : null,
       readAssignments: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, assignments[id] ?? null])),
+      readLatestMessageStates: async (/** @type {string[]} */ ids) =>
+        new Map([...latestMessageStates].filter(([id]) => ids.includes(id))),
       readOrderContexts: orderContextsFrom((/** @type {string} */ id) =>
         id in assignments
           ? {
@@ -130,6 +135,7 @@ function orderHarness(options = {}) {
     assignments,
     contactNames,
     guards,
+    latestMessageStates,
     names,
     repository,
     runtime,
@@ -194,6 +200,103 @@ async function createConfirmed(runtime, conversationId, summary) {
     }),
   );
 }
+
+test('summary aggregates all confirmed orders and requires a read session', async () => {
+  const { api, runtime } = orderHarness();
+  await createConfirmed(runtime, 'conversation-1');
+  await createPending(runtime, 'conversation-2');
+  const response = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: '/api/v1/orders/summary',
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), {
+    confirmedCount: 1,
+    soldAmountCents: 482000,
+    averageTicketCents: 482000,
+    pendingCount: 1,
+    totalPiecesSold: 32,
+  });
+  const denied = orderHarness({ readActor: null });
+  const blocked = await denied.api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: '/api/v1/orders/summary',
+  });
+  assert.equal(blocked.statusCode, 403);
+});
+
+test('orders expose last-message delivery state without message content', async () => {
+  const { api, latestMessageStates, runtime } = orderHarness();
+  const order = await createPending(runtime, 'conversation-1');
+  latestMessageStates.set('conversation-1', {
+    direction: 'outbound',
+    occurredAt: '2026-10-03T12:00:00.000Z',
+    deliveryStatus: 'failed',
+    status: 'sent',
+  });
+  const response = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${order.id}`,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json().order.lastMessage, {
+    direction: 'outbound',
+    occurredAt: '2026-10-03T12:00:00.000Z',
+    deliveryStatus: 'failed',
+    status: 'sent',
+  });
+});
+
+test('artwork provenance accepts two human choices and rejects file metadata', async () => {
+  const { api, runtime } = orderHarness();
+  const order = await createPending(runtime, 'conversation-1');
+  const accepted = await api.inject({
+    headers: writeHeaders,
+    method: 'PATCH',
+    payload: {
+      expectedVersion: order.version,
+      value: { feito_pelo_cliente: true, feito_pela_silmer: true },
+    },
+    url: `/api/v1/orders/${order.id}/sections/artwork`,
+  });
+  assert.equal(accepted.statusCode, 200);
+  assert.deepEqual(accepted.json().order.ficha.artwork, {
+    feito_pelo_cliente: true,
+    feito_pela_silmer: true,
+    files: [],
+  });
+  const refused = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'reject-artwork-files' },
+    method: 'PATCH',
+    payload: {
+      expectedVersion: accepted.json().order.version,
+      value: {
+        feito_pelo_cliente: true,
+        feito_pela_silmer: false,
+        files: [{ name: 'arte.cdr' }],
+      },
+    },
+    url: `/api/v1/orders/${order.id}/sections/artwork`,
+  });
+  assert.equal(refused.statusCode, 400);
+  assert.deepEqual(refused.json(), { error: { code: 'ORDER_INVALID' } });
+
+  const other = orderHarness({ writeActor: OTHER });
+  const otherOrder = await createPending(other.runtime, 'conversation-1');
+  const forbidden = await other.api.inject({
+    headers: writeHeaders,
+    method: 'PATCH',
+    payload: {
+      expectedVersion: otherOrder.version,
+      value: { feito_pelo_cliente: true, feito_pela_silmer: false },
+    },
+    url: `/api/v1/orders/${otherOrder.id}/sections/artwork`,
+  });
+  assert.equal(forbidden.statusCode, 403);
+});
 
 const writeHeaders = Object.freeze({
   cookie: 'crm_session=session-synthetic; crm_csrf=csrf-synthetic',
@@ -552,14 +655,14 @@ test('PATCH items takes a half-filled item, and one without the ADR 016 fields',
   const { order } = response.json();
   assert.equal(order.ficha.items[0].cor, '');
   assert.equal(order.ficha.items[0].estampa, '');
-  assert.equal(order.ficha.items[0].gola, '');
+  assert.equal(order.ficha.items[0].gola, 'OLIMPICA - VERDE');
   assert.equal(order.totalPieces, 0);
   assert.deepEqual(order.missingFields, [
     'items[0].cor',
     'items[0].estampa',
     'items[0].malhas',
     'items[0].grade',
-    'items[0].gola',
+    'items[0].tipo_servico',
     'summary.data_entrega_confirmada',
     'finalAmount',
     'paymentCondition',
@@ -584,7 +687,7 @@ test('PATCH items takes a half-filled item, and one without the ADR 016 fields',
         'items[0].estampa',
         'items[0].malhas',
         'items[0].grade',
-        'items[0].gola',
+        'items[0].tipo_servico',
         'summary.data_entrega_confirmada',
       ],
     },

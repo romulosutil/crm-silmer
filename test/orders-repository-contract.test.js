@@ -44,6 +44,7 @@ function draftFicha() {
         malhas: ['DRY FIT'],
         modelo: 'TRADICIONAL',
         tipo: 'CAMISA',
+        tipo_servico: 'SUBLIMAÇÃO',
         vies_gola: 'OLIMPICA',
         vies_mangas: 'NAO APLICAVEL',
       },

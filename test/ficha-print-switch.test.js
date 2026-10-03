@@ -67,6 +67,7 @@ function harness() {
       }),
       readAssignments: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, 'seller-1'])),
+      readLatestMessageStates: async () => new Map(),
       readOrderContexts: orderContextsFrom(() => ({
         briefing: { order_name: 'Equipe Sintetica' },
         customerName: 'Cliente Sintetico',

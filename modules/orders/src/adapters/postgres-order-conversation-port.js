@@ -112,6 +112,35 @@ export class PostgresOrderConversationPort {
   }
 
   /**
+   * Last message metadata for an order card. The query never reads content,
+   * contact identity or recipient information.
+   * @param {string[]} conversationIds
+   * @returns {Promise<Map<string, {direction: string, occurredAt: string, deliveryStatus: string|null, status: string}>>}
+   */
+  async readLatestMessageStates(conversationIds) {
+    if (conversationIds.length === 0) return new Map();
+    const result = await this.#database.query(
+      `SELECT DISTINCT ON (conversation_id)
+              conversation_id, direction, status, delivery_status, occurred_at
+       FROM crm.messages
+       WHERE conversation_id = ANY($1::text[])
+       ORDER BY conversation_id, occurred_at DESC, id DESC`,
+      [conversationIds],
+    );
+    return new Map(
+      result.rows.map((row) => [
+        row.conversation_id,
+        {
+          direction: row.direction,
+          occurredAt: new Date(row.occurred_at).toISOString(),
+          deliveryStatus: row.delivery_status ?? null,
+          status: row.status,
+        },
+      ]),
+    );
+  }
+
+  /**
    * What each existing conversation says about its order, read in one query:
    * a new order is built from it, and a pending one reads its client from it
    * again (ADR 018). The contact is the one the identity points to now, so a

@@ -204,6 +204,29 @@ export class PostgresOrderRepository {
     return result.rows[0] ? this.#map(result.rows[0]) : null;
   }
 
+  async summary() {
+    const result = await this.#database.query(
+      `SELECT
+         count(*) FILTER (WHERE status = 'confirmado')::integer AS confirmed_count,
+         coalesce(sum(final_amount_cents) FILTER (WHERE status = 'confirmado'), 0)::bigint AS sold_amount_cents,
+         count(*) FILTER (WHERE status = 'pendente')::integer AS pending_count,
+         coalesce(sum(total_pieces) FILTER (WHERE status = 'confirmado'), 0)::bigint AS total_pieces_sold
+       FROM crm.orders`,
+    );
+    const row = result.rows[0];
+    const confirmedCount = Number(row.confirmed_count);
+    const soldAmountCents = Number(row.sold_amount_cents);
+    return {
+      confirmedCount,
+      soldAmountCents,
+      averageTicketCents: confirmedCount
+        ? Math.round(soldAmountCents / confirmedCount)
+        : 0,
+      pendingCount: Number(row.pending_count),
+      totalPiecesSold: Number(row.total_pieces_sold),
+    };
+  }
+
   /** @param {string} conversationId */
   async findPendingByConversation(conversationId) {
     const result = await this.#database.query(

@@ -84,7 +84,7 @@ function requireStatus(order, expected, command) {
  * @param {Record<string, unknown>} item @param {number} index
  */
 function itemGaps(item, index) {
-  return ITEM_REQUIRED_FIELDS.filter((key) => {
+  const principalGaps = ITEM_REQUIRED_FIELDS.filter((key) => {
     const value = item?.[key];
     if (key === 'grade') return !Array.isArray(value) || value.length === 0;
     if (key === 'malhas') {
@@ -95,6 +95,11 @@ function itemGaps(item, index) {
     }
     return typeof value !== 'string' || value.trim() === '';
   }).map((key) => `items[${index}].${key}`);
+  const service = item?.tipo_servico;
+  if (typeof service !== 'string' || service.trim() === '') {
+    principalGaps.push(`items[${index}].tipo_servico`);
+  }
+  return principalGaps;
 }
 
 /**
@@ -113,10 +118,10 @@ function isCalendarDay(value) {
 
 /**
  * ADR 016 (replaces A01): generating the order needs at least one item, the
- * seven principal points of every item, the promised delivery, the final
- * amount and the payment method. Nothing else blocks or is listed: the
- * additional item fields, the rest of the summary and the other days of the
- * trail stay as the seller leaves them. Until the CRM handles payments,
+ * seven principal points and seller-assigned service type of every item, the
+ * promised delivery, the final amount and the payment method. The other item
+ * fields, the rest of the summary and the other days of the trail stay as the
+ * seller leaves them. Until the CRM handles payments,
  * generating the order means the payment is done, so the paid day never
  * blocks; the delivered day belongs to the after-sale.
  *

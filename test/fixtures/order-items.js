@@ -14,8 +14,14 @@ const PRINCIPAL_FIELDS = Object.freeze([
     cor: 'AZUL MARINHO',
     estampa: 'Arte do cliente · frente',
     gola: 'GOLA REDONDA',
+    tipo_servico: 'SUBLIMAÇÃO',
   }),
-  Object.freeze({ cor: 'PRETA', estampa: 'Sem estampa', gola: 'SEM GOLA' }),
+  Object.freeze({
+    cor: 'PRETA',
+    estampa: 'Sem estampa',
+    gola: 'SEM GOLA',
+    tipo_servico: 'COSTURA',
+  }),
 ]);
 
 /**

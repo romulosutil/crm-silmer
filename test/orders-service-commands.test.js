@@ -136,6 +136,7 @@ test('saving items recalculates total pieces and what is missing', async () => {
     'items[0].malhas',
     'items[0].grade',
     'items[0].gola',
+    'items[0].tipo_servico',
     'finalAmount',
     'paymentCondition',
   ]);
@@ -384,6 +385,7 @@ test('a half-filled item is saved, and generating names what each item lacks (AD
     'items[1].malhas',
     'items[1].grade',
     'items[1].gola',
+    'items[1].tipo_servico',
     'finalAmount',
     'paymentCondition',
   ]);
@@ -404,6 +406,7 @@ test('a half-filled item is saved, and generating names what each item lacks (AD
         'items[1].malhas',
         'items[1].grade',
         'items[1].gola',
+        'items[1].tipo_servico',
       ],
       statusCode: 422,
     },

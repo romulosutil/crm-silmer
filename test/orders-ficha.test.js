@@ -11,6 +11,7 @@ import {
   normalizeFicha,
   orderTotal,
   projectBriefingOntoFicha,
+  validateArtwork,
   validateItems,
   validateObservations,
   validateSummary,
@@ -51,11 +52,12 @@ test('the approved synthetic snapshot validates and totals 32 pieces', () => {
   assert.equal(orderTotal([]), 0);
 });
 
-test('an item sent without colour, artwork and collar is saved with them blank (ADR 016)', () => {
+test('an item without colour or artwork uses its legacy collar binding (ADR 016)', () => {
   const [old] = validateItems([item()]);
   assert.equal(old.cor, '');
   assert.equal(old.estampa, '');
-  assert.equal(old.gola, '');
+  assert.equal(old.gola, 'OLIMPICA - VERDE');
+  assert.equal(old.tipo_servico, '');
 
   const [complete] = validateItems([
     item({ cor: ' AZUL ', estampa: 'Arte do cliente', gola: 'GOLA V' }),
@@ -74,6 +76,25 @@ test('an item sent without colour, artwork and collar is saved with them blank (
       rejectedWith('ORDER_INVALID', { fields: [`items[0].${key}`] }),
     );
   }
+});
+
+test('the seven-point form may omit legacy and additional item text fields', () => {
+  const [saved] = validateItems([
+    {
+      tipo: 'Camiseta',
+      tipo_servico: 'Sublimação',
+      cor: 'Azul',
+      estampa: 'Arte enviada',
+      malhas: ['Dry fit'],
+      grade: [{ tamanho: 'M', quantidade: 2 }],
+      gola: 'Redonda',
+    },
+  ]);
+  assert.equal(saved.modelo, '');
+  assert.equal(saved.vies_gola, '');
+  assert.equal(saved.cor_frente, '');
+  assert.equal(saved.tipo_servico, 'Sublimação');
+  assert.equal(saved.gola, 'Redonda');
 });
 
 test('an item may be saved half filled: no fabric, no size, blank fields (ADR 016)', () => {
@@ -144,7 +165,7 @@ test('items keep the 200-character and 50-item limits', () => {
   );
 });
 
-test('a stored ficha without the new item fields reads them blank', () => {
+test('a stored ficha reads the legacy collar binding and defaults new fields', () => {
   const stored = {
     items: [structuredClone(synthetic.pedido.itens[0])],
     observations: [],
@@ -159,7 +180,13 @@ test('a stored ficha without the new item fields reads them blank', () => {
   const read = normalizeFicha(/** @type {any} */ (stored));
   assert.equal(read.items[0].cor, '');
   assert.equal(read.items[0].estampa, '');
-  assert.equal(read.items[0].gola, '');
+  assert.equal(read.items[0].gola, 'OLIMPICA - VERDE');
+  assert.equal(read.items[0].tipo_servico, '');
+  assert.deepEqual(read.artwork, {
+    feito_pelo_cliente: false,
+    feito_pela_silmer: false,
+    files: [],
+  });
   assert.equal(read.items[0].modelo, 'TRADICIONAL');
   assert.deepEqual(read.items[0].grade, synthetic.pedido.itens[0].grade);
   assert.equal('cor' in stored.items[0], false, 'the input is not mutated');
@@ -200,6 +227,33 @@ test('items reject unknown keys, typed totals and non-string fields', () => {
   });
   const [trimmed] = validateItems([item({ tipo: '  CAMISA ' })]);
   assert.equal(trimmed.tipo, 'CAMISA');
+});
+
+test('artwork origin accepts both choices and rejects file injection', () => {
+  assert.deepEqual(
+    validateArtwork({ feito_pelo_cliente: true, feito_pela_silmer: true }),
+    { feito_pelo_cliente: true, feito_pela_silmer: true, files: [] },
+  );
+  assert.deepEqual(
+    validateArtwork({ feito_pelo_cliente: false, feito_pela_silmer: false }),
+    { feito_pelo_cliente: false, feito_pela_silmer: false, files: [] },
+  );
+  assert.throws(
+    () =>
+      validateArtwork({
+        feito_pelo_cliente: true,
+        feito_pela_silmer: false,
+        files: [{ name: 'arte.cdr' }],
+      }),
+    rejectedWith('ORDER_INVALID', { fields: ['artwork.files'] }),
+  );
+  assert.throws(
+    () =>
+      validateArtwork({ feito_pelo_cliente: 'true', feito_pela_silmer: false }),
+    rejectedWith('ORDER_INVALID', {
+      fields: ['artwork.feito_pelo_cliente'],
+    }),
+  );
 });
 
 test('observations accept zero to five lines', () => {
@@ -365,7 +419,7 @@ test('a point left to the seller is never a ficha value and stays as service dat
   assert.deepEqual(mixed.items[0].malhas, ['algodão']);
 });
 
-test('only a named technique becomes the type of service', () => {
+test('a named technique is context, never an assigned item service', () => {
   /** @param {string} artwork_technique */
   const read = (artwork_technique) => briefingToFicha({ artwork_technique });
   for (const technique of [
@@ -382,6 +436,14 @@ test('only a named technique becomes the type of service', () => {
   ]) {
     assert.equal(read(technique).summary.aplicacao, technique, technique);
     assert.equal('artwork_technique' in read(technique).serviceData, false);
+    assert.equal(
+      briefingToFicha({
+        artwork_technique: technique,
+        product_model: 'Camiseta',
+      }).items[0].tipo_servico,
+      '',
+      technique,
+    );
   }
   for (const wish of [
     'estampada',
@@ -507,6 +569,11 @@ test('colour and quantity: colour fills the item, quantity stays as service data
 
 test('an empty briefing yields an empty draft', () => {
   assert.deepEqual(briefingToFicha({}), {
+    artwork: {
+      feito_pelo_cliente: false,
+      feito_pela_silmer: false,
+      files: [],
+    },
     items: [],
     observations: [],
     serviceData: {},
@@ -533,6 +600,7 @@ test('projects the seven points onto item 1 and keeps what the seller owns', () 
         cor_frente: 'PRETA',
         modelo: 'CAMISETA COMUM, GOLA V',
         tipo: '',
+        tipo_servico: 'Silk escolhido pelo vendedor',
       },
       { ...blankItem(), tipo: 'BONÉ' },
     ],
@@ -545,7 +613,13 @@ test('projects the seven points onto item 1 and keeps what the seller owns', () 
       nome: null,
     },
   });
+  pending.artwork = {
+    feito_pelo_cliente: true,
+    feito_pela_silmer: false,
+    files: [],
+  };
   const projected = projectBriefingOntoFicha(pending, {
+    artwork_technique: 'DTF',
     collar: 'gola V',
     fabrics: 'algodão',
     product_model: 'camiseta comum',
@@ -564,10 +638,13 @@ test('projects the seven points onto item 1 and keeps what the seller owns', () 
     malhas: ['algodão'],
     modelo: 'CAMISETA COMUM, GOLA V',
     tipo: 'camiseta comum',
+    tipo_servico: 'Silk escolhido pelo vendedor',
   });
   assert.deepEqual(projected.items[1], pending.items[1]);
   assert.deepEqual(projected.observations, ['Separar por tamanho']);
-  assert.equal(projected.summary.aplicacao, 'SILK');
+  assert.equal(projected.artwork?.feito_pelo_cliente, true);
+  assert.equal(projected.artwork?.feito_pela_silmer, false);
+  assert.equal(projected.summary.aplicacao, 'DTF');
   assert.equal(projected.summary.data_entrega_confirmada, '2026-10-24');
 
   const deferred = projectBriefingOntoFicha(projected, { colors: DEFERRED });
@@ -581,5 +658,9 @@ test('projects the seven points onto item 1 and keeps what the seller owns', () 
     { colors: 'azul' },
   );
   assert.equal(stored.items[0].cor, 'azul');
-  assert.equal(stored.items[0].gola, '', 'an old stored item gains the field');
+  assert.equal(
+    stored.items[0].gola,
+    'OLIMPICA - VERDE',
+    'an old stored item uses the legacy collar binding',
+  );
 });

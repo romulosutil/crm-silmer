@@ -28,6 +28,7 @@ export {
   orderTotal,
   projectBriefingOntoFicha,
   validateItems,
+  validateArtwork,
   validateObservations,
   validateSummary,
 } from './domain/ficha.js';

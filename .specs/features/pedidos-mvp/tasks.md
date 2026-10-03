@@ -1120,7 +1120,7 @@ com o contrato combinado do item.
 
 - [x] `ficha-canonical-v2.js` e o PDF v2 sem mudança; testes da v2 passam
 - [x] `npm run validate:ficha-pdf-review` valida v2 aprovada e v3 pendente
-- [ ] O PO aprova o PDF v3 e indica quem assina (fora desta task)
+- [ ] Rose e Operação assinam a amostra impressa e o PO confirma (T68; fora desta task)
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): add the ficha v3 with the seven points for review`
 
@@ -1142,7 +1142,8 @@ com o contrato combinado do item.
 ### Revisão do PDF pelo PO (02/10/2026)
 
 O PO aprovou a regra dos adicionais e o "—" no dia não registrado, e pediu as
-mudanças das tasks T65 a T68. Cada uma gera de novo o PDF e o registro, que
+mudanças das tasks T65 a T68 (em 03/10/2026 corrigiu quem assina: só Rose e
+Operação, à mão). Cada uma gera de novo o PDF e o registro, que
 continua pendente.
 
 ### T65: Lastro sem datas repetidas
@@ -1187,7 +1188,22 @@ continua pendente.
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): repeat the ficha v3 header on continuation pages`
 
-### Validação T62–T67
+### T68: Assinatura física de Rose e Operação
+
+- **What:** O registro da v3 espelha o da v2: aprovam só Rose e Operação (`reviewedBy.rose` e `reviewedBy.operation`), com assinatura física na amostra impressa (`signature: "physical"`, `signedPaperKeptAt`). A amostra ganha as linhas de assinatura e data. O registro continua pendente; o Tech Lead só registra depois que o PO confirmar a assinatura.
+- **Where:** `modules/orders/src/print/ficha-canonical-v3.js`, `scripts/ficha-pdf-review.mjs`, `docs/phase0/ficha-pdf-approval-v3.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, `test/ficha-{print-v3,pdf-review-v3}.test.js`, ADR 017, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `.specs/features/pedidos-mvp/{spec,context,tasks}.md`
+- **Depends on:** T67
+- **Requirement:** PIM-10
+
+**Done when:**
+
+- [x] Registro pendente, com Rose e Operação e assinatura física
+- [x] Aprovação de outros assinantes, sem papel guardado ou parcial é recusada
+- [ ] Rose e Operação assinam a amostra impressa e o PO confirma (fora desta task)
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): sign the ficha v3 on paper by Rose and Operação`
+
+### Validação T62–T68
 
 | Task | Escopo                  | Camada            | Testes | Depends on | Status |
 | ---- | ----------------------- | ----------------- | ------ | ---------- | ------ |
@@ -1197,6 +1213,7 @@ continua pendente.
 | T65  | 1 faixa do template     | template impresso | unit   | T64        | ✅     |
 | T66  | rótulos do template     | template impresso | unit   | T65        | ✅     |
 | T67  | páginas do template     | template impresso | unit   | T66        | ✅     |
+| T68  | registro de aprovação   | gate de revisão   | unit   | T67        | ✅     |
 
 ---
 

@@ -1,7 +1,8 @@
 # ADR 017 — Ficha impressa com os sete pontos
 
-Status: aceito. A v3 só passa a imprimir pedidos depois que o PDF de revisão
-for aprovado; até lá a v2 continua imprimindo, sem mudar nenhum byte.
+Status: aceito. A v3 só passa a imprimir pedidos depois que Rose e Operação
+assinarem a amostra impressa e a aprovação for registrada; até lá a v2
+continua imprimindo, sem mudar nenhum byte.
 
 Data: 02/10/2026
 
@@ -128,18 +129,24 @@ bloqueia.
    renderizado e o PDF. O HTML entra no registro porque o PDF não se reproduz
    byte a byte em outra máquina (fontes do sistema e data de criação), e o
    HTML sim: mudar o template depois do PDF quebra a validação. A aprovação
-   fica pendente. **Quem assina é decisão do PO:** na v2 assinaram Rose e
-   Operação; o registro da v3 aceita a lista de papéis e nomes que o PO
-   definir, com os seis critérios da v2 e uma evidência sem PII. Versão
+   fica pendente.
+
+   **Quem assina e como** (PO, 03/10/2026): só Rose e Operação, como na v2,
+   e a assinatura é física: as duas assinam à mão a amostra v3 impressa, nas
+   linhas de assinatura e data da última página. O registro espelha o da v2
+   (`reviewedBy` com `rose` e `operation`) e diz que a assinatura é física.
+   Só depois que o PO confirmar que o papel foi assinado, o Tech Lead registra
+   no repositório a data, quem assinou, o hash do PDF impresso, os seis
+   critérios e onde o papel assinado fica guardado (`signedPaperKeptAt`), com
+   uma evidência sem PII: o registro não guarda imagem da assinatura. Versão
    aprovada não se regera; correção depois da aprovação cria uma v4.
 
 9. **Ponto único de troca.** A constante `PRINT_TEMPLATE`, em
    `modules/orders/src/print/index.js`, escolhe o template de todo pedido
    impresso; a rota `GET /api/v1/orders/:orderId/print` chama
    `renderOrderFicha(order)` e não escolhe nada. Ela fica em
-   `ficha-canonical-v2`. Depois da aprovação, o Tech Lead registra a
-   aprovação no gate e troca a constante para `TEMPLATE_V3` num commit
-   próprio. A validação e os testes recusam a v3 nesse ponto enquanto o gate
+   `ficha-canonical-v2`. Depois de registrar a aprovação, o Tech Lead troca a
+   constante para `TEMPLATE_V3` num commit próprio. A validação e os testes recusam a v3 nesse ponto enquanto o gate
    estiver pendente.
 
 ## Alternativas descartadas

@@ -770,9 +770,10 @@ export function plannedPages(html) {
 /**
  * The v3 gate mirrors v2: hashes of the sample, of the rendered HTML (which a
  * different machine reproduces byte for byte, unlike the PDF) and of the PDF,
- * and a human approval that is wholly pending or wholly approved. Who signs
- * is the PO's call, so the gate names roles and people instead of fixing
- * them.
+ * and a human approval by Rose and Operação that is wholly pending or wholly
+ * approved. They sign the printed sample by hand; the Tech Lead records the
+ * day, the reviewers and where the signed paper is kept once the PO confirms
+ * the signature.
  *
  * @param {{artifactBytes: Buffer, evidence?: any, gate: any, renderedHtml: string, snapshotBytes: Buffer}} input
  */
@@ -837,23 +838,30 @@ export function validateFichaApprovalGateV3({
       JSON.stringify(approvalCriteria),
     'Ficha approval must record every canonical review criterion in order',
   );
+  // As in v2, Rose and Operação review; in v3 they sign the printed sample
+  // by hand, and the record says where that paper is kept.
+  invariant(
+    JSON.stringify(Object.keys(approval?.reviewedBy ?? {})) ===
+      JSON.stringify(['rose', 'operation']) &&
+      approval.signature === 'physical',
+    'v3 approval is a physical signature by Rose and Operação',
+  );
   const pending =
     approval?.status === 'pending-human-approval' &&
     approval.approved === false &&
-    approval.reviewedBy === null &&
+    approval.reviewedBy.rose === null &&
+    approval.reviewedBy.operation === null &&
     approval.reviewedAt === null &&
+    approval.signedPaperKeptAt === null &&
     approval.evidenceRef === null &&
     criteria.every((value) => value === null);
   const approved =
     approval?.status === 'approved' &&
     approval.approved === true &&
-    Array.isArray(approval.reviewedBy) &&
-    approval.reviewedBy.length > 0 &&
-    approval.reviewedBy.every(
-      (/** @type {any} */ reviewer) =>
-        nonEmptyString(reviewer?.role) && nonEmptyString(reviewer?.name),
-    ) &&
+    nonEmptyString(approval.reviewedBy.rose) &&
+    nonEmptyString(approval.reviewedBy.operation) &&
     Number.isFinite(Date.parse(approval.reviewedAt)) &&
+    nonEmptyString(approval.signedPaperKeptAt) &&
     criteria.every((value) => value === true) &&
     approval.evidenceRef === V3_EVIDENCE_PATH;
   invariant(
@@ -892,7 +900,9 @@ export function validateFichaApprovalEvidenceV3(evidence, gate) {
       JSON.stringify(evidence.reviewedBy) ===
         JSON.stringify(gate.approval.reviewedBy) &&
       JSON.stringify(evidence.criteria) ===
-        JSON.stringify(gate.approval.criteria),
+        JSON.stringify(gate.approval.criteria) &&
+      evidence.signature === 'physical' &&
+      evidence.signedPaperKeptAt === gate.approval.signedPaperKeptAt,
     'Approved evidence must match the human review recorded in the gate',
   );
   invariant(
@@ -1097,8 +1107,10 @@ async function generateV3() {
     approval: {
       status: 'pending-human-approval',
       approved: false,
-      reviewedBy: null,
+      signature: 'physical',
+      reviewedBy: { rose: null, operation: null },
       reviewedAt: null,
+      signedPaperKeptAt: null,
       criteria: Object.fromEntries(
         approvalCriteria.map((criterion) => [criterion, null]),
       ),

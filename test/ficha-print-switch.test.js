@@ -13,6 +13,7 @@ import {
   TEMPLATE_V2,
   TEMPLATE_V3,
   TEMPLATE_V4,
+  TEMPLATE_V5,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
@@ -305,6 +306,7 @@ test('the same order renders on all three templates through one function (PIM-10
   const v2 = renderOrderFicha(order, TEMPLATE_V2);
   const v3 = renderOrderFicha(order, TEMPLATE_V3);
   const v4 = renderOrderFicha(order, TEMPLATE_V4);
+  const v5 = renderOrderFicha(order, TEMPLATE_V5);
 
   assert.match(v2, /Entrega confirmada/u);
   // ADR 020: the order-wide technique is no longer written; v3 prints its
@@ -322,7 +324,13 @@ test('the same order renders on all three templates through one function (PIM-10
     /Entrega realizada<\/span><strong><span class="empty">—<\/span>/u,
   );
   assert.match(v4, /Definição da gola/u);
-  for (const html of [v2, v3, v4]) {
+  // ADR 020: v5 prints who makes the art and the technique of each item.
+  assert.match(v5, /Arte do pedido<\/span><strong>O cliente envia a arte/u);
+  assert.match(
+    v5,
+    /4<\/b> Técnica<\/span><div class="point-value">SUBLIMAÇÃO/u,
+  );
+  for (const html of [v2, v3, v4, v5]) {
     assert.doesNotMatch(html, /Amostra sint|4\.820,00|R\$|pix/iu);
     assert.doesNotMatch(html, /null|undefined/u);
   }

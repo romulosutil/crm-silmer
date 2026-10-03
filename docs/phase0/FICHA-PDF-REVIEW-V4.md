@@ -59,6 +59,9 @@ com quatro itens, estampas longas e ambas as origens gerou quatro páginas:
 três comerciais com cabeçalho e a última de produção, sem item cortado.
 Uma grade sintética de 100 tamanhos foi dividida em 15 partes: o total do item
 aparece só na primeira; as demais remetem a ela sem repetir a quantidade.
+As continuações repetem a origem da arte do pedido para páginas que circulem
+separadas, sem atribuí-la a cada item. O tipo de serviço usa texto maior e
+paginação recalibrada para preservar a leitura dos serviços longos.
 Dois serviços com quase 200 caracteres cada foram impressos em três páginas:
 duas comerciais com cabeçalho e a última de produção; o resumo indica
 “2 serviços · ver itens” e conserva os textos completos nos respectivos itens.

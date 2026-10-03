@@ -77,8 +77,9 @@ function cell(text, kind) {
  *   tipo: string, cor: string, estampa: string, tecido: string, gola: string,
  *   tamanhos: unknown[], adicionais: {label: string, value: string}[],
  * }} item the printable item
+ * @param {{extrasPerLine?: number}} [options]
  */
-export function estimateItemHeight(item) {
+export function estimateItemHeight(item, options = {}) {
   const sizeRows = Math.max(1, Math.ceil(item.tamanhos.length / SIZES_PER_ROW));
   const firstRow = Math.max(
     cell(item.tipo, TEXT.tipo),
@@ -93,20 +94,21 @@ export function estimateItemHeight(item) {
   );
   let extras = 0;
   if (item.adicionais.length > 0) {
+    const extrasPerLine = options.extrasPerLine ?? EXTRAS_PER_LINE;
     // Each extra is a label and a value that never split across lines.
     let lines = 1;
     let used = 0;
     for (const extra of item.adicionais) {
       const width = Math.min(
-        EXTRAS_PER_LINE,
+        extrasPerLine,
         Math.ceil([...extra.label].length * 0.8) + [...extra.value].length + 4,
       );
-      if (used > 0 && used + width > EXTRAS_PER_LINE) {
+      if (used > 0 && used + width > extrasPerLine) {
         lines += 1;
         used = 0;
       }
       used += width;
-      lines += Math.ceil(([...extra.value].length + 10) / EXTRAS_PER_LINE) - 1;
+      lines += Math.ceil(([...extra.value].length + 10) / extrasPerLine) - 1;
     }
     extras = EXTRAS_BASE + lines * EXTRAS_LINE;
   }
@@ -129,20 +131,20 @@ export function estimateFooterHeight(/** @type {string[]} */ observations) {
  *
  * @param {Parameters<typeof estimateItemHeight>[0][]} items
  * @param {string[]} observations
- * @param {{firstPageTop?: number}} [options]
+ * @param {{firstPageTop?: number, continuationTop?: number, extrasPerLine?: number}} [options]
  * @returns {number[][]}
  */
 export function paginateItems(items, observations, options = {}) {
   /** @type {number[][]} */
   const pages = [[]];
   let used = options.firstPageTop ?? PAGE_ONE_TOP;
-  const heights = items.map(estimateItemHeight);
+  const heights = items.map((item) => estimateItemHeight(item, options));
   heights.forEach((height, index) => {
     const page = /** @type {number[]} */ (pages.at(-1));
     const needed = page.length === 0 ? height : ITEM_GAP + height;
     if (page.length > 0 && used + needed > PAGE_HEIGHT) {
       pages.push([index]);
-      used = CONTINUATION_TOP + height;
+      used = (options.continuationTop ?? CONTINUATION_TOP) + height;
       return;
     }
     page.push(index);

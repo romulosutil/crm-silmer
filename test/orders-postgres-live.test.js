@@ -349,6 +349,86 @@ if (connectionString) {
     assert.deepEqual(await port.searchConversationIds('#12'), []);
   });
 
+  test('names the customer only from a confirmed name, never the channel handle (ADR 016)', async () => {
+    const database = databaseFor(pool);
+    const port = new PostgresOrderConversationPort({
+      contactEnvelopeKey: CONTACT_KEY,
+      database,
+      envelopeKey: ENVELOPE_KEY,
+    });
+    const service = createOrderService({
+      authorizeOwnership: async () => {},
+      clock: () => NOW,
+      conversations: port,
+      fabCode: '01',
+      repository,
+    });
+    /** @param {string} conversationId @param {Record<string, unknown>} briefing */
+    const writeBriefing = (conversationId, briefing) =>
+      pool.query(
+        `UPDATE crm.conversations
+         SET briefing_version = 2, briefing_envelope = $2::jsonb,
+             briefing_updated_at = $3
+         WHERE id = $1`,
+        [
+          conversationId,
+          JSON.stringify(
+            encryptJson(
+              briefing,
+              `n8n-briefing:${conversationId}:2`,
+              ENVELOPE_KEY,
+            ),
+          ),
+          NOW,
+        ],
+      );
+    /** @param {string} conversationId @param {string} name @param {string} source */
+    const nameContact = (conversationId, name, source) =>
+      pool.query(
+        `UPDATE crm.contacts contact
+         SET display_name = $2, display_name_source = $3
+         FROM crm.conversations conversation
+         JOIN crm.contact_identities identity
+           ON identity.id = conversation.contact_identity_id
+         WHERE conversation.id = $1 AND contact.id = identity.current_contact_id`,
+        [conversationId, name, source],
+      );
+
+    // An Instagram contact with no name: the "@handle" is not a name.
+    const unnamed = await seedConversation(pool);
+    assert.equal((await port.readOrderContext(unnamed))?.customerName, null);
+    const blank = await service.ensurePendingFromIntent({
+      conversationId: unnamed,
+      correlationId: 'correlation-unnamed',
+    });
+    assert.equal(blank.order.ficha.summary.cliente, '');
+
+    // Without a confirmed contact name, the name the customer gave the bot.
+    const told = await seedConversation(pool, { channel: 'whatsapp' });
+    await writeBriefing(told, { customer_name: 'Nome Dito Ao Bot' });
+    const fromBriefing = await service.ensurePendingFromIntent({
+      conversationId: told,
+      correlationId: 'correlation-told',
+    });
+    assert.equal(fromBriefing.order.ficha.summary.cliente, 'Nome Dito Ao Bot');
+
+    // A name promoted from the bot, or typed by a person, wins.
+    const promoted = await seedConversation(pool);
+    await nameContact(promoted, 'Nome Promovido', 'automation');
+    await writeBriefing(promoted, { customer_name: 'Outro Nome' });
+    assert.equal(
+      (await port.readOrderContext(promoted))?.customerName,
+      'Nome Promovido',
+    );
+    const renamed = await seedConversation(pool, { channel: 'whatsapp' });
+    await nameContact(renamed, 'Nome Do Vendedor', 'manual');
+    const byPerson = await service.ensurePendingFromIntent({
+      conversationId: renamed,
+      correlationId: 'correlation-renamed',
+    });
+    assert.equal(byPerson.order.ficha.summary.cliente, 'Nome Do Vendedor');
+  });
+
   test('the orders runtime replays a command key and audits it once in PostgreSQL', async () => {
     const runId = randomUUID().replaceAll('-', '');
     const database = databaseFor(pool);

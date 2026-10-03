@@ -7,6 +7,11 @@ import { decryptJson } from './envelope.js';
  */
 
 const MIN_PHONE_DIGITS = 4;
+// ADR 016: who may name the customer on an order. `manual` is a person
+// renaming the contact; `automation` is the name the customer gave the bot,
+// promoted from the briefing's `customer_name`. The channel handle (an
+// Instagram "@handle") or a WhatsApp profile name never is.
+const CONFIRMED_NAME_SOURCES = new Set(['automation', 'manual']);
 
 /** @param {unknown} value */
 function foldText(value) {
@@ -17,7 +22,7 @@ function foldText(value) {
 
 /**
  * What an order needs from the conversation it belongs to: who owns it, the
- * customer shown on the ficha, the agent's pre-ficha and the list search.
+ * customer's confirmed name, the agent's pre-ficha and the list search.
  * Names and phones live in encrypted envelopes, so they are matched here
  * after decryption and never through SQL text.
  */
@@ -114,8 +119,7 @@ export class PostgresOrderConversationPort {
     const result = await this.#database.query(
       `SELECT conversation.id, conversation.briefing_version,
               conversation.briefing_envelope, conversation.opened_at,
-              contact.display_name, identity.identity_envelope,
-              identity.external_identity_lookup_hash
+              contact.display_name, contact.display_name_source
        FROM crm.conversations conversation
        JOIN crm.contact_identities identity
          ON identity.id = conversation.contact_identity_id
@@ -125,7 +129,6 @@ export class PostgresOrderConversationPort {
     );
     const row = result.rows[0];
     if (!row) return null;
-    const identity = this.#identity(row);
     return {
       briefing: row.briefing_envelope
         ? decryptJson(
@@ -134,8 +137,11 @@ export class PostgresOrderConversationPort {
             this.#envelopeKey,
           )
         : null,
-      // Same precedence as the Inbox label, without falling back to the phone.
-      customerName: row.display_name ?? identity.displayHandle ?? null,
+      // ADR 016: only a confirmed name. Without one the order falls back to
+      // the briefing's `customer_name`, then stays blank for the seller.
+      customerName: CONFIRMED_NAME_SOURCES.has(row.display_name_source)
+        ? (row.display_name ?? null)
+        : null,
       // The first inbound message of this conversation opened it.
       openedAt: new Date(row.opened_at).toISOString(),
     };

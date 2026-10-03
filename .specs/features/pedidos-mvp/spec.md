@@ -5,6 +5,7 @@
 **Decisões de produto:** [`context.md`](context.md)
 **Arquitetura:** [`design.md`](design.md) · **Tasks:** [`tasks.md`](tasks.md)
 **Lastro de datas (29/09/2026):** [ADR 008](../../../docs/adr/008-lastro-de-datas-do-pedido.md) · história P1-10
+**Abertura no primeiro ponto da ficha (02/10/2026):** [ADR 014](../../../docs/adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md) · história P1-1 (PAB-01..04)
 **Mockups:** `.design/mesa-de-trabalho/` (canvas "Mesa de Trabalho Silmer")
 
 ## Problema
@@ -19,8 +20,8 @@ ele e por quê.
 
 ## Objetivos
 
-- [ ] Toda intenção de compra confirmada pelo agente vira um pedido pendente,
-      sem trabalho manual de criação.
+- [ ] Todo pedido do zero em que o cliente informa um ponto da ficha vira um
+      pedido pendente, sem trabalho manual de criação (ADR 014).
 - [ ] O vendedor responsável completa, confirma e imprime um pedido sem sair
       das telas Caixa de Entrada e Pedidos.
 - [ ] Nenhum pedido é impresso sem confirmação humana registrada (autor e
@@ -49,17 +50,22 @@ ele e por quê.
 ### P1-1: Agente cria o pedido pendente ⭐ MVP
 
 **História:** Como vendedor, quero que o pedido já exista quando o cliente
-demonstra intenção de compra, para não redigitar o que o agente coletou.
+começa a descrever o que quer, para não redigitar o que o agente coletou.
+
+Desde a [ADR 014](../../../docs/adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md),
+o agente pede a abertura com `open_order` na reserva de envio ou no handoff
+(PAB-01..03); o evento `order.intent_confirmed` continua aceito, obsoleto,
+para workflows antigos.
 
 **Aceite:**
 
-1. **PCL-01** WHEN o agente confirma intenção de compra numa conversa sem
+1. **PCL-01** WHEN o agente pede a abertura do pedido numa conversa sem
    pedido pendente THEN o sistema SHALL criar exatamente um pedido `pendente`
    vinculado à conversa e ao contato, com número `NN-CRM` reservado.
-2. **PCL-02** WHEN já existe pedido pendente na conversa THEN uma nova
-   intenção SHALL reutilizar o pedido existente (operação idempotente).
-3. **PCL-03** WHEN a conversa só tem pedidos confirmados e o agente confirma
-   nova intenção THEN o sistema SHALL criar um novo pedido pendente.
+2. **PCL-02** WHEN já existe pedido pendente na conversa THEN um novo pedido
+   de abertura SHALL reutilizar o pedido existente (operação idempotente).
+3. **PCL-03** WHEN a conversa só tem pedidos confirmados e o agente pede
+   nova abertura THEN o sistema SHALL criar um novo pedido pendente.
 4. **PAG-01** WHEN o agente envia `briefing_patch` e a conversa está com o
    agente e tem pedido pendente THEN os campos da ficha SHALL ser projetados no
    pedido pendente.
@@ -67,9 +73,32 @@ demonstra intenção de compra, para não redigitar o que o agente coletou.
    THEN patches do agente SHALL ser ignorados para o pedido.
 6. **PAG-03** WHEN o patch do agente traz valor, condição de pagamento ou
    status THEN o sistema SHALL rejeitar esses campos, como já faz hoje.
+7. **PAB-01** WHEN a ficha da conversa (briefing anterior unido ao patch da
+   rodada) passa a ter, pela primeira vez, um valor real em um dos sete
+   pontos (tipo de roupa, cor, quantidade, estampa, tecido, tamanhos, gola)
+   THEN o workflow SHALL enviar `open_order: true` na reserva de envio ou no
+   handoff dessa rodada e de todas as seguintes. "Definir com o vendedor" e o
+   nome sozinho SHALL NOT abrir o pedido, e `order_intent_confirmed` do modelo
+   SHALL ser ignorado.
+8. **PAB-02** WHEN a rodada não é pedido do zero (ADR 013) THEN o workflow
+   SHALL NOT abrir pedido, salvo um já aberto; WHEN o handoff, de qualquer
+   motivo, inclusive arquivo ou áudio, acontece com um ponto na ficha THEN ele
+   SHALL levar `open_order: true`.
+9. **PAB-03** WHEN `message.send.requested` ou `handoff.requested` traz
+   `open_order: true` THEN o CRM SHALL, depois de aplicar o evento, criar ou
+   reutilizar o pedido pendente pela ficha unida (PCL-01..03) e responder
+   `order: {opened: true, id, created}`; replay ou evento repetido SHALL NOT
+   criar um segundo pedido. `open_order` em outro evento ou com valor não
+   booleano SHALL ser recusado com 400.
+10. **PAB-04** WHEN o CRM não consegue abrir o pedido THEN o evento SHALL ser
+    aceito mesmo assim (a resposta ao cliente sai), a resposta SHALL trazer
+    `order: {opened: false, error}`, o CRM SHALL registrar log sem dados
+    pessoais e a auditoria `integration.n8n.order.open_failed`, e o workflow
+    SHALL enviar `workflow.failed` com `ORDER_OPEN_FAILED` para a conversa.
 
-**Teste independente:** enviar o evento de intenção pelo endpoint do n8n e ver
-o pedido pendente na lista de Pedidos e na gaveta da conversa.
+**Teste independente:** numa conversa nova do workflow DEV, mandar uma
+mensagem com um ponto da ficha (ex.: "quero camisetas brancas") e ver o pedido
+pendente na lista de Pedidos e na gaveta da conversa.
 
 ---
 
@@ -443,11 +472,22 @@ Verificado em T46, 29/09/2026.
 | `npm run test:orders:live`         | ✅ passou — 17/17 (PostgreSQL, `crm_silmer_test`)           |
 | `test/migrations-live.test.js`     | ✅ passou — backfill de `0024` entre as migrations          |
 
+### Abertura no primeiro ponto da ficha (ADR 014)
+
+Tasks T50–T53, 02/10/2026. A evidência é preenchida na T53.
+
+| ID     | História | Evidência | Status   |
+| ------ | -------- | --------- | -------- |
+| PAB-01 | P1-1     | T52       | Pendente |
+| PAB-02 | P1-1     | T52       | Pendente |
+| PAB-03 | P1-1     | T51       | Pendente |
+| PAB-04 | P1-1     | T51, T52  | Pendente |
+
 ## Roteiro de UAT
 
-1. Como agente (evento n8n `order.intent_confirmed`), confirmar intenção numa
-   conversa nova → pedido pendente `NN-CRM` aparece na gaveta da conversa e em
-   Pedidos/Pendentes.
+1. Como cliente no workflow DEV, mandar numa conversa nova uma mensagem com um
+   ponto da ficha (ADR 014) → pedido pendente `NN-CRM` aparece na gaveta da
+   conversa e em Pedidos/Pendentes.
 2. Assumir a conversa como vendedor na Caixa de Entrada.
 3. Abrir o pedido pela gaveta ("Abrir pedido").
 4. Editar a seção "Itens e especificações": ajustar grade, salvar e conferir

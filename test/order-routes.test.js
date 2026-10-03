@@ -154,6 +154,12 @@ function seed(input) {
   };
 }
 
+// ADR 020: who makes the art, marked before generating.
+const ART_FROM_CUSTOMER = Object.freeze({
+  feito_pela_silmer: false,
+  feito_pelo_cliente: true,
+});
+
 // ADR 016: the promised delivery a seller sets before generating.
 const PROMISED_SUMMARY = Object.freeze({
   aplicacao: null,
@@ -183,12 +189,20 @@ async function createConfirmed(runtime, conversationId, summary) {
       value: summary ?? PROMISED_SUMMARY,
     }),
   );
-  const edited = await runtime.patchSection(
+  const withItems = await runtime.patchSection(
     seed({
       expectedVersion: order.version,
       orderId: order.id,
       section: 'items',
       value: syntheticItems(),
+    }),
+  );
+  const edited = await runtime.patchSection(
+    seed({
+      expectedVersion: withItems.version,
+      orderId: withItems.id,
+      section: 'artwork',
+      value: ART_FROM_CUSTOMER,
     }),
   );
   return runtime.confirm(
@@ -252,7 +266,7 @@ test('orders expose last-message delivery state without message content', async 
   });
 });
 
-test('artwork provenance accepts two human choices and rejects file metadata', async () => {
+test('who makes the art: two origins together or "Sem estampa", never file metadata (ADR 020)', async () => {
   const { api, runtime } = orderHarness();
   const order = await createPending(runtime, 'conversation-1');
   const accepted = await api.inject({
@@ -269,7 +283,27 @@ test('artwork provenance accepts two human choices and rejects file metadata', a
     feito_pelo_cliente: true,
     feito_pela_silmer: true,
     files: [],
+    sem_estampa: false,
   });
+  assert.equal(
+    accepted.json().order.missingFields.includes('artwork'),
+    false,
+    'a marked origin no longer blocks',
+  );
+  const mixed = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'reject-mixed-artwork' },
+    method: 'PATCH',
+    payload: {
+      expectedVersion: accepted.json().order.version,
+      value: {
+        feito_pelo_cliente: true,
+        feito_pela_silmer: false,
+        sem_estampa: true,
+      },
+    },
+    url: `/api/v1/orders/${order.id}/sections/artwork`,
+  });
+  assert.equal(mixed.statusCode, 400);
   const refused = await api.inject({
     headers: { ...writeHeaders, 'idempotency-key': 'reject-artwork-files' },
     method: 'PATCH',
@@ -631,6 +665,7 @@ test('PATCH /orders/:id/sections/:section saves the whole section', async (t) =>
   assert.equal(order.version, pending.version + 1);
   assert.equal(order.totalPieces, 32);
   assert.deepEqual(order.missingFields, [
+    'artwork',
     'summary.data_entrega_confirmada',
     'finalAmount',
     'paymentCondition',
@@ -661,10 +696,10 @@ test('PATCH items takes a half-filled item, and one without the ADR 016 fields',
   assert.equal(order.totalPieces, 0);
   assert.deepEqual(order.missingFields, [
     'items[0].cor',
-    'items[0].estampa',
+    'items[0].tipo_servico',
     'items[0].malhas',
     'items[0].grade',
-    'items[0].tipo_servico',
+    'artwork',
     'summary.data_entrega_confirmada',
     'finalAmount',
     'paymentCondition',
@@ -686,10 +721,10 @@ test('PATCH items takes a half-filled item, and one without the ADR 016 fields',
       code: 'ORDER_NOT_CONFIRMABLE',
       fields: [
         'items[0].cor',
-        'items[0].estampa',
+        'items[0].tipo_servico',
         'items[0].malhas',
         'items[0].grade',
-        'items[0].tipo_servico',
+        'artwork',
         'summary.data_entrega_confirmada',
       ],
     },
@@ -823,12 +858,20 @@ async function createReady(runtime, conversationId) {
       value: PROMISED_SUMMARY,
     }),
   );
-  return runtime.patchSection(
+  const withItems = await runtime.patchSection(
     seed({
       expectedVersion: order.version,
       orderId: order.id,
       section: 'items',
       value: syntheticItems(),
+    }),
+  );
+  return runtime.patchSection(
+    seed({
+      expectedVersion: withItems.version,
+      orderId: withItems.id,
+      section: 'artwork',
+      value: ART_FROM_CUSTOMER,
     }),
   );
 }
@@ -875,6 +918,7 @@ test('confirming without what ADR 016 requires answers 422 ORDER_NOT_CONFIRMABLE
       code: 'ORDER_NOT_CONFIRMABLE',
       fields: [
         'items',
+        'artwork',
         'summary.data_entrega_confirmada',
         'finalAmount',
         'paymentCondition',

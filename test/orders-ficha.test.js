@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   DEFERRED,
   NOT_APPLICABLE,
+  NO_PRINT,
   blankItem,
   briefingToFicha,
   itemTotal,
@@ -186,7 +187,27 @@ test('a stored ficha reads the legacy collar binding and defaults new fields', (
     feito_pelo_cliente: false,
     feito_pela_silmer: false,
     files: [],
+    sem_estampa: false,
   });
+  assert.deepEqual(
+    normalizeFicha(
+      /** @type {any} */ ({
+        ...stored,
+        artwork: {
+          feito_pela_silmer: true,
+          feito_pelo_cliente: false,
+          files: [],
+        },
+      }),
+    ).artwork,
+    {
+      feito_pela_silmer: true,
+      feito_pelo_cliente: false,
+      files: [],
+      sem_estampa: false,
+    },
+    'an art origin stored before ADR 020 reads "Sem estampa" as unmarked',
+  );
   assert.equal(read.items[0].modelo, 'TRADICIONAL');
   assert.deepEqual(read.items[0].grade, synthetic.pedido.itens[0].grade);
   assert.equal('cor' in stored.items[0], false, 'the input is not mutated');
@@ -229,14 +250,46 @@ test('items reject unknown keys, typed totals and non-string fields', () => {
   assert.equal(trimmed.tipo, 'CAMISA');
 });
 
-test('artwork origin accepts both choices and rejects file injection', () => {
+test('who makes the art: customer and Silmer together, "Sem estampa" alone, no files (ADR 020)', () => {
   assert.deepEqual(
     validateArtwork({ feito_pelo_cliente: true, feito_pela_silmer: true }),
-    { feito_pelo_cliente: true, feito_pela_silmer: true, files: [] },
+    {
+      feito_pelo_cliente: true,
+      feito_pela_silmer: true,
+      files: [],
+      sem_estampa: false,
+    },
   );
   assert.deepEqual(
-    validateArtwork({ feito_pelo_cliente: false, feito_pela_silmer: false }),
-    { feito_pelo_cliente: false, feito_pela_silmer: false, files: [] },
+    validateArtwork({
+      feito_pelo_cliente: false,
+      feito_pela_silmer: false,
+      sem_estampa: true,
+    }),
+    {
+      feito_pelo_cliente: false,
+      feito_pela_silmer: false,
+      files: [],
+      sem_estampa: true,
+    },
+  );
+  assert.throws(
+    () =>
+      validateArtwork({
+        feito_pelo_cliente: true,
+        feito_pela_silmer: false,
+        sem_estampa: true,
+      }),
+    rejectedWith('ORDER_INVALID', { fields: ['artwork.sem_estampa'] }),
+  );
+  assert.throws(
+    () =>
+      validateArtwork({
+        feito_pelo_cliente: false,
+        feito_pela_silmer: false,
+        sem_estampa: 'sim',
+      }),
+    rejectedWith('ORDER_INVALID', { fields: ['artwork.sem_estampa'] }),
   );
   assert.throws(
     () =>
@@ -278,7 +331,7 @@ test('observations accept zero to five lines', () => {
   });
 });
 
-test('the summary input never carries the locked customer', () => {
+test('the summary input never carries the locked customer and ignores the legacy technique', () => {
   assert.deepEqual(
     validateSummary({
       aplicacao: ' SUBLIMACAO TOTAL ',
@@ -286,10 +339,13 @@ test('the summary input never carries the locked customer', () => {
       nome: '',
     }),
     {
-      aplicacao: 'SUBLIMACAO TOTAL',
       data_entrega_confirmada: '30/09/2026',
       nome: null,
     },
+  );
+  assert.deepEqual(
+    validateSummary({ data_entrega_confirmada: null, nome: 'Turma' }),
+    { data_entrega_confirmada: null, nome: 'Turma' },
   );
   assert.throws(
     () =>
@@ -307,18 +363,9 @@ test('the summary input never carries the locked customer', () => {
       fields: ['summary.data_entrega_confirmada'],
     }),
   );
-  assert.throws(
-    () =>
-      validateSummary({
-        aplicacao: 5,
-        data_entrega_confirmada: null,
-        nome: null,
-      }),
-    rejectedWith('ORDER_INVALID', { fields: ['summary.aplicacao'] }),
-  );
 });
 
-test('maps the seven points onto item 1 and keeps the rest as service data (ADR 016)', () => {
+test('maps the points onto item 1, the art onto the order and keeps the rest as service data (ADR 016/020)', () => {
   const ficha = briefingToFicha({
     artwork_locations: 'frente e costas',
     artwork_status: 'já tem a arte',
@@ -343,7 +390,7 @@ test('maps the seven points onto item 1 and keeps the rest as service data (ADR 
   });
 
   assert.deepEqual(ficha.summary, {
-    aplicacao: 'sublimação total',
+    aplicacao: null,
     cliente: 'Cliente Sintético',
     data_entrega_confirmada: null,
     nome: 'Equipe Horizonte',
@@ -352,7 +399,7 @@ test('maps the seven points onto item 1 and keeps the rest as service data (ADR 
     {
       ...blankItem(),
       cor: 'azul e branco',
-      estampa: 'já tem a arte · frente e costas',
+      estampa: 'frente e costas',
       gola: 'gola V',
       grade: [
         { quantidade: 4, tamanho: 'P' },
@@ -360,8 +407,15 @@ test('maps the seven points onto item 1 and keeps the rest as service data (ADR 
       ],
       malhas: ['dry fit'],
       tipo: 'camiseta comum',
+      tipo_servico: 'sublimação total',
     },
   ]);
+  assert.deepEqual(ficha.artwork, {
+    feito_pela_silmer: false,
+    feito_pelo_cliente: true,
+    files: [],
+    sem_estampa: false,
+  });
   assert.equal(ficha.items[0].modelo, '', 'the model is left to the seller');
   assert.deepEqual(ficha.observations, []);
   assert.deepEqual(ficha.serviceData, {
@@ -419,7 +473,7 @@ test('a point left to the seller is never a ficha value and stays as service dat
   assert.deepEqual(mixed.items[0].malhas, ['algodão']);
 });
 
-test('a named technique is context, never an assigned item service', () => {
+test('a named technique fills the technique of the item (ADR 020)', () => {
   /** @param {string} artwork_technique */
   const read = (artwork_technique) => briefingToFicha({ artwork_technique });
   for (const technique of [
@@ -432,18 +486,13 @@ test('a named technique is context, never an assigned item service', () => {
     'bordado',
     'bordada',
     'transfer',
-    'sem aplicação',
   ]) {
-    assert.equal(read(technique).summary.aplicacao, technique, technique);
+    assert.equal(read(technique).items[0].tipo_servico, technique, technique);
     assert.equal('artwork_technique' in read(technique).serviceData, false);
-    assert.equal(
-      briefingToFicha({
-        artwork_technique: technique,
-        product_model: 'Camiseta',
-      }).items[0].tipo_servico,
-      '',
-      technique,
-    );
+    assert.equal(read(technique).summary.aplicacao, null, technique);
+  }
+  for (const plain of ['sem aplicação', 'Sem estampa', 'lisa']) {
+    assert.equal(read(plain).items[0].tipo_servico, NO_PRINT, plain);
   }
   for (const wish of [
     'estampada',
@@ -453,50 +502,100 @@ test('a named technique is context, never an assigned item service', () => {
     'personalizada',
     'transferir depois',
   ]) {
-    assert.equal(read(wish).summary.aplicacao, null, wish);
+    assert.deepEqual(read(wish).items, [], `${wish} opens no item`);
     assert.equal(read(wish).serviceData.artwork_technique, wish, wish);
   }
-  assert.deepEqual(read('estampada').items, [], 'a technique opens no item');
 });
 
-test('the artwork says where it comes from, with its places, or "Sem estampa"', () => {
-  /** @param {Record<string, unknown>} briefing */
-  const estampa = (briefing) => briefingToFicha(briefing).items[0].estampa;
-  assert.equal(
-    estampa({ artwork_locations: 'frente', artwork_status: 'vai mandar' }),
-    'vai mandar · frente',
-  );
-  assert.equal(
-    estampa({ artwork_status: 'Silmer cria a arte' }),
-    'Silmer cria a arte',
-  );
-  assert.equal(
-    estampa({
-      artwork_locations: 'sem aplicação',
-      artwork_status: 'sem aplicação',
-      artwork_technique: 'sem aplicação',
-    }),
-    'Sem estampa',
-  );
-  assert.equal(
-    estampa({ artwork_locations: DEFERRED, artwork_status: 'tem a logo' }),
+test('who makes the art lands on the order only when the answer is clear (ADR 020)', () => {
+  /** @param {unknown} artwork_status */
+  const origin = (artwork_status) => {
+    const { artwork } = briefingToFicha({ artwork_status });
+    return [
+      artwork?.feito_pelo_cliente && 'cliente',
+      artwork?.feito_pela_silmer && 'silmer',
+      artwork?.sem_estampa && 'sem estampa',
+    ]
+      .filter(Boolean)
+      .join(' + ');
+  };
+  for (const answer of [
+    'pronta',
+    'já tem a logo',
+    'já tem a arte',
     'tem a logo',
-  );
-  const deferred = briefingToFicha({
-    artwork_locations: 'frente',
-    artwork_status: DEFERRED,
-  });
-  assert.equal(deferred.items[0].estampa, '');
+    'tem a arte',
+    'vai mandar',
+    'vai mandar a logo',
+    'Arte recebida',
+    'Arte recebida do cliente',
+    'Arte pronta e aprovada',
+  ]) {
+    assert.equal(origin(answer), 'cliente', answer);
+  }
+  for (const answer of [
+    'Silmer cria a arte',
+    'quer que a gente crie',
+    'não tem a logo, quer que a Silmer crie',
+    'não tenho arte',
+  ]) {
+    assert.equal(origin(answer), 'silmer', answer);
+  }
   assert.equal(
-    deferred.serviceData.artwork_locations,
-    'frente',
-    'places without an origin stay with the seller',
+    origin('tem a logo e quer que a Silmer crie o resto'),
+    'cliente + silmer',
   );
-  const appended = briefingToFicha({
-    artwork_locations: 'peito',
-    artwork_status: 'tem a arte',
+  for (const answer of [
+    'sem aplicação',
+    'Sem estampa',
+    'lisa',
+    'não quer estampa',
+  ]) {
+    assert.equal(origin(answer), 'sem estampa', answer);
+  }
+  for (const answer of [
+    'com estampa',
+    'estampa',
+    'tem estampa na frente',
+    'a definir',
+    'não informado',
+    DEFERRED,
+  ]) {
+    const ficha = briefingToFicha({ artwork_status: answer });
+    assert.equal(origin(answer), '', answer);
+    assert.equal(ficha.serviceData.artwork_status, answer, answer);
+    assert.deepEqual(ficha.items, [], 'the art opens no item');
+  }
+});
+
+test('where the print goes is the reference of an open item (ADR 020)', () => {
+  /** @param {Record<string, unknown>} briefing */
+  const read = (briefing) =>
+    briefingToFicha({ product_model: 'Camiseta', ...briefing });
+  assert.equal(
+    read({ artwork_locations: 'frente', artwork_status: 'vai mandar' }).items[0]
+      .estampa,
+    'frente',
+  );
+  const plain = read({
+    artwork_locations: 'sem aplicação',
+    artwork_status: 'sem aplicação',
+    artwork_technique: 'sem aplicação',
   });
-  assert.equal('artwork_locations' in appended.serviceData, false);
+  assert.equal(plain.items[0].estampa, '');
+  assert.equal(plain.items[0].tipo_servico, NO_PRINT);
+  assert.equal(plain.artwork?.sem_estampa, true);
+  assert.deepEqual(plain.serviceData, {});
+  const deferred = read({ artwork_locations: DEFERRED });
+  assert.equal(deferred.items[0].estampa, '');
+  assert.equal(deferred.serviceData.artwork_locations, DEFERRED);
+  const alone = briefingToFicha({ artwork_locations: 'peito' });
+  assert.deepEqual(alone.items, []);
+  assert.equal(
+    alone.serviceData.artwork_locations,
+    'peito',
+    'places without an item stay with the seller',
+  );
 });
 
 test('the collar is its own field and never joins the model (ADR 016)', () => {
@@ -573,6 +672,7 @@ test('an empty briefing yields an empty draft', () => {
       feito_pelo_cliente: false,
       feito_pela_silmer: false,
       files: [],
+      sem_estampa: false,
     },
     items: [],
     observations: [],
@@ -617,8 +717,10 @@ test('projects the seven points onto item 1 and keeps what the seller owns', () 
     feito_pelo_cliente: true,
     feito_pela_silmer: false,
     files: [],
+    sem_estampa: false,
   };
   const projected = projectBriefingOntoFicha(pending, {
+    artwork_status: 'Silmer cria a arte',
     artwork_technique: 'DTF',
     collar: 'gola V',
     fabrics: 'algodão',
@@ -643,9 +745,28 @@ test('projects the seven points onto item 1 and keeps what the seller owns', () 
   assert.deepEqual(projected.items[1], pending.items[1]);
   assert.deepEqual(projected.observations, ['Separar por tamanho']);
   assert.equal(projected.artwork?.feito_pelo_cliente, true);
-  assert.equal(projected.artwork?.feito_pela_silmer, false);
-  assert.equal(projected.summary.aplicacao, 'DTF');
+  assert.equal(
+    projected.artwork?.feito_pela_silmer,
+    false,
+    "the seller's art mark stays",
+  );
+  assert.equal(projected.summary.aplicacao, 'SILK', 'the legacy value stays');
   assert.equal(projected.summary.data_entrega_confirmada, '2026-10-24');
+
+  // A blank technique and an order without an art mark take the bot's.
+  const blank = normalizeFicha({
+    ...pending,
+    artwork: undefined,
+    items: [{ ...blankItem(), tipo: 'CAMISETA' }],
+  });
+  const filled = projectBriefingOntoFicha(blank, {
+    artwork_status: 'Silmer cria a arte',
+    artwork_technique: 'DTF',
+    product_model: 'camiseta',
+  });
+  assert.equal(filled.items[0].tipo_servico, 'DTF');
+  assert.equal(filled.artwork?.feito_pela_silmer, true);
+  assert.equal(filled.artwork?.feito_pelo_cliente, false);
 
   const deferred = projectBriefingOntoFicha(projected, { colors: DEFERRED });
   assert.equal(deferred.items[0].cor, 'PRETA', 'a deferred point never erases');

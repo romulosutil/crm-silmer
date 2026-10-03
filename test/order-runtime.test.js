@@ -105,12 +105,20 @@ test('the conversation owner creates, edits and confirms its order', async () =>
       },
     }),
   );
-  const edited = await runtime.patchSection(
+  const withItems = await runtime.patchSection(
     command(OWNER, {
       expectedVersion: promised.version,
       orderId: created.order.id,
       section: 'items',
       value: syntheticItems(),
+    }),
+  );
+  const edited = await runtime.patchSection(
+    command(OWNER, {
+      expectedVersion: withItems.version,
+      orderId: created.order.id,
+      section: 'artwork',
+      value: { feito_pela_silmer: true, feito_pelo_cliente: false },
     }),
   );
   const confirmed = await runtime.confirm(
@@ -143,6 +151,7 @@ test('the conversation owner creates, edits and confirms its order', async () =>
         'seller-1',
         { id: 'conversation-1', type: 'conversation' },
       ],
+      ['order.edit', 'seller-1', { id: created.order.id, type: 'order' }],
       ['order.edit', 'seller-1', { id: created.order.id, type: 'order' }],
       ['order.edit', 'seller-1', { id: created.order.id, type: 'order' }],
       ['order.confirm', 'seller-1', { id: created.order.id, type: 'order' }],
@@ -294,6 +303,7 @@ test('a confirmation without amount or condition is a 422, not a crash', async (
       code: 'ORDER_NOT_CONFIRMABLE',
       fields: [
         'items',
+        'artwork',
         'summary.data_entrega_confirmada',
         'finalAmount',
         'paymentCondition',

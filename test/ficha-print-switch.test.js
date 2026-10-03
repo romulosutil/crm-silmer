@@ -128,6 +128,14 @@ async function confirmedOrder(runtime, summary) {
       value: syntheticItems(),
     }),
   );
+  order = await runtime.patchSection(
+    seed({
+      expectedVersion: order.version,
+      orderId: order.id,
+      section: 'artwork',
+      value: { feito_pela_silmer: false, feito_pelo_cliente: true },
+    }),
+  );
   order = await runtime.confirm(
     seed({
       amountText: '4.820,00',
@@ -289,7 +297,6 @@ test('the same order renders on all three templates through one function (PIM-10
   const { api, runtime } = harness();
   t.after(() => api.close());
   const confirmed = await confirmedOrder(runtime, {
-    aplicacao: 'SILK',
     data_entrega_confirmada: '2026-10-24',
     nome: 'Equipe Sintetica',
   });
@@ -300,7 +307,9 @@ test('the same order renders on all three templates through one function (PIM-10
   const v4 = renderOrderFicha(order, TEMPLATE_V4);
 
   assert.match(v2, /Entrega confirmada/u);
-  assert.match(v3, /Tipo de serviço<\/span><strong>SILK</u);
+  // ADR 020: the order-wide technique is no longer written; v3 prints its
+  // legacy cell empty.
+  assert.match(v3, /Tipo de serviço<\/span><strong><span class="empty">—/u);
   assert.match(v3, /Entrega prometida<\/span><strong>24\/10\/2026</u);
   for (const label of PRINCIPAL_LABELS) assert.ok(v3.includes(label), label);
   // The trail comes from the order: first contact and payment; the order

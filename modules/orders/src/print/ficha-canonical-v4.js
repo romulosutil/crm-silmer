@@ -246,7 +246,7 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
     * { box-sizing: border-box; }
     :root { --canvas: #f8f7fc; --surface: #fff; --raised: #f0eef8; --active: #e8e3fa; --text: #160e36; --muted: #625b75; --border: #d8d4e4; --subtle: #e8e5ef; --accent: #ff5b01; --deep: #0c042d; --link: #5b3fd1; }
     html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    body { background: var(--canvas); color: var(--text); font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 9.5px; margin: 0; }
+    body { background: var(--canvas); color: var(--text); font-family: Arial, Helvetica, 'Liberation Sans', Arimo, sans-serif; font-size: 9.5px; margin: 0; }
     h1, h2, p, dl, dd { margin: 0; }
     .sheet-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 7px; }
     .brand { color: var(--link); font-size: 9px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }

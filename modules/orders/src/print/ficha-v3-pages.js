@@ -129,12 +129,13 @@ export function estimateFooterHeight(/** @type {string[]} */ observations) {
  *
  * @param {Parameters<typeof estimateItemHeight>[0][]} items
  * @param {string[]} observations
+ * @param {{firstPageTop?: number}} [options]
  * @returns {number[][]}
  */
-export function paginateItems(items, observations) {
+export function paginateItems(items, observations, options = {}) {
   /** @type {number[][]} */
   const pages = [[]];
-  let used = PAGE_ONE_TOP;
+  let used = options.firstPageTop ?? PAGE_ONE_TOP;
   const heights = items.map(estimateItemHeight);
   heights.forEach((height, index) => {
     const page = /** @type {number[]} */ (pages.at(-1));

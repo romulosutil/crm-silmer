@@ -19,6 +19,8 @@ function revisionOrder() {
   const order = structuredClone(sample);
   order.ficha.summary.aplicacao = 'TÉCNICA LEGADA';
   order.ficha.items[0].tipo_servico = 'Produção completa';
+  order.ficha.items[0].cor_frente = 'AZUL NO PEITO';
+  order.ficha.items[0].cor_costas = 'LARANJA NAS COSTAS';
   order.ficha.items[1].tipo_servico = 'Só impressão';
   order.ficha.items[2].tipo_servico = 'Produção completa';
   order.ficha.items[1].gola = '';
@@ -42,9 +44,25 @@ test('v4 preserves v3 as a separate approved template', () => {
   assert.match(v4, /Produção completa/u);
   assert.match(v4, /Só impressão/u);
   assert.match(v4, /Origem: Feita pelo cliente/u);
-  assert.doesNotMatch(v4, /TÉCNICA LEGADA/u);
+  assert.match(
+    v4,
+    /Técnica da arte \(referência\)<\/span><strong>TÉCNICA LEGADA/u,
+  );
+  assert.ok(
+    v4.indexOf('TÉCNICA LEGADA') < v4.indexOf('<article class="item-card">'),
+  );
+  assert.match(v4, /Cor frente <strong>AZUL NO PEITO/u);
+  assert.match(v4, /Cor costas <strong>LARANJA NAS COSTAS/u);
   assert.match(v4, /VERDE BANDEIRA/u); // legacy vies_gola fallback
   assert.equal((v4.match(/class="campo-producao-vazio"/gu) ?? []).length, 14);
+});
+
+test('v4 omits the global art reference when empty', () => {
+  const order = revisionOrder();
+  order.ficha.summary.aplicacao = '';
+  const html = renderOrderFicha(order, TEMPLATE_V4);
+  assert.doesNotMatch(html, /Técnica da arte \(referência\)/u);
+  assert.match(html, /Serviços dos itens/u);
 });
 
 test('v4 keeps continuation headers and prints each item exactly once', () => {

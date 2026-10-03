@@ -1,6 +1,6 @@
 // Proposed revision of the approved v3 layout. The v2/v3 renderers and their
 // review hashes stay immutable while this revision is reviewed.
-import { paginateItems } from './ficha-v3-pages.js';
+import { PAGE_ONE_TOP, paginateItems, wrappedLines } from './ficha-v3-pages.js';
 import { filledText } from './html.js';
 import { NOT_APPLICABLE } from '../domain/ficha.js';
 
@@ -41,10 +41,20 @@ function colorOf(item) {
 /** @param {any} item */
 function additionalOf(item) {
   return [
+    ['Cor frente', item.cor_frente],
+    ['Cor costas', item.cor_costas],
     ['Manga direita', item.cor_manga_direita],
     ['Manga esquerda', item.cor_manga_esquerda],
     ['Viés das mangas', item.vies_mangas],
   ].filter(([, value]) => typeof value === 'string' && value.trim());
+}
+
+/** @param {any} artwork */
+function originsOf(artwork) {
+  return [
+    artwork?.feito_pelo_cliente ? 'Feita pelo cliente' : null,
+    artwork?.feito_pela_silmer ? 'Feita pela Silmer' : null,
+  ].filter(Boolean);
 }
 
 /** @param {number} number @param {string} label @param {string} value @param {string} [className] */
@@ -59,10 +69,7 @@ function renderItem(item, index, artwork, visibleGrade, part, parts) {
       sum + line.quantidade,
     0,
   );
-  const origins = [
-    artwork?.feito_pelo_cliente ? 'Feita pelo cliente' : null,
-    artwork?.feito_pela_silmer ? 'Feita pela Silmer' : null,
-  ].filter(Boolean);
+  const origins = originsOf(artwork);
   const printDescription = item.estampa ? present(item.estampa) : present('');
   const printValue = `${printDescription}${origins.length ? `<small>Origem: ${display(origins.join(' e '))}</small>` : ''}`;
   const grade = visibleGrade
@@ -155,10 +162,16 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
       grade: grade.slice(part * 7, (part + 1) * 7),
     }));
   });
+  const originLabel = originsOf(order.artwork).join(' e ');
   const printableItems = fragments.map(({ item, grade }) => ({
     tipo: filledText(item.tipo),
     cor: filledText(colorOf(item)),
-    estampa: filledText(item.estampa),
+    estampa: [
+      filledText(item.estampa),
+      originLabel ? `Origem: ${originLabel}` : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
     tecido: Array.isArray(item.malhas) ? item.malhas.join(' / ') : '',
     gola: filledText(item.gola || item.vies_gola),
     tamanhos: grade,
@@ -167,7 +180,15 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
       ...additionalOf(item).map(([label, value]) => ({ label, value })),
     ],
   }));
-  const pages = paginateItems(printableItems, observations);
+  const technique = filledText(order.aplicacao);
+  // The fifth supporting cell may wrap; reserve its extra lines before
+  // placing the first item, so Chromium never creates an unheaded page.
+  const techniqueHeight = technique
+    ? Math.max(0, wrappedLines(technique, 30) - 1) * 13
+    : 0;
+  const pages = paginateItems(printableItems, observations, {
+    firstPageTop: PAGE_ONE_TOP + techniqueHeight,
+  });
   /** @param {number} pageIndex */
   const cardsOf = (pageIndex) =>
     pages[pageIndex]
@@ -244,6 +265,7 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
     .summary strong { color: var(--deep); font-size: 12px; overflow-wrap: anywhere; }
     .summary .quantity { color: var(--accent); font-size: 20px; line-height: .9; }
     .supporting { display: grid; gap: 6px; grid-template-columns: 1.5fr 1fr .8fr .5fr; margin: 7px 0 9px; }
+    .supporting.has-technique { grid-template-columns: 1.5fr 1fr .8fr .5fr 1.5fr; }
     .supporting > div { background: var(--raised); border-radius: 5px; min-height: 36px; padding: 7px 8px; }
     .supporting strong { font-size: 9.5px; }
     .lastro { display: grid; gap: 5px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
@@ -310,11 +332,12 @@ export function renderFichaHtmlV4(snapshot, options = {}) {
     <div><span class="label">Total de peças</span><strong class="quantity">${display(order.quantidade_total)}</strong></div>
     <div><span class="label">Serviços dos itens</span><strong>${present(serviceSummary)}</strong></div>
   </section>
-  <section class="supporting">
+  <section class="supporting${technique ? ' has-technique' : ''}">
     <div><span class="label">Evento / Nome</span><strong>${present(order.nome)}</strong></div>
     <div><span class="label">Vendedor</span><strong>${present(order.vendedor)}</strong></div>
     <div><span class="label">Data do pedido</span><strong>${present(order.data)}</strong></div>
     <div><span class="label">FAB</span><strong>${present(fabLabel(order.fab))}</strong></div>
+    ${technique ? `<div><span class="label">Técnica da arte (referência)</span><strong>${present(technique)}</strong></div>` : ''}
   </section>
   <div class="section-label">Lastro do pedido</div><section class="lastro">${lastroEntries.map(([label, value]) => `<div><span class="label">${display(label)}</span><strong>${present(value)}</strong></div>`).join('')}</section>
   <div class="section-label">Itens: os sete pontos e os adicionais</div>

@@ -1302,8 +1302,8 @@ de `master`; as tasks rodam em ordem, uma por commit (T50–T69 já têm dono).
 
 **Done when:**
 
-- [ ] `npm run validate` e `npm run test:orders:live` passam
-- [ ] Nenhum PCT sem evidência
+- [x] `npm run validate` e `npm run test:orders:live` passam
+- [x] Nenhum PCT sem evidência
 
 **Tests:** full · **Gate:** full · **Commit:** `docs(specs): trace the client that follows the contact`
 
@@ -1313,7 +1313,7 @@ de `master`; as tasks rodam em ordem, uma por commit (T50–T69 já têm dono).
 | ---- | -------------------------------- | ------------------------ | ----------- | ---------- | ------ |
 | T70  | 1 ADR + requisitos               | docs                     | none        | —          | ✅     |
 | T71  | 1 regra de leitura e de gerar    | domínio, serviço, PG     | unit + live | T70        | ✅     |
-| T72  | verificação                      | full                     | full        | T71        | ⬜     |
+| T72  | verificação                      | full                     | full        | T71        | ✅     |
 
 ---
 

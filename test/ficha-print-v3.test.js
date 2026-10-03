@@ -10,6 +10,12 @@ import {
   renderFichaHtmlV3,
 } from '../modules/orders/src/print/ficha-canonical-v3.js';
 import {
+  PAGE_HEIGHT,
+  estimateItemHeight,
+  paginateItems,
+  wrappedLines,
+} from '../modules/orders/src/print/ficha-v3-pages.js';
+import {
   TEMPLATE_V2,
   TEMPLATE_V3,
   printSnapshot,
@@ -127,7 +133,15 @@ function pointLabels(html) {
 
 /** @param {string} html */
 function pageOne(html) {
-  return html.slice(0, html.indexOf('<section class="page-break">'));
+  return html.slice(0, html.indexOf('<section class="page-break'));
+}
+
+/** @param {string} html @returns {string[]} each continuation page */
+function continuationPages(html) {
+  return html
+    .slice(0, html.indexOf('<section class="page-break">'))
+    .split('<section class="page-break continuation">')
+    .slice(1);
 }
 
 /** @param {string} text */
@@ -443,6 +457,94 @@ test('prints the stored NAO APLICAVEL as NÃO APLICÁVEL and typed text as typed
   assert.match(card, /Viés mangas<\/dt><dd>NAO APLICAVEL NA MANGA CURTA</u);
   // The stored value does not change: only the paper spells it out.
   assert.equal(printableItem(item).gola, 'NAO APLICAVEL');
+});
+
+test('keeps a short order on page 1, with no continuation page (PIM-12)', () => {
+  const html = printed(order([polo, regata]));
+
+  assert.deepEqual(continuationPages(html), []);
+  assert.match(pageOne(html), /Observações do pedido/u);
+  assert.doesNotMatch(html, /continuação dos itens/u);
+});
+
+test('repeats the header, the order number and the page number on every continuation page (PIM-12)', () => {
+  const items = Array.from({ length: 7 }, (_, index) => ({
+    ...regata,
+    tipo: `REGATA ${index + 1}`,
+  }));
+  const html = printed(order(items));
+  const pages = continuationPages(html);
+
+  assert.ok(pages.length >= 2, 'seven tall items need two continuation pages');
+  pages.forEach((page, offset) => {
+    assert.match(page, /<h1>FICHA DE PEDIDO<\/h1>/u);
+    assert.match(page, /<span>Pedido<\/span><strong>07-CRM<\/strong>/u);
+    assert.match(
+      page,
+      new RegExp(
+        `<span class="page-marker"><strong>Página ${offset + 2}</strong> · continuação dos itens</span>`,
+        'u',
+      ),
+    );
+    assert.doesNotMatch(page, /Amostra sint/u);
+  });
+  // Items keep their order and their numbers across pages, never split.
+  assert.deepEqual(
+    [...html.matchAll(/<span>Item<\/span><strong>(\d+)<\/strong>/gu)].map(
+      (match) => Number(match[1]),
+    ),
+    [1, 2, 3, 4, 5, 6, 7],
+  );
+  // The summary prints once; the observations and the total close the last
+  // commercial page; the production control keeps its own header.
+  assert.equal(html.match(/Resumo do pedido/gu)?.length, 1);
+  assert.equal(html.match(/Observações do pedido/gu)?.length, 1);
+  assert.match(/** @type {string} */ (pages.at(-1)), /Observações do pedido/u);
+  assert.match(productionPage(html), /CONTROLE DE PRODUÇÃO/u);
+  assert.doesNotMatch(productionPage(html), /page-marker/u);
+});
+
+test('marks the sample on continuation pages too', () => {
+  const items = [polo, regata, regata, regata];
+  const pages = continuationPages(printed(order(items), { synthetic: true }));
+
+  assert.ok(pages.length > 0);
+  for (const page of pages) {
+    assert.match(page, /Amostra sintética — não produzir/u);
+  }
+});
+
+test('plans the pages from conservative heights and keeps the total with the last item (PIM-12)', () => {
+  assert.equal(wrappedLines('', 10), 1);
+  assert.equal(wrappedLines('AZUL MARINHO', 12), 1);
+  assert.equal(wrappedLines('AZUL MARINHO', 11), 2);
+  assert.equal(wrappedLines('M'.repeat(25), 10), 3);
+
+  const short = printableItem(polo);
+  const tall = printableItem({
+    ...regata,
+    estampa: 'ARTE '.repeat(40).trim(),
+    grade: Array.from({ length: 14 }, (_, index) => ({
+      quantidade: 1,
+      tamanho: `T${index}`,
+    })),
+  });
+  assert.ok(estimateItemHeight(tall) > estimateItemHeight(short));
+  assert.deepEqual(paginateItems([short], []), [[0]]);
+  assert.deepEqual(paginateItems([], []), [[]]);
+  const many = Array.from({ length: 9 }, () => tall);
+  const pages = paginateItems(many, ['Separar por tamanho.']);
+  assert.deepEqual(pages.flat(), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.ok(pages.every((page) => page.length > 0));
+  assert.ok(estimateItemHeight(tall) * 3 < PAGE_HEIGHT);
+  // When the observations do not fit after the last item, the last item
+  // moves with them to a page of its own.
+  const twoAndTotal = paginateItems(
+    [short, tall, tall],
+    Array.from({ length: 5 }, () => 'OBSERVACAO '.repeat(18).trim()),
+  );
+  assert.equal(twoAndTotal.length, 2);
+  assert.deepEqual(twoAndTotal.at(-1), [2]);
 });
 
 test('escapes every printed text', () => {

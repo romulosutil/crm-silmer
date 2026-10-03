@@ -10,6 +10,7 @@ import {
 } from '../modules/orders/src/print/print-snapshot.js';
 import {
   buildFichaHtmlV3,
+  plannedPages,
   refuseApprovedRegeneration,
   validateFichaApprovalEvidenceV3,
   validateFichaApprovalGateV3,
@@ -84,12 +85,13 @@ test('the v3 sample covers every rule the PO judges on paper', async () => {
   const { gradeTotal } = validateFichaSnapshotV3(sample);
 
   assert.equal(sample.syntheticOnly, true);
-  assert.equal(sample.order.ficha.items.length, 2);
-  assert.equal(gradeTotal, 52);
+  assert.equal(sample.order.ficha.items.length, 3);
+  assert.equal(gradeTotal, 70);
   assert.equal(sample.order.totalPieces, gradeTotal);
-  const [polo, regata] = sample.order.ficha.items;
+  const [polo, regata, babyLook] = sample.order.ficha.items;
   assert.equal(polo.tipo, 'CAMISA POLO');
   assert.equal(regata.tipo, 'REGATA');
+  assert.equal(babyLook.tipo, 'BABY LOOK');
   assert.ok(regata.grade.length >= 6);
   assert.ok(regata.estampa.length >= 80);
   assert.equal(regata.cor_manga_direita, 'NAO APLICAVEL');
@@ -124,6 +126,13 @@ test('the v3 sample refuses gaps, wrong totals and contact data', async () => {
   refuses((copy) => {
     copy.syntheticOnly = false;
   }, /synthetic only/u);
+  refuses((copy) => {
+    copy.order.deliveredOn = '2026-10-02';
+  }, /delivery that happened not recorded yet/u);
+  refuses((copy) => {
+    copy.order.ficha.items.pop();
+    copy.order.totalPieces = 52;
+  }, /at least three items/u);
 });
 
 test('the review HTML is the print path of the sample with the review marks on', async () => {
@@ -154,13 +163,16 @@ test('locks the sample, the rendered HTML and the PDF by hash, approval pending'
   assert.equal(gate.snapshotSha256, sha256(snapshotBytes));
   assert.equal(gate.renderedHtmlSha256, sha256(renderedHtml));
   assert.equal(gate.artifact.sha256, sha256(artifactBytes));
-  assert.equal(gate.artifact.pageCount, 2);
+  // Page 1, the continuation with the third item, the production control.
+  assert.equal(gate.artifact.pageCount, 3);
+  assert.equal(plannedPages(renderedHtml), 3);
   assert.deepEqual(gate.requirements, [
     'PIM-06',
     'PIM-07',
     'PIM-08',
     'PIM-09',
     'PIM-11',
+    'PIM-12',
     'PLA-08',
   ]);
   // Nobody signed v3: the human approval is left wholly pending.

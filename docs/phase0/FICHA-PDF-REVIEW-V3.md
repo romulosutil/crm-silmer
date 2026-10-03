@@ -23,17 +23,19 @@ que tenha ao menos um nome por papel.
 - `ficha-pdf-approval-v3.json`: versões, hashes da amostra, do HTML renderizado
   e do PDF, critérios e estado humano.
 - `output/pdf/ficha-canonica-sintetica-v3.pdf`: o documento para revisão, A4
-  paisagem, duas páginas.
+  paisagem, três páginas: a página 1, uma página de continuação dos itens e o
+  controle de produção.
 - `scripts/ficha-pdf-review.mjs`: geração (`--generate --v3`) e validação
   fail-closed das duas versões (`--validate`).
 - `test/ficha-pdf-review-v3.test.js` e `test/ficha-print-v3.test.js`: amostra,
-  hashes, transição de aprovação e regras do template.
+  hashes, páginas planejadas, transição de aprovação e regras do template.
 
-A amostra tem dois itens: uma camisa polo com os sete pontos e sem adicionais,
-e uma regata com adicionais, "NÃO APLICÁVEL" nas mangas, estampa com texto
-longo e sete tamanhos. O total é 52 peças. O pagamento está registrado, como
-em todo pedido gerado; a entrega realizada ainda não, para mostrar como o papel
-marca um dia vazio.
+A amostra tem três itens: uma camisa polo com os sete pontos e sem adicionais;
+uma regata com adicionais, "NÃO APLICÁVEL" nas mangas, estampa com texto longo
+e sete tamanhos; e uma baby look, que já não cabe na página 1 e vai para a
+página 2, de continuação. O total é 70 peças. O pagamento está registrado (por
+ora, gerar o pedido implica pagamento); a entrega realizada ainda não, para
+mostrar como o papel marca um dia vazio.
 
 ## Geração e verificação técnica
 
@@ -51,7 +53,7 @@ foi gerado no Dell, com Liberation Sans no lugar de Arial (mesmas medidas).
 
 ## Roteiro de revisão
 
-1. Abrir o PDF em 100% e revisar as duas páginas.
+1. Abrir o PDF em 100% e revisar as três páginas.
 2. Imprimir em A4 paisagem, sem ajustar escala, e conferir se texto, bordas e
    rodapé ficam legíveis e sem cortes.
 3. Conferir, nesta ordem:
@@ -63,12 +65,17 @@ foi gerado no Dell, com Liberation Sans no lugar de Arial (mesmas medidas).
      aparecem uma vez só, no Resumo.
    - **Itens:** os sete pontos numerados, na ordem Tipo de roupa, Cor,
      Quantidade, Estampa, Tecido, Tamanhos e Gola; a quantidade de cada item é
-     a soma dos tamanhos (20 e 32).
+     a soma dos tamanhos (20, 32 e 18).
    - **Adicionais:** a polo não tem o bloco; a regata mostra só Modelo, Manga
-     direita, Manga esquerda e Viés gola, que são os preenchidos.
-   - **Observações e total** (52 peças).
-   - **Página 2:** os 14 campos de produção vazios, como na v2.
-   - **Acentos:** todo rótulo impresso com acento, nas duas páginas e na faixa
+     direita, Manga esquerda e Viés gola, e a baby look só Viés gola, que são
+     os preenchidos.
+   - **Página 2 (continuação):** o mesmo cabeçalho, com o número do pedido e
+     "Página 2 · continuação dos itens"; o Item 3; observações e total (70
+     peças).
+   - **Página 3 (controle de produção):** os 14 campos de produção vazios,
+     como na v2, com o próprio cabeçalho.
+   - **Rodapé:** "Página X de 3" em todas as páginas.
+   - **Acentos:** todo rótulo impresso com acento, em todas as páginas e na faixa
      de amostra; nas mangas da regata, o valor gravado "NAO APLICAVEL" sai
      como "NÃO APLICÁVEL". O texto digitado sai como foi digitado.
 4. Registrar individualmente os seis critérios do gate: `legibility`,

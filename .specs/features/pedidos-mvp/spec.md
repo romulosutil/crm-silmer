@@ -598,22 +598,33 @@ serviço de pedidos; a abertura pelo `open_order` usa o mesmo
 
 ### Itens com os sete pontos (ADR 016)
 
-A verificar na T66, com a evidência das T57–T61.
+Verificado em T66, 03/10/2026. Os trechos da ADR 016 em PFI-03, PFI-08,
+PFI-09, PFI-12, PCL-04, PCL-05 e PLA-06 têm a evidência de PIT-01, PIT-10,
+PIT-06, PIT-10, PIT-05, PIT-06 e PIT-12.
 
-| ID     | História | Evidência | Status   |
-| ------ | -------- | --------- | -------- |
-| PIT-01 | P1-11    | T60       | Pendente |
-| PIT-02 | P1-11    | T60       | Pendente |
-| PIT-03 | P1-11    | T58, T60  | Pendente |
-| PIT-04 | P1-11    | T58       | Pendente |
-| PIT-05 | P1-11    | T58       | Pendente |
-| PIT-06 | P1-11    | T58, T60  | Pendente |
-| PIT-07 | P1-11    | T58       | Pendente |
-| PIT-08 | P1-11    | T57, T58  | Pendente |
-| PIT-09 | P1-11    | T60       | Pendente |
-| PIT-10 | P1-11    | T60       | Pendente |
-| PIT-11 | P1-11    | T59       | Pendente |
-| PIT-12 | P1-11    | T61       | Pendente |
+| ID     | História | Evidência                                                                                                                                                                                | Status   |
+| ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| PIT-01 | P1-11    | `test/e2e/orders.spec.js:1018,1116`; `test/order-format.test.js:191`                                                                                                                     | Verified |
+| PIT-02 | P1-11    | `test/e2e/orders.spec.js:1018,1077,1116`                                                                                                                                                 | Verified |
+| PIT-03 | P1-11    | `test/orders-ficha.test.js:79,90,105,131`; `test/orders-service-commands.test.js:351`; `test/order-routes.test.js:523`; `test/e2e/orders.spec.js:1116`                                   | Verified |
+| PIT-04 | P1-11    | `test/orders-ficha.test.js:54,147`; `test/orders-service-read.test.js:206`; `test/orders-postgres-live.test.js:783`; `test/order-routes.test.js:523`                                     | Verified |
+| PIT-05 | P1-11    | `test/orders-domain.test.js:103`; `test/orders-postgres-live.test.js:612`; `test/order-routes.test.js:744`                                                                               | Verified |
+| PIT-06 | P1-11    | `test/orders-domain.test.js:369`; `test/order-format.test.js:117,157`; `test/e2e/orders.spec.js:639,1544`; `test/e2e/crm-ui.spec.js:1178`                                                | Verified |
+| PIT-07 | P1-11    | `test/orders-ficha.test.js:267,326,339,368,400,440,496,527`; `test/orders-service-create.test.js:101`                                                                                    | Verified |
+| PIT-08 | P1-11    | `test/orders-sizes.test.js:11,51,57,102`; `test/orders-ficha.test.js:464`                                                                                                                | Verified |
+| PIT-09 | P1-11    | `test/order-format.test.js:208`; `test/e2e/orders.spec.js:1166`                                                                                                                          | Verified |
+| PIT-10 | P1-11    | `test/e2e/orders.spec.js:1208`; `test/e2e/crm-ui.spec.js:1178`                                                                                                                           | Verified |
+| PIT-11 | P1-11    | `test/orders-postgres-live.test.js:352`                                                                                                                                                  | Verified |
+| PIT-12 | P1-11    | `test/orders-domain.test.js:190`; `test/orders-postgres-live.test.js:612`; `test/order-format.test.js:292,359`; `test/e2e/orders.spec.js:639`                                            | Verified |
+
+**Cobertura:** 12 requisitos · 12 verificados.
+
+| Comando                                                  | Resultado                                                                  |
+| -------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `npm run validate`                                       | ✅ passou (546 testes: 543 ok, 3 pulados; build)                           |
+| `npx playwright test` (config da porta 4275, não versionada) | ✅ passou — 82 passed, 7 skipped (os mesmos do Kanban)                 |
+| `npm run test:orders:live`                               | ✅ passou — 20/20 (PostgreSQL, `crm_silmer_test_itens`)                    |
+| `test/n8n-integration-postgres-live.test.js`             | ✅ passou — 3/3 (cópia local apontada para `crm_silmer_test_itens`)        |
 
 ## Roteiro de UAT
 

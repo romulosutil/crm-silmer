@@ -206,7 +206,7 @@ export function createOrderService(options) {
   }
 
   /**
-   * @param {{conversationId: string, correlationId: string, createdByKind: 'automation'|'user', createdBy: string|null}} input
+   * @param {{conversationId: string, correlationId: string, createdByKind: 'automation'|'user', createdBy: string|null, actor?: OrderActor}} input
    * @returns {Promise<{created: boolean, order: Order}>}
    */
   async function ensurePending(input) {
@@ -234,6 +234,7 @@ export function createOrderService(options) {
     });
     try {
       const order = await repository.createPending({
+        ...(input.actor ? { actor: input.actor } : {}),
         conversationId: input.conversationId,
         correlationId: input.correlationId,
         createdBy: input.createdBy,
@@ -294,6 +295,7 @@ export function createOrderService(options) {
         correlationId: requireId(input.correlationId, 'correlationId'),
         createdBy: input.actor.id,
         createdByKind: 'user',
+        actor: input.actor,
       });
     },
 
@@ -438,6 +440,7 @@ export function createOrderService(options) {
             updatedAt: clock().toISOString(),
           }),
           {
+            actor: input.actor,
             correlationId: input.correlationId,
             expectedVersion: order.version,
           },
@@ -471,6 +474,7 @@ export function createOrderService(options) {
               ),
           }),
           {
+            actor: input.actor,
             correlationId: input.correlationId,
             expectedVersion: order.version,
           },
@@ -490,6 +494,7 @@ export function createOrderService(options) {
         await repository.saveStatus(
           reopenOrder(order, { actorId: input.actor.id, now: clock() }),
           {
+            actor: input.actor,
             correlationId: input.correlationId,
             expectedVersion: order.version,
           },
@@ -514,6 +519,7 @@ export function createOrderService(options) {
             paidOn: input.paidOn,
           }),
           {
+            actor: input.actor,
             correlationId: input.correlationId,
             expectedVersion: order.version,
           },

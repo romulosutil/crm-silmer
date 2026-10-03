@@ -21,6 +21,11 @@ import { assertOrderRepositoryContract } from '../modules/orders/src/ports/contr
 
 const BASE_TIME = Date.parse('2026-09-12T12:00:00.000Z');
 const FIRST_CONTACT_AT = '2026-09-01T13:05:00.000Z';
+const CONTRACT_ACTOR = Object.freeze({
+  id: 'seller-contract',
+  kind: 'human',
+  capabilities: [],
+});
 let tick = 0;
 /** Distinct, increasing timestamps keep the updated_at ordering deterministic. */
 function nextNow() {
@@ -89,6 +94,7 @@ async function confirm(repository, order) {
       paymentCondition: 'pix',
     }),
     {
+      actor: CONTRACT_ACTOR,
       correlationId: `correlation-${randomUUID()}`,
       expectedVersion: order.version,
     },
@@ -242,7 +248,11 @@ export function defineOrderRepositoryContract(name, setup) {
           totalPieces: 12,
           updatedAt: now.toISOString(),
         },
-        { correlationId: 'correlation-section', expectedVersion: 1 },
+        {
+          actor: CONTRACT_ACTOR,
+          correlationId: 'correlation-section',
+          expectedVersion: 1,
+        },
       );
       assert.equal(saved.version, 2);
       assert.deepEqual(saved.ficha, ficha);
@@ -254,14 +264,22 @@ export function defineOrderRepositoryContract(name, setup) {
       await assert.rejects(
         repository.saveSection(
           { ...saved, totalPieces: 1 },
-          { correlationId: 'correlation-stale', expectedVersion: 1 },
+          {
+            actor: CONTRACT_ACTOR,
+            correlationId: 'correlation-stale',
+            expectedVersion: 1,
+          },
         ),
         { code: 'VERSION_CONFLICT', statusCode: 409 },
       );
       await assert.rejects(
         repository.saveSection(
           { ...saved, id: randomUUID() },
-          { correlationId: 'correlation-missing', expectedVersion: 2 },
+          {
+            actor: CONTRACT_ACTOR,
+            correlationId: 'correlation-missing',
+            expectedVersion: 2,
+          },
         ),
         { code: 'ORDER_NOT_FOUND', statusCode: 404 },
       );
@@ -278,7 +296,11 @@ export function defineOrderRepositoryContract(name, setup) {
       await assert.rejects(
         repository.saveSection(
           { ...confirmed, totalPieces: 99 },
-          { correlationId: 'correlation-closed', expectedVersion: 2 },
+          {
+            actor: CONTRACT_ACTOR,
+            correlationId: 'correlation-closed',
+            expectedVersion: 2,
+          },
         ),
         { code: 'ORDER_STATUS_CONFLICT', statusCode: 409 },
       );
@@ -332,7 +354,11 @@ export function defineOrderRepositoryContract(name, setup) {
 
       const reopened = await repository.saveStatus(
         reopenOrder(confirmed, { actorId: 'admin-contract', now: nextNow() }),
-        { correlationId: 'correlation-reopen', expectedVersion: 2 },
+        {
+          actor: CONTRACT_ACTOR,
+          correlationId: 'correlation-reopen',
+          expectedVersion: 2,
+        },
       );
       assert.equal(reopened.status, 'pendente');
       assert.equal(reopened.version, 3);
@@ -360,7 +386,11 @@ export function defineOrderRepositoryContract(name, setup) {
 
       const reopened = await repository.saveStatus(
         reopenOrder(confirmed, { actorId: 'admin-contract', now: nextNow() }),
-        { correlationId: 'correlation-reopen', expectedVersion: 2 },
+        {
+          actor: CONTRACT_ACTOR,
+          correlationId: 'correlation-reopen',
+          expectedVersion: 2,
+        },
       );
       assert.deepEqual(reopened.ficha, confirmed.ficha);
     });
@@ -376,7 +406,11 @@ export function defineOrderRepositoryContract(name, setup) {
           now: nextNow(),
           paidOn: '2026-09-10',
         }),
-        { correlationId: 'correlation-milestones', expectedVersion: 1 },
+        {
+          actor: CONTRACT_ACTOR,
+          correlationId: 'correlation-milestones',
+          expectedVersion: 1,
+        },
       );
       assert.equal(paid.version, 2);
       assert.equal(paid.paidOn, '2026-09-10');
@@ -391,7 +425,11 @@ export function defineOrderRepositoryContract(name, setup) {
           now: nextNow(),
           paidOn: '2026-09-10',
         }),
-        { correlationId: 'correlation-milestones', expectedVersion: 3 },
+        {
+          actor: CONTRACT_ACTOR,
+          correlationId: 'correlation-milestones',
+          expectedVersion: 3,
+        },
       );
       assert.equal(delivered.version, 4);
       assert.equal(delivered.deliveredOn, '2026-09-12');
@@ -404,7 +442,11 @@ export function defineOrderRepositoryContract(name, setup) {
       await assert.rejects(
         repository.saveMilestones(
           { ...delivered, paidOn: null },
-          { correlationId: 'correlation-milestones', expectedVersion: 3 },
+          {
+            actor: CONTRACT_ACTOR,
+            correlationId: 'correlation-milestones',
+            expectedVersion: 3,
+          },
         ),
         { code: 'VERSION_CONFLICT' },
       );
@@ -531,7 +573,11 @@ export function defineOrderRepositoryContract(name, setup) {
       );
       const sectioned = await repository.saveSection(
         { ...created, totalPieces: 6 },
-        { correlationId: 'correlation-events', expectedVersion: 1 },
+        {
+          actor: CONTRACT_ACTOR,
+          correlationId: 'correlation-events',
+          expectedVersion: 1,
+        },
       );
       const projected = await repository.projectBriefing(
         { ...sectioned, totalPieces: 7 },
@@ -540,16 +586,28 @@ export function defineOrderRepositoryContract(name, setup) {
       const confirmed = await confirm(repository, projected);
       const reopened = await repository.saveStatus(
         reopenOrder(confirmed, { actorId: 'admin-contract', now: nextNow() }),
-        { correlationId: 'correlation-events', expectedVersion: 4 },
+        {
+          actor: CONTRACT_ACTOR,
+          correlationId: 'correlation-events',
+          expectedVersion: 4,
+        },
       );
       await repository.saveMilestones(
         { ...reopened, paidOn: '2026-09-10' },
-        { correlationId: 'correlation-events', expectedVersion: 5 },
+        {
+          actor: CONTRACT_ACTOR,
+          correlationId: 'correlation-events',
+          expectedVersion: 5,
+        },
       );
       await assert.rejects(
         repository.saveSection(
           { ...created, totalPieces: 8 },
-          { correlationId: 'correlation-events', expectedVersion: 1 },
+          {
+            actor: CONTRACT_ACTOR,
+            correlationId: 'correlation-events',
+            expectedVersion: 1,
+          },
         ),
         { code: 'VERSION_CONFLICT' },
       );

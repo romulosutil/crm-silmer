@@ -754,6 +754,11 @@ campo canônico do ponto 7, com leitura compatível de `vies_gola` antigo.
 seção não recebe bytes nem escreve `files`. A API aplica autorização de
 pedido antes dessas mutações.
 
+Cada escrita humana também bloqueia a linha da conversa antes da linha do
+pedido e confere novamente o titular ou a concessão atual de
+`COMMERCIAL_ADMIN` na transação. Uma transferência concluída entre a leitura
+da ficha e o salvamento recusa a escrita antiga sem alterar pedido ou eventos.
+
 O resumo do dashboard agrega confirmados, valor final e peças no backend. A
 lista recebe metadados da última mensagem por consulta em lote, sem conteúdo,
 para calcular o tempo desde uma saída confirmada. SSE publica só IDs; as

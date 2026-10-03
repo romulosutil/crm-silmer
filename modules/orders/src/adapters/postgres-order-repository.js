@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { OrderConflictError, OrderNotFoundError } from '../domain/errors.js';
+import {
+  OrderConflictError,
+  OrderForbiddenError,
+  OrderNotFoundError,
+} from '../domain/errors.js';
 import {
   encodeOrderCursor,
   readOrderListQuery,
@@ -74,6 +78,56 @@ function violates(error, constraint) {
   );
 }
 
+/**
+ * Conversation transfers lock this row first. Keeping the same lock until
+ * commit orders ownership changes and order writes against each other.
+ *
+ * @param {Queryable} transaction @param {string} conversationId
+ */
+async function lockConversation(transaction, conversationId) {
+  const result = await transaction.query(
+    `SELECT assigned_user_id FROM crm.conversations
+     WHERE id = $1 FOR UPDATE`,
+    [conversationId],
+  );
+  return result.rows[0] ?? null;
+}
+
+/**
+ * The service checks before validation to avoid leaking details. This second
+ * check runs against the locked assignment, before any order write. An admin
+ * grant is checked in the same transaction and held against revocation.
+ *
+ * @param {Queryable} transaction
+ * @param {{id: string, kind: string, capabilities?: readonly string[]}|undefined} actor
+ * @param {{assigned_user_id: string|null}} conversation
+ * @param {boolean} allowTechnical
+ */
+async function assertWriteOwner(
+  transaction,
+  actor,
+  conversation,
+  allowTechnical,
+) {
+  // Only automation creation and briefing projection may omit a human actor.
+  if (!actor) {
+    if (allowTechnical) return;
+    throw new OrderForbiddenError();
+  }
+  if (actor.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
+  if (conversation.assigned_user_id === actor.id) return;
+  if (!(actor.capabilities ?? []).includes('COMMERCIAL_ADMIN')) {
+    throw new OrderForbiddenError();
+  }
+  const grant = await transaction.query(
+    `SELECT 1 FROM crm.user_capabilities
+     WHERE user_id = $1 AND capability = 'COMMERCIAL_ADMIN'
+     FOR SHARE`,
+    [actor.id],
+  );
+  if (!grant.rows[0]) throw new OrderForbiddenError();
+}
+
 export class PostgresOrderRepository {
   /** @type {TransactionalDatabase} */
   #database;
@@ -140,6 +194,22 @@ export class PostgresOrderRepository {
   async createPending(input) {
     try {
       return await this.#database.transaction(async (transaction) => {
+        const conversation = await lockConversation(
+          transaction,
+          input.conversationId,
+        );
+        if (!conversation) {
+          throw new OrderNotFoundError(
+            'Conversation was not found',
+            'CONVERSATION_NOT_FOUND',
+          );
+        }
+        await assertWriteOwner(
+          transaction,
+          input.actor,
+          conversation,
+          input.createdByKind === 'automation',
+        );
         const at = input.now.toISOString();
         const inserted = await transaction.query(
           `WITH reserved AS (SELECT nextval('crm.order_number_seq') AS sequence)
@@ -319,7 +389,7 @@ export class PostgresOrderRepository {
 
   /** @param {Order} order @param {OrderWriteOptions} options @param {string} eventType */
   async #writeFicha(order, options, eventType) {
-    return this.#write(order.id, options, eventType, async (current, tx) => {
+    return this.#write(order, options, eventType, async (current, tx) => {
       if (current.status !== 'pendente') {
         throw new OrderConflictError(
           'Only pending orders accept ficha changes',
@@ -354,7 +424,7 @@ export class PostgresOrderRepository {
    */
   async saveStatus(order, options) {
     return this.#write(
-      order.id,
+      order,
       options,
       statusEventType(order.status),
       async (current, tx) => {
@@ -397,7 +467,7 @@ export class PostgresOrderRepository {
   /** @param {Order} order @param {OrderWriteOptions} options */
   async saveMilestones(order, options) {
     return this.#write(
-      order.id,
+      order,
       options,
       'order.milestones_saved',
       async (_current, tx) =>
@@ -413,37 +483,51 @@ export class PostgresOrderRepository {
   }
 
   /**
-   * Locks the row, checks the version the caller read, applies the change
-   * and appends its event — all in one transaction. A concurrent writer waits
-   * on the lock and then sees the bumped version.
+   * Locks the conversation before the order, checks current ownership and
+   * version, applies the change and appends its event in one transaction.
+   * A transfer or another writer waits and sees the resulting state.
    *
-   * @param {string} orderId
+   * @param {Order} order
    * @param {OrderWriteOptions} options
    * @param {string} eventType
    * @param {(current: {status: string}, transaction: Queryable) => Promise<{rows: any[]}>} change
    */
-  async #write(orderId, options, eventType, change) {
+  async #write(order, options, eventType, change) {
     return this.#database.transaction(async (transaction) => {
+      const conversation = await lockConversation(
+        transaction,
+        order.conversationId,
+      );
+      if (!conversation) throw new OrderNotFoundError();
+      await assertWriteOwner(
+        transaction,
+        options.actor,
+        conversation,
+        eventType === 'order.briefing_projected',
+      );
       const locked = await transaction.query(
-        `SELECT status, version FROM crm.orders WHERE id = $1 FOR UPDATE`,
-        [orderId],
+        `SELECT conversation_id, status, version FROM crm.orders
+         WHERE id = $1 FOR UPDATE`,
+        [order.id],
       );
       const current = locked.rows[0];
-      if (!current) throw new OrderNotFoundError();
+      if (!current || current.conversation_id !== order.conversationId) {
+        throw new OrderNotFoundError();
+      }
       if (Number(current.version) !== options.expectedVersion) {
         throw new OrderConflictError(
           `Expected order version ${options.expectedVersion}, current version is ${current.version}`,
         );
       }
       const updated = await change(current, transaction);
-      const order = this.#map(updated.rows[0]);
+      const saved = this.#map(updated.rows[0]);
       await appendOrderEvent(
         transaction,
-        order,
+        saved,
         eventType,
         options.correlationId,
       );
-      return order;
+      return saved;
     });
   }
 }

@@ -28,7 +28,7 @@ permissão e estado continuam em `RULES.md` e na especificação.
 | **Peças**                        | Soma das quantidades da grade dos itens.                                                                                                    | Valor digitado manualmente.                                                    |
 | **Vendas**                       | Número de pedidos confirmados.                                                                                                              | Contar pendentes como vendas ou confundir com recebimentos.                    |
 | **Valor vendido**                | Soma do valor final dos pedidos confirmados.                                                                                                | Chamar de faturamento recebido ou saldo.                                       |
-| **Cliente sem resposta**         | Sinal de acompanhamento quando a última mensagem da Silmer foi enviada há pelo menos 48 horas sem resposta posterior.                       | Contar envio falho/incerto ou afirmar que o cliente desistiu.                  |
+| **Cliente sem resposta**         | Sinal de acompanhamento 48 horas após o envio confirmado da última mensagem da Silmer, sem resposta posterior. O tempo na fila não conta.   | Contar envio falho/incerto ou afirmar que o cliente desistiu.                  |
 | **Pedido sem movimentação**      | Tempo desde a última alteração do pedido.                                                                                                   | Apresentar como probabilidade de fechamento.                                   |
 
 ## Verbos das ações

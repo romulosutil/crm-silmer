@@ -22,7 +22,7 @@ import {
  * @typedef {{
  *   readAssignment(conversationId: string): Promise<{assignedUserId: string|null, version: number}|null>,
  *   readAssignments(conversationIds: string[]): Promise<Map<string, string|null>>,
- *   readLatestMessageStates(conversationIds: string[]): Promise<Map<string, {direction: string, occurredAt: string, deliveryStatus: string|null, status: string}>>,
+ *   readLatestMessageStates(conversationIds: string[]): Promise<Map<string, {direction: string, occurredAt: string, sentAt: string|null, deliveryStatus: string|null, status: string}>>,
  *   readOrderContexts(conversationIds: string[]): Promise<Map<string, any>>,
  *   readUserNames(userIds: string[]): Promise<Map<string, string|null>>,
  *   searchConversationIds(query: string): Promise<string[]>,

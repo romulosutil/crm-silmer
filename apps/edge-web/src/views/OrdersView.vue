@@ -76,18 +76,18 @@ function situation(order) {
   return still === '' ? headline : `${headline} · parado há ${still}`;
 }
 
-/** A delivered outbound message without a later reply is evidence of waiting. */
+/** A confirmed send without a later reply is evidence of waiting. */
 function clientWaiting(order) {
   if (order.status !== 'pendente') return '';
   const message = order.lastMessage;
   if (message?.direction !== 'outbound') return '';
   if (!['sent', 'delivered', 'read'].includes(message.deliveryStatus))
     return '';
-  if (typeof message.occurredAt !== 'string') return '';
-  const lastAt = new Date(message.occurredAt).getTime();
+  if (typeof message.sentAt !== 'string') return '';
+  const lastAt = new Date(message.sentAt).getTime();
   if (!Number.isFinite(lastAt) || now.value.getTime() - lastAt < 48 * 3_600_000)
     return '';
-  return `Cliente sem resposta há ${elapsedSince(message.occurredAt, now.value)}`;
+  return `Cliente sem resposta há ${elapsedSince(message.sentAt, now.value)}`;
 }
 
 function priority(order) {

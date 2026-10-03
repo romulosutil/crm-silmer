@@ -115,16 +115,23 @@ export class PostgresOrderConversationPort {
    * Last message metadata for an order card. The query never reads content,
    * contact identity or recipient information.
    * @param {string[]} conversationIds
-   * @returns {Promise<Map<string, {direction: string, occurredAt: string, deliveryStatus: string|null, status: string}>>}
+   * @returns {Promise<Map<string, {direction: string, occurredAt: string, sentAt: string|null, deliveryStatus: string|null, status: string}>>}
    */
   async readLatestMessageStates(conversationIds) {
     if (conversationIds.length === 0) return new Map();
     const result = await this.#database.query(
-      `SELECT DISTINCT ON (conversation_id)
-              conversation_id, direction, status, delivery_status, occurred_at
-       FROM crm.messages
-       WHERE conversation_id = ANY($1::text[])
-       ORDER BY conversation_id, occurred_at DESC, id DESC`,
+      `SELECT DISTINCT ON (message.conversation_id)
+              message.conversation_id, message.direction, message.status,
+              message.delivery_status, message.occurred_at,
+              coalesce(send_command.completed_at, message.delivery_status_at)
+                AS sent_at
+       FROM crm.messages AS message
+       LEFT JOIN crm.n8n_commands AS send_command
+         ON send_command.message_id = message.id
+        AND send_command.action = 'send_message'
+        AND send_command.status = 'sent'
+       WHERE message.conversation_id = ANY($1::text[])
+       ORDER BY message.conversation_id, message.occurred_at DESC, message.id DESC`,
       [conversationIds],
     );
     return new Map(
@@ -133,6 +140,9 @@ export class PostgresOrderConversationPort {
         {
           direction: row.direction,
           occurredAt: new Date(row.occurred_at).toISOString(),
+          // Message creation may precede an actual send by hours or days.
+          // A later delivered/read receipt does not move the confirmed send.
+          sentAt: row.sent_at ? new Date(row.sent_at).toISOString() : null,
           deliveryStatus: row.delivery_status ?? null,
           status: row.status,
         },

@@ -950,6 +950,27 @@ test('refreshes the open order when it changes elsewhere', async ({ page }) => {
   await expect.poll(() => detailCalls).toBeGreaterThan(1);
 });
 
+test('refreshes the open order when a message delivery changes', async ({
+  page,
+}) => {
+  let detailCalls = 0;
+  await mockOrders(page, {
+    liveEvent: {
+      payload: { conversationId: 'conversation-7' },
+      type: 'inbox.conversation.changed',
+    },
+    onDetail: () => {
+      detailCalls += 1;
+    },
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeVisible();
+  await expect.poll(() => detailCalls).toBeGreaterThan(1);
+});
+
 test('refreshes a pending order when its customer changes in the conversation', async ({
   page,
 }) => {

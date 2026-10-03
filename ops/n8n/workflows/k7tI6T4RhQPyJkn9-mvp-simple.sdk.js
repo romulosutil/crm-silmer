@@ -1113,7 +1113,8 @@ const crmNoticeUnknown = crmPost(
 const orderOpenFailed = ifBoolean(
   'Pedido não abriu? (MVP)',
   [710, -1200],
-  '{{ Boolean($json.order) && $json.order.opened === false }}',
+  // Plain operators only: an expression error here would stop the reply.
+  '{{ !!$json.order && $json.order.opened === false }}',
 );
 
 const prepareOrderOpenFailure = codeStep(

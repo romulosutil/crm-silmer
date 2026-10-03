@@ -1149,7 +1149,7 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ (Boolean($json.order) && $json.order.opened === false) ? 'true' : 'false' }}",
+              "leftValue": "={{ (!!$json.order && $json.order.opened === false) ? 'true' : 'false' }}",
               "operator": { "type": "string", "operation": "equals" },
               "rightValue": "true"
             }

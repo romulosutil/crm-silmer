@@ -14,11 +14,11 @@
   "syntheticOnly": true,
   "snapshotVersion": "synthetic-order-v3",
   "templateVersion": "ficha-canonical-v3",
-  "snapshotSha256": "2e0a60b70f4f54abf5924260ac2b4c4517b3ebd0e643cf2b6c7077123b28e712",
-  "renderedHtmlSha256": "03cd038e138bf86ccb7a7fcdea6ab78f035ae43b499e2a4cdfc80f59343fa91d",
+  "snapshotSha256": "27efa001b56c00f2add42c1b650a1d126ac547898207a9b46b81b598d8a2c9e6",
+  "renderedHtmlSha256": "d01988ceafdf580d77ac0b01b91a6f647671cf381c18091666914cf8d94b4ebd",
   "artifact": {
     "path": "output/pdf/ficha-canonica-sintetica-v3.pdf",
-    "sha256": "1e449d47b4ece26b9331eee7cd85c0059d56ec95f4c159fcbfc5ea18838b5426",
+    "sha256": "27eb1d4a6842701faad61797af9e99426a80e6ca29be853dc275d472d0a8a96f",
     "pageCount": 3
   },
   "approval": {

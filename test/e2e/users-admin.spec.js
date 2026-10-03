@@ -24,7 +24,7 @@ const SELLER = {
 
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{capabilities?: string[], revokeSelfOnEvent?: boolean}} [options]
+ * @param {{capabilities?: string[], externalChangeOnEvent?: boolean, revokeSelfOnEvent?: boolean}} [options]
  */
 async function mockUsers(page, options = {}) {
   const viewer = {
@@ -39,6 +39,7 @@ async function mockUsers(page, options = {}) {
   /** @type {Array<{method: string, path: string, body: any}>} */
   const commands = [];
   let sessionReads = 0;
+  let listReads = 0;
   /** @type {() => void} */
   let releaseEvent = () => {};
   const eventGate = new Promise((resolve) => {
@@ -61,18 +62,22 @@ async function mockUsers(page, options = {}) {
       return json({ user: viewer });
     }
     if (path === '/api/v1/events') {
-      if (!options.revokeSelfOnEvent) return route.fulfill({ status: 204 });
+      if (!options.revokeSelfOnEvent && !options.externalChangeOnEvent)
+        return route.fulfill({ status: 204 });
       await eventGate;
       return route.fulfill({
         status: 200,
         contentType: 'text/event-stream',
-        body: 'retry: 60000\n\nevent: identity.user.changed\nid: evt-2\ndata: {"userId":"admin-1"}\n\n',
+        body: `retry: 60000\n\nevent: identity.user.changed\nid: evt-2\ndata: {"userId":"${options.externalChangeOnEvent ? 'seller-1' : 'admin-1'}"}\n\n`,
       });
     }
     if (path === '/api/v1/kanban') {
       return json({ columns: [], eventCursor: 'evt-1' });
     }
-    if (path === '/api/v1/users' && method === 'GET') return json({ users });
+    if (path === '/api/v1/users' && method === 'GET') {
+      listReads += 1;
+      return json({ users });
+    }
     if (path === '/api/v1/users' && method === 'POST') {
       const body = request.postDataJSON();
       commands.push({ body, method, path });
@@ -118,7 +123,12 @@ async function mockUsers(page, options = {}) {
   return {
     commands,
     users,
+    listReads: () => listReads,
     sessionReads: () => sessionReads,
+    renameSellerElsewhere() {
+      users[1].name = 'Marina Atualizada';
+      releaseEvent();
+    },
     revokeSelf() {
       viewer.capabilities = [];
       releaseEvent();
@@ -173,6 +183,60 @@ test('lists accounts and hands over the created credentials as markdown', async 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
 });
+
+for (const interaction of ['edit', 'menu', 'delete']) {
+  test(`reconciles a live user change after closing the ${interaction} interaction`, async ({
+    page,
+  }) => {
+    const mock = await mockUsers(page, { externalChangeOnEvent: true });
+    await page.goto('/usuarios');
+    await expect(
+      page.getByRole('row', { name: /Marina Duarte/u }),
+    ).toBeVisible();
+    expect(mock.listReads()).toBe(1);
+
+    await openActions(page, 'Marina Duarte');
+    if (interaction === 'edit') {
+      await page.getByRole('button', { name: 'Editar' }).click();
+      const nameInput = page.getByRole('dialog').getByLabel('Nome');
+      await nameInput.fill('Marina Rascunho');
+      await nameInput.focus();
+    } else if (interaction === 'delete') {
+      await page.getByRole('button', { name: 'Excluir' }).click();
+      await expect(page.getByRole('alertdialog')).toBeVisible();
+    }
+
+    mock.renameSellerElsewhere();
+    await expect(page.locator('.sr-only[role="status"]')).toHaveText(
+      'Conteúdo atualizado automaticamente.',
+    );
+    await expect(
+      page.getByRole('row', { name: /Marina Duarte/u }),
+    ).toBeVisible();
+    expect(mock.listReads()).toBe(1);
+    if (interaction === 'edit') {
+      const nameInput = page.getByRole('dialog').getByLabel('Nome');
+      await expect(nameInput).toHaveValue('Marina Rascunho');
+      await expect(nameInput).toBeFocused();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Cancelar' })
+        .click();
+    } else if (interaction === 'delete') {
+      await page
+        .getByRole('alertdialog')
+        .getByRole('button', { name: 'Cancelar' })
+        .click();
+    } else {
+      await page.getByLabel('Mais ações para Marina Duarte').press('Escape');
+    }
+
+    await expect.poll(mock.listReads).toBeGreaterThan(1);
+    await expect(
+      page.getByRole('row', { name: /Marina Atualizada/u }),
+    ).toBeVisible();
+  });
+}
 
 test('edits one field at a time and disables an account', async ({ page }) => {
   const { commands } = await mockUsers(page);

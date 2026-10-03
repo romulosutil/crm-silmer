@@ -12,6 +12,7 @@ import {
 const heading = ref(null);
 const liveEvent = inject('liveEvent', ref(null));
 const loading = ref(true);
+const hasLoaded = ref(false);
 const error = ref('');
 const inbox = ref({ items: [], totalCount: 0 });
 const summary = ref({
@@ -54,26 +55,30 @@ const maxChannel = computed(() =>
   Math.max(1, ...channelCounts.value.map((channel) => channel.count)),
 );
 
-async function loadDashboard(silent = false) {
+async function loadDashboard() {
   controller?.abort();
-  controller = new AbortController();
-  if (!silent) loading.value = true;
+  const currentController = new AbortController();
+  controller = currentController;
+  loading.value = true;
   try {
     const [inboxResponse, summaryResponse] = await Promise.all([
       request('/api/v1/inbox/conversations?limit=100', {
-        signal: controller.signal,
+        signal: currentController.signal,
       }),
-      request('/api/v1/orders/summary', { signal: controller.signal }),
+      request('/api/v1/orders/summary', { signal: currentController.signal }),
     ]);
     inbox.value = inboxResponse.data;
     summary.value = summaryResponse.data;
+    hasLoaded.value = true;
     error.value = '';
   } catch (cause) {
     if (cause?.name !== 'AbortError') {
-      error.value = 'Não foi possível carregar os indicadores.';
+      error.value = hasLoaded.value
+        ? 'Não foi possível atualizar os indicadores. Os dados exibidos podem estar desatualizados.'
+        : 'Não foi possível carregar os indicadores.';
     }
   } finally {
-    loading.value = false;
+    if (controller === currentController) loading.value = false;
   }
 }
 
@@ -81,7 +86,7 @@ function scheduleLiveRefresh() {
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
   refreshTimer = globalThis.setTimeout(() => {
     refreshTimer = 0;
-    void loadDashboard(true);
+    void loadDashboard();
   }, 250);
 }
 
@@ -118,15 +123,21 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div v-if="loading" class="loading-state" role="status">
+    <div v-if="loading && !hasLoaded" class="loading-state" role="status">
       Carregando indicadores…
     </div>
-    <div v-else-if="error" class="empty-state" role="alert">
+    <div v-else-if="error && !hasLoaded" class="empty-state" role="alert">
       <h2>Dashboard indisponível</h2>
       <p>{{ error }}</p>
       <button type="button" @click="loadDashboard()">Tentar novamente</button>
     </div>
     <template v-else>
+      <div v-if="error" class="audit-note" role="alert">
+        <p>{{ error }}</p>
+        <button type="button" :disabled="loading" @click="loadDashboard()">
+          {{ loading ? 'Consultando…' : 'Tentar novamente' }}
+        </button>
+      </div>
       <dl class="kpi-grid">
         <div class="kpi kpi--accent">
           <dt>Valor vendido</dt>

@@ -8,6 +8,7 @@
 **Abertura no primeiro ponto da ficha (02/10/2026):** [ADR 014](../../../docs/adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md) · história P1-1 (PAB-01..04)
 **Itens com os sete pontos (02/10/2026):** [ADR 016](../../../docs/adr/016-itens-com-os-sete-pontos-da-ficha.md) · história P1-11
 **Ficha impressa com os sete pontos (02/10/2026):** [ADR 017](../../../docs/adr/017-ficha-impressa-com-os-sete-pontos.md) · P1-5 (PIM-06..10) e PLA-08
+**Cliente acompanha o contato (03/10/2026):** [ADR 018](../../../docs/adr/018-cliente-do-pedido-acompanha-o-contato.md) · história P1-12
 **Mockups:** `.design/mesa-de-trabalho/` (canvas "Mesa de Trabalho Silmer")
 
 ## Problema
@@ -135,7 +136,8 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
    e pagamento. Desde a ADR 008, o Lastro do pedido entra logo depois do
    Resumo (PLA-01).
 2. **PFI-02** Resumo SHALL conter: cliente (vindo do contato, bloqueado; só
-   nome confirmado desde a ADR 016, PIT-11),
+   nome confirmado desde a ADR 016, PIT-11; acompanha o contato enquanto o
+   pedido está pendente desde a ADR 018, PCT-01),
    entrega prometida, total de peças (calculado), tipo de serviço,
    evento/nome, vendedor (dono da conversa), data do pedido (definida na
    confirmação) e FAB (configuração `FAB_CODE`). Desde 30/09/2026 a tela diz
@@ -487,6 +489,38 @@ gerar sem "Pago em".
 
 ---
 
+### P1-12: Cliente do pedido acompanha o contato ⭐ MVP
+
+**História:** Como vendedor, quero que o pedido pendente mostre o cliente com
+o nome que o contato tem agora, para não gerar a ficha em branco ou com o nome
+antigo depois de corrigir o nome na conversa.
+
+Decisão: [ADR 018](../../../docs/adr/018-cliente-do-pedido-acompanha-o-contato.md),
+do PO em 03/10/2026, que promove o caso de borda "WHEN o contato muda de nome".
+
+**Aceite:**
+
+1. **PCT-01** WHEN o contato de um pedido pendente é renomeado por uma pessoa,
+   recebe o nome que o cliente deu ao bot ou tem o nome apagado THEN o
+   detalhe, a lista e a gaveta da conversa SHALL mostrar, na próxima leitura,
+   o cliente pela regra da PIT-11 com o contato atual, e a busca pelo nome
+   novo SHALL achar o pedido. O renomear SHALL NOT mudar a versão nem a data
+   da última mudança do pedido, nem publicar evento de pedido.
+2. **PCT-02** WHEN o pedido é gerado THEN o cliente mostrado nesse momento
+   SHALL ficar gravado no pedido; renomear o contato depois SHALL NOT mudar o
+   cliente do pedido gerado no detalhe, na lista, na gaveta nem na ficha
+   impressa.
+3. **PCT-03** WHEN o pedido gerado é reaberto THEN o cliente SHALL voltar a
+   acompanhar o contato (PCT-01), e gerar de novo SHALL gravar o nome desse
+   momento.
+
+**Teste independente:** com um pedido pendente, renomear o contato em "Editar
+nome" e ver o nome novo no pedido, na lista (também buscando por ele) e na
+gaveta; gerar, renomear de novo e ver o pedido e a impressão com o nome da
+geração; reabrir e ver o nome atual.
+
+---
+
 ### P2 (fora deste corte)
 
 - Pedidos no detalhe do Cliente.
@@ -511,6 +545,10 @@ gerar sem "Pago em".
   THEN ela SHALL seguir com uma pessoa até o encerramento, sem ação, rota ou
   comando que a devolva ao agente, e o pedido pendente SHALL NOT voltar a
   receber a projeção dos patches do agente (ADR 015).
+- WHEN uma conversa encerrada como `Sem lead` recebe uma mensagem nova do
+  cliente THEN o ciclo novo SHALL começar com o bot, como para qualquer cliente
+  novo: a regra da ADR 015 vale dentro de um ciclo de atendimento (PO,
+  03/10/2026).
 - WHEN a grade tem quantidade 0, negativa ou não inteira THEN o salvamento
   SHALL ser recusado com mensagem na linha.
 - WHEN o valor digitado tem formato inválido (ex.: `4,820.00`, texto) THEN o
@@ -520,7 +558,8 @@ gerar sem "Pago em".
 - WHEN o pedido não tem itens THEN o banner SHALL indicar "Nenhum item" e a
   confirmação SHALL ficar bloqueada.
 - WHEN o contato muda de nome THEN o cliente do pedido pendente SHALL refletir
-  o nome atual; o pedido confirmado SHALL manter o nome da confirmação.
+  o nome atual; o pedido confirmado SHALL manter o nome da confirmação. Desde a
+  ADR 018 (03/10/2026), é requisito: PCT-01..03.
 
 ---
 

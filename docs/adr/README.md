@@ -41,3 +41,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [015 — A conversa não volta para o bot](015-conversa-nao-volta-para-o-bot.md)
 - [016 — Itens com os sete pontos da ficha](016-itens-com-os-sete-pontos-da-ficha.md)
 - [017 — Ficha impressa com os sete pontos](017-ficha-impressa-com-os-sete-pontos.md)
+- [018 — O cliente do pedido acompanha o contato](018-cliente-do-pedido-acompanha-o-contato.md)

@@ -306,11 +306,12 @@ test('prints an empty summary field as the empty mark, never as null', () => {
   assert.doesNotMatch(page, /null|undefined/u);
 });
 
-test('prints the five days of the trail on page 1, in order (PLA-08)', () => {
+test('prints each of the five days once on page 1: two in the summary, three in the trail (PLA-08)', () => {
   // 22:30 on 01/10 in São Paulo is already 02/10 in UTC.
   const html = printed(
     order([polo], { firstContactAt: '2026-10-02T01:30:00.000Z' }),
   );
+  const page = pageOne(html);
   const trail = html.slice(
     html.indexOf('<section class="trail">'),
     html.indexOf('<section class="items">'),
@@ -326,12 +327,19 @@ test('prints the five days of the trail on page 1, in order (PLA-08)', () => {
     ].map((match) => `${match[1]}=${match[2]}`),
     [
       'Primeiro contato=01/10/2026',
-      'Pedido fechado=02/10/2026',
       'Pagamento=02/10/2026',
-      'Entrega prometida=24/10/2026',
       `Entrega realizada=<span class="empty">${EMPTY_MARK}</span>`,
     ],
   );
+  // The order date and the promised delivery print once, in the summary.
+  assert.doesNotMatch(
+    trail,
+    /Pedido fechado|Entrega prometida|Data do pedido/u,
+  );
+  assert.equal(page.match(/Entrega prometida<\/span>/gu)?.length, 1);
+  assert.equal(page.match(/Data do pedido<\/span>/gu)?.length, 1);
+  assert.match(page, /Data do pedido<\/span><strong>02\/10\/2026</u);
+  assert.match(page, /Entrega prometida<\/span><strong>24\/10\/2026</u);
 });
 
 test('keeps page 2 as the approved v2 and the review marks on the sample only (PIM-09)', () => {
@@ -402,10 +410,10 @@ test('builds the v2 snapshot exactly as before and adds the trail only to v3', (
   assert.equal(v2.pedido.data_entrega_confirmada, '24/10/2026');
   assert.deepEqual(v3.pedido.lastro, {
     primeiro_contato: '18/09/2026',
-    pedido_fechado: '02/10/2026',
     pagamento: '02/10/2026',
-    entrega_prometida: '24/10/2026',
     entrega_realizada: '',
   });
+  assert.equal(v3.pedido.data, '02/10/2026');
+  assert.equal(v3.pedido.data_entrega_confirmada, '24/10/2026');
   assert.throws(() => printSnapshot(source, 'ficha-canonical-v9'), /Unknown/u);
 });

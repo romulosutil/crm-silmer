@@ -1,9 +1,9 @@
 // `ficha-canonical-v3` (ADR 017): the printed ficha changes together with the
 // order screen. Each item prints the seven principal points of the bot's
 // ficha (ADR 012) in their order and under the screen's labels, the optional
-// extras only when someone filled them, and page 1 gains the date trail of
-// ADR 008. The summary takes the screen's labels (T48). Page 2 keeps the 14
-// blank production fields of v2 as they were. Until the review PDF is
+// extras only when someone filled them, and page 1 carries each of the five
+// days of ADR 008 once. The summary takes the screen's labels (T48). The
+// production page keeps the 14 blank fields of v2. Until the review PDF is
 // approved, orders keep printing on v2 (`PRINT_TEMPLATE` in `./index.js`).
 
 import { display, filledText } from './html.js';
@@ -39,12 +39,14 @@ export const EXTRA_FIELDS = Object.freeze([
   Object.freeze({ field: 'vies_mangas', label: 'Viés mangas' }),
 ]);
 
-/** PLA-08: the five days of the order, in the order they happen. */
+/**
+ * PLA-08: the trail strip, in the order the days happen. The order date
+ * ("Data do pedido") and the promised delivery ("Entrega prometida") are the
+ * other two days of ADR 008 and print only in the summary (ADR 017).
+ */
 export const TRAIL_FIELDS = Object.freeze([
   Object.freeze({ field: 'primeiro_contato', label: 'Primeiro contato' }),
-  Object.freeze({ field: 'pedido_fechado', label: 'Pedido fechado' }),
   Object.freeze({ field: 'pagamento', label: 'Pagamento' }),
-  Object.freeze({ field: 'entrega_prometida', label: 'Entrega prometida' }),
   Object.freeze({ field: 'entrega_realizada', label: 'Entrega realizada' }),
 ]);
 
@@ -266,7 +268,7 @@ export function renderFichaHtmlV3(snapshot, options = {}) {
       .supporting { display: grid; gap: 6px; grid-template-columns: 1.5fr 1fr .8fr .5fr; margin: 6px 0 8px; }
       .supporting > div, .trail > div { background: var(--raised); border-radius: 5px; min-height: 34px; padding: 6px 8px; }
       .supporting strong, .trail strong { font-size: 9.5px; overflow-wrap: anywhere; }
-      .trail { display: grid; gap: 6px; grid-template-columns: repeat(5, 1fr); margin-bottom: 8px; }
+      .trail { display: grid; gap: 6px; grid-template-columns: repeat(3, 1fr); margin-bottom: 8px; }
       .trail > div { background: var(--surface); border: 1px solid var(--border); }
       .trail strong { color: var(--deep); }
       .items { display: grid; gap: 7px; }

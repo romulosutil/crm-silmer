@@ -584,8 +584,8 @@ function itemExtras(item) {
 /**
  * The v3 review sample: synthetic, complete in the seven points, and built to
  * show the PO every rule the paper follows (an item with and one without
- * extras, "NAO APLICAVEL", a long text, six or more sizes and a day of the
- * trail not recorded yet).
+ * extras, "NAO APLICAVEL", a long text, six or more sizes, and the delivery
+ * that happened not recorded yet).
  *
  * @param {any} sample
  */
@@ -631,9 +631,11 @@ export function validateFichaSnapshotV3(sample) {
       `v3 sample ${field} must be an ISO day or null`,
     );
   }
+  // ADR 017: an order is generated only with the payment and the promised
+  // delivery recorded; the delivery that happened comes after the sale.
   invariant(
-    order.paidOn === null || order.deliveredOn === null,
-    'v3 sample must show a day of the trail not recorded yet',
+    isIsoDay(order.paidOn) && order.deliveredOn === null,
+    'v3 sample must show the payment recorded and the delivery not yet',
   );
 
   const summary = order.ficha?.summary;

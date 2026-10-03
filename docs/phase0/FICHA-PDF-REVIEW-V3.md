@@ -30,8 +30,9 @@ que tenha ao menos um nome por papel.
 
 A amostra tem dois itens: uma camisa polo com os sete pontos e sem adicionais,
 e uma regata com adicionais, "NAO APLICAVEL" nas mangas, estampa com texto
-longo e sete tamanhos. O total é 52 peças. A entrega realizada ainda não foi
-registrada, para mostrar como o papel marca um dia vazio.
+longo e sete tamanhos. O total é 52 peças. O pagamento está registrado, como
+em todo pedido gerado; a entrega realizada ainda não, para mostrar como o papel
+marca um dia vazio.
 
 ## Geração e verificação técnica
 
@@ -56,8 +57,9 @@ foi gerado no Dell, com Liberation Sans no lugar de Arial (mesmas medidas).
    - **Resumo:** Cliente, Entrega prometida, Total de peças e Tipo de serviço;
      Evento / Nome, Vendedor, Data do pedido e FAB. Sem valor nem forma de
      pagamento.
-   - **Lastro do pedido:** Primeiro contato, Pedido fechado, Pagamento,
-     Entrega prometida e Entrega realizada ("—", ainda não registrada).
+   - **Lastro do pedido:** Primeiro contato, Pagamento e Entrega realizada
+     ("—", ainda não registrada). A Data do pedido e a Entrega prometida
+     aparecem uma vez só, no Resumo.
    - **Itens:** os sete pontos numerados, na ordem Tipo de roupa, Cor,
      Quantidade, Estampa, Tecido, Tamanhos e Gola; a quantidade de cada item é
      a soma dos tamanhos (20 e 32).

@@ -1139,13 +1139,34 @@ com o contrato combinado do item.
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(api): print through one ficha template switch`
 
-### Validação T62–T64
+### Revisão do PDF pelo PO (02/10/2026)
+
+O PO aprovou a regra dos adicionais e o "—" no dia não registrado, e pediu as
+mudanças das tasks T65 a T68. Cada uma gera de novo o PDF e o registro, que
+continua pendente.
+
+### T65: Lastro sem datas repetidas
+
+- **What:** Data do pedido e Entrega prometida só no Resumo; a faixa "Lastro do pedido" fica com Primeiro contato, Pagamento e Entrega realizada. A amostra mostra o pagamento registrado (bloqueio da geração na ADR 016) e a entrega realizada vazia.
+- **Where:** `modules/orders/src/print/{ficha-canonical-v3,print-snapshot}.js`, `scripts/ficha-pdf-review.mjs`, `docs/phase0/ficha-pdf-approval-v3.json`, `output/pdf/ficha-canonica-sintetica-v3.pdf`, `test/ficha-print-{v3,switch}.test.js`, ADR 017, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `.specs/features/pedidos-mvp/{spec,context,tasks}.md`
+- **Depends on:** T64
+- **Requirement:** PLA-08
+
+**Done when:**
+
+- [x] Cada uma das cinco datas sai uma vez só na página 1
+- [x] PDF e registro gerados de novo, aprovação pendente
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): print each trail day once on the ficha v3`
+
+### Validação T62–T65
 
 | Task | Escopo                  | Camada            | Testes | Depends on | Status |
 | ---- | ----------------------- | ----------------- | ------ | ---------- | ------ |
 | T62  | 1 ADR + requisitos      | docs              | none   | —          | ✅     |
 | T63  | 1 template + seu pacote | template impresso | unit   | T62        | ✅     |
 | T64  | 1 ponto de troca + rota | rota/print        | unit   | T63        | ✅     |
+| T65  | 1 faixa do template     | template impresso | unit   | T64        | ✅     |
 
 ---
 

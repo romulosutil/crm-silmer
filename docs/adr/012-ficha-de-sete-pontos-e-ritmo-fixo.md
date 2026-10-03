@@ -1,6 +1,8 @@
 # ADR 012 — Ficha de sete pontos e ritmo fixo do bot
 
-Status: aceito
+Status: aceito; parcialmente supersedida pela
+[ADR 016](016-itens-com-os-sete-pontos-da-ficha.md) no trecho do item 3 (D26)
+que põe a gola no texto do modelo do item: a gola passou a ser campo do item.
 
 Data: 01/10/2026
 

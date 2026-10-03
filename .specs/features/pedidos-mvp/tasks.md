@@ -958,6 +958,112 @@ workflow DEV `0S5ZS1xeDCSoWovs` e, com autorização do PO, o de produção
 | T52  | workflow                 | unit            | unit + integração live  | T51        | ✅     |
 | T53  | workflow DEV e docs      | unit            | unit                    | T52        | ✅     |
 
+## Itens com os sete pontos (ADR 016, 02/10/2026)
+
+Decidido pelo PO em 02/10/2026, depois do diagnóstico dos pedidos do
+cloud-dev. Branch `feat/itens-com-os-sete-pontos`, a partir de `master`; as
+tasks rodam em ordem, uma por commit. A ficha impressa v3 (ADR 017) usa a
+forma do item desta entrega.
+
+### T56: ADR 016 e requisitos dos itens
+
+- **What:** Registrar a decisão; requisitos PIT-01..11; notas em PFI-02, PFI-03, PFI-08, PFI-09, PFI-12, PCL-04 e PCL-05; A01 supersedida; tipos do desenho; notas no inventário da ficha; estas tasks.
+- **Where:** `docs/adr/016-itens-com-os-sete-pontos-da-ficha.md`, `docs/adr/012-ficha-de-sete-pontos-e-ritmo-fixo.md` (só o status), `docs/adr/README.md`, `.specs/features/pedidos-mvp/{spec,context,design,tasks}.md`, `CAMPOS-FICHA-E-JORNADA-P0-1.md`
+- **Depends on:** —
+- **Requirement:** PIT-01..11
+
+**Done when:**
+
+- [ ] ADR 016 ligada à spec, ao contexto e às tasks
+- [ ] A01, a ADR 012 e o inventário da ficha apontam para a ADR 016
+
+**Tests:** none · **Gate:** docs · **Commit:** `docs(adr): build the order items on the seven ficha points`
+
+### T57: Leitura dos tamanhos
+
+- **What:** `parseSizes` no domínio de pedidos: texto, objeto e lista estruturada viram grade só sem dúvida, com os tamanhos do catálogo; o resto fica nulo.
+- **Where:** `modules/orders/src/domain/sizes.js`, `test/orders-sizes.test.js`
+- **Depends on:** T56
+- **Requirement:** PIT-08
+
+**Done when:**
+
+- [ ] Todos os exemplos da ADR 016 e os casos ambíguos cobertos
+- [ ] Gate quick passa
+
+**Tests:** unit · **Gate:** quick · **Commit:** `feat(orders): read the sizes the customer typed`
+
+### T58: Item com os sete pontos no domínio e na API
+
+- **What:** Forma do item com `cor`, `estampa` e `gola`; item incompleto ao salvar; ficha gravada lida com os campos novos vazios e o que falta recalculado; `missingFields` e 422 pela regra nova; mapeamento do bot para o item 1 (tipo, cor, estampa com locais, tecido, tamanhos, gola, técnica e "Definir com o vendedor"); OpenAPI.
+- **Where:** `modules/orders/src/{domain/{ficha,order}.js,application/order-service.js,index.js}`, `docs/api/openapi.v1.yaml`, `test/fixtures/order-items.js`, `test/orders-{domain,ficha,service-create,service-commands,service-read,repository-contract,postgres-live}.test.js`, `test/order-{routes,runtime}.test.js`
+- **Depends on:** T57
+- **Requirement:** PFI-03, PCL-04, PCL-05, PIT-03..08
+
+**Done when:**
+
+- [ ] Cada um dos sete pontos bloqueia sozinho; resumo e adicionais não
+- [ ] Item incompleto salva; linha de tamanho inválida continua recusada
+- [ ] Ficha sem as chaves novas é lida, e o que falta é recalculado
+- [ ] Gate quick e `npm run test:orders:live` passam
+
+**Tests:** unit + integração live · **Gate:** quick + live · **Commit:** `feat(orders): build items on the seven ficha points`
+
+### T59: Cliente só com nome confirmado
+
+- **What:** `readOrderContext` usa o nome do contato só com origem `manual` ou `automation`; sem ele, vale o `customer_name` do briefing; o identificador do canal sai.
+- **Where:** `modules/orders/src/adapters/postgres-order-conversation-port.js`, `test/orders-postgres-live.test.js`
+- **Depends on:** T58
+- **Requirement:** PIT-11
+
+**Done when:**
+
+- [ ] Conversa sem nome confirmado dá o cliente do briefing ou vazio, nunca o "@handle"
+- [ ] Nome dado por pessoa ou promovido do bot vale
+- [ ] Gate live passa
+
+**Tests:** integração live · **Gate:** quick + live · **Commit:** `fix(orders): name the customer only from a confirmed name`
+
+### T60: Tela do item com principais e adicionais
+
+- **What:** Itens com os sete principais na ordem e o cabeçalho "Item N · tipo · N peças"; "Adicionais (não obrigatórios)" recolhido; Gerar pedido com "Falta para gerar" por ponto e sem "Ainda em branco na ficha"; Situação da lista e gaveta pela regra nova; quantidade informada e aviso; rótulos novos.
+- **Where:** `apps/edge-web/src/components/order/*.vue`, `apps/edge-web/src/views/{OrderView,OrdersView}.vue`, `apps/edge-web/src/lib/order-format.js`, `apps/edge-web/src/screen-styles.css`, `test/order-format.test.js`, `test/e2e/{orders,crm-ui}.spec.js`
+- **Depends on:** T58
+- **Requirement:** PFI-01, PFI-08, PFI-09, PFI-12, PIT-01, PIT-02, PIT-06, PIT-09, PIT-10
+
+**Done when:**
+
+- [ ] Teclado abre e fecha os adicionais, com `aria-expanded` e o foco no botão
+- [ ] axe sem violações; desktop e 390 px conferidos
+- [ ] Gate e2e passa
+
+**Tests:** unit + e2e · **Gate:** quick + e2e · **Commit:** `feat(edge-web): show the order items on the seven ficha points`
+
+### T61: Verificação dos itens
+
+- **What:** Rodar os gates completos e registrar a rastreabilidade PIT em `spec.md`.
+- **Where:** `.specs/features/pedidos-mvp/{spec,tasks}.md`
+- **Depends on:** T57–T60
+- **Requirement:** PIT-01..11
+
+**Done when:**
+
+- [ ] `npm run validate`, `npm run test:e2e` e `npm run test:orders:live` passam
+- [ ] Nenhum PIT sem evidência
+
+**Tests:** full · **Gate:** full · **Commit:** `docs(specs): trace the seven-point items to their tests`
+
+### Validação T56–T61
+
+| Task | Escopo                         | Camada                 | Testes             | Depends on | Status |
+| ---- | ------------------------------ | ---------------------- | ------------------ | ---------- | ------ |
+| T56  | 1 ADR + requisitos             | docs                   | none               | —          | ✅     |
+| T57  | 1 leitura de domínio           | domínio                | unit               | T56        | ✅     |
+| T58  | forma do item e regra de gerar | domínio, serviço, API  | unit + live        | T57        | ✅     |
+| T59  | 1 adapter                      | adapter PG             | live               | T58        | ✅     |
+| T60  | seção de itens e fechamento    | lib + componentes      | unit + e2e         | T58        | ✅     |
+| T61  | verificação                    | full                   | full               | T57–T60    | ✅     |
+
 ---
 
 ## Validação das tasks

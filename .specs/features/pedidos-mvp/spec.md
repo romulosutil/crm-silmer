@@ -6,6 +6,7 @@
 **Arquitetura:** [`design.md`](design.md) · **Tasks:** [`tasks.md`](tasks.md)
 **Lastro de datas (29/09/2026):** [ADR 008](../../../docs/adr/008-lastro-de-datas-do-pedido.md) · história P1-10
 **Abertura no primeiro ponto da ficha (02/10/2026):** [ADR 014](../../../docs/adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md) · história P1-1 (PAB-01..04)
+**Itens com os sete pontos (02/10/2026):** [ADR 016](../../../docs/adr/016-itens-com-os-sete-pontos-da-ficha.md) · história P1-11
 **Mockups:** `.design/mesa-de-trabalho/` (canvas "Mesa de Trabalho Silmer")
 
 ## Problema
@@ -132,7 +133,8 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
    de produção (informativo), Dados do atendimento (não impresso), Fechamento
    e pagamento. Desde a ADR 008, o Lastro do pedido entra logo depois do
    Resumo (PLA-01).
-2. **PFI-02** Resumo SHALL conter: cliente (vindo do contato, bloqueado),
+2. **PFI-02** Resumo SHALL conter: cliente (vindo do contato, bloqueado; só
+   nome confirmado desde a ADR 016, PIT-11),
    entrega prometida, total de peças (calculado), tipo de serviço,
    evento/nome, vendedor (dono da conversa), data do pedido (definida na
    confirmação) e FAB (configuração `FAB_CODE`). Desde 30/09/2026 a tela diz
@@ -141,7 +143,10 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
    hash, mantém "Entrega confirmada" e "Aplicacao".
 3. **PFI-03** Cada item SHALL conter: tipo, modelo, malhas (1 ou mais), cor da
    frente, costas, manga direita, manga esquerda, viés gola, viés mangas e
-   grade (tamanho + quantidade inteira > 0, ao menos uma linha).
+   grade (tamanho + quantidade inteira > 0, ao menos uma linha). Desde a ADR
+   016 (02/10/2026), o item tem os principais e os adicionais de PIT-01 e
+   PIT-02 e pode ser salvo incompleto (PIT-03); a linha de tamanho continua
+   com tamanho e quantidade inteira > 0.
 4. **PFI-04** Total do item e total do pedido SHALL ser calculados a partir da
    grade e nunca digitados.
 5. **PFI-05** Observações SHALL aceitar de 0 a 5 linhas de texto.
@@ -152,8 +157,13 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
    aplicável".
 8. **PFI-08** "Dados do atendimento" (arte, locais, logística, finalidade,
    perfil de compra) SHALL ser exibidos em modo leitura a partir da pré-ficha e
-   marcados como "não saem na ficha impressa".
-9. **PFI-09** O banner do topo SHALL listar o que falta para confirmar.
+   marcados como "não saem na ficha impressa". Desde a ADR 016, ali ficam
+   também a quantidade, os tamanhos e a estampa ditos pelo cliente que não
+   viraram campo do pedido ("Quantidade informada", "Tamanhos informados",
+   "Estampa desejada") e todo ponto deixado para o vendedor.
+9. **PFI-09** O banner do topo SHALL listar o que falta para confirmar. Desde
+   a ADR 016, lista só o que impede gerar (PIT-05, PIT-06); campo em branco
+   que não bloqueia não é listado.
 10. **PAU-01** WHEN quem não é dono da conversa nem administrador abre o pedido
     THEN a página SHALL ser somente leitura e a API SHALL recusar edições com 403.
 11. **PFI-10** WHEN o pedido está confirmado THEN todas as seções SHALL ficar
@@ -178,13 +188,18 @@ valor e forma de pagamento, para liberar a impressão.
 1. **PCL-04** WHEN o dono da conversa ou um administrador aciona "Confirmar
    pedido" com valor final e condição válidos THEN o status SHALL virar
    `confirmado`, gravando valor, condição, autor, horário e data do pedido.
+   Desde a ADR 016, a tela diz "Gerar pedido" e "Forma de pagamento", e cada
+   item também precisa dos sete pontos principais (PIT-05).
 2. **PFI-11** Valor final SHALL ser digitado como texto em reais (ex.:
    `4.820,00`) com prefixo fixo `R$` e armazenado em centavos inteiros > 0.
 3. **PFI-12** Condição de pagamento SHALL ser uma entre: Pix, Cartão de
-   crédito, Cartão de débito.
+   crédito, Cartão de débito. Desde a ADR 016, a tela diz "Forma de
+   pagamento"; o campo da API continua `paymentCondition`.
 4. **PCL-05** WHEN valor ou condição está ausente ou inválido, ou o pedido não
    tem ao menos um item com grade THEN a confirmação SHALL ser recusada (422)
-   com mensagem por campo e o status SHALL continuar `pendente`.
+   com mensagem por campo e o status SHALL continuar `pendente`. Desde a ADR
+   016, também quando algum item não tem um dos sete pontos principais; o 422
+   `ORDER_NOT_CONFIRMABLE` nomeia cada um (PIT-06).
 5. **PCL-06** WHEN outro usuário tenta confirmar THEN a API SHALL responder 403
    e a interface SHALL não exibir o botão.
 6. **PCL-09** WHEN duas confirmações concorrem sobre a mesma versão THEN uma
@@ -331,6 +346,80 @@ fato entregamos, na ficha digital e na impressa.
 
 **Teste independente:** num pedido confirmado, informar "Entregue em" e ver a
 data no lastro, com o pedido ainda confirmado e a impressão liberada.
+
+---
+
+### P1-11: Itens com os sete pontos da ficha ⭐ MVP
+
+**História:** Como vendedor, quero que o item do pedido traga os sete pontos
+que o bot coletou (tipo de roupa, cor, quantidade, estampa, tecido, tamanhos e
+gola), para completar só o que falta e gerar um pedido que a fábrica consegue
+produzir.
+
+Decisão: [ADR 016](../../../docs/adr/016-itens-com-os-sete-pontos-da-ficha.md),
+que substitui a regra A01 do [contexto](context.md).
+
+**Aceite:**
+
+1. **PIT-01** Cada item SHALL mostrar os principais nesta ordem: Tipo de
+   roupa (`tipo`), Cor (`cor`), Quantidade (soma dos tamanhos, nunca
+   digitada), Estampa (`estampa`), Tecido (`malhas`), Tamanhos (`grade`) e
+   Gola (`gola`), com o cabeçalho "Item N · <tipo de roupa ou —> ·
+   <quantidade> peças".
+2. **PIT-02** Modelo, Cor frente, Cor costas, Manga direita, Manga esquerda,
+   Viés gola e Viés mangas SHALL ficar num bloco recolhível "Adicionais (não
+   obrigatórios)", fechado ao abrir a página, que o teclado abre e fecha
+   (`aria-expanded`, foco no botão). Mangas e viés mantêm "Não aplicável".
+3. **PIT-03** WHEN o vendedor salva os itens com campos em branco, sem tecido
+   ou sem tamanhos THEN o sistema SHALL aceitar; cada linha de tamanho
+   continua exigindo tamanho e quantidade inteira > 0, tecido não tem linha em
+   branco, e valem os limites de 200 caracteres por texto e 50 itens.
+4. **PIT-04** WHEN o pedido foi gravado antes da ADR 016 THEN o sistema SHALL
+   lê-lo com cor, estampa e gola em branco e recalcular o que falta pela regra
+   nova, sem migração; por uma versão, o `PATCH` dos itens SHALL aceitar item
+   sem essas três chaves e gravá-las em branco.
+5. **PIT-05** Gerar o pedido SHALL exigir ao menos um item, em cada item os
+   sete principais (tipo, cor, estampa, ao menos um tecido, ao menos uma linha
+   de tamanho e gola), o valor final e a forma de pagamento. Nada mais SHALL
+   bloquear nem ser listado como faltando: nem os adicionais, nem o resumo.
+6. **PIT-06** "Falta para gerar" SHALL nomear cada ponto em palavras simples
+   ("cor do item 1", "tamanhos do item 2", "valor final", "forma de
+   pagamento"), a partir de `missingFields`: `items`, `items[N].tipo`,
+   `items[N].cor`, `items[N].estampa`, `items[N].malhas`, `items[N].grade`,
+   `items[N].gola`, `finalAmount` e `paymentCondition`, nesta ordem. A
+   Situação da lista de Pedidos e a gaveta da conversa SHALL usar a mesma
+   lista.
+7. **PIT-07** WHEN o bot projeta a pré-ficha THEN o item 1 SHALL receber:
+   `product_model` (ou, sem ele, `product_type`) em Tipo de roupa; `colors` em
+   Cor; `artwork_status` em Estampa, com os locais de `artwork_locations`
+   depois de " · " e "sem aplicação" como "Sem estampa"; `fabrics` em Tecido;
+   `collar` em Gola. `artwork_technique` SHALL ir para Tipo de serviço só
+   quando nomeia uma técnica (silk/serigrafia, sublimação, DTF, DTG, bordado,
+   transfer ou "sem aplicação"). "Definir com o vendedor" SHALL nunca virar
+   valor do pedido: o campo fica vazio e o texto fica em Dados do atendimento.
+8. **PIT-08** WHEN os tamanhos chegam como texto THEN eles SHALL virar
+   Tamanhos só quando cada parte é um tamanho conhecido (PP, P, M, G, GG, XG,
+   XGG, EG, EGG, G1–G5, XX, JEGÃO) com uma quantidade inteira > 0, na mesma
+   ordem em todo o texto ("5 P, 10 M", "P5 M10", "25 M e 25G", "M: 15; G:
+   15"); o que deixar dúvida SHALL ficar com Tamanhos vazio e o texto em
+   "Tamanhos informados".
+9. **PIT-09** A quantidade que o cliente informou SHALL aparecer ao lado de
+   "Total de peças"; WHEN há tamanhos e a soma difere THEN a tela SHALL
+   mostrar, sem bloquear, "A soma dos tamanhos (X) é diferente da quantidade
+   informada (Y)"; sem tamanhos, a Quantidade do item 1 SHALL mostrar "—
+   (cliente informou Y)".
+10. **PIT-10** A tela SHALL dizer "Forma de pagamento", "Tamanhos", "Tecido" e
+    "Tipo de roupa"; em Dados do atendimento, `sizes` é "Tamanhos informados"
+    e `artwork_technique` é "Estampa desejada".
+11. **PIT-11** O cliente do pedido SHALL ser um nome confirmado: o nome do
+    contato dado por uma pessoa ou promovido do `customer_name` do bot; senão
+    o `customer_name` do briefing; senão vazio. O identificador do canal e o
+    nome do perfil do WhatsApp SHALL nunca ser o cliente.
+
+**Teste independente:** projetar no pedido um briefing com os sete pontos e
+"tamanhos: 10 P, 15 M e 15 G", ver o item 1 completo com 40 peças, deixar a
+gola em branco e ver "Falta para gerar: gola do item 1, valor final e forma de
+pagamento".
 
 ---
 
@@ -492,6 +581,24 @@ serviço de pedidos; a abertura pelo `open_order` usa o mesmo
 | `npm run validate`                                                            | ✅ passou na T53                                            |
 | `node --test --test-concurrency=1 test/n8n-integration-postgres-live.test.js` | ✅ passou — 4/4 (PostgreSQL, `crm_silmer_test_abertura`)    |
 
+### Itens com os sete pontos (ADR 016)
+
+A verificar na T61, com a evidência das T57–T60.
+
+| ID     | História | Evidência | Status   |
+| ------ | -------- | --------- | -------- |
+| PIT-01 | P1-11    | T60       | Pendente |
+| PIT-02 | P1-11    | T60       | Pendente |
+| PIT-03 | P1-11    | T58, T60  | Pendente |
+| PIT-04 | P1-11    | T58       | Pendente |
+| PIT-05 | P1-11    | T58       | Pendente |
+| PIT-06 | P1-11    | T58, T60  | Pendente |
+| PIT-07 | P1-11    | T58       | Pendente |
+| PIT-08 | P1-11    | T57, T58  | Pendente |
+| PIT-09 | P1-11    | T60       | Pendente |
+| PIT-10 | P1-11    | T60       | Pendente |
+| PIT-11 | P1-11    | T59       | Pendente |
+
 ## Roteiro de UAT
 
 1. Como cliente no workflow DEV, mandar numa conversa nova uma mensagem com um
@@ -499,11 +606,12 @@ serviço de pedidos; a abertura pelo `open_order` usa o mesmo
    conversa e em Pedidos/Pendentes.
 2. Assumir a conversa como vendedor na Caixa de Entrada.
 3. Abrir o pedido pela gaveta ("Abrir pedido").
-4. Editar a seção "Itens e especificações": ajustar grade, salvar e conferir
-   total recalculado.
+4. Editar a seção "Itens e especificações": ajustar os tamanhos, salvar e
+   conferir total recalculado; abrir "Adicionais (não obrigatórios)" pelo
+   teclado.
 5. Editar "Observações do pedido" (até 5 linhas) e salvar.
-6. Confirmar o pedido com valor (ex. `1.180,00`) e condição (Pix); checar
-   status "Confirmado por <nome> · <data hora>".
+6. Confirmar o pedido com valor (ex. `1.180,00`) e forma de pagamento (Pix);
+   checar status "Confirmado por <nome> · <data hora>".
 7. Imprimir o pedido confirmado; validar template `ficha-canonical-v2`, sem
    valor/condição e sem faixa de amostra.
 8. Reabrir o pedido; confirmar que a impressão trava de novo e número/valor

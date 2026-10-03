@@ -131,10 +131,16 @@ Pedidos substitui o que seria o Kanban.
 
 ## Discrição do agente (validar na revisão da spec)
 
-- **A01** Confirmar exige, além de valor e condição, **ao menos um item com
+- **A01** ~~Confirmar exige, além de valor e condição, **ao menos um item com
   grade**. Campos vazios da ficha **não bloqueiam**: aparecem no banner e saem
   como "—" no documento. Motivo: confirmação é julgamento humano; bloquear tudo
-  recria o gate rígido que tornou o Kanban inviável.
+  recria o gate rígido que tornou o Kanban inviável.~~
+  **Supersedida em 02/10/2026 pela
+  [ADR 016](../../../docs/adr/016-itens-com-os-sete-pontos-da-ficha.md):**
+  gerar exige ao menos um item, os sete pontos principais de cada item (tipo,
+  cor, estampa, tecido, tamanhos e gola; a quantidade é a soma dos tamanhos),
+  o valor final e a forma de pagamento. O resumo e os adicionais do item
+  continuam sem bloquear e deixam de ser listados como em branco.
 - **A02** "Tempo parado": no inbox, desde a criação do handoff pendente; na
   lista de Pedidos, desde a última alteração do pedido.
 - **A03** Rótulos de motivo a partir de `handoffs.reason_code`:

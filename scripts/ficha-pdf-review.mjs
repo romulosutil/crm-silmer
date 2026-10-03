@@ -18,6 +18,7 @@ import {
   TEMPLATE_V3,
   printSnapshot,
 } from '../modules/orders/src/print/print-snapshot.js';
+import { PRINT_TEMPLATE } from '../modules/orders/src/print/index.js';
 
 const rootUrl = new URL('../', import.meta.url);
 const snapshotUrl = new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl);
@@ -888,6 +889,26 @@ export function validateFichaApprovalEvidenceV3(evidence, gate) {
   return evidence;
 }
 
+/**
+ * PIM-10 (ADR 017): `PRINT_TEMPLATE` may name v3 only once the v3 approval is
+ * recorded; until then every printed order stays on the approved v2.
+ *
+ * @param {{gate: any, printTemplate: string}} input
+ */
+export function validateFichaPrintSwitch({ gate, printTemplate }) {
+  invariant(
+    printTemplate === TEMPLATE_V2 || printTemplate === TEMPLATE_V3,
+    'PRINT_TEMPLATE must name a known ficha template',
+  );
+  invariant(
+    printTemplate !== TEMPLATE_V3 ||
+      (gate?.templateVersion === TEMPLATE_V3 &&
+        gate.approval?.status === 'approved' &&
+        gate.approval.approved === true),
+    'PRINT_TEMPLATE selects ficha-canonical-v3 before its approval is recorded',
+  );
+}
+
 /** @param {Buffer} bytes */
 function countPdfPages(bytes) {
   return (bytes.toString('latin1').match(/\/Type\s*\/Page\b/gu) ?? []).length;
@@ -1096,7 +1117,10 @@ async function validateV3() {
     renderedHtml: buildFichaHtmlV3(sample),
     snapshotBytes,
   });
-  console.log(`Ficha v3 PDF review gate valid: ${gate.approval.status}.`);
+  validateFichaPrintSwitch({ gate, printTemplate: PRINT_TEMPLATE });
+  console.log(
+    `Ficha v3 PDF review gate valid: ${gate.approval.status}; orders print on ${PRINT_TEMPLATE}.`,
+  );
 }
 
 async function main() {

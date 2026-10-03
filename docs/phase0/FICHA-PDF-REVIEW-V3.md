@@ -87,7 +87,12 @@ Depois da revisão, na PR de aprovação:
    falha.
 3. `npm run validate:ficha-pdf-review` valida a transição completa.
 4. Num commit próprio, o Tech Lead troca `PRINT_TEMPLATE` para `TEMPLATE_V3`
-   em `modules/orders/src/print/index.js` (T64).
+   em `modules/orders/src/print/index.js` (T64). Com o gate pendente, essa
+   troca falha em `npm run validate:ficha-pdf-review` e em
+   `test/ficha-print-switch.test.js`. No mesmo commit, a asserção da v2 em
+   `test/order-routes.test.js` que procura "Entrega confirmada" passa a
+   procurar "Entrega prometida", e o teste da v2 byte a byte em
+   `test/ficha-print-switch.test.js` passa a ser pulado sozinho.
 
 Não registrar telefone, e-mail, pedido real, assinatura manuscrita ou qualquer
 outro dado pessoal na evidência.

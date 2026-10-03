@@ -83,6 +83,11 @@ function shownValue(value) {
   return value || '—';
 }
 
+/** The old piece detail stays visible for review, but is never a new field. */
+function legacyPieceDetail(item) {
+  return typeof item.modelo === 'string' ? item.modelo.trim() : '';
+}
+
 /**
  * The colour chip beside a part, when the text names a catalog colour.
  *
@@ -387,6 +392,17 @@ async function save() {
               }}</span>
             </button>
           </div>
+
+          <p v-if="legacyPieceDetail(item)" class="op-quantity-warning">
+            <OrderIcon name="alert" />
+            <span>
+              <strong>Detalhe antigo da peça</strong><br />
+              {{ legacyPieceDetail(item) }}<br />
+              Confira se Tipo de roupa ou Definição da gola inclui esse detalhe.
+              Se faltar, o responsável deve ajustar o item, reabrindo o pedido
+              se necessário, antes de imprimir a ficha.
+            </span>
+          </p>
 
           <!-- PIT-01: the seven bot points, plus the service chosen by the seller. -->
           <div class="op-item-fields">
@@ -715,6 +731,16 @@ async function save() {
             {{ itemHeading(item, itemIndex) }}
           </h3>
         </div>
+        <p v-if="legacyPieceDetail(item)" class="op-quantity-warning">
+          <OrderIcon name="alert" />
+          <span>
+            <strong>Detalhe antigo da peça</strong><br />
+            {{ legacyPieceDetail(item) }}<br />
+            Confira se Tipo de roupa ou Definição da gola inclui esse detalhe.
+            Se faltar, o responsável deve ajustar o item, reabrindo o pedido se
+            necessário, antes de imprimir a ficha.
+          </span>
+        </p>
         <!-- PIT-01: the seven bot points, plus service per item. -->
         <dl class="op-points">
           <div>

@@ -18,17 +18,17 @@
     "confirmedBy": { "name": "Vendedora Exemplo" },
     "ficha": {
       "summary": {
-        "cliente": "Cliente Demonstracao",
+        "cliente": "Cliente Demonstração",
         "data_entrega_confirmada": "2026-10-23",
         "aplicacao": "SUBLIMAÇÃO E BORDADO",
-        "nome": "Equipe Horizonte - Evento Sintetico"
+        "nome": "Equipe Horizonte - Evento Sintético"
       },
       "items": [
         {
           "tipo": "CAMISA POLO",
           "cor": "AZUL MARINHO",
           "estampa": "BORDADO DO BRASÃO NO PEITO ESQUERDO",
-          "malhas": ["PIQUET", "ALGODÃO 100%"],
+          "malhas": ["PIQUÊ", "ALGODÃO 100%"],
           "gola": "GOLA POLO",
           "modelo": "",
           "cor_frente": "",
@@ -89,9 +89,9 @@
         }
       ],
       "observations": [
-        "Arte final sintetica aprovada para teste visual.",
+        "Arte final sintética aprovada para teste visual.",
         "Separar os itens por tamanho e identificar cada pacote.",
-        "Nao usar este documento para producao ou cobranca."
+        "Não usar este documento para produção ou cobrança."
       ]
     }
   }

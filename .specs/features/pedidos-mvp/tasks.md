@@ -1438,3 +1438,75 @@ vendedor.
 | T49      | componente                | e2e             | e2e                                | ✅     |
 | T54      | docs                      | none            | none                               | ✅     |
 | T55      | view, rota, domínio e PG  | unit + live + e2e | unit + live + e2e                | ✅     |
+
+## Ficha espelhada e leitura operacional (ADR 019, 03/10/2026)
+
+As tarefas abaixo partem do `master` que já contém ADRs 008–018, v3 paginada
+e aprovação provisória. Cada fatia requer commit e push próprios antes de
+PR/merge. A ativação do Dropbox e o fluxo de aviso a Rose ficam fora desta
+entrega, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md).
+
+### T76: Decisão, contrato e glossário
+
+- **Requisitos:** REV-01–REV-10.
+- **Arquivos:** RFC 007, ADR 019, spec, tasks e docs/product.
+- **Aceite:** rótulos, responsabilidade por persona, versão da impressão e
+  limite das integrações documentados sem reescrever ADRs anteriores.
+- **Gate:** links e formatação.
+
+### T77: Serviço por item, origem da estampa e leituras da API
+
+- **Requisitos:** REV-02–REV-04, REV-06, REV-08.
+- **Arquivos:** domínio/serviço/repositórios de Pedidos, rotas/runtime e
+  contrato OpenAPI.
+- **Aceite:** serviço bloqueia geração por item, mas não edição parcial; PATCH
+  da arte aceita só booleanos por vendedor autorizado; resumo global e
+  última mensagem em lote não expõem conteúdo; legados seguem legíveis.
+- **Gate:** testes de domínio, ACL, runtime, rotas e contrato de repositório.
+
+### T78: Nova revisão da ficha para aprovação
+
+- **Requisitos:** REV-01, REV-02, REV-03, REV-05.
+- **Arquivos:** `modules/orders/src/print/ficha-canonical-v4.js`, snapshot,
+  amostra e PDF sintéticos v4, roteiro de revisão e testes.
+- **Aceite:** v2/v3/hashes intactos; v4 com serviço por item, origem da arte,
+  lastro, paginação e 14 campos de produção vazios; `PRINT_TEMPLATE` continua
+  v3 até aprovação específica da nova amostra.
+- **Gate:** impressão sintética de dois e vários itens, revisão visual e
+  validação das versões já aprovadas.
+
+### T79: Tela do pedido espelhada
+
+- **Requisitos:** REV-01–REV-04, REV-09.
+- **Arquivos:** componentes da tela de pedido, estilos e E2E.
+- **Aceite:** vendedor segue próximo passo, edita serviço por item, marca
+  origem, vê upload desativado e recupera conflito sem perder rascunho;
+  teclado, foco e dados legados verificados.
+- **Gate:** build, typecheck, lint e E2E focado.
+
+### T80: Dashboard e listas orientadas à operação
+
+- **Requisitos:** REV-06–REV-08, REV-10.
+- **Arquivos:** Dashboard, Pedidos, Clientes, estilos e E2E.
+- **Aceite:** valores e vendas apenas de confirmados; linha clicável com link
+  por teclado; sinais de ociosidade derivados de dados observados; largura
+  móvel contida.
+- **Gate:** testes de cálculo, build e E2E focado em desktop e celular.
+
+### T81: Atualização por eventos nas páginas
+
+- **Requisitos:** REV-09.
+- **Arquivos:** contrato SSE, shell, views afetadas e testes.
+- **Aceite:** mudança de pedido, contato ou conta atualiza páginas afetadas;
+  reconexão recupera estado; retry manual só em falha; evento contém IDs,
+  sem PII.
+- **Gate:** testes de eventos, ACL, E2E de mudança de papel e conflito.
+
+### T82: Revisão integrada e entrega
+
+- **Requisitos:** REV-01–REV-10.
+- **Aceite:** revisão heurística, amostra impressa e testes focados; branch
+  baseada no `master` atual, commits/push, PR e merge após gates. Produção
+  continua sujeita à aprovação física da ficha e às integrações acordadas.
+- **Gate:** `git diff --check`, format, typecheck, lint, build, gates de PDF e
+  testes E2E necessários.

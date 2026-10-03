@@ -7,6 +7,7 @@
 **Lastro de datas (29/09/2026):** [ADR 008](../../../docs/adr/008-lastro-de-datas-do-pedido.md) · história P1-10
 **Abertura no primeiro ponto da ficha (02/10/2026):** [ADR 014](../../../docs/adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md) · história P1-1 (PAB-01..04)
 **Itens com os sete pontos (02/10/2026):** [ADR 016](../../../docs/adr/016-itens-com-os-sete-pontos-da-ficha.md) · história P1-11
+**Ficha impressa com os sete pontos (02/10/2026):** [ADR 017](../../../docs/adr/017-ficha-impressa-com-os-sete-pontos.md) · P1-5 (PIM-06..10) e PLA-08
 **Mockups:** `.design/mesa-de-trabalho/` (canvas "Mesa de Trabalho Silmer")
 
 ## Problema
@@ -235,6 +236,36 @@ em Confirmados com "Confirmado por <nome> · <data hora>".
 **Teste independente:** confirmar e imprimir; comparar o documento com
 `output/pdf/ficha-canonica-sintetica-v2.pdf`.
 
+**Ficha v3 com os sete pontos (ADR 017, 02/10/2026).** PIM-02 vale até a
+aprovação do PDF da v3; PIM-03 a PIM-05 valem para os dois templates.
+
+6. **PIM-06** No template `ficha-canonical-v3`, cada item SHALL trazer os sete
+   pontos numerados, nesta ordem e com estes rótulos: Tipo de roupa (`tipo`),
+   Cor (`cor`), Quantidade, Estampa (`estampa`), Tecido (`malhas` unidas por
+   " / "), Tamanhos (blocos de tamanho e quantidade da `grade`) e Gola
+   (`gola`). Quantidade SHALL ser a soma da grade, nunca um campo gravado.
+7. **PIM-07** Os adicionais (Modelo, Cor frente, Cor costas, Manga direita,
+   Manga esquerda, Viés gola e Viés mangas) SHALL sair num bloco "Adicionais"
+   do item só quando ao menos um estiver preenchido, só os preenchidos e nessa
+   ordem; "NAO APLICAVEL" SHALL sair como valor preenchido.
+8. **PIM-08** WHEN a ficha foi gravada antes dos sete pontos (sem `cor`,
+   `estampa` e `gola`) THEN a v3 SHALL imprimir "—" nesses pontos e manter no
+   papel todos os campos da v2.
+9. **PIM-09** O Resumo da v3 SHALL usar os rótulos da tela, "Tipo de serviço"
+   (`aplicacao`) e "Entrega prometida" (`data_entrega_confirmada`), e manter
+   Cliente, Evento / Nome, Data do pedido, Vendedor, FAB e Total de peças, sem
+   valor final nem forma de pagamento (D12); campo vazio SHALL sair como "—".
+   A página 2 SHALL manter os 14 campos de produção em branco da v2; a faixa
+   de amostra e a caixa de aprovação SHALL sair só na amostra de revisão.
+10. **PIM-10** A impressão SHALL continuar no template v2 até a aprovação do
+    PDF da v3 ficar registrada; a troca SHALL acontecer num único ponto
+    (`PRINT_TEMPLATE`), e a validação SHALL recusar a v3 nesse ponto com a
+    aprovação pendente.
+
+**Teste independente (v3):** abrir `output/pdf/ficha-canonica-sintetica-v3.pdf`
+e conferir os sete pontos, os adicionais e o lastro na página 1, com o roteiro
+de `docs/phase0/FICHA-PDF-REVIEW-V3.md`.
+
 ---
 
 ### P1-6: Vendedor reabre um pedido confirmado ⭐ MVP
@@ -343,8 +374,10 @@ fato entregamos, na ficha digital e na impressa.
 7. **PLA-07** WHEN quem não é dono nem administrador tenta gravar THEN a
    interface SHALL não exibir "Editar" no lastro e a API SHALL responder 403;
    uma versão desatualizada SHALL receber 409.
-8. **PLA-08** A ficha impressa SHALL trazer as cinco datas do lastro, no
-   template v3 (ficha por produto), antes da aprovação de Rose e Operação.
+8. **PLA-08** A ficha impressa SHALL trazer as cinco datas do lastro na
+   página 1 do template `ficha-canonical-v3` com os sete pontos (ADR 017, que
+   supera a v3 por produto), antes da aprovação do PDF; dia ainda não
+   registrado SHALL sair como "—".
 9. **PLA-09** Enquanto a v2 imprime, a entrega confirmada SHALL sair como
    dd/mm/aaaa, igual à amostra aprovada.
 
@@ -564,7 +597,7 @@ Verificado em T46, 29/09/2026.
 | PLA-05 | P1-10    | `test/orders-domain.test.js:250`; `test/order-routes.test.js:833`; `test/e2e/orders.spec.js:883,914`          | Verified |
 | PLA-06 | P1-10    | `test/orders-domain.test.js:214`; `test/order-routes.test.js:799`; `test/e2e/orders.spec.js:842`              | Verified |
 | PLA-07 | P1-10    | `test/order-routes.test.js:858`; `test/orders-service-commands.test.js:419`; `test/e2e/orders.spec.js:652`    | Verified |
-| PLA-08 | P1-10    | T47, no branch `feat/ficha-por-produto`                                                                       | Pendente |
+| PLA-08 | P1-10    | Ver "Ficha impressa com os sete pontos (ADR 017)" abaixo; T63                                                 | Pendente |
 | PLA-09 | P1-10    | `test/order-routes.test.js:1059`                                                                              | Verified |
 
 **Cobertura:** 9 requisitos · 8 verificados · PLA-08 depende da v3.
@@ -625,6 +658,21 @@ PIT-06, PIT-10, PIT-05, PIT-06 e PIT-12.
 | `npx playwright test` (config da porta 4275, não versionada) | ✅ passou — 82 passed, 7 skipped (os mesmos do Kanban)                 |
 | `npm run test:orders:live`                               | ✅ passou — 20/20 (PostgreSQL, `crm_silmer_test_itens`)                    |
 | `test/n8n-integration-postgres-live.test.js`             | ✅ passou — 3/3 (cópia local apontada para `crm_silmer_test_itens`)        |
+
+### Ficha impressa com os sete pontos (ADR 017)
+
+A evidência do template vale para a v3; o papel só muda depois da aprovação
+do PDF (PIM-10). O registro da aprovação fica em
+`docs/phase0/ficha-pdf-approval-v3.json`.
+
+| ID     | História | Evidência | Status   |
+| ------ | -------- | --------- | -------- |
+| PIM-06 | P1-5     | T63       | Pendente |
+| PIM-07 | P1-5     | T63       | Pendente |
+| PIM-08 | P1-5     | T63       | Pendente |
+| PIM-09 | P1-5     | T63       | Pendente |
+| PIM-10 | P1-5     | T64       | Pendente |
+| PLA-08 | P1-10    | T63       | Pendente |
 
 ## Roteiro de UAT
 

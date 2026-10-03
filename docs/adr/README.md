@@ -30,7 +30,7 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [004 — Aposentar Kanban e Negócio](004-aposentar-kanban-e-negocio.md)
 - [005 — Excluir contas sem histórico](005-excluir-contas-sem-historico.md)
 - [006 — Pedido com dois status e confirmação humana](006-pedido-dois-status.md)
-- 007 — reservado para a ficha por produto (branch `feat/ficha-por-produto`)
+- 007 — reservado para a ficha por produto (branch `feat/ficha-por-produto`), não aceita e superada pela 017
 - [008 — Lastro de datas do pedido](008-lastro-de-datas-do-pedido.md)
 - [009 — Regras de transferência e teto do bot no n8n](009-regras-de-transferencia-e-teto-do-bot.md)
 - [010 — Intenção de pedido sem pergunta e tom do bot](010-intencao-de-pedido-sem-pergunta-e-tom-do-bot.md)
@@ -40,3 +40,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [014 — Pedido abre no primeiro ponto da ficha](014-pedido-abre-no-primeiro-ponto-da-ficha.md)
 - [015 — A conversa não volta para o bot](015-conversa-nao-volta-para-o-bot.md)
 - [016 — Itens com os sete pontos da ficha](016-itens-com-os-sete-pontos-da-ficha.md)
+- [017 — Ficha impressa com os sete pontos](017-ficha-impressa-com-os-sete-pontos.md)

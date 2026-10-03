@@ -35,13 +35,22 @@ test('last message status is read in one batch without content or identity', asy
               // must not replace this confirmed send time.
               sent_at: '2026-10-03T09:00:00.000Z',
             },
+            {
+              conversation_id: 'conversation-3',
+              direction: 'outbound',
+              status: 'sent',
+              delivery_status: 'read',
+              occurred_at: '2026-10-01T10:00:00.000Z',
+              // Legacy receipt with no retained send proof stays unknown.
+              sent_at: null,
+            },
           ],
         };
       },
     },
   });
   assert.deepEqual(await port.readLatestMessageStates([]), new Map());
-  const ids = ['conversation-1', 'conversation-2'];
+  const ids = ['conversation-1', 'conversation-2', 'conversation-3'];
   assert.deepEqual(
     await port.readLatestMessageStates(ids),
     new Map([
@@ -65,13 +74,26 @@ test('last message status is read in one batch without content or identity', asy
           status: 'sent',
         },
       ],
+      [
+        'conversation-3',
+        {
+          direction: 'outbound',
+          occurredAt: '2026-10-01T10:00:00.000Z',
+          sentAt: null,
+          deliveryStatus: 'read',
+          status: 'sent',
+        },
+      ],
     ]),
   );
   assert.equal(queries.length, 1);
   assert.deepEqual(queries[0].values, [ids]);
   assert.match(queries[0].sql, /DISTINCT ON \(message\.conversation_id\)/u);
-  assert.match(queries[0].sql, /send_command\.completed_at/u);
-  assert.match(queries[0].sql, /message\.delivery_status_at/u);
+  assert.match(queries[0].sql, /message\.sent_at/u);
+  assert.doesNotMatch(
+    queries[0].sql,
+    /send_command\.completed_at|message\.delivery_status_at/u,
+  );
   assert.doesNotMatch(
     queries[0].sql,
     /content_envelope|author_id|external_message_id/u,

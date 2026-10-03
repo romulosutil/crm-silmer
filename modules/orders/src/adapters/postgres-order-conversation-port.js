@@ -123,13 +123,8 @@ export class PostgresOrderConversationPort {
       `SELECT DISTINCT ON (message.conversation_id)
               message.conversation_id, message.direction, message.status,
               message.delivery_status, message.occurred_at,
-              coalesce(send_command.completed_at, message.delivery_status_at)
-                AS sent_at
+              message.sent_at
        FROM crm.messages AS message
-       LEFT JOIN crm.n8n_commands AS send_command
-         ON send_command.message_id = message.id
-        AND send_command.action = 'send_message'
-        AND send_command.status = 'sent'
        WHERE message.conversation_id = ANY($1::text[])
        ORDER BY message.conversation_id, message.occurred_at DESC, message.id DESC`,
       [conversationIds],

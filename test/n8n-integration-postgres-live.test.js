@@ -58,8 +58,9 @@ if (connectionString) {
       fabCode: 'FAB-TEST',
       repository: new PostgresOrderRepository({ database, envelopeKey }),
     });
+    let currentTime = NOW;
     const service = createN8nIntegrationService({
-      clock: () => NOW,
+      clock: () => currentTime,
       idFactory: (kind) => `${kind}-${++sequence}`,
       repository: new PostgresN8nIntegrationRepository({
         contactEnvelopeKey,
@@ -173,6 +174,24 @@ if (connectionString) {
       await service.recordEvent({
         command_id: reservation.command_id,
         conversation_id: first.conversation_id,
+        event_id: 'unknown-1',
+        event_type: 'message.send.unknown',
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        technical: technical('unknown-1', 'unknown-1'),
+      });
+      const beforeReconciliation = await pool.query(
+        `SELECT status, sent_at FROM crm.messages
+         WHERE command_id = 'command-ai-1'`,
+      );
+      assert.deepEqual(beforeReconciliation.rows[0], {
+        sent_at: null,
+        status: 'outcome_unknown',
+      });
+
+      await service.recordEvent({
+        command_id: reservation.command_id,
+        conversation_id: first.conversation_id,
         event_id: 'sent-1',
         event_type: 'message.sent',
         external_message_id: 'wamid.outbound.1',
@@ -180,6 +199,8 @@ if (connectionString) {
         schema_version: '1.0',
         technical: technical('sent-1', 'sent-1'),
       });
+      // A delayed read receipt must not restart the 48-hour customer clock.
+      currentTime = new Date(NOW.getTime() + 49 * 60 * 60 * 1000);
       for (const eventType of [
         'message.read',
         'message.delivered',
@@ -191,7 +212,7 @@ if (connectionString) {
           event_id: `${eventType}-1`,
           event_type: eventType,
           external_message_id: 'wamid.outbound.1',
-          occurred_at: NOW.toISOString(),
+          occurred_at: currentTime.toISOString(),
           schema_version: '1.0',
           technical: technical(`${eventType}-1`, `${eventType}-1`),
         });
@@ -200,7 +221,7 @@ if (connectionString) {
       const state = await pool.query(
         `SELECT conversation.briefing_version, conversation.claimed_revision,
                 conversation.inbound_revision, message.delivery_status,
-                message.status
+                message.delivery_status_at, message.sent_at, message.status
          FROM crm.conversations AS conversation
          JOIN crm.messages AS message ON message.conversation_id = conversation.id
          WHERE message.command_id = 'command-ai-1'`,
@@ -209,9 +230,28 @@ if (connectionString) {
         briefing_version: '1',
         claimed_revision: '1',
         delivery_status: 'read',
+        delivery_status_at: currentTime,
         inbound_revision: '1',
+        sent_at: NOW,
         status: 'sent',
       });
+      const latestMessage = await new PostgresOrderConversationPort({
+        contactEnvelopeKey,
+        database,
+        envelopeKey,
+      }).readLatestMessageStates([first.conversation_id]);
+      assert.equal(
+        latestMessage.get(first.conversation_id)?.sentAt,
+        NOW.toISOString(),
+      );
+      await assert.rejects(
+        pool.query(
+          `UPDATE crm.messages SET sent_at = $1
+           WHERE command_id = 'command-ai-1'`,
+          [currentTime],
+        ),
+        /first sent time is immutable/iu,
+      );
 
       const secondInbound = await service.receiveInbound({
         ...inbound,

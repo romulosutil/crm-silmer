@@ -1248,6 +1248,7 @@ async function confirmReservedSend(client, input, now) {
       `UPDATE crm.messages
        SET external_message_id = COALESCE(external_message_id, $2),
            status = 'sent',
+           sent_at = COALESCE(sent_at, $3),
            delivery_status = CASE
              WHEN delivery_status IN ('delivered', 'read') THEN delivery_status
              ELSE 'sent'

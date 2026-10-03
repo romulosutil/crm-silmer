@@ -34,8 +34,12 @@ const detail = ref(null);
 const busy = ref(false);
 const renaming = ref(false);
 const draftName = ref('');
+const renameBase = ref(null);
+const renameConflict = ref(false);
+const renameCurrentKnown = ref(false);
 const actionMessage = ref('');
 const nameInput = ref(null);
+const renameTrigger = ref(null);
 let listController;
 let detailController;
 let refreshTimer = 0;
@@ -114,7 +118,7 @@ async function loadContact(id, silent = false) {
   } catch (cause) {
     if (cause?.name !== 'AbortError') {
       error.value = 'Não foi possível carregar o contato selecionado.';
-      detail.value = null;
+      if (!silent || !renaming.value) detail.value = null;
     }
   } finally {
     detailLoading.value = false;
@@ -127,24 +131,66 @@ function clearSearch() {
 }
 
 async function openRename() {
+  if (!selected.value) return;
   draftName.value = selected.value?.displayName ?? '';
+  renameBase.value = {
+    contactId: selected.value.id,
+    expectedVersion: selected.value.version,
+  };
+  renameConflict.value = false;
+  renameCurrentKnown.value = false;
+  error.value = '';
   renaming.value = true;
   await nextTick();
   nameInput.value?.focus();
 }
 
+async function refreshConflictName() {
+  const contactId = renameBase.value?.contactId;
+  if (!contactId) return;
+  try {
+    const response = await request(
+      `/api/v1/contacts/${encodeURIComponent(contactId)}`,
+    );
+    if (renameBase.value?.contactId !== contactId) return;
+    detail.value = response.data;
+    renameCurrentKnown.value = true;
+  } catch {
+    renameCurrentKnown.value = false;
+  }
+}
+
+async function cancelRename() {
+  const hadConflict = renameConflict.value;
+  const contactId = renameBase.value?.contactId;
+  renaming.value = false;
+  renameBase.value = null;
+  renameConflict.value = false;
+  renameCurrentKnown.value = false;
+  if (hadConflict && contactId) await loadContact(contactId, true);
+  await nextTick();
+  renameTrigger.value?.focus();
+}
+
 async function saveName() {
-  if (!selected.value || busy.value) return;
+  const base = renameBase.value;
+  if (
+    !base ||
+    selected.value?.id !== base.contactId ||
+    busy.value ||
+    renameConflict.value
+  )
+    return;
   busy.value = true;
   error.value = '';
   actionMessage.value = '';
   try {
     await request(
-      `/api/v1/contacts/${encodeURIComponent(selected.value.id)}/name`,
+      `/api/v1/contacts/${encodeURIComponent(base.contactId)}/name`,
       {
         body: {
           displayName: draftName.value.trim(),
-          expectedVersion: selected.value.version,
+          expectedVersion: base.expectedVersion,
           reason: 'Nome do contato ajustado na ficha do cliente',
         },
         method: 'POST',
@@ -152,9 +198,19 @@ async function saveName() {
     );
     actionMessage.value = 'Nome do contato atualizado.';
     renaming.value = false;
+    renameBase.value = null;
     await loadContacts(true);
+    await nextTick();
+    renameTrigger.value?.focus();
   } catch (cause) {
-    error.value = describeError(cause);
+    if (Number(cause?.status) === 409) {
+      renameConflict.value = true;
+      await refreshConflictName();
+      await nextTick();
+      nameInput.value?.focus();
+    } else {
+      error.value = describeError(cause);
+    }
   } finally {
     busy.value = false;
   }
@@ -172,6 +228,11 @@ function scheduleLiveRefresh() {
 watch(
   () => props.selectedId,
   (id) => {
+    if (id && id !== renameBase.value?.contactId) {
+      renaming.value = false;
+      renameBase.value = null;
+      renameConflict.value = false;
+    }
     if (id && id !== selected.value?.id) void loadContact(id);
   },
 );
@@ -290,6 +351,9 @@ onBeforeUnmount(() => {
         <div class="client-head">
           <p class="section-kicker">Ficha do contato</p>
           <form v-if="renaming" class="rename-form" @submit.prevent="saveName">
+            <h2 :id="`client-${selected.id}`" class="sr-only">
+              {{ selected.label }}
+            </h2>
             <label :for="`client-name-${selected.id}`">Nome do contato</label>
             <input
               :id="`client-name-${selected.id}`"
@@ -299,11 +363,29 @@ onBeforeUnmount(() => {
               maxlength="120"
               placeholder="Sem nome definido"
             />
+            <div v-if="renameConflict" class="audit-note" role="alert">
+              <p>O nome mudou enquanto você editava. Seu texto foi mantido.</p>
+              <p v-if="renameCurrentKnown">
+                Nome atual: {{ selected.label }}. Cancele e abra a edição
+                novamente para revisar antes de salvar.
+              </p>
+              <p v-else>
+                Não foi possível consultar o nome atual. Consulte novamente ou
+                cancele para atualizar.
+              </p>
+              <button type="button" @click="refreshConflictName">
+                Consultar nome atual
+              </button>
+            </div>
             <div class="inline-actions">
-              <button type="submit" class="primary" :disabled="busy">
+              <button
+                type="submit"
+                class="primary"
+                :disabled="busy || renameConflict"
+              >
                 Salvar nome
               </button>
-              <button type="button" :disabled="busy" @click="renaming = false">
+              <button type="button" :disabled="busy" @click="cancelRename">
                 Cancelar
               </button>
             </div>
@@ -311,7 +393,12 @@ onBeforeUnmount(() => {
           <template v-else>
             <div class="client-title-row">
               <h2 :id="`client-${selected.id}`">{{ selected.label }}</h2>
-              <button type="button" class="link-button" @click="openRename">
+              <button
+                ref="renameTrigger"
+                type="button"
+                class="link-button"
+                @click="openRename"
+              >
                 Editar nome
               </button>
             </div>

@@ -20,6 +20,7 @@ import {
   validateFichaPrintSwitch,
 } from '../scripts/ficha-pdf-review.mjs';
 import { syntheticItems } from './fixtures/order-items.js';
+import { orderContextsFrom } from './fixtures/order-contexts.js';
 
 // PIM-10 (ADR 017): one switch decides the printed template. It names v3 since
 // the PO's provisional approval (T74); without a recorded approval it must
@@ -66,11 +67,11 @@ function harness() {
       }),
       readAssignments: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, 'seller-1'])),
-      readOrderContext: async () => ({
+      readOrderContexts: orderContextsFrom(() => ({
         briefing: { order_name: 'Equipe Sintetica' },
         customerName: 'Cliente Sintetico',
         openedAt: '2026-09-28T13:40:00.000Z',
-      }),
+      })),
       readUserNames: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, 'Vendedora Um'])),
       searchConversationIds: async () => [],

@@ -1315,6 +1315,28 @@ de `master`; as tasks rodam em ordem, uma por commit (T50–T69 já têm dono).
 | T71  | 1 regra de leitura e de gerar    | domínio, serviço, PG     | unit + live | T70        | ✅     |
 | T72  | verificação                      | full                     | full        | T71        | ✅     |
 
+## Impressão autorizada como leitura (03/10/2026)
+
+Achado na verificação da v3 no cloud-dev: nenhum pedido confirmado tinha sido
+impresso fora dos testes, e a rota de impressão respondia 403 para todo
+vendedor.
+
+### T75: Imprimir passa pela checagem de leitura
+
+- **What:** A checagem de leitura da identidade aceitava só ações terminadas em `.read`, e a impressão pede `order.print`; a rota respondia 403 com sessão válida. A lista de leituras passa a incluir `order.print`; ações que mudam dados continuam fora.
+- **Where:** `apps/api/src/identity-runtime.js`, `test/identity-operational-read.test.js`
+- **Depends on:** —
+- **Requirement:** PIM-02
+
+**Done when:**
+
+- [x] `order.print` chega à checagem de sessão como `order.read`
+- [x] `order.confirm`, `order.edit` e `order.intent` continuam recusadas como leitura
+- [x] O teste novo falha no código anterior
+- [x] `npm run validate` passa
+
+**Tests:** unit · **Gate:** quick · **Commit:** `fix(api): let a seller print a confirmed order`
+
 ---
 
 ## Validação das tasks

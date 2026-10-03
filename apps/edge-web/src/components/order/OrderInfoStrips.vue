@@ -14,22 +14,32 @@ const PRODUCTION_FIELD_COUNT = 14;
 const SERVICE_LABELS = Object.freeze({
   artwork_locations: 'Locais da arte',
   artwork_status: 'Arte',
+  // ADR 016: a wish such as "estampada" or "com foto"; only a named
+  // technique becomes the type of service.
+  artwork_technique: 'Estampa desejada',
   city_or_postal_code: 'Cidade ou CEP',
-  // ADR 012: the collar joins the item model; it lands here only when the
-  // agent sent it in a shape the ficha does not read.
-  collar: 'Gola',
+  // ADR 016: the seven points land on the item; they show here only when
+  // left to the seller or sent in a shape the order does not read.
+  collar: 'Gola informada',
   colors: 'Cores informadas',
+  customer_name: 'Nome informado',
   customizations: 'Personalizações',
   delivery_address: 'Endereço de entrega',
   delivery_mode: 'Forma de entrega',
+  fabrics: 'Tecido informado',
   needed_by: 'Data desejada',
   notes: 'Anotações',
   numbers: 'Numeração',
+  order_name: 'Evento / nome informado',
   pickup_location: 'Local de retirada',
+  product_model: 'Tipo de roupa informado',
+  product_type: 'Tipo de peça',
   purchase_profile: 'Perfil de compra',
   purpose: 'Finalidade',
   quantity: 'Quantidade informada',
   segment: 'Segmento',
+  // PIT-08: sizes that did not read without doubt.
+  sizes: 'Tamanhos informados',
   sponsors: 'Patrocinadores',
 });
 
@@ -78,8 +88,9 @@ const serviceEntries = computed(() =>
     </div>
     <div id="order-service-body" class="op-sheet-body">
       <p class="op-hint">
-        Arte, locais, logística, finalidade e perfil de compra — ficam no CRM e
-        não saem na ficha impressa.
+        Arte, locais, logística, finalidade e perfil de compra, e o que o
+        cliente disse sem virar campo do pedido — ficam no CRM e não saem na
+        ficha impressa.
       </p>
       <dl v-if="serviceOpen && serviceEntries.length" class="op-service">
         <div v-for="entry in serviceEntries" :key="entry.key">

@@ -1435,7 +1435,7 @@ details.exact summary {
 
 .op-label,
 .op-field > label:first-child,
-.op-specs dt,
+.op-points dt,
 .op-summary-main dt,
 .op-summary-meta dt,
 .op-service dt,
@@ -1765,7 +1765,7 @@ button.op-edit:disabled {
 }
 
 .op-summary-meta dd[data-muted],
-.op-specs dd[data-muted] {
+.op-points dd[data-muted] {
   color: var(--color-text-muted);
   font-weight: 500;
 }
@@ -2148,29 +2148,16 @@ button.op-add-item {
 
 .op-item-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1.1rem;
   background: var(--color-canvas);
   border-block-end: 1px solid var(--color-border-subtle);
 }
 
-.op-item-title {
+.op-item-heading {
   flex: 1 1 auto;
-  display: grid;
-  gap: 0.1rem;
   min-inline-size: 0;
-}
-
-.op-item-index {
-  color: var(--color-link);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.op-item-title h3 {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--color-brand-ink);
@@ -2179,32 +2166,26 @@ button.op-add-item {
   line-height: 1.3;
 }
 
-.op-item-title h3 span {
-  margin-inline-start: 0.35rem;
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.op-item-pieces {
+/* PIT-09: the sizes add up to something else than the customer said. */
+.op-quantity-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
   margin: 0;
-  color: var(--color-text-muted);
+  padding: 0.6rem 0.8rem;
+  color: var(--status-warning-text);
   font-size: var(--text-sm);
-  white-space: nowrap;
+  background: var(--status-warning-surface);
+  border-radius: var(--radius-md);
 }
 
-.op-item-pieces strong {
-  color: var(--color-accent-solid);
-  font-size: var(--text-2xl);
-  line-height: 1;
+.op-quantity-warning .op-icon {
+  flex: none;
+  margin-block-start: 0.1rem;
 }
 
-.op-item-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(14rem, 15.5rem);
-}
-
-.op-specs {
+/* PIT-01: the seven points in the bot's order, three to a row. */
+.op-points {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.25rem 1rem;
@@ -2212,18 +2193,19 @@ button.op-add-item {
   padding: 0.75rem 1.1rem 1rem;
 }
 
-.op-specs > div {
+.op-points > div {
   display: grid;
   align-content: start;
   gap: 0.2rem;
+  min-inline-size: 0;
   padding-block: 0.4rem;
 }
 
-.op-specs-wide {
-  grid-column: span 3;
+.op-points > .op-point--wide {
+  grid-column: span 2;
 }
 
-.op-specs dd {
+.op-points dd {
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -2233,22 +2215,12 @@ button.op-add-item {
   font-weight: 600;
 }
 
-.op-grade {
-  display: grid;
-  align-content: start;
-  gap: 0.6rem;
-  padding: 0.9rem 1rem;
-  border-inline-start: 1px solid var(--color-border-subtle);
-}
-
-.op-grade h4 {
-  margin: 0;
-}
-
 .op-grade-tiles {
   display: grid;
+  flex: 1 1 auto;
   grid-template-columns: repeat(auto-fill, minmax(2.9rem, 1fr));
   gap: 0.4rem;
+  max-inline-size: 24rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2274,43 +2246,56 @@ button.op-add-item {
   line-height: 1.2;
 }
 
+/* PIT-02: the optional fields, behind one button per item. */
+.op-extras {
+  border-block-start: 1px solid var(--color-border-subtle);
+}
+
+button.op-extras-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 0.5rem 1.1rem;
+  color: var(--color-link);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+button.op-extras-toggle:hover {
+  color: var(--color-link);
+  background: var(--color-surface-raised);
+}
+
+.op-extras-toggle .op-icon {
+  margin-inline-start: auto;
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+.op-extras-toggle[aria-expanded='true'] .op-icon {
+  transform: rotate(180deg);
+}
+
+.op-extras-body {
+  padding-block-start: 0.25rem;
+}
+
+.op-extras-body[hidden] {
+  display: none;
+}
+
 @media (width < 48rem) {
-  .op-item-body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .op-specs {
+  .op-points {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .op-specs-wide {
-    grid-column: span 2;
-  }
-
-  .op-grade {
-    border-inline-start: 0;
-    border-block-start: 1px solid var(--color-border-subtle);
   }
 }
 
 /* Item while editing */
-.op-item-edit .op-item-head {
-  align-items: flex-end;
-}
-
-.op-item-edit .op-item-index {
-  align-self: center;
-  inline-size: 3.5rem;
-  padding-block-start: 1.25rem;
-}
-
-.op-item-names {
-  flex: 1 1 auto;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
 .op-item-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2322,11 +2307,18 @@ button.op-add-item {
   grid-column: 1 / -1;
 }
 
+.op-quantity {
+  display: block;
+  padding-block: 0.55rem;
+  color: var(--color-brand-ink);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
 .op-grade-editor {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0.6rem;
-  margin: 0 1.1rem 1.1rem;
   padding: 0.9rem;
   background: var(--color-canvas);
   border-radius: var(--radius-md);
@@ -2392,17 +2384,12 @@ button.op-add-item {
 }
 
 @media (width < 48rem) {
-  .op-form-grid,
-  .op-item-names {
+  .op-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .op-item-fields {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .op-item-edit .op-item-head {
-    flex-wrap: wrap;
   }
 }
 
@@ -2758,20 +2745,6 @@ button.op-generate {
   border-block-start: 1px solid var(--color-border-subtle);
 }
 
-.op-ficha-gaps {
-  margin: 0;
-  padding: 0.65rem 0.8rem;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  background: var(--color-surface-raised);
-  border-radius: var(--radius-md);
-}
-
-.op-ficha-gaps[data-complete] {
-  color: var(--status-success-text);
-  background: var(--status-success-surface);
-}
-
 .op-total {
   display: flex;
   align-items: center;
@@ -2934,6 +2907,7 @@ button.op-generate {
 @media (prefers-reduced-motion: reduce) {
   .op-sheet,
   .op-disclosure .op-icon,
+  .op-extras-toggle .op-icon,
   .op-condition span {
     transition: none;
   }

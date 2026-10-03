@@ -51,25 +51,20 @@ export function fabLabel(code) {
 /** PIM-01: why the button is locked, said in the place of the button. */
 export const PRINT_LOCKED_REASON = 'Disponível depois de gerar o pedido';
 
-const SUMMARY_LABELS = Object.freeze({
-  aplicacao: 'tipo de serviço',
-  cliente: 'cliente',
-  data_entrega_confirmada: 'entrega prometida',
-  nome: 'evento/nome',
+// ADR 016: the seven points an item needs before the order is generated,
+// named as the seller reads them ("cor do item 1"). The quantity is the sum
+// of the sizes, so the sizes stand for it.
+const ITEM_POINT_LABELS = Object.freeze({
+  cor: 'cor',
+  estampa: 'estampa',
+  gola: 'gola',
+  grade: 'tamanhos',
+  malhas: 'tecido',
+  tipo: 'tipo de roupa',
 });
 
-const ITEM_LABELS = Object.freeze({
-  cor_costas: 'cor das costas',
-  cor_frente: 'cor da frente',
-  cor_manga_direita: 'cor da manga direita',
-  cor_manga_esquerda: 'cor da manga esquerda',
-  grade: 'grade',
-  malhas: 'malhas',
-  modelo: 'modelo',
-  tipo: 'tipo',
-  vies_gola: 'viés da gola',
-  vies_mangas: 'viés das mangas',
-});
+// What the bot records when the customer leaves a point to the seller.
+const DEFERRED = 'definir com o vendedor';
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
@@ -134,9 +129,19 @@ export function amountLabel(cents) {
 }
 
 /**
- * PFI-09: `missingFields` as the banner reads it. An entry this screen does
- * not know is shown as it is, so a field added to the ficha appears as a raw
- * name instead of disappearing from the list.
+ * Parts of a sentence joined the Portuguese way: "a, b e c".
+ *
+ * @param {string[]} parts
+ */
+export function joinPt(parts) {
+  if (parts.length < 2) return parts.join('');
+  return `${parts.slice(0, -1).join(', ')} e ${parts.at(-1)}`;
+}
+
+/**
+ * PIT-06: `missingFields` in plain words, in the order the server lists them.
+ * An entry this screen does not know is shown as it is, so a new blocker
+ * appears as a raw name instead of disappearing from the list.
  *
  * @param {unknown} missingFields
  * @returns {string[]}
@@ -148,29 +153,33 @@ export function missingFieldLabels(missingFields) {
 
 /** @param {string} field */
 function missingFieldLabel(field) {
-  if (field === 'items') return 'nenhum item com grade';
+  if (field === 'items') return 'nenhum item';
   if (field === 'finalAmount') return 'valor final';
-  if (field === 'paymentCondition') return 'condição de pagamento';
-  const summary = /^summary\.(\w+)$/u.exec(field);
-  if (summary) {
-    return (
-      SUMMARY_LABELS[/** @type {keyof typeof SUMMARY_LABELS} */ (summary[1])] ??
-      field
-    );
-  }
+  if (field === 'paymentCondition') return 'forma de pagamento';
   const item = /^items\[(\d+)\]\.(\w+)$/u.exec(field);
-  if (item) {
+  if (item && Object.hasOwn(ITEM_POINT_LABELS, item[2])) {
     const label =
-      ITEM_LABELS[/** @type {keyof typeof ITEM_LABELS} */ (item[2])] ?? item[2];
-    return `item ${Number(item[1]) + 1}: ${label}`;
+      ITEM_POINT_LABELS[
+        /** @type {keyof typeof ITEM_POINT_LABELS} */ (item[2])
+      ];
+    return `${label} do item ${Number(item[1]) + 1}`;
   }
   return field;
 }
 
 /**
- * PLI-05: one line for the Situação column. Blockers come first — they are
- * what keeps "Confirmar pedido" out of reach — and an empty ficha field is
- * named only when nothing blocks.
+ * True for the entries that belong to the items, as opposed to the amount
+ * and the payment method typed when generating.
+ *
+ * @param {string} field
+ */
+export function isItemGap(field) {
+  return field === 'items' || field.startsWith('items[');
+}
+
+/**
+ * PLI-05: one line for the Situação column and the drawer: the first two
+ * points still missing, and how many more.
  *
  * @param {unknown} missingFields
  */
@@ -178,12 +187,87 @@ export function missingHeadline(missingFields) {
   const missing = Array.isArray(missingFields) ? missingFields.map(String) : [];
   if (missing.length === 0) return 'Pronto para confirmar';
   if (missing.includes('items')) return 'Nenhum item';
-  const amount = missing.includes('finalAmount');
-  const condition = missing.includes('paymentCondition');
-  if (amount && condition) return 'Falta valor e condição';
-  if (amount) return 'Falta o valor final';
-  if (condition) return 'Falta a condição de pagamento';
-  return `Falta ${missingFieldLabel(missing[0])}`;
+  const labels = missingFieldLabels(missing);
+  if (labels.length <= 2) return `Falta ${joinPt(labels)}`;
+  const more = labels.length - 2;
+  return `Falta ${labels[0]}, ${labels[1]} e mais ${more} ${more === 1 ? 'ponto' : 'pontos'}`;
+}
+
+/** @param {Record<string, any>} item */
+export function itemPieces(item) {
+  return (Array.isArray(item?.grade) ? item.grade : []).reduce(
+    /** @param {number} total @param {Record<string, any>} line */
+    (total, line) =>
+      total + (Number.parseInt(String(line.quantidade), 10) || 0),
+    0,
+  );
+}
+
+/**
+ * PIT-01: "Item 1 · CAMISETA · 150 peças".
+ *
+ * @param {Record<string, any>} item @param {number} index
+ */
+export function itemHeading(item, index) {
+  const tipo = String(item?.tipo ?? '').trim() || '—';
+  return `Item ${index + 1} · ${tipo} · ${itemPieces(item)} peças`;
+}
+
+/**
+ * PIT-09: the quantity the customer told the bot, kept as service data. The
+ * text is shown as it came; `count` is set only when it holds one whole
+ * number, so "30 peças" compares and "entre 20 e 30" does not. A quantity
+ * left to the seller is not one.
+ *
+ * @param {Record<string, any>} order
+ * @returns {{text: string, count: number|null}|null}
+ */
+export function informedQuantity(order) {
+  const value = order?.ficha?.serviceData?.quantity;
+  let text = '';
+  if (typeof value === 'number' && Number.isFinite(value)) text = String(value);
+  else if (typeof value === 'string') text = value.trim();
+  if (text === '') return null;
+  const folded = text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[.!]+$/u, '');
+  if (folded === DEFERRED) return null;
+  const numbers = text.match(/\d+/gu) ?? [];
+  const count = numbers.length === 1 ? Number(numbers[0]) : null;
+  return {
+    count:
+      count !== null && Number.isSafeInteger(count) && count > 0 ? count : null,
+    text,
+  };
+}
+
+/**
+ * PIT-09: the warning beside "Total de peças" when the sizes add up to
+ * something other than what the customer said. It never blocks.
+ *
+ * @param {Record<string, any>} order
+ */
+export function quantityWarning(order) {
+  const informed = informedQuantity(order);
+  const total = Number(order?.totalPieces ?? 0);
+  if (!informed || informed.count === null || total <= 0) return '';
+  if (informed.count === total) return '';
+  return `A soma dos tamanhos (${total}) é diferente da quantidade informada (${informed.count})`;
+}
+
+/**
+ * PIT-09: an item's Quantidade — the sum of its sizes; with no sizes yet,
+ * the first item (the one the bot fills) says what the customer told it.
+ *
+ * @param {Record<string, any>} item @param {number} index @param {Record<string, any>} order
+ */
+export function itemQuantityLabel(item, index, order) {
+  const pieces = itemPieces(item);
+  if (pieces > 0) return `${pieces} ${pieces === 1 ? 'peça' : 'peças'}`;
+  const informed = index === 0 ? informedQuantity(order) : null;
+  return informed ? `— (cliente informou ${informed.text})` : '—';
 }
 
 /**

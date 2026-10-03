@@ -1,6 +1,10 @@
 <script setup>
 import { computed, inject, nextTick, ref } from 'vue';
-import { fabLabel } from '../../lib/order-format.js';
+import {
+  fabLabel,
+  informedQuantity,
+  quantityWarning,
+} from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
 
 const SECTION = 'summary';
@@ -21,6 +25,9 @@ const canEdit = computed(
   () => editing.canEdit.value && props.order.status === 'pendente',
 );
 const summary = computed(() => props.order.ficha.summary);
+// PIT-09: what the customer said, beside what the sizes add up to.
+const informed = computed(() => informedQuantity(props.order));
+const warning = computed(() => quantityWarning(props.order));
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
 );
@@ -180,13 +187,21 @@ async function save() {
         </div>
         <div>
           <dt>Total de peças</dt>
-          <dd class="op-num op-pieces">{{ order.totalPieces }}</dd>
+          <dd class="op-num op-pieces">
+            {{ order.totalPieces }}
+            <span v-if="informed" class="op-origin-note"
+              >cliente informou {{ informed.text }}</span
+            >
+          </dd>
         </div>
         <div>
           <dt>Tipo de serviço</dt>
           <dd>{{ summary.aplicacao || '—' }}</dd>
         </div>
       </dl>
+      <p v-if="warning" class="op-quantity-warning">
+        <OrderIcon name="alert" />{{ warning }}
+      </p>
       <dl class="op-summary-meta">
         <div>
           <dt>Evento / Nome</dt>
@@ -208,8 +223,8 @@ async function save() {
         </div>
       </dl>
       <p class="op-hint">
-        Total de peças é somado a partir da grade dos itens. O número do pedido
-        já existe desde a criação; a data do pedido é definida ao gerar.
+        Total de peças é somado a partir dos tamanhos dos itens. O número do
+        pedido já existe desde a criação; a data do pedido é definida ao gerar.
       </p>
     </div>
   </section>

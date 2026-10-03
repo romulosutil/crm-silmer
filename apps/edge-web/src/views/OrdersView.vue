@@ -237,7 +237,7 @@ onBeforeUnmount(() => {
               counts.confirmado
             }}</span>
           </h2>
-          <p>valor e condição de pagamento registrados</p>
+          <p>valor e forma de pagamento registrados</p>
         </div>
         <div class="table-wrap">
           <table class="data-table">

@@ -9,6 +9,12 @@ import {
   formatBrl,
   HANDOFF_REASON_LABELS,
   handoffReasonLabel,
+  informedQuantity,
+  isItemGap,
+  itemHeading,
+  itemPieces,
+  itemQuantityLabel,
+  joinPt,
   missingFieldLabels,
   missingHeadline,
   operationalDay,
@@ -18,6 +24,7 @@ import {
   PAYMENT_CONDITION_OPTIONS,
   paymentConditionLabel,
   PRINT_LOCKED_REASON,
+  quantityWarning,
 } from '../apps/edge-web/src/lib/order-format.js';
 
 test('names the two order statuses of ADR 006', () => {
@@ -106,40 +113,44 @@ test('shows the amount with the fixed prefix, or a dash while it is missing', ()
   assert.equal(amountLabel(null), '—');
 });
 
-test('turns missingFields into what the banner lists (PFI-09)', () => {
+test('names each point missing to generate in plain words (PIT-06)', () => {
   assert.deepEqual(
     missingFieldLabels([
-      'items',
+      'items[0].tipo',
+      'items[0].cor',
+      'items[0].estampa',
+      'items[0].malhas',
+      'items[1].grade',
+      'items[1].gola',
       'finalAmount',
       'paymentCondition',
-      'summary.cliente',
-      'summary.data_entrega_confirmada',
-      'summary.aplicacao',
-      'summary.nome',
     ]),
     [
-      'nenhum item com grade',
+      'tipo de roupa do item 1',
+      'cor do item 1',
+      'estampa do item 1',
+      'tecido do item 1',
+      'tamanhos do item 2',
+      'gola do item 2',
       'valor final',
-      'condição de pagamento',
-      'cliente',
-      'entrega prometida',
-      'tipo de serviço',
-      'evento/nome',
+      'forma de pagamento',
     ],
   );
-  assert.deepEqual(missingFieldLabels(['items[0].modelo', 'items[1].grade']), [
-    'item 1: modelo',
-    'item 2: grade',
-  ]);
-  assert.deepEqual(missingFieldLabels(['items[0].cor_manga_direita']), [
-    'item 1: cor da manga direita',
-  ]);
+  assert.deepEqual(missingFieldLabels(['items']), ['nenhum item']);
   assert.deepEqual(missingFieldLabels([]), []);
   assert.deepEqual(missingFieldLabels(null), []);
+  assert.equal(isItemGap('items'), true);
+  assert.equal(isItemGap('items[3].gola'), true);
+  assert.equal(isItemGap('finalAmount'), false);
 });
 
 test('names an unmapped missing field instead of hiding it', () => {
   assert.deepEqual(missingFieldLabels(['summary.futuro']), ['summary.futuro']);
+  assert.deepEqual(
+    missingFieldLabels(['items[0].modelo']),
+    ['items[0].modelo'],
+    'an extra never blocks, so it has no label of its own',
+  );
 });
 
 test('summarises what is missing for the Situação column (PLI-05)', () => {
@@ -150,15 +161,92 @@ test('summarises what is missing for the Situação column (PLI-05)', () => {
   );
   assert.equal(
     missingHeadline(['finalAmount', 'paymentCondition']),
-    'Falta valor e condição',
+    'Falta valor final e forma de pagamento',
   );
-  assert.equal(missingHeadline(['finalAmount']), 'Falta o valor final');
+  assert.equal(missingHeadline(['finalAmount']), 'Falta valor final');
   assert.equal(
-    missingHeadline(['paymentCondition']),
-    'Falta a condição de pagamento',
+    missingHeadline(['items[0].cor', 'finalAmount', 'paymentCondition']),
+    'Falta cor do item 1, valor final e mais 1 ponto',
   );
-  assert.equal(missingHeadline(['items[0].modelo']), 'Falta item 1: modelo');
+  assert.equal(
+    missingHeadline([
+      'items[0].cor',
+      'items[0].gola',
+      'finalAmount',
+      'paymentCondition',
+    ]),
+    'Falta cor do item 1, gola do item 1 e mais 2 pontos',
+  );
   assert.equal(missingHeadline(null), 'Pronto para confirmar');
+});
+
+test('joins parts of a sentence the Portuguese way', () => {
+  assert.equal(joinPt([]), '');
+  assert.equal(joinPt(['a']), 'a');
+  assert.equal(joinPt(['a', 'b']), 'a e b');
+  assert.equal(joinPt(['a', 'b', 'c']), 'a, b e c');
+});
+
+test('heads each item with its type and the pieces of its sizes (PIT-01)', () => {
+  const item = {
+    grade: [
+      { quantidade: 100, tamanho: 'M' },
+      { quantidade: 50, tamanho: 'G' },
+    ],
+    tipo: 'CAMISETA',
+  };
+  assert.equal(itemPieces(item), 150);
+  assert.equal(itemHeading(item, 0), 'Item 1 · CAMISETA · 150 peças');
+  assert.equal(
+    itemHeading({ grade: [], tipo: ' ' }, 2),
+    'Item 3 · — · 0 peças',
+  );
+  assert.equal(itemPieces({}), 0);
+});
+
+test('compares the sizes with the quantity the customer said, without blocking (PIT-09)', () => {
+  /** @param {unknown} quantity @param {number} totalPieces */
+  const order = (quantity, totalPieces) => ({
+    ficha: { serviceData: quantity === undefined ? {} : { quantity } },
+    totalPieces,
+  });
+  assert.deepEqual(informedQuantity(order(30, 0)), { count: 30, text: '30' });
+  assert.deepEqual(informedQuantity(order('30 peças', 0)), {
+    count: 30,
+    text: '30 peças',
+  });
+  assert.deepEqual(informedQuantity(order('entre 20 e 30', 0)), {
+    count: null,
+    text: 'entre 20 e 30',
+  });
+  assert.equal(informedQuantity(order('Definir com o vendedor', 0)), null);
+  assert.equal(informedQuantity(order(undefined, 0)), null);
+  assert.equal(informedQuantity(order('', 0)), null);
+
+  assert.equal(
+    quantityWarning(order(30, 40)),
+    'A soma dos tamanhos (40) é diferente da quantidade informada (30)',
+  );
+  assert.equal(quantityWarning(order(40, 40)), '');
+  assert.equal(quantityWarning(order(30, 0)), '', 'no sizes, no warning');
+  assert.equal(quantityWarning(order('uns 30 ou 40', 20)), '');
+  assert.equal(quantityWarning(order(undefined, 20)), '');
+
+  const empty = { grade: [] };
+  assert.equal(
+    itemQuantityLabel(empty, 0, order(30, 0)),
+    '— (cliente informou 30)',
+  );
+  assert.equal(itemQuantityLabel(empty, 1, order(30, 0)), '—');
+  assert.equal(itemQuantityLabel(empty, 0, order(undefined, 0)), '—');
+  assert.equal(
+    itemQuantityLabel(
+      { grade: [{ quantidade: 1, tamanho: 'M' }] },
+      0,
+      order(30, 1),
+    ),
+    '1 peça',
+  );
 });
 
 test('measures how long the order has been still (A02)', () => {

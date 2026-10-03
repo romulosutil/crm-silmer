@@ -1,8 +1,9 @@
 # ADR 017 — Ficha impressa com os sete pontos
 
-Status: aceito. A v3 só passa a imprimir pedidos depois que Rose e Operação
-assinarem a amostra impressa e a aprovação for registrada; até lá a v2
-continua imprimindo, sem mudar nenhum byte.
+Status: aceito. Aprovação em duas etapas: o PO aprovou a v3 em 03/10/2026
+para desenvolvimento e cloud-dev (aprovação provisória); a assinatura física
+de Rose e Operação na amostra impressa (aprovação final) continua pendente e é
+obrigatória antes da produção.
 
 Data: 02/10/2026
 
@@ -129,11 +130,23 @@ bloqueia.
    `npm run validate:ficha-pdf-review`. Os hashes travam a amostra, o HTML
    renderizado e o PDF. O HTML entra no registro porque o PDF não se reproduz
    byte a byte em outra máquina (fontes do sistema e data de criação), e o
-   HTML sim: mudar o template depois do PDF quebra a validação. A aprovação
-   fica pendente.
+   HTML sim: mudar o template depois do PDF quebra a validação.
 
-   **Quem assina e como** (PO, 03/10/2026): só Rose e Operação, como na v2,
-   e a assinatura é física: as duas assinam à mão a amostra v3 impressa, nas
+   **Duas etapas** (PO, 03/10/2026: "Essa assinatura será apenas em produção;
+   por enquanto, aprovada."):
+   - **Aprovação provisória**, registrada: o PO (papel PO, Rômulo Sutil)
+     aprovou a v3 em 03/10/2026 para desenvolvimento e cloud-dev
+     (`provisionalApproval`, escopo `development/cloud-dev`). Ela trava os
+     hashes da amostra, do HTML e do PDF aprovados: mudar qualquer um deles
+     quebra a validação, e o script recusa gerar o PDF de novo. Basta para
+     ligar a v3 no ponto de troca.
+   - **Aprovação final**, pendente: a assinatura física de Rose e Operação,
+     obrigatória antes da produção (`approval.requiredBefore: production`).
+     É um gate de go-live na seção 12 do `EASYPANEL-TOPOLOGY.md`, e a
+     validação mostra a pendência em toda execução.
+
+   **Quem assina a final e como** (PO, 03/10/2026): só Rose e Operação, como
+   na v2, e a assinatura é física: as duas assinam à mão a amostra v3 impressa, nas
    linhas de assinatura e data da última página. O registro espelha o da v2
    (`reviewedBy` com `rose` e `operation`) e diz que a assinatura é física.
    Só depois que o PO confirmar que o papel foi assinado, o Tech Lead registra

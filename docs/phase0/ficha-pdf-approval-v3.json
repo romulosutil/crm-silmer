@@ -21,9 +21,21 @@
     "sha256": "27eb1d4a6842701faad61797af9e99426a80e6ca29be853dc275d472d0a8a96f",
     "pageCount": 3
   },
+  "provisionalApproval": {
+    "status": "approved",
+    "approved": true,
+    "scope": "development/cloud-dev",
+    "reviewedBy": { "role": "PO", "name": "Rômulo Sutil" },
+    "reviewedAt": "2026-10-03",
+    "snapshotSha256": "27efa001b56c00f2add42c1b650a1d126ac547898207a9b46b81b598d8a2c9e6",
+    "renderedHtmlSha256": "d01988ceafdf580d77ac0b01b91a6f647671cf381c18091666914cf8d94b4ebd",
+    "artifactSha256": "27eb1d4a6842701faad61797af9e99426a80e6ca29be853dc275d472d0a8a96f",
+    "decisionRef": "docs/adr/017-ficha-impressa-com-os-sete-pontos.md"
+  },
   "approval": {
     "status": "pending-human-approval",
     "approved": false,
+    "requiredBefore": "production",
     "signature": "physical",
     "reviewedBy": { "rose": null, "operation": null },
     "reviewedAt": null,

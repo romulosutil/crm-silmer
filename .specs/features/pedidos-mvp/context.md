@@ -130,9 +130,10 @@ Pedidos substitui o que seria o Kanban.
     sete pontos, não mais a v3 por produto. Na página 1, Data do pedido e
     Entrega prometida saem só no Resumo, e a faixa do lastro traz Primeiro
     contato, Pagamento e Entrega realizada, com "—" no dia ainda não
-    registrado. A v3 só imprime depois que Rose e Operação assinarem à mão a
-    amostra impressa e o Tech Lead registrar a aprovação, confirmada pelo PO;
-    até lá valem D15 e esta D31.
+    registrado. A aprovação tem duas etapas (03/10/2026): o PO aprovou a v3
+    para desenvolvimento e cloud-dev; antes da produção, Rose e Operação
+    assinam à mão a amostra impressa e o Tech Lead registra a aprovação final,
+    confirmada pelo PO. D15 vale até a troca do template.
 
 ---
 

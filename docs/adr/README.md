@@ -43,3 +43,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [017 — Ficha impressa com os sete pontos](017-ficha-impressa-com-os-sete-pontos.md)
 - [018 — O cliente do pedido acompanha o contato](018-cliente-do-pedido-acompanha-o-contato.md)
 - [019 — Ficha espelhada e sinais operacionais](019-ficha-espelhada-e-sinais-operacionais.md)
+- [020 — Técnica por item e arte do pedido](020-tecnica-por-item-e-arte-do-pedido.md)

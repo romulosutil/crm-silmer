@@ -36,6 +36,16 @@ class IdentityHttpError extends Error {
  */
 
 /**
+ * A read is authorized by the session cookie alone, so only actions that
+ * change nothing pass here: every `.read` action and printing a confirmed
+ * order (PIM-02), which opens in a new tab as a plain navigation.
+ */
+const OPERATIONAL_READ_ACTIONS = new Set([
+  ...[...OPERATIONAL_ACTIONS].filter((action) => action.endsWith('.read')),
+  'order.print',
+]);
+
+/**
  * Composes the identity HTTP port with transaction-bound PostgreSQL adapters.
  * Secrets are decoded once and retained only in process memory.
  *
@@ -230,10 +240,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
 
     /** @param {{action: string, sessionToken: string}} input */
     async authorizeOperationalRead(input) {
-      if (
-        !OPERATIONAL_ACTIONS.has(input.action) ||
-        !input.action.endsWith('.read')
-      ) {
+      if (!OPERATIONAL_READ_ACTIONS.has(input.action)) {
         throw new IdentityHttpError(403, 'FORBIDDEN');
       }
       return database.transaction(async (client) => {

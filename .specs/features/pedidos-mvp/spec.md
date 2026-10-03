@@ -599,7 +599,7 @@ Verificado no Grupo H (T39) em 13/09/2026. Evidência = teste automatizado
 | PFI-12 | P1-4     | `test/orders-service-commands.test.js:260,336`; `modules/orders/src/domain/order.js:107` | Verified |
 | PFI-13 | P1-4     | `test/e2e/orders.spec.js:1075`                                      | Verified |
 | PIM-01 | P1-5     | `test/e2e/orders.spec.js:567`; `test/order-format.test.js:170`      | Verified |
-| PIM-02 | P1-5     | `test/order-routes.test.js:884`                                     | Verified |
+| PIM-02 | P1-5     | `test/order-routes.test.js:884`; `test/identity-operational-read.test.js` (T75) | Verified |
 | PIM-03 | P1-5     | `test/order-routes.test.js:917`                                     | Verified |
 | PIM-04 | P1-5     | `test/order-routes.test.js:889`                                     | Verified |
 | PIM-05 | P1-5     | `test/e2e/orders.spec.js:1110`                                      | Verified |

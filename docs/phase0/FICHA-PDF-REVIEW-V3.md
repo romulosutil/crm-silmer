@@ -1,8 +1,8 @@
 # T63 - Revisão do PDF da ficha v3 (sete pontos)
 
 Rastreabilidade: [ADR 017](../adr/017-ficha-impressa-com-os-sete-pontos.md);
-`T63` e a revisão do PO (`T65` a `T68`); `PIM-06..09`, `PIM-11` e `PLA-08`. A
-troca de template é a `T64` (`PIM-10`).
+`T63` e a revisão do PO (`T65`, `T67`, `T68` e `T69`); `PIM-06..09`, `PIM-11`,
+`PIM-12` e `PLA-08`. A troca de template é a `T64` (`PIM-10`).
 
 ## Estado do gate
 

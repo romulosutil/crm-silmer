@@ -38,7 +38,13 @@ const actionMenu = ref(null);
 const actionMenuFor = ref(null);
 const actionMenuPosition = ref({ left: 0, top: 0 });
 const actionMenuTrigger = ref(null);
+const interactionBlocked = computed(
+  () =>
+    busy.value ||
+    Boolean(editing.value || confirmingDelete.value || actionMenuFor.value),
+);
 let fallbackTimer = 0;
+let pendingLiveRefresh = false;
 
 const currentUser = computed(() => props.session.user ?? props.session);
 const isAdmin = computed(() =>
@@ -71,7 +77,7 @@ onMounted(async () => {
       liveConnection.value !== 'conectado' &&
       globalThis.document.visibilityState === 'visible'
     )
-      void load(true);
+      queueLiveRefresh();
   }, 30_000);
 });
 
@@ -97,16 +103,24 @@ async function load(silent = false) {
   }
 }
 
+function flushLiveRefresh() {
+  if (!pendingLiveRefresh || interactionBlocked.value) return;
+  pendingLiveRefresh = false;
+  void load(true);
+}
+
+function queueLiveRefresh() {
+  pendingLiveRefresh = true;
+  flushLiveRefresh();
+}
+
 watch(liveEvent, (event) => {
-  if (
-    (event?.reset || event?.type === 'identity.user.changed') &&
-    !busy.value &&
-    !editing.value &&
-    !confirmingDelete.value &&
-    !actionMenuFor.value
-  ) {
-    void load(true);
-  }
+  if (event?.reset || event?.type === 'identity.user.changed')
+    queueLiveRefresh();
+});
+
+watch(interactionBlocked, (blocked) => {
+  if (!blocked) flushLiveRefresh();
 });
 
 /** @param {SubmitEvent} event */

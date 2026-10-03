@@ -246,3 +246,64 @@ test('rejects a non-technical actor and malformed contract with typed HTTP error
       /source_revision/u.test(error.message),
   );
 });
+
+test('carries open_order only on the reservation and the handoff (ADR 014)', async () => {
+  const { calls, service } = harness();
+  /** @param {string} id @param {string} eventType @param {Record<string, unknown>} extra */
+  const event = (id, eventType, extra) =>
+    service.recordEvent({
+      automation_epoch: 3,
+      command_id: `command-${id}`,
+      conversation_id: 'conversation-1',
+      event_id: `open-order-${id}`,
+      event_type: eventType,
+      external_message_id: 'wamid.outbound.1',
+      handoff: { reason: 'negotiation', summary: 'Perguntou o valor.' },
+      message: { text: 'Mensagem segura', type: 'text' },
+      occurred_at: NOW.toISOString(),
+      schema_version: '1.0',
+      source_revision: 7,
+      technical: { ...TECHNICAL, idempotencyKey: `open-order-${id}` },
+      ...extra,
+    });
+
+  await event('reserve', 'message.send.requested', { open_order: true });
+  await event('handoff', 'handoff.requested', { open_order: true });
+  await event('closed', 'message.send.requested', { open_order: false });
+  await event('absent', 'message.send.requested', {});
+  assert.deepEqual(
+    calls.map(({ input }) => [input.eventType, input.openOrder]),
+    [
+      ['message.send.requested', true],
+      ['handoff.requested', true],
+      ['message.send.requested', false],
+      ['message.send.requested', null],
+    ],
+  );
+
+  // A flag rendered as text or a number would open nothing in silence.
+  for (const value of ['true', 1, null]) {
+    await assert.rejects(
+      event(`typed-${String(value)}`, 'message.send.requested', {
+        open_order: value,
+      }),
+      (error) =>
+        error instanceof N8nValidationError &&
+        error.statusCode === 400 &&
+        error.message === 'open_order must be a boolean',
+    );
+  }
+  // Only the events that carry the turn's briefing may open the order.
+  for (const eventType of ['message.sent', 'workflow.failed']) {
+    for (const value of [true, false]) {
+      await assert.rejects(
+        event(`${eventType}-${value}`, eventType, { open_order: value }),
+        (error) =>
+          error instanceof N8nValidationError &&
+          error.message ===
+            'open_order is only allowed on send reservation or handoff',
+      );
+    }
+  }
+  assert.equal(calls.length, 4);
+});

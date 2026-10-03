@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { Pool } from 'pg';
 
+import { createN8nApiRuntime } from '../apps/api/src/n8n-runtime.js';
 import {
   loadMigrations,
   migrate,
@@ -21,12 +22,23 @@ import {
 const connectionString = process.env.TEST_DATABASE_URL;
 const NOW = new Date('2026-09-08T15:00:00.000Z');
 
+/**
+ * These suites drop and recreate the `crm` schema, so they only run on a
+ * dedicated test database: `crm_silmer_test`, or a per-branch copy named
+ * `crm_silmer_test_<suffix>` when several branches share one PostgreSQL.
+ *
+ * @param {string} url
+ */
+function assertTestDatabase(url) {
+  assert.match(
+    new URL(url).pathname.slice(1),
+    /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
+  );
+}
+
 if (connectionString) {
   test('PostgreSQL folds revision fencing, briefing and delivery into the MVP model', async () => {
-    assert.equal(
-      new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
-    );
+    assertTestDatabase(connectionString);
     const pool = new Pool({ connectionString, max: 12 });
     const database = {
       query: pool.query.bind(pool),
@@ -307,10 +319,7 @@ if (connectionString) {
   });
 
   test('PostgreSQL seeds an order created after the agent reply with the merged briefing', async () => {
-    assert.equal(
-      new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
-    );
+    assertTestDatabase(connectionString);
     const pool = new Pool({ connectionString, max: 12 });
     const database = {
       query: pool.query.bind(pool),
@@ -436,10 +445,7 @@ if (connectionString) {
   });
 
   test('PostgreSQL caps automated messages and reserves the handoff notice (ADR 009)', async () => {
-    assert.equal(
-      new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
-    );
+    assertTestDatabase(connectionString);
     const pool = new Pool({ connectionString, max: 4 });
     const database = {
       query: pool.query.bind(pool),
@@ -647,6 +653,330 @@ if (connectionString) {
         }),
         /handoff\.notice\.text/u,
       );
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
+
+  test('PostgreSQL opens the pending order with the agent event that carries the ficha (ADR 014)', async () => {
+    assertTestDatabase(connectionString);
+    const pool = new Pool({ connectionString, max: 12 });
+    const database = {
+      query: pool.query.bind(pool),
+      transaction: (/** @type {(client: any) => Promise<any>} */ work) =>
+        withTransaction(pool, work),
+    };
+    let sequence = 0;
+    const contactEnvelopeKey = Buffer.alloc(32, 72);
+    const envelopeKey = Buffer.alloc(32, 71);
+    const orders = createOrderService({
+      authorizeOwnership: async () => {},
+      conversations: new PostgresOrderConversationPort({
+        contactEnvelopeKey,
+        database,
+        envelopeKey,
+      }),
+      fabCode: 'FAB-TEST',
+      repository: new PostgresOrderRepository({ database, envelopeKey }),
+    });
+    /** @param {any} ordersPort */
+    const serviceWith = (ordersPort) =>
+      createN8nIntegrationService({
+        clock: () => NOW,
+        idFactory: (kind) => `${kind}-open-${++sequence}`,
+        repository: new PostgresN8nIntegrationRepository({
+          contactEnvelopeKey,
+          contactLookupKey: Buffer.alloc(32, 73),
+          database,
+          envelopeKey,
+          messageEnvelopeKey: Buffer.alloc(32, 74),
+          orders: ordersPort,
+        }),
+      });
+    const service = serviceWith(orders);
+    /** @param {string} id */
+    const technical = (id) => ({
+      actor: 'AUTOMATION_EXECUTOR',
+      correlationId: `correlation-${id}`,
+      credentialVersion: 'current',
+      executionId: id,
+      idempotencyKey: id,
+      requestId: `request-${id}`,
+      workflowKey: 'whatsapp-mvp',
+      workflowVersion: 'mvp-simple-11',
+    });
+    /** @param {string} waId @param {number} turn @param {string} [name] */
+    const inbound = (waId, turn, name = 'Synthetic') =>
+      service.receiveInbound({
+        channel: 'whatsapp',
+        contact: { name, wa_id: waId },
+        event_id: `wamid.${waId}.${turn}`,
+        message: {
+          external_id: `wamid.${waId}.${turn}`,
+          text: `Mensagem ${turn}`,
+          type: 'text',
+        },
+        metadata: { phone_number_id: 'phone-account-open' },
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        technical: technical(`inbound-${waId}-${turn}`),
+      });
+    /** @param {any} context @param {string} id @param {Record<string, unknown>} extra */
+    const reservation = (context, id, extra) => ({
+      automation_epoch: context.automation_epoch,
+      command_id: `${context.conversation_id}:${context.source_revision}:ai-response`,
+      conversation_id: context.conversation_id,
+      event_id: `reserve:${id}`,
+      event_type: 'message.send.requested',
+      message: { text: 'Qual a cor da camisa?', type: 'text' },
+      occurred_at: NOW.toISOString(),
+      schema_version: '1.0',
+      source_revision: context.source_revision,
+      technical: technical(`reserve-${id}`),
+      ...extra,
+    });
+    /** @param {string} conversationId */
+    const pendingOrders = async (conversationId) =>
+      (
+        await pool.query(
+          `SELECT id FROM crm.orders
+           WHERE conversation_id = $1 AND status = 'pendente'`,
+          [conversationId],
+        )
+      ).rows.map((/** @type {any} */ row) => row.id);
+
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+
+      // The workflow decides; without open_order a ficha point opens nothing.
+      const quiet = await inbound('5527900000101', 1);
+      const notAsked = await service.recordEvent(
+        reservation(quiet, 'quiet-1', {
+          briefing_patch: { product_model: 'camiseta comum' },
+        }),
+      );
+      assert.equal(notAsked.send_authorized, true);
+      assert.equal('order' in notAsked, false);
+      assert.deepEqual(await pendingOrders(quiet.conversation_id), []);
+
+      // First point of the ficha: the reservation opens exactly one order,
+      // built from the briefing this same event merged, even when n8n
+      // retries the request while the first attempt is still running.
+      const first = await inbound('5527900000102', 1);
+      const opening = reservation(first, 'first-1', {
+        briefing_patch: {
+          order_name: 'Formatura 2026',
+          product_model: 'camiseta comum',
+        },
+        open_order: true,
+      });
+      const [opened, retried] = await allValues([
+        service.recordEvent(opening),
+        service.recordEvent(opening),
+      ]);
+      const [original, replay] = opened.duplicate
+        ? [retried, opened]
+        : [opened, retried];
+      assert.equal(original.send_authorized, true);
+      assert.equal(replay.send_authorized, false);
+      assert.equal(original.order.opened, true);
+      assert.equal(replay.order.opened, true);
+      assert.equal(replay.order.id, original.order.id);
+      assert.deepEqual([original.order.created, replay.order.created].sort(), [
+        false,
+        true,
+      ]);
+      assert.deepEqual(await pendingOrders(first.conversation_id), [
+        original.order.id,
+      ]);
+      const created = await orders.get(original.order.id);
+      assert.equal(created.status, 'pendente');
+      assert.equal(created.ficha.summary.nome, 'Formatura 2026');
+
+      // The next turn keeps asking (the rule is sticky): the same order is
+      // reused and receives the projection, as before ADR 014.
+      const next = await inbound('5527900000102', 2);
+      const reused = await service.recordEvent(
+        reservation(next, 'first-2', {
+          briefing_patch: { order_name: 'Formatura 2027', quantity: 30 },
+          open_order: true,
+        }),
+      );
+      assert.deepEqual(reused.order, {
+        created: false,
+        id: original.order.id,
+        opened: true,
+      });
+      const projected = await orders.get(original.order.id);
+      assert.equal(projected.ficha.summary.nome, 'Formatura 2027');
+      assert.equal(projected.version, created.version + 1);
+      assert.deepEqual(await pendingOrders(first.conversation_id), [
+        original.order.id,
+      ]);
+
+      // A handoff has no next turn: it opens the order itself.
+      const handedOff = await inbound('5527900000103', 1);
+      const handoff = await service.recordEvent({
+        automation_epoch: handedOff.automation_epoch,
+        briefing_patch: { order_name: 'Time da escola', quantity: 30 },
+        conversation_id: handedOff.conversation_id,
+        event_id: `${handedOff.conversation_id}:1:handoff`,
+        event_type: 'handoff.requested',
+        handoff: {
+          reason: 'negotiation',
+          summary: 'Motivo: Perguntou o valor. Ficha: 1 de 8 (13%).',
+        },
+        occurred_at: NOW.toISOString(),
+        open_order: true,
+        schema_version: '1.0',
+        source_revision: handedOff.source_revision,
+        technical: technical('handoff-open-1'),
+      });
+      assert.match(handoff.handoff_id, /^handoff-/u);
+      assert.equal(handoff.order.opened, true);
+      assert.equal(handoff.order.created, true);
+      const fromHandoff = await orders.get(handoff.order.id);
+      assert.equal(fromHandoff.conversationId, handedOff.conversation_id);
+      assert.equal(fromHandoff.ficha.summary.nome, 'Time da escola');
+
+      // The orders side fails (an API ahead of its migration, as on
+      // 30/09): the reply is still authorized, the failure is reported,
+      // audited and logged without the customer's data.
+      const logged = /** @type {unknown[][]} */ ([]);
+      const originalError = console.error;
+      console.error = (...args) => logged.push(args);
+      let failed;
+      let unavailable;
+      try {
+        const broken = serviceWith({
+          async ensurePendingFromIntent() {
+            throw Object.assign(
+              new Error('relation "crm.orders" does not exist: Ana Horizonte'),
+              { code: '42P01' },
+            );
+          },
+          projectAgentBriefing: orders.projectAgentBriefing,
+        });
+        const customer = await inbound('5527911112222', 1, 'Ana Horizonte');
+        failed = await broken.recordEvent(
+          reservation(customer, 'broken-1', {
+            briefing_patch: {
+              customer_name: 'Ana Horizonte',
+              quantity: 30,
+            },
+            open_order: true,
+          }),
+        );
+        assert.equal(failed.accepted, true);
+        assert.equal(failed.send_authorized, true);
+        assert.deepEqual(failed.order, {
+          error: 'ORDER_OPEN_FAILED',
+          opened: false,
+        });
+        assert.deepEqual(await pendingOrders(customer.conversation_id), []);
+        const audit = await pool.query(
+          `SELECT actor_id, reason, target_type, target_id
+           FROM crm.audit_events
+           WHERE action = 'integration.n8n.order.open_failed'`,
+        );
+        assert.deepEqual(audit.rows, [
+          {
+            actor_id: 'AUTOMATION_EXECUTOR',
+            reason: 'ORDER_OPEN_FAILED',
+            target_id: customer.conversation_id,
+            target_type: 'conversation',
+          },
+        ]);
+
+        const noOrders = serviceWith(null);
+        const other = await inbound('5527900000104', 1);
+        unavailable = await noOrders.recordEvent(
+          reservation(other, 'no-orders-1', {
+            briefing_patch: { quantity: 12 },
+            open_order: true,
+          }),
+        );
+      } finally {
+        console.error = originalError;
+      }
+      assert.deepEqual(unavailable.order, {
+        error: 'ORDERS_RUNTIME_UNAVAILABLE',
+        opened: false,
+      });
+      const trace = JSON.stringify(logged);
+      assert.match(trace, /ORDER_OPEN_FAILED/u);
+      for (const secret of ['Ana', '5527911112222', 'does not exist']) {
+        assert.equal(trace.includes(secret), false, secret);
+      }
+
+      // A retry of the same event opens the order once the cause is gone.
+      let failNext = true;
+      const flaky = serviceWith({
+        /** @param {any} input */
+        async ensurePendingFromIntent(input) {
+          if (failNext) {
+            failNext = false;
+            throw Object.assign(new Error('terminating connection'), {
+              code: '57P01',
+            });
+          }
+          return orders.ensurePendingFromIntent(input);
+        },
+        projectAgentBriefing: orders.projectAgentBriefing,
+      });
+      const retry = await inbound('5527900000105', 1);
+      const retryEvent = reservation(retry, 'retry-1', {
+        briefing_patch: { colors: 'azul marinho' },
+        open_order: true,
+      });
+      console.error = () => {};
+      let afterFailure;
+      try {
+        afterFailure = await flaky.recordEvent(retryEvent);
+      } finally {
+        console.error = originalError;
+      }
+      assert.equal(afterFailure.order.opened, false);
+      const healed = await flaky.recordEvent(retryEvent);
+      assert.equal(healed.duplicate, true);
+      assert.equal(healed.order.opened, true);
+      assert.equal(healed.order.created, true);
+      assert.deepEqual(await pendingOrders(retry.conversation_id), [
+        healed.order.id,
+      ]);
+
+      // Older workflows still send order.intent_confirmed (deprecated).
+      const key = Buffer.alloc(32, 91).toString('base64');
+      const runtime = createN8nApiRuntime(database, {
+        environment: {
+          CONTACT_IDENTITY_ENVELOPE_KEY: key,
+          CONTACT_IDENTITY_LOOKUP_KEY: key,
+          INBOX_MESSAGE_ENVELOPE_KEY: key,
+          N8N_INTEGRATION_ENVELOPE_KEY: key,
+        },
+        mediaVolume: /** @type {any} */ ({}),
+        orders,
+      });
+      const legacyReuse = await runtime.recordOrderIntent({
+        conversation_id: first.conversation_id,
+        event_id: 'legacy-intent-1',
+        technical: technical('legacy-intent-1'),
+      });
+      assert.equal(legacyReuse.duplicate, true);
+      assert.equal(legacyReuse.order_id, original.order.id);
+      const legacyNew = await runtime.recordOrderIntent({
+        conversation_id: quiet.conversation_id,
+        event_id: 'legacy-intent-2',
+        technical: technical('legacy-intent-2'),
+      });
+      assert.equal(legacyNew.duplicate, false);
+      assert.deepEqual(await pendingOrders(quiet.conversation_id), [
+        legacyNew.order_id,
+      ]);
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

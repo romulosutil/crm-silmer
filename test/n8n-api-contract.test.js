@@ -10,6 +10,7 @@ import {
   validateEvent,
   validateHeaders,
   validateInbound,
+  validateOrderOpening,
   validateProblem,
 } from '../schemas/fixtures/external/n8n/contract-validator.mjs';
 
@@ -120,4 +121,87 @@ test('rejects unknown command fields and preserves a closed problem+json shape',
     'title',
     'type',
   ]);
+});
+
+test('open_order travels only on the reservation and the handoff (ADR 014)', async () => {
+  const contract = await fixture('contract-v1.json');
+  const schema = await fixture('contract-v1.schema.json');
+  const reservation = await fixture('message-send-requested.json');
+  const handoff = await fixture('handoff-requested.json');
+
+  assert.deepEqual(contract.openOrderEvents, [
+    'message.send.requested',
+    'handoff.requested',
+  ]);
+  assert.deepEqual(schema.$defs.openOrder.type, 'boolean');
+  assert.ok(schema.required.includes('openOrderEvents'));
+  assert.equal(reservation.open_order, true);
+  assert.equal(validateEvent(reservation, contract), true);
+  assert.equal(validateEvent(handoff, contract), true);
+  assert.equal(
+    validateEvent({ ...reservation, open_order: false }, contract),
+    true,
+  );
+  const withoutFlag = { ...reservation };
+  delete withoutFlag.open_order;
+  assert.equal(validateEvent(withoutFlag, contract), true);
+
+  for (const [payload, code] of [
+    [{ ...reservation, open_order: 'true' }, 'INVALID_OPEN_ORDER'],
+    [{ ...reservation, open_order: null }, 'INVALID_OPEN_ORDER'],
+    [
+      {
+        command_id: 'conversation-synthetic-001:7:ai-response',
+        conversation_id: 'conversation-synthetic-001',
+        event_id: 'sent-001',
+        event_type: 'message.sent',
+        external_message_id: 'wamid.synthetic.1',
+        occurred_at: '2026-09-07T12:00:11.000Z',
+        open_order: true,
+        schema_version: '1.0',
+      },
+      'INVALID_OPEN_ORDER_EVENT',
+    ],
+  ]) {
+    assert.throws(
+      () => validateEvent(payload, contract),
+      (error) =>
+        error instanceof ContractValidationError && error.code === code,
+    );
+  }
+  assert.throws(
+    () =>
+      validateContract({
+        ...contract,
+        openOrderEvents: ['message.sent'],
+      }),
+    (error) =>
+      error instanceof ContractValidationError &&
+      error.code === 'INVALID_OPEN_ORDER_EVENTS',
+  );
+});
+
+test('the order opening answer is either the order or a typed failure (ADR 014)', () => {
+  assert.equal(
+    validateOrderOpening({ created: true, id: 'order-1', opened: true }),
+    true,
+  );
+  assert.equal(
+    validateOrderOpening({ error: 'ORDER_OPEN_FAILED', opened: false }),
+    true,
+  );
+  for (const invalid of [
+    { opened: true, id: 'order-1' },
+    { opened: true, created: false },
+    { opened: false },
+    { opened: false, error: 'falha ao abrir' },
+    { opened: false, error: 'ORDER_OPEN_FAILED', id: 'order-1' },
+    { error: 'ORDER_OPEN_FAILED' },
+  ]) {
+    assert.throws(
+      () => validateOrderOpening(invalid),
+      ContractValidationError,
+      JSON.stringify(invalid),
+    );
+  }
 });

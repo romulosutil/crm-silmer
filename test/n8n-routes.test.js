@@ -168,3 +168,54 @@ test('n8n events route sends order.intent_confirmed to recordOrderIntent under t
   assert.equal(calls[0].input.conversation_id, 'conversation-synthetic');
   assert.equal(calls[0].input.event_id, 'event-synthetic');
 });
+
+test('n8n events route forwards open_order and also authorizes the order action (ADR 014)', async (t) => {
+  const { api, authorizedActions, calls } = harness();
+  t.after(() => api.close());
+  /** @param {Record<string, unknown>} extra */
+  const send = (extra) =>
+    api.inject({
+      headers: technicalHeaders,
+      method: 'POST',
+      payload: {
+        automation_epoch: 1,
+        command_id: 'conversation-synthetic:2:ai-response',
+        conversation_id: 'conversation-synthetic',
+        event_id: 'reserve:conversation-synthetic:2:ai-response',
+        event_type: 'message.send.requested',
+        message: { text: 'Qual a cor?', type: 'text' },
+        occurred_at: '2026-10-02T12:00:00.000Z',
+        schema_version: '1.0',
+        source_revision: 2,
+        ...extra,
+      },
+      url: '/api/v1/integrations/n8n/events',
+    });
+
+  const opening = await send({ open_order: true });
+  assert.equal(opening.statusCode, 200);
+  assert.deepEqual(authorizedActions, [
+    'integration.n8n.event.create',
+    'order.intent',
+  ]);
+  assert.equal(calls[0].method, 'recordEvent');
+  assert.equal(calls[0].input.open_order, true);
+
+  authorizedActions.length = 0;
+  const handoff = await send({
+    event_type: 'handoff.requested',
+    handoff: { reason: 'negotiation', summary: 'Perguntou o valor.' },
+    open_order: true,
+  });
+  assert.equal(handoff.statusCode, 200);
+  assert.deepEqual(authorizedActions, ['handoff.create', 'order.intent']);
+
+  authorizedActions.length = 0;
+  assert.equal((await send({ open_order: false })).statusCode, 200);
+  assert.equal((await send({})).statusCode, 200);
+  assert.deepEqual(authorizedActions, [
+    'integration.n8n.event.create',
+    'integration.n8n.event.create',
+  ]);
+  assert.equal(calls.length, 4);
+});

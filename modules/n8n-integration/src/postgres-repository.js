@@ -7,6 +7,10 @@ import {
 import { N8nConflictError, N8nNotFoundError } from './errors.js';
 
 /** @typedef {{query(sql: string, values?: unknown[]): Promise<{rows: any[]}>}} Queryable */
+/**
+ * The `order` answer of an event that asked `open_order` (ADR 014).
+ * @typedef {{opened: true, id: string, created: boolean} | {opened: false, error: string}} OrderOpening
+ */
 
 const CONTACT_DISPLAY_NAME_MAX_LENGTH = 120;
 
@@ -59,7 +63,10 @@ export class PostgresN8nIntegrationRepository {
    *   contactEnvelopeKey?: Buffer,
    *   contactLookupKey?: Buffer,
    *   messageEnvelopeKey?: Buffer,
-   *   orders?: {projectAgentBriefing(input: {conversationId: string, correlationId: string, briefing: Record<string, unknown>, automationState: string}): Promise<any>} | null,
+   *   orders?: {
+   *     ensurePendingFromIntent?(input: {conversationId: string, correlationId: string}): Promise<{created: boolean, order: {id: string}}>,
+   *     projectAgentBriefing(input: {conversationId: string, correlationId: string, briefing: Record<string, unknown>, automationState: string}): Promise<any>,
+   *   } | null,
    *   automationMessageCap?: number,
    * }} options
    */
@@ -443,6 +450,9 @@ export class PostgresN8nIntegrationRepository {
     // the nested connection, which waits on that same lock) — a real
     // transaction_timeout hang was reproduced. Deferring the call to after
     // commit avoids the shared lock entirely; it already runs best-effort.
+    // Opening the pending order (ADR 014, `open_order`) follows the same
+    // rule: it runs after commit, so it reads the briefing this event merged,
+    // and its outcome is reported in the response without failing the event.
     /** @type {any} */
     let projectionTarget = null;
     const result = await this.database.transaction(async (client) => {
@@ -627,13 +637,87 @@ export class PostgresN8nIntegrationRepository {
           : {}),
       };
     });
-    if (projectionTarget) {
+    // A replay opens it too: the order call is idempotent, and a retry after
+    // a lost response must still learn whether the order exists.
+    const order =
+      input.openOrder === true ? await this.#openOrder(input, runtime) : null;
+    // An order created just now was built from the briefing this event
+    // merged; only an order that already existed needs the projection.
+    const createdNow = order?.opened === true && order.created;
+    if (projectionTarget && !createdNow) {
       await this.#projectOrder(
         projectionTarget.conversation,
         projectionTarget.correlationId,
       );
     }
-    return result;
+    return order ? { ...result, order } : result;
+  }
+
+  /**
+   * ADR 014 (D30): creates or reuses the conversation's pending order from
+   * the merged briefing, after the event committed. A failure never fails
+   * the event — the customer reply still goes out — but it is not silent
+   * either: it is logged without PII, audited and reported as
+   * `{opened: false, error}` so the workflow raises `ORDER_OPEN_FAILED`.
+   *
+   * @param {any} input @param {any} runtime
+   * @returns {Promise<OrderOpening>}
+   */
+  async #openOrder(input, runtime) {
+    if (typeof this.orders?.ensurePendingFromIntent !== 'function') {
+      return this.#orderOpenFailed(
+        input,
+        runtime,
+        'ORDERS_RUNTIME_UNAVAILABLE',
+      );
+    }
+    try {
+      const { created, order } = await this.orders.ensurePendingFromIntent({
+        conversationId: input.conversationId,
+        correlationId: input.correlationId,
+      });
+      return { opened: true, id: order.id, created: created === true };
+    } catch (error) {
+      return this.#orderOpenFailed(input, runtime, orderFailureCode(error));
+    }
+  }
+
+  /**
+   * @param {any} input @param {any} runtime @param {string} code
+   * @returns {Promise<{opened: false, error: string}>}
+   */
+  async #orderOpenFailed(input, runtime, code) {
+    const trace = {
+      code,
+      conversationId: input.conversationId,
+      correlationId: input.correlationId,
+      eventType: input.eventType,
+    };
+    console.error(
+      'n8n event accepted but the pending order did not open',
+      trace,
+    );
+    try {
+      await this.database.transaction(async (client) => {
+        await transactionBounds(client);
+        await appendAudit(client, runtime, {
+          action: 'integration.n8n.order.open_failed',
+          actor: input.technical.actor,
+          correlationId: input.correlationId,
+          occurredAt: validClock(runtime.clock),
+          reason: code,
+          targetId: input.conversationId,
+          targetType: 'conversation',
+          version: input.automationEpoch ?? 1,
+        });
+      });
+    } catch (error) {
+      console.error('the failed order opening could not be audited', {
+        ...trace,
+        auditCode: orderFailureCode(error),
+      });
+    }
+    return { opened: false, error: code };
   }
 
   /** @param {Queryable} client @param {string} conversationId @param {boolean} duplicate */
@@ -1422,6 +1506,22 @@ function safeFailureCode(value) {
   return typeof value === 'string' && /^[A-Z0-9_]{1,64}$/u.test(value)
     ? value
     : 'WORKFLOW_FAILED';
+}
+
+/**
+ * A typed domain code (`CONVERSATION_NOT_FOUND`, `ORDER_PENDING_EXISTS`...)
+ * travels as is; anything else, including driver codes and messages that
+ * could echo stored values, becomes the generic `ORDER_OPEN_FAILED`.
+ *
+ * @param {unknown} error
+ */
+function orderFailureCode(error) {
+  const code = /** @type {{code?: unknown}} */ (error)?.code;
+  return typeof code === 'string' &&
+    /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/u.test(code) &&
+    code.length <= 64
+    ? code
+    : 'ORDER_OPEN_FAILED';
 }
 
 /** @param {unknown} value */

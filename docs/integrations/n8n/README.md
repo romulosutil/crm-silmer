@@ -195,8 +195,9 @@ campos da ficha no pedido `pendente` da conversa:
 - Conversa com o agente (`automation_state = assistant`) e com pedido
   pendente: os campos são projetados no pedido.
 - Conversa com vendedor (`automation_state = human`): o patch é ignorado para o
-  pedido e o fato fica registrado na auditoria. Quando a conversa volta para a
-  IA, o pendente volta a receber a projeção.
+  pedido e o fato fica registrado na auditoria. A conversa não volta para a IA
+  (ADR 015), então o pendente não recebe mais a projeção: o vendedor completa
+  o pedido.
 - Pedido confirmado nunca recebe projeção.
 - Preço, valor, condição de pagamento, status e outros campos oficiais
   continuam recusados no `briefing_patch`, como antes.

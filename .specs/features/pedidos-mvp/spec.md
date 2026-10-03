@@ -245,7 +245,8 @@ em Confirmados com "Confirmado por <nome> · <data hora>".
    ordenar por tempo parado, do maior para o menor.
 5. **PCX-05** SHALL continuar funcionando como hoje: fila Todas/Minhas/Sem
    responsável, Arquivar e ver arquivadas, Repassar atendimento, Assumir,
-   Devolver à IA, Editar nome e Ver contato.
+   Editar nome e Ver contato. A Caixa de Entrada SHALL NOT oferecer
+   "Devolver à IA": a conversa com uma pessoa não volta para o bot (ADR 015).
 
 ---
 
@@ -324,8 +325,10 @@ data no lastro, com o pedido ainda confirmado e a impressão liberada.
   continuar em Pendentes.
 - WHEN a conversa é repassada THEN o novo dono SHALL poder editar, confirmar e
   reabrir o pedido; o antigo SHALL perder essas ações.
-- WHEN a conversa volta para a IA THEN o pedido pendente SHALL voltar a
-  receber a projeção dos patches do agente.
+- WHEN a conversa passa para uma pessoa (handoff ou "Assumir atendimento")
+  THEN ela SHALL seguir com uma pessoa até o encerramento, sem ação, rota ou
+  comando que a devolva ao agente, e o pedido pendente SHALL NOT voltar a
+  receber a projeção dos patches do agente (ADR 015).
 - WHEN a grade tem quantidade 0, negativa ou não inteira THEN o salvamento
   SHALL ser recusado com mensagem na linha.
 - WHEN o valor digitado tem formato inválido (ex.: `4,820.00`, texto) THEN o

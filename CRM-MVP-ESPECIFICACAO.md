@@ -148,10 +148,12 @@ regra de produção. Após a qualificação, comunica somente uma versão vigent
 orçamento humano aprovada por `Admin`; não calcula, negocia nem concede
 desconto.
 
-Tomada humana, handoff, retorno à IA, fechamento ou desligamento incrementam o
+Tomada humana, handoff, fechamento ou desligamento incrementam o
 `automation_epoch`. Antes de cada resposta automática, o n8n reserva o efeito
 apresentando epoch e revisão inbound ao CRM; decisões antigas são rejeitadas e
-não podem retomar a conversa silenciosamente.
+não podem retomar a conversa silenciosamente. Depois do handoff ou da tomada
+humana, a conversa não volta para o agente: segue com uma pessoa até o
+encerramento (ADR 015).
 
 ## 8. Papel do n8n
 

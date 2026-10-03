@@ -48,6 +48,12 @@ export {
   renderFichaHtml,
 } from './print/ficha-canonical-v2.js';
 export {
+  PRINT_TEMPLATE,
+  TEMPLATE_V2,
+  TEMPLATE_V3,
+  renderOrderFicha,
+} from './print/index.js';
+export {
   MAX_ORDER_PAGE_SIZE,
   assertOrderRepositoryContract,
 } from './ports/contracts.js';

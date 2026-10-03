@@ -1,4 +1,4 @@
-import { blankProduction, renderFichaHtml } from '@crm-silmer/orders';
+import { renderOrderFicha } from '@crm-silmer/orders';
 
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
 const ORDER_SECTIONS = new Set(['summary', 'items', 'observations']);
@@ -64,7 +64,8 @@ export function registerOrderRoutes(api, orders, contextFor) {
    * PIM-02/PIM-03/PIM-05: the printed document of a confirmed order. Any
    * operational session may print one, so this read is not scoped to the
    * conversation owner; a pending order has no document yet and is refused
-   * with 409, the same reason the page keeps the button locked.
+   * with 409, the same reason the page keeps the button locked. The template
+   * is chosen in one place, `PRINT_TEMPLATE` (PIM-10, ADR 017).
    */
   api.get('/api/v1/orders/:orderId/print', async (request, reply) =>
     respond(reply, async () => {
@@ -79,7 +80,7 @@ export function registerOrderRoutes(api, orders, contextFor) {
       return reply
         .code(200)
         .type('text/html; charset=utf-8')
-        .send(renderFichaHtml(printSnapshot(order), { synthetic: false }));
+        .send(renderOrderFicha(order));
     }),
   );
 
@@ -359,53 +360,6 @@ function rejectUnknownKeys(value, allowed) {
   if (Object.keys(value).some((key) => !accepted.has(key))) {
     throw new OrderRequestError(400, 'INVALID_REQUEST');
   }
-}
-
-/**
- * The approved v2 snapshot built from the order (D10). `vendedor` is whoever
- * confirmed it and `data` is the order date: both are frozen at confirmation,
- * so passing the conversation on afterwards never rewrites the paper. The
- * final amount and the payment condition stay out of the document (D12), and
- * the production block reaches the shop floor blank.
- *
- * @param {any} order
- */
-function printSnapshot(order) {
-  const { items, observations, summary } = order.ficha;
-  return {
-    pedido: {
-      aplicacao: printedText(summary.aplicacao),
-      cliente: printedText(summary.cliente),
-      data: printedDate(order.orderDate),
-      data_entrega_confirmada: printedDate(summary.data_entrega_confirmada),
-      fab: printedText(order.fabCode),
-      itens: items,
-      nome: printedText(summary.nome),
-      numero: printedText(order.number),
-      observacoes: observations,
-      quantidade_total: order.totalPieces,
-      vendedor: printedText(order.confirmedBy?.name),
-    },
-    producao: blankProduction(),
-  };
-}
-
-/** A field nobody filled prints blank, never "null". @param {unknown} value */
-function printedText(value) {
-  return typeof value === 'string' ? value : '';
-}
-
-/**
- * The order date and the confirmed delivery are stored as ISO days; the
- * approved template shows them the way the shop floor reads them (dd/mm/aaaa,
- * as in the approved sample). Older free text prints as it was typed.
- *
- * @param {unknown} value
- */
-function printedDate(value) {
-  const text = printedText(value);
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(text);
-  return match ? match[3] + '/' + match[2] + '/' + match[1] : text;
 }
 
 /** @param {import('fastify').FastifyReply} reply */

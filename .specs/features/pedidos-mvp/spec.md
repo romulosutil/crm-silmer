@@ -672,7 +672,7 @@ do PDF (PIM-10). O registro da aprovação fica em
 | PIM-07 | P1-5     | `test/ficha-print-v3.test.js:194`; `test/ficha-pdf-review-v3.test.js:81,99`                 | Verified · PDF a aprovar       |
 | PIM-08 | P1-5     | `test/ficha-print-v3.test.js:221`                                                           | Verified · PDF a aprovar       |
 | PIM-09 | P1-5     | `test/ficha-print-v3.test.js:252,279,337`                                                   | Verified · PDF a aprovar       |
-| PIM-10 | P1-5     | T64                                                                                         | Pendente                       |
+| PIM-10 | P1-5     | `test/ficha-print-switch.test.js:146,155,196,203,222`; `npm run validate:ficha-pdf-review`  | Verified · v2 até a aprovação  |
 | PLA-08 | P1-10    | `test/ficha-print-v3.test.js:309,384`; `test/ficha-pdf-review-v3.test.js:143`               | Verified · PDF a aprovar       |
 
 O gate do pacote (hashes da amostra, do HTML e do PDF, aprovação inteira ou

@@ -1127,14 +1127,14 @@ com o contrato combinado do item.
 ### T64: Ponto único de troca da impressão
 
 - **What:** `PRINT_TEMPLATE` e `renderOrderFicha(order)` em `modules/orders/src/print/index.js`; a rota de impressão chama `renderOrderFicha` e continua na v2; a validação recusa a v3 nesse ponto com o gate pendente.
-- **Where:** `modules/orders/src/print/index.js`, `modules/orders/src/index.js`, `apps/api/src/order-routes.js`, `scripts/ficha-pdf-review.mjs`, `test/ficha-print-switch.test.js`
+- **Where:** `modules/orders/src/print/index.js`, `modules/orders/src/index.js`, `apps/api/src/order-routes.js`, `scripts/ficha-pdf-review.mjs`, `docs/phase0/FICHA-PDF-REVIEW-V3.md`, `test/ficha-print-switch.test.js`
 - **Depends on:** T63
 - **Requirement:** PIM-10
 
 **Done when:**
 
-- [ ] A rota imprime exatamente o mesmo HTML v2 de antes
-- [ ] Testes cobrem os dois templates e a recusa da v3 sem aprovação
+- [x] A rota imprime exatamente o mesmo HTML v2 de antes
+- [x] Testes cobrem os dois templates e a recusa da v3 sem aprovação
 - [ ] Depois da aprovação, o Tech Lead troca `PRINT_TEMPLATE` num commit próprio
 
 **Tests:** unit · **Gate:** quick · **Commit:** `feat(api): print through one ficha template switch`

@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T8 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T9 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -204,7 +204,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-15..19
 **Reuses**: Adapter S3, autenticação e streaming Fastify.
 **Tools**: tlc-spec-driven; shell.
-**Done when**: [ ] 200/206/416 e Content-Range corretos; 401/403 impedem bytes; media attached continua legível após oito dias/encerramento; cache privado.
+**Done when**: [x] 200/206/416 e Content-Range corretos; 401/403 impedem bytes; media attached continua legível após oito dias/encerramento; cache privado. 18 testes de conteúdo e CAS SQL aprovados; [evidência](execution.md#t9-conteúdo-privado-com-range-e-recuperação).
 **Tests**: integration; mínimo 10 casos, Range aberto/sufixo, grande arquivo e indisponibilidade.
 **Gate**: Full.
 **Commit**: feat(api): stream authorized chat media content

@@ -1,5 +1,69 @@
 # Execução INBOX-MEDIA-1
 
+## T9: Conteúdo privado com Range e recuperação
+
+Critérios e arquivos comunicados antes do patch: content route/runtime, app/server,
+repository CAS de lost, testes API/SQL, OpenAPI e runbook. Testes escritos primeiro:
+primeira execução falhou ERR_MODULE_NOT_FOUND no endpoint ausente. Depois passaram
+18 casos de API (cinco Ranges válidos, cinco inválidos, retenção e ACL, recuperação,
+metadata divergente, 16 MiB em chunks e rollback de admissão), mais SQL CAS real.
+HEAD/GET verificam variante SHA/MIME/tamanho antes de bytes; contador do stream
+impede resposta maior/truncada. Timeout503 nunca substitui durable ready/attached.
+MissingObject marca lost410 por CAS version/key/hash, sem tocar quota. Leitura
+usa private,no-store/nosniff. CHAT_MEDIA_READ_ENABLED preserva histórico ao
+desligar CHAT_MEDIA_ENABLED. Nenhum vínculo ou objeto é removido pelo rollback.
+
+### Adequação suficiente e inversa
+
+Cada assertion abaixo liga a exigência ao resultado, e cada cenário de T9 tem
+assertions listadas. Arrays de Range expandem para cinco casos positivos e cinco
+negativos; assertions dentro deles valem para todas as entradas documentadas.
+
+| Critério / requisito | file:line + assertion | Resultado necessário |
+| --- | --- | --- |
+| test(MED-15/17: full retained attached bytes remain readable with private headers,  | `test/chat-media-content-routes.test.js:111` `assert.equal(response.statusCode, 200);` | Valor esperado explícito na assertion |
+| test(MED-15/17: full retained attached bytes remain readable with private headers,  | `test/chat-media-content-routes.test.js:112` `assert.equal(response.body, 'abcdefghij');` | Valor esperado explícito na assertion |
+| test(MED-15/17: full retained attached bytes remain readable with private headers,  | `test/chat-media-content-routes.test.js:113` `assert.equal(response.headers['cache-control'], 'private, no-store');` | Valor esperado explícito na assertion |
+| test(MED-15/17: full retained attached bytes remain readable with private headers,  | `test/chat-media-content-routes.test.js:114` `assert.equal(response.headers['x-content-type-options'], 'nosniff');` | Valor esperado explícito na assertion |
+| test(MED-15/17: full retained attached bytes remain readable with private headers,  | `test/chat-media-content-routes.test.js:115` `assert.equal(response.headers['accept-ranges'], 'bytes');` | Valor esperado explícito na assertion |
+| test(MED-15/17: full retained attached bytes remain readable with private headers,  | `test/chat-media-content-routes.test.js:116` `assert.equal(response.headers['content-length'], '10');` | Valor esperado explícito na assertion |
+| test(MED-17: range ${range} returns exact 206,  | `test/chat-media-content-routes.test.js:127` `assert.equal(response.statusCode, 206);` | Valor esperado explícito na assertion |
+| test(MED-17: range ${range} returns exact 206,  | `test/chat-media-content-routes.test.js:128` `assert.equal(response.body, expected);` | Valor esperado explícito na assertion |
+| test(MED-17: range ${range} returns exact 206,  | `test/chat-media-content-routes.test.js:129` `assert.equal(response.headers['content-range'], contentRange);` | Valor esperado explícito na assertion |
+| test(MED-17: range ${range} returns exact 206,  | `test/chat-media-content-routes.test.js:130` `assert.equal(Number(response.headers['content-length']), expected.length);` | Valor esperado explícito na assertion |
+| test(MED-17: invalid range ${range} returns 416 without bytes,  | `test/chat-media-content-routes.test.js:141` `assert.equal(response.statusCode, 416);` | Valor esperado explícito na assertion |
+| test(MED-17: invalid range ${range} returns 416 without bytes,  | `test/chat-media-content-routes.test.js:142` `assert.equal(response.headers['content-range'], 'bytes */10');` | Valor esperado explícito na assertion |
+| test(MED-17: invalid range ${range} returns 416 without bytes,  | `test/chat-media-content-routes.test.js:143` `assert.equal(response.headers['cache-control'], 'private, no-store');` | Valor esperado explícito na assertion |
+| test(MED-17: invalid range ${range} returns 416 without bytes,  | `test/chat-media-content-routes.test.js:144` `assert.equal(response.body.includes('abcdefghij'), false);` | Valor esperado explícito na assertion |
+| test(MED-16: missing session and forbidden actor cannot read bytes,  | `test/chat-media-content-routes.test.js:147` `assert.equal((await harness(t).get({ cookie: '' })).statusCode, 401);` | Valor esperado explícito na assertion |
+| test(MED-16: missing session and forbidden actor cannot read bytes,  | `test/chat-media-content-routes.test.js:148` `assert.equal( (await harness(t).get({ cookie: '' })).headers['cache-control'], 'private, no-store', );` | Valor esperado explícito na assertion |
+| test(MED-16: missing session and forbidden actor cannot read bytes,  | `test/chat-media-content-routes.test.js:152` `assert.equal((await harness(t, { forbidden: true }).get()).statusCode, 403);` | Valor esperado explícito na assertion |
+| test(MED-19: transient storage failure recovers without durable state replacement,  | `test/chat-media-content-routes.test.js:156` `assert.equal((await h.get()).statusCode, 503);` | Valor esperado explícito na assertion |
+| test(MED-19: transient storage failure recovers without durable state replacement,  | `test/chat-media-content-routes.test.js:157` `assert.equal(h.row.state, 'attached');` | Valor esperado explícito na assertion |
+| test(MED-19: transient storage failure recovers without durable state replacement,  | `test/chat-media-content-routes.test.js:158` `assert.equal((await h.get()).statusCode, 200);` | Valor esperado explícito na assertion |
+| test(MED-19: confirmed missing object returns 410 and marks lost,  | `test/chat-media-content-routes.test.js:163` `assert.equal(response.statusCode, 410);` | Valor esperado explícito na assertion |
+| test(MED-19: confirmed missing object returns 410 and marks lost,  | `test/chat-media-content-routes.test.js:164` `assert.equal(response.headers['cache-control'], 'private, no-store');` | Valor esperado explícito na assertion |
+| test(MED-19: confirmed missing object returns 410 and marks lost,  | `test/chat-media-content-routes.test.js:165` `assert.equal(h.row.state, 'lost');` | Valor esperado explícito na assertion |
+| test(MED-19: confirmed missing object returns 410 and marks lost,  | `test/chat-media-content-routes.test.js:166` `assert.equal(response.body.includes('secret-key'), false);` | Valor esperado explícito na assertion |
+| test(MED-17/19: storage metadata mismatch and ignored Range fail before bytes,  | `test/chat-media-content-routes.test.js:169` `assert.equal((await harness(t, { badMime: true }).get()).statusCode, 503);` | Valor esperado explícito na assertion |
+| test(MED-17/19: storage metadata mismatch and ignored Range fail before bytes,  | `test/chat-media-content-routes.test.js:170` `assert.equal( (await harness(t, { ignoredRange: true }).get({ range: 'bytes=1-2' })) .statusCode, 503, );` | Valor esperado explícito na assertion |
+| test(MED-17: large object streams in bounded chunks,  | `test/chat-media-content-routes.test.js:178` `assert.equal(response.statusCode, 200);` | Valor esperado explícito na assertion |
+| test(MED-17: large object streams in bounded chunks,  | `test/chat-media-content-routes.test.js:179` `assert.equal(response.rawPayload.length, 16 * 1024 * 1024);` | Valor esperado explícito na assertion |
+| test(MED-17: large object streams in bounded chunks,  | `test/chat-media-content-routes.test.js:180` `assert.equal(response.rawPayload[response.rawPayload.length - 1], 7);` | Valor esperado explícito na assertion |
+| test(MED-15: unvalidated content is blocked before storage read,  | `test/chat-media-content-routes.test.js:183` `assert.equal( ( await harness(t, { row: { state: 'rejected', validation_status: 'invalid_format' }, }).get() ).statusCode, 409, );` | Valor esperado explícito na assertion |
+| test(MED-15/16: disabling admission preserves history routes,  | `test/chat-media-content-routes.test.js:216` `assert.equal( ( await api.inject({ method: 'POST', url: '/api/v1/conversations/c/media', headers, }) ).statusCode, 404, );` | Valor esperado explícito na assertion |
+| test(MED-15/16: disabling admission preserves history routes,  | `test/chat-media-content-routes.test.js:226` `assert.equal( ( await api.inject({ method: 'GET', url: `/api/v1/conversations/c/media/${id}`, headers, }) ).statusCode, 200, );` | Valor esperado explícito na assertion |
+| test(MED-15/16: disabling admission preserves history routes,  | `test/chat-media-content-routes.test.js:236` `assert.equal( ( await api.inject({ method: 'GET', url: `/api/v1/conversations/c/media/${id}/content`, headers, }) ).body, 'retained', );` | Valor esperado explícito na assertion |
+| MED-19 / CAS e quota | `test/chat-media-upload-postgres-live.test.js:659` `assert.equal( await repository.markLost({ ...row, version: Number(row.version) + 1 }), false, );` | Versão stale não altera; lost preserva reserva |
+| MED-19 / CAS e quota | `test/chat-media-upload-postgres-live.test.js:663` `assert.equal(await repository.markLost(row), true);` | Versão stale não altera; lost preserva reserva |
+| MED-19 / CAS e quota | `test/chat-media-upload-postgres-live.test.js:664` `assert.equal(await repository.markLost(row), false);` | Versão stale não altera; lost preserva reserva |
+| MED-19 / CAS e quota | `test/chat-media-upload-postgres-live.test.js:665` `assert.deepEqual(await counts(), quota);` | Versão stale não altera; lost preserva reserva |
+| MED-19 / CAS e quota | `test/chat-media-upload-postgres-live.test.js:666` `assert.equal( ( await repository.readForActor({ mediaId: admission.id, conversationId: admission.conversationId, actor: admission.actor, }) ).state, 'lost', );` | Versão stale não altera; lost preserva reserva |
+| MED-19 / CAS e quota | `test/chat-media-upload-postgres-live.test.js:676` `await assert.rejects( repository.readForActor({ mediaId: admission.id, conversationId: 'different', actor: admission.actor, }), { statusCode: 404 }, );` | Versão stale não altera; lost preserva reserva |
+
+Gates: validate 779 aprovados / 3 skips antigos; SQL 15/15; E2E 107/7 skips antigos,114 total; diff/skill validators verdes. Autor não é Verifier; requisitos permanecem In Progress.
+
+
 ## T8: Status autorizado e erros de sessão
 
 Premissas e arquivos comunicados ao integrador antes do patch. Fonte de ACL:

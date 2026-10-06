@@ -3,7 +3,7 @@ import { mediaError } from './chat-media-runtime.js';
 /** @param {any} reply @param {any} error @param {string} requestId */
 export function sendChatMediaProblem(reply, error, requestId) {
   const raw = Number(error?.statusCode);
-  const status = [401, 403, 404, 409, 413, 416, 422, 429].includes(raw)
+  const status = [401, 403, 404, 409, 410, 413, 416, 422, 429].includes(raw)
     ? raw
     : 503;
   const code = /** @type {Record<number,string>} */ ({
@@ -11,20 +11,26 @@ export function sendChatMediaProblem(reply, error, requestId) {
     403: 'FORBIDDEN',
     404: 'MEDIA_NOT_FOUND',
     409: 'MEDIA_CONFLICT',
+    410: 'MEDIA_LOST',
     413: 'MEDIA_TOO_LARGE',
     416: 'MEDIA_INVALID_RANGE',
     422: 'MEDIA_INVALID',
     429: 'MEDIA_RATE_LIMITED',
     503: 'SERVICE_UNAVAILABLE',
   })[status];
-  return reply.code(status).type('application/problem+json').send({
-    accepted: false,
-    error: { code },
-    type: 'about:blank',
-    title: 'Chat media request failed',
-    status,
-    request_id: requestId,
-  });
+  return reply
+    .header('Cache-Control', 'private, no-store')
+    .header('X-Content-Type-Options', 'nosniff')
+    .code(status)
+    .type('application/problem+json')
+    .send({
+      accepted: false,
+      error: { code },
+      type: 'about:blank',
+      title: 'Chat media request failed',
+      status,
+      request_id: requestId,
+    });
 }
 /** @param {any} request @param {any} media */
 export async function authorizeChatMediaRead(request, media) {

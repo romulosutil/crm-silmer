@@ -268,6 +268,14 @@ export class PostgresChatMediaUploadRepository {
       );
     });
   }
+  /** Confirmed missing immutable object only; never release retained quota. @param {any} row */
+  async markLost(row) {
+    const result = await this.#database.query(
+      `UPDATE crm.chat_media SET state='lost',sanitized_reason='object_missing',version=version+1 WHERE id=$1 AND version=$2 AND object_key=$3 AND content_sha256=$4 AND state IN ('ready','attached') RETURNING id`,
+      [row.id, row.version, row.object_key, row.content_sha256],
+    );
+    return result.rows.length === 1;
+  }
   /** T22 discovery only: cleanup must lock/recheck receiving state before deletion. @param {number} [limit] */
   async listAbandonedAdmissions(limit = 100) {
     return (

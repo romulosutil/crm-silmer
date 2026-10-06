@@ -8,6 +8,7 @@ import {
   InMemoryMetaEventStore,
   PostgresWebhookInbox,
   PostgresChatMediaUploadRepository,
+  RustfsMediaStore,
   processMetaWebhook,
 } from '@crm-silmer/integration-reliability';
 import { createApi } from './app.js';
@@ -160,20 +161,40 @@ export function createServerApi(runtime = {}) {
     runtime.chatMedia ??
     (runtime.database &&
     operationalAuth &&
-    environment.CHAT_MEDIA_ENABLED === 'true'
+    (environment.CHAT_MEDIA_ENABLED === 'true' ||
+      environment.CHAT_MEDIA_READ_ENABLED === 'true')
       ? createChatMediaApiRuntime({
           repository: new PostgresChatMediaUploadRepository({
             database: runtime.database,
-            bucketAlias: environment.CHAT_MEDIA_BUCKET_ALIAS,
+            bucketAlias:
+              environment.CHAT_MEDIA_BUCKET_ALIAS ??
+              (environment.MEDIA_S3_BUCKET === 'crm-silmer-chat-media'
+                ? 'chat-operational'
+                : 'chat-dev'),
             limitBytes: Number(
               environment.CHAT_MEDIA_QUOTA_BYTES ?? 1073741824,
             ),
           }),
+          admissionEnabled: environment.CHAT_MEDIA_ENABLED === 'true',
           access: {
             ...operationalAuth,
             authorizeRead: operations?.authorizeRead,
           },
           spoolRoot: requireMediaSpoolRoot(environment),
+          store: environment.MEDIA_S3_BUCKET
+            ? new RustfsMediaStore({
+                bucket: environment.MEDIA_S3_BUCKET,
+                endpoint: environment.MEDIA_S3_ENDPOINT,
+                region: environment.MEDIA_S3_REGION,
+                accessKeyId: environment.MEDIA_S3_ACCESS_KEY_ID,
+                secretAccessKey: environment.MEDIA_S3_SECRET_ACCESS_KEY,
+              })
+            : undefined,
+          bucketAlias:
+            environment.CHAT_MEDIA_BUCKET_ALIAS ??
+            (environment.MEDIA_S3_BUCKET === 'crm-silmer-chat-media'
+              ? 'chat-operational'
+              : 'chat-dev'),
           envelopeKey: readEnvelopeKey(
             environment.INBOX_MESSAGE_ENVELOPE_KEY,
             'INBOX_MESSAGE_ENVELOPE_KEY',

@@ -642,4 +642,44 @@ if (connectionString) {
       503,
     );
   });
+  test('MED-19: missing object CAS marks lost while preserving quota and rejects stale versions', async () => {
+    const admission = input();
+    await repository.admit(admission);
+    await repository.complete(completed(admission));
+    await pool.query(
+      `UPDATE crm.chat_media SET state='ready',validation_status='clean',original_sha256=$2,content_sha256=$2,detected_mime_type='image/png',size_bytes=100,processed_at=now() WHERE id=$1`,
+      [admission.id, 'b'.repeat(64)],
+    );
+    const row = await repository.readForActor({
+      mediaId: admission.id,
+      conversationId: admission.conversationId,
+      actor: admission.actor,
+    });
+    const quota = await counts();
+    assert.equal(
+      await repository.markLost({ ...row, version: Number(row.version) + 1 }),
+      false,
+    );
+    assert.equal(await repository.markLost(row), true);
+    assert.equal(await repository.markLost(row), false);
+    assert.deepEqual(await counts(), quota);
+    assert.equal(
+      (
+        await repository.readForActor({
+          mediaId: admission.id,
+          conversationId: admission.conversationId,
+          actor: admission.actor,
+        })
+      ).state,
+      'lost',
+    );
+    await assert.rejects(
+      repository.readForActor({
+        mediaId: admission.id,
+        conversationId: 'different',
+        actor: admission.actor,
+      }),
+      { statusCode: 404 },
+    );
+  });
 }

@@ -16,6 +16,7 @@ import {
 import { registerConversationRoutes } from './conversation-routes.js';
 import { registerChatMediaUploadRoutes } from './chat-media-upload-routes.js';
 import { registerChatMediaStatusRoutes } from './chat-media-status-routes.js';
+import { registerChatMediaContentRoutes } from './chat-media-content-routes.js';
 import { registerIdentityRoutes } from './identity-routes.js';
 import { registerN8nRoutes } from './n8n-routes.js';
 import { registerOperationRoutes } from './operation-routes.js';
@@ -241,6 +242,15 @@ export function createApi(options = {}, runtime = {}) {
   }
 
   if (runtime.chatMedia) {
+    registerChatMediaContentRoutes(
+      api,
+      runtime.chatMedia,
+      (/** @type {object} */ request) => {
+        const context = requests.get(request);
+        if (!context) throw new Error('Missing request context');
+        return context;
+      },
+    );
     registerChatMediaStatusRoutes(
       api,
       runtime.chatMedia,
@@ -250,15 +260,16 @@ export function createApi(options = {}, runtime = {}) {
         return context;
       },
     );
-    registerChatMediaUploadRoutes(
-      api,
-      runtime.chatMedia,
-      (/** @type {object} */ request) => {
-        const context = requests.get(request);
-        if (!context) throw new Error('Missing request context');
-        return context;
-      },
-    );
+    if (runtime.chatMedia.admissionEnabled !== false)
+      registerChatMediaUploadRoutes(
+        api,
+        runtime.chatMedia,
+        (/** @type {object} */ request) => {
+          const context = requests.get(request);
+          if (!context) throw new Error('Missing request context');
+          return context;
+        },
+      );
   }
 
   if (runtime.orders) {

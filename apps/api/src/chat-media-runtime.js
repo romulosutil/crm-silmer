@@ -10,6 +10,7 @@ import { join, resolve } from 'node:path';
 import { Transform, Writable } from 'node:stream';
 import { pipeline, finished } from 'node:stream/promises';
 import { validateMediaDeclaration } from '@crm-silmer/integration-reliability';
+import { readChatMediaContent } from './chat-media-content-runtime.js';
 
 /** @param {number} statusCode */
 export function mediaError(statusCode) {
@@ -18,20 +19,27 @@ export function mediaError(statusCode) {
     code: 'CHAT_MEDIA_REQUEST_FAILED',
   });
 }
-/** @param {{repository:any,access:any,spoolRoot:string,envelopeKey:Buffer,removeFile?:Function}} options */
+/** @param {{repository:any,access:any,spoolRoot:string,envelopeKey:Buffer,removeFile?:Function,store?:any,bucketAlias?:string,admissionEnabled?:boolean}} options */
 export function createChatMediaApiRuntime({
   repository,
   access,
   spoolRoot,
   envelopeKey,
+  store,
+  bucketAlias = 'chat-dev',
+  admissionEnabled = true,
   removeFile = (/** @type {string} */ path) => rm(path, { force: true }),
 }) {
   if (!Buffer.isBuffer(envelopeKey) || envelopeKey.length !== 32)
     throw new TypeError('Media envelope key must contain 32 bytes');
   const root = resolve(spoolRoot);
   return {
+    admissionEnabled,
     authorize: access.authorize,
     authorizeRead: access.authorizeRead,
+    /** @param {any} input */
+    content: (input) =>
+      readChatMediaContent({ repository, store, bucketAlias }, input),
     /** @param {any} input */
     async status(input) {
       const row = await repository.readForActor(input);

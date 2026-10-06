@@ -349,3 +349,36 @@ vêm de `/app/modules` na imagem; handler/repository/SDK executam no host
 contra DB e RustFS locais. Não é teste do deployment remoto. A imagem final
 T6 tem digest `sha256:d372430897763a95b471898d349af004525ae234003fb350e7f5538fbaaf1655`;
 o digest 7105b14c registrado em T5 contém somente o código até T5.
+
+### T14: transporte humano por ID Meta
+
+A versão canônica mvp-simple-12-media mantém a reserva original e seleciona
+texto ou mídia somente quando send_authorized=true. Download CRM usa o ID
+textual como um segmento encodeURIComponent, Basic exclusivo CRM, sem
+redirecionamentos. O helper binário mede uffer.length antes do Crypto v2
+SHA256; depois do hash, o fluxo restaura a referência binária do item pareado
+do download. O multipart n8n 2.38.7 usa ormBinaryData/inputDataFieldName=data.
+Não interpretar inary.data.data como base64 nem persistir cópias em JSON.
+
+Upload Meta precede preflight JSON no mesmo endpoint CRM. Preflight válido
+precisa coincidir em media_id/type/SHA/MIME/tamanho; imediatamente depois,
+Meta/messages recebe somente ID e legenda para image/video. Áudio não ganha
+legenda nem flag voice presumida. Upload/messages não têm retry; qualquer
+erro ou resposta sem ID após invocar messages vai para unknown. Falhas
+comprovadamente anteriores usam workflow.failed/before_message_send e a
+allowlist T13, sem liberar uma nova reserva. Replays alcançam resposta sem efeito.
+
+Fontes primárias n8n fixadas no tag n8n@2.38.7: Crypto.node.ts (hash perde
+binary; dataPropertyName recebe digest), HttpRequest/V3/Description.ts
+(multipart formBinaryData) e HttpRequest/V3/HttpRequestV3.node.ts (buffer
+nativo e resposta file). O renderer e testes verificam o contrato; o runtime
+real e ausência de resíduos são a entrega T15. Inventário canônico 51→68
+nós, DEV 60→77, sem nós Wait e sem retirar cenários de teste anteriores.
+
+Ativação Meta exige SILMER_META_MEDIA_HOMOLOGATED=true, versão explícita
+SILMER_META_GRAPH_VERSION e phone ID numérico. Os endpoints oficiais atuais
+não ficaram acessíveis nesta sessão (429/Internal Error). Artigo oficial
+histórico de 2022 não prova limites/versionamento/voice em 2026. Homologação
+atual e configuração dessas variáveis ficam como gate externo T23, pendente;
+DEV simula exclusivamente os dois efeitos Meta após download/hash reais,
+com preflight CRM real. Essa evidência não confirma entrega real ao WhatsApp.

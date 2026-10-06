@@ -11,23 +11,7 @@ import {
 } from '@n8n/workflow-sdk';
 
 const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-const WORKFLOW_VERSION = 'mvp-simple-14';
-
-// ADR 026: the site chat enters the CRM as a WhatsApp identity, because the
-// CRM only knows that channel. The number starts with 999, a country code the
-// ITU never assigns, so it can never reach a real person; the panel refuses a
-// seller's message to it (SITE_CHAT_PREFIX) and the bot asks for a WhatsApp
-// instead (SITE_CHAT_RULE).
-const SITE_CHAT_PREFIX = '999';
-const SITE_CHAT_ORIGINS = 'https://silmer.com.br,https://www.silmer.com.br';
-const SITE_CHAT_NAME = 'Visitante do site';
-
-// ADR 026: a seller cannot answer inside the site chat, so every notice that
-// says the talk "continues here" asks for the visitor's WhatsApp instead.
-const SITE_CHAT_RULE = `const SITE_CHAT_CONTACT = 'Para o vendedor falar com você, me diga o seu WhatsApp com DDD.';
-const noticeForChannel = (channel, text) => channel === 'site_chat'
-  ? String(text).replace(/,? e o (seu )?atendimento continua aqui mesmo|,? aqui mesmo| right here/g, '').trim() + ' ' + SITE_CHAT_CONTACT
-  : text;`;
+const WORKFLOW_VERSION = 'mvp-simple-12-media';
 
 const BRIEFING_FIELDS = [
   'artwork_locations',
@@ -276,7 +260,7 @@ const ASKED_FIELD_SCHEMA = [
   'pickup_location',
 ];
 
-function codeStep(name, position, jsCode) {
+function codeStep(name, position, jsCode, continueOnError = false) {
   return node({
     type: 'n8n-nodes-base.code',
     version: 2,
@@ -284,6 +268,7 @@ function codeStep(name, position, jsCode) {
       name,
       position,
       parameters: { mode: 'runOnceForEachItem', jsCode },
+      ...(continueOnError ? { onError: 'continueErrorOutput' } : {}),
     },
   });
 }
@@ -1812,10 +1797,8 @@ const headerKey = $json.headers?.['idempotency-key'] ?? '';
 const action = payload.action;
 const stateActions = ['take_over', 'return_to_ai', 'close'];
 const validBase = payload.schema_version === '1.0' && typeof payload.command_id === 'string' && payload.command_id === headerKey;
-// ADR 026: a site chat visitor has no WhatsApp; the seller answers on the number the visitor gives.
-const siteChat = /^\\+?${SITE_CHAT_PREFIX}[0-9]+$/.test(String(payload.to ?? ''));
-const kind = validBase && action === 'send_message' && payload.message?.type === 'text'
-  ? (siteChat ? 'site_chat' : 'send')
+const kind = validBase && action === 'send_message' && ['text', 'image', 'audio', 'video'].includes(payload.message?.type)
+  ? 'send'
   : validBase && stateActions.includes(action) ? 'state' : 'invalid';
 return { json: { payload, kind } };`,
 );
@@ -1870,6 +1853,248 @@ const humanAuthorized = ifBoolean(
   'Envio humano autorizado? (MVP)',
   [-740, 250],
   '{{ $json.send_authorized === true }}',
+);
+const humanHasMedia = ifBoolean(
+  'Mensagem humana tem midia? (MVP)',
+  [-620, 30],
+  "{{ $('Preparar reserva de envio humano (MVP)').item.json.command.message.type !== 'text' }}",
+);
+const MEDIA_HEADERS = [
+  {
+    name: 'X-Correlation-Id',
+    value: expr(
+      "{{ $('Preparar reserva de envio humano (MVP)').item.json.correlation_id }}",
+    ),
+  },
+  { name: 'X-Silmer-Workflow-Key', value: WORKFLOW_KEY },
+  { name: 'X-Silmer-Workflow-Version', value: WORKFLOW_VERSION },
+  { name: 'X-Silmer-Execution-Id', value: expr('{{ $execution.id }}') },
+];
+const MEDIA_URL =
+  '{{ $env.SILMER_PANEL_BASE_URL + "/api/v1/integrations/n8n/commands/" + encodeURIComponent($("Preparar reserva de envio humano (MVP)").item.json.command.command_id) + "/media" }}';
+const downloadHumanMedia = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'CRM - Baixar midia reservada (MVP)',
+    position: [-420, -60],
+    onError: 'continueErrorOutput',
+    retryOnFail: false,
+    credentials: {
+      httpBasicAuth: newCredential('Silmer n8n para CRM Basic DEV'),
+    },
+    parameters: {
+      method: 'GET',
+      url: expr(MEDIA_URL),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpBasicAuth',
+      sendHeaders: true,
+      headerParameters: { parameters: MEDIA_HEADERS },
+      options: {
+        timeout: 60000,
+        redirect: { redirect: { followRedirects: false } },
+        response: {
+          response: { responseFormat: 'file', outputPropertyName: 'data' },
+        },
+      },
+    },
+  },
+});
+const measureHumanMedia = codeStep(
+  'Medir midia reservada (MVP)',
+  [-180, -60],
+  `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
+const item = $input.item;
+const bytes = await this.helpers.getBinaryDataBuffer($itemIndex, 'data');
+if (bytes.length !== command.message.size_bytes || bytes.length < 1 || bytes.length > (command.message.type === 'image' ? 5 : 16) * 1024 * 1024) throw new Error('MEDIA_INTEGRITY_MISMATCH');
+return { json: { media_size_bytes: bytes.length }, binary: item.binary };`,
+  true,
+);
+const hashHumanMedia = node({
+  type: 'n8n-nodes-base.crypto',
+  version: 2,
+  config: {
+    name: 'Crypto - SHA256 midia (MVP)',
+    position: [60, -60],
+    onError: 'continueErrorOutput',
+    parameters: {
+      action: 'hash',
+      type: 'SHA256',
+      binaryData: true,
+      binaryPropertyName: 'data',
+      encoding: 'hex',
+      dataPropertyName: 'media_sha256',
+    },
+  },
+});
+const restoreHumanMedia = codeStep(
+  'Validar hash e restaurar midia (MVP)',
+  [300, -60],
+  `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
+if ($json.media_sha256 !== command.message.sha256 || $json.media_size_bytes !== command.message.size_bytes) throw new Error('MEDIA_INTEGRITY_MISMATCH');
+const downloaded = $('CRM - Baixar midia reservada (MVP)').item;
+return { json: { media_sha256: $json.media_sha256, media_size_bytes: $json.media_size_bytes }, binary: downloaded.binary };`,
+  true,
+);
+const META_MEDIA_URL =
+  '{{ (() => { const version = $env.SILMER_META_GRAPH_VERSION; const phone = $env.SILMER_WHATSAPP_PHONE_NUMBER_ID; if ($env.SILMER_META_MEDIA_HOMOLOGATED !== "true" || !/^v[0-9]+\\.[0-9]+$/.test(version ?? "") || !/^[0-9]+$/.test(phone ?? "")) throw new Error("META_MEDIA_NOT_HOMOLOGATED"); return "https://graph.facebook.com/" + version + "/" + phone; })() }}';
+const uploadHumanMedia = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Meta - Upload midia humana (MVP)',
+    position: [540, -60],
+    onError: 'continueErrorOutput',
+    retryOnFail: false,
+    credentials: { whatsAppApi: newCredential('WhatsApp account') },
+    parameters: {
+      method: 'POST',
+      url: expr(
+        META_MEDIA_URL.replace(
+          'return "https://graph.facebook.com/" + version + "/" + phone;',
+          'return "https://graph.facebook.com/" + version + "/" + phone + "/media";',
+        ),
+      ),
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'whatsAppApi',
+      sendBody: true,
+      contentType: 'multipart-form-data',
+      bodyParameters: {
+        parameters: [
+          {
+            parameterType: 'formBinaryData',
+            name: 'file',
+            inputDataFieldName: 'data',
+          },
+          { name: 'messaging_product', value: 'whatsapp' },
+          {
+            name: 'type',
+            value: expr(
+              "{{ $('Preparar reserva de envio humano (MVP)').item.json.command.message.mime_type }}",
+            ),
+          },
+        ],
+      },
+      options: {
+        timeout: 60000,
+        redirect: { redirect: { followRedirects: false } },
+        response: { response: { responseFormat: 'json' } },
+      },
+    },
+  },
+});
+const preflightHumanMedia = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'CRM - Preflight midia reservada (MVP)',
+    position: [780, -60],
+    onError: 'continueErrorOutput',
+    retryOnFail: false,
+    credentials: {
+      httpBasicAuth: newCredential('Silmer n8n para CRM Basic DEV'),
+    },
+    parameters: {
+      method: 'GET',
+      url: expr(MEDIA_URL.replace(' + "/media"', ' + "/media?preflight=true"')),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpBasicAuth',
+      sendHeaders: true,
+      headerParameters: { parameters: MEDIA_HEADERS },
+      options: {
+        timeout: 10000,
+        redirect: { redirect: { followRedirects: false } },
+        response: { response: { responseFormat: 'json' } },
+      },
+    },
+  },
+});
+const prepareMetaMediaMessage = codeStep(
+  'Preparar mensagem Meta de midia (MVP)',
+  [1020, -60],
+  `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
+const expected = command.message;
+if ($json.valid !== true || $json.media_id !== expected.media_id || $json.type !== expected.type || $json.sha256 !== expected.sha256 || $json.mime_type !== expected.mime_type || $json.size_bytes !== expected.size_bytes) throw new Error('MEDIA_PREFLIGHT_REJECTED');
+const id = $('Meta - Upload midia humana (MVP)').item.json.id;
+if (typeof id !== 'string' || !id || id.length > 512) throw new Error('MEDIA_PREFLIGHT_REJECTED');
+const media = { id };
+if (expected.type !== 'audio' && expected.caption) media.caption = expected.caption;
+return { json: { meta_message: { messaging_product: 'whatsapp', to: command.to, type: expected.type, [expected.type]: media } } };`,
+  true,
+);
+const sendHumanMedia = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Meta - Enviar midia humana (MVP)',
+    position: [1260, -60],
+    onError: 'continueErrorOutput',
+    retryOnFail: false,
+    credentials: { whatsAppApi: newCredential('WhatsApp account') },
+    parameters: {
+      method: 'POST',
+      url: expr(
+        META_MEDIA_URL.replace(
+          'return "https://graph.facebook.com/" + version + "/" + phone;',
+          'return "https://graph.facebook.com/" + version + "/" + phone + "/messages";',
+        ),
+      ),
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'whatsAppApi',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr('{{ $json.meta_message }}'),
+      options: {
+        timeout: 30000,
+        redirect: { redirect: { followRedirects: false } },
+        response: { response: { responseFormat: 'json' } },
+      },
+    },
+  },
+});
+const validateHumanMediaSent = codeStep(
+  'Validar resposta do envio de midia (MVP)',
+  [1500, -60],
+  `const id = $json.messages?.[0]?.id;
+if (typeof id !== 'string' || !id || id.length > 512) throw new Error('META_SEND_OUTCOME_UNKNOWN');
+return { json: { messages: [{ id }] } };`,
+  true,
+);
+function beforeMediaFailure(code) {
+  return `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
+const eventId = 'before-send:' + command.command_id;
+return { json: { payload: { schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed', occurred_at: new Date().toISOString(), command_id: command.command_id, conversation_id: command.conversation_id, automation_epoch: command.automation_epoch, source_revision: command.source_revision, failure: { phase: 'before_message_send', code: '${code}' } }, idempotency_key: eventId, correlation_id: String($execution.id).padStart(16, '0') } };`;
+}
+const mediaDownloadFailure = codeStep(
+  'Falha de download da midia (MVP)',
+  [-180, -300],
+  beforeMediaFailure('MEDIA_DOWNLOAD_FAILED'),
+);
+const mediaIntegrityFailure = codeStep(
+  'Falha de integridade da midia (MVP)',
+  [300, -300],
+  beforeMediaFailure('MEDIA_INTEGRITY_MISMATCH'),
+);
+const mediaUploadFailure = codeStep(
+  'Falha de upload da midia (MVP)',
+  [540, -300],
+  beforeMediaFailure('MEDIA_UPLOAD_FAILED'),
+);
+const mediaPreflightFailure = codeStep(
+  'Falha de preflight da midia (MVP)',
+  [1020, -300],
+  beforeMediaFailure('MEDIA_PREFLIGHT_REJECTED'),
+);
+const mediaPreflightUnavailable = codeStep(
+  'Preflight da midia indisponivel (MVP)',
+  [780, -300],
+  beforeMediaFailure('MEDIA_PREFLIGHT_UNAVAILABLE'),
+);
+const crmMediaFailure = crmPost(
+  'CRM - Concluir falha anterior ao envio (MVP)',
+  [1260, -300],
+  '/api/v1/integrations/n8n/events',
 );
 const sendHuman = whatsAppText(
   'WhatsApp - Enviar texto humano (MVP)',
@@ -1987,21 +2212,32 @@ crmReserveAi.to(orderOpenFailed);
 crmHandoff.to(orderOpenFailed);
 orderOpenFailed.onTrue(prepareOrderOpenFailure.to(crmOrderOpenFailure));
 sendHuman.onError(prepareHumanUnknown.to(crmHumanUnknown.to(respondState)));
-// ADR 026: an audio is transcribed and an image goes to the model; what cannot
-// be read reaches the model as unread. Every end of a site turn answers it.
-prepareMedia.to(
-  isAudio
-    .onTrue(transcribeAudio.to(buildAgentContext))
-    .onFalse(buildAgentContext),
+downloadHumanMedia.to(
+  measureHumanMedia.to(
+    hashHumanMedia.to(
+      restoreHumanMedia.to(
+        uploadHumanMedia.to(
+          preflightHumanMedia.to(
+            prepareMetaMediaMessage.to(
+              sendHumanMedia.to(validateHumanMediaSent.to(prepareHumanSent)),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
 );
-getWhatsAppMedia.onError(markMediaUnread);
-downloadWhatsAppMedia.onError(markMediaUnread);
-prepareMedia.onError(markMediaUnread);
-transcribeAudio.onError(markMediaUnread);
-markMediaUnread.to(buildAgentContext);
-crmAiSent.to(answersSite);
-crmNoticeSent.to(answersSite);
-answersSite.onTrue(answerSite);
+downloadHumanMedia.onError(
+  mediaDownloadFailure.to(crmMediaFailure.to(respondState)),
+);
+measureHumanMedia.onError(mediaIntegrityFailure.to(crmMediaFailure));
+hashHumanMedia.onError(mediaIntegrityFailure);
+restoreHumanMedia.onError(mediaIntegrityFailure);
+uploadHumanMedia.onError(mediaUploadFailure.to(crmMediaFailure));
+preflightHumanMedia.onError(mediaPreflightUnavailable.to(crmMediaFailure));
+prepareMetaMediaMessage.onError(mediaPreflightFailure.to(crmMediaFailure));
+sendHumanMedia.onError(prepareHumanUnknown);
+validateHumanMediaSent.onError(prepareHumanUnknown);
 
 export default workflow(WORKFLOW_KEY, 'Silmer | Atendimento WhatsApp IA')
   .add(
@@ -2088,9 +2324,13 @@ export default workflow(WORKFLOW_KEY, 'Silmer | Atendimento WhatsApp IA')
           crmReserveHuman.to(
             humanAuthorized
               .onTrue(
-                sendHuman.to(
-                  prepareHumanSent.to(crmHumanSent.to(respondAccepted)),
-                ),
+                humanHasMedia
+                  .onTrue(downloadHumanMedia)
+                  .onFalse(
+                    sendHuman.to(
+                      prepareHumanSent.to(crmHumanSent.to(respondAccepted)),
+                    ),
+                  ),
               )
               .onFalse(respondState),
           ),

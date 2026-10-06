@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T16 concluídas; fase 3 em execução, próxima T17. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T17 concluídas; fase 3 em execução, próxima T18. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -310,7 +310,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-04, MED-06, MED-08
 **Reuses**: ApiError, commandKey e request existentes.
 **Tools**: tlc-spec-driven; shell.
-**Done when**: [ ] FormData não recebe JSON.stringify nem Content-Type manual; request JSON continua igual; abort e problemas API mapeados.
+**Done when**: [x] FormData não recebe JSON.stringify nem Content-Type manual; request JSON continua igual; abort e problemas API mapeados.
 **Tests**: unit + integration; mínimo 6 casos.
 **Gate**: Quick + Full.
 **Commit**: feat(web): support authenticated media upload requests

@@ -26,12 +26,15 @@ function readCookie(name) {
  * @param {{method?: string, body?: unknown, idempotencyKey?: string, headers?: Record<string,string>, signal?: AbortSignal}} [options]
  */
 export async function request(url, options = {}) {
+  options.signal?.throwIfAborted();
   const method = options.method ?? 'GET';
+  const multipart = options.body instanceof globalThis.FormData;
   const headers = new globalThis.Headers({
     Accept: 'application/json',
     ...options.headers,
   });
-  if (options.body !== undefined)
+  if (multipart) headers.delete('Content-Type');
+  else if (options.body !== undefined)
     headers.set('Content-Type', 'application/json');
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
     const csrf = readCookie('crm_csrf');
@@ -43,7 +46,11 @@ export async function request(url, options = {}) {
     method,
     headers,
     credentials: 'same-origin',
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: multipart
+      ? /** @type {FormData} */ (options.body)
+      : options.body === undefined
+        ? undefined
+        : JSON.stringify(options.body),
     signal: options.signal,
   });
   if (response.status === 304) {

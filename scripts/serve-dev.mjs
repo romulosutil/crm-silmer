@@ -79,6 +79,12 @@ function proxyApiRequest(request, response, requestUrl) {
       protocol: apiOrigin.protocol,
     },
     (upstreamResponse) => {
+      if (response.destroyed) {
+        upstreamResponse.destroy();
+        return;
+      }
+      upstreamResponse.once('error', () => response.destroy());
+      upstreamResponse.once('aborted', () => response.destroy());
       response.writeHead(
         upstreamResponse.statusCode ?? 502,
         upstreamResponse.headers,
@@ -87,12 +93,19 @@ function proxyApiRequest(request, response, requestUrl) {
     },
   );
   upstream.once('error', () => {
+    if (response.destroyed) return;
     if (!response.headersSent) {
       response.writeHead(502, {
         'Content-Type': 'application/json; charset=utf-8',
       });
     }
     response.end(JSON.stringify({ error: { code: 'DEV_API_UNAVAILABLE' } }));
+  });
+  request.once('aborted', () => upstream.destroy());
+  // A normally consumed IncomingMessage also emits close. Cancel only an
+  // unfinished browser response so JSON, Range and SSE retain normal streaming.
+  response.once('close', () => {
+    if (!response.writableEnded) upstream.destroy();
   });
   request.pipe(upstream);
 }

@@ -2,6 +2,13 @@
 
 Spec: [spec.md](spec.md). Contexto: [context.md](context.md).
 
+T17: request aceita FormData nativo sem JSON.stringify e remove qualquer
+Content-Type fornecido para deixar o browser gerar o boundary. JSON, CSRF,
+cookies same-origin e a chave capturada continuam iguais. AbortSignal é
+propagado para upload/status e abort prévio não chama HTTP. No proxy local,
+request.aborted e fechamento de resposta incompleta encerram o upstream;
+close normal de IncomingMessage não cancela JSON/Range/SSE completos.
+
 T16: histórico e último resumo projetam `media` somente pelo vínculo
 persistido message/conversation/kind. DTO: mediaId, kind, state, mimeType,
 sizeBytes, durationMs e contentUrl relativo à rota CRM autorizada; lost ou

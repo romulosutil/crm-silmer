@@ -62,7 +62,7 @@ Comandos individuais: `npm run typecheck`, `npm run lint`,
 `npm run build`. O build determinístico é escrito em `dist/` e inclui um
 manifesto SHA-256 sem timestamps.
 
-### Ambiente de desenvolvimento no worker Ubuntu
+### Ambiente de desenvolvimento local
 
 Docker local está autorizado nesta máquina para desenvolvimento e testes.
 Use ambientes dedicados e dados sintéticos, preservando containers de outros
@@ -83,7 +83,7 @@ O banco de desenvolvimento fica em um volume Docker nomeado. Para parar apenas
 os containers, preservando os dados locais, use `npm run dev:down`. Um
 `DATABASE_URL` exportado substitui o banco Docker gerenciado. Os valores de
 porta/origem podem ser ajustados somente para a sessão atual com `API_HOST`,
-`API_PORT`, `DEV_HOST`, `DEV_PORT` e `API_ORIGIN`. Esse fluxo é exclusivamente de desenvolvimento. No Windows, acesse essas portas por túnel SSH; produção mantém o deploy automático atual por GitHub → EasyPanel, com imagens por digest e gates operacionais.
+`API_PORT`, `DEV_HOST`, `DEV_PORT` e `API_ORIGIN`. Esse fluxo é exclusivamente de desenvolvimento. No Windows, acesse essas portas localmente; produção mantém o deploy automático atual por GitHub → EasyPanel, com imagens por digest e gates operacionais.
 
 Na primeira execução, abra `http://127.0.0.1:5678`, crie o proprietário local,
 abra o workflow `LOCAL | Silmer | Fluxo completo sem WhatsApp`, vincule uma

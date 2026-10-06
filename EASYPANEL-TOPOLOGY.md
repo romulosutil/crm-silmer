@@ -243,7 +243,7 @@ qualquer uma delas:
 | `public-s3-and-console-domains`        | Domínios públicos padrão do EasyPanel para S3 (9000) e console (9001) |
 | `cross-project-endpoint-smoke-pending` | Alcance de `schedule_rustfs:9000` a partir de `silmer-api` sem smoke  |
 | `image-digest-not-confirmed`           | Imagem, tag e digest da instância não confirmados                     |
-| `dedicated-bucket-credential-pending`  | Credencial do CRM restrita ao bucket ainda não criada                 |
+| `dedicated-bucket-credential-pending`  | Política `crm-silmer-arquivos-rw` criada; usuário e chaves pendentes  |
 | `off-host-backup-not-evidenced`        | Backup off-host do volume sem evidência                               |
 
 O bucket privado `crm-silmer-arquivos` foi criado pelo console em 05/10/2026
@@ -254,12 +254,16 @@ Os hostnames dos domínios públicos não são versionados. O digest
 `rustfs/rustfs:1.0.1@sha256:1803…` vale só para o `docker-compose.dev.yml`; ele
 não descreve a instância do `schedule` enquanto a imagem não for confirmada.
 
+A ativação em produção segue o runbook
+[ativacao-arquivos-da-arte](docs/runbooks/ativacao-arquivos-da-arte.md).
+
 Recomendações para fechar as lacunas:
 
 1. Remover os dois domínios públicos. Se o console precisar ficar acessível,
    restringi-lo por autenticação e allowlist de IP. O domínio S3 público nunca
    é endpoint do CRM e não pode continuar publicado para fechar a lacuna.
-2. Criar no RustFS um usuário e uma policy só para `crm-silmer-arquivos` e
+2. Criar no RustFS um usuário com a policy `crm-silmer-arquivos-rw` (já
+   criada em 06/10/2026, só para `crm-silmer-arquivos`) e
    usar essa credencial em `OBJECT_STORAGE_ACCESS_KEY_ID` e
    `OBJECT_STORAGE_SECRET_ACCESS_KEY`. As chaves root da instância nunca vão
    para o CRM.
@@ -495,7 +499,9 @@ O branch canônico atual é `master`.
    `docker/edge-web.Dockerfile`. Edge e worker têm Auto Deploy ativo; a API está
    com Auto Deploy desativado. Esta divergência precisa ser resolvida no fluxo
    escolhido antes de depender de deploy automático coordenado em produção.
-   A imagem local produzida pelo painel não comprova consumo do digest GHCR
+   Em 06/10/2026 a API recebeu deploy do `5a0391d` minutos após o merge da
+   PR #150, como o edge; o gatilho desse deploy não foi
+   verificado. A imagem local produzida pelo painel não comprova consumo do digest GHCR
    escaneado pelo CI.
 3. Registrar projeto/serviço, branch, gatilho, SHA implantado, referência da
    imagem atual e anterior e resultado da última execução, sem URLs com token.

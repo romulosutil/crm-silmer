@@ -598,6 +598,35 @@ paths:
         '422': { description: Declaração ou multipart inválido/vazio }
         '429': { description: Quota ou 12 admissões por sessão/minuto }
         '503': { description: Dependência indisponível ou conclusão incerta }
+  /conversations/{conversationId}/media/{mediaId}/content:
+    get:
+      operationId: getChatMediaContent
+      summary: Bytes privados da mídia retida
+      description: >-
+        Sessão humana e conversation.read obrigatórias. Draft somente autor/admin;
+        attached segue leitura da conversa mesmo após oito dias ou encerramento.
+        Aceita um único Range bytes fechado, aberto ou sufixo. Respostas usam
+        Cache-Control private,no-store, X-Content-Type-Options nosniff e Accept-Ranges bytes.
+        Indisponibilidade transitória não altera estado durable ou quota.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - name: mediaId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: Range
+          in: header
+          schema: { type: string }
+      responses:
+        '200': { description: Bytes completos, Content-Length exato }
+        '206': { description: Bytes parciais com Content-Range e Content-Length exatos }
+        '401': { description: Sessão ausente ou inválida, sem bytes }
+        '403': { description: Leitura proibida, sem bytes }
+        '404': { description: Mídia não encontrada nesta conversa }
+        '409': { description: Mídia ainda não validada/ready }
+        '410': { description: Objeto comprovadamente perdido; quota preservada }
+        '416': { description: Range inválido ou fora do objeto, Content-Range bytes */size }
+        '503': { description: Storage temporariamente indisponível ou metadata divergente }
   /conversations/{conversationId}/media/{mediaId}:
     get:
       operationId: getChatMediaStatus

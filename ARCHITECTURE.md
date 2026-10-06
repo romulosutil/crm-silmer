@@ -11,9 +11,7 @@ Handoff, Pedido, auditoria e jobs. A interface Vue 3 oferece Dashboard,
 Caixa de Entrada, Clientes, Pedidos, Vendedores e Conta. Negócio/Kanban
 foram aposentados pela [ADR 004](docs/adr/004-aposentar-kanban-e-negocio.md).
 
-O n8n recebe/envia WhatsApp e o chat do site, chama OpenAI (texto, imagem e
-transcrição de áudio) e orquestra a coleta
-([ADR 026](docs/adr/026-midia-e-chat-do-site-no-bot.md)). Nunca acessa
+O n8n recebe/envia WhatsApp, chama OpenAI e orquestra a coleta. Nunca acessa
 o banco do CRM. Toda mutação oficial passa pela API autenticada,
 autorizada, idempotente e auditada. A mensagem inicia a automação; a UI
 observa ou assume o atendimento. Instagram é CANAL-2, posterior ao piloto.
@@ -34,11 +32,6 @@ observa ou assume o atendimento. Instagram é CANAL-2, posterior ao piloto.
   proteção do painel de infraestrutura é um controle distinto.
 - Conversa transferida não retorna ao bot
   ([ADR 015](docs/adr/015-conversa-nao-volta-para-o-bot.md)).
-- Loja do site: o workflow n8n do checkout da InfinitePay registra o pedido
-  pago em `POST /api/v1/integrations/n8n/store-orders`, com o contrato das
-  rotas n8n e a ação `store.order.record`, idempotente pelo `pedido_id` e
-  auditada ([ADR 028](docs/adr/028-pedido-pago-da-loja-pelo-n8n.md)). Não
-  há escrita pública sem autenticação.
 
 ## Pedido e ficha
 
@@ -53,34 +46,25 @@ confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF
 sintético de aprovação é um artefato de revisão. Assinatura física de Rose
 e Operação continua pendente para produção. Versões v2/v3/v4 são preservadas.
 
-Arquivos da arte (até 5 de 10 MB e a arte final) são enviados e baixados
-pela página do pedido e ficam no RustFS interno, só pela API
-([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)). Aviso a Rose e
-automação PIX não são assumidos como entregues pelo ciclo atual de Pedido. Vendido conta
+Upload de arte, arquivo durável no Dropbox, aviso a Rose e automação PIX
+não são assumidos como entregues pelo ciclo atual de Pedido. Vendido conta
 somente confirmados; não equivale a recebimentos.
-
-O pedido da loja do site (`origin = loja`) nasce confirmado, sem conversa nem
-Contato, ao preço do catálogo do CRM, com o Pix confirmado pela InfinitePay
-(valor pago, NSU, comprovante), o número `LJ-…` e o prazo da cor; é travado,
-conta como venda normal (teste não conta) e imprime a ficha simplificada
-`ficha-loja-v1` ([ADRs 027](docs/adr/027-venda-da-loja-do-site.md) e
-[028](docs/adr/028-pedido-pago-da-loja-pelo-n8n.md)).
 
 ## Baseline técnica
 
-| Fronteira    | Implementação                                                                                                       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Frontend     | Vue 3, Vue Router, JavaScript ESM, CSS e Vite; sem store global                                                     |
-| API          | Node.js/Fastify, REST `/api/v1`, OpenAPI e SSE                                                                      |
-| Persistência | PostgreSQL, SQL e migrations versionadas                                                                            |
-| Assíncrono   | Inbox/outbox e jobs transacionais; sem Redis                                                                        |
-| Runtime CRM  | `silmer-edge-web`, `silmer-api`, `silmer-worker`, `silmer-postgres`; arquivos no RustFS `schedule/rustfs` (ADR 023) |
-| Automação    | n8n externo obrigatório, persistência e credenciais próprias                                                        |
-| IA           | OpenAI no workflow; [ADR 021](docs/adr/021-adotar-openai-no-mvp.md)                                                 |
-| Deploy       | Fluxo automático GitHub→EasyPanel existente; [ADR 022](docs/adr/022-manter-deploy-automatico-github-easypanel.md)   |
+| Fronteira    | Implementação                                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Frontend     | Vue 3, Vue Router, JavaScript ESM, CSS e Vite; sem store global                                                   |
+| API          | Node.js/Fastify, REST `/api/v1`, OpenAPI e SSE                                                                    |
+| Persistência | PostgreSQL, SQL e migrations versionadas                                                                          |
+| Assíncrono   | Inbox/outbox e jobs transacionais; sem Redis                                                                      |
+| Runtime CRM  | `silmer-edge-web`, `silmer-api`, `silmer-worker`, `silmer-postgres`                                               |
+| Automação    | n8n externo obrigatório, persistência e credenciais próprias                                                      |
+| IA           | OpenAI no workflow; [ADR 021](docs/adr/021-adotar-openai-no-mvp.md)                                               |
+| Deploy       | Fluxo automático GitHub→EasyPanel existente; [ADR 022](docs/adr/022-manter-deploy-automatico-github-easypanel.md) |
 
 Mídia de canal fica em volume privado da VPS por até sete dias ou fim da
-jornada. Arquivos válidos são anexados ao pedido e guardados no RustFS.
+jornada. Arquivos válidos seguem o procedimento operacional Dropbox.
 Perda da única cópia produz `lost/unavailable`. Esse prazo não se aplica a
 Pedidos, Fichas, documentos comerciais ou auditoria. Storage externo é uma
 evolução na issue #29; backups e tombstones têm gates próprios.

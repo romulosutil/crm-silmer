@@ -35,8 +35,13 @@
     "unavailableState": "lost/unavailable"
   },
   "validFileArchive": {
-    "destination": "existing-dropbox-operational-repository",
-    "automaticApiIntegration": false,
+    "destination": "crm-order-files-rustfs",
+    "decisionRecord": "docs/adr/021-arquivos-da-arte-no-rustfs.md",
+    "handoffMode": "operator-attaches-file-to-order",
+    "automaticPromotion": false,
+    "storedOnlyThroughCrmApi": true,
+    "publicAccess": false,
+    "includedInOffHostBackup": true,
     "promotionRequiresValidation": true,
     "promotionRequires": [
       "technical-validation-passed",
@@ -70,7 +75,7 @@
     "requiredBefore": [
       "external product use",
       "durability above the accepted single-host risk",
-      "automated durable archive replacing the operational Dropbox process"
+      "managed object storage replacing the self-hosted RustFS bucket"
     ]
   }
 }

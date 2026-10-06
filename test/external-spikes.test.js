@@ -178,7 +178,7 @@ test('keeps uncertain Meta sends out of blind retry', async () => {
   assert.match(send.outcomeUnknown.strategy, /reconcil/iu);
 });
 
-test('keeps Meta media transient and Dropbox operational only', async () => {
+test('keeps Meta media transient and hands valid files to RustFS manually', async () => {
   const effects = await json('docs/phase0/external-effects.json');
   const effectList = /** @type {Array<Record<string, any>>} */ (
     effects.effects
@@ -188,8 +188,9 @@ test('keeps Meta media transient and Dropbox operational only', async () => {
   assert.equal(media.retention.maximumAgeDays, 7);
   assert.equal(media.retention.backupRequired, false);
   assert.equal(media.retention.unavailableState, 'lost/unavailable');
+  assert.equal(media.validFileHandoff.destination, 'crm-order-files-rustfs');
   assert.equal(media.validFileHandoff.mode, 'manual-operational');
-  assert.equal(media.validFileHandoff.apiIntegration, false);
+  assert.equal(media.validFileHandoff.automaticPromotion, false);
   assert.equal(media.validFileHandoff.failureExtendsTransientExpiry, false);
 });
 

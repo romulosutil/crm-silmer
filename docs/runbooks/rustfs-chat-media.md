@@ -1,5 +1,13 @@
 # Ativação de mídia do chat no RustFS
 
+T10: reserva de ready continua charged até envio humano. Apenas a transação
+existente de mensagem/bind/outbox/auditoria/SSE converte reserved→used, após
+revalidar autor/conversa/ready/clean/tipo/SHA/MIME/tamanho. Outro administrador
+pode ler draft, mas não enviá-lo como seu. Replay de envio hidrata o resultado
+sem segundo bind/cobrança. Falhas de outbox ou auditoria revertem mensagem,
+takeover e quota juntos. Transferring/close após upload impedem envio stale;
+upload não muda automation. Prova SQL18/18 + regressão inbox7/7.
+
 Integridade T6/MED-19: o SHA original admitido de bytes reais por T7 é
 imutável. Worker compara resultado da validação antes de prepare/PUT e rejeita
 invalid_format em divergência mesmo de igual tamanho. prepare SQL exige SHA

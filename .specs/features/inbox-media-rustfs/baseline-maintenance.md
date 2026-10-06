@@ -17,6 +17,10 @@ Evidência inicial:
   typecheck, lint, validadores e build aprovados.
 - Runtime efetivo local: Node 24.14.1 / npm 11.12.1. Diverge do runtime
   declarado 24.20.0 / 11.19.0; estes checks não comprovam o runtime fixado.
+- Revalidação com runtime portátil Node 24.20.0 / npm 11.19.0: validate
+  aprovado com 656 testes / três skips (inclui nove novos de T1); audit
+  zero vulnerabilidades. ZIP verificado contra SHASUMS256 oficial:
+  `6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba`.
 - E2E exclusivo por revisor independente: 107 aprovados, sete skips
   existentes, zero falhas (`npm run test:e2e -- --workers=1`). Os seis
   cenários inicialmente falhos também passaram em execução separada.

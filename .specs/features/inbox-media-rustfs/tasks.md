@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T11 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T12 concluídas; fase 2 concluída, próxima T13. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -243,7 +243,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-06, MED-20..22, MED-24
 **Reuses**: comparableOutbound/assertPanelSendFence e envelopes cifrados; mudanças do fence são suporte deste contrato único.
 **Tools**: tlc-spec-driven; shell/SQL.
-**Done when**: [ ] Payload identifica variante exata; legenda/hash/referência divergentes não reservam; texto compatível; callbacks preservam estados monotônicos.
+**Done when**: [x] Payload identifica variante exata; legenda/hash/referência/MIME/tamanho divergentes não reservam; texto compatível; callbacks preservam estados monotônicos, conversa canônica e confirmação conhecida sem retry. 11 testes unit e 17 SQL T12; conjunto SQL 50/50, Full + Build verdes; evidência T12 em execution.md. T13 não iniciado.
 **Tests**: unit + integration live; mínimo 8 casos incluindo hash trocado e replay.
 **Gate**: Full + Build.
 **Commit**: feat(n8n): carry authorized media references in outbox

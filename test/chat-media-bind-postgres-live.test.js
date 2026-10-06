@@ -459,4 +459,343 @@ if (connectionString) {
     );
     assert.equal((await snapshot()).messages, 1);
   });
+  async function mediaPanelCommand(type = 'image') {
+    const id = await ready();
+    if (['audio', 'video'].includes(type))
+      await pool.query(
+        'UPDATE crm.chat_media SET kind=$2,detected_mime_type=$3 WHERE id=$1',
+        [id, type, type === 'audio' ? 'audio/ogg' : 'video/mp4'],
+      );
+    await pool.query(
+      `UPDATE crm.conversations SET inbound_revision=1 WHERE id='bind-conversation'`,
+    );
+    const sent = await service().sendHumanMessage(
+      command(
+        id,
+        type === 'text'
+          ? { messageType: 'text', content: { text: 'Synthetic text' } }
+          : type === 'audio'
+            ? { messageType: type, content: { mediaId: id } }
+            : { messageType: type },
+      ),
+    );
+    const row = (
+      await pool.query('SELECT * FROM crm.n8n_commands WHERE message_id=$1', [
+        sent.id,
+      ])
+    ).rows[0];
+    const { decryptJson } =
+      await import('../modules/n8n-integration/src/crypto.js');
+    const payload = decryptJson(
+      row.payload_envelope,
+      `n8n-command:${row.command_id}`,
+      KEY,
+    );
+    await pool.query(
+      `UPDATE crm.n8n_commands SET status='processing',locked_by='synthetic-delivery',locked_until=now()+interval '1 hour' WHERE command_id=$1`,
+      [row.command_id],
+    );
+    const { PostgresN8nIntegrationRepository } =
+      await import('../modules/n8n-integration/src/postgres-repository.js');
+    const { createN8nIntegrationService } =
+      await import('../modules/n8n-integration/src/service.js');
+    const integration = createN8nIntegrationService({
+      repository: new PostgresN8nIntegrationRepository({
+        database,
+        envelopeKey: KEY,
+      }),
+    });
+    /** @param {string} eventId @param {any} [overrides] */
+    const event = (eventId, overrides = {}) => ({
+      schema_version: '1.0',
+      event_id: eventId,
+      event_type: 'message.send.requested',
+      conversation_id: 'bind-conversation',
+      command_id: row.command_id,
+      automation_epoch: payload.automation_epoch,
+      source_revision: payload.source_revision,
+      message: structuredClone(payload.message),
+      occurred_at: new Date().toISOString(),
+      technical: {
+        actor: 'AUTOMATION_EXECUTOR',
+        correlationId: `correlation-${eventId}`,
+        credentialVersion: 'current',
+        executionId: 'synthetic-execution',
+        idempotencyKey: eventId,
+        requestId: `request-${eventId}`,
+        workflowKey: 'whatsapp-mvp',
+        workflowVersion: 'media-fixture-1',
+      },
+      ...overrides,
+    });
+    return { id, sent, row, payload, integration, event };
+  }
+  test('T12/MED-20/21: outbox identifies exact bound variant and replay never reauthorizes', async () => {
+    const f = await mediaPanelCommand();
+    assert.equal(f.payload.message.media_id, f.id);
+    assert.equal(f.payload.message.sha256, 'b'.repeat(64));
+    assert.equal(f.payload.message.mime_type, 'image/png');
+    assert.equal(f.payload.message.size_bytes, 100);
+    assert.equal(f.payload.message.caption, 'Synthetic caption');
+    assert.equal(f.payload.message.type, 'image');
+    assert.equal(JSON.stringify(f.payload).includes('object_key'), false);
+    const event = f.event('media-reserve');
+    assert.equal(
+      (await f.integration.recordEvent(event)).send_authorized,
+      true,
+    );
+    assert.equal(
+      (await f.integration.recordEvent(event)).send_authorized,
+      false,
+    );
+    await assert.rejects(
+      f.integration.recordEvent(f.event('already-sending')),
+      { statusCode: 409 },
+    );
+    assert.equal(
+      (
+        await pool.query('SELECT status FROM crm.messages WHERE id=$1', [
+          f.sent.id,
+        ])
+      ).rows[0].status,
+      'sending',
+    );
+    assert.equal((await snapshot()).used, '100');
+  });
+  for (const change of [
+    { media_id: '20000000-0000-4000-8000-000000000002' },
+    { sha256: 'd'.repeat(64) },
+    { mime_type: 'image/jpeg' },
+    { size_bytes: 101 },
+    { caption: 'Other' },
+    { attachment_id: 'different' },
+    { attachmentId: 'different' },
+  ])
+    test(`T12/MED-21: variant or alias mismatch ${JSON.stringify(change)} never reserves`, async () => {
+      const f = await mediaPanelCommand();
+      await assert.rejects(
+        f.integration.recordEvent(
+          f.event('mismatch', { message: { ...f.payload.message, ...change } }),
+        ),
+        { statusCode: 409 },
+      );
+      assert.equal(
+        (
+          await pool.query('SELECT status FROM crm.messages WHERE id=$1', [
+            f.sent.id,
+          ])
+        ).rows[0].status,
+        'queued',
+      );
+      assert.equal((await snapshot()).used, '100');
+    });
+  for (const change of [{ automation_epoch: 99 }, { source_revision: 99 }])
+    test(`T12/MED-21: epoch/source fence ${JSON.stringify(change)} never reserves`, async () => {
+      const f = await mediaPanelCommand();
+      await assert.rejects(
+        f.integration.recordEvent(f.event('stale', change)),
+        { statusCode: 409 },
+      );
+      assert.equal(
+        (
+          await pool.query('SELECT status FROM crm.messages WHERE id=$1', [
+            f.sent.id,
+          ])
+        ).rows[0].status,
+        'queued',
+      );
+    });
+  test('T12/MED-21: drift of bound variant after outbox is refused', async () => {
+    const f = await mediaPanelCommand();
+    await pool.query(
+      'UPDATE crm.chat_media SET content_sha256=$2 WHERE id=$1',
+      [f.id, 'd'.repeat(64)],
+    );
+    await assert.rejects(f.integration.recordEvent(f.event('drift')), {
+      statusCode: 409,
+    });
+    assert.equal(
+      (
+        await pool.query('SELECT status FROM crm.messages WHERE id=$1', [
+          f.sent.id,
+        ])
+      ).rows[0].status,
+      'queued',
+    );
+  });
+  test('T12/MED-24: unknown Meta outcome has no blind retry and callbacks remain monotonic', async () => {
+    const f = await mediaPanelCommand();
+    const reservation = f.event('reserve-unknown');
+    assert.equal(
+      (await f.integration.recordEvent(reservation)).send_authorized,
+      true,
+    );
+    const callback = (
+      /** @type {string} */ eventId,
+      /** @type {string} */ eventType,
+      /** @type {any} */ extra = {},
+    ) => {
+      const input = /** @type {any} */ (
+        f.event(eventId, { event_type: eventType, ...extra })
+      );
+      delete input.message;
+      delete input.source_revision;
+      return input;
+    };
+    await f.integration.recordEvent(
+      callback('unknown', 'message.send.unknown'),
+    );
+    const unknown = (
+      await pool.query(
+        'SELECT status,retryable,retry_safe FROM crm.n8n_commands WHERE command_id=$1',
+        [f.row.command_id],
+      )
+    ).rows[0];
+    assert.deepEqual(unknown, {
+      status: 'outcome_unknown',
+      retryable: false,
+      retry_safe: false,
+    });
+    await pool.query(
+      "UPDATE crm.outbox_jobs SET status='outcome_unknown',completed_at=now(),updated_at=now(),last_error_code='OUTCOME_UNKNOWN' WHERE n8n_command_id=$1",
+      [f.row.command_id],
+    );
+    await pool.query(
+      "INSERT INTO crm.reconciliation_items(id,job_id,status,reason,created_at) SELECT gen_random_uuid()::text,id,'open','external_outcome_unknown',now() FROM crm.outbox_jobs WHERE n8n_command_id=$1",
+      [f.row.command_id],
+    );
+    const history = async () =>
+      (
+        await pool.query(
+          'SELECT to_jsonb(job) AS job,to_jsonb(item) AS item FROM crm.outbox_jobs job JOIN crm.reconciliation_items item ON item.job_id=job.id WHERE job.n8n_command_id=$1',
+          [f.row.command_id],
+        )
+      ).rows;
+    const unknownHistory = await history();
+    assert.equal(
+      (await f.integration.recordEvent(reservation)).send_authorized,
+      false,
+    );
+    await assert.rejects(
+      f.integration.recordEvent(f.event('new-reservation')),
+      { statusCode: 409 },
+    );
+    await f.integration.recordEvent(
+      callback('sent', 'message.sent', {
+        external_message_id: 'wamid.synthetic-media',
+      }),
+    );
+    assert.deepEqual(
+      (
+        await pool.query(
+          'SELECT status,retryable,retry_safe,last_error_code FROM crm.n8n_commands WHERE command_id=$1',
+          [f.row.command_id],
+        )
+      ).rows[0],
+      {
+        status: 'sent',
+        retryable: false,
+        retry_safe: false,
+        last_error_code: null,
+      },
+    );
+    assert.deepEqual(await history(), unknownHistory);
+    await f.integration.recordEvent(
+      callback('read', 'message.read', {
+        external_message_id: 'wamid.synthetic-media',
+      }),
+    );
+    await f.integration.recordEvent(
+      callback('delivered', 'message.delivered', {
+        external_message_id: 'wamid.synthetic-media',
+      }),
+    );
+    await f.integration.recordEvent(
+      callback('failed', 'message.failed', {
+        external_message_id: 'wamid.synthetic-media',
+      }),
+    );
+    assert.equal(
+      (
+        await pool.query(
+          'SELECT delivery_status FROM crm.messages WHERE id=$1',
+          [f.sent.id],
+        )
+      ).rows[0].delivery_status,
+      'read',
+    );
+    assert.equal((await snapshot()).used, '100');
+  });
+  test('T12/MED-06: text outbox wire shape and reservation stay compatible', async () => {
+    const f = await mediaPanelCommand('text');
+    assert.deepEqual(f.payload.message, {
+      filename: null,
+      media_url: null,
+      text: 'Synthetic text',
+      type: 'text',
+    });
+    assert.equal(
+      (await f.integration.recordEvent(f.event('text-reserve')))
+        .send_authorized,
+      true,
+    );
+    assert.equal((await snapshot()).used, '0');
+  });
+  for (const eventType of ['message.sent', 'message.send.unknown'])
+    test(`T12/MED-21/24: contradictory callback conversation ${eventType} has no effect`, async () => {
+      const f = await mediaPanelCommand();
+      await f.integration.recordEvent(f.event('reserve-cross-callback'));
+      const effects = async () => {
+        const result = [];
+        for (const table of [
+          'messages',
+          'n8n_commands',
+          'audit_events',
+          'domain_events',
+          'n8n_events',
+        ]) {
+          result.push(
+            (
+              await pool.query(
+                `SELECT to_jsonb(t) AS row FROM crm.${table} t ORDER BY to_jsonb(t)::text`,
+              )
+            ).rows,
+          );
+        }
+        return result;
+      };
+      const before = await effects();
+      const callback = f.event('cross-callback', {
+        event_type: eventType,
+        conversation_id: 'bind-other-conversation',
+        external_message_id: 'wamid.synthetic-cross-callback',
+      });
+      delete callback.message;
+      delete callback.source_revision;
+      await assert.rejects(f.integration.recordEvent(callback), {
+        statusCode: 409,
+      });
+      assert.deepEqual(await effects(), before);
+      assert.equal((await snapshot()).used, '100');
+    });
+  for (const type of ['audio', 'video'])
+    test(`T12/MED-20/21: exact ${type} variant reserves with appropriate caption`, async () => {
+      const f = await mediaPanelCommand(type);
+      assert.equal(f.payload.message.media_id, f.id);
+      assert.equal(f.payload.message.type, type);
+      assert.equal(
+        f.payload.message.mime_type,
+        type === 'audio' ? 'audio/ogg' : 'video/mp4',
+      );
+      assert.equal(
+        f.payload.message.caption,
+        type === 'audio' ? null : 'Synthetic caption',
+      );
+      assert.equal(
+        (await f.integration.recordEvent(f.event(`${type}-reserve`)))
+          .send_authorized,
+        true,
+      );
+      assert.equal((await snapshot()).used, '100');
+    });
 }

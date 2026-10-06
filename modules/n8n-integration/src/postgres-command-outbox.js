@@ -1,4 +1,5 @@
 import { decryptJson, encryptJson, fingerprint } from './crypto.js';
+import { retainedMediaReference } from './retained-media-reference.js';
 
 /**
  * Drop-in replacement for PostgresOutboundMessageOutbox. It is called by the
@@ -63,6 +64,22 @@ export class PostgresN8nCommandOutbox {
       ]),
       this.contactEnvelopeKey,
     );
+    let mediaReference = {};
+    if (['image', 'audio', 'video'].includes(row.message_type)) {
+      const bound = (
+        await client.query(
+          'SELECT * FROM crm.chat_media WHERE message_id=$1 AND conversation_id=$2 FOR UPDATE',
+          [row.id, row.conversation_id],
+        )
+      ).rows[0];
+      mediaReference = retainedMediaReference(bound, {
+        id: row.id,
+        conversationId: row.conversation_id,
+        actorId: row.author_id,
+        type: row.message_type,
+        content: message,
+      });
+    }
     const payload = {
       action: 'send_message',
       actor: { id: row.author_id },
@@ -75,6 +92,7 @@ export class PostgresN8nCommandOutbox {
         media_url: null,
         text: message.text ?? message.caption ?? '',
         type: row.message_type,
+        ...mediaReference,
       },
       schema_version: '1.0',
       to: identity.externalIdentityId,

@@ -1,5 +1,18 @@
 # Ativação de mídia do chat no RustFS
 
+T18: composer standalone recebe contexto fixo conversationId/expectedVersion
+e disabled; o chamador fase4 deve derivar disabled da autorização/admissão
+atual e tratar sent para refresh. Não usar filename/MIME como prova de bytes.
+Seleção → prévia → Preparar arquivo → ready → revisão → Enviar anexo.
+Áudio sem caption; 1024 emoji são 1024 code points válidos. Erro mantém
+prévia e retry usa contexto/chave originais; após tentativa de envio, legenda
+fica congelada. Mudança de conversa/versão ou unmount aborta e ignora respostas
+antigas. Polling termina em até 600 s, incluindo GET pendente, cobrindo os
+340 s das fases locais mais I/O. Timeout conserva mediaId e preview; atualizar
+validação consulta a mesma mídia sem repetir upload. Não renova lease nem reenvia por timer.
+Teste UI/axe usa harness isolado e API mockada; runtime de validação de bytes
+e n8n têm evidências separadas, sem alegar integração Inbox completa T21/T24.
+
 T17: uploads usam FormData com boundary do browser; não definir Content-Type
 manualmente. Reutilizar File/contexto/Idempotency-Key originais após resultado
 ambíguo. Cancelar AbortController do upload/status ao descartar ou mudar de

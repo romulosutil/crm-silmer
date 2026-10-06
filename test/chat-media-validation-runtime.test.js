@@ -73,6 +73,20 @@ if (process.env.RUN_CHAT_MEDIA_RUNTIME_TESTS === 'yes') {
         assert.equal(result.sizeBytes, (await stat(path)).size);
         assert.match(result.sha256, /^[a-f0-9]{64}$/u);
       }
+      const renamed = join(root, 'renamed-invalid.png');
+      await writeFile(renamed, 'invalid synthetic text renamed as PNG');
+      await assert.rejects(
+        validator.validate({
+          path: renamed,
+          kind: 'image',
+          origin: 'attachment',
+          declaredMimeType: 'image/png',
+        }),
+        (error) =>
+          error instanceof Error &&
+          'reason' in error &&
+          error.reason === 'invalid_format',
+      );
       const cover = join(root, 'covered.mp3');
       await execute(
         'ffmpeg',

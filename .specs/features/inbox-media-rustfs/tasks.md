@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T17 concluídas; fase 3 em execução, próxima T18. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T18 concluídas; fase 3 completa, próxima T19. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -323,7 +323,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-01..04, MED-25
 **Reuses**: Tokens, semântica de forms e cliente HTTP existentes.
 **Tools**: tlc-spec-driven; Browser para UI; Playwright/axe.
-**Done when**: [ ] Um arquivo por mensagem; só enviar após ready; erro preserva prévia; remove/reseleciona; teclado e foco verificáveis.
+**Done when**: [x] Um arquivo por mensagem; só enviar após ready; erro preserva prévia; remove/reseleciona; teclado e foco verificáveis.
 **Tests**: e2e + axe; mínimo 8 cenários de tipos/erro/teclado.
 **Gate**: UI + Build.
 **Commit**: feat(web): compose image audio and video attachments

@@ -3,10 +3,13 @@ import { mediaError } from './chat-media-runtime.js';
 /** @param {any} reply @param {any} error @param {string} requestId */
 export function sendChatMediaProblem(reply, error, requestId) {
   const raw = Number(error?.statusCode);
-  const status = [401, 403, 404, 409, 410, 413, 416, 422, 429].includes(raw)
+  const status = [400, 401, 403, 404, 409, 410, 413, 416, 422, 429].includes(
+    raw,
+  )
     ? raw
     : 503;
   const code = /** @type {Record<number,string>} */ ({
+    400: 'INVALID_REQUEST',
     401: 'INVALID_CREDENTIALS',
     403: 'FORBIDDEN',
     404: 'MEDIA_NOT_FOUND',

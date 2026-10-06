@@ -16,7 +16,7 @@ arquivo, no repositório ou em chat.
 | Política `crm-silmer-arquivos-rw`                    | Criada em 06/10/2026: `ListBucket`/`GetBucketLocation` no bucket e `Get/Put/DeleteObject` nele |
 | Usuário RustFS do CRM e suas chaves                  | Pendente (pessoa responsável)                                                                  |
 | `OBJECT_STORAGE_*` no `silmer-api`                   | Pendente; sem elas as rotas de arquivos respondem 503 e o resto do pedido funciona             |
-| Migrações 0027 (`crm.order_files`) e 0028 (handoff)  | Pendentes                                                                                      |
+| Migrações 0027 (`crm.order_files`) e 0028 (handoff)  | Aplicadas em 06/10/2026: `{"applied_count":2,"phase":"expand","status":"ok"}`                  |
 | Domínios públicos S3/console, digest, backup e drill | Lacunas abertas em `ops/easypanel/topology.json`                                               |
 
 ## Passos

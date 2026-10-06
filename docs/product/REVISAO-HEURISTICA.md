@@ -1,7 +1,9 @@
 # Revisão heurística do CRM — 03/10/2026
 
+**Baseline reconciliada em 05/10/2026:** PR 142 integrada; Técnica por item, arte do pedido e v5 (ADR 020). A tabela de achados registra a revisão original e seus refinamentos; evidências visuais datadas da v4 não comprovam ensaio da v5.
+
 Rastreabilidade: `PFI-01..13`, `PLI-01..08`, `PCX-01..09`, `PIM-01..05`,
-`PAU-01`, `REV-01..10` e tarefas T76–T82 de Pedidos MVP. Avaliação do código e
+`PAU-01`, `REV-01..10`, `TEC-01..08` e tarefas T76–T87 de Pedidos MVP. Avaliação do código e
 das telas locais. Os dois PDFs fornecidos em 03/10/2026 servem de referência
 visual; a rota real exige sessão autorizada, e o workflow n8n não ficou
 acessível neste ambiente. Validar com as pessoas da operação após o deploy.
@@ -11,8 +13,8 @@ Prioridade `P1` afeta conclusão da tarefa; `P2` causa confusão ou retrabalho;
 | Heurística                     | Achado concreto                                                                                                 | Prioridade | Ajuste nesta entrega / verificação                                                                                 |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------ |
 | Visibilidade do estado         | Pedido pendente e confirmado existem, mas “parado há” mede alteração do pedido, não resposta do cliente.        | P1         | Mostrar sinais separados para pedido sem movimentação e cliente sem resposta, com origem do dado explícita.        |
-| Correspondência com a operação | “Modelo”, “Viés gola” e serviço no resumo não descrevem a decisão por item da produção.                         | P1         | Usar tipo de roupa, definição da gola e serviço em cada item.                                                      |
-| Controle da pessoa             | Edição por seção e confirmação humana já existem; falta tornar clara a responsabilidade pela origem da estampa. | P1         | Marcação humana no pedido; a IA não preenche essa decisão.                                                         |
+| Correspondência com a operação | “Modelo”, “Viés gola” e serviço no resumo não descrevem a decisão por item da produção.                         | P1         | Usar Tipo de roupa, Gola e Técnica em cada item (ADR 020).                                                         |
+| Controle da pessoa             | Edição por seção e confirmação humana já existem; falta tornar clara a responsabilidade pela origem da estampa. | P1         | Origem no pedido; bot só projeta relato inequívoco ainda vazio e vendedor confere (ADR 020).                       |
 | Consistência                   | “Gerar pedido”, “Confirmar pedido” e “Ficha” apareciam para efeitos distintos.                                  | P1         | Usar os verbos do glossário em botões, bloqueios e estados.                                                        |
 | Prevenção de erro              | O impresso só abre após confirmação, mas arquivo sem validação e destino incerto pode sumir ou expor dados.     | P1         | Preparar contrato de upload com validação, acesso autorizado e destino explícito antes de habilitar armazenamento. |
 | Reconhecimento                 | A página de pedido reúne muitos blocos e pendências sem indicar a sequência operacional.                        | P2         | Priorizar próximo passo, agrupar especificações por item e deixar informações somente de leitura menos dominantes. |
@@ -39,15 +41,14 @@ Prioridade `P1` afeta conclusão da tarefa; `P2` causa confusão ou retrabalho;
    salvar, confirmar e abrir a ficha; foco permanece previsível.
 2. Outro vendedor abre o pedido em leitura e não consegue marcar estampa,
    editar item nem confirmar pela API.
-3. Pedido com dois itens aceita serviços distintos e mostra cada serviço na
-   leitura e na ficha candidata.
+3. Pedido com dois itens aceita técnicas distintas; arte pertence ao pedido. Confirmar Sem estampa exclusivo das outras origens e leitura da Técnica na ficha v5.
 4. Dashboard muda após confirmação ou reabertura sem recarregar a página;
    valor vendido e vendas contam apenas confirmados.
 5. Pedido com última mensagem enviada pela Silmer há mais de 48 horas recebe
    sinal de cliente sem resposta; conversa que recebeu resposta ou cuja saída
    falhou não recebe.
 6. A impressão candidata preserva campos de produção vazios, sem valor ou
-   condição de pagamento, e não altera as versões v2 e v3 aprovadas.
+   condição de pagamento, e não altera versões/hashes v2–v4.
 
 ## Limites de interpretação
 
@@ -56,7 +57,6 @@ critérios comerciais validados. A interface usa sinais observáveis de tempo e
 resposta, sem porcentagem de fechamento. A comparação visual da ficha usa
 `ficha-canonica-sintetica-v3.pdf` e a candidata
 `output/pdf/ficha-canonica-sintetica-v4.pdf`; o exemplar real
-`25-CRM-ficha-v3.pdf` não deve ser copiado para testes ou relatórios. A v3
-segue selecionada para impressão até aprovação da nova amostra. O envio ao
+`25-CRM-ficha-v3.pdf` não deve ser copiado para testes ou relatórios. A v5 está selecionada com aprovação provisória do PO; a assinatura física de Rose e Operação continua obrigatória antes da produção. O envio ao
 Dropbox e as notificações a Rose ficam para fluxos de produção acordados com
 a Silmer.

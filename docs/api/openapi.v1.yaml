@@ -327,7 +327,7 @@ paths:
             name: archived,
             in: query,
             schema: { type: boolean, default: false },
-            description: Quando true, retorna somente conversas arquivadas.
+            description: 'Quando true, retorna somente conversas arquivadas.',
           }
         - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
         - {
@@ -411,7 +411,7 @@ paths:
   /contacts/{contactId}:
     get:
       operationId: getContact
-      summary: Retorna contato, identidades, conversas e negócios associados
+      summary: Retorna contato, identidades e histórico associado
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/ContactId'
@@ -424,104 +424,18 @@ paths:
               schema: { $ref: '#/components/schemas/ContactDetail' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /kanban:
-    get:
-      operationId: getKanban
-      summary: Projeta as cinco colunas do Kanban a partir de Negócios ativos
-      security: [{ sessionCookie: [] }]
-      parameters:
-        - $ref: '#/components/parameters/HumanReadOrigin'
-        - {
-            name: assignedUserId,
-            in: query,
-            schema: { type: string, minLength: 1 },
-          }
-        - { name: hasOverdueTask, in: query, schema: { type: boolean } }
-        - {
-            name: limit,
-            in: query,
-            schema: { type: integer, minimum: 1, maximum: 100, default: 20 },
-          }
-      responses:
-        '200':
-          description: Colunas com paginação independente; Backlog não integra o Kanban
-          headers:
-            Cache-Control:
-              { schema: { type: string, const: 'private, no-cache' } }
-            Vary: { schema: { type: string, const: 'Origin, Cookie' } }
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/KanbanBoard' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-  /kanban/cards:
-    get:
-      operationId: getKanbanCards
-      summary: Pagina uma etapa do Kanban por updatedAt e Deal id
-      security: [{ sessionCookie: [] }]
-      parameters:
-        - $ref: '#/components/parameters/HumanReadOrigin'
-        - {
-            name: stage,
-            in: query,
-            required: true,
-            schema: { $ref: '#/components/schemas/DealStage' },
-          }
-        - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
-        - {
-            name: assignedUserId,
-            in: query,
-            schema: { type: string, minLength: 1 },
-          }
-        - { name: hasOverdueTask, in: query, schema: { type: boolean } }
-        - {
-            name: limit,
-            in: query,
-            schema: { type: integer, minimum: 1, maximum: 100, default: 20 },
-          }
-      responses:
-        '200':
-          description: Página da coluna solicitada
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/KanbanColumn' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-  /deals/{dealId}:
-    get:
-      operationId: getDealDetail
-      summary: Retorna detalhe operacional pseudônimo do Negócio
-      security: [{ sessionCookie: [] }]
-      parameters:
-        - $ref: '#/components/parameters/DealId'
-        - $ref: '#/components/parameters/HumanReadOrigin'
-        - { name: If-None-Match, in: header, schema: { type: string } }
-      responses:
-        '200':
-          description: Negócio, qualificação, tarefas, gates, histórico e handoffs sem texto cifrado
-          headers:
-            ETag: { schema: { type: string } }
-            Cache-Control:
-              { schema: { type: string, const: 'private, no-cache' } }
-            Vary: { schema: { type: string, const: 'Origin, Cookie' } }
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DealDetail' }
-        '304': { description: Representação composta não mudou }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
   /events:
     get:
-      operationId: streamKanbanEvents
-      summary: Reproduz invalidações do Kanban em ordem total durável
+      operationId: streamInboxEvents
+      summary: Reproduz eventos autorizados de atendimento e Pedidos em ordem durável
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
         - {
             name: topic,
             in: query,
-            required: true,
-            schema: { type: string, const: kanban },
+            required: false,
+            schema: { type: string, const: inbox },
           }
         - { name: after, in: query, schema: { type: integer, minimum: 0 } }
         - {
@@ -532,8 +446,12 @@ paths:
       responses:
         '200':
           description: >-
-            text/event-stream. Emite kanban.card.changed, stream.reset e
-            heartbeats; nenhum payload livre de domínio é transportado.
+            text/event-stream privado, sem cache. topic é opcional e aceita somente inbox.
+            Emite inbox.contact.changed, inbox.conversation.changed,
+            inbox.order.changed, identity.user.changed e stream.reset;
+            session.expired encerra acesso revogado. Heartbeat a cada 15 segundos.
+            Last-Event-ID tem precedência sobre after; cursor não negativo e inteiro seguro.
+            Payloads minimizados não transportam PII, prompts ou segredos.
           content:
             text/event-stream: { schema: { type: string } }
         '400': { $ref: '#/components/responses/InvalidRequest' }
@@ -542,259 +460,6 @@ paths:
           description: Limite de aberturas por origem ou de streams simultâneos excedido
           headers:
             Retry-After: { schema: { type: integer, minimum: 1 } }
-  /conversations/{conversationId}/convert:
-    post:
-      operationId: convertConversation
-      summary: Vincula o Contato e cria exatamente um Negócio em Produto
-      description: >-
-        Fecha a conversa como convertida_em_lead na mesma transação da promoção
-        do Contato, criação do Negócio, idempotência e auditoria. Aceita o ator
-        técnico do n8n ou uma sessão humana de Vendedor.
-      security:
-        - automationBasic: []
-          idempotencyKey: []
-        - sessionCookie: []
-          csrfHeader: []
-          idempotencyKey: []
-      parameters:
-        - name: conversationId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1 }
-        - $ref: '#/components/parameters/OriginOptional'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConversationConversionRequest'
-      responses:
-        '201':
-          description: Conversão criada ou resposta original reproduzida
-          headers:
-            Location:
-              description: URL canônica do Negócio criado
-              schema: { type: string }
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConversationConversionResponse'
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/InvalidCredentials' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '503': { $ref: '#/components/responses/Unavailable' }
-  /deals/{dealId}/transitions:
-    post:
-      operationId: transitionDeal
-      summary: Avança ou retorna exatamente uma etapa do Negócio
-      description: >-
-        O destino é sempre derivado da etapa atual. O avanço persiste a
-        avaliação do gate, o histórico e o evento canônico na mesma transação.
-        O executor técnico deve informar a conversa ativa e seu automationEpoch.
-      security:
-        - automationBasic: []
-          idempotencyKey: []
-        - sessionCookie: []
-          csrfHeader: []
-          idempotencyKey: []
-      parameters:
-        - $ref: '#/components/parameters/DealId'
-        - $ref: '#/components/parameters/OriginOptional'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/DealTransitionRequest' }
-      responses:
-        '200':
-          description: Transição aplicada ou resposta original reproduzida
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DealCommandResponse' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/InvalidCredentials' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '503': { $ref: '#/components/responses/Unavailable' }
-  /deals/{dealId}/lose:
-    post:
-      operationId: loseDeal
-      summary: Marca o Negócio como perdido com motivo cifrado
-      description: Exclusivo para Vendedor autenticado.
-      security:
-        - sessionCookie: []
-          csrfHeader: []
-          idempotencyKey: []
-      parameters:
-        - $ref: '#/components/parameters/DealId'
-        - $ref: '#/components/parameters/Origin'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/DealLossRequest' }
-      responses:
-        '200':
-          description: Perda registrada ou resposta original reproduzida
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DealCommandResponse' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '503': { $ref: '#/components/responses/Unavailable' }
-  /deals/{dealId}/fields:
-    patch:
-      operationId: patchDealFields
-      summary: Atualiza campos oficiais da Ficha do Negócio
-      description: >-
-        Patch idempotente de seções fechadas. Incrementa a versão raiz uma vez
-        e retorna atomicamente à primeira etapa anterior incompleta. O executor
-        técnico deve provar conversa ativa e automationEpoch na mesma transação.
-      security:
-        - automationBasic: []
-          idempotencyKey: []
-        - sessionCookie: []
-          csrfHeader: []
-          idempotencyKey: []
-      parameters:
-        - $ref: '#/components/parameters/DealId'
-        - $ref: '#/components/parameters/OriginOptional'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/DealFieldsPatchRequest' }
-      responses:
-        '200':
-          description: Campos persistidos ou resposta original reproduzida
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DealFieldsPatchResponse' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/InvalidCredentials' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/InvalidRequest' }
-        '503': { $ref: '#/components/responses/Unavailable' }
-  /deals/{dealId}/assign:
-    post:
-      operationId: assignDeal
-      summary: Atribui um Negócio a um Vendedor ativo
-      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
-      parameters:
-        - $ref: '#/components/parameters/DealId'
-        - $ref: '#/components/parameters/Origin'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/DealAssignmentRequest' }
-      responses:
-        '200': { description: Atribuição persistida ou replay idempotente }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/InvalidRequest' }
-  /deals/{dealId}/tasks:
-    post:
-      operationId: createFollowUpTask
-      summary: Cria tarefa humana de follow-up com texto cifrado
-      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
-      parameters:
-        - $ref: '#/components/parameters/DealId'
-        - $ref: '#/components/parameters/Origin'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/TaskCreateRequest' }
-      responses:
-        '201': { description: Tarefa criada ou replay idempotente }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/InvalidRequest' }
-  /tasks/{taskId}/{action}:
-    post:
-      operationId: transitionFollowUpTask
-      summary: Inicia, conclui ou cancela uma tarefa de follow-up
-      description: Tarefas vinculadas a handoff não podem ser canceladas isoladamente.
-      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1 }
-        - name: action
-          in: path
-          required: true
-          schema: { type: string, enum: [start, complete, cancel] }
-        - $ref: '#/components/parameters/Origin'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/TaskActionRequest' }
-      responses:
-        '200': { description: Tarefa atualizada ou replay idempotente }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-  /deals/{dealId}/handoffs:
-    post:
-      operationId: createHumanHandoff
-      summary: Cria handoff humano e sua única tarefa atomicamente
-      description: AUTOMATION_EXECUTOR deve informar contexto n8n e fence da conversa.
-      security:
-        - automationBasic: []
-          idempotencyKey: []
-        - sessionCookie: []
-          csrfHeader: []
-          idempotencyKey: []
-      parameters:
-        - $ref: '#/components/parameters/DealId'
-        - $ref: '#/components/parameters/OriginOptional'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/HandoffCreateRequest' }
-      responses:
-        '201': { description: Handoff e tarefa criados ou replay idempotente }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/InvalidCredentials' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/InvalidRequest' }
-  /handoffs/{handoffId}/{action}:
-    post:
-      operationId: transitionHumanHandoff
-      summary: Aceita, transfere ou resolve um handoff humano
-      description: Transferência preserva dueAt; nenhuma ação reativa a automação.
-      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
-      parameters:
-        - name: handoffId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1 }
-        - name: action
-          in: path
-          required: true
-          schema: { type: string, enum: [accept, transfer, resolve] }
-        - $ref: '#/components/parameters/Origin'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/HandoffActionRequest' }
-      responses:
-        '200':
-          { description: Handoff e tarefa atualizados ou replay idempotente }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
   /integrations/n8n/messages/inbound:
     post:
       operationId: receiveN8nInboundMessage
@@ -920,7 +585,10 @@ paths:
         '202': { description: Estado oficial, auditoria e outbox gravados }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { description: 'Comando inexistente, inclusive `return-to-ai` (ADR 015)' }
+        '404':
+          {
+            description: 'Comando inexistente, inclusive `return-to-ai` (ADR 015)',
+          }
         '409': { $ref: '#/components/responses/Conflict' }
   /conversations/{conversationId}/archive:
     post:
@@ -936,7 +604,10 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/HumanConversationCommand' }
       responses:
-        '202': { description: Conversa arquivada, com auditoria e atualização em tempo real }
+        '202':
+          {
+            description: 'Conversa arquivada, com auditoria e atualização em tempo real',
+          }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -954,7 +625,10 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/HumanConversationCommand' }
       responses:
-        '202': { description: Conversa desarquivada, com auditoria e atualização em tempo real }
+        '202':
+          {
+            description: 'Conversa desarquivada, com auditoria e atualização em tempo real',
+          }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -1081,8 +755,7 @@ paths:
               { schema: { type: string, const: 'private, no-cache' } }
           content:
             application/json:
-              schema:
-                { $ref: '#/components/schemas/ConversationOrderResponse' }
+              schema: { $ref: '#/components/schemas/ConversationOrderResponse' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }

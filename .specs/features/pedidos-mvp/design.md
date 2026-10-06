@@ -1,18 +1,22 @@
 # Pedidos MVP — Arquitetura
 
 **Spec:** [`spec.md`](spec.md) · **Decisões:** [`context.md`](context.md)
-**Status:** Draft para aprovação
-**Base:** `origin/master` em `635cbb3` (Kanban e Negócio já removidos)
+**Status:** implementado; síntese atualizada em 05/10/2026
+**Base:** PR 142 integrada, ADR 020; versões e evidências anteriores preservadas.
 
 ---
+
+## Refinamento ADR 020
+
+Técnica (tipo_servico) é ponto obrigatório por item; Estampa (referência) é adicional. Arte (artwork) pertence ao pedido e exige origem para gerar. Aplicação geral antiga permanece guardada sem uso na v5. Bot preenche técnica/origem inequívocas ainda vazias. O modelo SQL abaixo mostra as migrations originais; defaults e projeções atuais devem ser confirmados nas fontes, não deduzidos do snapshot.
 
 ## Visão geral
 
 Um módulo novo, `modules/orders`, dono do agregado **Pedido**. Ele não reutiliza
 `deals-pipeline`, `qualification` nem as tabelas `crm.deals*` (ADR 004). A API
-ganha rotas de pedido no mesmo estilo das rotas de conversa; o n8n ganha um
-tipo de evento para criar o pendente; o feed ao vivo ganha um tipo de evento
-de pedido. No front, duas telas novas (lista e página), uma gaveta no inbox e a
+expõe rotas de pedido no mesmo estilo das rotas de conversa; o n8n usa um
+tipo de evento para criar o pendente; o feed ao vivo usa um tipo de evento
+de pedido. No front, duas telas (lista e página), uma gaveta no inbox e a
 troca do filtro "Situação" pelo filtro "Estado".
 
 ```mermaid
@@ -23,14 +27,14 @@ graph TD
   subgraph API[apps/api]
     NR[n8n-routes<br/>order.intent_confirmed<br/>briefing_patch]
     OR[order-routes<br/>list · get · create · patch · confirm · reopen · print]
-    CR[conversation-routes<br/>takeover · return · transfer · archive]
+    CR[conversation-routes<br/>takeover · transfer · archive]
     OPR[operation-runtime<br/>listInbox + filtro pendingHandoff<br/>readLiveEvents]
     AUTH[identity-runtime<br/>OPERATIONAL_ACTIONS]
   end
   subgraph orders[modules/orders]
     SVC[OrderService]
     DOM[Order domain<br/>status · número · validação · totais]
-    PRINT[ficha-canonical-v2 renderer]
+    PRINT[ficha-canonical-v5 renderer]
     PG[PostgresOrderRepository]
   end
   subgraph db[(PostgreSQL)]
@@ -225,7 +229,7 @@ CREATE TABLE crm.orders (
   ficha_version       integer NOT NULL DEFAULT 0,
   ficha_envelope      jsonb  NOT NULL,                 -- summary, items, observations, serviceData (cifrado)
   total_pieces        integer NOT NULL DEFAULT 0 CHECK (total_pieces >= 0),
-  missing_fields      text[] NOT NULL DEFAULT '{}',    -- para a lista sem decifrar
+  missing_fields      text[] NOT NULL DEFAULT '{}',    -- inclui técnica por item e artwork; lista sem decifrar
   final_amount_cents  bigint CHECK (final_amount_cents > 0),
   payment_condition   text   CHECK (payment_condition IN ('pix','cartao_credito','cartao_debito')),
   order_date          date,
@@ -281,7 +285,8 @@ type PaymentCondition = 'pix' | 'cartao_credito' | 'cartao_debito';
 interface FichaItem {
   tipo: string; // Tipo de roupa
   cor: string;
-  estampa: string;
+  tipo_servico: string; // Técnica, obrigatória; ADR 020
+  estampa: string; // Estampa (referência), adicional opcional
   malhas: string[]; // Tecido; sem linha em branco
   grade: { tamanho: string; quantidade: number }[]; // Tamanhos; inteiro > 0
   gola: string;
@@ -299,11 +304,17 @@ interface Ficha {
   summary: {
     cliente: string;
     data_entrega_confirmada: string | null;
-    aplicacao: string | null;
+    aplicacao: string | null; // legado preservado, sem edição ou impressão v5
     nome: string | null;
   };
   items: FichaItem[];
   observations: string[]; // 0..5
+  artwork: {
+    feito_pelo_cliente: boolean;
+    feito_pela_silmer: boolean;
+    sem_estampa: boolean;
+    files: unknown[];
+  }; // origem do pedido; Sem estampa é exclusiva
   serviceData: Record<string, unknown>; // só leitura, não impresso
 }
 
@@ -315,7 +326,7 @@ interface Order {
   fabCode: string;
   ficha: Ficha;
   totalPieces: number;
-  missingFields: string[]; // ADR 016: items, items[N].<principal>, summary.data_entrega_confirmada, finalAmount, paymentCondition
+  missingFields: string[]; // ADR 020: items, items[N].<principal>, artwork, summary.data_entrega_confirmada, finalAmount, paymentCondition
   finalAmountCents: number | null;
   paymentCondition: PaymentCondition | null;
   orderDate: string | null;
@@ -362,7 +373,7 @@ a partir de `Order` (`vendedor` = quem confirmou; `data` = `orderDate`;
 | Escrita por seção | `PATCH /sections/:section` com a seção inteira                                             | Casa com a UI "Editar seção"; um contrato por bloco do PDF.   |
 | Concorrência      | `version` otimista em todas as escritas                                                    | Já é o padrão das conversas; PCL-09.                          |
 | Número            | `SEQUENCE` global reservada na criação                                                     | `CAMPOS-FICHA-E-JORNADA-P0-1.md`: sequência que não reinicia. |
-| Impressão         | HTML do template v2 servido pela API + `window.print()`                                    | Sem Chromium no container da API; mantém o template aprovado. |
+| Impressão         | HTML do template v5 selecionado por PRINT_TEMPLATE, servido pela API + `window.print()`    | Sem Chromium no container da API; mantém o template aprovado. |
 | Tempo real        | Reusar `crm.domain_events` + dispatcher existente                                          | Sem canal novo; o SSE já tem rate limit.                      |
 | Filtro "Estado"   | Derivado de `handoffs.status` e `automation_state`                                         | Nenhum estado novo de conversa; nada a migrar.                |
 
@@ -376,9 +387,7 @@ a partir de `Order` (`vendedor` = quem confirmou; `data` = `orderDate`;
   Mitigação: T40 roda após o deploy, testa no workflow DEV, guarda a versão
   anterior para rollback e o nó do evento não bloqueia a resposta ao cliente.
 
-- **OpenAPI desatualizado:** `docs/api/openapi.v1.yaml` ainda lista `/kanban`,
-  `/deals/*` e `/conversations/{id}/convert`, que não existem. Esta feature só
-  adiciona os caminhos de pedido; a limpeza fica adiada.
+- **Contratos legados:** caminhos aposentados de Kanban/Negócio foram retirados da OpenAPI em 05/10/2026; schemas, tabelas e módulos históricos permanecem preservados e não autorizam novas capacidades.
 - **README do n8n afirma endpoints que sumiram** ("usa os endpoints canônicos de
   conversão, campos e transição"). A ADR 006 e a atualização do README corrigem
   isso.
@@ -386,6 +395,4 @@ a partir de `Order` (`vendedor` = quem confirmou; `data` = `orderDate`;
   Não tocar; limpeza adiada.
 - **Estados antigos da conversa** continuam em Clientes ("Situação") e no KPI
   "Requerem atenção" do Dashboard. Fora do escopo.
-- **Gate do template aprovado:** o PDF v2 é imutável por hash. A extração do
-  renderer precisa de teste golden para garantir saída idêntica com
-  `synthetic:true`.
+- **Gate da ficha:** v5 está selecionada com aprovação provisória do PO. Assinatura física de Rose e Operação continua exigida antes de produção. PDFs/templates v2–v4 e hashes não são reescritos.

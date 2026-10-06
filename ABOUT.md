@@ -2,7 +2,7 @@
 
 O CRM Silmer é um produto web próprio para organizar conversas comerciais, qualificação, vendas e geração de Fichas de Pedido. Ele substitui integralmente o Datacrazy.
 
-O fluxo começa quando uma mensagem válida do cliente dispara automaticamente um workflow no n8n. O n8n é o motor obrigatório da jornada: integra os canais, executa o Vendedor Silmer, cria ou atualiza leads pelo contrato da API do CRM, move o Kanban quando os gates forem satisfeitos e transfere para uma pessoa quando necessário. Não existe botão da interface para iniciar essa automação.
+O fluxo começa quando uma mensagem válida do cliente dispara automaticamente um workflow no n8n. O n8n é o motor obrigatório da jornada: integra os canais, executa o Vendedor Silmer, coleta dados e cria ou completa pedidos pendentes pelo contrato da API do CRM e transfere para uma pessoa quando necessário. Não existe botão da interface para iniciar essa automação.
 
 O MVP é organizado em três objetivos que evoluem em paralelo e se conectam no lançamento:
 
@@ -14,11 +14,10 @@ O n8n nunca acessa diretamente o banco. Toda mutação oficial passa pela API id
 
 O primeiro MVP operacional usa WhatsApp Business. Instagram Direct é a próxima
 fase de canal e reutilizará a mesma jornada. Quando essa fase chegar, o
-atendimento poderá migrar entre canais preservando o Negócio somente após
+atendimento poderá migrar entre canais preservando o Contato somente após
 correlação verificável entre `@instagram` e telefone. O artefato central do
 domínio é `ficha_exemplo.xlsx`: os dados
-necessários para produzir e cobrar um pedido definem as perguntas, validações e
-etapas da jornada.
+necessários para produzir e cobrar um pedido orientam as perguntas e validações. A baseline vigente é Pedido com dois status, técnica por item, arte do pedido e impressão v5 (ADRs 006 e 020); assinatura física e homologação permanecem gates de produção.
 
 Documentos principais:
 
@@ -53,3 +52,5 @@ Documentos principais:
 O documento externo de API foi inicialmente incorporado por RFC 001/ADR 002 e
 depois simplificado por RFC 002/ADR 003: Basic only, CRM como fonte da verdade,
 três endpoints, fence de envio incorporado à reserva e WhatsApp primeiro.
+
+OpenAI é o provedor escolhido para produção ([ADR 021](docs/adr/021-adotar-openai-no-mvp.md)). O deploy continua automático GitHub → EasyPanel ([ADR 022](docs/adr/022-manter-deploy-automatico-github-easypanel.md)).

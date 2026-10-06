@@ -2,69 +2,41 @@
 
 ## Regras de produto
 
-1. Conversa não é lead. Toda mensagem entra primeiro no backlog da Caixa de Entrada e dispara automaticamente o workflow correspondente no n8n.
-2. O Vendedor Silmer pode classificar uma conversa como oportunidade e solicitar ao CRM, de forma idempotente, a criação ou atualização do Contato e do Negócio; a simples chegada da mensagem não cria lead.
-3. Backlog não é coluna do Kanban.
-4. A Ficha de Pedido é a fonte da verdade dos dados necessários para concluir a jornada.
-5. O Vendedor Silmer conversa, coleta dados e pode converter conversas, atualizar campos oficiais e mover cards somente por comandos autorizados da API do CRM e pelos gates da jornada.
-6. O Vendedor Silmer nunca calcula, negocia ou inventa preço, prazo ou regra comercial; ele só pode comunicar orçamento aprovado por uma pessoa autorizada.
-7. A autonomia operacional do Vendedor Silmer é parte do MVP, limitada às capacidades do ator técnico do n8n, ao `automation_epoch`, aos gates do domínio e a um desligamento imediato por conversa e global.
-8. Toda mensagem, decisão, mutação ou transferência do agente é auditável no CRM; retries e duplicidades não podem criar conversas, leads, cards, pedidos ou envios duplicados.
-9. Conversa sem oportunidade termina como `Sem lead`; oportunidade encerrada termina como `Fechado` ou `Perdido` com motivo.
-10. Toda Ficha aprovada registra versão, autor e estado de envio.
-11. O primeiro pedido é `01-CRM`; os seguintes usam a sequência `02-CRM`, `03-CRM` e assim por diante, sem dependência de numeração legada.
-12. O destinatário operacional da Ficha é Rose; o telefone é resolvido pela
-    referência `secret://crm/order-recipient-phone` e nunca é versionado.
-13. A jornada definitiva é Backlog, Produto, Especificação, Estampa, Logística
-    e Fechamento; Backlog não é coluna do Kanban.
-14. Campo obrigatório `pendente` ou `divergente` bloqueia passagem. Um campo
-    `nao_aplicavel` só libera a passagem quando possui motivo.
-15. Receber comprovante PIX não confirma pagamento; somente uma pessoa
-    autorizada pode confirmar e liberar a Ficha no caminho inicial.
-16. O MVP mede vendas, não recebimentos nem saldo a receber.
-17. Rômulo Sutil Corrêa é o Responsável de Privacidade; a política do piloto foi aprovada após consulta jurídica.
-18. Imagens e arquivos de canal não promovidos a documento válido são
-    transitórios: os bytes são removidos no encerramento da jornada ou sete
-    dias após o recebimento/envio, o que ocorrer primeiro. Pedido, Ficha,
-    orçamento aprovado, comprovante PIX válido, eventos comerciais e auditoria
-    nunca herdam esse prazo curto.
-19. `convertida_em_lead` encerra a triagem, não a Conversa. Enquanto existir
-    Negócio ativo, `terminal_at` permanece nulo e o ator técnico pode continuar
-    usando os endpoints canônicos de campos e transições. `Sem lead`, Fechado
-    e Perdido continuam sendo os únicos encerramentos oficiais aplicáveis.
-20. Handoff automático começa sem pessoa responsável e todos os motivos
-    declaram `target_role` Vendedor; a função Atendimento não recebe mais
-    handoffs (ADR 009). A atribuição ocorre atomicamente para uma pessoa ativa
-    com papel compatível.
+1. Toda mensagem válida entra na Caixa de Entrada e dispara automaticamente o n8n; a UI não inicia a automação.
+2. Cliente é `Contact` + `ContactIdentity`. A chegada resolve contato e conversa, mas não confirma venda.
+3. Kanban e Negócio estão aposentados (ADR 004); novas capacidades não reutilizam tabelas ou módulos históricos desse domínio.
+4. Pedido possui somente `pendente` e `confirmado` (ADR 006). O preenchimento é progressivo e não linear.
+5. O agente cria ou completa pedido pendente por comandos autorizados da API. Nunca confirma pedido nem altera preço, pagamento ou escolha humana já registrada.
+6. Preço, prazo garantido e regra comercial nunca são inventados pelo agente. Uma pessoa autorizada decide as condições.
+7. Automação limita-se às capacidades de `AUTOMATION_EXECUTOR`, ao `automation_epoch` e aos gates; há desligamento por conversa e global.
+8. Retries e duplicidades não criam contatos, conversas, pedidos ou envios duplicados. Efeitos oficiais são auditáveis.
+9. Uma conversa pode ter vários pedidos e no máximo um pendente. Confirmação e reabertura são humanas; reabrir preserva número e bloqueia impressão.
+10. Pedido confirmado registra autor, horário, valor e condição. Só pedido confirmado pode ser impresso.
+11. A numeração começa em `01-CRM`, é reservada na criação e não depende da sequência legada.
+12. Rose é a destinatária operacional da ficha. Encaminhamento e eventual aviso automático exigem homologação própria; o telefone, quando usado, vem de `secret://crm/order-recipient-phone` e nunca é versionado.
+13. Gerar exige os pontos principais de cada item: Tipo de roupa, Cor, Quantidade calculada, Técnica, Tecido, Tamanhos e Gola; também exige origem da arte, entrega prometida, valor final e condição (ADR 020).
+14. Rascunho pode ser salvo incompleto. Pendências bloqueiam gerar, sem impor colunas ou avanço linear. Adicionais e nome do pedido não bloqueiam.
+15. Arte pertence ao pedido: cliente envia, Silmer cria ou sem estampa. “Sem estampa” exclui as duas outras opções. O bot só projeta resposta inequívoca e não substitui escolha humana.
+16. Vendas e valor vendido contam apenas pedidos confirmados; recebimentos e saldo a receber ficam fora do MVP. “Pago em” e “Entregue em” são datas manuais e não mudam status.
+17. Rômulo Sutil Corrêa é o Responsável de Privacidade; a política do piloto foi aprovada após consulta jurídica. Aprovações externas de IA e recovery permanecem gates independentes.
+18. Mídia de canal não promovida é transitória: remover bytes no fim da jornada ou em sete dias, o que ocorrer primeiro. Pedido, ficha, documentos comerciais válidos e auditoria seguem retenção própria.
+19. Handoff e tomada humana são definitivos para o atendimento: a conversa segue com pessoa até encerrar e não volta ao bot (ADR 015).
+20. Handoff nasce sem responsável e tem papel-alvo Vendedor (ADR 009). A reivindicação é atômica e exige pessoa ativa e elegível; editar, gerar ou reabrir pedido exige dono da conversa ou administrador.
 
 ## Regras técnicas já impostas
 
-1. O frontend usa Vue 3, Vue Router e Vite, conforme `docs/adr/001-adotar-vue-no-frontend.md`; novas bibliotecas de estado ou frameworks exigem autorização explícita.
-2. Evitar estado global em `window`; preferir ESM, IIFE ou classes isoladas.
-3. Interações devem funcionar por teclado e manter ARIA dinâmica quando aplicável.
-4. O WhatsApp usa a API oficial do WhatsApp Business e é obrigatório para o lançamento do piloto.
-5. WhatsApp Business é o canal do primeiro MVP operacional. Instagram Direct
-   é a fase de canal seguinte e deve reutilizar a mesma jornada. A migração
-   preserva o Negócio e só conecta `@instagram` e telefone após correlação
-   verificável e auditável.
-6. O n8n é obrigatório no MVP e é o motor de canais, IA e orquestração da jornada comercial. Cada mensagem recebida dispara o n8n sem depender de ação ou botão da UI.
-7. Integrações externas entram por contratos explícitos e não definem o modelo interno do domínio. O n8n nunca acessa diretamente o banco: usa APIs autenticadas, autorizadas, idempotentes e auditáveis do CRM.
-8. Dados pessoais seguem minimização, controle de acesso, auditoria e a política de retenção aprovada no P0.6.
-9. No piloto interno, a mídia transitória usa volume privado da VPS sem backup;
-   arquivos válidos seguem ao Dropbox por procedimento operacional registrado.
-   Isso não autoriza nem presume API, token ou sincronização automática do
-   Dropbox.
-10. O contrato n8n v1 usa somente Basic Auth com o ator
-    `AUTOMATION_EXECUTOR`, headers de idempotência/correlação/workflow e
-    `application/problem+json`; HMAC e timestamp não fazem parte desse
-    contrato.
-11. `message.send.requested` é o fence obrigatório e de uso único antes de
-    qualquer chamada à Meta. Timeout posterior vira `message.send.unknown` e
-    reconciliação; retry cego é proibido.
-12. A autorização da resposta automática é incorporada ao
-    `message.send.requested`: modo, `automation_epoch` e `source_revision`
-    devem estar atuais, e cada revisão inbound só pode ser consumida uma vez.
-    Não existe claim, lease ou token de rodada no MVP simples.
-13. O backend preserva fronteiras neutras de canal, mas o contrato executável
-    desta versão aceita somente WhatsApp. Instagram é uma fase posterior; não
-    há fallback silencioso para o webhook direto da Meta.
+1. Frontend em Vue 3, Vue Router e Vite (ADR 001); nova biblioteca de estado ou framework exige autorização explícita.
+2. Não manter estado de domínio em `window`; usar módulos isolados.
+3. Toda interface opera por teclado, gerencia foco e anuncia mudanças com ARIA quando aplicável.
+4. WhatsApp usa API oficial e é o canal obrigatório do primeiro lançamento. Instagram pertence a `CANAL-2` e não bloqueia o piloto WhatsApp.
+5. Na futura migração entre canais, associar identidades ao mesmo Contato somente após correlação verificável e auditável; nunca por nome ou inferência da IA.
+6. n8n é obrigatório para canais, OpenAI e orquestração. Falha de n8n é visível, sem fallback silencioso.
+7. Toda mutação oficial passa por contrato autenticado, autorizado, idempotente e auditável do CRM; n8n nunca acessa diretamente o banco do CRM.
+8. Dados pessoais seguem minimização, acesso por capacidade, auditoria e política de retenção aprovada. Controles de acesso devem refletir a implementação e as evidências atuais.
+9. No piloto interno, mídia transitória usa volume privado sem backup; arquivos válidos seguem ao Dropbox por procedimento registrado. Isso não presume API, token ou sincronização automática.
+10. n8n v1 usa Basic Auth com `AUTOMATION_EXECUTOR`, idempotência, correlação, identidade de workflow e `application/problem+json`; sem HMAC/timestamp nesse contrato.
+11. `message.send.requested` é reserva obrigatória de uso único antes da chamada à Meta. Timeout posterior vira resultado desconhecido e reconciliação; retry cego é proibido.
+12. A reserva valida modo, `automation_epoch` e `source_revision` atuais; cada revisão inbound só pode ser consumida uma vez. Não há claim, lease ou token de rodada.
+13. OpenAI é o provedor escolhido para produção. Produção com PII exige evidências aplicáveis de DPA, retenção, logging e ZDR; escolha do provedor não satisfaz esse gate.
+14. `PRINT_TEMPLATE` seleciona `ficha-canonical-v5`, com aprovação provisória do PO. Rose e Operação devem assinar a amostra física antes da produção; templates v2–v4 e hashes permanecem imutáveis.
+15. Manter o deploy automático GitHub → EasyPanel existente; verificar imagem/digest, migrations, health, segredos, isolamento, rollback e recovery no ambiente alvo antes de declarar prontidão operacional.

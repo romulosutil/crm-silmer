@@ -7,7 +7,7 @@ mantenha este documento apenas como rota de entrada.
 
 ## Inicialização obrigatória
 
-1. Consulte o Brain com `graphify query` antes de pesquisar arquivos do projeto.
+1. Consulte os grafos preexistentes de `graphify-out/` em leitura para descoberta arquitetural; confirme no código com `rg`. Sem grafo, use `rg`. Não indexe no Windows.
 2. Leia `ABOUT.md`, `RULES.md` e `ARCHITECTURE.md`.
 3. Localize o requisito em `.specs/features/crm-mvp/spec.md` e a tarefa em
    `.specs/features/crm-mvp/tasks.md`.
@@ -21,11 +21,8 @@ dos arquivos. O diretório `historico-datacrazy/` não é fonte normativa.
 
 - Use Vue 3, Vue Router, CSS e JavaScript ESM no frontend; não adicione Pinia, Nuxt ou outro framework sem autorização explícita.
 - Use ESM, IIFE ou classes isoladas; não publique estado de domínio em `window`.
-- Mantenha `Deal`/`Negocio` como única raiz do funil e PostgreSQL como fonte da
-  verdade.
-- O Vendedor Silmer pode converter, preencher e mover uma etapa somente pelo
-  ator técnico, contrato n8n v1 e gates do CRM; nunca inventa preço, prazo ou
-  condição comercial.
+- PostgreSQL é fonte da verdade. Kanban/Negócio estão aposentados (ADR 004); Pedido tem dois status e confirmação humana (ADR 006).
+- O Vendedor Silmer coleta e projeta dados no Pedido pendente somente pelo ator técnico e contrato n8n v1; nunca confirma pedido ou inventa preço, prazo e condição. Técnica é por item, arte pertence ao pedido e impressão usa v5 (ADR 020).
 - Use `docs/integrations/n8n/README.md`, RFC 002 e ADR 003 para a fronteira n8n;
   HMAC/timestamp não pertencem ao contrato n8n→CRM.
 - Efeitos externos são idempotentes, auditáveis e podem terminar em

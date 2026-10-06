@@ -5,7 +5,7 @@ vendas, PIX e geração da Ficha de Pedido. O produto substituirá integralmente
 Datacrazy. O primeiro MVP operacional usa WhatsApp Business no n8n; Instagram
 Direct é a próxima fase de canal.
 
-> **Estado atual:** a integração n8n foi reduzida ao recorte `N8N-MVP-1`, com
+> **Estado atual:** Inbox, Clientes, usuários, Pedidos e Dashboard estão implementados; PR 142 integrada com técnica por item, arte do pedido e impressão v5. A assinatura física de Rose e Operação permanece pendente. OpenAI é o provedor escolhido. O deploy atual é automático GitHub → EasyPanel. A integração n8n usa
 > três endpoints e reserva de envio por epoch/revisão. Publicação e go-live
 > continuam sujeitos às duas credenciais Basic DEV, homologação WhatsApp e
 > gates externos. Veja
@@ -62,15 +62,15 @@ Comandos individuais: `npm run typecheck`, `npm run lint`,
 `npm run build`. O build determinístico é escrito em `dist/` e inclui um
 manifesto SHA-256 sem timestamps.
 
-### Ambiente local com atualização automática
+### Ambiente de desenvolvimento no worker Ubuntu
 
-Com Docker Desktop em execução, inicie tudo com:
+O Docker local do Windows está desativado por decisão operacional. Containers executam em `dell-worker`, no workspace Ubuntu espelhado via Syncthing. Execute comandos Docker por `ssh dell-worker` ou `DOCKER_HOST=ssh://dell-worker`; não procure binários de container no Windows. No checkout Ubuntu, inicie:
 
 ```powershell
 npm run dev
 ```
 
-O comando sobe um PostgreSQL local persistente e um n8n local com PostgreSQL
+O comando sobe um PostgreSQL de desenvolvimento persistente e um n8n com PostgreSQL
 próprio, gera e importa a variante `LOCAL | Silmer | Fluxo completo sem
 WhatsApp`, aplica as migrations e inicia API, worker e frontend com atualização
 automática. A aplicação fica em `http://127.0.0.1:4173`, encaminha chamadas
@@ -81,9 +81,7 @@ O banco de desenvolvimento fica em um volume Docker nomeado. Para parar apenas
 os containers, preservando os dados locais, use `npm run dev:down`. Um
 `DATABASE_URL` exportado substitui o banco Docker gerenciado. Os valores de
 porta/origem podem ser ajustados somente para a sessão atual com `API_HOST`,
-`API_PORT`, `DEV_HOST`, `DEV_PORT` e `API_ORIGIN`. Esse fluxo é exclusivamente
-local: não substitui `npm run build`, imagens por digest nem a promoção manual
-dos ambientes operacionais.
+`API_PORT`, `DEV_HOST`, `DEV_PORT` e `API_ORIGIN`. Esse fluxo é exclusivamente de desenvolvimento. No Windows, acesse essas portas por túnel SSH; produção mantém o deploy automático atual por GitHub → EasyPanel, com imagens por digest e gates operacionais.
 
 Na primeira execução, abra `http://127.0.0.1:5678`, crie o proprietário local,
 abra o workflow `LOCAL | Silmer | Fluxo completo sem WhatsApp`, vincule uma
@@ -103,13 +101,11 @@ não local continuam exigindo HTTPS e segredos configurados.
 Na primeira execução, o ambiente também cria contas sintéticas locais por meio
 da API de identidade. Todas usam a senha `Desenvolvimento!2026`:
 
-| Perfil                          | E-mail                                 | Função operacional | Capacidade adicional         |
-| ------------------------------- | -------------------------------------- | ------------------ | ---------------------------- |
-| Admin comercial                 | `admin@crm-silmer.local`               | Atendimento        | `COMMERCIAL_ADMIN`           |
-| Atendimento                     | `atendimento@crm-silmer.local`         | Atendimento        | —                            |
-| Vendedor                        | `vendedor@crm-silmer.local`            | Vendedor           | —                            |
-| Encarregado de privacidade      | `privacidade@crm-silmer.local`         | Atendimento        | `PRIVACY_OFFICER`            |
-| Executor técnico de privacidade | `privacidade-tecnica@crm-silmer.local` | Atendimento        | `TECHNICAL_PRIVACY_EXECUTOR` |
+| Perfil          | E-mail                     | Função operacional | Capacidade adicional |
+| --------------- | -------------------------- | ------------------ | -------------------- |
+| Admin comercial | admin@crm-silmer.local     | Vendedor           | COMMERCIAL_ADMIN     |
+| Vendedor        | vendedor@crm-silmer.local  | Vendedor           | —                    |
+| Vendedora       | vendedora@crm-silmer.local | Vendedor           | —                    |
 
 Essas credenciais são exclusivamente para o PostgreSQL local iniciado por
 `npm run dev`; não são usadas nem aceitas em ambiente operacional. O seed é
@@ -123,7 +119,7 @@ plano sem rede. DNS, segredos, escrow, backup, restore e drills reais continuam
 externos e não são executados por esses comandos.
 
 O contrato de build único, publicação por SHA/digest, SBOM, provenance, scan e
-promoção manual está em [`docs/phase0/SUPPLY-CHAIN.md`](docs/phase0/SUPPLY-CHAIN.md).
+publicação estão em [`docs/phase0/SUPPLY-CHAIN.md`](docs/phase0/SUPPLY-CHAIN.md).
 
 Os spikes locais de providers, a matriz de efeitos e o envelope provisório de
 carga de `T00.4` estão em
@@ -144,8 +140,7 @@ Privacidade permanecem explicitamente pendentes.
 O gate de defaults e papéis de `T00.6` está em
 [`docs/phase0/PHASE-0-APPROVAL-GATE.md`](docs/phase0/PHASE-0-APPROVAL-GATE.md).
 Execute `npm run validate:phase0-decisions` e
-`npm run test:phase0-decisions`; T02, T03 e T05 permanecem bloqueadas até as
-aprovações e designações humanas.
+`npm run test:phase0-decisions`; a aprovação de T00.6 já está registrada na issue #10; ela não satisfaz gates independentes de produção.
 
 Os controles locais de observabilidade e hardening de `T00.7` estão em
 [`docs/phase0/OBSERVABILITY-AND-HARDENING.md`](docs/phase0/OBSERVABILITY-AND-HARDENING.md).
@@ -157,5 +152,4 @@ compilada como assets estáticos fica em `apps/edge-web`. Contratos compartilhad
 `modules/shared`.
 
 Toda contribuição segue [`CONTRIBUTING.md`](CONTRIBUTING.md), mantém vínculo com
-um requisito/tarefa e termina com validação, commit, push e atualização do
-Graphify.
+um requisito/tarefa e termina com validação, commit e push. O Hermes no worker Ubuntu atualiza o Graphify após push; agentes não indexam nem versionam o grafo.

@@ -2,9 +2,31 @@
 
 **Spec:** [`spec.md`](spec.md) · **Decisões:** [`context.md`](context.md) · **Arquitetura:** [`design.md`](design.md)
 **Prompts por grupo:** [`PROMPTS.md`](PROMPTS.md)
-**Status:** Draft para aprovação
+**Status:** implementação integrada; homologação e produção pendentes
+**Atualizado em:** 05/10/2026 — PR 142
 
 ---
+
+## Estado da entrega atual
+
+T01..T75 preservam planejamento e evidências datadas das entregas anteriores; checklists antigos e granularidade não comprovam deploy ou aceite externo. T76..T82 foram incorporadas antes da PR 142; T83..T87 estão integradas na baseline 2979c81. Não reexecutar tarefas de UI/domínio já entregues como backlog de produção.
+
+| Tarefa | Resultado integrado                            | Evidência de fonte                                                         |
+| ------ | ---------------------------------------------- | -------------------------------------------------------------------------- |
+| T76    | ADR 019, requisitos e glossário                | docs/adr/019-ficha-espelhada-e-sinais-operacionais.md                      |
+| T77    | Serviço/técnica, arte e leituras oficiais      | modules/orders/src/domain/ficha.js; application/order-service.js           |
+| T78    | Template v4 preservado                         | modules/orders/src/print/ficha-canonical-v4.js                             |
+| T79    | Pedido e edição por seção                      | apps/edge-web/src/components/order/                                        |
+| T80    | Dashboard e listas operacionais                | apps/edge-web/src/views/DashboardView.vue; OrdersView.vue; ClientsView.vue |
+| T81    | Atualização por eventos                        | apps/edge-web/src/App.vue; contrato SSE                                    |
+| T82    | Revisão integrada anterior                     | docs/product/REVISAO-HEURISTICA.md; evidências históricas abaixo           |
+| T83    | ADR 020 e TEC-01..08                           | commit f85a43c                                                             |
+| T84    | Técnica por item e arte do pedido              | commit bd166da                                                             |
+| T85    | Rótulos e campos na interface                  | commit 8e47802                                                             |
+| T86    | Template v5 e seletor aprovado provisoriamente | commits 744c66f e 2979c81; docs/phase0/ficha-pdf-approval-v5.json          |
+| T87    | PR 142 integrada                               | baseline 2979c81; gates devem ser confirmados na release alvo              |
+
+**Pendências reais:** UAT/WhatsApp operacional (OPS-1, INT-1..2), assinatura física da v5 por Rose e Operação (INT-4), procedimento durável de arquivos e encaminhamento da ficha (ORD-03..04), privacidade OpenAI, health, backup, alertas e recovery (INT-3). Aprovação provisória do PO não satisfaz assinatura física. Upload/Dropbox e aviso automático a Rose continuam fora desta implementação.
 
 ## Convenções
 
@@ -956,12 +978,12 @@ workflow DEV `0S5ZS1xeDCSoWovs` e, com autorização do PO, o de produção
 
 ### Validação do Grupo K
 
-| Task | Camada                   | Matriz exige    | Task diz                | Depends on | Status |
-| ---- | ------------------------ | --------------- | ----------------------- | ---------- | ------ |
-| T50  | docs                     | none            | none                    | —          | ✅     |
-| T51  | contrato, rota e adapter | unit + live     | unit + integração live  | T50        | ✅     |
-| T52  | workflow                 | unit            | unit + integração live  | T51        | ✅     |
-| T53  | workflow DEV e docs      | unit            | unit                    | T52        | ✅     |
+| Task | Camada                   | Matriz exige | Task diz               | Depends on | Status |
+| ---- | ------------------------ | ------------ | ---------------------- | ---------- | ------ |
+| T50  | docs                     | none         | none                   | —          | ✅     |
+| T51  | contrato, rota e adapter | unit + live  | unit + integração live | T50        | ✅     |
+| T52  | workflow                 | unit         | unit + integração live | T51        | ✅     |
+| T53  | workflow DEV e docs      | unit         | unit                   | T52        | ✅     |
 
 ## Itens com os sete pontos (ADR 016, 02/10/2026)
 
@@ -1077,15 +1099,15 @@ O número T65 é da ficha impressa (ADR 017); esta é a próxima livre.
 
 ### Validação T56–T61 e T66
 
-| Task | Escopo                         | Camada                 | Testes             | Depends on | Status |
-| ---- | ------------------------------ | ---------------------- | ------------------ | ---------- | ------ |
-| T56  | 1 ADR + requisitos             | docs                   | none               | —          | ✅     |
-| T57  | 1 leitura de domínio           | domínio                | unit               | T56        | ✅     |
-| T58  | forma do item e regra de gerar | domínio, serviço, API  | unit + live        | T57        | ✅     |
-| T59  | 1 adapter                      | adapter PG             | live               | T58        | ✅     |
-| T60  | seção de itens e fechamento    | lib + componentes      | unit + e2e         | T58        | ✅     |
-| T61  | 1 regra de gerar, ponta a ponta | domínio, tela, docs   | unit + live + e2e  | T60        | ✅     |
-| T66  | verificação                    | full                   | full               | T57–T61    | ✅     |
+| Task | Escopo                          | Camada                | Testes            | Depends on | Status |
+| ---- | ------------------------------- | --------------------- | ----------------- | ---------- | ------ |
+| T56  | 1 ADR + requisitos              | docs                  | none              | —          | ✅     |
+| T57  | 1 leitura de domínio            | domínio               | unit              | T56        | ✅     |
+| T58  | forma do item e regra de gerar  | domínio, serviço, API | unit + live       | T57        | ✅     |
+| T59  | 1 adapter                       | adapter PG            | live              | T58        | ✅     |
+| T60  | seção de itens e fechamento     | lib + componentes     | unit + e2e        | T58        | ✅     |
+| T61  | 1 regra de gerar, ponta a ponta | domínio, tela, docs   | unit + live + e2e | T60        | ✅     |
+| T66  | verificação                     | full                  | full              | T57–T61    | ✅     |
 
 ## Ficha impressa com os sete pontos (ADR 017, 02/10/2026)
 
@@ -1243,17 +1265,17 @@ branch.
 
 ### Validação T62–T65, T67–T69 e T73–T74
 
-| Task | Escopo                  | Camada            | Testes | Depends on | Status |
-| ---- | ----------------------- | ----------------- | ------ | ---------- | ------ |
-| T62  | 1 ADR + requisitos      | docs              | none   | —          | ✅     |
-| T63  | 1 template + seu pacote | template impresso | unit   | T62        | ✅     |
-| T64  | 1 ponto de troca + rota | rota/print        | unit   | T63        | ✅     |
-| T65  | 1 faixa do template     | template impresso | unit   | T64        | ✅     |
-| T69  | rótulos do template     | template impresso | unit   | T65        | ✅     |
-| T67  | páginas do template     | template impresso | unit   | T69        | ✅     |
-| T68  | registro de aprovação   | gate de revisão   | unit   | T67        | ✅     |
-| T73  | aprovação em duas etapas | gate de revisão  | unit   | T68        | ✅     |
-| T74  | 1 troca de template     | print/rota        | unit   | T73        | ✅     |
+| Task | Escopo                   | Camada            | Testes | Depends on | Status |
+| ---- | ------------------------ | ----------------- | ------ | ---------- | ------ |
+| T62  | 1 ADR + requisitos       | docs              | none   | —          | ✅     |
+| T63  | 1 template + seu pacote  | template impresso | unit   | T62        | ✅     |
+| T64  | 1 ponto de troca + rota  | rota/print        | unit   | T63        | ✅     |
+| T65  | 1 faixa do template      | template impresso | unit   | T64        | ✅     |
+| T69  | rótulos do template      | template impresso | unit   | T65        | ✅     |
+| T67  | páginas do template      | template impresso | unit   | T69        | ✅     |
+| T68  | registro de aprovação    | gate de revisão   | unit   | T67        | ✅     |
+| T73  | aprovação em duas etapas | gate de revisão   | unit   | T68        | ✅     |
+| T74  | 1 troca de template      | print/rota        | unit   | T73        | ✅     |
 
 ## Cliente acompanha o contato (ADR 018, 03/10/2026)
 
@@ -1309,11 +1331,11 @@ de `master`; as tasks rodam em ordem, uma por commit (T50–T69 já têm dono).
 
 ### Validação T70–T72
 
-| Task | Escopo                           | Camada                   | Testes      | Depends on | Status |
-| ---- | -------------------------------- | ------------------------ | ----------- | ---------- | ------ |
-| T70  | 1 ADR + requisitos               | docs                     | none        | —          | ✅     |
-| T71  | 1 regra de leitura e de gerar    | domínio, serviço, PG     | unit + live | T70        | ✅     |
-| T72  | verificação                      | full                     | full        | T71        | ✅     |
+| Task | Escopo                        | Camada               | Testes      | Depends on | Status |
+| ---- | ----------------------------- | -------------------- | ----------- | ---------- | ------ |
+| T70  | 1 ADR + requisitos            | docs                 | none        | —          | ✅     |
+| T71  | 1 regra de leitura e de gerar | domínio, serviço, PG | unit + live | T70        | ✅     |
+| T72  | verificação                   | full                 | full        | T71        | ✅     |
 
 ## Impressão autorizada como leitura (03/10/2026)
 
@@ -1415,29 +1437,29 @@ vendedor.
 
 ### Co-localização de testes
 
-| Task     | Camada                    | Matriz exige    | Task diz                           | Status |
-| -------- | ------------------------- | --------------- | ---------------------------------- | ------ |
-| T01–T03  | docs                      | none            | none                               | ✅     |
-| T04      | scaffold sem lógica       | none            | none (gate boundaries + typecheck) | ✅     |
-| T05–T11  | domínio/aplicação         | unit            | unit                               | ✅     |
-| T12, T13 | migration/adapter PG      | integração live | integração live                    | ✅     |
-| T14–T19  | autorização/runtime/rotas | unit            | unit                               | ✅     |
-| T20      | adapter de leitura PG     | integração live | integração live                    | ✅     |
-| T21, T23 | rotas/workflow            | unit            | unit                               | ✅     |
-| T22      | adapter PG                | integração live | integração live                    | ✅     |
-| T24, T25 | renderer/rota             | unit            | unit                               | ✅     |
-| T26      | lib pura do front         | unit            | unit                               | ✅     |
-| T27–T38  | views/componentes         | e2e             | e2e                                | ✅     |
-| T39      | verificação               | full            | full                               | ✅     |
-| T40      | operação no n8n online    | none            | none (gate online)                 | ✅     |
-| T42      | domínio/adapter PG        | unit + live     | unit + live                        | ✅     |
-| T43, T44 | rotas/runtime             | unit            | unit                               | ✅     |
-| T45      | lib + componente          | unit + e2e      | unit + e2e                         | ✅     |
-| T47      | template impresso         | unit            | unit                               | ✅     |
-| T48      | lib + componente          | unit + e2e      | unit + e2e                         | ✅     |
-| T49      | componente                | e2e             | e2e                                | ✅     |
-| T54      | docs                      | none            | none                               | ✅     |
-| T55      | view, rota, domínio e PG  | unit + live + e2e | unit + live + e2e                | ✅     |
+| Task     | Camada                    | Matriz exige      | Task diz                           | Status |
+| -------- | ------------------------- | ----------------- | ---------------------------------- | ------ |
+| T01–T03  | docs                      | none              | none                               | ✅     |
+| T04      | scaffold sem lógica       | none              | none (gate boundaries + typecheck) | ✅     |
+| T05–T11  | domínio/aplicação         | unit              | unit                               | ✅     |
+| T12, T13 | migration/adapter PG      | integração live   | integração live                    | ✅     |
+| T14–T19  | autorização/runtime/rotas | unit              | unit                               | ✅     |
+| T20      | adapter de leitura PG     | integração live   | integração live                    | ✅     |
+| T21, T23 | rotas/workflow            | unit              | unit                               | ✅     |
+| T22      | adapter PG                | integração live   | integração live                    | ✅     |
+| T24, T25 | renderer/rota             | unit              | unit                               | ✅     |
+| T26      | lib pura do front         | unit              | unit                               | ✅     |
+| T27–T38  | views/componentes         | e2e               | e2e                                | ✅     |
+| T39      | verificação               | full              | full                               | ✅     |
+| T40      | operação no n8n online    | none              | none (gate online)                 | ✅     |
+| T42      | domínio/adapter PG        | unit + live       | unit + live                        | ✅     |
+| T43, T44 | rotas/runtime             | unit              | unit                               | ✅     |
+| T45      | lib + componente          | unit + e2e        | unit + e2e                         | ✅     |
+| T47      | template impresso         | unit              | unit                               | ✅     |
+| T48      | lib + componente          | unit + e2e        | unit + e2e                         | ✅     |
+| T49      | componente                | e2e               | e2e                                | ✅     |
+| T54      | docs                      | none              | none                               | ✅     |
+| T55      | view, rota, domínio e PG  | unit + live + e2e | unit + live + e2e                  | ✅     |
 
 ## Ficha espelhada e leitura operacional (ADR 019, 03/10/2026)
 
@@ -1513,9 +1535,7 @@ entrega, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-ope
 
 ## Técnica por item e arte do pedido (ADR 020, 03/10/2026)
 
-As tarefas partem do `master` c237200 (v4 em uso). Cada uma vira um commit e
-um push na branch `feat/tecnica-e-arte-do-pedido`; o merge espera a aprovação
-provisória do PO sobre a amostra v5.
+A PR 142 integrou estas tarefas em 05/10/2026. A v5 está selecionada desde 2979c81; a aprovação provisória do PO é registrada, mas a assinatura física de produção permanece pendente. Abaixo ficam os critérios das entregas integradas.
 
 ### T83: Decisão, contrato e glossário
 

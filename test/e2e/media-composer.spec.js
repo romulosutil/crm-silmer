@@ -84,6 +84,7 @@ async function setup(page, options = {}) {
     }
     if (req.method() === 'POST' && path.endsWith('/messages')) {
       sends.push(req);
+      if (options.pendingSend && sends.length === 1) return;
       if (options.sendError && sends.length === 1) return route.abort('failed');
       return route.fulfill({
         status: 202,
@@ -269,6 +270,44 @@ test('T18/MED-06: uncertain send preserves preview, payload and original send ke
   );
   expect(sends[0].postDataJSON()).toEqual(sends[1].postDataJSON());
 });
+test('T18/MED-06/25: reenable after pending send retries the immutable original attempt explicitly', async ({
+  page,
+}) => {
+  const { uploads, sends } = await setup(page, { pendingSend: true });
+  await select(page);
+  await ready(page);
+  await page.getByLabel('Legenda').fill('Original');
+  await page.getByRole('button', { name: 'Enviar anexo', exact: true }).click();
+  await expect.poll(() => sends.length).toBe(1);
+  await page.getByRole('button', { name: 'Bloquear envio' }).click();
+  const retry = page.getByRole('button', { name: 'Tentar enviar novamente' });
+  await expect(retry).toBeDisabled();
+  await expect(page.getByLabel('Legenda')).toBeDisabled();
+  await page.getByRole('button', { name: 'Reabilitar envio' }).click();
+  await expect(retry).toBeEnabled();
+  expect(sends).toHaveLength(1);
+  await retry.focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByText('Mensagem enviada', { exact: true }),
+  ).toBeVisible();
+  expect(uploads).toHaveLength(1);
+  expect(sends).toHaveLength(2);
+  expect(sends[0].headers()['idempotency-key']).toEqual(
+    sends[1].headers()['idempotency-key'],
+  );
+  expect(sends[0].postDataJSON()).toEqual(sends[1].postDataJSON());
+  expect(new URL(sends[1].url()).pathname).toBe(
+    '/api/v1/conversations/conversation-1/messages',
+  );
+  expect(sends[1].postDataJSON()).toEqual({
+    expectedVersion: 4,
+    messageType: 'image',
+    content: { mediaId: 'media-1', caption: 'Original' },
+    reason: 'Envio humano de anexo',
+  });
+});
+
 test('T18/MED-25: remove and reselect by keyboard restores focus and clears the previous draft', async ({
   page,
 }) => {

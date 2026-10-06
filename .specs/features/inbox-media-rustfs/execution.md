@@ -1,5 +1,35 @@
 # Execução INBOX-MEDIA-1
 
+## Correção T18: retry após bloqueio transitório
+
+Premissa: cancelar HTTP não prova rollback do envio. Fronteira: MediaComposer,
+fixture e E2E; MED-06/25 exige preservar a operação original. Red factual:
+`test/e2e/media-composer.spec.js:287` `expect(retry).toBeEnabled()` falhou
+porque disabled=true mudou sending para error e manteve sendAttempt.
+Correção conserva ready quando há tentativa, com disabled ainda impedindo envio.
+Green focal 1/1, Node24.20.0. Nenhum envio automático ao reabilitar.
+
+Primeiro Full: 123 pass, 7 skips existentes, 1 fail. Diagnóstico foundation179:
+após reload, getByRole(status) encontrou Dashboard Carregando indicadores e
+região global ainda vazia; strict mode encerrou a assertion Sessão restaurada.
+Nenhum arquivo de login/Dashboard/teste baseline mudou. Reexecução integral
+mantém as mesmas assertions e timeouts: 124 pass/7 skips(total131), zero falhas.
+
+Adequação A/C bidirecional (diretrizes AGENTS/CONTRIBUTING): cada assertion
+abaixo corresponde exclusivamente ao cenário MED-06/25, sem teste especulativo.
+
+| Critério / mapeamento inverso  | file:line + assertion                                                                                                                                                                                  | Resultado da spec                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| bloqueio continua seguro       | `test/e2e/media-composer.spec.js:284` `expect(retry).toBeDisabled()`                                                                                                                                   | nenhum efeito enquanto bloqueado         |
+| reabilitar não envia           | `test/e2e/media-composer.spec.js:288` `expect(sends).toHaveLength(1)`                                                                                                                                  | envio só por ação explícita              |
+| mesma operação                 | `test/e2e/media-composer.spec.js:295` `expect(sends).toHaveLength(2)` e `:299` `expect(sends[0].postDataJSON()).toEqual(sends[1].postDataJSON())`                                                      | retry conserva payload original          |
+| conversa/version/caption/media | `test/e2e/media-composer.spec.js:303` `expect(sends[1].postDataJSON()).toEqual({expectedVersion:4,messageType:'image',content:{mediaId:'media-1',caption:'Original'},reason:'Envio humano de anexo'})` | valores congelados na primeira tentativa |
+| chave original                 | `test/e2e/media-composer.spec.js:296` `expect(sends[0].headers()['idempotency-key']).toEqual(sends[1].headers()['idempotency-key'])`                                                                   | mesma identidade no retry                |
+
+Check A/B/C/D: payload completo e chave/contexto assertados, teclado Enter,
+prévia preservada, nenhuma assertion/skip/teste publicado reduzido.
+Quick/Build847pass+3skips(total850), audit0; Verifier final continua após T24.
+
 ## T18: Composer de anexos
 
 MED-01/02/03/04/06/07/08/25: composer standalone com seleção única, revisão, upload explícito e envio apenas ready; áudio sem caption, aliases M4A e MIME vazio como hint, bytes validados no worker. Preview/identidades/version mantidos em retry, abort e generation impedem resposta antiga entre conversas. Legenda conta 1024 code points (emoji), não UTF16. Prazo polling600s inclui GET pendente e delay; refresh conserva mediaId sem reupload. Build/Quick847pass+3skips(total850), UI123pass+7skips(total130)workers1, novos16cenários E2E; validator real ClamAV/libmagic/codec1/1(113s) com fixture Chromium original, audit zero, diff e spec/tasks strict verdes. Nenhum cenário/assertion/skip/timeout publicado reduzido. Fase3 completa; próximoT19, nenhum Verified.

@@ -305,7 +305,13 @@ watch(
     if (disabled) {
       cancel();
       if (busy.value) {
-        state.value = mediaId.value ? 'error' : 'selected';
+        // An aborted message request can already have committed. Keep its
+        // immutable attempt eligible for an explicit idempotent retry.
+        state.value = sendAttempt
+          ? 'ready'
+          : mediaId.value
+            ? 'error'
+            : 'selected';
         error.value = 'Envio indisponível nesta conversa.';
       }
     }

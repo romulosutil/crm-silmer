@@ -1910,6 +1910,7 @@ button.op-edit:disabled {
 .op-form input[type='text'],
 .op-form input[type='date'],
 .op-form input[type='number'],
+.op-form select,
 .op-closing-form input[type='text'] {
   min-block-size: 42px;
   padding: 0.5rem 0.75rem;
@@ -1920,6 +1921,7 @@ button.op-edit:disabled {
 }
 
 .op-form input:hover:not(:disabled),
+.op-form select:hover:not(:disabled),
 .op-closing-form input[type='text']:hover {
   border-color: var(--color-text-muted);
 }
@@ -1930,6 +1932,7 @@ button.op-edit:disabled {
  * way the global 2px outline did.
  */
 .op-form input:is([type='text'], [type='date'], [type='number']):focus-visible,
+.op-form select:focus-visible,
 .op-closing-form input[type='text']:focus-visible {
   outline: 2px solid transparent;
   outline-offset: 0;

@@ -13,6 +13,15 @@
 
 ## Handoff
 
+T11 concluída: contrato humano text/image/audio/video; mídia só mediaId/caption,
+caption1024 pontos Unicode image/video, audio sem caption. Entrada false nega
+novo envio após lookup de replay, sem locks/mutação de domínio. Fingerprint novo
+JSON canônico sem correlationId preserva mesma chave/payload com novo trace e
+ordem de chaves; divergência real/ator bloqueada409. Hash legado exato aceita
+identificação original, mas trace legado novo não é recuperável sem payload.
+Gates: validate799/3 skips antigos; SQL28/28; E2E107/7 skips antigos; diff/skill
+validators verdes. Próximo T12, 13 tarefas restantes; nenhuma Verified.
+
 Fix estreito T10/MED-08: outro uploader/admin retorna403 de permissão,
 estado/conversa/versão retornam409. Prova red mostrou409 indevido; live18/18
 depois da correção, sem efeito/alteração de quota. T11 ainda em execução;

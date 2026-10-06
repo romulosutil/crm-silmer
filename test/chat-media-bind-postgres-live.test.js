@@ -336,4 +336,127 @@ if (connectionString) {
     });
     assert.equal((await snapshot()).reserved, String(size));
   });
+  test('T11/MED-06: disabled admission replays accepted send and blocks new send without mutation', async () => {
+    const id = await ready();
+    const input = command(id);
+    const message = await service().sendHumanMessage(input);
+    const { createConversationApiRuntime } =
+      await import('../apps/api/src/conversation-runtime.js');
+    const disabled = createConversationApiRuntime(
+      database,
+      {},
+      {},
+      { commandOutbox: new PostgresN8nCommandOutbox({ envelopeKey: KEY }) },
+      KEY,
+      { mediaEnabled: false },
+    );
+    const before = await snapshot();
+    assert.equal((await disabled.sendMessage(input)).id, message.id);
+    await assert.rejects(
+      disabled.sendMessage(command(id, { expectedVersion: 2 })),
+      { statusCode: 403 },
+    );
+    assert.deepEqual(await snapshot(), before);
+  });
+  test('T11/MED-06: HTTP replay with fresh trace preserves semantic identity, changed caption or actor conflicts', async (t) => {
+    const id = await ready();
+    /** @type {string[]} */ const traces = [];
+    const inbox = service();
+    const { createApi } = await import('../apps/api/src/app.js');
+    const api = createApi(
+      {},
+      {
+        conversations: {
+          async authorize(/** @type {any} */ input) {
+            return {
+              actor:
+                input.cookie === 'crm_session=other'
+                  ? { ...actor, id: 'bind-other' }
+                  : actor,
+            };
+          },
+          async sendMessage(/** @type {any} */ input) {
+            traces.push(input.correlationId);
+            return inbox.sendHumanMessage(input);
+          },
+        },
+      },
+    );
+    t.after(() => api.close());
+    const post = (
+      caption = 'Synthetic',
+      cookie = 'crm_session=seller',
+      reverseKeys = false,
+    ) =>
+      api.inject({
+        method: 'POST',
+        url: '/api/v1/conversations/bind-conversation/messages',
+        headers: {
+          cookie,
+          'idempotency-key': 'semantic-command',
+          origin: 'https://crm.example.test',
+          'x-csrf-token': 'synthetic',
+        },
+        payload: {
+          messageType: 'image',
+          content: reverseKeys
+            ? { caption, mediaId: id }
+            : { mediaId: id, caption },
+          expectedVersion: 1,
+          reason: 'Synthetic',
+        },
+      });
+    const first = await post();
+    assert.equal(first.statusCode, 202);
+    const second = await post();
+    assert.equal(second.statusCode, 202);
+    assert.equal(second.json().id, first.json().id);
+    assert.notEqual(traces[0], traces[1]);
+    assert.equal(
+      (await post('Synthetic', 'crm_session=seller', true)).statusCode,
+      202,
+    );
+    assert.equal((await post('Different')).statusCode, 409);
+    assert.equal(
+      (await post('Synthetic', 'crm_session=other')).statusCode,
+      409,
+    );
+    assert.equal((await snapshot()).messages, 1);
+    assert.equal((await snapshot()).used, '100');
+  });
+  test('T11/MED-06: legacy fingerprint replays same original trace but cannot reconstruct a changed trace', async () => {
+    const id = await ready();
+    const input = command(id);
+    const inbox = service();
+    const message = await inbox.sendHumanMessage(input);
+    const { createHash } = await import('node:crypto');
+    const legacy = {
+      actor: {
+        capabilities: [],
+        functionName: actor.functionName,
+        id: actor.id,
+        kind: 'human',
+      },
+      conversationId: input.conversationId,
+      correlationId: input.correlationId,
+      expectedVersion: input.expectedVersion,
+      idempotencyKey: input.idempotencyKey,
+      reason: input.reason.trim(),
+      content: input.content,
+      messageType: input.messageType,
+    };
+    await pool.query(
+      `UPDATE crm.inbox_commands SET fingerprint=$2 WHERE operation='send' AND idempotency_key=$1`,
+      [
+        input.idempotencyKey,
+        createHash('sha256').update(JSON.stringify(legacy)).digest('hex'),
+      ],
+    );
+    assert.equal((await inbox.sendHumanMessage(input)).id, message.id);
+    await assert.rejects(
+      inbox.sendHumanMessage({ ...input, correlationId: randomUUID() }),
+      { statusCode: 409 },
+    );
+    assert.equal((await snapshot()).messages, 1);
+  });
 }

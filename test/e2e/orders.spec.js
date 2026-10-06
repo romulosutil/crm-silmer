@@ -2044,7 +2044,7 @@ test('adds and removes items, fabrics and grade lines', async ({ page }) => {
   ]);
 });
 
-test('splits an item by audience with Duplicar item, by keyboard (ADR 022, PUB-01, PUB-02, PUB-06)', async ({
+test('splits an item by audience with Duplicar item, by keyboard (ADR 025, PUB-01, PUB-02, PUB-06)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -2086,7 +2086,7 @@ test('splits an item by audience with Duplicar item, by keyboard (ADR 022, PUB-0
   await expect(items.getByText('— (cliente informou 40)')).toBeVisible();
 });
 
-test('warns under an item whose sizes differ from the quantity said for it (ADR 022, PUB-02)', async ({
+test('warns under an item whose sizes differ from the quantity said for it (ADR 025, PUB-02)', async ({
   page,
 }) => {
   await mockOrders(page);

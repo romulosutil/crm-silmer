@@ -444,7 +444,7 @@ test('the kind of product stands in for the type of garment only when that is mi
   assert.equal(deferredModel.serviceData.product_model, DEFERRED);
 });
 
-test('a cap from the bot reaches item 1 with its model and no collar (ADR 021)', () => {
+test('a cap from the bot reaches item 1 with its model and no collar (ADR 024)', () => {
   // What workflow mvp-simple-12 records for a cap: the product, the model
   // with the product's name and the not-applicable collar. It never asks
   // fabric or sizes, which stay blank for the seller.
@@ -814,7 +814,7 @@ test('projects the seven points onto item 1 and keeps what the seller owns', () 
   );
 });
 
-test('an item may say its audience and the quantity said, both optional (ADR 022)', () => {
+test('an item may say its audience and the quantity said, both optional (ADR 025)', () => {
   const [plain] = validateItems([item()]);
   assert.equal(plain.publico, '');
   assert.equal(plain.quantidade_informada, null);
@@ -848,7 +848,7 @@ test('an item may say its audience and the quantity said, both optional (ADR 022
   }
 });
 
-test('a stored ficha reads no audience and no quantity said (ADR 022)', () => {
+test('a stored ficha reads no audience and no quantity said (ADR 025)', () => {
   const stored = item();
   delete stored.publico;
   delete stored.quantidade_informada;
@@ -862,7 +862,7 @@ test('a stored ficha reads no audience and no quantity said (ADR 022)', () => {
   assert.equal(read.quantidade_informada, null);
 });
 
-test('a split read without doubt makes one item per audience (ADR 022)', () => {
+test('a split read without doubt makes one item per audience (ADR 025)', () => {
   const ficha = briefingToFicha({
     product_type: 'camisetas',
     product_model: 'camiseta comum',
@@ -917,7 +917,7 @@ test('a split read without doubt makes one item per audience (ADR 022)', () => {
   );
 });
 
-test('while with the bot, a new split rebuilds the bot items and keeps the seller ones (ADR 022)', () => {
+test('while with the bot, a new split rebuilds the bot items and keeps the seller ones (ADR 025)', () => {
   const opened = briefingToFicha({
     product_type: 'camisetas',
     sizes: 'P10 M10 G10',

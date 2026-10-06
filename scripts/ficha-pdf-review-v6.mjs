@@ -15,7 +15,7 @@ const gateUrl = new URL('docs/phase0/ficha-pdf-approval-v6.json', rootUrl);
 const ARTIFACT_PATH = 'output/pdf/ficha-canonica-sintetica-v6.pdf';
 const REVIEW_PATH = 'docs/phase0/FICHA-PDF-REVIEW-V6.md';
 const REQUIREMENTS = Object.freeze(['PUB-07', 'PIM-10']);
-// ADR 022: the PO reviews the v6 sample before orders print on it; until
+// ADR 025: the PO reviews the v6 sample before orders print on it; until
 // then the package is locked by hash and the review is pending.
 const PROVISIONAL_STATUSES = Object.freeze(['pending-po-review', 'approved']);
 const CRITERIA = Object.freeze([
@@ -46,9 +46,9 @@ function nonEmpty(value) {
 export function validateFichaSnapshotV6(sample) {
   invariant(
     sample?.schemaVersion === 1 &&
-      sample.task === 'T95' &&
-      sample.adr === '022',
-    'v6 sample must trace T95 and ADR 022',
+      sample.task === 'T100' &&
+      sample.adr === '025',
+    'v6 sample must trace T100 and ADR 025',
   );
   invariant(
     sample.syntheticOnly === true &&
@@ -185,11 +185,11 @@ export function validateFichaApprovalGateV6({
 }) {
   invariant(
     gate?.schemaVersion === 1 &&
-      gate.task === 'T95' &&
-      gate.adr === '022' &&
+      gate.task === 'T100' &&
+      gate.adr === '025' &&
       gate.syntheticOnly === true &&
       JSON.stringify(gate.requirements) === JSON.stringify(REQUIREMENTS),
-    'v6 gate must trace T95, ADR 022 and PUB-07/PIM-10',
+    'v6 gate must trace T100, ADR 025 and PUB-07/PIM-10',
   );
   invariant(
     gate.snapshotVersion === 'synthetic-order-v6' &&

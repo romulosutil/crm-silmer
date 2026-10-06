@@ -28,7 +28,7 @@ export const BRIEFING_PATCH_FIELDS = new Set([
   'artwork_locations',
   'artwork_status',
   'artwork_technique',
-  // ADR 022: how the customer splits the quantity by audience.
+  // ADR 025: how the customer splits the quantity by audience.
   'audiences',
   'briefing_status',
   'city_or_postal_code',

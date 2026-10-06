@@ -18,8 +18,8 @@ export { TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4, TEMPLATE_V5, TEMPLATE_V6 };
  * PIM-10 (ADR 017): the single switch point for the printed ficha. Every
  * printed order uses this template; the print route never chooses one.
  *
- * It names `ficha-canonical-v6` (ADR 022) since the PO approved its
- * synthetic sample on 06/10/2026 for development and cloud-dev (T95). The
+ * It names `ficha-canonical-v6` (ADR 025) since the PO approved its
+ * synthetic sample on 06/10/2026 for development and cloud-dev (T100). The
  * physical signature by Rose and Operação in
  * `docs/phase0/ficha-pdf-approval-v6.json` remains a production go-live
  * gate. The validator refuses an unapproved switch; v2–v5 stay addressable

@@ -71,7 +71,7 @@ const saving = ref(false);
 const errorMessage = ref('');
 /** @type {import('vue').Ref<Record<string, string>>} */
 const lineErrors = ref({});
-/** ADR 022: what a screen reader hears after "Duplicar item". */
+/** ADR 025: what a screen reader hears after "Duplicar item". */
 const announcement = ref('');
 /** Which "Adicionais" blocks are open, by `read-N` or `edit-N`. */
 /** @type {import('vue').Ref<Record<string, boolean>>} */
@@ -260,7 +260,7 @@ function removeItem(index) {
 }
 
 /**
- * ADR 022 (D7): a copy right below, with everything but the sizes and the
+ * ADR 025 (D7): a copy right below, with everything but the sizes and the
  * quantity said, so each audience of a split gets its own item. The focus
  * goes to the copy's audience, the field the seller changes next.
  *

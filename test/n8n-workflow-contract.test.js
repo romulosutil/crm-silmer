@@ -438,7 +438,7 @@ test('decision normalizer whitelists briefing_patch keys exactly as the CRM does
     (match) => match[1],
   );
   // The CRM ships a new field first (ADR 012); once the workflow sends it,
-  // both lists match again (ADR 022: `audiences` since mvp-simple-13).
+  // both lists match again (ADR 025: `audiences` since mvp-simple-13).
   assert.deepEqual(
     [...workflowFields].sort(),
     [...BRIEFING_PATCH_FIELDS].sort(),
@@ -689,7 +689,7 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
     false,
   );
 
-  // The name and the ficha points of a shirt (ADR 012, ADR 021).
+  // The name and the ficha points of a shirt (ADR 012, ADR 024).
   const complete = {
     customer_name: 'Ana',
     product_type: 'camisetas',
@@ -1111,7 +1111,7 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
     { briefing: { ...asked, briefing_status: 'ignored' } },
   );
   assert.equal(onlyNotes.trigger, 'ignored_twice', 'notes alone add nothing');
-  // ADR 021: fabric is asked only once the product is clothing, so the order
+  // ADR 024: fabric is asked only once the product is clothing, so the order
   // is already open (quote_).
 
   const aboutTheField = decide(
@@ -1208,7 +1208,7 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
     sender_type: 'ai',
     text: 'Oi! Sou a assistente virtual da Silmer. Qual é o seu nome?',
   };
-  // ADR 021: asked at the greeting, the name is asked once more, alone; asked
+  // ADR 024: asked at the greeting, the name is asked once more, alone; asked
   // twice, the bot stops.
   assert.match(
     contextPrompt({ briefing: {}, recent_messages: [greeting] }),
@@ -1243,7 +1243,7 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
   );
 });
 
-// ADR 021: the points the bot asks, in one rhythm. Artwork origin, fabric,
+// ADR 024: the points the bot asks, in one rhythm. Artwork origin, fabric,
 // technique, sizes and collar are only recorded.
 const RHYTHM = [
   'product_type',
@@ -1339,7 +1339,7 @@ async function rhythmDecision(
         turn: 3,
         crm_counter: true,
         name_asked: true,
-        // ADR 021: the name was asked at the greeting and right after; the
+        // ADR 024: the name was asked at the greeting and right after; the
         // points are what these tests exercise.
         name_asks: 2,
         ...context,
@@ -1392,7 +1392,7 @@ test('confirmed front print is stored and never followed by a print-or-plain que
   assert.match(previous.reply_text, /Que tipo de camisa você quer\?/u);
   assert.doesNotMatch(previous.reply_text, /lisa ou com estampa/u);
 
-  // ADR 021: with nothing left, the reply falls back on the question of the
+  // ADR 024: with nothing left, the reply falls back on the question of the
   // product the customer wants to customize.
   const onlyPrint = await rhythmDecision(
     { reply_text: 'E vai lisa ou com estampa?', asked_field: 'product_model' },
@@ -1411,7 +1411,7 @@ test('confirmed front print is stored and never followed by a print-or-plain que
   );
 });
 
-test('the ficha is the name plus the product points in one rhythm, kept in one place (ADR 012, ADR 021)', async () => {
+test('the ficha is the name plus the product points in one rhythm, kept in one place (ADR 012, ADR 024)', async () => {
   const byName = await workflowNodesByName();
   for (const name of [
     'Montar contexto da IA (MVP)',
@@ -1452,7 +1452,7 @@ test('the ficha is the name plus the product points in one rhythm, kept in one p
   const prompt = byName.get('Atendente virtual Silmer (MVP)').parameters.options
     .systemMessage;
   assert.match(prompt, /um ponto por mensagem, o que o contexto indicar/u);
-  // ADR 021: the name first, then what to customize, never "qual camisa".
+  // ADR 024: the name first, then what to customize, never "qual camisa".
   assert.match(
     prompt,
     /pergunte o nome da pessoa e o que ela quer personalizar \(camisetas ou outras roupas, bonés, mochilas e bolsas, ou outro produto\)\. Não pergunte "qual camisa" antes de saber o produto/u,
@@ -1466,7 +1466,7 @@ test('the ficha is the name plus the product points in one rhythm, kept in one p
     /product_model: o modelo, só quando o contexto pedir\. Roupa: camiseta comum, manga longa, polo, regata, abadá, baby look ou outro\. Boné: trucker \(com tela atrás\), aba curva, aba reta ou outro\. Mochila ou bolsa: mochila de costas, mochila saco, ecobag ou outro\./u,
   );
   assert.match(prompt, /artwork_locations: onde vai a estampa/u);
-  // ADR 022: the split by audience has its own field, recorded, never asked.
+  // ADR 025: the split by audience has its own field, recorded, never asked.
   assert.match(
     prompt,
     /audiences: a divisão da quantidade por público, só quando o cliente dividir, com as palavras dele e só a divisão \("4 masculinas, 3 femininas e 3 infantis"\); a quantidade total vai em quantity\. Baby look é modelo, não público\./u,
@@ -1508,7 +1508,7 @@ test('the ficha is the name plus the product points in one rhythm, kept in one p
   assert.doesNotMatch(prompt, /par de campos|sempre pergunte/u);
 });
 
-test('the context node asks the name first, then the points of the product (ADR 012, ADR 021)', async () => {
+test('the context node asks the name first, then the points of the product (ADR 012, ADR 024)', async () => {
   // The name with the greeting, and once more right after, alone.
   const fresh = await rhythmContext({}, []);
   assert.equal(fresh.next_point, 'customer_name', 'the greeting asks the name');
@@ -1721,7 +1721,7 @@ test('the context node asks the name first, then the points of the product (ADR 
   );
 });
 
-test('the decision node requires only the name and the points of the product (ADR 012, ADR 021)', async () => {
+test('the decision node requires only the name and the points of the product (ADR 012, ADR 024)', async () => {
   const done = await rhythmDecision({
     briefing_patch: {
       ...SHIRT_POINTS,
@@ -1769,7 +1769,7 @@ test('the decision node requires only the name and the points of the product (AD
     'a field left to the seller shows even when the bot never asks it',
   );
 
-  // ADR 021: the name holds the ficha only while the bot still asks it.
+  // ADR 024: the name holds the ficha only while the bot still asks it.
   const nameOnce = await rhythmDecision(
     { briefing_patch: { ...SHIRT_POINTS } },
     { name_asks: 1 },
@@ -1801,7 +1801,7 @@ test('the decision node requires only the name and the points of the product (AD
   assert.equal(legacy.briefing_patch.next_required_field, 'product_type');
 });
 
-test('a cap, a bag or another product asks only its own points (ADR 021)', async () => {
+test('a cap, a bag or another product asks only its own points (ADR 024)', async () => {
   const cap = await rhythmDecision({
     briefing_patch: {
       customer_name: 'Ana',
@@ -1958,7 +1958,7 @@ test('a cap, a bag or another product asks only its own points (ADR 021)', async
   assert.equal(deferredModel.briefing_patch.next_required_field, 'colors');
 });
 
-test('a kit fills what the product or the technique defines, and the seller gets alerts and hints (ADR 021)', async () => {
+test('a kit fills what the product or the technique defines, and the seller gets alerts and hints (ADR 024)', async () => {
   const abada = await rhythmDecision(
     { answer_status: 'answered', briefing_patch: { product_type: 'abadás' } },
     { briefing: { customer_name: 'Ana', next_required_field: 'product_type' } },
@@ -2084,7 +2084,7 @@ test('a kit fills what the product or the technique defines, and the seller gets
     /Dica: personalização individual: pedir a lista de nomes, números e tamanhos; divisão por público: cada público vira um item\./u,
   );
 
-  // ADR 022: the split rides its own field, which the CRM turns into items.
+  // ADR 025: the split rides its own field, which the CRM turns into items.
   const split = await rhythmDecision(
     {
       briefing_patch: {
@@ -2136,7 +2136,7 @@ test('a kit fills what the product or the technique defines, and the seller gets
   );
 });
 
-test('the decision node picks the next point from the rhythm (ADR 012, ADR 021)', async () => {
+test('the decision node picks the next point from the rhythm (ADR 012, ADR 024)', async () => {
   /** @param {any} output @param {any} [context] */
   const next = async (output, context) =>
     (await rhythmDecision(output, context)).briefing_patch.next_required_field;
@@ -2213,7 +2213,7 @@ test('the decision node picks the next point from the rhythm (ADR 012, ADR 021)'
   assert.equal(firstMiss.briefing_patch.briefing_status, 'quote_clarifying');
   assert.equal(firstMiss.briefing_patch.next_required_field, 'colors');
 
-  // ADR 021: the customer told the product but not the name: the name, alone.
+  // ADR 024: the customer told the product but not the name: the name, alone.
   const nameAgain = await rhythmDecision(
     { answer_status: 'other', briefing_patch: { product_type: 'camisetas' } },
     {
@@ -2329,7 +2329,7 @@ test('an asked_field outside the ficha neither breaks the parser nor moves the r
   assert.equal(slip.missing_briefing_fields.includes('purpose'), false);
 });
 
-test('quantity and sizes sent together keep both, and the sizes are only recorded (ADR 021)', async () => {
+test('quantity and sizes sent together keep both, and the sizes are only recorded (ADR 024)', async () => {
   const together = await rhythmDecision(
     {
       answer_status: 'answered',
@@ -2397,7 +2397,7 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
     );
     assert.match(
       decision.reasoning,
-      // ADR 021: before the product is known, the ficha has the common points and the name.
+      // ADR 024: before the product is known, the ficha has the common points and the name.
       /Não é um pedido do zero[\s\S]*Ficha: 0 de 6 \(0%\)/u,
       text,
     );
@@ -2448,11 +2448,11 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
     true,
     'an order already opened stays open for the seller',
   );
-  // The model says the product, which the workflow records; the name was asked twice (ADR 021).
+  // The model says the product, which the workflow records; the name was asked twice (ADR 024).
   assert.match(midway.reasoning, /Ficha: 4 de 6 \(67%\)/u);
 });
 
-test('the summary measures how much of the ficha the bot filled (ADR 013, ADR 021)', async () => {
+test('the summary measures how much of the ficha the bot filled (ADR 013, ADR 024)', async () => {
   const complete = await rhythmDecision(
     { answer_status: 'answered' },
     { briefing: { ...SHIRT_POINTS, customer_name: 'Ana' } },
@@ -2514,7 +2514,7 @@ test('the summary measures how much of the ficha the bot filled (ADR 013, ADR 02
   assert.match(cap.reasoning, /Ficha: 3 de 6 \(50%\)/u);
 });
 
-test('"com estampa" is the technique, never where the art comes from, and neither is asked (ADR 012, ADR 021)', async () => {
+test('"com estampa" is the technique, never where the art comes from, and neither is asked (ADR 012, ADR 024)', async () => {
   // DEV 01/10, KPI-01: "com estampa" answered the artwork point by mistake.
   const typeAnswer = await rhythmDecision(
     {
@@ -2540,7 +2540,7 @@ test('"com estampa" is the technique, never where the art comes from, and neithe
   assert.equal(
     typeAnswer.missing_briefing_fields.includes('artwork_status'),
     false,
-    'the origin of the art is only recorded (ADR 021)',
+    'the origin of the art is only recorded (ADR 024)',
   );
   assert.equal(typeAnswer.briefing_patch.next_required_field, 'colors');
 

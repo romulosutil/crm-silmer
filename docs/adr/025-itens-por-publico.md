@@ -1,4 +1,4 @@
-# ADR 022 — Itens por público no pedido
+# ADR 025 — Itens por público no pedido
 
 Status: aceita
 
@@ -10,12 +10,12 @@ mesmo modelo, cor, malha e arte; depois, aceitou as recomendações D1–D7 da
 RFC. Tech Lead definiu a leitura da divisão, a projeção em vários itens, a
 compatibilidade das fichas gravadas e a ordem de implantação.
 
-RFC: [RFC 010](../rfc/010-itens-por-publico.md). Requisitos `PUB-01`–`PUB-09`
-da [spec](../../.specs/features/pedidos-mvp/spec.md); tarefas T92–T96 de
+RFC: [RFC 013](../rfc/013-itens-por-publico.md). Requisitos `PUB-01`–`PUB-09`
+da [spec](../../.specs/features/pedidos-mvp/spec.md); tarefas T97–T101 de
 [tasks](../../.specs/features/pedidos-mvp/tasks.md). Complementa a
 [ADR 016](016-itens-com-os-sete-pontos-da-ficha.md) (forma do item, projeção do
 bot e quantidade informada), a [ADR 020](020-tecnica-por-item-e-arte-do-pedido.md)
-(rótulos) e a [ADR 021](021-atendimento-comeca-pelo-produto.md) (a divisão
+(rótulos) e a [ADR 024](024-atendimento-comeca-pelo-produto.md) (a divisão
 deixa `notes` e ganha campo próprio).
 
 ## Contexto

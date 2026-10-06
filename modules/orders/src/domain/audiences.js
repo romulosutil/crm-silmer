@@ -1,4 +1,4 @@
-// ADR 022: the bot records how the customer splits the quantity by audience
+// ADR 025: the bot records how the customer splits the quantity by audience
 // ("4 masculinas, 3 femininas e 3 infantis") in `audiences`. The split
 // becomes one order item per audience only when the text leaves no doubt:
 // every part is one positive whole number next to one known audience, and

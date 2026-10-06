@@ -25,7 +25,7 @@ cliente, conversa, briefing ou memória curta.
 
 Em cada mensagem de texto, a IA extrai somente fatos confirmados para o
 `briefing_patch` criptografado da Conversa e pergunta pelo próximo ponto da
-ficha (ADR 012, ADR 021). A saudação pede o nome e o que o cliente quer
+ficha (ADR 012, ADR 024). A saudação pede o nome e o que o cliente quer
 personalizar, nunca "qual camisa"; se o cliente não disser o nome, a resposta
 seguinte reage ao que ele contou e pede só o nome, e depois o bot não insiste.
 Os pontos, nesta ordem, são: produto (`product_type`), modelo
@@ -36,7 +36,7 @@ confirmado). Origem da arte, técnica, tecido, tamanhos, gola, personalização
 individual e divisão por público nunca são perguntados: o bot grava o que o
 cliente disser e o vendedor completa. A divisão por público vai em
 `audiences` ("4 masculinas, 3 femininas e 3 infantis"), e o CRM a transforma
-em um item por público quando a lê sem dúvida (ADR 022). O bot nunca oferece criar a arte e, de
+em um item por público quando a lê sem dúvida (ADR 025). O bot nunca oferece criar a arte e, de
 tecido, só fala de algodão, poliéster e dry fit. Os demais campos
 (identificação do pedido, finalidade, perfil de compra, logística e
 anotações) também só são gravados quando o cliente fala deles. A retirada é
@@ -197,7 +197,7 @@ conforme a ADR 009.
 `open_order`. O workflow o calcula pela regra da
 [ADR 014](../../adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md): `true` na
 rodada em que a ficha (briefing anterior unido ao patch da rodada) ganha o
-primeiro valor real de um dos pontos (ADR 021: o produto é o primeiro) e em
+primeiro valor real de um dos pontos (ADR 024: o produto é o primeiro) e em
 todas as seguintes; o nome sozinho e "Definir com o vendedor" não abrem, e o
 que não é pedido do zero
 (ADR 013) nunca abre. Um valor que não seja booleano, ou o campo em outro
@@ -377,10 +377,10 @@ ADR 012, o CRM com o campo vai ao cloud-dev antes do workflow `mvp-simple-7`
 (ADR 014) vai antes do workflow `mvp-simple-11` (DEV `dev-mvp-simple-12`); o
 workflow anterior continua funcionando com o CRM novo, que ainda aceita
 `order.intent_confirmed`. O workflow `mvp-simple-12` (DEV
-`dev-mvp-simple-13`, ADR 021) não muda o contrato e não tem ordem de
+`dev-mvp-simple-13`, ADR 024) não muda o contrato e não tem ordem de
 implantação: `product_type` e o valor `NAO APLICAVEL` da gola já eram aceitos.
 O CRM que aceita `audiences` no `briefing_patch` e lê a divisão por público
-(ADR 022) vai ao ambiente **antes** do workflow `mvp-simple-13` (DEV
+(ADR 025) vai ao ambiente **antes** do workflow `mvp-simple-13` (DEV
 `dev-mvp-simple-14`), que envia o campo; um CRM antigo recusa a chave com
 `400`, e a resposta do bot não sai. O workflow anterior continua funcionando
 com o CRM novo.

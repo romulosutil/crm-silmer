@@ -1,7 +1,7 @@
 # Revisão visual da ficha v6
 
-Rastreabilidade: [ADR 022](../adr/022-itens-por-publico.md),
-[RFC 010](../rfc/010-itens-por-publico.md), `PUB-07`, T95. O pacote usa só
+Rastreabilidade: [ADR 025](../adr/025-itens-por-publico.md),
+[RFC 013](../rfc/013-itens-por-publico.md), `PUB-07`, T100. O pacote usa só
 dados sintéticos.
 
 ## Estado
@@ -57,3 +57,10 @@ pacote; depois, exige uma nova versão.
 node --test test/ficha-print-v6.test.js
 npm run validate:ficha-pdf-review
 ```
+
+## Renumeração (06/10/2026)
+
+Na integração com o `master`, que já usava a ADR 022 e a tarefa T95, a
+decisão passou a ADR 025 e a tarefa a T100. Só os metadados `adr` e `task` da
+amostra mudaram: o HTML renderizado e o PDF aprovados pelo PO têm os mesmos
+hashes, e o registro trava o novo hash do JSON da amostra.

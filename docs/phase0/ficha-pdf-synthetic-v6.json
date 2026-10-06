@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "task": "T95",
-  "adr": "022",
+  "task": "T100",
+  "adr": "025",
   "syntheticOnly": true,
   "snapshotVersion": "synthetic-order-v6",
   "templateVersion": "ficha-canonical-v6",

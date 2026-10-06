@@ -731,7 +731,7 @@ test('PATCH items takes a half-filled item, and one without the ADR 016 fields',
   });
 });
 
-test('PATCH items keeps the audience and the quantity said, and refuses another audience (ADR 022)', async (t) => {
+test('PATCH items keeps the audience and the quantity said, and refuses another audience (ADR 025)', async (t) => {
   const { api, runtime } = orderHarness();
   t.after(() => api.close());
   const pending = await createPending(runtime, 'conversation-1');

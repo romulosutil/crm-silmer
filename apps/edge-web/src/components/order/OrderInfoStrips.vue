@@ -17,7 +17,7 @@ const SERVICE_LABELS = Object.freeze({
   artwork_locations: 'Onde vai a estampa',
   artwork_status: 'Arte informada',
   artwork_technique: 'Técnica informada',
-  // ADR 022: a split by audience that did not read without doubt.
+  // ADR 025: a split by audience that did not read without doubt.
   audiences: 'Divisão informada',
   city_or_postal_code: 'Cidade ou CEP',
   // ADR 016: the seven points land on the item; they show here only when
@@ -28,7 +28,7 @@ const SERVICE_LABELS = Object.freeze({
   customizations: 'Personalizações',
   delivery_address: 'Endereço de entrega',
   delivery_mode: 'Forma de entrega',
-  // ADR 022 (D5): the fabric is "Modelo de malha" at Silmer.
+  // ADR 025 (D5): the fabric is "Modelo de malha" at Silmer.
   fabrics: 'Modelo de malha informado',
   needed_by: 'Data desejada',
   notes: 'Anotações do atendimento',

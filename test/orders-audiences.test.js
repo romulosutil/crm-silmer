@@ -6,11 +6,11 @@ import {
   parseAudiences,
 } from '../modules/orders/src/domain/audiences.js';
 
-test('the audiences are a closed list, with kids not split by gender (ADR 022, D1–D2)', () => {
+test('the audiences are a closed list, with kids not split by gender (ADR 025, D1–D2)', () => {
   assert.deepEqual(AUDIENCES, ['masculino', 'feminino', 'infantil', 'unissex']);
 });
 
-test('a split becomes audience parts only when it leaves no doubt (ADR 022)', () => {
+test('a split becomes audience parts only when it leaves no doubt (ADR 025)', () => {
   for (const [text, expected] of [
     [
       '4 masculinas, 3 femininas e 3 infantis',
@@ -59,7 +59,7 @@ test('a split becomes audience parts only when it leaves no doubt (ADR 022)', ()
   ]);
 });
 
-test('anything doubtful stays with the seller (ADR 022)', () => {
+test('anything doubtful stays with the seller (ADR 025)', () => {
   for (const text of [
     'metade masculina e metade feminina',
     '10 infantil masculino',

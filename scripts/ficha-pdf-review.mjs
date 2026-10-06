@@ -1010,7 +1010,7 @@ export function validateFichaApprovalEvidenceV3(evidence, gate) {
  * signature: that is a go-live gate (EASYPANEL-TOPOLOGY.md, section 12).
  *
  * ADR 020: v5 likewise needs the PO's provisional approval of its sample,
- * and so does v6 (ADR 022).
+ * and so does v6 (ADR 025).
  *
  * @param {{gate: any, gateV4?: any, gateV5?: any, gateV6?: any, printTemplate: string}} input
  */

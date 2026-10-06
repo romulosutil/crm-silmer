@@ -3,7 +3,7 @@
 Status: aceito; a preferência de pergunta do item 6 foi substituída pelo ritmo
 fixo da [ADR 012](012-ficha-de-sete-pontos-e-ritmo-fixo.md) em 01/10/2026; o
 nome do item 7, que voltava no fim, é pedido de novo logo depois da saudação
-desde a [ADR 021](021-atendimento-comeca-pelo-produto.md).
+desde a [ADR 024](024-atendimento-comeca-pelo-produto.md).
 
 Data: 01/10/2026
 

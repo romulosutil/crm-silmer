@@ -58,13 +58,13 @@ const ITEM_POINT_LABELS = Object.freeze({
   cor: 'cor',
   gola: 'gola',
   grade: 'tamanhos',
-  // ADR 022 (D5): the fabric is "Modelo de malha" at Silmer.
+  // ADR 025 (D5): the fabric is "Modelo de malha" at Silmer.
   malhas: 'modelo de malha',
   tipo: 'tipo de roupa',
   tipo_servico: 'técnica',
 });
 
-// ADR 022 (D1): who an item is for, a closed list the API also enforces.
+// ADR 025 (D1): who an item is for, a closed list the API also enforces.
 export const AUDIENCE_OPTIONS = Object.freeze([
   Object.freeze({ label: 'Masculino', value: 'masculino' }),
   Object.freeze({ label: 'Feminino', value: 'feminino' }),
@@ -231,7 +231,7 @@ export function itemPieces(item) {
 }
 
 /**
- * PIT-01: "Item 1 · CAMISETA · 150 peças"; ADR 022 adds the audience when
+ * PIT-01: "Item 1 · CAMISETA · 150 peças"; ADR 025 adds the audience when
  * there is one: "Item 2 · CAMISETA · Feminino · 10 peças".
  *
  * @param {Record<string, any>} item @param {number} index
@@ -245,7 +245,7 @@ export function itemHeading(item, index) {
 }
 
 /**
- * ADR 022: the quantity the customer said for this item, when it holds one.
+ * ADR 025: the quantity the customer said for this item, when it holds one.
  *
  * @param {Record<string, any>} item
  * @returns {number|null}
@@ -256,7 +256,7 @@ function itemInformed(item) {
 }
 
 /**
- * ADR 022 (PIT-09 per item): the warning under an item whose sizes add up to
+ * ADR 025 (PIT-09 per item): the warning under an item whose sizes add up to
  * something other than what the customer said for it. It never blocks.
  *
  * @param {Record<string, any>} item
@@ -314,7 +314,7 @@ export function quantityWarning(order) {
 
 /**
  * PIT-09: an item's Quantidade — the sum of its sizes; with no sizes yet, the
- * quantity said for the item (ADR 022) or, on the first item (the one the bot
+ * quantity said for the item (ADR 025) or, on the first item (the one the bot
  * fills), the quantity said for the order.
  *
  * @param {Record<string, any>} item @param {number} index @param {Record<string, any>} order

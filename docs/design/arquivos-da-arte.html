@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Arquivos da arte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Tokens copiados de apps/edge-web/src/tokens.css */
+  :root, :root[data-theme='light'] {
+    color-scheme: light;
+    --font: Poppins, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --radius-sm: .375rem; --radius-md: .625rem; --radius-lg: .875rem; --radius-pill: 999px;
+    --color-canvas: #f7f6fb; --color-surface: #ffffff; --color-surface-raised: #f0eef8;
+    --color-surface-active: #e8e3fa; --color-text: #1b1530; --color-text-muted: #625b75;
+    --color-border: #d8d4e4; --color-border-subtle: #e8e5ef; --color-accent: #ff5b01;
+    --color-accent-subtle: rgb(255 91 1 / 5%); --color-accent-solid: #c94300;
+    --color-on-accent: #ffffff; --color-link: #5b3fd1; --color-focus: #6f50e8;
+    --color-brand-ink: #0c042d;
+    --ok-bg: #e7f6ed; --ok: #146c43; --warn-bg: #fff4d6; --warn: #7a4a00;
+    --err-bg: #fdecec; --err: #a12a2a; --info-bg: #eaf2ff; --info: #205aa7;
+    --art-a: #ff5b01; --art-b: #5b3fd1; --art-c: #0c042d; --art-d: #ffd17a;
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-canvas: #0c042d; --color-surface: #110642; --color-surface-raised: #19085e;
+    --color-surface-active: #250c8d; --color-text: #f0ecfd; --color-text-muted: #a39dbe;
+    --color-border: #38249a; --color-border-subtle: #250c8d;
+    --color-accent-subtle: rgb(255 91 1 / 12%); --color-link: #a78bfa; --color-focus: #b9a6ff;
+    --color-brand-ink: #f0ecfd;
+    --ok-bg: #123a2a; --ok: #8fe3b3; --warn-bg: #4a2e00; --warn: #ffd17a;
+    --err-bg: #491a22; --err: #ffb4c0; --info-bg: #152f56; --info: #a8caff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) { color-scheme: dark; }
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-canvas); color: var(--color-text); font-family: var(--font); font-size: 1rem; line-height: 1.5; }
+  button, a { font: inherit; }
+  :focus-visible { outline: .2rem solid var(--color-focus); outline-offset: .2rem; }
+
+  /* Canvas */
+  .canvas { max-width: 1320px; margin: 0 auto; padding: 32px 16px 64px; }
+  .canvas-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; margin-bottom: 28px; }
+  .canvas-head h1 { margin: 0; font-size: 1.5rem; line-height: 1.25; }
+  .canvas-head p { margin: 4px 0 0; color: var(--color-text-muted); font-size: .875rem; max-width: 68ch; }
+  .theme { margin-left: auto; display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-surface); }
+  .theme button { border: 0; background: transparent; color: var(--color-text-muted); padding: 4px 14px; border-radius: var(--radius-pill); font-size: .8125rem; font-weight: 500; cursor: pointer; }
+  .theme button[aria-pressed='true'] { background: var(--color-surface-active); color: var(--color-link); }
+
+  .boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 600px), 1fr)); gap: 40px 32px; }
+  .board { min-width: 0; }
+  .board-label { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px; }
+  .board-label b { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--color-accent-solid); }
+  :root[data-theme='dark'] .board-label b { color: var(--color-accent); }
+  .board-label span { font-size: .9375rem; font-weight: 600; }
+  .board-note { margin: 10px 2px 0; font-size: .8125rem; color: var(--color-text-muted); }
+  .board-note li { margin: 2px 0; }
+  .board-note ul { margin: 0; padding-left: 18px; }
+
+  /* ---- Seção real (op-sheet) ---- */
+  .op-sheet { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+  .op-sheet-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 3.5rem; padding: 8px 16px 8px 20px; border-bottom: 1px solid var(--color-border-subtle); }
+  .op-sheet-head h2 { margin: 0; font-size: 1.125rem; }
+  .op-edit { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 6px 13px; color: var(--color-link); background: transparent; border: 0; border-radius: var(--radius-md); font-size: .875rem; font-weight: 500; cursor: pointer; }
+  .op-sheet-body { padding: 16px 20px; font-size: .9375rem; }
+  .op-sheet-body p { margin: 0; }
+  .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  .af-block { display: grid; gap: 12px; padding: 16px 20px 20px; border-top: 1px solid var(--color-border-subtle); }
+  .af-block-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  .af-block-head h3 { margin: 0; font-size: .9375rem; font-weight: 600; }
+  .af-count { padding: 2px 10px; font-size: .75rem; font-weight: 600; border-radius: var(--radius-pill); background: var(--color-surface-raised); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  .af-count[data-full] { background: var(--warn-bg); color: var(--warn); }
+  .af-hint { margin: 0; font-size: .75rem; color: var(--color-text-muted); }
+  .af-head-action { margin-left: auto; }
+
+  /* Botões */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 7px 14px; font-size: .875rem; font-weight: 500; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); cursor: pointer; text-decoration: none; white-space: nowrap; }
+  .btn:hover { background: var(--color-surface-raised); }
+  .btn-strong { background: var(--color-text); color: var(--color-surface); border-color: var(--color-text); }
+  .btn-strong:hover { background: var(--color-brand-ink); color: var(--color-surface); }
+  .btn-danger { background: var(--err); border-color: var(--err); color: var(--color-surface); }
+  .btn-ghost { border-color: transparent; background: transparent; color: var(--color-link); }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .icon-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--color-text-muted); cursor: pointer; text-decoration: none; }
+  .icon-btn:hover { background: var(--color-surface-raised); color: var(--color-text); }
+  .icon-btn.danger:hover { background: var(--err-bg); color: var(--err); }
+
+  /* Dropzone */
+  .af-drop { display: grid; justify-items: center; gap: 8px; padding: 22px 16px; text-align: center; border: 1.5px dashed var(--color-border); border-radius: var(--radius-md); background: var(--color-canvas); }
+  .af-drop[data-over] { border-color: var(--color-focus); background: var(--color-surface-active); }
+  .af-drop .icon { width: 28px; height: 28px; color: var(--color-text-muted); }
+  .af-drop p { margin: 0; font-size: .875rem; color: var(--color-text-muted); }
+  .af-drop strong { color: var(--color-text); font-weight: 600; }
+
+  /* Grade de arquivos */
+  .af-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .af-tile { position: relative; display: grid; grid-template-rows: auto auto; min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); overflow: hidden; }
+  .af-thumb { position: relative; aspect-ratio: 4 / 3; display: grid; place-items: center; background: var(--color-surface-raised); border-bottom: 1px solid var(--color-border-subtle); overflow: hidden; }
+  .af-thumb svg.art { width: 100%; height: 100%; display: block; }
+  .af-meta { display: grid; gap: 0; padding: 8px 6px 8px 10px; grid-template-columns: 1fr auto; align-items: center; }
+  .af-name { font-size: .8125rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .af-size { font-size: .75rem; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  .af-actions { grid-row: 1 / span 2; grid-column: 2; display: flex; }
+
+  /* Ícone por extensão */
+  .ext { position: relative; width: 56px; height: 68px; }
+  .ext svg { width: 100%; height: 100%; display: block; }
+  .ext .sheet { fill: var(--color-surface); stroke: var(--color-border); stroke-width: 1.5; }
+  .ext .fold { fill: var(--color-surface-raised); stroke: var(--color-border); stroke-width: 1.5; stroke-linejoin: round; }
+  .ext span { position: absolute; left: -6px; bottom: 10px; padding: 1px 7px; font-size: .6875rem; font-weight: 700; letter-spacing: .04em; border-radius: 4px; }
+  .ext[data-kind='vector'] span { background: var(--color-surface-active); color: var(--color-link); }
+  .ext[data-kind='pdf'] span { background: var(--err-bg); color: var(--err); }
+  .ext[data-kind='raster'] span { background: var(--info-bg); color: var(--info); }
+  .ext[data-kind='zip'] span { background: var(--warn-bg); color: var(--warn); }
+
+  /* Estados do tile */
+  .af-tile[data-state='uploading'] .af-thumb::after { content: ''; position: absolute; inset: 0; background: color-mix(in srgb, var(--color-surface) 55%, transparent); }
+  .af-progress { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 1; height: 6px; border-radius: var(--radius-pill); background: var(--color-border-subtle); overflow: hidden; }
+  .af-progress i { display: block; height: 100%; background: var(--color-link); border-radius: inherit; }
+  .af-tile[data-state='error'] { border-color: var(--err); }
+  .af-tile[data-state='error'] .af-thumb { background: var(--err-bg); }
+  .af-err { grid-column: 1 / -1; margin: 4px 0 0; font-size: .75rem; font-weight: 500; color: var(--err); }
+  .af-tile[data-state='confirm'] { border-color: var(--err); }
+  .af-confirm { position: absolute; inset: 0; display: grid; align-content: center; gap: 8px; padding: 12px; background: var(--color-surface); text-align: center; }
+  .af-confirm p { margin: 0; font-size: .8125rem; font-weight: 500; }
+  .af-confirm div { display: flex; gap: 6px; justify-content: center; }
+  .af-confirm .btn { min-height: 34px; padding: 4px 10px; font-size: .8125rem; }
+
+  /* Adicionar (tile) */
+  .af-add { display: grid; place-items: center; align-content: center; gap: 6px; min-height: 100%; aspect-ratio: auto; padding: 16px 8px; border: 1.5px dashed var(--color-border); border-radius: var(--radius-md); background: transparent; color: var(--color-link); font-size: .8125rem; font-weight: 500; cursor: pointer; text-align: center; }
+  .af-add small { color: var(--color-text-muted); font-weight: 400; font-size: .75rem; }
+  .af-add .icon { width: 24px; height: 24px; }
+
+  /* Arte final */
+  .af-final { display: grid; grid-template-columns: 132px 1fr; gap: 16px; align-items: center; padding: 12px; border: 1px solid var(--color-border); border-left: 4px solid var(--color-accent); border-radius: var(--radius-md); background: var(--color-accent-subtle); }
+  .af-final .af-thumb { border-radius: var(--radius-sm); border: 1px solid var(--color-border-subtle); }
+  .af-final-info { display: grid; gap: 4px; min-width: 0; }
+  .af-final-info .af-name { font-size: .9375rem; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
+  .af-final-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .af-tag-final { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px 2px 7px; font-size: .75rem; font-weight: 600; border-radius: var(--radius-pill); background: var(--ok-bg); color: var(--ok); }
+  .af-tag-final .icon { width: 14px; height: 14px; stroke-width: 2.4; }
+  .af-tag-missing { display: inline-flex; padding: 2px 10px; font-size: .75rem; font-weight: 600; border-radius: var(--radius-pill); background: var(--warn-bg); color: var(--warn); }
+  .af-final-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 16px; border: 1.5px dashed var(--color-border); border-radius: var(--radius-md); }
+  .af-final-empty p { margin: 0; flex: 1 1 220px; font-size: .875rem; color: var(--color-text-muted); }
+  .af-final-empty p strong { display: block; color: var(--color-text); font-weight: 600; }
+
+  .af-alert { margin: 0; padding: 10px 14px; border-radius: var(--radius-md); font-size: .875rem; font-weight: 500; display: flex; gap: 8px; align-items: flex-start; }
+  .af-alert.err { background: var(--err-bg); color: var(--err); }
+  .af-alert.warn { background: var(--warn-bg); color: var(--warn); }
+  .af-alert .icon { margin-top: 2px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* Mobile artboard */
+  .phone { width: 375px; max-width: 100%; margin: 0 auto; padding: 12px; border: 1px solid var(--color-border); border-radius: 28px; background: var(--color-canvas); }
+  .phone .af-grid { grid-template-columns: repeat(2, 1fr); }
+  .phone .af-final { grid-template-columns: 88px 1fr; gap: 12px; }
+  .phone .af-block, .phone .op-sheet-body { padding-left: 14px; padding-right: 14px; }
+  .phone .op-sheet-head { padding-left: 14px; }
+
+  /* Painel de decisões */
+  .spec { margin-top: 48px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+  .spec section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 18px 20px; }
+  .spec h2 { margin: 0 0 8px; font-size: 1rem; }
+  .spec ul { margin: 0; padding-left: 18px; font-size: .875rem; }
+  .spec li { margin: 5px 0; }
+  .spec code { font-size: .8125rem; background: var(--color-surface-raised); padding: 1px 5px; border-radius: 4px; }
+  .spec .q li::marker { content: '? '; color: var(--color-accent-solid); font-weight: 700; }
+
+  @media (max-width: 520px) {
+    .af-final { grid-template-columns: 88px 1fr; }
+    .af-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m6 6 1 14h10l1-14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19Z"/><path d="M12 10v4.5"/><path d="M12 17.25v.25"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13"/><path d="m14 4 4 4-4 4"/><path d="M20 16H7"/><path d="m10 12-4 4 4 4"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <!-- Arte de exemplo (substitui a miniatura real) -->
+    <symbol id="art-1" viewBox="0 0 160 120"><rect width="160" height="120" fill="#f3efe6"/><path d="M52 22h56l18 14-10 14-8-5v53H52V45l-8 5-10-14Z" fill="#0c042d"/><circle cx="80" cy="64" r="16" fill="#ff5b01"/><path d="M70 64h20M80 54v20" stroke="#f3efe6" stroke-width="3"/></symbol>
+    <symbol id="art-2" viewBox="0 0 160 120"><rect width="160" height="120" fill="#ff5b01"/><text x="80" y="58" text-anchor="middle" font-family="Poppins, sans-serif" font-weight="700" font-size="22" fill="#0c042d">SILMER</text><text x="80" y="80" text-anchor="middle" font-family="Poppins, sans-serif" font-weight="500" font-size="11" fill="#0c042d">UNIFORMES 2026</text></symbol>
+    <symbol id="art-3" viewBox="0 0 160 120"><rect width="160" height="120" fill="#e8e3fa"/><circle cx="58" cy="60" r="30" fill="#5b3fd1"/><rect x="82" y="34" width="46" height="52" rx="6" fill="#ffd17a"/></symbol>
+    <symbol id="art-final" viewBox="0 0 160 120"><rect width="160" height="120" fill="#ffffff"/><path d="M48 18h64l20 16-11 16-9-6v60H48V44l-9 6-11-16Z" fill="#0c042d"/><text x="80" y="64" text-anchor="middle" font-family="Poppins, sans-serif" font-weight="700" font-size="12" fill="#ff5b01">SILMER</text><rect x="66" y="72" width="28" height="3" fill="#ff5b01"/></symbol>
+  </defs>
+</svg>
+
+<main class="canvas">
+  <header class="canvas-head">
+    <div>
+      <h1>Estampa e arquivos — arquivos da arte</h1>
+      <p>Página do pedido. Até 5 arquivos de referência (10 MB cada) mais 1 arte final, que não entra na conta. Imagens viram miniatura; CDR, AI, PDF e afins mostram o ícone da extensão. Armazenamento no RustFS.</p>
+    </div>
+    <div class="theme" role="group" aria-label="Tema">
+      <button type="button" aria-pressed="true" data-t="light">Claro</button>
+      <button type="button" aria-pressed="false" data-t="dark">Escuro</button>
+    </div>
+  </header>
+
+  <div class="boards">
+
+    <!-- 1. Vazio -->
+    <article class="board">
+      <h2 class="board-label"><b>01</b><span>Pedido pendente, nada enviado</span></h2>
+      <section class="op-sheet" aria-label="Estampa e arquivos">
+        <div class="op-sheet-head"><h2>Estampa e arquivos</h2><button class="op-edit"><svg class="icon"><use href="#i-pencil"/></svg>Editar</button></div>
+        <div class="op-sheet-body"><p>O cliente envia a arte</p></div>
+
+        <div class="af-block">
+          <div class="af-block-head"><h3>Arte final</h3><span class="af-tag-missing">Pendente</span></div>
+          <div class="af-final-empty">
+            <p><strong>Nenhuma arte final enviada</strong>A versão aprovada que vai para a produção. Um arquivo, até 10 MB.</p>
+            <button class="btn"><svg class="icon"><use href="#i-upload"/></svg>Enviar arte final</button>
+          </div>
+        </div>
+
+        <div class="af-block">
+          <div class="af-block-head"><h3>Arquivos da arte</h3><span class="af-count">0 de 5</span></div>
+          <div class="af-drop">
+            <svg class="icon"><use href="#i-upload"/></svg>
+            <p><strong>Arraste os arquivos para cá</strong>ou</p>
+            <button class="btn btn-strong"><svg class="icon"><use href="#i-plus"/></svg>Adicionar arquivos da arte</button>
+            <p class="af-hint">Até 5 arquivos, 10 MB cada · PNG, JPEG, WebP, CDR, PDF, SVG, AI, EPS, PSD, TIFF, ZIP, RAR</p>
+          </div>
+        </div>
+      </section>
+      <div class="board-note"><ul>
+        <li>O envio é imediato: não precisa clicar em “Editar”. “Editar” continua só para “Quem faz a arte?”.</li>
+        <li>A arte final fica acima porque é o que a produção usa; as referências vêm depois.</li>
+        <li>O botão é o caminho principal (teclado). Arrastar é atalho.</li>
+      </ul></div>
+    </article>
+
+    <!-- 2. Com arquivos -->
+    <article class="board">
+      <h2 class="board-label"><b>02</b><span>Com arquivos e arte final</span></h2>
+      <section class="op-sheet" aria-label="Estampa e arquivos">
+        <div class="op-sheet-head"><h2>Estampa e arquivos</h2><button class="op-edit"><svg class="icon"><use href="#i-pencil"/></svg>Editar</button></div>
+        <div class="op-sheet-body"><p>O cliente envia a arte · A Silmer cria a arte</p></div>
+
+        <div class="af-block">
+          <div class="af-block-head"><h3>Arte final</h3><span class="af-tag-final"><svg class="icon"><use href="#i-check"/></svg>Enviada</span></div>
+          <div class="af-final">
+            <div class="af-thumb"><svg class="art"><use href="#art-final"/></svg></div>
+            <div class="af-final-info">
+              <span class="af-name">arte-final-p0042-v3.png</span>
+              <span class="af-size">PNG · 3,8 MB · enviada por Ana Paula em 05/10 às 14:12</span>
+              <div class="af-final-actions">
+                <a class="btn" href="#"><svg class="icon"><use href="#i-download"/></svg>Baixar</a>
+                <button class="btn btn-ghost"><svg class="icon"><use href="#i-swap"/></svg>Substituir</button>
+                <button class="icon-btn danger" aria-label="Remover arte final"><svg class="icon"><use href="#i-trash"/></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="af-block">
+          <div class="af-block-head"><h3>Arquivos da arte</h3><span class="af-count">4 de 5</span>
+            <button class="btn af-head-action"><svg class="icon"><use href="#i-plus"/></svg>Adicionar arquivos da arte</button></div>
+          <ul class="af-grid">
+            <li class="af-tile">
+              <div class="af-thumb"><svg class="art"><use href="#art-1"/></svg></div>
+              <div class="af-meta"><span class="af-name">mockup-frente.jpg</span><span class="af-size">JPEG · 1,2 MB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar mockup-frente.jpg"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+            </li>
+            <li class="af-tile">
+              <div class="af-thumb"><svg class="art"><use href="#art-2"/></svg></div>
+              <div class="af-meta"><span class="af-name">logo-cliente.png</span><span class="af-size">PNG · 640 KB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar logo-cliente.png"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+            </li>
+            <li class="af-tile">
+              <div class="af-thumb"><div class="ext" data-kind="vector"><svg viewBox="0 0 56 68"><path class="sheet" d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path class="fold" d="M38 2v16h16"/></svg><span>CDR</span></div></div>
+              <div class="af-meta"><span class="af-name">brasao-vetor.cdr</span><span class="af-size">CDR · 8,7 MB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar brasao-vetor.cdr"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+            </li>
+            <li class="af-tile">
+              <div class="af-thumb"><div class="ext" data-kind="pdf"><svg viewBox="0 0 56 68"><path class="sheet" d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path class="fold" d="M38 2v16h16"/></svg><span>PDF</span></div></div>
+              <div class="af-meta"><span class="af-name">briefing-evento.pdf</span><span class="af-size">PDF · 410 KB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar briefing-evento.pdf"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+            </li>
+          </ul>
+        </div>
+      </section>
+      <div class="board-note"><ul>
+        <li>Aqui só “Baixar” aparece por tile para mostrar a grade limpa; com edição liberada, a lixeira fica ao lado (ver 04).</li>
+        <li>A miniatura é só visual; “Baixar” entrega o arquivo original em qualquer formato.</li>
+        <li>O nome completo aparece no <code>title</code> e no rótulo acessível quando é cortado.</li>
+      </ul></div>
+    </article>
+
+    <!-- 3. Enviando e erros -->
+    <article class="board">
+      <h2 class="board-label"><b>03</b><span>Enviando, recusado e limite atingido</span></h2>
+      <section class="op-sheet" aria-label="Estampa e arquivos">
+        <div class="op-sheet-head"><h2>Estampa e arquivos</h2><button class="op-edit"><svg class="icon"><use href="#i-pencil"/></svg>Editar</button></div>
+        <div class="af-block">
+          <div class="af-block-head"><h3>Arquivos da arte</h3><span class="af-count" data-full>5 de 5</span>
+            <button class="btn af-head-action" disabled><svg class="icon"><use href="#i-plus"/></svg>Adicionar arquivos da arte</button></div>
+          <p class="af-alert warn" role="status"><svg class="icon"><use href="#i-alert"/></svg>Limite de 5 arquivos atingido. Remova um para enviar outro. A arte final continua liberada.</p>
+          <p class="af-alert err" role="alert"><svg class="icon"><use href="#i-alert"/></svg>“estampa-costas.psd” não foi enviado: tem 14,2 MB e o limite é 10 MB.</p>
+          <ul class="af-grid">
+            <li class="af-tile">
+              <div class="af-thumb"><svg class="art"><use href="#art-1"/></svg></div>
+              <div class="af-meta"><span class="af-name">mockup-frente.jpg</span><span class="af-size">JPEG · 1,2 MB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar mockup-frente.jpg"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+            </li>
+            <li class="af-tile">
+              <div class="af-thumb"><svg class="art"><use href="#art-2"/></svg></div>
+              <div class="af-meta"><span class="af-name">logo-cliente.png</span><span class="af-size">PNG · 640 KB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar logo-cliente.png"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+            </li>
+            <li class="af-tile">
+              <div class="af-thumb"><div class="ext" data-kind="vector"><svg viewBox="0 0 56 68"><path class="sheet" d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path class="fold" d="M38 2v16h16"/></svg><span>CDR</span></div></div>
+              <div class="af-meta"><span class="af-name">brasao-vetor.cdr</span><span class="af-size">CDR · 8,7 MB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar brasao-vetor.cdr"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+            </li>
+            <li class="af-tile" data-state="uploading" aria-busy="true">
+              <div class="af-thumb"><svg class="art"><use href="#art-3"/></svg><div class="af-progress" role="progressbar" aria-label="Enviando paleta.webp" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><i style="width:62%"></i></div></div>
+              <div class="af-meta"><span class="af-name">paleta.webp</span><span class="af-size">Enviando… 62%</span>
+                <span class="af-actions"><button class="icon-btn" aria-label="Cancelar envio de paleta.webp"><svg class="icon"><use href="#i-x"/></svg></button></span></div>
+            </li>
+            <li class="af-tile" data-state="uploading" aria-busy="true">
+              <div class="af-thumb"><div class="ext" data-kind="zip"><svg viewBox="0 0 56 68"><path class="sheet" d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path class="fold" d="M38 2v16h16"/></svg><span>ZIP</span></div><div class="af-progress" role="progressbar" aria-label="Enviando fontes.zip" aria-valuenow="18" aria-valuemin="0" aria-valuemax="100"><i style="width:18%"></i></div></div>
+              <div class="af-meta"><span class="af-name">fontes.zip</span><span class="af-size">Enviando… 18%</span>
+                <span class="af-actions"><button class="icon-btn" aria-label="Cancelar envio de fontes.zip"><svg class="icon"><use href="#i-x"/></svg></button></span></div>
+            </li>
+          </ul>
+        </div>
+      </section>
+      <div class="board-note"><ul>
+        <li>Tamanho e quantidade são checados no navegador antes de enviar e de novo na API (a API decide).</li>
+        <li>Se selecionar 4 arquivos com só 2 vagas: envia os 2 primeiros e avisa quais ficaram de fora.</li>
+        <li>Erros vão para uma região <code>role="alert"</code>; o progresso usa <code>progressbar</code>.</li>
+      </ul></div>
+    </article>
+
+    <!-- 4. Remover -->
+    <article class="board">
+      <h2 class="board-label"><b>04</b><span>Ações do tile e confirmação de remoção</span></h2>
+      <section class="op-sheet" aria-label="Estampa e arquivos">
+        <div class="op-sheet-head"><h2>Estampa e arquivos</h2><button class="op-edit"><svg class="icon"><use href="#i-pencil"/></svg>Editar</button></div>
+        <div class="af-block">
+          <div class="af-block-head"><h3>Arquivos da arte</h3><span class="af-count">3 de 5</span>
+            <button class="btn af-head-action"><svg class="icon"><use href="#i-plus"/></svg>Adicionar arquivos da arte</button></div>
+          <ul class="af-grid">
+            <li class="af-tile">
+              <div class="af-thumb"><svg class="art"><use href="#art-1"/></svg></div>
+              <div class="af-meta"><span class="af-name">mockup-frente.jpg</span><span class="af-size">JPEG · 1,2 MB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar mockup-frente.jpg"><svg class="icon"><use href="#i-download"/></svg></a><button class="icon-btn danger" aria-label="Remover mockup-frente.jpg"><svg class="icon"><use href="#i-trash"/></svg></button></span></div>
+            </li>
+            <li class="af-tile" data-state="confirm">
+              <div class="af-thumb"><svg class="art"><use href="#art-2"/></svg></div>
+              <div class="af-meta"><span class="af-name">logo-cliente.png</span><span class="af-size">PNG · 640 KB</span></div>
+              <div class="af-confirm" role="group" aria-label="Confirmar remoção">
+                <p>Remover “logo-cliente.png”?</p>
+                <div><button class="btn">Cancelar</button><button class="btn btn-danger">Remover</button></div>
+              </div>
+            </li>
+            <li class="af-tile">
+              <div class="af-thumb"><div class="ext" data-kind="vector"><svg viewBox="0 0 56 68"><path class="sheet" d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path class="fold" d="M38 2v16h16"/></svg><span>AI</span></div></div>
+              <div class="af-meta"><span class="af-name">brasao.ai</span><span class="af-size">AI · 5,1 MB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar brasao.ai"><svg class="icon"><use href="#i-download"/></svg></a><button class="icon-btn danger" aria-label="Remover brasao.ai"><svg class="icon"><use href="#i-trash"/></svg></button></span></div>
+            </li>
+            <li><button class="af-add"><svg class="icon"><use href="#i-plus"/></svg>Adicionar<small>2 vagas · 10 MB cada</small></button></li>
+          </ul>
+        </div>
+      </section>
+      <div class="board-note"><ul>
+        <li>Baixar e Remover sempre visíveis (sem depender de hover; funciona no toque).</li>
+        <li>Confirmação inline no próprio tile: o foco vai para “Cancelar”; Esc cancela; após remover, o foco vai para o próximo tile ou para “Adicionar”.</li>
+        <li>O tile “Adicionar” no fim da grade aparece quando há vaga e repete a ação do cabeçalho.</li>
+      </ul></div>
+    </article>
+
+    <!-- 5. Somente leitura -->
+    <article class="board">
+      <h2 class="board-label"><b>05</b><span>Pedido gerado ou sem permissão — só baixar</span></h2>
+      <section class="op-sheet" aria-label="Estampa e arquivos">
+        <div class="op-sheet-head"><h2>Estampa e arquivos</h2></div>
+        <div class="op-sheet-body"><p>O cliente envia a arte</p></div>
+        <div class="af-block">
+          <div class="af-block-head"><h3>Arte final</h3><span class="af-tag-final"><svg class="icon"><use href="#i-check"/></svg>Enviada</span></div>
+          <div class="af-final">
+            <div class="af-thumb"><div class="ext" data-kind="vector"><svg viewBox="0 0 56 68"><path class="sheet" d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path class="fold" d="M38 2v16h16"/></svg><span>CDR</span></div></div>
+            <div class="af-final-info">
+              <span class="af-name">arte-final-p0042.cdr</span>
+              <span class="af-size">CDR · 9,4 MB · enviada por Ana Paula em 05/10 às 14:12</span>
+              <div class="af-final-actions"><a class="btn" href="#"><svg class="icon"><use href="#i-download"/></svg>Baixar</a></div>
+            </div>
+          </div>
+        </div>
+        <div class="af-block">
+          <div class="af-block-head"><h3>Arquivos da arte</h3><span class="af-count">2</span></div>
+          <ul class="af-grid">
+            <li class="af-tile">
+              <div class="af-thumb"><svg class="art"><use href="#art-1"/></svg></div>
+              <div class="af-meta"><span class="af-name">mockup-frente.jpg</span><span class="af-size">JPEG · 1,2 MB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar mockup-frente.jpg"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+            </li>
+            <li class="af-tile">
+              <div class="af-thumb"><div class="ext" data-kind="raster"><svg viewBox="0 0 56 68"><path class="sheet" d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path class="fold" d="M38 2v16h16"/></svg><span>PSD</span></div></div>
+              <div class="af-meta"><span class="af-name">camada-cores.psd</span><span class="af-size">PSD · 7,0 MB</span>
+                <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar camada-cores.psd"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+            </li>
+          </ul>
+        </div>
+      </section>
+      <div class="board-note"><ul>
+        <li>Sem dropzone, sem “Adicionar”, sem lixeira; o contador perde o “de 5”.</li>
+        <li>Sem arquivos: “Nenhum arquivo anexado.” (texto atual mantido).</li>
+      </ul></div>
+    </article>
+
+    <!-- 6. Mobile -->
+    <article class="board">
+      <h2 class="board-label"><b>06</b><span>Celular — 375 px</span></h2>
+      <div class="phone">
+        <section class="op-sheet" aria-label="Estampa e arquivos">
+          <div class="op-sheet-head"><h2>Estampa e arquivos</h2><button class="op-edit"><svg class="icon"><use href="#i-pencil"/></svg>Editar</button></div>
+          <div class="af-block">
+            <div class="af-block-head"><h3>Arte final</h3><span class="af-tag-final"><svg class="icon"><use href="#i-check"/></svg>Enviada</span></div>
+            <div class="af-final">
+              <div class="af-thumb"><svg class="art"><use href="#art-final"/></svg></div>
+              <div class="af-final-info">
+                <span class="af-name">arte-final-p0042-v3.png</span>
+                <span class="af-size">PNG · 3,8 MB</span>
+                <div class="af-final-actions">
+                  <a class="icon-btn" href="#" aria-label="Baixar arte final"><svg class="icon"><use href="#i-download"/></svg></a>
+                  <button class="icon-btn" aria-label="Substituir arte final"><svg class="icon"><use href="#i-swap"/></svg></button>
+                  <button class="icon-btn danger" aria-label="Remover arte final"><svg class="icon"><use href="#i-trash"/></svg></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="af-block">
+            <div class="af-block-head"><h3>Arquivos da arte</h3><span class="af-count">3 de 5</span></div>
+            <ul class="af-grid">
+              <li class="af-tile">
+                <div class="af-thumb"><svg class="art"><use href="#art-1"/></svg></div>
+                <div class="af-meta"><span class="af-name">mockup-frente.jpg</span><span class="af-size">1,2 MB</span>
+                  <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar mockup-frente.jpg"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+              </li>
+              <li class="af-tile">
+                <div class="af-thumb"><div class="ext" data-kind="vector"><svg viewBox="0 0 56 68"><path class="sheet" d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path class="fold" d="M38 2v16h16"/></svg><span>CDR</span></div></div>
+                <div class="af-meta"><span class="af-name">brasao-vetor.cdr</span><span class="af-size">8,7 MB</span>
+                  <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar brasao-vetor.cdr"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+              </li>
+              <li class="af-tile">
+                <div class="af-thumb"><div class="ext" data-kind="pdf"><svg viewBox="0 0 56 68"><path class="sheet" d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path class="fold" d="M38 2v16h16"/></svg><span>PDF</span></div></div>
+                <div class="af-meta"><span class="af-name">briefing.pdf</span><span class="af-size">410 KB</span>
+                  <span class="af-actions"><a class="icon-btn" href="#" aria-label="Baixar briefing.pdf"><svg class="icon"><use href="#i-download"/></svg></a></span></div>
+              </li>
+              <li><button class="af-add"><svg class="icon"><use href="#i-plus"/></svg>Adicionar<small>2 vagas</small></button></li>
+            </ul>
+          </div>
+        </section>
+      </div>
+      <div class="board-note"><ul>
+        <li>Grade fixa em 2 colunas; o botão do cabeçalho some e fica só o tile “Adicionar”.</li>
+        <li>Sem dropzone no celular: o seletor do sistema abre câmera/galeria/arquivos.</li>
+      </ul></div>
+    </article>
+  </div>
+
+  <div class="spec">
+    <section>
+      <h2>Regras</h2>
+      <ul>
+        <li>Arquivos da arte: até 5 por pedido, 10 MB cada.</li>
+        <li>Arte final: 1 por pedido, 10 MB, fora da conta dos 5. Substituir troca o arquivo.</li>
+        <li>Formatos: PNG, JPEG, WebP, CDR, PDF, SVG, AI, EPS, PSD, TIFF, ZIP, RAR.</li>
+        <li>Miniatura: PNG, JPEG e WebP. Todo o resto (inclusive SVG) usa o ícone da extensão.</li>
+        <li>Enviar e remover: só com o pedido pendente e permissão de edição. Baixar: quem pode ver o pedido.</li>
+        <li>Toda ação (enviar, substituir, remover, baixar) entra na auditoria do pedido.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Proposta técnica (RustFS)</h2>
+      <ul>
+        <li>RustFS na rede interna do EasyPanel, sem domínio público; só a API fala com ele.</li>
+        <li>Envio e download passam pela API (stream), que aplica ACL, limite de 10 MB e contagem dentro da transação do pedido.</li>
+        <li>Chave opaca por arquivo (<code>orders/&lt;id&gt;/&lt;uuid&gt;</code>); nome original só no banco.</li>
+        <li>Download com <code>Content-Disposition: attachment</code> e <code>nosniff</code>; miniatura via endpoint próprio, só para imagens.</li>
+        <li>Miniatura gerada no navegador no envio (WebP ~320 px), sem nova dependência no servidor.</li>
+        <li>Decisão registrada na RFC 009 e na ADR 021, com o bucket no backup off-host junto com o PostgreSQL.</li>
+      </ul>
+    </section>
+    <section class="q">
+      <h2>Para confirmar</h2>
+      <ul>
+        <li>A arte final pode ser enviada depois de o pedido ser gerado? (Hoje tudo trava fora de “pendente”.)</li>
+        <li>Com “Sem estampa” marcado, a seção de arquivos some ou continua?</li>
+        <li>Gerar o pedido deve exigir a arte final enviada?</li>
+        <li>Quem pode enviar a arte final: só o vendedor do pedido ou qualquer usuário com edição?</li>
+      </ul>
+    </section>
+  </div>
+</main>
+<script>
+  for (const b of document.querySelectorAll('.theme button')) {
+    b.addEventListener('click', () => {
+      document.documentElement.dataset.theme = b.dataset.t;
+      for (const o of document.querySelectorAll('.theme button')) o.setAttribute('aria-pressed', String(o === b));
+    });
+  }
+</script>
+</body>
+</html>

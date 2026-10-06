@@ -1465,8 +1465,8 @@ vendedor.
 
 As tarefas abaixo partem do `master` que já contém ADRs 008–018, v3 paginada
 e aprovação provisória. Cada fatia requer commit e push próprios antes de
-PR/merge. A ativação do Dropbox e o fluxo de aviso a Rose ficam fora desta
-entrega, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md).
+PR/merge. O envio de arquivos (depois ativado pela ADR 021, T88–T92) e o
+fluxo de aviso a Rose ficam fora desta entrega, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md).
 
 ### T76: Decisão, contrato e glossário
 
@@ -1574,4 +1574,53 @@ A PR 142 integrou estas tarefas em 05/10/2026. A v5 está selecionada desde 2979
 
 - **Requisitos:** TEC-01–TEC-08.
 - **Aceite:** gates completos, PR e merge após a aprovação do PO.
+- **Gate:** `git diff --check`, `npm run validate` e E2E de pedidos.
+
+## Arquivos da arte no RustFS (ADR 021, 05/10/2026)
+
+As tarefas partem do `master` 2979c81 (v5 em uso). Cada uma vira um commit e
+um push na branch `feat/arquivos-da-arte`.
+
+### T88: Decisão, design e saída do Dropbox
+
+- **Requisitos:** ARQ-01–ARQ-09.
+- **Arquivos:** RFC 009, ADR 021, design, spec, tasks, glossário e docs de
+  arquitetura, segurança, política de mídia e topologia.
+- **Aceite:** decisão do PO registrada sem reescrever ADRs; nenhuma menção
+  ao Dropbox fora da ADR 019, da migração 0005 e dos JSON aprovados no T00.5
+  (esses aguardam nova revisão de Tech Lead e Privacidade).
+- **Gate:** validadores de topologia, mídia, spikes, catálogo e formatação.
+
+### T89: RustFS na topologia e no ambiente local
+
+- **Requisitos:** ARQ-07, ARQ-09.
+- **Arquivos:** `docker-compose.dev.yml`, `scripts/dev.mjs`, `ops/**`,
+  nginx, migração 0028 e handoff de mídia.
+- **Aceite:** RustFS fixado por digest, interno, com bucket no backup e no
+  drill; `npm run dev` sobe o RustFS local; nginx aceita 11 MB só no upload.
+- **Gate:** `validate:topology`, testes de recuperação e migrações.
+
+### T90: Arquivos no domínio e na API
+
+- **Requisitos:** ARQ-02–ARQ-08.
+- **Arquivos:** `modules/orders/src/**` (domínio, serviço, adapters S3 e
+  PostgreSQL), migração 0027, rotas e runtime de pedidos, OpenAPI e testes.
+- **Aceite:** limites, assinatura do conteúdo, substituição da arte final,
+  dono e status sob lock, idempotência, auditoria e 503 sem storage.
+- **Gate:** testes unitários, typecheck, lint e smoke contra um RustFS real.
+
+### T91: Tela dos arquivos da arte
+
+- **Requisitos:** ARQ-01–ARQ-06.
+- **Arquivos:** `OrderArtworkFiles.vue`, `OrderArtworkSection.vue`,
+  `lib/order-files.js`, `api-client.js`, estilos e E2E.
+- **Aceite:** estados do design (vazio, preenchido, enviando, recusado,
+  remover, somente leitura e celular) por teclado e sem violação axe.
+- **Gate:** build, tokens de design e E2E de pedidos.
+
+### T92: Revisão integrada e entrega
+
+- **Requisitos:** ARQ-01–ARQ-09.
+- **Aceite:** gates completos e PR; provisionar o RustFS e evidenciar o
+  backup do bucket antes da produção.
 - **Gate:** `git diff --check`, `npm run validate` e E2E de pedidos.

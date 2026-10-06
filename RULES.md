@@ -33,7 +33,7 @@
 6. n8n é obrigatório para canais, OpenAI e orquestração. Falha de n8n é visível, sem fallback silencioso.
 7. Toda mutação oficial passa por contrato autenticado, autorizado, idempotente e auditável do CRM; n8n nunca acessa diretamente o banco do CRM.
 8. Dados pessoais seguem minimização, acesso por capacidade, auditoria e política de retenção aprovada. Controles de acesso devem refletir a implementação e as evidências atuais.
-9. No piloto interno, mídia transitória usa volume privado sem backup; arquivos válidos seguem ao Dropbox por procedimento registrado. Isso não presume API, token ou sincronização automática.
+9. No piloto interno, mídia transitória usa volume privado sem backup; arquivo válido é anexado ao pedido e guardado no RustFS interno (ADR 023). Só a API fala com o RustFS: sem URL pública, link pré-assinado ou promoção automática a partir do canal.
 10. n8n v1 usa Basic Auth com `AUTOMATION_EXECUTOR`, idempotência, correlação, identidade de workflow e `application/problem+json`; sem HMAC/timestamp nesse contrato.
 11. `message.send.requested` é reserva obrigatória de uso único antes da chamada à Meta. Timeout posterior vira resultado desconhecido e reconciliação; retry cego é proibido.
 12. A reserva valida modo, `automation_epoch` e `source_revision` atuais; cada revisão inbound só pode ser consumida uma vez. Não há claim, lease ou token de rodada.

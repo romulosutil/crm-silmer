@@ -149,9 +149,12 @@ Mídia de canal é privada e temporária. Bytes expiram no fim da jornada ou
 em sete dias. Quarentena, limites, MIME/hash e scan precedem acesso.
 Worker trata retenção; detalhes em [TRANSIENT-MEDIA](docs/phase0/TRANSIENT-MEDIA.md).
 
-Perda da única cópia resulta em `lost/unavailable`. Arquivos válidos seguem
-procedimento Dropbox. Upload de arte e arquivo durável por API não estão
-habilitados no contrato atual. S3/R2 está diferido na issue #29; essa decisão
+Perda da única cópia resulta em `lost/unavailable`. Arquivos válidos são
+anexados ao pedido. Os arquivos da arte (5 de até 10 MB e a arte final) ficam
+no RustFS interno, só pela API, com catálogo cifrado, assinatura do conteúdo,
+auditoria e idempotência ([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)).
+O RustFS divide a VPS com o PostgreSQL; o risco é aceito com o bucket no
+backup off-host e no drill. S3/R2 externo segue diferido na issue #29; isso
 não dispensa backup de bancos/documentos duráveis. Pedidos/Fichas e auditoria
 não herdam a retenção curta de mídia.
 

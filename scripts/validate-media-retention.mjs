@@ -48,9 +48,12 @@ export function validateMediaRetentionPolicy(document) {
     'The accepted single-host media-loss risk must remain explicit',
   );
   invariant(
-    document.validFileArchive?.destination ===
-      'existing-dropbox-operational-repository' &&
-      document.validFileArchive.automaticApiIntegration === false &&
+    document.validFileArchive?.destination === 'crm-order-files-rustfs' &&
+      document.validFileArchive.decisionRecord ===
+        'docs/adr/021-arquivos-da-arte-no-rustfs.md' &&
+      document.validFileArchive.handoffMode ===
+        'operator-attaches-file-to-order' &&
+      document.validFileArchive.automaticPromotion === false &&
       document.validFileArchive.promotionRequiresValidation === true &&
       JSON.stringify(document.validFileArchive.promotionRequires) ===
         JSON.stringify([
@@ -64,24 +67,35 @@ export function validateMediaRetentionPolicy(document) {
       document.validFileArchive.archiveFailureNeverExtendsTransientExpiry ===
         true &&
       document.validFileArchive.missedArchiveOutcome === 'archive_missed',
-    'Valid files require a recorded operational Dropbox handoff without an implied API integration',
+    'Valid files require a recorded operator handoff to the order files in RustFS without automatic promotion',
+  );
+  invariant(
+    document.validFileArchive.storedOnlyThroughCrmApi === true &&
+      document.validFileArchive.publicAccess === false &&
+      document.validFileArchive.includedInOffHostBackup === true,
+    'Order files in RustFS must stay private, reachable only through the CRM API and inside the off-host backup',
   );
   const allowedArchiveFields = [
     'archiveFailureNeverExtendsTransientExpiry',
-    'automaticApiIntegration',
+    'automaticPromotion',
+    'decisionRecord',
     'deleteTransientBytesAfterRecordedHandoff',
     'destination',
+    'handoffMode',
+    'includedInOffHostBackup',
     'missedArchiveOutcome',
     'operatorDeletionIsReconciledAsOperationalLimitation',
     'promotionRequires',
     'promotionRequiresValidation',
+    'publicAccess',
     'recordHashAndHandoffMetadataInCrm',
     'retentionFollowsDataClass',
+    'storedOnlyThroughCrmApi',
   ];
   invariant(
     JSON.stringify(Object.keys(document.validFileArchive).sort()) ===
       JSON.stringify(allowedArchiveFields),
-    'Dropbox operational policy must use a closed schema without API, token, OAuth, SDK or webhook fields',
+    'Valid-file policy must use a closed schema without endpoint, credential, token, SDK or webhook fields',
   );
   const durable = new Set(document.durableDataExcludedFromTransientPolicy);
   for (const required of [
@@ -124,7 +138,7 @@ async function main() {
   );
   validateMediaRetentionPolicy(policy);
   console.log(
-    'Media retention valid: private zero-cost staging, earliest-of seven days or journey end, R2 deferred.',
+    'Media retention valid: private zero-cost staging, earliest-of seven days or journey end, valid files in RustFS, R2 deferred.',
   );
 }
 

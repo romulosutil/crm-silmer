@@ -46,8 +46,10 @@ confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF
 sintético de aprovação é um artefato de revisão. Assinatura física de Rose
 e Operação continua pendente para produção. Versões v2/v3/v4 são preservadas.
 
-Upload de arte, arquivo durável no Dropbox, aviso a Rose e automação PIX
-não são assumidos como entregues pelo ciclo atual de Pedido. Vendido conta
+Arquivos da arte (até 5 de 10 MB e a arte final) são enviados e baixados
+pela página do pedido e ficam no RustFS interno, só pela API
+([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)). Aviso a Rose e
+automação PIX não são assumidos como entregues pelo ciclo atual de Pedido. Vendido conta
 somente confirmados; não equivale a recebimentos.
 
 ## Baseline técnica
@@ -58,13 +60,13 @@ somente confirmados; não equivale a recebimentos.
 | API          | Node.js/Fastify, REST `/api/v1`, OpenAPI e SSE                                                                    |
 | Persistência | PostgreSQL, SQL e migrations versionadas                                                                          |
 | Assíncrono   | Inbox/outbox e jobs transacionais; sem Redis                                                                      |
-| Runtime CRM  | `silmer-edge-web`, `silmer-api`, `silmer-worker`, `silmer-postgres`                                               |
+| Runtime CRM  | `silmer-edge-web`, `silmer-api`, `silmer-worker`, `silmer-postgres`, `silmer-rustfs`                              |
 | Automação    | n8n externo obrigatório, persistência e credenciais próprias                                                      |
 | IA           | OpenAI no workflow; [ADR 021](docs/adr/021-adotar-openai-no-mvp.md)                                               |
 | Deploy       | Fluxo automático GitHub→EasyPanel existente; [ADR 022](docs/adr/022-manter-deploy-automatico-github-easypanel.md) |
 
 Mídia de canal fica em volume privado da VPS por até sete dias ou fim da
-jornada. Arquivos válidos seguem o procedimento operacional Dropbox.
+jornada. Arquivos válidos são anexados ao pedido e guardados no RustFS.
 Perda da única cópia produz `lost/unavailable`. Esse prazo não se aplica a
 Pedidos, Fichas, documentos comerciais ou auditoria. Storage externo é uma
 evolução na issue #29; backups e tombstones têm gates próprios.

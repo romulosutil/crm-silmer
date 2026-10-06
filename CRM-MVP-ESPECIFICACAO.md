@@ -116,9 +116,10 @@ Toda mensagem conhecida está processada ou em pendência visível. Não promete
 recuperação de mensagens ou bytes não observados. Mídia não promovida dura até
 o encerramento ou sete dias, o que ocorrer primeiro, em volume privado.
 
-Arquivos comerciais válidos seguem retenção própria e procedimento Dropbox
-registrado. Upload automático permanece desativado até contrato, armazenamento
-durável e autorização. Rose é a destinatária operacional da ficha; eventual
+Arquivos comerciais válidos seguem retenção própria: o vendedor os envia e
+baixa pela página do pedido, e eles ficam no RustFS interno (ADR 023), com o
+bucket no backup off-host. Upload automático a partir do canal continua
+desativado. Rose é a destinatária operacional da ficha; eventual
 envio ou aviso automático exige fluxo próprio e homologação. Quando usado, o
 telefone vem de `secret://crm/order-recipient-phone`, nunca do repositório.
 

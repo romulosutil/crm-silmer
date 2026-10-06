@@ -78,5 +78,7 @@ Antes de ativar a v4 para pedidos antigos, o vendedor deve revisar itens cujo
 **Tipo de roupa**. A v4 não imprime nem migra `modelo` automaticamente.
 
 A decisão provisória para testes está registrada. A revisão física por Rose e
-Operação permanece pendente antes da produção. O envio ao Dropbox e o aviso
-a Rose são fluxos separados.
+Operação permanece pendente antes da produção. O envio dos arquivos da arte,
+hoje guardados no RustFS
+([ADR 021](../adr/021-arquivos-da-arte-no-rustfs.md)), e o aviso a Rose são
+fluxos separados.

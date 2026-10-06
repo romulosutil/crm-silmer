@@ -1,5 +1,90 @@
 # Execução INBOX-MEDIA-1
 
+## T22: Cleanup de rascunhos com writers protegidos
+
+MED-15/27: o worker existente inicia scheduler de rascunhos, sem expurgar mídia
+vinculada. Rascunhos sem message_id e com mais de 24h são congelados unavailable
+por intenção durável antes de qualquer DELETE. Remoção e quota são confirmadas
+em etapa posterior; rollback depois do DELETE não restaura ready vinculável.
+Falha de spool, intermediário, objeto ou SQL conserva a reserva para retry.
+Migration expand 0030 adiciona intenção e prazos, sem alterar migrations antigas.
+
+Upload tem deadline de 120s; lease advisory de sessão não mantém BEGIN durante
+streaming. Fecha writer antes de liberar conexão e executar complete/release,
+inclusive com pool de uma conexão. Worker guarda decoder/PUT pela mesma chave;
+perda de heartbeat ou conexão aborta e espera fechamento físico. Prazo persistido
+de três minutos no upload e quinze no processamento protege a perda da sessão;
+ambas etapas do cleanup revalidam o prazo. Fila real recupera job expirado antes
+de cleanup; status terminal isolado não prova writer encerrado.
+
+Intermediários do normalizer usam UUID da variante no nome do diretório.
+Cleanup valida UUID, sufixo e caminho absoluto antes de rm recursivo; conserva
+outras variantes e diretórios desconhecidos. Diretórios legados sem UUID
+precisam de reconciliação operacional em T23. Pool worker padrão dez, mínimo
+dois para guarda e consultas/heartbeat; somente upload provou pool de uma.
+
+Reds discriminantes: deadline inexistente deixava upload pendente; composição
+não iniciava cleanup; heartbeat perdido permitia DELETE enquanto decoder ainda
+vivia; intenção não durável permitia restaurar ready após DELETE/rollback.
+Helper Linux inicial usando AbortSignal nativo ignorava killSignal no abort e
+travava filho resistente a TERM. Helper próprio agora usa SIGKILL, espera close
+e remove listener, preservando erro original quando não cancelado. Linux real
+Node24.20.0 passou 2/2 (abort 67ms, timeout 1022ms) em container próprio sem rede,
+256MiB/1CPU/UID1000; nenhum timeout publicado foi ampliado.
+
+Primeiro Live integral deu 126/127: a fixture chamava recovery enquanto heartbeat
+SQL podia manter lock; SKIP LOCKED corretamente não recuperava naquela rodada.
+Fixture agora aguarda heartbeat real negar lease e exige dead_letter, sem mudar
+o cleanup. Acrescentou spool real presente durante decoder vivo e ENOENT depois.
+Mock novo de normalização omitia audioCodec; corrigido fiel ao contrato Opus,
+sem relaxar validação. Esses dois erros eram da fixture, não defeitos atribuídos
+ao código de produção. Contagens finais dos gates são registradas abaixo.
+
+### Adequação dos testes T22
+
+Referências ao snapshot desta entrega. `live` é
+`test/chat-media-cleanup-postgres-live.test.js`; todos os cenários usam PG real
+sintético, sem contar ausência de TEST_DATABASE_URL como aprovação Live.
+DELETE S3 usa adapter de efeitos injetado; transporte RustFS real continua T24.
+
+| Cenário/requisito | Assertion discriminante | Resultado exigido |
+| --- | --- | --- |
+| Rascunho jovem MED-27 | live:235/236/237 state ready, reserva100, efeitos[] | Sem DELETE precoce |
+| Órfão antigo/retry MED-27 | live:246/255/256/260 reserva durante DELETE, lost, replay inerte | Quota só após remoção |
+| Attached oito dias/legado MED-15 | live:274/275/276/277 vínculo, attached, used100, efeitos[] | Sweeper antigo não expurga |
+| Corrida attach MED-15 | live:334/338/339 efeitos[] e message_id | Vencedor mantém bytes |
+| Falha spool/S3 MED-27 | live:351/352/354/365/367 reserva100/unavailable, retry0 | Cobrança conservada |
+| Decoder vivo sem heartbeat MED-27 | live:531/532/533/540/542 efeitos[], reserva33554532, access, depois0/ENOENT | Recovery não autoriza remover FD vivo |
+| DELETE seguido de rollback MED-15/27 | live:569/570/571/572/573/578 unavailable, intent, reserva100, send409, zero mensagens | Nunca restaurar ready vinculável |
+| Guardas duráveis e tombstone MED-27 | live:669/670/676/693/698/699/700/718/725 | Guard nas duas etapas; acquire não limpa intent |
+| Crash do encoder MED-27 | live:764/766/770/776/777/778/782 | rm falho conserva; UUID próprio removido, outros intactos |
+| Pool e morte de conexão MED-27 | live:821/822/827/883/893/894/895 | Dois uploads distintos; stream destruído e reserva0 |
+| Deadline/FD antes quota MED-27 | test/chat-media-upload-lifetime.test.js:42/53/54/55/84/165/167 | close/rm precedem release; HTTP503 limitado |
+| Filho Linux resistente TERM MED-27 | test/media-command.test.js:26/42/64/71 | ABORT_ERR e timeout SIGKILL; PID inexistente após await |
+| Intermediário identificável MED-27 | test/recorded-audio-normalizer.test.js:90/102 | UUID no prefixo, nenhum temporário após sucesso |
+
+Nenhum requisito marcado Verified. Pipeline built completo, UAT físico e gates
+de ativação remota permanecem pendentes; Final Verifier independente após T24.
+
+Gates T22: validate/Quick/Build 855 aprovados, três skips antigos, total858;
+Live integral serial 127/127, zero skips, 87,1s, dez arquivos de migrations,
+Inbox, comandos, schema, processamento, upload, binding, operação, integração
+n8n e cleanup. Novo manifest `test:chat-media:cleanup:live` contém19casos reais.
+Privacy explícito: validate:security-catalog, test:security-catalog4/4 e
+validate:media-retention verdes; este último mantém política legada intacta.
+Logs ignorados `var/media-T22-validate.log` e `var/media-T22-live.log` guardam
+contagens; helper Linux executado com bind readonly dos dois arquivos atuais
+e package.json na imagem crm-silmer-media-test-runtime, Node24.20.0.
+
+Probe sintético independente do root usou componente AudioRecorder real,
+Chrome151 e relógio real, sem clicar Parar: arquivo ignorado
+`var/chat-media-chromium-autostop-300s.webm`, 4838047bytes, SHA256
+98efa5465f58fb3a51aba3fdfa0bb0ee76e00ab6c2d462f26ab683dc2c46536f.
+FFmpeg Linux decodificou299970ms com exit0; ffprobe Opus mono48k, WebM streaming
+sem duração no header. Proof JSON adjacente e script media-boundary-autostop.mjs
+preservados. Isso prova autostop original dentro300000ms; não substitui passar
+essa fixture pelo built normalizer em T24. Limite301s negativo permanece.
+
 ## T21: Mídia integrada à Inbox
 
 MED-01..03/08..13/25: Inbox compõe seleção, gravação e histórico no contexto

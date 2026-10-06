@@ -68,6 +68,44 @@ test('T6 text worker starts while signature CDN refresh remains pending', async 
   release();
 });
 
+test('T22 media cleanup scheduler is started with workers', async () => {
+  /** @type {string[]} */ const starts = [];
+  await startWorkerServices({
+    commandWorker: {
+      async start() {
+        starts.push('text');
+      },
+    },
+    mediaWorker: {
+      async start() {
+        starts.push('legacy');
+      },
+    },
+    chatMediaCleanup: {
+      async start() {
+        starts.push('draft-cleanup');
+      },
+    },
+    retentionScheduler: {
+      async start() {
+        starts.push('legacy-scheduler');
+      },
+    },
+    signatureRefresh: {
+      async start() {
+        starts.push('signatures');
+      },
+    },
+  });
+  assert.deepEqual(starts, [
+    'text',
+    'legacy',
+    'draft-cleanup',
+    'legacy-scheduler',
+    'signatures',
+  ]);
+});
+
 test('T6 refresh concurrent starts share download and stop cannot resurrect timer', async () => {
   const root = await mkdtemp(join(tmpdir(), 'crm-refresh-stop-'));
   let calls = 0;

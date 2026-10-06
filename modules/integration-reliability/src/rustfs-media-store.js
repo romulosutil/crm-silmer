@@ -117,8 +117,8 @@ export class RustfsMediaStore {
     this.#timeoutMs = timeoutMs;
   }
 
-  /** @param {{key: string, stream: AsyncIterable<Uint8Array>, sizeBytes: number, sha256: string, mimeType: string}} input */
-  async putValidated({ key, stream, sizeBytes, sha256, mimeType }) {
+  /** @param {{key: string, stream: AsyncIterable<Uint8Array>, sizeBytes: number, sha256: string, mimeType: string,signal?:AbortSignal}} input */
+  async putValidated({ key, stream, sizeBytes, sha256, mimeType, signal }) {
     validateKey(key);
     if (
       !Number.isSafeInteger(sizeBytes) ||
@@ -172,13 +172,17 @@ export class RustfsMediaStore {
             IfNoneMatch: '*',
             ChecksumSHA256: Buffer.from(sha256, 'hex').toString('base64'),
           }),
-          { abortSignal: AbortSignal.timeout(this.#timeoutMs) },
+          {
+            abortSignal: signal
+              ? AbortSignal.any([signal, AbortSignal.timeout(this.#timeoutMs)])
+              : AbortSignal.timeout(this.#timeoutMs),
+          },
         ),
       ]);
       return { sizeBytes, sha256 };
     } catch (error) {
       if (/** @type {any} */ (error)?.$metadata?.httpStatusCode === 412) {
-        const existing = await this.head(key);
+        const existing = await this.head(key, signal);
         if (
           existing.sizeBytes === sizeBytes &&
           existing.sha256 === sha256 &&
@@ -190,17 +194,22 @@ export class RustfsMediaStore {
     } finally {
       source.destroy();
       verifier.destroy();
+      await Promise.allSettled([finished(source), finished(verifier)]);
     }
   }
 
-  /** @param {string} key */
-  async head(key) {
+  /** @param {string} key @param {AbortSignal} [signal] */
+  async head(key, signal) {
     validateKey(key);
     try {
       return metadata(
         await this.#client.send(
           new HeadObjectCommand({ Bucket: this.#bucket, Key: key }),
-          { abortSignal: AbortSignal.timeout(this.#timeoutMs) },
+          {
+            abortSignal: signal
+              ? AbortSignal.any([signal, AbortSignal.timeout(this.#timeoutMs)])
+              : AbortSignal.timeout(this.#timeoutMs),
+          },
         ),
       );
     } catch (error) {

@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs';
 import { lstat, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { setInterval, clearInterval } from 'node:timers';
+import { finished } from 'node:stream/promises';
 
 import {
   ChatMediaValidator,
@@ -33,7 +34,7 @@ function matches(row, object) {
   );
 }
 
-/** @param {{repository: {acquire: Function,prepare: Function,ready: Function,fail: Function},store: {head: Function,putValidated: Function},spoolRoot: string,bucketAlias?: string,validator?: {validate: Function},normalizer?: {normalize: Function},heartbeatIntervalMs?: number,removeFile?: Function}} options */
+/** @param {{repository: {acquire: Function,prepare: Function,ready: Function,fail: Function,withProcessingLease?:Function},store: {head: Function,putValidated: Function},spoolRoot: string,bucketAlias?: string,validator?: {validate: Function},normalizer?: {normalize: Function},heartbeatIntervalMs?: number,removeFile?: Function}} options */
 export function createChatMediaProcessJobHandler({
   repository,
   store,
@@ -49,15 +50,25 @@ export function createChatMediaProcessJobHandler({
     throw new TypeError('Invalid media heartbeat interval');
   let tail = Promise.resolve();
   /** @param {Record<string,any>} job @param {{heartbeat: () => Promise<boolean>}} context */
-  async function process(job, context) {
-    let lost = false;
+  async function process(
+    job,
+    context,
+    /** @type {AbortSignal|undefined} */ guardSignal,
+  ) {
+    const controller = new AbortController();
+    let lost = guardSignal?.aborted ?? false;
+    const lose = () => {
+      lost = true;
+      controller.abort();
+    };
+    guardSignal?.addEventListener('abort', lose, { once: true });
     /** @type {Promise<void>|undefined} */ let heartbeatInFlight;
     let row;
     const renew = async () => {
       try {
-        if (!(await context.heartbeat())) lost = true;
+        if (!(await context.heartbeat())) lose();
       } catch {
-        lost = true;
+        lose();
       }
     };
     const assertLease = async () => {
@@ -111,6 +122,7 @@ export function createChatMediaProcessJobHandler({
               kind: row.kind,
               origin: row.origin,
               declaredMimeType: row.declared_mime_type,
+              signal: controller.signal,
             });
             result = {
               ...(await validator.validate({
@@ -118,6 +130,7 @@ export function createChatMediaProcessJobHandler({
                 kind: 'audio',
                 origin: 'recording',
                 declaredMimeType: 'audio/ogg',
+                signal: controller.signal,
               })),
               originalSha256: original.sha256,
             };
@@ -126,6 +139,7 @@ export function createChatMediaProcessJobHandler({
               path: source,
               declaredMimeType: row.declared_mime_type,
               outputPath: output,
+              signal: controller.signal,
             });
         } else {
           result = await validator.validate({
@@ -133,6 +147,7 @@ export function createChatMediaProcessJobHandler({
             kind: row.kind,
             origin: row.origin,
             declaredMimeType: row.declared_mime_type,
+            signal: controller.signal,
           });
           result.originalSha256 = result.sha256;
         }
@@ -149,7 +164,7 @@ export function createChatMediaProcessJobHandler({
       }
       let object;
       try {
-        object = await store.head(String(row.object_key));
+        object = await store.head(String(row.object_key), controller.signal);
       } catch (error) {
         if (!(error instanceof MediaObjectMissingError)) throw error;
       }
@@ -159,19 +174,27 @@ export function createChatMediaProcessJobHandler({
           kind: row.kind,
           origin: row.origin,
           declaredMimeType: row.detected_mime_type,
+          signal: controller.signal,
         });
         if (!matches(row, validation)) throw new MediaStorageUnavailableError();
         await assertLease();
         // Internal immutable object effect: do not mark the generic Meta attempt
         // as sending/unknown. A retry performs HEAD/conditional PUT reconciliation.
-        await store.putValidated({
-          key: String(row.object_key),
-          stream: createReadStream(output),
-          sizeBytes: Number(row.size_bytes),
-          sha256: row.content_sha256,
-          mimeType: row.detected_mime_type,
-        });
-        object = await store.head(String(row.object_key));
+        const objectStream = createReadStream(output);
+        try {
+          await store.putValidated({
+            key: String(row.object_key),
+            stream: objectStream,
+            signal: controller.signal,
+            sizeBytes: Number(row.size_bytes),
+            sha256: row.content_sha256,
+            mimeType: row.detected_mime_type,
+          });
+        } finally {
+          objectStream.destroy();
+          await finished(objectStream).catch(() => undefined);
+        }
+        object = await store.head(String(row.object_key), controller.signal);
       }
       if (!matches(row, object)) throw new MediaStorageUnavailableError();
       await assertLease();
@@ -208,6 +231,7 @@ export function createChatMediaProcessJobHandler({
           };
     } finally {
       clearInterval(timer);
+      guardSignal?.removeEventListener('abort', lose);
       await heartbeatInFlight;
     }
   }
@@ -220,7 +244,13 @@ export function createChatMediaProcessJobHandler({
     });
     await previous;
     try {
-      return await process(job, context);
+      return repository.withProcessingLease
+        ? await repository.withProcessingLease(
+            String(job.chatMediaId),
+            (/** @type {AbortSignal} */ signal) =>
+              process(job, context, signal),
+          )
+        : await process(job, context, undefined);
     } finally {
       release();
     }

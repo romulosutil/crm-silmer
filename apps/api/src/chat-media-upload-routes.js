@@ -28,6 +28,8 @@ export function registerChatMediaUploadRoutes(api, media, contextFor) {
               ? 503
               : 422;
       return reply
+        .header('Cache-Control', 'private, no-store')
+        .header('X-Content-Type-Options', 'nosniff')
         .code(status)
         .type('application/problem+json')
         .send({

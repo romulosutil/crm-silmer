@@ -13,6 +13,15 @@
 
 ## Handoff
 
+T9 concluída; T1 a T9 entregues, 15 tarefas pendentes, nenhuma Verified.
+Conteúdo Range humano usa ACL de T8, HEAD/GET SHA/MIME/size e stream bounded.
+503 transitório preserva ready/attached; MissingObject410 usa CAS e mantém quota.
+CHAT_MEDIA_READ_ENABLED mantém histórico ao desligar admissão CHAT_MEDIA_ENABLED.
+Erros401/410/416 também usam private,no-store/nosniff. Gates: validate779/3 skips
+antigos, SQL26/26, conteúdo18/18, regressão32/32 e E2E107/7 skips antigos.
+Próximo passo: fix estreito MED-19/T6 para impedir substituição de SHA original
+entre admissão e worker; depois T10. Autor não é Verifier final.
+
 T8 concluída na entrega corrente; próximo passo T9. T1 a T8 entregues,
 16 tarefas pendentes, nenhuma Verified. Status usa conversation.read canônica,
 draft autor/admin e attached ACL de Vendedor. Credencial inválida/expirada/

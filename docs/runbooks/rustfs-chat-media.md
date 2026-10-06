@@ -1,5 +1,23 @@
 # Ativação de mídia do chat no RustFS
 
+Leitura humana T9: GET `/api/v1/conversations/:conversationId/media/:mediaId/content`
+exige sessão e conversation.read, com draft restrito a autor/admin. Serve200
+completo ou206 por Range único fechado/aberto/sufixo; inválido416 traz
+Content-Range `bytes */size`. Cache é private,no-store e nosniff obrigatório.
+Attached permanece legível após oito dias e encerramento. HEAD e GET conferem
+variante, tamanho, MIME e hash armazenados; leitura usa streams bounded.
+Timeout/erro temporário503 conserva estado e quota e permite recuperação em
+nova leitura. MissingObject usa CAS version/key/hash para lost410, sem liberar
+quota. Erro após início dos bytes encerra a conexão, sem expor chave em log.
+
+Rollback de entrada: CHAT_MEDIA_ENABLED=false impede POST novos uploads.
+CHAT_MEDIA_READ_ENABLED=true mantém status/conteúdo do histórico com a mesma
+configuração de DB/auth/spool/key e MEDIA_S3_*. A flag de leitura não habilita
+admissão. Desligar ambas remove rotas; isso representa indisponibilidade da
+leitura e não deve ser usado como rollback normal depois de anexos enviados.
+T11 também aplica CHAT_MEDIA_ENABLED a novos envios humanos de mídia, mantendo
+texto. Nenhuma flag remove vínculos, objetos ou cobrança retida.
+
 Requisitos MED-16, MED-19, MED-23; tarefa T1 de
 [INBOX-MEDIA-1](../../.specs/features/inbox-media-rustfs/tasks.md).
 O smoke comprova operações na imagem testada. Não comprova backup, recovery

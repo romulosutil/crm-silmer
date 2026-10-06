@@ -26,13 +26,3 @@ entre os documentos.
 
 - [009 — OpenAI no MVP](009-openai-no-mvp.md), decidida na ADR 021.
 - [010 — Deploy automático GitHub → EasyPanel](010-deploy-automatico-github-easypanel.md), decidida na ADR 022.
-- [011 — Arquivos da arte do pedido no RustFS](011-arquivos-da-arte-no-rustfs.md), decidida na ADR 023.
-
-## Decisões de 07/10/2026
-
-- [014 — Imagem, áudio e chat do site no bot](014-midia-e-chat-do-site-no-bot.md), decidida na ADR 026.
-- [015 — Venda da loja do site no CRM](015-venda-da-loja-do-site.md), decidida na ADR 027.
-
-## Decisões de 09/10/2026
-
-- [016 — Pedido pago da loja confirmado pelo gateway, via n8n](016-pedido-pago-da-loja-pelo-n8n.md), decidida na ADR 028.

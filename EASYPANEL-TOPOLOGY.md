@@ -244,9 +244,12 @@ qualquer uma delas:
 | `shared-project`                       | Serviço e volume compartilhados com outros apps do projeto `schedule` |
 | `cross-project-endpoint-smoke-pending` | Alcance de `schedule_rustfs:9000` a partir de `silmer-api` sem smoke  |
 | `image-digest-not-confirmed`           | Imagem, tag e digest da instância não confirmados                     |
-| `private-bucket-pending`               | Bucket `crm-silmer-arquivos` ainda não criado                         |
 | `dedicated-bucket-credential-pending`  | Credencial do CRM restrita ao bucket ainda não criada                 |
 | `off-host-backup-not-evidenced`        | Backup off-host do volume sem evidência                               |
+
+O bucket privado `crm-silmer-arquivos` foi criado pelo console em 05/10/2026
+(sem versionamento, bloqueio de objeto ou cota); o console mostrava RustFS
+`v1.0.0-alpha.99`, diferente do `1.0.1` do ambiente local.
 
 Os hostnames dos domínios públicos não são versionados. O digest
 `rustfs/rustfs:1.0.1@sha256:1803…` vale só para o `docker-compose.dev.yml`; ele
@@ -261,7 +264,7 @@ Recomendações para fechar as lacunas:
    usar essa credencial em `OBJECT_STORAGE_ACCESS_KEY_ID` e
    `OBJECT_STORAGE_SECRET_ACCESS_KEY`. As chaves root da instância nunca vão
    para o CRM.
-3. Criar o bucket privado pelo console restrito ou pela API no primeiro envio.
+3. ~~Criar o bucket privado~~: feito em 05/10/2026.
 4. Incluir o volume do RustFS no backup off-host e restaurar só o bucket do
    CRM no drill, sem sobrescrever dados dos outros apps do projeto `schedule`.
 5. Executar o smoke de `silmer-api` para `schedule_rustfs:9000` e registrar a

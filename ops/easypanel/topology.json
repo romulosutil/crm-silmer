@@ -217,7 +217,7 @@
           "buckets": [
             {
               "name": "crm-silmer-arquivos",
-              "created": false,
+              "created": true,
               "publicAccess": false,
               "offHostBackup": "with-postgres",
               "recoveryDrill": "with-postgres"
@@ -233,7 +233,6 @@
             "shared-project",
             "cross-project-endpoint-smoke-pending",
             "image-digest-not-confirmed",
-            "private-bucket-pending",
             "dedicated-bucket-credential-pending",
             "off-host-backup-not-evidenced"
           ]

@@ -13,14 +13,19 @@
 
 ## Handoff
 
-Feature: inbox-media-rustfs. Implementação autorizada, 24 tarefas pendentes.
+Feature: inbox-media-rustfs. Implementação autorizada, T1 concluída / 23 tarefas pendentes.
 Branch: codex/inbox-media-rustfs-plan.
 Concluído: BASE-01 atualizou source-map-js para 1.2.2; validate/audit aprovados,
 E2E exclusivo 107 aprovados / 7 skips; 11 testes live locais aprovados.
-Em andamento: T1 pelo worker media_storage_phase, smoke local alpha.99.
-Checks: validate passou (647 aprovados / 3 skips); audit passou após atualizar
-o lockfile para source-map-js 1.2.2. Runtime local diverge das versões fixadas.
+T1: commit/push 7e388c8; nove checks S3 reais na alpha.99 local aprovados,
+digest sha256:103dd40b84d5aa3d5ab02f3a693797eb1d14cb842554b222dfbb589f364aa47f.
+Em andamento: T2 pelo worker media_storage_phase; schema e testes SQL live.
+Checks adicionais: validate no Node 24.20.0 / npm 11.19.0 passou (656 aprovados /
+3 skips, incluindo T1); audit zero vulnerabilidades. Runtime portátil em
+var/tooling/node-v24.20.0-win-x64; prefixar PATH nas execuções PowerShell.
 Infraestrutura: usuário corrigiu orientação herdada; Docker local autorizado
 e Server 29.3.1 verificado. Testes dedicados locais podem prosseguir.
-Smoke RustFS real, digest e credencial CRM restrita continuam pendentes.
-Próximo passo: concluir smoke T1 e implementar T2..T6 em ordem, sem tocar Hermes.
+Smoke RustFS remoto, digest remoto e credencial CRM operacional continuam
+pendentes em T23. Banco local exclusivo na porta 15433 e RustFS sintético
+na porta 21900; containers crm-silmer-media-test-db e crm-silmer-media-test-rustfs.
+Próximo passo: implementar T2..T6 em ordem, sem tocar Hermes.

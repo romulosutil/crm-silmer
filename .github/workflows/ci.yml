@@ -186,7 +186,9 @@ jobs:
           [[ "$EXPECTED_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
           skopeo copy --all --preserve-digests \
             "oci:$OCI_LAYOUT" "docker://$RELEASE_TAG"
-          release_digest="$(docker buildx imagetools inspect "$RELEASE_TAG" | awk '/^Digest:/ { print $2; exit }')"
+          # Consume all inspector output so pipefail cannot reject a successful
+          # inspection when its producer encounters an early closed pipe.
+          release_digest="$(docker buildx imagetools inspect "$RELEASE_TAG" | awk '/^Digest:/ && !seen++ { print $2 }')"
           test "$release_digest" = "$EXPECTED_DIGEST"
           printf 'digest=%s\n' "$release_digest" >> "$GITHUB_OUTPUT"
       - name: Record immutable digest

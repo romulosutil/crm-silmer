@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 concluída. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 e T2 concluídas. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -111,7 +111,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-05, MED-15, MED-27, MED-28
 **Reuses**: Migrations publicadas, FK de messages e jobs PostgreSQL; escolher próximo número real.
 **Tools**: tlc-spec-driven; shell e banco dedicado Ubuntu/CI.
-**Done when**: [ ] Migration aplica duas vezes sem duplicar; constraints rejeitam vínculo duplicado; mídia attached não entra no sweeper transitório; modelo separa quota/rascunho.
+**Done when**: [x] Migration aplica duas vezes sem duplicar; constraints rejeitam vínculo duplicado; mídia attached não entra no sweeper transitório; modelo separa quota/rascunho. Oito cenários SQL live passaram; gates Live19/19 e Build verdes; [evidência](execution.md#t2-schema-persistente).
 **Tests**: integration live; mínimo 6 casos, em testes co-localizados na entrega.
 **Gate**: Live + Build; versões de migrations antigas preservadas.
 **Commit**: feat(media): add retained chat media schema

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "task": "T95",
+  "adr": "022",
+  "requirements": ["PUB-07", "PIM-10"],
+  "syntheticOnly": true,
+  "snapshotVersion": "synthetic-order-v6",
+  "templateVersion": "ficha-canonical-v6",
+  "snapshotSha256": "92e5e42e284372ff088554edb9daa373b120a76a163217041c6abaed7de0edac",
+  "renderedHtmlSha256": "c7ca92e1e5d2361a612efbafffe0972f0a6a6c9e0e25ba508ba3f34a13f2fd1d",
+  "artifact": {
+    "path": "output/pdf/ficha-canonica-sintetica-v6.pdf",
+    "sha256": "9e227262ccaa6c3860a162df70d3fdff5c83fb6b018380b8f4858578dcc0f401",
+    "pageCount": 3
+  },
+  "provisionalApproval": {
+    "status": "pending-po-review",
+    "approved": false,
+    "scope": "development/cloud-dev",
+    "reviewedBy": {
+      "role": "PO",
+      "name": null
+    },
+    "reviewedAt": null,
+    "snapshotSha256": "92e5e42e284372ff088554edb9daa373b120a76a163217041c6abaed7de0edac",
+    "renderedHtmlSha256": "c7ca92e1e5d2361a612efbafffe0972f0a6a6c9e0e25ba508ba3f34a13f2fd1d",
+    "artifactSha256": "9e227262ccaa6c3860a162df70d3fdff5c83fb6b018380b8f4858578dcc0f401",
+    "decisionRef": "docs/phase0/FICHA-PDF-REVIEW-V6.md"
+  },
+  "approval": {
+    "status": "pending-human-approval",
+    "approved": false,
+    "requiredBefore": "production",
+    "signature": "physical",
+    "reviewedBy": {
+      "rose": null,
+      "operation": null
+    },
+    "reviewedAt": null,
+    "signedPaperKeptAt": null,
+    "criteria": {
+      "legibility": null,
+      "content": null,
+      "order": null,
+      "grade": null,
+      "totals": null,
+      "printing": null
+    },
+    "evidenceRef": null
+  },
+  "versioning": {
+    "overwriteApprovedVersion": false,
+    "correctionsRequireNewTemplateVersion": true,
+    "supersedesTemplateVersion": "ficha-canonical-v5"
+  }
+}

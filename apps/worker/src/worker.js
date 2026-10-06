@@ -5,6 +5,9 @@ import { createDatabase } from '@crm-silmer/database';
 import {
   ClamAvMediaScanner,
   ClamAvSignatureRefresh,
+  CHAT_MEDIA_PROCESS_JOB_TYPE,
+  CHAT_MEDIA_QUEUE,
+  createChatMediaProcessJobHandler,
   createMediaDeleteJobHandler,
   createN8nCommandDeliveryClient,
   createN8nCommandJobHandler,
@@ -13,6 +16,8 @@ import {
   N8N_COMMAND_JOB_TYPE,
   N8N_COMMAND_QUEUE,
   PostgresJobQueue,
+  PostgresChatMediaRepository,
+  RustfsMediaStore,
   PostgresTransientMediaRepository,
   PrivateMediaVolume,
 } from '@crm-silmer/integration-reliability';
@@ -380,6 +385,62 @@ export function createMediaRetentionWorkerRuntime(options) {
   });
 }
 
+/** @param {{database: any,environment?: Record<string,string|undefined>,logger?: ReturnType<typeof createSafeLogger>,queue?: any,repository?: any,store?: any,spoolRoot?: string,workerId?: string}} options */
+export function createChatMediaWorkerRuntime(options) {
+  const environment = options.environment ?? process.env;
+  const repository =
+    options.repository ??
+    new PostgresChatMediaRepository({ database: options.database });
+  const store =
+    options.store ??
+    new RustfsMediaStore({
+      bucket: requiredEnvironment(environment, 'MEDIA_S3_BUCKET'),
+      endpoint: requiredEnvironment(environment, 'MEDIA_S3_ENDPOINT'),
+      region: requiredEnvironment(environment, 'MEDIA_S3_REGION'),
+      accessKeyId: requiredEnvironment(environment, 'MEDIA_S3_ACCESS_KEY_ID'),
+      secretAccessKey: requiredEnvironment(
+        environment,
+        'MEDIA_S3_SECRET_ACCESS_KEY',
+      ),
+    });
+  return new WorkerRuntime({
+    handlers: {
+      [CHAT_MEDIA_PROCESS_JOB_TYPE]: createChatMediaProcessJobHandler({
+        repository,
+        store,
+        spoolRoot:
+          options.spoolRoot ??
+          requiredEnvironment(environment, 'CHAT_MEDIA_SPOOL_ROOT'),
+        bucketAlias:
+          environment.MEDIA_S3_BUCKET === 'crm-silmer-chat-media'
+            ? 'chat-operational'
+            : 'chat-dev',
+      }),
+    },
+    queue:
+      options.queue ?? new PostgresJobQueue({ database: options.database }),
+    queueName: CHAT_MEDIA_QUEUE,
+    logger: options.logger,
+    workerId: options.workerId,
+  });
+}
+
+/** Starts text delivery without waiting for an external signature CDN.
+ * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>}}} services */
+export async function startWorkerServices({
+  commandWorker,
+  mediaWorker,
+  chatMediaWorker,
+  retentionScheduler,
+  signatureRefresh,
+}) {
+  await commandWorker.start();
+  await mediaWorker.start();
+  await chatMediaWorker?.start();
+  await retentionScheduler.start();
+  void signatureRefresh.start();
+}
+
 /**
  * Dynamically loads the domain adapter only at the executable boundary. Tests
  * and modules depend exclusively on the store port above.
@@ -430,7 +491,6 @@ export async function startWorkerFromEnvironment(options = {}) {
       }),
   });
   try {
-    await signatureRefresh.start();
     const commandStore = await loadN8nCommandStore(
       database,
       environment,
@@ -473,19 +533,38 @@ export async function startWorkerFromEnvironment(options = {}) {
       logger,
       repository,
     });
-    await retentionScheduler.start();
-    await commandWorker.start();
-    await mediaWorker.start();
+    const chatMediaWorker =
+      environment.CHAT_MEDIA_ENABLED === 'true'
+        ? createChatMediaWorkerRuntime({
+            database,
+            environment,
+            queue,
+            logger,
+            workerId: `chat-media-${process.pid}`,
+          })
+        : undefined;
+    await startWorkerServices({
+      commandWorker,
+      mediaWorker,
+      chatMediaWorker,
+      retentionScheduler,
+      signatureRefresh,
+    });
     return Object.freeze({
       runtime: Object.freeze({
         commandWorker,
         mediaWorker,
         retentionScheduler,
+        chatMediaWorker,
       }),
       stop: async () => {
         await signatureRefresh.stop();
         await retentionScheduler.stop();
-        await Promise.all([commandWorker.stop(), mediaWorker.stop()]);
+        await Promise.all([
+          commandWorker.stop(),
+          mediaWorker.stop(),
+          chatMediaWorker?.stop(),
+        ]);
         await database.close();
       },
     });

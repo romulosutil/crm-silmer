@@ -259,7 +259,7 @@ if (connectionString) {
         idempotency_key: randomUUID(),
         chat_media_id: draft.id,
         status: 'pending',
-        queue: 'chat-media',
+        queue: 'chat_media',
         available_at: new Date(),
         created_at: new Date(),
         ...overrides,

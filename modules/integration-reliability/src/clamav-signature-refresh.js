@@ -9,6 +9,8 @@ export class ClamAvSignatureRefresh {
   #execute;
   #marker;
   #onFailure;
+  #generation = 0;
+  /** @type {Promise<void>|undefined} */ #starting;
   /** @param {{execFileImpl?: Function,markerPath?: string,onFailure?: () => void}} [options] */
   constructor({
     execFileImpl = execute,
@@ -50,17 +52,27 @@ export class ClamAvSignatureRefresh {
   }
   async start() {
     if (this.timer) return;
-    // A failed refresh does not forge freshness: validators reject stale definitions.
-    await this.refresh().catch(() => {});
-    this.timer = setInterval(
-      () => this.refresh().catch(() => {}),
-      this.intervalMs,
-    );
-    this.timer.unref();
+    if (this.#starting) return this.#starting;
+    const generation = ++this.#generation;
+    this.#starting = (async () => {
+      // A failed refresh never forges freshness; valid baseline may still be used.
+      await this.refresh().catch(() => {});
+      if (generation !== this.#generation) return;
+      this.timer = setInterval(
+        () => this.refresh().catch(() => {}),
+        this.intervalMs,
+      );
+      this.timer.unref();
+    })().finally(() => {
+      this.#starting = undefined;
+    });
+    return this.#starting;
   }
   async stop() {
+    this.#generation++;
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
     await this.inFlight?.catch(() => {});
+    await this.#starting;
   }
 }

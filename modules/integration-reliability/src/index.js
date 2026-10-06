@@ -73,3 +73,9 @@ export {
 } from './chat-media-validation.js';
 export { RecordedAudioNormalizer } from './recorded-audio-normalizer.js';
 export { ClamAvSignatureRefresh } from './clamav-signature-refresh.js';
+export {
+  CHAT_MEDIA_PROCESS_JOB_TYPE,
+  CHAT_MEDIA_QUEUE,
+  createChatMediaProcessJobHandler,
+} from './chat-media-process-worker.js';
+export { PostgresChatMediaRepository } from './postgres-chat-media-repository.js';

@@ -1,5 +1,89 @@
 # Execução INBOX-MEDIA-1
 
+## T6: Worker de processamento persistente
+
+Premissas, arquivos e sucesso enviados ao integrador antes do patch: preservar
+fila existente e efeitos Meta, nova migration 0028 sem reescrever 0027,
+CAS/attempt vigente, persistir variante antes do PUT e confirmar cleanup antes
+de ready. Arquivos: handler, repository, job queue, exports, worker, updater,
+allowlists de observabilidade, migration, testes unit/live e documentação.
+Nenhuma dependência nova. O fixture T2 passou a usar queue canônica chat_media,
+sem mudar suas oito assertions/cenários. Requisitos MED-14/19/26/28/29 seguem
+In Progress até verificação independente e integração das próximas fases.
+
+Quick/Topology/Build: validate PASS, 722 aprovados, três skips antigos,
+725 total, Node 24.20.0/npm 11.19.0. Novos unitários: 16 handler e quatro
+composição/lifecycle. Suite SQL conjunta: 23/23 PASS (13 T6, oito schema T2,
+dois queue legados), zero skips. Ciclo combinado final: 14/14 PASS, 54,16 s,
+incluindo os 13 SQL e PNG + gravação WebM Chromium reais contra RustFS alpha.99,
+SDK e banco dedicados. Hash original/final, tamanho, MIME, ready, quota e
+spool vazio confirmados. Objetos sintéticos removidos pelo teste.
+
+Imagem final construída com T6:
+`sha256:d372430897763a95b471898d349af004525ae234003fb350e7f5538fbaaf1655`,
+400961795 bytes. Container isolado com USER node/UID 1000, read-only,
+2 GiB/1 CPU e tmpfs privado. Scanner e normalizador reais vieram dos módulos
+`/app/modules` dessa imagem; handler/repository/SDK rodaram no host contra
+DB e RustFS locais. A imagem T5 7105b14c contém somente T5 e anteriores.
+Não alegamos worker completo remoto ou ativação operacional, pendentes T23/T24.
+
+Falhas de desenvolvimento: FK do attempt inicialmente UUID contra coluna
+TEXT existente; corrigida para TEXT antes da entrega. Harness de recovery
+descartava um claim recém-criado, corrigido preservando o claim. Primeiro
+replay na imagem usou helper relativo ao WORKDIR /app, corrigido para caminho
+absoluto /workspace. Todos os cenários reexecutados; nenhum teste enfraquecido.
+QA encontrou ACK terminal antes da persistência da rejeição; corrigido com
+retrySafe em DB throw/CAS false e convergência comprovada no mesmo registro.
+
+Contratos: queue chat_media/job chat_media.process/effect internal; claim
+carrega chatMediaId. Heartbeat de 5 s acompanha scanner/encoder. PUT é efeito
+interno imutável e reconciliável, sem marcar efeito Meta. prepare persiste
+SHA/tamanho/MIME antes de PUT; HEAD divergente não sobrescreve. Cleanup
+confirmado precede transação ready; reserva cobre spool/intermediários/objeto
+e só reduz ao tamanho final após cleanup, used muda somente em T10. Falha de
+cleanup ou rollback conserva reserva; replay após cleanup e DB crash usa
+HEAD no mesmo registro, sem segunda conversão/PUT. Rejeitados conservam
+reserva até cleanup T22. Freshclam inicia em background; stop/concurrent
+start não recriam timer depois de shutdown. Mídia continua fail-closed.
+
+### Adequação: suficiência e discriminação
+
+Aliases: unit = test/chat-media-process-worker.test.js;
+sql = test/chat-media-process-postgres-live.test.js;
+composition = test/chat-media-worker-composition.test.js.
+Referências abaixo são linhas concretas das assertions.
+
+| Critério                        | Assertion concreta                          | Esperado                                          |
+| ------------------------------- | ------------------------------------------- | ------------------------------------------------- |
+| Replay e variante única         | unit:173/174/184/185; sql:303               | Um PUT e um prepare/ready                         |
+| Variante preparada antes do PUT | unit:107/110                                | SHA presente, bytes exatos                        |
+| Quota ready                     | sql:300/301/302/304                         | Reserva final, used zero, spool vazio             |
+| Rollback após PUT e cleanup     | sql:326/330/331/332/337/338/339/340/341/342 | Mesmo registro, HEAD, sem novo PUT/scan           |
+| Cleanup falho                   | sql:362/363/367/381/382/383/384             | Reserva integral até remover spool                |
+| HEAD divergente                 | sql:398/399/400                             | Não sobrescrever nem liberar reserva              |
+| Scanner e formato negados       | unit:210/211/212; sql:414/415/416           | Sem PUT/ready, rejeição persistida                |
+| Rejeição com DB/CAS falho       | sql:462/463/477/482/490/491                 | Retry no mesmo registro antes de ACK              |
+| Fencing e concorrência          | sql:281/291/510/512/513/515                 | Um owner, stale attempt não publica               |
+| Lease durante subprocesso       | unit:244/245/246/254/255                    | Sem efeito perdido, heartbeat repetido            |
+| Queue e integração              | sql:252/253/254; composition:22/23          | ID e handler na fila canônica                     |
+| Texto e lifecycle               | composition:66/67/90/91                     | CDN pendente não bloqueia texto/timer             |
+| Privacidade observável          | composition:38/39/40/41                     | Dimensões técnicas, sem canários privados         |
+| Ciclo real na imagem            | sql:647/653/654/659/660/664                 | Ready, hash/tamanho/MIME, used zero e spool vazio |
+
+Near misses discriminados: ready sem cleanup falha sql:304; liberar reserva
+no rollback falha sql:326/340/341; confiar só no HEAD sem comparar SHA/MIME/size
+falha sql:398/399; reprocessar gravação após PUT incerto falha unit:195;
+ACK antes de persistir rejected falha sql:462/463/477/482; marcar efeito Meta
+falha unit:154 e sql:311; aguardar CDN antes de texto falha composition:66;
+timer recriado após stop falha composition:91. Veredito: suficiente e
+discriminante para a fronteira T6, condicionado aos gates finais registrados
+no fechamento desta seção. Verifier independente da feature ainda obrigatório.
+
+Fechamento T6: E2E exclusivo com um worker PASS, 107 aprovados e sete skips
+antigos, 114 cenários preservados (1,1 min). npm audit: zero vulnerabilidades.
+git diff --check: PASS. Quick/Topology/Live/Build e adequação: PASS. Fase 1
+concluída; próxima tarefa T7 pelo integrador, sem implementação antecipada.
+
 ## T5: Normalização de gravações e assinaturas
 
 Premissas, arquivos e sucesso foram enviados ao integrador antes do patch:

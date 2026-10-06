@@ -62,6 +62,9 @@ const categoricalPolicies = new Map([
       allowed: new Set([
         'API_START_FAILED',
         'JOB_FAILED',
+        'MEDIA_LEASE_LOST',
+        'MEDIA_PROCESS_UNAVAILABLE',
+        'CLAM_SIGNATURE_REFRESH_FAILED',
         'READINESS_CHECK_FAILED',
         'SYNTHETIC_FAILURE',
         'UNHANDLED_ERROR',
@@ -72,7 +75,12 @@ const categoricalPolicies = new Map([
   [
     'job_type',
     {
-      allowed: new Set(['outbox_delivery', 'unknown_job']),
+      allowed: new Set([
+        'outbox_delivery',
+        'unknown_job',
+        'chat_media.process',
+        'media.signature.refresh',
+      ]),
       fallback: 'unknown_job',
     },
   ],
@@ -87,7 +95,7 @@ const categoricalPolicies = new Map([
   [
     'queue',
     {
-      allowed: new Set(['default', 'external_effects']),
+      allowed: new Set(['default', 'external_effects', 'chat_media']),
       fallback: 'unknown_queue',
     },
   ],

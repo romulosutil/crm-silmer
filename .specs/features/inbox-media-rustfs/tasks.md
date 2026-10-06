@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1, T2 e T3 concluídas. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T6 concluídas, fase 1 entregue. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -163,7 +163,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-14, MED-19, MED-26, MED-28, MED-29
 **Reuses**: Jobs PostgreSQL e composição apps/worker/src/worker.js; suporte de wiring no mesmo commit.
 **Tools**: tlc-spec-driven; shell/banco dedicado.
-**Done when**: [ ] Duas execuções do mesmo job produzem uma variante; PUT/DB incerto reconcilia; quota/concorrência limitadas; scanner falha fechado.
+**Done when**: [x] Duas execuções do mesmo job produzem uma variante; PUT/DB incerto reconcilia; quota/concorrência limitadas; scanner falha fechado.
 **Tests**: unit + integration live; mínimo 8 cenários, incluindo crash após PUT e rollback.
 **Gate**: Quick + Live + Build.
 **Commit**: feat(media): process chat media with existing worker

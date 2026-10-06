@@ -24,7 +24,8 @@ contam: o bot só grava o que o cliente disser.
 
 ## Como rodar
 
-- Use o workflow DEV `dev-mvp-simple-13` ou mais novo. Cada roteiro precisa de
+- Use o workflow DEV `dev-mvp-simple-14` ou mais novo, com o CRM que aceita
+  `audiences` (ADR 022). Cada roteiro precisa de
   uma conversa independente: abra outra sessão isolada do navegador no chat
   manual ou use o webhook DEV com um `wa_id` sintético inédito. Recarregar a
   página não garante um novo `sessionId` e pode continuar a conversa no CRM.
@@ -158,13 +159,13 @@ transfere na hora.
 
 ### KPI-10 — Divisão por público e nome e número
 
-| #   | Você manda                                                                                               | O bot deve                                                                                                                                                                 | Ficha  |
-| --- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 1   | Oi, sou o Rafa, quero 25 camisetas pro time: 10 masculinas, 10 femininas e 5 infantis, com nome e número | Perguntar o modelo; não perguntar tamanhos nem a divisão                                                                                                                   | 3/7    |
-| 2   | Comum, azul                                                                                              | Perguntar onde vai a estampa                                                                                                                                               | 5/7 ✅ |
-| 3   | Escudo na frente e nome e número nas costas                                                              | Perguntar para quando                                                                                                                                                      | 6/7    |
-| 4   | Dia 5 de dezembro                                                                                        | Transferir (Pré-ficha completa); no resumo, "Dica: personalização individual: pedir a lista de nomes, números e tamanhos; divisão por público: cada público vira um item." | 7/7    |
-| 5   | Valeu                                                                                                    | Ficar calado                                                                                                                                                               | —      |
+| #   | Você manda                                                                                               | O bot deve                                                                                                                                                                                                                                                          | Ficha  |
+| --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1   | Oi, sou o Rafa, quero 25 camisetas pro time: 10 masculinas, 10 femininas e 5 infantis, com nome e número | Perguntar o modelo; não perguntar tamanhos nem a divisão                                                                                                                                                                                                            | 3/7    |
+| 2   | Comum, azul                                                                                              | Perguntar onde vai a estampa                                                                                                                                                                                                                                        | 5/7 ✅ |
+| 3   | Escudo na frente e nome e número nas costas                                                              | Perguntar para quando                                                                                                                                                                                                                                               | 6/7    |
+| 4   | Dia 5 de dezembro                                                                                        | Transferir (Pré-ficha completa); no resumo, "Dica: personalização individual: pedir a lista de nomes, números e tamanhos; divisão por público: cada público vira um item."; o Pedido pendente tem três itens (Masculino 10, Feminino 10 e Infantil 5), sem tamanhos | 7/7    |
+| 5   | Valeu                                                                                                    | Ficar calado                                                                                                                                                                                                                                                        | —      |
 
 ## Não é pedido do zero: transferência imediata
 

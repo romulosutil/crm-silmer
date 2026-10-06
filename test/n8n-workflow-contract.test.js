@@ -438,12 +438,10 @@ test('decision normalizer whitelists briefing_patch keys exactly as the CRM does
     (match) => match[1],
   );
   // The CRM ships a new field first (ADR 012); once the workflow sends it,
-  // both lists match again. ADR 022: `audiences` is in the CRM (T93) ahead of
-  // workflow mvp-simple-13 (T96).
-  const crmAhead = new Set(['audiences']);
+  // both lists match again (ADR 022: `audiences` since mvp-simple-13).
   assert.deepEqual(
     [...workflowFields].sort(),
-    [...BRIEFING_PATCH_FIELDS].filter((field) => !crmAhead.has(field)).sort(),
+    [...BRIEFING_PATCH_FIELDS].sort(),
   );
 });
 
@@ -1468,6 +1466,12 @@ test('the ficha is the name plus the product points in one rhythm, kept in one p
     /product_model: o modelo, só quando o contexto pedir\. Roupa: camiseta comum, manga longa, polo, regata, abadá, baby look ou outro\. Boné: trucker \(com tela atrás\), aba curva, aba reta ou outro\. Mochila ou bolsa: mochila de costas, mochila saco, ecobag ou outro\./u,
   );
   assert.match(prompt, /artwork_locations: onde vai a estampa/u);
+  // ADR 022: the split by audience has its own field, recorded, never asked.
+  assert.match(
+    prompt,
+    /audiences: a divisão da quantidade por público, só quando o cliente dividir, com as palavras dele e só a divisão \("4 masculinas, 3 femininas e 3 infantis"\); a quantidade total vai em quantity\. Baby look é modelo, não público\./u,
+  );
+  assert.doesNotMatch(prompt, /notes: a divisão por público/u);
   assert.match(
     prompt,
     /needed_by: para quando o cliente precisa\. É desejo do cliente, nunca prazo confirmado/u,
@@ -2078,6 +2082,42 @@ test('a kit fills what the product or the technique defines, and the seller gets
   assert.match(
     personal.reasoning,
     /Dica: personalização individual: pedir a lista de nomes, números e tamanhos; divisão por público: cada público vira um item\./u,
+  );
+
+  // ADR 022: the split rides its own field, which the CRM turns into items.
+  const split = await rhythmDecision(
+    {
+      briefing_patch: {
+        product_type: 'camisetas',
+        quantity: 10,
+        audiences: '4 masculinas, 3 femininas e 3 infantis',
+      },
+    },
+    { current_text: '10 camisetas: 4 masculinas, 3 femininas e 3 infantis' },
+  );
+  assert.equal(
+    split.briefing_patch.audiences,
+    '4 masculinas, 3 femininas e 3 infantis',
+    'the decision node keeps the split for the CRM',
+  );
+  const splitPrice = await rhythmDecision(
+    { asks_price: true },
+    {
+      current_text: 'quanto fica?',
+      briefing: {
+        product_type: 'camisetas',
+        audiences: '5 masculinas e 5 femininas',
+      },
+    },
+  );
+  assert.match(
+    splitPrice.reasoning,
+    /Dica: divisão por público: cada público vira um item\./u,
+  );
+  assert.equal(
+    splitPrice.missing_briefing_fields.includes('audiences'),
+    false,
+    'the split is never asked',
   );
 
   const embroidery = await rhythmDecision(

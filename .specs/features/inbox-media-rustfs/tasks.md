@@ -11,7 +11,8 @@ e suas Critical Rules. Se não puder ativá-la, parar e informar o usuário.
 Cada tarefa: critérios → testes da spec → gate → marcar conclusão → commit
 atômico. Push segue autorização vigente e AGENTS.md. Publicação, criação de
 acesso e deploy exigem escopo explícito no momento da execução; planejamento
-não executa infraestrutura. Nunca rodar Graphify nem Docker local no Windows.
+não executa infraestrutura. Nunca gerar ou atualizar Graphify localmente.
+Docker local foi autorizado explicitamente pelo usuário para desenvolvimento e testes.
 
 Após a última tarefa, Verifier independente obrigatório, com evidência por AC
 e sensor de discriminação em scratch isolado; validation.md não é criado vazio.
@@ -55,8 +56,8 @@ adicionados ao manifest na própria tarefa e identificados como novos.
 
 Live exige TEST_DATABASE_URL de banco crm_silmer_test dedicado, sem dados reais.
 Não registrar PASS quando testes live não forem executados por falta de variável.
-Containers e ferramentas de scanner/codec rodam no Ubuntu via ssh dell-worker
-ou CI. Contagem existente é capturada antes de cada tarefa; mínimos abaixo
+Containers e ferramentas de scanner/codec podem rodar no Docker local ou CI.
+Contagem existente é capturada antes de cada tarefa; mínimos abaixo
 são cenários novos planejados, não resultados de testes já executados.
 
 ## Execution Plan

@@ -120,9 +120,9 @@ responde pelo resultado ponta a ponta.
 - NEVER run graphify build, parse, or indexing commands locally on the Windows host.
 - Graph updates are handled automatically in the background by the Ubuntu Worker on git push and nightly schedules.
 
-### Remote Infrastructure Directives
+### Infraestrutura de desenvolvimento
 
-- Local Windows Docker service is disabled by design. All containers run exclusively on `dell-worker`.
-- Never search Windows paths for container binaries or Nginx executables.
-- Run container commands via `ssh dell-worker "docker ..."` or rely on `DOCKER_HOST="ssh://dell-worker"`.
-- Container mounts map to `~/workspace/` on Ubuntu (mirrored from `dev/` via Syncthing).
+- Docker local está autorizado nesta máquina para desenvolvimento e testes.
+- Use containers e bancos dedicados com dados sintéticos; não confunda testes
+  locais com evidência operacional do EasyPanel ou do RustFS remoto.
+- Não há dependência obrigatória do alias `dell-worker` nem de mounts remotos.

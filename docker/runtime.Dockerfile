@@ -66,6 +66,10 @@ COPY --chown=node:node docker/freshclam.conf ./freshclam.conf
 RUN chown -R node:node /var/lib/clamav \
   && timeout 180s freshclam --config-file=/app/freshclam.conf --stdout
 
+RUN mkdir -p /var/lib/crm-chat-media /var/lib/crm-legacy-media \
+  && chown node:node /var/lib/crm-chat-media /var/lib/crm-legacy-media \
+  && chmod 0700 /var/lib/crm-chat-media /var/lib/crm-legacy-media
+
 RUN rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=production-dependencies --chown=node:node /workspace/node_modules ./node_modules

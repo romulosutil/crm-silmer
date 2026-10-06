@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T22 concluídas; fase 4 em execução, próxima T23. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T23 concluídas; fase 4 em execução, próxima T24. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -395,16 +395,16 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 
 ### T23: Plano operacional de ativação, legado e recovery
 
-**What**: Completar runbook de quotas, migração de cópias disponíveis, backup externo, restore e rollback.
-**Where**: docs/runbooks/rustfs-chat-media.md
+**What**: Completar runbook de quotas, migração de cópias disponíveis, backup externo, restore e rollback; perfil Docker local opt-in com runtimes construídos e enforcement de capacidade429.
+**Where**: docs/runbooks/rustfs-chat-media.md; scripts/dev-media.mjs; docker-compose.media.yml; modules/integration-reliability/src/postgres-chat-media-upload-repository.js
 **Depends on**: T22
 **Requirement**: MED-15, MED-19, MED-20, MED-28
 **Reuses**: Recovery/topologia atuais; ADR 023; docs canônicos e catálogos executáveis são suporte da entrega.
 **Tools**: tlc-spec-driven; Browser somente para operação autorizada; ssh/CI.
-**Done when**: [ ] Volume/legacy inventariados; cópia por hash precede cancelamento de DELETE; quotas ajustadas; backup externo/restore isolado evidenciados ou gate pendente; rollback preserva bytes/unknown.
+**Done when**: [x] Inventário local e plano de inventário/migração no alvo documentados; cópia por hash precede cancelamento de DELETE por item; quotas/capacidade ajustadas; backup externo/restore isolado e gates remotos explicitamente pendentes; rollback real preserva bytes/leitura e unknown.
 **Tests**: structural + integration; mínimo 6 verificações operacionais; nunca marcar recovery por mocks.
 **Gate**: Topology + Privacy + Build; gates externos têm estado próprio.
-**Commit**: docs(ops): define media retention migration and recovery
+**Commit**: feat(ops): add isolated media profile and enforce processing capacity
 
 ### T24: Homologação da fatia e evidências
 

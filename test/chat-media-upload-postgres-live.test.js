@@ -38,6 +38,8 @@ if (connectionString) {
   const repository = new PostgresChatMediaUploadRepository({
     database,
     limitBytes: 60 * 1024 * 1024,
+    // These existing cases isolate byte quota and session throttle from capacity.
+    processingCapacity: 12,
   });
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', Buffer.alloc(32, 7), iv);
@@ -117,6 +119,120 @@ if (connectionString) {
       )
     ).rows[0];
   }
+  test('T23/MED-28: two admitted pipelines reject a third without reserving bytes', async () => {
+    const limited = new PostgresChatMediaUploadRepository({ database });
+    const rows = [input(), input(), input()];
+    await limited.admit(rows[0]);
+    await limited.complete(completed(rows[0]));
+    await limited.admit(rows[1]);
+    const before = await counts();
+    await assert.rejects(limited.admit(rows[2]), { statusCode: 429 });
+    assert.deepEqual(await counts(), before);
+    await pool.query(
+      `UPDATE crm.chat_media SET state='ready',validation_status='clean',content_sha256=$1,size_bytes=100,detected_mime_type='image/png',processed_at=now()`,
+      ['b'.repeat(64)],
+    );
+    await limited.admit(rows[2]);
+    assert.equal(
+      (
+        await pool.query(
+          `SELECT count(*)::int AS count FROM crm.chat_media_admissions WHERE state='receiving'`,
+        )
+      ).rows[0].count,
+      2,
+    );
+  });
+  test('T23/MED-28: concurrent independent sessions serialize capacity at two', async () => {
+    const limited = new PostgresChatMediaUploadRepository({ database });
+    const results = await Promise.allSettled(
+      [0, 1, 2].map((n) =>
+        limited.admit(input({ sessionHash: `synthetic-capacity-${n}` })),
+      ),
+    );
+    assert.equal(results.filter((row) => row.status === 'fulfilled').length, 2);
+    assert.equal(
+      results.filter(
+        (row) => row.status === 'rejected' && row.reason.statusCode === 429,
+      ).length,
+      1,
+    );
+    assert.equal(
+      (
+        await pool.query(
+          `SELECT count(*)::int AS count FROM crm.chat_media_admissions WHERE state='receiving'`,
+        )
+      ).rows[0].count,
+      2,
+    );
+  });
+  test('T23/MED-28: terminal job with live guard occupies capacity, accepted replay bypasses it', async () => {
+    const limited = new PostgresChatMediaUploadRepository({ database });
+    const rows = [input(), input(), input()];
+    for (const row of rows.slice(0, 2)) {
+      await limited.admit(row);
+      await limited.complete(completed(row));
+    }
+    await pool.query(
+      `UPDATE crm.outbox_jobs SET status='dead_letter',completed_at=now() WHERE chat_media_id=$1`,
+      [rows[0].id],
+    );
+    await pool.query(
+      `UPDATE crm.chat_media SET processing_guard_until=now()+interval '15 minutes' WHERE id=$1`,
+      [rows[0].id],
+    );
+    await assert.rejects(limited.admit(rows[2]), { statusCode: 429 });
+    await pool.query(
+      `UPDATE crm.chat_media_quotas SET used_bytes=limit_bytes-reserved_bytes`,
+    );
+    const before = await counts();
+    const replay = await limited.admit({ ...rows[0], id: randomUUID() });
+    assert.equal(replay.replay.id, rows[0].id);
+    assert.deepEqual(await counts(), before);
+    await pool.query(`UPDATE crm.chat_media_quotas SET used_bytes=0`);
+    await pool.query(
+      `UPDATE crm.chat_media SET processing_guard_until=NULL WHERE id=$1`,
+      [rows[0].id],
+    );
+    await limited.admit(rows[2]);
+    assert.equal(
+      (
+        await pool.query(
+          `SELECT count(*)::int AS count FROM crm.chat_media_admissions WHERE state='receiving'`,
+        )
+      ).rows[0].count,
+      1,
+    );
+  });
+  test('T23/MED-28: expired receiving writer frees capacity while orphan bytes remain charged', async () => {
+    const limited = new PostgresChatMediaUploadRepository({ database });
+    const rows = [input(), input(), input()];
+    await limited.admit(rows[0]);
+    await limited.admit(rows[1]);
+    await pool.query(
+      `UPDATE crm.chat_media_admissions SET created_at=now()-interval '4 minutes',writer_guard_until=now()+interval '1 minute'`,
+    );
+    await assert.rejects(limited.admit(rows[2]), { statusCode: 429 });
+    await pool.query(
+      `UPDATE crm.chat_media_admissions SET created_at=now()-interval '4 minutes',writer_guard_until=now()-interval '1 minute'`,
+    );
+    assert.equal(
+      (await counts()).reserved,
+      String(2 * rows[0].reservationBytes),
+    );
+    await limited.admit(rows[2]);
+    assert.equal(
+      (await counts()).reserved,
+      String(3 * rows[0].reservationBytes),
+    );
+    assert.equal(
+      (
+        await pool.query(
+          `SELECT count(*)::int AS count FROM crm.chat_media_admissions WHERE state='receiving'`,
+        )
+      ).rows[0].count,
+      3,
+    );
+  });
   test('MED-28: durable admission reserves worst case before any media/job exists', async () => {
     const row = input();
     await repository.admit(row);

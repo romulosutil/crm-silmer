@@ -149,11 +149,13 @@ Mídia de canal é privada e temporária. Bytes expiram no fim da jornada ou
 em sete dias. Quarentena, limites, MIME/hash e scan precedem acesso.
 Worker trata retenção; detalhes em [TRANSIENT-MEDIA](docs/phase0/TRANSIENT-MEDIA.md).
 
-A nova classe de mídia enviada no chat usará RustFS existente, sem exclusão
-automática por sete dias ou encerramento (ADR 023). O desenho prevê registro
+A nova classe de mídia enviada no chat usa RustFS existente, sem exclusão
+automática por sete dias ou encerramento (ADR 023). A implementação mantém registro
 persistente separado do contrato transitório, leitura privada por conversa,
-processamento no worker e reserva n8n por referência imutável. Implementação,
-normalização de áudio e migração de cópias legadas disponíveis estão pendentes
+processamento no worker, normalização OGG/Opus e reserva n8n por referência
+imutável. Rascunhos órfãos usam intenção durável e guardas de writer antes de
+DELETE/quota. API admite no máximo dois pipelines por bucket; decoder é serial
+no worker. Homologação construída e migração de cópias legadas disponíveis estão pendentes
 no [plano INBOX-MEDIA-1](.specs/features/inbox-media-rustfs/design.md). O storage
 R2 futuro não é dependência dessa entrega; backup externo/restore têm gate próprio.
 

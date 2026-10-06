@@ -1,5 +1,69 @@
 # Execução INBOX-MEDIA-1
 
+## T23: Perfil operacional local, capacidade e recovery
+
+MED-15/19/20/28: startup opt-in `dev:media` constrói API/worker existentes em
+perfil Docker isolado crm-silmer-media-local, com DBs, objetos, chaves, spool e
+definições persistentes. Endpoints HTTP internos são loopback por namespace
+RustFS compartilhado; papéis mínimos distintos, sem root em API/worker/n8n.
+Build context exclui var/tmp (tooling, capturas e secrets locais). Secrets
+persistentes são reutilizados; ausência com volumes existentes falha antes de
+gerar arquivos/chaves/up. README canônico de texto e política legada preservados.
+
+API limita dois pipelines por bucket sob quota lock, incluindo sessões distintas.
+Receiving recente3min/guard futuro e job pending/retry/processing/guard futuro
+ocupam slot; ready sem guard libera. Estado terminal não prova writer fechado.
+Receiving órfão com grace expirada libera slot, mantendo quota/bytes até cleanup
+confirmado >24h. Runtime fixa capacidade2; fixture da prova antiga de bytequota
+usa capacidade12 explicitamente para isolar aquele limite, preservando assertions.
+Replays aceitos passam com quota/capacidade cheia sem novo slot/reserva.
+
+Reds reais novos: terceiro pipeline aceito e três admissões concorrentes aceitas
+antes do guard; receiving antiga bloqueava global429 mesmo após grace segura.
+Casos passam após enforcement. Fixture HTTP de rollback assumiu upload403,
+mas contrato existente desabilita a rota (app.js275), logo404; corrigida a
+fixture sem alterar esse contrato. Também provou novo POSTmessage-media403.
+
+### Adequação e operação T23
+
+| Cenário/requisito | Evidência/resultado nativo | Discrimina |
+| --- | --- | --- |
+| Capacidade MED-28 | test/chat-media-upload-postgres-live.test.js:129/130 terceiro429 e quota igual; :152/153 exatamente2admitidas/1rejeitada | Ausência de contador e corrida entre sessões |
+| Writer terminal/replay MED-28 | mesmo arquivo:183 guard futuro429; :189/190 replay mesmoID, counts iguais com quota cheia | Liberar slot apenas por status job; dupla cobrança |
+| Receiving órfão MED-28 | mesmo arquivo:214 guard futuro429; :218/223/227 reserva2x→3x e três ledgers receiving após grace | Bloquear24h sem processamento; apagar quota indevidamente |
+| Chaves originais | test/media-development-profile.test.js:14/20 missingkey+volume rejeita e root continua vazio; :69/70 restart conserva e estado incompleto rejeita | Regeneração silenciosa de AES/N8N/root |
+| Papéis/config privada MED-20 | mesmo arquivo:56/61/62/64 papéis diferentes e nenhum root/secretS3 no n8n; :47/48/52 somente loopback | Sharedroot ou hostnameHTTP indevido |
+| Roots/flags | mesmo arquivo:32/36/40 entradaoff/readon; :77/78/79 roots isolados; :91/92 nativebinarydefault/concurrency1 | Rollback perder leitura, raiz transitória compartilhada |
+| IAM alpha99 real | var/media-T23-head-missing.mjs: API/worker bucketCRM UUID ausente404, bucket estranho403, quatro respostas | 403 interpretado como missing; ampliar permissões sem prova |
+| Startup/restart built | var/media-T23-startup.log / media-T23-restart.log / media-T23-reactivate.log: migrations, API/worker/n8n saudáveis; API3013/edge4193/n8n5688 HTTP200 | Hosthandler ou reset de DB/volume/chave |
+| Definições/spool | Docker inspect/stat: UID1000 roots0700, API clamav RW=false, main.cvd/daily.cld/bytecode.cvd e fresh marker real | Volume vazio mascarando baseline; writer sem permissões |
+| Rollback funcional MED-15/19 | var/media-T23-profile-smoke.mjs e media-T23-rollback.log: upload202→builtworker/scanner→RustFS→binding202; off mantém attached200 e Range206 exato, upload404 e novo send403 | Ler histórico exigir entrada ligada; falso ready sem worker |
+| Texto durante429 MED-28 | var/media-T23-capacity-http.mjs/log: dois uploads202, terceiro429 sem quota mudar, texto202; somente worker dedicado pausado<1s para pending determinístico e retomado | Saturação mídia bloquear texto/reservar terceiro |
+
+Runtime local reconstruído usado na prova:
+sha256:24f30677faab7d95739ab66f7cc0f8d9bb3dc177cf08a5ddf482a50942eb0b8a.
+API/worker2GiB/1CPU, n8n2GiB/1CPU/concurrency1, RustFS1GiB/1CPU;
+decoder serial. Pico de startup observado worker814784512bytes e n8n882589696;
+isso mede startup, não stress de gravação300s. Prova built de PNG não confirma
+callback: workflow estava inativo e entrega não é alegada. Wholeworker/normalizer,
+DEV callback, browsers/codecs e microfone físico permanecem T24.
+
+Gates: validate862pass/3skips antigos(total865), UI166pass/7skips antigos(total173)
+workers1/FirefoxLinux disponível; Live integral131/131, zero skips,88,8s;
+upload focal19/19 (15antigos+4novos). Topology/recovery14/14 mocks mantêm oito
+blockers, Privacycatálogo4/4 e validadores verdes, audit0. Logs ignorados
+media-T23-{validate,e2e,live,capacity}.log. UI antes do ajuste final de receiving
+antiga; fontes/componentes UI intactos, SQL/HTTP real e Live cobrem esse ajuste.
+Validate final posterior confirma source atual; contagens sem skips novos.
+
+Runbook e sínteses RULES/ARCHITECTURE/ABOUT/TECHNICAL-DESIGN/EASYPANEL distinguem
+classe preservada implementada da política legada sete dias/fim da jornada.
+Plano de migração exige copiar/scan/hash/vínculo antes de cancelar DELETE por
+item. Inventário/migração remotos, IAM/digest/capacidade do alvo, backup externo,
+restore isolado, PII inicial n8n e Meta/DPA são gates pendentes explícitos;
+nenhum upgrade/deploy/mutação remota, nenhum recovery por mocks, nenhum Verified.
+Commit T23 atualizado para feat(ops), refletindo runtime/enforcement entregue.
+
 ## T22: Cleanup de rascunhos com writers protegidos
 
 MED-15/27: o worker existente inicia scheduler de rascunhos, sem expurgar mídia

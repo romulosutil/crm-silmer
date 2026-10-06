@@ -1,5 +1,130 @@
 # Ativação de mídia do chat no RustFS
 
+## T23: operação implementada e gates de ativação
+
+Inbox aceita imagem, áudio anexado ou gravado e vídeo; upload/preparo/envio são
+ações explícitas. API valida sessão, CSRF, ownership e versão, worker valida
+bytes e normaliza gravações, RustFS mantém variante privada, n8n reserva por
+referência imutável e confirma por callback. Mídia attached permanece salva;
+cleanup automático somente alcança rascunhos sem message_id com mais de24h.
+Homologação do pipeline construído e microfone físico são T24; configuração
+local não comprova operação remota, backup ou entrega real Meta.
+
+### Perfil Docker local opt-in
+
+`rtk npm run dev:media` constrói a imagem runtime existente e inicia somente
+`crm-silmer-media-local`, com DB e volumes nomeados próprios. O dev de texto
+continua `npm run dev`, com mídia desligada. Endereços do perfil: CRM4193,
+API3013, n8n5688 e S321920, sempre127.0.0.1. Dados, chaves e arquivos persistem
+ao fechar o processo; nenhum comando do startup remove volumes ou arquivos.
+Configuração e secrets locais ficam em var/media-local, ignorado pelo Git e
+Docker. Perda de secrets.json com volume persistente bloqueia startup antes de
+gerar novas chaves/env: restaurar o arquivo original do backup protegido.
+Backup do estado inclui secrets.json, encryption key n8n, DBs e objetos;
+separar acesso às chaves e não imprimir env/secrets em logs.
+
+API/worker/n8n compartilham namespace do RustFS do perfil. Assim endpoints
+internos S39000, n8n5678 e callbackAPI3000 são loopback; HTTP para hostname
+rustfs/n8n/host.docker.internal continua proibido pelos adapters. Banco usa DNS
+Docker e não faz HTTP. RustFS alpha99 está fixado por digest; papéis locais API
+GetObject e worker Get/Put/Delete limitados ao bucket CRM-dev. Bootstrap root
+existe somente no RustFS/setup local; API/worker/n8n não recebem root. Na alpha99
+HEAD de UUID ausente retorna404 para ambos papéis mínimos e bucket estrangeiro
+403; não foi necessário permitir ListBucket.
+
+Volumes chat-spool e legacy-spool têm roots distintos, UID/GID1000 e0700;
+UUIDs são relativos e arquivos são privados. Volume signatures é preenchido
+pela base genuína da imagem, API readonly e worker read/write para refresh.
+Não montar diretório vazio sobre a base, nem fabricar marker. Scanner falha
+fechado sem base ou com verificação stale; refresh em background mantém texto
+disponível. `main.cvd`, `daily.cld` e `bytecode.cvd` foram observados no perfil.
+Health worker atual prova processo; base/queue/DB exigem probes específicos.
+
+Budget do perfil: API2GiB/1CPU (scanner legado coexistente), worker2GiB/1CPU,
+n8n2GiB/1CPU/concurrency1 e RustFS1GiB/1CPU. Decoder é serial, threads1. API
+admite dois pipelines por bucket sob quota lock: receiving recente (três minutos)
+ou com guard futuro, e mídia com job
+pending/retry/processing ou guarda futura contam. Saturação429 antecede reserva
+e bytes; estado terminal com writer ainda protegido também conta. Ready sem
+guarda libera capacidade. Replay aceito não cria slot/reserva e passa com quota
+cheia. Após grace segura de recebimento expirada, writer órfão não ocupa slot,
+mas reserva/bytes permanecem até cleanup confirmado >24h. Quota DEV padrão1GiB,
+limite12admissões/min por sessão; texto mantém seu
+contrato. Testes de quota usam capacidade independente explicitamente maior
+para preservar a prova do limite de bytes, sem alterar runtime2.
+
+### Cleanup e rollback sem perda de arquivos enviados
+
+Streaming tem deadline120s e lease advisory de sessão sem BEGIN; FD fechado
+precede release de conexão e quota. Upload funciona com pool1; processamento
+requer pool>=2 (padrão10). Handler mantém guarda até fechar decoder/PUT, aborta
+por heartbeat/conexão perdida, SIGKILL no cancelamento/timeout e awaitclose.
+Guardas persistidas3min/15min protegem perda da sessão; job terminal sozinho
+não prova morte do writer. Fila real recupera attempt expirado antes do cleanup.
+
+Cleanup confirma intenção unavailable antes do DELETE, sob lock/recheck de
+job/mídia/writer. Só a etapa posterior remove spool/intermediários/S3 e libera
+quota; revalida guard nas duas etapas. Rollback após DELETE conserva intent e
+cobrança, nunca restaura ready vinculável. Retry é idempotente. Diretórios
+`.recording-<UUID variante>-<sufixo6>` pertencem àquela variante; somente eles
+são removidos. Diretórios legados sem UUID e arquivos desconhecidos não são
+apagados automaticamente: inventariar por hash/proveniência e contabilizar
+ocupação física antes de reconciliar com autorização. Lease expirada isolada
+não autoriza quota0 nem rm de decoder vivo.
+
+Rollback local `rtk npm run dev:media -- --read-only` mantém chaves/bucket/spool
+e CHAT_MEDIA_READ_ENABLED=true, desliga nova admissão e consumo de mídia.
+Upload novo responde404 por rota desabilitada; novo envio humano com mídia403.
+Texto/outbox existente continuam; ready/attached seguem consultáveis. Resultado
+unknown permanece para reconciliação; nunca reenviar automaticamente. Reativar
+com o mesmo secrets.json e volumes. No alvo, aplicar flags com mesma configuração
+DB/auth/storage; não usar rollback para apagar dados ou alterar retenção.
+
+### Migração legada, backup e gates externos
+
+Inventário local: volumes separados postgres-data, n8n-postgres-data, n8n-data,
+rustfs-data, chat-spool, legacy-spool e signatures no projeto dedicado. Inventário
+remoto permanece gate: contexto existente registrou RustFS sem domínio/backup
+comprovado; mapear mount absoluto, capacidade, bucketCRM e cópias legadas por
+UUID/hash/tamanho/estado. `hermes-backups` não participa desse inventário.
+Política legada sete dias/fim da jornada permanece até promoção confirmada.
+
+Para cada cópia legada disponível, bloquear expurgo do item durante migração,
+scan/quarentena, copiar para chaveCRM imutável e confirmar HEAD+GET+SHA+tamanho.
+Persistir vínculo novo e provenance em transação; somente depois marcar promoção
+e cancelar DELETE legado daquele item. Registrar source/target/hash e CAS,
+repetição sem novo objeto; cópia ausente vira lost/unavailable, não ready.
+Não cancelar sweeper global antes de confirmar todas as cópias e vínculos.
+Disponibilidade dessas cópias e execução da migração no alvo estão pendentes.
+
+Backup exige destino externo independente da VPS, criptografia, chave separada,
+inventário de objetos/hash e dump consistente DB/vínculos/quota. Snapshot/volume
+local é preservação, não recuperação. Restore isolado deve recuperar DB+objetos+
+chaves, medir RPO/RTO e confirmar leitura autorizada/Range/SHA de amostra,
+attached antigo intacto e unknown sem reenvio. Isolar n8n/Meta durante restore;
+reconciliar quota física, usada e reservada antes de reabrir admissão. Falha de
+integridade deixa indisponível e preserva metadata; sem falso sucesso.
+
+| Gate alvo | Estado e evidência exigida antes da ativação |
+| --- | --- |
+| RustFS/IAM/digest | Pendente no remoto; bucketCRM privado, papéis mínimos, lifecycle sem expurgo, negativas anônimo/cross-bucket e digest real |
+| Capacidade/inventário | Pendente no remoto; bytes usados/reservados mais intermediários/cópias, margem filesystem, concorrência2 e decoder1 medidos no sizing real |
+| Legado | Pendente no alvo; inventário por item, cópia hash antes de cancelar DELETE e CAS/retry comprovados |
+| Backup externo/restore | Pendente; destino separado, chaves protegidas, restore isolado e RPO/RTO/SHA/Range documentados |
+| n8n privacidade | Não atendido em produção: registros iniciais soft-deleted continham recipient/caption no ensaio; pruning máximo30dias e minimização/expurgo precisam de prova operacional |
+| Meta | Pendente; versão explícita e homologated, allowlist/limites/voice flag atuais, DPA e entrega real autorizada |
+| UAT | Pipeline built e microfone físico em T24; dispositivos sintéticos não aprovam hardware humano |
+
+Sem executar upgrade, deploy ou alteração remota. Revisar advisories/patches
+do RustFS alpha99, Node e pacotes Debian antes de promover; npm audit cobre
+dependências JS, não scanner/FFmpeg/SO. Config n8n global e workflow conservam
+none/none/false/false; instância usa binarydefault, concorrência1 e pruning720h.
+O export local mantém campo legado settings.binaryMode=separate, sem trocar a
+configuração nativa da instância. Isso não remove os registros iniciais com PII
+observados nem fecha gate externo.
+Admin REST local usa SigV4 conforme [documentação IAM](https://docs.rustfs.com/en/security-compliance/iam/policies);
+compatibilidade efetiva foi testada na alpha99, não presumida da documentação.
+
 T18: composer standalone recebe contexto fixo conversationId/expectedVersion
 e disabled; o chamador fase4 deve derivar disabled da autorização/admissão
 atual e tratar sent para refresh. Não usar filename/MIME como prova de bytes.
@@ -10,8 +135,8 @@ fica congelada. Mudança de conversa/versão ou unmount aborta e ignora resposta
 antigas. Polling termina em até 600 s, incluindo GET pendente, cobrindo os
 340 s das fases locais mais I/O. Timeout conserva mediaId e preview; atualizar
 validação consulta a mesma mídia sem repetir upload. Não renova lease nem reenvia por timer.
-Teste UI/axe usa harness isolado e API mockada; runtime de validação de bytes
-e n8n têm evidências separadas, sem alegar integração Inbox completa T21/T24.
+Teste UI/axe de T18 usa harness isolado e API mockada; T21 integra os componentes
+na Inbox e tem E2E HTTP/SSE próprios. Pipeline built completo permanece T24.
 
 T17: uploads usam FormData com boundary do browser; não definir Content-Type
 manualmente. Reutilizar File/contexto/Idempotency-Key originais após resultado
@@ -272,8 +397,8 @@ Replay aceito mede hash sem novo spool/reserva. Recebimento ativo/incompleto
 usa 409; crash não libera quota. Somente remoção confirmada de receiving
 permite release; consumed permanece para worker. Conclusão DB incerta consulta
 ledger sob lock antes de cleanup; consulta indisponível preserva spool/reserva.
-T22 deverá consumir listAbandonedAdmissions (>24h), lock/recheck e confirmar
-remoção antes de release. Não há sweeper de admissões nesta fase.
+T22 consome admissões >24h sob lock/recheck e confirma remoção antes de release,
+com deadline/guardas/intenção durável descritos acima.
 
 Novo live T7: `rtk proxy node --test --test-concurrency=1 test/chat-media-upload-postgres-live.test.js`.
 T8 amplia esse live com identidade/sessões reais. Status e preflight do upload
@@ -316,8 +441,8 @@ instalada; marcador inválido/futuro/stale falha fechado. Sem marcador, usa
 mtime da base; mais de 36 h impede liberação. Config não aceita entrada humana.
 
 Diretório `/var/lib/clamav`, UID/GID 1000 (node), gravável só pelo updater.
-Em T23 montar definições privadas compartilhadas entre API (scanner legado)
-e worker. Volume novo deve conter/copiar a assinatura-base da imagem; tmpfs
+Perfil T23 monta definições privadas compartilhadas entre API (scanner legado)
+e worker. Volume novo contém/copia a assinatura-base da imagem; tmpfs
 vazio exige download genuíno no startup antes da primeira liberação. API
 não recebe permissão de refresh, e não deve usar marker sem base. Validar
 permissões/mounts/read-only no deployment; estes testes locais não ativam remoto.

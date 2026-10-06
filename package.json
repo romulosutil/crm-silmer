@@ -18,6 +18,7 @@
     "check:design-tokens": "node scripts/check-design-tokens.mjs",
     "db:migrate": "npm run migrate --workspace @crm-silmer/database --",
     "dev": "node scripts/dev.mjs",
+    "dev:media": "node scripts/dev-media.mjs",
     "dev:down": "docker compose -f docker-compose.dev.yml down",
     "format": "prettier --write package.json \"apps/**/*.{html,css,js,json,vue}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"docs/adr/**/*.md\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/**/*.{md,yml,yaml}\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",
     "format:check": "prettier --check package.json \"apps/**/*.{html,css,js,json,vue}\" \"modules/**/*.{js,json}\" \"docs/phase0/**/*.{json,md}\" \"docs/adr/**/*.md\" \"ops/**/*.{json,md}\" \"schemas/**/*.json\" \"scripts/**/*.mjs\" \"test/**/*.js\" \".github/**/*.{md,yml,yaml}\" eslint.config.js jsconfig.json playwright.config.js .prettierrc.json",

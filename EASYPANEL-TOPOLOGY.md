@@ -161,16 +161,24 @@ Regras operacionais:
 
 ## 5. Armazenamento de arquivos
 
-### Decisão para mídia enviada do chat (implementação pendente)
+### Mídia enviada do chat (implementada; ativação remota pendente)
 
 A [ADR 023](docs/adr/023-midia-do-chat-no-rustfs.md) escolhe o RustFS já
 existente e preserva mídia enviada do chat sem TTL de sete dias nem expurgo
-ao encerrar. Buckets próprios privados do CRM serão separados de
+ao encerrar. Buckets próprios privados do CRM são separados de
 `hermes-backups`; leitura usa autorização do CRM. Configuração observada,
 limites da evidência e gates de backup/restore estão no
 [contexto](.specs/features/inbox-media-rustfs/context.md) e no
-[plano](.specs/features/inbox-media-rustfs/design.md). Nenhum bucket,
-credencial, upgrade ou deploy foi executado na entrega de planejamento.
+[plano](.specs/features/inbox-media-rustfs/design.md). Compatibilidade, API,
+worker, Inbox e cleanup têm implementação/evidência local; nenhum bucket,
+credencial, upgrade ou deploy remoto foi executado nesta entrega. Perfil local
+opt-in `npm run dev:media` usa DB/volumes próprios, API/worker/n8n construídos e
+HTTP interno somente loopback por namespace compartilhado do RustFS. API e
+worker têm 2GiB/1CPU cada, n8n2GiB/1CPU, RustFS1GiB/1CPU; os valores são orçamento
+do perfil local, sem substituir medição/sizing do deployment remoto. Worker
+consome uma conversão por vez; API admite dois pipelines no máximo por bucket.
+Spool privado e definições ClamAV UID1000 persistem; API monta definições readonly.
+Backup externo e restore isolado permanecem gates sem evidência operacional.
 As subseções seguintes descrevem o runtime transitório legado e a opção
 R2 futura, não a retenção da nova mídia enviada do chat.
 

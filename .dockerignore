@@ -9,6 +9,8 @@ docs
 graphify-out
 historico-datacrazy
 node_modules
+var
+tmp
 playwright-report
 test-results
 test

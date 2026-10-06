@@ -167,6 +167,7 @@ export function createServerApi(runtime = {}) {
       ? createChatMediaApiRuntime({
           repository: new PostgresChatMediaUploadRepository({
             database: runtime.database,
+            processingCapacity: 2,
             bucketAlias:
               environment.CHAT_MEDIA_BUCKET_ALIAS ??
               (environment.MEDIA_S3_BUCKET === 'crm-silmer-chat-media'

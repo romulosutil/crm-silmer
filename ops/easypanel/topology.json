@@ -187,7 +187,7 @@
             "tecnolar",
             "food-helper-migrations"
           ],
-          "sharedProjectRiskAcceptedRef": null,
+          "sharedProjectRiskAcceptedRef": "docs/adr/023-arquivos-da-arte-no-rustfs.md",
           "internalHost": "schedule_rustfs",
           "internalPort": 9000,
           "consolePort": 9001,
@@ -230,7 +230,6 @@
           "dedicatedCredential": "pending",
           "gaps": [
             "public-s3-and-console-domains",
-            "shared-project",
             "cross-project-endpoint-smoke-pending",
             "image-digest-not-confirmed",
             "dedicated-bucket-credential-pending",

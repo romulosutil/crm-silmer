@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T6 concluídas, fase 1 entregue. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T7 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -178,7 +178,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-01..04, MED-06..08, MED-20, MED-26, MED-28
 **Reuses**: Sessão, CSRF, ACL/ownership e multipart n8n; composição de app na entrega.
 **Tools**: tlc-spec-driven; shell.
-**Done when**: [ ] 202 inicia processamento; replay não cria upload; 401/403/409/413/422/429/503 imediatos cobertos; formato reprovado no worker usa status de T8; truncamento e Content-Length falso não excedem quota.
+**Done when**: [x] 202 inicia processamento; replay não cria upload; 401/403/409/413/422/429/503 imediatos cobertos; formato real fica para worker/status T8; truncamento e Content-Length falso não excedem quota. 20 HTTP e 13 SQL novos, Full/Build verdes; [evidência](execution.md#t7-upload-humano-com-admissão-durável).
 **Tests**: integration + unit; mínimo 12 cenários API.
 **Gate**: Full + Build ao concluir fase.
 **Commit**: feat(api): accept private chat media uploads

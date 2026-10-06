@@ -13,6 +13,18 @@
 
 ## Handoff
 
+T7 concluída na entrega corrente: upload humano, ledger de admissão 0029,
+reserva antes de streaming, replay byte-real, quota usada+reservada e throttle
+12/minuto por token canônico (inclui replay). Decisão de implementação aceita
+pelo integrador: ledger evita lock SQL durante IO e metadata fictícia; arquivo
+vazio usa422. Design/ADR023 permanecem baseline. Método
+listAbandonedAdmissions entrega discovery para T22, sem cleanup nesta fase.
+CommitDB/resposta perdida e query de reconciliação indisponível preservam spool.
+Gates T7: validate743/3 skips antigos, SQL conjunto24/24 (13novos), HTTP20novos,
+E2E107/7 skips antigos, audit0, diff/spec/tasks verdes. Próximo passo: T8.
+T1..T7 entregues,17tarefas pendentes; requisitos ainda In Progress.
+O snapshot abaixo preserva a evidência da infraestrutura entregue na fase1.
+
 Feature: inbox-media-rustfs. Implementação autorizada, fase 1 concluída:
 T1 a T6 entregues / 18 tarefas pendentes. Requisitos ainda In Progress;
 Verifier independente obrigatório no fechamento da feature.

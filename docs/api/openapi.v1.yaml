@@ -541,6 +541,63 @@ paths:
         '409': { $ref: '#/components/responses/N8nProblem' }
         '422': { $ref: '#/components/responses/N8nProblem' }
         '503': { $ref: '#/components/responses/N8nProblem' }
+  /conversations/{conversationId}/media:
+    post:
+      operationId: uploadChatMedia
+      summary: Recebe mídia privada sem assumir o atendimento
+      description: >-
+        Campos kind, origin e expectedVersion precedem um único campo file.
+        Arquivo vazio ou declaração inválida usa 422, excesso de bytes 413.
+        Inspeção real de formato/codec ocorre no worker após 202. Replay mede
+        bytes reais e declaração sem nova reserva; payload diferente ou
+        recebimento ainda ativo usa 409. Upload não altera ownership ou epoch.
+        Falhas usam application/problem+json com type, title, status e request_id,
+        accepted=false e error.code estável (INVALID_CREDENTIALS, FORBIDDEN,
+        MEDIA_CONFLICT, MEDIA_TOO_LARGE, MEDIA_INVALID, MEDIA_RATE_LIMITED ou
+        SERVICE_UNAVAILABLE conforme o status).
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [kind, origin, expectedVersion, file]
+              properties:
+                kind: { type: string, enum: [image, audio, video] }
+                origin: { type: string, enum: [attachment, recording] }
+                expectedVersion: { type: integer, minimum: 1 }
+                file: { type: string, format: binary }
+      responses:
+        '202':
+          description: Upload completo enfileirado, ou replay original
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [mediaId, state, statusUrl]
+                properties:
+                  mediaId: { type: string, format: uuid }
+                  state: { type: string, const: processing }
+                  statusUrl: { type: string }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { description: Limite de bytes excedido }
+        '422': { description: Declaração ou multipart inválido/vazio }
+        '429': { description: Quota ou 12 admissões por sessão/minuto }
+        '503': { description: Dependência indisponível ou conclusão incerta }
   /conversations/{conversationId}/messages:
     post:
       operationId: sendHumanConversationMessage

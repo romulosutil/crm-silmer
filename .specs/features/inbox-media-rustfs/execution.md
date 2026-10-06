@@ -1,5 +1,67 @@
 # Execução INBOX-MEDIA-1
 
+## T7: Upload humano com admissão durável
+
+Concluída com gates verdes. Premissas/arquivos/sucesso enviados ao integrador
+antes do patch. Migration 0029 adiciona ledger de admissão sem reescrever
+migrations publicadas; nenhum lock/transação SQL fica aberto durante bytes.
+Arquivos: upload route/runtime/wiring app/server, repository/export, migration,
+testes HTTP/SQL, OpenAPI, design, runbook, spec/tasks/STATE e esta evidência.
+T8 continua responsável pelo status do processamento assíncrono.
+
+Testes vieram de MED-04/06/07/08/20/26/28/29 e Done when T7 antes do código.
+20 cenários HTTP e 13 SQL novos, sem alterar/remover/ignorar testes existentes.
+Gates: validate 743 aprovados, três skips antigos, 746 total; SQL conjunto
+24/24 sem skips; E2E exclusivo um worker 107 aprovados, sete skips antigos,
+114 total; audit zero; git diff --check, validate_tasks/spec e types/lint verdes.
+Node 24.20.0/npm 11.19.0 portátil, PostgreSQL sintético local dedicado.
+
+Reserva antecede bytes: imagem/anexo 2×limite; gravação 3×16 MiB. Tamanho/hash
+real ajusta reserva para 2×entrada ou entrada+32 MiB. Filename usa AES-GCM
+com AAD UUID, verificado por decrypt autenticado. Empty 422 não cria metadados
+fictícios. Campo/file/truncamento inválidos não enfileiram job. MIME/codec
+invalidáveis depois do POST permanecem processamento após 202 (MED-29/T8).
+
+Replay completo consome/hash bounded sem spool/reserva; também conta no limite
+12/minuto por hash de crm_session canônico. Admissão receiving no mesmo scope
+usa 409. Quota soma used+reserved. Transferência/close são revalidados antes
+da conversão atômica ledger→mídia/job. Commit incerto consulta estado sob lock;
+consumed ou consulta indisponível preservam spool. Remoção falha preserva
+reserva. Discovery receiving >24h é contrato para T22, sem sweeper agora.
+
+Correções durante implementação: handler multipart aguardava pipeline de um
+source já destruído pelo parser; writer agora é fechado antes do cleanup.
+QA encontrou bypass por cookies extras, commit perdido apagando spool e
+replay sem throttle. Os três foram corrigidos e têm provas SQL/HTTP próprias.
+Primeiro comando de teste expandiu PATH no shell externo; substituído por
+Command com quoting simples antes dos gates. Fixtures SQL de hash de senha
+e fechamento foram corrigidas antes de rodar; nenhuma assertion enfraquecida.
+
+### Adequação suficiente
+
+| Critério / AC | file:line + assertion | Resultado da spec | Coberto |
+| --- | --- | --- | --- |
+| 202 com ID opaco/state | `test/chat-media-upload-routes.test.js:115`: `assert.equal(response.statusCode, 202)`; :116 `assert.equal(response.json().state, 'processing')` | Upload aceito e ainda não enviado | Sim |
+| Metadata byte-real/quota | `test/chat-media-upload-routes.test.js:119`: `assert.equal(saved.sizeBytes, 15)`; :121 `assert.equal(saved.reservationBytes, 30)` | Reserva 2×entrada medida | Sim |
+| Reserva antes do job | `test/chat-media-upload-postgres-live.test.js:110`: `assert.deepEqual(await counts(), {media:0,jobs:0,reserved:String(row.reservationBytes)})` | Pior caso cobrado, zero mídia/job | Sim |
+| Upload sem takeover | `test/chat-media-upload-postgres-live.test.js:120`: `assert.equal((await pool.query('SELECT automation_state,automation_epoch,version FROM crm.conversations')).rows[0].automation_state,'assistant')` | Upload não assume conversa | Sim |
+| Replay exato / payload diverso | `test/chat-media-upload-routes.test.js:152`: `assert.deepEqual(replay.json(), first.json())`; :161 `assert.equal(response.statusCode, 409)` | Mesmo resultado, outro arquivo 409 | Sim |
+| Auth/ACL/CSRF/status negativos | `test/chat-media-upload-routes.test.js:170`: `assert.equal(response.statusCode,statusCode)` para 403/409/429/503; :193 `assert.equal(response.statusCode,401)`; :200 `assert.equal(response.statusCode,403)` | Todas negativas imediatas do contrato | Sim |
+| Excesso/truncamento/Content-Length | `test/chat-media-upload-routes.test.js:209`: `assert.equal(response.statusCode,413)`; :217 `assert.equal(response.statusCode,422)`; :220 `assert.deepEqual(await readdir(h.root),[])` | Limite real, nenhum job/parcial solto | Sim |
+| Zero-byte / reprovação futura | `test/chat-media-upload-routes.test.js:238`: `assert.equal(response.statusCode,422)`; :246 `assert.equal(response.statusCode,202)` para SVG | Zero inválido antes do 202; tipo real assíncrono | Sim |
+| Gravação/limite 16 MiB/cleanup falho | `test/chat-media-upload-routes.test.js:259`: `assert.equal([...h.records.values()][0].reservationBytes,15+32*1024*1024)`; :269 `assert.equal(response.statusCode,413)`; :283 `assert.equal(h.reservations.size,1)` | Reserva da conversão, limite e liberação só após cleanup | Sim |
+| Concorrência / used+reserved | `test/chat-media-upload-postgres-live.test.js:183`: `assert.equal(results.filter(r=>r.status==='fulfilled').length,1)`; :214 `await assert.rejects(repository.admit(input()),{statusCode:429})` | Um vencedor; quota conservada | Sim |
+| Replay throttle/cookies extras | `test/chat-media-upload-postgres-live.test.js:203`: `await assert.rejects(repository.admit({...row,id:randomUUID()}),{statusCode:429})`; :299 `assert.equal(response.statusCode,n<12?422:429)` | 13º request não passa usando mesmo token | Sim |
+| Transfer/close e rollback job | `test/chat-media-upload-postgres-live.test.js:235`: `await assert.rejects(repository.complete(completed(row)),{statusCode:mutate.startsWith('assigned')?403:409})`; :325 `assert.deepEqual(await counts(),{media:0,jobs:0,reserved:String(row.reservationBytes)})` | Nunca publicar envio indevido ou meia transação | Sim |
+| Commit perdido / DB indisponível | `test/chat-media-upload-postgres-live.test.js:394`: `assert.equal((await api.inject(request)).statusCode,503)`; :402 `assert.deepEqual(await counts(),{media:1,jobs:1,reserved:'30'})`; :410 `assert.equal(replay.json().mediaId,media.id)` | Spool preservado e replay único, sem falso sucesso | Sim |
+| Discovery orphan e liberação uma vez | `test/chat-media-upload-postgres-live.test.js:429`: `assert.deepEqual(await repository.listAbandonedAdmissions(),[])`; :430 `assert.deepEqual(await counts(),{media:0,jobs:0,reserved:'0'})` | Não liberar sem confirmação nem cobrar duplamente | Sim |
+| Erro previsível e privacidade | `test/chat-media-upload-routes.test.js:171`: `assert.equal(response.json().accepted,false)`; :182 `assert.equal(response.headers['content-type'],'application/problem+json; charset=utf-8')`; :145 `assert.equal(response.body.includes('private-canary'),false)` | Campos de erro estáveis, sem filename/plaintext | Sim |
+
+Adequação: cada critério tem estado/valor assertado; assertions não se limitam
+a call counts. Filename também autenticado por AES-GCM (:131). Convenções
+CONTRIBUTING.md/node:test/checkJs seguidas. Requisitos seguem In Progress;
+nenhum Verified ou validation.md final produzido.
+
 ## T6: Worker de processamento persistente
 
 Premissas, arquivos e sucesso enviados ao integrador antes do patch: preservar
@@ -519,3 +581,113 @@ Verdict: suficiência por critério e necessidade por teste comprovadas em
 SQL real. Assertions verificam valores persistidos e falhas de constraints,
 sem substituir estado por call counts. Padrão `CONTRIBUTING.md`, node:test,
 JSDoc/checkJs e banco dedicado. Sem alteração de migration publicada.
+
+### Adequação necessária (mapeamento reverso)
+
+| file:line + assertion | Origem / critério | Manter |
+| --- | --- | --- |
+| `test/chat-media-upload-routes.test.js:66`: `assert.ok(reservations.get(input.id) >= input.sizeBytes * 2);` | T7 isolamento de banco / quota antes de bytes | Sim |
+| `test/chat-media-upload-routes.test.js:115`: `assert.equal(response.statusCode, 202);` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:116`: `assert.equal(response.json().state, 'processing');` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:117`: `assert.match(response.json().mediaId, /^[a-f0-9-]{36}$/u);` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:119`: `assert.equal(saved.sizeBytes, 15);` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:120`: `assert.equal(saved.declaredMimeType, 'image/png');` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:121`: `assert.equal(saved.reservationBytes, 30);` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:122`: `assert.equal(saved.filenameEnvelope.algorithm, 'AES-256-GCM');` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:131`: `assert.deepEqual( JSON.parse( Buffer.concat([ decipher.update(Buffer.from(envelope.ciphertext, 'base64url')), decipher.final(), ]).toString('utf8'), ), { filename: 'private-canary.png' }, );` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:140`: `assert.equal( JSON.stringify(saved.filenameEnvelope).includes('private-canary'), false, );` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:144`: `assert.deepEqual(await readdir(h.root), [saved.id]);` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:145`: `assert.equal(response.body.includes('private-canary'), false);` | MED-01/20: accepted upload is private and leaves complete spool for one job | Sim |
+| `test/chat-media-upload-routes.test.js:151`: `assert.equal(replay.statusCode, 202);` | MED-06: byte-identical replay preserves media ID and removes replay spool | Sim |
+| `test/chat-media-upload-routes.test.js:152`: `assert.deepEqual(replay.json(), first.json());` | MED-06: byte-identical replay preserves media ID and removes replay spool | Sim |
+| `test/chat-media-upload-routes.test.js:153`: `assert.equal(h.records.size, 1);` | MED-06: byte-identical replay preserves media ID and removes replay spool | Sim |
+| `test/chat-media-upload-routes.test.js:154`: `assert.equal(h.reservations.size, 0);` | MED-06: byte-identical replay preserves media ID and removes replay spool | Sim |
+| `test/chat-media-upload-routes.test.js:155`: `assert.equal((await readdir(h.root)).length, 1);` | MED-06: byte-identical replay preserves media ID and removes replay spool | Sim |
+| `test/chat-media-upload-routes.test.js:161`: `assert.equal(response.statusCode, 409);` | MED-07: same command different bytes returns 409 and cleans failed spool | Sim |
+| `test/chat-media-upload-routes.test.js:162`: `assert.equal(h.records.size, 1);` | MED-07: same command different bytes returns 409 and cleans failed spool | Sim |
+| `test/chat-media-upload-routes.test.js:163`: `assert.equal(h.reservations.size, 0);` | MED-07: same command different bytes returns 409 and cleans failed spool | Sim |
+| `test/chat-media-upload-routes.test.js:164`: `assert.equal((await readdir(h.root)).length, 1);` | MED-07: same command different bytes returns 409 and cleans failed spool | Sim |
+| `test/chat-media-upload-routes.test.js:170`: `assert.equal(response.statusCode, statusCode);` | MED-08/28: admission ${statusCode} writes no bytes | Sim |
+| `test/chat-media-upload-routes.test.js:171`: `assert.equal(response.json().accepted, false);` | MED-08/28: admission ${statusCode} writes no bytes | Sim |
+| `test/chat-media-upload-routes.test.js:172`: `assert.equal(response.json().status, statusCode);` | MED-08/28: admission ${statusCode} writes no bytes | Sim |
+| `test/chat-media-upload-routes.test.js:173`: `assert.equal( response.json().error.code, /** @type {Record<number,string>} */ ({ 403: 'FORBIDDEN', 409: 'MEDIA_CONFLICT', 429: 'MEDIA_RATE_LIMITED', 503: 'SERVICE_UNAVAILABLE', })[statusCode], );` | MED-08/28: admission ${statusCode} writes no bytes | Sim |
+| `test/chat-media-upload-routes.test.js:182`: `assert.equal( response.headers['content-type'], 'application/problem+json; charset=utf-8', );` | MED-08/28: admission ${statusCode} writes no bytes | Sim |
+| `test/chat-media-upload-routes.test.js:186`: `assert.equal(h.records.size, 0);` | MED-08/28: admission ${statusCode} writes no bytes | Sim |
+| `test/chat-media-upload-routes.test.js:187`: `assert.deepEqual(await readdir(h.root), []);` | MED-08/28: admission ${statusCode} writes no bytes | Sim |
+| `test/chat-media-upload-routes.test.js:188`: `assert.equal(response.body.includes('private-canary'), false);` | MED-08/28: admission ${statusCode} writes no bytes | Sim |
+| `test/chat-media-upload-routes.test.js:193`: `assert.equal(response.statusCode, 401);` | MED-16: absent session returns 401 before admission | Sim |
+| `test/chat-media-upload-routes.test.js:194`: `assert.equal(h.records.size, 0);` | MED-16: absent session returns 401 before admission | Sim |
+| `test/chat-media-upload-routes.test.js:195`: `assert.deepEqual(await readdir(h.root), []);` | MED-16: absent session returns 401 before admission | Sim |
+| `test/chat-media-upload-routes.test.js:200`: `assert.equal(response.statusCode, 403);` | MED-08: CSRF mismatch returns 403 before bytes | Sim |
+| `test/chat-media-upload-routes.test.js:201`: `assert.deepEqual(await readdir(h.root), []);` | MED-08: CSRF mismatch returns 403 before bytes | Sim |
+| `test/chat-media-upload-routes.test.js:209`: `assert.equal(response.statusCode, 413);` | MED-04: image above 5 MiB returns 413 even with false Content-Length | Sim |
+| `test/chat-media-upload-routes.test.js:210`: `assert.equal(h.records.size, 0);` | MED-04: image above 5 MiB returns 413 even with false Content-Length | Sim |
+| `test/chat-media-upload-routes.test.js:211`: `assert.equal(h.reservations.size, 0);` | MED-04: image above 5 MiB returns 413 even with false Content-Length | Sim |
+| `test/chat-media-upload-routes.test.js:212`: `assert.deepEqual(await readdir(h.root), []);` | MED-04: image above 5 MiB returns 413 even with false Content-Length | Sim |
+| `test/chat-media-upload-routes.test.js:217`: `assert.equal(response.statusCode, 422);` | MED-04: truncated multipart never publishes job and confirms cleanup | Sim |
+| `test/chat-media-upload-routes.test.js:218`: `assert.equal(h.records.size, 0);` | MED-04: truncated multipart never publishes job and confirms cleanup | Sim |
+| `test/chat-media-upload-routes.test.js:219`: `assert.equal(h.reservations.size, 0);` | MED-04: truncated multipart never publishes job and confirms cleanup | Sim |
+| `test/chat-media-upload-routes.test.js:220`: `assert.deepEqual(await readdir(h.root), []);` | MED-04: truncated multipart never publishes job and confirms cleanup | Sim |
+| `test/chat-media-upload-routes.test.js:231`: `assert.equal(response.statusCode, 422);` | MED-04: invalid fields ${JSON.stringify(fields)} return 422 | Sim |
+| `test/chat-media-upload-routes.test.js:232`: `assert.equal(h.records.size, 0);` | MED-04: invalid fields ${JSON.stringify(fields)} return 422 | Sim |
+| `test/chat-media-upload-routes.test.js:233`: `assert.deepEqual(await readdir(h.root), []);` | MED-04: invalid fields ${JSON.stringify(fields)} return 422 | Sim |
+| `test/chat-media-upload-routes.test.js:238`: `assert.equal(response.statusCode, 422);` | MED-29: zero bytes rejected before 202 without false metadata | Sim |
+| `test/chat-media-upload-routes.test.js:239`: `assert.equal(h.records.size, 0);` | MED-29: zero bytes rejected before 202 without false metadata | Sim |
+| `test/chat-media-upload-routes.test.js:240`: `assert.equal(h.reservations.size, 0);` | MED-29: zero bytes rejected before 202 without false metadata | Sim |
+| `test/chat-media-upload-routes.test.js:241`: `assert.deepEqual(await readdir(h.root), []);` | MED-29: zero bytes rejected before 202 without false metadata | Sim |
+| `test/chat-media-upload-routes.test.js:246`: `assert.equal(response.statusCode, 202);` | MED-29: complete invalid format is accepted for asynchronous inspection | Sim |
+| `test/chat-media-upload-routes.test.js:247`: `assert.equal(response.json().state, 'processing');` | MED-29: complete invalid format is accepted for asynchronous inspection | Sim |
+| `test/chat-media-upload-routes.test.js:248`: `assert.equal([...h.records.values()][0].sizeBytes, 6);` | MED-29: complete invalid format is accepted for asynchronous inspection | Sim |
+| `test/chat-media-upload-routes.test.js:258`: `assert.equal(response.statusCode, 202);` | MED-14/28: recording reserves input plus 32 MiB after worst case admission | Sim |
+| `test/chat-media-upload-routes.test.js:259`: `assert.equal( [...h.records.values()][0].reservationBytes, 15 + 32 * 1024 * 1024, );` | MED-14/28: recording reserves input plus 32 MiB after worst case admission | Sim |
+| `test/chat-media-upload-routes.test.js:269`: `assert.equal(response.statusCode, 413);` | MED-04: audio above 16 MiB is interrupted before publishing media | Sim |
+| `test/chat-media-upload-routes.test.js:270`: `assert.equal(h.records.size, 0);` | MED-04: audio above 16 MiB is interrupted before publishing media | Sim |
+| `test/chat-media-upload-routes.test.js:271`: `assert.equal(h.reservations.size, 0);` | MED-04: audio above 16 MiB is interrupted before publishing media | Sim |
+| `test/chat-media-upload-routes.test.js:272`: `assert.deepEqual(await readdir(h.root), []);` | MED-04: audio above 16 MiB is interrupted before publishing media | Sim |
+| `test/chat-media-upload-routes.test.js:281`: `assert.equal(response.statusCode, 503);` | MED-28: failed spool removal retains charged admission and responds503 | Sim |
+| `test/chat-media-upload-routes.test.js:282`: `assert.equal(h.records.size, 0);` | MED-28: failed spool removal retains charged admission and responds503 | Sim |
+| `test/chat-media-upload-routes.test.js:283`: `assert.equal(h.reservations.size, 1);` | MED-28: failed spool removal retains charged admission and responds503 | Sim |
+| `test/chat-media-upload-routes.test.js:284`: `assert.equal((await readdir(h.root)).length, 1);` | MED-28: failed spool removal retains charged admission and responds503 | Sim |
+| `test/chat-media-upload-postgres-live.test.js:44`: `assert.equal(new URL(connectionString).pathname, '/crm_silmer_test');` | T7 isolamento de banco / quota antes de bytes | Sim |
+| `test/chat-media-upload-postgres-live.test.js:110`: `assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: String(row.reservationBytes), });` | MED-28: durable admission reserves worst case before any media/job exists | Sim |
+| `test/chat-media-upload-postgres-live.test.js:115`: `assert.equal( (await pool.query('SELECT state FROM crm.chat_media_admissions')).rows[0] .state, 'receiving', );` | MED-28: durable admission reserves worst case before any media/job exists | Sim |
+| `test/chat-media-upload-postgres-live.test.js:120`: `assert.equal( ( await pool.query( 'SELECT automation_state,automation_epoch,version FROM crm.conversations', ) ).rows[0].automation_state, 'assistant', );` | MED-28: durable admission reserves worst case before any media/job exists | Sim |
+| `test/chat-media-upload-postgres-live.test.js:133`: `assert.deepEqual(result, { mediaId: row.id, duplicate: false });` | MED-06/28: atomic completion moves reservation once and queues a complete upload | Sim |
+| `test/chat-media-upload-postgres-live.test.js:134`: `assert.deepEqual(await counts(), { media: 1, jobs: 1, reserved: '200' });` | MED-06/28: atomic completion moves reservation once and queues a complete upload | Sim |
+| `test/chat-media-upload-postgres-live.test.js:136`: `assert.equal(media.input_size_bytes, '100');` | MED-06/28: atomic completion moves reservation once and queues a complete upload | Sim |
+| `test/chat-media-upload-postgres-live.test.js:137`: `assert.equal(media.declared_mime_type, 'image/png');` | MED-06/28: atomic completion moves reservation once and queues a complete upload | Sim |
+| `test/chat-media-upload-postgres-live.test.js:138`: `assert.equal(media.spool_key, row.id);` | MED-06/28: atomic completion moves reservation once and queues a complete upload | Sim |
+| `test/chat-media-upload-postgres-live.test.js:139`: `assert.equal(media.state, 'uploaded');` | MED-06/28: atomic completion moves reservation once and queues a complete upload | Sim |
+| `test/chat-media-upload-postgres-live.test.js:140`: `assert.deepEqual( ( await pool.query( 'SELECT state,reservation_bytes,media_id FROM crm.chat_media_admissions', ) ).rows, [{ state: 'consumed', reservation_bytes: '0', media_id: row.id }], );` | MED-06/28: atomic completion moves reservation once and queues a complete upload | Sim |
+| `test/chat-media-upload-postgres-live.test.js:148`: `assert.deepEqual( ( await pool.query( 'SELECT queue,job_type,effect_policy,chat_media_id FROM crm.outbox_jobs', ) ).rows, [ { queue: 'chat_media', job_type: 'chat_media.process', effect_policy: 'internal', chat_media_id: row.id, }, ], );` | MED-06/28: atomic completion moves reservation once and queues a complete upload | Sim |
+| `test/chat-media-upload-postgres-live.test.js:172`: `assert.deepEqual(replay, { replay: { id: row.id, request_fingerprint: 'c'.repeat(64) }, });` | MED-06: accepted replay requires no reservation even when quota is full | Sim |
+| `test/chat-media-upload-postgres-live.test.js:175`: `assert.deepEqual(await counts(), { media: 1, jobs: 1, reserved: '200' });` | MED-06: accepted replay requires no reservation even when quota is full | Sim |
+| `test/chat-media-upload-postgres-live.test.js:183`: `assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);` | MED-06: concurrent same scope has one durable admission and active replay 409 | Sim |
+| `test/chat-media-upload-postgres-live.test.js:184`: `assert.equal( /** @type {any} */ (results.find((r) => r.status === 'rejected')).reason .statusCode, 409, );` | MED-06: concurrent same scope has one durable admission and active replay 409 | Sim |
+| `test/chat-media-upload-postgres-live.test.js:189`: `assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: String(row.reservationBytes), });` | MED-06: concurrent same scope has one durable admission and active replay 409 | Sim |
+| `test/chat-media-upload-postgres-live.test.js:201`: `assert.equal(replay.replay.id, row.id);` | MED-28: accepted replays and divergent hashes share 12/min throttle without extra quota | Sim |
+| `test/chat-media-upload-postgres-live.test.js:203`: `await assert.rejects(repository.admit({ ...row, id: randomUUID() }), { statusCode: 429, });` | MED-28: accepted replays and divergent hashes share 12/min throttle without extra quota | Sim |
+| `test/chat-media-upload-postgres-live.test.js:206`: `assert.deepEqual(await counts(), { media: 1, jobs: 1, reserved: '200' });` | MED-28: accepted replays and divergent hashes share 12/min throttle without extra quota | Sim |
+| `test/chat-media-upload-postgres-live.test.js:214`: `await assert.rejects(repository.admit(input()), { statusCode: 429 });` | MED-28: quota includes used plus reserved and rejects excess atomically | Sim |
+| `test/chat-media-upload-postgres-live.test.js:215`: `assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: String(row.reservationBytes), });` | MED-28: quota includes used plus reserved and rejects excess atomically | Sim |
+| `test/chat-media-upload-postgres-live.test.js:235`: `await assert.rejects(repository.complete(completed(row)), { statusCode: mutate.startsWith('assigned') ? 403 : 409, });` | MED-08: transfer or close during streaming prevents completion and preserves charged orphan | Sim |
+| `test/chat-media-upload-postgres-live.test.js:238`: `assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: String(row.reservationBytes), });` | MED-08: transfer or close during streaming prevents completion and preserves charged orphan | Sim |
+| `test/chat-media-upload-postgres-live.test.js:244`: `assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: '0' });` | MED-08: transfer or close during streaming prevents completion and preserves charged orphan | Sim |
+| `test/chat-media-upload-postgres-live.test.js:253`: `await assert.rejects(repository.admit(input()), { statusCode: 429 });` | MED-28: one session allows 12 admissions per minute even after confirmed cleanup | Sim |
+| `test/chat-media-upload-postgres-live.test.js:254`: `assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: '0' });` | MED-28: one session allows 12 admissions per minute even after confirmed cleanup | Sim |
+| `test/chat-media-upload-postgres-live.test.js:299`: `assert.equal(response.statusCode, n < 12 ? 422 : 429);` | MED-28: cookie order and unrelated cookies cannot bypass the 12/min session limit | Sim |
+| `test/chat-media-upload-postgres-live.test.js:301`: `assert.equal( ( await pool.query( 'SELECT count(DISTINCT session_hash)::int AS count FROM crm.chat_media_admissions', ) ).rows[0].count, 1, );` | MED-28: cookie order and unrelated cookies cannot bypass the 12/min session limit | Sim |
+| `test/chat-media-upload-postgres-live.test.js:309`: `assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: '0' });` | MED-28: cookie order and unrelated cookies cannot bypass the 12/min session limit | Sim |
+| `test/chat-media-upload-postgres-live.test.js:321`: `await assert.rejects( repository.complete(completed(row)), /synthetic job write failure/u, );` | MED-05/28: job insertion rollback leaves admission charged and no media published | Sim |
+| `test/chat-media-upload-postgres-live.test.js:325`: `assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: String(row.reservationBytes), });` | MED-05/28: job insertion rollback leaves admission charged and no media published | Sim |
+| `test/chat-media-upload-postgres-live.test.js:330`: `assert.equal( (await pool.query('SELECT state FROM crm.chat_media_admissions')) .rows[0].state, 'receiving', );` | MED-05/28: job insertion rollback leaves admission charged and no media published | Sim |
+| `test/chat-media-upload-postgres-live.test.js:394`: `assert.equal((await api.inject(request)).statusCode, 503);` | MED-19/28: commit response lost preserves accepted spool (reconciliation unavailable=${unavailable}) | Sim |
+| `test/chat-media-upload-postgres-live.test.js:396`: `assert.equal( await ( await import('node:fs/promises') ).readFile(join(root, media.spool_key), 'utf8'), 'synthetic-bytes', );` | MED-19/28: commit response lost preserves accepted spool (reconciliation unavailable=${unavailable}) | Sim |
+| `test/chat-media-upload-postgres-live.test.js:402`: `assert.deepEqual(await counts(), { media: 1, jobs: 1, reserved: '30' });` | MED-19/28: commit response lost preserves accepted spool (reconciliation unavailable=${unavailable}) | Sim |
+| `test/chat-media-upload-postgres-live.test.js:403`: `assert.equal( (await pool.query('SELECT state FROM crm.chat_media_admissions')) .rows[0].state, 'consumed', );` | MED-19/28: commit response lost preserves accepted spool (reconciliation unavailable=${unavailable}) | Sim |
+| `test/chat-media-upload-postgres-live.test.js:409`: `assert.equal(replay.statusCode, 202);` | MED-19/28: commit response lost preserves accepted spool (reconciliation unavailable=${unavailable}) | Sim |
+| `test/chat-media-upload-postgres-live.test.js:410`: `assert.equal(replay.json().mediaId, media.id);` | MED-19/28: commit response lost preserves accepted spool (reconciliation unavailable=${unavailable}) | Sim |
+| `test/chat-media-upload-postgres-live.test.js:411`: `assert.deepEqual(await counts(), { media: 1, jobs: 1, reserved: '30' });` | MED-19/28: commit response lost preserves accepted spool (reconciliation unavailable=${unavailable}) | Sim |
+| `test/chat-media-upload-postgres-live.test.js:420`: `assert.deepEqual(await repository.listAbandonedAdmissions(), [ { id: orphan.id, bucket_alias: 'chat-dev', reservation_bytes: String(orphan.reservationBytes), }, ]);` | MED-27 support: orphan discovery preserves reservation until confirmed cleanup, consumed excluded | Sim |
+| `test/chat-media-upload-postgres-live.test.js:429`: `assert.deepEqual(await repository.listAbandonedAdmissions(), []);` | MED-27 support: orphan discovery preserves reservation until confirmed cleanup, consumed excluded | Sim |
+| `test/chat-media-upload-postgres-live.test.js:430`: `assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: '0' });` | MED-27 support: orphan discovery preserves reservation until confirmed cleanup, consumed excluded | Sim |

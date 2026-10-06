@@ -14,6 +14,7 @@ import {
   WebhookEventConflictError,
 } from '@crm-silmer/integration-reliability';
 import { registerConversationRoutes } from './conversation-routes.js';
+import { registerChatMediaUploadRoutes } from './chat-media-upload-routes.js';
 import { registerIdentityRoutes } from './identity-routes.js';
 import { registerN8nRoutes } from './n8n-routes.js';
 import { registerOperationRoutes } from './operation-routes.js';
@@ -41,6 +42,7 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   identity?: Record<string, any>,
  *   n8n?: any,
  *   conversations?: any,
+ *   chatMedia?: any,
  *   handoffs?: any,
  *   operations?: any,
  *   orders?: any
@@ -235,6 +237,18 @@ export function createApi(options = {}, runtime = {}) {
       if (!context) throw new Error('Missing request context');
       return context;
     });
+  }
+
+  if (runtime.chatMedia) {
+    registerChatMediaUploadRoutes(
+      api,
+      runtime.chatMedia,
+      (/** @type {object} */ request) => {
+        const context = requests.get(request);
+        if (!context) throw new Error('Missing request context');
+        return context;
+      },
+    );
   }
 
   if (runtime.orders) {

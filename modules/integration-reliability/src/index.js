@@ -79,3 +79,4 @@ export {
   createChatMediaProcessJobHandler,
 } from './chat-media-process-worker.js';
 export { PostgresChatMediaRepository } from './postgres-chat-media-repository.js';
+export { PostgresChatMediaUploadRepository } from './postgres-chat-media-upload-repository.js';

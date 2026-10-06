@@ -120,6 +120,24 @@ localizar um canário restante, revisar exclusivamente o prefixo sintético
 
 ## Gates e promoção
 
+Upload humano T7 exige CHAT_MEDIA_ENABLED=true, CHAT_MEDIA_SPOOL_ROOT próprio,
+CHAT_MEDIA_BUCKET_ALIAS=chat-dev ou chat-operational e CHAT_MEDIA_QUOTA_BYTES
+(DEV padrão 1 GiB). Envelope usa INBOX_MESSAGE_ENVELOPE_KEY com AAD
+chat-media-filename:UUID. API/worker compartilham UUID relativo; roots absolutos
+podem ser distintos. Não usar PRIVATE_MEDIA_ROOT para esse spool.
+
+0029 reserva antes de bytes e limita 12 admissões/minuto por hash do token
+crm_session canônico. Cookies extras/ordem não mudam o contador. Multipart
+exige kind, origin, expectedVersion antes de file; arquivo vazio usa 422.
+Replay aceito mede hash sem novo spool/reserva. Recebimento ativo/incompleto
+usa 409; crash não libera quota. Somente remoção confirmada de receiving
+permite release; consumed permanece para worker. Conclusão DB incerta consulta
+ledger sob lock antes de cleanup; consulta indisponível preserva spool/reserva.
+T22 deverá consumir listAbandonedAdmissions (>24h), lock/recheck e confirmar
+remoção antes de release. Não há sweeper de admissões nesta fase.
+
+Novo live T7: `rtk proxy node --test --test-concurrency=1 test/chat-media-upload-postgres-live.test.js`.
+
 ```powershell
 rtk proxy node --test test/rustfs-live-smoke.test.js
 rtk npm run validate:topology

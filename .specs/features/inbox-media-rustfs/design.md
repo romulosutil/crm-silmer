@@ -83,6 +83,17 @@ ler bucket operacional. Sem ACL pública e sem dependência de lifecycle S3.
 
 Upload fica temporariamente em spool privado montado na API/worker, UUID opaco,
 sem nome do cliente. API reserva quota transacional antes de consumir bytes.
+Migration expand 0029 registra admissões em `chat_media_admissions` com UUID
+do spool, hash somente do crm_session canônico e reserva. A API não mantém
+transação SQL aberta durante streaming. Conclusão converte ledger em mídia
+e job na mesma transação e ajusta reserva aos bytes reais. Arquivo vazio usa
+422 antes do 202, sem input_size_bytes fictício. Replay aceito mede/hash bytes
+sem novo spool/cobrança, inclusive com quota cheia; receiving ativo usa 409.
+Commit incerto exige consultar estado do ledger sob lock: consumed preserva
+spool; falha da reconciliação também preserva. Somente receiving confirmado
+permite cleanup/release. Crash mantém reserva. Discovery
+`listAbandonedAdmissions` fornece receiving >24h para lock/recheck e limpeza
+confirmada em T22; o método não executa cleanup nesta fase.
 Admissão T7 reserva o pior caso antes do streaming: anexo, duas vezes o
 limite do tipo; gravação, três vezes 16 MiB. Após medir os bytes reais,
 pode ajustar para duas vezes a entrada do anexo, ou entrada mais duas vezes

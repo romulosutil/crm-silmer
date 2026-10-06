@@ -175,7 +175,7 @@
         {
           "name": "silmer-rustfs",
           "kind": "object-storage",
-          "decisionRecord": "docs/adr/021-arquivos-da-arte-no-rustfs.md",
+          "decisionRecord": "docs/adr/023-arquivos-da-arte-no-rustfs.md",
           "image": "rustfs",
           "imageRef": "rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c",
           "license": "Apache-2.0",

@@ -1,4 +1,4 @@
--- ADR 021: the art files of an order live in RustFS; this table is the
+-- ADR 023: the art files of an order live in RustFS; this table is the
 -- catalog the API reads to list, download and remove them. Up to five
 -- reference files plus one final art per order. The original file name may
 -- carry customer data, so it lives only inside name_envelope; object keys are

@@ -808,7 +808,7 @@ pontos da ADR 016; o vendedor completa as escolhas operacionais antes de
 | REV-01 | A tela e a nova ficha usam **Tipo de roupa** para `item.tipo`, sem editar ou imprimir `modelo`; dados históricos de modelo continuam preservados.                                                                                                                                    |
 | REV-02 | O ponto 7 aparece como **Definição da gola**, usa `item.gola` e lê `vies_gola` antigo quando aquele estiver vazio; salvar outro campo não apaga essa definição.                                                                                                                      |
 | REV-03 | Cada item tem `tipo_servico`. É possível salvar um rascunho sem ele, mas **Gerar pedido** informa qual item falta; itens do mesmo pedido podem ter serviços diferentes. Gerados antigos seguem legíveis.                                                                             |
-| REV-04 | O vendedor autorizado marca separadamente **Feito pelo cliente** e **Feito pela Silmer**. A automação não define a origem. O upload informa os formatos, mas fica desativado até haver armazenamento durável e validação (ativado pela ADR 021; ver ARQ-01–ARQ-09). |
+| REV-04 | O vendedor autorizado marca separadamente **Feito pelo cliente** e **Feito pela Silmer**. A automação não define a origem. O upload informa os formatos, mas fica desativado até haver armazenamento durável e validação (ativado pela ADR 023; ver ARQ-01–ARQ-09). |
 | REV-05 | A revisão impressa candidata preserva lastro, paginação e 14 campos vazios de produção; mostra serviço por item, origem da estampa e definição da gola. V2, v3 e seus hashes não mudam. A troca do template depende de aprovação própria.                                            |
 | REV-06 | Dashboard mostra número de vendas confirmadas e valor final vendido, com período e universo explícitos; análises derivadas não contam pendentes como venda nem valor recebido.                                                                                                       |
 | REV-07 | Linhas de Pedidos e Clientes abrem ao clicar na área não interativa e mantêm link, foco e operação por teclado. Tabela larga rola dentro de região focável no celular.                                                                                                               |
@@ -834,10 +834,10 @@ Estes critérios superam REV-02–REV-05 onde divergem.
 | TEC-07 | `ficha-canonical-v5`: resumo com Cliente, Entrega prometida e Total de peças; apoio com Nome do pedido, Vendedor, Data do pedido e FAB; lastro com Primeiro contato, Pago em e Entregue em; **Arte do pedido** em toda página comercial; itens com os pontos de TEC-05; produção com **Cores da arte** e **Nº de cores — …**. V2–v4, PDFs e hashes intactos. `PRINT_TEMPLATE` muda para v5 só após a aprovação provisória do PO; a assinatura física de Rose e Operação continua antes da produção. |
 | TEC-08 | O [glossário](../../../docs/product/GLOSSARIO.md) fixa Técnica, Arte do pedido, Estampa (referência), Cor do tecido, Cores da arte, Nome do pedido, Pago em e Entregue em.                                                                                                                                                                                                                                                                                                                          |
 
-## Arquivos da arte no RustFS (ADR 021, 05/10/2026)
+## Arquivos da arte no RustFS (ADR 023, 05/10/2026)
 
 O PO ativou “Adicionar arquivos da arte” com armazenamento no RustFS
-([RFC 009](../../../docs/rfc/009-arquivos-da-arte-no-rustfs.md)) e aprovou o
+([RFC 011](../../../docs/rfc/011-arquivos-da-arte-no-rustfs.md)) e aprovou o
 [design](../../../docs/design/arquivos-da-arte.html). Estes critérios superam
 REV-04 onde divergem.
 

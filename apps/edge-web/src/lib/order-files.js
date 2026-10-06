@@ -1,4 +1,4 @@
-// ADR 021: what the page knows about an order's art files before asking the
+// ADR 023: what the page knows about an order's art files before asking the
 // API. The API checks everything again; these checks only spare the seller a
 // 10 MB upload that would be refused.
 

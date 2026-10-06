@@ -36,7 +36,7 @@
   },
   "validFileArchive": {
     "destination": "crm-order-files-rustfs",
-    "decisionRecord": "docs/adr/021-arquivos-da-arte-no-rustfs.md",
+    "decisionRecord": "docs/adr/023-arquivos-da-arte-no-rustfs.md",
     "handoffMode": "operator-attaches-file-to-order",
     "automaticPromotion": false,
     "storedOnlyThroughCrmApi": true,

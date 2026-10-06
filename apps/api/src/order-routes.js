@@ -276,7 +276,7 @@ export function registerOrderRoutes(api, orders, contextFor) {
 }
 
 /**
- * ADR 021: the art files of an order. Listing and downloading need order
+ * ADR 023: the art files of an order. Listing and downloading need order
  * access; sending and removing are order edits (owner or admin, pending
  * order) under an Idempotency-Key. The upload is multipart with a `slot`
  * field, the `file` and, for an image, the `thumbnail` the page drew.

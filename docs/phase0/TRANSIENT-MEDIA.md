@@ -14,7 +14,7 @@ Se o arquivo for inválido, ele é descartado e nunca chega ao pedido. Um
 arquivo só é válido quando passa limite, MIME real, hash e varredura e uma
 pessoa o classifica como necessário à finalidade operacional. Se atender às
 duas condições, o operador o anexa ao pedido, que o guarda no RustFS privado
-do CRM ([ADR 021](../adr/021-arquivos-da-arte-no-rustfs.md)). O CRM registra
+do CRM ([ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md)). O CRM registra
 um recibo do handoff — hash, operador, horário e resultado — e então elimina a
 cópia temporária. Não existe promoção automática a partir do canal nem URL
 pública do arquivo.
@@ -54,7 +54,7 @@ subconjunto mínimo para uma classe durável antes desse prazo.
 
 Esta entrega fixa e testa a regra de domínio. Ela não provisiona o volume no
 EasyPanel, não implementa o worker de mídia e não provisiona o RustFS. Esses
-passos pertencem a T02/T06 e à ADR 021. O gate R2 permanece apenas como opção
+passos pertencem a T02/T06 e à ADR 023. O gate R2 permanece apenas como opção
 futura na issue `#29`; nenhuma assinatura ou bucket foi autorizado.
 
 ## Verificação

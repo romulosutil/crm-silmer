@@ -21,7 +21,7 @@ import {
 import { syntheticItems } from './fixtures/order-items.js';
 import { orderContextsFrom } from './fixtures/order-contexts.js';
 
-// ADR 021: art files of an order — five references plus one final art,
+// ADR 023: art files of an order — five references plus one final art,
 // 10 MB each, content checked against the extension.
 
 const SELLER = Object.freeze({

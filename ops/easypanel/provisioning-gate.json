@@ -83,7 +83,7 @@
   "objectStorageGate": {
     "status": "pending-external",
     "service": "silmer-rustfs",
-    "decisionRecord": "docs/adr/021-arquivos-da-arte-no-rustfs.md",
+    "decisionRecord": "docs/adr/023-arquivos-da-arte-no-rustfs.md",
     "serviceCreated": false,
     "privateBucketCreated": false,
     "apiCredentialsSeparated": false,

@@ -189,7 +189,7 @@ export function createOrdersForServer({ database, environment, operations }) {
   return createOrderApiRuntime(database, {
     access: /** @type {any} */ (operations),
     environment,
-    // ADR 021: the art files turn on with the OBJECT_STORAGE_* variables.
+    // ADR 023: the art files turn on with the OBJECT_STORAGE_* variables.
     storage: objectStorageFromEnvironment(environment),
   });
 }

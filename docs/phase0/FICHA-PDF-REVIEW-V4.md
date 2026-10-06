@@ -80,5 +80,5 @@ Antes de ativar a v4 para pedidos antigos, o vendedor deve revisar itens cujo
 A decisão provisória para testes está registrada. A revisão física por Rose e
 Operação permanece pendente antes da produção. O envio dos arquivos da arte,
 hoje guardados no RustFS
-([ADR 021](../adr/021-arquivos-da-arte-no-rustfs.md)), e o aviso a Rose são
+([ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md)), e o aviso a Rose são
 fluxos separados.

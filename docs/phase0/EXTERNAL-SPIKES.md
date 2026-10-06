@@ -33,7 +33,7 @@ Rastreabilidade: `CHN-P04-01..14`, `MSG-01..04`, `ORD-03..05`, `PAY-02`,
   volume privado da VPS e expiram no fim da jornada ou em sete dias, o que
   ocorrer primeiro. O operador anexa o arquivo válido ao pedido, que o guarda
   no RustFS privado do CRM
-  ([ADR 021](../adr/021-arquivos-da-arte-no-rustfs.md)); não há promoção
+  ([ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md)); não há promoção
   automática a partir do canal. O contrato executável está em
   [`media-retention-policy.json`](./media-retention-policy.json).
 - Gemini Developer API: tier pago e `gemini-2.5-flash-lite` foram aprovados

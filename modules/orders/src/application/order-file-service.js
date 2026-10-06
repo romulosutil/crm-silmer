@@ -52,7 +52,7 @@ function sha256Hex(content) {
 }
 
 /**
- * ADR 021: upload, list, download and remove an order's art files. The bytes
+ * ADR 023: upload, list, download and remove an order's art files. The bytes
  * go to object storage first and the catalog row second, so a row never
  * points at a missing object; when the row is refused, the stored bytes are
  * deleted again. Download reads only need order access, so a confirmed order

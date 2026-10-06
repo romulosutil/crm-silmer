@@ -38,7 +38,7 @@ histórico e não define o sistema novo.
 - Automação: n8n obrigatório para WhatsApp, provedor de IA e jornada,
   sempre por APIs do CRM e sem acesso direto ao banco.
 - Integrações: contratos canônicos entre n8n e CRM; mídia transitória em volume
-  privado da VPS, arquivos do pedido no RustFS privado da rede interna (ADR 021)
+  privado da VPS, arquivos do pedido no RustFS privado da rede interna (ADR 023)
   e storage S3-compatible gerenciado diferido para a issue `#29`.
 
 Pinia/Nuxt, outros frameworks de frontend, Redis, microserviços adicionais e

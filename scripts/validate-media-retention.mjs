@@ -50,7 +50,7 @@ export function validateMediaRetentionPolicy(document) {
   invariant(
     document.validFileArchive?.destination === 'crm-order-files-rustfs' &&
       document.validFileArchive.decisionRecord ===
-        'docs/adr/021-arquivos-da-arte-no-rustfs.md' &&
+        'docs/adr/023-arquivos-da-arte-no-rustfs.md' &&
       document.validFileArchive.handoffMode ===
         'operator-attaches-file-to-order' &&
       document.validFileArchive.automaticPromotion === false &&

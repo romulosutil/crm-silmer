@@ -112,7 +112,7 @@ export function validateExternalEffects(document) {
   invariant(
     media?.validFileHandoff?.destination === 'crm-order-files-rustfs' &&
       media.validFileHandoff.decisionRecord ===
-        'docs/adr/021-arquivos-da-arte-no-rustfs.md' &&
+        'docs/adr/023-arquivos-da-arte-no-rustfs.md' &&
       media.validFileHandoff.mode === 'manual-operational' &&
       media.validFileHandoff.automaticPromotion === false &&
       media.validFileHandoff.failureExtendsTransientExpiry === false,

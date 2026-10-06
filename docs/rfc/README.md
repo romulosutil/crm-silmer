@@ -26,3 +26,4 @@ entre os documentos.
 
 - [009 — OpenAI no MVP](009-openai-no-mvp.md), decidida na ADR 021.
 - [010 — Deploy automático GitHub → EasyPanel](010-deploy-automatico-github-easypanel.md), decidida na ADR 022.
+- [011 — Arquivos da arte do pedido no RustFS](011-arquivos-da-arte-no-rustfs.md), decidida na ADR 023.

@@ -51,7 +51,7 @@ nulos e flags de workflow não descrevem automaticamente o ambiente atual.
 Atualizá-lo exige configuração e prova live; este planejamento não comprova
 a existência, ausência ou estado atual dos serviços do n8n.
 
-O `silmer-rustfs` da [ADR 021](docs/adr/021-arquivos-da-arte-no-rustfs.md)
+O `silmer-rustfs` da [ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)
 aparece em `plannedServices` com status `pending-provisioning`, e o
 `objectStorageGate` de `ops/easypanel/provisioning-gate.json` fica
 `pending-external` até existirem serviço, bucket privado, credenciais
@@ -60,7 +60,7 @@ separadas, backup off-host e restore no drill junto com o PostgreSQL.
 Não subir no MVP:
 
 - Redis ou BullMQ;
-- MinIO (o object storage dos arquivos do pedido é o RustFS da ADR 021);
+- MinIO (o object storage dos arquivos do pedido é o RustFS da ADR 023);
 - Elasticsearch ou Meilisearch;
 - Grafana, Prometheus ou Loki próprios;
 - banco/admin UI permanentemente habilitado.
@@ -202,8 +202,8 @@ do piloto interno. Não há promessa de restauração desses bytes.
 
 ### Arquivos do pedido no RustFS
 
-A [RFC 009](docs/rfc/009-arquivos-da-arte-no-rustfs.md) e a
-[ADR 021](docs/adr/021-arquivos-da-arte-no-rustfs.md) guardam os arquivos da
+A [RFC 011](docs/rfc/011-arquivos-da-arte-no-rustfs.md) e a
+[ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md) guardam os arquivos da
 arte no `silmer-rustfs`: RustFS S3-compatible, licença Apache-2.0, imagem
 `rustfs/rustfs:1.0.1` presa ao digest
 `sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`.
@@ -521,7 +521,7 @@ Produção:
 - `pg_dump` diário, 35 cópias, para ambos os bancos;
 - cópia do bucket `crm-silmer-arquivos` do RustFS no mesmo backup off-host,
   junto com os dumps do CRM, porque o volume `/data` divide a VPS com o
-  PostgreSQL (ADR 021);
+  PostgreSQL (ADR 023);
 - lifecycle apaga qualquer backup com mais de 35 dias;
 - backup manual verificado antes de mudança destrutiva;
 - restore mensal do banco em serviço temporário `postgres-restore-drill`,
@@ -624,7 +624,7 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] PostgreSQL e serviços internos sem portas públicas.
 - [ ] `silmer-rustfs` sem domínio nem porta pública, bucket privado,
       credencial `OBJECT_STORAGE_*` só na API e bucket restaurado no drill
-      junto com o PostgreSQL (ADR 021).
+      junto com o PostgreSQL (ADR 023).
 - [ ] Editor e API administrativa do n8n sem rota pública; apenas webhook do canal publicado.
 - [ ] Ator `AUTOMATION_EXECUTOR` sem acesso administrativo ou direto ao banco do CRM.
 - [ ] Backup horário/diário executado e alerta configurado.
@@ -660,7 +660,7 @@ os gates de backup externo, monitoramento e recovery drill em host limpo. O
 risco específico de perder mídia transitória de até sete dias também foi aceito
 para o uso interno; ele não amplia o RPO de PostgreSQL, Pedido, Ficha, PIX,
 auditoria, backups ou tombstones. O RustFS dos arquivos do pedido divide o
-domínio de falha com o PostgreSQL, risco aceito pela ADR 021 somente com o
+domínio de falha com o PostgreSQL, risco aceito pela ADR 023 somente com o
 bucket no backup off-host e no drill. O
 primeiro gatilho de evolução é mover o CRM ou o PostgreSQL para projeto ou
 domínio de falha próprio quando qualquer condição ocorrer:

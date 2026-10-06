@@ -1,6 +1,6 @@
-# RFC 009 — Arquivos da arte do pedido no RustFS
+# RFC 011 — Arquivos da arte do pedido no RustFS
 
-Status: decidida pelo PO em 05/10/2026; registrada na [ADR 021](../adr/021-arquivos-da-arte-no-rustfs.md).
+Status: decidida pelo PO em 05/10/2026; registrada na [ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md).
 
 Data: 05/10/2026
 

@@ -22,7 +22,7 @@ Antes de qualquer execução externa:
    referências opacas, sem registrar host, IP, PII ou segredo. O backup externo
    inclui o bucket `crm-silmer-arquivos` do `silmer-rustfs`, porque o volume
    `/data` divide a VPS com o PostgreSQL
-   ([ADR 021](../../docs/adr/021-arquivos-da-arte-no-rustfs.md)).
+   ([ADR 023](../../docs/adr/023-arquivos-da-arte-no-rustfs.md)).
 3. Confirmar implementação e evidência do ledger de tombstones de `T06.3`, com
    credencial de restore read-only fora do runtime.
 4. Confirmar escrow acessível por duas pessoas designadas, sem expor valores.

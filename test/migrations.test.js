@@ -163,7 +163,7 @@ test('ships the orders table as an expand migration that never touches deals (AD
   assert.doesNotMatch(orders.sql, /crm\.deals/iu);
 });
 
-test('moves new valid-file receipts to RustFS and keeps old ones (ADR 021)', async () => {
+test('moves new valid-file receipts to RustFS and keeps old ones (ADR 023)', async () => {
   const handoff = (await loadMigrations()).find(
     ({ version }) => version === '0028',
   );

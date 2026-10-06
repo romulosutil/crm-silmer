@@ -1,6 +1,6 @@
 import { OrderError, OrderValidationError } from './errors.js';
 
-// ADR 021: the art files of an order. Five reference files plus one final
+// ADR 023: the art files of an order. Five reference files plus one final
 // art, 10 MB each. The extension must be on the allowlist and the content must
 // carry that format's signature, so a renamed executable is refused.
 

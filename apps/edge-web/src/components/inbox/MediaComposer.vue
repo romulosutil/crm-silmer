@@ -6,8 +6,9 @@ const props = defineProps({
   conversationId: { type: String, required: true },
   expectedVersion: { type: Number, required: true },
   disabled: { type: Boolean, default: false },
+  recording: { type: Object, default: null },
 });
-const emit = defineEmits(['sent']);
+const emit = defineEmits(['sent', 'sending-change']);
 const inputId = useId(),
   captionId = useId(),
   statusId = useId();
@@ -21,6 +22,7 @@ const file = ref(/** @type {File|null} */ (null)),
 const state = ref('empty'),
   error = ref(''),
   mediaId = ref('');
+const fileOrigin = ref('attachment');
 /** @type {{conversationId:string,expectedVersion:number,uploadKey:string}|null} */ let context =
   null;
 /** @type {{key:string,body:Record<string,any>}|null} */ let sendAttempt = null;
@@ -29,6 +31,11 @@ let generation = 0;
 const captionLength = computed(() => Array.from(caption.value).length);
 const busy = computed(() =>
   ['uploading', 'processing', 'sending'].includes(state.value),
+);
+watch(
+  () => state.value === 'sending',
+  (sending) => emit('sending-change', sending),
+  { immediate: true },
 );
 const sendAllowed = computed(
   () =>
@@ -91,6 +98,7 @@ function clear() {
   kind.value = '';
   caption.value = '';
   mediaId.value = '';
+  fileOrigin.value = 'attachment';
   error.value = '';
   state.value = 'empty';
   context = null;
@@ -113,8 +121,16 @@ async function selectFile(event) {
     error.value = 'Selecione apenas um arquivo.';
     return;
   }
-  const selected = files[0],
-    declaration = hint(selected);
+  await selectCandidate(files[0]);
+}
+/** @param {File} selected @param {string} [origin] */
+async function selectCandidate(selected, origin = 'attachment') {
+  const actualMime = selected.type.split(';')[0].trim().toLowerCase();
+  const declaration =
+    origin === 'recording' &&
+    ['audio/webm', 'audio/ogg', 'audio/mp4'].includes(actualMime)
+      ? { mime: selected.type, kind: 'audio' }
+      : hint(selected);
   if (!declaration) {
     error.value = 'Escolha JPEG, PNG, MP3, OGG, M4A ou MP4.';
     return;
@@ -134,6 +150,7 @@ async function selectFile(event) {
           lastModified: selected.lastModified,
         });
   kind.value = declaration.kind;
+  fileOrigin.value = origin;
   preview.value = URL.createObjectURL(file.value);
   context = {
     conversationId: props.conversationId,
@@ -224,7 +241,7 @@ async function prepare() {
     if (!mediaId.value) {
       const form = new FormData();
       form.set('kind', kind.value);
-      form.set('origin', 'attachment');
+      form.set('origin', fileOrigin.value);
       form.set('expectedVersion', String(captured.expectedVersion));
       form.set('file', file.value, file.value.name);
       const { data } = await request(
@@ -318,6 +335,14 @@ watch(
   },
 );
 onBeforeUnmount(() => clear());
+watch(
+  () => props.recording,
+  async (recording) => {
+    clear();
+    if (recording instanceof File)
+      await selectCandidate(recording, 'recording');
+  },
+);
 </script>
 
 <template>

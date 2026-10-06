@@ -1,5 +1,6 @@
 import { createApp, h, ref } from 'vue';
 import MediaComposer from '/src/components/inbox/MediaComposer.vue';
+import AudioRecorder from '/src/components/inbox/AudioRecorder.vue';
 import '/src/tokens.css';
 import '/src/styles.css';
 
@@ -33,12 +34,19 @@ createApp({
           'Fechar composer',
         ),
         visible.value
-          ? h(MediaComposer, {
-              conversationId: conversation.value,
-              expectedVersion: 4,
-              disabled: disabled.value,
-              onSent: () => (sent.value = true),
-            })
+          ? h(
+              new globalThis.URLSearchParams(globalThis.location.search).has(
+                'recorder',
+              )
+                ? AudioRecorder
+                : MediaComposer,
+              {
+                conversationId: conversation.value,
+                expectedVersion: 4,
+                disabled: disabled.value,
+                onSent: () => (sent.value = true),
+              },
+            )
           : null,
         sent.value ? h('p', { role: 'status' }, 'Mensagem enviada') : null,
       ]);

@@ -13,6 +13,17 @@
 
 ## Handoff
 
+T19 concluída; próxima T20. Recorder standalone acessível pede microfone apenas
+por ação explícita, negocia MIME, para em 300s/16MiB e libera tracks em descarte,
+troca, unmount e resposta de permissão tardia. Envio pendente impede nova captura
+e descarte, inclusive Escape; red factual seguido de green. E2E completo142pass,
+7skips anteriores(total149), incluindo18cenários T19. Quick/Build847pass/3skips.
+Chromium e Firefox reais com dispositivo sintético reproduzem áudio; Firefox
+Linux em Docker com PulseAudio privado passou3repetições e decodeFFmpeg.
+Firefox Windows falha SideBySide mesmo após reinstalação oficial; não validado.
+Microfone físico/UAT e pipeline worker completo continuam T24; nenhum Verified.
+Autor anterior terminou com erro de quota; root assumiu fontes/index/gates.
+
 Correção T18/MED-06/25 concluída: POSTmessages pendente cancelado pelo bloqueio
 conserva tentativa imutável/ready. Reabilitar permite retry explícito com mesma
 chave/body/conversa/version/caption, sem envio automático. Red retry disabled;

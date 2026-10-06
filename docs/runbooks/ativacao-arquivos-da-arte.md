@@ -38,9 +38,13 @@ arquivo, no repositório ou em chat.
    ```
 
 3. **Implantar o `silmer-api`** para carregar as variáveis.
-4. **Migrações.** No console do container novo do `silmer-api`, rodar
-   `npm run db:migrate`. Aplica só `*.expand.sql` pendentes (0027 e 0028), sob
-   advisory lock; não reescreve dados. Registrar a saída sem segredos.
+4. **Migrações.** A imagem de runtime não tem `npm`; o CLI roda com `node`
+   e usa a `DATABASE_URL` do container. No console do `silmer-api`, conferir
+   que `ls modules/database/migrations | tail -3` lista 0027 e 0028 (senão o
+   container ainda é o antigo) e rodar `node modules/database/src/cli.js`.
+   Aplica só `*.expand.sql` pendentes, sob advisory lock, sem reescrever
+   dados; a saída esperada é `{"applied_count":2,"phase":"expand",...}`.
+   Registrar a saída sem segredos.
 5. **Smoke.** Num pedido pendente de teste, enviar um PNG pequeno, conferir a
    miniatura, baixar o arquivo e removê-lo. Repetir com um `.cdr` ou `.pdf`.
    Num pedido gerado, conferir que só há “Baixar”.

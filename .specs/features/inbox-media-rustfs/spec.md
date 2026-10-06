@@ -179,7 +179,7 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 | MED-13         | Liberar recursos      | In Tasks | Pending     | T19,T21               |
 | MED-14         | Normalização          | Execute  | In Progress | T5,T6                 |
 | MED-15         | Preservação           | Execute  | In Progress | T2,T3,T9,T16,T22,T23  |
-| MED-16         | Leitura privada       | In Tasks | Pending     | T8,T9,T13             |
+| MED-16         | Leitura privada       | Execute  | In Progress | T8,T9,T13             |
 | MED-17         | Range                 | Execute  | In Progress | T3,T9,T20             |
 | MED-18         | Range inválido        | In Tasks | Pending     | T9                    |
 | MED-19         | Falha S3              | Execute  | In Progress | T3,T6,T9,T20          |

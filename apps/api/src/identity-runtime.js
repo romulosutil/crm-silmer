@@ -274,7 +274,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
       });
     },
 
-    /** @param {{action: string, sessionToken: string}} input */
+    /** @param {{action: string, sessionToken: string, authenticationFailureStatus?:401}} input */
     async authorizeOperationalRead(input) {
       if (!OPERATIONAL_READ_ACTIONS.has(input.action)) {
         throw new IdentityHttpError(403, 'FORBIDDEN');
@@ -285,7 +285,12 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           session = await identityService(client).authenticate(
             input.sessionToken,
           );
-        } catch {
+        } catch (error) {
+          if (input.authenticationFailureStatus === 401) {
+            if (/** @type {any} */ (error)?.code === 'INVALID_SESSION')
+              throw new IdentityHttpError(401, 'INVALID_CREDENTIALS');
+            throw error;
+          }
           throw new IdentityHttpError(403, 'FORBIDDEN');
         }
         const repository = createPostgresIdentityRepository(client);

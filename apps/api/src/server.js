@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { createDatabase } from '@crm-silmer/database';
@@ -168,7 +169,10 @@ export function createServerApi(runtime = {}) {
               environment.CHAT_MEDIA_QUOTA_BYTES ?? 1073741824,
             ),
           }),
-          access: operationalAuth,
+          access: {
+            ...operationalAuth,
+            authorizeRead: operations?.authorizeRead,
+          },
           spoolRoot: requireMediaSpoolRoot(environment),
           envelopeKey: readEnvelopeKey(
             environment.INBOX_MESSAGE_ENVELOPE_KEY,
@@ -202,11 +206,17 @@ export function createServerApi(runtime = {}) {
 }
 
 /** @param {Record<string,string|undefined>} environment */
-function requireMediaSpoolRoot(environment) {
+export function requireMediaSpoolRoot(environment) {
   const root = environment.CHAT_MEDIA_SPOOL_ROOT;
-  if (!root || root === environment.PRIVATE_MEDIA_ROOT)
+  const canonical = (/** @type {string} */ path) =>
+    process.platform === 'win32' ? resolve(path).toLowerCase() : resolve(path);
+  if (
+    !root ||
+    (environment.PRIVATE_MEDIA_ROOT &&
+      canonical(root) === canonical(environment.PRIVATE_MEDIA_ROOT))
+  )
     throw new Error('A distinct CHAT_MEDIA_SPOOL_ROOT is required');
-  return root;
+  return resolve(root);
 }
 
 /**

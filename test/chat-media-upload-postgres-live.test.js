@@ -256,6 +256,11 @@ if (connectionString) {
   test('MED-28: cookie order and unrelated cookies cannot bypass the 12/min session limit', async (t) => {
     const root = await mkdtemp(join(tmpdir(), 'crm-media-throttle-'));
     const access = {
+      async authorizeRead() {
+        return {
+          actor: { id: 'upload-seller', kind: 'human', capabilities: [] },
+        };
+      },
       async authorize() {
         return {
           actor: { id: 'upload-seller', kind: 'human', capabilities: [] },
@@ -343,6 +348,11 @@ if (connectionString) {
     test(`MED-19/28: commit response lost preserves accepted spool (reconciliation unavailable=${unavailable})`, async (t) => {
       const root = await mkdtemp(join(tmpdir(), 'crm-media-ambiguous-'));
       const access = {
+        async authorizeRead() {
+          return {
+            actor: { id: 'upload-seller', kind: 'human', capabilities: [] },
+          };
+        },
         async authorize() {
           return {
             actor: { id: 'upload-seller', kind: 'human', capabilities: [] },
@@ -428,5 +438,208 @@ if (connectionString) {
     await repository.release(orphan.id);
     assert.deepEqual(await repository.listAbandonedAdmissions(), []);
     assert.deepEqual(await counts(), { media: 0, jobs: 0, reserved: '0' });
+  });
+  test('T8 MED-16: production identity/read/write composition distinguishes401/403/200/503', async (t) => {
+    const { createIdentityApiRuntime } =
+      await import('../apps/api/src/identity-runtime.js');
+    const { createOperationalAuthRuntime } =
+      await import('../apps/api/src/operational-auth-runtime.js');
+    const { createOperationReadRuntime } =
+      await import('../apps/api/src/operation-runtime.js');
+    const { createHash } = await import('node:crypto');
+    const key = Buffer.alloc(32, 7).toString('base64url');
+    const environment = {
+      APP_ORIGIN: 'https://crm.example.test',
+      AUTH_THROTTLE_HMAC_KEY: key,
+      IDEMPOTENCY_ENVELOPE_KEY: key,
+      IDENTITY_BOOTSTRAP_TOKEN:
+        'synthetic-bootstrap-token-with-at-least-32-characters',
+      CONTACT_IDENTITY_ENVELOPE_KEY: key,
+      INBOX_MESSAGE_ENVELOPE_KEY: key,
+      HANDOFF_ENVELOPE_KEY: key,
+      OPERATION_CURSOR_HMAC_KEY: key,
+    };
+    await pool.query(
+      `INSERT INTO crm.user_functions(user_id,function_name) VALUES('upload-seller','Vendedor') ON CONFLICT DO NOTHING`,
+    );
+    const hash = (/** @type {string} */ value) =>
+      createHash('sha256').update(value).digest('hex');
+    await pool.query(
+      `INSERT INTO crm.sessions(token_hash,user_id,csrf_hash,created_at,last_seen_at,absolute_expires_at) VALUES($1,'upload-seller',$2,now(),now(),now()+interval '1 hour') ON CONFLICT DO NOTHING`,
+      [hash('valid-synthetic-session'), hash('valid-synthetic-csrf')],
+    );
+    const identity = createIdentityApiRuntime(database, environment);
+    const operations = createOperationReadRuntime(database, {
+      identity,
+      environment,
+    });
+    const access = {
+      ...createOperationalAuthRuntime({ identity }),
+      authorizeRead: operations.authorizeRead,
+    };
+    const root = await mkdtemp(join(tmpdir(), 'crm-media-status-auth-'));
+    const api = createApi(
+      {},
+      {
+        chatMedia: createChatMediaApiRuntime({
+          repository,
+          access,
+          spoolRoot: root,
+          envelopeKey: Buffer.alloc(32, 7),
+        }),
+      },
+    );
+    t.after(async () => {
+      await api.close();
+      await rm(root, { recursive: true, force: true });
+    });
+    const row = input();
+    await repository.admit(row);
+    await repository.complete(completed(row));
+    const get = (
+      cookie = 'crm_session=valid-synthetic-session',
+      origin = 'https://crm.example.test',
+    ) =>
+      api.inject({
+        method: 'GET',
+        url: `/api/v1/conversations/upload-conversation/media/${row.id}`,
+        headers: { cookie, origin },
+      });
+    assert.equal((await get()).statusCode, 200);
+    await pool.query(
+      `INSERT INTO crm.sessions(token_hash,user_id,csrf_hash,created_at,last_seen_at,absolute_expires_at) VALUES($1,'upload-other',$2,now(),now(),now()+interval '1 hour') ON CONFLICT DO NOTHING`,
+      [hash('other-synthetic-session'), hash('other-csrf')],
+    );
+    assert.equal(
+      (await get('crm_session=other-synthetic-session')).statusCode,
+      403,
+    );
+    await pool.query(
+      `INSERT INTO crm.user_functions(user_id,function_name) VALUES('upload-other','Vendedor') ON CONFLICT DO NOTHING`,
+    );
+    assert.equal(
+      (await get('crm_session=other-synthetic-session')).statusCode,
+      403,
+    );
+    await pool.query(
+      `INSERT INTO crm.user_capabilities(user_id,capability,granted_by) VALUES('upload-other','COMMERCIAL_ADMIN','upload-seller') ON CONFLICT DO NOTHING`,
+    );
+    assert.equal(
+      (await get('crm_session=other-synthetic-session')).statusCode,
+      200,
+    );
+    await pool.query(
+      `DELETE FROM crm.user_capabilities WHERE user_id='upload-other'`,
+    );
+    await pool.query(
+      `INSERT INTO crm.messages(id,conversation_id,provider,provider_account_id,command_id,direction,author_kind,author_id,message_type,content_envelope,status,occurred_at,created_at) VALUES('status-message','upload-conversation','meta','synthetic','status-message','outbound','human','upload-seller','image',$1,'queued',now(),now())`,
+      [envelope],
+    );
+    await pool.query(
+      `UPDATE crm.chat_media SET state='attached',message_id='status-message',attached_at=now(),processed_at=now(),validation_status='clean',detected_mime_type='image/png',size_bytes=100,content_sha256=$2 WHERE id=$1`,
+      [row.id, 'b'.repeat(64)],
+    );
+    assert.equal(
+      (await get('crm_session=other-synthetic-session')).statusCode,
+      200,
+    );
+    assert.equal((await get('crm_session=bogus')).statusCode, 401);
+    assert.equal(
+      (await get(undefined, 'https://denied.example.test')).statusCode,
+      403,
+    );
+    await pool.query(
+      `UPDATE crm.sessions SET revoked_at=now() WHERE token_hash=$1`,
+      [hash('valid-synthetic-session')],
+    );
+    assert.equal((await get()).statusCode, 401);
+    await pool.query(
+      `UPDATE crm.sessions SET revoked_at=NULL,created_at=now()-interval '1 hour',absolute_expires_at=now()-interval '1 second' WHERE token_hash=$1`,
+      [hash('valid-synthetic-session')],
+    );
+    assert.equal((await get()).statusCode, 401);
+    await pool.query(
+      `UPDATE crm.sessions SET absolute_expires_at=now()+interval '1 hour' WHERE token_hash=$1`,
+      [hash('valid-synthetic-session')],
+    );
+    const payload = Buffer.from(
+      '--b\r\nContent-Disposition: form-data; name="kind"\r\n\r\nimage\r\n--b\r\nContent-Disposition: form-data; name="origin"\r\n\r\nattachment\r\n--b\r\nContent-Disposition: form-data; name="expectedVersion"\r\n\r\n1\r\n--b\r\nContent-Disposition: form-data; name="file"; filename="synthetic.png"\r\nContent-Type: image/png\r\n\r\nsynthetic-bytes\r\n--b--\r\n',
+    );
+    const post = (
+      session = 'valid-synthetic-session',
+      csrf = 'valid-synthetic-csrf',
+    ) =>
+      api.inject({
+        method: 'POST',
+        url: '/api/v1/conversations/upload-conversation/media',
+        payload,
+        headers: {
+          'content-type': 'multipart/form-data; boundary=b',
+          'idempotency-key': 'production-auth-upload',
+          cookie: `crm_session=${session}; crm_csrf=valid-synthetic-csrf`,
+          origin: 'https://crm.example.test',
+          'x-csrf-token': csrf,
+        },
+      });
+    assert.equal((await post('bogus')).statusCode, 401);
+    assert.equal((await post(undefined, 'wrong')).statusCode, 403);
+    assert.equal((await post()).statusCode, 202);
+    const brokenDb = {
+      query: database.query,
+      transaction: async () => {
+        throw new Error('synthetic DB unavailable');
+      },
+    };
+    const unavailable = createIdentityApiRuntime(brokenDb, environment);
+    const failedOperations = createOperationReadRuntime(database, {
+      identity: unavailable,
+      environment,
+    });
+    const failedApi = createApi(
+      {},
+      {
+        chatMedia: createChatMediaApiRuntime({
+          repository,
+          access: {
+            ...createOperationalAuthRuntime({ identity: unavailable }),
+            authorizeRead: failedOperations.authorizeRead,
+          },
+          spoolRoot: root,
+          envelopeKey: Buffer.alloc(32, 7),
+        }),
+      },
+    );
+    t.after(() => failedApi.close());
+    assert.equal(
+      (
+        await failedApi.inject({
+          method: 'GET',
+          url: `/api/v1/conversations/upload-conversation/media/${row.id}`,
+          headers: {
+            cookie: 'crm_session=valid-synthetic-session',
+            origin: 'https://crm.example.test',
+          },
+        })
+      ).statusCode,
+      503,
+    );
+    assert.equal(
+      (
+        await failedApi.inject({
+          method: 'POST',
+          url: '/api/v1/conversations/upload-conversation/media',
+          payload,
+          headers: {
+            'content-type': 'multipart/form-data; boundary=b',
+            'idempotency-key': 'failed-production-auth-upload',
+            cookie:
+              'crm_session=valid-synthetic-session; crm_csrf=valid-synthetic-csrf',
+            origin: 'https://crm.example.test',
+            'x-csrf-token': 'valid-synthetic-csrf',
+          },
+        })
+      ).statusCode,
+      503,
+    );
   });
 }

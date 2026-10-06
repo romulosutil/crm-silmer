@@ -31,6 +31,22 @@ export function createChatMediaApiRuntime({
   const root = resolve(spoolRoot);
   return {
     authorize: access.authorize,
+    authorizeRead: access.authorizeRead,
+    /** @param {any} input */
+    async status(input) {
+      const row = await repository.readForActor(input);
+      return {
+        mediaId: row.id,
+        kind: row.kind,
+        origin: row.origin,
+        state: row.state,
+        validationStatus: row.validation_status,
+        mimeType: row.detected_mime_type ?? null,
+        sizeBytes: row.size_bytes === null ? null : Number(row.size_bytes),
+        durationMs: row.duration_ms === null ? null : Number(row.duration_ms),
+        ...(row.sanitized_reason ? { reason: row.sanitized_reason } : {}),
+      };
+    },
     /** @param {any} input */
     async upload(input) {
       const { maxBytes } = validateMediaDeclaration(input);

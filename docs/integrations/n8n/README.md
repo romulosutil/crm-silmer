@@ -34,7 +34,9 @@ quantidade (`quantity`), onde vai a estampa (`artwork_locations`) e para
 quando o cliente precisa (`needed_by`, desejo do cliente, nunca prazo
 confirmado). Origem da arte, técnica, tecido, tamanhos, gola, personalização
 individual e divisão por público nunca são perguntados: o bot grava o que o
-cliente disser e o vendedor completa. O bot nunca oferece criar a arte e, de
+cliente disser e o vendedor completa. A divisão por público vai em
+`audiences` ("4 masculinas, 3 femininas e 3 infantis"), e o CRM a transforma
+em um item por público quando a lê sem dúvida (ADR 022). O bot nunca oferece criar a arte e, de
 tecido, só fala de algodão, poliéster e dry fit. Os demais campos
 (identificação do pedido, finalidade, perfil de compra, logística e
 anotações) também só são gravados quando o cliente fala deles. A retirada é
@@ -377,6 +379,11 @@ workflow anterior continua funcionando com o CRM novo, que ainda aceita
 `order.intent_confirmed`. O workflow `mvp-simple-12` (DEV
 `dev-mvp-simple-13`, ADR 021) não muda o contrato e não tem ordem de
 implantação: `product_type` e o valor `NAO APLICAVEL` da gola já eram aceitos.
+O CRM que aceita `audiences` no `briefing_patch` e lê a divisão por público
+(ADR 022) vai ao ambiente **antes** do workflow `mvp-simple-13` (DEV
+`dev-mvp-simple-14`), que envia o campo; um CRM antigo recusa a chave com
+`400`, e a resposta do bot não sai. O workflow anterior continua funcionando
+com o CRM novo.
 
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker e configurar as duas credenciais Basic.

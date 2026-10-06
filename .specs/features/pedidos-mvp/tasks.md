@@ -26,7 +26,7 @@ T01..T75 preservam planejamento e evidências datadas das entregas anteriores; c
 | T86    | Template v5 e seletor aprovado provisoriamente | commits 744c66f e 2979c81; docs/phase0/ficha-pdf-approval-v5.json          |
 | T87    | PR 142 integrada                               | baseline 2979c81; gates devem ser confirmados na release alvo              |
 
-**Pendências reais:** UAT/WhatsApp operacional (OPS-1, INT-1..2), assinatura física da v5 por Rose e Operação (INT-4), procedimento durável de arquivos e encaminhamento da ficha (ORD-03..04), privacidade OpenAI, health, backup, alertas e recovery (INT-3). Aprovação provisória do PO não satisfaz assinatura física. Upload/Dropbox e aviso automático a Rose continuam fora desta implementação.
+**Pendências reais:** UAT/WhatsApp operacional (OPS-1, INT-1..2), assinatura física da v5 por Rose e Operação (INT-4), procedimento durável de arquivos e encaminhamento da ficha (ORD-03..04), privacidade OpenAI, health, backup, alertas e recovery (INT-3). Aprovação provisória do PO não satisfaz assinatura física. O envio de arquivos da arte no RustFS chega com a ADR 023 (T88–T92); aviso automático a Rose continua fora desta implementação.
 
 ## Convenções
 

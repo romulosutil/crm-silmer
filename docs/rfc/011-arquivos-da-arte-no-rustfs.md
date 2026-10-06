@@ -23,12 +23,12 @@ Design aprovado: [arquivos-da-arte.html](../design/arquivos-da-arte.html).
 
 ## Opções avaliadas
 
-| Opção                                  | A favor                                                                   | Contra                                                                                       |
-| -------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Dropbox (destino previsto na RFC 007)  | Já usado pela operação                                                    | OAuth, token de terceiro, pasta fora da ACL do CRM, sem auditoria por arquivo e sem miniatura |
-| Volume de mídia transitória            | Já existe                                                                 | Retenção de sete dias; a regra 18 proíbe reutilizá-lo para documento do pedido               |
-| S3 externo (AWS `sa-east-1`, R2)       | Domínio de falha separado                                                 | Contrato, DPA e custo ainda não aprovados (issue `#29`)                                      |
-| **RustFS no EasyPanel (escolhida)**    | S3-compatible, Apache-2.0, interno, sem custo novo, troca de endpoint simples | Mesmo domínio de falha do PostgreSQL; exige backup off-host do bucket                         |
+| Opção                                 | A favor                                                                       | Contra                                                                                        |
+| ------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Dropbox (destino previsto na RFC 007) | Já usado pela operação                                                        | OAuth, token de terceiro, pasta fora da ACL do CRM, sem auditoria por arquivo e sem miniatura |
+| Volume de mídia transitória           | Já existe                                                                     | Retenção de sete dias; a regra 18 proíbe reutilizá-lo para documento do pedido                |
+| S3 externo (AWS `sa-east-1`, R2)      | Domínio de falha separado                                                     | Contrato, DPA e custo ainda não aprovados (issue `#29`)                                       |
+| **RustFS no EasyPanel (escolhida)**   | S3-compatible, Apache-2.0, interno, sem custo novo, troca de endpoint simples | Mesmo domínio de falha do PostgreSQL; exige backup off-host do bucket                         |
 
 ## Recomendação aprovada
 
@@ -50,6 +50,11 @@ Design aprovado: [arquivos-da-arte.html](../design/arquivos-da-arte.html).
    é a condição para aceitar o mesmo domínio de falha.
 7. O handoff manual de mídia válida do canal passa a anexar o arquivo ao
    pedido; o Dropbox sai de docs, política, validadores e código.
+
+Depois da decisão, o PO indicou a instância já existente `schedule/rustfs`
+no lugar de um serviço novo; a ADR 023 registra o endpoint interno e os
+desvios encontrados (domínios públicos, projeto compartilhado, backup sem
+evidência).
 
 ## Perguntas respondidas por padrão
 

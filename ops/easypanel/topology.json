@@ -171,38 +171,72 @@
           }
         }
       ],
-      "plannedServices": [
+      "sharedServices": [
         {
-          "name": "silmer-rustfs",
+          "name": "rustfs",
+          "project": "schedule",
           "kind": "object-storage",
           "decisionRecord": "docs/adr/023-arquivos-da-arte-no-rustfs.md",
-          "image": "rustfs",
-          "imageRef": "rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c",
-          "license": "Apache-2.0",
-          "public": false,
-          "publicPorts": [],
-          "domain": null,
+          "observedAt": "2026-10-05",
+          "status": "existing-with-gaps",
+          "sharedWith": [
+            "n8n",
+            "redis",
+            "postgres-pgvector",
+            "project-hub",
+            "tecnolar",
+            "food-helper-migrations"
+          ],
+          "sharedProjectRiskAcceptedRef": null,
+          "internalHost": "schedule_rustfs",
           "internalPort": 9000,
-          "clients": ["silmer-api"],
-          "persistence": "easypanel-volume-plus-external-backup",
-          "volumes": [
+          "consolePort": 9001,
+          "crossProjectEndpointSmoked": false,
+          "image": "rustfs",
+          "imageRef": null,
+          "imageDigestConfirmed": false,
+          "public": true,
+          "publicRoutes": [
             {
-              "name": "silmer-rustfs-data",
-              "mountPath": "/data",
-              "access": "read-write",
-              "backup": true
+              "purpose": "s3-api",
+              "via": "easypanel-default-domain",
+              "targetPort": 9000,
+              "hostname": null,
+              "restriction": null
+            },
+            {
+              "purpose": "console",
+              "via": "easypanel-default-domain",
+              "targetPort": 9001,
+              "hostname": null,
+              "restriction": null
             }
           ],
+          "clients": ["silmer-api"],
+          "dataVolume": { "offHostBackupEvidenced": false },
           "buckets": [
             {
               "name": "crm-silmer-arquivos",
+              "created": false,
               "publicAccess": false,
               "offHostBackup": "with-postgres",
               "recoveryDrill": "with-postgres"
             }
           ],
-          "secretNames": ["RUSTFS_ACCESS_KEY", "RUSTFS_SECRET_KEY"],
-          "status": "pending-provisioning"
+          "secretNames": [
+            "OBJECT_STORAGE_ACCESS_KEY_ID",
+            "OBJECT_STORAGE_SECRET_ACCESS_KEY"
+          ],
+          "dedicatedCredential": "pending",
+          "gaps": [
+            "public-s3-and-console-domains",
+            "shared-project",
+            "cross-project-endpoint-smoke-pending",
+            "image-digest-not-confirmed",
+            "private-bucket-pending",
+            "dedicated-bucket-credential-pending",
+            "off-host-backup-not-evidenced"
+          ]
         }
       ]
     }

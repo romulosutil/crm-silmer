@@ -40,7 +40,6 @@ sem acesso direto ao banco do CRM e com somente o webhook do canal publicado.
 | `silmer-postgres` | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo             |
 | `silmer-n8n`      | App                | n8n por versão e digest fixados        |                     Não | Nenhuma; usa banco próprio                    |
 | `silmer-n8n-db`   | PostgreSQL Service | Major fixada                           |                     Não | Volume EasyPanel + backup externo             |
-| `silmer-rustfs`   | App                | `rustfs/rustfs:1.0.1` por digest       |        Não, sem domínio | Volume `/data` + backup externo               |
 
 `migrate` é um job curto executado pelo pipeline ou script salvo do EasyPanel;
 não é serviço permanente.
@@ -51,11 +50,12 @@ nulos e flags de workflow não descrevem automaticamente o ambiente atual.
 Atualizá-lo exige configuração e prova live; este planejamento não comprova
 a existência, ausência ou estado atual dos serviços do n8n.
 
-O `silmer-rustfs` da [ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)
-aparece em `plannedServices` com status `pending-provisioning`, e o
+Os arquivos do pedido ([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md))
+usam o serviço `rustfs` já existente no projeto EasyPanel `schedule`, fora do
+`espectro-mvp` (seção 5). Ele aparece em `sharedServices` de
+`ops/easypanel/topology.json` com status `existing-with-gaps`, e o
 `objectStorageGate` de `ops/easypanel/provisioning-gate.json` fica
-`pending-external` até existirem serviço, bucket privado, credenciais
-separadas, backup off-host e restore no drill junto com o PostgreSQL.
+`pending-external` até cada lacuna ser fechada com evidência.
 
 Não subir no MVP:
 
@@ -82,7 +82,8 @@ silmer-edge-web (único serviço público)
           |                              |
           |                       silmer-worker privado
           |
-          |                       silmer-rustfs privado (só silmer-api)
+          |                       schedule_rustfs:9000 (projeto schedule;
+          |                       só silmer-api; lacunas na seção 5)
           |
    silmer-n8n privado --------> silmer-api privada
           |
@@ -115,7 +116,9 @@ O n8n acessa o CRM somente pela API privada e não recebe rota ou credencial par
 - `80/443`: público.
 - `22`: somente IP administrativo ou VPN.
 - Painel EasyPanel: somente VPN/allowlist.
-- PostgreSQL, RustFS (porta 9000) e portas internas: nunca publicados.
+- PostgreSQL e portas internas: nunca publicados. O RustFS do projeto
+  `schedule` ainda tem domínios públicos padrão (seção 5); isso é lacuna
+  aberta, não exceção aprovada.
 - Remover qualquer porta de teste depois do diagnóstico.
 
 ## 4. Sizing inicial
@@ -167,8 +170,8 @@ Regras operacionais:
 - reservar 3 GB para Ubuntu, EasyPanel, Traefik, logs, métricas, backup e
   manutenção do PostgreSQL;
 - incluir os serviços não relacionados no orçamento agregado de CPU, RAM e disco;
-- definir e medir o limite do `silmer-rustfs` no provisionamento e contar o
-  volume `/data` na regra de disco livre.
+- contar o volume do `schedule/rustfs` na regra de disco livre, porque ele é
+  compartilhado com outros apps do projeto `schedule`.
 
 ## 5. Armazenamento de arquivos
 
@@ -204,24 +207,67 @@ do piloto interno. Não há promessa de restauração desses bytes.
 
 A [RFC 011](docs/rfc/011-arquivos-da-arte-no-rustfs.md) e a
 [ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md) guardam os arquivos da
-arte no `silmer-rustfs`: RustFS S3-compatible, licença Apache-2.0, imagem
-`rustfs/rustfs:1.0.1` presa ao digest
-`sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`.
+arte em RustFS S3-compatible. O PO indicou uma instância já existente, não um
+serviço novo do CRM. Fatos observados no EasyPanel em 05/10/2026, somente
+leitura:
 
-- O serviço fica somente na rede interna do projeto, sem domínio público e sem
-  porta publicada. Só `silmer-api` fala com ele; edge, worker e n8n não recebem
-  rota nem credencial.
-- O bucket `crm-silmer-arquivos` é privado e usa volume persistente `/data`.
-- Upload e download passam pela API, sem URL pré-assinada nem link público. A
+- serviço `rustfs` no projeto `schedule`, compartilhado com n8n, redis,
+  postgres-pgvector, project-hub, tecnolar e food-helper-migrations;
+- host interno `schedule_rustfs`, API S3 na porta 9000 e console na 9001;
+- endpoint da API do CRM: `OBJECT_STORAGE_ENDPOINT=http://schedule_rustfs:9000`,
+  pela rede overlay entre projetos do EasyPanel, ainda sem smoke que confirme
+  o alcance a partir de `silmer-api`.
+
+O contrato do CRM continua o mesmo:
+
+- só `silmer-api` fala com o RustFS, pelo host interno; edge, worker e n8n não
+  recebem rota nem credencial;
+- o bucket `crm-silmer-arquivos` é privado;
+- upload e download passam pela API, sem URL pré-assinada nem link público. A
   API aplica allowlist de formato por assinatura de conteúdo, SHA-256,
-  auditoria e idempotência.
-- Cada pedido aceita até cinco arquivos da arte de até 10 MB e uma arte final
+  auditoria e idempotência;
+- cada pedido aceita até cinco arquivos da arte de até 10 MB e uma arte final
   fora dessa conta. Envio e remoção exigem pedido pendente e permissão de
-  edição; download exige leitura do pedido.
-- O volume fica na mesma VPS que o PostgreSQL. Esse domínio de falha comum foi
-  aceito para o MVP com uma condição: o bucket entra no backup off-host e no
-  drill de recuperação junto com o PostgreSQL (seção 10). Para arquivos do
-  pedido, isso supersede a rejeição de MinIO na mesma VPS do TDD.
+  edição; download exige leitura do pedido;
+- o volume do RustFS fica no mesmo host que o PostgreSQL. Esse domínio de
+  falha comum só é aceito se o bucket entrar no backup off-host e no drill de
+  recuperação junto com o PostgreSQL (seção 10). Para arquivos do pedido, isso
+  supersede a rejeição de MinIO na mesma VPS do TDD.
+
+Lacunas abertas, registradas em `gaps` do `topology.json`. Cada uma bloqueia o
+`objectStorageGate`, e o validador recusa gate aprovado enquanto existir
+qualquer uma delas:
+
+| Lacuna                                 | Situação observada                                                    |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| `public-s3-and-console-domains`        | Domínios públicos padrão do EasyPanel para S3 (9000) e console (9001) |
+| `shared-project`                       | Serviço e volume compartilhados com outros apps do projeto `schedule` |
+| `cross-project-endpoint-smoke-pending` | Alcance de `schedule_rustfs:9000` a partir de `silmer-api` sem smoke  |
+| `image-digest-not-confirmed`           | Imagem, tag e digest da instância não confirmados                     |
+| `private-bucket-pending`               | Bucket `crm-silmer-arquivos` ainda não criado                         |
+| `dedicated-bucket-credential-pending`  | Credencial do CRM restrita ao bucket ainda não criada                 |
+| `off-host-backup-not-evidenced`        | Backup off-host do volume sem evidência                               |
+
+Os hostnames dos domínios públicos não são versionados. O digest
+`rustfs/rustfs:1.0.1@sha256:1803…` vale só para o `docker-compose.dev.yml`; ele
+não descreve a instância do `schedule` enquanto a imagem não for confirmada.
+
+Recomendações para fechar as lacunas:
+
+1. Remover os dois domínios públicos. Se o console precisar ficar acessível,
+   restringi-lo por autenticação e allowlist de IP. O domínio S3 público nunca
+   é endpoint do CRM e não pode continuar publicado para fechar a lacuna.
+2. Criar no RustFS um usuário e uma policy só para `crm-silmer-arquivos` e
+   usar essa credencial em `OBJECT_STORAGE_ACCESS_KEY_ID` e
+   `OBJECT_STORAGE_SECRET_ACCESS_KEY`. As chaves root da instância nunca vão
+   para o CRM.
+3. Criar o bucket privado pelo console restrito ou pela API no primeiro envio.
+4. Incluir o volume do RustFS no backup off-host e restaurar só o bucket do
+   CRM no drill, sem sobrescrever dados dos outros apps do projeto `schedule`.
+5. Executar o smoke de `silmer-api` para `schedule_rustfs:9000` e registrar a
+   imagem e o digest em execução.
+6. Aceitar o compartilhamento do projeto `schedule` por decisão registrada
+   (`sharedProjectRiskAcceptedRef`) ou mover os arquivos para serviço próprio.
 
 ### Object storage futuro
 
@@ -350,8 +396,6 @@ OBJECT_STORAGE_REGION
 OBJECT_STORAGE_BUCKET
 OBJECT_STORAGE_ACCESS_KEY_ID
 OBJECT_STORAGE_SECRET_ACCESS_KEY
-RUSTFS_ACCESS_KEY
-RUSTFS_SECRET_KEY
 ```
 
 Regras:
@@ -372,10 +416,11 @@ Regras:
   `outcome_unknown` e reconciliação;
 - `N8N_ENCRYPTION_KEY` é obrigatória, fica em escrow operacional e deve ser
   restaurável junto do banco próprio do n8n;
-- `OBJECT_STORAGE_*` existe somente em `silmer-api`: endpoint interno na
-  porta 9000 do RustFS, região `us-east-1`, bucket `crm-silmer-arquivos` e
-  credencial própria; `RUSTFS_ACCESS_KEY` e `RUSTFS_SECRET_KEY` ficam somente
-  no `silmer-rustfs`;
+- `OBJECT_STORAGE_*` existe somente em `silmer-api`: endpoint
+  `http://schedule_rustfs:9000`, região `us-east-1`, bucket
+  `crm-silmer-arquivos` e credencial dedicada com policy restrita ao bucket.
+  As chaves root do RustFS (`RUSTFS_ACCESS_KEY` e `RUSTFS_SECRET_KEY`) ficam
+  somente no serviço do projeto `schedule` e nunca entram no CRM;
 - `PIX_KEY_VALUE` fica disponível somente ao runtime que monta a mensagem e
   não aparece em log, frontend ou variável de build;
 - `secret://crm/order-recipient-phone` é resolvido somente no runtime para
@@ -519,9 +564,9 @@ Produção:
 
 - `pg_dump` horário, 48 cópias, para CRM e banco próprio do n8n;
 - `pg_dump` diário, 35 cópias, para ambos os bancos;
-- cópia do bucket `crm-silmer-arquivos` do RustFS no mesmo backup off-host,
-  junto com os dumps do CRM, porque o volume `/data` divide a VPS com o
-  PostgreSQL (ADR 023);
+- cópia do bucket `crm-silmer-arquivos` do `schedule/rustfs` no mesmo backup
+  off-host, junto com os dumps do CRM, porque o volume divide o host com o
+  PostgreSQL (ADR 023); hoje sem evidência;
 - lifecycle apaga qualquer backup com mais de 35 dias;
 - backup manual verificado antes de mudança destrutiva;
 - restore mensal do banco em serviço temporário `postgres-restore-drill`,
@@ -545,8 +590,8 @@ duas pessoas designadas. O kit é validado a cada mudança de topologia.
 
 1. Criar `postgres-restore-drill` temporário e rede isolada.
 2. Restaurar o backup sem copiar o banco para homologação.
-3. Restaurar o bucket `crm-silmer-arquivos` em RustFS temporário da mesma rede
-   isolada.
+3. Restaurar somente o bucket `crm-silmer-arquivos` em RustFS temporário da
+   mesma rede isolada.
 4. Aplicar migrations e tombstones externos.
 5. Validar contagens, constraints, leitura/escrita com mocks sem saída e o
    SHA-256 de uma amostra de arquivos do pedido contra o banco restaurado.
@@ -579,7 +624,8 @@ banco, mas não a recuperação de uma perda do host.
 
 1. Ativar manutenção e parar API/worker.
 2. Restaurar o banco de produção e o bucket `crm-silmer-arquivos` em
-   instâncias isoladas.
+   instâncias isoladas. Nunca restaurar o volume inteiro do `schedule/rustfs`
+   sobre a produção: ele guarda dados de outros apps.
 3. Aplicar migrations compatíveis.
 4. Reaplicar o ledger externo de `deletion_tombstones`.
 5. Excluir objetos que já haviam sido removidos.
@@ -622,9 +668,10 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Credenciais separadas e rotação testada.
 - [ ] Basic n8n→CRM e CRM→n8n criados e vinculados sem HMAC/timestamp.
 - [ ] PostgreSQL e serviços internos sem portas públicas.
-- [ ] `silmer-rustfs` sem domínio nem porta pública, bucket privado,
-      credencial `OBJECT_STORAGE_*` só na API e bucket restaurado no drill
-      junto com o PostgreSQL (ADR 023).
+- [ ] `schedule/rustfs` sem domínio S3 público, console removido ou restrito,
+      bucket privado, credencial `OBJECT_STORAGE_*` dedicada só na API, smoke
+      entre projetos, imagem confirmada e bucket restaurado no drill junto com
+      o PostgreSQL (ADR 023).
 - [ ] Editor e API administrativa do n8n sem rota pública; apenas webhook do canal publicado.
 - [ ] Ator `AUTOMATION_EXECUTOR` sem acesso administrativo ou direto ao banco do CRM.
 - [ ] Backup horário/diário executado e alerta configurado.
@@ -660,8 +707,9 @@ os gates de backup externo, monitoramento e recovery drill em host limpo. O
 risco específico de perder mídia transitória de até sete dias também foi aceito
 para o uso interno; ele não amplia o RPO de PostgreSQL, Pedido, Ficha, PIX,
 auditoria, backups ou tombstones. O RustFS dos arquivos do pedido divide o
-domínio de falha com o PostgreSQL, risco aceito pela ADR 023 somente com o
-bucket no backup off-host e no drill. O
+domínio de falha com o PostgreSQL e o projeto `schedule` com outros apps; a
+ADR 023 só aceita isso com o bucket no backup off-host e no drill, e as
+lacunas da seção 5 seguem abertas. O
 primeiro gatilho de evolução é mover o CRM ou o PostgreSQL para projeto ou
 domínio de falha próprio quando qualquer condição ocorrer:
 

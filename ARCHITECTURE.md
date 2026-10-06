@@ -54,16 +54,16 @@ somente confirmados; não equivale a recebimentos.
 
 ## Baseline técnica
 
-| Fronteira    | Implementação                                                                                                     |
-| ------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Frontend     | Vue 3, Vue Router, JavaScript ESM, CSS e Vite; sem store global                                                   |
-| API          | Node.js/Fastify, REST `/api/v1`, OpenAPI e SSE                                                                    |
-| Persistência | PostgreSQL, SQL e migrations versionadas                                                                          |
-| Assíncrono   | Inbox/outbox e jobs transacionais; sem Redis                                                                      |
-| Runtime CRM  | `silmer-edge-web`, `silmer-api`, `silmer-worker`, `silmer-postgres`, `silmer-rustfs`                              |
-| Automação    | n8n externo obrigatório, persistência e credenciais próprias                                                      |
-| IA           | OpenAI no workflow; [ADR 021](docs/adr/021-adotar-openai-no-mvp.md)                                               |
-| Deploy       | Fluxo automático GitHub→EasyPanel existente; [ADR 022](docs/adr/022-manter-deploy-automatico-github-easypanel.md) |
+| Fronteira    | Implementação                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Frontend     | Vue 3, Vue Router, JavaScript ESM, CSS e Vite; sem store global                                                     |
+| API          | Node.js/Fastify, REST `/api/v1`, OpenAPI e SSE                                                                      |
+| Persistência | PostgreSQL, SQL e migrations versionadas                                                                            |
+| Assíncrono   | Inbox/outbox e jobs transacionais; sem Redis                                                                        |
+| Runtime CRM  | `silmer-edge-web`, `silmer-api`, `silmer-worker`, `silmer-postgres`; arquivos no RustFS `schedule/rustfs` (ADR 023) |
+| Automação    | n8n externo obrigatório, persistência e credenciais próprias                                                        |
+| IA           | OpenAI no workflow; [ADR 021](docs/adr/021-adotar-openai-no-mvp.md)                                                 |
+| Deploy       | Fluxo automático GitHub→EasyPanel existente; [ADR 022](docs/adr/022-manter-deploy-automatico-github-easypanel.md)   |
 
 Mídia de canal fica em volume privado da VPS por até sete dias ou fim da
 jornada. Arquivos válidos são anexados ao pedido e guardados no RustFS.

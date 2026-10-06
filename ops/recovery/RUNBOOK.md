@@ -20,9 +20,10 @@ Antes de qualquer execução externa:
    limpa; o gate deve continuar refletindo o estado operacional real.
 2. Confirmar backup restaurável no EasyPanel e backup externo independente por
    referências opacas, sem registrar host, IP, PII ou segredo. O backup externo
-   inclui o bucket `crm-silmer-arquivos` do `silmer-rustfs`, porque o volume
-   `/data` divide a VPS com o PostgreSQL
-   ([ADR 023](../../docs/adr/023-arquivos-da-arte-no-rustfs.md)).
+   inclui o bucket `crm-silmer-arquivos` do `rustfs` do projeto `schedule`,
+   porque o volume divide o host com o PostgreSQL
+   ([ADR 023](../../docs/adr/023-arquivos-da-arte-no-rustfs.md)). Em
+   05/10/2026 esse backup não tinha evidência.
 3. Confirmar implementação e evidência do ledger de tombstones de `T06.3`, com
    credencial de restore read-only fora do runtime.
 4. Confirmar escrow acessível por duas pessoas designadas, sem expor valores.
@@ -38,6 +39,8 @@ Interrompa antes de provisionar ou restaurar se qualquer condição ocorrer:
 - backup restaurável do EasyPanel ausente ou backup externo bloqueado;
 - bucket `crm-silmer-arquivos` fora do backup externo ou sem restore junto do
   PostgreSQL;
+- plano que restaure o volume inteiro do `schedule/rustfs` sobre a produção:
+  ele guarda dados de outros apps; restaure só o bucket do CRM;
 - ledger `T06.3` ausente, não verificável ou sem restore read-only;
 - menos de dois custodians disponíveis para o escrow;
 - tentativa de registrar host, IP, domínio, PII, credencial ou segredo como
@@ -78,18 +81,22 @@ do CRM.
 3. Execute `npm run test:recovery:mocks`.
 4. Execute `npm run recovery:plan` e preserve a saída como checklist preliminar.
 5. Confirme o projeto `espectro-mvp`, os quatro serviços `silmer-*`, o
-   `silmer-rustfs` planejado e o gate em `ops/easypanel/provisioning-gate.json`;
-   domínios definitivos, DNS e referências de escrow continuam `null` e valores
-   permanecem apenas nos sistemas aprovados.
+   `schedule/rustfs` compartilhado com suas lacunas e o gate em
+   `ops/easypanel/provisioning-gate.json`; domínios definitivos, DNS e
+   referências de escrow continuam `null` e valores permanecem apenas nos
+   sistemas aprovados.
 6. Pare aqui se não houver duas pessoas custodiando o escrow ou autorização para
    o drill externo.
 
 Os validadores falham se `silmer-api`, `silmer-worker` ou `silmer-postgres` forem
 públicos, se DNS ou segredo ganhar valor no repositório, se uma imagem de
 aplicação não estiver presa ao digest aprovado ou se algum adapter deixar o
-modo `mock`. Também falham se o `silmer-rustfs` ganhar domínio, porta pública,
-cliente além de `silmer-api`, imagem fora do digest aprovado ou bucket fora do
-backup off-host e do drill.
+modo `mock`. Para o `schedule/rustfs`, também falham se uma lacuna observada
+sumir de `gaps`, se um hostname público for versionado, se um digest não
+confirmado for declarado, se houver cliente além de `silmer-api`, se a
+credencial não for a dedicada da API, se o bucket sair do backup off-host e do
+drill, se o kit restaurar mais que o bucket do CRM ou se o gate for aprovado
+com domínios públicos ou lacunas abertas.
 
 ## Execução externa pendente
 
@@ -98,16 +105,17 @@ repositório:
 
 1. Manter o EasyPanel compatível na VPS autorizada.
 2. Recriar o projeto compartilhado `espectro-mvp` com `silmer-edge-web`,
-   `silmer-api`, `silmer-worker`, `silmer-postgres`, `silmer-rustfs`, n8n e seu
-   PostgreSQL conforme `ops/easypanel/topology.json`.
+   `silmer-api`, `silmer-worker`, `silmer-postgres`, n8n e seu PostgreSQL, e o
+   `rustfs` do projeto `schedule` sem domínio S3 público, conforme
+   `ops/easypanel/topology.json`.
 3. Recuperar segredos do escrow com duas pessoas, sem registrar valores em logs.
 4. Registrar digests atual/anterior e aplicar migrations expand/contract.
 5. Manter Meta, IA, storage, telemetria e tombstones em adapters mock durante o
    drill.
 6. Restaurar os PostgreSQL do CRM e do n8n, a chave de criptografia e a versão
-   preservada do workflow; restaurar o bucket `crm-silmer-arquivos` depois do
-   banco e antes de liberar a API, conferindo o SHA-256 de uma amostra contra
-   o banco; aplicar tombstones e executar smoke sem saída.
+   preservada do workflow; restaurar somente o bucket `crm-silmer-arquivos`
+   depois do banco e antes de liberar a API, conferindo o SHA-256 de uma
+   amostra contra o banco; aplicar tombstones e executar smoke sem saída.
 7. Confirmar que comandos `processing` expirados e reservas de envio incertas
    reaparecem em reconciliação, sem chamada à Meta.
 8. Testar DNS em subdomínio autorizado, registrar tempos, RPO/RTO e evidências.

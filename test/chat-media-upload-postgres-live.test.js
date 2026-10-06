@@ -19,6 +19,19 @@ if (connectionString) {
   const pool = new Pool({ connectionString, max: 4 });
   const database = {
     query: pool.query.bind(pool),
+    connection: async (/** @type {Function} */ work) => {
+      const client = await pool.connect();
+      try {
+        const value = await work(client);
+        client.release();
+        return value;
+      } catch (error) {
+        client.release(
+          error instanceof Error ? error : new Error('Connection work failed'),
+        );
+        throw error;
+      }
+    },
     transaction: (/** @type {Function} */ work) =>
       withTransaction(pool, /** @type {any} */ (work)),
   };
@@ -465,7 +478,7 @@ if (connectionString) {
     const hash = (/** @type {string} */ value) =>
       createHash('sha256').update(value).digest('hex');
     await pool.query(
-      `INSERT INTO crm.sessions(token_hash,user_id,csrf_hash,created_at,last_seen_at,absolute_expires_at) VALUES($1,'upload-seller',$2,now(),now(),now()+interval '1 hour') ON CONFLICT DO NOTHING`,
+      `INSERT INTO crm.sessions(token_hash,user_id,csrf_hash,created_at,last_seen_at,absolute_expires_at) VALUES($1,'upload-seller',$2,now()-interval '1 second',now()-interval '1 second',now()+interval '1 hour') ON CONFLICT DO NOTHING`,
       [hash('valid-synthetic-session'), hash('valid-synthetic-csrf')],
     );
     const identity = createIdentityApiRuntime(database, environment);
@@ -507,7 +520,7 @@ if (connectionString) {
       });
     assert.equal((await get()).statusCode, 200);
     await pool.query(
-      `INSERT INTO crm.sessions(token_hash,user_id,csrf_hash,created_at,last_seen_at,absolute_expires_at) VALUES($1,'upload-other',$2,now(),now(),now()+interval '1 hour') ON CONFLICT DO NOTHING`,
+      `INSERT INTO crm.sessions(token_hash,user_id,csrf_hash,created_at,last_seen_at,absolute_expires_at) VALUES($1,'upload-other',$2,now()-interval '1 second',now()-interval '1 second',now()+interval '1 hour') ON CONFLICT DO NOTHING`,
       [hash('other-synthetic-session'), hash('other-csrf')],
     );
     assert.equal(

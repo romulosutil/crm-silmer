@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T21 concluídas; fase 4 em execução, próxima T22. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T22 concluídas; fase 4 em execução, próxima T23. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -384,10 +384,14 @@ foco externo preservado. Dois testes discriminantes e gate UI integral em execut
 **Requirement**: MED-15, MED-27
 **Reuses**: Jobs, transações e scanner cleanup; não reutilizar sweeper transitório para attached.
 **Tools**: tlc-spec-driven; SQL dedicado.
-**Done when**: [ ] >24h sem message_id é limpável; attach concorrente vence com bytes intactos; após oito dias/encerramento jobs antigos não removem mídia nova.
+**Done when**: [x] >24h sem message_id é limpável; attach concorrente vence com bytes intactos; após oito dias/encerramento jobs antigos não removem mídia nova. Intenção durável impede vínculo após DELETE/rollback; writers ativos conservam quota até fechamento; intermediários de crash pertencem ao UUID da variante.
 **Tests**: unit + integration live; mínimo 8 casos de relógio e corrida.
 **Gate**: Quick + Live + Privacy.
 **Commit**: feat(media): clean abandoned drafts without expiring sent files
+
+Manifest novo: `rtk npm run test:chat-media:cleanup:live`, com TEST_DATABASE_URL
+dedicada; dezenove casos PostgreSQL e filesystem reais, além de deadline/close
+do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 
 ### T23: Plano operacional de ativação, legado e recovery
 

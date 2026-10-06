@@ -19,7 +19,7 @@ export function mediaError(statusCode) {
     code: 'CHAT_MEDIA_REQUEST_FAILED',
   });
 }
-/** @param {{repository:any,access:any,spoolRoot:string,envelopeKey:Buffer,removeFile?:Function,store?:any,bucketAlias?:string,admissionEnabled?:boolean}} options */
+/** @param {{repository:any,access:any,spoolRoot:string,envelopeKey:Buffer,removeFile?:Function,store?:any,bucketAlias?:string,admissionEnabled?:boolean,uploadTimeoutMs?:number}} options */
 export function createChatMediaApiRuntime({
   repository,
   access,
@@ -28,11 +28,18 @@ export function createChatMediaApiRuntime({
   store,
   bucketAlias = 'chat-dev',
   admissionEnabled = true,
+  uploadTimeoutMs = 120_000,
   removeFile = (/** @type {string} */ path) => rm(path, { force: true }),
 }) {
   if (!Buffer.isBuffer(envelopeKey) || envelopeKey.length !== 32)
     throw new TypeError('Media envelope key must contain 32 bytes');
   const root = resolve(spoolRoot);
+  if (
+    !Number.isSafeInteger(uploadTimeoutMs) ||
+    uploadTimeoutMs < 1 ||
+    uploadTimeoutMs > 120_000
+  )
+    throw new TypeError('Invalid upload deadline');
   return {
     admissionEnabled,
     authorize: access.authorize,
@@ -97,37 +104,60 @@ export function createChatMediaApiRuntime({
             callback(null, chunk);
           },
         });
-        const destination = replay
-          ? new Writable({
-              write(_chunk, _encoding, callback) {
-                callback();
-              },
-            })
-          : createWriteStream(path, { flags: 'wx', mode: 0o600 });
-        const controller = new AbortController();
-        const operations = [
-          pipeline(input.stream, bounded, destination, {
-            signal: controller.signal,
-          }),
-          input.finishMultipart(),
-        ];
-        try {
-          await Promise.all(operations);
-        } catch (error) {
-          controller.abort();
-          input.stream.destroy();
-          // A malformed parser can leave next() pending after destroying its
-          // file. Wait for the file writer to close before removing the spool.
-          destination.destroy();
-          await finished(destination).catch(() => undefined);
-          if (/** @type {any} */ (error)?.statusCode) throw error;
-          if (
-            /** @type {any} */ (error)?.code &&
-            /** @type {any} */ (error).code !== 'ERR_STREAM_PREMATURE_CLOSE'
-          )
-            throw mediaError(503);
-          throw mediaError(422);
-        }
+        const receive = async (
+          /** @type {AbortSignal|undefined} */ leaseSignal,
+        ) => {
+          const destination = replay
+            ? new Writable({
+                write(_chunk, _encoding, callback) {
+                  callback();
+                },
+              })
+            : createWriteStream(path, { flags: 'wx', mode: 0o600 });
+          const controller = new AbortController();
+          /** @type {(error: Error) => void} */ let rejectAborted = () => {};
+          const aborted = new Promise((_resolve, reject) => {
+            rejectAborted = reject;
+          });
+          const abort = () => {
+            controller.abort();
+            rejectAborted(mediaError(503));
+          };
+          leaseSignal?.addEventListener('abort', abort, { once: true });
+          const timer = setTimeout(abort, uploadTimeoutMs);
+          if (leaseSignal?.aborted) abort();
+          const operations = [
+            pipeline(input.stream, bounded, destination, {
+              signal: controller.signal,
+            }),
+            input.finishMultipart(),
+          ];
+          try {
+            await Promise.race([Promise.all(operations), aborted]);
+          } catch (error) {
+            controller.abort();
+            input.stream.destroy();
+            // A malformed parser can leave next() pending after destroying its
+            // file. Wait for the file writer to close before removing the spool.
+            destination.destroy();
+            await finished(destination).catch(() => undefined);
+            if (/** @type {any} */ (error)?.statusCode) throw error;
+            if (
+              /** @type {any} */ (error)?.code &&
+              /** @type {any} */ (error).code !== 'ERR_STREAM_PREMATURE_CLOSE'
+            )
+              throw mediaError(503);
+            throw mediaError(422);
+          } finally {
+            clearTimeout(timer);
+            leaseSignal?.removeEventListener('abort', abort);
+          }
+        };
+        // The lease ends after FD close, before SQL completion/release needs a
+        // pool connection. No BEGIN or second client is held during the stream.
+        if (!replay && repository.withUploadLease)
+          await repository.withUploadLease(id, receive);
+        else await receive(undefined);
         if (input.stream.truncated) throw mediaError(413);
         if (sizeBytes === 0) throw mediaError(422);
         const sha256 = hash.digest('hex');

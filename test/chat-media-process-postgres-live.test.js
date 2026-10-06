@@ -67,6 +67,19 @@ if (connectionString) {
   const pool = new Pool({ connectionString, max: 4 });
   const database = {
     query: pool.query.bind(pool),
+    connection: async (/** @type {Function} */ work) => {
+      const client = await pool.connect();
+      try {
+        const value = await work(client);
+        client.release();
+        return value;
+      } catch (error) {
+        client.release(
+          error instanceof Error ? error : new Error('Connection work failed'),
+        );
+        throw error;
+      }
+    },
     /** @param {(client: import('pg').PoolClient) => Promise<any>} work */
     transaction: (work) => withTransaction(pool, work),
   };

@@ -1,8 +1,7 @@
-import { execFile } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
-import { promisify } from 'node:util';
+import { executeMediaCommand } from './media-command.js';
 
-const execute = promisify(execFile);
+const execute = executeMediaCommand;
 const SIGNATURE_FILES = Object.freeze([
   '/var/lib/clamav/daily.cld',
   '/var/lib/clamav/daily.cvd',
@@ -30,8 +29,8 @@ export class ClamAvMediaScanner {
     this.signatureFreshnessFile = signatureFreshnessFile;
   }
 
-  /** @param {string} path */
-  async scan(path) {
+  /** @param {string} path @param {AbortSignal} [signal] */
+  async scan(path, signal) {
     let clean = true;
     try {
       await this.execFile(
@@ -39,6 +38,7 @@ export class ClamAvMediaScanner {
         ['--no-summary', '--infected', '--', path],
         {
           timeout: 60_000,
+          ...(signal ? { signal } : {}),
           windowsHide: true,
         },
       );
@@ -51,6 +51,7 @@ export class ClamAvMediaScanner {
       (
         await this.execFile('file', ['--brief', '--mime-type', '--', path], {
           timeout: 10_000,
+          ...(signal ? { signal } : {}),
           windowsHide: true,
         })
       ).stdout,

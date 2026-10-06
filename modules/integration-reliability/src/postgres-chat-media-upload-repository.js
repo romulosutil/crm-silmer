@@ -25,6 +25,44 @@ export class PostgresChatMediaUploadRepository {
     this.#bucketAlias = bucketAlias;
     this.#limitBytes = limitBytes;
   }
+  /** @param {string} id @param {Function} work */
+  async withUploadLease(id, work) {
+    return this.#database.connection(async (/** @type {any} */ client) => {
+      const controller = new AbortController();
+      const lost = () => controller.abort();
+      client.on('error', lost);
+      client.on('end', lost);
+      try {
+        await client.query('SELECT pg_advisory_lock(hashtextextended($1,0))', [
+          `media-writer:${id}`,
+        ]);
+        const receiving = await client.query(
+          `UPDATE crm.chat_media_admissions SET writer_guard_until=now()+interval '3 minutes' WHERE id=$1 AND state='receiving' RETURNING id`,
+          [id],
+        );
+        if (!receiving.rows.length) throw error(409);
+        return await work(controller.signal);
+      } finally {
+        try {
+          await client.query(
+            'UPDATE crm.chat_media_admissions SET writer_guard_until=NULL WHERE id=$1',
+            [id],
+          );
+          // Work must have closed every writer before releasing this lease.
+          const unlocked = (
+            await client.query(
+              'SELECT pg_advisory_unlock(hashtextextended($1,0)) AS released',
+              [`media-writer:${id}`],
+            )
+          ).rows[0];
+          if (!unlocked.released) throw new Error('Media writer lease lost');
+        } finally {
+          client.off('error', lost);
+          client.off('end', lost);
+        }
+      }
+    });
+  }
   /** @param {any} client @param {any} input */
   async #conversation(client, input, checkState = true) {
     const row = (

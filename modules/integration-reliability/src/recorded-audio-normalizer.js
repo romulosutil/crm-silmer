@@ -1,14 +1,13 @@
-import { execFile } from 'node:child_process';
 import { chmod, link, mkdtemp, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { promisify } from 'node:util';
+import { basename, dirname, join } from 'node:path';
+import { executeMediaCommand } from './media-command.js';
 
 import {
   ChatMediaValidator,
   ChatMediaValidationError,
 } from './chat-media-validation.js';
 
-const execute = promisify(execFile);
+const execute = executeMediaCommand;
 export class RecordedAudioNormalizer {
   #validator;
   #execute;
@@ -21,13 +20,14 @@ export class RecordedAudioNormalizer {
     this.#execute = execFileImpl;
   }
 
-  /** @param {{path: string, declaredMimeType: string, outputPath: string}} input */
-  async normalize({ path, declaredMimeType, outputPath }) {
+  /** @param {{path: string, declaredMimeType: string, outputPath: string,signal?:AbortSignal}} input */
+  async normalize({ path, declaredMimeType, outputPath, signal }) {
     const input = await this.#validator.validate({
       path,
       kind: 'audio',
       origin: 'recording',
       declaredMimeType,
+      signal,
     });
     if (
       !['audio/webm', 'audio/ogg', 'audio/mp4'].includes(input.mimeType) ||
@@ -35,7 +35,14 @@ export class RecordedAudioNormalizer {
       input.durationMs > 300000
     )
       throw new ChatMediaValidationError('invalid_format');
-    const temporary = await mkdtemp(join(dirname(outputPath), '.recording-'));
+    const outputKey = basename(outputPath);
+    const prefix =
+      /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu.test(
+        outputKey,
+      )
+        ? `.recording-${outputKey}-`
+        : '.recording-';
+    const temporary = await mkdtemp(join(dirname(outputPath), prefix));
     const candidate = join(temporary, 'variant.ogg');
     try {
       await chmod(temporary, 0o700);
@@ -88,6 +95,7 @@ export class RecordedAudioNormalizer {
       try {
         await this.#execute('ffmpeg', args, {
           timeout: 120000,
+          ...(signal ? { signal } : {}),
           maxBuffer: 65536,
           windowsHide: true,
         });
@@ -100,6 +108,7 @@ export class RecordedAudioNormalizer {
         kind: 'audio',
         origin: 'recording',
         declaredMimeType: 'audio/ogg',
+        signal,
       });
       if (
         result.audioCodec !== 'opus' ||

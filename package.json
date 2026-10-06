@@ -52,6 +52,7 @@
     "test:orders:live": "node --test --test-concurrency=1 test/orders-postgres-live.test.js",
     "test:operation-read:live": "node --test --test-concurrency=1 test/operation-read-postgres-live.test.js",
     "test:media-retention": "node --test test/media-retention-policy.test.js test/transient-media-retention.test.js",
+    "test:chat-media:cleanup:live": "node --test --test-concurrency=1 test/chat-media-cleanup-postgres-live.test.js",
     "test:phase0-decisions": "node --test test/phase0-decisions.test.js",
     "test:phase1-schema:live": "node --test test/phase1-schema-live.test.js",
     "test:security-catalog": "node --test test/security-catalog.test.js",

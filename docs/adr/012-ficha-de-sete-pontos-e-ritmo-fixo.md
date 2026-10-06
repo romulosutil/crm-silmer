@@ -2,7 +2,11 @@
 
 Status: aceito; parcialmente supersedida pela
 [ADR 016](016-itens-com-os-sete-pontos-da-ficha.md) no trecho do item 3 (D26)
-que põe a gola no texto do modelo do item: a gola passou a ser campo do item.
+que põe a gola no texto do modelo do item: a gola passou a ser campo do item;
+e pela [ADR 021](021-atendimento-comeca-pelo-produto.md) nos itens 1, 2 e 4:
+os pontos passam a ser produto, modelo, cor, quantidade, local da estampa e
+prazo; arte, tecido, tamanhos e gola só são gravados; o nome vem no começo;
+sai a exceção de "lisa ou com estampa?"; e a gola de regata e polo vira kit.
 
 Data: 01/10/2026
 

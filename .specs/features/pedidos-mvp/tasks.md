@@ -1624,3 +1624,38 @@ um push na branch `feat/arquivos-da-arte`.
 - **Aceite:** gates completos e PR; provisionar o RustFS e evidenciar o
   backup do bucket antes da produção.
 - **Gate:** `git diff --check`, `npm run validate` e E2E de pedidos.
+
+## O atendimento começa pelo produto (ADR 021, 05/10/2026)
+
+As tarefas partem do `master` 2979c81. Cada uma vira um commit e um push na
+branch `feat/atendimento-por-produto`.
+
+### T88: Decisão e rastreabilidade
+
+- **Requisitos:** PRD-01–PRD-08.
+- **Arquivos:** RFC 009, ADR 021 (notas nas ADRs 011 e 012), índice de
+  ADRs, spec e tasks.
+- **Aceite:** decisões do PO e escolhas do Tech Lead registradas, com os
+  itens por público no CRM como próxima proposta.
+- **Gate:** links e formatação.
+
+### T89: Pontos por produto no workflow
+
+- **Requisitos:** PRD-01–PRD-08.
+- **Arquivos:** SDK do workflow, snapshots sanitizados (principal, DEV e
+  local), `render-mvp-workflow.mjs`, `create-dev-test-workflow.mjs`,
+  `test/n8n-workflow-contract.test.js`, `test/n8n-dev-workflow.test.js`,
+  `test/orders-ficha.test.js`, README e
+  roteiro do indicador da integração n8n.
+- **Aceite:** nome e produto na saudação; pontos e perguntas por produto;
+  arte, malha, técnica, tamanhos e gola só gravados; kits, alertas e dicas;
+  indicador pelo produto; contrato do CRM inalterado.
+- **Gate:** testes de contrato do workflow e da ficha, `npm run validate`.
+
+### T90: Homologação no DEV
+
+- **Requisitos:** PRD-01–PRD-08.
+- **Aceite:** roteiros KPI-01 a KPI-10, EXT-12 e ZERO-05 rodados no
+  `dev-mvp-simple-13`, com o registro do indicador; publicação depois da
+  aprovação do PO.
+- **Gate:** registro do roteiro.

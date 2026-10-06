@@ -1,5 +1,44 @@
 # Execução INBOX-MEDIA-1
 
+## T21: Mídia integrada à Inbox
+
+MED-01..03/08..13/25: Inbox compõe seleção, gravação e histórico no contexto
+da conversa ativa. Upload/envio permanecem ações explícitas. Resposta antiga
+de detalhe não substitui conversa nova; SSE de encerramento/transferência
+invalida o draft. Captura e prévia são liberadas ao trocar a conversa. O modo
+DEV aparece somente quando o DTO persistido informa deliveryMode=dev.
+
+Reds factuais: revisão gravada seguida de imagem mantinha botão Descartar e
+anúncio de gravação; resposta de detalhe já recebida, mas atrasada na resolução
+de fetch, substituía a nova conversa. O teste de corrida retém a resposta real
+e remove AbortSignal para discriminar o guard de controller/id, sem depender
+apenas de AbortController. Corrigidos sem reduzir assertions publicadas.
+
+| Critério / mapeamento inverso | Evidência file:line e assertion | Resultado exigido |
+| --- | --- | --- |
+| MED-01/02/03 conversa e envio explícito | test/e2e/inbox-media.spec.js:218/225 zero uploads/envios; :233 rota conv1; :236 payload expectedVersion/type/mediaId; :241 CSRF | Cada tipo usa conversa/versão/origem corretas, sem envio automático |
+| MED-08 ownership | :250/253 controles disabled; :254 histórico visível | Outra pessoa não prepara/envia, histórico legível |
+| MED-08 troca durante upload | :272 heading conv2; :273 preview ausente; :279 sends zero | Upload antigo não envia na conversa nova |
+| MED-08 close/transfer por SSE | :300 input disabled; :303 botão enviar ausente; :304 sends zero | Mudança humana invalida draft stale |
+| MED-09/13 troca durante captura | :322 tracks.stop=1; :325 Parar ausente; :326/327 uploads/envios zero | Captura encerrada sem envio |
+| MED-10 revisão seguida de anexo | :343 imagem presente; :346 Descartar ausente; :352 anúncio ausente; :354 input focado | Imagem preservada, estado de gravação liberado |
+| MED-25 texto/foco/axe | :370 reply focado; :371 payload texto; :382 input focado; :383 violations=[] | Texto conservado e foco acessível |
+| MED-08 detalhe antigo | :436 heading conv2 após liberar resposta velha; :444 upload rota conv2 | Guard protege contexto mesmo se abort não impedir resolução |
+| MED-01/10 origem após revisão | :462 imagem; :474 multipart attachment; :478 payload image/mediaId | Troca de origem preserva arquivo realmente selecionado |
+| MED-08 envio pendente | :498 textarea disabled; :501 texto disabled; :504 Gravar disabled; :506 reabilitado; :508 type=image | Não permite texto/captura concorrentes ao comando |
+
+Adequação: treze casos cobrem estado/payload/rota e foco, todos vinculados acima;
+SSE usa EventSource real, backend e dispositivo são fixtures sintéticas. Permissão
+negada/codecs reais continuam cobertos por T19, não são alegados por essa fixture.
+Focal12/12 e caso adicional1/1; UI integral166pass/7skips anteriores(total173),
+workers1, incluindo Firefox Linux T19. Quick/Build847pass/3skips(total850),
+typecheck/lint/format/boundaries/catalog/topology verdes. Nenhum SQL mudou.
+Logs locais ignorados: var/media-T21-validate.log e var/media-T21-e2e.log.
+Demo persistente usa banco/volumes próprios e assets copiados em var/media-demo:
+login200, Inbox200/human1 e frontend200 verificados; UAT físico root pendente,
+sem pedir microfone automaticamente. Sem preparar/enviar enquanto MEDIA=false.
+Nenhum requisito Verified; pipeline completo e ativação remota continuam T23/T24.
+
 ## Correção T20: Foco do player removido
 
 MED-25: revisão independente encontrou foco perdido ao remover player por lost

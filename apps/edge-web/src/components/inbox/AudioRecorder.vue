@@ -6,7 +6,7 @@ const props = defineProps({
   expectedVersion: { type: Number, required: true },
   disabled: { type: Boolean, default: false },
 });
-const emit = defineEmits(['sent']);
+const emit = defineEmits(['sent', 'sending-change']);
 const startButton = ref(null),
   stopButton = ref(null);
 const state = ref('idle'),
@@ -172,6 +172,15 @@ function sent(data) {
   clear();
   emit('sent', data);
 }
+function recordingDismissed() {
+  recording.value = null;
+  state.value = 'idle';
+  error.value = '';
+}
+function sendingChanged(value) {
+  sending.value = value;
+  emit('sending-change', value);
+}
 watch(() => [props.conversationId, props.expectedVersion], clear);
 watch(
   () => props.disabled,
@@ -233,7 +242,8 @@ onBeforeUnmount(clear);
       :expected-version="expectedVersion"
       :disabled="disabled || active"
       :recording="recording"
-      @sending-change="sending = $event"
+      @sending-change="sendingChanged"
+      @recording-dismissed="recordingDismissed"
       @sent="sent"
     />
   </section>

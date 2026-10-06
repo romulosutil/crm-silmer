@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T15 concluídas; fase 3 em execução, próxima T16. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T16 concluídas; fase 3 em execução, próxima T17. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -297,7 +297,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-15, MED-19, MED-20
 **Reuses**: Query/mapMessage e preview existentes.
 **Tools**: tlc-spec-driven; SQL.
-**Done when**: [ ] DTO expõe mediaId/tipo/status/tamanho e rota CRM; histórico sem N+1 S3; SSE contém somente IDs técnicos.
+**Done when**: [x] DTO expõe mediaId/tipo/status/tamanho e rota CRM; histórico sem N+1 S3; SSE contém somente IDs técnicos.
 **Tests**: unit + integration live; mínimo 6 casos, incluindo legado e lost.
 **Gate**: Quick + Live.
 **Commit**: feat(inbox): project media metadata in message history

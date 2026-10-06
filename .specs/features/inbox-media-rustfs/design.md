@@ -2,6 +2,16 @@
 
 Spec: [spec.md](spec.md). Contexto: [context.md](context.md).
 
+T16: histórico e último resumo projetam `media` somente pelo vínculo
+persistido message/conversation/kind. DTO: mediaId, kind, state, mimeType,
+sizeBytes, durationMs e contentUrl relativo à rota CRM autorizada; lost ou
+unavailable não oferecem contentUrl. Legado mantém preview e media=null.
+Não selecionam chave, nome original ou bytes nem fazem chamadas S3. A
+classificação `deliveryMode=dev` vem da versão DEV do único recibo original
+message.send.requested em n8n_events; failed/unknown mantêm a classificação,
+sem inferir entrega real por prefixo do external_message_id. Sem recibo é
+null. SSE permanece limitado aos identificadores técnicos existentes.
+
 ### T15: persistência efetiva do n8n 2.38.7
 
 DEV/local usam `default` nativo e `none/none/false/false`, concorrência 1,

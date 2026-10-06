@@ -1,5 +1,11 @@
 # Ativação de mídia do chat no RustFS
 
+T16: media.contentUrl é exclusivamente uma rota relativa CRM, protegida pela
+ACL normal de leitura; lost preserva o histórico e retorna contentUrl=null.
+deliveryMode=dev indica simulação pela reserva original, inclusive failed e
+outcome_unknown. Não significa entrega WhatsApp. Histórico/lista não consultam
+RustFS; a leitura dos bytes continua no endpoint autorizado e pode marcar lost.
+
 ### T15: ensaio local real e limite de privacidade
 
 Executar `npm run smoke:n8n:media:local` com Node 24.20.0,

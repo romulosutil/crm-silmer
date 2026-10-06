@@ -1607,6 +1607,28 @@ components:
         createdAt: { type: string, format: date-time }
         authorKind: { type: [string, 'null'] }
         authorId: { type: [string, 'null'] }
+        deliveryMode:
+          type: [string, 'null']
+          enum: [dev, official, null]
+          description: Origem do único recibo de reserva; DEV não comprova entrega real.
+        media:
+          oneOf:
+            - { $ref: '#/components/schemas/InboxPersistentMedia' }
+            - { type: 'null' }
+    InboxPersistentMedia:
+      type: object
+      additionalProperties: false
+      required: [mediaId, kind, state, mimeType, sizeBytes, durationMs, contentUrl]
+      properties:
+        mediaId: { type: string, format: uuid }
+        kind: { type: string, enum: [image, audio, video] }
+        state: { type: string }
+        mimeType: { type: [string, 'null'] }
+        sizeBytes: { type: [integer, 'null'], minimum: 0 }
+        durationMs: { type: [integer, 'null'], minimum: 0 }
+        contentUrl:
+          type: [string, 'null']
+          description: Rota relativa CRM com ACL; null quando indisponível, nunca URL storage.
     InboxConversationView:
       type: object
       additionalProperties: false

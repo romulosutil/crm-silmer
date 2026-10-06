@@ -1,6 +1,23 @@
 import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-envelope';
 import { decryptInboxMessageEnvelope } from './postgres-inbox-repository.js';
 
+const MEDIA_PROJECTION = `media.id media_id, media.kind media_kind,
+  media.state media_state, media.detected_mime_type media_mime_type,
+  media.size_bytes media_size_bytes, media.duration_ms media_duration_ms,
+  media.validation_status media_validation_status,
+  reservation.workflow_version reserved_workflow_version`;
+// Persisted binding, never a payload URL or a storage request. One original
+// reservation is authoritative; contradictory provenance fails closed.
+const MEDIA_JOIN = `LEFT JOIN crm.chat_media media
+  ON media.message_id=message.id AND media.conversation_id=message.conversation_id
+    AND media.kind=message.message_type
+  LEFT JOIN LATERAL (
+    SELECT CASE WHEN count(*)=1 THEN max(workflow_version) END workflow_version
+    FROM crm.n8n_events
+    WHERE message_id=message.id AND conversation_id=message.conversation_id
+      AND event_type='message.send.requested'
+  ) reservation ON true`;
+
 /**
  * The order the Inbox shows for a conversation: the pending one, otherwise the
  * most recently confirmed (same rule as GET /conversations/:id/order). Only
@@ -112,7 +129,12 @@ export class PostgresInboxReadRepository {
                   last_message.content_envelope last_message_content_envelope,
                   last_message.status last_message_status,
                   last_message.delivery_status last_message_delivery_status,
-                  last_message.occurred_at last_message_occurred_at
+                  last_message.occurred_at last_message_occurred_at,
+                  last_message.media_id, last_message.media_kind,
+                  last_message.media_state, last_message.media_mime_type,
+                  last_message.media_size_bytes, last_message.media_duration_ms,
+                  last_message.media_validation_status,
+                  last_message.reserved_workflow_version
            FROM crm.conversations conversation
            JOIN crm.contact_identities identity
              ON identity.id=conversation.contact_identity_id
@@ -133,8 +155,10 @@ export class PostgresInboxReadRepository {
            LEFT JOIN LATERAL (
              SELECT message.id, message.direction, message.message_type,
                     message.content_envelope, message.status,
-                    message.delivery_status, message.occurred_at
+                    message.delivery_status, message.occurred_at,
+                    ${MEDIA_PROJECTION}
              FROM crm.messages message
+             ${MEDIA_JOIN}
              WHERE message.conversation_id=conversation.id
              ORDER BY message.occurred_at DESC, message.id DESC LIMIT 1
            ) last_message ON true
@@ -209,11 +233,13 @@ export class PostgresInboxReadRepository {
           ),
         () =>
           database.query(
-            `SELECT id, conversation_id, direction, author_kind, author_id,
-                    message_type, content_envelope, status, delivery_status,
-                    occurred_at, created_at
-             FROM crm.messages WHERE conversation_id=$1
-             ORDER BY occurred_at, id`,
+            `SELECT message.id, message.conversation_id, message.direction,
+                    message.author_kind, message.author_id, message.message_type,
+                    message.content_envelope, message.status, message.delivery_status,
+                    message.occurred_at, message.created_at, ${MEDIA_PROJECTION}
+             FROM crm.messages message ${MEDIA_JOIN}
+             WHERE message.conversation_id=$1
+             ORDER BY message.occurred_at, message.id`,
             [conversationId],
           ),
         () =>
@@ -265,7 +291,9 @@ function mapConversationSummary(row, repository) {
   const lastMessage = row.last_message_id
     ? mapMessage(
         {
+          ...row,
           id: row.last_message_id,
+          conversation_id: row.id,
           direction: row.last_message_direction,
           message_type: row.last_message_type,
           content_envelope: row.last_message_content_envelope,
@@ -342,6 +370,33 @@ function mapMessage(row, repository) {
     deliveryStatus: row.delivery_status ?? null,
     direction: row.direction,
     id: row.id,
+    media: row.media_id
+      ? Object.freeze({
+          mediaId: row.media_id,
+          kind: row.media_kind,
+          state: row.media_state,
+          mimeType: row.media_mime_type ?? null,
+          sizeBytes:
+            row.media_size_bytes === null || row.media_size_bytes === undefined
+              ? null
+              : Number(row.media_size_bytes),
+          durationMs:
+            row.media_duration_ms === null ||
+            row.media_duration_ms === undefined
+              ? null
+              : Number(row.media_duration_ms),
+          contentUrl:
+            row.media_state === 'attached' &&
+            row.media_validation_status === 'clean'
+              ? `/api/v1/conversations/${encodeURIComponent(row.conversation_id)}/media/${encodeURIComponent(row.media_id)}/content`
+              : null,
+        })
+      : null,
+    deliveryMode: row.reserved_workflow_version
+      ? /^dev-mvp-simple-\d+$/u.test(row.reserved_workflow_version)
+        ? 'dev'
+        : 'official'
+      : null,
     occurredAt: iso(row.occurred_at),
     preview: messagePreview(content, row.message_type),
     status: row.status,

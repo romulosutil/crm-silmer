@@ -14,6 +14,7 @@ import {
   TEMPLATE_V3,
   TEMPLATE_V4,
   TEMPLATE_V5,
+  TEMPLATE_V6,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
@@ -38,6 +39,12 @@ const v3Gate = JSON.parse(
 const v4Gate = JSON.parse(
   await readFile(
     new URL('docs/phase0/ficha-pdf-approval-v4.json', rootUrl),
+    'utf8',
+  ),
+);
+const v6Gate = JSON.parse(
+  await readFile(
+    new URL('docs/phase0/ficha-pdf-approval-v6.json', rootUrl),
     'utf8',
   ),
 );
@@ -166,12 +173,13 @@ async function get(api, url) {
   return api.inject({ headers: readHeaders, method: 'GET', url });
 }
 
-test('the switch agrees with the recorded v5 approval (PIM-10)', () => {
+test('the switch agrees with the recorded v6 approval (PIM-10)', () => {
   assert.doesNotThrow(() =>
     validateFichaPrintSwitch({
       gate: v3Gate,
       gateV4: v4Gate,
       gateV5: v5Gate,
+      gateV6: v6Gate,
       printTemplate: PRINT_TEMPLATE,
     }),
   );
@@ -261,11 +269,12 @@ test('the print route prints whatever the switch names (PIM-10)', async (t) => {
   assert.equal(response.body, renderOrderFicha(order, PRINT_TEMPLATE));
 });
 
-test('orders print on v5 since the PO approved its sample (T86, PIM-10)', async (t) => {
+test('orders print on v6 since the PO approved its sample (T95, PIM-10)', async (t) => {
   const { order, response } = await printedThroughRoute(t);
 
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V5);
-  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V5));
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V6);
+  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V6));
+  assert.match(response.body, /5<\/b> Modelo de malha/u);
   assert.match(response.body, /Tipo de roupa/u);
   assert.match(response.body, /4<\/b> Técnica/u);
   assert.match(

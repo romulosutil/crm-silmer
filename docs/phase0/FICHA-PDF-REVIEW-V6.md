@@ -6,12 +6,14 @@ dados sintéticos.
 
 ## Estado
 
-**Aguarda a revisão provisória do PO.** O registro
+**Aprovada provisoriamente pelo PO para desenvolvimento e cloud-dev em
+06/10/2026.** O registro
 [`ficha-pdf-approval-v6.json`](ficha-pdf-approval-v6.json) trava os hashes da
-amostra, do HTML e do PDF com a revisão pendente. `PRINT_TEMPLATE` continua
-`ficha-canonical-v5`, e o validador recusa a troca para a v6 enquanto o PO não
-registrar a aprovação. Depois dela, Rose e Operação ainda precisam revisar e
-assinar fisicamente a amostra impressa antes de qualquer uso em produção. A
+amostra, do HTML e do PDF e grava a aprovação do PO; `PRINT_TEMPLATE` passou a
+`ficha-canonical-v6`. O validador recusaria a troca sem essa aprovação, e o
+script de pré-visualização se recusa a sobrescrever o PDF aprovado. Rose e
+Operação ainda precisam revisar e assinar fisicamente a amostra impressa antes
+de qualquer uso em produção. A
 v2, a v3, a v4, a v5, seus PDFs e seus hashes não foram alterados.
 
 ## O que mudou da v5 para a v6

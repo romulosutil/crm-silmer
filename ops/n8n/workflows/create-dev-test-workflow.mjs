@@ -19,6 +19,10 @@ const HUMAN_SEND = 'WhatsApp - Enviar texto humano (MVP)';
 const NOTICE_SEND = 'WhatsApp - Enviar aviso de transferência (MVP)';
 const DEV_NOTICE_SEND = 'DEV - Simular aviso de transferência (MVP)';
 const DEV_HUMAN_SEND = 'DEV - Simular envio humano (MVP)';
+const MEDIA_UPLOAD = 'Meta - Upload midia humana (MVP)';
+const DEV_MEDIA_UPLOAD = 'DEV - Simular upload Meta de midia (MVP)';
+const MEDIA_SEND = 'Meta - Enviar midia humana (MVP)';
+const DEV_MEDIA_SEND = 'DEV - Simular envio Meta de midia (MVP)';
 const PANEL_TRIGGER = 'Painel - Receber comando (MVP)';
 // ADR 026: the public site chat stays in the canonical workflow; DEV and LOCAL
 // keep their own chat, restricted to the n8n user.
@@ -210,9 +214,34 @@ return { json: { id: 'dev-notice-' + notice.command_id, messages: [{ id: 'dev-no
 return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-human-' + command.command_id }], simulated: true } };`,
   );
 
+  transformSendNode(
+    requiredNode(nodes, MEDIA_UPLOAD),
+    DEV_MEDIA_UPLOAD,
+    `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
+const bytes = await this.helpers.getBinaryDataBuffer($itemIndex, 'data');
+if (bytes.length !== command.message.size_bytes) throw new Error('DEV_MEDIA_UPLOAD_INVALID');
+if ($('Painel - Receber comando (MVP)').item.json.body?.simulate_media_upload_failed === true) throw new Error('DEV_MEDIA_UPLOAD_FAILED');
+return { json: { id: 'dev-media-' + command.command_id, simulated: true } };`,
+  );
+  transformSendNode(
+    requiredNode(nodes, MEDIA_SEND),
+    DEV_MEDIA_SEND,
+    `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
+if ($('Painel - Receber comando (MVP)').item.json.body?.simulate_send_unknown === true) throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');
+return { json: { messages: [{ id: 'dev-human-media-' + command.command_id }], simulated: true } };`,
+  );
+
   for (const node of nodes) {
-    // Only the CRM calls change; Meta media and OpenAI keep their own accounts.
-    if (isCrmRequest(node)) {
+    if (typeof node.parameters?.jsCode === 'string') {
+      node.parameters.jsCode = node.parameters.jsCode.replaceAll(
+        MEDIA_UPLOAD,
+        DEV_MEDIA_UPLOAD,
+      );
+    }
+    if (node.type === 'n8n-nodes-base.httpRequest') {
+      if (node.parameters.genericAuthType !== 'httpBasicAuth') {
+        throw new Error('DEV_UNEXPECTED_EXTERNAL_HTTP_TRANSPORT');
+      }
       rewriteWorkflowHeaders(node);
       if (options.deployment) {
         node.credentials = {
@@ -411,6 +440,8 @@ function rewriteConnections(connections) {
     [AI_SEND]: DEV_AI_SEND,
     [HUMAN_SEND]: DEV_HUMAN_SEND,
     [NOTICE_SEND]: DEV_NOTICE_SEND,
+    [MEDIA_UPLOAD]: DEV_MEDIA_UPLOAD,
+    [MEDIA_SEND]: DEV_MEDIA_SEND,
   };
   /** @type {Record<string, any>} */
   const result = {};

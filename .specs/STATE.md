@@ -13,6 +13,8 @@
 
 ## Handoff
 
+T14 concluída na fase3; MED-06/21/22/24: red oito cenarios novos falharam por ausencia do caminho de midia; green preserva reserva, bytes nativos medidos antes Crypto v2 e referencia pareada restaurada, SHA/tamanho, URL command_id textual encodeURIComponent, multipart formBinaryData, Meta por ID, preflight real imediatamente antes messages, falha conhecida antes efeito versus unknown depois sem retry. Quick827pass/3skips publicados(total830), contrato especifico8/8 mais DEV8/8 e E2E107pass/7skips publicados(total114) workers1; typecheck/lint/diff verdes. Inventario aprovado canonic51para68 e DEV60para77, mantendo assertions funcionais e cenarios removidos proibidos. Suporte minimo generator necessario ao contrato T14 simula somente upload/messages Meta e impede HTTP externo receber Basic CRM; persistencia/importer/prova runtime n8n continuam T15. API/limites/voice Meta atuais nao demonstrados por endpoints oficiais inacessiveis; ativacao failclosed exige homologated+versao explicita+phone numerico e gate externo T23. Fonte n8n2.38.7 confirmado; nenhum schema ou ADR mudou; nenhuma Verified; proximo T15.
+
 Fix T13/MED-22: comando text reservado agora negado409 por GET/preflight, sem
 S3/mutação. Red SQLundefined e HTTP503 confirmado; SQLbind46/46, transporte8/8,
 Quick818/3 antigos, typecheck/lint/diff verdes. Próxima T14 em execução;

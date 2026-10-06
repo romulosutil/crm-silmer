@@ -301,7 +301,7 @@ function syntheticFile(name, slot, index) {
 }
 
 /**
- * The /files routes of ADR 021 over an in-memory store per order.
+ * The /files routes of ADR 023 over an in-memory store per order.
  *
  * @param {import('@playwright/test').Route} route
  * @param {import('@playwright/test').Request} request
@@ -521,7 +521,7 @@ async function mockOrders(page, options = {}) {
       return;
     }
 
-    // ADR 021: the art files of each order, kept per test like the orders.
+    // ADR 023: the art files of each order, kept per test like the orders.
     const filesRoute =
       /^\/api\/v1\/orders\/([^/]+)\/files(?:\/([^/]+)(?:\/(content|thumbnail))?)?$/u.exec(
         path,

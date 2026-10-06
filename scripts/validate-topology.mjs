@@ -39,7 +39,7 @@ function sameArray(actual, expected) {
 }
 
 /**
- * ADR 021: RustFS keeps the order files. It stays internal, pinned by digest
+ * ADR 023: RustFS keeps the order files. It stays internal, pinned by digest
  * and inside the off-host backup and recovery drill with PostgreSQL.
  * @param {Record<string, any>} project
  */
@@ -58,9 +58,9 @@ function validatePlannedObjectStorage(project) {
   const [storage] = planned;
   invariant(
     storage.kind === 'object-storage' &&
-      storage.decisionRecord === 'docs/adr/021-arquivos-da-arte-no-rustfs.md' &&
+      storage.decisionRecord === 'docs/adr/023-arquivos-da-arte-no-rustfs.md' &&
       objectStorageImagePattern.test(storage.imageRef),
-    'silmer-rustfs must trace to ADR 021 and use the pinned RustFS digest',
+    'silmer-rustfs must trace to ADR 023 and use the pinned RustFS digest',
   );
   invariant(
     storage.public === false &&
@@ -281,9 +281,9 @@ function validateObjectStorageGate(storageGate) {
   invariant(
     storageGate?.service === 'silmer-rustfs' &&
       storageGate.decisionRecord ===
-        'docs/adr/021-arquivos-da-arte-no-rustfs.md' &&
+        'docs/adr/023-arquivos-da-arte-no-rustfs.md' &&
       checks.every((check) => typeof storageGate[check] === 'boolean'),
-    'Object storage gate must trace silmer-rustfs to ADR 021',
+    'Object storage gate must trace silmer-rustfs to ADR 023',
   );
   invariant(
     ['pending-external', 'passed'].includes(storageGate.status) &&

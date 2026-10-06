@@ -2089,7 +2089,7 @@ button.op-save:hover:not(:disabled) {
   font-weight: 600;
 }
 
-/* Art files (ADR 021): the final art, then up to five references. */
+/* Art files (ADR 023): the final art, then up to five references. */
 .op-files-block {
   display: grid;
   gap: 0.75rem;

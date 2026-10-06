@@ -65,7 +65,7 @@
     "temporaryDnsDrill": ["github-issue://3"],
     "objectVersionRestore": ["github-issue://3"],
     "orderFilesBucketRestore": [
-      "repository://docs/adr/021-arquivos-da-arte-no-rustfs.md"
+      "repository://docs/adr/023-arquivos-da-arte-no-rustfs.md"
     ],
     "fullSmoke": ["github-issue://3"]
   },
@@ -127,7 +127,7 @@
       "ownerRole": "DevOps-Privacy",
       "dueGate": "before-monthly-database-restore",
       "evidenceRefs": [
-        "repository://docs/adr/021-arquivos-da-arte-no-rustfs.md"
+        "repository://docs/adr/023-arquivos-da-arte-no-rustfs.md"
       ]
     },
     {

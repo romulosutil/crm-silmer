@@ -99,7 +99,7 @@ test('declares the approved shared EasyPanel project and prefixed services', asy
   }
 });
 
-test('plans RustFS as a private service backed up with PostgreSQL (ADR 021)', async () => {
+test('plans RustFS as a private service backed up with PostgreSQL (ADR 023)', async () => {
   const topology = await json('ops/easypanel/topology.json');
   const gate = await json('ops/easypanel/provisioning-gate.json');
   const kit = await json('ops/recovery/off-host-kit.json');

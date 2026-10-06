@@ -23,7 +23,7 @@ function nameAad(fileId) {
 }
 
 /**
- * The catalog of an order's art files (ADR 021). Writes take the same locks
+ * The catalog of an order's art files (ADR 023). Writes take the same locks
  * as an order write — conversation, then order — so the owner check, the
  * pending status and the five-file limit hold against concurrent commands.
  */

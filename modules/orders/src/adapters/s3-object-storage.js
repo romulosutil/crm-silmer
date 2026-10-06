@@ -1,7 +1,7 @@
 import { createHash, createHmac } from 'node:crypto';
 import { Readable } from 'node:stream';
 
-// ADR 021: the art files live in RustFS, reached only by the API on the
+// ADR 023: the art files live in RustFS, reached only by the API on the
 // internal network. RustFS speaks S3, so this adapter signs the four calls the
 // orders module needs with AWS Signature V4 and path-style URLs, without an
 // SDK dependency.

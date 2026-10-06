@@ -52,7 +52,7 @@ const localIdentityEnvironment = {
     process.env.IDENTITY_BOOTSTRAP_TOKEN ??
     'development-bootstrap-token-local-only',
 };
-// ADR 021: the order's art files go to the local RustFS of
+// ADR 023: the order's art files go to the local RustFS of
 // docker-compose.dev.yml unless another S3 endpoint is given.
 const localObjectStorage = process.env.OBJECT_STORAGE_ENDPOINT === undefined;
 const objectStorageEnvironment = {

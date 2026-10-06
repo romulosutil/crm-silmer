@@ -1,4 +1,4 @@
-# ADR 021 — Arquivos da arte do pedido no RustFS
+# ADR 023 — Arquivos da arte do pedido no RustFS
 
 Status: aceita
 
@@ -9,7 +9,7 @@ arquivos de 10 MB e uma arte final fora da conta), miniatura e ícone por
 extensão e a saída do Dropbox, e aprovou o
 [design](../design/arquivos-da-arte.html). Tech Lead definiu o caminho pela
 API, o catálogo, a validação e a recuperação. Proposta na
-[RFC 009](../rfc/009-arquivos-da-arte-no-rustfs.md). Requisitos
+[RFC 011](../rfc/011-arquivos-da-arte-no-rustfs.md). Requisitos
 `ARQ-01`–`ARQ-09` da [spec](../../.specs/features/pedidos-mvp/spec.md),
 tarefas T88–T92 de [tasks](../../.specs/features/pedidos-mvp/tasks.md).
 

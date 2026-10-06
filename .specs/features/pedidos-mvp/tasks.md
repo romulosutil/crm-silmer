@@ -1465,7 +1465,7 @@ vendedor.
 
 As tarefas abaixo partem do `master` que já contém ADRs 008–018, v3 paginada
 e aprovação provisória. Cada fatia requer commit e push próprios antes de
-PR/merge. O envio de arquivos (depois ativado pela ADR 021, T88–T92) e o
+PR/merge. O envio de arquivos (depois ativado pela ADR 023, T88–T92) e o
 fluxo de aviso a Rose ficam fora desta entrega, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md).
 
 ### T76: Decisão, contrato e glossário
@@ -1576,7 +1576,7 @@ A PR 142 integrou estas tarefas em 05/10/2026. A v5 está selecionada desde 2979
 - **Aceite:** gates completos, PR e merge após a aprovação do PO.
 - **Gate:** `git diff --check`, `npm run validate` e E2E de pedidos.
 
-## Arquivos da arte no RustFS (ADR 021, 05/10/2026)
+## Arquivos da arte no RustFS (ADR 023, 05/10/2026)
 
 As tarefas partem do `master` 2979c81 (v5 em uso). Cada uma vira um commit e
 um push na branch `feat/arquivos-da-arte`.
@@ -1584,7 +1584,7 @@ um push na branch `feat/arquivos-da-arte`.
 ### T88: Decisão, design e saída do Dropbox
 
 - **Requisitos:** ARQ-01–ARQ-09.
-- **Arquivos:** RFC 009, ADR 021, design, spec, tasks, glossário e docs de
+- **Arquivos:** RFC 011, ADR 023, design, spec, tasks, glossário e docs de
   arquitetura, segurança, política de mídia e topologia.
 - **Aceite:** decisão do PO registrada sem reescrever ADRs; nenhuma menção
   ao Dropbox fora da ADR 019, da migração 0005 e dos JSON aprovados no T00.5

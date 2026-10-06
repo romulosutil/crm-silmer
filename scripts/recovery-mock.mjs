@@ -417,7 +417,7 @@ export function validateRecoveryKit(kit, topology) {
   );
   invariant(
     kit.orderFiles?.decisionRecord ===
-      '../../docs/adr/021-arquivos-da-arte-no-rustfs.md' &&
+      '../../docs/adr/023-arquivos-da-arte-no-rustfs.md' &&
       kit.orderFiles.service === 'silmer-rustfs' &&
       kit.orderFiles.bucket === 'crm-silmer-arquivos' &&
       kit.orderFiles.offHostBackup === 'with-postgres' &&

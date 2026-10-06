@@ -18,7 +18,7 @@ services:
     volumes:
       - crm-silmer-postgres-data:/var/lib/postgresql/data
 
-  # ADR 021: the art files of an order. Local-only credentials; the API
+  # ADR 023: the art files of an order. Local-only credentials; the API
   # creates the bucket on its first upload.
   rustfs:
     image: rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c

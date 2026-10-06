@@ -1347,7 +1347,7 @@ if (connectionString) {
     assert.equal(grantedAdmin.paidOn, '2026-09-12');
   });
 
-  // ADR 021: the file catalog takes the order locks, keeps the five-file
+  // ADR 023: the file catalog takes the order locks, keeps the five-file
   // limit under concurrency and seals the original name. With
   // TEST_OBJECT_STORAGE_* set, the bytes go through a real RustFS/S3.
   test('order files keep five references under concurrency and seal their names', async () => {

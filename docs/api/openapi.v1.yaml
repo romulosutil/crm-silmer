@@ -953,7 +953,7 @@ paths:
   /orders/{orderId}/files:
     get:
       operationId: listOrderFiles
-      summary: Lista a arte final e os arquivos da arte do pedido (ADR 021)
+      summary: Lista a arte final e os arquivos da arte do pedido (ADR 023)
       description: >-
         Ação order.read. Sem OBJECT_STORAGE_* configurado responde 503 e o
         resto do pedido continua disponível.

@@ -1,6 +1,6 @@
 # RFC 007 — Ficha espelhada e leitura operacional do CRM
 
-Status: decidida para desenvolvimento pela [ADR 019](../adr/019-ficha-espelhada-e-sinais-operacionais.md); os arquivos da arte foram decididos depois pela [RFC 009](009-arquivos-da-arte-no-rustfs.md) e pela [ADR 021](../adr/021-arquivos-da-arte-no-rustfs.md); o aviso a Rose segue proposto.
+Status: decidida para desenvolvimento pela [ADR 019](../adr/019-ficha-espelhada-e-sinais-operacionais.md); os arquivos da arte foram decididos depois pela [RFC 011](011-arquivos-da-arte-no-rustfs.md) e pela [ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md); o aviso a Rose segue proposto.
 
 Data: 03/10/2026
 
@@ -46,8 +46,8 @@ paginação, lastro e controle de produção em branco ([ADR 017](../adr/017-fic
 ## Integração preparada, sem ativação
 
 O destino dos arquivos da arte foi decidido depois pela
-[RFC 009](009-arquivos-da-arte-no-rustfs.md) e pela
-[ADR 021](../adr/021-arquivos-da-arte-no-rustfs.md): bucket privado do RustFS,
+[RFC 011](011-arquivos-da-arte-no-rustfs.md) e pela
+[ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md): bucket privado do RustFS,
 com envio e download pela API do CRM e backup off-host junto do PostgreSQL. Os
 requisitos desta seção continuam valendo: allowlist com ao menos PNG, JPEG e
 CDR, após validação de MIME, extensão, tamanho e conteúdo; registro de

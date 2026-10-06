@@ -317,7 +317,7 @@ Arquivo inválido é eliminado e nunca chega ao pedido. Para esta política,
 arquivo válido é aquele que passou limite, MIME por conteúdo, hash e varredura
 e que uma pessoa classificou como necessário à finalidade operacional; uma só
 dessas condições não basta. O operador anexa o arquivo válido ao pedido, que o
-guarda no bucket privado do RustFS (ADR 021), e ele passa a seguir o prazo da
+guarda no bucket privado do RustFS (ADR 023), e ele passa a seguir o prazo da
 classe correspondente. O MVP registra hash, operador, horário e resultado do
 handoff; não há promoção automática a partir do canal nem URL pública do
 arquivo. Pedido, Ficha versionada, orçamento aprovado, comprovante PIX válido,

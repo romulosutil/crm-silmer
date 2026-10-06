@@ -17,7 +17,7 @@ import {
 } from '../../lib/order-files.js';
 import OrderIcon from './OrderIcon.vue';
 
-// ADR 021: up to five art files plus the final art, sent and downloaded by
+// ADR 023: up to five art files plus the final art, sent and downloaded by
 // hand. Each upload goes on its own, one after the other, so the five-file
 // limit and the replaced final art are decided by the API in order.
 

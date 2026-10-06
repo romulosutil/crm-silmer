@@ -75,7 +75,7 @@ export function commandKey() {
 }
 
 /**
- * ADR 021: a multipart upload with progress, which fetch cannot report. Same
+ * ADR 023: a multipart upload with progress, which fetch cannot report. Same
  * session, CSRF and Idempotency-Key rules as `request`; a failure arrives as
  * the same ApiError, and a lost connection as status 0.
  *

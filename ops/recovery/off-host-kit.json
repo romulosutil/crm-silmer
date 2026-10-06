@@ -49,7 +49,7 @@
   },
   "runbook": "RUNBOOK.md",
   "orderFiles": {
-    "decisionRecord": "../../docs/adr/021-arquivos-da-arte-no-rustfs.md",
+    "decisionRecord": "../../docs/adr/023-arquivos-da-arte-no-rustfs.md",
     "service": "silmer-rustfs",
     "bucket": "crm-silmer-arquivos",
     "offHostBackup": "with-postgres",

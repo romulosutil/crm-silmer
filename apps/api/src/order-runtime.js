@@ -114,7 +114,7 @@ export function createOrderRuntime(options) {
     repository: options.repository,
   });
 
-  // ADR 021: without object storage the art files stay off and their routes
+  // ADR 023: without object storage the art files stay off and their routes
   // answer 503, while the rest of the order keeps working.
   const fileService = options.files
     ? createOrderFileService({
@@ -366,7 +366,7 @@ export function createOrderRuntime(options) {
     },
 
     /**
-     * ADR 021: the command fingerprint carries the content hashes, so a
+     * ADR 023: the command fingerprint carries the content hashes, so a
      * retry with the same key and bytes replays the first answer and other
      * bytes under that key are refused.
      *

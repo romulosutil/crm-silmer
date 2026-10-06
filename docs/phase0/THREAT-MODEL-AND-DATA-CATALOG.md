@@ -35,7 +35,7 @@ ficam fora do backup e arquivos válidos usam recibo do handoff manual. Logs tê
 retenção operacional de 30 dias e teto jurídico de 90 dias. Backups expiram em
 35 dias e todo restore reaplica tombstones antes de ficar ready.
 
-Desde a [ADR 021](../adr/021-arquivos-da-arte-no-rustfs.md), o arquivo válido
+Desde a [ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md), o arquivo válido
 fica no pedido, em bucket privado do RustFS acessado só pela API e incluído no
 backup off-host. `threat-model.json` e `data-catalog.json` ainda descrevem o
 destino anterior: os dois têm hash aprovado em `security-review.json` e só

@@ -141,6 +141,23 @@ export class PostgresChatMediaUploadRepository {
     });
   }
   /** @param {any} input */
+  async readForActor(input) {
+    const row = (
+      await this.#database.query(
+        'SELECT * FROM crm.chat_media WHERE id=$1 AND conversation_id=$2',
+        [input.mediaId, input.conversationId],
+      )
+    ).rows[0];
+    if (!row) throw error(404);
+    if (
+      !row.message_id &&
+      row.uploaded_by !== input.actor.id &&
+      !input.actor.capabilities?.includes('COMMERCIAL_ADMIN')
+    )
+      throw error(403);
+    return row;
+  }
+  /** @param {any} input */
   async complete(input) {
     return this.#database.transaction(async (/** @type {any} */ client) => {
       await client.query(

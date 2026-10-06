@@ -137,6 +137,10 @@ T22 deverá consumir listAbandonedAdmissions (>24h), lock/recheck e confirmar
 remoção antes de release. Não há sweeper de admissões nesta fase.
 
 Novo live T7: `rtk proxy node --test --test-concurrency=1 test/chat-media-upload-postgres-live.test.js`.
+T8 amplia esse live com identidade/sessões reais. Status e preflight do upload
+usam conversation.read; sessão ausente/inválida/expirada/revogada401,
+origem/capacidade/ownership negados403, falha DB503. O modo401 é específico
+da fronteira de mídia; leitores antigos mantêm o contrato anterior.
 
 ```powershell
 rtk proxy node --test test/rustfs-live-smoke.test.js

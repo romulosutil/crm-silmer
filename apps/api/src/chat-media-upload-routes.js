@@ -1,5 +1,6 @@
 import multipart from '@fastify/multipart';
 import { mediaError } from './chat-media-runtime.js';
+import { authorizeChatMediaRead } from './chat-media-status-routes.js';
 
 /** @param {import('fastify').FastifyInstance} api @param {any} media @param {Function} contextFor */
 export function registerChatMediaUploadRoutes(api, media, contextFor) {
@@ -23,7 +24,7 @@ export function registerChatMediaUploadRoutes(api, media, contextFor) {
           ? 422
           : [401, 403, 409, 413, 429].includes(raw)
             ? raw
-            : raw >= 500
+            : raw >= 500 || !Number.isSafeInteger(raw)
               ? 503
               : 422;
       return reply
@@ -63,6 +64,7 @@ export function registerChatMediaUploadRoutes(api, media, contextFor) {
         )
           throw mediaError(422);
         const context = contextFor(request);
+        await authorizeChatMediaRead(request, media);
         const principal = await media.authorize({
           action: 'conversation.message.send',
           cookie: request.headers.cookie,
@@ -75,7 +77,9 @@ export function registerChatMediaUploadRoutes(api, media, contextFor) {
         const fields = /** @type {Record<string,string>} */ ({});
         let file;
         while (true) {
-          const next = await parts.next();
+          const next = await parts.next().catch(() => {
+            throw mediaError(422);
+          });
           if (next.done) break;
           const part = next.value;
           if (part.type === 'file') {

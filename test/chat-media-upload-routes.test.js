@@ -76,6 +76,11 @@ async function harness(t, options = {}) {
     },
   };
   const access = {
+    async authorizeRead() {
+      return {
+        actor: { id: 'synthetic-seller', kind: 'human', capabilities: [] },
+      };
+    },
     async authorize(/** @type {any} */ input) {
       if (input.csrfToken !== 'synthetic-csrf')
         throw Object.assign(new Error('private-canary'), { statusCode: 403 });

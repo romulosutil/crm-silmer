@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T7 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T8 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -191,7 +191,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-08, MED-16, MED-19, MED-20, MED-29
 **Reuses**: Problem JSON, ACL e DTO da mídia.
 **Tools**: tlc-spec-driven; shell.
-**Done when**: [ ] Rascunho só é visível ao autor/admin; attached segue ACL de leitura; invalid_format retorna 200/state=rejected; DTO nunca inclui credencial/object_key.
+**Done when**: [x] Rascunho só é visível ao autor/admin; attached segue ACL de leitura; invalid_format retorna 200/state=rejected; DTO nunca inclui credencial/object_key.18 cenários e identidade/sessões SQL reais, Full verde; [evidência](execution.md#t8-status-autorizado-e-erros-de-sessão).
 **Tests**: integration; mínimo 6 cenários de estados/permissão.
 **Gate**: Quick + Full de integração.
 **Commit**: feat(api): expose authorized media processing status

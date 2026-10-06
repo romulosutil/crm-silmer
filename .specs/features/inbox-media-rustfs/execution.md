@@ -1,5 +1,71 @@
 # Execução INBOX-MEDIA-1
 
+## T4: Validação de mídia
+
+Premissas antes do patch: somente allowlist aprovada, scanner existente e
+ffprobe no backend; declarado não substitui MIME real. Arquivos: módulo
+`chat-media-validation.js`, export, dois testes e spec/tasks/execution.
+Gerador sintético Chromium versionado adicionado após finding deQA, para
+preservar reprodução de gravações streaming sem duration.
+Sucesso: pelo menos12 cenários, fixtures reais para seis formatos, MIME/codec,
+malware/stale e fronteiras de tamanho/legenda; Quick, runtime real e Build.
+
+Quick/Build final:685 pass, três skips preexistentes,688 total, Node24.20.0;
+types/lint verdes.16 testes unitários específicos. E2E não repetido nesta
+tarefa sem mudançaUI; baseline integral107+7skips de T2 permanece histórico,
+novo gate integral ao concluir a fase. Requisitos seguem In Progress.
+
+Runtime isolado usa Node24.20.0 bookworm, FFmpeg5.1.9, ClamAV1.4.3 e libmagic.
+Freshclam oficial atualizou daily28144/main63/bytecode339, verificou cada
+database e terminou0. Primeiro download falhou por faltaCA; instalação
+explícita de ca-certificates resolveu, requisito da imagem emT5. Nenhuma
+assinatura sintética/fake usada. Aviso NotifyClamd semdaemon não impediu
+update; T5 desabilitará essa opção. Runtime remoto permanece gateT23.
+
+O scanner rejeita infecção, indisponibilidade e assinatura>36h. ffprobe
+tem timeout10s/maxBuffer64KiB/probesize8MiB/maxalloc64MiB/protocolfile e MOV
+sem refs externas. MP3 admite uma capa JPEG/PNG apenas com attached_pic=1.
+Gravação streaming sem duration é decodificada por FFmpeg com threads1,
+timeout30s, teto301s e progresso limitado; timeline>300s é rejeitada.
+Não se aceita duration ausente por suposição. Erros são sanitizados.
+
+### Adequação: suficiência
+
+| Critério           | Evidência assertion                                                                                                           | Esperado                        | Coberto |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------- |
+| MED01..03 formatos | `test/chat-media-validation.test.js:106` MIME exato; :107 tamanho15; :108 SHA64; seis fixtures; runtime:72 MIME/:73 tamanho   | Allowlist e bytes/codec válidos | Sim     |
+| MED04 limites      | `test/chat-media-validation.test.js:207` limite exato; :215 throws status413 para+1                                           | Fronteira5/16MiB                | Sim     |
+| Legenda            | `test/chat-media-validation.test.js:231`1024; :2391025throws; :251 áudio throws                                               | Limites aprovados               | Sim     |
+| MIME/codec MED29   | `test/chat-media-validation.test.js:272` razão invalid_format; :321 rejects HEVC/MP3video/Vorbis; runtime:151/:181 rejects    | Disfarce/codec não ficam ready  | Sim     |
+| Scanner MED26      | `test/chat-media-validation.test.js:344` razões infected/stale/scanner_unavailable e mensagem fixa; runtime:198 EICARinfected | Fail closed, sem dado privado   | Sim     |
+| MP3 capa           | `test/chat-media-validation.test.js:160`audioCodec mp3/:162 vídeo comum rejects; runtime:99 capa real aceita                  | Capa embutida válida            | Sim     |
+| WebM streaming     | `test/chat-media-validation.test.js:189`1200ms/:191301s rejects; runtime:134durationundefined/:145 timeline real1..2s         | Duração medida e limitada       | Sim     |
+| Declaração300s     | `test/chat-media-validation.test.js:399`300000ms/:401300.001s rejects                                                         | Teto inclusivo                  | Sim     |
+| Probe/empty        | `test/chat-media-validation.test.js:368`rejects                                                                               | Falha nunca ready               | Sim     |
+
+### Adequação: discriminação
+
+| Near miss                           | Assertion que falha  | Resultado incorreto distinguido                  |
+| ----------------------------------- | -------------------- | ------------------------------------------------ |
+| Aceitar MIME declarado sem detector | unit:272/runtime:151 | PNG declaradoJPEG aceito                         |
+| Aceitar qualquer codecMP4/OGG       | unit:321/runtime:181 | HEVC/mpeg4/Vorbis aceitos                        |
+| Fail open no scanner                | unit:344/runtime:198 | EICAR ou scanner erro aceito                     |
+| Rejeitar MP3 com capa               | unit:160/runtime:99  | Arquivo permitido rejeitado                      |
+| Supor duraçãoWebM ausente           | unit:189/runtime:145 | Gravação Chromium rejeitada ou duração inventada |
+| Truncar gravação longa e aceitar    | unit:191             | 301s aceitos                                     |
+
+Runtime final PASS: um teste, zero skips,111s; seis formatos reais, MP3capa,
+WebMChromium com duração ausente e timeline medida, MIMEdisfarçado/codec/EICAR.
+Reprodução: executar `node scripts/generate-chat-media-recording-fixture.mjs`
+com PlaywrightChromium instalado; executar teste no container com
+`RUN_CHAT_MEDIA_RUNTIME_TESTS=yes` e `CHAT_MEDIA_CHROMIUM_FIXTURE` apontando
+para `var/tooling/chromium-media-recorder.webm` no mount. Gerador usa apenas
+oscilador, não microfone; bytes/hash variam por serial/timestamps da gravação.
+Pico clamscan observado750MiB; orçamento operacional medido emT5.
+
+Veredito: suficiente e discriminante; Quick/runtime/Build PASS. Nenhum
+requisito completo Verified, pois API/UI/worker ainda estão pendentes.
+
 ## T3: Adapter privado RustFS
 
 PASS: nove unitários e um ciclo real do SDK na alpha.99 local. Gate Quick

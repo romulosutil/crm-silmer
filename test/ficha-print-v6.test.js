@@ -107,9 +107,10 @@ test('the v6 sample prints every audience once and a quantity said that differs'
   );
 });
 
-test('v6 package is locked by hash and waits for the PO review', async () => {
-  assert.equal(gate.provisionalApproval.status, 'pending-po-review');
-  assert.equal(gate.provisionalApproval.approved, false);
+test('v6 package is locked by hash and approved by the PO for development', async () => {
+  assert.equal(gate.provisionalApproval.status, 'approved');
+  assert.equal(gate.provisionalApproval.approved, true);
+  assert.equal(gate.provisionalApproval.reviewedBy.role, 'PO');
   assert.equal(gate.versioning.supersedesTemplateVersion, TEMPLATE_V5);
   assert.deepEqual(await validateFichaReviewV6(), gate);
   const input = {
@@ -135,11 +136,17 @@ test('v6 package is locked by hash and waits for the PO review', async () => {
       }),
     /PDF changed/u,
   );
-  const reviewerWithoutApproval = structuredClone(gate);
-  reviewerWithoutApproval.provisionalApproval.reviewedBy.name = 'Alguém';
+  const halfApproved = structuredClone(gate);
+  halfApproved.provisionalApproval.approved = false;
   assert.throws(
-    () =>
-      validateFichaApprovalGateV6({ ...input, gate: reviewerWithoutApproval }),
+    () => validateFichaApprovalGateV6({ ...input, gate: halfApproved }),
+    /review by the PO/u,
+  );
+  const pendingWithReviewer = structuredClone(gate);
+  pendingWithReviewer.provisionalApproval.status = 'pending-po-review';
+  pendingWithReviewer.provisionalApproval.approved = false;
+  assert.throws(
+    () => validateFichaApprovalGateV6({ ...input, gate: pendingWithReviewer }),
     /review by the PO/u,
   );
   const falseSignature = structuredClone(gate);
@@ -150,9 +157,9 @@ test('v6 package is locked by hash and waits for the PO review', async () => {
   );
 });
 
-test('orders keep printing on v5 until the PO approves v6 (PIM-10)', () => {
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V5);
-  assert.equal(fichaV6ApprovalStages(gate).provisional, false);
+test('orders print on v6 only with the PO approval recorded (PIM-10)', () => {
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V6);
+  assert.equal(fichaV6ApprovalStages(gate).provisional, true);
   const switchTo = (/** @type {any} */ gateV6) =>
     validateFichaPrintSwitch({
       gate: v3Gate,
@@ -161,10 +168,10 @@ test('orders keep printing on v5 until the PO approves v6 (PIM-10)', () => {
       gateV6,
       printTemplate: TEMPLATE_V6,
     });
-  assert.throws(() => switchTo(gate), /before its approval is recorded/u);
+  assert.doesNotThrow(() => switchTo(gate));
+  const pending = structuredClone(gate);
+  pending.provisionalApproval.status = 'pending-po-review';
+  pending.provisionalApproval.approved = false;
+  assert.throws(() => switchTo(pending), /before its approval is recorded/u);
   assert.throws(() => switchTo(undefined), /before its approval is recorded/u);
-  const approved = structuredClone(gate);
-  approved.provisionalApproval.status = 'approved';
-  approved.provisionalApproval.approved = true;
-  assert.doesNotThrow(() => switchTo(approved));
 });

@@ -1705,8 +1705,8 @@ commit e um push.
 - **Requisitos:** PUB-07.
 - **Arquivos:** `ficha-canonical-v6.js`, amostra sintética de quatro
   públicos, snapshot, PDF e gate da revisão.
-- **Aceite:** v2–v5 intactas; `PRINT_TEMPLATE` continua v5 até a aprovação
-  provisória do PO.
+- **Aceite:** v2–v5 intactas; `PRINT_TEMPLATE` passa a v6 depois da aprovação
+  provisória do PO (concedida em 06/10/2026).
 - **Gate:** testes da impressão e `validate:ficha-pdf-review`.
 
 ### T96: Workflow com a divisão em `audiences`

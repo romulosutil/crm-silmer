@@ -112,11 +112,19 @@ Gerar exige pontos obrigatórios dos itens, arte e entrega prometida. A edição
 parcial é permitida. `summary.aplicacao`, `modelo` e campos antigos seguem
 preservados para compatibilidade, sem criar novos critérios de geração.
 
+ADR 022: cada item tem `publico` (masculino, feminino, infantil, unissex) e
+`quantidade_informada` opcionais, que não bloqueiam gerar. A divisão dita ao
+bot (`audiences`) vira um item por público quando o domínio a lê sem dúvida
+(`modules/orders/src/domain/audiences.js`); "Tecido" passa a "Modelo de
+malha". O bot pergunta pelo produto, com kits e pontos passivos (ADR 021).
+
 `GET /api/v1/orders/:orderId/print` exige sessão de leitura autorizada e
-Pedido confirmado. Retorna HTML imprimível da v5, escolhida em
-`modules/orders/src/print/index.js`. PDF sintético e hashes são artefatos
-de aprovação, sem prova de envio externo. V2/v3/v4 não são sobrescritas.
-Assinatura física de Rose/Operação na v5 segue obrigatória antes da produção.
+Pedido confirmado. Retorna HTML imprimível da v6 (público de cada item e
+"Modelo de malha"), escolhida em `modules/orders/src/print/index.js` e
+aprovada provisoriamente pelo PO em 06/10/2026. PDF sintético e hashes são
+artefatos de aprovação, sem prova de envio externo. V2 a v5 não são
+sobrescritas. Assinatura física de Rose/Operação na v6 segue obrigatória
+antes da produção.
 
 Dashboard/listas usam read models autorizados. Vendido/vendas contam
 confirmados e não representam recebimentos. SSE usa IDs e metadados mínimos.

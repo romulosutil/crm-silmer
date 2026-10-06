@@ -13,10 +13,20 @@
 
 ## Handoff
 
+T21 concluída: anexos/recorder/histórico integrados à Inbox, ownership e SSE
+invalidam draft, troca encerra captura e respostas tardias não substituem conversa.
+Seleção de imagem após revisão gravada preserva imagem e remove anúncio stale.
+Dois reds discriminantes: detalhe antigo substituía conversa nova; gravação
+revisada anunciava Descartar mesmo após trocar por imagem. Treze E2E novos,
+UI166pass/7skips anteriores(total173), Quick/Build847pass/3skips(total850).
+Demo persistente em 4183/API3002 usa DB/volumes próprios e snapshot de assets;
+login vendedor200, Inbox200/human1 verificados, sem pedir microfone. Root conduz
+UAT físico pendente; manter demo estável. Próxima T22. Nenhum Verified.
+
 FixT20/MED-25 concluído: dois reds player focado→lost/503 receberam inactive;
 green transfere apenas foco do player removido ao aviso, preserva foco externo.
 Focal11/11, UI153pass/7skips existentes(total160), typecheck/lint verdes. T21WIP
-em var/inbox-media-T21-WIP.spec.js deve ser restaurado após commitfix; próximaT21.
+restaurado após commitfix; snapshot histórico 6463815, antes da entrega T21.
 
 T20 concluída: MediaMessage standalone aceita somente URL relativa CRM, imagem
 privada real, players nativos sem autoplay, áudio AAC/vídeo H.264 com seek e

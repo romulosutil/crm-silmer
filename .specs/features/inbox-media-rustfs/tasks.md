@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T20 concluídas; fase 4 em execução, próxima T21. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T21 concluídas; fase 4 em execução, próxima T22. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -371,7 +371,7 @@ foco externo preservado. Dois testes discriminantes e gate UI integral em execut
 **Requirement**: MED-01..03, MED-08..13, MED-25
 **Reuses**: Envio humano, eventos e controles de ownership atuais.
 **Tools**: tlc-spec-driven; Browser/Playwright/axe.
-**Done when**: [ ] Conversa certa recebe envio; troca de conversa aborta draft/captura; close/transfer bloqueiam envio stale; estados DEV reconhecíveis; texto sem regressão.
+**Done when**: [x] Conversa certa recebe envio; troca de conversa aborta draft/captura; close/transfer bloqueiam envio stale; estados DEV reconhecíveis; texto sem regressão.
 **Tests**: e2e + axe; mínimo 8 cenários incluindo SSE e concorrência.
 **Gate**: UI + Full.
 **Commit**: feat(inbox): integrate media sending and audio recording

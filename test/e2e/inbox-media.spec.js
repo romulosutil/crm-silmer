@@ -1,0 +1,509 @@
+import { expect, test } from '@playwright/test';
+import { AxeBuilder } from '@axe-core/playwright';
+
+/** @param {import('@playwright/test').Page} page @param {any} [options] */
+async function setup(page, options = {}) {
+  const conversations = [1, 2].map((number) => ({
+    id: `conversation-${number}`,
+    version: 4,
+    channel: 'whatsapp',
+    state: 'em_atendimento',
+    automationState: 'human',
+    automationEpoch: 2,
+    assignedUser: { id: 'seller-1', functionName: 'Vendedor' },
+    handoff: null,
+    contact: {
+      id: `contact-${number}`,
+      label: `Cliente sintético ${number}`,
+      externalId: '5500000000000',
+    },
+    lastMessage: {
+      id: `initial-${number}`,
+      type: 'text',
+      preview: 'Mensagem inicial',
+      direction: 'inbound',
+    },
+  }));
+  if (options.otherOwner) conversations[0].assignedUser.id = 'seller-2';
+  const messages = new Map(
+    conversations.map((conversation) => [
+      conversation.id,
+      [conversation.lastMessage],
+    ]),
+  );
+  const uploads = /** @type {import('@playwright/test').Request[]} */ ([]);
+  const sends = /** @type {import('@playwright/test').Request[]} */ ([]);
+  /** @type {import('@playwright/test').Route | null} */ let eventRoute = null;
+  /** @type {import('@playwright/test').Route | null} */ let uploadRoute = null;
+  /** @type {import('@playwright/test').Route | null} */ let sendRoute = null;
+  await page
+    .context()
+    .addCookies([
+      { name: 'crm_csrf', value: 'csrf-media', url: 'http://127.0.0.1:4173' },
+    ]);
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request(),
+      path = new URL(request.url()).pathname;
+    if (path === '/api/v1/sessions/current')
+      return route.fulfill({
+        json: {
+          user: { id: 'seller-1', functionName: 'Vendedor', capabilities: [] },
+        },
+      });
+    if (path === '/api/v1/events') {
+      eventRoute = route;
+      return;
+    }
+    if (path === '/api/v1/users/assignable')
+      return route.fulfill({
+        json: {
+          users: [
+            { id: 'seller-1', name: 'Vendedor sintético' },
+            { id: 'seller-2', name: 'Outro vendedor' },
+          ],
+        },
+      });
+    if (path === '/api/v1/inbox/conversations')
+      return route.fulfill({
+        json: { items: conversations, totalCount: 2, nextCursor: null },
+      });
+    const detail = /^\/api\/v1\/inbox\/conversations\/([^/]+)$/.exec(path);
+    if (detail)
+      return route.fulfill({
+        json: {
+          conversation: conversations.find((item) => item.id === detail[1]),
+          messages: messages.get(detail[1]),
+          suggestion: null,
+        },
+      });
+    const match =
+      /^\/api\/v1\/conversations\/([^/]+)\/(media|messages)(?:\/(.*))?$/.exec(
+        path,
+      );
+    if (match?.[2] === 'media' && request.method() === 'POST') {
+      uploads.push(request);
+      if (options.pendingUpload) {
+        uploadRoute = route;
+        return;
+      }
+      return route.fulfill({
+        status: 202,
+        json: { mediaId: `media-${match[1]}`, state: 'processing' },
+      });
+    }
+    if (match?.[2] === 'media')
+      return route.fulfill({
+        json: {
+          mediaId: `media-${match[1]}`,
+          state: options.processing ? 'processing' : 'ready',
+        },
+      });
+    if (match?.[2] === 'messages') {
+      sends.push(request);
+      if (options.pendingSend) {
+        sendRoute = route;
+        return;
+      }
+      const body = request.postDataJSON();
+      messages.get(match[1])?.push(
+        /** @type {any} */ ({
+          id: `sent-${sends.length}`,
+          type: body.messageType,
+          preview:
+            body.content.text || body.content.caption || 'Anexo sintético',
+          direction: 'outbound',
+          authorKind: 'human',
+          authorId: 'seller-1',
+          deliveryStatus: 'sent',
+          deliveryMode: 'dev',
+          occurredAt: '2026-10-06T10:00:00Z',
+          media:
+            body.messageType === 'text'
+              ? null
+              : {
+                  mediaId: body.content.mediaId,
+                  kind: body.messageType,
+                  state: 'lost',
+                  contentUrl: null,
+                },
+        }),
+      );
+      return route.fulfill({
+        status: 202,
+        json: { id: `sent-${sends.length}` },
+      });
+    }
+    return route.fulfill({ json: { items: [], users: [], order: null } });
+  });
+  await page.goto('/inbox');
+  await expect(
+    page.getByRole('textbox', { name: 'Responder', exact: true }),
+  ).toBeVisible();
+  return {
+    uploads,
+    sends,
+    conversations,
+    async sse(changed = true) {
+      await expect.poll(() => Boolean(eventRoute)).toBe(true);
+      await eventRoute?.fulfill({
+        contentType: 'text/event-stream',
+        body: changed
+          ? 'retry: 60000\n\nevent: inbox.conversation.changed\nid: synthetic-1\ndata: {"type":"inbox.conversation.changed","conversationId":"conversation-1"}\n\n'
+          : 'retry: 60000\n\n: connected\n\n',
+      });
+    },
+    async releaseUpload() {
+      await uploadRoute?.fulfill({
+        status: 202,
+        json: { mediaId: 'old-media', state: 'processing' },
+      });
+    },
+    async releaseSend() {
+      await sendRoute?.fulfill({
+        status: 202,
+        json: { id: 'pending-media-send' },
+      });
+    },
+  };
+}
+
+/** @param {import('@playwright/test').Page} page */
+async function fakeMicrophone(page) {
+  await page.addInitScript(() => {
+    const evidence = { stops: 0 };
+    /** @type {any} */ (globalThis).__mic = evidence;
+    globalThis.navigator.mediaDevices.getUserMedia = async () =>
+      /** @type {any} */ ({
+        getTracks: () => [{ stop: () => evidence.stops++ }],
+      });
+    class Recorder extends globalThis.EventTarget {
+      static isTypeSupported() {
+        return true;
+      }
+      mimeType = 'audio/ogg;codecs=opus';
+      state = 'inactive';
+      start() {
+        this.state = 'recording';
+      }
+      stop() {
+        this.state = 'inactive';
+        globalThis.queueMicrotask(() => {
+          this.dispatchEvent(
+            new globalThis.MessageEvent('dataavailable', {
+              data: new globalThis.Blob([new Uint8Array(128)], {
+                type: this.mimeType,
+              }),
+            }),
+          );
+          this.dispatchEvent(new globalThis.Event('stop'));
+        });
+      }
+    }
+    /** @type {any} */ (globalThis).MediaRecorder = Recorder;
+  });
+}
+
+for (const [kind, fixture] of [
+  ['image', 'png'],
+  ['audio', 'm4a'],
+  ['video', 'mp4'],
+]) {
+  test(`MED-01..03/08 ${kind} explicit send binds selected conversation and shows DEV`, async ({
+    page,
+  }) => {
+    const state = await setup(page);
+    await page
+      .getByLabel('Arquivo para anexar')
+      .setInputFiles(`test/fixtures/media-composer.${fixture}`);
+    expect(state.uploads).toHaveLength(0);
+    await page
+      .getByRole('button', { name: 'Preparar arquivo', exact: true })
+      .click();
+    await expect(
+      page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+    ).toBeEnabled();
+    expect(state.sends).toHaveLength(0);
+    await page
+      .getByRole('button', { name: 'Enviar anexo', exact: true })
+      .click();
+    await expect(
+      page.getByText('DEV: envio simulado', { exact: true }),
+    ).toBeVisible();
+    expect(state.sends).toHaveLength(1);
+    expect(state.sends[0].url()).toContain(
+      '/conversations/conversation-1/messages',
+    );
+    expect(state.sends[0].postDataJSON()).toMatchObject({
+      expectedVersion: 4,
+      messageType: kind,
+      content: { mediaId: 'media-conversation-1' },
+    });
+    expect(state.sends[0].headers()['x-csrf-token']).toBe('csrf-media');
+    expect(state.sends[0].headers()['idempotency-key']).toBeTruthy();
+  });
+}
+
+test('MED-08 other owner disables attachments and microphone while preserving history', async ({
+  page,
+}) => {
+  await setup(page, { otherOwner: true });
+  await expect(page.getByLabel('Arquivo para anexar')).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Gravar áudio', exact: true }),
+  ).toBeDisabled();
+  await expect(page.getByText('Mensagem inicial').last()).toBeVisible();
+});
+
+test('MED-08/13 switch during pending upload removes draft and ignores late result', async ({
+  page,
+}) => {
+  const state = await setup(page, { pendingUpload: true });
+  await page
+    .getByLabel('Arquivo para anexar')
+    .setInputFiles('test/fixtures/media-composer.png');
+  await page
+    .getByRole('button', { name: 'Preparar arquivo', exact: true })
+    .click();
+  await expect.poll(() => state.uploads.length).toBe(1);
+  await page.getByRole('button', { name: /Cliente sintético 2/ }).click();
+  await state.releaseUpload();
+  await expect(
+    page.getByRole('heading', { name: 'Cliente sintético 2' }),
+  ).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Prévia do anexo' })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+  ).toHaveCount(0);
+  expect(state.sends).toHaveLength(0);
+});
+
+for (const transition of ['close', 'transfer']) {
+  test(`MED-08 ${transition} SSE invalidates processing draft and blocks stale send`, async ({
+    page,
+  }) => {
+    const state = await setup(page, { processing: true });
+    await page
+      .getByLabel('Arquivo para anexar')
+      .setInputFiles('test/fixtures/media-composer.png');
+    await page
+      .getByRole('button', { name: 'Preparar arquivo', exact: true })
+      .click();
+    await expect(
+      page.getByText('Validando arquivo…', { exact: true }),
+    ).toBeVisible();
+    state.conversations[0].version = 5;
+    if (transition === 'close') state.conversations[0].state = 'sem_lead';
+    else state.conversations[0].assignedUser.id = 'seller-2';
+    await state.sse();
+    await expect(page.getByLabel('Arquivo para anexar')).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+    ).toHaveCount(0);
+    expect(state.sends).toHaveLength(0);
+  });
+}
+
+test('MED-13 switching active capture stops microphone without send', async ({
+  page,
+}) => {
+  await fakeMicrophone(page);
+  const state = await setup(page);
+  await page.getByRole('button', { name: 'Gravar áudio', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Parar gravação' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: /Cliente sintético 2/ }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => /** @type {any} */ (globalThis).__mic.stops),
+    )
+    .toBe(1);
+  await expect(
+    page.getByRole('button', { name: 'Parar gravação' }),
+  ).toHaveCount(0);
+  expect(state.uploads).toHaveLength(0);
+  expect(state.sends).toHaveLength(0);
+});
+
+test('MED-10/13 recording review replaced by attachment has no stale discard or status', async ({
+  page,
+}) => {
+  await fakeMicrophone(page);
+  const state = await setup(page);
+  await page.getByRole('button', { name: 'Gravar áudio', exact: true }).click();
+  await page.getByRole('button', { name: 'Parar gravação' }).click();
+  await expect(page.getByLabel('Prévia do áudio')).toBeVisible();
+  await page
+    .getByLabel('Arquivo para anexar')
+    .setInputFiles('test/fixtures/media-composer.png');
+  await expect(
+    page.getByRole('img', { name: 'Prévia do anexo' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Descartar gravação' }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(
+      'Gravação pronta para revisão. Prepare e envie quando quiser.',
+      { exact: true },
+    ),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Remover anexo' }).click();
+  await expect(page.getByLabel('Arquivo para anexar')).toBeFocused();
+  expect(state.sends).toHaveLength(0);
+});
+
+test('MED-25 text remains available and accepted media restores focus without axe violations', async ({
+  page,
+}) => {
+  const state = await setup(page);
+  await page
+    .getByRole('textbox', { name: 'Responder', exact: true })
+    .fill('Texto sintético');
+  await page
+    .getByRole('button', { name: 'Enviar resposta', exact: true })
+    .click();
+  await expect(
+    page.getByRole('textbox', { name: 'Responder', exact: true }),
+  ).toBeFocused();
+  expect(state.sends[0].postDataJSON()).toMatchObject({
+    messageType: 'text',
+    content: { text: 'Texto sintético' },
+  });
+  await page
+    .getByLabel('Arquivo para anexar')
+    .setInputFiles('test/fixtures/media-composer.png');
+  await page
+    .getByRole('button', { name: 'Preparar arquivo', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Enviar anexo', exact: true }).click();
+  await expect(page.getByLabel('Arquivo para anexar')).toBeFocused();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('MED-08 stale detail response cannot replace newly selected conversation', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const original = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = async (input, options) => {
+      if (
+        String(input).endsWith('/inbox/conversations/conversation-1') &&
+        ++calls === 2
+      ) {
+        const response = await original(input, {
+          ...options,
+          signal: undefined,
+        });
+        const body = await response.text();
+        await new Promise((resolve) => {
+          /** @type {any} */ (globalThis).__releaseOldDetail = resolve;
+        });
+        return new globalThis.Response(body, {
+          status: response.status,
+          headers: response.headers,
+        });
+      }
+      return original(input, options);
+    };
+  });
+  const state = await setup(page);
+  await state.sse(false);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Boolean(/** @type {any} */ (globalThis).__releaseOldDetail),
+      ),
+    )
+    .toBe(true);
+  await page.getByRole('button', { name: /Cliente sintético 2/ }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Cliente sintético 2' }),
+  ).toBeVisible();
+  await page.evaluate(async () => {
+    /** @type {any} */ (globalThis).__releaseOldDetail();
+    await new Promise((resolve) =>
+      globalThis.requestAnimationFrame(() =>
+        globalThis.requestAnimationFrame(resolve),
+      ),
+    );
+  });
+  await expect(
+    page.getByRole('heading', { name: 'Cliente sintético 2' }),
+  ).toBeVisible();
+  await page
+    .getByLabel('Arquivo para anexar')
+    .setInputFiles('test/fixtures/media-composer.png');
+  await page
+    .getByRole('button', { name: 'Preparar arquivo', exact: true })
+    .click();
+  await expect.poll(() => state.uploads.length).toBe(1);
+  expect(state.uploads[0].url()).toContain(
+    '/conversations/conversation-2/media',
+  );
+});
+
+test('MED-01/10 replacing reviewed recording sends selected image as attachment', async ({
+  page,
+}) => {
+  await fakeMicrophone(page);
+  const state = await setup(page);
+  await page.getByRole('button', { name: 'Gravar áudio', exact: true }).click();
+  await page.getByRole('button', { name: 'Parar gravação' }).click();
+  await expect(page.getByLabel('Prévia do áudio')).toBeVisible();
+  await page
+    .getByLabel('Arquivo para anexar')
+    .setInputFiles('test/fixtures/media-composer.png');
+  await expect(
+    page.getByRole('img', { name: 'Prévia do anexo' }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Preparar arquivo', exact: true })
+    .click();
+  await expect(
+    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+  ).toBeEnabled();
+  await page.getByRole('button', { name: 'Enviar anexo', exact: true }).click();
+  await expect(
+    page.getByText('DEV: envio simulado', { exact: true }),
+  ).toBeVisible();
+  expect(state.uploads).toHaveLength(1);
+  expect(state.uploads[0].postData()).toMatch(
+    /name="origin"\r\n\r\nattachment/,
+  );
+  expect(state.sends).toHaveLength(1);
+  expect(state.sends[0].postDataJSON()).toMatchObject({
+    messageType: 'image',
+    content: { mediaId: 'media-conversation-1' },
+  });
+});
+
+test('MED-08 pending media send prevents concurrent text and capture', async ({
+  page,
+}) => {
+  const state = await setup(page, { pendingSend: true });
+  const text = page.getByRole('textbox', { name: 'Responder', exact: true });
+  await text.fill('Texto sintético separado');
+  await page
+    .getByLabel('Arquivo para anexar')
+    .setInputFiles('test/fixtures/media-composer.png');
+  await page
+    .getByRole('button', { name: 'Preparar arquivo', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Enviar anexo', exact: true }).click();
+  await expect.poll(() => state.sends.length).toBe(1);
+  await expect(text).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Enviar resposta', exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Gravar áudio', exact: true }),
+  ).toBeDisabled();
+  await state.releaseSend();
+  await expect(text).toBeEnabled();
+  expect(state.sends).toHaveLength(1);
+  expect(state.sends[0].postDataJSON().messageType).toBe('image');
+});

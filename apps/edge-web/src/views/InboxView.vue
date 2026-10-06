@@ -9,6 +9,8 @@ import {
   watch,
 } from 'vue';
 import OrderDrawer from '../components/order/OrderDrawer.vue';
+import AudioRecorder from '../components/inbox/AudioRecorder.vue';
+import MediaMessage from '../components/inbox/MediaMessage.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
   CHANNEL_LABELS,
@@ -85,6 +87,7 @@ const queueFilter = ref('all');
 const loading = ref(true);
 const detailLoading = ref(false);
 const busy = ref(false);
+const mediaSending = ref(false);
 const error = ref('');
 const listError = ref('');
 const actionMessage = ref('');
@@ -428,7 +431,8 @@ async function selectVisibleConversation(refreshActive = true) {
 async function selectConversation(id, silent = false) {
   if (!id) return;
   detailController?.abort();
-  detailController = new AbortController();
+  const controller = new AbortController();
+  detailController = controller;
   if (activeId.value !== id) {
     detail.value = null;
     renaming.value = false;
@@ -441,22 +445,28 @@ async function selectConversation(id, silent = false) {
   try {
     const response = await request(
       `/api/v1/inbox/conversations/${encodeURIComponent(id)}`,
-      { signal: detailController.signal },
+      { signal: controller.signal },
     );
+    if (controller !== detailController || activeId.value !== id) return;
     detail.value = response.data;
   } catch (cause) {
-    if (/** @type {any} */ (cause)?.name !== 'AbortError') {
+    if (
+      controller === detailController &&
+      activeId.value === id &&
+      /** @type {any} */ (cause)?.name !== 'AbortError'
+    ) {
       error.value = 'Não foi possível carregar a conversa selecionada.';
       if (!silent || !renaming.value) detail.value = null;
     }
   } finally {
-    detailLoading.value = false;
+    if (controller === detailController && activeId.value === id)
+      detailLoading.value = false;
   }
 }
 
 /** @param {string} path @param {Record<string, unknown>} body @param {string} successMessage */
 async function runCommand(path, body, successMessage) {
-  if (!active.value || busy.value) return;
+  if (!active.value || busy.value || mediaSending.value) return;
   busy.value = true;
   error.value = '';
   actionMessage.value = '';
@@ -516,6 +526,11 @@ async function sendReply() {
     await nextTick();
     replyInput.value?.focus();
   }
+}
+
+async function mediaSent() {
+  actionMessage.value = 'Mensagem aceita para envio.';
+  await loadInbox(true);
 }
 
 async function loadAssignableUsers() {
@@ -1102,6 +1117,10 @@ onBeforeUnmount(() => {
               <span>{{ dateTimeBR(message.occurredAt) }}</span>
             </div>
             <p>{{ message.preview }}</p>
+            <MediaMessage v-if="message.media" :media="message.media" />
+            <small v-if="message.deliveryMode === 'dev'"
+              >DEV: envio simulado</small
+            >
             <small v-if="deliveryNotice(message)">{{
               deliveryNotice(message)
             }}</small>
@@ -1119,7 +1138,7 @@ onBeforeUnmount(() => {
             v-model="reply"
             rows="3"
             maxlength="2000"
-            :disabled="busy || !canReply"
+            :disabled="busy || mediaSending || !canReply"
             aria-describedby="reply-help"
           ></textarea>
           <div class="composer-row">
@@ -1142,13 +1161,21 @@ onBeforeUnmount(() => {
               <button
                 type="submit"
                 class="primary"
-                :disabled="busy || !canReply || !reply.trim()"
+                :disabled="busy || mediaSending || !canReply || !reply.trim()"
               >
                 Enviar resposta
               </button>
             </div>
           </div>
         </form>
+        <AudioRecorder
+          :key="active.id"
+          :conversation-id="active.id"
+          :expected-version="active.version"
+          :disabled="busy || !canReply"
+          @sending-change="mediaSending = $event"
+          @sent="mediaSent"
+        />
       </section>
       <section v-else class="surface empty-list" aria-live="polite">
         <h2>Selecione uma conversa</h2>

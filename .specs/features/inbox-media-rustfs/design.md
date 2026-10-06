@@ -193,6 +193,15 @@ conversa; mutações usam CSRF, Idempotency-Key e controle de versão vigente.
 | GET /integrations/n8n/commands/{commandId}/media | 200 streaming                                                                    | Basic AUTOMATION_EXECUTOR e capacidade específica; comando reservado processing, message_id/mediaId/hash/epoch válidos |
 
 Novo GET técnico é extensão explícita ao contrato anterior de três endpoints;
+`?preflight=true` retorna JSON seguro somente leitura no mesmo endpoint, sem
+S3, nova reserva ou renovação. HEAD não é exposto. Basic e capacidade
+integration.n8n.command.media.read exigem workflow/version/execution da reserva
+original em n8n_events; comando processing e mensagem sending da variante
+attached/clean são conferidos. Preflight ocorre após Meta/media e antes de
+Meta/messages. Falha conhecida anterior ao efeito usa workflow.failed com
+phase=before_message_send e allowlist OpenAPI; conclui sob CAS da execução
+original, sem exigir epoch atual, sem retry e sem regredir estados finais.
+Falha genérica é diagnóstico; após invocar Meta/messages só unknown.
 não esconder a alteração sob a ADR 003. n8n pede bytes apenas depois da reserva.
 Replay da reserva continua send_authorized=false; GET de bytes não concede
 segunda autorização de envio. Verificar fence novamente antes do efeito Meta.

@@ -1490,7 +1490,7 @@ components:
           properties: { code: { type: string } }
         request_id: { type: string }
     HumanMessageCommand:
-        type: object
+      type: object
       additionalProperties: false
       required: [content, expectedVersion, messageType, reason]
       properties:

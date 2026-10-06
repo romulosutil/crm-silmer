@@ -35,7 +35,7 @@ async function fixture(options = {}) {
         assert.equal(args[args.indexOf('-t') + 1], '301');
         assert.equal(args[args.indexOf('-protocol_whitelist') + 1], 'file');
         return {
-          stdout: `out_time_us=${(options.decodedDuration ?? 1) * 1000000}\nprogress=end\n`,
+          stdout: `out_time_us=${(options.decodedDuration ?? (Number(options.duration) || 1)) * 1000000}\nprogress=end\n`,
         };
       }
       return {
@@ -195,6 +195,29 @@ test('T4 streaming recording duration is decoded with bounds and rejects above 3
     } finally {
       await f.cleanup();
     }
+  }
+});
+
+test('T5 recording decoded timeline rejects misleading short header', async () => {
+  const f = await fixture({
+    mime: 'video/webm',
+    format: 'matroska,webm',
+    streams: [{ codec_type: 'audio', codec_name: 'opus' }],
+    duration: '1',
+    decodedDuration: 301,
+  });
+  try {
+    await assert.rejects(
+      f.validator.validate({
+        path: f.path,
+        kind: 'audio',
+        origin: 'recording',
+        declaredMimeType: 'audio/webm',
+      }),
+      /Media validation failed/u,
+    );
+  } finally {
+    await f.cleanup();
   }
 });
 

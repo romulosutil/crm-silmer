@@ -1,5 +1,81 @@
 # Execução INBOX-MEDIA-1
 
+## T5: Normalização de gravações e assinaturas
+
+Premissas, arquivos e sucesso foram enviados ao integrador antes do patch:
+entrada validada em T4, OGG/Opus mono a 48 kHz e saída escaneada, temporário
+privado e publicação exclusiva. Arquivos: módulo, testes, export, Docker,
+atualizador de assinaturas, composição do worker, runbook, spec e tasks.
+Sem nova dependência JavaScript ou serviço. FFmpeg/ffprobe, freshclam e CA
+suportam gravações e verificação genuína; os copyrights dos pacotes Debian
+permanecem na imagem. O digest da base Node foi preservado.
+
+Gates Quick, Topology e Build: PASS, 701 aprovados, três skips antigos, 704 total.
+10 unitários do normalizador, quatro do atualizador e um de header enganoso;
+tipos e lint verdes. Runtime explícito: um teste aprovado em 103,23 s.
+WebM do Chromium, OGG/Opus e MP4/AAC viram OGG/Opus mono confirmado por
+channels=1; OGG de 300 s retorna durationMs=300000, WebM de 301 s é rejeitado
+sem saída. Sem skips ou assinaturas falsas. CPU: 87,93 s user e 15,03 s system;
+RSS máximo: 989248 KiB, zero swaps. Medição por GNU time inclui subprocessos;
+fixture sintética não substitui o teste de carga em T23.
+
+Imagem runtime construída e executada localmente:
+digest `sha256:7105b14c4563b8daeeed2b1eee1aa20f3bf873e0b965cfb13a7fe67c140fb8fd`,
+400957267 bytes. USER node, UID 1000; assinatura-base daily 28144, main 63 e
+bytecode 339 baixada e testada oficialmente durante o build. Verificação
+executável na própria imagem confirmou baseline, freshclam genuíno e marcador
+publicado. Runtime remoto, limites, mount de definições e backup continuam
+como gates em T23.
+
+O timeout de 120 s é do encoder; por arquivo, scan 60 s, libmagic 10 s,
+probe 10 s e decodificação 30 s: limite somado de 340 s nas fases locais,
+além de IO, DB e PUT. Escolha explícita no design e runbook; o handler em T6
+renova lease. Recomenda-se limite de 2 GiB por worker, pela medição próxima
+de 1 GiB, com conversão e scan sequenciais. Freshclam tem timeout de 180 s
+no startup e a cada 24 h, com falha técnica observável. Marcador só depois
+de freshclam com exit 0, por arquivo temporário e rename atômico; falha
+preserva conteúdo e mtime anteriores. Base instalada é exigida; marcador
+inválido, futuro ou stale impede liberação. O scanner legado da API deverá
+compartilhar definições privadas com o worker em T23.
+
+### Adequação: suficiência
+
+Nesta seção, unit = test/recorded-audio-normalizer.test.js,
+runtime = test/recorded-audio-normalizer-runtime.test.js,
+refresh = test/clamav-signature-refresh.test.js e
+validator = test/chat-media-validation.test.js. Números indicam linhas das
+assertions atuais; valores de timeout estão em milissegundos.
+
+| Critério                          | Assertion concreta                                                                                                   | Esperado                                | Coberto |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------- |
+| Conversão MED-14                  | unit:72 channels=1, :73 codec=opus, :75 scans=2; runtime:51/52/53                                                    | Mono, OGG/Opus, scan de entrada e saída | Sim     |
+| Bytes e vazio MED-04              | unit:89 rejects entrada vazia ou 16 MiB + 1; :97 diretório somente com entrada                                       | Entrada inválida não converte           | Sim     |
+| Duração MED-12                    | unit:116 razão invalid_format em 300001 ms; runtime:93 durationMs=300000; :126 rejects 301 s; :134 ausência de saída | Teto útil inclusivo de 300 s            | Sim     |
+| Header enganoso                   | validator:210 rejects header 1 s e timeline 301 s                                                                    | Não confiar no header                   | Sim     |
+| Timeout e recursos                | unit:44 timeout=120000, :45 buffer=65536, :47 cap=301, :48 protocol=file; :116 processing_failed                     | Subprocesso limitado e erro sanitizado  | Sim     |
+| Saída infectada ou estéreo MED-26 | unit:116 infected e não mono rejeitados; :127 cleanup                                                                | Saída falha fechado                     | Sim     |
+| Cleanup                           | unit:76 diretório com entrada e saída; :127 somente entrada                                                          | Sem intermediário órfão                 | Sim     |
+| Variante imutável                 | unit:137 EEXIST; :145 bytes originais preservados                                                                    | Não substituir saída existente          | Sim     |
+| Refresh e cadência                | refresh:27 intervalo de 24 h, :29 uma chamada no startup, :31 timeout=180000, :32 buffer, :33 timestamp válido       | Refresh limitado                        | Sim     |
+| Marcador após falha               | refresh:112 conteúdo anterior, :113 mtime anterior; :77 inválido/futuro/stale rejeitados                             | Falha não forja freshness               | Sim     |
+| Concorrência                      | refresh:132 calls=1                                                                                                  | Um updater em curso                     | Sim     |
+
+### Adequação: discriminação
+
+| Near miss                                  | Assertion que falha            | Distinção                         |
+| ------------------------------------------ | ------------------------------ | --------------------------------- |
+| Encoder com -ac 1 sem provar mono          | runtime:51/98                  | Saída estéreo não passa           |
+| Scan somente da entrada                    | unit:75/116                    | Saída deve ser escaneada          |
+| Aceitar header curto ou truncar 301 s      | validator:210; runtime:126/134 | Timeline útil excedente rejeitada |
+| Usar metadata OGG com padding para o teto  | runtime:93                     | 300 s úteis aceitos               |
+| Deixar temporário após erro                | unit:127                       | Cleanup obrigatório               |
+| Sobrescrever variante                      | unit:137/145                   | Publicação exclusiva              |
+| Atualizar marcador quando freshclam falha  | refresh:112/113                | Conteúdo e mtime preservados      |
+| Aceitar marcador inválido, futuro ou stale | refresh:77                     | Falha fechado                     |
+
+Veredito: suficiente e discriminante; Quick, Topology, Build e runtime PASS.
+Requisitos ainda dependentes de API, UI ou worker permanecem In Progress.
+
 ## T4: Validação de mídia
 
 Premissas antes do patch: somente allowlist aprovada, scanner existente e
@@ -34,22 +110,22 @@ Não se aceita duration ausente por suposição. Erros são sanitizados.
 | Critério           | Evidência assertion                                                                                                           | Esperado                        | Coberto |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------- |
 | MED01..03 formatos | `test/chat-media-validation.test.js:106` MIME exato; :107 tamanho15; :108 SHA64; seis fixtures; runtime:72 MIME/:73 tamanho   | Allowlist e bytes/codec válidos | Sim     |
-| MED04 limites      | `test/chat-media-validation.test.js:207` limite exato; :215 throws status413 para+1                                           | Fronteira5/16MiB                | Sim     |
-| Legenda            | `test/chat-media-validation.test.js:231`1024; :2391025throws; :251 áudio throws                                               | Limites aprovados               | Sim     |
-| MIME/codec MED29   | `test/chat-media-validation.test.js:272` razão invalid_format; :321 rejects HEVC/MP3video/Vorbis; runtime:151/:181 rejects    | Disfarce/codec não ficam ready  | Sim     |
-| Scanner MED26      | `test/chat-media-validation.test.js:344` razões infected/stale/scanner_unavailable e mensagem fixa; runtime:198 EICARinfected | Fail closed, sem dado privado   | Sim     |
+| MED04 limites      | `test/chat-media-validation.test.js:230` limite exato; :238 throws status413 para+1                                           | Fronteira5/16MiB                | Sim     |
+| Legenda            | `test/chat-media-validation.test.js:254`1024; :2621025throws; :274 áudio throws                                               | Limites aprovados               | Sim     |
+| MIME/codec MED29   | `test/chat-media-validation.test.js:295` razão invalid_format; :344 rejects HEVC/MP3video/Vorbis; runtime:151/:181 rejects    | Disfarce/codec não ficam ready  | Sim     |
+| Scanner MED26      | `test/chat-media-validation.test.js:367` razões infected/stale/scanner_unavailable e mensagem fixa; runtime:198 EICARinfected | Fail closed, sem dado privado   | Sim     |
 | MP3 capa           | `test/chat-media-validation.test.js:160`audioCodec mp3/:162 vídeo comum rejects; runtime:99 capa real aceita                  | Capa embutida válida            | Sim     |
 | WebM streaming     | `test/chat-media-validation.test.js:189`1200ms/:191301s rejects; runtime:134durationundefined/:145 timeline real1..2s         | Duração medida e limitada       | Sim     |
-| Declaração300s     | `test/chat-media-validation.test.js:399`300000ms/:401300.001s rejects                                                         | Teto inclusivo                  | Sim     |
-| Probe/empty        | `test/chat-media-validation.test.js:368`rejects                                                                               | Falha nunca ready               | Sim     |
+| Declaração300s     | `test/chat-media-validation.test.js:422`300000ms/:424300.001s rejects                                                         | Teto inclusivo                  | Sim     |
+| Probe/empty        | `test/chat-media-validation.test.js:391`rejects                                                                               | Falha nunca ready               | Sim     |
 
 ### Adequação: discriminação
 
 | Near miss                           | Assertion que falha  | Resultado incorreto distinguido                  |
 | ----------------------------------- | -------------------- | ------------------------------------------------ |
-| Aceitar MIME declarado sem detector | unit:272/runtime:151 | PNG declaradoJPEG aceito                         |
-| Aceitar qualquer codecMP4/OGG       | unit:321/runtime:181 | HEVC/mpeg4/Vorbis aceitos                        |
-| Fail open no scanner                | unit:344/runtime:198 | EICAR ou scanner erro aceito                     |
+| Aceitar MIME declarado sem detector | unit:295/runtime:151 | PNG declaradoJPEG aceito                         |
+| Aceitar qualquer codecMP4/OGG       | unit:344/runtime:181 | HEVC/mpeg4/Vorbis aceitos                        |
+| Fail open no scanner                | unit:367/runtime:198 | EICAR ou scanner erro aceito                     |
 | Rejeitar MP3 com capa               | unit:160/runtime:99  | Arquivo permitido rejeitado                      |
 | Supor duraçãoWebM ausente           | unit:189/runtime:145 | Gravação Chromium rejeitada ou duração inventada |
 | Truncar gravação longa e aceitar    | unit:191             | 301s aceitos                                     |

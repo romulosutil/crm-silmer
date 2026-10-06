@@ -90,7 +90,11 @@ ClamAV falha fechado, libmagic verifica MIME, ffprobe verifica container,
 codec e duração. FFmpeg/ffprobe entram na imagem runtime existente como
 dependência justificada, sem serviço novo. Use execFile com argumentos fixos,
 protocolos locais, sem shell e sem abrir recursos externos apontados pelo arquivo.
-Timeout de processamento proposto: 120 segundos, memória/CPU/spool limitados.
+Timeout do encoder: 120 segundos; cada scan 60 s, probe 10 s e decodificação de
+timeline 30 s; libmagic 10 s por arquivo. Gravação completa tem orçamento máximo de 340 s das fases locais,
+além de IO/DB; handler renova lease durante todas as fases. Conversões são
+sequenciais com threads=1 e memória, CPU e spool limitados. Escolha em T5 evita
+declarar timeout de 120 s total que não mataria os subprocessos de outras fases.
 
 Gravações são normalizadas para OGG/Opus mono; anexos válidos não são
 transcodificados por padrão. Scan e validação alcançam a entrada e o arquivo

@@ -50,13 +50,6 @@ nulos e flags de workflow não descrevem automaticamente o ambiente atual.
 Atualizá-lo exige configuração e prova live; este planejamento não comprova
 a existência, ausência ou estado atual dos serviços do n8n.
 
-Os arquivos do pedido ([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md))
-usam o serviço `rustfs` já existente no projeto EasyPanel `schedule`, fora do
-`espectro-mvp` (seção 5). Ele aparece em `sharedServices` de
-`ops/easypanel/topology.json` com status `existing-with-gaps`, e o
-`objectStorageGate` de `ops/easypanel/provisioning-gate.json` fica
-`pending-external` até cada lacuna ser fechada com evidência.
-
 Não subir no MVP:
 
 - Redis ou BullMQ;
@@ -509,9 +502,7 @@ O branch canônico atual é `master`.
    `docker/edge-web.Dockerfile`. Edge e worker têm Auto Deploy ativo; a API está
    com Auto Deploy desativado. Esta divergência precisa ser resolvida no fluxo
    escolhido antes de depender de deploy automático coordenado em produção.
-   Em 06/10/2026 a API recebeu deploy do `5a0391d` minutos após o merge da
-   PR #150, como o edge; o gatilho desse deploy não foi
-   verificado. A imagem local produzida pelo painel não comprova consumo do digest GHCR
+   A imagem local produzida pelo painel não comprova consumo do digest GHCR
    escaneado pelo CI.
 3. Registrar projeto/serviço, branch, gatilho, SHA implantado, referência da
    imagem atual e anterior e resultado da última execução, sem URLs com token.

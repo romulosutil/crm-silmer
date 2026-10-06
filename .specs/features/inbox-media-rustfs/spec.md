@@ -164,10 +164,10 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 
 | Requirement ID | Story                 | Phase    | Status      | Tasks                 |
 | -------------- | --------------------- | -------- | ----------- | --------------------- |
-| MED-01         | Arquivo imagem        | In Tasks | Pending     | T4,T7,T18,T21         |
-| MED-02         | Arquivo áudio         | In Tasks | Pending     | T4,T7,T18,T21         |
-| MED-03         | Arquivo vídeo         | In Tasks | Pending     | T4,T7,T18,T21         |
-| MED-04         | Validação             | In Tasks | Pending     | T4,T5,T7,T18          |
+| MED-01         | Arquivo imagem        | Execute  | In Progress | T4,T7,T18,T21         |
+| MED-02         | Arquivo áudio         | Execute  | In Progress | T4,T7,T18,T21         |
+| MED-03         | Arquivo vídeo         | Execute  | In Progress | T4,T7,T18,T21         |
+| MED-04         | Validação             | Execute  | In Progress | T4,T5,T7,T18          |
 | MED-05         | Persistência atômica  | Execute  | In Progress | T2,T10,T11            |
 | MED-06         | Replay                | In Tasks | Pending     | T7,T10,T11,T14,T15    |
 | MED-07         | Chave divergente      | In Tasks | Pending     | T7,T10,T11            |
@@ -189,10 +189,10 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 | MED-23         | DEV real              | In Tasks | Pending     | T1,T15,T24            |
 | MED-24         | Resultado incerto     | In Tasks | Pending     | T12,T14,T15,T24       |
 | MED-25         | Acessibilidade        | In Tasks | Pending     | T18,T19,T20,T21,T24   |
-| MED-26         | Scanner               | In Tasks | Pending     | T4,T6,T7              |
+| MED-26         | Scanner               | Execute  | In Progress | T4,T6,T7              |
 | MED-27         | Órfãos                | Execute  | In Progress | T2,T22                |
 | MED-28         | Quota                 | Execute  | In Progress | T2,T6,T7,T23          |
-| MED-29         | Reprovação assíncrona | In Tasks | Pending     | T4,T5,T6,T8           |
+| MED-29         | Reprovação assíncrona | Execute  | In Progress | T4,T5,T6,T8           |
 
 Coverage: 29 total, 29 mapped to tasks, 0 unmapped. Nenhum requisito Verified.
 

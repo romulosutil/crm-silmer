@@ -97,7 +97,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Depends on**: None
 **Requirement**: MED-16, MED-19, MED-23
 **Reuses**: Inspeção context.md; padrão de smoke R2 sem presumir equivalência.
-**Tools**: tlc-spec-driven; Browser para inspeção; shell/ssh para smoke autorizado.
+**Tools**: tlc-spec-driven; Browser somente leitura; shell/Docker local para smoke autorizado.
 **Done when**: [x] PUT/HEAD/GET/Range/DELETE e negativas de canário sintético passam na mesma versão configurada (alpha.99), em ambiente local isolado autorizado; bucket CRM isolado de hermes-backups; digest real do teste registrado; nenhuma alteração silenciosa do RustFS. Ativação e digest do deployment remoto permanecem gates de T23. Smoke real com HEAD/GET de objeto sintético conhecido negados e 10 testes do harness passaram; [evidência](execution.md#t1-compatibilidade-rustfs).
 **Tests**: integration; mínimo 6 cenários de compatibilidade/negativa, sem objetos reais.
 **Gate**: Topology e smoke explícito documentado; criação de credencial/bucket sob autorização de acesso vigente.
@@ -110,7 +110,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Depends on**: T1
 **Requirement**: MED-05, MED-15, MED-27, MED-28
 **Reuses**: Migrations publicadas, FK de messages e jobs PostgreSQL; escolher próximo número real.
-**Tools**: tlc-spec-driven; shell e banco dedicado Ubuntu/CI.
+**Tools**: tlc-spec-driven; shell e banco dedicado Docker local/CI.
 **Done when**: [x] Migration aplica duas vezes sem duplicar; constraints rejeitam vínculo duplicado; mídia attached não entra no sweeper transitório; modelo separa quota/rascunho. Oito cenários SQL live passaram; gates Live19/19 e Build verdes; [evidência](execution.md#t2-schema-persistente).
 **Tests**: integration live; mínimo 6 casos, em testes co-localizados na entrega.
 **Gate**: Live + Build; versões de migrations antigas preservadas.
@@ -136,8 +136,8 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Depends on**: T3
 **Requirement**: MED-01..04, MED-26, MED-29
 **Reuses**: ClamAvMediaScanner, limites n8n-routes e libmagic.
-**Tools**: tlc-spec-driven; scanner/ffprobe no worker Ubuntu.
-**Done when**: [ ] Cada formato permitido tem fixture real válida; disfarce MIME, codec inválido, malware e assinatura stale impedem ready/envio.
+**Tools**: tlc-spec-driven; scanner/ffprobe em Docker local/CI.
+**Done when**: [x] Cada formato permitido tem fixture real válida; disfarce MIME, codec inválido, malware e assinatura stale impedem ready/envio.16 unitários e um runtime real (seis formatos, capaMP3, Chromium streaming, MIME/codec/EICAR) passaram; [evidência](execution.md#t4-validação-de-mídia).
 **Tests**: unit + integration; mínimo 12 casos positivos, fronteira e negativos.
 **Gate**: Quick + fixtures reais no runtime; Build.
 **Commit**: feat(media): validate upload formats and codecs

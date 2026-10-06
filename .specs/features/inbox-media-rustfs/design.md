@@ -2,6 +2,27 @@
 
 Spec: [spec.md](spec.md). Contexto: [context.md](context.md).
 
+T18: MediaComposer standalone recebe conversationId/expectedVersion/disabled
+e emite sent após o 202. Selecionar não envia: preparação e envio são ações
+explícitas, envio só após ready. Preview local usa objectURL revogado ao
+remover/substituir/unmount; áudio não apresenta nem envia caption. Legendas
+contam Unicode code points com Array.from, sem maxlength UTF-16.
+MIME/ extensão do browser são somente hints de declaração; audio/m4a e
+audio/x-m4a normalizam para audio/mp4, MIME vazio/extensão aprovada não
+impedem bytes válidos. O worker decide formato/codecs e pode rejeitar arquivo
+renomeado. Limites no cliente reproduzem 5 MiB imagem/16 MiB áudio e vídeo.
+
+Contexto e File estáveis são capturados na seleção; upload retry mantém chave,
+versão e filename. Primeiro envio captura chave e conteúdo; erro ambíguo
+mantém preview e congela legenda, retry consulta/envia a mesma operação.
+Troca de conversationId/expectedVersion, descarte e unmount abortam o trabalho
+e invalidam callbacks pelo generation token; nada envia automaticamente.
+Polling tem intervalo 1 s e prazo 600 s canceláveis, incluindo GET pendente:
+comporta os 340 s das fases locais mais I/O. Timeout conserva preview/mediaId;
+atualizar a validação consulta a mesma mídia sem repetir upload.
+Integração Inbox/Recorder/MediaMessage continua fase 4. Harness está apenas
+em test/fixtures; nenhum caminho de produto ou estado global foi acrescentado.
+
 T17: request aceita FormData nativo sem JSON.stringify e remove qualquer
 Content-Type fornecido para deixar o browser gerar o boundary. JSON, CSRF,
 cookies same-origin e a chave capturada continuam iguais. AbortSignal é

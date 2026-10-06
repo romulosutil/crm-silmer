@@ -1,5 +1,88 @@
 # Execução INBOX-MEDIA-1
 
+## T3: Adapter privado RustFS
+
+PASS: nove unitários e um ciclo real do SDK na alpha.99 local. Gate Quick
+668 pass, três skips preexistentes, 671 total; tipo/lint/audit verdes.
+T3 não declara requisitos inteiros verificados, pois API/worker seguem pendentes.
+
+### Antes do patch
+
+- Premissas: source validada fornece SHA-256, tamanho e MIME; key UUID opaco;
+  bucket CRM isolado; nenhuma URL assinada retornada para browser.
+- Arquivos: `rustfs-media-store.js`, export `index.js`, manifest do módulo e
+  lockfile, testes `rustfs-media-store.test.js` e `rustfs-media-store-live.test.js`,
+  spec/tasks/execution. Nenhuma dependência frontend adicionada.
+- Sucesso: pelo menos oito unitários, operações streaming e falhas parciais,
+  mais ciclo real SDK em alpha.99; Quick, smoke T1, tipos/lint e audit.
+- Dependência: T2 `b94e5f1`; correção de negativas T1 `cacb897`.
+
+### Dependência e contrato
+
+`@aws-sdk/client-s3` fixado em 3.1146.0 no módulo backend, 26 pacotes novos.
+Metadados npm: Apache-2.0 e Node >=20, compatível com runtime 24.20.0.
+Justificativa: assinatura/autenticação, streaming e operações S3 necessárias,
+evitando implementar protocolo próprio no runtime. Risco: superfície de
+dependências e defaults de checksum; lockfile, audit high e ciclo real
+contra imagem exata fazem parte do gate.
+
+[AWS checksum docs](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/s3-checksums.html)
+confirma CRC32 automático desde 3.729.0. O adapter usa SHA256 precomputado,
+ContentLength e settings WHEN_REQUIRED, path-style e maxAttempts=1.
+`IfNoneMatch='*'` foi comprovado na alpha.99: replay 412 só retorna sucesso
+se HEAD reconcilia o mesmo SHA/tamanho/MIME. Variante divergente não sobrescreve.
+Erro de PUT preserva código MEDIA_STORAGE_UNAVAILABLE; não vira invalid_format.
+
+Métodos: `putValidated({key,stream,sizeBytes,sha256,mimeType})`, `head(key)`,
+`read(key,range?)`, `deleteDraft(key)`. Read retorna stream Node, tamanho,
+SHA, MIME e Content-Range; não retorna URL/key/bucket/ETag. Delete exige que
+o chamador bloqueie e revalide `message_id IS NULL` antes, implementado em T22.
+Byte count/hash são verificados durante PUT; erros de read parcial são
+sanitizados. Falhas 404/416/externa têm códigos distintos. SDK não retry cego.
+
+Ciclo real em `rtk proxy node --test test/rustfs-media-store-live.test.js`,
+com credencial DEV limitada e opt-in explícito: PUT streaming, HEAD hash/size,
+GET bytes exatos, Range bytes exatos, replay condicional, rejeição de variante
+divergente, GET original preservado, DELETE e HEAD404. Um teste passou, zero
+skips. Warnings SDK de request streaming não retryable em 412 são genéricos;
+nenhum segredo/chave/provider body vai para log ou DTO.
+Smoke T1 atual `var/rustfs-local-alpha99-object-denial-evidence.json` passou
+com 11 checks reais na mesma imagem/digest, após instalar o SDK.
+
+### Adequação: suficiência
+
+| Critério / requisito                  | Evidência assertion                                                                                                                                                                                                             | Resultado esperado                                        | Coberto |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------- |
+| PUT streaming/hash/size               | `test/rustfs-media-store.test.js:43`: `assert.deepEqual(await collect(command.input.Body), BYTES)`; linha46 `assert.deepEqual(result,{sizeBytes:BYTES.length,sha256:SHA})`; linha38 assert checksum base64                      | Bytes exatos, digest/tamanho da variante                  | Sim     |
+| HEAD                                  | `test/rustfs-media-store.test.js:57`: `assert.deepEqual(result,{sizeBytes:BYTES.length,sha256:SHA,mimeType:'image/jpeg'})`                                                                                                      | Metadata privada exata, sem ETag                          | Sim     |
+| Reconciliação sem overwrite MED-15/19 | `test/rustfs-media-store.test.js:80`: `assert.deepEqual(await adapter.putValidated(upload()),{sizeBytes:BYTES.length,sha256:SHA})`; linha85 `assert.rejects` variante com código MEDIA_STORAGE_UNAVAILABLE                      | 412 igual reconcilia; diferente falha                     | Sim     |
+| Range MED-17                          | `test/rustfs-media-store.test.js:106`: `assert.equal(result.contentRange,...)`; linha108 `assert.deepEqual(await collect(result.stream),BYTES.subarray(0,3))`                                                                   | Range e bytes exatos                                      | Sim     |
+| Falhas MED-19/20                      | `test/rustfs-media-store.test.js:117`: `assert.rejects(...error.code===code&&!JSON.stringify(error).includes('secret'))`                                                                                                        | 404 missing/416 range/503 unavailable sanitizados         | Sim     |
+| Timeout                               | `test/rustfs-media-store.test.js:134`: `assert.rejects(...error.code==='MEDIA_STORAGE_UNAVAILABLE')`                                                                                                                            | Deadline aborta request, não declara sucesso              | Sim     |
+| Limite/hash incorreto                 | `test/rustfs-media-store.test.js:154` e `:158`: `assert.rejects(adapter.putValidated(...),/Unable to store private media/u)`                                                                                                    | Fonte divergente não vira PUT válido                      | Sim     |
+| Stream parcial MED-19/20              | `test/rustfs-media-store.test.js:175`: `assert.rejects(collect(result.stream),...error.message==='Private media storage is unavailable')`                                                                                       | Falha sem URL/secret raw                                  | Sim     |
+| Delete/key/bucket isolados            | `test/rustfs-media-store.test.js:189`: `assert.deepEqual(target,{Bucket:'crm-silmer-chat-media-dev',Key:KEY})`; linha190 `assert.rejects` key arbitrária; linha194 `assert.throws` Hermes                                       | Somente bucket CRM/key UUID                               | Sim     |
+| SDK real                              | `test/rustfs-media-store-live.test.js:52`: `assert.deepEqual(await bytes(read.stream),body)`; linha55 Range bytes; linha74 `assert.deepEqual(await bytes(preserved.stream),body)`; linha78 `assert.rejects` missing após delete | Defaults SDK compatíveis com alpha.99 e bytes preservados | Sim     |
+
+### Adequação: necessidade
+
+| Teste / assertion                                                      | Origem                                                       | Manter |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------ | ------ |
+| `test/rustfs-media-store.test.js:35–47`, output bytes/digest e sem key | T3 streaming + MED-15/20                                     | Sim    |
+| `test/rustfs-media-store.test.js:57`, HEAD metadata                    | T3 HEAD                                                      | Sim    |
+| `test/rustfs-media-store.test.js:80–85`, 412 igual/diferente           | Design PUT/DB desconhecido + MED-19                          | Sim    |
+| `test/rustfs-media-store.test.js:97–108`, Range                        | MED-17                                                       | Sim    |
+| `test/rustfs-media-store.test.js:117`, códigos/privacidade             | MED-19/20                                                    | Sim    |
+| `test/rustfs-media-store.test.js:134`, deadline                        | T3 timeout                                                   | Sim    |
+| `test/rustfs-media-store.test.js:154–158`, hash/size                   | T3 fonte válida/streaming                                    | Sim    |
+| `test/rustfs-media-store.test.js:175`, read parcial                    | T3 falha parcial + MED-20                                    | Sim    |
+| `test/rustfs-media-store.test.js:189–194`, Delete/key/bucket           | T3 acesso privado                                            | Sim    |
+| `test/rustfs-media-store-live.test.js:42–78`, ciclo real               | T3 compatibilidade real, sem presumir smoke manual prova SDK | Sim    |
+
+Verdict: critérios e falhas da camada cobertos em outputs e bytes, inclusive
+contra runtime real. Testes seguem CONTRIBUTING/node:test/JSDoc; nenhum teste
+preexistente alterado, ignorado ou removido. Nenhum cenário fora da spec.
+
 ## Correção T1: negar leitura de objeto conhecido fora do bucket
 
 PASS em 2026-10-06T03:00:29.057Z. Uma revisão intermediária detectou que

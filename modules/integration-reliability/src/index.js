@@ -58,3 +58,9 @@ export {
   runMetaSendAttempt,
   verifyMetaWebhookSignature,
 } from './meta-sandbox.js';
+export {
+  RustfsMediaStore,
+  MediaStorageUnavailableError,
+  MediaObjectMissingError,
+  MediaInvalidRangeError,
+} from './rustfs-media-store.js';

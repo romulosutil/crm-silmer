@@ -1,5 +1,19 @@
 # Execução INBOX-MEDIA-1
 
+## Fix T10/MED-08: Permissão de uploader usa403
+
+Revisão independente exigiu distinguir outro uploaded_by (403 de permissão)
+de estado/conversa/versão (409 de conflito). Assertions de outro ator/admin
+foram corrigidas explicitamente pelo integrador para403 antes do código; red
+mostrou InboxConflictError409 onde403 era obrigatório. Negativa foi fortalecida
+sem retirar cenário nem efeito esperado. Repository agora lança
+InboxForbiddenError para mídia desta conversa pertencente a outro uploader.
+Admin continua sem autorização de bind de arquivo alheio. Estado/conversa/
+versão conservam409. Assertions `test/chat-media-bind-postgres-live.test.js:229`
+rejects403 para actorId, :232 snapshot igual; :236 rejects403 admin e :244
+automation assistant demonstram ausência de efeito. Live18/18, Quick types/lint/
+format/diff verdes. Autor não é Verifier.
+
 ## T10: Vinculo atomico e conservacao de quota
 
 MED-05..08/15/28: criterios e arquivos comunicados antes do patch. Novo teste SQL escrito primeiro reproduziu ready sem bind e negativas sem rejeicao. Fixtures iniciais corrigidas para respeitar auditoria imutavel (schema sintetico recriado por caso) e metadata ready size_bytes real; outcomes/assertions preservados. Bind valida mesmo autor/conversa/ready/clean/tipo/SHA/MIME/limite/reserva sob locks antes do takeover. Mensagem/vinculo/quota/outbox/audit/SSE/command usam a transacao existente; reserva vira used apenas nela. Replay hidrata antes do bind; concorrencia tem um vencedor, mesma midia nao liga a segunda mensagem. Admin read nao autoriza bind de outro ator. Allowlist coincide com T4, imagem5MiB e audio/video16MiB. Texto preservado.
@@ -25,9 +39,9 @@ Nenhuma assertion/timeouts/skips publicada foi enfraquecida.
 | test(T10/MED-05: concurrent sends of one media have one winner,  | `test/chat-media-bind-postgres-live.test.js:216` `assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);` | Resultado explícito discriminante da assertion |
 | test(T10/MED-05: concurrent sends of one media have one winner,  | `test/chat-media-bind-postgres-live.test.js:217` `assert.equal((await snapshot()).messages, 1);` | Resultado explícito discriminante da assertion |
 | test(T10/MED-05: concurrent sends of one media have one winner,  | `test/chat-media-bind-postgres-live.test.js:218` `assert.equal((await snapshot()).used, '100');` | Resultado explícito discriminante da assertion |
-| test(T10/MED-05/08: invalid bind ${JSON.stringify(options)} rolls back,  | `test/chat-media-bind-postgres-live.test.js:229` `await assert.rejects(service().sendHumanMessage(command(id)), { statusCode: 409, });` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/08: invalid bind ${JSON.stringify(options)} rolls back,  | `test/chat-media-bind-postgres-live.test.js:229` `await assert.rejects(service().sendHumanMessage(command(id)), { statusCode: options.actorId ? 403 : 409, });` | Resultado explícito discriminante da assertion |
 | test(T10/MED-05/08: invalid bind ${JSON.stringify(options)} rolls back,  | `test/chat-media-bind-postgres-live.test.js:232` `assert.deepEqual(await snapshot(), before);` | Resultado explícito discriminante da assertion |
-| test(T10/MED-08: admin read capability cannot bind another actor media,  | `test/chat-media-bind-postgres-live.test.js:236` `await assert.rejects( service().sendHumanMessage( command(id, { actor: { ...actor, capabilities: ['COMMERCIAL_ADMIN'] }, }), ), { statusCode: 409 }, );` | Resultado explícito discriminante da assertion |
+| test(T10/MED-08: admin read capability cannot bind another actor media,  | `test/chat-media-bind-postgres-live.test.js:236` `await assert.rejects( service().sendHumanMessage( command(id, { actor: { ...actor, capabilities: ['COMMERCIAL_ADMIN'] }, }), ), { statusCode: 403 }, );` | Resultado explícito discriminante da assertion |
 | test(T10/MED-08: admin read capability cannot bind another actor media,  | `test/chat-media-bind-postgres-live.test.js:244` `assert.equal((await snapshot()).automation, 'assistant');` | Resultado explícito discriminante da assertion |
 | test(T10/MED-05: second message cannot reuse attached media,  | `test/chat-media-bind-postgres-live.test.js:250` `await assert.rejects( inbox.sendHumanMessage(command(id, { expectedVersion: 2 })), { statusCode: 409 }, );` | Resultado explícito discriminante da assertion |
 | test(T10/MED-05: second message cannot reuse attached media,  | `test/chat-media-bind-postgres-live.test.js:254` `assert.equal((await snapshot()).messages, 1);` | Resultado explícito discriminante da assertion |

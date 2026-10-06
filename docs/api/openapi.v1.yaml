@@ -950,6 +950,129 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/OrderNotFound' }
         '409': { $ref: '#/components/responses/OrderConflict' }
+  /orders/{orderId}/files:
+    get:
+      operationId: listOrderFiles
+      summary: Lista a arte final e os arquivos da arte do pedido (ADR 021)
+      description: >-
+        Ação order.read. Sem OBJECT_STORAGE_* configurado responde 503 e o
+        resto do pedido continua disponível.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Arquivos do pedido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderFiles' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+    post:
+      operationId: uploadOrderFile
+      summary: Envia um arquivo da arte ou a arte final
+      description: >-
+        Ação order.edit, restrita ao dono da conversa ou a COMMERCIAL_ADMIN e
+        ao pedido pendente (409 ORDER_STATUS_CONFLICT). Até 5 arquivos
+        `reference` (409 FILE_LIMIT_REACHED) e uma arte `final`, que substitui
+        a anterior; 10 MB cada (413 FILE_TOO_LARGE). A extensão precisa estar
+        na allowlist e o conteúdo precisa ter a assinatura dela (422
+        FILE_TYPE_NOT_ALLOWED ou FILE_CONTENT_MISMATCH). A sessão é checada
+        antes de o corpo ser lido. Replay com a mesma Idempotency-Key e os
+        mesmos bytes devolve a primeira resposta.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/OrderFileUpload' }
+      responses:
+        '201':
+          description: Arquivo guardado ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderFiles' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '413': { $ref: '#/components/responses/OrderUnprocessable' }
+        '422': { $ref: '#/components/responses/OrderUnprocessable' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /orders/{orderId}/files/{fileId}:
+    delete:
+      operationId: removeOrderFile
+      summary: Remove um arquivo da arte ou a arte final
+      description: >-
+        Ação order.edit, mesmas regras do envio. Apaga a linha e os objetos
+        (arquivo e miniatura) do RustFS.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/OrderFileId'
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200':
+          description: Arquivos que restaram ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderFiles' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /orders/{orderId}/files/{fileId}/content:
+    get:
+      operationId: downloadOrderFile
+      summary: Baixa o arquivo original como anexo
+      description: >-
+        Ação order.read, também para pedido confirmado. Sempre anexo, com
+        nosniff e CSP sandbox; o download entra na auditoria.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/OrderFileId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Bytes do arquivo
+          headers:
+            Content-Disposition:
+              { schema: { type: string, pattern: '^attachment; ' } }
+            Content-Security-Policy:
+              { schema: { type: string, const: "default-src 'none'; sandbox" } }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /orders/{orderId}/files/{fileId}/thumbnail:
+    get:
+      operationId: getOrderFileThumbnail
+      summary: Miniatura WebP de uma imagem enviada
+      description: >-
+        Ação order.read. Só existe para PNG, JPEG e WebP enviados com
+        miniatura; os demais respondem 404 FILE_NOT_FOUND.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/OrderFileId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Miniatura de até 320 px
+          content:
+            image/webp:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
 components:
   securitySchemes:
     automationBasic:
@@ -982,6 +1105,11 @@ components:
       required: false
       description: Obrigatório para autenticação humana; não usado pelo ator técnico.
       schema: { type: string, format: uri }
+    OrderFileId:
+      name: fileId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 512 }
     HumanReadOrigin:
       name: Origin
       in: header
@@ -2419,6 +2547,70 @@ components:
         averageTicketCents: { type: integer, minimum: 0 }
         pendingCount: { type: integer, minimum: 0 }
         totalPiecesSold: { type: integer, minimum: 0 }
+    OrderFile:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          slot,
+          name,
+          extension,
+          contentType,
+          sizeBytes,
+          thumbnail,
+          uploadedAt,
+          uploadedBy,
+        ]
+      properties:
+        id: { type: string }
+        slot: { type: string, enum: [reference, final] }
+        name:
+          type: string
+          maxLength: 120
+          description: Nome original sem caminho; guardado cifrado.
+        extension:
+          type: string
+          enum:
+            [ai, cdr, eps, jpeg, jpg, pdf, png, psd, rar, svg, tif, tiff, webp, zip]
+        contentType: { type: string }
+        sizeBytes: { type: integer, minimum: 1, maximum: 10485760 }
+        thumbnail:
+          type: boolean
+          description: Há miniatura WebP em /thumbnail.
+        uploadedAt: { type: string, format: date-time }
+        uploadedBy: { $ref: '#/components/schemas/OrderActorRef' }
+    OrderFiles:
+      type: object
+      additionalProperties: false
+      required: [final, references, limits]
+      properties:
+        final:
+          oneOf:
+            - $ref: '#/components/schemas/OrderFile'
+            - type: 'null'
+        references:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/OrderFile' }
+        limits:
+          type: object
+          additionalProperties: false
+          required: [maxBytes, maxReferences]
+          properties:
+            maxBytes: { type: integer, const: 10485760 }
+            maxReferences: { type: integer, const: 5 }
+    OrderFileUpload:
+      type: object
+      additionalProperties: false
+      required: [slot, file]
+      properties:
+        slot: { type: string, enum: [reference, final] }
+        file: { type: string, format: binary, description: Até 10 MB. }
+        thumbnail:
+          type: string
+          format: binary
+          description: WebP de até 256 KB, só para PNG, JPEG e WebP.
     OrderResponse:
       type: object
       additionalProperties: false
@@ -2537,6 +2729,16 @@ components:
                   INVALID_AMOUNT,
                   INVALID_GRADE,
                   INVALID_DATE,
+                  ORDER_STATUS_CONFLICT,
+                  EMPTY_FILE,
+                  FILE_CONTENT_MISMATCH,
+                  FILE_LIMIT_REACHED,
+                  FILE_NOT_FOUND,
+                  FILE_TOO_LARGE,
+                  FILE_TYPE_NOT_ALLOWED,
+                  INVALID_FILE_NAME,
+                  INVALID_FILE_SLOT,
+                  INVALID_THUMBNAIL,
                 ]
             fields:
               type: array

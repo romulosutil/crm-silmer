@@ -13,6 +13,11 @@
 
 ## Handoff
 
+FixT20/MED-25 concluído: dois reds player focado→lost/503 receberam inactive;
+green transfere apenas foco do player removido ao aviso, preserva foco externo.
+Focal11/11, UI153pass/7skips existentes(total160), typecheck/lint verdes. T21WIP
+em var/inbox-media-T21-WIP.spec.js deve ser restaurado após commitfix; próximaT21.
+
 T20 concluída: MediaMessage standalone aceita somente URL relativa CRM, imagem
 privada real, players nativos sem autoplay, áudio AAC/vídeo H.264 com seek e
 206/Content-Range exato. Lost e503 mostram estado acessível sem entrega inventada;

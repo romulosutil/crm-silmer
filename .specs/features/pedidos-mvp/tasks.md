@@ -1659,3 +1659,13 @@ branch `feat/atendimento-por-produto`.
   `dev-mvp-simple-13`, com o registro do indicador; publicação depois da
   aprovação do PO.
 - **Gate:** registro do roteiro.
+
+### T91: RFC dos itens por público
+
+- **Requisitos:** propostos `PUB-01`–`PUB-09` na
+  [RFC 010](../../../docs/rfc/010-itens-por-publico.md); entram na spec com a
+  ADR 022, depois da decisão do PO.
+- **Arquivos:** RFC 010 e tasks.
+- **Aceite:** situação atual, proposta, alternativas, riscos, critérios e as
+  decisões D1–D7 para o PO.
+- **Gate:** links e formatação.

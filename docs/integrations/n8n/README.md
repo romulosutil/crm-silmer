@@ -8,6 +8,13 @@
 
 ## Objetivo e limite
 
+OpenAI é o provedor do MVP, conforme a
+[ADR 021](../../adr/021-adotar-openai-no-mvp.md). O workflow versionado
+usa Responses API com `gpt-5.6-luna`; confirmação do modelo implantado e
+controles de privacidade ficam no [checklist OpenAI](../openai/README.md).
+Spikes Gemini não são dependência do lançamento. Deploy preserva o fluxo
+GitHub → EasyPanel existente ([ADR 022](../../adr/022-manter-deploy-automatico-github-easypanel.md)).
+
 O n8n recebe o webhook oficial do WhatsApp, registra a mensagem no CRM, usa o
 contexto devolvido pelo CRM, decide entre resposta de IA e handoff e pede ao CRM
 uma autorização de uso único antes de chamar a Meta. PostgreSQL continua sendo
@@ -272,7 +279,7 @@ campos da ficha no pedido `pendente` da conversa:
 
 - Workflow: `k7tI6T4RhQPyJkn9` — `Silmer | Atendimento WhatsApp IA`.
 - Workflow DEV: `0S5ZS1xeDCSoWovs` — `DEV | Silmer | Fluxo completo sem
-  WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos por
+WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos por
   `silmer/dev-mvp-flow`, usa a API real do CRM e simula apenas os dois envios
   pelo WhatsApp. O webhook CRM→n8n isolado é `silmer/dev-panel-command`. A
   versão DEV aceita `scenario: message`, `handoff`, `send_unknown` e

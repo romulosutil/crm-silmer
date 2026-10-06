@@ -46,7 +46,8 @@ test('mantém o n8n obrigatório, fora do banco e com WhatsApp como primeiro can
   const spec = await read('.specs/features/crm-mvp/spec.md');
   assert.match(spec, /ORC-01/);
   assert.match(spec, /mensagem recebida[^\n]+dispara[^\n]+n8n/iu);
-  assert.match(spec, /OpenAI[^\n]+Gemini|Gemini[^\n]+OpenAI/iu);
+  assert.match(spec, /ORC-06[^\n]+OpenAI/iu);
+  assert.doesNotMatch(spec, /OpenAI e Gemini são obrigatórios/iu);
   assert.match(
     spec,
     /Instagram[^\n]+(?:fase posterior|não bloqueia)|(?:fase posterior|não bloqueia)[^\n]+Instagram/iu,

@@ -1,5 +1,11 @@
 # T00.4 — Spikes externos
 
+> Baseline de lançamento atualizada em 05/10/2026: o provedor escolhido é
+> OpenAI ([ADR 021](../adr/021-adotar-openai-no-mvp.md)). As evidências Gemini
+> abaixo preservam o spike histórico e não bloqueiam a escolha de fornecedor
+> do MVP nem aprovam OpenAI. Os controles do provedor ativo estão no
+> [checklist OpenAI](../integrations/openai/README.md).
+
 ## Resultado local
 
 Em 30/08/2026, a parte versionável e sem credenciais foi fechada: matriz de

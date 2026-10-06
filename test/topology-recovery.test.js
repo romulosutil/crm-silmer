@@ -169,7 +169,6 @@ test('records the existing schedule/rustfs with its gaps explicit (ADR 023)', as
   assert.equal(storage.status, 'existing-with-gaps');
   assert.deepEqual(storage.gaps, [
     'public-s3-and-console-domains',
-    'shared-project',
     'cross-project-endpoint-smoke-pending',
     'image-digest-not-confirmed',
     'dedicated-bucket-credential-pending',

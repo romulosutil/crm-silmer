@@ -241,7 +241,6 @@ qualquer uma delas:
 | Lacuna                                 | Situação observada                                                    |
 | -------------------------------------- | --------------------------------------------------------------------- |
 | `public-s3-and-console-domains`        | Domínios públicos padrão do EasyPanel para S3 (9000) e console (9001) |
-| `shared-project`                       | Serviço e volume compartilhados com outros apps do projeto `schedule` |
 | `cross-project-endpoint-smoke-pending` | Alcance de `schedule_rustfs:9000` a partir de `silmer-api` sem smoke  |
 | `image-digest-not-confirmed`           | Imagem, tag e digest da instância não confirmados                     |
 | `dedicated-bucket-credential-pending`  | Credencial do CRM restrita ao bucket ainda não criada                 |
@@ -269,8 +268,8 @@ Recomendações para fechar as lacunas:
    CRM no drill, sem sobrescrever dados dos outros apps do projeto `schedule`.
 5. Executar o smoke de `silmer-api` para `schedule_rustfs:9000` e registrar a
    imagem e o digest em execução.
-6. Aceitar o compartilhamento do projeto `schedule` por decisão registrada
-   (`sharedProjectRiskAcceptedRef`) ou mover os arquivos para serviço próprio.
+6. ~~Aceitar o compartilhamento do projeto `schedule`~~: aceito pelo PO em
+   05/10/2026 na ADR 023, com credencial e restore restritos ao bucket.
 
 ### Object storage futuro
 

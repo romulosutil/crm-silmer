@@ -87,7 +87,7 @@
     "observedAt": "2026-10-05",
     "serviceCreated": true,
     "publicDomainsRemovedOrRestricted": false,
-    "sharedProjectRiskAccepted": false,
+    "sharedProjectRiskAccepted": true,
     "crossProjectEndpointSmoked": false,
     "imageDigestConfirmed": false,
     "privateBucketCreated": true,

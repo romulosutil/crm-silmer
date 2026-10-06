@@ -72,8 +72,31 @@ por escrito:
   ou restringir o console;
 - o projeto `schedule` é compartilhado com outros apps, então a credencial
   do CRM precisa de uma política restrita ao bucket `crm-silmer-arquivos`;
-- a imagem e o digest da instância não foram confirmados;
+- a imagem e o digest da instância não foram confirmados (o console mostrava
+  `v1.0.0-alpha.99`);
 - o backup off-host do volume e o drill com o PostgreSQL não têm evidência.
+
+O bucket privado `crm-silmer-arquivos` foi criado pelo console em
+05/10/2026.
+
+### Aceite do projeto compartilhado
+
+Em 05/10/2026 o PO aceitou manter os arquivos do pedido no RustFS do projeto
+`schedule`, compartilhado com outros apps, em vez de um serviço próprio do
+CRM. O aceite vale com estas condições, que continuam obrigatórias:
+
+- o CRM usa só o bucket `crm-silmer-arquivos`, com usuário e política
+  restritos a ele; as chaves root da instância nunca vão para o CRM;
+- o CRM acessa pela rede interna (`schedule_rustfs:9000`), nunca pelo
+  domínio público;
+- recuperação restaura só esse bucket, sem sobrescrever dados dos outros
+  apps;
+- um incidente, upgrade ou parada do `schedule/rustfs` afeta os arquivos do
+  pedido; mudar para um serviço próprio exige nova ADR.
+
+Este aceite fecha só a lacuna `shared-project` (`sharedProjectRiskAcceptedRef`
+aponta para esta ADR). Domínios públicos, credencial dedicada, smoke entre
+projetos, digest e backup continuam bloqueando o gate.
 
 ## Consequências
 

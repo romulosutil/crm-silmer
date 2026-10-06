@@ -14,6 +14,7 @@ export function createInboxService({
   clock = () => new Date(),
   idFactory = defaultIdFactory,
   repository,
+  mediaEnabled = true,
 }) {
   if (
     !repository ||
@@ -32,6 +33,7 @@ export function createInboxService({
     throw new InboxValidationError('clock and idFactory must be functions');
   }
   const runtime = freezeInboxRecord({
+    mediaEnabled,
     appendAudit: (/** @type {any} */ event, /** @type {any} */ context) =>
       auditPort.append(event, context),
     clock,
@@ -108,6 +110,7 @@ export function createInboxService({
       validateHumanCommand(command);
       requireNonEmpty(command.messageType, 'messageType');
       validateContent(command.content);
+      validateHumanMessageContent(command.messageType, command.content);
       return repository.mutateConversation(
         'send',
         normalizeHumanCommand(command, {
@@ -179,6 +182,30 @@ function validateContent(content) {
   if (JSON.stringify(content) === undefined) {
     throw new InboxValidationError('message content must be JSON serializable');
   }
+}
+
+/** @param {string} type @param {any} content */
+function validateHumanMessageContent(type, content) {
+  if (!['text', 'image', 'audio', 'video'].includes(type))
+    throw new InboxValidationError('Unsupported human message type');
+  if (type === 'text') return;
+  if (
+    Object.keys(content).some((key) => !['mediaId', 'caption'].includes(key)) ||
+    typeof content.mediaId !== 'string' ||
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu.test(
+      content.mediaId,
+    )
+  )
+    throw new InboxValidationError(
+      'Media content requires a canonical mediaId',
+    );
+  if (
+    Object.hasOwn(content, 'caption') &&
+    (type === 'audio' ||
+      typeof content.caption !== 'string' ||
+      Array.from(content.caption).length > 1024)
+  )
+    throw new InboxValidationError('Media caption is invalid');
 }
 
 /** @param {any} command */

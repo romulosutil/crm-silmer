@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T10 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T11 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -230,7 +230,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-04..08
 **Reuses**: conversation-routes, versão/idempotência e ações de envio existentes.
 **Tools**: tlc-spec-driven; shell.
-**Done when**: [ ] Aceita text/image/audio/video nos formatos definidos; proíbe key/URL arbitrários; upload não liga bot; texto conserva comportamento; OpenAPI atualizado no suporte.
+**Done when**: [x] Aceita text/image/audio/video nos formatos definidos; proíbe key/URL arbitrários; upload não liga bot; texto conserva comportamento; OpenAPI atualizado no suporte. 18 testes unit/integration e 3 provas SQL de replay/gate/legado, Full verde; evidência T11 em execution.md.
 **Tests**: unit + integration; mínimo 8 casos de payload, replay e ACL.
 **Gate**: Full.
 **Commit**: feat(inbox): validate human media send commands

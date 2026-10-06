@@ -6,10 +6,12 @@ import { createMetaWhatsAppNormalizer } from '@crm-silmer/inbox-channels';
 import {
   InMemoryMetaEventStore,
   PostgresWebhookInbox,
+  PostgresChatMediaUploadRepository,
   processMetaWebhook,
 } from '@crm-silmer/integration-reliability';
 import { objectStorageFromEnvironment } from '@crm-silmer/orders';
 import { createApi } from './app.js';
+import { createChatMediaApiRuntime } from './chat-media-runtime.js';
 import { createAutomationAuthRuntime } from './automation-auth-runtime.js';
 import { createCommercialRuntime } from './commercial-runtime.js';
 import { createConversationHandoffRuntime } from './conversation-handoff-runtime.js';
@@ -43,6 +45,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   automationAuth?: ReturnType<typeof createAutomationAuthRuntime>,
  *   operationalAuth?: Record<string, any>,
  *   conversations?: Record<string, any>,
+ *   chatMedia?: Record<string, any>,
  *   handoffs?: Record<string, any>,
  *   n8n?: Record<string, any>,
  *   operations?: Record<string, any>,
@@ -161,12 +164,34 @@ export function createServerApi(runtime = {}) {
           ),
         )
       : undefined);
+  const chatMedia =
+    runtime.chatMedia ??
+    (runtime.database &&
+    operationalAuth &&
+    environment.CHAT_MEDIA_ENABLED === 'true'
+      ? createChatMediaApiRuntime({
+          repository: new PostgresChatMediaUploadRepository({
+            database: runtime.database,
+            bucketAlias: environment.CHAT_MEDIA_BUCKET_ALIAS,
+            limitBytes: Number(
+              environment.CHAT_MEDIA_QUOTA_BYTES ?? 1073741824,
+            ),
+          }),
+          access: operationalAuth,
+          spoolRoot: requireMediaSpoolRoot(environment),
+          envelopeKey: readEnvelopeKey(
+            environment.INBOX_MESSAGE_ENVELOPE_KEY,
+            'INBOX_MESSAGE_ENVELOPE_KEY',
+          ),
+        })
+      : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
     {
       ...runtime,
       automationAuth,
       commercial,
+      chatMedia,
       conversations,
       handoffs,
       logger,
@@ -184,6 +209,14 @@ export function createServerApi(runtime = {}) {
     api.addHook('onClose', closeDatabase.bind(database));
   }
   return api;
+}
+
+/** @param {Record<string,string|undefined>} environment */
+function requireMediaSpoolRoot(environment) {
+  const root = environment.CHAT_MEDIA_SPOOL_ROOT;
+  if (!root || root === environment.PRIVATE_MEDIA_ROOT)
+    throw new Error('A distinct CHAT_MEDIA_SPOOL_ROOT is required');
+  return root;
 }
 
 /**

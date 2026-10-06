@@ -541,87 +541,63 @@ paths:
         '409': { $ref: '#/components/responses/N8nProblem' }
         '422': { $ref: '#/components/responses/N8nProblem' }
         '503': { $ref: '#/components/responses/N8nProblem' }
-  /integrations/n8n/store-orders:
+  /conversations/{conversationId}/media:
     post:
-      operationId: recordStoreOrder
-      summary: Registra o pedido pago da loja do site (ADR 028)
+      operationId: uploadChatMedia
+      summary: Recebe mídia privada sem assumir o atendimento
       description: >-
-        Ação store.order.record, só do AUTOMATION_EXECUTOR. O workflow n8n
-        "Silmer | Loja | Checkout InfinitePay" chama depois que o
-        payment_check da InfinitePay confirma o Pix (paid e amount maior ou
-        igual ao valor). O CRM confere o pedido com o próprio catálogo da loja
-        e cria um pedido confirmado, travado, sem conversa nem contato, ao
-        preço do catálogo. A chave natural é o `pedido_id`: os mesmos dados
-        respondem 200 com o mesmo pedido, antes do catálogo; o `receipt_url`
-        que antes faltava é gravado e responde 200; dados diferentes ou outro
-        comprovante, ou um `transaction_nsu` de outro pedido, respondem 409.
-        `Idempotency-Key` é o mesmo texto de `pedido_id`. `X-Correlation-Id`
-        precisa ser um UUID (ou 16 a 64 hexadecimais) — use o próprio
-        `pedido_id`. Até 60 chamadas por minuto (429 RATE_LIMITED com
-        Retry-After, antes da credencial). Corpo JSON até 16 KB. Desligada
-        (404) até STORE_ORDERS_HMAC_KEY existir. As URLs da resposta partem
-        de APP_BASE_URL; sem ela, saem relativas.
-      security: [{ automationBasic: [], idempotencyKey: [] }]
+        Campos kind, origin e expectedVersion precedem um único campo file.
+        Arquivo vazio ou declaração inválida usa 422, excesso de bytes 413.
+        Inspeção real de formato/codec ocorre no worker após 202. Replay mede
+        bytes reais e declaração sem nova reserva; payload diferente ou
+        recebimento ainda ativo usa 409. Upload não altera ownership ou epoch.
+        Falhas usam application/problem+json com type, title, status e request_id,
+        accepted=false e error.code estável (INVALID_CREDENTIALS, FORBIDDEN,
+        MEDIA_CONFLICT, MEDIA_TOO_LARGE, MEDIA_INVALID, MEDIA_RATE_LIMITED ou
+        SERVICE_UNAVAILABLE conforme o status).
+      security:
+        - sessionCookie: []
+          csrfHeader: []
+          idempotencyKey: []
       parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/WorkflowKey'
-        - $ref: '#/components/parameters/WorkflowVersion'
-        - $ref: '#/components/parameters/ExecutionId'
+        - name: conversationId
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/Origin'
       requestBody:
         required: true
         content:
-          application/json:
-            schema: { $ref: '#/components/schemas/StoreOrderRecord' }
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [kind, origin, expectedVersion, file]
+              properties:
+                kind: { type: string, enum: [image, audio, video] }
+                origin: { type: string, enum: [attachment, recording] }
+                expectedVersion: { type: integer, minimum: 1 }
+                file: { type: string, format: binary }
       responses:
-        '201':
-          description: Pedido criado
-          headers:
-            Cache-Control: { schema: { type: string, const: no-store } }
+        '202':
+          description: Upload completo enfileirado, ou replay original
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/StoreOrderRecorded' }
-        '200':
-          description: >-
-            Pedido já registrado com os mesmos dados; ou o comprovante que
-            faltava foi gravado agora (`comprovante_registrado` true).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoreOrderRecorded' }
-        '400':
-          description: >-
-            INVALID_REQUEST (corpo malformado, chave faltando ou de tipo
-            errado), UNKNOWN_REQUEST_FIELD, UNSUPPORTED_SCHEMA_VERSION,
-            INVALID_STORE_NUMBER, INVALID_RECEIPT_URL, INVALID_PAID_AT,
-            INVALID_CUSTOMER, INVALID_IDEMPOTENCY_KEY, INVALID_CORRELATION_ID
-            e INVALID_X_SILMER_* dos cabeçalhos.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/N8nProblem' }
-        '401': { $ref: '#/components/responses/N8nProblem' }
-        '403': { $ref: '#/components/responses/N8nProblem' }
-        '404': { description: Loja do site não configurada neste ambiente }
-        '409':
-          description: STORE_ORDER_CONFLICT
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/N8nProblem' }
-        '413': { $ref: '#/components/responses/N8nProblem' }
-        '415': { $ref: '#/components/responses/N8nProblem' }
-        '422':
-          description: >-
-            STORE_CATALOG_MISMATCH, AMOUNT_BELOW_PRICE, TEST_REFUSED ou
-            PAYMENT_METHOD_UNSUPPORTED. Nada é gravado.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/N8nProblem' }
-        '429':
-          description: RATE_LIMITED
-          headers:
-            Retry-After: { schema: { type: integer, minimum: 1 } }
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/N8nProblem' }
-        '503': { $ref: '#/components/responses/N8nProblem' }
+              schema:
+                type: object
+                additionalProperties: false
+                required: [mediaId, state, statusUrl]
+                properties:
+                  mediaId: { type: string, format: uuid }
+                  state: { type: string, const: processing }
+                  statusUrl: { type: string }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { description: Limite de bytes excedido }
+        '422': { description: Declaração ou multipart inválido/vazio }
+        '429': { description: Quota ou 12 admissões por sessão/minuto }
+        '503': { description: Dependência indisponível ou conclusão incerta }
   /conversations/{conversationId}/messages:
     post:
       operationId: sendHumanConversationMessage

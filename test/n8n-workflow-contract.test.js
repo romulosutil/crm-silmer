@@ -549,6 +549,7 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
           sellers: ['Marina', 'Edson', 'Lúcio', 'Dario'],
           message_cap: 15,
           turn: 3,
+          name_asks: 2,
           ...context,
         },
       },
@@ -619,27 +620,29 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
 
   const firstMiss = decide(
     { answer_status: 'unclear' },
-    { briefing: { next_required_field: 'fabrics' } },
+    { briefing: { product_type: 'camisetas', next_required_field: 'colors' } },
   );
   assert.equal(firstMiss.handoff_required, false);
-  assert.equal(firstMiss.briefing_patch.briefing_status, 'clarifying');
+  assert.equal(firstMiss.briefing_patch.briefing_status, 'quote_clarifying');
   const question = decide(
     { answer_status: 'question' },
     {
       briefing: {
-        next_required_field: 'fabrics',
-        briefing_status: 'clarifying',
+        product_type: 'camisetas',
+        next_required_field: 'colors',
+        briefing_status: 'quote_clarifying',
       },
     },
   );
   assert.equal(question.handoff_required, false);
-  assert.equal(question.briefing_patch.briefing_status, 'clarifying');
+  assert.equal(question.briefing_patch.briefing_status, 'quote_clarifying');
   const secondMiss = decide(
     { answer_status: 'undecided' },
     {
       briefing: {
-        next_required_field: 'fabrics',
-        briefing_status: 'clarifying',
+        product_type: 'camisetas',
+        next_required_field: 'colors',
+        briefing_status: 'quote_clarifying',
       },
     },
   );
@@ -686,16 +689,15 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
     false,
   );
 
-  // The name and the seven ficha points (ADR 012).
+  // The name and the ficha points of a shirt (ADR 012, ADR 021).
   const complete = {
     customer_name: 'Ana',
+    product_type: 'camisetas',
     product_model: 'camiseta comum',
-    quantity: 10,
-    fabrics: 'algodão',
     colors: 'branca',
-    collar: 'redonda',
-    artwork_status: 'já tem a logo',
-    sizes: 'M10',
+    quantity: 10,
+    artwork_locations: 'frente',
+    needed_by: '20/11',
   };
   const done = decide({ briefing_patch: complete });
   assert.equal(
@@ -706,7 +708,7 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
   assert.equal(
     done.open_order,
     true,
-    'a complete ficha holds the seven points, so the handoff opens the order',
+    'a complete ficha holds its points, so the handoff opens the order',
   );
   assert.doesNotMatch(done.reply_text, /\?/u);
   assert.equal(
@@ -833,6 +835,7 @@ test('decision normalizer applies the PO decisions of 30/09 on top of BOT-03', a
           sellers: [],
           message_cap: 15,
           turn: 3,
+          name_asks: 2,
           crm_counter: true,
           ...context,
         },
@@ -850,10 +853,12 @@ test('decision normalizer applies the PO decisions of 30/09 on top of BOT-03', a
 
   const deferred = decide(
     { answer_status: 'deferred' },
-    { briefing: { next_required_field: 'sizes' } },
+    {
+      briefing: { product_type: 'camisetas', next_required_field: 'needed_by' },
+    },
   );
-  assert.equal(deferred.briefing_patch.sizes, 'Definir com o vendedor');
-  assert.equal(deferred.missing_briefing_fields.includes('sizes'), false);
+  assert.equal(deferred.briefing_patch.needed_by, 'Definir com o vendedor');
+  assert.equal(deferred.missing_briefing_fields.includes('needed_by'), false);
   assert.equal(
     decide({ briefing_patch: { fabrics: 'o vendedor indica o tecido' } })
       .briefing_patch.fabrics,
@@ -882,7 +887,7 @@ test('the bot neither asks to build the quote nor asks the order name (PO, 01/10
   assert.match(prompt, /Nunca pergunte o nome do pedido/u);
   assert.match(
     prompt,
-    /pode escolher mais de uma e termine sempre com "ou outra"/u,
+    /pode escolher mais de uma e termine sempre com "ou outro" ou "ou outra"/u,
   );
   assert.doesNotMatch(prompt, /asked_field "order_intent"/u);
 
@@ -924,6 +929,7 @@ test('the bot neither asks to build the quote nor asks the order name (PO, 01/10
           sellers: ['Marina'],
           message_cap: 15,
           turn: 3,
+          name_asks: 2,
           crm_counter: true,
           ...context,
         },
@@ -1001,7 +1007,10 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
   );
   assert.match(prompt, /emende a próxima pergunta na mesma frase/u);
   assert.match(prompt, /não comece com "Anotei"/u);
-  assert.match(prompt, /não repita a pergunta do nome em toda mensagem/u);
+  assert.match(
+    prompt,
+    /na mensagem seguinte reaja ao que ele contou e pergunte só o nome/u,
+  );
   // Plain words for people who just want a nice shirt (PO, 01/10).
   assert.match(prompt, /palavras do dia a dia, nada de termo técnico/u);
   assert.match(
@@ -1011,7 +1020,7 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
   assert.match(prompt, /Se ele aceitar uma sugestão sua/u);
   assert.match(
     prompt,
-    /Só use nomes como silk, sublimação, DTF, PV, piquet ou fio se o cliente usar primeiro/u,
+    /Só use nomes como silk, sublimação, DTF, transfer, PV, piquet ou fio se o cliente usar primeiro/u,
   );
   assert.doesNotMatch(
     prompt,
@@ -1044,6 +1053,7 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
           sellers: [],
           message_cap: 15,
           turn: 3,
+          name_asks: 1,
           crm_counter: true,
           ...context,
         },
@@ -1101,25 +1111,31 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
     { briefing: { ...asked, briefing_status: 'ignored' } },
   );
   assert.equal(onlyNotes.trigger, 'ignored_twice', 'notes alone add nothing');
+  // ADR 021: fabric is asked only once the product is clothing, so the order
+  // is already open (quote_).
 
   const aboutTheField = decide(
-    { answer_status: 'question', asked_field: 'fabrics' },
+    { answer_status: 'question', asked_field: 'colors' },
     {
-      briefing: { next_required_field: 'fabrics', briefing_status: 'ignored' },
-      current_text: 'qual a diferença entre algodão e dry fit?',
+      briefing: {
+        product_type: 'camisetas',
+        next_required_field: 'colors',
+        briefing_status: 'ignored',
+      },
+      current_text: 'qual cor combina com estampa colorida?',
     },
   );
   assert.equal(aboutTheField.handoff_required, false);
-  assert.equal(aboutTheField.briefing_patch.briefing_status, 'ignored');
+  assert.equal(aboutTheField.briefing_patch.briefing_status, 'quote_ignored');
 
   const skippedWithNews = decide(
     {
       answer_status: 'other',
-      asked_field: 'product_model',
+      asked_field: 'product_type',
       briefing_patch: { colors: 'branca' },
     },
     {
-      briefing: { next_required_field: 'product_model' },
+      briefing: { next_required_field: 'product_type' },
       current_text: 'branca',
     },
   );
@@ -1142,20 +1158,22 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
   );
 
   const missedThenIgnored = decide(
-    { answer_status: 'other', asked_field: 'fabrics' },
+    { answer_status: 'other', asked_field: 'colors' },
     {
       briefing: {
-        next_required_field: 'fabrics',
+        product_type: 'camisetas',
+        next_required_field: 'colors',
         briefing_status: 'quote_clarifying',
       },
     },
   );
   assert.equal(missedThenIgnored.trigger, 'ignored_twice');
   const ignoredThenUnsure = decide(
-    { answer_status: 'undecided', asked_field: 'fabrics' },
+    { answer_status: 'undecided', asked_field: 'colors' },
     {
       briefing: {
-        next_required_field: 'fabrics',
+        product_type: 'camisetas',
+        next_required_field: 'colors',
         briefing_status: 'quote_ignored',
       },
     },
@@ -1190,9 +1208,15 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
     sender_type: 'ai',
     text: 'Oi! Sou a assistente virtual da Silmer. Qual é o seu nome?',
   };
+  // ADR 021: asked at the greeting, the name is asked once more, alone; asked
+  // twice, the bot stops.
   assert.match(
     contextPrompt({ briefing: {}, recent_messages: [greeting] }),
-    /Nome do cliente: já pedido e não respondido; não pergunte de novo agora/u,
+    /Nome do cliente: pedido na apresentação e não respondido; agora pergunte só o nome/u,
+  );
+  assert.match(
+    contextPrompt({ briefing: {}, recent_messages: [greeting, greeting] }),
+    /Nome do cliente: já pedido duas vezes; não pergunte mais, o vendedor confirma/u,
   );
   assert.match(
     contextPrompt({ briefing: {}, recent_messages: [] }),
@@ -1206,9 +1230,9 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
         next_required_field: 'quantity',
         briefing_status: 'quote_skipped',
       },
-      recent_messages: [greeting],
+      recent_messages: [greeting, greeting],
     }),
-    /o cliente pulou product_model \(tipo de roupa\) e contou outra coisa do pedido; isso fica para o fim da lista, não pergunte agora/u,
+    /o cliente pulou product_type \(produto\) e contou outra coisa do pedido; isso fica para o fim da lista, não pergunte agora/u,
   );
   assert.match(
     contextPrompt({
@@ -1219,41 +1243,45 @@ test('a question ignored twice hands off, and news for the ficha is welcome (PO,
   );
 });
 
-// The order the PO took from the Silmer Instagram Direct (ADR 012).
+// ADR 021: the points the bot asks, in one rhythm. Artwork origin, fabric,
+// technique, sizes and collar are only recorded.
 const RHYTHM = [
+  'product_type',
   'product_model',
   'colors',
   'quantity',
-  'artwork_status',
-  'fabrics',
-  'sizes',
-  'collar',
+  'artwork_locations',
+  'needed_by',
 ];
-const SEVEN_POINTS = Object.freeze({
+// A shirt asks every point of the rhythm.
+const SHIRT_POINTS = Object.freeze({
+  product_type: 'camisetas',
   product_model: 'camiseta comum',
-  quantity: 30,
-  fabrics: 'algodão',
   colors: 'branca',
-  collar: 'redonda',
-  artwork_status: 'já tem a logo',
-  sizes: '10 P, 10 M, 10 G',
+  quantity: 30,
+  artwork_locations: 'frente',
+  needed_by: '20/11',
 });
 const GREETING = {
   sender_type: 'ai',
-  text: 'Oi! Sou a assistente virtual da Silmer. Qual é o seu nome?',
+  text: 'Oi! Sou a assistente virtual da Silmer. Qual é o seu nome e o que você quer personalizar?',
+};
+const NAME_AGAIN = {
+  sender_type: 'ai',
+  text: 'Que legal que você quer camisetas! Qual é o seu nome?',
 };
 
 /** @param {...string} omit */
-function sevenPointsWithout(...omit) {
+function shirtPointsWithout(...omit) {
   return Object.fromEntries(
-    Object.entries(SEVEN_POINTS).filter(([key]) => !omit.includes(key)),
+    Object.entries(SHIRT_POINTS).filter(([key]) => !omit.includes(key)),
   );
 }
 
 /** Runs the context node for one inbound with the given briefing. */
 async function rhythmContext(
   /** @type {any} */ briefing,
-  /** @type {any[]} */ recentMessages = [GREETING],
+  /** @type {any[]} */ recentMessages = [GREETING, NAME_AGAIN],
 ) {
   const byName = await workflowNodesByName();
   return runCodeNode(
@@ -1311,6 +1339,9 @@ async function rhythmDecision(
         turn: 3,
         crm_counter: true,
         name_asked: true,
+        // ADR 021: the name was asked at the greeting and right after; the
+        // points are what these tests exercise.
+        name_asks: 2,
         ...context,
       },
     },
@@ -1318,28 +1349,29 @@ async function rhythmDecision(
 }
 
 test('confirmed front print is stored and never followed by a print-or-plain question', async () => {
-  const briefing = {
-    customer_name: 'Ana',
-    product_model: 'camiseta comum',
-    colors: 'branca',
-    quantity: 30,
-    next_required_field: 'artwork_status',
-  };
   const current = await rhythmDecision(
     {
       reply_text: 'Você quer a camiseta com estampa ou lisa?',
-      asked_field: 'artwork_status',
+      asked_field: 'artwork_locations',
       answer_status: 'other',
       briefing_patch: { artwork_status: 'com estampa' },
     },
-    { briefing, current_text: 'Quero estampa na frente.' },
+    {
+      briefing: {
+        customer_name: 'Ana',
+        product_model: 'camiseta comum',
+        colors: 'branca',
+        quantity: 30,
+        next_required_field: 'artwork_locations',
+      },
+      current_text: 'Quero estampa na frente.',
+    },
   );
   assert.equal(current.briefing_patch.artwork_locations, 'frente');
   assert.equal(current.briefing_patch.artwork_status, undefined);
   assert.equal(current.briefing_patch.artwork_technique, 'com estampa');
-  assert.equal(current.briefing_patch.next_required_field, 'artwork_status');
-  assert.match(current.reply_text, /Você já tem a arte ou a logo/u);
-  assert.doesNotMatch(current.reply_text, /estampa ou lisa/u);
+  assert.equal(current.briefing_patch.next_required_field, 'needed_by');
+  assert.equal(current.reply_text, 'Para quando você precisa?');
 
   const previous = await rhythmDecision(
     {
@@ -1349,6 +1381,7 @@ test('confirmed front print is stored and never followed by a print-or-plain que
     {
       briefing: {
         customer_name: 'Ana',
+        product_type: 'camisas',
         artwork_locations: 'frente',
       },
       current_text: 'Preciso de camisas para a equipe.',
@@ -1358,9 +1391,27 @@ test('confirmed front print is stored and never followed by a print-or-plain que
   assert.equal(previous.briefing_patch.next_required_field, 'product_model');
   assert.match(previous.reply_text, /Que tipo de camisa você quer\?/u);
   assert.doesNotMatch(previous.reply_text, /lisa ou com estampa/u);
+
+  // ADR 021: with nothing left, the reply falls back on the question of the
+  // product the customer wants to customize.
+  const onlyPrint = await rhythmDecision(
+    { reply_text: 'E vai lisa ou com estampa?', asked_field: 'product_model' },
+    {
+      briefing: {
+        customer_name: 'Ana',
+        product_type: 'bonés',
+        artwork_locations: 'frente',
+      },
+    },
+  );
+  assert.equal(onlyPrint.briefing_patch.next_required_field, 'product_model');
+  assert.equal(
+    onlyPrint.reply_text,
+    'Qual modelo de boné você quer: trucker (com tela atrás), aba curva, aba reta ou outro?',
+  );
 });
 
-test('the ficha is the name plus seven points in one rhythm, kept in one place (ADR 012)', async () => {
+test('the ficha is the name plus the product points in one rhythm, kept in one place (ADR 012, ADR 021)', async () => {
   const byName = await workflowNodesByName();
   for (const name of [
     'Montar contexto da IA (MVP)',
@@ -1383,10 +1434,11 @@ test('the ficha is the name plus seven points in one rhythm, kept in one place (
   assert.deepEqual(schema.properties.asked_field.enum, [
     'customer_name',
     ...RHYTHM,
-    'product_type',
+    'artwork_status',
+    'fabrics',
+    'sizes',
+    'collar',
     'artwork_technique',
-    'artwork_locations',
-    'needed_by',
     'purpose',
     'purchase_profile',
     'delivery_mode',
@@ -1400,25 +1452,45 @@ test('the ficha is the name plus seven points in one rhythm, kept in one place (
   const prompt = byName.get('Atendente virtual Silmer (MVP)').parameters.options
     .systemMessage;
   assert.match(prompt, /um ponto por mensagem, o que o contexto indicar/u);
+  // ADR 021: the name first, then what to customize, never "qual camisa".
   assert.match(
     prompt,
-    /camiseta comum, polo, regata, abadá, mais justinha \(baby look\) ou outra\? E vai lisa ou com estampa\?/u,
+    /pergunte o nome da pessoa e o que ela quer personalizar \(camisetas ou outras roupas, bonés, mochilas e bolsas, ou outro produto\)\. Não pergunte "qual camisa" antes de saber o produto/u,
   );
   assert.match(
     prompt,
-    /A única exceção: junto do tipo de roupa, você pode perguntar se vai lisa ou com estampa/u,
-  );
-  assert.match(prompt, /algodão, dry fit, poliéster ou outro/u);
-  assert.match(prompt, /poliéster \(leve e bom para estampa colorida\)/u);
-  assert.match(
-    prompt,
-    /collar: gola: gola redonda, gola V, gola polo ou outra\. Regata e abadá não têm gola e polo já tem gola polo: o sistema grava e você não pergunta/u,
+    /Se o cliente não disser o nome, na mensagem seguinte reaja ao que ele contou e pergunte só o nome, por exemplo: "Que legal que você quer camisetas! Qual é o seu nome\?"\. Depois disso, não pergunte mais o nome/u,
   );
   assert.match(
     prompt,
-    /"Você já tem a arte ou a logo, ou quer que a gente crie\? E vai estampada ou bordada\?"/u,
+    /product_model: o modelo, só quando o contexto pedir\. Roupa: camiseta comum, manga longa, polo, regata, abadá, baby look ou outro\. Boné: trucker \(com tela atrás\), aba curva, aba reta ou outro\. Mochila ou bolsa: mochila de costas, mochila saco, ecobag ou outro\./u,
   );
-  assert.match(prompt, /sizes: tamanhos: quantas de cada tamanho/u);
+  assert.match(prompt, /artwork_locations: onde vai a estampa/u);
+  assert.match(
+    prompt,
+    /needed_by: para quando o cliente precisa\. É desejo do cliente, nunca prazo confirmado/u,
+  );
+  // Artwork, fabric, technique, sizes and collar are only recorded.
+  assert.match(
+    prompt,
+    /O QUE SÓ GRAVAR \(nunca pergunte; o vendedor completa\)/u,
+  );
+  assert.match(
+    prompt,
+    /artwork_status: de onde vem a arte[^\n]*Nunca ofereça criar a arte nem pergunte se ele já tem/u,
+  );
+  assert.match(
+    prompt,
+    /De tecido, o cliente comum só conhece algodão, poliéster e dry fit: fale só deles/u,
+  );
+  assert.match(
+    prompt,
+    /Tecido: algodão \(macio, bom para o dia a dia\); poliéster \(leve, bom para estampa bem colorida\); dry fit \(seca rápido, bom para esporte e calor\)/u,
+  );
+  assert.doesNotMatch(
+    prompt,
+    /tecido misto|encorpado|A única exceção|confecção que produz|quer que a gente crie/u,
+  );
   assert.match(
     prompt,
     /Se o cliente disser que vai lisa ou que não haverá estampa/u,
@@ -1427,46 +1499,162 @@ test('the ficha is the name plus seven points in one rhythm, kept in one place (
     prompt,
     /frases curtas, sem listas longas e sem markdown; no máximo 1 emoji, e raramente/u,
   );
-  assert.match(
-    prompt,
-    /Os demais campos só são gravados se o cliente falar por conta própria, nunca perguntados/u,
-  );
   assert.doesNotMatch(prompt, /par de campos|sempre pergunte/u);
 });
 
-test('the context node asks the next missing point of the rhythm (ADR 012)', async () => {
+test('the context node asks the name first, then the points of the product (ADR 012, ADR 021)', async () => {
+  // The name with the greeting, and once more right after, alone.
   const fresh = await rhythmContext({}, []);
   assert.equal(fresh.next_point, 'customer_name', 'the greeting asks the name');
+  assert.match(
+    fresh.prompt,
+    /Como perguntar: apresente-se, pergunte o nome e o que a pessoa quer personalizar: camisetas ou outras roupas, bonés, mochilas e bolsas, ou outro produto\n/u,
+  );
+  assert.match(fresh.prompt, /Nome do cliente: ainda não pedido/u);
   assert.doesNotMatch(fresh.prompt, /Se o cliente pular/u);
 
-  const nameSkipped = await rhythmContext({
-    next_required_field: 'customer_name',
-  });
-  assert.equal(
-    nameSkipped.next_point,
-    'product_model',
-    'a name already asked waits for the seven points',
+  const productFirst = await rhythmContext({ product_type: 'bonés' }, []);
+  assert.equal(productFirst.next_point, 'customer_name');
+  assert.match(
+    productFirst.prompt,
+    /Como perguntar: apresente-se e pergunte o nome\n/u,
   );
-  assert.doesNotMatch(nameSkipped.prompt, /Se o cliente pular/u);
+
+  const nameAgain = await rhythmContext(
+    {
+      product_type: 'camisetas',
+      next_required_field: 'customer_name',
+      briefing_status: 'quote_skipped',
+    },
+    [GREETING],
+  );
+  assert.equal(nameAgain.next_point, 'customer_name');
+  assert.match(
+    nameAgain.prompt,
+    /Como perguntar: reaja ao que o cliente contou e pergunte só o nome, por exemplo: "Que legal que você quer camisetas! Qual é o seu nome\?"\n/u,
+  );
+  assert.match(
+    nameAgain.prompt,
+    /Nome do cliente: pedido na apresentação e não respondido; agora pergunte só o nome/u,
+  );
+
+  const askedTwice = await rhythmContext({ product_type: 'camisetas' });
+  assert.equal(askedTwice.next_point, 'product_model');
+  assert.match(
+    askedTwice.prompt,
+    /Nome do cliente: já pedido duas vezes; não pergunte mais, o vendedor confirma/u,
+  );
+  assert.match(
+    askedTwice.prompt,
+    /Pontos que ainda faltam, nesta ordem: product_model \(modelo\), colors \(cor\), quantity \(quantidade\), artwork_locations \(onde vai a estampa\), needed_by \(para quando\)\n/u,
+    'the name no longer waits in line',
+  );
+
+  // The product is the first point, and before it is known the model is not.
+  const start = await rhythmContext({ customer_name: 'Júlia' });
+  assert.equal(start.next_point, 'product_type');
+  assert.match(start.prompt, /Produto: ainda não informado\n/u);
+  assert.match(
+    start.prompt,
+    /Próximo ponto da ficha: product_type \(produto\); pergunte só isso\nComo perguntar: O que você quer personalizar: camisetas ou outras roupas, bonés, mochilas e bolsas, ou outro produto\?\n/u,
+  );
+  assert.match(
+    start.prompt,
+    /Pontos que ainda faltam, nesta ordem: product_type \(produto\), colors \(cor\), quantity \(quantidade\), artwork_locations \(onde vai a estampa\), needed_by \(para quando\)\n/u,
+  );
 
   const asked = await rhythmContext({
     customer_name: 'Júlia',
-    next_required_field: 'product_model',
+    next_required_field: 'product_type',
   });
   assert.match(
     asked.prompt,
-    /Se o cliente pular product_model \(tipo de roupa\) agora e contar outra coisa do pedido: não insista, pergunte colors \(cor\) e volte a tipo de roupa depois/u,
+    /Se o cliente pular product_type \(produto\) agora e contar outra coisa do pedido: não insista, pergunte colors \(cor\) e volte a produto depois/u,
   );
 
-  const start = await rhythmContext({});
-  assert.equal(start.next_point, 'product_model');
+  const shirt = await rhythmContext({
+    customer_name: 'Júlia',
+    product_type: 'camisetas',
+  });
+  assert.equal(shirt.next_point, 'product_model');
+  assert.match(shirt.prompt, /Produto: roupa\n/u);
   assert.match(
-    start.prompt,
-    /Próximo ponto da ficha: product_model \(tipo de roupa\); pergunte só isso\n/u,
+    shirt.prompt,
+    /Como perguntar: Qual modelo você quer: camiseta comum, manga longa, polo, regata, abadá, baby look ou outro\?\n/u,
+  );
+
+  const print = await rhythmContext({
+    customer_name: 'Júlia',
+    ...shirtPointsWithout('artwork_locations', 'needed_by'),
+  });
+  assert.equal(print.next_point, 'artwork_locations');
+  assert.match(
+    print.prompt,
+    /Como perguntar: Onde vai a estampa: só na frente, ou também nas costas ou na manga\?\n/u,
+  );
+  const date = await rhythmContext({
+    customer_name: 'Júlia',
+    ...shirtPointsWithout('needed_by'),
+  });
+  assert.equal(date.next_point, 'needed_by');
+  assert.match(date.prompt, /Como perguntar: Para quando você precisa\?\n/u);
+
+  const cap = await rhythmContext({
+    customer_name: 'Júlia',
+    product_type: 'bonés',
+    product_model: 'bonés trucker',
+    colors: 'preto',
+    quantity: 50,
+  });
+  assert.equal(cap.next_point, 'artwork_locations');
+  assert.match(cap.prompt, /Produto: boné\n/u);
+  assert.match(
+    cap.prompt,
+    /Como perguntar: Onde vai a personalização do boné: na frente, na lateral ou atrás\?\n/u,
+  );
+
+  // A kit fills what the product defines: an abadá is white, with no model to ask.
+  const abada = await rhythmContext({
+    customer_name: 'Júlia',
+    product_type: 'abadás',
+  });
+  assert.equal(
+    abada.next_point,
+    'quantity',
+    'the abadá skips model and colour',
   );
   assert.match(
-    start.prompt,
-    /Pontos que ainda faltam, nesta ordem: product_model \(tipo de roupa\), colors \(cor\), quantity \(quantidade\), artwork_status \(estampa\), fabrics \(tecido\), sizes \(tamanhos\), collar \(gola\), customer_name \(nome\)/u,
+    abada.prompt,
+    /Pontos que ainda faltam, nesta ordem: quantity \(quantidade\), artwork_locations \(onde vai a estampa\), needed_by \(para quando\)\n/u,
+  );
+
+  const bag = await rhythmContext({
+    customer_name: 'Júlia',
+    product_type: 'ecobags',
+  });
+  assert.equal(bag.next_point, 'colors', 'an ecobag already names its model');
+  assert.match(bag.prompt, /Produto: mochila ou bolsa\n/u);
+
+  const other = await rhythmContext({
+    customer_name: 'Júlia',
+    product_type: 'canecas',
+    colors: 'branca',
+  });
+  assert.equal(other.next_point, 'quantity', 'another product has no model');
+  assert.match(other.prompt, /Produto: outro produto\n/u);
+  assert.match(
+    other.prompt,
+    /Como perguntar: Quantas unidades você precisa\?\n/u,
+  );
+
+  const mixed = await rhythmContext({
+    customer_name: 'Júlia',
+    product_type: 'camisetas e bonés',
+  });
+  assert.match(mixed.prompt, /Produto: roupa e boné\n/u);
+  assert.match(
+    mixed.prompt,
+    /Como perguntar: Qual modelo você quer para cada produto\?\n/u,
   );
 
   const filled = await rhythmContext({
@@ -1477,8 +1665,8 @@ test('the context node asks the next missing point of the rhythm (ADR 012)', asy
   });
   assert.equal(
     filled.next_point,
-    'artwork_status',
-    'filled and deferred points are skipped',
+    'artwork_locations',
+    'filled and deferred points are skipped, and the model says the product',
   );
   assert.match(filled.prompt, /Nome do cliente: já informado/u);
 
@@ -1491,7 +1679,7 @@ test('the context node asks the next missing point of the rhythm (ADR 012)', asy
   assert.equal(clarifying.next_point, 'quantity');
   assert.match(
     clarifying.prompt,
-    /Próximo ponto da ficha: quantity \(quantidade\); pergunte só isso, de novo, oferecendo 2 ou 3 opções simples/u,
+    /Próximo ponto da ficha: quantity \(quantidade\); pergunte só isso, de novo, oferecendo 2 ou 3 opções simples\nComo perguntar: Quantas peças você precisa\?\n/u,
   );
 
   const skipped = await rhythmContext({
@@ -1507,18 +1695,11 @@ test('the context node asks the next missing point of the rhythm (ADR 012)', asy
   );
   assert.match(
     skipped.prompt,
-    /Pontos que ainda faltam, nesta ordem: quantity \(quantidade\), artwork_status \(estampa\), fabrics \(tecido\), sizes \(tamanhos\), collar \(gola\), product_model \(tipo de roupa\)\n/u,
-  );
-
-  const nameLast = await rhythmContext({ ...SEVEN_POINTS });
-  assert.equal(nameLast.next_point, 'customer_name');
-  assert.match(
-    nameLast.prompt,
-    /Nome do cliente: já pedido e não respondido; os 7 pontos estão completos: peça o nome agora, uma única vez/u,
+    /Pontos que ainda faltam, nesta ordem: quantity \(quantidade\), artwork_locations \(onde vai a estampa\), needed_by \(para quando\), product_type \(produto\)\n/u,
   );
 
   const complete = await rhythmContext({
-    ...SEVEN_POINTS,
+    ...SHIRT_POINTS,
     customer_name: 'Júlia',
   });
   assert.equal(complete.next_point, null);
@@ -1526,47 +1707,75 @@ test('the context node asks the next missing point of the rhythm (ADR 012)', asy
     complete.prompt,
     /Próximo ponto da ficha: nenhum, a ficha está completa/u,
   );
+  assert.doesNotMatch(complete.prompt, /Como perguntar/u);
+  assert.equal(
+    (await rhythmContext({ ...SHIRT_POINTS })).next_point,
+    null,
+    'a name asked twice does not hold the ficha',
+  );
 });
 
-test('the decision node requires only the name and the seven points (ADR 012)', async () => {
+test('the decision node requires only the name and the points of the product (ADR 012, ADR 021)', async () => {
   const done = await rhythmDecision({
     briefing_patch: {
-      ...SEVEN_POINTS,
+      ...SHIRT_POINTS,
       customer_name: 'Ana',
       delivery_mode: 'entrega',
     },
   });
   assert.equal(done.trigger, 'briefing_complete');
-  assert.deepEqual(done.missing_briefing_fields, []);
+  assert.deepEqual(
+    done.missing_briefing_fields,
+    [],
+    'artwork, fabric, technique, sizes and collar are never required',
+  );
   assert.equal(
     done.briefing_patch.delivery_mode,
     'entrega',
-    'a volunteered field is still kept, and delivery no longer asks for the address',
+    'a volunteered field is still kept',
   );
 
-  const noCollar = await rhythmDecision({
-    briefing_patch: { ...sevenPointsWithout('collar'), customer_name: 'Ana' },
+  const noDate = await rhythmDecision({
+    briefing_patch: {
+      ...shirtPointsWithout('needed_by'),
+      customer_name: 'Ana',
+    },
   });
-  assert.equal(noCollar.handoff_required, false, 'the collar is required');
-  assert.deepEqual(noCollar.missing_briefing_fields, ['collar']);
-  assert.equal(noCollar.briefing_patch.next_required_field, 'collar');
+  assert.equal(noDate.handoff_required, false, 'the date is required');
+  assert.deepEqual(noDate.missing_briefing_fields, ['needed_by']);
+  assert.equal(noDate.briefing_patch.next_required_field, 'needed_by');
 
   const price = await rhythmDecision(
     {},
     {
       current_text: 'quanto fica?',
       briefing: {
-        ...sevenPointsWithout('collar', 'sizes'),
-        needed_by: 'Definir com o vendedor',
+        ...shirtPointsWithout('artwork_locations', 'needed_by'),
+        fabrics: 'Definir com o vendedor',
       },
     },
   );
-  assert.match(price.reasoning, /Faltam: sizes, collar, customer_name\./u);
+  assert.match(price.reasoning, /Faltam: artwork_locations, needed_by\./u);
+  assert.match(price.reasoning, /Nome: não informado\./u);
   assert.match(
     price.reasoning,
-    /Para o vendedor definir: needed_by\./u,
+    /Para o vendedor definir: fabrics\./u,
     'a field left to the seller shows even when the bot never asks it',
   );
+
+  // ADR 021: the name holds the ficha only while the bot still asks it.
+  const nameOnce = await rhythmDecision(
+    { briefing_patch: { ...SHIRT_POINTS } },
+    { name_asks: 1 },
+  );
+  assert.equal(nameOnce.handoff_required, false);
+  assert.deepEqual(nameOnce.missing_briefing_fields, ['customer_name']);
+  assert.equal(nameOnce.briefing_patch.next_required_field, 'customer_name');
+  const nameTwice = await rhythmDecision({
+    briefing_patch: { ...SHIRT_POINTS },
+  });
+  assert.equal(nameTwice.trigger, 'briefing_complete');
+  assert.match(nameTwice.reasoning, /Nome: não informado\./u);
 
   const legacy = await rhythmDecision(
     { answer_status: 'unclear' },
@@ -1583,22 +1792,321 @@ test('the decision node requires only the name and the seven points (ADR 012)', 
     false,
     'a field the bot no longer asks has nothing pending',
   );
-  assert.equal(legacy.briefing_patch.next_required_field, 'product_model');
+  assert.equal(legacy.briefing_patch.next_required_field, 'product_type');
 });
 
-test('the decision node picks the next point from the rhythm (ADR 012)', async () => {
+test('a cap, a bag or another product asks only its own points (ADR 021)', async () => {
+  const cap = await rhythmDecision({
+    briefing_patch: {
+      customer_name: 'Ana',
+      product_type: 'bonés',
+      product_model: 'trucker',
+      colors: 'preto',
+      quantity: 50,
+      artwork_locations: 'frente',
+      needed_by: '10/12',
+    },
+  });
+  assert.equal(cap.trigger, 'briefing_complete');
+  assert.deepEqual(cap.missing_briefing_fields, []);
+  assert.equal(
+    cap.briefing_patch.product_model,
+    'bonés trucker',
+    'the model keeps the name of the product for the order item',
+  );
+  assert.equal(
+    cap.briefing_patch.collar,
+    'NAO APLICAVEL',
+    'a cap has no collar, and the order item needs one',
+  );
+  assert.equal(cap.ficha_total, 7);
+  assert.match(cap.reasoning, /Ficha: 7 de 7 \(100%\)/u);
+  assert.match(cap.reasoning, /Dica: boné costuma ser bordado\./u);
+
+  const bagStart = await rhythmDecision(
+    { answer_status: 'answered', briefing_patch: { product_type: 'ecobags' } },
+    { briefing: { customer_name: 'Ana', next_required_field: 'product_type' } },
+  );
+  assert.equal(
+    bagStart.briefing_patch.product_model,
+    'ecobags',
+    'a product that names its model is not asked the model',
+  );
+  assert.equal(bagStart.briefing_patch.collar, 'NAO APLICAVEL');
+  assert.equal(bagStart.briefing_patch.next_required_field, 'colors');
+  assert.equal(bagStart.open_order, true, 'the product opens the order');
+
+  const backpack = await rhythmDecision(
+    { answer_status: 'answered', briefing_patch: { product_type: 'mochilas' } },
+    { briefing: { customer_name: 'Ana', next_required_field: 'product_type' } },
+  );
+  assert.equal(backpack.briefing_patch.product_model, undefined);
+  assert.equal(backpack.briefing_patch.next_required_field, 'product_model');
+  const sameName = await rhythmDecision(
+    { briefing_patch: { product_model: 'mochila saco' } },
+    {
+      briefing: {
+        customer_name: 'Ana',
+        product_type: 'mochilas',
+        next_required_field: 'product_model',
+      },
+    },
+  );
+  assert.equal(
+    sameName.briefing_patch.product_model,
+    'mochila saco',
+    'a model that already names the product is kept as said',
+  );
+
+  const regatas = await rhythmDecision(
+    {
+      answer_status: 'answered',
+      briefing_patch: { product_model: '30 regatas' },
+    },
+    { briefing: { customer_name: 'Ana', next_required_field: 'product_type' } },
+  );
+  assert.equal(
+    regatas.briefing_patch.product_type,
+    '30 regatas',
+    'the model the customer gives also says the product',
+  );
+  assert.equal(regatas.briefing_patch.next_required_field, 'colors');
+
+  const polos = await rhythmDecision(
+    {
+      answer_status: 'answered',
+      briefing_patch: { product_type: 'camisas polo' },
+    },
+    { briefing: { customer_name: 'Ana', next_required_field: 'product_type' } },
+  );
+  assert.equal(polos.briefing_patch.product_model, 'camisas polo');
+  assert.equal(polos.briefing_patch.next_required_field, 'colors');
+
+  const shirts = await rhythmDecision(
+    {
+      answer_status: 'answered',
+      briefing_patch: { product_type: 'camisetas' },
+    },
+    { briefing: { customer_name: 'Ana', next_required_field: 'product_type' } },
+  );
+  assert.equal(shirts.briefing_patch.product_model, undefined);
+  assert.equal('collar' in shirts.briefing_patch, false);
+  assert.equal(shirts.briefing_patch.next_required_field, 'product_model');
+
+  const mugs = await rhythmDecision({
+    briefing_patch: {
+      customer_name: 'Ana',
+      product_type: 'canecas',
+      colors: 'branca',
+      quantity: 100,
+      artwork_locations: 'um lado',
+      needed_by: 'dezembro',
+    },
+  });
+  assert.equal(
+    mugs.trigger,
+    'briefing_complete',
+    'another product has no model',
+  );
+  assert.equal(
+    'collar' in mugs.briefing_patch,
+    false,
+    'nor a collar it guesses',
+  );
+  assert.equal(mugs.ficha_total, 6);
+  assert.match(
+    mugs.reasoning,
+    /Dica: caneca, squeeze, garrafa e mouse pad costumam ser sublimação\./u,
+  );
+
+  const mixed = await rhythmDecision({
+    briefing_patch: {
+      customer_name: 'Ana',
+      product_type: 'camisetas e bonés',
+      colors: 'preto',
+    },
+  });
+  assert.equal('collar' in mixed.briefing_patch, false);
+  assert.deepEqual(mixed.missing_briefing_fields, [
+    'product_model',
+    'quantity',
+    'artwork_locations',
+    'needed_by',
+  ]);
+
+  const deferredModel = await rhythmDecision(
+    { answer_status: 'deferred' },
+    {
+      briefing: {
+        customer_name: 'Ana',
+        product_type: 'bonés',
+        next_required_field: 'product_model',
+      },
+      current_text: 'o modelo o vendedor me indica',
+    },
+  );
+  assert.equal(
+    deferredModel.briefing_patch.product_model,
+    'Definir com o vendedor',
+  );
+  assert.equal(deferredModel.briefing_patch.next_required_field, 'colors');
+});
+
+test('a kit fills what the product or the technique defines, and the seller gets alerts and hints (ADR 021)', async () => {
+  const abada = await rhythmDecision(
+    { answer_status: 'answered', briefing_patch: { product_type: 'abadás' } },
+    { briefing: { customer_name: 'Ana', next_required_field: 'product_type' } },
+  );
+  assert.deepEqual(
+    {
+      product_model: abada.briefing_patch.product_model,
+      artwork_technique: abada.briefing_patch.artwork_technique,
+      fabrics: abada.briefing_patch.fabrics,
+      colors: abada.briefing_patch.colors,
+      collar: abada.briefing_patch.collar,
+    },
+    {
+      product_model: 'abadás',
+      artwork_technique: 'sublimação total',
+      fabrics: 'poliéster',
+      colors: 'branca',
+      collar: 'regata',
+    },
+  );
+  assert.equal(
+    abada.briefing_patch.next_required_field,
+    'quantity',
+    'no model and no colour to ask',
+  );
+
+  // A kit never overwrites the customer, and a conflict goes to the seller.
+  const blackAbada = await rhythmDecision(
+    { asks_price: true },
+    {
+      current_text: 'quanto fica?',
+      briefing: { product_type: 'abadás', colors: 'preto' },
+    },
+  );
+  assert.equal(blackAbada.briefing_patch.colors, undefined);
+  assert.match(
+    blackAbada.reasoning,
+    /Atenção: sublimação em peça escura: a sublimação pede peça branca ou clara\./u,
+  );
+
+  const fullPrint = await rhythmDecision({
+    briefing_patch: {
+      product_type: 'camisetas',
+      artwork_technique: 'sublimação total',
+    },
+  });
+  assert.equal(fullPrint.briefing_patch.fabrics, 'poliéster');
+  assert.equal(fullPrint.briefing_patch.colors, 'branca');
+  assert.equal(fullPrint.missing_briefing_fields.includes('colors'), false);
+
+  const cotton = await rhythmDecision(
+    { asks_price: true },
+    {
+      current_text: 'quanto fica?',
+      briefing: {
+        product_type: 'camisetas',
+        artwork_technique: 'sublimação total',
+        fabrics: 'algodão',
+      },
+    },
+  );
+  assert.match(
+    cotton.reasoning,
+    /Atenção: sublimação em algodão: a sublimação pede poliéster\./u,
+  );
+
+  const mixedAbada = await rhythmDecision({
+    briefing_patch: { product_type: 'camisetas e abadás' },
+  });
+  assert.equal(
+    'colors' in mixedAbada.briefing_patch,
+    false,
+    'a kit applies only when every product of the order is it',
+  );
+
+  for (const model of [
+    'regata',
+    'Camisa regata dry fit',
+    'abadá',
+    '30 regatas e 20 abadás',
+  ]) {
+    const decision = await rhythmDecision({
+      briefing_patch: { product_model: model },
+    });
+    assert.equal(decision.briefing_patch.collar, 'regata', model);
+  }
+  for (const model of ['polo', 'Camisa polo', '20 polos']) {
+    const decision = await rhythmDecision({
+      briefing_patch: { product_model: model },
+    });
+    assert.equal(decision.briefing_patch.collar, 'gola polo', model);
+  }
+  for (const model of ['camisetas e regatas', 'camiseta e polo']) {
+    const decision = await rhythmDecision({
+      briefing_patch: { product_model: model },
+    });
+    assert.equal('collar' in decision.briefing_patch, false, model);
+  }
+  assert.equal(
+    (
+      await rhythmDecision(
+        { briefing_patch: { product_model: 'regata' } },
+        { briefing: { collar: 'gola V' } },
+      )
+    ).briefing_patch.collar,
+    undefined,
+    'a collar the customer gave is never overwritten',
+  );
+
+  const personal = await rhythmDecision(
+    { asks_price: true },
+    {
+      current_text: 'quanto fica?',
+      briefing: {
+        product_type: 'camisetas',
+        customizations: 'nome e número nas costas',
+        notes: 'Divisão por público: 4 masculinas, 3 femininas, 3 infantis',
+      },
+    },
+  );
+  assert.match(
+    personal.reasoning,
+    /Dica: personalização individual: pedir a lista de nomes, números e tamanhos; divisão por público: cada público vira um item\./u,
+  );
+
+  const embroidery = await rhythmDecision(
+    { asks_price: true },
+    {
+      current_text: 'quanto fica?',
+      briefing: {
+        product_type: 'bonés',
+        artwork_technique: 'bordado com foto',
+      },
+    },
+  );
+  assert.match(
+    embroidery.reasoning,
+    /Atenção: bordado com foto ou arte muito colorida: conferir se dá para bordar\./u,
+  );
+});
+
+test('the decision node picks the next point from the rhythm (ADR 012, ADR 021)', async () => {
   /** @param {any} output @param {any} [context] */
   const next = async (output, context) =>
     (await rhythmDecision(output, context)).briefing_patch.next_required_field;
 
   assert.equal(
-    await next({}, { name_asked: false }),
+    await next({}, { name_asks: 0 }),
     'customer_name',
     'the greeting asks the name',
   );
   assert.equal(
     await next({}, { briefing: { customer_name: 'Ana' } }),
-    'product_model',
+    'product_type',
   );
   assert.equal(
     await next(
@@ -1614,12 +2122,12 @@ test('the decision node picks the next point from the rhythm (ADR 012)', async (
       {
         briefing: {
           customer_name: 'Ana',
-          ...sevenPointsWithout('fabrics', 'sizes', 'collar'),
-          next_required_field: 'fabrics',
+          ...shirtPointsWithout('artwork_locations', 'needed_by'),
+          next_required_field: 'artwork_locations',
         },
       },
     ),
-    'sizes',
+    'needed_by',
     'a point left to the seller is not asked again',
   );
   assert.equal(
@@ -1635,40 +2143,61 @@ test('the decision node picks the next point from the rhythm (ADR 012)', async (
   );
   assert.equal(
     await next(
-      { asked_field: 'needed_by' },
+      { asked_field: 'fabrics' },
       { briefing: { customer_name: 'Ana' } },
     ),
-    'product_model',
-    'the model cannot move the rhythm to a field outside the ficha',
+    'product_type',
+    'the model cannot move the rhythm to a field the bot only records',
   );
   assert.equal(
     await next(
-      { asked_field: 'sizes' },
+      { asked_field: 'needed_by' },
       { briefing: { customer_name: 'Ana' } },
     ),
-    'sizes',
+    'needed_by',
     'what the bot actually asked is kept for the ignored and clarifying counts',
   );
 
   const firstMiss = await rhythmDecision(
     { answer_status: 'unclear' },
-    { briefing: { customer_name: 'Ana', next_required_field: 'fabrics' } },
-  );
-  assert.equal(firstMiss.briefing_patch.briefing_status, 'clarifying');
-  assert.equal(firstMiss.briefing_patch.next_required_field, 'fabrics');
-
-  const nameLast = await rhythmDecision(
-    { answer_status: 'answered', briefing_patch: { sizes: '10 M e 20 G' } },
     {
       briefing: {
-        ...sevenPointsWithout('sizes'),
-        next_required_field: 'sizes',
+        customer_name: 'Ana',
+        product_type: 'camisetas',
+        next_required_field: 'colors',
       },
     },
   );
-  assert.equal(nameLast.handoff_required, false);
-  assert.deepEqual(nameLast.missing_briefing_fields, ['customer_name']);
-  assert.equal(nameLast.briefing_patch.next_required_field, 'customer_name');
+  assert.equal(firstMiss.briefing_patch.briefing_status, 'quote_clarifying');
+  assert.equal(firstMiss.briefing_patch.next_required_field, 'colors');
+
+  // ADR 021: the customer told the product but not the name: the name, alone.
+  const nameAgain = await rhythmDecision(
+    { answer_status: 'other', briefing_patch: { product_type: 'camisetas' } },
+    {
+      name_asks: 1,
+      current_text: 'quero camisetas',
+      briefing: { next_required_field: 'customer_name' },
+    },
+  );
+  assert.equal(nameAgain.briefing_patch.next_required_field, 'customer_name');
+  assert.equal(nameAgain.briefing_patch.briefing_status, 'quote_skipped');
+  const thenPoints = await rhythmDecision(
+    { answer_status: 'other', briefing_patch: { product_model: 'polo' } },
+    {
+      name_asks: 2,
+      current_text: 'polo',
+      briefing: {
+        product_type: 'camisetas',
+        next_required_field: 'customer_name',
+      },
+    },
+  );
+  assert.equal(
+    thenPoints.briefing_patch.next_required_field,
+    'colors',
+    'asked twice, the name is not asked again',
+  );
 });
 
 test('a skipped point waits at the end of the rhythm (ADR 011 item 8, ADR 012)', async () => {
@@ -1676,11 +2205,11 @@ test('a skipped point waits at the end of the rhythm (ADR 011 item 8, ADR 012)',
     { answer_status: 'other', briefing_patch: { colors: 'branca' } },
     {
       current_text: 'quero branca',
-      briefing: { customer_name: 'Ana', next_required_field: 'product_model' },
+      briefing: { customer_name: 'Ana', next_required_field: 'product_type' },
     },
   );
   assert.equal(skip.handoff_required, false);
-  // ADR 014: the colour is the first ficha point, so the order opens (quote_).
+  // ADR 014: the colour is a ficha point, so the order opens (quote_).
   assert.equal(skip.briefing_patch.briefing_status, 'quote_skipped');
   assert.equal(
     skip.briefing_patch.next_required_field,
@@ -1700,41 +2229,39 @@ test('a skipped point waits at the end of the rhythm (ADR 011 item 8, ADR 012)',
     },
   );
   assert.equal(after.briefing_patch.briefing_status, 'quote_collecting');
-  assert.equal(after.briefing_patch.next_required_field, 'artwork_status');
+  assert.equal(after.briefing_patch.next_required_field, 'artwork_locations');
 
   const back = await rhythmDecision(
-    {
-      answer_status: 'answered',
-      briefing_patch: { artwork_status: 'já tem a logo' },
-    },
+    { answer_status: 'answered', briefing_patch: { needed_by: 'dezembro' } },
     {
       briefing: {
         customer_name: 'Ana',
         colors: 'branca',
         quantity: 30,
-        next_required_field: 'artwork_status',
+        artwork_locations: 'frente',
+        next_required_field: 'needed_by',
         briefing_status: 'collecting',
       },
     },
   );
   assert.equal(
     back.briefing_patch.next_required_field,
-    'product_model',
+    'product_type',
     'then the bot comes back to the skipped point',
   );
 
   const onlyOneLeft = await rhythmDecision(
-    { answer_status: 'other', briefing_patch: { needed_by: 'dezembro' } },
+    { answer_status: 'other', briefing_patch: { fabrics: 'algodão' } },
     {
       briefing: {
-        ...sevenPointsWithout('collar'),
+        ...shirtPointsWithout('needed_by'),
         customer_name: 'Ana',
-        next_required_field: 'collar',
+        next_required_field: 'needed_by',
       },
     },
   );
   assert.equal(onlyOneLeft.briefing_patch.briefing_status, 'quote_skipped');
-  assert.equal(onlyOneLeft.briefing_patch.next_required_field, 'collar');
+  assert.equal(onlyOneLeft.briefing_patch.next_required_field, 'needed_by');
 });
 
 test('an asked_field outside the ficha neither breaks the parser nor moves the rhythm (ADR 012)', async () => {
@@ -1742,12 +2269,12 @@ test('an asked_field outside the ficha neither breaks the parser nor moves the r
   const schema = JSON.parse(
     byName.get('Validar saída do MVP').parameters.inputSchema,
   );
-  assert.ok(schema.properties.asked_field.enum.includes('needed_by'));
+  assert.ok(schema.properties.asked_field.enum.includes('purpose'));
 
   const slip = await rhythmDecision(
-    { answer_status: 'question', asked_field: 'needed_by' },
+    { answer_status: 'question', asked_field: 'purpose' },
     {
-      current_text: 'fica pronto até dezembro?',
+      current_text: 'serve pra evento?',
       briefing: {
         customer_name: 'Ana',
         product_model: 'camiseta comum',
@@ -1757,93 +2284,10 @@ test('an asked_field outside the ficha neither breaks the parser nor moves the r
   );
   assert.equal(slip.handoff_required, false);
   assert.equal(slip.briefing_patch.next_required_field, 'colors');
-  assert.equal(slip.missing_briefing_fields.includes('needed_by'), false);
+  assert.equal(slip.missing_briefing_fields.includes('purpose'), false);
 });
 
-test('a regata, an abadá or a polo records the collar and skips the question (ADR 012)', async () => {
-  for (const model of [
-    'regata',
-    'Camisa regata dry fit',
-    'abadá',
-    '30 regatas e 20 abadás',
-  ]) {
-    const decision = await rhythmDecision(
-      { answer_status: 'answered', briefing_patch: { product_model: model } },
-      {
-        briefing: {
-          customer_name: 'Ana',
-          next_required_field: 'product_model',
-        },
-      },
-    );
-    assert.equal(decision.briefing_patch.collar, 'regata', model);
-    assert.equal(decision.missing_briefing_fields.includes('collar'), false);
-  }
-
-  const mixed = await rhythmDecision({
-    briefing_patch: { product_model: 'camisetas e regatas' },
-  });
-  assert.equal(
-    'collar' in mixed.briefing_patch,
-    false,
-    'a mixed order still asks the collar',
-  );
-  assert.equal(
-    (
-      await rhythmDecision(
-        { briefing_patch: { product_model: 'regata' } },
-        { briefing: { collar: 'gola V' } },
-      )
-    ).briefing_patch.collar,
-    undefined,
-    'a collar the customer gave is never overwritten',
-  );
-
-  for (const model of ['polo', 'Camisa polo', '20 polos']) {
-    const polo = await rhythmDecision(
-      { answer_status: 'answered', briefing_patch: { product_model: model } },
-      {
-        briefing: {
-          customer_name: 'Ana',
-          next_required_field: 'product_model',
-        },
-      },
-    );
-    assert.equal(polo.briefing_patch.collar, 'gola polo', model);
-    assert.equal(polo.missing_briefing_fields.includes('collar'), false);
-  }
-  assert.equal(
-    'collar' in
-      (
-        await rhythmDecision({
-          briefing_patch: { product_model: 'camiseta e polo' },
-        })
-      ).briefing_patch,
-    false,
-    'a polo in a mixed order still asks the collar',
-  );
-  assert.equal(
-    (
-      await rhythmDecision(
-        { briefing_patch: { product_model: 'polo' } },
-        { briefing: { collar: 'gola V' } },
-      )
-    ).briefing_patch.collar,
-    undefined,
-    'a collar the customer gave for the polo is never overwritten',
-  );
-
-  const done = await rhythmDecision({
-    briefing_patch: {
-      ...sevenPointsWithout('collar'),
-      product_model: 'abadá',
-      customer_name: 'Ana',
-    },
-  });
-  assert.equal(done.trigger, 'briefing_complete');
-});
-
-test('quantity and sizes sent together fill both points (ADR 012)', async () => {
+test('quantity and sizes sent together keep both, and the sizes are only recorded (ADR 021)', async () => {
   const together = await rhythmDecision(
     {
       answer_status: 'answered',
@@ -1862,11 +2306,13 @@ test('quantity and sizes sent together fill both points (ADR 012)', async () => 
   assert.equal(together.briefing_patch.quantity, 30);
   assert.equal(together.briefing_patch.sizes, '5 P, 10 M, 15 G');
   assert.deepEqual(together.missing_briefing_fields, [
-    'artwork_status',
-    'fabrics',
-    'collar',
+    'artwork_locations',
+    'needed_by',
   ]);
-  assert.equal(together.briefing_patch.next_required_field, 'artwork_status');
+  assert.equal(
+    together.briefing_patch.next_required_field,
+    'artwork_locations',
+  );
 });
 
 test('something already going on elsewhere calls a seller at once (ADR 013)', async () => {
@@ -1874,7 +2320,7 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
   assert.match(
     byName.get('Atendente virtual Silmer (MVP)').parameters.options
       .systemMessage,
-    /PEDIDO DO ZERO[\s\S]*camisa do post[\s\S]*me manda por e-mail/u,
+    /PEDIDO DO ZERO[\s\S]*a camisa, o boné ou o produto do post[\s\S]*me manda por e-mail/u,
   );
   assert.match(
     byName.get('Validar saída do MVP').parameters.inputSchema,
@@ -1884,6 +2330,8 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
   for (const text of [
     'Quero a camisa do post',
     'quero essa camisa',
+    'quero esse boné',
+    'gostei dessa mochila',
     'Pode me enviar por e-mail?',
     'me manda no whatsapp por favor',
     'vi no story, ainda tem?',
@@ -1894,7 +2342,7 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
   ]) {
     const decision = await rhythmDecision(
       { order_intent_confirmed: true, external_context: false },
-      { current_text: text, name_asked: false },
+      { current_text: text, name_asks: 0 },
     );
     assert.equal(decision.trigger, 'external_context', text);
     assert.equal(decision.handoff_required, true, text);
@@ -1907,7 +2355,8 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
     );
     assert.match(
       decision.reasoning,
-      /Não é um pedido do zero[\s\S]*Ficha: 0 de 8 \(0%\)/u,
+      // ADR 021: before the product is known, the ficha has the common points and the name.
+      /Não é um pedido do zero[\s\S]*Ficha: 0 de 6 \(0%\)/u,
       text,
     );
   }
@@ -1947,7 +2396,7 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
         colors: 'azul',
         quantity: 20,
         briefing_status: 'quote_collecting',
-        next_required_field: 'artwork_status',
+        next_required_field: 'artwork_locations',
       },
     },
   );
@@ -1957,25 +2406,26 @@ test('something already going on elsewhere calls a seller at once (ADR 013)', as
     true,
     'an order already opened stays open for the seller',
   );
-  assert.match(midway.reasoning, /Ficha: 3 de 8 \(38%\)/u);
+  // The model says the product, which the workflow records; the name was asked twice (ADR 021).
+  assert.match(midway.reasoning, /Ficha: 4 de 6 \(67%\)/u);
 });
 
-test('the summary measures how much of the ficha the bot filled (ADR 013)', async () => {
+test('the summary measures how much of the ficha the bot filled (ADR 013, ADR 021)', async () => {
   const complete = await rhythmDecision(
     { answer_status: 'answered' },
-    { briefing: { ...SEVEN_POINTS, customer_name: 'Ana' } },
+    { briefing: { ...SHIRT_POINTS, customer_name: 'Ana' } },
   );
   assert.equal(complete.trigger, 'briefing_complete');
-  assert.equal(complete.ficha_filled, 8);
-  assert.equal(complete.ficha_total, 8);
-  assert.match(complete.reasoning, /Ficha: 8 de 8 \(100%\)/u);
+  assert.equal(complete.ficha_filled, 7);
+  assert.equal(complete.ficha_total, 7);
+  assert.match(complete.reasoning, /Ficha: 7 de 7 \(100%\)/u);
 
   const deferred = await rhythmDecision(
     { answer_status: 'answered' },
     {
       briefing: {
-        ...SEVEN_POINTS,
-        fabrics: 'Definir com o vendedor',
+        ...SHIRT_POINTS,
+        needed_by: 'Definir com o vendedor',
         customer_name: 'Ana',
       },
     },
@@ -1983,26 +2433,22 @@ test('the summary measures how much of the ficha the bot filled (ADR 013)', asyn
   assert.equal(deferred.trigger, 'briefing_complete');
   assert.equal(
     deferred.ficha_filled,
-    7,
+    6,
     'a point left to the seller is not filled by the bot',
   );
-  assert.match(deferred.reasoning, /Ficha: 7 de 8 \(88%\)/u);
+  assert.match(deferred.reasoning, /Ficha: 6 de 7 \(86%\)/u);
 
   const half = await rhythmDecision(
     { asks_price: true },
     {
       current_text: 'quanto fica?',
-      briefing: sevenPointsWithout(
-        'artwork_status',
-        'fabrics',
-        'sizes',
-        'collar',
-      ),
+      name_asks: 1,
+      briefing: shirtPointsWithout('artwork_locations', 'needed_by'),
     },
   );
   assert.equal(half.trigger, 'price');
-  assert.equal(half.ficha_filled, 3);
-  assert.match(half.reasoning, /Ficha: 3 de 8 \(38%\)/u);
+  assert.equal(half.ficha_filled, 4);
+  assert.match(half.reasoning, /Ficha: 4 de 7 \(57%\)/u);
 
   const reply = await rhythmDecision(
     { answer_status: 'answered', briefing_patch: { colors: 'preta' } },
@@ -2012,12 +2458,22 @@ test('the summary measures how much of the ficha the bot filled (ADR 013)', asyn
   assert.equal(
     reply.ficha_filled,
     3,
-    'type, colour and the polo collar the workflow records',
+    'the product from the polo, the model and the colour; the collar is not a point',
   );
+
+  const cap = await rhythmDecision(
+    { asks_price: true },
+    {
+      current_text: 'quanto fica?',
+      briefing: { product_type: 'bonés', colors: 'preto', quantity: 50 },
+    },
+  );
+  assert.equal(cap.ficha_total, 6, 'a cap counts its own points');
+  assert.match(cap.reasoning, /Ficha: 3 de 6 \(50%\)/u);
 });
 
-test('"com estampa" for "lisa ou com estampa?" does not answer the artwork point (ADR 012)', async () => {
-  // DEV 01/10, KPI-01: the artwork question was never asked.
+test('"com estampa" is the technique, never where the art comes from, and neither is asked (ADR 012, ADR 021)', async () => {
+  // DEV 01/10, KPI-01: "com estampa" answered the artwork point by mistake.
   const typeAnswer = await rhythmDecision(
     {
       answer_status: 'answered',
@@ -2031,6 +2487,7 @@ test('"com estampa" for "lisa ou com estampa?" does not answer the artwork point
       current_text: 'camiseta comum, com estampa',
       briefing: {
         customer_name: 'Dudu',
+        product_type: 'camisetas',
         briefing_status: 'quote_collecting',
         next_required_field: 'product_model',
       },
@@ -2038,27 +2495,12 @@ test('"com estampa" for "lisa ou com estampa?" does not answer the artwork point
   );
   assert.equal(typeAnswer.briefing_patch.artwork_status, undefined);
   assert.equal(typeAnswer.briefing_patch.artwork_technique, 'estampada');
-  assert.ok(typeAnswer.missing_briefing_fields.includes('artwork_status'));
-  assert.equal(typeAnswer.briefing_patch.next_required_field, 'colors');
-
-  const afterQuantity = await rhythmDecision(
-    { answer_status: 'answered', briefing_patch: { quantity: 25 } },
-    {
-      current_text: '25',
-      briefing: {
-        customer_name: 'Dudu',
-        product_model: 'camiseta comum',
-        artwork_technique: 'estampada',
-        colors: 'azul marinho',
-        briefing_status: 'quote_collecting',
-        next_required_field: 'quantity',
-      },
-    },
-  );
   assert.equal(
-    afterQuantity.briefing_patch.next_required_field,
-    'artwork_status',
+    typeAnswer.missing_briefing_fields.includes('artwork_status'),
+    false,
+    'the origin of the art is only recorded (ADR 021)',
   );
+  assert.equal(typeAnswer.briefing_patch.next_required_field, 'colors');
 
   for (const printOnly of [
     'com estampa',
@@ -2106,7 +2548,7 @@ test('the pending order opens at the first real point of the ficha (ADR 014)', a
   // The name alone does not open it.
   const nameOnly = await rhythmDecision(
     { answer_status: 'none', briefing_patch: { customer_name: 'Carla' } },
-    { current_text: 'Oi, sou a Carla', name_asked: false },
+    { current_text: 'Oi, sou a Carla', name_asks: 0 },
   );
   assert.equal(nameOnly.open_order, false);
   assert.equal(nameOnly.briefing_patch.briefing_status, 'collecting');
@@ -2135,7 +2577,7 @@ test('the pending order opens at the first real point of the ficha (ADR 014)', a
   );
 
   // The first real point opens it, whichever of the seven it is.
-  for (const [field, value] of Object.entries(SEVEN_POINTS)) {
+  for (const [field, value] of Object.entries(SHIRT_POINTS)) {
     const first = await rhythmDecision(
       { answer_status: 'answered', briefing_patch: { [field]: value } },
       { briefing: { customer_name: 'Carla' }, current_text: String(value) },

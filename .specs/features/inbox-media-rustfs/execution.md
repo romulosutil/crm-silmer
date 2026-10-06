@@ -1,5 +1,51 @@
 # Execução INBOX-MEDIA-1
 
+## T19: Gravação com revisão explícita
+
+MED-09..13/25: AudioRecorder standalone pede getUserMedia({audio:true}) apenas
+por ação explícita, negocia MIME suportado, usa relógio monotônico e interrompe
+captura em 300s ou 16MiB. Stop oferece revisão sem upload; preparar e enviar
+continuam ações separadas. Negação/indisponibilidade/erro do encoder preservam
+anexos. Descarte, troca e unmount liberam tracks e URL, inclusive permissão tardia.
+
+Red factual adicional: nova captura e descarte continuavam habilitados durante
+POSTmessages pendente. O teste de envio pendente falhou em toBeDisabled; composer
+passa sending-change ao recorder, que bloqueia ações e Escape nesse estado.
+Green mantém uma única requisição de upload e uma de envio.
+
+| Critério / mapeamento inverso    | Evidência file:line                              | Resultado assertado                                                                              |
+| -------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| MED-09/10/25 ação explícita      | test/e2e/audio-recorder.spec.js:165              | sem pedido inicial, teclado inicia áudio, stop não envia, origin recording e content sem caption |
+| MED-11 fallback                  | test/e2e/audio-recorder.spec.js:206              | denied/unavailable/encoderFailure deixam anexo habilitado                                        |
+| MED-13 captura e resposta tardia | test/e2e/audio-recorder.spec.js:227 e :246       | discard/switch/unmount fecham tracks sem upload e sem iniciar capture tardia                     |
+| MED-12 duração/tamanho           | test/e2e/audio-recorder.spec.js:275, :287 e :379 | 300s e 16MiB param tracks, excedente rejeita, limite exato revisa sem enviar                     |
+| MED-10 áudio vazio               | test/e2e/audio-recorder.spec.js:304              | alerta e nenhuma prévia enviável                                                                 |
+| MED-13/25 revisão acessível      | test/e2e/audio-recorder.spec.js:315              | URL revogada, foco devolvido, axe sem violações                                                  |
+| MED-06 envio pendente            | test/e2e/audio-recorder.spec.js:335              | botões desabilitados, Escape conserva revisão, upload/send únicos                                |
+| MED-09/10 codec real             | test/e2e/audio-recorder.spec.js:396              | Chromium/Firefox reais: MIME áudio, playback não pausado, nenhum MediaError                      |
+
+Gates em Node24.20.0: validate Quick847pass/3skips existentes(total850), build,
+typecheck e lint verdes; E2E completo142pass/7skips existentes(total149), workers1.
+18 novos casos passaram; Firefox real também passou3repetições consecutivas.
+Fixtures sintéticas geradas foram preservadas apenas em var ignorado; FFmpeg
+decodificou áudio Firefox com exit0 em container readonly/networknone.
+
+Firefox Windows1538 falhou SideBySide (mozglue), mesmo após instalação oficial
+--force. Prova Firefox usa Linux real: imagem Playwright1.62.1 com digest pinado,
+servidor loopback31927, sem dispositivos/segredos/mounts do host. PulseAudio
+privado/nullsink resolveu MediaError3/OnMediaSinkAudioError observado nas três
+repetições iniciais; assertions de playback foram mantidas. CI instala ambos
+os browsers e cria nullsink; execução remota de CI ainda não observada.
+
+Reprodução local: docker build -f docker/playwright-firefox.Dockerfile -t
+crm-silmer-playwright-firefox:local .; executar imagem com --memory=1g --cpus=1
+-p 127.0.0.1:31927:31927. Definir PW_FIREFOX_WS_ENDPOINT como
+ws://127.0.0.1:31927/media-recorder-firefox e executar test:e2e -- --workers=1.
+Sem variável, usa Firefox instalado localmente. --unsafe é restrito ao servidor
+de teste isolado para preferências de dispositivo sintético, sem infraestrutura
+de produção. Microfone físico/UAT e pipeline completo continuam T24; nenhum
+requisito Verified. O root assumiu T19 após erro terminal de quota do autor.
+
 ## Correção T18: retry após bloqueio transitório
 
 Premissa: cancelar HTTP não prova rollback do envio. Fronteira: MediaComposer,

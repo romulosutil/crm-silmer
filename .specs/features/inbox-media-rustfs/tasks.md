@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T18 concluídas; fase 3 completa, próxima T19. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T19 concluídas; fase 4 em execução, próxima T20. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -342,7 +342,7 @@ novo comprova duas requisições com mesma chave/body/contexto, um único upload
 **Requirement**: MED-09..13, MED-25
 **Reuses**: MediaComposer e APIs MediaRecorder/getUserMedia.
 **Tools**: tlc-spec-driven; Browser e Playwright com dispositivo sintético.
-**Done when**: [ ] Solicitação só por clique; MIME negociado; limite de 300s/16MiB; stop/cancel/review; tracks liberadas; permissão negada não bloqueia anexos.
+**Done when**: [x] Solicitação só por clique; MIME negociado; limite de 300s/16MiB; stop/cancel/review; tracks liberadas; permissão negada não bloqueia anexos.
 **Tests**: e2e + axe; mínimo 10 casos; teste de microfone real em T24.
 **Gate**: UI.
 **Commit**: feat(web): record and review audio in inbox

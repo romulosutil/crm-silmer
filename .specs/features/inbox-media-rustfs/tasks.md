@@ -317,6 +317,10 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 
 ### T18: Composer de anexos
 
+Correção T18/MED-06/25: bloqueio de POST messages pendente conserva ready e
+a tentativa imutável; reabilitar permite somente retry explícito. Cenário E2E
+novo comprova duas requisições com mesma chave/body/contexto, um único upload.
+
 **What**: Criar componente de seleção/prévia/legenda e envio explícito.
 **Where**: apps/edge-web/src/components/inbox/MediaComposer.vue
 **Depends on**: T17

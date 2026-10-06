@@ -13,6 +13,14 @@
 
 ## Handoff
 
+Correção T18/MED-06/25 concluída: POSTmessages pendente cancelado pelo bloqueio
+conserva tentativa imutável/ready. Reabilitar permite retry explícito com mesma
+chave/body/conversa/version/caption, sem envio automático. Red retry disabled;
+green focal1/1 Node24.20.0, Build847pass/3skips, audit0, Full124pass/7skips total131.
+Primeiro Full123pass/7skips/1fail por strictmode de status Dashboard transitório
+na restauração de sessão; rerun completo passou sem mudar assertions/timeouts.
+Fontes somente MediaComposer+fixture/E2E, docs rastreáveis; próximo T19.
+
 T18 concluída; MED-01/02/03/04/06/07/08/25: composer standalone com seleção única, revisão, upload explícito e envio apenas ready; áudio sem caption, aliases M4A e MIME vazio como hint, bytes validados no worker. Preview/identidades/version mantidos em retry, abort e generation impedem resposta antiga entre conversas. Legenda conta 1024 code points (emoji), não UTF16. Prazo polling600s inclui GET pendente e delay; refresh conserva mediaId sem reupload. Build/Quick847pass+3skips(total850), UI123pass+7skips(total130)workers1, novos16cenários E2E; validator real ClamAV/libmagic/codec1/1(113s) com fixture Chromium original, audit zero, diff e spec/tasks strict verdes. Nenhum cenário/assertion/skip/timeout publicado reduzido. Fase3 completa; próximoT19, nenhum Verified.
 
 T17 concluída na fase3; MED-04/06/08: red FormData enviadoJSON e cancelamento proxy parcial/SSE ausente; green9 HTTP/socket reais (7client+2proxy), bytes/boundary nativos sem Content-Type manual, CSRF e key preservados, JSON304 intactos, AbortSignal upload/status/preabort e erros saneados. Proxyaborted/responsecloseincompleto encerraupstream, Range206normal preservado. Quick847pass/3skips(total850), FullUI107pass/7skips(total114)workers1, type-lint-diff e strictspec/tasks verdes. SemSQL ou migração; nenhum Verified; proximoT18standalone.

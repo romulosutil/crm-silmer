@@ -24,6 +24,11 @@ createApp({
         ),
         h(
           'button',
+          { onClick: () => (disabled.value = false) },
+          'Reabilitar envio',
+        ),
+        h(
+          'button',
           { onClick: () => (visible.value = false) },
           'Fechar composer',
         ),

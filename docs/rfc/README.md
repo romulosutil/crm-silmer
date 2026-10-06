@@ -26,3 +26,4 @@ entre os documentos.
 
 - [009 — OpenAI no MVP](009-openai-no-mvp.md), decidida na ADR 021.
 - [010 — Deploy automático GitHub → EasyPanel](010-deploy-automatico-github-easypanel.md), decidida na ADR 022.
+- [011 — Mídia do chat no RustFS](011-midia-do-chat-no-rustfs.md), storage e retenção decididos na ADR 023; implementação planejada.

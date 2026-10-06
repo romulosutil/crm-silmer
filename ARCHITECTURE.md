@@ -63,7 +63,13 @@ somente confirmados; não equivale a recebimentos.
 | IA           | OpenAI no workflow; [ADR 021](docs/adr/021-adotar-openai-no-mvp.md)                                               |
 | Deploy       | Fluxo automático GitHub→EasyPanel existente; [ADR 022](docs/adr/022-manter-deploy-automatico-github-easypanel.md) |
 
-Mídia de canal fica em volume privado da VPS por até sete dias ou fim da
+Nova mídia enviada pelo vendedor no chat usará RustFS privado e ficará salva
+até nova decisão de retenção, sem expurgo por sete dias ou encerramento
+([ADR 023](docs/adr/023-midia-do-chat-no-rustfs.md)). O planejamento inclui
+imagem, áudio anexado/gravado e vídeo; implementação e recovery permanecem
+pendentes em [INBOX-MEDIA-1](.specs/features/inbox-media-rustfs/tasks.md).
+
+Mídia de canal no runtime legado fica em volume privado da VPS por até sete dias ou fim da
 jornada. Arquivos válidos seguem o procedimento operacional Dropbox.
 Perda da única cópia produz `lost/unavailable`. Esse prazo não se aplica a
 Pedidos, Fichas, documentos comerciais ou auditoria. Storage externo é uma

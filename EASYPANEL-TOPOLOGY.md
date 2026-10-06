@@ -161,6 +161,19 @@ Regras operacionais:
 
 ## 5. Armazenamento de arquivos
 
+### Decisão para mídia enviada do chat (implementação pendente)
+
+A [ADR 023](docs/adr/023-midia-do-chat-no-rustfs.md) escolhe o RustFS já
+existente e preserva mídia enviada do chat sem TTL de sete dias nem expurgo
+ao encerrar. Buckets próprios privados do CRM serão separados de
+`hermes-backups`; leitura usa autorização do CRM. Configuração observada,
+limites da evidência e gates de backup/restore estão no
+[contexto](.specs/features/inbox-media-rustfs/context.md) e no
+[plano](.specs/features/inbox-media-rustfs/design.md). Nenhum bucket,
+credencial, upgrade ou deploy foi executado na entrega de planejamento.
+As subseções seguintes descrevem o runtime transitório legado e a opção
+R2 futura, não a retenção da nova mídia enviada do chat.
+
 ### Piloto interno sem custo incremental
 
 Imagens e arquivos de canal ainda não promovidos a registro comercial válido

@@ -77,6 +77,26 @@ gates independentes; storage de mídia transitória pode seguir a exceção inte
 
 ## Objetivo 2 — Inbox Multicanal
 
+### INBOX-MEDIA-1 — Mídia enviada pelo vendedor
+
+**Situação:** planejamento em 05/10/2026 com RustFS existente, imagem,
+áudio anexado/gravado pelo microfone e vídeo. Mídia enviada será preservada
+sem TTL de sete dias ou expurgo ao encerrar, conforme ADR 023.
+
+**Entrega planejada:** 24 tarefas em quatro fases; requisitos MED-01..29,
+design, matriz de testes e gates em
+[inbox-media-rustfs](../inbox-media-rustfs/tasks.md). Nenhuma tarefa de
+implementação concluída. DEV lê arquivos reais e simula apenas Meta;
+homologação WhatsApp e backup/restore permanecem evidências externas.
+
+**Rastreabilidade:** INBOX-3/4, MSG-01..03, PRV-01..03, T02/T06 e issue #29.
+
+- [x] INBOX-MEDIA-PLAN-1 — especificação, contexto, design, 24 tarefas,
+      ADR/RFC e revisão independente entregues; gates estruturais strict passaram.
+      [Evidência](../inbox-media-rustfs/planning-review.md): validate passou;
+      E2E e audit da baseline têm pendências. Este item conclui o planejamento,
+      não a implementação nem a prontidão de release.
+
 | Etapa                    | Implementação atual                                    | Homologação restante                                                              |
 | ------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------- |
 | INBOX-1 — Mensagens      | Contato, conversa, mensagem e envelope n8n persistidos | Repetição e eventos fora de ordem no canal real                                   |

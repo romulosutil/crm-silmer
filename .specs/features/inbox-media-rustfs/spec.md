@@ -199,6 +199,8 @@ Coverage: 29 total, 29 mapped to tasks, 0 unmapped. Nenhum requisito Verified.
 T20 implementada para MED-17/19/25, com nove cenários UI e evidências de
 playback/seek/Range privado e acessibilidade em [execution.md](execution.md).
 Os requisitos permanecem In Progress até integração e Verifier independente.
+Correção T20 de MED-25 também cobre o foco após player removido por lost/erro,
+com dois cenários discriminantes em execution.md; status permanece In Progress.
 
 ## Success Criteria
 

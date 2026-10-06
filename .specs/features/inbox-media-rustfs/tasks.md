@@ -360,6 +360,9 @@ novo comprova duas requisições com mesma chave/body/contexto, um único upload
 **Gate**: UI.
 **Commit**: feat(web): render private media in chat history
 
+Correção MED-25: [x] Aviso recebe foco quando lost/erro remove player focado;
+foco externo preservado. Dois testes discriminantes e gate UI integral em execution.md.
+
 ### T21: Integrar componentes à Caixa de Entrada
 
 **What**: Conectar anexos, recorder e histórico ao fluxo da conversa ativa.

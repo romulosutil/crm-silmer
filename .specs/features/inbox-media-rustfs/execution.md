@@ -1,5 +1,48 @@
 # Execução INBOX-MEDIA-1
 
+## T20: Histórico com reprodução privada
+
+MED-17/19/25: MediaMessage renderiza imagem e controles nativos de áudio/vídeo
+com preload metadata e sem autoplay. Aceita somente rota relativa de conteúdo
+do CRM. Lost preserva a mensagem sem pedir bytes; erro de leitura mostra estado
+acessível unavailable, sem anunciar entrega. Metadados do DTO permanecem a fonte
+de estado; não há GET S3 adicional no componente.
+
+Premissas: T16 fornece mediaId/kind/state/contentUrl autorizado. Arquivos desta
+entrega: componente, fixture Vue, áudio AAC sintético de 3s, nove E2E e registros
+T20. A fixture M4A anterior tem 0,2s, insuficiente para seek em 0,5s; o primeiro
+focal passou 6/7 e acusou currentTime=0,2. A nova fixture preserva a assertion
+de seek/playback. Não houve alteração de testes publicados, skips ou timeouts.
+
+| Critério / AC | Evidência file:line e assertion | Resultado da spec | Coberto |
+| --- | --- | --- | --- |
+| MED-17 imagem privada | test/e2e/media-message.spec.js:127 `toBeGreaterThan(0)`; :128 `expect(reads[0].cookie).toContain('crm_session=synthetic-media-reader')`; :129 `toBe(200)` | PNG real decodificado com sessão | Sim |
+| MED-17 áudio/vídeo e seek | test/e2e/media-message.spec.js:164 `toBeGreaterThan(0.5)`; :172 `expect(ranged?.range).toBe('bytes=0-')`; :173 `expect(ranged?.contentRange).toBe(...)` | Playback e seek sobre bytes reais 206/Content-Range exato | Sim |
+| T20 sem autoplay | test/e2e/media-message.spec.js:138 `toHaveAttribute('controls', '')`; :139 `toHaveAttribute('preload', 'metadata')`; :140 `not.toHaveAttribute('autoplay', /.*/)`; :152 `toBe(true)` | Controles nativos, início pausado | Sim |
+| MED-19 lost | test/e2e/media-message.spec.js:183 `toHaveText('Arquivo perdido. O histórico da mensagem foi preservado.')`; :186 `toHaveCount(0)`; :187 `expect(reads).toHaveLength(0)` | Histórico sem bytes inventados | Sim |
+| MED-19 falha RustFS | test/e2e/media-message.spec.js:197 `toHaveText('Arquivo indisponível no momento.')`; :200 `toHaveCount(0)`; :201 `getByText('Mensagem enviada').toHaveCount(0)` | Falha acessível, sem anúncio de entrega | Sim |
+| Fronteira privada MED-16/19 | test/e2e/media-message.spec.js:217 `expect(external).toHaveLength(0)`; :218 `expect(reads).toHaveLength(0)` | URL externa não é usada | Sim |
+| MED-25 lost por teclado | test/e2e/media-message.spec.js:233 `toBeFocused()`; :234 `violations.toEqual([])` | Foco permanece previsível, axe limpo | Sim |
+| MED-25 controles por teclado | test/e2e/media-message.spec.js:256 `activeElement.toBe(true)`; :264 `paused.toBe(false)`; :265 `violations.toEqual([])` | Tab e Espaço operam os players reais; axe com player presente | Sim |
+
+| Teste / assertion | Mapeamento inverso | Necessário |
+| --- | --- | --- |
+| :127..129 imagem, naturalWidth/cookie/status | T20 imagem autenticada/MED-17 | Sim |
+| :138..173 áudio e vídeo, controls/preload/paused/currentTime/error/206 | T20 reprodução/seek/MED-17/25 | Sim |
+| :183..187 lost, status/nodes/reads | MED-19 | Sim |
+| :197..201 503, status/nodes/delivery | MED-19 | Sim |
+| :214..218 URL externa, status/requests | MED-16/19 | Sim |
+| :227..234 transição lost, status/foco/axe | MED-19/25 | Sim |
+| :249..265 áudio/vídeo por teclado, ready/foco/play/axe | MED-25 | Sim |
+
+Adequação: critérios cobertos por valores/estados e bytes reais, sem assertions
+rasas; todos os nove casos têm requisito. Segue CONTRIBUTING.md e matriz UI/axe
+de tasks.md. Texto exato dos avisos é escolha de UI, a spec exige estado acessível.
+Focal9/9 e UI completo151pass/7skips anteriores(total158), workers1, Node24.20.0.
+Typecheck/lint verdes. Nenhum SQL alterado. Chromium mediu PNG/AAC/H.264; Firefox
+recording foi medido em T19, pares de codecs anexados ficam explícitos em T24.
+Microfone físico, worker completo e operação remota continuam pendentes.
+
 ## T19: Gravação com revisão explícita
 
 MED-09..13/25: AudioRecorder standalone pede getUserMedia({audio:true}) apenas

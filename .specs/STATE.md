@@ -13,6 +13,12 @@
 
 ## Handoff
 
+Fix estreito T10/MED-08: outro uploader/admin retorna403 de permissão,
+estado/conversa/versão retornam409. Prova red mostrou409 indevido; live18/18
+depois da correção, sem efeito/alteração de quota. T11 ainda em execução;
+replay exato com flag false e fingerprint sem correlationId serão cobertos
+antes do commit. Requisitos continuam In Progress.
+
 T10 entregue: bind no envio humano existente com mídia/quota locked; valida
 mesmo autor/conversa/ready/clean/hash/MIME/tipo/size, reserva→used só no commit.
 Admin read não permite bind de outro ator. Replay anterior ao bind não cobra

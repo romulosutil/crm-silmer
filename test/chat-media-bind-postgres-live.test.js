@@ -227,7 +227,7 @@ if (connectionString) {
       const id = await ready(options);
       const before = await snapshot();
       await assert.rejects(service().sendHumanMessage(command(id)), {
-        statusCode: 409,
+        statusCode: options.actorId ? 403 : 409,
       });
       assert.deepEqual(await snapshot(), before);
     });
@@ -239,7 +239,7 @@ if (connectionString) {
           actor: { ...actor, capabilities: ['COMMERCIAL_ADMIN'] },
         }),
       ),
-      { statusCode: 409 },
+      { statusCode: 403 },
     );
     assert.equal((await snapshot()).automation, 'assistant');
   });

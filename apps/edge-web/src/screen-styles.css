@@ -472,6 +472,30 @@ details.exact summary {
   overflow-x: auto;
 }
 
+/*
+ * Clientes loads up to 100 contacts and Pedidos grows with each "Ver mais",
+ * so a list table scrolls inside its own region instead of stretching the
+ * page, with its column headings pinned at the top. The scroll padding keeps
+ * a row reached by keyboard from hiding under those headings.
+ */
+.table-wrap.list-scroll {
+  max-block-size: min(36rem, 65dvh);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-block-start: 2.75rem;
+  scrollbar-gutter: stable;
+}
+
+.list-scroll .data-table th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  /* A collapsed border scrolls away with the rows; the shadow stays. */
+  border-block-end: 0;
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
 .table-scroll-hint {
   display: none;
   color: var(--color-text-muted);
@@ -984,6 +1008,25 @@ details.exact summary {
   gap: 1rem;
 }
 
+/*
+ * Beside the contact card, the client list fits the viewport below the
+ * sticky top bar, as the Inbox list does, and its table takes whatever height
+ * the heading leaves.
+ */
+.clients-layout > .list-panel {
+  position: sticky;
+  inset-block-start: calc(var(--topbar-block-size) + 1rem);
+  display: flex;
+  flex-direction: column;
+  max-block-size: calc(100dvh - var(--topbar-block-size) - 3.25rem);
+}
+
+.list-panel > .table-wrap.list-scroll {
+  flex: 0 1 auto;
+  min-block-size: 0;
+  max-block-size: none;
+}
+
 .row-link {
   color: var(--color-text);
   font-weight: 600;
@@ -1303,6 +1346,16 @@ details.exact summary {
   .inbox-list {
     position: static;
     max-block-size: min(24rem, 50dvh);
+  }
+
+  /* Stacked above the contact card, the client list does the same. */
+  .clients-layout > .list-panel {
+    position: static;
+    max-block-size: none;
+  }
+
+  .list-panel > .table-wrap.list-scroll {
+    max-block-size: min(28rem, 55dvh);
   }
 
   .bar-chart {

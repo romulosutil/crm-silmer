@@ -337,7 +337,7 @@ onBeforeUnmount(() => {
           Deslize a tabela para ver todas as colunas.
         </p>
         <div
-          class="table-wrap"
+          class="table-wrap list-scroll"
           role="region"
           tabindex="0"
           aria-label="Pedidos confirmados; role horizontalmente para ver todas as colunas"
@@ -402,7 +402,7 @@ onBeforeUnmount(() => {
           Deslize a tabela para ver todas as colunas.
         </p>
         <div
-          class="table-wrap"
+          class="table-wrap list-scroll"
           role="region"
           tabindex="0"
           aria-label="Pedidos pendentes; role horizontalmente para ver todas as colunas"

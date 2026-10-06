@@ -732,6 +732,51 @@ test('pages the list with "Ver mais"', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Ver mais' })).toHaveCount(0);
 });
 
+test('keeps a long order list inside its own scrollable table', async ({
+  page,
+}) => {
+  const manyPending = Array.from({ length: 40 }, (_, index) => ({
+    ...pendingOrder,
+    id: `order-pendente-${index + 1}`,
+    number: `${index + 10}-CRM`,
+    ficha: {
+      ...pendingOrder.ficha,
+      summary: {
+        ...pendingOrder.ficha.summary,
+        cliente: `Cliente de teste ${index + 1}`,
+      },
+    },
+  }));
+  await mockOrders(page, { orders: [confirmedOrder, ...manyPending] });
+  await page.goto('/pedidos');
+  const table = page.getByRole('region', {
+    name: /Pedidos pendentes; role horizontalmente/u,
+  });
+  await expect(table.getByRole('row')).toHaveCount(41);
+
+  for (const viewport of [
+    { height: 720, width: 1280 },
+    { height: 844, width: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const metrics = await table.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      pageHeight: globalThis.document.documentElement.scrollHeight,
+      scrollHeight: element.scrollHeight,
+      viewportHeight: globalThis.innerHeight,
+    }));
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+    expect(metrics.clientHeight).toBeLessThan(metrics.viewportHeight);
+    // The page no longer grows with the list it holds.
+    expect(metrics.pageHeight).toBeLessThan(metrics.scrollHeight);
+  }
+
+  const lastOrder = table.getByRole('row', { name: /Cliente de teste 40/u });
+  await lastOrder.getByRole('link', { name: 'Abrir pedido' }).focus();
+  await expect(lastOrder).toBeInViewport();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
 test('refreshes the list when an order changes elsewhere (PLI-08)', async ({
   page,
 }) => {

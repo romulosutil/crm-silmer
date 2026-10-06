@@ -409,6 +409,9 @@ export function createOperationReadRuntime(database, options = {}) {
       return options.identity.authorizeOperationalRead({
         action: input.action,
         sessionToken,
+        ...(input.authenticationFailureStatus === 401
+          ? { authenticationFailureStatus: 401 }
+          : {}),
       });
     },
   });

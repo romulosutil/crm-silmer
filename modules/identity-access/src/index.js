@@ -646,7 +646,10 @@ export function createIdentityAccessService({
       window.touchedAt,
       window.idleExpiresBefore,
     );
-    if (!session) throw new Error('Invalid or expired session');
+    if (!session)
+      throw Object.assign(new Error('Invalid or expired session'), {
+        code: 'INVALID_SESSION',
+      });
     return Object.freeze({
       userId: session.userId,
     });

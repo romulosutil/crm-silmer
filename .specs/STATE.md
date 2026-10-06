@@ -13,6 +13,16 @@
 
 ## Handoff
 
+T8 concluída na entrega corrente; próximo passo T9. T1 a T8 entregues,
+16 tarefas pendentes, nenhuma Verified. Status usa conversation.read canônica,
+draft autor/admin e attached ACL de Vendedor. Credencial inválida/expirada/
+revogada usa INVALID_SESSION tipado com modo401 opt-in; DB503 preservado.
+Upload faz preflight401 antes do guard CSRF403. Roots equivalentes do spool
+são rejeitados após resolve/case Windows. Tests com identidade/sessões SQL
+reais comprovaram200/401/403/503. Gates: validate761/3 skips antigos,
+SQL conjunto25/25 e final14/14, E2E107/7 skips antigos, diff limpo.
+T7 publicado em f97506a. Informações abaixo preservam evidências anteriores.
+
 T7 concluída na entrega corrente: upload humano, ledger de admissão 0029,
 reserva antes de streaming, replay byte-real, quota usada+reservada e throttle
 12/minuto por token canônico (inclui replay). Decisão de implementação aceita

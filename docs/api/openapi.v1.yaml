@@ -598,6 +598,50 @@ paths:
         '422': { description: Declaração ou multipart inválido/vazio }
         '429': { description: Quota ou 12 admissões por sessão/minuto }
         '503': { description: Dependência indisponível ou conclusão incerta }
+  /conversations/{conversationId}/media/{mediaId}:
+    get:
+      operationId: getChatMediaStatus
+      summary: Estado e metadados seguros da mídia privada
+      description: >-
+        Rascunho somente autor ou COMMERCIAL_ADMIN; mídia vinculada segue a ACL
+        de leitura da conversa. Nunca retorna object_key, URL, filename ou
+        envelope. Formato inválido depois do202 usa200/state=rejected/reason=invalid_format.
+        Sessão ausente/expirada/revogada/inválida401; origem, capacidade ou
+        ownership negados403. Dependência indisponível503. Cache private,no-store.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: mediaId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Estado atual sem chaves ou nomes originais
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [mediaId, kind, origin, state, validationStatus, mimeType, sizeBytes, durationMs]
+                properties:
+                  mediaId: { type: string, format: uuid }
+                  kind: { type: string, enum: [image, audio, video] }
+                  origin: { type: string, enum: [attachment, recording] }
+                  state: { type: string, enum: [uploaded, processing, ready, attached, rejected, unavailable, lost] }
+                  validationStatus: { type: string }
+                  mimeType: { type: [string, 'null'] }
+                  sizeBytes: { type: [integer, 'null'], minimum: 1 }
+                  durationMs: { type: [integer, 'null'], minimum: 0 }
+                  reason: { type: string }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Mídia ausente na conversa }
+        '503': { description: Dependência indisponível }
   /conversations/{conversationId}/messages:
     post:
       operationId: sendHumanConversationMessage

@@ -796,6 +796,57 @@ if (connectionString) {
       );
     return result;
   }
+  test('T13/MED-22: reserved text command cannot enter media endpoint', async (t) => {
+    const f = await mediaPanelCommand('text');
+    await f.integration.recordEvent(f.event('text-no-media'));
+    const { PostgresN8nIntegrationRepository } =
+      await import('../modules/n8n-integration/src/postgres-repository.js');
+    const repo = new PostgresN8nIntegrationRepository({
+      database,
+      envelopeKey: KEY,
+    });
+    const before = await effects();
+    const { default: Fastify } = await import('fastify');
+    const { registerN8nCommandMediaRoutes } =
+      await import('../apps/api/src/n8n-command-media-routes.js');
+    const api = Fastify();
+    t.after(() => api.close());
+    api.decorate('automationAuth', {
+      authorize: async () => ({ actor: 'AUTOMATION_EXECUTOR' }),
+    });
+    registerN8nCommandMediaRoutes(
+      api,
+      repo,
+      {
+        reservedContent: async () => {
+          throw new Error('must not read storage');
+        },
+      },
+      () => ({ correlationId: 'trace', requestId: 'request' }),
+    );
+    for (const suffix of ['', '?preflight=true']) {
+      const response = await api.inject({
+        url: `/api/v1/integrations/n8n/commands/${encodeURIComponent(f.row.command_id)}/media${suffix}`,
+        headers: {
+          authorization: 'Basic synthetic',
+          'x-correlation-id': 'trace',
+          'x-silmer-workflow-key': 'whatsapp-mvp',
+          'x-silmer-workflow-version': 'media-fixture-1',
+          'x-silmer-execution-id': 'synthetic-execution',
+        },
+      });
+      assert.equal(response.statusCode, 409);
+      assert.equal(response.body.includes('Synthetic text'), false);
+    }
+    await assert.rejects(
+      repo.readReservedMedia({
+        commandId: f.row.command_id,
+        technical: f.event('text-no-media').technical,
+      }),
+      { statusCode: 409 },
+    );
+    assert.deepEqual(await effects(), before);
+  });
   for (const mutation of [
     `UPDATE crm.conversations SET terminal_at=now(),state='sem_lead' WHERE id='bind-conversation'`,
     `UPDATE crm.conversations SET inbound_revision=inbound_revision+1 WHERE id='bind-conversation'`,

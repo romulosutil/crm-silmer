@@ -460,6 +460,8 @@ export class PostgresN8nIntegrationRepository {
       ).rows[0];
       const command = await selectPanelCommand(client, input.commandId);
       await assertReservedExecution(client, command, input);
+      if (!['image', 'audio', 'video'].includes(command.message_type))
+        throw new N8nConflictError('Command has no retained media');
       const payload = decryptJson(
         command.payload_envelope,
         `n8n-command:${command.command_id}`,
@@ -471,6 +473,7 @@ export class PostgresN8nIntegrationRepository {
           [command.message_id, target.conversation_id],
         )
       ).rows[0];
+      if (!bound) throw new N8nConflictError('Bound media is missing');
       assertPanelSendFence(
         command,
         conversation,
@@ -1296,9 +1299,11 @@ async function assertReservedExecution(client, command, input) {
     receipts[0].workflow_key !== input.technical.workflowKey ||
     receipts[0].workflow_version !== input.technical.workflowVersion ||
     receipts[0].execution_id !== input.technical.executionId ||
-    (input.automationEpoch != null &&
+    (input.automationEpoch !== null &&
+      input.automationEpoch !== undefined &&
       Number(receipts[0].automation_epoch) !== input.automationEpoch) ||
-    (input.sourceRevision != null &&
+    (input.sourceRevision !== null &&
+      input.sourceRevision !== undefined &&
       Number(receipts[0].source_revision) !== input.sourceRevision)
   )
     throw new N8nConflictError('Reservation execution mismatch');

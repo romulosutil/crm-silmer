@@ -1,8 +1,8 @@
 # Topologia EasyPanel — CRM Silmer
 
-> **Status:** baseline do CRM aprovada; extensão obrigatória do n8n pendente de provisionamento e gate operacional
+> **Status:** manter o fluxo atual de deploy automático GitHub → EasyPanel; gate de produção pendente de checagem operacional
 >
-> **Data:** 31/08/2026; revisão arquitetural em 06/09/2026
+> **Data:** baseline de 31/08/2026; revisão operacional em 05/10/2026
 >
 > **Host:** Hostinger VPS com Ubuntu 24.04 e EasyPanel
 
@@ -11,6 +11,14 @@
 Usar o projeto EasyPanel compartilhado e duradouro `espectro-mvp`. Os serviços
 do CRM recebem o prefixo `silmer-`, que define sua fronteira operacional dentro
 do projeto. O desenvolvimento e os testes técnicos continuam locais ou no CI.
+
+Em 05/10/2026, o proprietário determinou preservar o fluxo que já faz deploy
+automático a partir do GitHub, conforme a
+[ADR 022](docs/adr/022-manter-deploy-automatico-github-easypanel.md). O projeto
+e os serviços abaixo são a baseline registrada; a associação entre o deploy
+atual, sua fonte, SHA e imagem executada precisa de evidência do painel.
+O [relatório de checagens](docs/runbooks/production-readiness-checks.md)
+separa observações públicas, registros históricos e pendências do ambiente alvo.
 
 A decisão elimina projetos separados de desenvolvimento, homologação e produção.
 O risco de isolamento reduzido e de competição com serviços não relacionados foi
@@ -36,10 +44,11 @@ sem acesso direto ao banco do CRM e com somente o webhook do canal publicado.
 `migrate` é um job curto executado pelo pipeline ou script salvo do EasyPanel;
 não é serviço permanente.
 
-O inventário executável atual em `ops/easypanel/topology.json` continua sendo a
-evidência do que já foi provisionado e ainda não contém n8n. A etapa AGENTE-1
-deve atualizá-lo junto da configuração e da prova live; este planejamento não
-pode ser usado para afirmar que os dois novos serviços já existem.
+O inventário em `ops/easypanel/topology.json` registra o provisionamento
+histórico de quatro serviços e ainda não contém n8n. Seus digests, domínios
+nulos e flags de workflow não descrevem automaticamente o ambiente atual.
+Atualizá-lo exige configuração e prova live; este planejamento não comprova
+a existência, ausência ou estado atual dos serviços do n8n.
 
 Não subir no MVP:
 
@@ -58,9 +67,9 @@ Internet e Meta
       |
 silmer-edge-web (único serviço público)
    |-- /                         bundle estático da SPA Vue
-   |-- /api/*                    silmer-api:8000
+   |-- /api/*                    silmer-api:3000
    |-- /webhook/meta/*           silmer-n8n:5678
-   `-- /api/v1/events            silmer-api:8000 (SSE)
+   `-- /api/v1/events            silmer-api:3000 (SSE)
           |                              |
           |                       silmer-postgres privado
           |                              |
@@ -70,10 +79,14 @@ silmer-edge-web (único serviço público)
           |
    silmer-n8n-db privado
           |
-   Meta / OpenAI ou Gemini
+   Meta / OpenAI
 ```
 
 Domínios propostos, substituindo `<dominio>` pelo domínio aprovado:
+
+O endpoint histórico `espectro-mvp-silmer-edge-web.jicnzg.easypanel.host`
+respondeu às checagens públicas em 05/10/2026. É a referência do cloud-dev;
+essa observação não aprova o domínio final nem os controles privados da VPS.
 
 | Finalidade   | Domínio               | Proteção adicional                                  |
 | ------------ | --------------------- | --------------------------------------------------- |
@@ -100,8 +113,8 @@ O n8n acessa o CRM somente pela API privada e não recebe rota ou credencial par
 
 Baseline recomendada: **Hostinger KVM 4, com 4 vCPU, 16 GB RAM e 200 GB NVMe**.
 Ela é a hipótese inicial para o CRM e o n8n junto dos demais serviços do
-projeto, desde que o envelope agregado seja novamente validado e o worker de
-PDF tenha concorrência estritamente limitada. A aprovação anterior da issue
+projeto, desde que o envelope agregado seja novamente validado e os jobs do
+worker tenham concorrência limitada. A aprovação anterior da issue
 `#8` não mediu o n8n e, portanto, não prova esse novo envelope.
 
 Essa recomendação só vale para o envelope de carga da seção 13 do TDD.
@@ -123,11 +136,25 @@ Os valores abaixo são **limites máximos**, não reservas somáveis:
 | `silmer-n8n`      |       1,5 GB, até 1 CPU |
 | `silmer-n8n-db`   |       1,5 GB, até 1 CPU |
 
+Na auditoria autenticada de 05/10/2026, API, worker, edge e PostgreSQL exibiram
+reservas e limites de CPU/memória em 0, descritos como **unlimited**. Os valores da tabela
+continuam sendo a hipótese de sizing; não são a configuração observada.
+O worker mostrou uma réplica, comando `node apps/worker/src/worker.js` e nenhuma
+entrada na seção de portas publicadas. Heartbeat e hardening continuam gates
+independentes.
+
+O Advanced da API mostrou uma réplica, Zero Downtime marcado, comando sem
+override e nenhuma entrada de porta publicada. Domains do edge confirmou
+HTTPS do host conhecido → `http://espectro-mvp_silmer-edge-web:8080/`. Essas
+telas comprovam a configuração ali exibida; não substituem firewall ou
+identificação da revisão executada.
+
 Regras operacionais:
 
 - manter ao menos 30% do disco livre;
-- construir imagens no GitHub, nunca na VPS;
-- limitar concorrência do Chromium no worker;
+- conferir o custo do build Git do fluxo EasyPanel atual no envelope da VPS e
+  vincular a imagem realmente executada à revisão e aos gates de supply chain;
+- limitar concorrência dos jobs e do scanner no worker;
 - reservar 3 GB para Ubuntu, EasyPanel, Traefik, logs, métricas, backup e
   manutenção do PostgreSQL;
 - incluir os serviços não relacionados no orçamento agregado de CPU, RAM e disco.
@@ -238,10 +265,6 @@ META_ACCESS_TOKEN
 AI_PROVIDER
 AI_MODEL_PRIMARY
 OPENAI_API_KEY
-GEMINI_API_KEY
-GEMINI_PAID_SERVICE_CONFIRMED
-GEMINI_ZDR_APPROVED
-GEMINI_DEVELOPER_LOGGING_ENABLED
 S3_ENDPOINT
 S3_REGION
 S3_DATA_BUCKET
@@ -313,8 +336,9 @@ Regras:
   `FICHA_RECIPIENT_E164`; o telefone não aparece em código, documentação, log
   ou artefato de build;
 - rotação trimestral e imediata após incidente ou saída de operador;
-- o GitHub Actions recebe somente credencial para publicar no GHCR; a promoção
-  manual no EasyPanel não expõe segredos de runtime ao pipeline;
+- o workflow versionado do GitHub Actions recebe somente a credencial de
+  publicação no GHCR; a configuração efetiva do deploy automático EasyPanel
+  deve preservar a separação dos segredos de runtime e ser conferida no painel;
 - alterações de segredo geram registro operacional e smoke test.
 
 ## 7. Health checks
@@ -348,7 +372,7 @@ fallback.
 - filesystem read-only quando possível;
 - temporários em tmpfs/volume limitado e descartável;
 - imagens-base fixadas por digest;
-- Chromium e `clamscan` com concorrência 1, timeout e limite de memória;
+- `clamscan` com concorrência 1, timeout e limite de memória;
 - assinatura-base ClamAV na imagem e `freshclam` em tmpfs no startup e a cada
   24 horas; idade acima de 36 horas bloqueia liberação do anexo e gera alerta.
 
@@ -369,24 +393,36 @@ O branch canônico atual é `master`.
 
 ### Merge e promoção
 
-1. Merge em `master` constrói uma vez.
-2. Publica `edge-web` e `runtime` no GHCR com SHA e digest.
-3. Operador autorizado acessa EasyPanel por VPN e verifica backup/espaço.
-4. Executa `migrate` como script salvo, usando a imagem runtime e advisory lock.
-5. Troca `silmer-api` e `silmer-worker` e depois `silmer-edge-web` para os
-   digests aprovados no projeto estável.
-6. Publica a versão aprovada dos workflows no `silmer-n8n`, preservando a
-   versão anterior para rollback.
-7. Executa smoke WhatsApp → n8n → CRM → Inbox e registra a aprovação operacional.
-8. Auto-deploy direto no projeto permanece desabilitado.
+1. Merge em `master` executa os gates do workflow versionado e publica
+   `edge-web` e `runtime` no GHCR com SHA e digest.
+2. O fluxo GitHub → EasyPanel existente permanece como mecanismo de deploy
+   escolhido. A auditoria confirmou API e worker com fonte Git
+   `romulosutil/crm-silmer`, branch `master`, build path `/` e Dockerfile
+   `docker/runtime.Dockerfile`. O edge usa o mesmo Git/branch/path com
+   `docker/edge-web.Dockerfile`. Edge e worker têm Auto Deploy ativo; a API está
+   com Auto Deploy desativado. Esta divergência precisa ser resolvida no fluxo
+   escolhido antes de depender de deploy automático coordenado em produção.
+   A imagem local produzida pelo painel não comprova consumo do digest GHCR
+   escaneado pelo CI.
+3. Registrar projeto/serviço, branch, gatilho, SHA implantado, referência da
+   imagem atual e anterior e resultado da última execução, sem URLs com token.
+4. Conferir o comportamento de migrations e a ordem API/worker/edge; migrations
+   usam advisory lock e expand/contract. A existência do gatilho automático não
+   comprova que a migration foi aplicada.
+5. Publicação de workflows n8n exige versão compatível e homologada, com CRM
+   compatível implantado antes do workflow e versão anterior para rollback.
+6. Executar health/readiness, heartbeat e smoke WhatsApp → n8n → CRM → Inbox;
+   registrar a aprovação operacional antes de liberar tráfego real.
 
-No piloto, GitHub Actions testa, escaneia e publica; não acessa a API
-administrativa do EasyPanel. A promoção é manual e auditada no painel. Automação
-futura exige runner privado/VPN; a API administrativa não será publicada.
+A `.github/workflows/ci.yml` atual testa, escaneia e publica imagens, mas não
+chama a API administrativa do EasyPanel. Isso não exclui um gatilho configurado
+diretamente no painel ou integração GitHub externa ao workflow. Não expor essa
+API para completar a checagem. A promoção manual deixa de ser o fluxo obrigatório;
+rollback, backup e rastreabilidade por SHA/imagem permanecem gates próprios.
 
-`workflow_dispatch` pode validar qualquer SHA aprovado sem promover o runtime.
-O operador promove o digest manualmente no projeto estável. Nunca usar `latest`;
-a configuração registra o digest atual e o anterior.
+A produção exige imagem identificável e referência anterior recuperável.
+Não usar `latest` como evidência de versão; um status verde de CI ou um endpoint
+saudável isolado não identifica o código executado.
 
 ## 9. Migração e rollback
 
@@ -402,10 +438,11 @@ Sequência de deploy do contrato n8n v1:
    integração, tornando a rota direta do CRM indisponível;
 8. implantar edge, verificar live, ready, heartbeat e monitorar 30 minutos.
 
-O rascunho simplificado atual é a versão
-`fae803db-eef0-4074-a7ae-1a6bb786e203`, com 42 nós. A publicação permanece
-bloqueada pelas credenciais Basic DEV e pela homologação WhatsApp; Instagram
-entra depois em `CANAL-2` e não bloqueia este primeiro MVP operacional.
+A versão de workflow a implantar vem do export/SDK versionado em
+`ops/n8n/workflows/` e deve ser comparada com a versão publicada no painel.
+O ID de rascunho e os 42 nós preservados no inventário histórico não provam a
+versão atual. Credenciais Basic distintas e homologação WhatsApp continuam
+gates; Instagram entra depois em `CANAL-2`.
 
 Migrações seguem expand/contract. Remover tabela/coluna ocorre somente quando o
 digest anterior já não depender dela. Rollback normal reaponta para o digest
@@ -426,6 +463,11 @@ tentativas e reconciliações e reaponta apenas os runtimes compatíveis. Ele n�
 reativa silenciosamente a entrada direta da Meta.
 
 ## 10. Backups e disaster recovery
+
+Na auditoria de 05/10/2026, `silmer-postgres` mostrou **Local Disk / Manual Run**
+e uma entrada de backup anterior a migration. Isso não comprova cópia externa,
+agendamento ou restore. A exposição do banco no painel estava em **Exposed
+Port = 0**; firewall do host permanece uma checagem separada.
 
 Produção:
 
@@ -472,7 +514,7 @@ O drill não interrompe produção e nunca envia WhatsApp, IA ou objetos externo
    e chave de criptografia e reaplicar tombstones com a credencial read-only.
 5. Validar acesso aos objetos existentes, recuperar uma versão apagada/corrompida
    e confirmar que objetos sujeitos a tombstone não reaparecem.
-6. Executar smoke completo de login, inbox, Deal, PIX, Ficha e reconciliação.
+6. Executar smoke completo de login, inbox, Pedido, PIX, Ficha e reconciliação.
 7. Testar troca de DNS em subdomínio de drill com o TTL documentado.
 8. Registrar tempos por etapa, RPO/RTO, lacunas e responsáveis pela correção.
 9. Destruir o host do drill após preservar evidências sem dados pessoais.
@@ -515,7 +557,7 @@ Alertas mínimos:
 - último backup horário bem-sucedido acima de 75 minutos ou diário acima de 26 horas;
 - disco 70/80/90% e memória acima de 80%;
 - certificado próximo do vencimento;
-- falhas repetidas Meta, IA, PDF ou storage;
+- falhas repetidas Meta, IA, impressão da Ficha ou storage;
 - consumo de tokens/custo da IA fora do esperado.
 
 Audit trail comercial não depende de logs do EasyPanel.
@@ -532,7 +574,7 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Restore completo em serviço temporário isolado dentro do RTO.
 - [ ] Perda total da VPS recuperada em host limpo dentro do RTO.
 - [ ] Tombstones imutáveis, com credenciais separadas, reaplicados depois de restore antigo.
-- [ ] Webhook repetido sem duplicar mensagem, Negócio ou job.
+- [ ] Webhook repetido sem duplicar mensagem, Pedido ou job.
 - [ ] Cada mensagem válida dispara o n8n sem botão da UI e registra versão, execução e epoch no CRM.
 - [ ] Worker parado acumula jobs e recupera a fila ao voltar.
 - [ ] Crash durante efeito externo produz `sent`, `failed` ou `outcome_unknown`, sem retry cego.
@@ -543,10 +585,11 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Smoke WhatsApp oficial ponta a ponta aprovado antes da publicação.
 - [ ] Instagram oficial e migração de canal aprovados na fase `CANAL-2`.
 - [ ] Persistência de execução/manual do n8n desabilitada ou expurgada em até 30 dias, sem PII.
-- [ ] Falha de Ficha aparece na reconciliação e retry não duplica envio.
-- [ ] Ficha impressa v3 com aprovação final: assinatura física de Rose e
+- [ ] Ficha confirmada pode ser impressa pelo navegador e a operação registra
+      o encaminhamento externo; geração de PDF no worker não é gate do runtime atual.
+- [ ] Ficha impressa v5 com aprovação final: assinatura física de Rose e
       Operação na amostra impressa registrada em
-      `docs/phase0/ficha-pdf-approval-v3.json` (ADR 017). A aprovação provisória
+      `docs/phase0/ficha-pdf-approval-v5.json` (ADR 020). A aprovação provisória
       do PO vale só para desenvolvimento e cloud-dev.
 - [ ] Monitor externo detecta parada da VPS.
 - [ ] Responsável de Privacidade aprova storage, IA e observabilidade.

@@ -23,8 +23,13 @@ segurança. Ela **não satisfaz** o comportamento funcional de `MSG-02` nem de
   manifesto cujas referências de `edge-web` e `runtime` são idênticas por
   digest em dev e hml. A promoção deve ocorrer dentro da retenção de 30 dias
   desses artifacts.
-- A promoção para EasyPanel continua manual, fora do GitHub Actions. O operador
-  guarda o digest atual e o anterior; produção não possui auto-deploy.
+- A operação mantém o deploy automático GitHub → EasyPanel existente,
+  conforme a [ADR 022](../adr/022-manter-deploy-automatico-github-easypanel.md).
+  A publicação GHCR não comprova que o painel consome essa imagem nem espera
+  o CI. Conferir gatilho, SHA/build/imagem implantados e release anterior
+  recuperável no [relatório operacional](../runbooks/production-readiness-checks.md).
+  O workflow manual acima é uma ferramenta auxiliar de conferência de digests,
+  não uma exigência para substituir o fluxo existente.
 
 ## Pins verificados em 30/08/2026
 
@@ -40,6 +45,32 @@ Atualizar um pin exige PR próprio, nova resolução em fonte oficial, build,
 scan e registro do novo digest; aliases mutáveis não entram em deploy.
 
 ## Scanner
+
+### Correção do bloqueio de release em 05/10/2026
+
+O CI de `master` após a PR #142 (`2979c812`, run `37394796634`)
+publicou `edge-web`, mas bloqueou `runtime` antes do login no GHCR. O Trivy
+encontrou três vulnerabilidades críticas corrigíveis em
+`perl-base 5.36.0-7+deb12u3`: `CVE-2026-13221`, `CVE-2026-42496` e
+`CVE-2026-8376`. A imagem mantém sua base Node por digest e atualiza somente
+`perl-base` durante a instalação dos pacotes de runtime. O build exige versão
+igual ou superior a `5.36.0-7+deb12u4`, a correção publicada pelo Debian.
+O scan continua obrigatório, com as mesmas severidade e condições de bloqueio.
+
+Fontes: [CI do SHA integrado](https://github.com/romulosutil/crm-silmer/actions/runs/37394796634),
+[Debian CVE-2026-13221](https://security-tracker.debian.org/tracker/CVE-2026-13221),
+[Debian CVE-2026-42496](https://security-tracker.debian.org/tracker/CVE-2026-42496)
+e [Debian CVE-2026-8376](https://security-tracker.debian.org/tracker/CVE-2026-8376).
+
+A falha anterior de publicação de `edge-web` no run `37114381756` saiu com
+código 255 após a cópia dos manifestos. Ela não se repetiu no run atual; os
+logs antigos não comprovam sua causa. A extração de digest, porém, fechava o
+pipe ao encontrar o primeiro header. Sob `pipefail`, isso pode reprovar um
+inspector que ainda escreve detalhes. A publicação e a resolução para
+promoção agora consomem toda a saída e continuam comparando o primeiro digest
+com a referência aprovada. O teste de regressão exercita um pipe real com
+saída extensa, falha do produtor e header ausente. A validação remota do novo
+build e do scan pertence ao CI do commit que contém a correção.
 
 Trivy foi escolhido por reunir vulnerabilidades de pacotes e imagem em um
 scanner conhecido, reproduzível e integrável ao GitHub Actions. Ele roda no

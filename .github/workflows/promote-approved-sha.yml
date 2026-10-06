@@ -102,8 +102,9 @@ jobs:
           test "$edge_record" = "edge-web=$REGISTRY_ROOT/edge-web@$edge_digest"
           test "$runtime_record" = "runtime=$REGISTRY_ROOT/runtime@$runtime_digest"
 
-          edge_registry_digest="$(docker buildx imagetools inspect "$edge_tag" | awk '/^Digest:/ { print $2; exit }')"
-          runtime_registry_digest="$(docker buildx imagetools inspect "$runtime_tag" | awk '/^Digest:/ { print $2; exit }')"
+          # Drain inspector output before validating the immutable references.
+          edge_registry_digest="$(docker buildx imagetools inspect "$edge_tag" | awk '/^Digest:/ && !seen++ { print $2 }')"
+          runtime_registry_digest="$(docker buildx imagetools inspect "$runtime_tag" | awk '/^Digest:/ && !seen++ { print $2 }')"
           test "$edge_registry_digest" = "$edge_digest"
           test "$runtime_registry_digest" = "$runtime_digest"
 

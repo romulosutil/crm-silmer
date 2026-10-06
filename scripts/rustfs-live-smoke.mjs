@@ -50,6 +50,13 @@ export function validateRustfsSmokeEnvironment(env) {
     'Smoke only accepts an isolated CRM bucket pair',
   );
   requireCondition(bucket !== deniedBucket, 'Smoke buckets must be distinct');
+  const deniedObjectKey = required(env, 'RUSTFS_SMOKE_DENIED_OBJECT_KEY');
+  requireCondition(
+    /^compatibility-canary\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u.test(
+      deniedObjectKey,
+    ),
+    'Denied object must be a known synthetic canary',
+  );
   const digest = required(env, 'RUSTFS_RUNNING_IMAGE_DIGEST');
   requireCondition(
     /^sha256:[a-f0-9]{64}$/u.test(digest),
@@ -59,6 +66,7 @@ export function validateRustfsSmokeEnvironment(env) {
     endpoint: endpoint.origin,
     bucket,
     deniedBucket,
+    deniedObjectKey,
     digest,
     region: required(env, 'MEDIA_S3_REGION'),
     accessKeyId: required(env, 'MEDIA_S3_ACCESS_KEY_ID'),
@@ -237,6 +245,26 @@ export async function runRustfsLiveSmoke(options = {}) {
       cross.status === 403,
       'Cross-bucket access must return 403',
     );
+    stage = 'cross-bucket object HEAD';
+    const deniedHead = await request(
+      'HEAD',
+      config.deniedBucket,
+      config.deniedObjectKey,
+    );
+    requireCondition(
+      deniedHead.status === 403,
+      'Cross-bucket object HEAD must return 403',
+    );
+    stage = 'cross-bucket object GET';
+    const deniedGet = await request(
+      'GET',
+      config.deniedBucket,
+      config.deniedObjectKey,
+    );
+    requireCondition(
+      deniedGet.status === 403,
+      'Cross-bucket object GET must return 403',
+    );
     stage = 'DELETE';
     const remove = await request('DELETE', config.bucket, key);
     requireCondition(remove.status === 204, 'DELETE must return 204');
@@ -279,6 +307,8 @@ export async function runRustfsLiveSmoke(options = {}) {
       invalidRange: true,
       anonymousDenied: true,
       crossBucketDenied: true,
+      crossObjectHeadDenied: true,
+      crossObjectGetDenied: true,
       noExpiryLifecycle: true,
       deleteAndMissing: true,
     },

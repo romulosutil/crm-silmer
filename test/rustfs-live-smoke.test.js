@@ -15,10 +15,12 @@ const env = {
   MEDIA_S3_ACCESS_KEY_ID: 'synthetic-limited-key',
   MEDIA_S3_SECRET_ACCESS_KEY: 'synthetic-secret-not-real',
   RUSTFS_SMOKE_DENIED_BUCKET: 'crm-silmer-chat-media',
+  RUSTFS_SMOKE_DENIED_OBJECT_KEY:
+    'compatibility-canary/07000000-0000-4000-8000-000000000001',
   RUSTFS_RUNNING_IMAGE_DIGEST: `sha256:${'a'.repeat(64)}`,
 };
 
-/** @param {{rangeStatus?: number, anonymousStatus?: number, crossStatus?: number, corrupt?: boolean, transportFailure?: boolean, lifecycle?: boolean}} [fault] */
+/** @param {{rangeStatus?: number, anonymousStatus?: number, crossStatus?: number, crossObjectGetStatus?: number, corrupt?: boolean, transportFailure?: boolean, lifecycle?: boolean}} [fault] */
 function harness(fault = {}) {
   /** @type {Array<{method: string, path: string, signed: boolean}>} */
   const calls = [];
@@ -36,7 +38,10 @@ function harness(fault = {}) {
     calls.push({ method, path: url.pathname, signed });
     if (url.pathname.startsWith('/crm-silmer-chat-media/')) {
       return new globalThis.Response(null, {
-        status: fault.crossStatus ?? 403,
+        status:
+          method === 'GET'
+            ? (fault.crossObjectGetStatus ?? 403)
+            : (fault.crossStatus ?? 403),
       });
     }
     if (!signed) {
@@ -118,6 +123,8 @@ test('T1 synthetic smoke verifies bytes, HEAD hash/size, ranges, denials and cle
     invalidRange: true,
     anonymousDenied: true,
     crossBucketDenied: true,
+    crossObjectHeadDenied: true,
+    crossObjectGetDenied: true,
     noExpiryLifecycle: true,
     deleteAndMissing: true,
   });
@@ -241,6 +248,13 @@ test('T1 PUT response loss attempts cleanup and never discloses raw transport er
   );
   assert.equal(h.removed(), true);
   assert.equal(h.evidence(), undefined);
+});
+
+test('T1 denied bucket HEAD cannot hide permitted object GET', async () => {
+  const h = harness({ crossObjectGetStatus: 200 });
+  await assert.rejects(h.run(), /cross-bucket object GET/u);
+  assert.equal(h.evidence(), undefined);
+  assert.equal(h.removed(), true);
 });
 
 test('T1 expiry lifecycle prevents activation without changing provider settings', async () => {

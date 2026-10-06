@@ -1,5 +1,20 @@
 # Execução INBOX-MEDIA-1
 
+## Fix T13: texto reservado não permite leitura técnica de mídia
+
+MED-22: revisão intermediária encontrou caminho text sem bound row. Red SQL
+mostrou undefined aceito e HTTP GET503; reader agora exige image/audio/video
+e bound row existente, retornando409 no GET e preflight, sem S3 ou mutação.
+`test/chat-media-bind-postgres-live.test.js:838` assert.equal(response.statusCode,409)
+para as duas representações e `:842` assert.rejects(repo.readReservedMedia(...),
+{statusCode:409}) cobrem o critério. `:849` assert.deepEqual(await effects(),before)
+prova ausência de mutações. Inversamente cada assertion corresponde a MED-22;
+nenhum caso publicado removido ou enfraquecido. Fixture monta reserva real SQL
+e transporte Fastify; texto normal preservado pelos cenários T12. Quick818/3
+skips antigos; bindSQL46/46 (45 anteriores+1 novo); transporte8/8,
+typecheck/lint/diff verdes. Fix isolado; testes novos T14 ainda red foram
+preservados em var apenas durante este gate e serão restaurados. Nenhum Verified.
+
 ## T13: Endpoint tecnico e preflight por reserva
 
 MED-16/20/21/22/24: red inicial demonstrou metodo de leitura ausente e abort de outra execucao aceito. GET valida Basic/capacidade minima, comando processing/mensagem sending, identidade original do recibo n8n_events, variante bound e fence human/nonterminal/epoch/revision. Preflight JSON nao acessa S3 nem renova/reserva; HEAD e seletores estrangeiros negados. workflow.failed before_message_send conclui sob CAS original e allowlist, mesmo com epoch invalidado, sem retry nem regressao final. SQL60/60=45bind(38baseline+7T13)+7inbox+3migrations+1command-store+4n8n-integration, zero skips; comandos node --test --test-concurrency=1 com esses cinco arquivos, TEST_DATABASE_URL dedicada. Quick818pass/3skips antigos; transporte8/8; E2E107/7skips antigos com workers1; typecheck/lint/diff e spec/tasks strict verdes. Sem schema novo; proviniencia em events, nao commands. Prova dos ramos preMeta fica em T14/T15; Meta/recovery externos T23 e Verifier final pendentes. Proximo T14;11 tarefas restantes; nenhuma Verified.

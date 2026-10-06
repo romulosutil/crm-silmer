@@ -172,7 +172,6 @@ test('records the existing schedule/rustfs with its gaps explicit (ADR 023)', as
     'shared-project',
     'cross-project-endpoint-smoke-pending',
     'image-digest-not-confirmed',
-    'private-bucket-pending',
     'dedicated-bucket-credential-pending',
     'off-host-backup-not-evidenced',
   ]);
@@ -313,10 +312,10 @@ test('keeps the object storage gate pending while public domains or gaps remain'
     /cannot pass while public domains or gaps remain/iu,
   );
 
-  const claimedBucket = clone(gate);
-  claimedBucket.objectStorageGate.privateBucketCreated = true;
+  const claimedCredential = clone(gate);
+  claimedCredential.objectStorageGate.apiCredentialsSeparated = true;
   assert.throws(
-    () => validateProvisioningGate(claimedBucket, topology),
+    () => validateProvisioningGate(claimedCredential, topology),
     /match the observed/iu,
   );
 

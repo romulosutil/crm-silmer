@@ -90,7 +90,7 @@
     "sharedProjectRiskAccepted": false,
     "crossProjectEndpointSmoked": false,
     "imageDigestConfirmed": false,
-    "privateBucketCreated": false,
+    "privateBucketCreated": true,
     "apiCredentialsSeparated": false,
     "offHostBackupConfigured": false,
     "restoreDrilledWithPostgres": false

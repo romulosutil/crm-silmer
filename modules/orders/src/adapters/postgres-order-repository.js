@@ -84,7 +84,7 @@ function violates(error, constraint) {
  *
  * @param {Queryable} transaction @param {string} conversationId
  */
-async function lockConversation(transaction, conversationId) {
+export async function lockConversation(transaction, conversationId) {
   const result = await transaction.query(
     `SELECT assigned_user_id FROM crm.conversations
      WHERE id = $1 FOR UPDATE`,
@@ -103,7 +103,7 @@ async function lockConversation(transaction, conversationId) {
  * @param {{assigned_user_id: string|null}} conversation
  * @param {boolean} allowTechnical
  */
-async function assertWriteOwner(
+export async function assertWriteOwner(
   transaction,
   actor,
   conversation,

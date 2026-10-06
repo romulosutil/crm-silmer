@@ -8,6 +8,7 @@ import {
   PostgresWebhookInbox,
   processMetaWebhook,
 } from '@crm-silmer/integration-reliability';
+import { objectStorageFromEnvironment } from '@crm-silmer/orders';
 import { createApi } from './app.js';
 import { createAutomationAuthRuntime } from './automation-auth-runtime.js';
 import { createCommercialRuntime } from './commercial-runtime.js';
@@ -188,6 +189,8 @@ export function createOrdersForServer({ database, environment, operations }) {
   return createOrderApiRuntime(database, {
     access: /** @type {any} */ (operations),
     environment,
+    // ADR 021: the art files turn on with the OBJECT_STORAGE_* variables.
+    storage: objectStorageFromEnvironment(environment),
   });
 }
 

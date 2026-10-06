@@ -2,6 +2,28 @@
 export { InMemoryOrderRepository } from './adapters/in-memory-order-repository.js';
 export { PostgresOrderConversationPort } from './adapters/postgres-order-conversation-port.js';
 export { PostgresOrderRepository } from './adapters/postgres-order-repository.js';
+export { PostgresOrderFileRepository } from './adapters/postgres-order-file-repository.js';
+export {
+  InMemoryObjectStorage,
+  InMemoryOrderFileRepository,
+} from './adapters/in-memory-order-files.js';
+export {
+  ObjectStorageUnavailableError,
+  S3ObjectStorage,
+  objectStorageFromEnvironment,
+} from './adapters/s3-object-storage.js';
+export {
+  ORDER_FILE_LIMITS,
+  createOrderFileService,
+} from './application/order-file-service.js';
+export {
+  MAX_ORDER_FILE_BYTES,
+  MAX_ORDER_REFERENCE_FILES,
+  MAX_ORDER_THUMBNAIL_BYTES,
+  ORDER_FILE_FORMATS,
+  OrderFileTooLargeError,
+  describeOrderFile,
+} from './domain/order-files.js';
 export {
   DEFAULT_ORDER_PAGE_SIZE,
   ORDER_SECTIONS,

@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { CAPABILITIES } from '@crm-silmer/identity-access';
 import {
@@ -5,12 +7,15 @@ import {
   PostgresIdempotencyRecordStore,
 } from '@crm-silmer/integration-reliability';
 import {
+  createOrderFileService,
   createOrderService,
+  ORDER_FILE_LIMITS,
   OrderConflictError,
   OrderForbiddenError,
   OrderInputError,
   OrderNotFoundError,
   PostgresOrderConversationPort,
+  PostgresOrderFileRepository,
   PostgresOrderRepository,
 } from '@crm-silmer/orders';
 
@@ -51,6 +56,7 @@ import {
  *   fabCode: string,
  *   idempotencyStore: {execute: (identity: any, operation: (transaction?: unknown) => Promise<unknown>) => Promise<unknown>},
  *   repository: any,
+ *   files?: {repository: any, storage: any},
  *   clock?: () => Date,
  *   idFactory?: () => string,
  * }} options
@@ -107,6 +113,20 @@ export function createOrderRuntime(options) {
     idFactory: options.idFactory,
     repository: options.repository,
   });
+
+  // ADR 021: without object storage the art files stay off and their routes
+  // answer 503, while the rest of the order keeps working.
+  const fileService = options.files
+    ? createOrderFileService({
+        async authorizeOwnership({ actor, conversationId }) {
+          await ownConversation(actor, conversationId);
+        },
+        clock: options.clock,
+        files: options.files.repository,
+        orders: options.repository,
+        storage: options.files.storage,
+      })
+    : undefined;
 
   /**
    * Shapes stored orders into the public Order contract: people are named,
@@ -167,6 +187,50 @@ export function createOrderRuntime(options) {
   /** @param {any} order */
   async function presentOne(order) {
     return (await present([order]))[0];
+  }
+
+  /**
+   * The public OrderFiles contract: names of who uploaded, storage keys and
+   * hashes kept inside the API.
+   *
+   * @param {{final: any, references: any[]}} files
+   */
+  async function presentFiles(files) {
+    const all = [files.final, ...files.references].filter(Boolean);
+    const names = await conversations.readUserNames([
+      ...new Set(all.map((file) => file.uploadedBy)),
+    ]);
+    /** @param {any} file */
+    const one = (file) =>
+      file && {
+        contentType: file.contentType,
+        extension: file.extension,
+        id: file.id,
+        name: file.name,
+        sizeBytes: file.sizeBytes,
+        slot: file.slot,
+        thumbnail: file.thumbnailKey !== null,
+        uploadedAt: file.uploadedAt,
+        uploadedBy: {
+          id: file.uploadedBy,
+          name: names.get(file.uploadedBy) ?? '',
+        },
+      };
+    return {
+      final: one(files.final),
+      limits: ORDER_FILE_LIMITS,
+      references: files.references.map(one),
+    };
+  }
+
+  function requireFiles() {
+    if (!fileService) {
+      throw Object.assign(new Error('Order files are not configured'), {
+        code: 'FILE_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+      });
+    }
+    return fileService;
   }
 
   /**
@@ -297,6 +361,82 @@ export function createOrderRuntime(options) {
     },
 
     /** @param {string} orderId */
+    async listFiles(orderId) {
+      return presentFiles(await requireFiles().list(orderId));
+    },
+
+    /**
+     * ADR 021: the command fingerprint carries the content hashes, so a
+     * retry with the same key and bytes replays the first answer and other
+     * bytes under that key are refused.
+     *
+     * @param {OrderCommand & {orderId: string, slot: unknown, name: unknown, content: Buffer, thumbnail: Buffer|null}} input
+     */
+    async uploadFile(input) {
+      const files = requireFiles();
+      const contentSha256 = sha256Hex(input.content);
+      return run(
+        input,
+        {
+          action: 'order.file.upload',
+          command: {
+            contentSha256,
+            name: typeof input.name === 'string' ? input.name : null,
+            slot: typeof input.slot === 'string' ? input.slot : null,
+            thumbnailSha256: input.thumbnail
+              ? sha256Hex(input.thumbnail)
+              : null,
+          },
+          expectedVersion: contentSha256,
+          target: { id: input.orderId, type: 'order' },
+        },
+        async () => presentFiles((await files.upload(input)).files),
+      );
+    },
+
+    /** @param {OrderCommand & {orderId: string, fileId: string}} input */
+    async removeFile(input) {
+      const files = requireFiles();
+      return run(
+        input,
+        {
+          action: 'order.file.remove',
+          command: { fileId: input.fileId, orderId: input.orderId },
+          expectedVersion: input.fileId,
+          target: { id: input.orderId, type: 'order' },
+        },
+        async () => presentFiles((await files.remove(input)).files),
+      );
+    },
+
+    /**
+     * A download is audited like a command (who read which file), without
+     * an idempotency record: reading twice is harmless.
+     *
+     * @param {{actor: OrderActor, correlationId: string, orderId: string, fileId: string}} input
+     */
+    async openFileContent(input) {
+      const opened = await requireFiles().openContent(
+        input.orderId,
+        input.fileId,
+      );
+      await options.auditTrail.append({
+        action: 'order.file.download',
+        actor: input.actor.id,
+        correlationId: input.correlationId,
+        reason: 'order.file.download',
+        target: { id: input.orderId, type: 'order' },
+        version: input.fileId,
+      });
+      return opened;
+    },
+
+    /** @param {string} orderId @param {string} fileId */
+    async openFileThumbnail(orderId, fileId) {
+      return requireFiles().openThumbnail(orderId, fileId);
+    },
+
+    /** @param {string} orderId */
     async get(orderId) {
       return { order: await presentOne(await service.get(orderId)) };
     },
@@ -331,6 +471,11 @@ export function createOrderRuntime(options) {
   });
 }
 
+/** @param {Buffer} content */
+function sha256Hex(content) {
+  return createHash('sha256').update(content).digest('hex');
+}
+
 /** @param {unknown} value */
 function requireVersion(value) {
   if (!Number.isSafeInteger(value) || Number(value) < 1) {
@@ -346,7 +491,7 @@ function requireVersion(value) {
  * order routes share the Inbox read (session) and write (session + CSRF) rules.
  *
  * @param {any} database
- * @param {{access: OrderAccess, environment?: Record<string, string|undefined>}} options
+ * @param {{access: OrderAccess, environment?: Record<string, string|undefined>, storage?: any}} options
  */
 export function createOrderApiRuntime(database, options) {
   const environment = options.environment ?? process.env;
@@ -373,6 +518,15 @@ export function createOrderApiRuntime(database, options) {
         'IDEMPOTENCY_ENVELOPE_KEY',
       ),
     }),
+    files: options.storage
+      ? {
+          repository: new PostgresOrderFileRepository({
+            database,
+            envelopeKey,
+          }),
+          storage: options.storage,
+        }
+      : undefined,
     repository: new PostgresOrderRepository({ database, envelopeKey }),
   });
 }

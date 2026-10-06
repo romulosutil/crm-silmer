@@ -46,3 +46,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [020 — Técnica por item e arte do pedido](020-tecnica-por-item-e-arte-do-pedido.md)
 - [021 — Adotar OpenAI no MVP](021-adotar-openai-no-mvp.md)
 - [022 — Manter deploy automático GitHub → EasyPanel](022-manter-deploy-automatico-github-easypanel.md)
+- [023 — Mídia do chat no RustFS](023-midia-do-chat-no-rustfs.md)

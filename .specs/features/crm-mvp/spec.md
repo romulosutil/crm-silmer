@@ -139,7 +139,7 @@ um canal não corrompe o histórico do outro.
 
 1. **PRV-01:** WHEN uma pessoa ou o ator técnico do n8n acessa ou altera dados THEN o sistema SHALL aplicar as capacidades mínimas definidas no P0.7 e no contrato `AUTOMATION_EXECUTOR`, sem permitir autoatribuição ou acesso direto ao banco.
 2. **PRV-02:** WHEN dados pessoais são alterados, exportados, anonimizados ou excluídos THEN o sistema SHALL registrar a operação conforme a política aprovada no P0.6.
-3. **PRV-03:** WHEN o prazo de retenção é alcançado THEN o sistema SHALL aplicar a regra aprovada de descarte ou anonimização e permitir a execução pelo administrador técnico designado; para mídia transitória, o prazo SHALL ser o menor entre o encerramento da jornada e sete dias do recebimento ou envio.
+3. **PRV-03:** WHEN o prazo de retenção é alcançado THEN o sistema SHALL aplicar a regra aprovada de descarte ou anonimização e permitir a execução pelo administrador técnico designado; para mídia transitória legada, o prazo SHALL ser o menor entre o encerramento da jornada e sete dias do recebimento ou envio. A nova mídia enviada do chat segue ADR 023 e MED-15: preservar até nova decisão de política, sem expurgo por sete dias ou encerramento; implementação pendente em INBOX-MEDIA-1.
 
 **Responsável de privacidade:** Rômulo Sutil Corrêa. A política do piloto foi aprovada após consulta jurídica.
 

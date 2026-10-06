@@ -149,6 +149,14 @@ Mídia de canal é privada e temporária. Bytes expiram no fim da jornada ou
 em sete dias. Quarentena, limites, MIME/hash e scan precedem acesso.
 Worker trata retenção; detalhes em [TRANSIENT-MEDIA](docs/phase0/TRANSIENT-MEDIA.md).
 
+A nova classe de mídia enviada no chat usará RustFS existente, sem exclusão
+automática por sete dias ou encerramento (ADR 023). O desenho prevê registro
+persistente separado do contrato transitório, leitura privada por conversa,
+processamento no worker e reserva n8n por referência imutável. Implementação,
+normalização de áudio e migração de cópias legadas disponíveis estão pendentes
+no [plano INBOX-MEDIA-1](.specs/features/inbox-media-rustfs/design.md). O storage
+R2 futuro não é dependência dessa entrega; backup externo/restore têm gate próprio.
+
 Perda da única cópia resulta em `lost/unavailable`. Arquivos válidos seguem
 procedimento Dropbox. Upload de arte e arquivo durável por API não estão
 habilitados no contrato atual. S3/R2 está diferido na issue #29; essa decisão

@@ -185,7 +185,15 @@ pode ajustar para duas vezes a entrada do anexo, ou entrada mais duas vezes
 Essa conta cobre spool, intermediário/variante e objeto conjuntamente.
 Limite é aplicado durante streaming e confirmado pelo tamanho/hash real.
 
-Worker usa jobs PostgreSQL; inicia com duas conversões simultâneas no máximo.
+Worker usa jobs PostgreSQL; executa conversões sequencialmente (um decoder).
+API admite no máximo dois pipelines por bucket, contando receiving recente
+(três minutos) ou com guard futuro, e mídia
+com job pending/retry/processing ou guarda física futura; quota lock serializa
+sessões diferentes. Pipeline saturado devolve429 antes de nova reserva/bytes.
+Ready/job terminal sem guarda libera capacidade; replay já aceito não consome
+slot novo, mesmo com quota/capacidade cheia. O limite não afeta mensagens texto.
+Receiving órfão com grace expirada libera slot, mas conserva reserva e bytes
+até cleanup confirmado >24h; não bloqueia todas as admissões por24h após crash.
 ClamAV falha fechado, libmagic verifica MIME, ffprobe verifica container,
 codec e duração. FFmpeg/ffprobe entram na imagem runtime existente como
 dependência justificada, sem serviço novo. Use execFile com argumentos fixos,

@@ -1,0 +1,154 @@
+name: crm-silmer-media-local
+
+x-runtime: &runtime
+  image: crm-silmer-media-local-runtime
+  build:
+    context: .
+    dockerfile: docker/runtime.Dockerfile
+  env_file: ${MEDIA_LOCAL_STATE_ROOT:?Run npm run dev:media}/api.env
+  user: '1000:1000'
+  network_mode: service:rustfs
+  volumes:
+    - chat-spool:/var/lib/crm-chat-media
+    - legacy-spool:/var/lib/crm-legacy-media
+    - signatures:/var/lib/clamav:ro
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: crm_silmer_media
+      POSTGRES_USER: crm_silmer_media
+      POSTGRES_PASSWORD: synthetic-media-development-only
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U crm_silmer_media -d crm_silmer_media']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    ports:
+      - '127.0.0.1:15435:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  n8n-postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: n8n_media
+      POSTGRES_USER: n8n_media
+      POSTGRES_PASSWORD: synthetic-media-n8n-only
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U n8n_media -d n8n_media']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - n8n-postgres-data:/var/lib/postgresql/data
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.99@sha256:103dd40b84d5aa3d5ab02f3a693797eb1d14cb842554b222dfbb589f364aa47f
+    mem_limit: 1g
+    cpus: 1.0
+    environment:
+      RUSTFS_ACCESS_KEY: crm-media-local-bootstrap
+      RUSTFS_SECRET_KEY: ${MEDIA_LOCAL_ROOT_SECRET:?Local bootstrap secret required}
+      RUSTFS_CONSOLE_ENABLE: 'false'
+      RUSTFS_OBS_LOG_LEVEL: error
+    healthcheck:
+      test:
+        ['CMD', 'curl', '--fail', '--silent', 'http://127.0.0.1:9000/health']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    ports:
+      - '127.0.0.1:21920:9000'
+      - '127.0.0.1:3013:3000'
+      - '127.0.0.1:5688:5678'
+    volumes:
+      - rustfs-data:/data
+
+  api:
+    <<: *runtime
+    mem_limit: 2g
+    cpus: 1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+
+  worker:
+    <<: *runtime
+    env_file: ${MEDIA_LOCAL_STATE_ROOT:?Run npm run dev:media}/worker.env
+    mem_limit: 2g
+    cpus: 1.0
+    command: ['node', 'apps/worker/src/worker.js']
+    depends_on:
+      api:
+        condition: service_healthy
+      n8n:
+        condition: service_healthy
+    volumes:
+      - chat-spool:/var/lib/crm-chat-media
+      - legacy-spool:/var/lib/crm-legacy-media
+      - signatures:/var/lib/clamav
+
+  n8n:
+    image: n8nio/n8n:2.38.7
+    env_file: ${MEDIA_LOCAL_STATE_ROOT:?Run npm run dev:media}/n8n.env
+    network_mode: service:rustfs
+    mem_limit: 2g
+    cpus: 1.0
+    depends_on:
+      n8n-postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n_media
+      DB_POSTGRESDB_USER: n8n_media
+      DB_POSTGRESDB_PASSWORD: synthetic-media-n8n-only
+      N8N_HOST: 127.0.0.1
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      N8N_EDITOR_BASE_URL: http://127.0.0.1:5688
+      N8N_WEBHOOK_URL: http://127.0.0.1:5688/
+      N8N_SECURE_COOKIE: 'false'
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: 'false'
+      N8N_DIAGNOSTICS_ENABLED: 'false'
+      N8N_PERSONALIZATION_ENABLED: 'false'
+      N8N_TEMPLATES_ENABLED: 'false'
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: 'true'
+      EXECUTIONS_DATA_PRUNE: 'true'
+      EXECUTIONS_DATA_MAX_AGE: '720'
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: none
+      EXECUTIONS_DATA_SAVE_ON_ERROR: none
+      EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS: 'false'
+      EXECUTIONS_DATA_SAVE_ON_PROGRESS: 'false'
+    healthcheck:
+      test:
+        ['CMD', 'wget', '--quiet', '--spider', 'http://127.0.0.1:5678/healthz']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./ops/n8n/workflows:/workflows:ro
+      - ./ops/n8n/import-local-workflow.mjs:/import-local-workflow.mjs:ro
+    entrypoint: ['/bin/sh', '-ec']
+    command:
+      - |
+        node /import-local-workflow.mjs /workflows/0S5ZS1xeDCSoWovs-local-test.sanitized.json /home/node/.n8n/silmer-local-workflow-imported
+        exec n8n start
+
+volumes:
+  postgres-data:
+  n8n-postgres-data:
+  n8n-data:
+  rustfs-data:
+  chat-spool:
+  legacy-spool:
+  signatures:

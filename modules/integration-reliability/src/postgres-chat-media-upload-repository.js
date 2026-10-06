@@ -9,21 +9,26 @@ export class PostgresChatMediaUploadRepository {
   #database;
   #bucketAlias;
   #limitBytes;
-  /** @param {{database:any,bucketAlias?:string,limitBytes?:number}} options */
+  #processingCapacity;
+  /** @param {{database:any,bucketAlias?:string,limitBytes?:number,processingCapacity?:number}} options */
   constructor({
     database,
     bucketAlias = 'chat-dev',
     limitBytes = 1024 * 1024 * 1024,
+    processingCapacity = 2,
   }) {
     if (
       !['chat-dev', 'chat-operational'].includes(bucketAlias) ||
       !Number.isSafeInteger(limitBytes) ||
-      limitBytes < 1
+      limitBytes < 1 ||
+      !Number.isSafeInteger(processingCapacity) ||
+      processingCapacity < 1
     )
       throw new TypeError('Invalid chat media quota');
     this.#database = database;
     this.#bucketAlias = bucketAlias;
     this.#limitBytes = limitBytes;
+    this.#processingCapacity = processingCapacity;
   }
   /** @param {string} id @param {Function} work */
   async withUploadLease(id, work) {
@@ -136,8 +141,26 @@ export class PostgresChatMediaUploadRepository {
           [sessionHash],
         )
       ).rows[0];
+      // The quota row serializes capacity across sessions and conversations.
+      // A terminal job alone does not prove a physical writer has closed.
+      const pipelines = existing
+        ? 0
+        : (
+            await client.query(
+              `SELECT (
+            (SELECT count(*) FROM crm.chat_media_admissions WHERE bucket_alias=$1 AND state='receiving' AND
+              (created_at>now()-interval '3 minutes' OR writer_guard_until>now())) +
+            (SELECT count(*) FROM crm.chat_media m WHERE m.storage_bucket_alias=$1 AND m.message_id IS NULL AND m.cleanup_started_at IS NULL AND
+              ((m.processing_guard_until>now()) OR
+               (m.state IN ('uploaded','processing','unavailable') AND EXISTS
+                (SELECT 1 FROM crm.outbox_jobs j WHERE j.chat_media_id=m.id AND j.job_type='chat_media.process' AND j.status IN ('pending','retry','processing')))))
+          )::int AS count`,
+              [this.#bucketAlias],
+            )
+          ).rows[0].count;
       if (
         recent.count >= 12 ||
+        (!existing && pipelines >= this.#processingCapacity) ||
         (!existing &&
           Number(quota.used_bytes) +
             Number(quota.reserved_bytes) +

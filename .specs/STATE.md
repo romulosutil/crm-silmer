@@ -13,6 +13,19 @@
 
 ## Handoff
 
+T23 implementada: dev:media opt-in, perfil Docker isolado/API-worker built,
+volumes/chaves persistentes, namespace HTTPloopback, papéis mínimos e scanner
+compartilhado UID1000/APIreadonly. Capacidade bucket2 com quota lock, replay
+isento e receiving antigo libera slot após grace3min sem liberar bytes/quota.
+Rollback real preserva attached200/Range206, upload404 e novo sendmedia403;
+texto202 mesmo quando terceiro upload429. Live131/131, Quick862+3skips(total865),
+UI166+7skips(total173), Privacy4/4, recovery14/14mocks com8blockers, audit0.
+Perfil4193/API3013/PG15435/S321920 separado pronto; callbackDEV/normalizer300s
+e wholepipeline permanecem T24. Demo4183/API3002/PG15434 intacta, flow1humano
+pendente. Não logar4193 no browser humano: cookie127 compartilhado por portas.
+Canon distingue mídia enviada preservada do legado; gates remotos/backup/Meta
+e PIIinicialn8n explícitos. PróximoT24; nenhum Verified/validationPASS.
+
 T22 implementada: cleanup de órfãos >24h com intenção durável anterior ao DELETE,
 sem expurgar attached. Guardas de sessão sem BEGIN protegem upload/decoder/PUT
 até fechamento físico, com prazos persistidos 3/15min e deadline upload120s.

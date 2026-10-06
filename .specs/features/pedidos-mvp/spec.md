@@ -852,3 +852,24 @@ REV-04 onde divergem.
 | ARQ-07 | Os bytes ficam no RustFS interno, sem link público nem URL pré-assinada; a chave do objeto é opaca e o nome original fica cifrado no banco. O download sai com `Content-Disposition: attachment`, `nosniff` e CSP `sandbox`. |
 | ARQ-08 | Envio, remoção e download entram na auditoria; envio e remoção são idempotentes. Sem `OBJECT_STORAGE_*` as rotas respondem 503 e o resto do pedido funciona. |
 | ARQ-09 | O bucket entra no backup off-host, no drill e no restore com o PostgreSQL; o handoff manual de mídia válida do canal anexa o arquivo ao pedido. |
+
+## O atendimento começa pelo produto (ADR 021, 05/10/2026)
+
+O PO decidiu que o bot pergunta primeiro o nome e o que o cliente quer
+personalizar, e não qual camisa, porque a Silmer personaliza camisas, bonés,
+mochilas e muitos outros produtos. Arte, malha, técnica, tamanhos e gola
+passam a ser do vendedor, e o que perguntar depende do produto e de kits
+([RFC 009](../../../docs/rfc/009-atendimento-comeca-pelo-produto.md)). O
+contrato com o CRM e a forma do item não mudam. Estes critérios superam, no
+bot, os sete pontos da ADR 012.
+
+| ID | Critério de aceite |
+| --- | --- |
+| PRD-01 | A saudação pede o nome e o que a pessoa quer personalizar (camisetas ou outras roupas, bonés, mochilas e bolsas, ou outro produto); o bot nunca pergunta "qual camisa" antes de saber o produto. Sem o nome, a resposta seguinte reage ao que o cliente contou e pede só o nome; depois de dois pedidos, o nome não é mais perguntado nem segura a ficha, e o resumo diz "Nome: não informado.". |
+| PRD-02 | O ritmo é produto → modelo → cor → quantidade → onde vai a estampa → para quando. O modelo só é perguntado para roupa, boné, mochila ou bolsa, com as opções do produto; o prazo é desejo do cliente, nunca prazo confirmado. |
+| PRD-03 | Origem da arte, técnica, malha, tamanhos, gola, personalização individual e divisão por público nunca são perguntados: o bot grava o que o cliente disser. O bot nunca oferece criar a arte e, de tecido, só fala de algodão, poliéster e dry fit. |
+| PRD-04 | Os kits gravam, só em campo vazio e sem perguntar: abadá (sublimação total, poliéster, branca, gola regata), sublimação total (poliéster, branca), regata (gola regata), polo (gola polo), boné, mochila e bolsa (gola `NAO APLICAVEL`). O workflow também grava o produto a partir do modelo dito, o modelo quando o produto já o nomeia e o nome do produto no modelo de boné e bolsa. |
+| PRD-05 | O resumo da transferência traz "Atenção" (sublimação em algodão ou em peça escura, bordado com foto) e "Dica" (técnica usual do produto, personalização individual, divisão por público); o bot não fala disso com o cliente. |
+| PRD-06 | `briefing_complete` exige os pontos do produto e o nome enquanto o bot o pede; "Ficha: X de N" conta os mesmos campos (7 para roupa, boné ou bolsa; 6 para outro produto ou produto não dito). |
+| PRD-07 | Um boné do bot chega ao item 1 do pedido com o tipo ("bonés trucker"), a cor e a gola "NÃO APLICÁVEL"; malha, técnica, tamanhos e arte ficam para o vendedor, que continua obrigado a preenchê-los para gerar o pedido. "Quero esse boné" é peça já mostrada e transfere (ADR 013). |
+| PRD-08 | O workflow passa a `mvp-simple-12` (DEV `dev-mvp-simple-13`) sem ordem de implantação; o [roteiro do indicador da ficha](../../../docs/integrations/n8n/roteiro-indicador-da-ficha.md) cobre roupa, abadá, boné, ecobag, outro produto, sublimação em peça escura e divisão por público. |

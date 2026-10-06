@@ -162,6 +162,11 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 
 ## Requirement Traceability
 
+Evidência automatizada T24 e matriz dos29AC em docs/runbooks/chat-media-uat.md;
+microfone físico permanece pendente. Status In Progress preservado até UAT e
+Verifier independente. Persistência inicial de header Basic no n8n é gate P1
+de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
+
 | Requirement ID | Story                 | Phase    | Status      | Tasks                 |
 | -------------- | --------------------- | -------- | ----------- | --------------------- |
 | MED-01         | Arquivo imagem        | Execute  | In Progress | T4,T7,T18,T21         |

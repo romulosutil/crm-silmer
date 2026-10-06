@@ -13,6 +13,18 @@
 
 ## Handoff
 
+T24 evidência automatizada concluída: API→builtworker/scanner/normalizer→RustFS
+privado→n8n DEV→callback real, PNG/MP3/MP4/recording sent; replay/ACL/Range,
+301s rejected, attached conservado após fixture8dias+close/scheduler65s.
+Auto-stop real299970ms normaliza OGG/Opusmono48k; playback oito pares
+ChromeWindows/FirefoxLinux, fault failed/unknown e export ativo restaurado.
+Matriz29AC/runbook docs/runbooks/chat-media-uat.md distingue fixture e prova real.
+P1 produção: execution_data inicial persiste recipient/caption/Basic mesmo savesnone;
+operacional bloqueado até minimização/redação+expurgo/readiness comprovados.
+T24 In Progress/Done desmarcado: microfone físico Flow1 ainda pendente na demo4183,
+preservada; Flow2 perfil4193 após coordenação, sem colisão cookie127 entre portas.
+Nenhum Verified/validationPASS; Verifier final/sensor após UAT física completa.
+
 T23 implementada: dev:media opt-in, perfil Docker isolado/API-worker built,
 volumes/chaves persistentes, namespace HTTPloopback, papéis mínimos e scanner
 compartilhado UID1000/APIreadonly. Capacidade bucket2 com quota lock, replay

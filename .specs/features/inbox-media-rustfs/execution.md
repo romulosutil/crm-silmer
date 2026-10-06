@@ -1,5 +1,73 @@
 # Execução INBOX-MEDIA-1
 
+## T24: Evidência automatizada built; UAT física pendente
+
+MED-01..29: matriz completa e fronteiras em docs/runbooks/chat-media-uat.md.
+T24 permanece In Progress/Done desmarcado, sem Verified ou validationPASS.
+Microfone físico ainda aguarda resposta humana na demo4183; Verifier final e
+sensor somente após esse fechamento. Produto/SQL/UI permanecem no snapshot
+4fa0ec1; esta entrega adiciona ferramentas opt-in e documentação de evidência.
+
+Whole pipeline local: API multipart→worker construído/ClamAV/normalizer→RustFS
+privado→binding/reserva→n8n DEV real→callback ao CRM. PNG/MP3/MP4/recording sent;
+nenhum ready semeado e nenhum hosthandler substituto. Inbound setup usa endpoint
+real e atribuição sintética de vendedor. Original auto-stop300s com relógio real
+e hardware fake decodifica299970ms; normalizado GET OGG1543526bytes, Opusmono48k,
+FFprobe299.976500s/padding, FFmpegdecode0. Original301008ms rejeitado invalid_format,
+send409. Replay mantém uma mensagem/comando/mídia/reserva. Timestamp sintético8dias
+mais fechamento e scheduler built65s conservam quatro attached/hashes.
+
+### Adequação T24
+
+| Requisito/caso | Fonte/assertion atual | Discrimina |
+| --- | --- | --- |
+| MED-01/02/03/05/23 | scripts/media-built-local-smoke.mjs:133 upload202; :196 deliveryMode dev; :212 contagens unitárias; :221 GET bytes exatos | Ready seed/handler host, callback fictício, duplicação |
+| MED-12/14 | mesmo script:230 SELECT duration/MIME/origin/hash; :241 duração não nula e assertions seguintes; var/media-T24-built-pipeline-proof.json e GET normalizado/FFprobe | Number(null)=0 aceito, formato/sha variante incorreto |
+| MED-06/16/17/18/15 | mesmo script replay/401/403/206/416 e retenção final; media-T24-full-built-final.log exit0 | ACL ausente, bytes Range incorretos, expurgo attached |
+| MED-21/24 | scripts/media-built-local-fault-smoke.mjs:280 failed/outcome_unknown; :291/292 flags false; :294 código preflight; replay e contagens subsequentes | Efeito após preflight recusado ou retry cego após unknown |
+| MED-23/restauração | mesmo script:83/84 active+published; :144 export fault diferente; :375 finally compara digest restaurado | Fault não efetivo/importer canônico, workflow deixado alterado |
+| MED-17/playback | var/media-T24-playback-codecs.mjs/proof/log, oito pares e Range206/seek/play | Browser não decodifica ou cache mascara fixture; UI HTTPfixture separada da API real |
+| MED-20/gate produção | var/media-T24-privacy-inventory.mjs/proof/log, categorias sem valores | Savesnone interpretado como ausência de persistência inicial |
+
+Logs/provas ignorados preservados: media-T24-full-built-final.log (fonte principal
+permanente exit0), media-T24-fault-callbacks-final.log (código funcional ignorado
+promovido com guard/JSDoc/format), media-T24-playback-codecs-final.log (probe
+observacional real ChromeWindows/FirefoxLinux). Runtime API/worker digest
+24f30677faab7d95739ab66f7cc0f8d9bb3dc177cf08a5ddf482a50942eb0b8a.
+Fault efetivamente ativo provado; export nodes/connections/settings antes=depois
+5f4275e77151cc79dfb600ed7809acb53ee57bede0caf5839f7226ef1e45e395.
+Expectativa inicial errada MEDIA_PREFLIGHT_REJECTED ajustada somente na nova
+fixture ao branch canônico MEDIA_PREFLIGHT_UNAVAILABLE; contrato preservado.
+Primeiro fault restaurado automaticamente pelo importer foi diagnóstico de fixture.
+403 usa ator autenticado sem função operacional e restaura finally: baseline
+permite vendedor ativo ler attached do Inbox, não foi alterada.
+
+P1 externo confirmado: execution_data n8n PostgreSQL persiste recipient20,
+caption16 e header Basic21 em23 linhas soft-deleted. Categorias de bytes/binary,
+filename/objectkey0; logs do ensaio sem canárias nas categorias examinadas.
+Nenhum valor de Basic foi impresso/salvo na evidência. Soft-delete/pruning não
+comprovam expurgo seguro/WAL. Bloqueada ativação com dados/credenciais operacionais
+até minimização/redação+expurgo/readiness reais; DEV sintético não elimina gate.
+Matriz/runbook distinguem testes efetivos, fixtures, browsers e pendências.
+
+Gates de produto preservados no snapshot4fa0ec1: Live131/131 zero skips,
+UI166pass/7skips antigos(total173), Quick862pass/3skips antigos(total865).
+Gates finais do patch de evidência: formatcheck/types/lint/boundaries/tokens/build
+exit0, var/media-T24-structural.log; git diff --check0, ConventionalCommit checker0.
+Spec strict0errors/0warnings; tasks strict inicialmente0errors/1warning T23
+(exit1): interrompido antes de commit. Fronteira T23 refinada para seu resultado
+único operacional e entrypoint Where scripts/dev-media.mjs, com lista completa
+dos outros18arquivos em Supporting files e racional no GranularityCheck.
+Histórico4fa0ec1/ADRs/escopo preservados; rerun strict0errors/0warnings exit0.
+Sem repetir Live/UI por produto intacto.
+Primeiro lint dos novos harnesses encontrou globals Node24 e variável ready
+não usada: declarados via globalThis, await preservado e sem relaxar assertions.
+Inicialização state agora independente de arquivo T23 dispensável; assertions e
+caminho inbound permanecem os mesmos. Hashes dos artefatos em
+var/media-T24-proof-hashes.json. Nenhum gate externo é inferido desses checks.
+Demo4183 intacta e perfil4193 restaurado/disponível; evitar login humano4193
+enquanto sessão4183 pendente (cookies por host compartilham portas).
+
 ## T23: Perfil operacional local, capacidade e recovery
 
 MED-15/19/20/28: startup opt-in `dev:media` constrói API/worker existentes em

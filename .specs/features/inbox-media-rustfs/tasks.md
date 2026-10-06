@@ -395,8 +395,9 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 
 ### T23: Plano operacional de ativação, legado e recovery
 
-**What**: Completar runbook de quotas, migração de cópias disponíveis, backup externo, restore e rollback; perfil Docker local opt-in com runtimes construídos e enforcement de capacidade429.
-**Where**: docs/runbooks/rustfs-chat-media.md; scripts/dev-media.mjs; docker-compose.media.yml; modules/integration-reliability/src/postgres-chat-media-upload-repository.js
+**What**: Entregar um perfil local de mídia operável pelo entrypoint dev:media, com backpressure429 e rollback preservando leitura; seu runbook mantém migração/backup/restore remotos como gates explícitos.
+**Where**: scripts/dev-media.mjs
+**Supporting files**: docker-compose.media.yml; docker/runtime.Dockerfile; .dockerignore; apps/api/src/server.js; modules/integration-reliability/src/postgres-chat-media-upload-repository.js; package.json; docs/runbooks/rustfs-chat-media.md; test/chat-media-upload-postgres-live.test.js; test/media-development-profile.test.js; ABOUT.md; ARCHITECTURE.md; EASYPANEL-TOPOLOGY.md; RULES.md; TECHNICAL-DESIGN.md; .specs/STATE.md; .specs/features/inbox-media-rustfs/design.md; .specs/features/inbox-media-rustfs/execution.md; .specs/features/inbox-media-rustfs/tasks.md.
 **Depends on**: T22
 **Requirement**: MED-15, MED-19, MED-20, MED-28
 **Reuses**: Recovery/topologia atuais; ADR 023; docs canônicos e catálogos executáveis são suporte da entrega.
@@ -419,7 +420,21 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Gate**: Build + Full + smoke RustFS/DEV; Verifier e sensor após o commit final.
 **Commit**: docs(qa): record end-to-end chat media acceptance
 
+Entrega automatizada T24 registrada em docs/runbooks/chat-media-uat.md e execution.md:
+quatro uploads built→DEV/callback, failed/unknown/restauração, replay/ACL/Range,
+normalização300s/negação301s, retenção e playback oito pares. Done permanece
+desmarcado por UAT de microfone físico pendente, sem Verified; Verifier/sensor
+após fechamento. P1 de header Basic persistido no n8n bloqueia uso operacional.
+
 ## Task Granularity Check
+
+T23 tem um resultado operacional único: perfil local de mídia iniciado por
+scripts/dev-media.mjs, incluindo backpressure e rollback legível. Compose,
+admission SQL, configuração runtime, documentação e testes são suporte acoplado
+a esse perfil e estão integralmente enumerados em Supporting files. Entry point
+é a fronteira primária de Where; não se omite escopo nem se criam tarefas
+retroativas para reclassificar o commit4fa0ec1. Refinamento registrado em T24
+após o sensor de granularidade detectar Where com múltiplos arquivos.
 
 Cada Tn possui um único resultado: runbook (T1/T23/T24), migration (T2), adapter
 (T3/T5), validador (T4), worker (T6/T22), endpoint (T7/T8/T9/T13), transação

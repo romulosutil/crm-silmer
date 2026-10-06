@@ -1,5 +1,16 @@
 # Ativação de mídia do chat no RustFS
 
+Integridade T6/MED-19: o SHA original admitido de bytes reais por T7 é
+imutável. Worker compara resultado da validação antes de prepare/PUT e rejeita
+invalid_format em divergência mesmo de igual tamanho. prepare SQL exige SHA
+original null/idêntico e variante ainda não preparada; COALESCE permite seed
+legado null sem sobrescrever admissão. Rejeição conserva spool/reserva até
+cleanup confirmado de T22. Provas: process-worker17/17 e process-postgres15/15;
+pipeline combinado16/16 (zero skips) mantém scanner/normalizer da imagem e
+SDK/handler host; 58.9s na reprodução do fix. Digest da imagem:
+sha256:d372430897763a95b471898d349af004525ae234003fb350e7f5538fbaaf1655.
+Worker process completo e n8n permanecem gates de T24.
+
 Leitura humana T9: GET `/api/v1/conversations/:conversationId/media/:mediaId/content`
 exige sessão e conversation.read, com draft restrito a autor/admin. Serve200
 completo ou206 por Range único fechado/aberto/sufixo; inválido416 traz

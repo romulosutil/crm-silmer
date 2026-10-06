@@ -1,5 +1,33 @@
 # Execução INBOX-MEDIA-1
 
+## Fix T6/MED-19: Integridade da admissão até a variante
+
+Achado independente: prepare substituía o SHA original persistido por T7,
+permitindo um spool alterado válido de mesmo tamanho. Testes escritos primeiro
+falharam: unit não registrou invalid_format e SQL retornou linha/hash substituído
+onde o contrato exigia null. Worker agora compara originalSha256 da validação
+com o original previamente admitido antes de prepare/PUT; divergência é rejected
+invalid_format, sem PUT/ready. SQL prepare preserva original por COALESCE e CAS
+exige original null ou idêntico e content_sha256 null. Variante preparada nunca
+é substituída. Seeds legados com original null continuam preenchidos pela
+validação. Nenhuma migration publicada alterada, nenhum teste enfraquecido.
+
+| Critério / requisito ↔ assertion | Evidência necessária |
+| --- | --- |
+| Mesmo tamanho não autoriza troca, MED-19 | `test/chat-media-process-worker.test.js:307` `assert.equal(Buffer.byteLength('different'),BYTES.length)`; :310 failures invalid_format; :311 prepared0; :312 puts0; :313 ready0; :314 original SHA preservado |
+| SQL/worker rejeita sem cobrança liberada | `test/chat-media-process-postgres-live.test.js:688` original SHA; :689 contentnull; :690 rejected; :691 invalid_format; :692 puts0; :693 reserved igual; :694 used0 |
+| Hash original e variante imutáveis | `test/chat-media-process-postgres-live.test.js:707` prepare divergente null; :714 originalSHA; :715 contentnull; :717 originalSHA; :718 contentSHA; :719 segundo prepare divergente null; :726 contentSHA preservado |
+
+Adequação inversa: assertions307–314 ligadas à divergência antes do efeito;
+assertions680–694 ligadas à conservação SQL/quota; assertions707–726 ligadas
+à CAS/hash e variante, incluindo preenchimento da linha legítima. Testes
+anteriores de pipeline/retry/lease conservados. Gates: unit17/17, SQL15/15;
+types/lint/diff verdes. Pipeline16/16 com scanner/normalizer da imagem construída
+sha256:d372430897763a95b471898d349af004525ae234003fb350e7f5538fbaaf1655 e
+RustFS local alpha.99, 58.9s, zero skips. Handler/SQL/SDK no host e ferramentas
+da imagem por helper; não prova worker process completo nem n8n, que seguem T24.
+Autor não é Verifier.
+
 ## T9: Conteúdo privado com Range e recuperação
 
 Critérios e arquivos comunicados antes do patch: content route/runtime, app/server,

@@ -671,4 +671,58 @@ if (connectionString) {
       }
     });
   }
+  test('T6/MED-19: admitted hash mismatch rejects equal-size spool without PUT or ready', async () => {
+    const f = await fixture();
+    try {
+      const admittedSha = createHash('sha256')
+        .update(Buffer.from('different'))
+        .digest('hex');
+      assert.equal(Buffer.byteLength('different'), BYTES.length);
+      await pool.query(
+        'UPDATE crm.chat_media SET original_sha256=$2 WHERE id=$1',
+        [f.seeded.id, admittedSha],
+      );
+      const reserved = Number((await quota()).reserved_bytes);
+      assert.equal(await f.runtime.runOnce(), 1);
+      const row = await media(f.seeded.id);
+      assert.equal(row.original_sha256, admittedSha);
+      assert.equal(row.content_sha256, null);
+      assert.equal(row.state, 'rejected');
+      assert.equal(row.sanitized_reason, 'invalid_format');
+      assert.equal(f.calls.puts, 0);
+      assert.equal(Number((await quota()).reserved_bytes), reserved);
+      assert.equal(Number((await quota()).used_bytes), 0);
+    } finally {
+      await f.cleanup();
+    }
+  });
+  test('T6/MED-19: prepare cannot replace admitted original SHA or immutable prepared variant', async () => {
+    const seeded = await seed();
+    await pool.query(
+      'UPDATE crm.chat_media SET original_sha256=$2 WHERE id=$1',
+      [seeded.id, SHA],
+    );
+    const job = await claim();
+    const row = await repository.acquire(job);
+    assert.equal(
+      await repository.prepare(job, row, {
+        ...METADATA,
+        originalSha256: 'd'.repeat(64),
+      }),
+      null,
+    );
+    assert.equal((await media(seeded.id)).original_sha256, SHA);
+    assert.equal((await media(seeded.id)).content_sha256, null);
+    const prepared = await repository.prepare(job, row, METADATA);
+    assert.equal(prepared.original_sha256, SHA);
+    assert.equal(prepared.content_sha256, SHA);
+    assert.equal(
+      await repository.prepare(job, prepared, {
+        ...METADATA,
+        sha256: 'd'.repeat(64),
+      }),
+      null,
+    );
+    assert.equal((await media(seeded.id)).content_sha256, SHA);
+  });
 }

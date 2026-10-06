@@ -298,3 +298,21 @@ for (const options of [{ failFailure: true }, { failCas: true }]) {
     }
   });
 }
+test('T6/MED-19: same-size spool replacement preserves admitted SHA and prevents prepare/PUT/ready', async () => {
+  const f = await fixture();
+  try {
+    const admittedSha = createHash('sha256')
+      .update(Buffer.from('different'))
+      .digest('hex');
+    assert.equal(Buffer.byteLength('different'), BYTES.length);
+    f.row().original_sha256 = admittedSha;
+    assert.equal((await f.handler(f.job, f.context)).outcome, 'sent');
+    assert.deepEqual(f.calls.failures, ['invalid_format']);
+    assert.equal(f.calls.prepared, 0);
+    assert.equal(f.calls.puts, 0);
+    assert.equal(f.calls.ready, 0);
+    assert.equal(f.row().original_sha256, admittedSha);
+  } finally {
+    await f.cleanup();
+  }
+});

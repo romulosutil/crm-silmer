@@ -13,6 +13,12 @@
 
 ## Handoff
 
+Fix T6/MED-19 concluído antes de T10: SHA original da admissão preservado,
+divergência de spool igual tamanho rejeitada antes de prepare/PUT; prepare SQL
+exige SHA original null/idêntico e variante ainda null. Unit17/17, SQL15/15,
+pipeline combinado16/16 com imagem construída e RustFS local, zero skips;
+types/lint/format/diff verdes. Próxima tarefa T10; nenhum status Verified.
+
 T9 concluída; T1 a T9 entregues, 15 tarefas pendentes, nenhuma Verified.
 Conteúdo Range humano usa ACL de T8, HEAD/GET SHA/MIME/size e stream bounded.
 503 transitório preserva ready/attached; MissingObject410 usa CAS e mantém quota.

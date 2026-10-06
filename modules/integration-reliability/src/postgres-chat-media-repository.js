@@ -61,12 +61,13 @@ export class PostgresChatMediaRepository {
   async prepare(job, row, metadata) {
     return this.#owned(job, async (/** @type {any} */ client) => {
       const updated = await client.query(
-        `UPDATE crm.chat_media SET original_sha256=$4,
+        `UPDATE crm.chat_media SET original_sha256=COALESCE(original_sha256,$4),
         content_sha256=$5,size_bytes=$6,detected_mime_type=$7,container=$8,
         audio_codec=$9,video_codec=$10,duration_ms=$11,validation_status='clean',
         sanitized_reason=NULL,version=version+1
         WHERE id=$1 AND version=$2 AND processing_attempt_id=$3 AND state='processing'
-          AND message_id IS NULL RETURNING *`,
+          AND message_id IS NULL AND content_sha256 IS NULL
+          AND (original_sha256 IS NULL OR original_sha256=$4) RETURNING *`,
         [
           row.id,
           row.version,

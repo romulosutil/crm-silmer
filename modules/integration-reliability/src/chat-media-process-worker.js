@@ -137,6 +137,11 @@ export function createChatMediaProcessJobHandler({
           result.originalSha256 = result.sha256;
         }
         await assertLease();
+        if (
+          row.original_sha256 &&
+          row.original_sha256 !== result.originalSha256
+        )
+          throw new ChatMediaValidationError('invalid_format');
         if (row.origin === 'recording' && result.audioChannels !== 1)
           throw new ChatMediaValidationError('invalid_format');
         row = await repository.prepare(job, row, result);

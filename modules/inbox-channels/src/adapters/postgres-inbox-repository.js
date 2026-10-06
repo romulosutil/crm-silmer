@@ -351,6 +351,12 @@ export class PostgresInboxRepository {
               [mediaId],
             )
           ).rows[0];
+          if (
+            media &&
+            media.conversation_id === current.id &&
+            media.uploaded_by !== input.actor.id
+          )
+            throw new InboxForbiddenError('Media belongs to another uploader');
           const size = Number(media?.size_bytes);
           const allowedMime = {
             image: ['image/jpeg', 'image/png'],
@@ -360,7 +366,6 @@ export class PostgresInboxRepository {
           if (
             !media ||
             media.conversation_id !== current.id ||
-            media.uploaded_by !== input.actor.id ||
             media.state !== 'ready' ||
             media.message_id !== null ||
             media.validation_status !== 'clean' ||

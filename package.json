@@ -28,6 +28,8 @@
     "smoke:r2:live": "node scripts/r2-live-smoke.mjs",
     "smoke:rustfs:live": "node scripts/rustfs-live-smoke.mjs",
     "smoke:n8n:media:local": "node scripts/n8n-media-local-smoke.mjs",
+    "smoke:media:built:local": "node scripts/media-built-local-smoke.mjs",
+    "smoke:media:built:fault:local": "node scripts/media-built-local-fault-smoke.mjs",
     "smoke:meta:sandbox": "node scripts/meta-sandbox-smoke.mjs",
     "smoke:gemini:privacy": "node scripts/gemini-privacy-smoke.mjs",
     "smoke:observability:live": "node scripts/observability-live-probe.mjs --baseline",

@@ -7,8 +7,13 @@ ações explícitas. API valida sessão, CSRF, ownership e versão, worker valid
 bytes e normaliza gravações, RustFS mantém variante privada, n8n reserva por
 referência imutável e confirma por callback. Mídia attached permanece salva;
 cleanup automático somente alcança rascunhos sem message_id com mais de24h.
-Homologação do pipeline construído e microfone físico são T24; configuração
-local não comprova operação remota, backup ou entrega real Meta.
+Pipeline construído local homologado por provas automatizadas T24; microfone
+físico permanece pendente. A matriz e as fronteiras estão em
+[chat-media-uat.md](chat-media-uat.md). Configuração local não comprova operação
+remota, backup ou entrega real Meta. P1: execução inicial n8n PostgreSQL persiste
+recipient/caption/header Basic mesmo savesnone. Bloquear dados/credenciais
+operacionais até minimização/redação e expurgo/readiness comprovados; soft-delete
+não comprova apagamento seguro. Evidências não incluem valores de headers.
 
 ### Perfil Docker local opt-in
 

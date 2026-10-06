@@ -12,7 +12,7 @@ armazenar no RustFS existente; testar com n8n DEV sem WhatsApp.
 - Usuário escolheu RustFS já existente: não contratar R2 nesta entrega.
 - Usuário escolheu anexar áudio e gravar pelo microfone.
 - Usuário retirou o prazo de sete dias: manter mídia enviada salva por enquanto.
-- Planejamento solicitado com tlc-spec-driven; não iniciar implementação.
+- Planejamento solicitado com tlc-spec-driven; implementação e uso de subagentes autorizados posteriormente pelo usuário.
 - EasyPanel e console RustFS autorizados para inspeção; nenhuma alteração remota feita.
 
 ## Evidência da inspeção

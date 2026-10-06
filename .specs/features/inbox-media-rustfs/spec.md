@@ -181,13 +181,13 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 | MED-15         | Preservação           | Execute  | In Progress | T2,T3,T9,T16,T22,T23  |
 | MED-16         | Leitura privada       | Execute  | In Progress | T8,T9,T13             |
 | MED-17         | Range                 | Execute  | In Progress | T3,T9,T20             |
-| MED-18         | Range inválido        | In Tasks | Pending     | T9                    |
+| MED-18         | Range inválido        | Execute  | In Progress | T9                    |
 | MED-19         | Falha S3              | Execute  | In Progress | T3,T6,T9,T20          |
 | MED-20         | Logs privados         | Execute  | In Progress | T3,T7,T12,T13,T16,T23 |
-| MED-21         | Reserva única         | In Tasks | Pending     | T12,T13,T14,T15       |
+| MED-21         | Reserva única         | Execute  | In Progress | T12,T13,T14,T15       |
 | MED-22         | Bytes por comando     | In Tasks | Pending     | T13,T14,T15           |
 | MED-23         | DEV real              | In Tasks | Pending     | T1,T15,T24            |
-| MED-24         | Resultado incerto     | In Tasks | Pending     | T12,T14,T15,T24       |
+| MED-24         | Resultado incerto     | Execute  | In Progress | T12,T14,T15,T24       |
 | MED-25         | Acessibilidade        | In Tasks | Pending     | T18,T19,T20,T21,T24   |
 | MED-26         | Scanner               | Execute  | In Progress | T4,T6,T7              |
 | MED-27         | Órfãos                | Execute  | In Progress | T2,T22                |

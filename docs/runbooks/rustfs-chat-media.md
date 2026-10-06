@@ -1,5 +1,28 @@
 # Ativação de mídia do chat no RustFS
 
+T12: outbox mantém message de texto sem alteração. Mídia leva na message plana
+media_id,sha256,mime_type,size_bytes,type,text,caption (audio:null), e
+filename/media_url null. Fonte é a chat_media bound attached/clean, com autor,
+conversa e variante revalidados; nunca content/cliente para metadados binários.
+O fence reconsulta vínculo/variante e legenda atual sob lock antes da reserva.
+Referência/hash/MIME/size/caption/epoch/source divergentes409 não reservam.
+Aliases attachment_id/attachmentId/mediaId são proibidos na mídia retida.
+Replay retorna send_authorized=false, e sending nunca autoriza nova reserva.
+Unknown Meta deixa outcome_unknown/retryable=false/retry_safe=false; somente
+reconciliação/callback conhecido resolve. Callbacks preservam read contra
+delivered/failed posterior, sem alterar mídia/quota. GET técnico de sending,
+preflight e workflow real seguem T13/T14, sem implementação antecipada.
+Callbacks message.sent/message.send.unknown resolvem a conversa do comando
+pelas tabelas de comandos e mensagens. conversation_id contraditório retorna
+409 antes de efeitos, auditoria, SSE e recibos; os UPDATEs também restringem
+essa conversa canônica. Essa resolução preserva respostas automáticas que
+possuem mensagem reservada sem linha na outbox humana.
+Confirmação conhecida message.sent converte o comando outcome_unknown para
+sent, limpa last_error_code e conserva retryable/retry_safe=false. Jobs e
+itens de reconciliação preexistentes permanecem intactos como evidência do
+efeito incerto (inclusive o item open para revisão operacional); o callback
+não os reabre, apaga ou agenda outra tentativa. A prova SQL inclui esse histórico.
+
 Contrato T11 de envio humano: messageType=text/image/audio/video. Para mídia,
 content é `{mediaId,caption?}`; caption somente image/video, no máximo1024
 pontos Unicode (emoji conta um), audio não aceita nem caption vazio. Qualquer

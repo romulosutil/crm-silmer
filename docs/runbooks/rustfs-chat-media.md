@@ -1,5 +1,28 @@
 # Ativação de mídia do chat no RustFS
 
+### T15: ensaio local real e limite de privacidade
+
+Executar `npm run smoke:n8n:media:local` com Node 24.20.0,
+`RUN_N8N_MEDIA_LOCAL_SMOKE=yes` e `TEST_DATABASE_URL` do banco dedicado
+crm_silmer_test. Exige RustFS sintético local, ffmpeg no container dedicado
+e n8nio/n8n:2.38.7; nenhuma chamada Meta/OpenAI real. O comando elimina
+somente seu container e suas chaves sintéticas, preservando o perfil local
+ignorado para inspeção. Não executar junto de outros gates SQL.
+
+O ensaio verifica PNG/OGG/MP4, replay, falhas anteriores ao efeito, unknown,
+hash/tamanho e epoch; próximo de 16 MiB mede memory.peak com limite 2 GiB,
+1 CPU e concorrência 1. Reimport usa digest, preserva referências OpenAI
+locais e publica a versão atual antes de reiniciar. Healthz não comprova
+ativação do webhook; exigir evento de ativação e callback real.
+
+Inspecionar o perfil parado com inspect-n8n-execution-privacy.py, apenas
+categorias. O n8n grava registros iniciais soft-deleted até pruning, contendo
+recipient/caption: **privacidade de produção T23 não atendida**. Zero bytes
+raw/base64 em SQLite/WAL/FS e ambos stdout/stderr não significa zero PII.
+Nunca apagar esses registros ou desligar pruning para fazer o teste passar.
+O smoke semeia mídia ready manualmente; worker/scanner construídos e o
+transporte completo do dispatcher ficam pendentes em T24.
+
 T13: leitura técnica exige Basic e integration.n8n.command.media.read,
 command processing, message sending e variante bound attached/clean. A
 identidade é workflow/version/execution do recibo de reserva em n8n_events;

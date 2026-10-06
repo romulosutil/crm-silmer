@@ -2,6 +2,15 @@
 
 Data: 05/10/2026. Status: decisões do usuário capturadas; detalhes propostos.
 
+T15 (06/10): n8n 2.38.7 real confirmou o ramo humano com bytes PNG/OGG/MP4,
+15 execuções, atualização publicada efetivamente executada e reimport
+idempotente. Pico default/concurrency1: 1467297792 bytes com vídeo 16 MiB
+e limite 2 GiB/1 CPU, somente efeitos Meta simulados. Registros iniciais
+soft-deleted contêm categorias recipient/caption: produção Privacy T23
+permanece não atendida, apesar de zero canários binários em DB/WAL/FS/logs.
+Mídia ready semeada manualmente; worker construído/transporte completo T24
+pendentes. Detalhes e fontes no design, execution e runbook.
+
 ## Feature Boundary
 
 Enviar imagem, áudio e vídeo na Caixa de Entrada; gravar áudio pelo microfone;

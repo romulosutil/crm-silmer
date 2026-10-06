@@ -9,6 +9,7 @@ import {
 } from '../modules/database/src/index.js';
 import {
   createInboxService,
+  PostgresInboxReadRepository,
   PostgresInboxRepository,
 } from '../modules/inbox-channels/src/index.js';
 import { PostgresChatMediaUploadRepository } from '../modules/integration-reliability/src/postgres-chat-media-upload-repository.js';
@@ -530,6 +531,153 @@ if (connectionString) {
     });
     return { id, sent, row, payload, integration, event };
   }
+  for (const kind of ['image', 'audio', 'video'])
+    test(`T16/MED-15/19/20: history and summary project safe ${kind} metadata in one snapshot`, async () => {
+      const f = await mediaPanelCommand(kind);
+      const queries = /** @type {string[]} */ ([]);
+      const readDatabase = {
+        ...database,
+        transaction: (/** @type {any} */ work) =>
+          database.transaction((/** @type {any} */ client) =>
+            work({
+              query: (/** @type {string} */ sql, /** @type {any} */ values) => {
+                queries.push(sql);
+                return client.query(sql, values);
+              },
+            }),
+          ),
+      };
+      const reads = new PostgresInboxReadRepository({
+        database: readDatabase,
+        contactEnvelopeKey: KEY,
+        messageEnvelopeKey: KEY,
+      });
+      const detail = await reads.get('bind-conversation');
+      assert.equal(
+        queries.filter((sql) => sql.trim().startsWith('SELECT')).length,
+        3,
+      );
+      const media = detail.messages[0].media;
+      assert.deepEqual(media, {
+        mediaId: f.id,
+        kind,
+        state: 'attached',
+        mimeType:
+          kind === 'image'
+            ? 'image/png'
+            : kind === 'audio'
+              ? 'audio/ogg'
+              : 'video/mp4',
+        sizeBytes: 100,
+        durationMs: null,
+        contentUrl: `/api/v1/conversations/bind-conversation/media/${f.id}/content`,
+      });
+      assert.equal(detail.messages[0].deliveryMode, null);
+      assert.deepEqual(
+        (await reads.list({ limit: 20 })).items.find(
+          (/** @type {any} */ row) => row.id === 'bind-conversation',
+        ).lastMessage.media,
+        media,
+      );
+      assert.equal(
+        queries.filter((sql) => sql.trim().startsWith('SELECT')).length,
+        5,
+      );
+      const serialized = JSON.stringify(detail.messages);
+      for (const forbidden of [
+        'object_key',
+        'filename',
+        'sha256',
+        'synthetic.png',
+        'http://',
+        'https://',
+      ])
+        assert.equal(serialized.includes(forbidden), false);
+    });
+  test('T16/MED-15: lost media retains message metadata without offering bytes', async () => {
+    const f = await mediaPanelCommand();
+    await pool.query(
+      "UPDATE crm.chat_media SET state='lost',sanitized_reason='object_missing' WHERE id=$1",
+      [f.id],
+    );
+    const reads = new PostgresInboxReadRepository({
+      database,
+      contactEnvelopeKey: KEY,
+      messageEnvelopeKey: KEY,
+    });
+    const media = (await reads.get('bind-conversation')).messages[0].media;
+    assert.equal(media.mediaId, f.id);
+    assert.equal(media.state, 'lost');
+    assert.equal(media.contentUrl, null);
+  });
+  test('T16/MED-19: legacy text/media without persistent binding preserve preview and have no fabricated media route', async () => {
+    const f = await mediaPanelCommand('text');
+    const reads = new PostgresInboxReadRepository({
+      database,
+      contactEnvelopeKey: KEY,
+      messageEnvelopeKey: KEY,
+    });
+    const message = (await reads.get('bind-conversation')).messages[0];
+    assert.equal(message.media, null);
+    assert.equal(message.preview, f.payload.message.text);
+    await pool.query(
+      "UPDATE crm.messages SET message_type='image' WHERE id=$1",
+      [f.sent.id],
+    );
+    assert.equal(
+      (await reads.get('bind-conversation')).messages[0].media,
+      null,
+    );
+  });
+  for (const status of ['failed', 'outcome_unknown'])
+    test(`T16/MED-19/23/24: DEV ${status} is identified from original reservation, independent of external ID`, async () => {
+      const f = await mediaPanelCommand();
+      const event = f.event('dev-original-reservation');
+      event.technical.workflowVersion = 'dev-mvp-simple-12';
+      await f.integration.recordEvent(event);
+      await pool.query('UPDATE crm.messages SET status=$2 WHERE id=$1', [
+        f.sent.id,
+        status,
+      ]);
+      const reads = new PostgresInboxReadRepository({
+        database,
+        contactEnvelopeKey: KEY,
+        messageEnvelopeKey: KEY,
+      });
+      assert.equal(
+        (await reads.get('bind-conversation')).messages[0].deliveryMode,
+        'dev',
+      );
+    });
+  test('T16/MED-19/20: external DEV prefix cannot replace official reservation provenance and SSE stays technical', async () => {
+    const f = await mediaPanelCommand();
+    await f.integration.recordEvent(f.event('official-original'));
+    await pool.query(
+      "UPDATE crm.messages SET external_message_id='dev-human-media-forged' WHERE id=$1",
+      [f.sent.id],
+    );
+    const reads = new PostgresInboxReadRepository({
+      database,
+      contactEnvelopeKey: KEY,
+      messageEnvelopeKey: KEY,
+    });
+    assert.equal(
+      (await reads.get('bind-conversation')).messages[0].deliveryMode,
+      'official',
+    );
+    const stream = JSON.stringify(
+      (await pool.query('SELECT payload FROM crm.domain_events')).rows,
+    );
+    for (const forbidden of [
+      'mediaId',
+      'caption',
+      'contentUrl',
+      'object_key',
+      'filename',
+      'Synthetic caption',
+    ])
+      assert.equal(stream.includes(forbidden), false);
+  });
   test('T12/MED-20/21: outbox identifies exact bound variant and replay never reauthorizes', async () => {
     const f = await mediaPanelCommand();
     assert.equal(f.payload.message.media_id, f.id);

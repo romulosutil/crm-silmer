@@ -1,5 +1,34 @@
 # Execução INBOX-MEDIA-1
 
+## T16: DTO persistente do historico
+
+MED-15/19/20: red novos casos retornaram media/deliveryMode undefined; green oito SQL live cobrem imagem/audio/video, lost, legado, DEVfailed/unknown e prefixo externo sem autoridade. Historico e resumo consultam binding persistido na mesma snapshot; get3SELECT/list2SELECT sem storage, sem nome/chave/hash/bytes. media.contentUrl so rota relativa CRM autorizada para attachedclean; lostnull. deliveryMode vem do unico recibo original message.send.requested n8n_events, nunca prefixo de mensagem; SSE IDs tecnicos preservados. Quick838pass/3skips(total841), Live65/65=bind54+operationRead1+inbox7+migrations3; type-lint-diff e validadores estritos verdes. Nenhuma Verified; proximoT17.
+
+### Adequação bidirecional
+
+Os testes derivam dos ACs indicados nos nomes dos cenários. Cada assertion abaixo
+associa critério → resultado exato e resultado → requisito. Assert de fixture
+comprova isolamento. Nenhum cenário/skip/timeout publicado foi removido ou
+enfraquecido; Check A/B/C/D passa dentro da fronteira desta tarefa.
+
+| Critério / requisito (mapeamento inverso) | file:line + assertion | Resultado da spec |
+| --- | --- | --- |
+| test(T16/MED-15/19/20: history and summary project safe ${kind} metadata in one snapshot, async () | `test/chat-media-bind-postgres-live.test.js:556` `assert.equal(         queries.filter((sql) => sql.trim().startsWith('SELECT')).length,         3,       );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-15/19/20: history and summary project safe ${kind} metadata in one snapshot, async () | `test/chat-media-bind-postgres-live.test.js:561` `assert.deepEqual(media, {         mediaId: f.id,         kind,         state: 'attached',         mimeType:           kind === 'image'             ? 'image/png'             : kind === 'audio';` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-15/19/20: history and summary project safe ${kind} metadata in one snapshot, async () | `test/chat-media-bind-postgres-live.test.js:575` `assert.equal(detail.messages[0].deliveryMode, null);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-15/19/20: history and summary project safe ${kind} metadata in one snapshot, async () | `test/chat-media-bind-postgres-live.test.js:576` `assert.deepEqual(         (await reads.list({ limit: 20 })).items.find(           (/** @type {any} */ row) => row.id === 'bind-conversation',         ).lastMessage.media,         media,       );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-15/19/20: history and summary project safe ${kind} metadata in one snapshot, async () | `test/chat-media-bind-postgres-live.test.js:582` `assert.equal(         queries.filter((sql) => sql.trim().startsWith('SELECT')).length,         5,       );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-15/19/20: history and summary project safe ${kind} metadata in one snapshot, async () | `test/chat-media-bind-postgres-live.test.js:595` `assert.equal(serialized.includes(forbidden), false);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-15: lost media retains message metadata without offering bytes, async () | `test/chat-media-bind-postgres-live.test.js:609` `assert.equal(media.mediaId, f.id);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-15: lost media retains message metadata without offering bytes, async () | `test/chat-media-bind-postgres-live.test.js:610` `assert.equal(media.state, 'lost');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-15: lost media retains message metadata without offering bytes, async () | `test/chat-media-bind-postgres-live.test.js:611` `assert.equal(media.contentUrl, null);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-19: legacy text/media without persistent binding preserve preview and have no fabricated media route, async () | `test/chat-media-bind-postgres-live.test.js:621` `assert.equal(message.media, null);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-19: legacy text/media without persistent binding preserve preview and have no fabricated media route, async () | `test/chat-media-bind-postgres-live.test.js:622` `assert.equal(message.preview, f.payload.message.text);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-19: legacy text/media without persistent binding preserve preview and have no fabricated media route, async () | `test/chat-media-bind-postgres-live.test.js:627` `assert.equal(       (await reads.get('bind-conversation')).messages[0].media,       null,     );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-19/23/24: DEV ${status} is identified from original reservation, independent of external ID, async () | `test/chat-media-bind-postgres-live.test.js:647` `assert.equal(         (await reads.get('bind-conversation')).messages[0].deliveryMode,         'dev',       );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-19/20: external DEV prefix cannot replace official reservation provenance and SSE stays technical, async () | `test/chat-media-bind-postgres-live.test.js:664` `assert.equal(       (await reads.get('bind-conversation')).messages[0].deliveryMode,       'official',     );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T16/MED-19/20: external DEV prefix cannot replace official reservation provenance and SSE stays technical, async () | `test/chat-media-bind-postgres-live.test.js:679` `assert.equal(stream.includes(forbidden), false);` | Resultado explícito da assertion; necessário ao AC no cenário |
+
 ## T15: Simulador DEV com bytes reais e importer por digest
 
 Evidência nativa sintética: `npm run smoke:n8n:media:local`, perfil ignorado

@@ -8,7 +8,8 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 
 import { RecordedAudioNormalizer } from '../modules/integration-reliability/src/recorded-audio-normalizer.js';
@@ -60,6 +61,49 @@ async function fixture(options = {}) {
     cleanup: () => rm(root, { recursive: true, force: true }),
   };
 }
+test('T22 recording crash intermediates carry the immutable output UUID', async () => {
+  const f = await fixture();
+  const key = randomUUID();
+  const outputPath = join(f.root, key);
+  let validationCount = 0;
+  try {
+    const normalizer = new RecordedAudioNormalizer({
+      validator: {
+        async validate() {
+          validationCount++;
+          return {
+            mimeType: validationCount === 1 ? 'audio/webm' : 'audio/ogg',
+            sha256: 'a'.repeat(64),
+            sizeBytes: 9,
+            durationMs: 1200,
+            audioCodec: 'opus',
+            audioChannels: 1,
+          };
+        },
+      },
+      execFileImpl: async (
+        /** @type {string} */ _command,
+        /** @type {string[]} */ args,
+      ) => {
+        const candidate = String(args.at(-1));
+        assert.match(
+          basename(dirname(candidate)),
+          new RegExp(`^\\.recording-${key}-[A-Za-z0-9]{6}$`),
+        );
+        await writeFile(candidate, 'synthetic');
+        return { stdout: '' };
+      },
+    });
+    await normalizer.normalize({
+      path: f.path,
+      outputPath,
+      declaredMimeType: 'audio/webm',
+    });
+    assert.deepEqual((await readdir(f.root)).sort(), [key, 'input'].sort());
+  } finally {
+    await f.cleanup();
+  }
+});
 for (const mime of ['audio/webm', 'audio/ogg', 'audio/mp4']) {
   test(`T5 normalizes ${mime}, scans input/output and removes intermediates`, async () => {
     const f = await fixture({ mime });

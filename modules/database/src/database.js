@@ -53,6 +53,21 @@ export function createDatabase({
   const transaction = (work) => withTransaction(pool, work);
   return Object.freeze({
     close: () => pool.end(),
+    /** Dedicated session without BEGIN, e.g. an upload writer advisory lease.
+     * @template T @param {(client: import('pg').PoolClient) => Promise<T>} work */
+    connection: async (work) => {
+      const client = await pool.connect();
+      try {
+        const result = await work(client);
+        client.release();
+        return result;
+      } catch (error) {
+        client.release(
+          error instanceof Error ? error : new Error('Connection work failed'),
+        );
+        throw error;
+      }
+    },
     query: pool.query.bind(pool),
     readiness: async () => checkDatabaseReadiness(pool, await migrations),
     transaction,

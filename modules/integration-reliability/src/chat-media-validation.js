@@ -1,12 +1,11 @@
-import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { lstat } from 'node:fs/promises';
-import { promisify } from 'node:util';
+import { executeMediaCommand } from './media-command.js';
 
 import { ClamAvMediaScanner } from './clamav-media-scanner.js';
 
-const execute = promisify(execFile);
+const execute = executeMediaCommand;
 export const CHAT_MEDIA_LIMITS = Object.freeze({
   image: 5 * 1024 * 1024,
   audio: 16 * 1024 * 1024,
@@ -86,7 +85,7 @@ export class ChatMediaValidator {
   #scanner;
   #execute;
   #now;
-  /** @param {{scanner?: {scan: (path: string) => Promise<{clean: boolean,detectedMimeType: string,signatureUpdatedAt: Date|string}>}, execFileImpl?: Function, now?: () => Date}} [options] */
+  /** @param {{scanner?: {scan: (path: string,signal?:AbortSignal) => Promise<{clean: boolean,detectedMimeType: string,signatureUpdatedAt: Date|string}>}, execFileImpl?: Function, now?: () => Date}} [options] */
   constructor({
     scanner = new ClamAvMediaScanner(),
     execFileImpl = execute,
@@ -97,8 +96,8 @@ export class ChatMediaValidator {
     this.#now = now;
   }
 
-  /** @param {{path: string,kind: string,origin: string,declaredMimeType: string}} input */
-  async validate({ path, kind, origin, declaredMimeType }) {
+  /** @param {{path: string,kind: string,origin: string,declaredMimeType: string,signal?:AbortSignal}} input */
+  async validate({ path, kind, origin, declaredMimeType, signal }) {
     const { maxBytes } = validateMediaDeclaration({ kind, origin });
     let stats;
     try {
@@ -110,7 +109,7 @@ export class ChatMediaValidator {
       return reject();
     let scanned;
     try {
-      scanned = await this.#scanner.scan(path);
+      scanned = await this.#scanner.scan(path, signal);
     } catch {
       return reject('scanner_unavailable');
     }
@@ -167,6 +166,7 @@ export class ChatMediaValidator {
           (
             await this.#execute('ffprobe', args, {
               timeout: 10000,
+              ...(signal ? { signal } : {}),
               maxBuffer: 65536,
               windowsHide: true,
             })
@@ -272,6 +272,7 @@ export class ChatMediaValidator {
         );
         const { stdout } = await this.#execute('ffmpeg', args, {
           timeout: 30000,
+          ...(signal ? { signal } : {}),
           maxBuffer: 65536,
           windowsHide: true,
         });

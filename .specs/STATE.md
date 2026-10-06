@@ -13,6 +13,16 @@
 
 ## Handoff
 
+T22 implementada: cleanup de órfãos >24h com intenção durável anterior ao DELETE,
+sem expurgar attached. Guardas de sessão sem BEGIN protegem upload/decoder/PUT
+até fechamento físico, com prazos persistidos 3/15min e deadline upload120s.
+Crash do encoder deixa diretório vinculado ao UUID; cleanup preserva outros e
+desconhecidos, falha rm conserva quota. SIGKILL/close provados Linux2/2.
+Validate855pass/3skips(total858); gates Live/Privacy finais registrados execution.
+Demo4183/API3002/DB15434/assets continuam estáveis: UAT físico flow1 pendente,
+não reiniciar nem resetar. Probe real de auto-stop Chrome151 mediu299970ms via
+decode FFmpeg; built normalizer/pipeline ainda T24. Próxima T23; nenhum Verified.
+
 T21 concluída: anexos/recorder/histórico integrados à Inbox, ownership e SSE
 invalidam draft, troca encerra captura e respostas tardias não substituem conversa.
 Seleção de imagem após revisão gravada preserva imagem e remove anúncio stale.

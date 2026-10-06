@@ -151,8 +151,33 @@ sem novo spool/cobrança, inclusive com quota cheia; receiving ativo usa 409.
 Commit incerto exige consultar estado do ledger sob lock: consumed preserva
 spool; falha da reconciliação também preserva. Somente receiving confirmado
 permite cleanup/release. Crash mantém reserva. Discovery
-`listAbandonedAdmissions` fornece receiving >24h para lock/recheck e limpeza
-confirmada em T22; o método não executa cleanup nesta fase.
+`listAbandonedAdmissions` fornece receiving >24h; T22 executa limpeza sob
+lock/recheck, sem liberar reserva antes da remoção confirmada. Streaming tem
+deadline de 120 s e lease advisory de sessão em conexão dedicada, sem BEGIN.
+A conexão só é liberada após fechar o writer; complete/release usam SQL depois
+disso, inclusive com pool de upload de uma conexão. Perda de conexão aborta
+o stream; prazo persistido de três minutos protege uma admissão antiga até o
+encerramento físico, mesmo se a sessão advisory desaparecer.
+
+Cleanup de mídia sem vínculo e com mais de 24h primeiro confirma intenção
+durável (`cleanup_started_at`, estado unavailable), sob locks de job/mídia e
+writer. Só depois do commit remove spool, intermediários e objeto S3; uma
+segunda transação confirma remoção e libera quota. Rollback após DELETE nunca
+restaura ready vinculável. Attached e message_id não nulo são excluídos.
+Normalização cria intermediários `.recording-<UUID da variante>-<sufixo>`;
+cleanup remove somente diretórios daquele UUID. Diretórios antigos sem UUID
+ou de outra mídia permanecem para reconciliação operacional.
+
+Processamento usa a mesma lease de sessão durante decoder/PUT; heartbeat perdido
+aborta subprocessos/streams e aguarda close antes de liberar a guarda. O prazo
+persistido de 15 minutos é conservador para orçamento local de 340 s mais IO;
+cleanup revalida esse prazo nas duas etapas. Job processing nunca autoriza
+cleanup, mesmo com lease expirada: a fila real precisa recuperar/finalizar antes.
+Intent de cleanup impede novo acquire. Conexão perdida conserva reserva até
+prazo e recheck; erros de DELETE conservam intenção e quota para retry.
+Pool do worker precisa de pelo menos duas conexões (padrão dez) para guarda
+e consultas/heartbeat; upload suporta pool de uma. Comandos locais usam SIGKILL
+em cancelamento/timeout, esperam close e removem listener, inclusive no Linux.
 Admissão T7 reserva o pior caso antes do streaming: anexo, duas vezes o
 limite do tipo; gravação, três vezes 16 MiB. Após medir os bytes reais,
 pode ajustar para duas vezes a entrada do anexo, ou entrada mais duas vezes

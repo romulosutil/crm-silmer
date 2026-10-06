@@ -6,9 +6,54 @@
  */
 export class PostgresChatMediaRepository {
   #database;
-  /** @param {{database: {transaction: Function}}} options */
+  /** @param {{database: {transaction: Function,connection:Function}}} options */
   constructor({ database }) {
     this.#database = database;
+  }
+
+  /** Protect physical readers/writers even after job heartbeat is lost.
+   * @param {string} mediaId @param {Function} work */
+  async withProcessingLease(mediaId, work) {
+    return this.#database.connection(async (/** @type {any} */ client) => {
+      const controller = new AbortController();
+      const lost = () => controller.abort();
+      let guarded = false;
+      client.on('error', lost);
+      client.on('end', lost);
+      try {
+        await client.query('SELECT pg_advisory_lock(hashtextextended($1,0))', [
+          `media-writer:${mediaId}`,
+        ]);
+        const marked = await client.query(
+          `UPDATE crm.chat_media SET processing_guard_until=now()+interval '15 minutes' WHERE id=$1 AND message_id IS NULL AND cleanup_started_at IS NULL RETURNING id`,
+          [mediaId],
+        );
+        guarded = marked.rows.length === 1;
+        return await work(controller.signal);
+      } finally {
+        try {
+          // All children and file streams must be closed before this callback ends.
+          if (guarded)
+            await client.query(
+              'UPDATE crm.chat_media SET processing_guard_until=NULL WHERE id=$1',
+              [mediaId],
+            );
+        } finally {
+          try {
+            const row = (
+              await client.query(
+                'SELECT pg_advisory_unlock(hashtextextended($1,0)) AS released',
+                [`media-writer:${mediaId}`],
+              )
+            ).rows[0];
+            if (!row.released) throw new Error('Media processing guard lost');
+          } finally {
+            client.off('error', lost);
+            client.off('end', lost);
+          }
+        }
+      }
+    });
   }
 
   /** @param {Record<string,any>} job @param {Function} work */
@@ -39,6 +84,7 @@ export class PostgresChatMediaRepository {
         [job.chatMediaId],
       );
       const row = result.rows[0];
+      if (row?.cleanup_started_at) return null;
       if (!row || ['ready', 'attached', 'rejected', 'lost'].includes(row.state))
         return row ?? null;
       if (

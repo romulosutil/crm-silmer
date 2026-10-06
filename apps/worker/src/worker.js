@@ -17,6 +17,8 @@ import {
   N8N_COMMAND_QUEUE,
   PostgresJobQueue,
   PostgresChatMediaRepository,
+  PostgresChatMediaDraftCleanup,
+  ChatMediaDraftCleanupScheduler,
   RustfsMediaStore,
   PostgresTransientMediaRepository,
   PrivateMediaVolume,
@@ -426,17 +428,19 @@ export function createChatMediaWorkerRuntime(options) {
 }
 
 /** Starts text delivery without waiting for an external signature CDN.
- * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>}}} services */
+ * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},chatMediaCleanup?:{start:Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>}}} services */
 export async function startWorkerServices({
   commandWorker,
   mediaWorker,
   chatMediaWorker,
+  chatMediaCleanup,
   retentionScheduler,
   signatureRefresh,
 }) {
   await commandWorker.start();
   await mediaWorker.start();
   await chatMediaWorker?.start();
+  await chatMediaCleanup?.start();
   await retentionScheduler.start();
   void signatureRefresh.start();
 }
@@ -543,10 +547,40 @@ export async function startWorkerFromEnvironment(options = {}) {
             workerId: `chat-media-${process.pid}`,
           })
         : undefined;
+    const chatMediaCleanup =
+      environment.CHAT_MEDIA_ENABLED === 'true'
+        ? new ChatMediaDraftCleanupScheduler({
+            cleanup: new PostgresChatMediaDraftCleanup({
+              database,
+              spoolRoot: requiredEnvironment(
+                environment,
+                'CHAT_MEDIA_SPOOL_ROOT',
+              ),
+              bucketAlias:
+                environment.MEDIA_S3_BUCKET === 'crm-silmer-chat-media'
+                  ? 'chat-operational'
+                  : 'chat-dev',
+              store: new RustfsMediaStore({
+                bucket: requiredEnvironment(environment, 'MEDIA_S3_BUCKET'),
+                endpoint: requiredEnvironment(environment, 'MEDIA_S3_ENDPOINT'),
+                region: requiredEnvironment(environment, 'MEDIA_S3_REGION'),
+                accessKeyId: requiredEnvironment(
+                  environment,
+                  'MEDIA_S3_ACCESS_KEY_ID',
+                ),
+                secretAccessKey: requiredEnvironment(
+                  environment,
+                  'MEDIA_S3_SECRET_ACCESS_KEY',
+                ),
+              }),
+            }),
+          })
+        : undefined;
     await startWorkerServices({
       commandWorker,
       mediaWorker,
       chatMediaWorker,
+      chatMediaCleanup,
       retentionScheduler,
       signatureRefresh,
     });
@@ -556,8 +590,10 @@ export async function startWorkerFromEnvironment(options = {}) {
         mediaWorker,
         retentionScheduler,
         chatMediaWorker,
+        chatMediaCleanup,
       }),
       stop: async () => {
+        await chatMediaCleanup?.stop();
         await signatureRefresh.stop();
         await retentionScheduler.stop();
         await Promise.all([

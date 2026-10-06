@@ -8,7 +8,7 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   recording: { type: Object, default: null },
 });
-const emit = defineEmits(['sent', 'sending-change']);
+const emit = defineEmits(['sent', 'sending-change', 'recording-dismissed']);
 const inputId = useId(),
   captionId = useId(),
   statusId = useId();
@@ -107,6 +107,7 @@ function clear() {
 }
 async function remove() {
   clear();
+  emit('recording-dismissed');
   await nextTick();
   fileInput.value?.focus();
 }
@@ -116,6 +117,7 @@ async function selectFile(event) {
     /** @type {HTMLInputElement} */ (event.target).files ?? [],
   );
   clear();
+  emit('recording-dismissed');
   if (!files?.length) return;
   if (files.length !== 1) {
     error.value = 'Selecione apenas um arquivo.';
@@ -338,6 +340,7 @@ onBeforeUnmount(() => clear());
 watch(
   () => props.recording,
   async (recording) => {
+    if (!recording && fileOrigin.value !== 'recording') return;
     clear();
     if (recording instanceof File)
       await selectCandidate(recording, 'recording');

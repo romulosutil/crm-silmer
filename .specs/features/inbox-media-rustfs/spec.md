@@ -172,11 +172,11 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 | MED-06         | Replay                | Execute  | In Progress | T7,T10,T11,T14,T15    |
 | MED-07         | Chave divergente      | Execute  | In Progress | T7,T10,T11            |
 | MED-08         | Autorização/estado    | Execute  | In Progress | T7,T8,T10,T11,T21     |
-| MED-09         | Microfone             | In Tasks | Pending     | T19,T21               |
-| MED-10         | Revisão de áudio      | In Tasks | Pending     | T19,T21               |
-| MED-11         | Permissão negada      | In Tasks | Pending     | T19,T21               |
+| MED-09         | Microfone             | Execute  | In Progress | T19,T21               |
+| MED-10         | Revisão de áudio      | Execute  | In Progress | T19,T21               |
+| MED-11         | Permissão negada      | Execute  | In Progress | T19,T21               |
 | MED-12         | Limites gravação      | Execute  | In Progress | T5,T19                |
-| MED-13         | Liberar recursos      | In Tasks | Pending     | T19,T21               |
+| MED-13         | Liberar recursos      | Execute  | In Progress | T19,T21               |
 | MED-14         | Normalização          | Execute  | In Progress | T5,T6                 |
 | MED-15         | Preservação           | Execute  | In Progress | T2,T3,T9,T16,T22,T23  |
 | MED-16         | Leitura privada       | Execute  | In Progress | T8,T9,T13             |

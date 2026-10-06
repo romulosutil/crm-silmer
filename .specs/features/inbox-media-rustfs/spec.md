@@ -175,9 +175,9 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 | MED-09         | Microfone             | In Tasks | Pending     | T19,T21               |
 | MED-10         | Revisão de áudio      | In Tasks | Pending     | T19,T21               |
 | MED-11         | Permissão negada      | In Tasks | Pending     | T19,T21               |
-| MED-12         | Limites gravação      | In Tasks | Pending     | T5,T19                |
+| MED-12         | Limites gravação      | Execute  | In Progress | T5,T19                |
 | MED-13         | Liberar recursos      | In Tasks | Pending     | T19,T21               |
-| MED-14         | Normalização          | In Tasks | Pending     | T5,T6                 |
+| MED-14         | Normalização          | Execute  | In Progress | T5,T6                 |
 | MED-15         | Preservação           | Execute  | In Progress | T2,T3,T9,T16,T22,T23  |
 | MED-16         | Leitura privada       | In Tasks | Pending     | T8,T9,T13             |
 | MED-17         | Range                 | Execute  | In Progress | T3,T9,T20             |

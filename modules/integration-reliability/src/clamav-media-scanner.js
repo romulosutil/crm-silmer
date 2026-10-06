@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { promisify } from 'node:util';
 
 const execute = promisify(execFile);
@@ -16,16 +16,18 @@ const SIGNATURE_FILES = Object.freeze([
  * contain the private temporary path.
  */
 export class ClamAvMediaScanner {
-  /** @param {{execFileImpl?: Function, signatureFiles?: string[]}} [options] */
+  /** @param {{execFileImpl?: Function, signatureFiles?: string[], signatureFreshnessFile?: string}} [options] */
   constructor({
     execFileImpl = execute,
     signatureFiles = [...SIGNATURE_FILES],
+    signatureFreshnessFile = '/var/lib/clamav/.freshclam-verified',
   } = {}) {
     if (typeof execFileImpl !== 'function') {
       throw new TypeError('execFileImpl must be a function');
     }
     this.execFile = execFileImpl;
     this.signatureFiles = [...signatureFiles];
+    this.signatureFreshnessFile = signatureFreshnessFile;
   }
 
   /** @param {string} path */
@@ -60,8 +62,25 @@ export class ClamAvMediaScanner {
     return Object.freeze({
       clean,
       detectedMimeType,
-      signatureUpdatedAt: await newestSignatureTimestamp(this.signatureFiles),
+      signatureUpdatedAt: await confirmedSignatureTimestamp(
+        this.signatureFiles,
+        this.signatureFreshnessFile,
+      ),
     });
+  }
+}
+
+/** @param {string[]} paths @param {string} marker */
+async function confirmedSignatureTimestamp(paths, marker) {
+  const installed = await newestSignatureTimestamp(paths);
+  try {
+    const timestamp = new Date((await readFile(marker, 'utf8')).trim());
+    if (!Number.isFinite(timestamp.getTime()))
+      throw new Error('Invalid signature freshness');
+    return timestamp;
+  } catch (error) {
+    if (/** @type {any} */ (error)?.code === 'ENOENT') return installed;
+    throw error;
   }
 }
 

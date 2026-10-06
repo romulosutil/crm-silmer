@@ -136,3 +136,53 @@ de T23. Não atribuir esses resultados ao smoke de compatibilidade.
 Fontes: [matriz S3 RustFS](https://docs.rustfs.com/en/reference/s3-compatibility)
 e [SigV4 S3](https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html).
 A documentação atual não substitui o teste da versão alpha.99.
+
+## Pipeline local e runtime de mídia
+
+Imagem existente recebe FFmpeg/ffprobe, clamav-freshclam e ca-certificates;
+sem serviço novo. Base Node 24.20.0 permanece fixada por digest. FFmpeg
+Debian 5.1.9 e ClamAV 1.4.3 foram comprovados com bytes sintéticos reais.
+As licenças dos binários permanecem em `/usr/share/doc/` na imagem; revisar
+atualizações de segurança do SO no gate T23. npm audit não audita esses binários.
+
+Build baixa e testa assinatura-base genuína via freshclam (timeout de 180 s).
+Worker executa freshclam no startup e a cada 24 h, timeout de 180 s, maxBuffer de 64 KiB,
+sem NotifyClamd. Falha gera código técnico CLAM_SIGNATURE_REFRESH_FAILED e
+não atualiza marcador de verificação. `.freshclam-verified` é publicado por
+rename atômico apenas depois de freshclam com exit 0; prova checagem recente
+quando a base já estava atualizada sem mudar seu mtime. Scanner exige base
+instalada; marcador inválido/futuro/stale falha fechado. Sem marcador, usa
+mtime da base; mais de 36 h impede liberação. Config não aceita entrada humana.
+
+Diretório `/var/lib/clamav`, UID/GID 1000 (node), gravável só pelo updater.
+Em T23 montar definições privadas compartilhadas entre API (scanner legado)
+e worker. Volume novo deve conter/copiar a assinatura-base da imagem; tmpfs
+vazio exige download genuíno no startup antes da primeira liberação. API
+não recebe permissão de refresh, e não deve usar marker sem base. Validar
+permissões/mounts/read-only no deployment; estes testes locais não ativam remoto.
+
+Limites por fase: scanner 60 s e libmagic 10 s por arquivo, ffprobe 10 s,
+decodificação de timeline 30 s; encoder 120 s, threads=1, maxalloc=64 MiB,
+protocolos locais. Entrada e saída são escaneadas e sondadas; gravação tem
+teto de 300 s e 16 MiB em ambas. Orçamento máximo das fases locais: 340 s
+(inclui libmagic duas vezes), além de filesystem,
+DB e PUT; worker renova lease durante processamento. Nenhum Promise.race
+abandona encoder em execução. Conversões/scan sequenciais por worker.
+
+Medição de sessão com `/usr/bin/time -v`: CPU 64,01 s user e 5,78 s system,
+69,86 s elapsed, RSS máximo de 989180 KiB, zero swaps para três formatos e negativa
+de 301 s. Com a fronteira OGG de 300 s: 103,23 s elapsed, CPU 87,93 s user e
+15,03 s system, RSS máximo de 989248 KiB, zero swaps. Recomenda-se limite
+operacional de 2 GiB por worker para evitar OOM próximo de 1 GiB; confirmar
+sob carga em T23. Spool privado tem quota própria e rascunhos de 24 h;
+anexos enviados seguem preservados. Não executar scanner paralelo para
+elevar throughput sem revisar orçamento e controle de concorrência.
+
+Reproduzir bytes Chromium com `node scripts/generate-chat-media-recording-fixture.mjs`
+e executar testes runtime com `RUN_CHAT_MEDIA_RUNTIME_TESTS=yes` e
+`CHAT_MEDIA_CHROMIUM_FIXTURE` apontando para o WebM no mount. Som sintético
+oscilador, sem uso de microfone real. Testes OGG de 300 s e WebM de 301 s medem timeline
+decodificada; pré-skip/padding ou cabeçalho curto não alteram teto útil.
+
+Fontes: [FFmpeg opções](https://ffmpeg.org/ffmpeg.html),
+[freshclam configuração](https://docs.clamav.net/manual/Usage/Configuration.html#freshclamconf).

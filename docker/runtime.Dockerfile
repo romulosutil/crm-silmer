@@ -58,8 +58,13 @@ WORKDIR /app
 RUN apt-get update \
   && apt-get install -y --no-install-recommends --only-upgrade perl-base \
   && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' perl-base)" ge '5.36.0-7+deb12u4' \
-  && apt-get install -y --no-install-recommends clamav file \
+  && apt-get install -y --no-install-recommends ca-certificates clamav clamav-freshclam file ffmpeg \
   && rm -rf /var/lib/apt/lists/*
+
+COPY --chown=node:node docker/freshclam.conf ./freshclam.conf
+# Genuine baseline database cached independently of application code changes.
+RUN chown -R node:node /var/lib/clamav \
+  && timeout 180s freshclam --config-file=/app/freshclam.conf --stdout
 
 RUN rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx

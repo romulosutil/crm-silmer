@@ -156,7 +156,7 @@ export class ChatMediaValidator {
         args.push('-enable_drefs', '0', '-use_absolute_path', '0');
       args.push(
         '-show_entries',
-        'stream=codec_type,codec_name:stream_disposition=attached_pic:format=format_name,duration',
+        'stream=codec_type,codec_name,channels:stream_disposition=attached_pic:format=format_name,duration',
         '-of',
         'json',
         '-i',
@@ -238,7 +238,7 @@ export class ChatMediaValidator {
         return reject();
     }
     let duration = kind === 'image' ? null : Number(probe.format?.duration);
-    if (origin === 'recording' && !Number.isFinite(duration)) {
+    if (origin === 'recording') {
       try {
         const args = [
           '-v',
@@ -302,6 +302,7 @@ export class ChatMediaValidator {
       mimeType,
       container,
       audioCodec: audio[0]?.codec_name ?? null,
+      audioChannels: audio[0]?.channels ?? null,
       videoCodec: video[0]?.codec_name ?? null,
       durationMs: duration === null ? null : Math.round(duration * 1000),
     };

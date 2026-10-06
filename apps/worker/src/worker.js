@@ -4,6 +4,7 @@ import { clearInterval, setInterval } from 'node:timers';
 import { createDatabase } from '@crm-silmer/database';
 import {
   ClamAvMediaScanner,
+  ClamAvSignatureRefresh,
   createMediaDeleteJobHandler,
   createN8nCommandDeliveryClient,
   createN8nCommandJobHandler,
@@ -420,7 +421,16 @@ export async function startWorkerFromEnvironment(options = {}) {
     applicationName: SERVICES.worker,
     connectionString: requiredEnvironment(environment, 'DATABASE_URL'),
   });
+  const signatureRefresh = new ClamAvSignatureRefresh({
+    onFailure: () =>
+      logger.error('worker_job_failed', {
+        error_code: 'CLAM_SIGNATURE_REFRESH_FAILED',
+        job_type: 'media.signature.refresh',
+        queue: 'default',
+      }),
+  });
   try {
+    await signatureRefresh.start();
     const commandStore = await loadN8nCommandStore(
       database,
       environment,
@@ -473,12 +483,14 @@ export async function startWorkerFromEnvironment(options = {}) {
         retentionScheduler,
       }),
       stop: async () => {
+        await signatureRefresh.stop();
         await retentionScheduler.stop();
         await Promise.all([commandWorker.stop(), mediaWorker.stop()]);
         await database.close();
       },
     });
   } catch (error) {
+    await signatureRefresh.stop();
     await database.close();
     throw error;
   }

@@ -1697,7 +1697,7 @@ test('reads each item with the seven points in order and the extras closed (PFI-
     'Cor',
     'Quantidade',
     'Técnica',
-    'Tecido',
+    'Modelo de malha',
     'Tamanhos',
     'Gola',
   ]);
@@ -1798,7 +1798,7 @@ test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)'
   await items.getByLabel('Tipo de roupa').fill('REGATA');
   await items.getByLabel('Cor', { exact: true }).fill('PRETA');
   await items.getByLabel('Técnica', { exact: true }).fill('SILK 4 CORES');
-  await items.getByLabel('Tecido 1').fill('ALGODÃO');
+  await items.getByLabel('Modelo de malha 1').fill('ALGODÃO');
   await items.getByLabel('Gola', { exact: true }).fill('REGATA');
   await items
     .getByRole('button', { name: 'Adicionais (não obrigatórios)' })
@@ -1836,7 +1836,7 @@ test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)'
   });
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await expect(closing).toContainText(
-    'Falta para gerar: cor do item 2, tecido do item 2, tamanhos do item 2, gola do item 2, valor final e forma de pagamento.',
+    'Falta para gerar: cor do item 2, modelo de malha do item 2, tamanhos do item 2, gola do item 2, valor final e forma de pagamento.',
   );
 });
 
@@ -1890,7 +1890,7 @@ test('names the fields the way the PO asked (PIT-10)', async ({ page }) => {
   for (const label of [
     'Tipo de roupa',
     'Tamanhos',
-    'Tecido',
+    'Modelo de malha',
     'Forma de pagamento',
   ]) {
     await expect(main.getByText(label, { exact: true }).first()).toBeVisible();
@@ -2030,8 +2030,10 @@ test('adds and removes items, fabrics and grade lines', async ({ page }) => {
   await items.getByRole('button', { name: 'Adicionar tamanho' }).click();
   await items.getByLabel('Tamanho da linha 3').fill('GG');
   await items.getByLabel('Quantidade do tamanho GG').fill('10');
-  await items.getByRole('button', { name: 'Adicionar tecido' }).click();
-  await items.getByLabel('Tecido 2').fill('HELANCA LIGHT');
+  await items
+    .getByRole('button', { name: 'Adicionar modelo de malha' })
+    .click();
+  await items.getByLabel('Modelo de malha 2').fill('HELANCA LIGHT');
   await items.getByRole('button', { name: 'Salvar' }).click();
 
   await expect(items).toContainText('1 item · 160 peças');
@@ -2040,6 +2042,73 @@ test('adds and removes items, fabrics and grade lines', async ({ page }) => {
     'DRY FIT 100% POLIÉSTER',
     'HELANCA LIGHT',
   ]);
+});
+
+test('splits an item by audience with Duplicar item, by keyboard (ADR 022, PUB-01, PUB-02, PUB-06)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Público').selectOption('masculino');
+  await items.getByLabel('Quantidade informada').fill('150');
+
+  const duplicate = items.getByRole('button', { name: 'Duplicar item 1' });
+  await duplicate.focus();
+  await page.keyboard.press('Enter');
+  const copyAudience = items.locator('#item-1-publico');
+  await expect(copyAudience).toBeFocused();
+  await expect(
+    items.getByText('Item 2 criado como cópia do item 1.'),
+  ).toHaveCount(1);
+  await expect(copyAudience).toHaveValue('masculino');
+  await copyAudience.selectOption('feminino');
+  await expect(items.locator('#item-1-informada')).toHaveValue('');
+  await items.locator('#item-1-informada').fill('40');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  const [first, copy] = writes[0].body.value;
+  expect(first.publico).toBe('masculino');
+  expect(first.quantidade_informada).toBe(150);
+  expect(copy.publico).toBe('feminino');
+  expect(copy.quantidade_informada).toBe(40);
+  expect(copy.grade).toEqual([]);
+  expect(copy.tipo).toBe(first.tipo);
+  expect(copy.malhas).toEqual(first.malhas);
+
+  await expect(
+    items.getByRole('heading', { name: /^Item 2 · .* · Feminino · 0 peças$/u }),
+  ).toBeVisible();
+  await expect(items.getByText('— (cliente informou 40)')).toBeVisible();
+});
+
+test('warns under an item whose sizes differ from the quantity said for it (ADR 022, PUB-02)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Quantidade informada').fill('200');
+  await expect(
+    items.getByText(
+      'A soma dos tamanhos (150) é diferente da quantidade informada (200)',
+    ),
+  ).toBeVisible();
+  await items.getByLabel('Quantidade informada').fill('0');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+  await expect(
+    items.getByText('Use um número inteiro de 1 a 100000.'),
+  ).toBeVisible();
+  await expect(items.getByLabel('Quantidade informada')).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  );
 });
 
 test('shows the server grade error on the line it names', async ({ page }) => {

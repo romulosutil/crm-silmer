@@ -49,6 +49,7 @@
     "cleanVpsDrill": "pending",
     "temporaryDnsDrill": "pending",
     "objectVersionRestore": "pending",
+    "orderFilesBucketRestore": "blocked",
     "fullSmoke": "pending"
   },
   "checkEvidence": {
@@ -63,6 +64,9 @@
     "cleanVpsDrill": ["github-issue://3"],
     "temporaryDnsDrill": ["github-issue://3"],
     "objectVersionRestore": ["github-issue://3"],
+    "orderFilesBucketRestore": [
+      "repository://docs/adr/021-arquivos-da-arte-no-rustfs.md"
+    ],
     "fullSmoke": ["github-issue://3"]
   },
   "blockers": [
@@ -116,6 +120,15 @@
       "ownerRole": "DevOps-Privacy",
       "dueGate": "quarterly-full-host-drill",
       "evidenceRefs": ["github-issue://3"]
+    },
+    {
+      "id": "order-files-bucket-backup-not-evidenced",
+      "summary": "The RustFS order-files bucket has no off-host backup or restore evidence.",
+      "ownerRole": "DevOps-Privacy",
+      "dueGate": "before-monthly-database-restore",
+      "evidenceRefs": [
+        "repository://docs/adr/021-arquivos-da-arte-no-rustfs.md"
+      ]
     },
     {
       "id": "full-smoke-not-executed",

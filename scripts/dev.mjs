@@ -52,6 +52,20 @@ const localIdentityEnvironment = {
     process.env.IDENTITY_BOOTSTRAP_TOKEN ??
     'development-bootstrap-token-local-only',
 };
+// ADR 021: the order's art files go to the local RustFS of
+// docker-compose.dev.yml unless another S3 endpoint is given.
+const localObjectStorage = process.env.OBJECT_STORAGE_ENDPOINT === undefined;
+const objectStorageEnvironment = {
+  OBJECT_STORAGE_ENDPOINT:
+    process.env.OBJECT_STORAGE_ENDPOINT ?? 'http://127.0.0.1:9000',
+  OBJECT_STORAGE_REGION: process.env.OBJECT_STORAGE_REGION ?? 'us-east-1',
+  OBJECT_STORAGE_BUCKET:
+    process.env.OBJECT_STORAGE_BUCKET ?? 'crm-silmer-arquivos',
+  OBJECT_STORAGE_ACCESS_KEY_ID:
+    process.env.OBJECT_STORAGE_ACCESS_KEY_ID ?? 'rustfs_local_only',
+  OBJECT_STORAGE_SECRET_ACCESS_KEY:
+    process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY ?? 'rustfs_local_only_secret',
+};
 const localN8nClientId = 'n8n-local-development';
 const localN8nClientSecret = localSecrets.CRM_AUTOMATION_CLIENT_SECRET;
 /** @type {Record<string, string>} */
@@ -85,6 +99,7 @@ const localN8nComposeEnvironment = {
 };
 
 if (process.env.DATABASE_URL === undefined) await startLocalDatabase();
+if (localObjectStorage) await startLocalObjectStorage();
 if (localN8nEnabled) await startLocalN8n();
 await runMigrations();
 await runInitialBuild();
@@ -97,6 +112,7 @@ try {
       DATABASE_URL: databaseUrl,
       ...localIdentityEnvironment,
       ...localN8nEnvironment,
+      ...objectStorageEnvironment,
       HOST: apiHost,
       PORT: apiPort,
     }),
@@ -186,6 +202,17 @@ async function startLocalDatabase() {
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
   }
   throw new Error('Local PostgreSQL did not become ready in time');
+}
+
+async function startLocalObjectStorage() {
+  await run('local RustFS', 'docker', [
+    'compose',
+    '-f',
+    'docker-compose.dev.yml',
+    'up',
+    '--detach',
+    'rustfs',
+  ]);
 }
 
 async function startLocalN8n() {

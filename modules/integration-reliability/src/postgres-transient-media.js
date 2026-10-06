@@ -143,7 +143,7 @@ export class PostgresTransientMediaRepository {
   }
 
   /** @param {{mediaId: string, operatorId: string, occurredAt?: string|Date, result: 'success'|'failure'|'limitation'|'archive_missed'}} input */
-  async recordDropboxHandoff({
+  async recordValidFileHandoff({
     mediaId,
     operatorId,
     occurredAt = new Date(),
@@ -152,7 +152,9 @@ export class PostgresTransientMediaRepository {
     if (
       !['success', 'failure', 'limitation', 'archive_missed'].includes(result)
     ) {
-      throw new TypeError('result must be a canonical Dropbox handoff outcome');
+      throw new TypeError(
+        'result must be a canonical valid-file handoff outcome',
+      );
     }
     const normalizedMediaId = boundedString(mediaId, 'mediaId', 128);
     const normalizedOperatorId = boundedString(operatorId, 'operatorId', 128);
@@ -182,7 +184,7 @@ export class PostgresTransientMediaRepository {
         `INSERT INTO crm.media_handoff_receipts
            (id, transient_media_id, destination, content_sha256,
             operator_id, occurred_at, result)
-         VALUES ($1, $2, 'dropbox', $3, $4, $5, $6)`,
+         VALUES ($1, $2, 'rustfs', $3, $4, $5, $6)`,
         [
           receiptId,
           normalizedMediaId,
@@ -196,13 +198,13 @@ export class PostgresTransientMediaRepository {
         `INSERT INTO crm.audit_events
            (id, actor_id, action, target_type, target_id, version, reason,
             correlation_id, occurred_at)
-         VALUES ($1, $2, 'media.dropbox_handoff.recorded', 'transient_media',
+         VALUES ($1, $2, 'media.valid_file_handoff.recorded', 'transient_media',
            $3, '1', $4, $5, $6)`,
         [
           randomUUID(),
           normalizedOperatorId,
           normalizedMediaId,
-          `dropbox-${result}`,
+          `valid-file-${result}`,
           receiptId,
           timestamp,
         ],

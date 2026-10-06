@@ -20,6 +20,7 @@ const expectedRecoveryCheckKeys = [
   'cleanVpsDrill',
   'temporaryDnsDrill',
   'objectVersionRestore',
+  'orderFilesBucketRestore',
   'fullSmoke',
 ];
 const expectedCadenceKeys = [
@@ -413,6 +414,16 @@ export function validateRecoveryKit(kit, topology) {
   invariant(
     kit.runbook === 'RUNBOOK.md',
     'Recovery kit must reference the local runbook',
+  );
+  invariant(
+    kit.orderFiles?.decisionRecord ===
+      '../../docs/adr/021-arquivos-da-arte-no-rustfs.md' &&
+      kit.orderFiles.service === 'silmer-rustfs' &&
+      kit.orderFiles.bucket === 'crm-silmer-arquivos' &&
+      kit.orderFiles.offHostBackup === 'with-postgres' &&
+      kit.orderFiles.restoreOrder === 'after-postgres-before-api' &&
+      kit.orderFiles.sameFailureDomainAsPostgres === true,
+    'Recovery kit must back up and restore the RustFS order files with PostgreSQL',
   );
   invariant(
     JSON.stringify(Object.keys(kit.adapters ?? {})) ===

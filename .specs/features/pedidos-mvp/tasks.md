@@ -1669,3 +1669,50 @@ branch `feat/atendimento-por-produto`.
 - **Aceite:** situação atual, proposta, alternativas, riscos, critérios e as
   decisões D1–D7 para o PO.
 - **Gate:** links e formatação.
+
+## Itens por público (ADR 022, 05/10/2026)
+
+Seguem a T91 na branch `feat/atendimento-por-produto`; cada tarefa vira um
+commit e um push.
+
+### T92: Decisão e rastreabilidade
+
+- **Requisitos:** PUB-01–PUB-09.
+- **Arquivos:** RFC 010 (status), ADR 022, índice de ADRs, spec e tasks.
+- **Aceite:** D1–D7 registradas conforme a recomendação aceita pelo PO.
+- **Gate:** links e formatação.
+
+### T93: Público, quantidade informada e divisão no domínio e na API
+
+- **Requisitos:** PUB-01–PUB-05, PUB-09.
+- **Arquivos:** `modules/orders/src/domain/` (`ficha.js`, `audiences.js`),
+  integração n8n (`BRIEFING_PATCH_FIELDS`, contrato e schema), OpenAPI e
+  testes.
+- **Aceite:** campos opcionais validados; leitura da divisão sem dúvida;
+  projeção em vários itens; fichas antigas lidas com os campos vazios.
+- **Gate:** testes de domínio, serviço, rotas e contrato.
+
+### T94: Tela do pedido com público e Duplicar item
+
+- **Requisitos:** PUB-01, PUB-02, PUB-06, PUB-07 (rótulo).
+- **Arquivos:** componentes do pedido, `order-format.js` e E2E.
+- **Aceite:** seletor de público por teclado, cabeçalho e aviso por item,
+  Duplicar item com foco no público, "Modelo de malha".
+- **Gate:** build, typecheck, lint e E2E de pedidos.
+
+### T95: Ficha impressa v6
+
+- **Requisitos:** PUB-07.
+- **Arquivos:** `ficha-canonical-v6.js`, amostra sintética de quatro
+  públicos, snapshot, PDF e gate da revisão.
+- **Aceite:** v2–v5 intactas; `PRINT_TEMPLATE` continua v5 até a aprovação
+  provisória do PO.
+- **Gate:** testes da impressão e `validate:ficha-pdf-review`.
+
+### T96: Workflow com a divisão em `audiences`
+
+- **Requisitos:** PUB-08.
+- **Arquivos:** SDK do workflow, snapshots, testes e README da integração.
+- **Aceite:** divisão gravada em `audiences`; a dica ao vendedor lê o campo;
+  ordem de implantação no runbook.
+- **Gate:** testes de contrato do workflow.

@@ -873,3 +873,21 @@ bot, os sete pontos da ADR 012.
 | PRD-06 | `briefing_complete` exige os pontos do produto e o nome enquanto o bot o pede; "Ficha: X de N" conta os mesmos campos (7 para roupa, boné ou bolsa; 6 para outro produto ou produto não dito). |
 | PRD-07 | Um boné do bot chega ao item 1 do pedido com o tipo ("bonés trucker"), a cor e a gola "NÃO APLICÁVEL"; malha, técnica, tamanhos e arte ficam para o vendedor, que continua obrigado a preenchê-los para gerar o pedido. "Quero esse boné" é peça já mostrada e transfere (ADR 013). |
 | PRD-08 | O workflow passa a `mvp-simple-12` (DEV `dev-mvp-simple-13`) sem ordem de implantação; o [roteiro do indicador da ficha](../../../docs/integrations/n8n/roteiro-indicador-da-ficha.md) cobre roupa, abadá, boné, ecobag, outro produto, sublimação em peça escura e divisão por público. |
+
+## Itens por público (ADR 022, 05/10/2026)
+
+O PO definiu que gênero e idade criam itens, só quando o cliente divide a
+quantidade, e aceitou as recomendações D1–D7 da
+[RFC 010](../../../docs/rfc/010-itens-por-publico.md).
+
+| ID | Critério de aceite |
+| --- | --- |
+| PUB-01 | Cada item tem `publico` opcional (masculino, feminino, infantil, unissex ou vazio), editável por teclado num seletor com rótulo "Público" e mostrado no cabeçalho do item; não entra em `missingFields` nem bloqueia gerar. A API recusa outro valor. |
+| PUB-02 | Cada item tem `quantidade_informada` opcional (inteiro de 1 a 100000), só de referência; com grade e soma diferente, o item mostra "A soma dos tamanhos (X) é diferente da quantidade informada (Y)"; sem grade, "— (cliente informou Y)". |
+| PUB-03 | O CRM aceita `audiences` no `briefing_patch` e lê a divisão só quando não há dúvida (inteiro positivo junto de masculino, feminino, infantil ou unissex, uma vez cada); o texto aparece em Dados do atendimento como "Divisão informada". |
+| PUB-04 | Com duas ou mais partes lidas, o pedido pendente nasce com um item por parte, na ordem dita, cada um com público, quantidade informada e os mesmos pontos projetados do bot; a grade só é projetada com um item. Uma parte só marca o público e a quantidade informada do item 1. |
+| PUB-05 | Enquanto a conversa está com o bot, uma divisão nova refaz os itens da divisão sem apagar a técnica do vendedor nem itens acrescentados por ele; depois do handoff, nada é reprojetado. |
+| PUB-06 | "Duplicar item N" insere a cópia logo abaixo, sem grade nem quantidade informada, e leva o foco ao seletor de público do item novo; o leitor de tela anuncia o item criado. |
+| PUB-07 | "Tecido" passa a "Modelo de malha" na tela; `ficha-canonical-v6` imprime o público junto do número do item, o novo rótulo e a quantidade informada quando difere da soma; v2–v5 intactas; `PRINT_TEMPLATE` muda só após a aprovação provisória do PO. |
+| PUB-08 | O workflow `mvp-simple-13` grava a divisão em `audiences`, nunca a pergunta, e vai ao ambiente depois do CRM que aceita o campo. |
+| PUB-09 | Fichas gravadas antes são lidas com `publico` e `quantidade_informada` vazios; nenhuma migração SQL. |

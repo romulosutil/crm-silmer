@@ -83,6 +83,11 @@ ler bucket operacional. Sem ACL pública e sem dependência de lifecycle S3.
 
 Upload fica temporariamente em spool privado montado na API/worker, UUID opaco,
 sem nome do cliente. API reserva quota transacional antes de consumir bytes.
+Admissão T7 reserva o pior caso antes do streaming: anexo, duas vezes o
+limite do tipo; gravação, três vezes 16 MiB. Após medir os bytes reais,
+pode ajustar para duas vezes a entrada do anexo, ou entrada mais duas vezes
+16 MiB na gravação. Content-Length não autoriza escrita além da reserva.
+Essa conta cobre spool, intermediário/variante e objeto conjuntamente.
 Limite é aplicado durante streaming e confirmado pelo tamanho/hash real.
 
 Worker usa jobs PostgreSQL; inicia com duas conversões simultâneas no máximo.
@@ -99,7 +104,11 @@ declarar timeout de 120 s total que não mataria os subprocessos de outras fases
 Gravações são normalizadas para OGG/Opus mono; anexos válidos não são
 transcodificados por padrão. Scan e validação alcançam a entrada e o arquivo
 final; limite de 16 MiB se aplica aos dois. Saída limpa vai ao RustFS; ready só
-é gravado após PUT e confirmação de integridade. Crash PUT/DB reconcilia chave
+é gravado após PUT, confirmação de integridade e remoção confirmada do spool.
+SHA, tamanho e MIME da variante são persistidos antes do PUT; HEAD divergente
+impede sobrescrita e publicação. Somente depois do cleanup, ready reduz a
+reserva ao objeto final; used muda apenas no vínculo T10. Falha de cleanup
+ou rollback mantém a reserva anterior. Crash PUT/DB reconcilia chave
 determinística de upload/variante; não cria segundo arquivo visível.
 
 Falha conhecida antes do envio admite retry de processamento com o mesmo

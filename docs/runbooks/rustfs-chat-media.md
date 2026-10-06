@@ -174,7 +174,8 @@ Medição de sessão com `/usr/bin/time -v`: CPU 64,01 s user e 5,78 s system,
 de 301 s. Com a fronteira OGG de 300 s: 103,23 s elapsed, CPU 87,93 s user e
 15,03 s system, RSS máximo de 989248 KiB, zero swaps. Recomenda-se limite
 operacional de 2 GiB por worker para evitar OOM próximo de 1 GiB; confirmar
-sob carga em T23. Spool privado tem quota própria e rascunhos de 24 h;
+sob carga em T23. A reserva transacional cobre conjuntamente spool e objeto,
+sem quota física separada fictícia; rascunhos têm prazo de 24 h para T22;
 anexos enviados seguem preservados. Não executar scanner paralelo para
 elevar throughput sem revisar orçamento e controle de concorrência.
 
@@ -186,3 +187,52 @@ decodificada; pré-skip/padding ou cabeçalho curto não alteram teto útil.
 
 Fontes: [FFmpeg opções](https://ffmpeg.org/ffmpeg.html),
 [freshclam configuração](https://docs.clamav.net/manual/Usage/Configuration.html#freshclamconf).
+
+## Worker e contrato de admissão T7
+
+Ativação explícita: `CHAT_MEDIA_ENABLED=true`. Sem essa flag, a fila nova não
+é consumida. Worker usa `DATABASE_URL`, `CHAT_MEDIA_SPOOL_ROOT` e
+`MEDIA_S3_ENDPOINT`, `MEDIA_S3_REGION`, `MEDIA_S3_BUCKET`,
+`MEDIA_S3_ACCESS_KEY_ID`, `MEDIA_S3_SECRET_ACCESS_KEY`. Produção exige HTTPS;
+HTTP é permitido somente para loopback em teste. Bucket canônico determina
+alias `chat-dev` ou `chat-operational`; mídia de outro alias falha fechado.
+API e worker compartilham o spool privado; os roots absolutos podem diferir
+nos runtimes, mas `spool_key` e `object_key` são apenas UUIDs relativos.
+
+Producer usa jobType `chat_media.process`, queue `chat_media`, effectPolicy
+`internal` e `chat_media_id`, sem message_id ou transient_media_id. Migração
+0028 exige essa combinação. Criar mídia e job atomicamente na admissão;
+preencher declared_mime_type, input_size_bytes medido, envelope cifrado do
+nome, upload_command_id/fingerprint, kind/origin, UUIDs, alias/backend e
+reservation_bytes com quota reservada. Estado inicial uploaded/pending.
+Antes de consumir bytes, reservar duas vezes o limite do tipo para anexos,
+ou três vezes 16 MiB para gravação; ajustar pela entrada medida depois do
+streaming, sem confiar em Content-Length. Worker exige pelo menos duas
+vezes a entrada de anexo, ou entrada mais duas vezes 16 MiB de gravação.
+
+PostgresChatMediaRepository expõe acquire(job), prepare(job,row,metadata),
+ready(job,row) e fail(job,row,reason), todos com fencing do claim/attempt e
+CAS. Metadados preparados precedem o PUT; HEAD confirma hash/tamanho/MIME.
+Cleanup confirmado precede ready e redução da reserva ao objeto final;
+used permanece zero até T10. DB rollback ou cleanup incompleto preserva
+reserva e permite HEAD/retry no mesmo registro. T22 libera reserva somente
+após DELETE confirmado. Lease é renovado a cada 5 s; processamento é
+sequencial. Assinaturas atualizam em background sem atrasar texto/heartbeat.
+
+Reprodução isolada do teste combinado: gerar a fixture Chromium acima,
+iniciar a imagem runtime com mount do repositório em `/workspace`, UID 1000,
+limite de 2 GiB/1 CPU e tmpfs privado em `/tmp`; manter o nome do container
+no prefixo `crm-silmer-media-test-`. Configurar TEST_DATABASE_URL para o
+banco dedicado `crm_silmer_test`, as variáveis S3 sintéticas locais acima,
+RUN_RUSTFS_LIVE_SMOKE=yes, CHAT_MEDIA_RUNTIME_CONTAINER com esse nome e
+CHAT_MEDIA_USE_BUILT_RUNTIME=yes. Executar:
+
+```powershell
+rtk proxy node --test --test-concurrency=1 test/chat-media-process-postgres-live.test.js
+```
+
+São 13 cenários SQL e um ciclo real com duas mídias. Scanner/normalizador
+vêm de `/app/modules` na imagem; handler/repository/SDK executam no host
+contra DB e RustFS locais. Não é teste do deployment remoto. A imagem final
+T6 tem digest `sha256:d372430897763a95b471898d349af004525ae234003fb350e7f5538fbaaf1655`;
+o digest 7105b14c registrado em T5 contém somente o código até T5.

@@ -1,8 +1,8 @@
 # Mídia do vendedor no chat — Tasks
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
-Status: Draft. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; nenhuma implementada ou marcada concluída.
+Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
+24 tarefas planejadas; T1 concluída. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -98,7 +98,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-16, MED-19, MED-23
 **Reuses**: Inspeção context.md; padrão de smoke R2 sem presumir equivalência.
 **Tools**: tlc-spec-driven; Browser para inspeção; shell/ssh para smoke autorizado.
-**Done when**: [ ] PUT/HEAD/GET/Range/DELETE de canário sintético passam; bucket CRM isolado de hermes-backups; digest registrado; nenhuma alteração silenciosa do RustFS.
+**Done when**: [x] PUT/HEAD/GET/Range/DELETE e negativas de canário sintético passam na mesma versão configurada (alpha.99), em ambiente local isolado autorizado; bucket CRM isolado de hermes-backups; digest real do teste registrado; nenhuma alteração silenciosa do RustFS. Ativação e digest do deployment remoto permanecem gates de T23. Smoke real e 9 testes do harness passaram; [evidência](execution.md#t1-compatibilidade-rustfs).
 **Tests**: integration; mínimo 6 cenários de compatibilidade/negativa, sem objetos reais.
 **Gate**: Topology e smoke explícito documentado; criação de credencial/bucket sob autorização de acesso vigente.
 **Commit**: docs(storage): define rustfs chat media activation gate

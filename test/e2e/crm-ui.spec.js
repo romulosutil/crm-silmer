@@ -166,7 +166,7 @@ const conversationOrder = {
   version: 2,
 };
 
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyContacts?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -454,9 +454,19 @@ async function mockCrm(page, options = {}) {
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
-          items: options.empty ? [] : [contact],
+          items: options.empty
+            ? []
+            : options.manyContacts
+              ? Array.from({ length: 60 }, (_, index) => ({
+                  ...contact,
+                  id: index ? `contact-${index + 1}` : contact.id,
+                  label: index
+                    ? `Cliente de teste ${index + 1}`
+                    : contact.label,
+                }))
+              : [contact],
           nextCursor: null,
-          totalCount: options.empty ? 0 : 1,
+          totalCount: options.empty ? 0 : options.manyContacts ? 60 : 1,
         }),
       });
       return;
@@ -1406,6 +1416,75 @@ test('opens a client by clicking the whole row while keeping its keyboard link',
   await expect(page).toHaveURL('/clientes/contact-1');
   await page.getByRole('link', { name: 'Studio Malu' }).focus();
   await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeFocused();
+});
+
+test('keeps a long client list inside its own scrollable table', async ({
+  page,
+}) => {
+  await mockCrm(page, { manyContacts: true });
+  await page.goto('/clientes/contact-1');
+  const table = page.getByRole('region', {
+    name: /Clientes; role horizontalmente/u,
+  });
+  await expect(table.getByRole('row')).toHaveCount(61);
+  await expect(
+    page.getByRole('heading', { name: 'Studio Malu' }),
+  ).toBeVisible();
+  const tableMetrics = () =>
+    table.evaluate((element) => {
+      const root = globalThis.document.documentElement;
+      // Scrolled to the bottom of the page, where the top bar overlaps most.
+      globalThis.scrollTo(0, root.scrollHeight);
+      const panel = element.closest('.list-panel');
+      return {
+        clientHeight: element.clientHeight,
+        headingTop: element.querySelector('th')?.getBoundingClientRect().top,
+        pageHeight: root.scrollHeight,
+        panelBottom: panel?.getBoundingClientRect().bottom,
+        panelTop: panel?.getBoundingClientRect().top,
+        scrollHeight: element.scrollHeight,
+        tableTop: element.getBoundingClientRect().top,
+        topbarBottom: globalThis.document
+          .querySelector('.app-topbar')
+          ?.getBoundingClientRect().bottom,
+        viewportHeight: globalThis.innerHeight,
+      };
+    });
+
+  for (const viewport of [
+    { height: 720, width: 1280 },
+    { height: 844, width: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const metrics = await tableMetrics();
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+    expect(metrics.clientHeight).toBeLessThan(metrics.viewportHeight);
+    // The page no longer grows with the list it holds.
+    expect(metrics.pageHeight).toBeLessThan(metrics.scrollHeight);
+    if (viewport.width >= 1200) {
+      // Beside the contact card, the list stays whole below the top bar.
+      expect(metrics.panelTop).toBeGreaterThanOrEqual(
+        Number(metrics.topbarBottom),
+      );
+      expect(metrics.panelBottom).toBeLessThanOrEqual(metrics.viewportHeight);
+    }
+  }
+
+  // The column headings stay on top while the rows scroll under them.
+  await table.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const pinned = await tableMetrics();
+  expect(Math.abs(Number(pinned.headingTop) - pinned.tableTop)).toBeLessThan(2);
+
+  await page.evaluate(() => globalThis.scrollTo(0, 0));
+  await table.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  const lastClient = page.getByRole('link', { name: 'Cliente de teste 60' });
+  await lastClient.focus();
+  await expect(lastClient).toBeInViewport();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('recovers the client list after an initial server failure without showing an empty list', async ({

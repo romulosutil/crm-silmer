@@ -1,5 +1,77 @@
 # Execução INBOX-MEDIA-1
 
+## T15: Simulador DEV com bytes reais e importer por digest
+
+Evidência nativa sintética: `npm run smoke:n8n:media:local`, perfil ignorado
+retido após parada; não apagou registros nem desabilitou pruning. Os dez
+cenários iniciais, três replays e dois envios após restart totalizaram 15.
+Novas expectativas erradas (200/completed/count0) foram corrigidas, com
+aprovação do Tech Lead, para contratos 202/sent e lifecycle soft-deleted;
+nenhum teste publicado ou cenário foi removido. O gate produção T23 permanece
+sem PASS por recipient/caption iniciais; a prova limita-se a bytes/refs e DEV.
+
+Os snapshots em HEAD anterior tinham 61 nós DEV/local; a regeneração real
+passa a 77, acrescentando 16 nomes sem remover nenhum. A expectativa unitária
+do generator já era 77 desde T14; este gate cobre agora também igualdade
+snapshot→generator. O inventário canônico continua 68. O timeout gerado
+passa a refletir os 240 segundos do canônico. O transporte completo do worker
+(timeout local N8N_COMMAND_TIMEOUT_MS=10000) deve ser avaliado em T24;
+este ensaio reserva/aciona o workflow diretamente e não prova esse orçamento.
+
+| AC / requisito inverso | file:line + assertion | Resultado exigido |
+| --- | --- | --- |
+| MED-23 bytes reais/tipos/falhas | `scripts/n8n-media-local-smoke.mjs:546` cenários e `:505` status exato | PNG/OGG/MP4 e failed/unknown discriminados |
+| MED-06 replay/reserva | `scripts/n8n-media-local-smoke.mjs:541` counts deepEqual 1/1 | Replay não repete efeito |
+| MED-21 antes/depois efeito | `scripts/n8n-media-local-smoke.mjs:513` counts e `:527` retry flags | Download/hash/size 0/0; upload/epoch 1/0; unknown 1/1 sem retry |
+| MED-23 publicação atual | `scripts/n8n-media-local-smoke.mjs:623` version diferente; `:624` activeVersionId igual; `:522` ID atualizado | Nova publicação efetivamente executada |
+| MED-23 preservação/idempotência | `scripts/n8n-media-local-smoke.mjs:628` referência; `:629` credentials; `:630` users; `:655` deepEqual após reimport | Versão e estado local preservados |
+| MED-23 recursos | `scripts/n8n-media-local-smoke.mjs:648` pico >16MiB e <2GiB | Medido1467297792 bytes; default/concurrency1 |
+| MED-20 lifecycle sem bytes | `scripts/n8n-media-local-smoke.mjs:673` rows15; `:674` softdeleted15; `:675` binary0; `:676` refs0; `:677` runData0; `:678` stack inicial | Registros iniciais até pruning, sem resultados binários |
+| MED-20 resíduo raw/base64 | `scripts/n8n-media-local-smoke.mjs:663` ambos logs; `:692` todos arquivos | Canários dos bytes válidos ausentes em DB/WAL/FS/stdout/stderr |
+| Limite Privacy produção | `scripts/inspect-n8n-execution-privacy.py:77` categorias sem valores | recipient/caption observados: T23 pendente, sem alegar zero PII |
+
+MED-06/21/22/23/24: red settings all/all, ausencia default e botfilter403 Node; green n8n2.38.7 real PNG/OGG/MP4, success/failed/unknown/missing/replay/epoch/hash/size/16MiB, 15 execucoes. Pico1467297792 bytes(1.37GiB), default concorrencia1 limite2GiB/1CPU; somente Meta simulado, sem prova multipart Graph producao. Atualizacao publicada realmente executada e reimport idempotente preservam versao/users/credencial OpenAI sintetica/referencia/volume. Perfil parado15/15 soft-deleted, stack inicialONLY, zero binary/refs/runData/canarios raw-base64 DB-WAL-FS-stdout-stderr; categorias recipient/caption presentes: gate Privacy producao T23 NAO atendido. Seed ready manual/SHA RustFS; wholebuiltworker T24 pendente. Quick838pass/3skips(total841), T15unit11/11; UI107pass/7skips(total114)workers1, type-lint-diff-spec-tasks estritos verdes. Nenhuma Verified ou ADR reescrito; proximoT16.
+
+### Adequação bidirecional
+
+Os testes derivam dos ACs indicados nos nomes dos cenários. Cada assertion abaixo
+associa critério → resultado exato e resultado → requisito. Assert de fixture
+comprova isolamento. Nenhum cenário/skip/timeout publicado foi removido ou
+enfraquecido; Check A/B/C/D passa dentro da fronteira desta tarefa.
+
+| Critério / requisito (mapeamento inverso) | file:line + assertion | Resultado da spec |
+| --- | --- | --- |
+| test(T15/MED-23: importer assigns native node IDs once and preserves them by name across SDK regeneration, () | `test/n8n-dev-media.test.js:14` `assert.match(initial.nodes[0].id, /^[a-f0-9-]{36}$/u);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: importer assigns native node IDs once and preserves them by name across SDK regeneration, () | `test/n8n-dev-media.test.js:15` `assert.equal(     prepareLocalWorkflow(incoming, initial).nodes[0].id,     initial.nodes[0].id,   );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: importer assigns native node IDs once and preserves them by name across SDK regeneration, () | `test/n8n-dev-media.test.js:19` `assert.equal(Reflect.get(incoming.nodes[0], 'id'), undefined);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: localhost technical webhook accepts the real Node client user agent, () | `test/n8n-dev-media.test.js:35` `assert.equal(panel.parameters.authentication, 'none');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: localhost technical webhook accepts the real Node client user agent, () | `test/n8n-dev-media.test.js:36` `assert.equal(panel.parameters.options.ignoreBots, false);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: canonical and deployed technical webhook preserve Basic while accepting Node command workers, () | `test/n8n-dev-media.test.js:47` `assert.equal(panel.parameters.options.ignoreBots, false);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: canonical and deployed technical webhook preserve Basic while accepting Node command workers, () | `test/n8n-dev-media.test.js:48` `assert.equal(panel.parameters.authentication, 'basicAuth');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: canonical and deployed technical webhook preserve Basic while accepting Node command workers, () | `test/n8n-dev-media.test.js:51` `assert.equal(     deployment.nodes.find(       (/** @type {any} */ node) =>         node.name === 'Painel - Receber comando (MVP)',     ).credentials.httpBasicAuth.name,     'Silmer CRM para n8n Basic DEV',   );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-21/23: DEV upload validates actual buffer and can exercise known pre-message failure, async () | `test/n8n-dev-media.test.js:85` `assert.equal((await simulate(name, 3, {})).json.simulated, true);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-21/23: DEV upload validates actual buffer and can exercise known pre-message failure, async () | `test/n8n-dev-media.test.js:86` `await assert.rejects(simulate(name, 2, {}), /DEV_MEDIA_UPLOAD_INVALID/u);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-21/23: DEV upload validates actual buffer and can exercise known pre-message failure, async () | `test/n8n-dev-media.test.js:87` `await assert.rejects(     simulate(name, 3, { simulate_media_upload_failed: true }),     /DEV_MEDIA_UPLOAD_FAILED/u,   );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-24: DEV message uncertainty throws after effect boundary with no external HTTP, async () | `test/n8n-dev-media.test.js:94` `assert.equal(     (await simulate(name, 3, {})).json.messages[0].id,     'dev-human-media-synthetic',   );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-24: DEV message uncertainty throws after effect boundary with no external HTTP, async () | `test/n8n-dev-media.test.js:98` `await assert.rejects(     simulate(name, 3, { simulate_send_unknown: true }),     /DEV_SIMULATED_SEND_OUTCOME_UNKNOWN/u,   );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-20/23: local=${local} saves neither bytes nor execution data, () | `test/n8n-dev-media.test.js:106` `assert.deepEqual(       [         dev.settings.saveDataSuccessExecution,         dev.settings.saveDataErrorExecution,         dev.settings.saveExecutionProgress,         dev.settings.saveManualExecutions,       ],       ['none', 'none', false, false],;` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-20/23: local=${local} saves neither bytes nor execution data, () | `test/n8n-dev-media.test.js:115` `assert.equal(       dev.nodes.some(         (/** @type {any} */ n) => n.type === 'n8n-nodes-base.wait',       ),       false,     );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-20/23: local=${local} saves neither bytes nor execution data, () | `test/n8n-dev-media.test.js:121` `assert.equal(dev.pinData, undefined);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-20/23: local=${local} saves neither bytes nor execution data, () | `test/n8n-dev-media.test.js:122` `assert.equal(dev.staticData, undefined);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-20: digest import preserves local OpenAI credential and publication state, never CRM or Meta credentials, () | `test/n8n-dev-media.test.js:152` `assert.deepEqual(result.nodes[0].credentials, existing.nodes[0].credentials);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-20: digest import preserves local OpenAI credential and publication state, never CRM or Meta credentials, () | `test/n8n-dev-media.test.js:153` `assert.equal(result.nodes[1].credentials, undefined);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-20: digest import preserves local OpenAI credential and publication state, never CRM or Meta credentials, () | `test/n8n-dev-media.test.js:154` `assert.equal(result.active, true);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-20: digest import preserves local OpenAI credential and publication state, never CRM or Meta credentials, () | `test/n8n-dev-media.test.js:155` `assert.equal(incoming.active, false);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-20: digest import preserves local OpenAI credential and publication state, never CRM or Meta credentials, () | `test/n8n-dev-media.test.js:156` `assert.equal(JSON.stringify(result).includes('old-private'), false);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: local instance explicitly uses native default binary mode and bounded resources, async () | `test/n8n-dev-media.test.js:163` `assert.match(compose, /N8N_DEFAULT_BINARY_DATA_MODE: .default./u);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: local instance explicitly uses native default binary mode and bounded resources, async () | `test/n8n-dev-media.test.js:164` `assert.match(compose, /N8N_CONCURRENCY_PRODUCTION_LIMIT: .1./u);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: local instance explicitly uses native default binary mode and bounded resources, async () | `test/n8n-dev-media.test.js:165` `assert.match(compose, /mem_limit: 2g/u);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: local instance explicitly uses native default binary mode and bounded resources, async () | `test/n8n-dev-media.test.js:166` `assert.match(compose, /import-local-workflow.mjs/u);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: local instance explicitly uses native default binary mode and bounded resources, async () | `test/n8n-dev-media.test.js:167` `assert.doesNotMatch(compose, /touch .*marker/u);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: regenerated local=${local} snapshot preserves actual media path, async () | `test/n8n-dev-media.test.js:182` `assert.deepEqual(snapshot, createDevTestWorkflow(source, { local }));` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: regenerated local=${local} snapshot preserves actual media path, async () | `test/n8n-dev-media.test.js:183` `assert.equal(snapshot.nodes.length, 77);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T15/MED-23: regenerated local=${local} snapshot preserves actual media path, async () | `test/n8n-dev-media.test.js:184` `assert.equal(       JSON.stringify(snapshot).includes('graph.facebook.com'),       false,     );` | Resultado explícito da assertion; necessário ao AC no cenário |
+
 ## T14: Workflow humano por ID Meta
 
 MED-06/21/22/24: red oito cenarios novos falharam por ausencia do caminho de midia; green preserva reserva, bytes nativos medidos antes Crypto v2 e referencia pareada restaurada, SHA/tamanho, URL command_id textual encodeURIComponent, multipart formBinaryData, Meta por ID, preflight real imediatamente antes messages, falha conhecida antes efeito versus unknown depois sem retry. Quick827pass/3skips publicados(total830), contrato especifico8/8 mais DEV8/8 e E2E107pass/7skips publicados(total114) workers1; typecheck/lint/diff verdes. Inventario aprovado canonic51para68 e DEV60para77, mantendo assertions funcionais e cenarios removidos proibidos. Suporte minimo generator necessario ao contrato T14 simula somente upload/messages Meta e impede HTTP externo receber Basic CRM; persistencia/importer/prova runtime n8n continuam T15. API/limites/voice Meta atuais nao demonstrados por endpoints oficiais inacessiveis; ativacao failclosed exige homologated+versao explicita+phone numerico e gate externo T23. Fonte n8n2.38.7 confirmado; nenhum schema ou ADR mudou; nenhuma Verified; proximo T15.

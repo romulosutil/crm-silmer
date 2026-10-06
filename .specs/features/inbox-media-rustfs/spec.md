@@ -186,7 +186,7 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 | MED-20         | Logs privados         | Execute  | In Progress | T3,T7,T12,T13,T16,T23 |
 | MED-21         | Reserva única         | Execute  | In Progress | T12,T13,T14,T15       |
 | MED-22         | Bytes por comando     | Execute  | In Progress | T13,T14,T15           |
-| MED-23         | DEV real              | In Tasks | Pending     | T1,T15,T24            |
+| MED-23         | DEV real              | Execute  | In Progress | T1,T15,T24            |
 | MED-24         | Resultado incerto     | Execute  | In Progress | T12,T14,T15,T24       |
 | MED-25         | Acessibilidade        | In Tasks | Pending     | T18,T19,T20,T21,T24   |
 | MED-26         | Scanner               | Execute  | In Progress | T4,T6,T7              |

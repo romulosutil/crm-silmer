@@ -444,6 +444,34 @@ test('the kind of product stands in for the type of garment only when that is mi
   assert.equal(deferredModel.serviceData.product_model, DEFERRED);
 });
 
+test('a cap from the bot reaches item 1 with its model and no collar (ADR 021)', () => {
+  // What workflow mvp-simple-12 records for a cap: the product, the model
+  // with the product's name and the not-applicable collar. It never asks
+  // fabric or sizes, which stay blank for the seller.
+  const ficha = briefingToFicha({
+    product_type: 'bonés',
+    product_model: 'bonés trucker',
+    colors: 'preto',
+    quantity: 50,
+    artwork_status: 'já tem a logo',
+    collar: NOT_APPLICABLE,
+  });
+  const [cap] = ficha.items;
+  assert.equal(cap.tipo, 'bonés trucker');
+  assert.equal(cap.cor, 'preto');
+  assert.equal(cap.gola, NOT_APPLICABLE);
+  assert.deepEqual(cap.malhas, []);
+  assert.deepEqual(cap.grade, []);
+  assert.equal(ficha.serviceData.product_type, 'bonés');
+  assert.equal(ficha.serviceData.quantity, 50);
+
+  // Another product has no model: the product is the type.
+  assert.equal(
+    briefingToFicha({ product_type: 'canecas' }).items[0].tipo,
+    'canecas',
+  );
+});
+
 test('a point left to the seller is never a ficha value and stays as service data', () => {
   const ficha = briefingToFicha({
     artwork_status: DEFERRED,

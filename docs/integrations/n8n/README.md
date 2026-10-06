@@ -25,41 +25,62 @@ cliente, conversa, briefing ou memória curta.
 
 Em cada mensagem de texto, a IA extrai somente fatos confirmados para o
 `briefing_patch` criptografado da Conversa e pergunta pelo próximo ponto da
-ficha (ADR 012). A ficha que o bot pergunta tem o nome (`customer_name`) e sete
-pontos: tipo de roupa (`product_model`), cor (`colors`), quantidade
-(`quantity`), estampa (`artwork_status`), tecido (`fabrics`), tamanhos
-(`sizes`) e gola (`collar`); regata e abadá gravam a gola "regata", e polo
-grava "gola polo", sem perguntar. Os demais campos do `briefing_patch` (identificação do
-pedido, tipo de peça, técnica e locais da estampa, data desejada, finalidade,
-perfil de compra, logística e anotações) só são gravados quando o cliente fala
-deles; o bot não os pergunta e o vendedor completa. A retirada é sempre na
-"Loja da Silmer".
+ficha (ADR 012, ADR 021). A saudação pede o nome e o que o cliente quer
+personalizar, nunca "qual camisa"; se o cliente não disser o nome, a resposta
+seguinte reage ao que ele contou e pede só o nome, e depois o bot não insiste.
+Os pontos, nesta ordem, são: produto (`product_type`), modelo
+(`product_model`, só para roupa, boné, mochila ou bolsa), cor (`colors`),
+quantidade (`quantity`), onde vai a estampa (`artwork_locations`) e para
+quando o cliente precisa (`needed_by`, desejo do cliente, nunca prazo
+confirmado). Origem da arte, técnica, tecido, tamanhos, gola, personalização
+individual e divisão por público nunca são perguntados: o bot grava o que o
+cliente disser e o vendedor completa. O bot nunca oferece criar a arte e, de
+tecido, só fala de algodão, poliéster e dry fit. Os demais campos
+(identificação do pedido, finalidade, perfil de compra, logística e
+anotações) também só são gravados quando o cliente fala deles. A retirada é
+sempre na "Loja da Silmer".
+
+Sem perguntar, o workflow grava o que já está definido (`KITS`): abadá é
+sublimação total em poliéster branco com gola regata; sublimação total pede
+poliéster branco; regata tem gola "regata", polo tem "gola polo", e boné,
+mochila e bolsa têm gola `NAO APLICAVEL`. Também grava o produto a partir do
+modelo dito ("30 regatas"), o modelo quando o produto já o nomeia ("abadás",
+"ecobags") e o nome do produto no modelo de boné e bolsa ("bonés trucker").
+Só preenche campo vazio, e o que preenche não é perguntado. O resumo da
+transferência traz "Atenção" (`ALERTS`: sublimação em algodão ou em peça
+escura, bordado com foto) e "Dica" (`HINTS`: técnica usual do produto,
+personalização individual, divisão por público), só para o vendedor.
 
 O workflow escolhe o próximo ponto pela constante `FICHA_RHYTHM` do SDK, o
-primeiro ponto ainda vazio, um por mensagem, e calcula de forma determinística
-os pontos pendentes depois de unir o patch ao briefing atual. Ele só emite
-`briefing_complete` quando o nome e os sete pontos estiverem presentes. Para
-trocar a ordem, reordene `FICHA_RHYTHM` em
+primeiro ponto do produto ainda vazio, um por mensagem, e calcula de forma
+determinística os pontos pendentes depois de unir o patch ao briefing atual.
+O nó de contexto diz ao modelo o produto reconhecido e como perguntar o
+próximo ponto (`POINT_QUESTIONS`). Ele só emite `briefing_complete` quando os
+pontos do produto e o nome estiverem presentes; o nome pedido duas vezes sem
+resposta deixa de ser exigido. Os grupos de produto ficam em `PRODUCT_KINDS`
+e `NAMED_MODELS`. Para trocar a ordem ou acrescentar um kit, edite
 `ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sdk.js`, atualize o snapshot
 sanitizado principal com os nós gerados por `render-mvp-workflow.mjs` e rode
 `npm run generate:n8n-dev-workflow` e `npm run generate:n8n-local-workflow`.
 Os gatilhos de transferência da ADR 009 são
 aplicados pelo nó de decisão, não só pelo prompt: pergunta de preço, frete ou
 pagamento; pedido de pessoa ou de vendedor pelo nome; nome fora do CRM pedido
-duas vezes; conversa que não é pedido do zero (camisa do post, "quero essa
-camisa", pedido de contato por e-mail, WhatsApp ou telefone, algo já combinado
-com a Silmer; ADR 013); duas respostas incompreensíveis ou indecisas para o
-mesmo item; reclamação; urgência; conteúdo não suportado; e o teto de 15
-mensagens. O resumo de todo handoff traz "Ficha: X de 8 (Y%)", o indicador da
-meta de 50% da ficha; o
+duas vezes; conversa que não é pedido do zero (camisa ou boné do post, "quero
+essa camisa", pedido de contato por e-mail, WhatsApp ou telefone, algo já
+combinado com a Silmer; ADR 013); duas respostas incompreensíveis ou indecisas
+para o mesmo item; reclamação; urgência; conteúdo não suportado; e o teto de
+15 mensagens. O resumo de todo handoff traz "Ficha: X de N (Y%)", o indicador
+da meta de 50% da ficha, com N igual ao nome, enquanto o bot o pede, mais os
+pontos do produto (7 para roupa, boné ou bolsa; 6 para outro produto); o
 [roteiro do indicador da ficha](roteiro-indicador-da-ficha.md) tem as
 mensagens para testá-lo.
 `briefing_status` e `next_required_field` guardam o estado desses gatilhos e
 não vão para a Ficha. Nenhuma informação inferida vira Pedido oficial,
 catálogo, preço, prazo garantido ou pagamento. O agente pode criar um Pedido
 `pendente`, que é rascunho não oficial, na rodada em que a ficha ganha o
-primeiro dos sete pontos (ADR 014); oficial é o Pedido `confirmado`, e a
-confirmação permanece humana (ADR 006).
+primeiro dos seus pontos ou um campo que ele só grava, em geral o produto
+(ADR 014); oficial é o Pedido `confirmado`, e a confirmação permanece humana
+(ADR 006).
 
 Esta entrega ativa somente WhatsApp. Instagram, leitura multimodal pela IA e
 novas telas ficam nas fases posteriores. O adapter direto Meta → CRM permanece
@@ -174,8 +195,9 @@ conforme a ADR 009.
 `open_order`. O workflow o calcula pela regra da
 [ADR 014](../../adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md): `true` na
 rodada em que a ficha (briefing anterior unido ao patch da rodada) ganha o
-primeiro valor real de um dos sete pontos e em todas as seguintes; o nome
-sozinho e "Definir com o vendedor" não abrem, e o que não é pedido do zero
+primeiro valor real de um dos pontos (ADR 021: o produto é o primeiro) e em
+todas as seguintes; o nome sozinho e "Definir com o vendedor" não abrem, e o
+que não é pedido do zero
 (ADR 013) nunca abre. Um valor que não seja booleano, ou o campo em outro
 evento, volta `400`. A autorização é a do próprio evento.
 
@@ -352,7 +374,9 @@ ADR 012, o CRM com o campo vai ao cloud-dev antes do workflow `mvp-simple-7`
 (DEV `dev-mvp-simple-8`). Pelo mesmo motivo, o CRM que aceita `open_order`
 (ADR 014) vai antes do workflow `mvp-simple-11` (DEV `dev-mvp-simple-12`); o
 workflow anterior continua funcionando com o CRM novo, que ainda aceita
-`order.intent_confirmed`.
+`order.intent_confirmed`. O workflow `mvp-simple-12` (DEV
+`dev-mvp-simple-13`, ADR 021) não muda o contrato e não tem ordem de
+implantação: `product_type` e o valor `NAO APLICAVEL` da gola já eram aceitos.
 
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker e configurar as duas credenciais Basic.

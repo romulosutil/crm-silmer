@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 e T2 concluídas. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1, T2 e T3 concluídas. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -124,7 +124,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-15, MED-17, MED-19, MED-20
 **Reuses**: Contrato verificado T1, hash/limites de private-media-volume; cliente S3 fixado.
 **Tools**: tlc-spec-driven; shell; documentação oficial.
-**Done when**: [ ] PUT/HEAD/read/Range funcionam; timeout e missing distinguíveis; nenhuma chave/root/URL pública em DTO ou log.
+**Done when**: [x] PUT/HEAD/read/Range funcionam; timeout e missing distinguíveis; nenhuma chave/root/URL pública em DTO ou log. Nove testes unitários e ciclo real SDK alpha.99 passaram; evidência em execution.md.
 **Tests**: unit + integration; mínimo 8 casos, incluindo streaming e falha parcial.
 **Gate**: Quick + smoke T1; audit de dependência no Build.
 **Commit**: feat(media): add private rustfs adapter

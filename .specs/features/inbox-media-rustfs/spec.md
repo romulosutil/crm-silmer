@@ -1,6 +1,6 @@
 # Mídia enviada pelo vendedor no chat — Specification
 
-Status: planejamento completo para revisão; implementação não iniciada.
+Status: implementação autorizada pelo usuário; em execução.
 Data: 05/10/2026. Decisões de storage e retenção: ADR 023 / RFC 011.
 Tarefa guarda-chuva: INBOX-MEDIA-1; baseline: INBOX-3/4, MSG-01..03,
 PRV-01..03, T02/T06 e issue histórica #29.
@@ -23,17 +23,17 @@ WhatsApp. O RustFS existente será o storage privado dessas mídias.
 
 ## Out of Scope
 
-| Feature                                                          | Reason                                                                  |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Gravar vídeo ou fotografar com a câmera                          | Pedido cobre anexar imagem/vídeo e gravar áudio                         |
-| Transcrição e interpretação de mídia pela IA                     | Capacidade de envio humano, sem mudar jornada do bot                    |
-| Vários anexos por mensagem, GIF, SVG, PDF e documentos           | Primeira fatia usa um arquivo image/audio/video                         |
-| Edição, compressão geral de vídeo e filtros de imagem            | Validar formato; conversão limitada à gravação de áudio                 |
-| Arquivamento de arte do Pedido e integração Dropbox              | Contrato próprio; anexo do chat não promove documento comercial         |
-| Atualizar RustFS compartilhado ou mover seus volumes             | Não necessário ao planejamento; depende de homologação e janela própria |
-| Expor bucket público ou usar credencial administrativa no CRM    | Acesso mínimo e leitura por API                                         |
-| Criar conta, credencial, bucket ou executar deploy nesta entrega | Entrega é planejamento; inspeção do painel foi somente leitura          |
-| Receptor de chat separado ou push assíncrono na janela n8n       | Validação ocorre no CRM e no callback DEV                               |
+| Feature                                                         | Reason                                                                            |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Gravar vídeo ou fotografar com a câmera                         | Pedido cobre anexar imagem/vídeo e gravar áudio                                   |
+| Transcrição e interpretação de mídia pela IA                    | Capacidade de envio humano, sem mudar jornada do bot                              |
+| Vários anexos por mensagem, GIF, SVG, PDF e documentos          | Primeira fatia usa um arquivo image/audio/video                                   |
+| Edição, compressão geral de vídeo e filtros de imagem           | Validar formato; conversão limitada à gravação de áudio                           |
+| Arquivamento de arte do Pedido e integração Dropbox             | Contrato próprio; anexo do chat não promove documento comercial                   |
+| Atualizar RustFS compartilhado ou mover seus volumes            | Não necessário ao planejamento; depende de homologação e janela própria           |
+| Expor bucket público ou usar credencial administrativa no CRM   | Acesso mínimo e leitura por API                                                   |
+| Alterar acessos ou executar deploy remoto sem revisão do escopo | Gate de ativação em T23; Docker local sintético foi autorizado para implementação |
+| Receptor de chat separado ou push assíncrono na janela n8n      | Validação ocorre no CRM e no callback DEV                                         |
 
 ## Assumptions & Open Questions
 
@@ -56,7 +56,9 @@ WhatsApp. O RustFS existente será o storage privado dessas mídias.
 **Open questions:** none — todas as decisões pendentes estão registradas como
 propostas acima. Endpoint/credenciais, digest, quotas, compatibilidade S3 e
 backup são verificações operacionais, não fatos presumidos. O plano detalhado
-é rascunho revisável; apenas storage, gravação e retenção foram decididos.
+foi autorizado para implementação. A autorização posterior de Docker local
+permite homologação sintética isolada, sem alterar o RustFS compartilhado.
+Ativação, acessos e recovery remotos continuam gates explícitos de T23.
 
 ## User Stories
 
@@ -160,37 +162,37 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 
 ## Requirement Traceability
 
-| Requirement ID | Story                 | Phase    | Status  | Tasks                 |
-| -------------- | --------------------- | -------- | ------- | --------------------- |
-| MED-01         | Arquivo imagem        | In Tasks | Pending | T4,T7,T18,T21         |
-| MED-02         | Arquivo áudio         | In Tasks | Pending | T4,T7,T18,T21         |
-| MED-03         | Arquivo vídeo         | In Tasks | Pending | T4,T7,T18,T21         |
-| MED-04         | Validação             | In Tasks | Pending | T4,T5,T7,T18          |
-| MED-05         | Persistência atômica  | In Tasks | Pending | T2,T10,T11            |
-| MED-06         | Replay                | In Tasks | Pending | T7,T10,T11,T14,T15    |
-| MED-07         | Chave divergente      | In Tasks | Pending | T7,T10,T11            |
-| MED-08         | Autorização/estado    | In Tasks | Pending | T7,T8,T10,T11,T21     |
-| MED-09         | Microfone             | In Tasks | Pending | T19,T21               |
-| MED-10         | Revisão de áudio      | In Tasks | Pending | T19,T21               |
-| MED-11         | Permissão negada      | In Tasks | Pending | T19,T21               |
-| MED-12         | Limites gravação      | In Tasks | Pending | T5,T19                |
-| MED-13         | Liberar recursos      | In Tasks | Pending | T19,T21               |
-| MED-14         | Normalização          | In Tasks | Pending | T5,T6                 |
-| MED-15         | Preservação           | In Tasks | Pending | T2,T3,T9,T16,T22,T23  |
-| MED-16         | Leitura privada       | In Tasks | Pending | T8,T9,T13             |
-| MED-17         | Range                 | In Tasks | Pending | T3,T9,T20             |
-| MED-18         | Range inválido        | In Tasks | Pending | T9                    |
-| MED-19         | Falha S3              | In Tasks | Pending | T3,T6,T9,T20          |
-| MED-20         | Logs privados         | In Tasks | Pending | T3,T7,T12,T13,T16,T23 |
-| MED-21         | Reserva única         | In Tasks | Pending | T12,T13,T14,T15       |
-| MED-22         | Bytes por comando     | In Tasks | Pending | T13,T14,T15           |
-| MED-23         | DEV real              | In Tasks | Pending | T1,T15,T24            |
-| MED-24         | Resultado incerto     | In Tasks | Pending | T12,T14,T15,T24       |
-| MED-25         | Acessibilidade        | In Tasks | Pending | T18,T19,T20,T21,T24   |
-| MED-26         | Scanner               | In Tasks | Pending | T4,T6,T7              |
-| MED-27         | Órfãos                | In Tasks | Pending | T2,T22                |
-| MED-28         | Quota                 | In Tasks | Pending | T2,T6,T7,T23          |
-| MED-29         | Reprovação assíncrona | In Tasks | Pending | T4,T5,T6,T8           |
+| Requirement ID | Story                 | Phase    | Status      | Tasks                 |
+| -------------- | --------------------- | -------- | ----------- | --------------------- |
+| MED-01         | Arquivo imagem        | In Tasks | Pending     | T4,T7,T18,T21         |
+| MED-02         | Arquivo áudio         | In Tasks | Pending     | T4,T7,T18,T21         |
+| MED-03         | Arquivo vídeo         | In Tasks | Pending     | T4,T7,T18,T21         |
+| MED-04         | Validação             | In Tasks | Pending     | T4,T5,T7,T18          |
+| MED-05         | Persistência atômica  | Execute  | In Progress | T2,T10,T11            |
+| MED-06         | Replay                | In Tasks | Pending     | T7,T10,T11,T14,T15    |
+| MED-07         | Chave divergente      | In Tasks | Pending     | T7,T10,T11            |
+| MED-08         | Autorização/estado    | In Tasks | Pending     | T7,T8,T10,T11,T21     |
+| MED-09         | Microfone             | In Tasks | Pending     | T19,T21               |
+| MED-10         | Revisão de áudio      | In Tasks | Pending     | T19,T21               |
+| MED-11         | Permissão negada      | In Tasks | Pending     | T19,T21               |
+| MED-12         | Limites gravação      | In Tasks | Pending     | T5,T19                |
+| MED-13         | Liberar recursos      | In Tasks | Pending     | T19,T21               |
+| MED-14         | Normalização          | In Tasks | Pending     | T5,T6                 |
+| MED-15         | Preservação           | Execute  | In Progress | T2,T3,T9,T16,T22,T23  |
+| MED-16         | Leitura privada       | In Tasks | Pending     | T8,T9,T13             |
+| MED-17         | Range                 | In Tasks | Pending     | T3,T9,T20             |
+| MED-18         | Range inválido        | In Tasks | Pending     | T9                    |
+| MED-19         | Falha S3              | In Tasks | Pending     | T3,T6,T9,T20          |
+| MED-20         | Logs privados         | In Tasks | Pending     | T3,T7,T12,T13,T16,T23 |
+| MED-21         | Reserva única         | In Tasks | Pending     | T12,T13,T14,T15       |
+| MED-22         | Bytes por comando     | In Tasks | Pending     | T13,T14,T15           |
+| MED-23         | DEV real              | In Tasks | Pending     | T1,T15,T24            |
+| MED-24         | Resultado incerto     | In Tasks | Pending     | T12,T14,T15,T24       |
+| MED-25         | Acessibilidade        | In Tasks | Pending     | T18,T19,T20,T21,T24   |
+| MED-26         | Scanner               | In Tasks | Pending     | T4,T6,T7              |
+| MED-27         | Órfãos                | Execute  | In Progress | T2,T22                |
+| MED-28         | Quota                 | Execute  | In Progress | T2,T6,T7,T23          |
+| MED-29         | Reprovação assíncrona | In Tasks | Pending     | T4,T5,T6,T8           |
 
 Coverage: 29 total, 29 mapped to tasks, 0 unmapped. Nenhum requisito Verified.
 

@@ -3,7 +3,7 @@
 ## T1: Compatibilidade RustFS
 
 Status: concluída. Harness e smoke real passaram na alpha.99 local isolada.
-Ativação remota continua pendente em T23. T2 ainda não iniciou.
+Ativação remota continua pendente em T23. T2 foi concluída abaixo.
 
 ### Antes do patch
 
@@ -101,3 +101,81 @@ Verdict: critérios de T1 cobertos no harness e por smoke real, com digest
 observado. Sem assertions rasas, testes desnecessários ou alterações de
 testes existentes. Nenhum segredo ou dado real utilizado. T1 concluída;
 T23 continua responsável por ativação e recovery no deployment remoto.
+
+## T2: Schema persistente
+
+Status: concluída, gates Live e Build passaram. Requisitos
+MED-05/15/27/28 permanecem em progresso; schema não comprova envio ou UI.
+
+### Antes do patch
+
+- Premissas: último número real é 0026; IDs de conversas/usuários/mensagens
+  permanecem text. A nova mídia usa UUID e não reutiliza transient_media.
+- Arquivos: `modules/database/migrations/0027_chat_media.expand.sql`,
+  `test/chat-media-schema-postgres-live.test.js`, `spec.md`, `tasks.md`,
+  `execution.md`. Migrations publicadas ficam intactas.
+- Sucesso: ao menos seis cenários live de replay, vínculo único, retenção
+  independente e quota, com gates Live e Build. Banco exclusivo
+  `crm_silmer_test`, sintético e sem dados reais.
+- Dependência: T1 concluída em `7e388c8`.
+
+### Implementação e gates
+
+Criada `crm.chat_media` com vínculo único por mensagem, FK composta para a
+mesma conversa, upload idempotente por ator/conversa, filename cifrado,
+estados, metadados, reserva e CAS. Sem expires_at ou trigger de fim de
+jornada. `crm.chat_media_quotas` separa bytes utilizados e reservados;
+limites serão injetados e atualizados transacionalmente por API/worker.
+Jobs ganham `chat_media_id` e `chat_media.process`, com unicidade e target
+próprio. As quatro variantes legadas foram preservadas.
+
+O teste live utiliza ciphertext AES-256-GCM sintético com iv/tag reais.
+O CHECK do novo envelope é total (`IS TRUE`), negando campos ausentes,
+metadata incompleta e plaintext. O CHECK valida estrutura; autenticação
+criptográfica depende da aplicação, não da expressão SQL.
+
+Nenhuma assertion existente foi alterada, removida ou ignorada. Uma falha
+inicial no setup do teste (migrate exige options) foi corrigida; uma colisão
+de nome de constraint na migration nova foi corrigida antes de aplicar.
+
+- Live T2: 8/8 passaram, zero falhas/skips.
+- Live do projeto + T2: 19/19 passaram, zero falhas/skips, com
+  `node --test --test-concurrency=1 test/migrations-live.test.js test/inbox-postgres-live.test.js test/n8n-command-store-postgres-live.test.js test/chat-media-schema-postgres-live.test.js`.
+- `npm run validate`: PASS com Node 24.20.0/npm 11.19.0, 657 pass,
+  três skips preexistentes, 660 total. Inclui lint, tipos e build.
+- `npm run test:e2e -- --workers=1`: 107 passaram, sete skips preexistentes,
+  114 total. Assertions e contagem preservadas. A primeira execução com
+  oito workers tinha 105 pass e duas falhas, incluindo Target crashed;
+  o rerun completo com um worker confirmou a suíte sem alterar teste.
+- `npm audit --audit-level=high`: zero vulnerabilidades.
+- `git diff --check`, validate_spec e validate_tasks strict: PASS.
+
+### Adequação
+
+| Critério / requisito                           | `file:line` + assertion                                                                                                                                                                                                                                                                                                                                                                     | Resultado esperado                                                                  | Coberto |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------- |
+| Migration aplica duas vezes                    | `test/chat-media-schema-postgres-live.test.js:102`: `assert.deepEqual(await migrate(pool, { migrations: await loadMigrations() }), { applied: [], phase: 'expand' })`; linha 109: `assert.equal(result.rows[0].count, 1)`                                                                                                                                                                   | Replay vazio, uma aplicação 0027                                                    | Sim     |
+| Um arquivo por mensagem, mesma conversa MED-05 | `test/chat-media-schema-postgres-live.test.js:120` e 129: `await assert.rejects(media(...), /chat_media_message_id_key/u)` e `await assert.rejects(media(...), /chat_media_message_conversation_fk/u)`                                                                                                                                                                                      | Duplicate/FK rejeitam vínculo inválido                                              | Sim     |
+| Upload idempotente por ator/conversa           | `test/chat-media-schema-postgres-live.test.js:142`: `await assert.rejects(media({ upload_command_id: first.upload_command_id }), /chat_media_upload_scope_key/u)`; linha 150: `assert.equal(other.upload_command_id, first.upload_command_id)`                                                                                                                                              | Mesmo scope duplicado rejeitado; outra conversa independente                        | Sim     |
+| Preservação após oito dias/terminal MED-15     | `test/chat-media-schema-postgres-live.test.js:163`–164: `assert.equal(await repository.scheduleExpiredDeletions(), 0)` e `assert.equal(await repository.scheduleTerminalJourneyDeletions(), 0)`; linha 168: `assert.deepEqual(attached.rows, [{ state: 'attached', message_id: 'media-conversation-a-message' }])`; linha 174: `assert.equal(oldMedia.rows[0].older_than_eight_days, true)` | Media antiga permanece attached, nenhum job transitório                             | Sim     |
+| Rascunho separado MED-27                       | `test/chat-media-schema-postgres-live.test.js:225`: `assert.equal(draft.message_id, null)`; linha 226: `assert.equal(draft.retention_class, 'chat_retained')`; linha 227: `assert.equal(draft.state, 'uploaded')`                                                                                                                                                                           | Rascunho sem vínculo, classe própria                                                | Sim     |
+| Quota/reservas MED-28                          | `test/chat-media-schema-postgres-live.test.js:189`/195: `await assert.rejects(pool.query(...), /chat_media_quotas_capacity_check/u)` e `await assert.rejects(pool.query(...), /chat_media_quotas_nonnegative_check/u)`; linha 204: `assert.deepEqual(row.rows, [{ used_bytes: '600', reserved_bytes: '300' }])`                                                                             | Soma acima de limite e valores negativos rejeitados; counters separados preservados | Sim     |
+| Ready requer metadata limpa                    | `test/chat-media-schema-postgres-live.test.js:208`–220: `await assert.rejects(media({ state: 'ready' }), /chat_media_ready_metadata_check/u)`; variante infected, linked sem attached e reserva negativa também rejeitadas                                                                                                                                                                  | Não publicar ready incompleta/infectada                                             | Sim     |
+| Filename cifrado no schema                     | `test/chat-media-schema-postgres-live.test.js:237`: `await assert.rejects(media({ filename_envelope: JSON.stringify(invalid) }), /chat_media_filename_envelope_check/u)`; linha 243: `assert.equal(valid.filename_envelope.ciphertext, JSON.parse(envelope).ciphertext)`; linha 247: `assert.equal(JSON.stringify(valid.filename_envelope).includes('synthetic.jpg'), false)`               | Estrutura incompleta/plaintext rejeitados; ciphertext real preservado               | Sim     |
+| Target/uniqueness job                          | `test/chat-media-schema-postgres-live.test.js:274`: `assert.deepEqual(job.rows, [{ job_type: 'chat_media.process', chat_media_id: draft.id }])`; linha 277: `await assert.rejects(insert(), /outbox_jobs_chat_media_process_key/u)`; linhas 278/282: `assert.rejects` target null/FK inexistente                                                                                            | Target persistente próprio, um job por mídia, FK válida                             | Sim     |
+
+| Teste / assertion                                                                              | Origem                                         | Manter |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------ |
+| `test/chat-media-schema-postgres-live.test.js:102`, replay e count                             | Done when T2 migration idempotente             | Sim    |
+| `test/chat-media-schema-postgres-live.test.js:119–129`, vínculo positivo e negativas unique/FK | MED-05 + Done when T2 vínculo                  | Sim    |
+| `test/chat-media-schema-postgres-live.test.js:142–150`, replay scope                           | Design `upload_command_id` + T2 constraints    | Sim    |
+| `test/chat-media-schema-postgres-live.test.js:163–182`, sweeper/attached/date/sem expires/jobs | MED-15 + T2 sem sweeper transitório            | Sim    |
+| `test/chat-media-schema-postgres-live.test.js:189–204`, capacidade e counters                  | MED-28 + T2 modelo de quota                    | Sim    |
+| `test/chat-media-schema-postgres-live.test.js:208–228`, ready/binding/size/draft/object UUID   | MED-05/27 + modelo T2                          | Sim    |
+| `test/chat-media-schema-postgres-live.test.js:237–247`, envelope inválido/ciphertext           | Design filename_envelope cifrado / privacidade | Sim    |
+| `test/chat-media-schema-postgres-live.test.js:274–285`, jobtarget/unique/FK                    | T2 payload de job compatível                   | Sim    |
+
+Verdict: suficiência por critério e necessidade por teste comprovadas em
+SQL real. Assertions verificam valores persistidos e falhas de constraints,
+sem substituir estado por call counts. Padrão `CONTRIBUTING.md`, node:test,
+JSDoc/checkJs e banco dedicado. Sem alteração de migration publicada.

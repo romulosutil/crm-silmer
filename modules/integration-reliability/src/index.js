@@ -64,3 +64,10 @@ export {
   MediaObjectMissingError,
   MediaInvalidRangeError,
 } from './rustfs-media-store.js';
+export {
+  CHAT_MEDIA_LIMITS,
+  ChatMediaDeclarationError,
+  ChatMediaValidationError,
+  ChatMediaValidator,
+  validateMediaDeclaration,
+} from './chat-media-validation.js';

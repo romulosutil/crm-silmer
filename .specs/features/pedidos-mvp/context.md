@@ -2,7 +2,8 @@
 
 **Coletado em:** 09/09 a 12/09/2026, em revisão de design com o PO
 **Spec:** [`spec.md`](spec.md)
-**Status:** Pronto para arquitetura
+**Atualizado em:** 05/10/2026 — PR 142 integrada
+**Status:** implementado; homologação e assinatura física da ficha pendentes
 
 ---
 
@@ -25,8 +26,8 @@ Pedidos substitui o que seria o Kanban.
 - **D02** O **agente cria** o pedido pendente quando confirma a intenção de
   compra. Isso muda a regra atual do contrato n8n ("nenhuma informação inferida
   vira Pedido oficial"). Reconciliação: **Pendente é rascunho não oficial;
-  oficial é Confirmado**, e confirmar continua sendo humano. Registrar em ADR
-  006, que supersede o trecho "Pedido será uma decisão posterior" da ADR 004.
+  oficial é Confirmado**, e confirmar continua sendo humano. A ADR
+  006 registra essa decisão e supersede o trecho "Pedido será uma decisão posterior" da ADR 004.
 - **D03** O vendedor (dono) ou um admin também pode **criar manualmente** quando
   o agente não detectou a intenção. Sem isso a conversa ficaria sem saída.
 - **D04** **Vários pedidos por conversa, um pendente por vez.** Nova intenção
@@ -49,21 +50,17 @@ Pedidos substitui o que seria o Kanban.
 
 ### Campos e documento
 
-- **D10** Campos e ordem das seções seguem o template aprovado
-  `ficha-canonical-v2` (`scripts/ficha-pdf-review.mjs → buildFichaHtml` e
-  `docs/phase0/ficha-pdf-synthetic.json`).
-- **D11** Arte, locais, logística, finalidade e perfil de compra ficam em
-  "Dados do atendimento": só leitura, a partir da pré-ficha, e **não saem na
-  ficha impressa**.
+D10/D11/D15 foram refinadas pelas ADRs 016–020, preservando seus IDs e dados antigos.
+
+- **D10** Campos atuais seguem os requisitos TEC-01..08 e a impressão ficha-canonical-v5 (ADR 020). V2–v4 e hashes preservam o histórico.
+- **D11** Arte pertence ao pedido e é impressa nas páginas comerciais da v5; locais são Estampa (referência) do item. Logística, finalidade e perfil continuam em Dados do atendimento, sem criar estados de Pedido.
 - **D12** Valor final: texto em reais com prefixo `R$`, formato brasileiro,
   guardado em centavos. Condição: Pix, Cartão de crédito, Cartão de débito.
   Valor e condição **não aparecem** no documento impresso.
 - **D13** Cliente vem do contato da conversa e fica bloqueado no pedido.
 - **D14** Número `NN-CRM` é reservado **na criação** do pedido (a lista mostra
   número em pendentes). Data do pedido é definida **na confirmação**.
-  ⚠️ O mockup da página ainda diz "número e data saem na confirmação" — corrigir
-  o texto de apoio na implementação.
-- **D15** Impressão só no template v2. v1 fica como fallback documental.
+- **D15** PRINT_TEMPLATE seleciona v5 com aprovação provisória do PO. Assinatura física de Rose e Operação continua obrigatória antes da produção. Versões anteriores são referências preservadas.
 
 ### Vocabulário e navegação
 
@@ -134,24 +131,13 @@ Pedidos substitui o que seria o Kanban.
     para desenvolvimento e cloud-dev; antes da produção, Rose e Operação
     assinam à mão a amostra impressa e o Tech Lead registra a aprovação final,
     confirmada pelo PO. D15 deixou de valer em 03/10/2026: desde a T74 a
-    impressão usa a v3.
+    impressão usava a v3. Desde a PR 142, a v5 está selecionada com aprovação provisória (ADR 020), sem dispensar assinatura física para produção.
 
 ---
 
 ## Discrição do agente (validar na revisão da spec)
 
-- **A01** ~~Confirmar exige, além de valor e condição, **ao menos um item com
-  grade**. Campos vazios da ficha **não bloqueiam**: aparecem no banner e saem
-  como "—" no documento. Motivo: confirmação é julgamento humano; bloquear tudo
-  recria o gate rígido que tornou o Kanban inviável.~~
-  **Supersedida em 02/10/2026 pela
-  [ADR 016](../../../docs/adr/016-itens-com-os-sete-pontos-da-ficha.md):**
-  gerar exige ao menos um item, os sete pontos principais de cada item (tipo,
-  cor, estampa, tecido, tamanhos e gola; a quantidade é a soma dos tamanhos),
-  a entrega prometida, o valor final e a forma de pagamento. O resto do resumo
-  e os adicionais do item continuam sem bloquear e deixam de ser listados como
-  em branco. Até o CRM tratar pagamento, gerar subentende o pagamento feito:
-  "Pago em" não bloqueia.
+- **A01** Gerar exige ao menos um item com Tipo de roupa, Cor, Quantidade calculada, Técnica, Tecido, Tamanhos e Gola; origem da arte, entrega prometida, valor final e condição (ADR 020). Adicionais e nome do pedido não bloqueiam. Pago em não bloqueia nem altera status; o CRM não afirma pagamento por gerar o pedido.
 - **A02** "Tempo parado": no inbox, desde a criação do handoff pendente; na
   lista de Pedidos, desde a última alteração do pedido.
 - **A03** Rótulos de motivo a partir de `handoffs.reason_code`:
@@ -161,7 +147,7 @@ Pedidos substitui o que seria o Kanban.
   "Dado divergente"; `low_confidence` → "Agente sem confiança";
   `complaint` → "Reclamação"; `urgency` → "Urgência";
   `unsupported` → "Conteúdo não suportado".
-- **A04** Impressão por página HTML do template v2 com `window.print()` no
+- **A04** Impressão por página HTML do template v5 com `window.print()` no
   navegador, sem Chromium no container da API.
 
 ---
@@ -178,10 +164,17 @@ Pedidos substitui o que seria o Kanban.
 
 ## Ideias adiadas
 
-- Pedidos no detalhe do Cliente; KPIs de pedidos no Dashboard.
+- Ampliações das consultas comerciais e do detalhe do Cliente; KPIs de pedidos confirmados já existem no Dashboard.
 - Linha do tempo de preenchimento por campo.
 - Mesa de Trabalho como visão de portfólio.
-- Limpeza das rotas mortas de Kanban/Negócio no OpenAPI e do módulo
-  `deals-pipeline` órfão.
+- Remoção do módulo deals-pipeline órfão e schemas históricos exige fatia própria; os caminhos aposentados já foram retirados da OpenAPI.
 - Rever a coluna "Situação" do Cliente e o KPI "Requerem atenção" do Dashboard,
   que ainda usam os estados antigos da conversa.
+
+## Baseline da PR 142 — ADR 020
+
+- Técnica é do item e substitui Estampa como ponto principal; Estampa (referência) é adicional opcional.
+- Arte é do pedido: cliente envia, Silmer cria ou Sem estampa, exclusiva das outras opções. Origem é obrigatória para gerar.
+- Bot só projeta técnica/origem inequívocas em campos vazios, preservando escolhas humanas.
+- Aplicação geral antiga e modelo continuam guardados, sem edição ou impressão na v5.
+- PRINT_TEMPLATE usa ficha-canonical-v5; v2–v4 e hashes não mudam. Aprovação provisória registrada em docs/phase0/ficha-pdf-approval-v5.json; assinatura física antes da produção continua pendente.

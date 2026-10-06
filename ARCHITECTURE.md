@@ -1,107 +1,94 @@
-# Arquitetura — Decisões do MVP
+# Arquitetura — baseline do CRM Silmer
 
-> **Status:** baseline simplificada em 08/09/2026 pelo contrato n8n MVP.  
-> **Detalhes:** `TECHNICAL-DESIGN.md`; implantação em `EASYPANEL-TOPOLOGY.md`.
+Atualizada em 05/10/2026 após a PR #142 (ADR 020). Detalhes em
+[TECHNICAL-DESIGN.md](TECHNICAL-DESIGN.md) e
+[EASYPANEL-TOPOLOGY.md](EASYPANEL-TOPOLOGY.md).
 
-## Forma do produto
+## Produto e autoridade
 
-O MVP possui três objetivos que podem evoluir isoladamente e convergem no lançamento:
+O CRM é um monólito modular. PostgreSQL guarda Contato, Conversa, Mensagem,
+Handoff, Pedido, auditoria e jobs. A interface Vue 3 oferece Dashboard,
+Caixa de Entrada, Clientes, Pedidos, Vendedores e Conta. Negócio/Kanban
+foram aposentados pela [ADR 004](docs/adr/004-aposentar-kanban-e-negocio.md).
 
-| Objetivo                      | Responsabilidade                                                                                              | Não faz                                                   |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| CRM                           | Fonte oficial de contatos, conversas, mensagens, handoffs, permissões e auditoria | Não executa prompts nem depende da UI para iniciar fluxos |
-| Inbox Multicanal              | Exibe mensagens, pendências e saúde; permite resposta manual, atribuição, takeover e reconciliação            | Não contém regra comercial nem dispara o n8n por botão    |
-| Agente Vendedor Silmer no n8n | Recebe/envia WhatsApp, chama o provedor de IA configurado e orquestra resposta, comandos canônicos e handoff  | Não escreve no banco nem decide fora dos contratos do CRM |
+O n8n recebe/envia WhatsApp, chama OpenAI e orquestra a coleta. Nunca acessa
+o banco do CRM. Toda mutação oficial passa pela API autenticada,
+autorizada, idempotente e auditada. A mensagem inicia a automação; a UI
+observa ou assume o atendimento. Instagram é CANAL-2, posterior ao piloto.
 
-Fluxo inicial: `Cliente → WhatsApp → n8n → API do CRM → Inbox`.
-Respostas seguem `CRM → n8n → WhatsApp`. Instagram reutilizará a fronteira em
-fase posterior. Cada mensagem válida dispara automaticamente o n8n; a
-interface apenas observa ou assume a conversa.
+## Contratos ativos
 
-## Fronteiras e autoridade
+- Integração n8n MVP: três endpoints de inbound, attachment e events,
+  Basic Auth com `AUTOMATION_EXECUTOR`, briefing na Conversa e outbox
+  CRM→n8n ([ADR 003](docs/adr/003-adotar-integracao-n8n-mvp-simples.md)).
+- `message.send.requested` reserva um único efeito antes da Meta, usando
+  `automation_epoch` e `source_revision`. Replay não autoriza novo envio;
+  resultado incerto exige reconciliação, sem retry cego.
+- Handoff começa sem responsável. Claim por CAS tem um vencedor. Takeover,
+  handoff, fechamento e desligamento invalidam decisões obsoletas por epoch.
+- A função humana vigente é `Vendedor`; capacidades adicionais são
+  ortogonais. Sessão opaca, cookie seguro e CSRF protegem as mutações.
+  A migration `0012_remove_mfa.contract.sql` retirou MFA do CRM;
+  proteção do painel de infraestrutura é um controle distinto.
+- Conversa transferida não retorna ao bot
+  ([ADR 015](docs/adr/015-conversa-nao-volta-para-o-bot.md)).
 
-- PostgreSQL é a fonte da verdade do CRM.
-- O n8n é o motor obrigatório de canais, IA e orquestração, mas nunca acessa diretamente o banco do CRM.
-- Toda mutação oficial usa API versionada, Basic Auth de serviço, capacidade mínima, `Idempotency-Key`, correlação, identidade de workflow, versão esperada, auditoria e `automation_epoch`.
-- O CRM valida estados e gates. O workflow decide o próximo comando permitido; não redefine a máquina de estados.
-- Logs do n8n são evidência técnica. A auditoria durável do efeito comercial pertence ao CRM.
-- OpenAI e Gemini implementam o mesmo contrato estruturado. Regras de preço, permissão, gate e handoff são determinísticas e ficam fora do prompt.
-- Tomada humana, handoff, fechamento e desligamento incrementam o
-  `automation_epoch`; decisões antigas são rejeitadas na reserva de envio.
-- Toda chamada à Meta exige reserva atômica `message.send.requested`; resultado incerto é reconciliado e nunca repetido às cegas.
+## Pedido e ficha
 
-## Decisões confirmadas
+Pedido tem `pendente` e `confirmado`, confirmação/reabertura humanas e
+numeração global `NN-CRM`. Pode abrir a partir do primeiro ponto confirmado
+da ficha; o bot preenche progressivamente, e o vendedor revisa/completa.
+Um pendente acompanha o Contato; a confirmação congela o snapshot.
 
-- Frontend em Vue 3, JavaScript ESM e CSS, compilado com Vite; decisão registrada em `docs/adr/001-adotar-vue-no-frontend.md`.
-- API oficial do WhatsApp Business como canal do primeiro MVP operacional;
-  Instagram Direct é a próxima fase de canal.
-- Migração entre Instagram e WhatsApp preserva o Contato e só associa `@instagram` e telefone após correlação verificável e auditável.
-- Caixa de Entrada é a superfície operacional do atendimento e dos handoffs.
-- Pedido e sua ficha serão definidos em uma fase posterior, depois da homologação da jornada de atendimento.
-- Vendedor Silmer autônomo nas operações explicitamente concedidas ao ator `AUTOMATION_EXECUTOR`.
-- Aprovação de preço, venda, pagamento e Ficha permanece humana no caminho inicial.
-- n8n obrigatório; indisponibilidade do n8n torna a automação indisponível e visível, sem fallback silencioso para outra fonte de estado.
-- Integração n8n MVP conforme RFC 002/ADR 003: três endpoints, Basic only,
-  briefing consolidado na Conversa, reserva por epoch/revisão e comandos
-  CRM→n8n por outbox.
-- Contrato ativo somente para WhatsApp; Instagram é evolução posterior e não
-  bloqueia a validação do primeiro MVP operacional.
-- Numeração de pedidos iniciada em `01-CRM`, sem dependência legada.
-- Rômulo Sutil Corrêa como Responsável de Privacidade e política do piloto aprovada após consulta jurídica.
-- Defaults `D00.6-01..07` aprovados; `silmer:romulo.sutil` designado como Tech Lead, equipe de entrega e Administrador Técnico.
-- Exceção `SOLO-OPS-PILOT-01` limitada ao piloto interno; não prova segregação, infraestrutura provisionada ou recovery.
+O template selecionado é `ficha-canonical-v5` (ADR 020 / PR #142).
+Técnica pertence ao item e origem da arte ao pedido. Impressão exige Pedido
+confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF
+sintético de aprovação é um artefato de revisão. Assinatura física de Rose
+e Operação continua pendente para produção. Versões v2/v3/v4 são preservadas.
+
+Upload de arte, arquivo durável no Dropbox, aviso a Rose e automação PIX
+não são assumidos como entregues pelo ciclo atual de Pedido. Vendido conta
+somente confirmados; não equivale a recebimentos.
 
 ## Baseline técnica
 
-- **Forma:** CRM como monólito modular em JavaScript ESM e n8n como runtime externo obrigatório de automação; não criar microserviços adicionais.
-- **Processos do CRM:** `silmer-edge-web`, `silmer-api`, `silmer-worker` e `silmer-postgres`.
-- **Automação:** `silmer-n8n`, persistência própria e workflows versionados. A interface administrativa não é pública.
-- **Frontend:** SPA acessível em Vue 3 e Vue Router, sem store global nesta fase; Vite gera assets estáticos e Nginx não-root mantém web/API na mesma origem.
-- **Backend:** Node.js Active LTS, Fastify, REST `/api/v1`, OpenAPI 3.1 e SSE.
-- **Persistência:** PostgreSQL com SQL e migrações versionadas; dados oficiais normalizados e JSONB limitado a payloads e snapshots apropriados.
-- **Assíncrono:** CRM mantém inbox/outbox e jobs transacionais. A rede opera at-least-once; contratos idempotentes e reconciliação tratam replay e `outcome_unknown` sem prometer exactly-once.
-- **Escala:** execução regular do n8n no MVP. Queue mode e Redis só entram após medição que justifique mais infraestrutura.
-- **Autenticação humana:** sessão opaca em cookie seguro e CSRF.
-- **Autenticação técnica:** credenciais Basic distintas n8n→CRM e CRM→n8n, exclusivas e rotacionáveis, sem HMAC/timestamp, sessão de navegador, capacidade administrativa ou acesso ao banco do CRM.
-- **Storage:** mídia de canal transitória em volume privado da VPS por até sete dias ou fim da jornada; arquivos válidos seguem ao Dropbox por procedimento operacional registrado. Evolução de storage depende da issue `#29`.
-- **Documentos:** snapshot imutável, template HTML/CSS e PDF gerado no worker.
-- **IA:** OpenAI ou Gemini por configuração versionada, sujeitos ao mesmo schema, evals e gates de privacidade. Produção com PII permanece bloqueada até evidências aplicáveis de DPA, retenção e ZDR.
-- **Deploy:** imagens imutáveis por digest, workflows publicados por versão, migrations expand/contract, backup externo e rollback coordenado.
+| Fronteira    | Implementação                                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Frontend     | Vue 3, Vue Router, JavaScript ESM, CSS e Vite; sem store global                                                   |
+| API          | Node.js/Fastify, REST `/api/v1`, OpenAPI e SSE                                                                    |
+| Persistência | PostgreSQL, SQL e migrations versionadas                                                                          |
+| Assíncrono   | Inbox/outbox e jobs transacionais; sem Redis                                                                      |
+| Runtime CRM  | `silmer-edge-web`, `silmer-api`, `silmer-worker`, `silmer-postgres`                                               |
+| Automação    | n8n externo obrigatório, persistência e credenciais próprias                                                      |
+| IA           | OpenAI no workflow; [ADR 021](docs/adr/021-adotar-openai-no-mvp.md)                                               |
+| Deploy       | Fluxo automático GitHub→EasyPanel existente; [ADR 022](docs/adr/022-manter-deploy-automatico-github-easypanel.md) |
 
-## Modelagem e confiabilidade
+Mídia de canal fica em volume privado da VPS por até sete dias ou fim da
+jornada. Arquivos válidos seguem o procedimento operacional Dropbox.
+Perda da única cópia produz `lost/unavailable`. Esse prazo não se aplica a
+Pedidos, Fichas, documentos comerciais ou auditoria. Storage externo é uma
+evolução na issue #29; backups e tombstones têm gates próprios.
 
-- Cliente é `Contact` + `ContactIdentity`; briefing de conversa é progressivo,
-  permanece ligado ao atendimento e não promove dados comerciais neste corte.
-- Backlog e handoff pertencem à Conversa; um handoff começa sem responsável e
-  é reivindicado por papel via CAS, sem depender de entidade comercial.
-- Dados extraídos pela IA só se tornam oficiais após validação do schema e aceitação pelo comando do CRM.
-- Auditoria de negócio é append-only e não se confunde com log técnico.
-- Perda da única cópia de mídia transitória produz `lost/unavailable`, nunca alegação de recuperação.
-- Qualquer futuro Pedido, Ficha, preço ou pagamento usará chaves idempotentes e constraints transacionais.
-- Cada evento técnico correlaciona `workflow_key`, versão, `execution_id`,
-  mensagem, `correlation_id` e `automation_epoch`, sem exigir entidade própria
-  de execução.
+Os módulos/tabelas legados continuam onde migrations já publicadas exigem
+compatibilidade. Não são uma segunda fonte de estado nem autorizam retomar
+Kanban. Remoção física depende de migration contract.
 
-O Kanban e o domínio de Negócio foram aposentados do runtime atual pela
-[ADR 004](docs/adr/004-aposentar-kanban-e-negocio.md). Referências históricas
-não definem novos comportamentos.
+## Prontidão operacional
 
-## Caminho de lançamento
+OpenAI é escolhido; DPA, retenção, ZDR e request real ainda precisam de
+evidência específica do projeto. Spikes Gemini anteriores não liberam o
+provedor ativo ([runbook](docs/integrations/openai/README.md)).
 
-1. Aplicar migrações com a integração desligada e implantar API/worker.
-2. Criar as duas credenciais Basic DEV e atualizar o workflow ainda inativo.
-3. Homologar WhatsApp ponta a ponta, publicar e transferir o webhook da Meta.
-4. Desabilitar a entrada direta no CRM; rollback pausa a automação sem reativá-la.
-5. Após o primeiro MVP, implementar e homologar Instagram como `CANAL-2`.
+Manter o deploy automático não comprova seu vínculo com CI, SHA ou imagem.
+Esses checks, saúde, rede e configurações observadas estão no
+[relatório operacional](docs/runbooks/production-readiness-checks.md).
 
-As aprovações externas de IA, observabilidade, storage e recovery permanecem gates próprios. Testes e documentação não substituem evidência operacional nem aprovação humana.
+Go-live exige homologação WhatsApp, aprovação física da v5, monitor off-host,
+backup externo e drills com RPO de uma hora/RTO de quatro horas. Aplicar
+CRM/migrations compatíveis antes do workflow que depende do contrato novo.
+Rollback pausa a automação e preserva resultados incertos; não reativa o
+webhook direto da Meta nem restaura banco como primeiro recurso.
 
-## Pedido e ficha na revisão de 03/10/2026
-
-O módulo de Pedidos já integra a operação após a baseline acima. A
-[ADR 019](docs/adr/019-ficha-espelhada-e-sinais-operacionais.md) registra
-serviço por item, decisão humana da origem da estampa, sinais observáveis de
-acompanhamento e uma candidata v4 da ficha. A impressão continua selecionando
-a v3 aprovada provisoriamente por um único ponto de troca; v2/v3 e seus hashes
-permanecem intactos até nova revisão. O upload de arte exige storage durável e
-contrato Dropbox próprio antes de ser ativado.
+Decisões anteriores continuam em `docs/adr/`; o histórico não substitui
+`RULES.md` e as specs atuais. Rastreabilidade e pendências em
+[tasks](.specs/features/crm-mvp/tasks.md).

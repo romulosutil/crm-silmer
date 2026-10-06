@@ -21,3 +21,8 @@ Use um RFC antes de comprometer arquitetura, processo, produto ou ferramenta
 em uma mudança relevante. Depois da decisão, atualize o status do RFC e, se a
 decisão for arquitetural, crie um ADR em [`../adr/`](../adr/) com o vínculo
 entre os documentos.
+
+## Decisões operacionais de 05/10/2026
+
+- [009 — OpenAI no MVP](009-openai-no-mvp.md), decidida na ADR 021.
+- [010 — Deploy automático GitHub → EasyPanel](010-deploy-automatico-github-easypanel.md), decidida na ADR 022.

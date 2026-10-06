@@ -1,171 +1,64 @@
-# Próximas fases — produto e interfaces do CRM Silmer
+# Próximas fases — prontidão do CRM Silmer
 
-> **Atualizado em:** 11/09/2026  
-> **Status:** jornada de atendimento priorizada antes da jornada comercial  
+> **Atualizado em:** 05/10/2026\
 > **Fila canônica:** `.specs/features/crm-mvp/tasks.md`
 
-Nenhuma interface nova faz parte da entrega `N8N-MVP-1`. Este documento mostra
-o que deve aparecer em tela depois que o fluxo WhatsApp estiver homologado,
-sem criar entidades ou requisitos paralelos.
+Inbox, Handoffs, Clientes, usuários, Pedidos e Dashboard já estão implementados.
+A PR 142 incorpora técnica por item, origem da arte e ficha v5. A próxima fase
+é homologar a operação e demonstrar prontidão de produção.
 
-## Estado de partida
+Kanban e Negócio estão aposentados (ADR 004); Pedido possui dois status e
+confirmação humana (ADR 006). Handoff e takeover não retornam à IA (ADR 015).
+Aprovação provisória da v5 para desenvolvimento não substitui assinatura
+física de Rose e Operação.
 
-O frontend já possui autenticação, shell, Dashboard operacional, Inbox,
-detalhe da conversa, Clientes e Conta. Inbox e Clientes consomem read models
-autorizados do PostgreSQL; Dashboard agrega somente a operação de atendimento,
-sem fabricar vendas ou pedidos ainda inexistentes. O
-read model de Handoffs está disponível na Caixa de Entrada para operadores Vendedor, assim
-como o claim atômico já existente. A migração vigente de identidade consolidou
-as funções humanas em `Vendedor`; este roadmap não volta a introduzir a antiga
-separação Atendimento/Vendedor sem decisão, migração e autorização explícitas.
+## Ordem de trabalho
 
-### Entregue na conexão frontend/backend de 08/09/2026
+| Ordem | Frente                 | Evidência para concluir                                                                                      | Tarefa               |
+| ----- | ---------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------- |
+| 1     | Baseline de lançamento | Docs/IDs coerentes com ADR 020 e PR 142; sem tarefas de telas já entregues tratadas como futuro              | OPS-DOC-01           |
+| 2     | Pipeline               | Build e publicação de imagens verdes; SHA/digest verificável                                                 | OPS-CI-01 / INT-3    |
+| 3     | EasyPanel atual        | Deploy automático, domínio/HTTPS, rede privada, health, segredos e rollback checados no ambiente             | OPS-CHK-01 / INT-3   |
+| 4     | OpenAI                 | Provedor único documentado; DPA, retenção, logging e ZDR aplicáveis aprovados antes de PII                   | OPS-AI-01 / AGENTE-3 |
+| 5     | WhatsApp real          | Duas credenciais distintas; versão ativa e jornada com mensagens/resposta humana, handoff e takeover         | OPS-1 / INT-1..2     |
+| 6     | Recuperação e alertas  | Backups externos dos bancos, chave n8n recuperável, tombstones, restore e monitor externo com drills         | CRM-4 / INT-3        |
+| 7     | Pedido e ficha         | Jornada por teclado, ACL negativa, dados fora de ordem, geração/reabertura, v5 e assinatura física           | CRM-1..3 / INT-4     |
+| 8     | Arquivos e Rose        | Procedimento durável dos arquivos e encaminhamento acordados com Operação; automação só com contrato próprio | ORD-03..04 / INT-4   |
+| 9     | Lançamento controlado  | UAT, smoke, carga aprovada, release identificada e rollback/recovery demonstrados                            | INT-4                |
 
-- `GET /api/v1/inbox/conversations` e
-  `GET /api/v1/inbox/conversations/{id}`, com filtros fechados, paginação por
-  cursor assinado, minimização e ACL `conversation.read`;
-- `GET /api/v1/contacts` e `GET /api/v1/contacts/{id}`, com identidades
-  decifradas somente após autorização e ACL `contact.read`;
-- Inbox ligada às mutações existentes de resposta, takeover, retorno à IA e
-  encerramento, usando versão esperada, CSRF e idempotência;
-- estados acessíveis de loading, vazio, erro e repetição em Dashboard, Inbox e
-  Clientes; remoção do dataset e do aviso de demonstração;
-- `GET /api/v1/inbox/handoffs`, com ACL `handoff.read`, cursor assinado e
-  minimização após autorização, e seção de handoffs na Caixa de Entrada que
-  reivindica pela mutação
-  oficial com versão esperada, CSRF e idempotência;
-- atualização em tempo real da Inbox, incluindo handoffs, sem roubar o foco,
-  incluindo tratamento compreensível de disputa (`409`) ao assumir um handoff.
+Frentes 1–4 podem avançar em paralelo preservando posse dos arquivos. Cada
+gate registra o que foi testado e o que ainda depende do ambiente ou de pessoa.
 
-Permanecem fora desta fatia anexos seguros e merge/unmerge de identidades.
-UI-1 e UI-2 estão disponíveis para homologação conjunta; UI-3 não deve ser
-declarada integralmente encerrada até que a relação de handoffs seja exposta no
-detalhe do Cliente.
+## Caminho de homologação
 
-## Corte atual — jornada de atendimento completa
+1. Checar a versão compatível do CRM no EasyPanel antes de publicar workflow.
+2. Rodar smoke sintético em DEV, com `message`, `handoff`, `send_unknown` e
+   `delivery_status`, identificadores inéditos e sem PII em evidências.
+3. Homologar WhatsApp oficial: inbound, IA, resposta humana, status, replay,
+   claim concorrente e takeover durante resposta.
+4. Completar Pedido com técnica em cada item, arte do pedido, entrega
+   prometida, valor e condição; gerar por dono/admin, imprimir e reabrir.
+5. Verificar sinais do Dashboard e cliente sem resposta; eventos preservam
+   rascunho e foco. Não usar tempo parado como probabilidade de venda.
+6. Registrar gates de operação, privacidade e ficha assinada antes do go-live.
 
-Este corte fecha a operação de atendimento antes de qualquer evolução comercial:
-entrada por n8n, criação ou resolução de Contato e Conversa, resposta da IA,
-handoff, fila, assumir conversa, responder manualmente, devolver à IA,
-transferir para outro Vendedor e encerrar. A fonte da verdade permanece o CRM;
-o n8n simula apenas o transporte WhatsApp no workflow de desenvolvimento.
+## Evoluções posteriores
 
-Não fazem parte deste corte conversão comercial, Kanban, preço, pedido, PIX ou
-Ficha. A separação evita que a validação operacional dependa de dados
-comerciais ainda não homologados.
+- `CANAL-2`: Instagram com adapter, identidades separadas até correlação
+  verificável e auditável, preservando Contato e histórico.
+- PAY-01..05: cobrança PIX, comprovante estruturado e boas-vindas automáticas,
+  diferidos pela ADR 006. Datas manuais não implementam esse fluxo.
+- Upload durável e Dropbox, com validação e acesso privado, e aviso automático
+  a Rose exigem fluxo e contrato próprios; não presumir integração ativa.
+- Painel operacional de reconciliação só quando o uso justificar.
+- Recebimentos/saldo, atendimento próprio do site, escala por queue/Redis e
+  produção completa dependem de escopo e decisões futuros.
 
-| Frente                     | Dono sugerido    | Pode seguir em paralelo                                                   | Dependência / fronteira protegida                                                                   |
-| -------------------------- | ---------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Homologação do atendimento | QA/Integrações   | Executar os quatro cenários DEV e as ações humanas no ambiente publicado. | Não altera contratos, banco nem workflow sem registrar a evidência.                                 |
-| Robustez do atendimento    | Backend/Frontend | Cobrir anexos seguros, offline e detalhes de handoff no Cliente.          | Preserva `conversation-routes`, `operation-routes` e OpenAPI; mudanças de contrato são coordenadas. |
-| Jornada comercial          | Produto/Backend  | Refinar critérios e modelos de conversão em uma branch futura.            | Só inicia após a homologação deste corte; não muda Inbox, Handoff ou workflow DEV.                  |
+## Fontes de trabalho
 
-Aceite operacional: para um mesmo Contato, um operador consegue observar a
-Conversa, disputar e assumir o Handoff com um único vencedor, responder sem
-duplicação, devolver a automação, transferir o responsável e receber atualizações
-em tempo real. O teste DEV deve cobrir `message`, `handoff`, `send_unknown` e
-`delivery_status` com identificadores de evento inéditos.
-
-Durante a automação, a Conversa também mantém uma pré-ficha criptografada. A IA
-extrai cada informação confirmada e pergunta pelo próximo campo obrigatório;
-o handoff `briefing_complete` só ocorre quando a pré-ficha de atendimento está
-completa. Ela é uma preparação para o Vendedor, não a Ficha/Pedido oficial e
-não autoriza preço, disponibilidade, prazo garantido, pagamento ou conversão
-automática de Negócio.
-
-## Ordem recomendada
-
-| Ordem | Fase                            | Resultado para a operação                                                                                       | Dados principais                                                              |
-| ----: | ------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-|     0 | OPS-1 — homologação WhatsApp    | O fluxo real é validado ainda sem nova UI; falhas são verificadas por contrato e runbook.                       | Conversa, Mensagem, briefing, Handoff e eventos técnicos.                     |
-|     1 | UI-1 — Inbox + Conversa         | A pessoa encontra conversas, lê histórico e briefing, responde, assume, devolve à IA ou encerra no mesmo fluxo. | `Contact`, `Conversation`, `Message` e estado de entrega.                     |
-|     2 | UI-2 — Handoffs na Inbox        | Vendedor vê e reivindica itens pendentes na mesma tela de atendimento.                                          | `Handoff`, papel-alvo, motivo, SLA e responsável.                             |
-|     3 | UI-3 — Detalhe do Cliente       | “Cliente” aparece como Contato, identidades e conversas relacionadas.                                             | `Contact` + `ContactIdentity`; nenhuma tabela `customers`.                    |
-|     4 | COM-1 — Definição de Pedido     | Após a homologação do atendimento, especificar o Pedido e sua ficha sem reintroduzir Kanban.                     | Nova RFC/ADR, Contato e Conversa como origem verificável.                     |
-|     5 | UI-5 — Operação e reconciliação | Somente se o piloto demonstrar necessidade, a operação vê comandos falhos e resultados incertos.                | `n8n_commands`, `reconciliation_items`, Mensagem e metadados de `n8n_events`. |
-|     6 | CANAL-2 — Instagram             | O mesmo domínio recebe a segunda identidade e a jornada multicanal é homologada.                                | Nova `ContactIdentity`, sem duplicar Cliente ou Negócio.                      |
-
-## UI-1 — Inbox e atendimento da conversa
-
-Os read models são `GET /api/v1/inbox/conversations` e
-`GET /api/v1/inbox/conversations/{id}`. A tela combina lista e detalhe responsivos:
-última mensagem, prioridade, canal, modo IA/humano, indicador de handoff,
-histórico, anexos seguros, briefing atual, composer e estados de entrega.
-
-Reutiliza `POST /messages`, `/takeover`, `/return-to-ai` e `/close`. A UI não
-expõe edição manual de epoch ou revisão. O aceite cobre teclado, foco, loading,
-vazio, erro, offline, autorização e replay sem mensagem duplicada.
-
-O stream ao vivo emite `stream.reset` com cursor avançado quando há muitos
-eventos acumulados ou um operador reconecta atrás de outra sessão; a Inbox
-recarrega o read model autorizado. Se a conexão cair, a tela avisa e oferece
-atualização manual. A busca atual cobre somente as até 100 conversas carregadas
-e compara contato, telefone e última mensagem; busca em mensagens antigas
-exigirá um índice compatível com a criptografia e a política de privacidade.
-
-Rastreabilidade: INB-01, AGT-01, AGT-03, AGT-05–06, ORC-07–08 e MSG-01–03.
-
-## UI-2 — Handoffs na Caixa de Entrada
-
-Disponibilizar, dentro da Caixa de Entrada, a consulta paginada de handoffs
-abertos e reutilizar `POST /api/v1/handoffs/{id}/claim`. A lista mostra motivo,
-idade, SLA e conversa. Ao assumir, a própria Caixa de Entrada abre a conversa
-assumida. O servidor decide elegibilidade e compare-and-swap; numa disputa há
-um vencedor e o outro recebe `409` compreensível. A primeira versão está
-entregue para a função humana vigente `Vendedor`.
-
-Rastreabilidade: AGT-03–05, AGT-08 e PRV-01.
-
-## UI-3 — detalhe do Cliente
-
-Usar `GET /api/v1/contacts` e `GET /api/v1/contacts/{id}` com ACL e
-minimização. A tela mostra dados
-canônicos, identidades verificadas, conversas e handoffs. Não funde
-pessoas por nome, telefone parecido ou inferência de IA. Merge/unmerge, quando
-exposto, é humano, reversível, motivado e auditado.
-
-Rastreabilidade: INB-02, INB-04, ORC-09 e PRV-01–03.
-
-## COM-1 — definição de Pedido
-
-Depois da homologação da jornada de atendimento, definir em RFC a criação de
-Pedido a partir de dados confirmados da Conversa. Não reutilizar o Kanban nem
-promover automaticamente o briefing para um registro comercial.
-
-Rastreabilidade: futura revisão de AGT e ORD, após aprovação de Produto.
-
-## UI-5 — operação somente quando necessária
-
-Não haverá tela de runs, claims ou tentativas: esses conceitos saíram do MVP.
-Se o uso real justificar uma interface operacional, criar uma projeção mínima
-de comandos, Mensagens `outcome_unknown`, reconciliações e metadados sanitizados
-de eventos. Nunca exibir segredo, prompt, token ou payload bruto do cliente.
-
-Rastreabilidade: ORC-04–05, ORC-08 e MSG-02–03.
-
-## CANAL-2 — Instagram
-
-Implementar o adapter de canal e homologar a correlação explícita entre
-identidade do Instagram e telefone. A segunda identidade preserva o mesmo
-Contato apenas após correlação verificável e auditável. Esta fase não
-deve reintroduzir lógica específica de canal nas entidades canônicas.
-
-Rastreabilidade: ORC-02, ORC-09 e MSG-04.
-
-## Documentos que guiam os próximos passos
-
-Use esta ordem em caso de dúvida:
-
-1. `RULES.md` — invariantes.
-2. `.specs/features/crm-mvp/spec.md` — requisitos e aceite.
-3. `CRM-MVP-ESPECIFICACAO.md` — escopo e comportamento.
-4. `TECHNICAL-DESIGN.md` — módulos, dados, APIs e segurança.
-5. `docs/api/openapi.v1.yaml` — contrato HTTP executável.
-6. `.specs/features/crm-mvp/tasks.md` — ordem e status das entregas.
-7. Este roadmap — composição e sequência das próximas telas.
-8. `docs/integrations/n8n/README.md` — operação e limite da integração.
-9. `ARCHITECTURE.md` e `EASYPANEL-TOPOLOGY.md` — decisões e rollout.
-
-Cada fase começa pelo read model e OpenAPI, segue com backend e testes e só
-então implementa Vue. Acessibilidade, autorização, PII e estados de erro fazem
-parte da fase, não de uma revisão posterior.
+`RULES.md`, `.specs/features/crm-mvp/spec.md`, PRD, TDD, OpenAPI e tasks
+mantêm a precedência do AGENTS. Para Pedido, usar também
+`.specs/features/pedidos-mvp/spec.md`, tarefas T76..T87 e ADRs 019/020.
+Contratos executáveis e rollout ficam em `docs/integrations/n8n/README.md`;
+ambiente alvo em `EASYPANEL-TOPOLOGY.md`. Evidências antigas não comprovam
+configuração atual ou aprovação de produção.

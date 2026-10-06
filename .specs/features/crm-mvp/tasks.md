@@ -1,241 +1,156 @@
-# CRM Silmer MVP — Plano Macro de Entrega
+# CRM Silmer MVP — Plano de prontidão
 
-> **Atualizado em:** 08/09/2026  
-> **Decisão:** n8n é obrigatório e funciona como motor de canais, IA e jornada comercial.  
-> **Design técnico:** `TECHNICAL-DESIGN.md`  
-> **Topologia:** `EASYPANEL-TOPOLOGY.md`  
-> **Próximas interfaces:** `docs/roadmap/PROXIMAS-FASES.md`
+> **Atualizado em:** 05/10/2026\
+> **Baseline:** PR 142 integrada, Pedido v5, OpenAI e deploy automático GitHub → EasyPanel.\
+> **Design:** `TECHNICAL-DESIGN.md`; **topologia:** `EASYPANEL-TOPOLOGY.md`.
 
-O MVP será construído como três objetivos divergentes: **CRM | Inbox Multicanal | Agente Vendedor Silmer no n8n**. Cada objetivo pode avançar e ser validado isoladamente; os três se conectam somente na etapa de integração e lançamento.
+Os três objetivos são CRM | Inbox Multicanal | Agente Vendedor Silmer no n8n e convergem em integração e lançamento.
 
-Os identificadores `T00..T07` permanecem como referência histórica das issues e entregas já realizadas. Este documento passa a ordenar o trabalho pelo produto que precisa ficar pronto, sem criar clusters adicionais.
+Implementação e homologação têm estados distintos. T00..T07 preservam a
+rastreabilidade das issues históricas; os IDs abaixo organizam o lançamento
+atual. ADRs 004 e 006 substituem o plano de Negócio/Kanban por Pedido.
+Tarefas históricas de Pedidos permanecem em sua própria spec; não reabrir
+implementação entregue nem marcar aceite externo por testes locais.
 
 ## Premissas comuns
 
-- Cada mensagem válida do cliente dispara automaticamente o n8n. A UI não inicia o workflow.
-- O n8n recebe e envia mensagens do WhatsApp oficial e executa o provedor de IA
-  configurado. Instagram reutiliza a jornada em uma fase posterior.
-- PostgreSQL e APIs do CRM continuam sendo a fonte da verdade. O n8n nunca acessa diretamente o banco.
-- O ator técnico `AUTOMATION_EXECUTOR` recebe somente as capacidades necessárias para conversar, criar ou atualizar leads, preencher campos e transicionar etapas.
-- Preço, aprovação da venda, confirmação de pagamento e aprovação da Ficha continuam exigindo pessoa autorizada.
-- Toda tarefa concluída exige teste proporcional ao risco, commit atômico, push por PR e atualização do Graphify.
-
-Em 02/09/2026, a T00.6 foi aprovada na issue `#10` e deixou de bloquear T02, T03 e T05.
-A evidência permanece em `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`, com
-`silmer:romulo.sutil` no gate aprovado. A nova decisão de arquitetura não altera
-essa aprovação nem satisfaz gates externos e operacionais independentes.
+- n8n recebe/envia WhatsApp, chama OpenAI e usa somente a API do CRM.
+- A UI observa ou assume o atendimento, sem botão para iniciar workflow.
+- Contato, Conversa e Pedido pertencem ao CRM; Pedido tem dois status.
+- Confirmação, preço e condição são humanos; handoff/takeover não voltam à IA.
+- Um pendente por conversa, comandos idempotentes, epoch/revisão e auditoria.
+- Em 02/09/2026, a T00.6 foi aprovada na issue `#10` e deixou de bloquear T02, T03 e T05.
+- Evidência em `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`, com `silmer:romulo.sutil` no gate aprovado; não satisfaz os gates externos atuais.
+- Cada entrega termina com checks proporcionais, commit e push. Somente o
+  Hermes no Ubuntu atualiza o grafo; agentes não o geram nem versionam.
 
 ## Objetivo 1 — CRM
 
-**Resultado:** possuir o sistema oficial de dados e regras comerciais, independente da interface e da implementação interna dos workflows.
+### CRM-1 — Fundação e autorização
 
-### Etapa CRM-1 — Consolidar a fundação já entregue
+**Situação:** identidade, sessão, CSRF, capacidade mínima do ator n8n,
+auditoria e idempotência implementados. Verificar em UAT as permissões atuais
+de Pedido, sem depender das antigas ações de aprovação de Negócio.
 
-- **Situação:** majoritariamente pronta em `T00` e `T01`.
-- **Execução:** em andamento pela fatia CRM-1A, que introduz o ator técnico
-  `AUTOMATION_EXECUTOR`, sua autenticação exclusiva e a matriz mínima de
-  comandos do n8n.
-- Preservar migrations, sessões, MFA, ACL humana, auditoria, idempotência, configuração e catálogo versionados.
-- Acrescentar o ator técnico `AUTOMATION_EXECUTOR`, credencial rotacionável e capacidades mínimas, sem autoatribuição nem sessão de navegador.
-- Fechar os testes de ACL do ciclo Pedido/Ficha ainda rastreados na issue `#13`.
-- **Dependência remanescente:** a issue `#13` continua aberta até existirem as
-  entidades, comandos e UI reais de Pedido/Ficha previstos na CRM-3; doubles de
-  autorização não serão promovidos a evidência E2E.
-- **Verificação:** uma credencial do n8n só executa comandos previstos; tentativa de acesso administrativo ou direto ao banco falha e é auditada.
+**Aceite restante:** dono/admin cria, edita, gera e reabre; outro vendedor
+consulta e imprime somente confirmado. Repetição e concorrência preservam
+efeito único. Vincular a matriz da issue #13 ao contrato atual.
 
-### Etapa CRM-2 — Concluir Contato, Negócio e Kanban
+**Rastreabilidade:** PRV-01..03, ORC-03..05 e PCL/PAU em Pedidos MVP.
 
-- **Origem:** `T03.1..T03.6`.
-- Implementar `Contact`, identidade, `Deal` como raiz única e projeção de Card.
-- Implementar etapas Produto, Especificação, Estampa, Logística e Fechamento com versão esperada, gates, retorno à primeira etapa incompleta e motivo de perda.
-- Expor comandos idempotentes para criar/atualizar lead, preencher campos, registrar gate, avançar, recuar, transferir e encerrar.
-- Publicar eventos canônicos para atualização em tempo real da UI.
-- **Verificação:** concorrência, replay e transição inválida nunca criam dois negócios nem pulam etapa.
+### CRM-2 — Clientes e dados comerciais
 
-### Etapa CRM-3 — Concluir fechamento, pedido e Ficha
+**Situação:** Clientes, identidades, histórico de conversas e Pedido a partir
+do atendimento implementados. Kanban/Negócio aposentados; suas migrations
+históricas não são reutilizadas.
 
-- **Origem:** `T05.1..T05.9`.
-- Implementar orçamento versionado, aprovação humana da venda, PIX, conferência humana, numeração `NN-CRM`, snapshot imutável, PDF, envio para Rose e boas-vindas.
-- Tornar cada efeito externo idempotente e reconciliável, incluindo `outcome_unknown`.
-- **Verificação:** repetir aprovação, cobrança, geração e envio não duplica cobrança, pedido, número ou mensagem.
+**Aceite restante:** homologar nome projetado no pendente e congelado no
+confirmado, acesso autorizado e um pendente por conversa sob concorrência.
 
-### Etapa CRM-4 — Concluir gestão e operação
+**Rastreabilidade:** INB-01..04, ORC-09 e PCT-01..03.
 
-- **Origem:** `T06.1..T06.6`.
-- Entregar relatório de vendas, usuários, configurações, privacidade, retenção, tombstones e painel de saúde.
-- Fechar evidências de observabilidade off-host na issue `#11`, storage/recovery na issue `#29` e recovery drill na issue `#3`.
-- **Verificação:** relatórios reconciliam com eventos do domínio; retenção e recovery não fazem alegações além das evidências reais.
+### CRM-3 — Pedido e ficha v5
 
-### Critério de conclusão do CRM
+**Situação:** ciclo pendente/confirmado, edição por seção, geração humana,
+reabertura, numeração, técnica por item, origem da arte e impressão v5
+integrados. Implementação detalhada: T01..T87 de Pedidos MVP, com refinamentos
+T76..T82 e T83..T87 (PR 142 / ADR 020).
 
-O objetivo está pronto quando as APIs conseguem executar toda a jornada com fixtures, sem n8n nem UI, preservando ACL, idempotência, auditoria e invariantes comerciais.
+**Aceite restante:** assinatura física de Rose e Operação para v5, UAT do
+fluxo atual e procedimento durável dos arquivos/encaminhamento a Rose.
+Upload automático e aviso a Rose não estão ativos; dependem de contrato próprio.
+
+**Rastreabilidade:** ORD-01..05, PFI/PIM/TEC. PAY-01..05 são evolução diferida
+pela ADR 006; não exigir cobrança PIX para gerar Pedido no ciclo atual.
+
+### CRM-4 — Gestão e operação
+
+**Situação:** usuários, Dashboard de confirmados, sinais observáveis e
+atualização por eventos implementados. Relatórios adicionais, privacidade
+operacional e recovery só são completos quando houver evidência própria.
+
+**Aceite restante:** confirmar totais e reabertura; homologar retenção,
+tombstones, backup externo e recuperação. Issues #3, #11 e #29 preservam seus
+gates independentes; storage de mídia transitória pode seguir a exceção interna.
+
+**Rastreabilidade:** FIN-01..03, PRV-02..03, REV-06..09 e T06.3/T07.3.
 
 ## Objetivo 2 — Inbox Multicanal
 
-**Resultado:** oferecer uma superfície operacional única para observar conversas, responder manualmente, tratar pendências e assumir o atendimento.
+| Etapa                    | Implementação atual                                    | Homologação restante                                                              |
+| ------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| INBOX-1 — Mensagens      | Contato, conversa, mensagem e envelope n8n persistidos | Repetição e eventos fora de ordem no canal real                                   |
+| INBOX-2 — WhatsApp       | Fronteira Meta → n8n → CRM versionada                  | Credenciais distintas, webhook publicado e resposta humana                        |
+| INBOX-3 — Confiabilidade | Reserva, status e resultado incerto                    | Falha real, reconciliação e mídia indisponível visíveis                           |
+| INBOX-4 — Interface      | Inbox, handoff, takeover, transferência e eventos      | Teclado, foco, acesso entre vendedores e nenhuma retomada automática após handoff |
+| CANAL-2 — Instagram      | Fase posterior                                         | Adapter, correlação explícita e UAT próprio                                       |
 
-### Etapa INBOX-1 — Reaproveitar o núcleo de mensagens
-
-- **Situação:** persistência e configuração de canal de `T02.1` e `T02.4` estão prontas; devem ser preservadas.
-- Manter conversa, ciclo, mensagem, identidade externa, anexos, status e mídia transitória como modelo canônico do CRM.
-- Adaptar a entrada para aceitar o envelope normalizado pelo n8n, mantendo chaves externas e idempotência.
-- **Verificação:** mensagens repetidas e fora de ordem convergem para uma única linha do tempo.
-
-### Etapa INBOX-2 — Refatorar a fronteira do WhatsApp
-
-- **Situação:** o adapter direto da Meta em `T02.2` deixa de ser a porta operacional e vira referência reutilizável para assinatura, normalização e fixtures.
-- Mover recebimento, download/upload de mídia, envio e status do WhatsApp para workflows publicados no n8n.
-- O CRM recebe eventos canônicos do n8n e devolve comandos/resultados; não recebe o clique da UI para iniciar automação.
-- Separar apps/webhooks de desenvolvimento e produção e documentar credenciais e rotação.
-- **Verificação:** mensagem realista entra pela Meta, dispara n8n e aparece uma única vez na Inbox; resposta manual e automática usam o mesmo histórico oficial.
-
-### Etapa INBOX-3 — Concluir confiabilidade do canal
-
-- **Origem:** completar `T02.3` e `T02.5`.
-- Implementar pendências, retries seguros, reconciliação, status de entrega e estados `outcome_unknown`, `lost/unavailable` e `requer_atencao`.
-- Exibir saúde do n8n, WhatsApp e último evento observado sem afirmar recuperação de dados não recebidos.
-- **Verificação:** indisponibilidade do n8n, Meta, CRM ou mídia fica visível e retomável sem duplicidade.
-
-### Etapa INBOX-4 — Concluir a interface acessível
-
-- **Origem:** `T02.6`.
-- Entregar lista de conversas, filtros, thread, composer, anexos, estados vazios/erro/offline e atualização em tempo real.
-- Implementar resposta manual, tomada humana, reativação controlada, atribuição e histórico do resumo de handoff.
-- Garantir teclado, foco previsível, regiões vivas e rótulos dinâmicos; nenhum botão deve simular “iniciar n8n”.
-- **Verificação:** operação completa sem mouse e takeover durante uma resposta de IA impede envio atrasado.
-
-### Etapa CANAL-2 — Concluir Instagram e migração de canal
-
-- **Origem:** `T02.7`.
-- Após o primeiro MVP, integrar Instagram Direct mantendo identidades separadas até correlação verificável.
-- Permitir migração entre WhatsApp e Instagram sem criar outro Negócio; conectar `@instagram` e telefone ao mesmo lead após confirmação verificável.
-- **Verificação:** ambos os canais aparecem na mesma Inbox, mantêm o mesmo contexto e não fundem pessoas por nome ou similaridade.
-
-### Critério de conclusão da Inbox Multicanal
-
-O objetivo está pronto quando uma pessoa consegue observar, responder, assumir e reconciliar conversas por teclado usando eventos simulados, mesmo antes do agente completo estar conectado.
+**Rastreabilidade:** INB/MSG, AGT-03..08, ORC-07..09, PRV-01 e ADR 015.
 
 ## Objetivo 3 — Agente Vendedor Silmer no n8n
 
-**Resultado:** executar a jornada inicial de vendas no WhatsApp usando IA sob
-regras determinísticas e transferir para uma pessoa quando necessário.
+| Etapa                      | Contrato ou capacidade                                           | Pendência                                                                        |
+| -------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| AGENTE-1 — Runtime         | n8n com banco e criptografia próprios                            | Checar ambiente EasyPanel existente, editor protegido, backup e restauração      |
+| AGENTE-2 — API             | Três endpoints, Basic, idempotência, correlação e epoch/revisão  | OPS-1 no ambiente real                                                           |
+| AGENTE-3 — OpenAI          | Provedor escolhido; schema e regras determinísticas              | DPA, retenção, logging e ZDR aplicáveis da issue #5; escolha não prova aprovação |
+| AGENTE-4 — Coleta e Pedido | Briefing progressivo, projeção e criação idempotente do pendente | Jornada real com dados fora de ordem, técnica e origem da arte                   |
+| AGENTE-5 — Handoff         | Transferência e invalidar execuções antigas                      | Takeover durante resposta e claim concorrente                                    |
+| AGENTE-6 — Operação        | Workflows e contratos versionados                                | Health, alertas, rotação, custo e runbooks no ambiente alvo                      |
 
-### Etapa AGENTE-1 — Implantar o n8n obrigatório
+**Rastreabilidade:** ORC-01..08, AGT-01..08, PAG/TEC e PRV-01..03.
+OpenAI é a baseline da [ADR 021](../../../docs/adr/021-adotar-openai-no-mvp.md);
+um segundo provedor não é gate do MVP.
 
-- Criar o serviço privado `silmer-n8n`, banco/esquema e credenciais próprios, criptografia de credenciais, backup, health check e publicação por versão.
-- Publicar o webhook do WhatsApp sem expor a interface administrativa do n8n.
-- Usar execução regular no MVP; queue mode e Redis permanecem P2 até haver evidência de escala.
-- **Verificação:** workflow sintético é publicado, executado e restaurado sem acesso direto ao PostgreSQL do CRM.
+## N8N-MVP-1 e sequência de homologação
 
-### Etapa AGENTE-2 — Criar contratos CRM ↔ n8n
+N8N-MVP-1A (contrato/modelo), N8N-MVP-1B (reserva por epoch/revisão) e
+N8N-MVP-1C (workflow simples) são a baseline implementada da RFC 002 / ADR 003.
 
-- Definir envelopes versionados para mensagem, contexto, comando, resultado, erro e handoff.
-- Implementar autenticação de serviço, `Idempotency-Key`, `correlation_id`, `workflow_key`, versão, `execution_id` e `automation_epoch`.
-- Rejeitar comando obsoleto, capacidade indevida, schema divergente e replay com payload diferente.
-- **Verificação:** testes de contrato executam contra doubles de ambos os lados e contra PostgreSQL real do CRM.
+**OPS-1 permanece operacional:** verificar duas credenciais Basic distintas,
+workflow e versão ativos, smoke sintético e WhatsApp real antes de declarar
+canal homologado. CRM compatível deve estar implantado antes do workflow que
+envia `order.intent_confirmed`; guardar versão anterior para rollback.
 
-### Etapa AGENTE-3 — Conectar o provedor de IA
-
-- Implementar o schema estruturado para um provedor configurado. Um segundo
-  provedor só entra depois com os mesmos contratos e evals, sem fallback cego.
-- Minimizar contexto, aplicar retenção aprovada, bloquear segredo/PII em logs e registrar modelo, versão de prompt, tokens e decisão.
-- Manter regras de preço, permissão, gate e handoff em validação determinística, fora do prompt.
-- Fechar DPA, retenção e ZDR do provedor escolhido antes de produção com PII, conforme issue `#5`.
-- **Verificação:** evals cobrem prompt injection, preço inventado, schema
-  inválido e indisponibilidade do provedor.
-
-### Etapa AGENTE-4 — Construir o workflow da jornada
-
-- Ao receber mensagem, carregar contexto oficial, descobrir o próximo dado necessário, perguntar apenas o que falta e persistir a resposta validada.
-- Classificar intenção, criar ou atualizar lead, registrar gates e mover o Kanban pelas etapas permitidas.
-- Executar o fluxo inicial no WhatsApp; a adaptação do Instagram pertence a
-  `CANAL-2` e preserva o mesmo domínio.
-- Após aprovações humanas obrigatórias, continuar PIX, Ficha, envio e boas-vindas sem duplicar efeitos.
-- Versionar e publicar workflows por ambiente; execução ativa deve sempre apontar para uma versão conhecida.
-- **Verificação:** jornada sintética percorre Backlog até Fechado e uma segunda termina em Sem lead.
-
-### Etapa AGENTE-5 — Implementar handoff e desligamento seguro
-
-- Transferir quando o cliente pede pessoa, quando preço/regra não está aprovado, quando há bloqueio real ou quando a confiança fica abaixo do limite versionado.
-- Gerar resumo, motivo, etapa, pendências e responsável; suspender novos envios automáticos.
-- Incrementar `automation_epoch` no takeover e validar o epoch novamente imediatamente antes de cada envio ou mutação.
-- **Verificação:** uma execução atrasada após takeover não envia mensagem nem altera o CRM.
-
-### Etapa AGENTE-6 — Tornar a automação operável
-
-- Criar métricas e alertas de latência, erro, backlog, handoff, custo por conversa, loops, versão ativa e divergência CRM/n8n.
-- Criar runbooks de pausar globalmente, pausar por conversa, reprocessar, reconciliar, rotacionar credencial, trocar provedor e restaurar workflows.
-- Auditar no CRM o efeito de negócio; o histórico de execução do n8n é evidência técnica, não a fonte oficial.
-- **Verificação:** simulações de falha são detectadas e recuperadas sem PII em logs e sem avanço silencioso.
-
-### Critério de conclusão do Agente Vendedor Silmer no n8n
-
-O objetivo está pronto quando workflows versionados conduzem casos sintéticos com OpenAI e Gemini, respeitam os gates humanos remanescentes e sobrevivem a retry, takeover e falha externa.
-
-## Entrega transversal N8N-MVP-1 — integração simples
-
-Esta fatia implementa
-[RFC 002](../../../docs/rfc/002-simplificar-integracao-n8n-para-o-mvp.md) e
-[ADR 003](../../../docs/adr/003-adotar-integracao-n8n-mvp-simples.md), que
-supersedem RFC 001/ADR 002 sem reescrever o histórico.
-
-1. **N8N-MVP-1A — contrato e modelo:** reduzir a fronteira para inbound,
-   attachment e events; consolidar briefing na Conversa; manter entrega na
-   Mensagem; remover claim do runtime.
-2. **N8N-MVP-1B — efeito seguro:** incorporar o fence ao
-   `message.send.requested` com `automation_epoch`, `source_revision`,
-   `claimed_revision` e `command_id`; preservar outbox para comandos humanos.
-3. **N8N-MVP-1C — workflow:** reduzir `k7tI6T4RhQPyJkn9` ao caminho WhatsApp
-   inbound → contexto → IA/handoff → reserva → Meta → status, mantendo-o
-   inativo e preservando a baseline `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.
-4. **OPS-1 — homologação:** configurar as duas credenciais Basic, executar
-   smoke sintético e número Meta de homologação e só então publicar e transferir
-   o webhook. Este item continua externo à implementação local.
-
-As tabelas de runs, turns, histórico de briefing e tentativas já publicadas
-ficam dormentes; a remoção física exige migração contract posterior. Cada fatia
-encerra com testes, documentação, commit/push e `graphify update .`.
-
-## Sequência executiva posterior
-
-O detalhamento, contratos anteriores à tela e critérios de aceite estão em
-[`docs/roadmap/PROXIMAS-FASES.md`](../../../docs/roadmap/PROXIMAS-FASES.md).
-Esta é a ordem canônica após `N8N-MVP-1`: OPS-1 (homologação WhatsApp), UI-1
-(Inbox e Conversa), UI-2 (Handoffs), UI-3 (Cliente), UI-4 (evolução do
-Negócio), UI-5 (operação/reconciliação somente se o uso justificar) e CANAL-2
-(Instagram). Não há tela de runs, claims ou tentativas no MVP simples.
-
-Cada fase começa pelo read model e pela atualização da OpenAPI quando a consulta
-ainda não existir. A homologação do n8n pode avançar antes das novas telas; o
-lançamento depende dos gates operacionais e externos documentados.
+Inbox/Handoffs/Clientes e Pedido já existem; o próximo trabalho é UAT e
+prontidão. Não há tela de runs, claims ou tentativas no MVP simples.
+`docs/roadmap/PROXIMAS-FASES.md` detalha a ordem operacional.
 
 ## Integração e lançamento
 
-Esta etapa começa somente quando os critérios isolados dos três objetivos estiverem atendidos.
+### INT-1 — Jornada integrada
 
-### Etapa INT-1 — Conectar os três objetivos
+Ligar WhatsApp → n8n → CRM → Inbox e CRM → n8n → WhatsApp; completar um
+Pedido, handoff, geração e impressão v5 com eventos em tempo real. Nenhum
+workflow escreve no banco e nenhuma ação depende de botão para iniciar n8n.
 
-- Ligar WhatsApp → n8n → CRM → Inbox e os comandos CRM → n8n → WhatsApp.
-- Executar uma venda completa e um handoff humano, incluindo atualização em tempo real da Inbox e do Kanban.
-- **Gate:** nenhuma ação depende de botão para iniciar o n8n e nenhum workflow escreve diretamente no banco.
+### INT-2 — Falhas, acesso e acessibilidade
 
-### Etapa INT-2 — Validar falhas e segurança
+Repetir webhook, atrasar IA, provocar concorrência e takeover, trocar versão,
+induzir falha externa e resultado incerto. Validar ACL, CSRF, assinatura Meta,
+rotação, PII, teclado, foco e ARIA. Zero efeito duplicado, obsoleto ou acesso
+indevido; resultado incerto exige reconciliação.
 
-- Repetir webhook, derrubar cada dependência, atrasar resposta de IA, provocar concorrência, trocar versão de workflow e executar takeover.
-- Validar ACL, CSRF onde aplicável, assinatura do canal, rotação de segredos, PII, teclado, foco e ARIA.
-- **Gate:** zero duplicidade, zero mutação obsoleta, zero violação bloqueante de acesso, privacidade ou acessibilidade.
+### INT-3 — Ambiente e release
 
-### Etapa INT-3 — Preparar produção
+Manter o deploy automático atual ([ADR 022](../../../docs/adr/022-manter-deploy-automatico-github-easypanel.md)).
+Pipeline verde, imagem identificada por digest, migrations, HTTPS/isolamento,
+health, segredos, backups externos, monitor off-host, rollback e recovery
+devem ter evidência atual do EasyPanel. Código, docs e mocks não substituem
+checagem do painel. Fechar gates aplicáveis das issues #1, #3, #5, #11, #13 e #29.
 
-- Construir imagens imutáveis, aplicar migrations, publicar workflows, configurar domínios/segredos, backups, monitor off-host, rollback e recovery.
-- Executar carga conforme envelope aprovado e fechar evidências pendentes das issues `#1`, `#3`, `#5`, `#11`, `#13` e `#29` que forem aplicáveis ao go-live.
-- **Gate:** smoke por digest, alertas roteados, restore e rollback demonstrados no ambiente alvo.
+### INT-4 — UAT e go-live
 
-### Etapa INT-4 — UAT e lançamento do MVP
+Produto e Operação validam ORC/INB/AGT/MSG/ORD/FIN/PRV e PCL/PFI/PIM/TEC com
+dados sintéticos; Rose e Operação assinam v5. Privacidade aprova OpenAI e seus
+controles aplicáveis. Lançar só com canal real, agente controlável, rollback e
+recovery demonstrados. Instagram e PAY diferidos têm UAT próprio posterior.
 
-- Produto valida os critérios `ORC`, `INB`, `AGT`, `MSG`, `ORD`, `PAY`, `FIN` e `PRV` com dados sintéticos.
-- Operação aprova Inbox, handoff, pedido, Ficha e runbooks.
-- Privacidade e DevOps aprovam somente os gates sob sua autoridade; testes e documentos não substituem essas aprovações.
-- **Gate final:** WhatsApp operacional, n8n saudável, CRM íntegro, Inbox
-  acessível, agente controlável e rollback ensaiado. Instagram passa por UAT
-  próprio em `CANAL-2`.
+## Manutenção de prontidão — 05/10/2026
+
+| ID         | Entrega                                                                  | Rastreabilidade                                 | Estado                                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------ | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| OPS-DOC-01 | Reconciliar PR 142, docs ativos e rastreabilidade, preservando histórico | CRM-1..4, ORC/INB/AGT/ORD, TEC-01..08, T83..T87 | Entregue; contratos, links, validate e E2E passaram                                                                                       |
+| OPS-CI-01  | Investigar e corrigir publicação de imagens                              | INT-3 / T00.2                                   | Em verificação                                                                                                                            |
+| OPS-CHK-01 | Auditar deploy automático existente e checar ambiente alvo               | INT-3 / T00.3                                   | Auditoria dos quatro serviços registrada; gaps de produção pendentes ([evidência](../../../docs/runbooks/production-readiness-checks.md)) |
+| OPS-AI-01  | Escolher OpenAI e reconciliar baseline documental                        | ORC-06, PRV-01..03, AGENTE-3 / INT-3            | Decisão técnica registrada; privacidade externa pendente                                                                                  |

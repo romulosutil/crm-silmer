@@ -1,6 +1,7 @@
 # Pedidos MVP — Especificação
 
-**Status:** Draft para aprovação
+**Status:** implementação integrada; UAT e aprovação física de produção pendentes
+**Atualizado em:** 05/10/2026 — PR 142
 **Data:** 12/09/2026
 **Decisões de produto:** [`context.md`](context.md)
 **Arquitetura:** [`design.md`](design.md) · **Tasks:** [`tasks.md`](tasks.md)
@@ -11,40 +12,40 @@
 **Cliente acompanha o contato (03/10/2026):** [ADR 018](../../../docs/adr/018-cliente-do-pedido-acompanha-o-contato.md) · história P1-12
 **Mockups:** `.design/mesa-de-trabalho/` (canvas "Mesa de Trabalho Silmer")
 
-## Problema
+## Baseline vigente
+
+O código atual seleciona ficha-canonical-v5 (ADR 020 / TEC-01..08), com aprovação provisória do PO; assinatura física de Rose e Operação é gate separado. TEC supersede PFI/PIM/REV nos pontos de Técnica, origem da arte, Estampa (referência) e rótulos. As seções de verificação datadas abaixo são histórico de entregas e não comprovam homologação, deploy ou aceite externo atuais.
+
+## Problema original e resultado
 
 O Kanban e o Negócio foram aposentados (ADR 004) porque o preenchimento da
 ficha não é linear: o cliente responde fora de ordem, o agente preenche o que
-consegue e o vendedor completa o resto quando assume a conversa. Hoje a
-operação não tem onde registrar o pedido, confirmar valor e forma de pagamento,
-nem imprimir a ficha aprovada (`ficha-canonical-v2`). O vendedor também não
-tem como ver, na Caixa de Entrada, quais conversas estão paradas esperando por
-ele e por quê.
+consegue e o vendedor completa o resto quando assume a conversa. O módulo entregue oferece registro, confirmação humana, impressão e triagem das conversas que aguardam vendedor. A homologação desses fluxos no ambiente alvo continua pendente.
 
 ## Objetivos
 
-- [ ] Todo pedido do zero em que o cliente informa um ponto da ficha vira um
-      pedido pendente, sem trabalho manual de criação (ADR 014).
-- [ ] O vendedor responsável completa, confirma e imprime um pedido sem sair
-      das telas Caixa de Entrada e Pedidos.
-- [ ] Nenhum pedido é impresso sem confirmação humana registrada (autor e
-      horário).
-- [ ] A ficha impressa reproduz os blocos e campos do template aprovado v2.
+- Todo pedido do zero em que o cliente informa um ponto da ficha vira um
+  pedido pendente, sem trabalho manual de criação (ADR 014).
+- O vendedor responsável completa, confirma e imprime um pedido sem sair
+  das telas Caixa de Entrada e Pedidos.
+- Nenhum pedido é impresso sem confirmação humana registrada (autor e
+  horário).
+- A ficha impressa reproduz os blocos e campos da v5, com aprovação provisória e gate físico antes da produção.
 
 ## Fora do escopo
 
-| Item                                                          | Motivo                                                           |
-| ------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Cobrança PIX, conferência de comprovante, status de pagamento | Toda confirmação é humana no MVP; sem automação de pagamento.    |
-| Produção, entrega, pedido perdido ou cancelado                | Não existem como status no MVP. O lastro (P1-10) guarda só datas. |
-| Tela Mesa de Trabalho, marcos visuais, anel de completude     | Cortados na revisão de escopo; a Caixa de Entrada faz a triagem. |
-| Histórico de quem preencheu cada campo (UI)                   | P2. A trilha fica gravada; só não aparece.                       |
-| Pedidos no detalhe do cliente e KPIs de pedidos no Dashboard  | P2.                                                              |
-| Edição campo a campo                                          | Edição é por seção.                                              |
-| Impressão no template legado v1                               | v1 é fallback documental; o MVP imprime v2.                      |
-| Validação de modelo contra catálogo                           | Sem catálogo autorizado no MVP.                                  |
-| Reaproveitar tabelas e módulos de Negócio                     | Proibido pela ADR 004.                                           |
-| Remover rotas mortas de Kanban/Negócio do OpenAPI             | Limpeza separada (ver `design.md` → Riscos).                     |
+| Item                                                          | Motivo                                                                                         |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Cobrança PIX, conferência de comprovante, status de pagamento | Toda confirmação é humana no MVP; sem automação de pagamento.                                  |
+| Produção, entrega, pedido perdido ou cancelado                | Não existem como status no MVP. O lastro (P1-10) guarda só datas.                              |
+| Tela Mesa de Trabalho, marcos visuais, anel de completude     | Cortados na revisão de escopo; a Caixa de Entrada faz a triagem.                               |
+| Histórico de quem preencheu cada campo (UI)                   | P2. A trilha fica gravada; só não aparece.                                                     |
+| Ampliações comerciais no detalhe do cliente                   | Evolução posterior; KPIs de confirmados já estão no Dashboard.                                 |
+| Edição campo a campo                                          | Edição é por seção.                                                                            |
+| Impressão no template legado v1                               | v1 é referência documental; o MVP imprime v5.                                                  |
+| Validação de modelo contra catálogo                           | Sem catálogo autorizado no MVP.                                                                |
+| Reaproveitar tabelas e módulos de Negócio                     | Proibido pela ADR 004.                                                                         |
+| Remover rotas mortas de Kanban/Negócio do OpenAPI             | Caminhos aposentados removidos na reconciliação de 05/10/2026; schemas históricos preservados. |
 
 ---
 
@@ -568,72 +569,72 @@ geração; reabrir e ver o nome atual.
 Verificado no Grupo H (T39) em 13/09/2026. Evidência = teste automatizado
 (arquivo:linha) que falha se o requisito for quebrado.
 
-| ID     | História | Evidência                                                        | Status   |
-| ------ | -------- | ----------------------------------------------------------------- | -------- |
-| PCL-01 | P1-1     | `test/orders-service-create.test.js:78`                            | Verified |
-| PCL-02 | P1-1     | `test/orders-service-create.test.js:132`                           | Verified |
-| PCL-03 | P1-1     | `test/orders-service-create.test.js:162`                           | Verified |
+| ID     | História | Evidência                                                                                  | Status   |
+| ------ | -------- | ------------------------------------------------------------------------------------------ | -------- |
+| PCL-01 | P1-1     | `test/orders-service-create.test.js:78`                                                    | Verified |
+| PCL-02 | P1-1     | `test/orders-service-create.test.js:132`                                                   | Verified |
+| PCL-03 | P1-1     | `test/orders-service-create.test.js:162`                                                   | Verified |
 | PAG-01 | P1-1     | `test/orders-service-create.test.js:243`; `test/n8n-integration-postgres-live.test.js:116` | Verified |
-| PAG-02 | P1-1     | `test/orders-service-create.test.js:279` (ramo `ignored`)          | Verified |
-| PAG-03 | P1-1     | `test/orders-repository-contract.test.js:287`                      | Verified |
-| PCL-10 | P1-2     | `test/orders-service-create.test.js:198`; `test/e2e/crm-ui.spec.js:1102` | Verified |
-| PCL-11 | P1-2     | `test/e2e/crm-ui.spec.js:369,1083`                                  | Verified |
-| PFI-01 | P1-3     | `test/e2e/orders.spec.js:978`                                       | Verified |
-| PFI-02 | P1-3     | `test/e2e/orders.spec.js:710`                                       | Verified |
-| PFI-03 | P1-3     | `test/e2e/orders.spec.js:773`                                       | Verified |
-| PFI-04 | P1-3     | `test/e2e/orders.spec.js:773,789,814`                               | Verified |
-| PFI-05 | P1-3     | `test/e2e/orders.spec.js:905,937`                                   | Verified |
-| PFI-06 | P1-3     | `test/e2e/orders.spec.js:698,892`                                   | Verified |
-| PFI-07 | P1-3     | `test/e2e/orders.spec.js:833`                                       | Verified |
-| PFI-08 | P1-3     | `test/e2e/orders.spec.js:957`                                       | Verified |
-| PFI-09 | P1-3     | `test/e2e/orders.spec.js:581`; `test/order-format.test.js:103`      | Verified |
-| PFI-10 | P1-3     | `test/e2e/orders.spec.js:764`                                       | Verified |
-| PFI-14 | P1-3     | `test/e2e/orders.spec.js:1016`                                      | Verified |
-| PAU-01 | P1-3     | `test/e2e/orders.spec.js:610`                                       | Verified |
-| PCL-04 | P1-4     | `test/orders-service-commands.test.js:260` (bloco `confirmed`)      | Verified |
-| PCL-05 | P1-4     | `test/orders-service-commands.test.js:260,313`                      | Verified |
-| PCL-06 | P1-4     | `test/orders-service-commands.test.js:173`; `test/e2e/orders.spec.js:1092` | Verified |
-| PCL-08 | P1-4     | `test/orders-service-commands.test.js:336`                          | Verified |
-| PCL-09 | P1-4     | `test/orders-postgres-live.test.js:457`                             | Verified |
-| PFI-11 | P1-4     | `test/orders-service-commands.test.js:260`; `test/order-format.test.js:82` | Verified |
-| PFI-12 | P1-4     | `test/orders-service-commands.test.js:260,336`; `modules/orders/src/domain/order.js:107` | Verified |
-| PFI-13 | P1-4     | `test/e2e/orders.spec.js:1075`                                      | Verified |
-| PIM-01 | P1-5     | `test/e2e/orders.spec.js:567`; `test/order-format.test.js:170`      | Verified |
-| PIM-02 | P1-5     | `test/order-routes.test.js:884`; `test/identity-operational-read.test.js` (T75) | Verified |
-| PIM-03 | P1-5     | `test/order-routes.test.js:917`                                     | Verified |
-| PIM-04 | P1-5     | `test/order-routes.test.js:889`                                     | Verified |
-| PIM-05 | P1-5     | `test/e2e/orders.spec.js:1110`                                      | Verified |
-| PCL-07 | P1-6     | `test/e2e/orders.spec.js:1027`; `test/orders-service-commands.test.js:336` | Verified |
-| PCL-12 | P1-6     | `test/order-routes.test.js:753`; `test/orders-domain.test.js:169`   | Verified |
-| PLI-01 | P1-7     | `test/e2e/foundation.spec.js:338`                                   | Verified |
-| PLI-02 | P1-7     | `test/e2e/orders.spec.js:430`                                       | Verified |
-| PLI-03 | P1-7     | `test/e2e/orders.spec.js:368,448`                                   | Verified |
-| PLI-04 | P1-7     | `test/e2e/orders.spec.js:368`                                       | Verified |
-| PLI-05 | P1-7     | `test/order-format.test.js:139`                                     | Verified |
-| PLI-06 | P1-7     | `test/e2e/orders.spec.js:409`                                       | Verified |
-| PLI-07 | P1-7     | `test/e2e/orders.spec.js:460`                                       | Verified |
-| PLI-08 | P1-7     | `test/e2e/orders.spec.js:473`; `test/e2e/crm-ui.spec.js:975`        | Verified |
-| PGE-01 | P1-7     | `test/e2e/foundation.spec.js:338,402`; `test/e2e/orders.spec.js:529` | Verified |
-| PCX-01 | P1-8     | `test/e2e/crm-ui.spec.js:830,1131`                                  | Verified |
-| PCX-02 | P1-8     | `test/e2e/crm-ui.spec.js:848`                                       | Verified |
-| PCX-03 | P1-8     | `test/e2e/crm-ui.spec.js:74,931,938`                                | Verified |
-| PCX-04 | P1-8     | `test/e2e/crm-ui.spec.js:74,923`                                    | Verified |
-| PCX-05 | P1-8     | `test/e2e/crm-ui.spec.js:839,886`                                   | Verified |
-| PCX-06 | P1-9     | `test/e2e/crm-ui.spec.js:950`                                       | Verified |
-| PCX-07 | P1-9     | `test/e2e/crm-ui.spec.js:1005`                                      | Verified |
-| PCX-08 | P1-9     | `test/e2e/crm-ui.spec.js:1091`                                      | Verified |
-| PCX-09 | P1-9     | `test/e2e/crm-ui.spec.js:1021,1036,1053`                            | Verified |
+| PAG-02 | P1-1     | `test/orders-service-create.test.js:279` (ramo `ignored`)                                  | Verified |
+| PAG-03 | P1-1     | `test/orders-repository-contract.test.js:287`                                              | Verified |
+| PCL-10 | P1-2     | `test/orders-service-create.test.js:198`; `test/e2e/crm-ui.spec.js:1102`                   | Verified |
+| PCL-11 | P1-2     | `test/e2e/crm-ui.spec.js:369,1083`                                                         | Verified |
+| PFI-01 | P1-3     | `test/e2e/orders.spec.js:978`                                                              | Verified |
+| PFI-02 | P1-3     | `test/e2e/orders.spec.js:710`                                                              | Verified |
+| PFI-03 | P1-3     | `test/e2e/orders.spec.js:773`                                                              | Verified |
+| PFI-04 | P1-3     | `test/e2e/orders.spec.js:773,789,814`                                                      | Verified |
+| PFI-05 | P1-3     | `test/e2e/orders.spec.js:905,937`                                                          | Verified |
+| PFI-06 | P1-3     | `test/e2e/orders.spec.js:698,892`                                                          | Verified |
+| PFI-07 | P1-3     | `test/e2e/orders.spec.js:833`                                                              | Verified |
+| PFI-08 | P1-3     | `test/e2e/orders.spec.js:957`                                                              | Verified |
+| PFI-09 | P1-3     | `test/e2e/orders.spec.js:581`; `test/order-format.test.js:103`                             | Verified |
+| PFI-10 | P1-3     | `test/e2e/orders.spec.js:764`                                                              | Verified |
+| PFI-14 | P1-3     | `test/e2e/orders.spec.js:1016`                                                             | Verified |
+| PAU-01 | P1-3     | `test/e2e/orders.spec.js:610`                                                              | Verified |
+| PCL-04 | P1-4     | `test/orders-service-commands.test.js:260` (bloco `confirmed`)                             | Verified |
+| PCL-05 | P1-4     | `test/orders-service-commands.test.js:260,313`                                             | Verified |
+| PCL-06 | P1-4     | `test/orders-service-commands.test.js:173`; `test/e2e/orders.spec.js:1092`                 | Verified |
+| PCL-08 | P1-4     | `test/orders-service-commands.test.js:336`                                                 | Verified |
+| PCL-09 | P1-4     | `test/orders-postgres-live.test.js:457`                                                    | Verified |
+| PFI-11 | P1-4     | `test/orders-service-commands.test.js:260`; `test/order-format.test.js:82`                 | Verified |
+| PFI-12 | P1-4     | `test/orders-service-commands.test.js:260,336`; `modules/orders/src/domain/order.js:107`   | Verified |
+| PFI-13 | P1-4     | `test/e2e/orders.spec.js:1075`                                                             | Verified |
+| PIM-01 | P1-5     | `test/e2e/orders.spec.js:567`; `test/order-format.test.js:170`                             | Verified |
+| PIM-02 | P1-5     | `test/order-routes.test.js:884`; `test/identity-operational-read.test.js` (T75)            | Verified |
+| PIM-03 | P1-5     | `test/order-routes.test.js:917`                                                            | Verified |
+| PIM-04 | P1-5     | `test/order-routes.test.js:889`                                                            | Verified |
+| PIM-05 | P1-5     | `test/e2e/orders.spec.js:1110`                                                             | Verified |
+| PCL-07 | P1-6     | `test/e2e/orders.spec.js:1027`; `test/orders-service-commands.test.js:336`                 | Verified |
+| PCL-12 | P1-6     | `test/order-routes.test.js:753`; `test/orders-domain.test.js:169`                          | Verified |
+| PLI-01 | P1-7     | `test/e2e/foundation.spec.js:338`                                                          | Verified |
+| PLI-02 | P1-7     | `test/e2e/orders.spec.js:430`                                                              | Verified |
+| PLI-03 | P1-7     | `test/e2e/orders.spec.js:368,448`                                                          | Verified |
+| PLI-04 | P1-7     | `test/e2e/orders.spec.js:368`                                                              | Verified |
+| PLI-05 | P1-7     | `test/order-format.test.js:139`                                                            | Verified |
+| PLI-06 | P1-7     | `test/e2e/orders.spec.js:409`                                                              | Verified |
+| PLI-07 | P1-7     | `test/e2e/orders.spec.js:460`                                                              | Verified |
+| PLI-08 | P1-7     | `test/e2e/orders.spec.js:473`; `test/e2e/crm-ui.spec.js:975`                               | Verified |
+| PGE-01 | P1-7     | `test/e2e/foundation.spec.js:338,402`; `test/e2e/orders.spec.js:529`                       | Verified |
+| PCX-01 | P1-8     | `test/e2e/crm-ui.spec.js:830,1131`                                                         | Verified |
+| PCX-02 | P1-8     | `test/e2e/crm-ui.spec.js:848`                                                              | Verified |
+| PCX-03 | P1-8     | `test/e2e/crm-ui.spec.js:74,931,938`                                                       | Verified |
+| PCX-04 | P1-8     | `test/e2e/crm-ui.spec.js:74,923`                                                           | Verified |
+| PCX-05 | P1-8     | `test/e2e/crm-ui.spec.js:839,886`                                                          | Verified |
+| PCX-06 | P1-9     | `test/e2e/crm-ui.spec.js:950`                                                              | Verified |
+| PCX-07 | P1-9     | `test/e2e/crm-ui.spec.js:1005`                                                             | Verified |
+| PCX-08 | P1-9     | `test/e2e/crm-ui.spec.js:1091`                                                             | Verified |
+| PCX-09 | P1-9     | `test/e2e/crm-ui.spec.js:1021,1036,1053`                                                   | Verified |
 
 **Cobertura:** 52 requisitos · 52 verificados · 0 sem evidência · 0 lacunas.
 
 **Gate desta verificação:**
 
-| Comando                            | Resultado                                    |
-| ----------------------------------- | --------------------------------------------- |
-| `npm run validate`                  | ✅ passou (format, typecheck, lint, boundaries, design-tokens, topology, r2, external-spikes, media-retention, security-catalog, ficha-pdf-review, phase0-decisions, observability, 477 unit tests, build) |
-| `npm run test:orders:live`          | ✅ passou — 16/16 (PostgreSQL, `crm_silmer_test`) |
-| `npm run test:operation-read:live`  | ✅ passou — 1/1 (PostgreSQL, `crm_silmer_test`)   |
-| `npm run test:e2e`                  | ✅ passou — 69 passed, 7 skipped (Playwright)     |
+| Comando                            | Resultado                                                                                                                                                                                                  |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run validate`                 | ✅ passou (format, typecheck, lint, boundaries, design-tokens, topology, r2, external-spikes, media-retention, security-catalog, ficha-pdf-review, phase0-decisions, observability, 477 unit tests, build) |
+| `npm run test:orders:live`         | ✅ passou — 16/16 (PostgreSQL, `crm_silmer_test`)                                                                                                                                                          |
+| `npm run test:operation-read:live` | ✅ passou — 1/1 (PostgreSQL, `crm_silmer_test`)                                                                                                                                                            |
+| `npm run test:e2e`                 | ✅ passou — 69 passed, 7 skipped (Playwright)                                                                                                                                                              |
 
 Os 7 testes e2e pulados são cenários de Kanban já aposentados (ADR 004,
 `test/e2e/crm-ui.spec.js:602,1215,1238,1275,1284,1303,1315`) — não pertencem à
@@ -643,47 +644,47 @@ Pedidos MVP e não contam como lacuna.
 
 Verificado em T46, 29/09/2026.
 
-| ID     | História | Evidência                                                                                                     | Status   |
-| ------ | -------- | ------------------------------------------------------------------------------------------------------------- | -------- |
-| PLA-01 | P1-10    | `test/e2e/orders.spec.js:822,1144`; `test/order-format.test.js:201`                                           | Verified |
-| PLA-02 | P1-10    | `test/orders-service-create.test.js:97`; `test/orders-postgres-live.test.js:334`; `test/migrations-live.test.js:270` | Verified |
-| PLA-03 | P1-10    | `test/order-format.test.js:201`; `test/e2e/orders.spec.js:822`                                                | Verified |
-| PLA-04 | P1-10    | `test/orders-domain.test.js:214`; `test/orders-repository-contract.test.js:341`; `test/order-routes.test.js:778`; `test/e2e/orders.spec.js:842` | Verified |
-| PLA-05 | P1-10    | `test/orders-domain.test.js:250`; `test/order-routes.test.js:833`; `test/e2e/orders.spec.js:883,914`          | Verified |
-| PLA-06 | P1-10    | `test/orders-domain.test.js:214`; `test/order-routes.test.js:799`; `test/e2e/orders.spec.js:842`              | Verified |
-| PLA-07 | P1-10    | `test/order-routes.test.js:858`; `test/orders-service-commands.test.js:419`; `test/e2e/orders.spec.js:652`    | Verified |
-| PLA-08 | P1-10    | Ver "Ficha impressa com os sete pontos (ADR 017)" abaixo                                                      | Verified · PDF a aprovar |
-| PLA-09 | P1-10    | `test/order-routes.test.js:1059`                                                                              | Verified |
+| ID     | História | Evidência                                                                                                                                       | Status                   |
+| ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| PLA-01 | P1-10    | `test/e2e/orders.spec.js:822,1144`; `test/order-format.test.js:201`                                                                             | Verified                 |
+| PLA-02 | P1-10    | `test/orders-service-create.test.js:97`; `test/orders-postgres-live.test.js:334`; `test/migrations-live.test.js:270`                            | Verified                 |
+| PLA-03 | P1-10    | `test/order-format.test.js:201`; `test/e2e/orders.spec.js:822`                                                                                  | Verified                 |
+| PLA-04 | P1-10    | `test/orders-domain.test.js:214`; `test/orders-repository-contract.test.js:341`; `test/order-routes.test.js:778`; `test/e2e/orders.spec.js:842` | Verified                 |
+| PLA-05 | P1-10    | `test/orders-domain.test.js:250`; `test/order-routes.test.js:833`; `test/e2e/orders.spec.js:883,914`                                            | Verified                 |
+| PLA-06 | P1-10    | `test/orders-domain.test.js:214`; `test/order-routes.test.js:799`; `test/e2e/orders.spec.js:842`                                                | Verified                 |
+| PLA-07 | P1-10    | `test/order-routes.test.js:858`; `test/orders-service-commands.test.js:419`; `test/e2e/orders.spec.js:652`                                      | Verified                 |
+| PLA-08 | P1-10    | Ver "Ficha impressa com os sete pontos (ADR 017)" abaixo                                                                                        | Verified · PDF a aprovar |
+| PLA-09 | P1-10    | `test/order-routes.test.js:1059`                                                                                                                | Verified                 |
 
 **Cobertura:** 9 requisitos · 9 verificados · PLA-08 sai no papel depois da
 aprovação do PDF da v3 (ADR 017).
 
-| Comando                            | Resultado                                                  |
-| ---------------------------------- | ---------------------------------------------------------- |
-| `npm run validate`                 | ✅ passou (498 testes: 495 ok, 3 pulados; build)           |
-| `npm run test:e2e`                 | ✅ passou — 73 passed, 7 skipped (os mesmos do Kanban)      |
-| `npm run test:orders:live`         | ✅ passou — 17/17 (PostgreSQL, `crm_silmer_test`)           |
-| `test/migrations-live.test.js`     | ✅ passou — backfill de `0024` entre as migrations          |
+| Comando                        | Resultado                                              |
+| ------------------------------ | ------------------------------------------------------ |
+| `npm run validate`             | ✅ passou (498 testes: 495 ok, 3 pulados; build)       |
+| `npm run test:e2e`             | ✅ passou — 73 passed, 7 skipped (os mesmos do Kanban) |
+| `npm run test:orders:live`     | ✅ passou — 17/17 (PostgreSQL, `crm_silmer_test`)      |
+| `test/migrations-live.test.js` | ✅ passou — backfill de `0024` entre as migrations     |
 
 ### Abertura no primeiro ponto da ficha (ADR 014)
 
 Verificado na T53, 02/10/2026.
 
-| ID     | História | Evidência                                                                                                                                                                   | Status   |
-| ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| PAB-01 | P1-1     | `test/n8n-workflow-contract.test.js:2102` (2106, 2114, 2147); `test/n8n-workflow-contract.test.js:469,874`                                                                  | Verified |
-| PAB-02 | P1-1     | `test/n8n-workflow-contract.test.js:2169,2177,2209`; `test/n8n-workflow-contract.test.js:213`                                                                               | Verified |
+| ID     | História | Evidência                                                                                                                                                                       | Status   |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| PAB-01 | P1-1     | `test/n8n-workflow-contract.test.js:2102` (2106, 2114, 2147); `test/n8n-workflow-contract.test.js:469,874`                                                                      | Verified |
+| PAB-02 | P1-1     | `test/n8n-workflow-contract.test.js:2169,2177,2209`; `test/n8n-workflow-contract.test.js:213`                                                                                   | Verified |
 | PAB-03 | P1-1     | `test/n8n-integration-postgres-live.test.js:755,766,800,821,975`; `test/n8n-integration-domain.test.js:250`; `test/n8n-api-contract.test.js:126`; `test/n8n-routes.test.js:172` | Verified |
-| PAB-04 | P1-1     | `test/n8n-integration-postgres-live.test.js:846,894,939`; `test/n8n-workflow-contract.test.js:305`; `test/n8n-api-contract.test.js:184`; `test/n8n-dev-workflow.test.js:111` | Verified |
+| PAB-04 | P1-1     | `test/n8n-integration-postgres-live.test.js:846,894,939`; `test/n8n-workflow-contract.test.js:305`; `test/n8n-api-contract.test.js:184`; `test/n8n-dev-workflow.test.js:111`    | Verified |
 
 **Cobertura:** 4 requisitos · 4 verificados. PCL-01..03 mantêm a evidência do
 serviço de pedidos; a abertura pelo `open_order` usa o mesmo
 `ensurePendingFromIntent` (`test/n8n-integration-postgres-live.test.js:663`).
 
-| Comando                                                                       | Resultado                                                  |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `npm run validate`                                                            | ✅ passou na T53                                            |
-| `node --test --test-concurrency=1 test/n8n-integration-postgres-live.test.js` | ✅ passou — 4/4 (PostgreSQL, `crm_silmer_test_abertura`)    |
+| Comando                                                                       | Resultado                                                |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `npm run validate`                                                            | ✅ passou na T53                                         |
+| `node --test --test-concurrency=1 test/n8n-integration-postgres-live.test.js` | ✅ passou — 4/4 (PostgreSQL, `crm_silmer_test_abertura`) |
 
 ### Itens com os sete pontos (ADR 016)
 
@@ -691,29 +692,29 @@ Verificado em T66, 03/10/2026. Os trechos da ADR 016 em PFI-03, PFI-08,
 PFI-09, PFI-12, PCL-04, PCL-05 e PLA-06 têm a evidência de PIT-01, PIT-10,
 PIT-06, PIT-10, PIT-05, PIT-06 e PIT-12.
 
-| ID     | História | Evidência                                                                                                                                                                                | Status   |
-| ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| PIT-01 | P1-11    | `test/e2e/orders.spec.js:1018,1116`; `test/order-format.test.js:191`                                                                                                                     | Verified |
-| PIT-02 | P1-11    | `test/e2e/orders.spec.js:1018,1077,1116`                                                                                                                                                 | Verified |
-| PIT-03 | P1-11    | `test/orders-ficha.test.js:79,90,105,131`; `test/orders-service-commands.test.js:351`; `test/order-routes.test.js:523`; `test/e2e/orders.spec.js:1116`                                   | Verified |
-| PIT-04 | P1-11    | `test/orders-ficha.test.js:54,147`; `test/orders-service-read.test.js:206`; `test/orders-postgres-live.test.js:783`; `test/order-routes.test.js:523`                                     | Verified |
-| PIT-05 | P1-11    | `test/orders-domain.test.js:103`; `test/orders-postgres-live.test.js:612`; `test/order-routes.test.js:744`                                                                               | Verified |
-| PIT-06 | P1-11    | `test/orders-domain.test.js:369`; `test/order-format.test.js:117,157`; `test/e2e/orders.spec.js:639,1544`; `test/e2e/crm-ui.spec.js:1178`                                                | Verified |
-| PIT-07 | P1-11    | `test/orders-ficha.test.js:267,326,339,368,400,440,496,527`; `test/orders-service-create.test.js:101`                                                                                    | Verified |
-| PIT-08 | P1-11    | `test/orders-sizes.test.js:11,51,57,102`; `test/orders-ficha.test.js:464`                                                                                                                | Verified |
-| PIT-09 | P1-11    | `test/order-format.test.js:208`; `test/e2e/orders.spec.js:1166`                                                                                                                          | Verified |
-| PIT-10 | P1-11    | `test/e2e/orders.spec.js:1208`; `test/e2e/crm-ui.spec.js:1178`                                                                                                                           | Verified |
-| PIT-11 | P1-11    | `test/orders-postgres-live.test.js:352`                                                                                                                                                  | Verified |
-| PIT-12 | P1-11    | `test/orders-domain.test.js:190`; `test/orders-postgres-live.test.js:612`; `test/order-format.test.js:292,359`; `test/e2e/orders.spec.js:639`                                            | Verified |
+| ID     | História | Evidência                                                                                                                                              | Status   |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| PIT-01 | P1-11    | `test/e2e/orders.spec.js:1018,1116`; `test/order-format.test.js:191`                                                                                   | Verified |
+| PIT-02 | P1-11    | `test/e2e/orders.spec.js:1018,1077,1116`                                                                                                               | Verified |
+| PIT-03 | P1-11    | `test/orders-ficha.test.js:79,90,105,131`; `test/orders-service-commands.test.js:351`; `test/order-routes.test.js:523`; `test/e2e/orders.spec.js:1116` | Verified |
+| PIT-04 | P1-11    | `test/orders-ficha.test.js:54,147`; `test/orders-service-read.test.js:206`; `test/orders-postgres-live.test.js:783`; `test/order-routes.test.js:523`   | Verified |
+| PIT-05 | P1-11    | `test/orders-domain.test.js:103`; `test/orders-postgres-live.test.js:612`; `test/order-routes.test.js:744`                                             | Verified |
+| PIT-06 | P1-11    | `test/orders-domain.test.js:369`; `test/order-format.test.js:117,157`; `test/e2e/orders.spec.js:639,1544`; `test/e2e/crm-ui.spec.js:1178`              | Verified |
+| PIT-07 | P1-11    | `test/orders-ficha.test.js:267,326,339,368,400,440,496,527`; `test/orders-service-create.test.js:101`                                                  | Verified |
+| PIT-08 | P1-11    | `test/orders-sizes.test.js:11,51,57,102`; `test/orders-ficha.test.js:464`                                                                              | Verified |
+| PIT-09 | P1-11    | `test/order-format.test.js:208`; `test/e2e/orders.spec.js:1166`                                                                                        | Verified |
+| PIT-10 | P1-11    | `test/e2e/orders.spec.js:1208`; `test/e2e/crm-ui.spec.js:1178`                                                                                         | Verified |
+| PIT-11 | P1-11    | `test/orders-postgres-live.test.js:352`                                                                                                                | Verified |
+| PIT-12 | P1-11    | `test/orders-domain.test.js:190`; `test/orders-postgres-live.test.js:612`; `test/order-format.test.js:292,359`; `test/e2e/orders.spec.js:639`          | Verified |
 
 **Cobertura:** 12 requisitos · 12 verificados.
 
-| Comando                                                  | Resultado                                                                  |
-| -------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `npm run validate`                                       | ✅ passou (546 testes: 543 ok, 3 pulados; build)                           |
-| `npx playwright test` (config da porta 4275, não versionada) | ✅ passou — 82 passed, 7 skipped (os mesmos do Kanban)                 |
-| `npm run test:orders:live`                               | ✅ passou — 20/20 (PostgreSQL, `crm_silmer_test_itens`)                    |
-| `test/n8n-integration-postgres-live.test.js`             | ✅ passou — 3/3 (cópia local apontada para `crm_silmer_test_itens`)        |
+| Comando                                                      | Resultado                                                           |
+| ------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `npm run validate`                                           | ✅ passou (546 testes: 543 ok, 3 pulados; build)                    |
+| `npx playwright test` (config da porta 4275, não versionada) | ✅ passou — 82 passed, 7 skipped (os mesmos do Kanban)              |
+| `npm run test:orders:live`                                   | ✅ passou — 20/20 (PostgreSQL, `crm_silmer_test_itens`)             |
+| `test/n8n-integration-postgres-live.test.js`                 | ✅ passou — 3/3 (cópia local apontada para `crm_silmer_test_itens`) |
 
 ### Ficha impressa com os sete pontos (ADR 017)
 
@@ -724,16 +725,16 @@ registrada e presa aos hashes do PDF, e a final, assinatura física de Rose e
 Operação na amostra impressa, pendente e obrigatória antes da produção
 (PIM-10).
 
-| ID     | História | Evidência                                                                                   | Status                         |
-| ------ | -------- | ------------------------------------------------------------------------------------------- | ------------------------------ |
-| PIM-06 | P1-5     | `test/ficha-print-v3.test.js:168,200`; `test/ficha-pdf-review-v3.test.js:91`                | Verified · PDF a aprovar       |
-| PIM-07 | P1-5     | `test/ficha-print-v3.test.js:224`; `test/ficha-pdf-review-v3.test.js:91,110`                | Verified · PDF a aprovar       |
-| PIM-08 | P1-5     | `test/ficha-print-v3.test.js:251`                                                           | Verified · PDF a aprovar       |
-| PIM-09 | P1-5     | `test/ficha-print-v3.test.js:282,309,375`                                                   | Verified · PDF a aprovar       |
-| PIM-10 | P1-5     | `test/ficha-print-switch.test.js:145,155,209,216,234,248`; `test/ficha-pdf-review-v3.test.js:313`; `npm run validate:ficha-pdf-review` | Verified · v3 desde a T74      |
-| PIM-11 | P1-5     | `test/ficha-print-v3.test.js:429,454`; `test/ficha-pdf-review-v3.test.js:147`               | Verified · PDF a aprovar       |
-| PIM-12 | P1-5     | `test/ficha-print-v3.test.js:471,479,516,526`; `test/ficha-pdf-review-v3.test.js:162`       | Verified · PDF a aprovar       |
-| PLA-08 | P1-10    | `test/ficha-print-v3.test.js:339,569`; `test/ficha-pdf-review-v3.test.js:162`               | Verified · PDF a aprovar       |
+| ID     | História | Evidência                                                                                                                              | Status                    |
+| ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| PIM-06 | P1-5     | `test/ficha-print-v3.test.js:168,200`; `test/ficha-pdf-review-v3.test.js:91`                                                           | Verified · PDF a aprovar  |
+| PIM-07 | P1-5     | `test/ficha-print-v3.test.js:224`; `test/ficha-pdf-review-v3.test.js:91,110`                                                           | Verified · PDF a aprovar  |
+| PIM-08 | P1-5     | `test/ficha-print-v3.test.js:251`                                                                                                      | Verified · PDF a aprovar  |
+| PIM-09 | P1-5     | `test/ficha-print-v3.test.js:282,309,375`                                                                                              | Verified · PDF a aprovar  |
+| PIM-10 | P1-5     | `test/ficha-print-switch.test.js:145,155,209,216,234,248`; `test/ficha-pdf-review-v3.test.js:313`; `npm run validate:ficha-pdf-review` | Verified · v3 desde a T74 |
+| PIM-11 | P1-5     | `test/ficha-print-v3.test.js:429,454`; `test/ficha-pdf-review-v3.test.js:147`                                                          | Verified · PDF a aprovar  |
+| PIM-12 | P1-5     | `test/ficha-print-v3.test.js:471,479,516,526`; `test/ficha-pdf-review-v3.test.js:162`                                                  | Verified · PDF a aprovar  |
+| PLA-08 | P1-10    | `test/ficha-print-v3.test.js:339,569`; `test/ficha-pdf-review-v3.test.js:162`                                                          | Verified · PDF a aprovar  |
 
 O gate do pacote (hashes da amostra, do HTML e do PDF, aprovação inteira ou
 pendente, recusa de regerar a versão aprovada) está em
@@ -744,11 +745,11 @@ pendente, recusa de regerar a versão aprovada) está em
 
 Verificado em T72, 03/10/2026. Nenhuma tela mudou, então não há e2e novo.
 
-| ID     | História | Evidência                                                                                                                                                       | Status   |
-| ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| PCT-01 | P1-12    | `test/orders-service-client.test.js:127,153,242`; `test/order-routes.test.js:1126`; `test/orders-postgres-live.test.js:528,554`                                 | Verified |
+| ID     | História | Evidência                                                                                                                                                          | Status   |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| PCT-01 | P1-12    | `test/orders-service-client.test.js:127,153,242`; `test/order-routes.test.js:1126`; `test/orders-postgres-live.test.js:528,554`                                    | Verified |
 | PCT-02 | P1-12    | `test/orders-service-client.test.js:187`; `test/orders-repository-contract.test.js:344`; `test/order-routes.test.js:1135`; `test/orders-postgres-live.test.js:558` | Verified |
-| PCT-03 | P1-12    | `test/orders-service-client.test.js:207`; `test/order-routes.test.js:1155`; `test/orders-postgres-live.test.js:616`                                             | Verified |
+| PCT-03 | P1-12    | `test/orders-service-client.test.js:207`; `test/order-routes.test.js:1155`; `test/orders-postgres-live.test.js:616`                                                | Verified |
 
 **Cobertura:** 3 requisitos · 3 verificados.
 
@@ -769,10 +770,9 @@ Verificado em T72, 03/10/2026. Nenhuma tela mudou, então não há e2e novo.
    conferir total recalculado; abrir "Adicionais (não obrigatórios)" pelo
    teclado.
 5. Editar "Observações do pedido" (até 5 linhas) e salvar.
-6. Confirmar o pedido com valor (ex. `1.180,00`) e forma de pagamento (Pix);
+6. Preencher Técnica por item, origem da arte do pedido e entrega prometida; confirmar com valor (ex. `1.180,00`) e forma de pagamento (Pix);
    checar status "Confirmado por <nome> · <data hora>".
-7. Imprimir o pedido confirmado; validar template `ficha-canonical-v3` (ADR
-   017), sem valor/condição e sem faixa de amostra.
+7. Imprimir o pedido confirmado; validar template `ficha-canonical-v5` (ADR 020), sem valor/condição e sem faixa de amostra; assinatura física precede produção.
 8. Reabrir o pedido; confirmar que a impressão trava de novo e número/valor
    são preservados.
 9. Na Caixa de Entrada, aplicar o filtro "Estado" → "Aguardando vendedor" e
@@ -799,23 +799,22 @@ Verificado em T72, 03/10/2026. Nenhuma tela mudou, então não há e2e novo.
 
 ## Revisão da ficha e leitura operacional (ADR 019, 03/10/2026)
 
-Esta seção registra a nova decisão do PO. A coleta do bot continua com os sete
+Esta seção registra a decisão de 03/10/2026, refinada pela ADR 020. A coleta do bot continua com os sete
 pontos da ADR 016; o vendedor completa as escolhas operacionais antes de
-**Gerar pedido**. A v3 aprovada para desenvolvimento permanece o template em
-uso até a revisão da candidata v4, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md).
+**Gerar pedido**. A revisão original partiu da v3 e preparou a v4, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md).
 
-| ID | Critério de aceite |
-| --- | --- |
-| REV-01 | A tela e a nova ficha usam **Tipo de roupa** para `item.tipo`, sem editar ou imprimir `modelo`; dados históricos de modelo continuam preservados. |
-| REV-02 | O ponto 7 aparece como **Definição da gola**, usa `item.gola` e lê `vies_gola` antigo quando aquele estiver vazio; salvar outro campo não apaga essa definição. |
-| REV-03 | Cada item tem `tipo_servico`. É possível salvar um rascunho sem ele, mas **Gerar pedido** informa qual item falta; itens do mesmo pedido podem ter serviços diferentes. Gerados antigos seguem legíveis. |
+| ID     | Critério de aceite                                                                                                                                                                                                                                                                   |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| REV-01 | A tela e a nova ficha usam **Tipo de roupa** para `item.tipo`, sem editar ou imprimir `modelo`; dados históricos de modelo continuam preservados.                                                                                                                                    |
+| REV-02 | O ponto 7 aparece como **Definição da gola**, usa `item.gola` e lê `vies_gola` antigo quando aquele estiver vazio; salvar outro campo não apaga essa definição.                                                                                                                      |
+| REV-03 | Cada item tem `tipo_servico`. É possível salvar um rascunho sem ele, mas **Gerar pedido** informa qual item falta; itens do mesmo pedido podem ter serviços diferentes. Gerados antigos seguem legíveis.                                                                             |
 | REV-04 | O vendedor autorizado marca separadamente **Feito pelo cliente** e **Feito pela Silmer**. A automação não define a origem. O upload informa formatos e destino `CRM/<numero-lowercase>/`, mas fica desativado até armazenamento durável, validação e integração Dropbox em produção. |
-| REV-05 | A revisão impressa candidata preserva lastro, paginação e 14 campos vazios de produção; mostra serviço por item, origem da estampa e definição da gola. V2, v3 e seus hashes não mudam. A troca do template depende de aprovação própria. |
-| REV-06 | Dashboard mostra número de vendas confirmadas e valor final vendido, com período e universo explícitos; análises derivadas não contam pendentes como venda nem valor recebido. |
-| REV-07 | Linhas de Pedidos e Clientes abrem ao clicar na área não interativa e mantêm link, foco e operação por teclado. Tabela larga rola dentro de região focável no celular. |
-| REV-08 | Pedidos diferencia **Cliente sem resposta** (última saída enviada há pelo menos 48 horas) de **Pedido sem movimentação** (`updatedAt`); envio falho/incerto não acende o sinal. Nenhuma probabilidade de fechamento é inventada. |
-| REV-09 | Páginas observam eventos seguros do CRM e atualizam sem botão normal de atualização. Edição em andamento preserva rascunho; conflito de versão permite recuperar a leitura atual após cancelar. Nova tentativa manual continua para falha real. |
-| REV-10 | O [glossário](../../../docs/product/GLOSSARIO.md) fixa termos e verbos; a [revisão heurística](../../../docs/product/REVISAO-HEURISTICA.md) documenta achados e verificação. Aviso a Rose por n8n ou e-mail é proposta para fluxo conjunto, sem implantação nesta etapa. |
+| REV-05 | A revisão impressa candidata preserva lastro, paginação e 14 campos vazios de produção; mostra serviço por item, origem da estampa e definição da gola. V2, v3 e seus hashes não mudam. A troca do template depende de aprovação própria.                                            |
+| REV-06 | Dashboard mostra número de vendas confirmadas e valor final vendido, com período e universo explícitos; análises derivadas não contam pendentes como venda nem valor recebido.                                                                                                       |
+| REV-07 | Linhas de Pedidos e Clientes abrem ao clicar na área não interativa e mantêm link, foco e operação por teclado. Tabela larga rola dentro de região focável no celular.                                                                                                               |
+| REV-08 | Pedidos diferencia **Cliente sem resposta** (última saída enviada há pelo menos 48 horas) de **Pedido sem movimentação** (`updatedAt`); envio falho/incerto não acende o sinal. Nenhuma probabilidade de fechamento é inventada.                                                     |
+| REV-09 | Páginas observam eventos seguros do CRM e atualizam sem botão normal de atualização. Edição em andamento preserva rascunho; conflito de versão permite recuperar a leitura atual após cancelar. Nova tentativa manual continua para falha real.                                      |
+| REV-10 | O [glossário](../../../docs/product/GLOSSARIO.md) fixa termos e verbos; a [revisão heurística](../../../docs/product/REVISAO-HEURISTICA.md) documenta achados e verificação. Aviso a Rose por n8n ou e-mail é proposta para fluxo conjunto, sem implantação nesta etapa.             |
 
 ## Técnica por item e arte do pedido (ADR 020, 03/10/2026)
 
@@ -824,13 +823,13 @@ e decidiu um nome por conceito. A coleta do bot e o indicador da ficha não
 mudam; muda onde o CRM grava cada resposta e como a tela e o papel a chamam.
 Estes critérios superam REV-02–REV-05 onde divergem.
 
-| ID | Critério de aceite |
-| --- | --- |
-| TEC-01 | `items[].tipo_servico` aparece como **Técnica**, ponto 4 do item, na tela e no papel; é obrigatória para gerar. O bot preenche o primeiro item quando o cliente nomeia uma técnica (silk, sublimação, DTF, DTG, bordado, transfer) ou diz que a peça é lisa (“Sem estampa”); outra descrição fica em Dados do atendimento como “Técnica informada”. |
-| TEC-02 | `summary.aplicacao` não é escrita pelo bot, editada nem impressa a partir da v5. O valor antigo continua guardado e a API aceita a chave de um cliente antigo sem usá-la. |
-| TEC-03 | **Estampa e arquivos** oferece **O cliente envia a arte**, **A Silmer cria a arte** e **Sem estampa**. As duas primeiras coexistem; “Sem estampa” exclui as outras (a API recusa a combinação). **Gerar pedido** exige uma marcação (`artwork` em `missingFields`). O bot projeta a origem a partir de `artwork_status` só quando a resposta é inequívoca; o vendedor corrige. |
-| TEC-04 | `items[].estampa` deixa os pontos principais, não bloqueia e aparece como **Estampa (referência)** nos adicionais. O bot grava ali só os locais da estampa. |
-| TEC-05 | Pontos do item: Tipo de roupa, Cor, Quantidade, Técnica, Tecido, Tamanhos e **Gola**. Adicionais: Estampa (referência), **Cor do tecido — frente/costas/manga direita/manga esquerda** e **Viés das mangas**. “Tipo de peça” do bot aparece como “Tipo de roupa informado”; o aviso do `modelo` antigo sai da tela, e o valor continua guardado. |
-| TEC-06 | Lastro com **Pago em** e **Entregue em** na tela e no papel; resumo com **Nome do pedido**; a dica da entrega prometida diz “A data combinada com o cliente.”; o total de peças não mostra “cliente informou N” (o aviso de diferença continua). |
+| ID     | Critério de aceite                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TEC-01 | `items[].tipo_servico` aparece como **Técnica**, ponto 4 do item, na tela e no papel; é obrigatória para gerar. O bot preenche o primeiro item quando o cliente nomeia uma técnica (silk, sublimação, DTF, DTG, bordado, transfer) ou diz que a peça é lisa (“Sem estampa”); outra descrição fica em Dados do atendimento como “Técnica informada”.                                                                                                                                                 |
+| TEC-02 | `summary.aplicacao` não é escrita pelo bot, editada nem impressa a partir da v5. O valor antigo continua guardado e a API aceita a chave de um cliente antigo sem usá-la.                                                                                                                                                                                                                                                                                                                           |
+| TEC-03 | **Estampa e arquivos** oferece **O cliente envia a arte**, **A Silmer cria a arte** e **Sem estampa**. As duas primeiras coexistem; “Sem estampa” exclui as outras (a API recusa a combinação). **Gerar pedido** exige uma marcação (`artwork` em `missingFields`). O bot projeta a origem a partir de `artwork_status` só quando a resposta é inequívoca; o vendedor corrige.                                                                                                                      |
+| TEC-04 | `items[].estampa` deixa os pontos principais, não bloqueia e aparece como **Estampa (referência)** nos adicionais. O bot grava ali só os locais da estampa.                                                                                                                                                                                                                                                                                                                                         |
+| TEC-05 | Pontos do item: Tipo de roupa, Cor, Quantidade, Técnica, Tecido, Tamanhos e **Gola**. Adicionais: Estampa (referência), **Cor do tecido — frente/costas/manga direita/manga esquerda** e **Viés das mangas**. “Tipo de peça” do bot aparece como “Tipo de roupa informado”; o aviso do `modelo` antigo sai da tela, e o valor continua guardado.                                                                                                                                                    |
+| TEC-06 | Lastro com **Pago em** e **Entregue em** na tela e no papel; resumo com **Nome do pedido**; a dica da entrega prometida diz “A data combinada com o cliente.”; o total de peças não mostra “cliente informou N” (o aviso de diferença continua).                                                                                                                                                                                                                                                    |
 | TEC-07 | `ficha-canonical-v5`: resumo com Cliente, Entrega prometida e Total de peças; apoio com Nome do pedido, Vendedor, Data do pedido e FAB; lastro com Primeiro contato, Pago em e Entregue em; **Arte do pedido** em toda página comercial; itens com os pontos de TEC-05; produção com **Cores da arte** e **Nº de cores — …**. V2–v4, PDFs e hashes intactos. `PRINT_TEMPLATE` muda para v5 só após a aprovação provisória do PO; a assinatura física de Rose e Operação continua antes da produção. |
-| TEC-08 | O [glossário](../../../docs/product/GLOSSARIO.md) fixa Técnica, Arte do pedido, Estampa (referência), Cor do tecido, Cores da arte, Nome do pedido, Pago em e Entregue em. |
+| TEC-08 | O [glossário](../../../docs/product/GLOSSARIO.md) fixa Técnica, Arte do pedido, Estampa (referência), Cor do tecido, Cores da arte, Nome do pedido, Pago em e Entregue em.                                                                                                                                                                                                                                                                                                                          |

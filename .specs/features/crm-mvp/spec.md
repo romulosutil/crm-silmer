@@ -2,16 +2,20 @@
 
 ## Problema
 
-As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é uma oportunidade. A Silmer precisa separar backlog de leads, automatizar a qualificação sem perder a autoridade do domínio e transformar o resultado em uma Ficha de Pedido válida para produção e cobrança.
+As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é uma oportunidade. A Silmer precisa organizar atendimento e pedidos pendentes, automatizar a qualificação sem perder a autoridade do domínio e transformar o resultado em uma Ficha de Pedido válida para produção e operação.
 
 ## Objetivos
 
 - Conduzir o caminho feliz do WhatsApp oficial até a Ficha de Pedido; adicionar
   Instagram em uma fase posterior sobre o mesmo domínio.
 - Disparar automaticamente o n8n a cada mensagem recebida, sem botão na UI.
-- Usar o Vendedor Silmer no n8n para conversar, cadastrar ou atualizar leads, mover o Kanban e transferir para uma pessoa quando necessário.
+- Usar o Vendedor Silmer no n8n para conversar, coletar dados, criar ou completar pedido pendente e transferir para uma pessoa quando necessário.
 - Manter o CRM como fonte da verdade, com APIs autorizadas, rastreabilidade, tomada humana e reconciliação de falhas.
 - Medir as vendas originadas no CRM.
+
+## Baseline vigente — 05/10/2026
+
+ADRs 004, 006 e 020 supersedem funil linear e gates antigos de Ficha. OpenAI é a baseline da [ADR 021](../../../docs/adr/021-adotar-openai-no-mvp.md); deploy automático permanece conforme [ADR 022](../../../docs/adr/022-manter-deploy-automatico-github-easypanel.md). IDs preservados não comprovam homologação; estados de entrega estão na rastreabilidade.
 
 ## P1 — MVP
 
@@ -26,39 +30,36 @@ As conversas comerciais chegam por canais de mensagem, mas nem toda conversa é 
    THEN ele SHALL normalizar o evento e registrar seu resultado no CRM por
    contrato versionado; o adapter futuro do Instagram SHALL reutilizar esse
    contrato sem criar outro domínio.
-3. **ORC-03:** WHEN o Vendedor Silmer cria ou atualiza Contato ou Negócio, preenche campo ou move etapa THEN o n8n SHALL usar uma API autenticada, autorizada, idempotente e auditável do CRM e nunca acessar diretamente o banco.
+3. **ORC-03:** WHEN o Vendedor Silmer atualiza briefing, cria ou completa Pedido pendente ou solicita handoff THEN o n8n SHALL usar API autenticada, autorizada, idempotente e auditável do CRM e nunca acessar diretamente o banco.
 4. **ORC-04:** WHEN um workflow executa THEN o CRM SHALL correlacionar `workflow_key`, versão publicada, `execution_id`, mensagem, `automation_epoch` e resultado sem armazenar segredo.
 5. **ORC-05:** WHEN eventos são repetidos, concorrentes ou chegam fora de ordem THEN CRM e n8n SHALL produzir no máximo um efeito oficial e expor divergências para reconciliação.
-6. **ORC-06:** WHEN a política versionada seleciona OpenAI ou Gemini THEN o workflow SHALL preservar o mesmo schema de entrada, saída, segurança, privacidade e avaliação.
+6. **ORC-06:** WHEN o workflow chama OpenAI, provedor escolhido para produção, THEN ele SHALL preservar o schema estruturado, segurança, privacidade e avaliação; um provedor alternativo exige nova decisão e homologação.
 7. **ORC-07:** WHEN uma pessoa assume a conversa ou a automação é desligada THEN o CRM SHALL incrementar o `automation_epoch` e rejeitar comandos e envios de execuções antigas.
 8. **ORC-08:** WHEN n8n, canal ou provedor de IA fica indisponível ou retorna resultado incerto THEN o sistema SHALL tornar a pendência visível e retomável, sem avançar silenciosamente a jornada.
-9. **ORC-09:** WHEN o atendimento migra de canal THEN o sistema SHALL continuar o mesmo Negócio e conectar `@instagram` e telefone ao lead somente após correlação verificável, explícita e auditável, preservando as duas identidades e os históricos.
+9. **ORC-09:** WHEN a fase posterior CANAL-2 executa migração de canal THEN o sistema SHALL associar @instagram e telefone ao mesmo Contato somente após correlação verificável e auditável, preservando os históricos.
 
-O contrato executável de ORC-01–09 é a OpenAPI v1: três endpoints n8n→CRM,
+O contrato executável de ORC-01–08 é a OpenAPI v1: três endpoints n8n→CRM,
 Basic Auth como `AUTOMATION_EXECUTOR`, idempotência com hash e o fence de uso
 único `message.send.requested`, validado por `automation_epoch` e
 `source_revision`. Resultado desconhecido exige reconciliação e nunca retry
 cego à Meta. Não há claim, lease ou token de rodada no MVP simples.
 
-**Teste independente:** receber uma mensagem realista, comprovar o disparo automático do n8n, executar a jornada com OpenAI e Gemini, repetir eventos e assumir a conversa durante uma execução sem duplicar ou aplicar efeito atrasado.
+**Teste independente:** receber uma mensagem realista, comprovar o disparo automático do n8n, executar a jornada com OpenAI, repetir eventos e assumir a conversa durante uma execução sem duplicar ou aplicar efeito atrasado.
 
 ### P1.1 Caixa de Entrada e conversão
 
-**User story:** Como Atendimento, quero triar conversas antes de transformá-las em lead para que o Kanban contenha somente oportunidades comerciais.
+**User story:** Como Vendedor, quero observar conversas e os pedidos pendentes correspondentes para assumir o atendimento quando necessário.
 
 **Critérios de aceite:**
 
-1. **INB-01:** WHEN uma mensagem válida chega pela API oficial THEN o sistema SHALL criar ou atualizar uma conversa no backlog sem criar automaticamente um lead apenas pela chegada.
-2. **INB-02:** WHEN o Vendedor Silmer identifica intenção comercial THEN o n8n SHALL solicitar a criação ou vinculação do Contato e de exatamente um Negócio no Kanban.
-3. **INB-03:** WHEN a conversa não representa oportunidade THEN o n8n SHALL encerrá-la como `Sem lead` com motivo auditável, sem criar Negócio.
-4. **INB-04:** WHEN a mesma conversão automática ou manual é repetida THEN o sistema SHALL retornar o resultado existente sem duplicar Contato, Lead ou Card.
+1. **INB-01:** WHEN uma mensagem válida chega THEN o sistema SHALL resolver Contato e Conversa na Caixa de Entrada sem confirmar uma venda automaticamente.
+2. **INB-02:** WHEN o agente recebe dados da ficha que indicam pedido THEN o n8n SHALL solicitar criação ou atualização de um único Pedido pendente por conversa, conforme ADRs 006 e 014.
+3. **INB-03:** WHEN o atendimento não representa oportunidade THEN o sistema SHALL permitir encerramento auditável da Conversa sem exigir Pedido.
+4. **INB-04:** WHEN criação automática ou manual é repetida THEN o sistema SHALL retornar o pendente existente sem duplicar Contato ou Pedido.
 
-Para INB-01–04, Cliente permanece `Contact` + `ContactIdentity`; inbound nunca
-cria Negócio. `convertida_em_lead` encerra a triagem mas mantém a conversa não
-terminal enquanto o Negócio estiver ativo, permitindo os comandos oficiais
-posteriores.
+Para INB-01–04, Cliente é Contact + ContactIdentity; Pedido é rascunho até confirmação humana. Kanban e Negócio estão aposentados pela ADR 004, com Pedido vigente pela ADR 006.
 
-**Teste independente:** receber duas conversas, converter automaticamente apenas a comercial e repetir os eventos sem duplicar Contato, Lead ou Card.
+**Teste independente:** receber duas conversas, completar dados da ficha na comercial e repetir eventos sem duplicar Contato, Conversa ou Pedido pendente.
 
 ### P1.2 Atendimento assistido pelo Vendedor Silmer
 
@@ -66,21 +67,20 @@ posteriores.
 
 **Critérios de aceite:**
 
-1. **AGT-01:** WHEN existe uma conversa ou lead ativo THEN o agente SHALL consultar o histórico e os campos já respondidos antes de perguntar.
-2. **AGT-02:** WHEN os campos obrigatórios da etapa estão válidos THEN o n8n SHALL registrar o gate e solicitar ao CRM o avanço de exatamente uma etapa.
+1. **AGT-01:** WHEN existe conversa ativa THEN o agente SHALL consultar histórico e campos já respondidos antes de perguntar.
+2. **AGT-02:** WHEN o cliente informa dados em qualquer ordem THEN o agente SHALL validar e persistir respostas inequívocas e perguntar pelo próximo dado faltante, sem exigir avanço linear.
 3. **AGT-03:** WHEN o cliente pede uma pessoa da Silmer THEN o agente SHALL interromper sua atuação e criar handoff com resumo, motivo e papel-alvo, inicialmente sem responsável.
 4. **AGT-04:** WHEN o cliente insiste em valor antes de existir orçamento humano aprovado THEN o agente SHALL transferir sem calcular, negociar ou inventar valor.
 5. **AGT-05:** WHEN o agente encontra bloqueio não resolvível THEN ele SHALL registrar o motivo e transferir sem descartar o contexto.
 6. **AGT-06:** WHEN o agente envia mensagem, decide, altera estado ou transfere atendimento THEN um usuário autorizado SHALL conseguir auditar o evento e sua correlação com a execução do n8n.
-7. **AGT-07:** WHEN todos os campos obrigatórios aplicáveis da etapa estão `preenchido` ou `nao_aplicavel` com motivo THEN o sistema SHALL permitir que o ator técnico do n8n registre o gate e avance exatamente uma etapa conforme `CAMPOS-FICHA-E-JORNADA-P0-1.md`.
-8. **AGT-08:** WHEN um campo obrigatório está `pendente` ou `divergente`, ou uma correção invalida etapa anterior, THEN o sistema SHALL impedir avanço ou exigir retorno à primeira etapa incompleta sem apagar o histórico.
+7. **AGT-07:** WHEN todos os campos obrigatórios atuais da ficha estão válidos THEN o sistema SHALL permitir que dono da conversa ou administrador gere o Pedido; o agente SHALL preservar essa confirmação humana.
+8. **AGT-08:** WHEN um campo obrigatório está ausente ou divergente THEN o sistema SHALL impedir geração, indicar pendências e permitir salvar rascunho sem apagar dados e histórico.
 
 O contexto do agente vem de `recent_messages` e do snapshot de briefing da
-Conversa; não existe memória curta paralela no n8n. `briefing_patch` ignora
-nulos, aceita somente campos de qualificação e altera apenas esse snapshot até
-a promoção explícita pelos endpoints canônicos.
+Conversa; não existe memória comercial paralela no n8n. `briefing_patch` ignora
+nulos, aceita somente campos de qualificação e altera apenas esse snapshot até sua projeção autorizada no Pedido pendente; o agente não sobrescreve escolhas humanas.
 
-**Teste independente:** conduzir um lead simulado automaticamente pelas etapas permitidas, preservar as aprovações humanas de preço, venda, pagamento e Ficha e repetir com os três cenários de handoff.
+**Teste independente:** coletar dados fora de ordem, preencher pedido pendente, preservar preço, condição e confirmação humana e repetir com os três cenários de handoff.
 
 ### P1.3 Ficha de Pedido
 
@@ -88,19 +88,17 @@ a promoção explícita pelos endpoints canônicos.
 
 **Critérios de aceite:**
 
-1. **ORD-01:** WHEN um pedido está pronto THEN o sistema SHALL validar todos os campos obrigatórios derivados da Ficha.
-2. **ORD-02:** WHEN um usuário autorizado aprova a primeira Ficha THEN o sistema SHALL reservar `01-CRM`; as seguintes SHALL usar a sequência `02-CRM`, `03-CRM` e assim por diante, sem depender de numeração legada.
-3. **ORD-03:** WHEN o envio é confirmado THEN o sistema SHALL enviar para Rose
-   usando o telefone resolvido por `secret://crm/order-recipient-phone`, sem
-   versionar o dado pessoal, e guardar o estado e identificador do envio.
-4. **ORD-04:** WHEN o envio falha THEN o sistema SHALL preservar a Ficha aprovada e oferecer retry auditável sem gerar novo pedido.
-5. **ORD-05:** WHEN a Ficha é gerada THEN o sistema SHALL preencher todos os campos comerciais aplicáveis do inventário aprovado, calcular o total pela grade, registrar versão, autor e horário e manter vazios os campos posteriores de produção.
+1. **ORD-01:** WHEN uma pessoa solicita gerar Pedido THEN o sistema SHALL validar os campos obrigatórios de PFI e TEC-01..08 em Pedidos MVP.
+2. **ORD-02:** WHEN o primeiro Pedido é criado THEN o sistema SHALL reservar 01-CRM; seguintes SHALL usar sequência global NN-CRM; confirmar e reabrir SHALL preservar esse número (ADR 006).
+3. **ORD-03:** WHEN o encaminhamento operacional da Ficha é homologado THEN ele SHALL alcançar Rose e registrar evidência de entrega; eventual envio automático é evolução própria, com telefone em secret://crm/order-recipient-phone e sem PII versionada.
+4. **ORD-04:** WHEN o encaminhamento da Ficha falha THEN a operação SHALL preservar o Pedido confirmado e registrar retomada sem criar outro Pedido; automação desse efeito depende do contrato de ORD-03.
+5. **ORD-05:** WHEN Pedido é gerado THEN o sistema SHALL registrar pessoa e horário, fixar nome do cliente, calcular peças pela grade e liberar impressão v5, deixando produção vazia; assinatura física de Rose e Operação SHALL preceder produção.
 
-**Teste independente:** gerar a Ficha `01-CRM`, revisar, enviar e repetir o envio sem duplicar pedido ou consumir outro número.
+**Teste independente:** criar Pedido `01-CRM`, completar, gerar por pessoa autorizada, imprimir e reabrir sem duplicar Pedido ou consumir outro número; homologar encaminhamento a Rose separadamente.
 
 ### P1.4 Confiabilidade e canais
 
-**User story:** Como Atendimento, quero saber quais mensagens foram processadas ou ficaram pendentes para que uma falha de integração não fique invisível.
+**User story:** Como Vendedor, quero saber quais mensagens foram processadas ou ficaram pendentes para que uma falha de integração não fique invisível.
 
 **Critérios de aceite:**
 
@@ -127,11 +125,11 @@ um canal não corrompe o histórico do outro.
 
 **Critérios de aceite:**
 
-1. **FIN-01:** WHEN uma venda é fechada THEN o sistema SHALL registrar valor vendido, data e vendedor.
-2. **FIN-02:** WHEN o gestor seleciona um período THEN o sistema SHALL exibir total vendido, quantidade de vendas e ticket médio.
-3. **FIN-03:** WHEN uma venda é cancelada THEN o sistema SHALL preservar histórico e removê-la dos totais ativos conforme regra aprovada.
+1. **FIN-01:** WHEN Pedido é confirmado THEN o sistema SHALL registrar valor, data e pessoa responsável e contabilizar a venda uma vez.
+2. **FIN-02:** WHEN gestor consulta Dashboard THEN o sistema SHALL explicitar período e universo dos totais de confirmados, sem contar pendentes ou recebimentos.
+3. **FIN-03:** WHEN Pedido é reaberto THEN o sistema SHALL preservar histórico e retirá-lo dos totais de confirmados; cancelamento/perda comercial permanecem fora do ciclo MVP (ADR 006).
 
-**Teste independente:** fechar, cancelar e consultar vendas em um período conhecido; valores recebidos e saldo a receber não integram o cálculo do MVP.
+**Teste independente:** confirmar, reabrir e consultar totais de pedidos em um universo conhecido; valores recebidos e saldo a receber não integram o cálculo do MVP.
 
 ### P1.6 Privacidade e acesso
 
@@ -149,7 +147,9 @@ um canal não corrompe o histórico do outro.
 retenção em dados de teste com relógio controlado, cobrindo encerramento antes
 de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 
-### P1.7 PIX e boas-vindas
+### P2.1 PIX e boas-vindas — diferido
+
+A ADR 006 retirou cobrança, comprovante e status de pagamento do MVP. PAY-01..05 são preservados como rastreabilidade da evolução; não descrevem capacidade entregue nem bloqueiam gerar o Pedido atual. Datas manuais da ADR 008 não implementam esse fluxo.
 
 **User story:** Como cliente com venda aprovada, quero receber instruções PIX e uma confirmação clara do pedido para saber o que fazer e o que esperar.
 
@@ -157,7 +157,7 @@ de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 
 1. **PAY-01:** WHEN uma pessoa autorizada registra a venda como aprovada THEN o sistema SHALL criar uma única cobrança com o valor final do orçamento humano aprovado e enviar a chave PIX configurada.
 2. **PAY-02:** WHEN a instrução PIX é enviada THEN o sistema SHALL guardar chave mascarada, horário, identificador da mensagem e estado do envio sem duplicar a cobrança em retries.
-3. **PAY-03:** WHEN um comprovante é recebido THEN o sistema SHALL anexá-lo ao negócio e solicitar conferência humana sem marcar o pagamento como confirmado.
+3. **PAY-03:** WHEN um comprovante é recebido THEN o sistema SHALL anexá-lo ao pedido e solicitar conferência humana sem marcar o pagamento como confirmado.
 4. **PAY-04:** WHEN uma pessoa autorizada confirma o pagamento THEN o sistema SHALL registrar autor e horário e liberar a geração da Ficha.
 5. **PAY-05:** WHEN a Ficha é gerada THEN o sistema SHALL enviar boas-vindas com número do pedido, resumo, data confirmada, modalidade logística e contato de suporte de forma idempotente.
 
@@ -180,18 +180,18 @@ de sete dias, teto de sete dias e documento comercial excluído da purga curta.
 
 ## Rastreabilidade
 
-| Grupo              | IDs             | Status                                           |
-| ------------------ | --------------- | ------------------------------------------------ |
-| Orquestração n8n   | ORC-01 a ORC-09 | Implementada; homologação operacional pendente   |
-| Inbox e conversão  | INB-01 a INB-04 | Implementada no contrato n8n v1                  |
-| Agente vendedor    | AGT-01 a AGT-08 | Implementado; publicação pendente                |
-| Pedido             | ORD-01 a ORD-05 | Pronto para especificação técnica                |
-| Mensagens e canais | MSG-01 a MSG-04 | WhatsApp primeiro; Instagram bloqueia lançamento |
-| Financeiro         | FIN-01 a FIN-03 | Pronto para especificação técnica                |
-| Privacidade        | PRV-01 a PRV-03 | Coberta no contrato; homologação pendente        |
-| PIX e boas-vindas  | PAY-01 a PAY-05 | Pronto para especificação técnica                |
+| Grupo              | IDs             | Status                                                                            |
+| ------------------ | --------------- | --------------------------------------------------------------------------------- |
+| Orquestração n8n   | ORC-01 a ORC-09 | WhatsApp implementado; homologação pendente; ORC-09 em CANAL-2                    |
+| Inbox e conversão  | INB-01 a INB-04 | Implementada no contrato n8n v1                                                   |
+| Agente vendedor    | AGT-01 a AGT-08 | Implementado; publicação pendente                                                 |
+| Pedido             | ORD-01 a ORD-05 | Pedido e impressão v5 implementados; encaminhamento e assinatura física pendentes |
+| Mensagens e canais | MSG-01 a MSG-04 | WhatsApp: homologação pendente; Instagram em CANAL-2                              |
+| Financeiro         | FIN-01 a FIN-03 | Confirmados e valor vendido implementados; UAT pendente                           |
+| Privacidade        | PRV-01 a PRV-03 | Coberta no contrato; homologação pendente                                         |
+| PIX e boas-vindas  | PAY-01 a PAY-05 | Diferidos pela ADR 006; datas manuais não implementam cobrança                    |
 
-**Cobertura:** 41 requisitos de MVP; 41 mapeados; nenhuma decisão de produto P0 aberta. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.
+**Cobertura:** 41 IDs preservados, incluindo 5 PAY diferidos; implementação, homologação e aprovação externa têm estados distintos. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.
 
 ## Critério de passagem
 
@@ -202,8 +202,7 @@ Em 02/09/2026, a T00.6 foi aprovada na issue `#10` e deixou de bloquear T02, T03
 A fonte humana está versionada em `docs/phase0/T00.6-APPROVAL-EVIDENCE.md`;
 `docs/phase0/PHASE-0-APPROVAL-GATE.md` descreve o gate aprovado e
 `docs/phase0/domain-decisions.json` é o espelho executável fail-closed. Os
-papéis usam `silmer:romulo.sutil`, com MFA confirmado e exceção de operação
-solo limitada ao piloto interno.
+papéis usam `silmer:romulo.sutil` e exceção de operação solo limitada ao piloto interno. Esse registro histórico não comprova controles de autenticação ou segregação do runtime atual.
 
 Essa aprovação remove apenas o bloqueio da T00.6; os demais gates técnicos,
 externos e operacionais continuam independentes.

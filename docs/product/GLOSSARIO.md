@@ -1,7 +1,7 @@
 # Glossário de produto e texto da interface
 
 Rastreabilidade: `PCL-01..12`, `PFI-01..13`, `PLI-01..08`, `PCX-01..09`,
-`ORD-01..04`, tarefas `T24..T38` de Pedidos MVP. As alterações solicitadas em
+`ORD-01..04`, `TEC-01..08`, tarefas `T24..T38` e `T83..T87` de Pedidos MVP. As alterações solicitadas em
 03/10/2026 acrescentam técnica por item, arte do pedido (ADR 020) e a
 leitura operacional de vendas e inatividade. Este glossário fixa a redação; as regras de
 permissão e estado continuam em `RULES.md` e na especificação.

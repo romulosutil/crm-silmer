@@ -1,74 +1,59 @@
 # CRM Silmer MVP — Contexto de Produto
 
-**Coletado em:** 29/08/2026  
-**Atualizado em:** 06/09/2026 — n8n definido como motor obrigatório
-**Spec:** `.specs/features/crm-mvp/spec.md`
-**Status:** P0.1 a P0.7 resolvidos; pronto para especificação técnica e implementação
+**Coletado em:** 29/08/2026\
+**Atualizado em:** 05/10/2026 — PR 142 integrada e OpenAI escolhido\
+**Spec:** [spec.md](spec.md)\
+**Status:** implementação de atendimento e Pedidos disponível; homologação e gates de produção pendentes
 
 ## Limite da feature
 
-Entregar a jornada comercial desde a entrada de uma conversa no WhatsApp oficial até a geração, envio e registro comercial da Ficha de Pedido. Cada mensagem recebida dispara automaticamente o n8n, que executa o Vendedor Silmer e orquestra a jornada. O CRM continua sendo a fonte da verdade e a única fronteira autorizada para mutações oficiais.
+WhatsApp oficial → n8n → CRM → atendimento humano → pedido confirmado e ficha
+impressa. O CRM é a fonte da verdade; n8n é o motor obrigatório de canal e IA e
+toda mutação oficial usa sua API. A UI não dispara o workflow.
 
-O trabalho será conduzido como três objetivos divergentes — CRM, Inbox Multicanal e Agente Vendedor Silmer no n8n — que se conectam no teste integrado e no lançamento.
+## Decisões vigentes
 
-## Decisões confirmadas
-
-### Backlog e lead
-
-- Caixa de Entrada funciona como backlog.
-- Conversa não cria lead automaticamente apenas por existir.
-- A simples chegada de uma mensagem não cria lead.
-- Quando identifica intenção comercial, o Vendedor Silmer solicita ao CRM a criação ou atualização idempotente do Contato e do Negócio.
-- A interface pode oferecer conversão manual durante a tomada humana, mas esse botão não inicia nem substitui o workflow do n8n.
-
-### Vendedor Silmer
-
-- Lê o contexto autorizado, conversa, coleta dados e decide o próximo passo dentro dos gates do domínio.
-- Converte conversa, atualiza campos oficiais e move o card por APIs autenticadas, autorizadas, idempotentes e auditáveis do CRM.
-- Transfere quando o cliente pede vendedor, insiste em valores sem orçamento humano aprovado ou existe bloqueio real não resolvível.
-- Pode comunicar um orçamento já aprovado por pessoa autorizada, sem calcular, negociar ou alterar preço.
-- O n8n é o runtime obrigatório do agente e da orquestração comercial.
-- OpenAI e Gemini são provedores intercambiáveis atrás do mesmo contrato; nenhum provedor pode contornar regras do CRM.
-- Tomada humana incrementa o `automation_epoch`, invalida execuções antigas e impede que uma resposta atrasada retome a automação.
-
-### Integrações
-
-- WhatsApp Business e Instagram Direct usam APIs oficiais e são canais obrigatórios do MVP; a verificação do WhatsApp já foi obtida e a do Instagram continua como gate operacional.
-- Webhooks e envios operacionais dos dois canais pertencem ao n8n; o CRM recebe eventos canônicos e comandos, não payloads usados como estado de domínio.
-- Instagram Direct e WhatsApp Business disparam a mesma jornada no n8n.
-- O atendimento pode migrar entre Instagram e WhatsApp preservando o mesmo Negócio. O CRM conecta `@instagram` e telefone ao lead somente por correlação verificável e auditável.
-- No MVP, o site direciona o visitante para o WhatsApp.
-- O destinatário da Ficha é Rose; o telefone é resolvido pela referência
-  `secret://crm/order-recipient-phone` e não é versionado.
-
-### Ficha, financeiro, privacidade e acesso
-
-- A Ficha real orienta os campos, perguntas e etapas.
-- O inventário e a jornada definitivos estão em `CAMPOS-FICHA-E-JORNADA-P0-1.md`.
-- Backlog fica fora do Kanban; as colunas são Produto, Especificação, Estampa, Logística e Fechamento.
-- Campo obrigatório `pendente` ou `divergente` bloqueia passagem; correção retorna à primeira etapa incompleta.
-- O primeiro pedido é `01-CRM`, seguido por `02-CRM`, `03-CRM` e assim por diante, sem dependência de número legado.
-- O caminho inicial de pagamento envia chave PIX, exige confirmação humana e então dispara Ficha e boas-vindas idempotentes.
-- O MVP mede valor vendido, quantidade de vendas e ticket médio; recebido e saldo a receber ficam para P2.
-- A política de privacidade do piloto foi aprovada após consulta jurídica. Rômulo Sutil Corrêa é o Responsável de Privacidade.
-- Atendimento/Vendedor executa a operação comercial; Admin governa usuários, configurações, retenção e atos administrativos da Ficha.
-- No piloto interno, `silmer:romulo.sutil` concentra Produto, Operação, Tech
-  Lead, equipe de entrega, Privacidade e Administração Técnica com MFA. A
-  exceção solo mantém capacidades ortogonais, autorização e execução em
-  eventos distintos, auditoria obrigatória e revisão antes de piloto externo
-  ou quando houver segundo operador.
+- Cliente é `Contact` + `ContactIdentity`; Conversa e Mensagem mantêm histórico
+  oficial. Kanban e Negócio estão aposentados pela ADR 004.
+- O agente coleta dados não linearmente, projeta respostas inequívocas na
+  pré-ficha e no pedido pendente, e abre handoff quando precisa de pessoa.
+- Pedido tem dois status, `pendente` e `confirmado`; no máximo um pendente por
+  conversa. A numeração `NN-CRM` é reservada na criação (ADR 006).
+- Gerar e reabrir exigem dono da conversa ou administrador. Só confirmado pode
+  ser impresso; reabrir preserva número e bloqueia impressão.
+- Preço, condição e entrega prometida são decisões humanas. Datas manuais de
+  pagamento e entrega não alteram status (ADR 008).
+- Técnica pertence ao item; origem da arte pertence ao pedido. Resposta
+  inequívoca do bot só preenche dados ainda vazios, e o vendedor confere
+  (ADR 020, requisitos TEC-01..08 e tarefas T83..T87).
+- A impressão seleciona v5, aprovada provisoriamente pelo PO para
+  desenvolvimento. Assinatura física de Rose e Operação permanece gate de
+  produção; v2–v4 e hashes não mudam.
+- Handoff nasce sem responsável, para Vendedor; claim é atômico (ADR 009).
+  Depois de handoff ou takeover, a conversa não volta à IA (ADR 015).
+- WhatsApp é o canal do primeiro lançamento; Instagram é `CANAL-2`, sem
+  bloquear esse MVP. Identidades só se correlacionam com evidência auditável.
+- OpenAI é o provedor de produção escolhido pelo PO em 05/10/2026. Homologação
+  de privacidade, DPA, retenção, logging e ZDR aplicáveis continua pendente.
+- Manter o fluxo atual de deploy automático GitHub → EasyPanel, com checagens
+  operacionais de ambiente, health, isolamento, segredos e rollback.
+- Dashboard mede pedidos confirmados e valor vendido. Recebido e saldo a
+  receber não entram; cobrança PIX e boas-vindas automáticas ficam adiadas.
+- Upload/Dropbox e aviso automático a Rose precisam de contrato e homologação
+  próprios. O procedimento operacional deve preservar os arquivos válidos.
+- A política de privacidade do piloto foi aprovada após consulta jurídica.
+  Rômulo Sutil Corrêa é o responsável. A exceção de operação solo continua
+  limitada ao piloto interno e não prova segregação nem recovery.
 
 ## Discrição do Tech Lead
 
-- Backend, banco e detalhes internos dos contratos, preservadas as fronteiras aprovadas.
-- Estratégia de filas, retries, observabilidade, anexos e documentos.
-- Escolha entre OpenAI e Gemini por ambiente ou política versionada, condicionada aos gates de privacidade.
-- Formato interno dos contratos, desde que preserve as regras do produto.
-- Revisão da exceção de operação solo antes do piloto externo ou quando houver
-  um segundo operador disponível.
+Detalhes de contratos internos, retries, observabilidade e documentação,
+preservados requisitos, autorização e idempotência. Troca de provedor,
+infraestrutura ou escopo de canal exige decisão registrada.
 
 ## Ideias adiadas
 
-- Canal próprio de atendimento do site.
-- Valores recebidos e saldo a receber.
-- ERP financeiro completo, estoque, chão de fábrica e pós-venda.
+Instagram, atendimento próprio do site, cobrança e comprovante estruturados,
+boas-vindas automáticas, recebimentos/saldo, estoque, produção completa e
+pós-venda. Envio a Rose e integração Dropbox permanecem pendências operacionais
+próprias e não devem ser declarados prontos por testes locais.

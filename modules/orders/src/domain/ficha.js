@@ -1,4 +1,5 @@
 import { OrderInputError, OrderValidationError } from './errors.js';
+import { AUDIENCES, parseAudiences } from './audiences.js';
 import { parseSizes } from './sizes.js';
 
 // The ficha mirrors the approved `ficha-canonical-v2` blocks (D10): summary,
@@ -14,6 +15,10 @@ import { parseSizes } from './sizes.js';
 // The print description (`estampa`), the colour of each part and the sleeve
 // binding are additional; the model and the old collar binding stay stored
 // for legacy orders.
+//
+// ADR 022: an item may also say its audience (`publico`) and the quantity the
+// customer said for it (`quantidade_informada`); both are optional, never
+// block the order, and the quantity is only a reference next to the grade.
 
 export const NOT_APPLICABLE = 'NAO APLICAVEL';
 // What the bot records when the customer leaves a point to the seller. It is
@@ -75,7 +80,14 @@ const OPTIONAL_ITEM_TEXT_KEYS = new Set([
   'gola',
   ...ITEM_EXTRA_FIELDS,
 ]);
-const ITEM_KEYS = new Set([...ITEM_TEXT_KEYS, 'malhas', 'grade']);
+const ITEM_KEYS = new Set([
+  ...ITEM_TEXT_KEYS,
+  'malhas',
+  'grade',
+  'publico',
+  'quantidade_informada',
+]);
+const MAX_INFORMED_QUANTITY = 100000;
 const GRADE_KEYS = new Set(['tamanho', 'quantidade']);
 
 // Workflow bookkeeping, not facts about the order.
@@ -87,6 +99,7 @@ const BRIEFING_INTERNAL_KEYS = new Set([
 // does a named technique. Who makes the art (`artwork_status`) belongs to the
 // order, and where the print goes only rides along an item already open.
 const ITEM_BRIEFING_KEYS = Object.freeze([
+  'audiences',
   'product_model',
   'product_type',
   'colors',
@@ -104,6 +117,7 @@ const ITEM_BRIEFING_KEYS = Object.freeze([
  *   cor_frente: string, cor_costas: string,
  *   cor_manga_direita: string, cor_manga_esquerda: string,
  *   vies_gola: string, vies_mangas: string,
+ *   publico: string, quantidade_informada: number|null,
  * }} FichaItem
  * @typedef {{data_entrega_confirmada: string|null, nome: string|null}} FichaSummaryInput
  * @typedef {FichaSummaryInput & {cliente: string, aplicacao?: string|null}} FichaSummary
@@ -130,6 +144,8 @@ export function blankItem() {
     grade: [],
     malhas: [],
     modelo: '',
+    publico: '',
+    quantidade_informada: null,
     tipo: '',
     tipo_servico: '',
     vies_gola: '',
@@ -158,8 +174,9 @@ export function hasArtworkOrigin(artwork) {
 
 /**
  * ADR 016: a ficha stored before the seven-point item has no `cor`,
- * `estampa` or `gola`; ADR 020 adds `sem_estampa` to the art. They are read
- * blank, so nothing is migrated and the encrypted envelope keeps its version.
+ * `estampa` or `gola`; ADR 020 adds `sem_estampa` to the art; ADR 022 adds
+ * `publico` and `quantidade_informada`. They are read blank, so nothing is
+ * migrated and the encrypted envelope keeps its version.
  *
  * @param {Ficha} ficha
  * @returns {Ficha}
@@ -278,6 +295,11 @@ function validateItem(raw, itemIndex) {
         : requireText(raw[key], `${prefix}.${key}`);
   }
   item.gola = item.gola || item.vies_gola;
+  item.publico = optionalAudience(raw.publico, `${prefix}.publico`);
+  item.quantidade_informada = optionalInformedQuantity(
+    raw.quantidade_informada,
+    `${prefix}.quantidade_informada`,
+  );
 
   const malhas = Array.isArray(raw.malhas)
     ? raw.malhas.map((value) => requireText(value, `${prefix}.malhas`))
@@ -325,6 +347,46 @@ function validateItem(raw, itemIndex) {
     };
   });
   return /** @type {FichaItem} */ (item);
+}
+
+/**
+ * ADR 022: the audience is one of the closed list (D1), or blank when the
+ * customer did not split the order.
+ *
+ * @param {unknown} value @param {string} field @returns {string}
+ */
+function optionalAudience(value, field) {
+  if (value === undefined || value === null || value === '') return '';
+  if (
+    typeof value !== 'string' ||
+    !AUDIENCES.includes(/** @type {any} */ (value))
+  ) {
+    throw new OrderInputError(
+      `${field} must be one of ${AUDIENCES.join(', ')}`,
+      [field],
+    );
+  }
+  return value;
+}
+
+/**
+ * ADR 022: the quantity the customer said for the item, a reference only.
+ *
+ * @param {unknown} value @param {string} field @returns {number|null}
+ */
+function optionalInformedQuantity(value, field) {
+  if (value === undefined || value === null) return null;
+  if (
+    !Number.isSafeInteger(value) ||
+    /** @type {number} */ (value) <= 0 ||
+    /** @type {number} */ (value) > MAX_INFORMED_QUANTITY
+  ) {
+    throw new OrderInputError(
+      `${field} must be a whole number from 1 to ${MAX_INFORMED_QUANTITY}`,
+      [field],
+    );
+  }
+  return /** @type {number} */ (value);
 }
 
 /**
@@ -536,7 +598,8 @@ function briefingGrade(value) {
  * ("Definir com o vendedor") is never a ficha value: the field stays blank,
  * so it keeps blocking the order, and the text stays as service data. So
  * does anything else the bot collected, including the quantity the customer
- * said.
+ * said. ADR 022: a split by audience read without doubt gives one item per
+ * audience instead, each with its audience and quantity said.
  *
  * @param {Record<string, unknown>|null|undefined} briefing
  * @returns {Ficha}
@@ -563,13 +626,21 @@ export function briefingToFicha(briefing) {
   const tipo =
     take('product_model', fichaText) || take('product_type', fichaText);
   const origin = take('artwork_status', artworkOrigin);
+  // ADR 022: a split read without doubt makes one item per audience. Several
+  // items share the points, but not the sizes: those stay as service data for
+  // the seller to share out.
+  const split = take(
+    'audiences',
+    (value) => parseAudiences(value) ?? undefined,
+  );
+  const severalItems = (split?.length ?? 0) > 1;
 
   /** @type {FichaItem} */
   const item = {
     ...blankItem(),
     cor: take('colors', fichaText) ?? '',
     gola: take('collar', fichaText) ?? '',
-    grade: take('sizes', briefingGrade) ?? [],
+    grade: severalItems ? [] : (take('sizes', briefingGrade) ?? []),
     malhas: take('fabrics', briefingParts) ?? [],
     tipo: tipo ?? '',
     tipo_servico: take('artwork_technique', techniqueText) ?? '',
@@ -580,6 +651,14 @@ export function briefingToFicha(briefing) {
       (key) => source[key] !== undefined && source[key] !== null,
     );
   if (hasItem) item.estampa = take('artwork_locations', artworkPlaces) ?? '';
+  /** @type {FichaItem[]} */
+  const items = !hasItem
+    ? []
+    : (split ?? [{ publico: '', quantidade: null }]).map((part) => ({
+        ...structuredClone(item),
+        publico: part.publico,
+        quantidade_informada: part.quantidade,
+      }));
 
   /** @type {Record<string, unknown>} */
   const serviceData = {};
@@ -591,7 +670,7 @@ export function briefingToFicha(briefing) {
 
   return {
     artwork: { ...blankArtwork(), ...origin },
-    items: hasItem ? [item] : [],
+    items,
     observations: [],
     serviceData,
     summary: {
@@ -602,6 +681,35 @@ export function briefingToFicha(briefing) {
       data_entrega_confirmada: null,
       nome,
     },
+  };
+}
+
+/**
+ * What the bot says lands on an item it projected before: a point the
+ * briefing has replaces the item's, the technique only fills a blank one
+ * (ADR 020), and the seller's extras stay.
+ *
+ * @param {FichaItem} currentItem
+ * @param {FichaItem} draftItem
+ * @param {{keepGrade: boolean}} options
+ * @returns {FichaItem}
+ */
+function mergeBotItem(currentItem, draftItem, { keepGrade }) {
+  return {
+    ...currentItem,
+    cor: draftItem.cor || currentItem.cor,
+    estampa: draftItem.estampa || currentItem.estampa,
+    gola: draftItem.gola || currentItem.gola,
+    grade:
+      draftItem.grade.length > 0 || !keepGrade
+        ? draftItem.grade
+        : currentItem.grade,
+    malhas: draftItem.malhas.length > 0 ? draftItem.malhas : currentItem.malhas,
+    publico: draftItem.publico || currentItem.publico,
+    quantidade_informada:
+      draftItem.quantidade_informada ?? currentItem.quantidade_informada,
+    tipo: draftItem.tipo || currentItem.tipo,
+    tipo_servico: currentItem.tipo_servico || draftItem.tipo_servico,
   };
 }
 
@@ -628,6 +736,12 @@ export function orderClient(context) {
  * observations, files and any further items are the seller's and stay as
  * they are.
  *
+ * ADR 022: a split by audience makes the bot's items the leading items with
+ * an audience (or the first item, before any split). A new split rebuilds
+ * them, one per audience, keeping the technique the seller chose; items the
+ * seller added after them stay. The grade of a rebuilt item is not carried
+ * over, since the sizes said were for the whole order.
+ *
  * @param {Ficha} ficha
  * @param {Record<string, unknown>|null|undefined} briefing
  * @returns {Ficha}
@@ -635,27 +749,26 @@ export function orderClient(context) {
 export function projectBriefingOntoFicha(ficha, briefing) {
   const draft = briefingToFicha(briefing);
   const current = normalizeFicha(ficha);
-  const [draftItem] = draft.items;
-  const [firstItem, ...otherItems] = current.items;
   let items = current.items;
-  if (draftItem && !firstItem) {
-    items = [draftItem];
-  } else if (draftItem && firstItem) {
+  if (draft.items.length > 1) {
+    const leading = current.items.findIndex((item) => item.publico === '');
+    const botItems =
+      leading === -1 ? current.items.length : Math.max(leading, 1);
     items = [
-      {
-        ...firstItem,
-        cor: draftItem.cor || firstItem.cor,
-        estampa: draftItem.estampa || firstItem.estampa,
-        gola: draftItem.gola || firstItem.gola,
-        grade: draftItem.grade.length > 0 ? draftItem.grade : firstItem.grade,
-        malhas:
-          draftItem.malhas.length > 0 ? draftItem.malhas : firstItem.malhas,
-        tipo: draftItem.tipo || firstItem.tipo,
-        // ADR 020: the bot fills a blank technique, never the seller's.
-        tipo_servico: firstItem.tipo_servico || draftItem.tipo_servico,
-      },
-      ...otherItems,
+      ...draft.items.map((draftItem, index) => {
+        const currentItem = current.items[index];
+        return index < botItems && currentItem
+          ? mergeBotItem(currentItem, draftItem, { keepGrade: false })
+          : draftItem;
+      }),
+      ...current.items.slice(Math.min(botItems, current.items.length)),
     ];
+  } else if (draft.items.length === 1) {
+    const [firstItem, ...otherItems] = current.items;
+    const [draftItem] = draft.items;
+    items = firstItem
+      ? [mergeBotItem(firstItem, draftItem, { keepGrade: true }), ...otherItems]
+      : [draftItem];
   }
   // ADR 020: likewise, the bot marks who makes the art only while the order
   // has no mark.

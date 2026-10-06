@@ -2310,10 +2310,13 @@ components:
       type: object
       additionalProperties: false
       description: >-
-        Item da ficha (ADRs 016 e 020). Principais, na ordem da tela: tipo
+        Item da ficha (ADRs 016, 020 e 022). Principais, na ordem da tela: tipo
         (Tipo de roupa), cor, quantidade (soma da grade; nunca enviada),
         tipo_servico (Técnica: silk, DTF, sublimação, bordado… ou Sem
-        estampa), malhas (Tecido), grade (Tamanhos) e gola (Gola). O bot pode
+        estampa), malhas (Modelo de malha), grade (Tamanhos) e gola (Gola).
+        Opcionais e sem bloquear (ADR 022): publico (masculino, feminino,
+        infantil, unissex ou vazio) e quantidade_informada (referência do que
+        o cliente disse; não entra no total). O bot pode
         preencher uma técnica vazia; é obrigatória para confirmar, mas pode
         ficar vazia enquanto pendente. Adicionais, que não bloqueiam: estampa
         (Estampa (referência)), cores do tecido por parte e vies_mangas; modelo
@@ -2341,6 +2344,13 @@ components:
         cor_manga_esquerda: { type: string, maxLength: 200 }
         vies_gola: { type: string, maxLength: 200 }
         vies_mangas: { type: string, maxLength: 200 }
+        publico:
+          type: string
+          enum: ['', masculino, feminino, infantil, unissex]
+        quantidade_informada:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 100000
     FichaArtwork:
       type: object
       additionalProperties: false

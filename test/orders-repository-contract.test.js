@@ -54,6 +54,8 @@ function draftFicha() {
         grade: [{ quantidade: 5, tamanho: 'M' }],
         malhas: ['DRY FIT'],
         modelo: 'TRADICIONAL',
+        publico: 'masculino',
+        quantidade_informada: 5,
         tipo: 'CAMISA',
         tipo_servico: 'SUBLIMAÇÃO',
         vies_gola: 'OLIMPICA',

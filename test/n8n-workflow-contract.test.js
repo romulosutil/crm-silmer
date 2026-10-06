@@ -438,10 +438,12 @@ test('decision normalizer whitelists briefing_patch keys exactly as the CRM does
     (match) => match[1],
   );
   // The CRM ships a new field first (ADR 012); once the workflow sends it,
-  // both lists match again.
+  // both lists match again. ADR 022: `audiences` is in the CRM (T93) ahead of
+  // workflow mvp-simple-13 (T96).
+  const crmAhead = new Set(['audiences']);
   assert.deepEqual(
     [...workflowFields].sort(),
-    [...BRIEFING_PATCH_FIELDS].sort(),
+    [...BRIEFING_PATCH_FIELDS].filter((field) => !crmAhead.has(field)).sort(),
   );
 });
 

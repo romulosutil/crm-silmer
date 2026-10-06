@@ -40,7 +40,7 @@ os pontos à mão em cada item novo.
 3. **Divisão do bot.** O `briefing_patch` ganha `audiences`, o texto da
    divisão com as palavras do cliente. O CRM o lê só quando não há dúvida:
    cada parte é um inteiro positivo junto de um público conhecido, uma vez
-   cada público; o resto fica com o vendedor, e o texto aparece em Dados do
+   cada público; o resto fica com o vendedor, e o texto não lido aparece em Dados do
    atendimento como "Divisão informada". A leitura mora em
    `modules/orders/src/domain/audiences.js`.
 4. **Projeção em vários itens.** Com duas ou mais partes lidas, o pedido

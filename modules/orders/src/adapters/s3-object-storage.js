@@ -60,6 +60,8 @@ function awsTimestamp(date) {
 export class S3ObjectStorage {
   /** @type {URL} */
   #endpoint;
+  /** The endpoint path without trailing slashes. */
+  #basePath;
   #region;
   #bucket;
   #accessKeyId;
@@ -94,6 +96,9 @@ export class S3ObjectStorage {
       throw new TypeError('object storage bucket name is invalid');
     }
     this.#endpoint = endpoint;
+    let basePath = endpoint.pathname;
+    while (basePath.endsWith('/')) basePath = basePath.slice(0, -1);
+    this.#basePath = basePath;
     this.#region = options.region.trim();
     this.#bucket = options.bucket;
     this.#accessKeyId = options.accessKeyId.trim();
@@ -177,7 +182,7 @@ export class S3ObjectStorage {
    */
   async #send(method, key, options = {}) {
     const path = [
-      this.#endpoint.pathname.replace(/\/+$/u, ''),
+      this.#basePath,
       awsEncode(this.#bucket),
       ...(key ? key.split('/').map(awsEncode) : []),
     ].join('/');

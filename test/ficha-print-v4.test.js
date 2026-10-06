@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   renderOrderFicha,
@@ -189,7 +190,7 @@ test('the preview script refuses to overwrite the provisionally approved PDF', a
     '../scripts/ficha-pdf-preview-v4.mjs',
     import.meta.url,
   );
-  const result = spawnSync(process.execPath, [script.pathname], {
+  const result = spawnSync(process.execPath, [fileURLToPath(script)], {
     encoding: 'utf8',
   });
   assert.notEqual(result.status, 0);

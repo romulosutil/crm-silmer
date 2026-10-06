@@ -169,9 +169,9 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 | MED-03         | Arquivo vídeo         | Execute  | In Progress | T4,T7,T18,T21         |
 | MED-04         | Validação             | Execute  | In Progress | T4,T5,T7,T18          |
 | MED-05         | Persistência atômica  | Execute  | In Progress | T2,T10,T11            |
-| MED-06         | Replay                | In Tasks | Pending     | T7,T10,T11,T14,T15    |
-| MED-07         | Chave divergente      | In Tasks | Pending     | T7,T10,T11            |
-| MED-08         | Autorização/estado    | In Tasks | Pending     | T7,T8,T10,T11,T21     |
+| MED-06         | Replay                | Execute  | In Progress | T7,T10,T11,T14,T15    |
+| MED-07         | Chave divergente      | Execute  | In Progress | T7,T10,T11            |
+| MED-08         | Autorização/estado    | Execute  | In Progress | T7,T8,T10,T11,T21     |
 | MED-09         | Microfone             | In Tasks | Pending     | T19,T21               |
 | MED-10         | Revisão de áudio      | In Tasks | Pending     | T19,T21               |
 | MED-11         | Permissão negada      | In Tasks | Pending     | T19,T21               |

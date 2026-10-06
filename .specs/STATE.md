@@ -13,6 +13,13 @@
 
 ## Handoff
 
+T10 entregue: bind no envio humano existente com mídia/quota locked; valida
+mesmo autor/conversa/ready/clean/hash/MIME/tipo/size, reserva→used só no commit.
+Admin read não permite bind de outro ator. Replay anterior ao bind não cobra
+duas vezes; concorrência e segundo uso têm um vencedor. Audit/outbox rollback
+mantêm ready e reserva. Quick781/3 skips antigos, Live25/25 (18 novos+7 inbox).
+Próximo T11; 14 tarefas restantes, nenhuma Verified.
+
 Fix T6/MED-19 concluído antes de T10: SHA original da admissão preservado,
 divergência de spool igual tamanho rejeitada antes de prepare/PUT; prepare SQL
 exige SHA original null/idêntico e variante ainda null. Unit17/17, SQL15/15,

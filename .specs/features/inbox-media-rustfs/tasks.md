@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T9 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T10 concluídas; fase 2 em execução. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -217,7 +217,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-05..08, MED-15
 **Reuses**: Lock de conversa, command_id, audit/SSE/outbox atuais.
 **Tools**: tlc-spec-driven; SQL em banco dedicado.
-**Done when**: [ ] Mensagem/vínculo/outbox são atômicos; concorrência tem um vencedor; mesmo ID não pode ser ligado a segunda mensagem; takeover só no envio.
+**Done when**: [x] Mensagem/vínculo/outbox são atômicos; concorrência tem um vencedor; mesmo ID não pode ser ligado a segunda mensagem; takeover só no envio. 18 casos SQL novos e 7 regressões passaram, incluindo auditoria/outbox rollback, quota, replay e tipo/MIME/size; evidência T10 em execution.md.
 **Tests**: integration live; mínimo 8 casos incluindo transferência/close durante upload.
 **Gate**: Quick + Live.
 **Commit**: feat(inbox): bind retained media atomically to human messages

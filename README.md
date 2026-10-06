@@ -64,7 +64,9 @@ manifesto SHA-256 sem timestamps.
 
 ### Ambiente de desenvolvimento no worker Ubuntu
 
-O Docker local do Windows está desativado por decisão operacional. Containers executam em `dell-worker`, no workspace Ubuntu espelhado via Syncthing. Execute comandos Docker por `ssh dell-worker` ou `DOCKER_HOST=ssh://dell-worker`; não procure binários de container no Windows. No checkout Ubuntu, inicie:
+Docker local está autorizado nesta máquina para desenvolvimento e testes.
+Use ambientes dedicados e dados sintéticos, preservando containers de outros
+projetos. Não há dependência de um worker remoto. No checkout local, inicie:
 
 ```powershell
 npm run dev

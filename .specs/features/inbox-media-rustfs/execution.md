@@ -1,5 +1,42 @@
 # Execução INBOX-MEDIA-1
 
+## T17: Multipart autenticado e cancelamento nativo
+
+MED-04/06/08: red FormData enviadoJSON e cancelamento proxy parcial/SSE ausente; green9 HTTP/socket reais (7client+2proxy), bytes/boundary nativos sem Content-Type manual, CSRF e key preservados, JSON304 intactos, AbortSignal upload/status/preabort e erros saneados. Proxyaborted/responsecloseincompleto encerraupstream, Range206normal preservado. Quick847pass/3skips(total850), FullUI107pass/7skips(total114)workers1, type-lint-diff e strictspec/tasks verdes. SemSQL ou migração; nenhum Verified; proximoT18standalone.
+
+### Adequação bidirecional
+
+Os testes derivam dos ACs indicados nos nomes dos cenários. Cada assertion abaixo
+associa critério → resultado exato e resultado → requisito. Assert de fixture
+comprova isolamento. Nenhum cenário/skip/timeout publicado foi removido ou
+enfraquecido; Check A/B/C/D passa dentro da fronteira desta tarefa.
+
+| Critério / requisito (mapeamento inverso) | file:line + assertion | Resultado da spec |
+| --- | --- | --- |
+| test(T17/MED-04/06/08: native FormData preserves binary/boundary, CSRF and original command key, async () | `test/media-api-client.test.js:44` `assert.match(         req.headers['content-type'],         /^multipart\/form-data;` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-04/06/08: native FormData preserves binary/boundary, CSRF and original command key, async () | `test/media-api-client.test.js:48` `assert.equal(req.headers['x-csrf-token'], 'synthetic csrf');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-04/06/08: native FormData preserves binary/boundary, CSRF and original command key, async () | `test/media-api-client.test.js:49` `assert.equal(req.headers['idempotency-key'], 'upload/a?#%');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-04/06/08: native FormData preserves binary/boundary, CSRF and original command key, async () | `test/media-api-client.test.js:50` `assert.ok(body.includes(Buffer.from([0, 255, 9, 7])));` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-04/06/08: native FormData preserves binary/boundary, CSRF and original command key, async () | `test/media-api-client.test.js:51` `assert.ok(body.includes(Buffer.from('name="origin"')));` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-04/06/08: native FormData preserves binary/boundary, CSRF and original command key, async () | `test/media-api-client.test.js:72` `assert.equal(result.data.state, 'processing');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-06: JSON request remains encoded with CSRF and same idempotency key, async () | `test/media-api-client.test.js:79` `assert.equal(req.headers['content-type'], 'application/json');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-06: JSON request remains encoded with CSRF and same idempotency key, async () | `test/media-api-client.test.js:80` `assert.equal(req.headers['x-csrf-token'], 'synthetic csrf');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-06: JSON request remains encoded with CSRF and same idempotency key, async () | `test/media-api-client.test.js:81` `assert.equal(req.headers['idempotency-key'], 'original');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-06: JSON request remains encoded with CSRF and same idempotency key, async () | `test/media-api-client.test.js:82` `assert.deepEqual(JSON.parse((await bytes(req)).toString()), {         expectedVersion: 1,         content: { mediaId: 'id' },       });` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-06: JSON request remains encoded with CSRF and same idempotency key, async () | `test/media-api-client.test.js:89` `assert.equal(         (           await request(url, {             method: 'POST',             body: { expectedVersion: 1, content: { mediaId: 'id' } },             idempotencyKey: 'original',           })         ).data,;` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-08: native status polling forwards AbortSignal and stops pending read, async () | `test/media-api-client.test.js:109` `await assert.rejects(         pending,         (error) => /** @type {any} */ (error).name === 'AbortError',       );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-08: native multipart request stops on abort, async () | `test/media-api-client.test.js:133` `await assert.rejects(         pending,         (error) => /** @type {any} */ (error).name === 'AbortError',       );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-08: pre-aborted request performs no HTTP work, async () | `test/media-api-client.test.js:150` `await assert.rejects(         request(url, { signal: controller.signal }),         (error) => /** @type {any} */ (error).name === 'AbortError',       );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-08: pre-aborted request performs no HTTP work, async () | `test/media-api-client.test.js:154` `assert.equal(calls, 0);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-04: processing rejection problem retains sanitized status/code/detail, async () | `test/media-api-client.test.js:168` `await assert.rejects(         request(url),         (error) =>           error instanceof ApiError &&           error.status === 422 &&           error.code === 'CHAT_MEDIA_INVALID_FORMAT' &&           error.message === 'Formato inválido',       );` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-06: GET 304 retains ETag and emits no body or CSRF, async () | `test/media-api-client.test.js:182` `assert.equal(req.headers['content-type'], undefined);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-06: GET 304 retains ETag and emits no body or CSRF, async () | `test/media-api-client.test.js:183` `assert.equal(req.headers['x-csrf-token'], undefined);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-06: GET 304 retains ETag and emits no body or CSRF, async () | `test/media-api-client.test.js:187` `assert.deepEqual(await request(url), {         data: null,         etag: '"v1"',         notModified: true,       });` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-08: normal Range response completes and a closed SSE consumer stops the upstream response, async () | `test/media-dev-proxy.test.js:104` `assert.equal(req.headers.range, 'bytes=0-2');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-08: normal Range response completes and a closed SSE consumer stops the upstream response, async () | `test/media-dev-proxy.test.js:121` `assert.equal(range.status, 206);` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-08: normal Range response completes and a closed SSE consumer stops the upstream response, async () | `test/media-dev-proxy.test.js:122` `assert.equal(await range.text(), 'abc');` | Resultado explícito da assertion; necessário ao AC no cenário |
+| test(T17/MED-08: normal Range response completes and a closed SSE consumer stops the upstream response, async () | `test/media-dev-proxy.test.js:123` `assert.equal(range.headers.get('content-range'), 'bytes 0-2/6');` | Resultado explícito da assertion; necessário ao AC no cenário |
+
 ## T16: DTO persistente do historico
 
 MED-15/19/20: red novos casos retornaram media/deliveryMode undefined; green oito SQL live cobrem imagem/audio/video, lost, legado, DEVfailed/unknown e prefixo externo sem autoridade. Historico e resumo consultam binding persistido na mesma snapshot; get3SELECT/list2SELECT sem storage, sem nome/chave/hash/bytes. media.contentUrl so rota relativa CRM autorizada para attachedclean; lostnull. deliveryMode vem do unico recibo original message.send.requested n8n_events, nunca prefixo de mensagem; SSE IDs tecnicos preservados. Quick838pass/3skips(total841), Live65/65=bind54+operationRead1+inbox7+migrations3; type-lint-diff e validadores estritos verdes. Nenhuma Verified; proximoT17.

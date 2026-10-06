@@ -1,5 +1,11 @@
 # Ativação de mídia do chat no RustFS
 
+T17: uploads usam FormData com boundary do browser; não definir Content-Type
+manualmente. Reutilizar File/contexto/Idempotency-Key originais após resultado
+ambíguo. Cancelar AbortController do upload/status ao descartar ou mudar de
+conversa; o proxy dev encaminha o abandono da conexão para a API, preservando
+JSON, resposta Range normal e streaming SSE.
+
 T16: media.contentUrl é exclusivamente uma rota relativa CRM, protegida pela
 ACL normal de leitura; lost preserva o histórico e retorna contentUrl=null.
 deliveryMode=dev indica simulação pela reserva original, inclusive failed e

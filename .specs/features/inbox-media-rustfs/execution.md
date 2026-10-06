@@ -1,5 +1,54 @@
 # Execução INBOX-MEDIA-1
 
+## T10: Vinculo atomico e conservacao de quota
+
+MED-05..08/15/28: criterios e arquivos comunicados antes do patch. Novo teste SQL escrito primeiro reproduziu ready sem bind e negativas sem rejeicao. Fixtures iniciais corrigidas para respeitar auditoria imutavel (schema sintetico recriado por caso) e metadata ready size_bytes real; outcomes/assertions preservados. Bind valida mesmo autor/conversa/ready/clean/tipo/SHA/MIME/limite/reserva sob locks antes do takeover. Mensagem/vinculo/quota/outbox/audit/SSE/command usam a transacao existente; reserva vira used apenas nela. Replay hidrata antes do bind; concorrencia tem um vencedor, mesma midia nao liga a segunda mensagem. Admin read nao autoriza bind de outro ator. Allowlist coincide com T4, imagem5MiB e audio/video16MiB. Texto preservado.
+
+### Adequação bidirecional
+
+Cada cenário da spec está ligado às assertions discriminantes abaixo. A coluna
+cenário faz a associação suficiente; a coluna fonte/assertion faz a associação
+inversa de cada teste ao contrato, incluindo expansões por arrays parametrizados.
+Nenhuma assertion/timeouts/skips publicada foi enfraquecida.
+
+| Critério / requisito | file:line + assertion | Resultado |
+| --- | --- | --- |
+| T10: isolamento/fixture | `test/chat-media-bind-postgres-live.test.js:34` `assert.equal(new URL(connectionString).pathname, '/crm_silmer_test');` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: bind/message/outbox/audit/takeover and quota commit together; replay charges once,  | `test/chat-media-bind-postgres-live.test.js:176` `assert.equal((await snapshot()).automation, 'assistant');` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: bind/message/outbox/audit/takeover and quota commit together; replay charges once,  | `test/chat-media-bind-postgres-live.test.js:181` `assert.equal(row.state, 'attached');` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: bind/message/outbox/audit/takeover and quota commit together; replay charges once,  | `test/chat-media-bind-postgres-live.test.js:182` `assert.equal(row.message_id, message.id);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: bind/message/outbox/audit/takeover and quota commit together; replay charges once,  | `test/chat-media-bind-postgres-live.test.js:183` `assert.equal(Number(row.reservation_bytes), 0);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: bind/message/outbox/audit/takeover and quota commit together; replay charges once,  | `test/chat-media-bind-postgres-live.test.js:184` `assert.deepEqual(await snapshot(), { messages: 1, commands: 1, audits: 1, reserved: '0', used: '100', automation: 'human', });` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: bind/message/outbox/audit/takeover and quota commit together; replay charges once,  | `test/chat-media-bind-postgres-live.test.js:192` `assert.equal((await inbox.sendHumanMessage(input)).id, message.id);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: bind/message/outbox/audit/takeover and quota commit together; replay charges once,  | `test/chat-media-bind-postgres-live.test.js:193` `assert.deepEqual(await snapshot(), { messages: 1, commands: 1, audits: 1, reserved: '0', used: '100', automation: 'human', });` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: bind/message/outbox/audit/takeover and quota commit together; replay charges once,  | `test/chat-media-bind-postgres-live.test.js:201` `assert.equal( Number( (await pool.query(`SELECT count(*) AS count FROM crm.domain_events`)) .rows[0].count, ), 1, );` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: concurrent sends of one media have one winner,  | `test/chat-media-bind-postgres-live.test.js:216` `assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: concurrent sends of one media have one winner,  | `test/chat-media-bind-postgres-live.test.js:217` `assert.equal((await snapshot()).messages, 1);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: concurrent sends of one media have one winner,  | `test/chat-media-bind-postgres-live.test.js:218` `assert.equal((await snapshot()).used, '100');` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/08: invalid bind ${JSON.stringify(options)} rolls back,  | `test/chat-media-bind-postgres-live.test.js:229` `await assert.rejects(service().sendHumanMessage(command(id)), { statusCode: 409, });` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/08: invalid bind ${JSON.stringify(options)} rolls back,  | `test/chat-media-bind-postgres-live.test.js:232` `assert.deepEqual(await snapshot(), before);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-08: admin read capability cannot bind another actor media,  | `test/chat-media-bind-postgres-live.test.js:236` `await assert.rejects( service().sendHumanMessage( command(id, { actor: { ...actor, capabilities: ['COMMERCIAL_ADMIN'] }, }), ), { statusCode: 409 }, );` | Resultado explícito discriminante da assertion |
+| test(T10/MED-08: admin read capability cannot bind another actor media,  | `test/chat-media-bind-postgres-live.test.js:244` `assert.equal((await snapshot()).automation, 'assistant');` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: second message cannot reuse attached media,  | `test/chat-media-bind-postgres-live.test.js:250` `await assert.rejects( inbox.sendHumanMessage(command(id, { expectedVersion: 2 })), { statusCode: 409 }, );` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: second message cannot reuse attached media,  | `test/chat-media-bind-postgres-live.test.js:254` `assert.equal((await snapshot()).messages, 1);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: ${failure} preserves ready reservation,  | `test/chat-media-bind-postgres-live.test.js:260` `await assert.rejects( service({ [failure]: true }).sendHumanMessage(command(id)), /synthetic-/u, );` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: ${failure} preserves ready reservation,  | `test/chat-media-bind-postgres-live.test.js:264` `assert.deepEqual(await snapshot(), before);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05/28: ${failure} preserves ready reservation,  | `test/chat-media-bind-postgres-live.test.js:265` `assert.equal( (await pool.query('SELECT state FROM crm.chat_media WHERE id=$1', [id])) .rows[0].state, 'ready', );` | Resultado explícito discriminante da assertion |
+| test(T10/MED-07: ${scenario} after upload prevents stale send,  | `test/chat-media-bind-postgres-live.test.js:282` `await assert.rejects(service().sendHumanMessage(command(id)), { statusCode: 409, });` | Resultado explícito discriminante da assertion |
+| test(T10/MED-07: ${scenario} after upload prevents stale send,  | `test/chat-media-bind-postgres-live.test.js:285` `assert.equal((await snapshot()).messages, 0);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-07: ${scenario} after upload prevents stale send,  | `test/chat-media-bind-postgres-live.test.js:286` `assert.equal((await snapshot()).reserved, '100');` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: message kind and validated MIME must agree,  | `test/chat-media-bind-postgres-live.test.js:290` `await assert.rejects( service().sendHumanMessage( command(id, { messageType: 'audio', content: { mediaId: id } }), ), { statusCode: 409 }, );` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: message kind and validated MIME must agree,  | `test/chat-media-bind-postgres-live.test.js:296` `assert.equal((await snapshot()).messages, 0);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: ready ${kind} binds validated kind,  | `test/chat-media-bind-postgres-live.test.js:308` `assert.equal(sent.type, kind);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: ready ${kind} binds validated kind,  | `test/chat-media-bind-postgres-live.test.js:309` `assert.equal((await snapshot()).used, '100');` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: MIME ${mime} outside approved formats cannot bind,  | `test/chat-media-bind-postgres-live.test.js:318` `await assert.rejects(service().sendHumanMessage(command(id)), { statusCode: 409, });` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: MIME ${mime} outside approved formats cannot bind,  | `test/chat-media-bind-postgres-live.test.js:321` `assert.equal((await snapshot()).messages, 0);` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: image above five MiB cannot bind despite a ready row,  | `test/chat-media-bind-postgres-live.test.js:334` `await assert.rejects(service().sendHumanMessage(command(id)), { statusCode: 409, });` | Resultado explícito discriminante da assertion |
+| test(T10/MED-05: image above five MiB cannot bind despite a ready row,  | `test/chat-media-bind-postgres-live.test.js:337` `assert.equal((await snapshot()).reserved, String(size));` | Resultado explícito discriminante da assertion |
+
+Gates: Quick: types/lint/format/diff e npm test781 aprovados/3 skips antigos; Live25/25 (18 novos+7 regressao inbox), zero skips. Autor não é Verifier; requisitos permanecem In Progress.
+
+
 ## Fix T6/MED-19: Integridade da admissão até a variante
 
 Achado independente: prepare substituía o SHA original persistido por T7,

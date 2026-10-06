@@ -335,6 +335,58 @@ export class PostgresInboxRepository {
       let commandResult;
 
       if (kind === 'send') {
+        let media;
+        if (['image', 'audio', 'video'].includes(input.messageType)) {
+          const mediaId = input.content?.mediaId;
+          if (
+            typeof mediaId !== 'string' ||
+            !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu.test(
+              mediaId,
+            )
+          )
+            throw new InboxConflictError('Media reference is invalid');
+          media = (
+            await transaction.query(
+              'SELECT * FROM crm.chat_media WHERE id=$1 FOR UPDATE',
+              [mediaId],
+            )
+          ).rows[0];
+          const size = Number(media?.size_bytes);
+          const allowedMime = {
+            image: ['image/jpeg', 'image/png'],
+            audio: ['audio/mpeg', 'audio/mp4', 'audio/ogg'],
+            video: ['video/mp4'],
+          };
+          if (
+            !media ||
+            media.conversation_id !== current.id ||
+            media.uploaded_by !== input.actor.id ||
+            media.state !== 'ready' ||
+            media.message_id !== null ||
+            media.validation_status !== 'clean' ||
+            media.kind !== input.messageType ||
+            !/^[a-f0-9]{64}$/u.test(media.content_sha256 ?? '') ||
+            !/^[a-f0-9]{64}$/u.test(media.original_sha256 ?? '') ||
+            !Number.isSafeInteger(size) ||
+            size < 1 ||
+            size > (input.messageType === 'image' ? 5 : 16) * 1024 * 1024 ||
+            Number(media.reservation_bytes) !== size ||
+            !allowedMime[
+              /** @type {'image'|'audio'|'video'} */ (input.messageType)
+            ].includes(media.detected_mime_type)
+          )
+            throw new InboxConflictError(
+              'Media is not ready for this human message',
+            );
+          const quota = (
+            await transaction.query(
+              'SELECT * FROM crm.chat_media_quotas WHERE bucket_alias=$1 FOR UPDATE',
+              [media.storage_bucket_alias],
+            )
+          ).rows[0];
+          if (!quota || Number(quota.reserved_bytes) < size)
+            throw new InboxConflictError('Media reservation is inconsistent');
+        }
         const updated = await transaction.query(
           `UPDATE crm.conversations SET automation_state = 'human',
              automation_epoch = automation_epoch
@@ -371,6 +423,18 @@ export class PostgresInboxRepository {
             occurredAt,
           ],
         );
+        if (media) {
+          const bound = await transaction.query(
+            `UPDATE crm.chat_media SET state='attached',message_id=$2,attached_at=$3,reservation_bytes=0,version=version+1 WHERE id=$1 AND version=$4 AND state='ready' AND message_id IS NULL RETURNING id`,
+            [media.id, messageId, occurredAt, media.version],
+          );
+          if (!bound.rows.length)
+            throw new InboxConflictError('Media binding changed concurrently');
+          await transaction.query(
+            `UPDATE crm.chat_media_quotas SET reserved_bytes=reserved_bytes-$2,used_bytes=used_bytes+$2,version=version+1,updated_at=now() WHERE bucket_alias=$1`,
+            [media.storage_bucket_alias, Number(media.size_bytes)],
+          );
+        }
         await this.#outboundMessageOutbox.enqueueChannelMessage(
           {
             availableAt: occurredAt,

@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T13 concluídas; fase 3 em execução, próxima T14. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T14 concluídas; fase 3 em execução, próxima T15. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -271,7 +271,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-06, MED-21, MED-22, MED-24
 **Reuses**: Reserva humana, callbacks e renderer atuais; snapshot sanitizado regenerado no mesmo commit.
 **Tools**: tlc-spec-driven; shell; documentação oficial n8n/Meta.
-**Done when**: [ ] Reserva precede efeito; fluxo preserva bytes sem logs; allowlist/limites/voice flag/API version revalidados oficialmente; resultado incerto não reenvia.
+**Done when**: [x] Reserva precede efeito; fluxo preserva bytes sem logs; contrato n8n 2.38.7 confirmado no fonte oficial; allowlist/limites/voice flag/API version Meta atuais permanecem gate externo T23 antes da ativação; resultado incerto não reenvia.
 **Tests**: unit + integration; mínimo 8 cenários com fixtures Meta; homologação real permanece gate externo.
 **Gate**: Quick + contrato renderizado + Full.
 **Commit**: feat(n8n): send human media through official channel flow

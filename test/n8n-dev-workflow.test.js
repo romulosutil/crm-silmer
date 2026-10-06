@@ -30,8 +30,8 @@ test('keeps the canonical MVP path while replacing only WhatsApp transport', asy
 
   assert.equal(dev.source.id, DEV_WORKFLOW_ID);
   assert.equal(dev.source.active, false);
-  // 52 canonical nodes plus the DEV triggers and results.
-  assert.ok(nodes.length < 64);
+  // 68 canonical nodes plus nine DEV triggers, builders and results.
+  assert.equal(nodes.length, 77);
   assert.equal(
     nodes.some((node) => /whatsApp(?:Trigger)?$/u.test(node.type)),
     false,
@@ -223,5 +223,34 @@ test('makes a localhost-only workflow self-contained without exporting credentia
         ) &&
         node.credentials === undefined,
     ),
+  );
+});
+
+test('T14/MED-21: DEV replaces only media Meta effects after real download/hash and before real preflight', async () => {
+  const dev = await workflow({ local: true });
+  const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
+  const byName = new Map(nodes.map((node) => [node.name, node]));
+  const download = byName.get('CRM - Baixar midia reservada (MVP)');
+  const hash = byName.get('Crypto - SHA256 midia (MVP)');
+  const upload = byName.get('DEV - Simular upload Meta de midia (MVP)');
+  const preflight = byName.get('CRM - Preflight midia reservada (MVP)');
+  const send = byName.get('DEV - Simular envio Meta de midia (MVP)');
+  assert.equal(download?.type, 'n8n-nodes-base.httpRequest');
+  assert.equal(hash?.type, 'n8n-nodes-base.crypto');
+  assert.equal(preflight?.type, 'n8n-nodes-base.httpRequest');
+  assert.equal(upload?.type, 'n8n-nodes-base.code');
+  assert.equal(send?.type, 'n8n-nodes-base.code');
+  assert.match(upload.parameters.jsCode, /getBinaryDataBuffer/u);
+  assert.match(send.parameters.jsCode, /simulate_send_unknown/u);
+  assert.deepEqual(dev.connections[upload.name].main[0], [
+    { node: preflight.name, type: 'main', index: 0 },
+  ]);
+  assert.equal(
+    nodes.some((node) => node.parameters?.url?.includes('graph.facebook.com')),
+    false,
+  );
+  assert.equal(
+    nodes.some((node) => node.credentials?.whatsAppApi),
+    false,
   );
 });

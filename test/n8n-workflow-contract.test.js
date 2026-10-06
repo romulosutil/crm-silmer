@@ -188,8 +188,8 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
   assert.equal(workflow.source.active, false);
   assert.equal(workflow.source.activeVersionId, null);
-  // 45 nodes plus the seven of the handoff notice chain (BOT-03).
-  assert.ok(workflow.nodes.length < 55);
+  // Existing 51 nodes plus 17 necessary media nodes (T14/MED-21/22/24).
+  assert.equal(workflow.nodes.length, 68);
   const serialized = JSON.stringify(workflow);
   assert.doesNotMatch(serialized, /claim_token|claim_id|ai-turns\/claim/u);
   assert.doesNotMatch(serialized, /silmer_failures|windowBufferMemory/u);

@@ -48,7 +48,7 @@ domínios nulos e um workflow antigo. Não foram reescritos com estados presumid
 | Registro GitHub Deployments     | Histórico insuficiente | Um deployment `t00-2-promotion`, de 12/09/2026, permanece `waiting`, sem URL. Isso não exclui auto-deploy configurado externamente no EasyPanel.                                                                                |
 | Lista de webhooks GitHub        | Bloqueado por acesso   | CLI retorna 404 e informa ausência do escopo `admin:repo_hook`. Nenhum escopo foi ampliado. URLs e credenciais de webhook não foram coletadas.                                                                                  |
 | SSH do worker                   | Bloqueado por acesso   | `ssh -o BatchMode=yes -o ConnectTimeout=10 dell-worker` não resolve o hostname nesta sessão. O worker Ubuntu não foi inspecionado; esse host não é prova de acesso à VPS EasyPanel.                                             |
-| Sessão administrativa EasyPanel | Observado              | Proprietário efetuou login; Tech Lead acessou a aba autenticada e assumiu auditoria somente leitura. Nenhuma credencial foi digitada ou coletada pelos agentes.                                                                 |
+| Sessão administrativa EasyPanel | Observado              | Proprietário efetuou login; Tech Lead acessou a aba autenticada e assumiu auditoria somente leitura. Nenhuma senha foi digitada pelos agentes; segredos não integram estes artefatos.                                           |
 | Transporte do painel            | Pendente crítico       | Formulário de login acessível por HTTP na porta 3000 pela rede desta sessão. HTTPS do painel e restrição VPN/allowlist não comprovados. Isso não mede a regra global do firewall; credenciais não foram enviadas pelos agentes. |
 
 As respostas de health contêm apenas os campos técnicos acima. Corpos de
@@ -63,6 +63,11 @@ não comprovam limites configurados, sizing sob carga ou heartbeat no banco.
 ### Painel autenticado — fonte e release
 
 Coleta do Tech Lead por navegação somente leitura; nenhuma configuração salva.
+
+Uma leitura inicial do histórico exibiu a URL secreta de gatilho na saída da
+ferramenta. O valor não foi incluído no repositório ou na PR; leituras posteriores
+filtraram esse campo. Regenerar o gatilho exposto e conferir seu vínculo com a
+integração existente faz parte da revisão de segredos antes da produção.
 
 | Serviço/controle              | Observado                                                                                                                                                       | Pendência para produção                                                                                                                               |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |

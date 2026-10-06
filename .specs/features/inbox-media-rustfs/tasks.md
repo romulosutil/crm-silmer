@@ -150,7 +150,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-04, MED-12, MED-14, MED-26, MED-29
 **Reuses**: execFile e scanner; imagem runtime existente recebe FFmpeg/ffprobe como suporte da entrega.
 **Tools**: tlc-spec-driven; Ubuntu/CI para encoder.
-**Done when**: [ ] WebM/Opus, OGG/Opus e MP4/AAC viram saída validada; entrada vazia, >300s, >16MiB e timeout falham; intermediários são removidos.
+**Done when**: [x] WebM/Opus, OGG/Opus e MP4/AAC viram saída validada; entrada vazia, >300s, >16MiB e timeout falham; intermediários são removidos. Dez unitários, quatro de refresh, header enganoso e runtime real (300 s aceitos, 301 s rejeitados) passaram; imagem e assinaturas genuínas comprovadas. [Evidência](execution.md#t5-normalização-de-gravações-e-assinaturas).
 **Tests**: unit + integration; mínimo 8 casos com arquivos sintéticos reproduzíveis.
 **Gate**: Quick + Topology + Build; medir CPU/memória/timeout.
 **Commit**: feat(media): normalize recorded audio for delivery

@@ -71,3 +71,5 @@ export {
   ChatMediaValidator,
   validateMediaDeclaration,
 } from './chat-media-validation.js';
+export { RecordedAudioNormalizer } from './recorded-audio-normalizer.js';
+export { ClamAvSignatureRefresh } from './clamav-signature-refresh.js';

@@ -1,6 +1,7 @@
 # RFC 010 — Itens por público no pedido
 
-Status: em revisão — aguarda as decisões do PO da seção 7.
+Status: decidida pelo PO em 05/10/2026, que seguiu as recomendações D1–D7 da
+seção 7; registrada na [ADR 022](../adr/022-itens-por-publico.md).
 
 Data: 05/10/2026
 
@@ -167,7 +168,7 @@ que público é o item.
 | PUB-08 | O workflow `mvp-simple-13` grava a divisão em `audiences`, nunca a pergunta, e vai ao ambiente depois do CRM que aceita o campo.                                                        |
 | PUB-09 | Fichas gravadas antes são lidas com `publico` e `quantidade_informada` vazios; nenhuma migração SQL.                                                                                    |
 
-## 7. Decisões pedidas ao PO
+## 7. Decisões do PO (05/10/2026: todas conforme a recomendação)
 
 | #   | Decisão                                                                 | Recomendação do Tech Lead                                                   |
 | --- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------- |

@@ -48,3 +48,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [022 — Manter deploy automático GitHub → EasyPanel](022-manter-deploy-automatico-github-easypanel.md)
 - [023 — Arquivos da arte do pedido no RustFS](023-arquivos-da-arte-no-rustfs.md)
 - [021 — O atendimento começa pelo produto](021-atendimento-comeca-pelo-produto.md)
+- [022 — Itens por público no pedido](022-itens-por-publico.md)

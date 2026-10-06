@@ -813,3 +813,155 @@ test('projects the seven points onto item 1 and keeps what the seller owns', () 
     'an old stored item uses the legacy collar binding',
   );
 });
+
+test('an item may say its audience and the quantity said, both optional (ADR 022)', () => {
+  const [plain] = validateItems([item()]);
+  assert.equal(plain.publico, '');
+  assert.equal(plain.quantidade_informada, null);
+
+  const [feminine] = validateItems([
+    item({ publico: 'feminino', quantidade_informada: 10 }),
+  ]);
+  assert.equal(feminine.publico, 'feminino');
+  assert.equal(feminine.quantidade_informada, 10);
+  assert.equal(
+    validateItems([item({ publico: '', quantidade_informada: null })])[0]
+      .publico,
+    '',
+  );
+
+  for (const publico of ['Feminino', 'baby look', 'infantil masculino', 3]) {
+    assert.throws(
+      () => validateItems([item({ publico })]),
+      rejectedWith('ORDER_INVALID', { fields: ['items[0].publico'] }),
+      String(publico),
+    );
+  }
+  for (const quantidade of [0, -1, 2.5, '10', 100001]) {
+    assert.throws(
+      () => validateItems([item({ quantidade_informada: quantidade })]),
+      rejectedWith('ORDER_INVALID', {
+        fields: ['items[0].quantidade_informada'],
+      }),
+      String(quantidade),
+    );
+  }
+});
+
+test('a stored ficha reads no audience and no quantity said (ADR 022)', () => {
+  const stored = item();
+  delete stored.publico;
+  delete stored.quantidade_informada;
+  const [read] = normalizeFicha({
+    items: [stored],
+    observations: [],
+    serviceData: {},
+    summary: { cliente: '', data_entrega_confirmada: null, nome: null },
+  }).items;
+  assert.equal(read.publico, '');
+  assert.equal(read.quantidade_informada, null);
+});
+
+test('a split read without doubt makes one item per audience (ADR 022)', () => {
+  const ficha = briefingToFicha({
+    product_type: 'camisetas',
+    product_model: 'camiseta comum',
+    colors: 'azul',
+    fabrics: 'algodão',
+    artwork_technique: 'silk',
+    artwork_locations: 'frente',
+    quantity: 10,
+    sizes: 'P5 M5',
+    audiences: '4 masculinas, 3 femininas e 3 infantis',
+  });
+  assert.deepEqual(
+    ficha.items.map((entry) => [entry.publico, entry.quantidade_informada]),
+    [
+      ['masculino', 4],
+      ['feminino', 3],
+      ['infantil', 3],
+    ],
+  );
+  for (const entry of ficha.items) {
+    assert.equal(entry.tipo, 'camiseta comum');
+    assert.equal(entry.cor, 'azul');
+    assert.deepEqual(entry.malhas, ['algodão']);
+    assert.equal(entry.tipo_servico, 'silk');
+    assert.equal(entry.estampa, 'frente');
+    assert.deepEqual(entry.grade, [], 'the sizes were for the whole order');
+  }
+  ficha.items[0].malhas.push('poliéster');
+  assert.deepEqual(ficha.items[1].malhas, ['algodão'], 'items do not share');
+  assert.equal(ficha.serviceData.sizes, 'P5 M5');
+  assert.equal('audiences' in ficha.serviceData, false);
+
+  const one = briefingToFicha({
+    product_type: 'camisetas',
+    sizes: 'P5 M5',
+    audiences: '10 femininas',
+  });
+  assert.equal(one.items.length, 1);
+  assert.equal(one.items[0].publico, 'feminino');
+  assert.equal(one.items[0].quantidade_informada, 10);
+  assert.equal(one.items[0].grade.length, 2, 'one item keeps the sizes');
+
+  const doubtful = briefingToFicha({
+    product_type: 'camisetas',
+    audiences: 'metade masculina e metade feminina',
+  });
+  assert.equal(doubtful.items.length, 1);
+  assert.equal(doubtful.items[0].publico, '');
+  assert.equal(
+    doubtful.serviceData.audiences,
+    'metade masculina e metade feminina',
+  );
+});
+
+test('while with the bot, a new split rebuilds the bot items and keeps the seller ones (ADR 022)', () => {
+  const opened = briefingToFicha({
+    product_type: 'camisetas',
+    sizes: 'P10 M10 G10',
+  });
+  const seller = {
+    ...blankItem(),
+    tipo: 'boné',
+    grade: [{ quantidade: 5, tamanho: 'Único' }],
+  };
+  const withSellerItem = { ...opened, items: [...opened.items, seller] };
+
+  const split = projectBriefingOntoFicha(withSellerItem, {
+    product_type: 'camisetas',
+    sizes: 'P10 M10 G10',
+    audiences: '10 masculinas, 10 femininas e 10 infantis',
+  });
+  assert.deepEqual(
+    split.items.map((entry) => entry.publico || entry.tipo),
+    ['masculino', 'feminino', 'infantil', 'boné'],
+  );
+  assert.deepEqual(
+    split.items[0].grade,
+    [],
+    'the whole-order sizes leave the first item',
+  );
+
+  const chosen = structuredClone(split);
+  chosen.items[1].tipo_servico = 'bordado';
+  const corrected = projectBriefingOntoFicha(chosen, {
+    product_type: 'camisetas',
+    artwork_technique: 'silk',
+    audiences: '12 masculinas e 18 femininas',
+  });
+  assert.deepEqual(
+    corrected.items.map((entry) => [
+      entry.publico || entry.tipo,
+      entry.quantidade_informada,
+      entry.tipo_servico,
+    ]),
+    [
+      ['masculino', 12, 'silk'],
+      ['feminino', 18, 'bordado'],
+      ['boné', null, ''],
+    ],
+    'the split is redone; the seller technique and item stay',
+  );
+});

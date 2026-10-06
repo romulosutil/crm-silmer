@@ -884,7 +884,7 @@ quantidade, e aceitou as recomendações D1–D7 da
 | --- | --- |
 | PUB-01 | Cada item tem `publico` opcional (masculino, feminino, infantil, unissex ou vazio), editável por teclado num seletor com rótulo "Público" e mostrado no cabeçalho do item; não entra em `missingFields` nem bloqueia gerar. A API recusa outro valor. |
 | PUB-02 | Cada item tem `quantidade_informada` opcional (inteiro de 1 a 100000), só de referência; com grade e soma diferente, o item mostra "A soma dos tamanhos (X) é diferente da quantidade informada (Y)"; sem grade, "— (cliente informou Y)". |
-| PUB-03 | O CRM aceita `audiences` no `briefing_patch` e lê a divisão só quando não há dúvida (inteiro positivo junto de masculino, feminino, infantil ou unissex, uma vez cada); o texto aparece em Dados do atendimento como "Divisão informada". |
+| PUB-03 | O CRM aceita `audiences` no `briefing_patch` e lê a divisão só quando não há dúvida (inteiro positivo junto de masculino, feminino, infantil ou unissex, uma vez cada); quando não é lida, o texto fica em Dados do atendimento como "Divisão informada". |
 | PUB-04 | Com duas ou mais partes lidas, o pedido pendente nasce com um item por parte, na ordem dita, cada um com público, quantidade informada e os mesmos pontos projetados do bot; a grade só é projetada com um item. Uma parte só marca o público e a quantidade informada do item 1. |
 | PUB-05 | Enquanto a conversa está com o bot, uma divisão nova refaz os itens da divisão sem apagar a técnica do vendedor nem itens acrescentados por ele; depois do handoff, nada é reprojetado. |
 | PUB-06 | "Duplicar item N" insere a cópia logo abaixo, sem grade nem quantidade informada, e leva o foco ao seletor de público do item novo; o leitor de tela anuncia o item criado. |

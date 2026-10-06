@@ -54,6 +54,7 @@ export {
   validateObservations,
   validateSummary,
 } from './domain/ficha.js';
+export { AUDIENCES, parseAudiences } from './domain/audiences.js';
 export { parseSizes } from './domain/sizes.js';
 export { formatBrlAmount, parseBrlAmount } from './domain/money.js';
 export {

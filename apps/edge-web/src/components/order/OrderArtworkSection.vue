@@ -1,5 +1,6 @@
 <script setup>
 import { computed, inject, nextTick, ref, watch } from 'vue';
+import OrderArtworkFiles from './OrderArtworkFiles.vue';
 import OrderIcon from './OrderIcon.vue';
 
 const SECTION = 'artwork';
@@ -24,9 +25,6 @@ const draft = ref({
 const saving = ref(false);
 const errorMessage = ref('');
 const artwork = computed(() => props.order.ficha?.artwork ?? {});
-const folderName = computed(() =>
-  String(props.order.number ?? '').toLowerCase(),
-);
 const isEditing = computed(() => editing.editingSection.value === SECTION);
 const canEdit = computed(
   () => editing.canEdit.value && props.order.status === 'pendente',
@@ -39,9 +37,6 @@ const sources = computed(
     ORIGINS.filter((origin) => artwork.value[origin.key] === true)
       .map((origin) => origin.label)
       .join(' · ') || 'Falta marcar quem faz a arte.',
-);
-const files = computed(() =>
-  Array.isArray(artwork.value.files) ? artwork.value.files : [],
 );
 
 async function startEditing() {
@@ -169,30 +164,6 @@ async function save() {
       <p>{{ sources }}</p>
     </div>
 
-    <div class="op-artwork-upload">
-      <label for="order-artwork-files">Adicionar arquivos da arte</label>
-      <input
-        id="order-artwork-files"
-        type="file"
-        multiple
-        disabled
-        accept=".png,.jpg,.jpeg,.cdr,.pdf,.svg,.ai,.eps,.psd,.tif,.tiff,.webp,.zip,.rar"
-        aria-describedby="order-artwork-upload-hint"
-      />
-      <p id="order-artwork-upload-hint" class="op-hint">
-        Envio disponível após ativar o Dropbox em produção. Formatos previstos:
-        PNG, JPEG, CDR, PDF, SVG, AI, EPS, PSD, TIFF, WebP, ZIP e RAR.
-      </p>
-      <p class="op-hint">
-        Destino dos arquivos: <code>CRM/{{ folderName }}/</code>. A pasta do
-        pedido será criada no primeiro envio.
-      </p>
-      <ul v-if="files.length" class="op-observations">
-        <li v-for="(file, index) in files" :key="index">
-          {{ file.name || 'Arquivo sem nome' }}
-        </li>
-      </ul>
-      <p v-else class="op-empty">Nenhum arquivo anexado.</p>
-    </div>
+    <OrderArtworkFiles :order="order" />
   </section>
 </template>

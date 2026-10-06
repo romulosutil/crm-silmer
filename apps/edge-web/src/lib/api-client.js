@@ -73,3 +73,58 @@ export async function request(url, options = {}) {
 export function commandKey() {
   return globalThis.crypto.randomUUID();
 }
+
+/**
+ * ADR 021: a multipart upload with progress, which fetch cannot report. Same
+ * session, CSRF and Idempotency-Key rules as `request`; a failure arrives as
+ * the same ApiError, and a lost connection as status 0.
+ *
+ * @param {string} url
+ * @param {FormData} form
+ * @param {{idempotencyKey: string, onProgress?: (fraction: number) => void, signal?: AbortSignal}} options
+ * @returns {Promise<{data: any}>}
+ */
+export function upload(url, form, options) {
+  return new Promise((resolve, reject) => {
+    const xhr = new globalThis.XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Accept', 'application/json');
+    const csrf = readCookie('crm_csrf');
+    if (csrf) xhr.setRequestHeader('X-CSRF-Token', decodeURIComponent(csrf));
+    xhr.setRequestHeader('Idempotency-Key', options.idempotencyKey);
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable)
+        options.onProgress?.(event.loaded / event.total);
+    });
+    xhr.addEventListener('load', () => {
+      /** @type {any} */
+      let data = {};
+      try {
+        data = JSON.parse(xhr.responseText || '{}');
+      } catch {
+        data = {};
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve({ data });
+        return;
+      }
+      const nested = data?.error;
+      reject(
+        new ApiError(
+          xhr.status,
+          nested && typeof nested === 'object' ? { ...data, ...nested } : data,
+        ),
+      );
+    });
+    xhr.addEventListener('error', () =>
+      reject(new ApiError(0, { code: 'NETWORK_ERROR' })),
+    );
+    xhr.addEventListener('abort', () =>
+      reject(new ApiError(0, { code: 'UPLOAD_CANCELLED' })),
+    );
+    options.signal?.addEventListener('abort', () => xhr.abort(), {
+      once: true,
+    });
+    xhr.send(form);
+  });
+}

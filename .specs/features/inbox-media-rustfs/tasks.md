@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T14 concluídas; fase 3 em execução, próxima T15. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T15 concluídas; fase 3 em execução, próxima T16. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -284,7 +284,7 @@ T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23
 **Requirement**: MED-06, MED-21..24
 **Reuses**: Variantes DEV/local e nós de reserva/callback; sem tocar sessões/workflows reais durante planejamento.
 **Tools**: tlc-spec-driven; n8n DEV/ssh autorizado.
-**Done when**: [ ] PNG/áudio/MP4 reais exercitam success, failed, unknown, missing, replay e epoch; evidência identifica simulação; snapshots regenerados sem credenciais.
+**Done when**: [x] PNG/áudio/MP4 reais exercitam success, failed, unknown, missing, replay e epoch; evidência identifica simulação; snapshots regenerados sem credenciais.
 **Tests**: unit + integration; mínimo 8 cenários, incluindo hash/tamanho divergentes.
 **Gate**: Quick + DEV sintético + Full.
 **Commit**: feat(n8n): exercise real media bytes in dev simulation

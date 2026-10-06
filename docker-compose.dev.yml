@@ -35,6 +35,8 @@ services:
 
   n8n:
     image: n8nio/n8n:2.38.7
+    mem_limit: 2g
+    cpus: 1.0
     depends_on:
       n8n-postgres:
         condition: service_healthy
@@ -47,6 +49,8 @@ services:
       DB_TYPE: postgresdb
       N8N_BLOCK_ENV_ACCESS_IN_NODE: 'false'
       N8N_DIAGNOSTICS_ENABLED: 'false'
+      N8N_DEFAULT_BINARY_DATA_MODE: 'default'
+      N8N_CONCURRENCY_PRODUCTION_LIMIT: '1'
       N8N_EDITOR_BASE_URL: http://127.0.0.1:5678
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: 'true'
       N8N_HOST: 127.0.0.1
@@ -64,14 +68,11 @@ services:
     volumes:
       - crm-silmer-n8n-data:/home/node/.n8n
       - ./ops/n8n/workflows:/workflows:ro
+      - ./ops/n8n/import-local-workflow.mjs:/import-local-workflow.mjs:ro
     entrypoint: ['/bin/sh', '-ec']
     command:
       - |
-        marker=/home/node/.n8n/silmer-local-workflow-imported
-        if [ ! -f "$$marker" ]; then
-          n8n import:workflow --input=/workflows/0S5ZS1xeDCSoWovs-local-test.sanitized.json
-          touch "$$marker"
-        fi
+        node /import-local-workflow.mjs /workflows/0S5ZS1xeDCSoWovs-local-test.sanitized.json /home/node/.n8n/silmer-local-workflow-imported
         exec n8n start
 
 volumes:

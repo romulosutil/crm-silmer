@@ -1259,7 +1259,7 @@ const panelWebhook = trigger({
       path: 'silmer/panel-command',
       authentication: 'basicAuth',
       responseMode: 'responseNode',
-      options: { ignoreBots: true, rawBody: false },
+      options: { ignoreBots: false, rawBody: false },
     },
   },
 });

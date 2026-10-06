@@ -15,11 +15,11 @@
     "binaryMode": "separate",
     "availableInMCP": false,
     "timezone": "America/Sao_Paulo",
-    "saveExecutionProgress": true,
+    "saveExecutionProgress": false,
     "saveManualExecutions": false,
-    "saveDataErrorExecution": "all",
-    "saveDataSuccessExecution": "all",
-    "executionTimeout": 120
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 240
   },
   "nodes": [
     {
@@ -367,6 +367,255 @@
       "waitBetweenTries": 1000
     },
     {
+      "name": "Preparar aviso de transferência (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [710, -1000],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const crm = $json;\nlet handoff = null;\nfor (const name of ['Preparar handoff da IA (MVP)', 'Preparar handoff de conteúdo (MVP)']) {\n  try {\n    handoff = $(name).item.json.payload;\n    break;\n  } catch (error) {\n    handoff = null;\n  }\n}\nconst notice = handoff?.handoff?.notice ?? null;\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\n// Only a notice the CRM reserved may reach Meta; a replay or a spent cap returns false.\nreturn { json: {\n  send_authorized: crm.notice?.send_authorized === true && notice !== null,\n  command_id: crm.notice?.command_id ?? null,\n  text: notice?.text ?? '',\n  conversation_id: handoff?.conversation_id ?? null,\n  wa_id: source.from,\n  phone_number_id: source.phone_number_id\n} };"
+      }
+    },
+    {
+      "name": "Aviso de transferência autorizado? (MVP)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [950, -1000],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.send_authorized === true) ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "DEV - Simular aviso de transferência (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1190, -1000],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nreturn { json: { id: 'dev-notice-' + notice.command_id, messages: [{ id: 'dev-notice-' + notice.command_id }], simulated: true } };"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Preparar message.sent do aviso (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1430, -1070],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + notice.command_id, event_type: 'message.sent',\n  occurred_at: new Date().toISOString(), command_id: notice.command_id,\n  conversation_id: notice.conversation_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + notice.command_id, correlation_id: correlationId } };"
+      }
+    },
+    {
+      "name": "CRM - Registrar message.sent do aviso (MVP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1670, -1070],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.idempotency_key }}"
+            },
+            {
+              "name": "X-Correlation-Id",
+              "value": "={{ $json.correlation_id }}"
+            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
+            {
+              "name": "X-Silmer-Workflow-Version",
+              "value": "dev-mvp-simple-12"
+            },
+            {
+              "name": "X-Silmer-Execution-Id",
+              "value": "={{ $execution.id }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 10000
+        }
+      },
+      "maxTries": 3,
+      "retryOnFail": true,
+      "waitBetweenTries": 1000
+    },
+    {
+      "name": "Preparar envio desconhecido do aviso (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1430, -930],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + notice.command_id,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  command_id: notice.command_id, conversation_id: notice.conversation_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + notice.command_id, correlation_id: correlationId } };"
+      }
+    },
+    {
+      "name": "CRM - Marcar envio desconhecido do aviso (MVP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1670, -930],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.idempotency_key }}"
+            },
+            {
+              "name": "X-Correlation-Id",
+              "value": "={{ $json.correlation_id }}"
+            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
+            {
+              "name": "X-Silmer-Workflow-Version",
+              "value": "dev-mvp-simple-12"
+            },
+            {
+              "name": "X-Silmer-Execution-Id",
+              "value": "={{ $execution.id }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 10000
+        }
+      },
+      "maxTries": 3,
+      "retryOnFail": true,
+      "waitBetweenTries": 1000
+    },
+    {
+      "name": "Pedido não abriu? (MVP)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [710, -1200],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ (!!$json.order && $json.order.opened === false) ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "Preparar falha ao abrir pedido (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [950, -1200],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const crm = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\n// The event that asked open_order: the AI reply's reservation or one of the two handoffs.\nlet event = null;\nfor (const name of ['Preparar reserva de envio da IA (MVP)', 'Preparar handoff da IA (MVP)', 'Preparar handoff de conteúdo (MVP)']) {\n  try {\n    event = $(name).item.json.payload;\n    break;\n  } catch (error) {\n    event = null;\n  }\n}\nconst eventId = 'order-open-failed:' + String(event?.event_id ?? $execution.id);\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed',\n  occurred_at: new Date().toISOString(), conversation_id: event?.conversation_id ?? null,\n  failure: {\n    code: 'ORDER_OPEN_FAILED',\n    event_type: String(event?.event_type ?? 'unknown'),\n    reason: String(crm.order?.error ?? 'unknown').slice(0, 64)\n  }\n}, idempotency_key: eventId, correlation_id: correlationId } };"
+      }
+    },
+    {
+      "name": "CRM - Registrar falha ao abrir pedido (MVP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1190, -1200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.idempotency_key }}"
+            },
+            {
+              "name": "X-Correlation-Id",
+              "value": "={{ $json.correlation_id }}"
+            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
+            {
+              "name": "X-Silmer-Workflow-Version",
+              "value": "dev-mvp-simple-12"
+            },
+            {
+              "name": "X-Silmer-Execution-Id",
+              "value": "={{ $execution.id }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 10000
+        }
+      },
+      "maxTries": 3,
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 1000
+    },
+    {
       "name": "Preparar reserva de envio da IA (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -648,7 +897,7 @@
         "path": "silmer/local-panel-command",
         "authentication": "none",
         "responseMode": "responseNode",
-        "options": { "ignoreBots": true, "rawBody": false }
+        "options": { "ignoreBots": false, "rawBody": false }
       },
       "id": "343ddc1c-73f5-4b8f-8ea2-cf4f8d6ca9bd",
       "webhookId": "34edee34-4a73-494f-b7ca-69a9e48bd1b9"
@@ -660,7 +909,7 @@
       "position": [-1700, 360],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const payload = $json.body ?? {};\nconst headerKey = $json.headers?.['idempotency-key'] ?? '';\nconst action = payload.action;\nconst stateActions = ['take_over', 'return_to_ai', 'close'];\nconst validBase = payload.schema_version === '1.0' && typeof payload.command_id === 'string' && payload.command_id === headerKey;\nconst kind = validBase && action === 'send_message' && payload.message?.type === 'text'\n  ? 'send'\n  : validBase && stateActions.includes(action) ? 'state' : 'invalid';\nreturn { json: { payload, kind } };"
+        "jsCode": "const payload = $json.body ?? {};\nconst headerKey = $json.headers?.['idempotency-key'] ?? '';\nconst action = payload.action;\nconst stateActions = ['take_over', 'return_to_ai', 'close'];\nconst validBase = payload.schema_version === '1.0' && typeof payload.command_id === 'string' && payload.command_id === headerKey;\nconst kind = validBase && action === 'send_message' && ['text', 'image', 'audio', 'video'].includes(payload.message?.type)\n  ? 'send'\n  : validBase && stateActions.includes(action) ? 'state' : 'invalid';\nreturn { json: { payload, kind } };"
       }
     },
     {
@@ -803,6 +1052,298 @@
         },
         "options": {}
       }
+    },
+    {
+      "name": "Mensagem humana tem midia? (MVP)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-620, 30],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($('Preparar reserva de envio humano (MVP)').item.json.command.message.type !== 'text') ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "CRM - Baixar midia reservada (MVP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-420, -60],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/commands/\" + encodeURIComponent($(\"Preparar reserva de envio humano (MVP)\").item.json.command.command_id) + \"/media\" }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Correlation-Id",
+              "value": "={{ $('Preparar reserva de envio humano (MVP)').item.json.correlation_id }}"
+            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
+            {
+              "name": "X-Silmer-Workflow-Version",
+              "value": "dev-mvp-simple-12"
+            },
+            {
+              "name": "X-Silmer-Execution-Id",
+              "value": "={{ $execution.id }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000,
+          "redirect": { "redirect": { "followRedirects": false } },
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "name": "Medir midia reservada (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-180, -60],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst item = $input.item;\nconst bytes = await this.helpers.getBinaryDataBuffer($itemIndex, 'data');\nif (bytes.length !== command.message.size_bytes || bytes.length < 1 || bytes.length > (command.message.type === 'image' ? 5 : 16) * 1024 * 1024) throw new Error('MEDIA_INTEGRITY_MISMATCH');\nreturn { json: { media_size_bytes: bytes.length }, binary: item.binary };"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Crypto - SHA256 midia (MVP)",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [60, -60],
+      "parameters": {
+        "action": "hash",
+        "type": "SHA256",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "encoding": "hex",
+        "dataPropertyName": "media_sha256"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Validar hash e restaurar midia (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, -60],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nif ($json.media_sha256 !== command.message.sha256 || $json.media_size_bytes !== command.message.size_bytes) throw new Error('MEDIA_INTEGRITY_MISMATCH');\nconst downloaded = $('CRM - Baixar midia reservada (MVP)').item;\nreturn { json: { media_sha256: $json.media_sha256, media_size_bytes: $json.media_size_bytes }, binary: downloaded.binary };"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "DEV - Simular upload Meta de midia (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, -60],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst bytes = await this.helpers.getBinaryDataBuffer($itemIndex, 'data');\nif (bytes.length !== command.message.size_bytes) throw new Error('DEV_MEDIA_UPLOAD_INVALID');\nif ($('Painel - Receber comando (MVP)').item.json.body?.simulate_media_upload_failed === true) throw new Error('DEV_MEDIA_UPLOAD_FAILED');\nreturn { json: { id: 'dev-media-' + command.command_id, simulated: true } };"
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "name": "CRM - Preflight midia reservada (MVP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [780, -60],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/commands/\" + encodeURIComponent($(\"Preparar reserva de envio humano (MVP)\").item.json.command.command_id) + \"/media?preflight=true\" }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Correlation-Id",
+              "value": "={{ $('Preparar reserva de envio humano (MVP)').item.json.correlation_id }}"
+            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
+            {
+              "name": "X-Silmer-Workflow-Version",
+              "value": "dev-mvp-simple-12"
+            },
+            {
+              "name": "X-Silmer-Execution-Id",
+              "value": "={{ $execution.id }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "redirect": { "redirect": { "followRedirects": false } },
+          "response": { "response": { "responseFormat": "json" } }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "name": "Preparar mensagem Meta de midia (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1020, -60],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst expected = command.message;\nif ($json.valid !== true || $json.media_id !== expected.media_id || $json.type !== expected.type || $json.sha256 !== expected.sha256 || $json.mime_type !== expected.mime_type || $json.size_bytes !== expected.size_bytes) throw new Error('MEDIA_PREFLIGHT_REJECTED');\nconst id = $('DEV - Simular upload Meta de midia (MVP)').item.json.id;\nif (typeof id !== 'string' || !id || id.length > 512) throw new Error('MEDIA_PREFLIGHT_REJECTED');\nconst media = { id };\nif (expected.type !== 'audio' && expected.caption) media.caption = expected.caption;\nreturn { json: { meta_message: { messaging_product: 'whatsapp', to: command.to, type: expected.type, [expected.type]: media } } };"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "DEV - Simular envio Meta de midia (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1260, -60],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nif ($('Painel - Receber comando (MVP)').item.json.body?.simulate_send_unknown === true) throw new Error('DEV_SIMULATED_SEND_OUTCOME_UNKNOWN');\nreturn { json: { messages: [{ id: 'dev-human-media-' + command.command_id }], simulated: true } };"
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": false
+    },
+    {
+      "name": "Validar resposta do envio de midia (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, -60],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const id = $json.messages?.[0]?.id;\nif (typeof id !== 'string' || !id || id.length > 512) throw new Error('META_SEND_OUTCOME_UNKNOWN');\nreturn { json: { messages: [{ id }] } };"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Falha de download da midia (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-180, -300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst eventId = 'before-send:' + command.command_id;\nreturn { json: { payload: { schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed', occurred_at: new Date().toISOString(), command_id: command.command_id, conversation_id: command.conversation_id, automation_epoch: command.automation_epoch, source_revision: command.source_revision, failure: { phase: 'before_message_send', code: 'MEDIA_DOWNLOAD_FAILED' } }, idempotency_key: eventId, correlation_id: String($execution.id).padStart(16, '0') } };"
+      }
+    },
+    {
+      "name": "Falha de integridade da midia (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, -300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst eventId = 'before-send:' + command.command_id;\nreturn { json: { payload: { schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed', occurred_at: new Date().toISOString(), command_id: command.command_id, conversation_id: command.conversation_id, automation_epoch: command.automation_epoch, source_revision: command.source_revision, failure: { phase: 'before_message_send', code: 'MEDIA_INTEGRITY_MISMATCH' } }, idempotency_key: eventId, correlation_id: String($execution.id).padStart(16, '0') } };"
+      }
+    },
+    {
+      "name": "Falha de upload da midia (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, -300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst eventId = 'before-send:' + command.command_id;\nreturn { json: { payload: { schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed', occurred_at: new Date().toISOString(), command_id: command.command_id, conversation_id: command.conversation_id, automation_epoch: command.automation_epoch, source_revision: command.source_revision, failure: { phase: 'before_message_send', code: 'MEDIA_UPLOAD_FAILED' } }, idempotency_key: eventId, correlation_id: String($execution.id).padStart(16, '0') } };"
+      }
+    },
+    {
+      "name": "Falha de preflight da midia (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1020, -300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst eventId = 'before-send:' + command.command_id;\nreturn { json: { payload: { schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed', occurred_at: new Date().toISOString(), command_id: command.command_id, conversation_id: command.conversation_id, automation_epoch: command.automation_epoch, source_revision: command.source_revision, failure: { phase: 'before_message_send', code: 'MEDIA_PREFLIGHT_REJECTED' } }, idempotency_key: eventId, correlation_id: String($execution.id).padStart(16, '0') } };"
+      }
+    },
+    {
+      "name": "Preflight da midia indisponivel (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, -300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio humano (MVP)').item.json.command;\nconst eventId = 'before-send:' + command.command_id;\nreturn { json: { payload: { schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed', occurred_at: new Date().toISOString(), command_id: command.command_id, conversation_id: command.conversation_id, automation_epoch: command.automation_epoch, source_revision: command.source_revision, failure: { phase: 'before_message_send', code: 'MEDIA_PREFLIGHT_UNAVAILABLE' } }, idempotency_key: eventId, correlation_id: String($execution.id).padStart(16, '0') } };"
+      }
+    },
+    {
+      "name": "CRM - Concluir falha anterior ao envio (MVP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1260, -300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.idempotency_key }}"
+            },
+            {
+              "name": "X-Correlation-Id",
+              "value": "={{ $json.correlation_id }}"
+            },
+            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
+            {
+              "name": "X-Silmer-Workflow-Version",
+              "value": "dev-mvp-simple-12"
+            },
+            {
+              "name": "X-Silmer-Execution-Id",
+              "value": "={{ $execution.id }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 10000
+        }
+      },
+      "maxTries": 3,
+      "retryOnFail": true,
+      "waitBetweenTries": 1000
     },
     {
       "name": "DEV - Simular envio humano (MVP)",
@@ -1045,255 +1586,6 @@
       },
       "id": "7cbe7a1f-4442-4d4c-9dbd-8c1de2a2d6a1",
       "webhookId": "2d846e1d-f2f4-4862-9c24-0c1b93afda0d"
-    },
-    {
-      "name": "Preparar aviso de transferência (MVP)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [710, -1000],
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const crm = $json;\nlet handoff = null;\nfor (const name of ['Preparar handoff da IA (MVP)', 'Preparar handoff de conteúdo (MVP)']) {\n  try {\n    handoff = $(name).item.json.payload;\n    break;\n  } catch (error) {\n    handoff = null;\n  }\n}\nconst notice = handoff?.handoff?.notice ?? null;\nconst source = $('Normalizar evento WhatsApp (MVP)').item.json;\n// Only a notice the CRM reserved may reach Meta; a replay or a spent cap returns false.\nreturn { json: {\n  send_authorized: crm.notice?.send_authorized === true && notice !== null,\n  command_id: crm.notice?.command_id ?? null,\n  text: notice?.text ?? '',\n  conversation_id: handoff?.conversation_id ?? null,\n  wa_id: source.from,\n  phone_number_id: source.phone_number_id\n} };"
-      }
-    },
-    {
-      "name": "Aviso de transferência autorizado? (MVP)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [950, -1000],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ ($json.send_authorized === true) ? 'true' : 'false' }}",
-              "operator": { "type": "string", "operation": "equals" },
-              "rightValue": "true"
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "name": "DEV - Simular aviso de transferência (MVP)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1190, -1000],
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nreturn { json: { id: 'dev-notice-' + notice.command_id, messages: [{ id: 'dev-notice-' + notice.command_id }], simulated: true } };"
-      },
-      "onError": "continueErrorOutput"
-    },
-    {
-      "name": "Preparar message.sent do aviso (MVP)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1430, -1070],
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + notice.command_id, event_type: 'message.sent',\n  occurred_at: new Date().toISOString(), command_id: notice.command_id,\n  conversation_id: notice.conversation_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + notice.command_id, correlation_id: correlationId } };"
-      }
-    },
-    {
-      "name": "CRM - Registrar message.sent do aviso (MVP)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [1670, -1070],
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
-        "authentication": "none",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            {
-              "name": "Idempotency-Key",
-              "value": "={{ $json.idempotency_key }}"
-            },
-            {
-              "name": "X-Correlation-Id",
-              "value": "={{ $json.correlation_id }}"
-            },
-            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
-            {
-              "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-12"
-            },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={{ $json.payload }}",
-        "options": {
-          "response": { "response": { "responseFormat": "json" } },
-          "timeout": 10000
-        }
-      },
-      "maxTries": 3,
-      "retryOnFail": true,
-      "waitBetweenTries": 1000
-    },
-    {
-      "name": "Preparar envio desconhecido do aviso (MVP)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1430, -930],
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + notice.command_id,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  command_id: notice.command_id, conversation_id: notice.conversation_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + notice.command_id, correlation_id: correlationId } };"
-      }
-    },
-    {
-      "name": "CRM - Marcar envio desconhecido do aviso (MVP)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [1670, -930],
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
-        "authentication": "none",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            {
-              "name": "Idempotency-Key",
-              "value": "={{ $json.idempotency_key }}"
-            },
-            {
-              "name": "X-Correlation-Id",
-              "value": "={{ $json.correlation_id }}"
-            },
-            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
-            {
-              "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-12"
-            },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={{ $json.payload }}",
-        "options": {
-          "response": { "response": { "responseFormat": "json" } },
-          "timeout": 10000
-        }
-      },
-      "maxTries": 3,
-      "retryOnFail": true,
-      "waitBetweenTries": 1000
-    },
-    {
-      "name": "Pedido não abriu? (MVP)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [710, -1200],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ (!!$json.order && $json.order.opened === false) ? 'true' : 'false' }}",
-              "operator": { "type": "string", "operation": "equals" },
-              "rightValue": "true"
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "name": "Preparar falha ao abrir pedido (MVP)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [950, -1200],
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const crm = $json;\nconst correlationId = String($execution.id).padStart(16, '0');\n// The event that asked open_order: the AI reply's reservation or one of the two handoffs.\nlet event = null;\nfor (const name of ['Preparar reserva de envio da IA (MVP)', 'Preparar handoff da IA (MVP)', 'Preparar handoff de conteúdo (MVP)']) {\n  try {\n    event = $(name).item.json.payload;\n    break;\n  } catch (error) {\n    event = null;\n  }\n}\nconst eventId = 'order-open-failed:' + String(event?.event_id ?? $execution.id);\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: eventId, event_type: 'workflow.failed',\n  occurred_at: new Date().toISOString(), conversation_id: event?.conversation_id ?? null,\n  failure: {\n    code: 'ORDER_OPEN_FAILED',\n    event_type: String(event?.event_type ?? 'unknown'),\n    reason: String(crm.order?.error ?? 'unknown').slice(0, 64)\n  }\n}, idempotency_key: eventId, correlation_id: correlationId } };"
-      }
-    },
-    {
-      "name": "CRM - Registrar falha ao abrir pedido (MVP)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [1190, -1200],
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
-        "authentication": "none",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            {
-              "name": "Idempotency-Key",
-              "value": "={{ $json.idempotency_key }}"
-            },
-            {
-              "name": "X-Correlation-Id",
-              "value": "={{ $json.correlation_id }}"
-            },
-            { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
-            {
-              "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-12"
-            },
-            {
-              "name": "X-Silmer-Execution-Id",
-              "value": "={{ $execution.id }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "={{ $env.SILMER_LOCAL_N8N_TO_CRM_AUTHORIZATION }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={{ $json.payload }}",
-        "options": {
-          "response": { "response": { "responseFormat": "json" } },
-          "timeout": 10000
-        }
-      },
-      "maxTries": 3,
-      "onError": "continueErrorOutput",
-      "retryOnFail": true,
-      "waitBetweenTries": 1000
     },
     {
       "id": "c38c09db-e293-4547-8d2c-807d4d18c0ea",
@@ -1588,6 +1880,222 @@
         ]
       ]
     },
+    "Validar resposta do envio de midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "Preparar message.sent humano (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar envio humano desconhecido (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEV - Simular envio Meta de midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "Validar resposta do envio de midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar envio humano desconhecido (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar mensagem Meta de midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "DEV - Simular envio Meta de midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Falha de preflight da midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Preflight midia reservada (MVP)": {
+      "main": [
+        [
+          {
+            "node": "Preparar mensagem Meta de midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preflight da midia indisponivel (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEV - Simular upload Meta de midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "CRM - Preflight midia reservada (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Falha de upload da midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar hash e restaurar midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "DEV - Simular upload Meta de midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Falha de integridade da midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto - SHA256 midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "Validar hash e restaurar midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Falha de integridade da midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Medir midia reservada (MVP)": {
+      "main": [
+        [{ "node": "Crypto - SHA256 midia (MVP)", "type": "main", "index": 0 }],
+        [
+          {
+            "node": "Falha de integridade da midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Baixar midia reservada (MVP)": {
+      "main": [
+        [{ "node": "Medir midia reservada (MVP)", "type": "main", "index": 0 }],
+        [
+          {
+            "node": "Falha de download da midia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Concluir falha anterior ao envio (MVP)": {
+      "main": [
+        [
+          {
+            "node": "Responder comando sem envio (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falha de download da midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "CRM - Concluir falha anterior ao envio (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falha de integridade da midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "CRM - Concluir falha anterior ao envio (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falha de upload da midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "CRM - Concluir falha anterior ao envio (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preflight da midia indisponivel (MVP)": {
+      "main": [
+        [
+          {
+            "node": "CRM - Concluir falha anterior ao envio (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falha de preflight da midia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "CRM - Concluir falha anterior ao envio (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "DEV - Receber evento sintético (MVP)": {
       "main": [
         [
@@ -1782,6 +2290,24 @@
         ]
       ]
     },
+    "Mensagem humana tem midia? (MVP)": {
+      "main": [
+        [
+          {
+            "node": "CRM - Baixar midia reservada (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DEV - Simular envio humano (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "CRM - Registrar message.sent humano (MVP)": {
       "main": [
         [
@@ -1808,7 +2334,7 @@
       "main": [
         [
           {
-            "node": "DEV - Simular envio humano (MVP)",
+            "node": "Mensagem humana tem midia? (MVP)",
             "type": "main",
             "index": 0
           }

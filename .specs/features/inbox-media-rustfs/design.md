@@ -1,6 +1,27 @@
 # Mídia no chat — Design
 
 Spec: [spec.md](spec.md). Contexto: [context.md](context.md).
+
+### T15: persistência efetiva do n8n 2.38.7
+
+DEV/local usam `default` nativo e `none/none/false/false`, concorrência 1,
+2 GiB e 1 CPU. Somente os efeitos Meta são simulados; download, tamanho,
+SHA-256, reserva, preflight e callbacks passam pelo runtime real.
+O trigger técnico do Painel aceita o User-Agent nativo do worker Node
+(`ignoreBots=false`); Basic permanece obrigatório no canônico/deployed.
+
+Essas configurações evitam salvar resultados binários, mas o n8n grava uma
+execução inicial e faz soft-delete antes do pruning. A inspeção decodificada
+encontrou categorias `recipient` e `caption` nesse registro inicial, sem
+runData ou binary. Portanto, o gate de privacidade de produção T23 permanece
+**não atendido**: minimizar/expurgar PII e comprovar retenção/pruning conforme
+EASYPANEL-TOPOLOGY.md (limite de 30 dias). Zero canários de bytes em DB/WAL,
+storage e logs sustenta MED-20 no ensaio sintético, sem provar ausência de PII.
+Fontes fixadas: [lifecycle](https://github.com/n8n-io/n8n/blob/n8n%402.38.7/packages/cli/src/execution-lifecycle-hooks.ts)
+e [persistence](https://github.com/n8n-io/n8n/blob/n8n%402.38.7/packages/cli/src/execution-persistence.ts).
+Não desabilitar pruning nem apagar registros para produzir a evidência.
+Admissão ready no smoke é seed manual de bytes/SHA em RustFS; execução do
+worker construído, scanner e transporte completo seguem T24.
 Status: Draft; storage, gravação e retenção decididos; contratos abaixo propostos.
 Complexidade: Large, com API, persistência, UI, worker e integração externa.
 

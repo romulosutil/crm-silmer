@@ -66,9 +66,9 @@ export function createDevTestWorkflow(source, options = {}) {
   workflow.settings = {
     ...(workflow.settings ?? {}),
     availableInMCP: false,
-    saveDataErrorExecution: local ? 'all' : 'none',
-    saveDataSuccessExecution: local ? 'all' : 'none',
-    saveExecutionProgress: local,
+    saveDataErrorExecution: 'none',
+    saveDataSuccessExecution: 'none',
+    saveExecutionProgress: false,
     saveManualExecutions: false,
   };
 
@@ -249,7 +249,12 @@ return { json: { messages: [{ id: 'dev-human-media-' + command.command_id }], si
     };
   } else {
     delete panelTrigger.credentials;
-    if (local) panelTrigger.parameters.authentication = 'none';
+    if (local) {
+      panelTrigger.parameters.authentication = 'none';
+      // This localhost webhook is invoked by the Node command worker.
+      // User-agent bot detection is not authentication for technical clients.
+      panelTrigger.parameters.options.ignoreBots = false;
+    }
   }
 
   nodes.push(

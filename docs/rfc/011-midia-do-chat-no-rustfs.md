@@ -1,5 +1,14 @@
 # RFC 011 — Mídia do chat no RustFS
 
+Refinamento T15: a configuração n8n 2.38.7 `none/none/false/false` não elimina
+o registro inicial do webhook antes do pruning. O ensaio real identificou
+categorias recipient/caption na stack inicial soft-deleted; não persistiu
+runData/binary e os canários raw/base64 não apareceram em DB/WAL/arquivos/logs.
+O gate de privacidade de produção T23 permanece **não atendido** até comprovar
+minimização/expurgo de PII e retenção/pruning conforme EASYPANEL-TOPOLOGY.md.
+Isso é uma limitação observada, sem alteração do ADR-023. Fonte e contrato
+efetivo em [design](../../.specs/features/inbox-media-rustfs/design.md).
+
 Status: decisão de storage/retenção tomada em 05/10/2026;
 detalhes de implementação em revisão. Decisão: [ADR 023](../adr/023-midia-do-chat-no-rustfs.md).
 Responsável pela proposta: Tech Lead. Decisor: usuário solicitante nesta sessão.

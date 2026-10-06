@@ -39,6 +39,8 @@ Documentos principais:
   configuração, rollout e troubleshooting da integração.
 - `docs/roadmap/PROXIMAS-FASES.md`: ordem das próximas telas e do Instagram,
   critérios de aceite e mapa dos documentos que guiam as próximas telas.
+- `docs/roadmap/BACKLOG-POS-GO-LIVE.md`: evoluções planejadas após o go-live;
+  primeira demanda é upload e download de arquivos na Ficha do Pedido.
 - `TECHNICAL-DESIGN.md`: TDD canônico com stack, módulos, dados, APIs,
   segurança, SLOs, riscos e decisões técnicas do MVP.
 - `EASYPANEL-TOPOLOGY.md`: projetos, serviços, sizing, CI/CD, backups e

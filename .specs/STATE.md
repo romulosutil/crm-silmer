@@ -13,6 +13,14 @@
 
 ## Handoff
 
+T20 concluída: MediaMessage standalone aceita somente URL relativa CRM, imagem
+privada real, players nativos sem autoplay, áudio AAC/vídeo H.264 com seek e
+206/Content-Range exato. Lost e503 mostram estado acessível sem entrega inventada;
+URL externa não solicitada. Tab/Espaço e axe com ambos players presentes passaram.
+Focal9/9; UI151pass/7skips anteriores(total158), typecheck/lint verdes. PróximaT21
+integraçãoInbox, geração/controller para resposta stale e estados do recorder.
+Nenhum Verified; microfone físico/pipeline worker/remoto continuam pendentes.
+
 T19 concluída; próxima T20. Recorder standalone acessível pede microfone apenas
 por ação explícita, negocia MIME, para em 300s/16MiB e libera tracks em descarte,
 troca, unmount e resposta de permissão tardia. Envio pendente impede nova captura

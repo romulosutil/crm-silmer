@@ -1305,7 +1305,23 @@ components:
         source_revision: { type: integer, minimum: 1 }
         command_id: { type: string, maxLength: 512 }
         external_message_id: { type: string, maxLength: 512 }
-        message: { type: object, additionalProperties: true }
+        message:
+          type: object
+          additionalProperties: true
+          description: >-
+            message.send.requested humano deve reproduzir a message da outbox.
+            Texto conserva o shape legado. Mídia retida usa somente media_id,
+            sha256, mime_type, size_bytes, type, text e caption (null para audio),
+            com filename/media_url null. Metadados vêm da chat_media vinculada,
+            nunca do cliente. Aliases attachment_id/attachmentId/mediaId e URL/key
+            arbitrárias são negados409. Legenda/variante/epoch/source divergentes
+            não reservam. Replay retorna send_authorized=false.
+          properties:
+            media_id: { type: string, format: uuid }
+            sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+            mime_type: { type: string }
+            size_bytes: { type: integer, minimum: 1 }
+            caption: { type: [string, 'null'], maxLength: 1024 }
         briefing_patch:
           type: object
           additionalProperties: false

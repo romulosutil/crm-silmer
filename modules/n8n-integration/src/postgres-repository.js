@@ -5,6 +5,7 @@ import {
   identityLookupHash,
 } from './crypto.js';
 import { N8nConflictError, N8nNotFoundError } from './errors.js';
+import { retainedMediaReference } from './retained-media-reference.js';
 
 /** @typedef {{query(sql: string, values?: unknown[]): Promise<{rows: any[]}>}} Queryable */
 /**
@@ -488,7 +489,24 @@ export class PostgresN8nIntegrationRepository {
       }
 
       const processedAt = validClock(runtime.clock);
+      const commandCallback = ['message.sent', 'message.send.unknown'].includes(
+        input.eventType,
+      );
+      const canonicalConversationId = commandCallback
+        ? await resolveEventConversation(client, input)
+        : null;
+      if (
+        commandCallback &&
+        input.conversationId &&
+        input.conversationId !== canonicalConversationId
+      ) {
+        throw new N8nConflictError(
+          'Callback conversation does not match its command',
+          'COMMAND_PAYLOAD_MISMATCH',
+        );
+      }
       const resolvedConversationId =
+        canonicalConversationId ??
         input.conversationId ??
         (input.eventType === 'workflow.failed'
           ? null
@@ -941,7 +959,23 @@ export class PostgresN8nIntegrationRepository {
     }
     const panelCommand = await selectPanelCommand(client, input.commandId);
     if (panelCommand) {
-      assertPanelSendFence(panelCommand, conversation, input, this.envelopeKey);
+      const bound =
+        panelCommand.message_type === 'text'
+          ? null
+          : (
+              await client.query(
+                'SELECT * FROM crm.chat_media WHERE message_id=$1 AND conversation_id=$2 FOR UPDATE',
+                [panelCommand.message_id, panelCommand.conversation_id],
+              )
+            ).rows[0];
+      assertPanelSendFence(
+        panelCommand,
+        conversation,
+        input,
+        this.envelopeKey,
+        bound,
+        this.messageEnvelopeKey,
+      );
       const updated = await client.query(
         `UPDATE crm.messages
          SET status = 'sending', n8n_execution_id = $2,
@@ -1168,7 +1202,10 @@ async function resolveEventConversation(client, input) {
 async function selectPanelCommand(client, commandId) {
   return (
     await client.query(
-      `SELECT command.*, message.status AS message_status
+      `SELECT command.*, message.status AS message_status,
+              message.message_type, message.content_envelope AS message_content_envelope,
+              message.conversation_id AS message_conversation_id,
+              message.author_id AS message_author_id, message.author_kind AS message_author_kind
        FROM crm.n8n_commands AS command
        JOIN crm.messages AS message ON message.id = command.message_id
        WHERE command.command_id = $1
@@ -1178,11 +1215,22 @@ async function selectPanelCommand(client, commandId) {
   ).rows[0];
 }
 
-/** @param {any} command @param {any} conversation @param {any} input @param {Buffer} key */
-function assertPanelSendFence(command, conversation, input, key) {
+/** @param {any} command @param {any} conversation @param {any} input @param {Buffer} key @param {any} bound @param {Buffer} messageKey */
+function assertPanelSendFence(
+  command,
+  conversation,
+  input,
+  key,
+  bound,
+  messageKey,
+) {
   if (
     command.action !== 'send_message' ||
     command.actor_kind !== 'human' ||
+    command.message_author_kind !== 'human' ||
+    command.message_author_id !== command.actor_id ||
+    command.conversation_id !== conversation.id ||
+    command.message_conversation_id !== conversation.id ||
     !command.message_id ||
     command.message_status !== 'queued' ||
     command.status !== 'processing' ||
@@ -1199,7 +1247,38 @@ function assertPanelSendFence(command, conversation, input, key) {
     `n8n-command:${command.command_id}`,
     key,
   );
+  if (command.message_type !== 'text') {
+    const content = decryptJson(
+      command.message_content_envelope,
+      `message:${command.message_id}`,
+      messageKey,
+    );
+    const reference = retainedMediaReference(bound, {
+      id: command.message_id,
+      conversationId: conversation.id,
+      actorId: command.actor_id,
+      type: command.message_type,
+      content,
+    });
+    if (
+      fingerprint(comparableOutbound(payload.message)) !==
+      fingerprint(
+        comparableOutbound({
+          ...payload.message,
+          ...reference,
+          type: command.message_type,
+          text: content.caption ?? '',
+        }),
+      )
+    )
+      throw new N8nConflictError(
+        'Bound variant changed after authorization',
+        'COMMAND_PAYLOAD_MISMATCH',
+      );
+  }
   if (
+    payload.conversation_id !== conversation.id ||
+    Number(payload.automation_epoch) !== Number(input.automationEpoch) ||
     Number(payload.source_revision) !== Number(input.sourceRevision) ||
     fingerprint(comparableOutbound(payload.message)) !==
       fingerprint(comparableOutbound(input.message))
@@ -1212,7 +1291,52 @@ function assertPanelSendFence(command, conversation, input, key) {
 }
 
 /** @param {any} message */
-function comparableOutbound(message) {
+export function comparableOutbound(message) {
+  const aliases = [
+    message?.attachment_id,
+    message?.media_id,
+    message?.attachmentId,
+  ].filter((value) => value !== undefined && value !== null);
+  if (new Set(aliases).size > 1)
+    throw new N8nConflictError(
+      'Contradictory media aliases',
+      'COMMAND_PAYLOAD_MISMATCH',
+    );
+  const retained = ['image', 'audio', 'video'].includes(message?.type);
+  if (
+    retained &&
+    (Object.keys(message).some(
+      (key) =>
+        ![
+          'type',
+          'text',
+          'caption',
+          'media_id',
+          'sha256',
+          'mime_type',
+          'size_bytes',
+          'filename',
+          'media_url',
+        ].includes(key),
+    ) ||
+      typeof message.media_id !== 'string' ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(
+        message.media_id,
+      ) ||
+      !/^[a-f0-9]{64}$/u.test(message.sha256 ?? '') ||
+      typeof message.mime_type !== 'string' ||
+      !Number.isSafeInteger(message.size_bytes) ||
+      message.size_bytes < 1 ||
+      (message.filename !== undefined && message.filename !== null) ||
+      (message.media_url !== undefined && message.media_url !== null) ||
+      (message.caption !== undefined &&
+        message.caption !== null &&
+        typeof message.caption !== 'string'))
+  )
+    throw new N8nConflictError(
+      'Invalid retained media payload',
+      'COMMAND_PAYLOAD_MISMATCH',
+    );
   return {
     attachmentId:
       message?.attachment_id ??
@@ -1221,6 +1345,10 @@ function comparableOutbound(message) {
       null,
     text: message?.text ?? null,
     type: message?.type ?? null,
+    sha256: retained ? message.sha256 : null,
+    mimeType: retained ? message.mime_type : null,
+    sizeBytes: retained ? message.size_bytes : null,
+    caption: retained ? (message.caption ?? null) : null,
   };
 }
 
@@ -1258,19 +1386,26 @@ async function confirmReservedSend(client, input, now) {
              ELSE $3
            END
        WHERE command_id = $1
+         AND conversation_id = $4
          AND status IN ('sending', 'sent', 'failed', 'outcome_unknown')
          AND (external_message_id IS NULL OR external_message_id = $2)
        RETURNING id, delivery_status`,
-      [input.commandId, input.externalMessageId, input.occurredAt],
+      [
+        input.commandId,
+        input.externalMessageId,
+        input.occurredAt,
+        input.conversationId,
+      ],
     )
   ).rows[0];
   if (!message) throw new N8nNotFoundError('Send reservation was not found');
   await client.query(
     `UPDATE crm.n8n_commands
      SET status = 'sent', external_message_id = $2, updated_at = $3,
+         last_error_code = NULL, retryable = false, retry_safe = false,
          completed_at = $3, locked_by = NULL, locked_until = NULL
-     WHERE command_id = $1 AND status IN ('pending', 'processing')`,
-    [input.commandId, input.externalMessageId, now],
+     WHERE command_id = $1 AND conversation_id = $4 AND status IN ('pending', 'processing', 'outcome_unknown')`,
+    [input.commandId, input.externalMessageId, now, input.conversationId],
   );
   return { messageId: message.id, status: message.delivery_status };
 }
@@ -1327,9 +1462,9 @@ async function markSendUnknown(client, input, now) {
       `UPDATE crm.messages
        SET status = 'outcome_unknown', delivery_status = 'outcome_unknown',
            delivery_status_at = $2
-       WHERE command_id = $1 AND status = 'sending'
+       WHERE command_id = $1 AND conversation_id = $3 AND status = 'sending'
        RETURNING id`,
-      [input.commandId, now],
+      [input.commandId, now, input.conversationId],
     )
   ).rows[0];
   if (!message) throw new N8nNotFoundError('Send reservation was not found');
@@ -1339,8 +1474,8 @@ async function markSendUnknown(client, input, now) {
          retryable = false, retry_safe = false,
          last_error_code = 'OUTCOME_UNKNOWN', updated_at = $2,
          completed_at = $2
-     WHERE command_id = $1 AND status IN ('pending', 'processing', 'failed')`,
-    [input.commandId, now],
+     WHERE command_id = $1 AND conversation_id = $3 AND status IN ('pending', 'processing', 'failed')`,
+    [input.commandId, now, input.conversationId],
   );
   return { messageId: message.id };
 }

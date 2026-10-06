@@ -198,9 +198,29 @@ Replay da reserva continua send_authorized=false; GET de bytes não concede
 segunda autorização de envio. Verificar fence novamente antes do efeito Meta.
 Novo payload inclui media_id, sha256, mime_type, size_bytes e type; o hash de
 autorização cobre referência, variante e legenda, não hostname arbitrário.
+A message é plana: metadata de variante e caption estão na mesma message da
+outbox; text acompanha a caption existente para compatibilidade do webhook.
+Campos filename/media_url permanecem null e nenhum object_key é exposto.
+Fonte única é chat_media attached+clean vinculada à mensagem/autor/conversa.
+O fence reconsulta essa linha sob lock e compara também caption do envelope
+atual da mensagem. Aliases de referência são proibidos na mídia retida;
+contradição entre aliases legados nunca é selecionada silenciosamente.
+Fences queued/processing/human/nonterminal/epoch/source revision permanecem;
+uma mensagem sending não autoriza nova reserva e replay retorna false.
+Unknown Meta preserva outcome_unknown sem retry automático; callbacks mantêm
+a ordem read/delivered/sent. Leitura de execução reservada sending é T13.
+Callbacks sent/unknown resolvem a conversa canônica pelo UNION de comandos
+e mensagens, inclusive com conversation_id explícito; contradição retorna
+409 antes de auditoria, SSE ou recibo. Updates também exigem essa conversa.
+Confirmação conhecida move outcome_unknown para sent e limpa o erro do
+comando, mantendo ambos flags de retry false. Histórico de job e reconciliação
+preexistente é preservado para revisão operacional, sem reagendar efeito.
 
-MED-04: 413 para excesso de bytes; 422 somente para campos/legenda ou tipo
-declarado inválidos detectados antes de aceitar o POST. MIME real, codec e
+MED-04: no POST multipart /media, 413 para excesso de bytes e 422 para campos
+multipart ou tipo declarado inválidos detectados antes de aceitar o upload.
+No POST /messages, payload ou caption inválidos retornam 400 conforme T11;
+caption pertence ao comando da mensagem, não aos campos multipart do upload.
+MIME real, codec e
 duração reprovados pelo worker não alteram o 202 já devolvido: o GET de status
 retorna 200 com state=rejected e reason=invalid_format (MED-29). 401/403 para acesso,
 409 para estado/replay divergente, 429 para quota/throttle, 503 para dependência,

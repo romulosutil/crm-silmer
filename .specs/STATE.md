@@ -13,6 +13,22 @@
 
 ## Handoff
 
+T12 concluída; fase 2 entregue até T12, sem iniciar T13. Outbox plana usa
+media_id, sha256, mime_type, size_bytes, type, caption e text da variante
+attached/clean vinculada, filename/media_url null. Fence revalida referência,
+variante, legenda, epoch/source, autor/conversa e uso único; replay não autoriza
+novo envio. Texto conserva o wire anterior. Callbacks sent/unknown resolvem
+conversa canônica pelo UNION existente e negam contradição antes de efeitos;
+UPDATEs também restringem a conversa. Confirmação conhecida outcome_unknown
+para sent limpa erro e mantém flags de retry false. Job/reconciliação históricos
+permanecem intactos (item open para revisão operacional), sem reagendamento.
+Provas red e adequação bidirecional em execution.md: 11 unit e 17 SQL T12;
+conjunto SQL 50/50 sem skips, validate/build 810 pass e 3 skips antigos,
+E2E exclusivo 107 pass e 7 skips antigos, audit zero, diff e spec/tasks strict
+verdes. MED-16/17/18/21/24 permanecem Execute/In Progress, nenhuma Verified.
+12 tarefas restantes. validate_state é gate de fechamento ainda pendente da
+validation.md do Verifier e das próximas fases; autor não produz esse relatório.
+
 T11 concluída: contrato humano text/image/audio/video; mídia só mediaId/caption,
 caption1024 pontos Unicode image/video, audio sem caption. Entrada false nega
 novo envio após lookup de replay, sem locks/mutação de domínio. Fingerprint novo

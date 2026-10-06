@@ -160,6 +160,14 @@ fim de jornada. Criar uma classe nova, isolada do sweeper legado.
   de created_at enquanto message_id é NULL, não aplicado a attached.
 - reservation_bytes e versão/CAS para quota, processamento e cleanup concorrentes.
 
+Identidade de comando humano T11 é fingerprint canônico do JSON normalizado,
+sem correlationId; ator/conversa/versão/type/content/reason continuam cobertos.
+Ordem de chaves e novo trace não mudam o comando. O gate de entrada false ocorre
+após lookup idempotente e antes de locks/mutações de domínio. Replay exato já
+aceito permanece legível e não repete mensagem/bind/cobrança. Fallback do hash
+legado inteiro preserva a mesma identificação original; trace legado novo não
+é reconstruível sem o payload/correlação que não foram persistidos, então409.
+
 Mensagem mantém content_envelope cifrado com {mediaId, caption}; bytes não
 ficam no PostgreSQL. A relação nova não usa crm.attachments, cujo FK aponta
 para transient_media. Índice em conversation_id/message_id e varredura

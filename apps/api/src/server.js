@@ -155,6 +155,7 @@ export function createServerApi(runtime = {}) {
             environment.INBOX_MESSAGE_ENVELOPE_KEY,
             'INBOX_MESSAGE_ENVELOPE_KEY',
           ),
+          { mediaEnabled: environment.CHAT_MEDIA_ENABLED === 'true' },
         )
       : undefined);
   const chatMedia =

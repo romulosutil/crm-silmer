@@ -4,15 +4,17 @@ import {
   PostgresInboxRepository,
 } from '@crm-silmer/inbox-channels';
 
-/** @param {any} database @param {Record<string, any>} access @param {Record<string, any>} handoffs @param {Record<string, any>} n8n @param {Buffer} messageEnvelopeKey */
+/** @param {any} database @param {Record<string, any>} access @param {Record<string, any>} handoffs @param {Record<string, any>} n8n @param {Buffer} messageEnvelopeKey @param {{mediaEnabled?:boolean}} [options] */
 export function createConversationApiRuntime(
   database,
   access,
   handoffs,
   n8n,
   messageEnvelopeKey,
+  { mediaEnabled = true } = {},
 ) {
   const service = createInboxService({
+    mediaEnabled,
     auditPort: new PostgresAuditTrail(database),
     repository: new PostgresInboxRepository({
       database,

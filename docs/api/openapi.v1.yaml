@@ -1412,15 +1412,39 @@ components:
           properties: { code: { type: string } }
         request_id: { type: string }
     HumanMessageCommand:
-      type: object
+        type: object
       additionalProperties: false
       required: [content, expectedVersion, messageType, reason]
       properties:
         content: { type: object, additionalProperties: true }
         expectedVersion: { type: integer, minimum: 1 }
         messageType:
-          { type: string, enum: [text, image, audio, video, document] }
+          { type: string, enum: [text, image, audio, video] }
         reason: { type: string, minLength: 1, maxLength: 512 }
+      description: >-
+        CHAT_MEDIA_ENABLED=false impede novos envios image/audio/video (403),
+        preservando texto e leitura. Mídia só aceita referência canônica mediaId;
+        chave, URL, filename e attachmentId arbitrários são proibidos.
+      oneOf:
+        - properties:
+            messageType: { const: text }
+        - properties:
+            messageType: { enum: [image, video] }
+            content:
+              type: object
+              additionalProperties: false
+              required: [mediaId]
+              properties:
+                mediaId: { type: string, format: uuid }
+                caption: { type: string, maxLength: 1024 }
+        - properties:
+            messageType: { const: audio }
+            content:
+              type: object
+              additionalProperties: false
+              required: [mediaId]
+              properties:
+                mediaId: { type: string, format: uuid }
     HumanConversationCommand:
       type: object
       additionalProperties: false

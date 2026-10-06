@@ -275,7 +275,11 @@ export class PostgresInboxRepository {
     // ADR 015: refused before any lock or read, so the former `reactivate`
     // cannot touch the conversation, the audit trail or the n8n outbox.
     assertConversationMutation(kind);
-    const fingerprint = hashJson(input);
+    const semanticInput = { ...input };
+    delete semanticInput.correlationId;
+    const fingerprint = hashJson(
+      canonicalCommandValue(JSON.parse(JSON.stringify(semanticInput))),
+    );
     return this.#database.transaction(async (transaction) => {
       await advisoryLock(
         transaction,
@@ -287,7 +291,10 @@ export class PostgresInboxRepository {
         [kind, input.idempotencyKey],
       );
       if (replay.rows[0]) {
-        if (replay.rows[0].fingerprint !== fingerprint) {
+        if (
+          replay.rows[0].fingerprint !== fingerprint &&
+          replay.rows[0].fingerprint !== hashJson(input)
+        ) {
           throw new InboxConflictError(
             'Idempotency key was reused with another command',
           );
@@ -295,6 +302,12 @@ export class PostgresInboxRepository {
         return this.#hydrateCommand(transaction, replay.rows[0].result);
       }
 
+      if (
+        kind === 'send' &&
+        input.messageType !== 'text' &&
+        runtime.mediaEnabled === false
+      )
+        throw new InboxForbiddenError('New chat media sends are disabled');
       const selected = await transaction.query(
         `SELECT ${CONVERSATION_SELECT} FROM crm.conversations
          WHERE id = $1 FOR UPDATE`,
@@ -774,6 +787,18 @@ async function advisoryLock(transaction, identity) {
 /** @param {unknown} value */
 function hashJson(value) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+/** Canonical JSON projection preserves JSON semantics without another module dependency. @param {any} value @returns {any} */
+function canonicalCommandValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalCommandValue);
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalCommandValue(value[key])]),
+    );
+  return value;
 }
 
 /** @param {string|Date} value */

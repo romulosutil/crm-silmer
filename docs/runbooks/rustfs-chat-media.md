@@ -1,5 +1,24 @@
 # Ativação de mídia do chat no RustFS
 
+Contrato T11 de envio humano: messageType=text/image/audio/video. Para mídia,
+content é `{mediaId,caption?}`; caption somente image/video, no máximo1024
+pontos Unicode (emoji conta um), audio não aceita nem caption vazio. Qualquer
+URL, chave, filename, attachmentId ou campo extra é INBOX_INVALID400. A referência
+UUID passa à transação T10, que revalida vínculo e propriedade. Desligar
+CHAT_MEDIA_ENABLED nega novos envios de mídia403 depois de consultar replay e
+antes de locks/mutações de domínio, preservando texto,
+GET status e GET conteúdo se CHAT_MEDIA_READ_ENABLED continuar true. Upload não
+assume conversa; takeover só no envio válido. Erros humanos mantêm schema
+accepted:false,error.code,request_id. Prova unit/integration18/18.
+
+Idempotência de comandos T11: fingerprint novo exclui correlationId e serializa
+JSON canonicamente (ordem de chaves não altera identidade); continua cobrindo
+ator, conversa, versão, tipo, conteúdo e reason. Replay exato já aceito funciona
+com admissão desligada e não cobra novamente. Registros legados de inbox_commands
+aceitam o hash antigo exato para a mesma identificação original; sem payload/
+correlação persistidos não é possível reconstruir automaticamente um replay
+legado com trace novo. Nesse caso409 é esperado, sem repetir a mensagem.
+
 T10: reserva de ready continua charged até envio humano. Apenas a transação
 existente de mensagem/bind/outbox/auditoria/SSE converte reserved→used, após
 revalidar autor/conversa/ready/clean/tipo/SHA/MIME/tamanho. Outro administrador

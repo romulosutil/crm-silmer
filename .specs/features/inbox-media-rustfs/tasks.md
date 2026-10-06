@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T19 concluídas; fase 4 em execução, próxima T20. Evidência em [execution.md](execution.md).
+24 tarefas planejadas; T1 a T20 concluídas; fase 4 em execução, próxima T21. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -355,7 +355,7 @@ novo comprova duas requisições com mesma chave/body/contexto, um único upload
 **Requirement**: MED-17, MED-19, MED-25
 **Reuses**: DTO T16 e endpoint Range; tokens atuais.
 **Tools**: tlc-spec-driven; Browser/Playwright/axe.
-**Done when**: [ ] Imagem/audio/video renderizam com autenticação; sem autoplay; Range permite seek; arquivo indisponível tem mensagem acessível.
+**Done when**: [x] Imagem/audio/video renderizam com autenticação; sem autoplay; Range permite seek; arquivo indisponível tem mensagem acessível.
 **Tests**: e2e + axe; mínimo 6 casos, playback e seek com arquivos reais.
 **Gate**: UI.
 **Commit**: feat(web): render private media in chat history

@@ -196,6 +196,10 @@ replay; troca de epoch; hash divergente; scanner desatualizado; teclado/axe.
 
 Coverage: 29 total, 29 mapped to tasks, 0 unmapped. Nenhum requisito Verified.
 
+T20 implementada para MED-17/19/25, com nove cenários UI e evidências de
+playback/seek/Range privado e acessibilidade em [execution.md](execution.md).
+Os requisitos permanecem In Progress até integração e Verifier independente.
+
 ## Success Criteria
 
 - [ ] Três tipos enviados e reproduzidos no CRM; gravação revisada antes do envio.

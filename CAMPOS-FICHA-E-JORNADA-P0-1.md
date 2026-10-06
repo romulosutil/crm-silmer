@@ -195,9 +195,9 @@ idempotência, autorização e homologação próprios.
 
 PRINT_TEMPLATE seleciona ficha-canonical-v5. Aprovação provisória do PO vale
 para desenvolvimento; Rose e Operação assinam a amostra física antes da
-produção. V2–v4 e hashes são imutáveis. Arquivos válidos e encaminhamento a
-Rose exigem procedimento durável registrado; upload/Dropbox e aviso
-automáticos ainda dependem de contrato e homologação próprios.
+produção. V2–v4 e hashes são imutáveis. Arquivos da arte são enviados e
+baixados pela página do pedido e ficam no RustFS (ADR 023); encaminhamento e
+aviso automáticos a Rose ainda dependem de contrato e homologação próprios.
 
 ## 8. Rastreabilidade do P0.1
 

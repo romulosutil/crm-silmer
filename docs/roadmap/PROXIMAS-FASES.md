@@ -48,8 +48,9 @@ gate registra o que foi testado e o que ainda depende do ambiente ou de pessoa.
   verificável e auditável, preservando Contato e histórico.
 - PAY-01..05: cobrança PIX, comprovante estruturado e boas-vindas automáticas,
   diferidos pela ADR 006. Datas manuais não implementam esse fluxo.
-- Upload durável e Dropbox, com validação e acesso privado, e aviso automático
-  a Rose exigem fluxo e contrato próprios; não presumir integração ativa.
+- Arquivos da arte no RustFS chegam com a ADR 023; provisionar o serviço e
+  evidenciar o backup do bucket antes da produção. Aviso automático a Rose
+  exige fluxo e contrato próprios; não presumir integração ativa.
 - Painel operacional de reconciliação só quando o uso justificar.
 - Recebimentos/saldo, atendimento próprio do site, escala por queue/Redis e
   produção completa dependem de escopo e decisões futuros.

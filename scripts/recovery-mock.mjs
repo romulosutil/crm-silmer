@@ -418,12 +418,16 @@ export function validateRecoveryKit(kit, topology) {
   invariant(
     kit.orderFiles?.decisionRecord ===
       '../../docs/adr/023-arquivos-da-arte-no-rustfs.md' &&
-      kit.orderFiles.service === 'silmer-rustfs' &&
+      kit.orderFiles.service === 'schedule/rustfs' &&
       kit.orderFiles.bucket === 'crm-silmer-arquivos' &&
       kit.orderFiles.offHostBackup === 'with-postgres' &&
       kit.orderFiles.restoreOrder === 'after-postgres-before-api' &&
       kit.orderFiles.sameFailureDomainAsPostgres === true,
     'Recovery kit must back up and restore the RustFS order files with PostgreSQL',
+  );
+  invariant(
+    kit.orderFiles.restoreScope === 'crm-bucket-only',
+    'Recovery must restore only the CRM bucket, never the shared RustFS volume',
   );
   invariant(
     JSON.stringify(Object.keys(kit.adapters ?? {})) ===

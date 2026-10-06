@@ -23,11 +23,14 @@ externo continua diferido. O PO decidiu ativar o envio no MVP com RustFS.
 
 ## Decisão
 
-1. **RustFS interno.** Serviço `silmer-rustfs` (imagem
-   `rustfs/rustfs:1.0.1` fixada por digest) no projeto de produção, sem
-   domínio público, bucket privado `crm-silmer-arquivos`. Só a API o acessa,
-   por `OBJECT_STORAGE_*`; sem essas variáveis os arquivos ficam desligados
-   (503) e o resto do pedido funciona. A API cria o bucket no primeiro envio.
+1. **RustFS interno.** O CRM usa o RustFS já existente no projeto
+   `schedule` do EasyPanel (serviço `rustfs`), pela rede interna em
+   `http://schedule_rustfs:9000`, com o bucket privado `crm-silmer-arquivos`
+   e uma credencial só desse bucket. Só a API o acessa, por
+   `OBJECT_STORAGE_*`; sem essas variáveis os arquivos ficam desligados (503)
+   e o resto do pedido funciona. A API cria o bucket no primeiro envio, se a
+   credencial permitir. O ambiente local usa `rustfs/rustfs:1.0.1` fixado por
+   digest.
 2. **Tudo pela API.** `GET/POST /orders/{id}/files`,
    `DELETE /orders/{id}/files/{fileId}`, `GET …/content` (anexo) e
    `GET …/thumbnail`. Enviar e remover são edições do pedido (`order.edit`,
@@ -58,6 +61,20 @@ externo continua diferido. O PO decidiu ativar o envio no MVP com RustFS.
    é anexada ao pedido pelo operador (`media_handoff_receipts.destination =
 'rustfs'`, migração 0028 `NOT VALID`, que preserva recibos antigos).
 
+## Instância em uso e desvios (05/10/2026)
+
+O PO indicou a instância `schedule/rustfs`. A leitura do EasyPanel mostrou
+desvios que bloqueiam o `objectStorageGate` até serem resolvidos ou aceitos
+por escrito:
+
+- a API S3 (9000) e o console (9001) têm domínios públicos padrão do
+  EasyPanel; o CRM nunca usa o domínio público, e a recomendação é removê-los
+  ou restringir o console;
+- o projeto `schedule` é compartilhado com outros apps, então a credencial
+  do CRM precisa de uma política restrita ao bucket `crm-silmer-arquivos`;
+- a imagem e o digest da instância não foram confirmados;
+- o backup off-host do volume e o drill com o PostgreSQL não têm evidência.
+
 ## Consequências
 
 - O vendedor envia e baixa arquivos na página do pedido, com progresso,
@@ -76,6 +93,7 @@ externo continua diferido. O PO decidiu ativar o envio no MVP com RustFS.
 
 Supersede o item 8 da [ADR 019](019-ficha-espelhada-e-sinais-operacionais.md)
 (campo desabilitado e destino Dropbox) e, para os arquivos do pedido, a
-rejeição de “MinIO na mesma VPS” do `TECHNICAL-DESIGN.md`. A
+rejeição de “MinIO na mesma VPS” que o `TECHNICAL-DESIGN.md` registrava
+até 05/10/2026. A
 [ADR 020](020-tecnica-por-item-e-arte-do-pedido.md) continua integral: “Quem
 faz a arte?” e a exigência para gerar não mudam.

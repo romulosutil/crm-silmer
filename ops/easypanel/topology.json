@@ -41,6 +41,11 @@
           "PRIVATE_MEDIA_MAX_BYTES",
           "PRIVATE_MEDIA_MAX_FILE_BYTES",
           "MEDIA_RETENTION_SCAN_INTERVAL_MS",
+          "OBJECT_STORAGE_ENDPOINT",
+          "OBJECT_STORAGE_REGION",
+          "OBJECT_STORAGE_BUCKET",
+          "OBJECT_STORAGE_ACCESS_KEY_ID",
+          "OBJECT_STORAGE_SECRET_ACCESS_KEY",
           "META_APP_ID",
           "META_APP_SECRET",
           "META_VERIFY_TOKEN",
@@ -164,6 +169,40 @@
             "failureThreshold": 3,
             "checks": [{ "type": "command", "command": "pg_isready" }]
           }
+        }
+      ],
+      "plannedServices": [
+        {
+          "name": "silmer-rustfs",
+          "kind": "object-storage",
+          "decisionRecord": "docs/adr/021-arquivos-da-arte-no-rustfs.md",
+          "image": "rustfs",
+          "imageRef": "rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c",
+          "license": "Apache-2.0",
+          "public": false,
+          "publicPorts": [],
+          "domain": null,
+          "internalPort": 9000,
+          "clients": ["silmer-api"],
+          "persistence": "easypanel-volume-plus-external-backup",
+          "volumes": [
+            {
+              "name": "silmer-rustfs-data",
+              "mountPath": "/data",
+              "access": "read-write",
+              "backup": true
+            }
+          ],
+          "buckets": [
+            {
+              "name": "crm-silmer-arquivos",
+              "publicAccess": false,
+              "offHostBackup": "with-postgres",
+              "recoveryDrill": "with-postgres"
+            }
+          ],
+          "secretNames": ["RUSTFS_ACCESS_KEY", "RUSTFS_SECRET_KEY"],
+          "status": "pending-provisioning"
         }
       ]
     }

@@ -99,6 +99,69 @@ test('declares the approved shared EasyPanel project and prefixed services', asy
   }
 });
 
+test('plans RustFS as a private service backed up with PostgreSQL (ADR 021)', async () => {
+  const topology = await json('ops/easypanel/topology.json');
+  const gate = await json('ops/easypanel/provisioning-gate.json');
+  const kit = await json('ops/recovery/off-host-kit.json');
+  const [storage] = topology.projects[0].plannedServices;
+
+  assert.equal(storage.name, 'silmer-rustfs');
+  assert.equal(storage.public, false);
+  assert.deepEqual(storage.publicPorts, []);
+  assert.equal(storage.domain, null);
+  assert.deepEqual(storage.clients, ['silmer-api']);
+  assert.equal(storage.buckets[0].name, 'crm-silmer-arquivos');
+  assert.equal(storage.buckets[0].offHostBackup, 'with-postgres');
+  assert.equal(gate.objectStorageGate.status, 'pending-external');
+  assert.equal(kit.orderFiles.bucket, 'crm-silmer-arquivos');
+  assert.doesNotThrow(() => validateRecoveryKit(kit, topology));
+
+  for (const mutate of [
+    (/** @type {Record<string, any>} */ service) => {
+      service.public = true;
+    },
+    (/** @type {Record<string, any>} */ service) => {
+      service.publicPorts = [9000];
+    },
+    (/** @type {Record<string, any>} */ service) => {
+      service.domain = 'files.example.com';
+    },
+    (/** @type {Record<string, any>} */ service) => {
+      service.clients = ['silmer-api', 'silmer-edge-web'];
+    },
+  ]) {
+    const unsafe = clone(topology);
+    mutate(unsafe.projects[0].plannedServices[0]);
+    assert.throws(() => validateTopologyDocument(unsafe), /private/iu);
+  }
+
+  const unpinned = clone(topology);
+  unpinned.projects[0].plannedServices[0].imageRef = 'rustfs/rustfs:latest';
+  assert.throws(() => validateTopologyDocument(unpinned), /digest/iu);
+
+  const withoutBackup = clone(topology);
+  withoutBackup.projects[0].plannedServices[0].buckets[0].offHostBackup =
+    'none';
+  assert.throws(
+    () => validateTopologyDocument(withoutBackup),
+    /off-host backup/iu,
+  );
+
+  const falsePass = clone(gate);
+  falsePass.objectStorageGate.status = 'passed';
+  assert.throws(
+    () => validateProvisioningGate(falsePass, topology),
+    /backed up and drilled/iu,
+  );
+
+  const kitWithoutBucket = clone(kit);
+  kitWithoutBucket.orderFiles.offHostBackup = 'none';
+  assert.throws(
+    () => validateRecoveryKit(kitWithoutBucket, topology),
+    /RustFS order files/iu,
+  );
+});
+
 test('rejects any public internal Silmer service', async () => {
   const topology = await json('ops/easypanel/topology.json');
 
@@ -181,7 +244,7 @@ test('builds a deterministic recovery plan from local files and mocks', async ()
   assert.ok(first.steps.some(({ action }) => action === 'prepare-dns-plan'));
   assert.deepEqual(first.readiness, {
     status: 'blocked',
-    checks: { passed: 0, pending: 4, blocked: 4 },
+    checks: { passed: 0, pending: 4, blocked: 5 },
     evidencePresent: { monthly: false, quarterly: false },
     blockerIds: [
       'easypanel-restorable-backup-missing',
@@ -191,6 +254,7 @@ test('builds a deterministic recovery plan from local files and mocks', async ()
       'clean-vps-drill-not-executed',
       'temporary-dns-drill-not-executed',
       'object-version-restore-not-executed',
+      'order-files-bucket-backup-not-evidenced',
       'full-smoke-not-executed',
     ],
   });
@@ -213,6 +277,7 @@ test('keeps issue 3 blocked with explicit opaque recovery evidence', async () =>
     'pending',
     'pending',
     'pending',
+    'blocked',
     'pending',
   ]);
   const blockers = /** @type {Array<{ evidenceRefs: string[] }>} */ (

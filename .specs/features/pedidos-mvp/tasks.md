@@ -1595,7 +1595,7 @@ um push na branch `feat/arquivos-da-arte`.
 
 - **Requisitos:** ARQ-07, ARQ-09.
 - **Arquivos:** `docker-compose.dev.yml`, `scripts/dev.mjs`, `ops/**`,
-  nginx, migração 0028 e handoff de mídia.
+  nginx, migrações 0027 (catálogo) e 0028 e handoff de mídia.
 - **Aceite:** RustFS fixado por digest, interno, com bucket no backup e no
   drill; `npm run dev` sobe o RustFS local; nginx aceita 11 MB só no upload.
 - **Gate:** `validate:topology`, testes de recuperação e migrações.
@@ -1604,7 +1604,7 @@ um push na branch `feat/arquivos-da-arte`.
 
 - **Requisitos:** ARQ-02–ARQ-08.
 - **Arquivos:** `modules/orders/src/**` (domínio, serviço, adapters S3 e
-  PostgreSQL), migração 0027, rotas e runtime de pedidos, OpenAPI e testes.
+  PostgreSQL), rotas e runtime de pedidos, OpenAPI e testes.
 - **Aceite:** limites, assinatura do conteúdo, substituição da arte final,
   dono e status sob lock, idempotência, auditoria e 503 sem storage.
 - **Gate:** testes unitários, typecheck, lint e smoke contra um RustFS real.

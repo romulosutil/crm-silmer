@@ -9,6 +9,9 @@ const expectedServices = [
   'silmer-worker',
   'silmer-postgres',
 ];
+const expectedPlannedServices = ['silmer-rustfs'];
+const objectStorageImagePattern =
+  /^rustfs\/rustfs:1\.0\.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c$/u;
 const imageReferencePattern =
   /^ghcr\.io\/romulosutil\/crm-silmer\/(edge-web|runtime)@sha256:[0-9a-f]{64}$/u;
 const evidenceReferencePattern =
@@ -32,6 +35,68 @@ function sameArray(actual, expected) {
   return (
     actual.length === expected.length &&
     actual.every((value, index) => value === expected[index])
+  );
+}
+
+/**
+ * ADR 021: RustFS keeps the order files. It stays internal, pinned by digest
+ * and inside the off-host backup and recovery drill with PostgreSQL.
+ * @param {Record<string, any>} project
+ */
+function validatePlannedObjectStorage(project) {
+  const planned = /** @type {Array<Record<string, any>>} */ (
+    project.plannedServices ?? []
+  );
+  invariant(
+    Array.isArray(planned) &&
+      sameArray(
+        planned.map(({ name }) => name),
+        expectedPlannedServices,
+      ),
+    `${project.name} planned services must be exactly ${expectedPlannedServices.join(', ')}`,
+  );
+  const [storage] = planned;
+  invariant(
+    storage.kind === 'object-storage' &&
+      storage.decisionRecord === 'docs/adr/021-arquivos-da-arte-no-rustfs.md' &&
+      objectStorageImagePattern.test(storage.imageRef),
+    'silmer-rustfs must trace to ADR 021 and use the pinned RustFS digest',
+  );
+  invariant(
+    storage.public === false &&
+      Array.isArray(storage.publicPorts) &&
+      storage.publicPorts.length === 0 &&
+      storage.domain === null &&
+      sameArray(storage.clients ?? [], ['silmer-api']),
+    'silmer-rustfs must remain private, without domain, reachable only by silmer-api',
+  );
+  const volumes = /** @type {Array<Record<string, any>>} */ (
+    storage.volumes ?? []
+  );
+  const buckets = /** @type {Array<Record<string, any>>} */ (
+    storage.buckets ?? []
+  );
+  invariant(
+    volumes.length === 1 &&
+      volumes[0].mountPath === '/data' &&
+      volumes[0].backup === true &&
+      buckets.length === 1 &&
+      buckets[0].name === 'crm-silmer-arquivos' &&
+      buckets[0].publicAccess === false &&
+      buckets[0].offHostBackup === 'with-postgres' &&
+      buckets[0].recoveryDrill === 'with-postgres',
+    'silmer-rustfs needs a private bucket with /data in the off-host backup and drill',
+  );
+  invariant(
+    sameArray(storage.secretNames ?? [], [
+      'RUSTFS_ACCESS_KEY',
+      'RUSTFS_SECRET_KEY',
+    ]),
+    'silmer-rustfs must declare secret names only',
+  );
+  invariant(
+    storage.status === 'pending-provisioning',
+    'silmer-rustfs must not claim provisioning without operational evidence',
   );
 }
 
@@ -141,6 +206,8 @@ export function validateTopologyDocument(document) {
       }
     }
 
+    validatePlannedObjectStorage(project);
+
     invariant(
       project.secrets?.scope === 'silmer',
       `${project.name} secrets must use the Silmer scope`,
@@ -200,6 +267,30 @@ function rejectSensitiveMaterial(value) {
     );
     rejectSensitiveMaterial(child);
   }
+}
+
+/** @param {any} storageGate */
+function validateObjectStorageGate(storageGate) {
+  const checks = [
+    'serviceCreated',
+    'privateBucketCreated',
+    'apiCredentialsSeparated',
+    'offHostBackupConfigured',
+    'restoreDrilledWithPostgres',
+  ];
+  invariant(
+    storageGate?.service === 'silmer-rustfs' &&
+      storageGate.decisionRecord ===
+        'docs/adr/021-arquivos-da-arte-no-rustfs.md' &&
+      checks.every((check) => typeof storageGate[check] === 'boolean'),
+    'Object storage gate must trace silmer-rustfs to ADR 021',
+  );
+  invariant(
+    ['pending-external', 'passed'].includes(storageGate.status) &&
+      (storageGate.status !== 'passed' ||
+        checks.every((check) => storageGate[check] === true)),
+    'Object storage gate cannot pass before the bucket is backed up and drilled with PostgreSQL',
+  );
 }
 
 /**
@@ -357,6 +448,7 @@ export function validateProvisioningGate(gate, topology) {
     Array.isArray(gate.acceptedRisks),
     'Provisioning gate must declare accepted risks',
   );
+  validateObjectStorageGate(gate.objectStorageGate);
   if (gate.status === 'passed') {
     invariant(
       gate.acceptedRisks.length === 0 &&
@@ -423,7 +515,7 @@ async function main() {
   validateEnvironmentTemplate(environmentTemplate, topology);
   validateProvisioningGate(provisioningGate, topology);
   console.log(
-    'Topology valid: shared project, prefixed services, immutable images, no secret values.',
+    'Topology valid: shared project, prefixed services, immutable images, private RustFS planned, no secret values.',
   );
 }
 

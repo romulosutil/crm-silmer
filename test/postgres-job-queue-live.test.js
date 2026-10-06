@@ -255,7 +255,7 @@ if (connectionString) {
     }
   });
 
-  test('PostgreSQL media lifecycle schedules deletion without extending TTL and records manual Dropbox handoff', async () => {
+  test('PostgreSQL media lifecycle schedules deletion without extending TTL and records the manual valid-file handoff to RustFS', async () => {
     const pool = new Pool({ connectionString, max: 4 });
     try {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
@@ -287,7 +287,7 @@ if (connectionString) {
         ],
       );
 
-      await repository.recordDropboxHandoff({
+      await repository.recordValidFileHandoff({
         mediaId,
         occurredAt: receivedAt,
         operatorId: 'operator-1',
@@ -337,13 +337,14 @@ if (connectionString) {
         ],
       );
       const receipts = await pool.query(
-        `SELECT operator_id, result, content_sha256
+        `SELECT destination, operator_id, result, content_sha256
          FROM crm.media_handoff_receipts WHERE transient_media_id = $1`,
         [mediaId],
       );
       assert.deepEqual(receipts.rows, [
         {
           content_sha256: 'c'.repeat(64),
+          destination: 'rustfs',
           operator_id: 'operator-1',
           result: 'success',
         },

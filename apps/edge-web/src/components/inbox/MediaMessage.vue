@@ -1,10 +1,12 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 
 const props = defineProps({
   media: { type: Object, required: true },
 });
 const failed = ref(false);
+const player = ref(null),
+  noticeElement = ref(null);
 const contentUrl = computed(() => {
   const url = props.media.contentUrl;
   return typeof url === 'string' &&
@@ -20,6 +22,11 @@ const notice = computed(() =>
     ? 'Arquivo perdido. O histórico da mensagem foi preservado.'
     : 'Arquivo indisponível no momento.',
 );
+watch(unavailable, async (value) => {
+  if (!value || !player.value?.contains(document.activeElement)) return;
+  await nextTick();
+  noticeElement.value?.focus();
+});
 watch(
   () => [props.media.mediaId, props.media.state, props.media.contentUrl],
   () => {
@@ -30,15 +37,25 @@ watch(
 
 <template>
   <section class="media-message" aria-label="Mídia da mensagem">
-    <p v-if="unavailable" role="status" aria-live="polite">{{ notice }}</p>
+    <p
+      v-if="unavailable"
+      ref="noticeElement"
+      tabindex="-1"
+      role="status"
+      aria-live="polite"
+    >
+      {{ notice }}
+    </p>
     <img
       v-else-if="media.kind === 'image'"
+      ref="player"
       :src="contentUrl"
       alt="Imagem da conversa"
       @error="failed = true"
     />
     <audio
       v-else-if="media.kind === 'audio'"
+      ref="player"
       :src="contentUrl"
       controls
       preload="metadata"
@@ -47,6 +64,7 @@ watch(
     ></audio>
     <video
       v-else-if="media.kind === 'video'"
+      ref="player"
       :src="contentUrl"
       controls
       preload="metadata"

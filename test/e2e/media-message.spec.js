@@ -176,6 +176,39 @@ for (const kind of ['audio', 'video']) {
   });
 }
 
+test('MED-25 lost transition restores focus from removed native player to notice', async ({
+  page,
+}) => {
+  await page.goto(`${origin}/__media-message?kind=audio`);
+  const player = page.locator('audio');
+  await player.focus();
+  await page
+    .getByRole('button', { name: 'Marcar arquivo perdido' })
+    .evaluate((element) => /** @type {HTMLButtonElement} */ (element).click());
+  await expect(page.locator('audio')).toHaveCount(0);
+  await expect(page.getByRole('status')).toBeFocused();
+});
+
+test('MED-25 content failure restores focus from removed player to notice', async ({
+  page,
+}) => {
+  /** @type {import('@playwright/test').Route | null} */ let contentRoute =
+    null;
+  await page.route('**/api/v1/conversations/**/content', (route) => {
+    contentRoute = route;
+  });
+  await page.goto(`${origin}/__media-message?kind=audio`);
+  await page.locator('audio').focus();
+  await expect.poll(() => Boolean(contentRoute)).toBe(true);
+  await /** @type {import('@playwright/test').Route | null} */ (
+    contentRoute
+  )?.fulfill({ status: 503, body: '' });
+  await expect(page.getByRole('status')).toHaveText(
+    'Arquivo indisponível no momento.',
+  );
+  await expect(page.getByRole('status')).toBeFocused();
+});
+
 test('MED-19 lost file preserves accessible history without bytes request', async ({
   page,
 }) => {

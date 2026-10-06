@@ -1,5 +1,25 @@
 # Execução INBOX-MEDIA-1
 
+## Correção T20: Foco do player removido
+
+MED-25: revisão independente encontrou foco perdido ao remover player por lost
+ou erro HTTP. Dois testes novos falharam com status inactive em toBeFocused.
+MediaMessage detecta foco dentro do player antes da troca, espera nextTick e
+foca o aviso tabindex=-1. Foco externo permanece onde estava.
+
+| Critério / mapeamento inverso | Evidência file:line e assertion | Resultado exigido |
+| --- | --- | --- |
+| MED-25 lost remove player focado | test/e2e/media-message.spec.js:189 `expect(page.getByRole('status')).toBeFocused()` | Foco previsível no aviso |
+| MED-25 erro503 remove player focado | test/e2e/media-message.spec.js:209 `expect(page.getByRole('status')).toBeFocused()` | Foco previsível no aviso |
+| MED-25 foco externo preservado | test/e2e/media-message.spec.js:266 `toBeFocused()` no botão; :267 `violations.toEqual([])` | Não roubar foco fora da mídia |
+
+Adequação: as duas novas assertions matam o comportamento anterior; caso publicado
+de foco externo permanece intacto. Focal11/11; UI integral153pass/7skips anteriores
+(total160), workers1; typecheck/lint verdes. WIP T21 não publicado foi guardado
+em var durante este gate e será restaurado após commit, sem pular teste publicado.
+As linhas da seção T20 abaixo referem-se ao snapshot ffdcaa5; o Verifier final
+rederiva evidência no HEAD vigente. Nenhum requisito Verified.
+
 ## T20: Histórico com reprodução privada
 
 MED-17/19/25: MediaMessage renderiza imagem e controles nativos de áudio/vídeo

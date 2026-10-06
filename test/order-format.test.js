@@ -366,7 +366,7 @@ test('names the promised delivery and tells it apart from the amount and payment
   );
 });
 
-test('an item says its audience and compares its sizes with the quantity said for it (ADR 022)', () => {
+test('an item says its audience and compares its sizes with the quantity said for it (ADR 025)', () => {
   assert.deepEqual(
     AUDIENCE_OPTIONS.map((option) => option.value),
     ['masculino', 'feminino', 'infantil', 'unissex'],

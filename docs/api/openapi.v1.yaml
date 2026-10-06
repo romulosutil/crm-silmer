@@ -2314,7 +2314,7 @@ components:
         (Tipo de roupa), cor, quantidade (soma da grade; nunca enviada),
         tipo_servico (Técnica: silk, DTF, sublimação, bordado… ou Sem
         estampa), malhas (Modelo de malha), grade (Tamanhos) e gola (Gola).
-        Opcionais e sem bloquear (ADR 022): publico (masculino, feminino,
+        Opcionais e sem bloquear (ADR 025): publico (masculino, feminino,
         infantil, unissex ou vazio) e quantidade_informada (referência do que
         o cliente disse; não entra no total). O bot pode
         preencher uma técnica vazia; é obrigatória para confirmar, mas pode

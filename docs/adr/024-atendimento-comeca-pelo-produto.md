@@ -1,4 +1,4 @@
-# ADR 021 — O atendimento começa pelo produto
+# ADR 024 — O atendimento começa pelo produto
 
 Status: aceita
 
@@ -13,9 +13,9 @@ fala de algodão, poliéster e dry fit; e que o que perguntar depende de
 produto, o local da estampa e o prazo como perguntas, os kits, as dicas e os
 alertas ao vendedor; essas escolhas são revogáveis pelo PO.
 
-RFC: [RFC 009](../rfc/009-atendimento-comeca-pelo-produto.md). Requisitos
+RFC: [RFC 012](../rfc/012-atendimento-comeca-pelo-produto.md). Requisitos
 `AGT-01`, `AGT-05` e `PRD-01`–`PRD-08` da
-[spec](../../.specs/features/pedidos-mvp/spec.md); tarefas T88–T90 de
+[spec](../../.specs/features/pedidos-mvp/spec.md); tarefas T93–T95 de
 [tasks](../../.specs/features/pedidos-mvp/tasks.md). Supersede parcialmente a
 [ADR 012](012-ficha-de-sete-pontos-e-ritmo-fixo.md) (itens 1, 2 e 4: os sete
 pontos, a exceção de "lisa ou com estampa?", o nome no fim e a gola
@@ -72,7 +72,7 @@ perguntava o prazo nem onde vai a estampa.
 - O vendedor recebe menos dados técnicos do bot e passa a completar malha,
   técnica, tamanhos, gola e arte, que continuam exigidos para gerar o pedido.
 - A divisão por público chega como texto em Dados do atendimento; o pedido
-  com um item por público depende de nova proposta no CRM (RFC 009, seção 6).
+  com um item por público depende de nova proposta no CRM (RFC 012, seção 6).
 - Kits, dicas e alertas crescem com o uso: cada linha nova é um commit no SDK
   e novos snapshots.
 

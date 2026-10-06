@@ -112,11 +112,11 @@ Gerar exige pontos obrigatórios dos itens, arte e entrega prometida. A edição
 parcial é permitida. `summary.aplicacao`, `modelo` e campos antigos seguem
 preservados para compatibilidade, sem criar novos critérios de geração.
 
-ADR 022: cada item tem `publico` (masculino, feminino, infantil, unissex) e
+ADR 025: cada item tem `publico` (masculino, feminino, infantil, unissex) e
 `quantidade_informada` opcionais, que não bloqueiam gerar. A divisão dita ao
 bot (`audiences`) vira um item por público quando o domínio a lê sem dúvida
 (`modules/orders/src/domain/audiences.js`); "Tecido" passa a "Modelo de
-malha". O bot pergunta pelo produto, com kits e pontos passivos (ADR 021).
+malha". O bot pergunta pelo produto, com kits e pontos passivos (ADR 024).
 
 `GET /api/v1/orders/:orderId/print` exige sessão de leitura autorizada e
 Pedido confirmado. Retorna HTML imprimível da v6 (público de cada item e

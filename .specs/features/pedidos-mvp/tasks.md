@@ -1625,21 +1625,21 @@ um push na branch `feat/arquivos-da-arte`.
   backup do bucket antes da produção.
 - **Gate:** `git diff --check`, `npm run validate` e E2E de pedidos.
 
-## O atendimento começa pelo produto (ADR 021, 05/10/2026)
+## O atendimento começa pelo produto (ADR 024, 05/10/2026)
 
 As tarefas partem do `master` 2979c81. Cada uma vira um commit e um push na
 branch `feat/atendimento-por-produto`.
 
-### T88: Decisão e rastreabilidade
+### T93: Decisão e rastreabilidade
 
 - **Requisitos:** PRD-01–PRD-08.
-- **Arquivos:** RFC 009, ADR 021 (notas nas ADRs 011 e 012), índice de
+- **Arquivos:** RFC 012, ADR 024 (notas nas ADRs 011 e 012), índice de
   ADRs, spec e tasks.
 - **Aceite:** decisões do PO e escolhas do Tech Lead registradas, com os
   itens por público no CRM como próxima proposta.
 - **Gate:** links e formatação.
 
-### T89: Pontos por produto no workflow
+### T94: Pontos por produto no workflow
 
 - **Requisitos:** PRD-01–PRD-08.
 - **Arquivos:** SDK do workflow, snapshots sanitizados (principal, DEV e
@@ -1652,7 +1652,7 @@ branch `feat/atendimento-por-produto`.
   indicador pelo produto; contrato do CRM inalterado.
 - **Gate:** testes de contrato do workflow e da ficha, `npm run validate`.
 
-### T90: Homologação no DEV
+### T95: Homologação no DEV
 
 - **Requisitos:** PRD-01–PRD-08.
 - **Aceite:** roteiros KPI-01 a KPI-10, EXT-12 e ZERO-05 rodados no
@@ -1660,29 +1660,29 @@ branch `feat/atendimento-por-produto`.
   aprovação do PO.
 - **Gate:** registro do roteiro.
 
-### T91: RFC dos itens por público
+### T96: RFC dos itens por público
 
 - **Requisitos:** propostos `PUB-01`–`PUB-09` na
-  [RFC 010](../../../docs/rfc/010-itens-por-publico.md); entram na spec com a
-  ADR 022, depois da decisão do PO.
-- **Arquivos:** RFC 010 e tasks.
+  [RFC 013](../../../docs/rfc/013-itens-por-publico.md); entram na spec com a
+  ADR 025, depois da decisão do PO.
+- **Arquivos:** RFC 013 e tasks.
 - **Aceite:** situação atual, proposta, alternativas, riscos, critérios e as
   decisões D1–D7 para o PO.
 - **Gate:** links e formatação.
 
-## Itens por público (ADR 022, 05/10/2026)
+## Itens por público (ADR 025, 05/10/2026)
 
-Seguem a T91 na branch `feat/atendimento-por-produto`; cada tarefa vira um
+Seguem a T96 na branch `feat/atendimento-por-produto`; cada tarefa vira um
 commit e um push.
 
-### T92: Decisão e rastreabilidade
+### T97: Decisão e rastreabilidade
 
 - **Requisitos:** PUB-01–PUB-09.
-- **Arquivos:** RFC 010 (status), ADR 022, índice de ADRs, spec e tasks.
+- **Arquivos:** RFC 013 (status), ADR 025, índice de ADRs, spec e tasks.
 - **Aceite:** D1–D7 registradas conforme a recomendação aceita pelo PO.
 - **Gate:** links e formatação.
 
-### T93: Público, quantidade informada e divisão no domínio e na API
+### T98: Público, quantidade informada e divisão no domínio e na API
 
 - **Requisitos:** PUB-01–PUB-05, PUB-09.
 - **Arquivos:** `modules/orders/src/domain/` (`ficha.js`, `audiences.js`),
@@ -1692,7 +1692,7 @@ commit e um push.
   projeção em vários itens; fichas antigas lidas com os campos vazios.
 - **Gate:** testes de domínio, serviço, rotas e contrato.
 
-### T94: Tela do pedido com público e Duplicar item
+### T99: Tela do pedido com público e Duplicar item
 
 - **Requisitos:** PUB-01, PUB-02, PUB-06, PUB-07 (rótulo).
 - **Arquivos:** componentes do pedido, `order-format.js` e E2E.
@@ -1700,7 +1700,7 @@ commit e um push.
   Duplicar item com foco no público, "Modelo de malha".
 - **Gate:** build, typecheck, lint e E2E de pedidos.
 
-### T95: Ficha impressa v6
+### T100: Ficha impressa v6
 
 - **Requisitos:** PUB-07.
 - **Arquivos:** `ficha-canonical-v6.js`, amostra sintética de quatro
@@ -1709,7 +1709,7 @@ commit e um push.
   provisória do PO (concedida em 06/10/2026).
 - **Gate:** testes da impressão e `validate:ficha-pdf-review`.
 
-### T96: Workflow com a divisão em `audiences`
+### T101: Workflow com a divisão em `audiences`
 
 - **Requisitos:** PUB-08.
 - **Arquivos:** SDK do workflow, snapshots, testes e README da integração.

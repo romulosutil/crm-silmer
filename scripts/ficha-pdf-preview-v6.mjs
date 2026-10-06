@@ -1,4 +1,4 @@
-// Synthetic review artifact for v6 (ADR 022). This script does not touch the
+// Synthetic review artifact for v6 (ADR 025). This script does not touch the
 // immutable v2–v5 approval packages or change the live print switch.
 import { mkdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';

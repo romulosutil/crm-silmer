@@ -1,7 +1,7 @@
-# RFC 010 — Itens por público no pedido
+# RFC 013 — Itens por público no pedido
 
 Status: decidida pelo PO em 05/10/2026, que seguiu as recomendações D1–D7 da
-seção 7; registrada na [ADR 022](../adr/022-itens-por-publico.md).
+seção 7; registrada na [ADR 025](../adr/025-itens-por-publico.md).
 
 Data: 05/10/2026
 
@@ -9,10 +9,10 @@ Origem: o PO definiu em 05/10/2026 que gênero e idade criam itens: "10 camisas
 sendo 4 masculinas, 3 infantis e 3 femininas são 3 itens que provavelmente são
 iguais, mas geram itens distintos na ficha". Também definiu que só se cria item
 novo quando o cliente fala da divisão e que os itens assumem o mesmo modelo,
-cor, malha e arte. A [RFC 009](009-atendimento-comeca-pelo-produto.md) e a
-[ADR 021](../adr/021-atendimento-comeca-pelo-produto.md) já fazem o bot gravar
+cor, malha e arte. A [RFC 012](012-atendimento-comeca-pelo-produto.md) e a
+[ADR 024](../adr/024-atendimento-comeca-pelo-produto.md) já fazem o bot gravar
 a divisão como texto em `notes` e avisar o vendedor; esta RFC propõe o que o
-CRM precisa para o pedido nascer com um item por público. Tarefa T91 de
+CRM precisa para o pedido nascer com um item por público. Tarefa T96 de
 [tasks](../../.specs/features/pedidos-mvp/tasks.md); requisitos propostos
 `PUB-01`–`PUB-09` na seção 6.
 
@@ -22,7 +22,7 @@ CRM precisa para o pedido nascer com um item por público. Tarefa T91 de
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Item (`ficha.items[]`)    | Sete pontos (ADR 016/020) e adicionais; não há campo de público. A quantidade não é gravada: é a soma de `grade`.                                                      |
 | Bot → pedido              | `briefingToFicha` e `projectBriefingOntoFicha` (`modules/orders/src/domain/ficha.js`) projetam só o item 1, enquanto a conversa está com o bot.                        |
-| Divisão dita pelo cliente | Desde a ADR 021, vai como texto em `notes` ("Divisão por público: 4 masculinas…") e aparece em Dados do atendimento, com a dica "cada público vira um item" no resumo. |
+| Divisão dita pelo cliente | Desde a ADR 024, vai como texto em `notes` ("Divisão por público: 4 masculinas…") e aparece em Dados do atendimento, com a dica "cada público vira um item" no resumo. |
 | Quantidade dita           | `quantity` fica no atendimento como "Quantidade informada"; o aviso de diferença compara com o total do pedido (ADR 016, item 7).                                      |
 | Tamanhos                  | A leitura da ADR 016 (item 6, `sizes.js`) só aceita tamanhos de adulto; "infantil 4, 6, 8" fica com o vendedor.                                                        |
 | Catálogo                  | A RFC 005 já listava a modelagem "Infantil", "Masculina reta" e "Feminina acinturada/baby look" e a grade infantil 2–16, sem aprovação.                                |
@@ -138,7 +138,7 @@ que público é o item.
 | Público no campo adicional `modelo`                                   | A ADR 020 tirou `modelo` da tela; o público ficaria escondido e fora do papel.                                                           |
 | Público como oitavo ponto obrigatório                                 | Obrigaria escolher público em todo pedido, inclusive boné e caneca; o PO quer item novo só quando o cliente fala.                        |
 | Divisão estruturada vinda do modelo de IA (`[{publico, quantidade}]`) | O workflow achata objetos em texto e o modelo erra estrutura; o padrão do projeto é o CRM ler o texto só quando não há dúvida (ADR 016). |
-| Continuar com a divisão só em `notes`                                 | É o estado atual (ADR 021): funciona, mas o vendedor monta os itens à mão a cada pedido dividido.                                        |
+| Continuar com a divisão só em `notes`                                 | É o estado atual (ADR 024): funciona, mas o vendedor monta os itens à mão a cada pedido dividido.                                        |
 | Grade infantil lida automaticamente por público                       | Os tamanhos são passivos e quase nunca vêm separados por público; a leitura ficaria cheia de casos de dúvida. Fica para o vendedor.      |
 
 ## 5. Riscos
@@ -182,7 +182,7 @@ que público é o item.
 
 ## 8. Entrega proposta, depois da decisão
 
-1. ADR 022 com as decisões e critérios `PUB-*` na spec.
+1. ADR 025 com as decisões e critérios `PUB-*` na spec.
 2. Domínio e API: `publico`, `quantidade_informada`, leitura de `audiences`,
    projeção em N itens; OpenAPI, contrato n8n e testes.
 3. Tela do pedido: seletor de público, cabeçalho, aviso por item e Duplicar

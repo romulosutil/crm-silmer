@@ -1,8 +1,8 @@
-# RFC 009 — O atendimento começa pelo produto
+# RFC 012 — O atendimento começa pelo produto
 
 Status: decidida em 05/10/2026 pelo PO, com as escolhas do Tech Lead
 revogáveis pelo PO; registrada na
-[ADR 021](../adr/021-atendimento-comeca-pelo-produto.md). Os itens por
+[ADR 024](../adr/024-atendimento-comeca-pelo-produto.md). Os itens por
 público no CRM (seção 6) seguem em proposta própria.
 
 Data: 05/10/2026
@@ -16,7 +16,7 @@ conhece algodão, poliéster e dry fit; o nome vem sempre no começo; e o que
 perguntar depende de "pré-kits" (abadá é sublimação total). A revisão de
 estamparia do Tech Lead acrescentou o prazo, o local da estampa, as
 restrições da sublimação e os avisos ao vendedor. Requisitos `PRD-01`–`PRD-08`
-da [spec](../../.specs/features/pedidos-mvp/spec.md), tarefas T88–T90 de
+da [spec](../../.specs/features/pedidos-mvp/spec.md), tarefas T93–T95 de
 [tasks](../../.specs/features/pedidos-mvp/tasks.md).
 
 ## 1. Problema observado

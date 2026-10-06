@@ -1,4 +1,4 @@
-// ADR 022: revision of the v5 layout for items per audience — the audience
+// ADR 025: revision of the v5 layout for items per audience — the audience
 // prints under the item number, point 5 is "Modelo de malha", and the
 // quantity the customer said for an item prints among its extras when it
 // differs from the sum of the sizes. The v2–v5 renderers and their review
@@ -48,7 +48,7 @@ function colorOf(item) {
   return colors.join(' / ');
 }
 
-// ADR 022 (D1): the closed list of audiences, as the screen names them.
+// ADR 025 (D1): the closed list of audiences, as the screen names them.
 const AUDIENCE_LABELS = Object.freeze({
   feminino: 'Feminino',
   infantil: 'Infantil',
@@ -75,7 +75,7 @@ function totalOf(item) {
 }
 
 /**
- * ADR 022: the quantity said for the item, only when it differs from the sum
+ * ADR 025: the quantity said for the item, only when it differs from the sum
  * of its sizes; as text, so it rides the extras row and its height estimate.
  *
  * @param {any} item

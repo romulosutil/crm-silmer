@@ -34,7 +34,7 @@ const v3Gate = await json('../docs/phase0/ficha-pdf-approval-v3.json');
 const v4Gate = await json('../docs/phase0/ficha-pdf-approval-v4.json');
 const v5Gate = await json('../docs/phase0/ficha-pdf-approval-v5.json');
 
-test('v6 prints the audience by the item number and "Modelo de malha" (ADR 022, PUB-07)', () => {
+test('v6 prints the audience by the item number and "Modelo de malha" (ADR 025, PUB-07)', () => {
   const html = renderOrderFicha(reviewSample.order, TEMPLATE_V6);
   for (const audience of ['MASCULINO', 'FEMININO', 'INFANTIL', 'UNISSEX']) {
     assert.match(
@@ -63,7 +63,7 @@ test('v6 prints the audience by the item number and "Modelo de malha" (ADR 022, 
   );
 });
 
-test('v6 prints the quantity said only when it differs from the sizes (ADR 022, PUB-02)', () => {
+test('v6 prints the quantity said only when it differs from the sizes (ADR 025, PUB-02)', () => {
   const html = renderOrderFicha(reviewSample.order, TEMPLATE_V6);
   const said = [
     ...html.matchAll(/Quantidade informada <strong>(\d+)<\/strong>/gu),
@@ -84,7 +84,7 @@ test('v6 prints the quantity said only when it differs from the sizes (ADR 022, 
   assert.doesNotMatch(plain, /null|undefined/u);
 });
 
-test('v6 reads an order stored before ADR 022 without an audience', () => {
+test('v6 reads an order stored before ADR 025 without an audience', () => {
   const order = structuredClone(reviewSample.order);
   for (const item of order.ficha.items) {
     delete item.publico;

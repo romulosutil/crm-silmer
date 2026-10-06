@@ -4,7 +4,7 @@ Mensagens para testar o bot à mão e medir a meta da
 [ADR 013](../../adr/013-pedido-do-zero-e-meta-de-meia-ficha.md): em pedido do
 zero, o bot preenche pelo menos **50% da ficha** antes de transferir.
 
-Desde a [ADR 021](../../adr/021-atendimento-comeca-pelo-produto.md), o bot
+Desde a [ADR 024](../../adr/024-atendimento-comeca-pelo-produto.md), o bot
 pede o nome e o que o cliente quer personalizar na saudação e, depois,
 pergunta só o que o produto precisa:
 
@@ -25,7 +25,7 @@ contam: o bot só grava o que o cliente disser.
 ## Como rodar
 
 - Use o workflow DEV `dev-mvp-simple-14` ou mais novo, com o CRM que aceita
-  `audiences` (ADR 022). Cada roteiro precisa de
+  `audiences` (ADR 025). Cada roteiro precisa de
   uma conversa independente: abra outra sessão isolada do navegador no chat
   manual ou use o webhook DEV com um `wa_id` sintético inédito. Recarregar a
   página não garante um novo `sessionId` e pode continuar a conversa no CRM.

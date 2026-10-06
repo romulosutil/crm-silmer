@@ -46,7 +46,7 @@ const BRIEFING_FIELDS = [
 // ADR 012 (D24, D25): the ficha the bot fills is the name plus these points,
 // and this is the one rhythm it asks them in, one point per message. The
 // workflow, not the model, picks the next point: the first one still missing.
-// ADR 021: the first point is what the customer wants to customize
+// ADR 024: the first point is what the customer wants to customize
 // (`product_type`); the model is asked only for products that have models
 // (MODEL_KINDS), and a kit (PRODUCT_RULE) fills, and so skips, what the
 // product already defines. Where the print goes and when the customer needs
@@ -64,14 +64,14 @@ const FICHA_RHYTHM = [
   'needed_by',
 ];
 
-// ADR 021: the order item points the bot only records. With the rhythm, they
+// ADR 024: the order item points the bot only records. With the rhythm, they
 // are what opens the pending order (ADR 014).
 const PASSIVE_POINTS = ['artwork_status', 'fabrics', 'sizes', 'collar'];
 
-// ADR 021: the kinds of product whose model the bot asks.
+// ADR 024: the kinds of product whose model the bot asks.
 const MODEL_KINDS = ['roupa', 'bone', 'bolsa'];
 
-// ADR 021: what to ask for each point, by kind of product when it changes.
+// ADR 024: what to ask for each point, by kind of product when it changes.
 // The context node gives it to the model, and the decision node falls back on
 // it when it removes a redundant question from the reply.
 const POINT_QUESTIONS = {
@@ -104,7 +104,7 @@ const POINT_QUESTIONS = {
   needed_by: 'Para quando você precisa?',
 };
 
-// ADR 021: how the workflow reads the product, and the kits. A kind is named,
+// ADR 024: how the workflow reads the product, and the kits. A kind is named,
 // by the product's name (PRODUCT_KINDS) or by a model of it (NAMED_MODELS), in
 // the product or in the model the customer gave; anything else is "outro".
 // KITS hold what a product or a technique already defines: the workflow fills
@@ -189,7 +189,7 @@ const HINTS = [
     text: 'caneca, squeeze, garrafa e mouse pad costumam ser sublimação' },
   { when: (f) => !isEmptyField(f.customizations) || !isEmptyField(f.numbers),
     text: 'personalização individual: pedir a lista de nomes, números e tamanhos' },
-  // ADR 022: the CRM makes one item per audience when it reads the split.
+  // ADR 025: the CRM makes one item per audience when it reads the split.
   { when: (f) => !isEmptyField(f.audiences) || /divis\w* por publico/.test(productText(f.notes)),
     text: 'divisão por público: cada público vira um item' }
 ];
@@ -216,7 +216,7 @@ const PRODUCT_LABELS = { roupa: 'roupa', bone: 'boné', bolsa: 'mochila ou bolsa
 // ADR 014 (D29): when the pending order opens. The workflow decides, not the
 // model: the order opens in the turn the ficha (the briefing so far plus this
 // turn's patch) first holds one of the ficha points or of the points the bot
-// only records (ADR 021), and stays open; the quote_ prefix of
+// only records (ADR 024), and stays open; the quote_ prefix of
 // briefing_status marks it. "Definir com o vendedor" and the name alone open
 // nothing, and the caller rules out what is not an order from scratch
 // (ADR 013). Both Code nodes that answer a customer message receive this rule
@@ -602,13 +602,13 @@ const status = String(briefing.briefing_status ?? '');
 const clarifying = status.endsWith('clarifying');
 // The customer skipped the last question but told something else about the order (PO, 01/10).
 const skipped = status.endsWith('skipped');
-// ADR 021 (PO, 05/10): the name is asked with the greeting and, if the customer does not give
+// ADR 024 (PO, 05/10): the name is asked with the greeting and, if the customer does not give
 // it, once more right after, alone; then the bot stops asking and the seller confirms it.
 const nameAsks = briefing.customer_name ? 0 : recentMessages
   .filter((message) => message.sender_type === 'ai' && /\\bnome\\b/i.test(String(message.text ?? ''))).length;
 const nameAsked = nameAsks > 0;
 // ADR 012 (D25): the workflow picks the next ficha point from one fixed rhythm, one point per message.
-// ADR 021: the product the customer wants to customize decides which points the rhythm asks.
+// ADR 024: the product the customer wants to customize decides which points the rhythm asks.
 ${PRODUCT_RULE}
 const POINT_LABELS = ${JSON.stringify(FICHA_POINT_LABELS)};
 const point = (field) => field + ' (' + (POINT_LABELS[field] ?? field) + ')';
@@ -866,7 +866,7 @@ if (patch.artwork_status && !artworkOrigin.test(fold(patch.artwork_status))) {
 // A message that adds something to the ficha is progress, even when it skips the question (PO, 01/10).
 const addsToFicha = Object.keys(patch).some((key) => key !== 'notes' && fold(patch[key]) !== fold(previous[key]));
 // ADR 012 (D24): the bot asks only the name and the ficha points, in one fixed rhythm (D25);
-// ADR 021: the product decides which points.
+// ADR 024: the product decides which points.
 ${PRODUCT_RULE}
 const askable = ['customer_name', ...FICHA_RHYTHM];
 if (decision.answer_status === 'deferred' && askable.includes(pendingBefore)
@@ -874,7 +874,7 @@ if (decision.answer_status === 'deferred' && askable.includes(pendingBefore)
   patch[pendingBefore] = DEFERRED;
 }
 const briefing = { ...previous, ...patch };
-/// ADR 021 (Tech Lead, revocable by the PO): a cap or a bag keeps its name in the model ("boné
+/// ADR 024 (Tech Lead, revocable by the PO): a cap or a bag keeps its name in the model ("boné
 // trucker"), which is what the order item shows.
 const typeKinds = productKinds(briefing);
 const typeKind = typeKinds.length === 1 ? typeKinds[0] : null;
@@ -885,7 +885,7 @@ if (['bone', 'bolsa'].includes(typeKind) && patch.product_model && patch.product
   patch.product_model = briefing.product_type + ' ' + patch.product_model;
   briefing.product_model = patch.product_model;
 }
-// ADR 021: the workflow records what it fills on its own, only in empty fields, so the bot never
+// ADR 024: the workflow records what it fills on its own, only in empty fields, so the bot never
 // asks it: the product from the model ("30 regatas"), the model a product already names
 // ("ecobags"), and the kits (the abadá, full sublimation, the collar of the regata, the polo, the
 // cap and the bag; ADR 012 item 4 is now the regata and polo kits).
@@ -895,13 +895,13 @@ for (const [field, value] of Object.entries(inferredFields(briefing))) {
 }
 const kinds = productKinds(briefing);
 
-// ADR 021 (PO, 05/10): the name is asked with the greeting and once more right after; while the
+// ADR 024 (PO, 05/10): the name is asked with the greeting and once more right after; while the
 // bot still asks it, it holds the ficha open. Asked twice, the seller confirms it.
 const nameAsks = Number.isInteger(context.name_asks) ? context.name_asks : context.name_asked ? 1 : 0;
 const nameRequired = Boolean(briefing.customer_name) || nameAsks < 2;
 // briefing_complete needs the points of the product and the name. Everything else (artwork,
 // fabric, technique, sizes, collar, order name, purpose, delivery...) is kept when the customer
-// says it and never asked: the seller completes it (ADR 012, ADR 021).
+// says it and never asked: the seller completes it (ADR 012, ADR 024).
 const required = [...fichaPoints(briefing), ...(nameRequired ? ['customer_name'] : [])];
 
 const deliveryMode = fold(briefing.delivery_mode);
@@ -984,7 +984,7 @@ const externalContext = decision.external_context === true
 // pending question nor adds to the ficha ignores it; two misses on the same question hand off.
 const previousStatus = String(previous.briefing_status ?? '');
 // ADR 014 (D29): the pending order opens in the turn the ficha first holds one of its points
-// (ADR 021: the product is the first), on the reply or on the handoff, and stays open. Something already going on elsewhere
+// (ADR 024: the product is the first), on the reply or on the handoff, and stays open. Something already going on elsewhere
 // never opens one (ADR 013). The model's order_intent_confirmed, if it still sends one, is ignored.
 ${OPEN_ORDER_RULE}
 const openOrder = orderAlreadyOpen(previous) || (!externalContext && holdsFichaPoint(briefing));
@@ -1070,7 +1070,7 @@ const laterPoints = new Set([
 const line = [...pointsMissing.filter((field) => !laterPoints.has(field)),
   ...pointsMissing.filter((field) => laterPoints.has(field))];
 // One miss asks the same point again with options; the name goes with the greeting and, if the
-// customer does not give it, right after, alone (ADR 021).
+// customer does not give it, right after, alone (ADR 024).
 const askAgain = stillPending && (failedAnswer || (wasClarifying && keepsState));
 // The point just asked comes first until it is answered, unless the customer skipped it.
 const keepPending = stillPending && order(pendingBefore) >= 0 && !skippedWithNews;
@@ -1111,12 +1111,12 @@ const reasoning = String(decision.reasoning ?? '').slice(0, 500);
 // Any field left to the seller shows in the summary, asked or volunteered (ADR 009 item 11).
 const deferredFields = Object.keys(briefing).filter((field) => briefing[field] === DEFERRED);
 // ADR 013 (D28): the ficha KPI is the share of the name and the ficha points the customer
-// filled; a point left to the seller does not count. The goal is half the ficha. ADR 021: the
+// filled; a point left to the seller does not count. The goal is half the ficha. ADR 024: the
 // points are the ones of the product: 7 for clothing, a cap or a bag, 6 for another product.
 const fichaFilled = required.filter((field) => !missing.includes(field) && briefing[field] !== DEFERRED).length;
 const fichaShare = 'Ficha: ' + fichaFilled + ' de ' + required.length
   + ' (' + Math.round((100 * fichaFilled) / required.length) + '%).';
-// ADR 021: what production cannot do as asked, and what the product usually takes, for the
+// ADR 024: what production cannot do as asked, and what the product usually takes, for the
 // seller only; the bot never tells the customer.
 const alerts = notesFor(ALERTS, briefing);
 const hints = notesFor(HINTS, briefing);

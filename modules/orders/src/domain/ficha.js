@@ -16,7 +16,7 @@ import { parseSizes } from './sizes.js';
 // binding are additional; the model and the old collar binding stay stored
 // for legacy orders.
 //
-// ADR 022: an item may also say its audience (`publico`) and the quantity the
+// ADR 025: an item may also say its audience (`publico`) and the quantity the
 // customer said for it (`quantidade_informada`); both are optional, never
 // block the order, and the quantity is only a reference next to the grade.
 
@@ -174,7 +174,7 @@ export function hasArtworkOrigin(artwork) {
 
 /**
  * ADR 016: a ficha stored before the seven-point item has no `cor`,
- * `estampa` or `gola`; ADR 020 adds `sem_estampa` to the art; ADR 022 adds
+ * `estampa` or `gola`; ADR 020 adds `sem_estampa` to the art; ADR 025 adds
  * `publico` and `quantidade_informada`. They are read blank, so nothing is
  * migrated and the encrypted envelope keeps its version.
  *
@@ -350,7 +350,7 @@ function validateItem(raw, itemIndex) {
 }
 
 /**
- * ADR 022: the audience is one of the closed list (D1), or blank when the
+ * ADR 025: the audience is one of the closed list (D1), or blank when the
  * customer did not split the order.
  *
  * @param {unknown} value @param {string} field @returns {string}
@@ -370,7 +370,7 @@ function optionalAudience(value, field) {
 }
 
 /**
- * ADR 022: the quantity the customer said for the item, a reference only.
+ * ADR 025: the quantity the customer said for the item, a reference only.
  *
  * @param {unknown} value @param {string} field @returns {number|null}
  */
@@ -598,7 +598,7 @@ function briefingGrade(value) {
  * ("Definir com o vendedor") is never a ficha value: the field stays blank,
  * so it keeps blocking the order, and the text stays as service data. So
  * does anything else the bot collected, including the quantity the customer
- * said. ADR 022: a split by audience read without doubt gives one item per
+ * said. ADR 025: a split by audience read without doubt gives one item per
  * audience instead, each with its audience and quantity said.
  *
  * @param {Record<string, unknown>|null|undefined} briefing
@@ -626,7 +626,7 @@ export function briefingToFicha(briefing) {
   const tipo =
     take('product_model', fichaText) || take('product_type', fichaText);
   const origin = take('artwork_status', artworkOrigin);
-  // ADR 022: a split read without doubt makes one item per audience. Several
+  // ADR 025: a split read without doubt makes one item per audience. Several
   // items share the points, but not the sizes: those stay as service data for
   // the seller to share out.
   const split = take(
@@ -736,7 +736,7 @@ export function orderClient(context) {
  * observations, files and any further items are the seller's and stay as
  * they are.
  *
- * ADR 022: a split by audience makes the bot's items the leading items with
+ * ADR 025: a split by audience makes the bot's items the leading items with
  * an audience (or the first item, before any split). A new split rebuilds
  * them, one per audience, keeping the technique the seller chose; items the
  * seller added after them stay. The grade of a rebuilt item is not carried

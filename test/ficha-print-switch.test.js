@@ -269,7 +269,7 @@ test('the print route prints whatever the switch names (PIM-10)', async (t) => {
   assert.equal(response.body, renderOrderFicha(order, PRINT_TEMPLATE));
 });
 
-test('orders print on v6 since the PO approved its sample (T95, PIM-10)', async (t) => {
+test('orders print on v6 since the PO approved its sample (T100, PIM-10)', async (t) => {
   const { order, response } = await printedThroughRoute(t);
 
   assert.equal(PRINT_TEMPLATE, TEMPLATE_V6);

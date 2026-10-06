@@ -441,6 +441,54 @@ export class PostgresN8nIntegrationRepository {
   }
 
   /** @param {any} input @param {any} runtime */
+  /** Read the immutable bound variant under the same lock order as reservation. @param {any} input */
+  async readReservedMedia(input) {
+    return this.database.transaction(async (client) => {
+      await transactionBounds(client);
+      const target = (
+        await client.query(
+          'SELECT conversation_id FROM crm.n8n_commands WHERE command_id=$1',
+          [input.commandId],
+        )
+      ).rows[0];
+      if (!target) throw new N8nNotFoundError('Command not found');
+      const conversation = (
+        await client.query(
+          'SELECT * FROM crm.conversations WHERE id=$1 FOR UPDATE',
+          [target.conversation_id],
+        )
+      ).rows[0];
+      const command = await selectPanelCommand(client, input.commandId);
+      await assertReservedExecution(client, command, input);
+      const payload = decryptJson(
+        command.payload_envelope,
+        `n8n-command:${command.command_id}`,
+        this.envelopeKey,
+      );
+      const bound = (
+        await client.query(
+          'SELECT * FROM crm.chat_media WHERE message_id=$1 AND conversation_id=$2 FOR UPDATE',
+          [command.message_id, target.conversation_id],
+        )
+      ).rows[0];
+      assertPanelSendFence(
+        command,
+        conversation,
+        {
+          automationEpoch: payload.automation_epoch,
+          sourceRevision: payload.source_revision,
+          message: payload.message,
+        },
+        this.envelopeKey,
+        bound,
+        this.messageEnvelopeKey,
+        'sending',
+      );
+      return bound;
+    });
+  }
+
+  /** @param {any} input @param {any} runtime */
   async recordEvent(input, runtime) {
     // Order projection opens its own transaction (PostgresOrderRepository
     // owns that) and both it and this transaction can insert into
@@ -600,6 +648,29 @@ export class PostgresN8nIntegrationRepository {
         }
       } else if (eventInput.eventType === 'workflow.failed') {
         outcome.failureCode = safeFailureCode(eventInput.failure?.code);
+        if (eventInput.failure?.phase === 'before_message_send') {
+          const command = await selectPanelCommand(
+            client,
+            eventInput.commandId,
+          );
+          await assertReservedExecution(client, command, eventInput);
+          if (command.conversation_id !== eventInput.conversationId)
+            throw new N8nConflictError('Failure target mismatch');
+          const message = await client.query(
+            `UPDATE crm.messages SET status='failed',delivery_status='failed',delivery_status_at=$2 WHERE id=$1 AND status='sending' AND external_message_id IS NULL RETURNING id`,
+            [command.message_id, processedAt],
+          );
+          if (!message.rows[0])
+            throw new N8nConflictError('Send already concluded');
+          const completed = await client.query(
+            `UPDATE crm.n8n_commands SET status='failed',retryable=false,retry_safe=false,last_error_code=$3,locked_by=NULL,locked_until=NULL,completed_at=$2,updated_at=$2 WHERE command_id=$1 AND status='processing' AND external_message_id IS NULL RETURNING command_id`,
+            [eventInput.commandId, processedAt, eventInput.failure.code],
+          );
+          if (!completed.rows[0])
+            throw new N8nConflictError('Command already concluded');
+          messageId = command.message_id;
+          outcome.deliveryStatus = 'failed';
+        }
       }
 
       await insertReceipt(client, runtime, {
@@ -1198,6 +1269,41 @@ async function resolveEventConversation(client, input) {
   return rows[0].conversation_id;
 }
 
+/** Original reservation is authoritative; a replay cannot stamp another identity. @param {Queryable} client @param {any} command @param {any} input */
+async function assertReservedExecution(client, command, input) {
+  if (
+    !command ||
+    command.status !== 'processing' ||
+    command.message_status !== 'sending' ||
+    command.message_external_id ||
+    command.external_message_id ||
+    command.action !== 'send_message' ||
+    command.actor_kind !== 'human' ||
+    command.message_author_kind !== 'human' ||
+    command.message_author_id !== command.actor_id ||
+    command.message_delivery_status ||
+    command.message_execution_id !== input.technical.executionId
+  )
+    throw new N8nConflictError('Reservation is not active');
+  const receipts = (
+    await client.query(
+      `SELECT workflow_key,workflow_version,execution_id,automation_epoch,source_revision FROM crm.n8n_events WHERE message_id=$1 AND conversation_id=$2 AND event_type='message.send.requested'`,
+      [command.message_id, command.conversation_id],
+    )
+  ).rows;
+  if (
+    receipts.length !== 1 ||
+    receipts[0].workflow_key !== input.technical.workflowKey ||
+    receipts[0].workflow_version !== input.technical.workflowVersion ||
+    receipts[0].execution_id !== input.technical.executionId ||
+    (input.automationEpoch != null &&
+      Number(receipts[0].automation_epoch) !== input.automationEpoch) ||
+    (input.sourceRevision != null &&
+      Number(receipts[0].source_revision) !== input.sourceRevision)
+  )
+    throw new N8nConflictError('Reservation execution mismatch');
+}
+
 /** @param {Queryable} client @param {string} commandId */
 async function selectPanelCommand(client, commandId) {
   return (
@@ -1205,7 +1311,10 @@ async function selectPanelCommand(client, commandId) {
       `SELECT command.*, message.status AS message_status,
               message.message_type, message.content_envelope AS message_content_envelope,
               message.conversation_id AS message_conversation_id,
-              message.author_id AS message_author_id, message.author_kind AS message_author_kind
+              message.author_id AS message_author_id, message.author_kind AS message_author_kind,
+              message.n8n_execution_id AS message_execution_id,
+              message.external_message_id AS message_external_id,
+              message.delivery_status AS message_delivery_status
        FROM crm.n8n_commands AS command
        JOIN crm.messages AS message ON message.id = command.message_id
        WHERE command.command_id = $1
@@ -1223,6 +1332,7 @@ function assertPanelSendFence(
   key,
   bound,
   messageKey,
+  expectedStatus = 'queued',
 ) {
   if (
     command.action !== 'send_message' ||
@@ -1232,7 +1342,7 @@ function assertPanelSendFence(
     command.conversation_id !== conversation.id ||
     command.message_conversation_id !== conversation.id ||
     !command.message_id ||
-    command.message_status !== 'queued' ||
+    command.message_status !== expectedStatus ||
     command.status !== 'processing' ||
     Number(command.automation_epoch) !== Number(input.automationEpoch) ||
     Number(conversation.automation_epoch) !== Number(input.automationEpoch) ||

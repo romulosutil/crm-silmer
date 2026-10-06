@@ -1,5 +1,17 @@
 # Ativação de mídia do chat no RustFS
 
+T13: leitura técnica exige Basic e integration.n8n.command.media.read,
+command processing, message sending e variante bound attached/clean. A
+identidade é workflow/version/execution do recibo de reserva em n8n_events;
+GET não reserva nem renova. `?preflight=true` é JSON seguro sem S3/bytes,
+após upload Meta e antes de mensagens; HEAD está desativado. Codificar o
+command_id inteiro como um segmento. Nunca seguir redirecionamento com Basic.
+Falhas conhecidas antes de Meta/messages usam workflow.failed com phase
+before_message_send e allowlist OpenAPI. A conclusão CAS da reserva original
+não exige epoch atual e nunca dá retry. Após invocar /messages, usar unknown;
+ErrorTrigger genérico não conclui envio. Preflight reduz a janela de corrida,
+sem alegar atomicidade CRM/Meta.
+
 T12: outbox mantém message de texto sem alteração. Mídia leva na message plana
 media_id,sha256,mime_type,size_bytes,type,text,caption (audio:null), e
 filename/media_url null. Fonte é a chat_media bound attached/clean, com autor,

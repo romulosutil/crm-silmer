@@ -40,6 +40,19 @@ export function createChatMediaApiRuntime({
     /** @param {any} input */
     content: (input) =>
       readChatMediaContent({ repository, store, bucketAlias }, input),
+    /** Technical reader has already checked original reservation and current fence. @param {any} row */
+    reservedContent: (row) =>
+      readChatMediaContent(
+        {
+          repository: {
+            readForActor: async () => row,
+            markLost: (/** @type {any} */ lost) => repository.markLost(lost),
+          },
+          store,
+          bucketAlias,
+        },
+        { mediaId: row.id },
+      ),
     /** @param {any} input */
     async status(input) {
       const row = await repository.readForActor(input);

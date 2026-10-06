@@ -514,6 +514,55 @@ paths:
         '415': { $ref: '#/components/responses/N8nProblem' }
         '422': { $ref: '#/components/responses/N8nProblem' }
         '503': { $ref: '#/components/responses/N8nProblem' }
+  /integrations/n8n/commands/{commandId}/media:
+    get:
+      operationId: readReservedN8nMedia
+      summary: Read private media bound to the original active human send reservation
+      description: >-
+        Requires integration.n8n.command.media.read and the original workflow key,
+        version and execution. Command processing, message sending, bound clean
+        variant and current human/nonterminal epoch/revision are revalidated.
+        preflight=true returns safe JSON without storage reads, reservation or
+        renewal. Neither representation grants a new send authorization. HEAD is
+        not exposed; foreign selectors and redirects are prohibited.
+      security: [{ automationBasic: [] }]
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 512 }
+        - name: preflight
+          in: query
+          schema: { type: string, const: 'true' }
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkflowKey'
+        - $ref: '#/components/parameters/WorkflowVersion'
+        - $ref: '#/components/parameters/ExecutionId'
+      responses:
+        '200':
+          description: Private no-store bytes, or read-only JSON preflight
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [valid, media_id, type, sha256, mime_type, size_bytes]
+                properties:
+                  valid: { const: true }
+                  media_id: { type: string, format: uuid }
+                  type: { enum: [image, audio, video] }
+                  sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+                  mime_type: { type: string }
+                  size_bytes: { type: integer, minimum: 1, maximum: 16777216 }
+        '400': { description: Invalid query or missing technical identity }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Reserved command not found }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '410': { description: Object lost, metadata preserved }
+        '503': { description: Storage or integration unavailable }
   /integrations/n8n/events:
     post:
       operationId: recordN8nEvent
@@ -1366,7 +1415,20 @@ components:
               properties:
                 command_id: { type: string, minLength: 1, maxLength: 512 }
                 text: { type: string, minLength: 1, maxLength: 4096 }
-        failure: { type: object, additionalProperties: true }
+        failure:
+          type: object
+          additionalProperties: true
+          description: >-
+            Generic workflow.failed is diagnostic only. The explicit
+            phase=before_message_send requires command_id and conversation_id,
+            only phase/code keys and one allowlisted code: MEDIA_DOWNLOAD_FAILED,
+            MEDIA_INTEGRITY_MISMATCH, MEDIA_UPLOAD_FAILED,
+            MEDIA_PREFLIGHT_REJECTED or MEDIA_PREFLIGHT_UNAVAILABLE. It concludes
+            processing/sending under the original reservation execution with
+            retryable=false and retry_safe=false, even after epoch invalidation.
+            It cannot regress sent/delivered/read/outcome_unknown. Use only on
+            branches proven to precede Meta/messages; errors after invocation
+            require message.send.unknown, never this completion.
         open_order:
           type: boolean
           description: >-

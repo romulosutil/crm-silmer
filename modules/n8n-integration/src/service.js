@@ -276,6 +276,27 @@ export function createN8nIntegrationService({
 /** @param {any} input */
 function validateEventShape(input) {
   if (
+    input.eventType === 'workflow.failed' &&
+    input.failure?.phase !== undefined
+  ) {
+    if (
+      input.failure.phase !== 'before_message_send' ||
+      !input.commandId ||
+      !input.conversationId ||
+      Object.keys(input.failure).some(
+        (key) => !['phase', 'code'].includes(key),
+      ) ||
+      ![
+        'MEDIA_DOWNLOAD_FAILED',
+        'MEDIA_INTEGRITY_MISMATCH',
+        'MEDIA_UPLOAD_FAILED',
+        'MEDIA_PREFLIGHT_REJECTED',
+        'MEDIA_PREFLIGHT_UNAVAILABLE',
+      ].includes(input.failure.code)
+    )
+      throw new N8nValidationError('Invalid before-message-send failure');
+  }
+  if (
     input.briefingPatch &&
     !['handoff.requested', 'message.send.requested'].includes(input.eventType)
   ) {

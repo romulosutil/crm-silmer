@@ -92,6 +92,8 @@ export function createN8nApiRuntime(database, options = {}) {
     commandOutbox,
     receiveInbound: service.receiveInbound,
     recordEvent: service.recordEvent,
+    readReservedMedia: (/** @type {any} */ input) =>
+      repository.readReservedMedia(input),
     /**
      * The MVP agent's `order.intent_confirmed` event, kept out of the n8n
      * integration service: order creation is idempotent by conversation

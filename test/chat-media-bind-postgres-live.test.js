@@ -778,6 +778,156 @@ if (connectionString) {
       assert.deepEqual(await effects(), before);
       assert.equal((await snapshot()).used, '100');
     });
+  async function effects() {
+    const result = [];
+    for (const table of [
+      'messages',
+      'n8n_commands',
+      'audit_events',
+      'domain_events',
+      'n8n_events',
+    ])
+      result.push(
+        (
+          await pool.query(
+            `SELECT to_jsonb(t) AS row FROM crm.${table} t ORDER BY to_jsonb(t)::text`,
+          )
+        ).rows,
+      );
+    return result;
+  }
+  for (const mutation of [
+    `UPDATE crm.conversations SET terminal_at=now(),state='sem_lead' WHERE id='bind-conversation'`,
+    `UPDATE crm.conversations SET inbound_revision=inbound_revision+1 WHERE id='bind-conversation'`,
+    `UPDATE crm.chat_media SET content_sha256=repeat('d',64)`,
+    `UPDATE crm.chat_media SET state='unavailable',validation_status='infected',sanitized_reason='infected'`,
+  ])
+    test(`T13/MED-21/22: stale or inconsistent variant denies read ${mutation.split('SET ')[1]}`, async () => {
+      const f = await mediaPanelCommand();
+      const { PostgresN8nIntegrationRepository } =
+        await import('../modules/n8n-integration/src/postgres-repository.js');
+      const repo = new PostgresN8nIntegrationRepository({
+        database,
+        envelopeKey: KEY,
+      });
+      const event = f.event('stale-read');
+      await f.integration.recordEvent(event);
+      await pool.query(mutation);
+      const before = await effects();
+      await assert.rejects(
+        repo.readReservedMedia({
+          commandId: f.row.command_id,
+          technical: event.technical,
+        }),
+        { statusCode: 409 },
+      );
+      assert.deepEqual(await effects(), before);
+    });
+  test('T13/MED-22: reserved media is read-only and bound to original execution', async () => {
+    const f = await mediaPanelCommand();
+    const { PostgresN8nIntegrationRepository } =
+      await import('../modules/n8n-integration/src/postgres-repository.js');
+    const repo = new PostgresN8nIntegrationRepository({
+      database,
+      envelopeKey: KEY,
+    });
+    const event = f.event('read-reserve');
+    const input = { commandId: f.row.command_id, technical: event.technical };
+    await assert.rejects(repo.readReservedMedia(input), { statusCode: 409 });
+    await f.integration.recordEvent(event);
+    const before = await effects();
+    assert.equal((await repo.readReservedMedia(input)).id, f.id);
+    assert.equal(
+      (await f.integration.recordEvent(event)).send_authorized,
+      false,
+    );
+    assert.equal(
+      (await repo.readReservedMedia(input)).content_sha256,
+      'b'.repeat(64),
+    );
+    assert.deepEqual(await effects(), before);
+    for (const key of ['executionId', 'workflowKey', 'workflowVersion']) {
+      await assert.rejects(
+        repo.readReservedMedia({
+          ...input,
+          technical: { ...input.technical, [key]: 'other' },
+        }),
+        { statusCode: 409 },
+      );
+    }
+    await pool.query(
+      `UPDATE crm.conversations SET automation_epoch=automation_epoch+1 WHERE id='bind-conversation'`,
+    );
+    await assert.rejects(repo.readReservedMedia(input), { statusCode: 409 });
+    const failure = f.event('before-send-failure', {
+      event_type: 'workflow.failed',
+      failure: {
+        phase: 'before_message_send',
+        code: 'MEDIA_PREFLIGHT_REJECTED',
+      },
+    });
+    delete failure.message;
+    await f.integration.recordEvent(failure);
+    assert.deepEqual(
+      (
+        await pool.query(
+          'SELECT status,retryable,retry_safe,locked_by,locked_until FROM crm.n8n_commands WHERE command_id=$1',
+          [f.row.command_id],
+        )
+      ).rows[0],
+      {
+        status: 'failed',
+        retryable: false,
+        retry_safe: false,
+        locked_by: null,
+        locked_until: null,
+      },
+    );
+    assert.equal(
+      (
+        await pool.query('SELECT status FROM crm.messages WHERE id=$1', [
+          f.sent.id,
+        ])
+      ).rows[0].status,
+      'failed',
+    );
+    const after = await effects();
+    assert.equal((await f.integration.recordEvent(failure)).duplicate, true);
+    assert.deepEqual(await effects(), after);
+  });
+  for (const terminal of ['outcome_unknown', 'sent'])
+    test(`T13/MED-24: before-send failure cannot regress ${terminal} or another execution`, async () => {
+      const f = await mediaPanelCommand();
+      await f.integration.recordEvent(f.event('failure-reserve'));
+      const failure = f.event('failure-abort', {
+        event_type: 'workflow.failed',
+        failure: {
+          phase: 'before_message_send',
+          code: 'MEDIA_DOWNLOAD_FAILED',
+        },
+      });
+      delete failure.message;
+      await assert.rejects(
+        f.integration.recordEvent({
+          ...failure,
+          technical: { ...failure.technical, executionId: 'other' },
+        }),
+        { statusCode: 409 },
+      );
+      await pool.query('UPDATE crm.messages SET status=$2 WHERE id=$1', [
+        f.sent.id,
+        terminal,
+      ]);
+      await pool.query(
+        'UPDATE crm.n8n_commands SET status=$2,completed_at=now(),locked_by=NULL,locked_until=NULL WHERE command_id=$1',
+        [f.row.command_id, terminal],
+      );
+      const before = await effects();
+      await assert.rejects(f.integration.recordEvent(failure), {
+        statusCode: 409,
+      });
+      assert.deepEqual(await effects(), before);
+    });
   for (const type of ['audio', 'video'])
     test(`T12/MED-20/21: exact ${type} variant reserves with appropriate caption`, async () => {
       const f = await mediaPanelCommand(type);

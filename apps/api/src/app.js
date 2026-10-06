@@ -19,6 +19,7 @@ import { registerChatMediaStatusRoutes } from './chat-media-status-routes.js';
 import { registerChatMediaContentRoutes } from './chat-media-content-routes.js';
 import { registerIdentityRoutes } from './identity-routes.js';
 import { registerN8nRoutes } from './n8n-routes.js';
+import { registerN8nCommandMediaRoutes } from './n8n-command-media-routes.js';
 import { registerOperationRoutes } from './operation-routes.js';
 import { registerOrderRoutes } from './order-routes.js';
 import { WEBHOOK_BODY_LIMIT_BYTES } from './whatsapp-webhook-runtime.js';
@@ -242,6 +243,17 @@ export function createApi(options = {}, runtime = {}) {
   }
 
   if (runtime.chatMedia) {
+    if (runtime.n8n?.readReservedMedia)
+      registerN8nCommandMediaRoutes(
+        api,
+        runtime.n8n,
+        runtime.chatMedia,
+        (/** @type {object} */ request) => {
+          const context = requests.get(request);
+          if (!context) throw new Error('Missing request context');
+          return context;
+        },
+      );
     registerChatMediaContentRoutes(
       api,
       runtime.chatMedia,

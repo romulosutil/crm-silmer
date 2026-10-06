@@ -31,6 +31,20 @@ tarefas estão no [plano](../../.specs/features/inbox-media-rustfs/design.md).
 
 ## Critérios de decisão e aceite
 
+T13 acrescenta GET técnico por comando e representação `?preflight=true` no
+mesmo endpoint. A leitura exige capacidade mínima e a identidade original da
+reserva em `crm.n8n_events`; replay não cria autorização, lease ou reserva.
+Preflight revalida epoch/revisão após upload Meta e imediatamente antes de
+`/messages`, sem S3 ou bytes. Não há atomicidade entre CRM e Meta.
+
+`workflow.failed` com `failure.phase=before_message_send` conclui somente o
+comando processing e a mensagem sending da mesma execução original, sem
+external_message_id. Códigos são a allowlist publicada no OpenAPI. Epoch atual
+não é necessário para abortar uma reserva invalidada. CAS, flags de retry false
+e recibo idempotente impedem regressão de sent/read/delivered/unknown. Ramos
+de erro após invocar `/messages` usam unknown; ErrorTrigger genérico continua
+diagnóstico. A prova do ramo anterior ao efeito pertence ao workflow T14/T15.
+
 - MED-01..29; INBOX-MEDIA-1 e MSG/PRV vigentes com a exceção da ADR 023.
 - Bucket privado próprio, sem compartilhar hermes-backups; nenhuma credencial root.
 - Smoke comprova PUT/HEAD/GET/Range/DELETE e negativa de acesso entre buckets na

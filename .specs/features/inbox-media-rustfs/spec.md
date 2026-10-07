@@ -217,7 +217,7 @@ de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
 | MED-29         | Reprovação assíncrona | Execute | In Progress | T4,T5,T6,T8           |
 | MED-30         | Validação automática  | Execute | In Progress | T25,T24               |
 | MED-31         | Composer integrado    | Execute | In Progress | T25,T24               |
-| MED-32         | Erro recuperável      | Execute | In Progress | T25,T24               |
+| MED-32         | Erro recuperável      | Execute | In Progress | T25,T26,T24           |
 
 Coverage: 32 total, 32 mapped to tasks, 0 unmapped. Nenhum requisito Verified.
 

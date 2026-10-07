@@ -86,6 +86,17 @@ async function setup(page, options = {}) {
       sends.push(req);
       if (options.pendingSend && sends.length === 1) return;
       if (options.sendError && sends.length === 1) return route.abort('failed');
+      if (options.sendStatus && sends.length === 1)
+        return route.fulfill({
+          status: options.sendStatus,
+          json: {
+            accepted: false,
+            error: {
+              code: options.sendCode,
+              detail: 'PRIVATE_SEND_ERROR_CANARY',
+            },
+          },
+        });
       return route.fulfill({
         status: 202,
         json: { id: 'message-1', status: 'pending' },
@@ -576,3 +587,145 @@ test('T25/MED-25/31: attachment picker is styled, keyboard operable and sized fo
   ).toBe(true);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+/** @type {Array<[number, string, string, boolean]>} */
+const sendRefusals = [
+  [
+    401,
+    'INVALID_REQUEST',
+    'Sua sessão expirou. Entre novamente antes de tentar o mesmo envio.',
+    true,
+  ],
+  [
+    403,
+    'INBOX_FORBIDDEN',
+    'Este envio não é permitido. Verifique o responsável pelo atendimento e a disponibilidade dos anexos antes de tentar novamente.',
+    true,
+  ],
+  [
+    429,
+    'INVALID_REQUEST',
+    'Há muitos envios em andamento. Aguarde um pouco antes de tentar o mesmo envio.',
+    true,
+  ],
+  [
+    400,
+    'INBOX_INVALID',
+    'O anexo ou a legenda foi recusado. Remova o anexo, revise o arquivo e selecione novamente antes de enviar.',
+    false,
+  ],
+  [
+    404,
+    'INVALID_REQUEST',
+    'A conversa ou o serviço de anexos não está disponível. Remova o anexo e confira a conversa antes de selecionar novamente.',
+    false,
+  ],
+  [
+    409,
+    'INBOX_CONFLICT',
+    'A conversa ou o anexo mudou. Remova o anexo, atualize a conversa e selecione novamente antes de enviar.',
+    false,
+  ],
+  [
+    413,
+    'INVALID_REQUEST',
+    'O arquivo ultrapassa o limite permitido. Remova o anexo e escolha um arquivo menor.',
+    false,
+  ],
+  [
+    422,
+    'INBOX_INVALID',
+    'O anexo ou a legenda foi recusado. Remova o anexo, revise o arquivo e selecione novamente antes de enviar.',
+    false,
+  ],
+];
+for (const [code, sendCode, message, retryAllowed] of sendRefusals)
+  test(`T25-FIX1/MED-32: known send refusal ${code} preserves the draft and offers the appropriate action without exposing private details`, async ({
+    page,
+  }) => {
+    const { uploads, sends } = await setup(page, {
+      sendStatus: code,
+      sendCode,
+    });
+    await select(page);
+    await ready(page);
+    await page.getByLabel('Legenda').fill('Legenda original');
+    await page
+      .getByRole('button', { name: 'Enviar anexo', exact: true })
+      .click();
+    await expect(page.getByRole('alert')).toHaveText(message);
+    await expect(page.getByRole('alert')).not.toContainText(
+      'PRIVATE_SEND_ERROR_CANARY',
+    );
+    await expect(
+      page.getByRole('img', { name: 'Prévia do anexo' }),
+    ).toBeVisible();
+    await expect(page.getByLabel('Legenda')).toHaveValue('Legenda original');
+    await expect(page.getByLabel('Legenda')).toBeDisabled();
+    expect(uploads).toHaveLength(1);
+    expect(sends).toHaveLength(1);
+    if (retryAllowed) {
+      const retry = page.getByRole('button', {
+        name: 'Tentar enviar novamente',
+      });
+      await expect(retry).toBeEnabled();
+      await retry.click();
+      await expect(
+        page.getByText('Mensagem enviada', { exact: true }),
+      ).toBeVisible();
+      expect(sends).toHaveLength(2);
+      expect(sends[0].headers()['idempotency-key']).toBe(
+        sends[1].headers()['idempotency-key'],
+      );
+      expect(sends[0].postDataJSON()).toEqual(sends[1].postDataJSON());
+      expect(uploads).toHaveLength(1);
+    } else {
+      await expect(
+        page.getByRole('button', { name: 'Envio indisponível', exact: true }),
+      ).toBeDisabled();
+      const remove = page.getByRole('button', { name: 'Remover anexo' });
+      await expect(remove).toBeEnabled();
+      await remove.click();
+      await expect(
+        page.getByRole('img', { name: 'Prévia do anexo' }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('button', { name: 'Anexar arquivo', exact: true }),
+      ).toBeFocused();
+      expect(sends).toHaveLength(1);
+    }
+  });
+
+/** @type {Array<[number, string]>} */
+const uncertainSendErrors = [
+  [503, 'SERVICE_UNAVAILABLE'],
+  [409, 'PRIVATE_SEND_ERROR_CANARY'],
+];
+for (const [code, sendCode] of uncertainSendErrors)
+  test(`T25-FIX1/MED-06/32: uncertain or unrecognized send ${code}/${sendCode} keeps the immutable original attempt`, async ({
+    page,
+  }) => {
+    const { sends } = await setup(page, { sendStatus: code, sendCode });
+    await select(page);
+    await ready(page);
+    await page.getByLabel('Legenda').fill('Legenda original');
+    await page
+      .getByRole('button', { name: 'Enviar anexo', exact: true })
+      .click();
+    await expect(page.getByRole('alert')).toHaveText(
+      'Não foi possível confirmar o envio. Tente novamente para consultar o mesmo envio.',
+    );
+    await expect(page.getByRole('alert')).not.toContainText(
+      'PRIVATE_SEND_ERROR_CANARY',
+    );
+    await expect(page.getByLabel('Legenda')).toBeDisabled();
+    await page.getByRole('button', { name: 'Tentar enviar novamente' }).click();
+    await expect(
+      page.getByText('Mensagem enviada', { exact: true }),
+    ).toBeVisible();
+    expect(sends).toHaveLength(2);
+    expect(sends[0].headers()['idempotency-key']).toBe(
+      sends[1].headers()['idempotency-key'],
+    );
+    expect(sends[0].postDataJSON()).toEqual(sends[1].postDataJSON());
+  });

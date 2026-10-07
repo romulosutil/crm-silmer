@@ -188,8 +188,9 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
   assert.equal(workflow.source.active, false);
   assert.equal(workflow.source.activeVersionId, null);
-  // 45 nodes plus the seven of the handoff notice chain (BOT-03).
-  assert.ok(workflow.nodes.length < 55);
+  // 45 nodes plus the seven of the handoff notice chain (BOT-03) and the 16
+  // of media reading and the site chat (ADR 026).
+  assert.ok(workflow.nodes.length < 70);
   const serialized = JSON.stringify(workflow);
   assert.doesNotMatch(serialized, /claim_token|claim_id|ai-turns\/claim/u);
   assert.doesNotMatch(serialized, /silmer_failures|windowBufferMemory/u);
@@ -732,7 +733,14 @@ test('sends the handoff notice the CRM reserved, and only that one (BOT-03)', as
     'Preparar aviso de transferência (MVP)',
   ]);
   assert.deepEqual(targets('Aviso de transferência autorizado? (MVP)'), [
+    'Enviar aviso pelo chat do site? (MVP)',
+  ]);
+  // ADR 026: WhatsApp goes to Meta; the site chat shows the notice itself.
+  assert.deepEqual(targets('Enviar aviso pelo chat do site? (MVP)', 1), [
     'WhatsApp - Enviar aviso de transferência (MVP)',
+  ]);
+  assert.deepEqual(targets('Enviar aviso pelo chat do site? (MVP)', 0), [
+    'Site - Entregar aviso de transferência (MVP)',
   ]);
   const send = byName.get('WhatsApp - Enviar aviso de transferência (MVP)');
   assert.equal(send.onError, 'continueErrorOutput');
@@ -790,9 +798,29 @@ test('sends the handoff notice the CRM reserved, and only that one (BOT-03)', as
       automation_epoch: 0,
       source_revision: 1,
     },
-    { 'Normalizar evento WhatsApp (MVP)': { message_type: 'audio' } },
+    { 'Normalizar evento WhatsApp (MVP)': { message_type: 'document' } },
   );
   assert.match(media.payload.handoff.notice.text, /arquivo/u);
+  assert.match(media.payload.handoff.notice.text, /aqui mesmo/u);
+  // ADR 026: the site chat cannot carry the seller's reply; it asks for a WhatsApp.
+  const siteMedia = runCodeNode(
+    byName.get('Preparar handoff de conteúdo (MVP)').parameters.jsCode,
+    {
+      conversation_id: 'conversation-3',
+      automation_epoch: 0,
+      source_revision: 1,
+    },
+    {
+      'Normalizar evento WhatsApp (MVP)': {
+        message_type: 'video',
+        channel: 'site_chat',
+      },
+    },
+  );
+  assert.equal(
+    siteMedia.payload.handoff.notice.text,
+    'Recebi o seu arquivo, obrigada! Um dos nossos vendedores vai continuar o seu atendimento. Para o vendedor falar com você, me diga o seu WhatsApp com DDD.',
+  );
   assert.equal(
     runCodeNode(
       prepare,

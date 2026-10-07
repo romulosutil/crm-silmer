@@ -11,7 +11,9 @@ Handoff, Pedido, auditoria e jobs. A interface Vue 3 oferece Dashboard,
 Caixa de Entrada, Clientes, Pedidos, Vendedores e Conta. Negócio/Kanban
 foram aposentados pela [ADR 004](docs/adr/004-aposentar-kanban-e-negocio.md).
 
-O n8n recebe/envia WhatsApp, chama OpenAI e orquestra a coleta. Nunca acessa
+O n8n recebe/envia WhatsApp e o chat do site, chama OpenAI (texto, imagem e
+transcrição de áudio) e orquestra a coleta
+([ADR 026](docs/adr/026-midia-e-chat-do-site-no-bot.md)). Nunca acessa
 o banco do CRM. Toda mutação oficial passa pela API autenticada,
 autorizada, idempotente e auditada. A mensagem inicia a automação; a UI
 observa ou assume o atendimento. Instagram é CANAL-2, posterior ao piloto.

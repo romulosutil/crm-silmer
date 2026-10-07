@@ -1716,3 +1716,14 @@ commit e um push.
 - **Aceite:** divisão gravada em `audiences`; a dica ao vendedor lê o campo;
   ordem de implantação no runbook.
 - **Gate:** testes de contrato do workflow.
+
+### T102: Imagem, áudio e chat do site no workflow
+
+- **Requisitos:** MID-01–MID-05, SITE-01–SITE-06.
+- **Arquivos:** SDK do workflow, render, gerador DEV/LOCAL, snapshots,
+  testes, README da integração, RFC 014 e ADR 026.
+- **Aceite:** imagem anexada ao agente, áudio transcrito, mídia não lida sem
+  derrubar a execução, tipos do WhatsApp mapeados, chat público com
+  identidade `999`, avisos que pedem o WhatsApp no chat e recusa `422` no
+  painel.
+- **Gate:** testes de contrato do workflow e `test/n8n-media-site-chat.test.js`.

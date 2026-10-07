@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
-import { commandKey, request } from '../../lib/api-client.js';
+import { ApiError, commandKey, request } from '../../lib/api-client.js';
 
 const props = defineProps({
   conversationId: { type: String, required: true },
@@ -56,6 +56,7 @@ const status = computed(
       ready: 'Pronto para enviar.',
       sending: 'Enviando anexo…',
       rejected: 'Arquivo rejeitado. Remova e escolha outro.',
+      blocked: 'Envio recusado. O rascunho foi preservado para revisão.',
       error: 'Não foi possível concluir. A prévia foi preservada.',
     })[state.value],
 );
@@ -327,6 +328,35 @@ async function send() {
     state.value = 'ready';
     error.value =
       'Não foi possível confirmar o envio. Tente novamente para consultar o mesmo envio.';
+    // Only the API's explicit refusal contract permits distinguishing a
+    // rejected command from an uncertain request. Never render server details.
+    if (
+      cause instanceof ApiError &&
+      cause.problem.accepted === false &&
+      [
+        'INVALID_REQUEST',
+        'INBOX_INVALID',
+        'INBOX_FORBIDDEN',
+        'FORBIDDEN',
+        'INBOX_CONFLICT',
+      ].includes(cause.code)
+    ) {
+      const refusal = /** @type {Record<number, string>} */ ({
+        400: 'O anexo ou a legenda foi recusado. Remova o anexo, revise o arquivo e selecione novamente antes de enviar.',
+        401: 'Sua sessão expirou. Entre novamente antes de tentar o mesmo envio.',
+        403: 'Este envio não é permitido. Verifique o responsável pelo atendimento e a disponibilidade dos anexos antes de tentar novamente.',
+        404: 'A conversa ou o serviço de anexos não está disponível. Remova o anexo e confira a conversa antes de selecionar novamente.',
+        409: 'A conversa ou o anexo mudou. Remova o anexo, atualize a conversa e selecione novamente antes de enviar.',
+        413: 'O arquivo ultrapassa o limite permitido. Remova o anexo e escolha um arquivo menor.',
+        422: 'O anexo ou a legenda foi recusado. Remova o anexo, revise o arquivo e selecione novamente antes de enviar.',
+        429: 'Há muitos envios em andamento. Aguarde um pouco antes de tentar o mesmo envio.',
+      })[cause.status];
+      if (refusal) {
+        error.value = refusal;
+        if ([400, 404, 409, 413, 422].includes(cause.status))
+          state.value = 'blocked';
+      }
+    }
   } finally {
     if (token === generation) controller = null;
   }
@@ -466,7 +496,13 @@ watch(
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m3 3 18 9-18 9 4-9-4-9Zm4 9h14" />
           </svg>
-          {{ sendAttempt ? 'Tentar enviar novamente' : 'Enviar anexo' }}
+          {{
+            state === 'blocked'
+              ? 'Envio indisponível'
+              : sendAttempt
+                ? 'Tentar enviar novamente'
+                : 'Enviar anexo'
+          }}
         </button>
         <slot v-else name="send" />
       </div>

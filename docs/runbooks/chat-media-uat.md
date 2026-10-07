@@ -49,6 +49,13 @@ foram preservados. O snapshot da UI foi atualizado mantendo assets anteriores.
 O smoke da nova UI identificou polling que recusava o estado transitório
 `uploaded`; T25 aguarda `uploaded` e `processing`, liberando envio após `ready`.
 
+A revisão independente encontrou ainda MED-32 no envio: recusas HTTP conhecidas
+eram mostradas como resultado incerto. T26 usa somente accepted=false e códigos
+públicos conhecidos para orientar retry idempotente ou remoção/reseleção.
+O anexo permanece visível; detalhes privados do servidor não são exibidos.
+FullUI187pass/7skips antigos, sem falha ou retry efetivo, inclui dez novos casos
+de recusa/PII/idempotência. A revisão de toda a feature aguarda o reteste humano.
+
 Esta ponte4183 é configuração da sessão local, não o default de `dev:media`:
 reiniciar esse comando regenera Origin4193. Antes de reutilizar4183, conferir
 Origin e proxy; não desativar a validação CSRF para contornar divergências.

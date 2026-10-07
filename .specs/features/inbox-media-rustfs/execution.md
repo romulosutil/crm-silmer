@@ -1,5 +1,38 @@
 # Execução INBOX-MEDIA-1
 
+## T26: Recusas conhecidas de envio — finding MED-32
+
+O Verifier independente revisou86ab0a1: baseline59/59, unit862/0/3, cinco
+faults comportamentais mortos por assertions e isolamento do scratch comprovado.
+Verdict restrito T25 foi FAIL porque403/409 conhecidos de envio recebiam texto
+genérico de resultado incerto. T26 corrige esse finding sem alterar API/SQL.
+
+Somente MediaComposer e seu E2E mudam no produto. Uma recusa é classificada
+apenas por ApiError, accepted=false, código público em allowlist e status
+conhecido. Nenhum cause.message/problem.detail é exibido. Recusas recuperáveis
+preservam anexo, preview, legenda, payload e chave originais para retry explícito.
+400/404/409/413/422 que exigem revisão bloqueiam retry cego e mantêm remover
+disponível;409 não inventa um subtipo, pois o contrato INBOX_CONFLICT agrega
+mudança da conversa, mídia e chave. Rede,5xx e código desconhecido continuam
+tratados como resultado incerto, sem nova chave automática ou duplicação.
+
+RED403 reproduzido antes do fix. Focal37/37 passou depois (27 casos anteriores
+e10 novos), sem skips ou relaxar assertions, além de types/lint/format.
+Matriz das oito recusas em test/e2e/media-composer.spec.js:643 exige texto
+correspondente, preview/legenda preservados, ausência de canária privada,
+payload/key iguais no retry e remoção/foco nos bloqueados. Dois casos incertos
+em:705 preservam tentativa original para503 e409 com código desconhecido.
+O relatório validation-ux.md é atualizado pelo Verifier somente após novo
+commit e reexecução de baseline/sensor; T24 e aceite humano seguem pendentes.
+
+FullUI T26 passou187/187, sete skips preexistentes, zero falhas/retries efetivos
+(var/media-T26-e2e.log; workers1, retries1 disponível mas não acionado).
+O runner reconstruiu o frontend final; não houve alteração de timeout ou
+assertions para obter esse resultado. Unit/backend862/0/3 e prova real da T25
+permanecem aplicáveis, pois a mudança T26 restringe-se ao tratamento de recusas
+da UI e seus testes. Referências históricas de adequação T25 abaixo correspondem
+ao commit86ab0a1; o relatório independente final cita as posições do novo HEAD.
+
 ## T25: Correção da UAT do composer
 
 Os cinco problemas reportados na UI4183 originaram MED-30..32. A demo anterior

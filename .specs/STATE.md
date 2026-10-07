@@ -13,6 +13,19 @@
 
 ## Handoff
 
+T25+T26: revisão independente final PASS específico, iteração 2/3, sobre
+90de325. Relatório em features/inbox-media-rustfs/validation-ux.md: 69/69 E2E
+focais, 862 unit pass/zero fail/três skips antigos, build e 13 prechecks verdes;
+oito mutantes comportamentais mortos por assertions, com isolamento comprovado.
+FullUI final: 187 pass/sete skips antigos/zero fail/zero retry. Lesson L-003
+registrada pelo script como candidate, recurrence1. Commits T25 e T26 enviados.
+Demo http://127.0.0.1:4183/inbox atualizada, bridge Hidden PID31248, API3013
+e readiness200. Smoke real confirmou upload sem envio automático, envio
+explícito202, callback sent/dev, leitura200/Range206 e bytes exatos no RustFS.
+Próximo passo: reteste humano de anexos, gravação e reprodução pelo microfone
+físico para T24. Este PASS cobre a correção UI; T24 permanece In Progress e a
+feature não está Verified. PrivacyP1 n8n e gates operacionais continuam abertos.
+
 Revisão independente de86ab0a1: baseline59/59, unit862/0/3 e cinco mutantes
 comportamentais mortos com isolamento comprovado. Verdict T25 FAIL por MED-32:
 recusas HTTP conhecidas de envio usavam mensagem genérica de resultado incerto.

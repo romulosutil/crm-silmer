@@ -71,7 +71,7 @@ async function setup(page, options = {}) {
         );
       if (options.uploadError && uploads.length === 1)
         return route.fulfill({
-          status: 503,
+          status: options.uploadStatus ?? 503,
           json: { error: { code: 'SERVICE_UNAVAILABLE' } },
         });
       return route.fulfill({
@@ -98,19 +98,27 @@ async function setup(page, options = {}) {
       json: {
         mediaId: path.includes('conversation-2') ? 'media-2' : 'media-1',
         kind: options.kind ?? 'image',
-        state: options.rejected
-          ? 'rejected'
-          : options.processingForever
-            ? 'processing'
-            : options.processing && polls === 1
+        state:
+          options.stateSequence?.[polls - 1] ??
+          (options.rejected
+            ? 'rejected'
+            : options.processingForever
               ? 'processing'
-              : 'ready',
+              : options.processing && polls === 1
+                ? 'processing'
+                : 'ready'),
         reason: options.rejected ? 'invalid_format' : undefined,
       },
     });
   });
   await page.goto(origin + '/__media-composer');
-  return { uploads, sends };
+  return {
+    uploads,
+    sends,
+    get polls() {
+      return polls;
+    },
+  };
 }
 /** @param {import('@playwright/test').Page} page @param {string} [name] @param {string} [mime] */
 async function select(page, name = 'sample.png', mime = 'image/png') {
@@ -129,7 +137,6 @@ async function select(page, name = 'sample.png', mime = 'image/png') {
 }
 /** @param {import('@playwright/test').Page} page */
 async function ready(page) {
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await expect(
     page.getByRole('button', { name: 'Enviar anexo', exact: true }),
   ).toBeEnabled();
@@ -149,7 +156,7 @@ for (const [kind, name, mime] of [
     await expect(
       page.getByRole('button', { name: 'Enviar anexo', exact: true }),
     ).toBeDisabled();
-    expect(uploads).toHaveLength(0);
+    await expect.poll(() => uploads.length).toBe(1);
     expect(sends).toHaveLength(0);
     await ready(page);
     if (kind === 'audio')
@@ -182,7 +189,6 @@ test('T18/MED-04: empty MIME is a hint and renamed invalid bytes are rejected by
 }) => {
   const { uploads, sends } = await setup(page, { rejected: true });
   await select(page, 'renamed.png', '');
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await expect(page.getByRole('alert')).toContainText('Formato inválido');
   await expect(
     page.getByRole('img', { name: 'Prévia do anexo' }),
@@ -231,12 +237,11 @@ test('T18/MED-06: retry preserves original upload key, file and version after ne
 }) => {
   const { uploads } = await setup(page, { uploadError: true });
   await select(page);
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(
     page.getByRole('img', { name: 'Prévia do anexo' }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Tentar preparar novamente' }).click();
+  await page.getByRole('button', { name: 'Tentar carregar novamente' }).click();
   await expect(
     page.getByRole('button', { name: 'Enviar anexo', exact: true }),
   ).toBeEnabled();
@@ -316,26 +321,24 @@ test('T18/MED-25: remove and reselect by keyboard restores focus and clears the 
   const remove = page.getByRole('button', { name: 'Remover anexo' });
   await remove.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByLabel('Arquivo para anexar')).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: 'Anexar arquivo', exact: true }),
+  ).toBeFocused();
   await expect(page.getByRole('img', { name: 'Prévia do anexo' })).toHaveCount(
     0,
   );
   await select(page);
-  await page.getByRole('button', { name: 'Preparar arquivo' }).focus();
-  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Legenda')).toBeFocused();
   await expect(
     page.getByRole('button', { name: 'Enviar anexo', exact: true }),
   ).toBeEnabled();
-  await expect(
-    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
-  ).toBeFocused();
+  await expect(page.getByLabel('Legenda')).toBeFocused();
 });
 test('T18/MED-07/08: switch or unmount cancels stale upload and cannot send it in another conversation', async ({
   page,
 }) => {
   const { sends } = await setup(page, { uploadDelay: 250 });
   await select(page);
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await page.getByRole('button', { name: 'Trocar conversa' }).click();
   await expect(page.getByRole('img', { name: 'Prévia do anexo' })).toHaveCount(
     0,
@@ -343,7 +346,6 @@ test('T18/MED-07/08: switch or unmount cancels stale upload and cannot send it i
   await page.waitForTimeout(350);
   expect(sends).toHaveLength(0);
   await select(page);
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await page.getByRole('button', { name: 'Fechar composer' }).click();
   await page.waitForTimeout(350);
   expect(sends).toHaveLength(0);
@@ -370,7 +372,6 @@ test('T18/MED-07/08: delayed original upload cannot replace the new conversation
     oldOnly: true,
   });
   await select(page);
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await page.getByRole('button', { name: 'Trocar conversa' }).click();
   await select(page);
   await ready(page);
@@ -392,7 +393,6 @@ test('T18/MED-04: valid local pipeline beyond 340 seconds remains eligible befor
   await page.clock.install({ time: new Date('2026-10-06T00:00:00Z') });
   await setup(page, { processing: true });
   await select(page);
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await expect(page.getByRole('status')).toContainText('Validando arquivo');
   await page.clock.fastForward(350000);
   await expect(
@@ -407,7 +407,6 @@ test('T18/MED-04/06: polling timeout preserves media ID and a status retry can o
   const options = { processingForever: true };
   const { uploads } = await setup(page, options);
   await select(page);
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await expect(page.getByRole('status')).toContainText('Validando arquivo');
   const secondPoll = page.waitForResponse('**/media/media-1');
   await page.clock.fastForward(599000);
@@ -430,9 +429,8 @@ test('T18/MED-04/06: polling budget aborts a pending status GET without losing t
 }) => {
   await page.clock.install({ time: new Date('2026-10-06T00:00:00Z') });
   const { uploads } = await setup(page, { pendingStatus: true });
-  await select(page);
   const pending = page.waitForRequest('**/media/media-1');
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
+  await select(page);
   await pending;
   await page.clock.fastForward(600000);
   await expect(page.getByRole('alert')).toBeVisible();
@@ -443,4 +441,138 @@ test('T18/MED-04/06: polling budget aborts a pending status GET without losing t
     page.getByRole('button', { name: 'Atualizar validação' }),
   ).toBeEnabled();
   expect(uploads).toHaveLength(1);
+});
+
+test('T25/MED-30/31: selection validates automatically, permits caption editing and never sends without confirmation', async ({
+  page,
+}) => {
+  const { uploads, sends } = await setup(page, {
+    uploadDelay: 250,
+    processing: true,
+  });
+  await select(page);
+  await expect(page.getByRole('button', { name: /Preparar/ })).toHaveCount(0);
+  const caption = page.getByLabel('Legenda');
+  await expect(caption).toBeEnabled();
+  await caption.fill('Legenda escrita enquanto carrega');
+  await expect(
+    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+  ).toBeDisabled();
+  await ready(page);
+  await expect(caption).toHaveValue('Legenda escrita enquanto carrega');
+  await expect(caption).toBeFocused();
+  expect(uploads).toHaveLength(1);
+  expect(sends).toHaveLength(0);
+  await page.getByRole('button', { name: 'Enviar anexo', exact: true }).click();
+  await expect(
+    page.getByText('Mensagem enviada', { exact: true }),
+  ).toBeVisible();
+  expect(sends[0].postDataJSON().content.caption).toBe(
+    'Legenda escrita enquanto carrega',
+  );
+});
+
+test('T25/MED-30: queued uploaded media progresses through processing to ready without manual retry or sending', async ({
+  page,
+}) => {
+  const result = await setup(page, {
+    stateSequence: ['uploaded', 'processing', 'ready'],
+  });
+  await select(page);
+  await expect(page.getByRole('status')).toContainText('Validando arquivo');
+  await expect(
+    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+  ).toBeDisabled();
+  await expect.poll(() => result.polls).toBe(2);
+  await expect(
+    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+  ).toBeDisabled();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await ready(page);
+  expect(result.polls).toBe(3);
+  expect(result.uploads).toHaveLength(1);
+  expect(result.sends).toHaveLength(0);
+  await expect(
+    page.getByRole('button', { name: 'Atualizar validação' }),
+  ).toHaveCount(0);
+});
+
+test('T25/MED-25/30: background validation preserves focus on the audio preview', async ({
+  page,
+}) => {
+  const { sends } = await setup(page, { kind: 'audio', processing: true });
+  await select(page, 'sample.m4a', 'audio/mp4');
+  await expect(page.getByRole('status')).toContainText('Validando arquivo');
+  const player = page.getByLabel('Prévia do áudio');
+  await player.focus();
+  await expect(player).toBeFocused();
+  await ready(page);
+  await expect(player).toBeFocused();
+  expect(sends).toHaveLength(0);
+});
+
+/** @type {Array<[number, string]>} */
+const uploadErrors = [
+  [401, 'Sua sessão expirou'],
+  [403, 'Você não pode anexar arquivos nesta conversa'],
+  [404, 'Anexos estão indisponíveis neste ambiente'],
+  [413, 'O arquivo ultrapassa o limite permitido'],
+  [429, 'Há muitos arquivos sendo carregados'],
+  [503, 'O serviço de anexos está temporariamente indisponível'],
+];
+for (const [code, message] of uploadErrors)
+  test(`T25/MED-32: upload ${code} explains recovery and preserves the original draft and key`, async ({
+    page,
+  }) => {
+    const { uploads, sends } = await setup(page, {
+      uploadError: true,
+      uploadStatus: code,
+    });
+    await select(page);
+    await expect(page.getByRole('alert')).toContainText(message);
+    await expect(
+      page.getByRole('img', { name: 'Prévia do anexo' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+    ).toBeDisabled();
+    expect(sends).toHaveLength(0);
+    await page
+      .getByRole('button', { name: 'Tentar carregar novamente' })
+      .click();
+    await ready(page);
+    expect(uploads).toHaveLength(2);
+    expect(uploads[0].headers()['idempotency-key']).toBe(
+      uploads[1].headers()['idempotency-key'],
+    );
+    expect(sends).toHaveLength(0);
+  });
+
+test('T25/MED-25/31: attachment picker is styled, keyboard operable and sized for mobile without overflow', async ({
+  page,
+}) => {
+  await setup(page);
+  await page.setViewportSize({ width: 360, height: 800 });
+  const attach = page.getByRole('button', {
+    name: 'Anexar arquivo',
+    exact: true,
+  });
+  await expect(attach).toBeVisible();
+  await expect(page.getByLabel('Arquivo para anexar')).toBeHidden();
+  const box = await attach.boundingBox();
+  expect(box?.width).toBeGreaterThanOrEqual(44);
+  expect(box?.height).toBeGreaterThanOrEqual(44);
+  await attach.focus();
+  const picker = page.waitForEvent('filechooser');
+  await page.keyboard.press('Enter');
+  await (await picker).setFiles('test/fixtures/media-composer.png');
+  await ready(page);
+  expect(
+    await page.evaluate(
+      () =>
+        globalThis.document.documentElement.scrollWidth <=
+        globalThis.innerWidth,
+    ),
+  ).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

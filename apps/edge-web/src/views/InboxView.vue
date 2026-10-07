@@ -1130,44 +1130,6 @@ onBeforeUnmount(() => {
           </li>
         </ol>
 
-        <form class="composer" @submit.prevent="sendReply">
-          <label for="reply">Responder</label>
-          <textarea
-            id="reply"
-            ref="replyInput"
-            v-model="reply"
-            rows="3"
-            maxlength="2000"
-            :disabled="busy || mediaSending || !canReply"
-            aria-describedby="reply-help"
-          ></textarea>
-          <div class="composer-row">
-            <p id="reply-help">
-              <template v-if="isTerminal">A conversa está encerrada.</template>
-              <template v-else-if="!canAct"
-                >Somente o vendedor responsável pode responder.</template
-              >
-              <template v-else-if="pendingHandoff"
-                >Assuma o atendimento antes de responder.</template
-              >
-              <template v-else-if="active.automationState !== 'human'"
-                >Assuma o atendimento antes de responder.</template
-              >
-              <template v-else
-                >A mensagem será registrada antes do envio ao canal.</template
-              >
-            </p>
-            <div class="inline-actions">
-              <button
-                type="submit"
-                class="primary"
-                :disabled="busy || mediaSending || !canReply || !reply.trim()"
-              >
-                Enviar resposta
-              </button>
-            </div>
-          </div>
-        </form>
         <AudioRecorder
           :key="active.id"
           :conversation-id="active.id"
@@ -1175,7 +1137,66 @@ onBeforeUnmount(() => {
           :disabled="busy || !canReply"
           @sending-change="mediaSending = $event"
           @sent="mediaSent"
-        />
+        >
+          <template #message="{ recordingActive }">
+            <form
+              id="inbox-reply-form"
+              class="composer"
+              @submit.prevent="sendReply"
+            >
+              <label for="reply">Responder</label>
+              <textarea
+                id="reply"
+                ref="replyInput"
+                v-model="reply"
+                rows="3"
+                placeholder="Digite uma mensagem…"
+                maxlength="2000"
+                :disabled="busy || mediaSending || recordingActive || !canReply"
+                aria-describedby="reply-help"
+              ></textarea>
+              <div class="composer-row">
+                <p id="reply-help">
+                  <template v-if="isTerminal"
+                    >A conversa está encerrada.</template
+                  >
+                  <template v-else-if="!canAct"
+                    >Somente o vendedor responsável pode responder.</template
+                  >
+                  <template v-else-if="pendingHandoff"
+                    >Assuma o atendimento antes de responder.</template
+                  >
+                  <template v-else-if="active.automationState !== 'human'"
+                    >Assuma o atendimento antes de responder.</template
+                  >
+                  <template v-else
+                    >A mensagem será registrada antes do envio ao
+                    canal.</template
+                  >
+                </p>
+              </div>
+            </form>
+          </template>
+          <template #send="{ recordingActive }">
+            <button
+              type="submit"
+              form="inbox-reply-form"
+              class="primary"
+              :disabled="
+                busy ||
+                mediaSending ||
+                recordingActive ||
+                !canReply ||
+                !reply.trim()
+              "
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m3 3 18 9-18 9 4-9-4-9Zm4 9h14" />
+              </svg>
+              Enviar resposta
+            </button>
+          </template>
+        </AudioRecorder>
       </section>
       <section v-else class="surface empty-list" aria-live="polite">
         <h2>Selecione uma conversa</h2>

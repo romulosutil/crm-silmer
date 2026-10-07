@@ -162,7 +162,7 @@ async function stop(page) {
   await expect(page.getByLabel('Prévia do áudio')).toBeVisible();
 }
 
-test('T19/MED-09/10/25: only explicit keyboard recording asks audio permission and stop requires explicit prepare/send', async ({
+test('T19/T25/MED-09/10/25/30: explicit keyboard recording asks permission, stop validates automatically and send remains explicit', async ({
   page,
 }) => {
   const { uploads, sends } = await setup(page);
@@ -185,9 +185,8 @@ test('T19/MED-09/10/25: only explicit keyboard recording asks audio permission a
   expect(
     await page.evaluate(() => /** @type {any} */ (globalThis).__capture.stops),
   ).toBe(1);
-  expect(uploads).toHaveLength(0);
+  await expect.poll(() => uploads.length).toBe(1);
   expect(sends).toHaveLength(0);
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await expect(
     page.getByRole('button', { name: 'Enviar anexo', exact: true }),
   ).toBeEnabled();
@@ -346,7 +345,6 @@ test('T19/MED-06/10: pending send cannot be discarded or replaced by a new captu
   });
   await record(page);
   await stop(page);
-  await page.getByRole('button', { name: 'Preparar arquivo' }).click();
   await expect(
     page.getByRole('button', { name: 'Enviar anexo', exact: true }),
   ).toBeEnabled();
@@ -376,7 +374,7 @@ test('T19/MED-06/10: pending send cannot be discarded or replaced by a new captu
   expect(sends).toHaveLength(1);
 });
 
-test('T19/MED-12: exact 16-MiB capture stops tracks without automatic upload', async ({
+test('T19/T25/MED-12/30: exact 16-MiB capture stops tracks and validates without sending automatically', async ({
   page,
 }) => {
   const { uploads, sends } = await setup(page, { empty: true });
@@ -388,7 +386,7 @@ test('T19/MED-12: exact 16-MiB capture stops tracks without automatic upload', a
   expect(
     await page.evaluate(() => /** @type {any} */ (globalThis).__capture.stops),
   ).toBe(1);
-  expect(uploads).toHaveLength(0);
+  await expect.poll(() => uploads.length).toBe(1);
   expect(sends).toHaveLength(0);
 });
 

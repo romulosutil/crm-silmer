@@ -1,5 +1,80 @@
 # Execução INBOX-MEDIA-1
 
+## T25: Correção da UAT do composer
+
+Os cinco problemas reportados na UI4183 originaram MED-30..32. A demo anterior
+permitia gravar/revisar, mas tinha admissão de mídia desativada; por isso a etapa
+manual Preparar falhava e Enviar anexo não habilitava. A ponte local agora usa
+API3013/Origin4183 e o perfil completo com worker Linux, ClamAV, RustFS privado
+e n8n DEV. Origin4193 continua recusado403; CSRF não foi relaxado. DB15434,
+volumes/chaves e assets históricos foram preservados.
+
+MediaComposer inicia upload/validação ao selecionar ou parar a gravação; mantém
+prévia e legenda editável, sem criar mensagem até a confirmação explícita.
+Picker nativo fica oculto atrás de botão temático operável por teclado. Inbox
+e AudioRecorder compõem a mesma toolbar, um envio contextual e ferramentas
+separadas por gap; envio fica à direita mesmo quando há quebra de linha.
+HTTP401/403/404/413/429/503 explicam recuperação, conservando arquivo e chave.
+READY em background não rouba foco do player/legenda. Retry incerto preserva
+o payload imutável e a chave original; ACL, abort e descarte continuam cobertos.
+
+O smoke da nova UI com backend real encontrou GET200 state=uploaded antes de
+o worker mudar para processing/ready. O polling anterior aceitava somente
+processing e encerrava com MEDIA_INVALID_STATE, embora o objeto terminasse
+READY no banco. T25 corrige a espera para ambos os estados transitórios,
+sem habilitar envio antes de ready; a regressão cobre uploaded→processing→ready.
+Não houve mudança de API, autorização, CSRF, worker ou contrato de estados.
+
+### Gates T25
+
+Prechecks de validate (format, typecheck, lint, boundaries, tokens, topologia,
+recovery/catálogos) passaram. O runner unit paralelo esgotou memória nativa;
+os mesmos testes com `node --test --test-concurrency=1 test/*.test.js` passaram:
+862 pass, zero fail e três skips antigos (var/media-T25-unit-serial.log).
+Build passou (var/media-T25-build.log); os runners E2E reconstruíram a UI final.
+27/27 media-composer focais passaram, incluindo uploaded→processing→ready.
+
+FullUI final, workers1:176 pass, sete skips antigos e um timeout durante axe
+do player áudio inalterado. `--last-failed --workers=1` repetiu exatamente esse
+caso sem alterar fonte/assertions e passou em926ms, exit0. Não houve mudança
+de timeout, skip novo ou redução de assertions. Logs: var/media-T25-e2e-closure.log
+e var/media-T25-e2e-retry.log. npm audit:zero vulnerabilidades. Spec/tasks strict:
+zero erros/avisos. As provas de banco e scanner anteriores permanecem válidas;
+T25 altera somente composição/frontend e configuração da demo local.
+
+Smoke final da nova Vue na UI4183: login pela tela, conversa sintética atribuída,
+seleção PNG99bytes, legenda digitada, upload/validação automática, sends0 antes
+do clique e botão habilitado após ready. Clique único gerou POSTmessage202,
+callback real sent/dev e legenda no histórico. GET privado200 e Range206
+conferiram bytes/hash exatos. Prova var/media-T25-real-ui-proof.json, log
+var/media-T25-real-ui-smoke.log, screenshots ready/sent. Leituras finais usam
+fetch do próprio navegador sintético com sessão e headers normais; helper HTTP
+separado não compartilhou a autenticação esperada e foi substituído, sem mudar
+guard de autorização. Nenhuma voz/hardware físico foi automatizado.
+
+Snapshot4183 contém JS index-D3qsyGDq.js e CSS index-WPE6QDnE.css, HTTP200 e
+bytes iguais ao build; indexSHA256
+0a0c7ccef7f804eb96cef559032a1332891c92028dbd638e2c83b03c7ca89b0e.
+Inspeção no in-app Browser confirmou toolbar e foco no tema claro/escuro,
+mensagem sintética DEV no histórico e controles separados. T24 permanece
+pendente de nova UAT humana; a revisão T25 não declara toda a feature Verified.
+
+### Adequação T25
+
+| Teste/assertion                                                                                                                                    | Resultado exigido                                       | Rastreabilidade |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------- |
+| `test/e2e/media-composer.spec.js:446`: uploads length1, sends length0, caption mantém valor/foco e payload final                                   | Upload automático sem envio implícito, legenda editável | MED-30/31       |
+| `test/e2e/media-composer.spec.js:500`: player focused após ready, sends length0                                                                    | Validação não interrompe revisão                        | MED-25/30       |
+| `test/e2e/media-composer.spec.js:524`: mensagem específica, preview visible, send disabled, keys iguais nas duas tentativas                        | Falha recuperável sem perda/duplicação                  | MED-32/06       |
+| `test/e2e/media-composer.spec.js:551`: hidden input, Enter abre picker, botões44px, scrollWidth<=innerWidth, axe=[]                                | Picker temático, teclado, tela estreita                 | MED-25/31       |
+| `test/e2e/inbox-media.spec.js:493`: único envio contextual, text draft restaurado, distância2D>=8px, dimensões>=44px, envio à direita em1280/390px | Composição familiar e espaçamento responsivo            | MED-31          |
+
+Teste novo de gap inicialmente assumiu uma única linha horizontal. A screenshot
+mostrou wrap legítimo e gap vertical12px; corrigido para distância entre
+retângulos em dois eixos, mantendo mínimo8px e falha em sobreposição. A mudança
+de interações Preparar→validação automática deriva da UAT explicitamente pedida,
+sem remover/skip/relaxar casos negativos, segurança, idempotência ou lifecycle.
+
 ## T24: Evidência automatizada built; UAT física pendente
 
 MED-01..29: matriz completa e fronteiras em docs/runbooks/chat-media-uat.md.

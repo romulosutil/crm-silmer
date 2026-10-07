@@ -13,6 +13,24 @@
 
 ## Handoff
 
+UAT humana de06/10 reportou FAILED: Prepare/upload falha, filepicker nativo,
+mic colado aEnviar, UX pouco familiar e envioanexo bloqueado. Demo4183 tinha
+admissãofalse; correçãoT25 autorizada registraMED30..32 e antecede fechamentoT24.
+Composerintegrado valida automaticamente drafts, mantém prévia/legenda e exige
+envio explícito; runtime4183 está sendo ligado ao perfilAPI3013, Origin4183,
+worker/RustFS/n8nDEV reais, preservando DB15434/snapshot anterior e volumes/chaves.
+FontesUI/testes agente media_composer_ux_fix; runtimeignored media_phase4_resume;
+root integra docs/gates/Browser. NenhumVerified; PrivacyP1 operacional permanece.
+
+T25 implementação e gates concluídos: polling uploaded/processing corrigido,
+862unitpass/3skips antigos; FullUI176pass/7skips antigos+1timeout axe inalterado,
+rerun desse caso1pass sem alterar assertion/timeout. Smoke da nova UI4183
+concluiu upload automático sem mensagem, envio explícito202, callback sent/dev,
+GET200/Range206/bytes exatos no RustFS. Snapshot final atualizado e inspeção
+claro/escuro confirmada. Próximo passo: revisão independente específica da
+correção; depois reteste humano de microfone/anexos para fechar T24. Sem Verified
+global e sem liberação operacional. Estados uploaded→processing→ready são normais.
+
 T24 evidência automatizada concluída: API→builtworker/scanner/normalizer→RustFS
 privado→n8n DEV→callback real, PNG/MP3/MP4/recording sent; replay/ACL/Range,
 301s rejected, attached conservado após fixture8dias+close/scheduler65s.

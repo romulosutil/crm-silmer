@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-24 tarefas planejadas; T1 a T23 concluídas; fase 4 em execução, próxima T24. Evidência em [execution.md](execution.md).
+25 tarefas planejadas; T1 a T23 e T25 concluídas; T24 aguarda nova UAT humana. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -17,7 +17,8 @@ Docker local foi autorizado explicitamente pelo usuário para desenvolvimento e 
 Após a última tarefa, Verifier independente obrigatório, com evidência por AC
 e sensor de discriminação em scratch isolado; validation.md não é criado vazio.
 Se houver achados, criar tarefas de correção e repetir no limite da skill.
-São quatro fases de seis tarefas; na execução, oferecer delegação conforme a
+As quatro fases originais têm seis tarefas; a fase 4 inclui a correção T25
+solicitada durante UAT e passa a sete tarefas. Na execução, oferecer delegação conforme a
 skill antes de despachar workers. Arquivos têm um único dono por tarefa.
 
 ## Test Coverage Matrix
@@ -63,7 +64,8 @@ são cenários novos planejados, não resultados de testes já executados.
 ## Execution Plan
 
 Fases sequenciais. Dependências são de dados/contrato, não decoração do diagrama.
-Dentro de cada fase, executar IDs em ordem; fases têm no máximo seis tarefas.
+Dentro de cada fase, seguir dependências; T25 é uma correção posterior à
+implementação e antecede o fechamento T24, preservando os IDs históricos.
 
 ### Phase 1: Storage e pipeline
 
@@ -79,11 +81,12 @@ T13..T18: bytes técnicos, workflow, DEV, DTO, cliente HTTP e composer.
 
 ### Phase 4: Gravação, histórico e fechamento
 
-T19..T24: recorder, playback, integração Inbox, limpeza, rollout e UAT.
+T19..T23, T25, T24: recorder, playback, integração Inbox, limpeza, rollout,
+correção UX solicitada pelo usuário e UAT.
 
 ```text
 T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9 -> T10 -> T11 -> T12
-T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T24
+T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T24
 ```
 
 ## Task Breakdown
@@ -407,16 +410,30 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Gate**: Topology + Privacy + Build; gates externos têm estado próprio.
 **Commit**: feat(ops): add isolated media profile and enforce processing capacity
 
+### T25: Corrigir a experiência de composição e a demo da UAT
+
+**What**: Disponibilizar composer integrado com validação automática e envio explícito no chat DEV habilitado, corrigindo os cinco problemas reportados pelo usuário.
+**Where**: apps/edge-web/src/views/InboxView.vue
+**Supporting files**: apps/edge-web/src/components/inbox/MediaComposer.vue; apps/edge-web/src/components/inbox/AudioRecorder.vue; test/e2e/media-composer.spec.js; test/e2e/inbox-media.spec.js; test/e2e/audio-recorder.spec.js; fixtures existentes de gravação; docs/runbooks/chat-media-uat.md; .specs/STATE.md; .specs/features/inbox-media-rustfs/spec.md; .specs/features/inbox-media-rustfs/context.md; .specs/features/inbox-media-rustfs/design.md; .specs/features/inbox-media-rustfs/execution.md; .specs/features/inbox-media-rustfs/validation-ux.md.
+**Depends on**: T23
+**Requirement**: MED-01..03, MED-06..13, MED-25, MED-30..32
+**Reuses**: Componentes Vue3, tokens, API de mídia e perfil Docker existente; runtime e snapshots locais podem ser corrigidos sem apagar dados/chaves/volumes.
+**Tools**: tlc-spec-driven; Browser; Playwright; Docker local autorizado.
+**Done when**: [x] Seleção/parada inicia upload e validação sem Preparar manual e sem mensagem automática; preview/legenda e retry idempotente funcionam; toolbar contextual tem botões temáticos, 44px, foco e espaçamento responsivos; erro explica recusa; demo4183 permite preparar automaticamente/enviar pelo worker e callback DEV reais; nenhum teste de segurança ou ciclo de vida é removido ou enfraquecido.
+**Tests**: e2e + axe + integração real; novos cenários para MED-30..32 e regressão das negativas/idempotência/abort/foco existentes.
+**Gate**: Build + UI + smoke local pelo backend da demo4183; revisão independente da correção antes da nova UAT.
+**Commit**: fix(inbox): simplify media composing and enable complete local testing
+
 ### T24: Homologação da fatia e evidências
 
 **What**: Executar UAT sintético ponta a ponta do CRM ao DEV e consolidar critérios para canal real.
 **Where**: docs/runbooks/chat-media-uat.md
-**Depends on**: T23
-**Requirement**: MED-01..29
+**Depends on**: T25
+**Requirement**: MED-01..32
 **Reuses**: Todos os testes da fatia; handoff e reserva atuais.
 **Tools**: tlc-spec-driven; Browser/Playwright; Verifier independente após commit final.
 **Done when**: [ ] UAT com três arquivos reais e microfone; sucesso/falha/unknown/replay/ACL/teclado; retenção pós-oito dias demonstrada; Meta separado; nenhuma PII em evidência.
-**Tests**: integration + e2e; matriz de 29 ACs, sem duplicar testes só para aumentar contagem.
+**Tests**: integration + e2e; matriz de 32 ACs após correção UAT, sem duplicar testes só para aumentar contagem.
 **Gate**: Build + Full + smoke RustFS/DEV; Verifier e sensor após o commit final.
 **Commit**: docs(qa): record end-to-end chat media acceptance
 
@@ -470,7 +487,8 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T21  | T20                    | T20 → T21     | Match  |
 | T22  | T21                    | T21 → T22     | Match  |
 | T23  | T22                    | T22 → T23     | Match  |
-| T24  | T23                    | T23 → T24     | Match  |
+| T25  | T23                    | T23 → T25     | Match  |
+| T24  | T25                    | T25 → T24     | Match  |
 
 ## Test Co-location Validation
 
@@ -500,6 +518,7 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T22  | Worker                      | unit/integration            | unit/integration live  | OK     |
 | T23  | Operação                    | structural/integration      | structural/integration | OK     |
 | T24  | UAT                         | integration/e2e             | integration/e2e        | OK     |
+| T25  | Composer integrado          | e2e/axe + integração real   | e2e/axe + integração   | OK     |
 
 ## Confirmação antes de Execute
 

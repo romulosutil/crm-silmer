@@ -215,10 +215,7 @@ for (const [kind, fixture] of [
     await page
       .getByLabel('Arquivo para anexar')
       .setInputFiles(`test/fixtures/media-composer.${fixture}`);
-    expect(state.uploads).toHaveLength(0);
-    await page
-      .getByRole('button', { name: 'Preparar arquivo', exact: true })
-      .click();
+    await expect.poll(() => state.uploads.length).toBe(1);
     await expect(
       page.getByRole('button', { name: 'Enviar anexo', exact: true }),
     ).toBeEnabled();
@@ -261,9 +258,6 @@ test('MED-08/13 switch during pending upload removes draft and ignores late resu
   await page
     .getByLabel('Arquivo para anexar')
     .setInputFiles('test/fixtures/media-composer.png');
-  await page
-    .getByRole('button', { name: 'Preparar arquivo', exact: true })
-    .click();
   await expect.poll(() => state.uploads.length).toBe(1);
   await page.getByRole('button', { name: /Cliente sintético 2/ }).click();
   await state.releaseUpload();
@@ -287,9 +281,6 @@ for (const transition of ['close', 'transfer']) {
     await page
       .getByLabel('Arquivo para anexar')
       .setInputFiles('test/fixtures/media-composer.png');
-    await page
-      .getByRole('button', { name: 'Preparar arquivo', exact: true })
-      .click();
     await expect(
       page.getByText('Validando arquivo…', { exact: true }),
     ).toBeVisible();
@@ -345,13 +336,12 @@ test('MED-10/13 recording review replaced by attachment has no stale discard or 
     page.getByRole('button', { name: 'Descartar gravação' }),
   ).toHaveCount(0);
   await expect(
-    page.getByText(
-      'Gravação pronta para revisão. Prepare e envie quando quiser.',
-      { exact: true },
-    ),
+    page.getByText('Ouça a gravação e envie quando quiser.', { exact: true }),
   ).toHaveCount(0);
   await page.getByRole('button', { name: 'Remover anexo' }).click();
-  await expect(page.getByLabel('Arquivo para anexar')).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: 'Anexar arquivo', exact: true }),
+  ).toBeFocused();
   expect(state.sends).toHaveLength(0);
 });
 
@@ -375,11 +365,10 @@ test('MED-25 text remains available and accepted media restores focus without ax
   await page
     .getByLabel('Arquivo para anexar')
     .setInputFiles('test/fixtures/media-composer.png');
-  await page
-    .getByRole('button', { name: 'Preparar arquivo', exact: true })
-    .click();
   await page.getByRole('button', { name: 'Enviar anexo', exact: true }).click();
-  await expect(page.getByLabel('Arquivo para anexar')).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: 'Anexar arquivo', exact: true }),
+  ).toBeFocused();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
@@ -437,9 +426,6 @@ test('MED-08 stale detail response cannot replace newly selected conversation', 
   await page
     .getByLabel('Arquivo para anexar')
     .setInputFiles('test/fixtures/media-composer.png');
-  await page
-    .getByRole('button', { name: 'Preparar arquivo', exact: true })
-    .click();
   await expect.poll(() => state.uploads.length).toBe(1);
   expect(state.uploads[0].url()).toContain(
     '/conversations/conversation-2/media',
@@ -454,15 +440,13 @@ test('MED-01/10 replacing reviewed recording sends selected image as attachment'
   await page.getByRole('button', { name: 'Gravar áudio', exact: true }).click();
   await page.getByRole('button', { name: 'Parar gravação' }).click();
   await expect(page.getByLabel('Prévia do áudio')).toBeVisible();
+  await expect.poll(() => state.uploads.length).toBe(1);
   await page
     .getByLabel('Arquivo para anexar')
     .setInputFiles('test/fixtures/media-composer.png');
   await expect(
     page.getByRole('img', { name: 'Prévia do anexo' }),
   ).toBeVisible();
-  await page
-    .getByRole('button', { name: 'Preparar arquivo', exact: true })
-    .click();
   await expect(
     page.getByRole('button', { name: 'Enviar anexo', exact: true }),
   ).toBeEnabled();
@@ -470,8 +454,9 @@ test('MED-01/10 replacing reviewed recording sends selected image as attachment'
   await expect(
     page.getByText('DEV: envio simulado', { exact: true }),
   ).toBeVisible();
-  expect(state.uploads).toHaveLength(1);
-  expect(state.uploads[0].postData()).toMatch(
+  await expect.poll(() => state.uploads.length).toBe(2);
+  expect(state.uploads[0].postData()).toMatch(/name="origin"\r\n\r\nrecording/);
+  expect(state.uploads[1].postData()).toMatch(
     /name="origin"\r\n\r\nattachment/,
   );
   expect(state.sends).toHaveLength(1);
@@ -490,15 +475,12 @@ test('MED-08 pending media send prevents concurrent text and capture', async ({
   await page
     .getByLabel('Arquivo para anexar')
     .setInputFiles('test/fixtures/media-composer.png');
-  await page
-    .getByRole('button', { name: 'Preparar arquivo', exact: true })
-    .click();
   await page.getByRole('button', { name: 'Enviar anexo', exact: true }).click();
   await expect.poll(() => state.sends.length).toBe(1);
-  await expect(text).toBeDisabled();
+  await expect(text).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Enviar resposta', exact: true }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Gravar áudio', exact: true }),
   ).toBeDisabled();
@@ -506,4 +488,59 @@ test('MED-08 pending media send prevents concurrent text and capture', async ({
   await expect(text).toBeEnabled();
   expect(state.sends).toHaveLength(1);
   expect(state.sends[0].postDataJSON().messageType).toBe('image');
+});
+
+test('T25/MED-31: one contextual send preserves unsent text when a draft is removed', async ({
+  page,
+}) => {
+  const state = await setup(page);
+  const text = page.getByRole('textbox', { name: 'Responder', exact: true });
+  await text.fill('Rascunho de texto preservado');
+  await page
+    .getByLabel('Arquivo para anexar')
+    .setInputFiles('test/fixtures/media-composer.png');
+  await expect(
+    page.getByRole('button', { name: 'Enviar resposta', exact: true }),
+  ).toHaveCount(0);
+  await expect(text).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+  ).toBeEnabled();
+  expect(state.sends).toHaveLength(0);
+  await page.getByRole('button', { name: 'Remover anexo' }).click();
+  await expect(text).toHaveValue('Rascunho de texto preservado');
+  await expect(
+    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Enviar resposta', exact: true }),
+  ).toBeEnabled();
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 800 });
+    const mic = await page
+      .getByRole('button', { name: 'Gravar áudio', exact: true })
+      .boundingBox();
+    const send = await page
+      .getByRole('button', { name: 'Enviar resposta', exact: true })
+      .boundingBox();
+    if (!mic || !send) throw new Error('Composer actions must be visible');
+    expect(mic.width).toBeGreaterThanOrEqual(44);
+    expect(mic.height).toBeGreaterThanOrEqual(44);
+    expect(send.width).toBeGreaterThanOrEqual(44);
+    expect(send.height).toBeGreaterThanOrEqual(44);
+    // Tools can wrap above Send. Measure the distance between their rectangles,
+    // so both layouts enforce spacing and overlapping controls always fail.
+    const horizontalGap = Math.max(
+      0,
+      send.x - (mic.x + mic.width),
+      mic.x - (send.x + send.width),
+    );
+    const verticalGap = Math.max(
+      0,
+      send.y - (mic.y + mic.height),
+      mic.y - (send.y + send.height),
+    );
+    expect(Math.hypot(horizontalGap, verticalGap)).toBeGreaterThanOrEqual(8);
+    expect(send.x + send.width).toBeGreaterThanOrEqual(mic.x + mic.width);
+  }
 });

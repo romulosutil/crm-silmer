@@ -196,47 +196,6 @@ onBeforeUnmount(clear);
     class="audio-recorder"
     @keydown.esc="discard"
   >
-    <div class="button-row">
-      <button
-        ref="startButton"
-        type="button"
-        :disabled="disabled || active || sending"
-        @click="start"
-      >
-        Gravar áudio
-      </button>
-      <button
-        v-if="state === 'recording'"
-        ref="stopButton"
-        type="button"
-        @click="stop"
-      >
-        Parar gravação
-      </button>
-      <button
-        v-if="active || recording"
-        type="button"
-        :disabled="sending"
-        @click="discard"
-      >
-        Descartar gravação
-      </button>
-    </div>
-    <p role="status" aria-live="polite">
-      {{
-        state === 'requesting'
-          ? 'Aguardando permissão do microfone.'
-          : state === 'recording'
-            ? 'Gravando áudio. Pare para revisar.'
-            : state === 'review'
-              ? 'Gravação pronta para revisão. Prepare e envie quando quiser.'
-              : 'Gravação por microfone ou arquivo de áudio.'
-      }}
-    </p>
-    <p v-if="state === 'recording'" aria-live="off">
-      {{ seconds }} de 300 segundos
-    </p>
-    <p v-if="error" role="alert">{{ error }}</p>
     <MediaComposer
       :conversation-id="conversationId"
       :expected-version="expectedVersion"
@@ -245,15 +204,65 @@ onBeforeUnmount(clear);
       @sending-change="sendingChanged"
       @recording-dismissed="recordingDismissed"
       @sent="sent"
-    />
+    >
+      <template #message
+        ><slot name="message" :recording-active="active"
+      /></template>
+      <template #send><slot name="send" :recording-active="active" /></template>
+      <template #tools>
+        <button
+          ref="startButton"
+          type="button"
+          :disabled="disabled || active || sending"
+          @click="start"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0V5Zm-3 6v1a6 6 0 0 0 12 0v-1m-6 7v4m-4 0h8"
+            />
+          </svg>
+          Gravar áudio
+        </button>
+        <button
+          v-if="state === 'recording'"
+          ref="stopButton"
+          type="button"
+          @click="stop"
+        >
+          Parar gravação
+        </button>
+        <button
+          v-if="active || recording"
+          type="button"
+          :disabled="sending"
+          @click="discard"
+        >
+          Descartar gravação
+        </button>
+      </template>
+      <template #recording-status>
+        <p v-if="state !== 'idle'" role="status" aria-live="polite">
+          {{
+            state === 'requesting'
+              ? 'Aguardando permissão do microfone.'
+              : state === 'recording'
+                ? 'Gravando áudio. Pare para revisar.'
+                : state === 'review'
+                  ? 'Ouça a gravação e envie quando quiser.'
+                  : 'Finalizando gravação…'
+          }}
+        </p>
+        <p v-if="state === 'recording'" aria-live="off">
+          {{ seconds }} de 300 segundos
+        </p>
+        <p v-if="error" role="alert">{{ error }}</p>
+      </template>
+    </MediaComposer>
   </section>
 </template>
 <style scoped>
 .audio-recorder {
   display: grid;
   gap: var(--space-3);
-}
-.button-row {
-  flex-wrap: wrap;
 }
 </style>

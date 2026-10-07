@@ -3,8 +3,10 @@
 Spec: [spec.md](spec.md). Contexto: [context.md](context.md).
 
 T18: MediaComposer standalone recebe conversationId/expectedVersion/disabled
-e emite sent após o 202. Selecionar não envia: preparação e envio são ações
-explícitas, envio só após ready. Preview local usa objectURL revogado ao
+e emite sent após o 202. A correção T25 solicitada na UAT substitui a ação
+Preparar: selecionar/parar gravação inicia upload e validação do rascunho,
+com prévia e progresso; mensagem só é criada por envio explícito após ready.
+Preview local usa objectURL revogado ao
 remover/substituir/unmount; áudio não apresenta nem envia caption. Legendas
 contam Unicode code points com Array.from, sem maxlength UTF-16.
 MIME/ extensão do browser são somente hints de declaração; audio/m4a e
@@ -218,6 +220,16 @@ Falha conhecida antes do envio admite retry de processamento com o mesmo
 upload_id. Timeout após efeito Meta segue reconciliação, sem novo envio.
 
 ### UI
+
+T25 integra os três componentes em um composer por slots internos: prévia
+acima da barra, Responder sem mídia ou Legenda para imagem/vídeo, controles
+temáticos de anexar/gravar e um envio contextual. Sem store global ou nova
+biblioteca. Legenda permanece editável durante upload/validação e congela
+quando o primeiro comando de envio captura o payload. Retry usa o mesmo
+upload/mediaId e comando; recusa é explicada por status, sem expor conteúdo
+ou detalhes internos. Controles têm alvo44px, gap, foco visível e layout estreito.
+O runtime da UAT4183 aponta ao perfil completo com Origin/CSRF4183;
+demo media-off anterior é preservada como snapshot histórico, sem impedir o teste.
 
 MediaComposer.vue: uma mídia selecionada, prévia, estado de validação, remover,
 legenda imagem/vídeo e envio explícito. AudioRecorder.vue: iniciar, duração,

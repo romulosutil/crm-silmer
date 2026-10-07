@@ -13,7 +13,8 @@ declarado Verified neste documento.
 
 Snapshot de produto: `4fa0ec1`. API/worker usados nas provas:
 `sha256:24f30677faab7d95739ab66f7cc0f8d9bb3dc177cf08a5ddf482a50942eb0b8a`.
-As ferramentas desta entrega acrescentam evidência, sem alterar produto, SQL ou UI.
+Esse snapshot corresponde às provas T24. A correção T25 altera o composer e
+seus testes, preservando os contratos de API, SQL e processamento.
 
 ## Reprodução local e isolamento
 
@@ -39,12 +40,22 @@ temporariamente somente o workflow DEV desse perfil e restaura em `finally`.
 Ambos usam inbound real antes de atribuir a conversa sintética ao vendedor;
 nenhuma mídia ready é semeada manualmente, nem handler do host substitui o worker.
 
-A demo humana UI4183/API3002/PG15434/S321910 e seu snapshot
-`var/media-demo/dist` devem permanecer intactos enquanto Flow1 estiver pendente.
-Cookies de 127.0.0.1 compartilham portas: não fazer login humano em4193 durante
-Flow1. CLI e contextos Playwright separados não compartilham essa sessão.
+A UAT humana da demo4183 foi **FAILED**: preparar falhava, seletor nativo,
+controles sem espaçamento, composição pouco familiar e envio bloqueado.
+A admissão de mídia estava desativada na API3002 dessa demo. T25 conecta a
+mesma UI4183 ao perfil completo API3013/PG15435/RustFS21920/n8n5688, com
+Origin4183 e admissão/leitura habilitadas. API3002, PG15434 e volumes antigos
+foram preservados. O snapshot da UI foi atualizado mantendo assets anteriores.
+O smoke da nova UI identificou polling que recusava o estado transitório
+`uploaded`; T25 aguarda `uploaded` e `processing`, liberando envio após `ready`.
 
-## Matriz de 29 critérios
+Esta ponte4183 é configuração da sessão local, não o default de `dev:media`:
+reiniciar esse comando regenera Origin4193. Antes de reutilizar4183, conferir
+Origin e proxy; não desativar a validação CSRF para contornar divergências.
+Cookies de127.0.0.1 compartilham portas; usar uma sessão sintética consistente
+com API3013. Testes Playwright separados não compartilham a sessão humana.
+
+## Matriz de 32 critérios
 
 As referências Tn apontam para os testes e adequação registrados em
 `.specs/features/inbox-media-rustfs/execution.md`; a coluna T24 distingue prova
@@ -81,6 +92,9 @@ nova de evidência preservada. Casos negativos não foram removidos ou relaxados
 | MED-27 | T22 Live órfão24h, attach concorrente, writer/decoder vivo, crash/intermediários e falha DELETE mantêm reserva; T24 scheduler real conserva attached.                                                 |
 | MED-28 | T23 Live131/131 e HTTP dois202/terceiro429/quota intacta/texto202; capacidade2/decoder serial, receiving grace3min conserva bytes.                                                                    |
 | MED-29 | T4/T5/T6 codecs/MIME negativos; T24301s invalid_format, send409 e nunca ready.                                                                                                                        |
+| MED-30 | T25 valida automaticamente seleção/parada e estados uploaded/processing antes de ready, sem POSTmessage implícito; revisão física pendente.                                                           |
+| MED-31 | T25 picker temático, toolbar única/envio contextual, draft texto preservado, botões44px, gap2D>=8px em1280/390px e axe sem violações; revisão humana pendente.                                        |
+| MED-32 | T25 erros401/403/404/413/429/503 explicam recuperação; preview e chave original preservados, envio continua bloqueado até ready.                                                                      |
 
 O403 acima usa usuário sem função operacional válida no DB sintético e restaura
 a função. Vendedores ativos compartilham leitura do Inbox pela baseline;
@@ -169,14 +183,15 @@ permanecem externos; catálogo verde ou mocks não equivalem a esses gates.
 
 ## UAT humana pendente
 
-Flow1 permanece na demo4183, conversa `synthetic-media-demo-conversation`:
-o humano permite o microfone, grava fala, para, ouve e descarta. Confirmar som,
-revisão e liberação do dispositivo; não preparar/enviar nesse perfil media-off.
-O coordenador aguarda a resposta explícita, sem converter silêncio em skip.
+Retestar na UI4183, sessão sintética do perfil completo, conversa
+“Conversa sintética para testar mídia”. O humano permite o microfone, grava
+fala, para, ouve e descarta; confirmar som e liberação do dispositivo.
+Em outra gravação, parar, ouvir e enviar explicitamente após a validação
+automática. Não existe mais etapa manual “Preparar”. Confirmar DEV sent e
+reprodução no histórico. Selecionar também imagem/áudio/vídeo, editar legenda
+quando aplicável e operar controles por teclado, inclusive em tela estreita.
 
-Depois da coordenação de Flow1, Flow2 pode usar perfil4193: gravar fala, parar,
-ouvir, preparar e enviar explicitamente; confirmar estado DEV sent, reprodução
-no histórico e replay sem duplicação. Selecionar também imagem/áudio/vídeo e
-operar os controles por teclado. Não automatizar hardware físico ou sua permissão.
-Se houver falha, registrar o caso e corrigir antes de fechar T24. Somente então
-rodar Verifier independente e sensor, mantendo gates operacionais pendentes honestos.
+Não automatizar hardware físico ou sua permissão. A correção T25 tem revisão
+independente própria; T24 e o Verifier de toda a feature aguardam essa nova
+resposta humana. Manter gates operacionais pendentes honestos e não converter
+silêncio em aprovação.

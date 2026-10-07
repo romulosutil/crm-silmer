@@ -13,7 +13,8 @@ const inputId = useId(),
   captionId = useId(),
   statusId = useId();
 const fileInput = ref(null),
-  prepareButton = ref(null),
+  attachButton = ref(null),
+  captionInput = ref(null),
   sendButton = ref(null);
 const file = ref(/** @type {File|null} */ (null)),
   preview = ref(''),
@@ -48,11 +49,11 @@ const sendAllowed = computed(
 const status = computed(
   () =>
     ({
-      empty: 'Selecione um arquivo para revisar.',
-      selected: 'Revise a prévia e prepare o arquivo.',
-      uploading: 'Preparando arquivo…',
+      empty: '',
+      selected: 'Revise o anexo antes de enviar.',
+      uploading: 'Carregando anexo…',
       processing: 'Validando arquivo…',
-      ready: 'Arquivo pronto. Revise e envie quando quiser.',
+      ready: 'Pronto para enviar.',
       sending: 'Enviando anexo…',
       rejected: 'Arquivo rejeitado. Remova e escolha outro.',
       error: 'Não foi possível concluir. A prévia foi preservada.',
@@ -109,7 +110,7 @@ async function remove() {
   clear();
   emit('recording-dismissed');
   await nextTick();
-  fileInput.value?.focus();
+  attachButton.value?.focus();
 }
 /** @param {Event} event */
 async function selectFile(event) {
@@ -161,7 +162,8 @@ async function selectCandidate(selected, origin = 'attachment') {
   };
   state.value = 'selected';
   await nextTick();
-  prepareButton.value?.focus();
+  captionInput.value?.focus();
+  void prepare();
 }
 /** @param {number} token */
 function current(token) {
@@ -210,7 +212,12 @@ async function poll(token, signal, conversationId) {
       if (data.state === 'ready') {
         state.value = 'ready';
         await nextTick();
-        sendButton.value?.focus();
+        // Background validation must not interrupt editing or playback.
+        if (
+          document.activeElement === document.body ||
+          document.activeElement === attachButton.value
+        )
+          sendButton.value?.focus();
         return;
       }
       if (['rejected', 'unavailable', 'lost', 'expired'].includes(data.state)) {
@@ -221,7 +228,8 @@ async function poll(token, signal, conversationId) {
             : 'Arquivo indisponível. Escolha outro arquivo.';
         return;
       }
-      if (data.state !== 'processing') throw new Error('MEDIA_INVALID_STATE');
+      if (!['uploaded', 'processing'].includes(data.state))
+        throw new Error('MEDIA_INVALID_STATE');
       state.value = 'processing';
       await delay(polling.signal);
     }
@@ -264,7 +272,16 @@ async function prepare() {
   } catch (cause) {
     if (!current(token) || cause?.name === 'AbortError') return;
     state.value = 'error';
-    error.value = 'Não foi possível preparar o arquivo. Tente novamente.';
+    error.value =
+      {
+        401: 'Sua sessão expirou. Entre novamente para anexar o arquivo.',
+        403: 'Você não pode anexar arquivos nesta conversa. Verifique o responsável pelo atendimento.',
+        404: 'Anexos estão indisponíveis neste ambiente. O arquivo foi preservado.',
+        413: 'O arquivo ultrapassa o limite permitido. Escolha um arquivo menor.',
+        429: 'Há muitos arquivos sendo carregados. Aguarde um pouco e tente novamente.',
+        503: 'O serviço de anexos está temporariamente indisponível. Tente novamente.',
+      }[cause?.status] ??
+      'Não foi possível carregar ou validar o anexo. Tente novamente.';
   } finally {
     if (token === generation) controller = null;
   }
@@ -304,7 +321,7 @@ async function send() {
     clear();
     emit('sent', data);
     await nextTick();
-    fileInput.value?.focus();
+    attachButton.value?.focus();
   } catch (cause) {
     if (!current(token) || cause?.name === 'AbortError') return;
     state.value = 'ready';
@@ -326,11 +343,7 @@ watch(
       if (busy.value) {
         // An aborted message request can already have committed. Keep its
         // immutable attempt eligible for an explicit idempotent retry.
-        state.value = sendAttempt
-          ? 'ready'
-          : mediaId.value
-            ? 'error'
-            : 'selected';
+        state.value = sendAttempt ? 'ready' : 'error';
         error.value = 'Envio indisponível nesta conversa.';
       }
     }
@@ -350,18 +363,35 @@ watch(
 
 <template>
   <section class="media-composer" aria-label="Anexar mídia" :aria-busy="busy">
-    <label :for="inputId">Arquivo para anexar</label>
     <input
       :id="inputId"
       ref="fileInput"
       type="file"
+      class="media-composer__file-input"
+      aria-label="Arquivo para anexar"
       accept=".jpg,.jpeg,.png,.mp3,.ogg,.m4a,.mp4,image/jpeg,image/png,audio/mpeg,audio/ogg,audio/mp4,video/mp4"
-      :disabled="disabled || busy"
+      :disabled="disabled || state === 'sending'"
       :aria-describedby="statusId"
       @change="selectFile"
     />
     <div v-if="file" class="media-composer__review">
-      <p>{{ file.name }}</p>
+      <div class="media-composer__file-heading">
+        <p>
+          {{ file.name }}
+          <small>{{ (file.size / 1024 / 1024).toFixed(2) }} MiB</small>
+        </p>
+        <button
+          type="button"
+          class="media-composer__remove"
+          :disabled="state === 'sending'"
+          aria-label="Remover anexo"
+          @click="remove"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 6 12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </div>
       <img v-if="kind === 'image'" :src="preview" alt="Prévia do anexo" />
       <audio
         v-else-if="kind === 'audio'"
@@ -381,48 +411,66 @@ watch(
         <label :for="captionId">Legenda</label>
         <textarea
           :id="captionId"
+          ref="captionInput"
           v-model="caption"
-          :disabled="disabled || busy || Boolean(sendAttempt)"
+          placeholder="Adicione uma legenda…"
+          rows="2"
+          :disabled="disabled || state === 'sending' || Boolean(sendAttempt)"
           :aria-invalid="captionLength > 1024"
           :aria-describedby="`${captionId}-count`"
         ></textarea>
         <p :id="`${captionId}-count`">{{ captionLength }}/1024 caracteres</p>
       </template>
-      <div class="button-row">
+    </div>
+    <slot v-else name="message" />
+    <slot name="recording-status" />
+    <p v-if="status" :id="statusId" role="status" aria-live="polite">
+      {{ status }}
+    </p>
+    <p v-if="error" role="alert" class="media-composer__error">{{ error }}</p>
+    <div class="media-composer__toolbar">
+      <div class="media-composer__tools">
         <button
-          ref="prepareButton"
+          ref="attachButton"
           type="button"
-          :disabled="
-            disabled ||
-            busy ||
-            ['ready', 'rejected'].includes(state) ||
-            Boolean(sendAttempt)
-          "
+          :disabled="disabled || state === 'sending'"
+          :aria-describedby="status ? statusId : undefined"
+          @click="fileInput?.click()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="m8 12 6-6a4 4 0 0 1 6 6l-8 8a6 6 0 0 1-8-8l8-8m-4 12 8-8a2 2 0 0 1 3 3l-8 8"
+            />
+          </svg>
+          Anexar arquivo
+        </button>
+        <slot name="tools" />
+      </div>
+      <div class="media-composer__actions">
+        <button
+          v-if="file && state === 'error' && !sendAttempt"
+          type="button"
+          :disabled="disabled || busy"
           @click="prepare"
         >
-          {{
-            mediaId && state === 'error'
-              ? 'Atualizar validação'
-              : state === 'error'
-                ? 'Tentar preparar novamente'
-                : 'Preparar arquivo'
-          }}
+          {{ mediaId ? 'Atualizar validação' : 'Tentar carregar novamente' }}
         </button>
         <button
+          v-if="file"
           ref="sendButton"
           type="button"
+          class="primary"
           :disabled="!sendAllowed"
           @click="send"
         >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m3 3 18 9-18 9 4-9-4-9Zm4 9h14" />
+          </svg>
           {{ sendAttempt ? 'Tentar enviar novamente' : 'Enviar anexo' }}
         </button>
-        <button type="button" :disabled="state === 'sending'" @click="remove">
-          Remover anexo
-        </button>
+        <slot v-else name="send" />
       </div>
     </div>
-    <p :id="statusId" role="status" aria-live="polite">{{ status }}</p>
-    <p v-if="error" role="alert">{{ error }}</p>
   </section>
 </template>
 
@@ -441,6 +489,72 @@ watch(
   gap: var(--space-3);
   min-width: 0;
 }
+.media-composer__file-input {
+  display: none;
+}
+.media-composer__file-heading,
+.media-composer__toolbar,
+.media-composer__tools,
+.media-composer__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.media-composer__file-heading,
+.media-composer__toolbar {
+  justify-content: space-between;
+}
+.media-composer__file-heading p {
+  margin: 0;
+  min-width: 0;
+}
+.media-composer__file-heading small {
+  display: block;
+  color: var(--color-text-muted);
+}
+.media-composer__tools,
+.media-composer__actions,
+.media-composer__toolbar {
+  flex-wrap: wrap;
+}
+.media-composer__actions {
+  margin-inline-start: auto;
+}
+.media-composer__toolbar {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+.media-composer button,
+.media-composer :deep(button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+}
+.media-composer svg,
+.media-composer :deep(svg) {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.media-composer__remove {
+  flex-shrink: 0;
+}
+.media-composer__error {
+  margin: 0;
+}
+.media-composer :deep(.composer) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
 .media-composer__review p {
   overflow-wrap: anywhere;
 }
@@ -458,7 +572,12 @@ textarea {
   min-height: 5rem;
   resize: vertical;
 }
-.button-row {
-  flex-wrap: wrap;
+@media (max-width: 480px) {
+  .media-composer {
+    padding: var(--space-3);
+  }
+  .media-composer__tools {
+    flex: 1 1 100%;
+  }
 }
 </style>

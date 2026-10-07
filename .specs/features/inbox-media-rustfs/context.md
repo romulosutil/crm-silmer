@@ -18,6 +18,16 @@ armazenar no RustFS existente; testar com n8n DEV sem WhatsApp.
 
 ## Implementation Decisions
 
+- UAT de 06/10/2026 reportou cinco problemas: Prepare falha, seletor nativo
+  sem tema, mic colado ao envio, composição pouco familiar e Enviar anexo
+  bloqueado. Registro FAILED; gravação no DOM não comprova ouvir/descarte.
+- A demo4183 usada no teste tinha CHAT_MEDIA_ENABLED=false; isso explica
+  upload404 e ausência de ready. Corrigir o ambiente sem afrouxar CSRF/ACL.
+- O pedido de UX autoriza validação automática na seleção/parada e uma barra
+  integrada de anexar/gravar/enviar, com prévia, legenda e envio explícito.
+  Atualizar interações de testes da ação Preparar obsoleta preservando negativos,
+  idempotência, scanner e limites. São MED-30..32/T25; fechar T24 após nova UAT.
+
 - Usuário escolheu RustFS já existente: não contratar R2 nesta entrega.
 - Usuário escolheu anexar áudio e gravar pelo microfone.
 - Usuário retirou o prazo de sete dias: manter mídia enviada salva por enquanto.

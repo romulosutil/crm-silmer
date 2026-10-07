@@ -13,6 +13,14 @@
 
 ## Handoff
 
+Revisão independente de86ab0a1: baseline59/59, unit862/0/3 e cinco mutantes
+comportamentais mortos com isolamento comprovado. Verdict T25 FAIL por MED-32:
+recusas HTTP conhecidas de envio usavam mensagem genérica de resultado incerto.
+T26 formaliza a correção e antecede T24. Só MediaComposer.vue e seu E2E mudam
+no produto; retries potencialmente aceitos mantêm chave/payload imutáveis.
+Após gates e commit T26, reexecutar o Verifier no novo HEAD. Não fechar feature
+ou UAT física por esse relatório específico. PrivacyP1 operacional permanece.
+
 UAT humana de06/10 reportou FAILED: Prepare/upload falha, filepicker nativo,
 mic colado aEnviar, UX pouco familiar e envioanexo bloqueado. Demo4183 tinha
 admissãofalse; correçãoT25 autorizada registraMED30..32 e antecede fechamentoT24.

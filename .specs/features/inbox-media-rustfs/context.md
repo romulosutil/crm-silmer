@@ -69,3 +69,12 @@ matriz de browsers e recovery. São propostas, sem alegar aprovação do usuári
 
 Receptor DEV separado, câmera, múltiplos anexos, PDF, IA multimodal, upload
 de arte do Pedido e política futura de retenção são entregas independentes.
+
+## Finding da revisão independente — T26
+
+A revisão T25 encontrou lacuna em MED-32: a recusa HTTP conhecida de envio
+era mostrada como resultado incerto. A correção distingue causas públicas
+seguras e ações de retry/revisão, preservando anexo, chave e payload de
+tentativas potencialmente aceitas. Nenhum detalhe arbitrário de erro/PII
+vai à interface. É correção do contrato aprovado, sem ampliar o canal
+ou alterar autorização, API, worker, RustFS e retenção.

@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-25 tarefas planejadas; T1 a T23 e T25 concluídas; T24 aguarda nova UAT humana. Evidência em [execution.md](execution.md).
+26 tarefas planejadas; T1 a T23, T25 e T26 concluídas; T24 aguarda nova UAT humana. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -17,8 +17,8 @@ Docker local foi autorizado explicitamente pelo usuário para desenvolvimento e 
 Após a última tarefa, Verifier independente obrigatório, com evidência por AC
 e sensor de discriminação em scratch isolado; validation.md não é criado vazio.
 Se houver achados, criar tarefas de correção e repetir no limite da skill.
-As quatro fases originais têm seis tarefas; a fase 4 inclui a correção T25
-solicitada durante UAT e passa a sete tarefas. Na execução, oferecer delegação conforme a
+As quatro fases originais têm seis tarefas; a fase 4 inclui T25 solicitada
+durante UAT e T26 decorrente da revisão independente, passando a oito tarefas. Na execução, oferecer delegação conforme a
 skill antes de despachar workers. Arquivos têm um único dono por tarefa.
 
 ## Test Coverage Matrix
@@ -81,12 +81,12 @@ T13..T18: bytes técnicos, workflow, DEV, DTO, cliente HTTP e composer.
 
 ### Phase 4: Gravação, histórico e fechamento
 
-T19..T23, T25, T24: recorder, playback, integração Inbox, limpeza, rollout,
-correção UX solicitada pelo usuário e UAT.
+T19..T23, T25, T26, T24: recorder, playback, integração Inbox, limpeza, rollout,
+correção UX, recuperação de recusa conhecida e UAT.
 
 ```text
 T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9 -> T10 -> T11 -> T12
-T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T24
+T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T24
 ```
 
 ## Task Breakdown
@@ -424,11 +424,25 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Gate**: Build + UI + smoke local pelo backend da demo4183; revisão independente da correção antes da nova UAT.
 **Commit**: fix(inbox): simplify media composing and enable complete local testing
 
+### T26: Explicar e recuperar recusas conhecidas de envio
+
+**What**: Corrigir o finding MED-32 do Verifier da T25, distinguindo recusa conhecida de resultado incerto sem perder a idempotência.
+**Where**: apps/edge-web/src/components/inbox/MediaComposer.vue
+**Supporting files**: test/e2e/media-composer.spec.js; .specs/features/inbox-media-rustfs/spec.md; .specs/features/inbox-media-rustfs/context.md; .specs/features/inbox-media-rustfs/execution.md; .specs/features/inbox-media-rustfs/validation-ux.md; .specs/STATE.md; docs/runbooks/chat-media-uat.md.
+**Depends on**: T25
+**Requirement**: MED-06, MED-32
+**Reuses**: ApiError status/code, contratos INBOX_INVALID/INBOX_FORBIDDEN/INBOX_CONFLICT e drafts existentes; nenhum detalhe arbitrário da API vai à interface.
+**Tools**: tlc-spec-driven; Playwright; Verifier independente.
+**Done when**: [x] Recusa conhecida explica motivo seguro; recuperáveis mantêm retry com chave/payload originais; recusas que exigem revisão bloqueiam retry cego e permitem remover/reselecionar; preview é preservado e nenhuma mensagem é automática; rede/5xx incertos mantêm comportamento existente e nenhum dado privado do erro é exibido.
+**Tests**: e2e de motivos HTTP, preview, sends0, chave/payload, bloqueio/remover e canária de PII; regressão dos cenários existentes de resultado incerto.
+**Gate**: Build + UI focal; Verifier independente reexecuta baseline e sensor no novo HEAD antes da nova UAT.
+**Commit**: fix(inbox): explain known media send refusals safely
+
 ### T24: Homologação da fatia e evidências
 
 **What**: Executar UAT sintético ponta a ponta do CRM ao DEV e consolidar critérios para canal real.
 **Where**: docs/runbooks/chat-media-uat.md
-**Depends on**: T25
+**Depends on**: T26
 **Requirement**: MED-01..32
 **Reuses**: Todos os testes da fatia; handoff e reserva atuais.
 **Tools**: tlc-spec-driven; Browser/Playwright; Verifier independente após commit final.
@@ -488,7 +502,8 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T22  | T21                    | T21 → T22     | Match  |
 | T23  | T22                    | T22 → T23     | Match  |
 | T25  | T23                    | T23 → T25     | Match  |
-| T24  | T25                    | T25 → T24     | Match  |
+| T26  | T25                    | T25 → T26     | Match  |
+| T24  | T26                    | T26 → T24     | Match  |
 
 ## Test Co-location Validation
 
@@ -519,6 +534,7 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T23  | Operação                    | structural/integration      | structural/integration | OK     |
 | T24  | UAT                         | integration/e2e             | integration/e2e        | OK     |
 | T25  | Composer integrado          | e2e/axe + integração real   | e2e/axe + integração   | OK     |
+| T26  | Recusa de envio             | e2e + sensor                | e2e + sensor           | OK     |
 
 ## Confirmação antes de Execute
 

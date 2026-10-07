@@ -49,3 +49,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [023 — Arquivos da arte do pedido no RustFS](023-arquivos-da-arte-no-rustfs.md)
 - [024 — O atendimento começa pelo produto](024-atendimento-comeca-pelo-produto.md)
 - [025 — Itens por público no pedido](025-itens-por-publico.md)
+- [026 — Imagem, áudio e chat do site no bot](026-midia-e-chat-do-site-no-bot.md)

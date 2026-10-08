@@ -98,6 +98,12 @@ antigas. Conversa transferida não volta ao bot (ADR 015).
 Contrato, diagnóstico e rollout: [n8n](docs/integrations/n8n/README.md) e
 [ator técnico](docs/runbooks/automation-executor.md).
 
+ADR 027: `POST /api/v1/public/loja/pedidos` recebe o aviso de Pix da loja do
+site sem sessão. `Origin` da lista `STORE_ORDERS_ALLOWED_ORIGINS`, corpo até
+8 KB, `Idempotency-Key` igual a `pedido_id` no registro de idempotência de
+sempre, limites por IP (memória e PostgreSQL) e por telefone (PostgreSQL),
+recibo com HMAC (`STORE_ORDERS_HMAC_KEY`) e auditoria na mesma transação.
+
 ## 5. Pedido, impressão e métricas
 
 Pedido tem `pendente` e `confirmado` (ADR 006). O primeiro ponto confirmado
@@ -125,6 +131,13 @@ aprovada provisoriamente pelo PO em 06/10/2026. PDF sintético e hashes são
 artefatos de aprovação, sem prova de envio externo. V2 a v5 não são
 sobrescritas. Assinatura física de Rose/Operação na v6 segue obrigatória
 antes da produção.
+
+Pedido da loja (ADR 027): `origin = loja`, sem conversa, nasce confirmado
+pelo ator `system:loja-do-site` ao preço de
+`modules/orders/src/domain/store-catalog.js`, com `paid_on` e
+`payment_declared_at` informados pelo cliente; qualquer escrita depois é
+`409 ORDER_LOCKED`. Imprime `ficha-loja-v1` na mesma rota, com
+`?download=1` para anexo; teste (`is_test`) fica fora das métricas.
 
 Dashboard/listas usam read models autorizados. Vendido/vendas contam
 confirmados e não representam recebimentos. SSE usa IDs e metadados mínimos.

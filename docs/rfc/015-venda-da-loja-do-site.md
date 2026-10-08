@@ -1,6 +1,8 @@
 # RFC 015 — Venda da loja do site no CRM
 
-Status: em revisão, aguardando a decisão do PO sobre D1–D9 (seção 7).
+Status: decidida pelo PO em 07/10/2026, que seguiu as recomendações D1–D9 da
+seção 7 e acrescentou que o pedido da loja aparece no Dashboard como venda
+normal (seção 3.4); registrada na [ADR 027](../adr/027-venda-da-loja-do-site.md).
 
 Data: 07/10/2026
 
@@ -38,8 +40,8 @@ e roda em modo teste até existir o endpoint. Tarefa T103 de
    devolvido ao site, sem duplicar em reenvio.
 2. O pedido é lastro da venda: travado, com status "Pago (informado pelo
    cliente em …)", nome e telefone, e uma ficha simplificada para baixar.
-3. Conta como venda no Dashboard, com a parcela da loja visível para a Rose
-   conferir no Sicredi.
+3. Conta como venda no Dashboard, como qualquer venda; a Rose confere no
+   Sicredi pelo filtro da loja na lista.
 4. Não se mistura com o atendimento: nenhum contato, conversa ou pendente do
    bot é criado, achado ou alterado.
 5. O endpoint público resiste a abuso sem infraestrutura nova.
@@ -126,10 +128,10 @@ só para `origin = loja`.
 
 - O pedido da loja conta em "Vendido", "Pedidos confirmados", "Ticket médio"
   e "Peças vendidas", como qualquer confirmado.
-- `GET /api/v1/orders/summary` ganha `store: {count, amountCents}` e passa a
-  ignorar pedidos de teste. O card "Vendido" mostra embaixo "inclui N da loja
-  do site · R$ X informados pelo cliente", para a Rose comparar com o extrato
-  do Sicredi.
+- `GET /api/v1/orders/summary` passa a ignorar pedidos de teste.
+- ~~O card "Vendido" mostra embaixo "inclui N da loja do site · R$ X
+  informados pelo cliente".~~ **Decisão do PO (07/10/2026):** o pedido da loja
+  aparece no Dashboard como uma venda normal, sem linha separada.
 - A lista ganha o filtro "Loja do site" (`origin=loja`), para a mesma
   conferência.
 
@@ -238,7 +240,8 @@ teste_recusado`.
   público, cor, malha, gola, tamanho, quantidade, valor, Pix "informado pelo
   cliente em …", retirada e origem; botão **Baixar ficha** (e Imprimir ficha).
   Nenhuma seção editável, fechamento, lastro ou arquivos da arte.
-- **Dashboard:** a linha da loja embaixo de "Vendido".
+- **Dashboard:** sem mudança visível; o pedido da loja entra nos números como
+  qualquer venda (decisão do PO).
 - Acessibilidade: selos com texto (não só cor), o status anunciado como texto,
   botões com nome acessível, foco no título ao abrir, tudo por teclado.
 
@@ -293,7 +296,7 @@ teste_recusado`.
 ## 5. Riscos
 
 - **Aviso falso.** Qualquer um informa "paguei" sem pagar: o pedido conta como
-  venda até alguém notar. Mitigação: limites, a linha da loja no Dashboard e o
+  venda até alguém notar. Mitigação: limites e o
   filtro para a conferência no Sicredi; a retirada só acontece com o Pix
   conferido. Tirar um aviso falso do "Vendido" exige uma ação nova (D9).
 - **Número exposto.** O `numero` devolvido revela a sequência de pedidos do
@@ -322,7 +325,7 @@ teste_recusado`.
 | LOJ-06 | O pedido da loja nasce `confirmado`, `origin = loja`, sem conversa, autor "Loja do site", condição Pix, `paid_on` e `payment_declared_at` do aviso; nenhum contato, conversa ou pendente é criado ou alterado. |
 | LOJ-07 | Editar, gerar, reabrir, lastro e arquivos num pedido da loja respondem `409 ORDER_LOCKED`; a página não mostra esses controles.                                                                                |
 | LOJ-08 | Lista e página mostram selo "Loja" e "Pago (informado pelo cliente em dd/mm/aaaa às hh:mm)"; a lista filtra "Loja do site" e acha o pedido pelo número e pelo telefone.                                        |
-| LOJ-09 | O Dashboard conta os pedidos da loja (não teste) em Vendido e mostra a parcela da loja.                                                                                                                        |
+| LOJ-09 | O Dashboard conta os pedidos da loja (não teste) em Vendido como qualquer venda, sem linha separada (decisão do PO).                                                                                           |
 | LOJ-10 | "Baixar ficha" baixa `ficha-loja-v1` com só os campos padrão; a mesma rota imprime; o CSP do nginx libera só o estilo dela.                                                                                    |
 | LOJ-11 | Preflight `OPTIONS` libera `POST`, `Content-Type` e `Idempotency-Key` só para as origens configuradas, com `Vary: Origin`; `POST` sem origem permitida é `403`.                                                |
 | LOJ-12 | Acima de 5 pedidos/hora por IP ou 5/24 h por telefone, ou 30 requisições/minuto por IP, responde `429 rate_limited` com `Retry-After`.                                                                         |

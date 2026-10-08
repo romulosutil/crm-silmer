@@ -357,9 +357,13 @@ WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos po
   teto pelas mensagens do cliente. Os nomes não entram no repositório.
 - São necessárias duas credenciais Basic distintas: n8n → CRM e CRM → n8n.
 - O n8n 2 bloqueia `$env` nos nós por padrão (`N8N_BLOCK_ENV_ACCESS_IN_NODE`).
-  O DEV implantado grava a URL do cloud-dev direto nos nós do CRM; o workflow
-  principal ainda usa `$env.SILMER_PANEL_BASE_URL` e precisa da mesma
-  adaptação, com a URL do CRM de destino, antes de ser publicado nesse n8n.
+  Na implantação, o DEV e o principal gravam a URL do cloud-dev
+  (`https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host`) direto nos
+  nós do CRM; o snapshot do repositório mantém `$env.SILMER_PANEL_BASE_URL`.
+  Troque a URL nos nós quando o CRM definitivo tiver domínio. Pelo mesmo
+  motivo, o nó `WhatsApp - Enviar texto humano (MVP)` precisa do ID do número
+  de origem escolhido no próprio nó, no lugar de
+  `$env.SILMER_WHATSAPP_PHONE_NUMBER_ID`, antes de o principal ser publicado.
 - Segredos não entram em export, repositório, log, chat ou Data Table.
 - Persistência de execuções manuais/sucesso e progresso deve ficar desabilitada;
   falhas são sanitizadas e têm expurgo técnico em até 30 dias.

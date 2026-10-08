@@ -94,9 +94,9 @@ de desenvolvimento e nunca é fallback silencioso.
 - **Imagem** (até 5 MB) vai anexada ao agente. **Áudio** (até 16 MB) é
   transcrito pela mesma conta OpenAI (`gpt-4o-mini-transcribe`) e entra como
   a mensagem do cliente. No WhatsApp, os nós `WhatsApp - Consultar mídia` e
-  `WhatsApp - Baixar mídia` usam a credencial WhatsApp na Graph API
-  (`SILMER_META_GRAPH_VERSION`, padrão `v23.0`); no site, o arquivo já chega
-  com a mensagem.
+  `WhatsApp - Baixar mídia` usam a credencial WhatsApp na Graph API `v23.0`
+  (fixa no nó, porque o n8n 2 bloqueia `$env` nos nós por padrão); no site, o
+  arquivo já chega com a mensagem.
 - O que não pode ser consultado, baixado, preparado ou transcrito (por exemplo
   áudio AAC ou AMR) chega ao modelo como "não consegui abrir", e o bot pede
   para o cliente escrever. Documento, vídeo e tipo desconhecido transferem.
@@ -356,6 +356,10 @@ WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos po
   da variável `SILMER_PILOT_SELLERS` do n8n, separados por vírgula, e conta o
   teto pelas mensagens do cliente. Os nomes não entram no repositório.
 - São necessárias duas credenciais Basic distintas: n8n → CRM e CRM → n8n.
+- O n8n 2 bloqueia `$env` nos nós por padrão (`N8N_BLOCK_ENV_ACCESS_IN_NODE`).
+  O DEV implantado grava a URL do cloud-dev direto nos nós do CRM; o workflow
+  principal ainda usa `$env.SILMER_PANEL_BASE_URL` e precisa da mesma
+  adaptação, com a URL do CRM de destino, antes de ser publicado nesse n8n.
 - Segredos não entram em export, repositório, log, chat ou Data Table.
 - Persistência de execuções manuais/sucesso e progresso deve ficar desabilitada;
   falhas são sanitizadas e têm expurgo técnico em até 30 dias.

@@ -1727,3 +1727,18 @@ commit e um push.
   identidade `999`, avisos que pedem o WhatsApp no chat e recusa `422` no
   painel.
 - **Gate:** testes de contrato do workflow e `test/n8n-media-site-chat.test.js`.
+
+## Venda da loja do site (RFC 015, 07/10/2026)
+
+Branch `feat/loja-do-site`, a partir do `master`; segue a T102 (ADR 026).
+
+### T103: RFC da venda da loja do site
+
+- **Requisitos:** propostos `LOJ-01`–`LOJ-14` na
+  [RFC 015](../../../docs/rfc/015-venda-da-loja-do-site.md); entram na spec com
+  a ADR 027, depois da decisão do PO.
+- **Arquivos:** RFC 015 e tasks.
+- **Aceite:** situação atual, onde mora o endpoint, conciliação com as ADRs
+  006, 008 e 018, alternativas, riscos, critérios e as decisões D1–D9 para o
+  PO.
+- **Gate:** links e formatação.

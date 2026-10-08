@@ -6,6 +6,7 @@ import {
 } from '@crm-silmer/orders';
 
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
+const ORDER_ORIGINS = new Set(['atendimento', 'loja']);
 const ORDER_SECTIONS = new Set(['summary', 'items', 'observations', 'artwork']);
 
 /**
@@ -26,6 +27,7 @@ const PUBLIC_CODES = new Set([
   'INVALID_AMOUNT',
   'INVALID_GRADE',
   'ORDER_INVALID',
+  'ORDER_LOCKED',
   'ORDER_NOT_CONFIRMABLE',
   'ORDER_NOT_CONFIRMED',
   'ORDER_NOT_FOUND',
@@ -83,18 +85,31 @@ export function registerOrderRoutes(api, orders, contextFor) {
    * operational session may print one, so this read is not scoped to the
    * conversation owner; a pending order has no document yet and is refused
    * with 409, the same reason the page keeps the button locked. The template
-   * is chosen in one place, `PRINT_TEMPLATE` (PIM-10, ADR 017).
+   * is chosen in one place, `PRINT_TEMPLATE` (PIM-10, ADR 017); a site shop
+   * order prints its simplified ficha (ADR 027). `?download=1` sends the
+   * same document as the attachment `pedido-NN-CRM.html` (LOJ-10).
    */
   api.get('/api/v1/orders/:orderId/print', async (request, reply) =>
     respond(reply, async () => {
       const params = requireObject(request.params);
       const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+      const query = requireObject(request.query ?? {});
+      rejectUnknownKeys(query, ['download']);
+      if (query.download !== undefined && query.download !== '1') {
+        throw new OrderRequestError(400, 'INVALID_REQUEST');
+      }
       await authorizeRead(request, orders, 'order.print');
       const { order } = await orders.get(orderId);
       if (order.status !== 'confirmado') {
         throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
       }
       privateReadHeaders(reply);
+      if (query.download === '1') {
+        reply.header(
+          'content-disposition',
+          attachment('pedido-' + order.number + '.html'),
+        );
+      }
       return reply
         .code(200)
         .type('text/html; charset=utf-8')
@@ -515,14 +530,21 @@ async function authorizeRead(request, orders, action = 'order.read') {
 /** @param {unknown} value */
 function parseListQuery(value) {
   const query = requireObject(value ?? {});
-  rejectUnknownKeys(query, ['cursor', 'limit', 'q', 'status']);
-  /** @type {{status?: string, q?: string, cursor?: string, limit?: number}} */
+  rejectUnknownKeys(query, ['cursor', 'limit', 'origin', 'q', 'status']);
+  /** @type {{status?: string, origin?: string, q?: string, cursor?: string, limit?: number}} */
   const input = {};
   if (query.status !== undefined) {
     if (!ORDER_STATUSES.has(query.status)) {
       throw new OrderRequestError(400, 'INVALID_FILTER');
     }
     input.status = query.status;
+  }
+  // ADR 027: "Loja do site" narrows the list to the site shop's orders.
+  if (query.origin !== undefined) {
+    if (!ORDER_ORIGINS.has(query.origin)) {
+      throw new OrderRequestError(400, 'INVALID_FILTER');
+    }
+    input.origin = query.origin;
   }
   if (query.q !== undefined) {
     input.q = requireIdentifier(query.q, 'QUERY', 128);

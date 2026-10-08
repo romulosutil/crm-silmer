@@ -15,10 +15,12 @@ import {
 export const STORE_ORDER_ACTION = 'store.order.create';
 export const DEFAULT_STORE_REQUESTS_PER_MINUTE = 30;
 
-// An allowed origin is a scheme, a host and an optional port; `*` stands for
-// one run of letters, digits and hyphens inside the host, as in a Vercel
-// preview (`https://silmer-*-romulodesigns.vercel.app`).
+// An allowed origin is a scheme, a host and an optional port; one `*` stands
+// for a run of letters, digits and hyphens inside the host, as in a Vercel
+// preview (`https://silmer-*-romulodesigns.vercel.app`). The domain after the
+// wildcard is fixed, so `https://*` alone is refused.
 const ORIGIN_ENTRY = /^https?:\/\/[a-z0-9*.-]+(?::\d{1,5})?$/u;
+const WILDCARD_RUN = /^[a-z0-9-]+$/u;
 
 /**
  * @typedef {{
@@ -35,7 +37,9 @@ const ORIGIN_ENTRY = /^https?:\/\/[a-z0-9*.-]+(?::\d{1,5})?$/u;
 /**
  * ADR 027: compiles `STORE_ORDERS_ALLOWED_ORIGINS` (comma separated) into a
  * matcher. Every entry is checked at startup, so a typo stops the API
- * instead of opening or closing the route by surprise.
+ * instead of opening or closing the route by surprise. Nothing from the
+ * configuration becomes a regular expression: an entry matches the whole
+ * origin, or its fixed prefix and suffix around the one wildcard.
  *
  * @param {string} list
  * @returns {(origin: unknown) => boolean}
@@ -48,23 +52,34 @@ export function compileAllowedOrigins(list) {
   if (entries.length === 0) {
     throw new Error('STORE_ORDERS_ALLOWED_ORIGINS needs at least one origin');
   }
-  const patterns = entries.map((entry) => {
-    if (!ORIGIN_ENTRY.test(entry) || entry.includes('**')) {
-      throw new Error(`STORE_ORDERS_ALLOWED_ORIGINS has an invalid origin`);
+  /** @type {Array<(origin: string) => boolean>} */
+  const matchers = entries.map((entry) => {
+    if (!ORIGIN_ENTRY.test(entry)) {
+      throw new Error('STORE_ORDERS_ALLOWED_ORIGINS has an invalid origin');
     }
-    const [scheme, host] = entry.split('://');
-    if (host.includes('*') && scheme !== 'https') {
-      throw new Error('a wildcard origin must use https');
+    const star = entry.indexOf('*');
+    if (star === -1) return (origin) => origin === entry;
+    const prefix = entry.slice(0, star);
+    const suffix = entry.slice(star + 1);
+    if (
+      !prefix.startsWith('https://') ||
+      suffix.includes('*') ||
+      !suffix.includes('.')
+    ) {
+      throw new Error(
+        'a wildcard origin uses https, one wildcard and a fixed domain after it',
+      );
     }
-    const source = entry
-      .replace(/[.+?^${}()|[\]\\]/gu, '\\$&')
-      .replaceAll('*', '[a-z0-9-]+');
-    return new RegExp(`^${source}$`, 'u');
+    return (origin) =>
+      origin.length > prefix.length + suffix.length &&
+      origin.startsWith(prefix) &&
+      origin.endsWith(suffix) &&
+      WILDCARD_RUN.test(origin.slice(prefix.length, -suffix.length));
   });
   return (origin) =>
     typeof origin === 'string' &&
     origin.length <= 255 &&
-    patterns.some((pattern) => pattern.test(origin));
+    matchers.some((matches) => matches(origin));
 }
 
 /**

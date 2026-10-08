@@ -17,6 +17,8 @@ import {
   PostgresOrderConversationPort,
   PostgresOrderFileRepository,
   PostgresOrderRepository,
+  STORE_ACTOR_ID,
+  STORE_ACTOR_NAME,
 } from '@crm-silmer/orders';
 
 /**
@@ -133,19 +135,28 @@ export function createOrderRuntime(options) {
   /**
    * Shapes stored orders into the public Order contract: people are named,
    * the seller is the conversation's current owner and internal columns
-   * (sequence, creator) stay out of the response.
+   * (sequence, creator) stay out of the response. ADR 027: a store order
+   * has no conversation, so no seller or last message; "Loja do site"
+   * confirmed it and it is `locked`.
    *
    * @param {any[]} orders
    */
   async function present(orders) {
     if (orders.length === 0) return [];
     const conversationIds = [
-      ...new Set(orders.map((order) => order.conversationId)),
+      ...new Set(
+        orders
+          .map((order) => order.conversationId)
+          .filter((id) => typeof id === 'string'),
+      ),
     ];
-    const [owners, latestMessageStates] = await Promise.all([
-      conversations.readAssignments(conversationIds),
-      conversations.readLatestMessageStates(conversationIds),
-    ]);
+    const [owners, latestMessageStates] =
+      conversationIds.length === 0
+        ? [new Map(), new Map()]
+        : await Promise.all([
+            conversations.readAssignments(conversationIds),
+            conversations.readLatestMessageStates(conversationIds),
+          ]);
     const people = new Set();
     for (const order of orders) {
       for (const id of [
@@ -153,12 +164,16 @@ export function createOrderRuntime(options) {
         order.reopenedBy,
         owners.get(order.conversationId),
       ]) {
-        if (id) people.add(id);
+        if (id && id !== STORE_ACTOR_ID) people.add(id);
       }
     }
     const names = await conversations.readUserNames([...people]);
     /** @param {string|null|undefined} id */
-    const person = (id) => (id ? { id, name: names.get(id) ?? '' } : null);
+    const person = (id) => {
+      if (!id) return null;
+      if (id === STORE_ACTOR_ID) return { id, name: STORE_ACTOR_NAME };
+      return { id, name: names.get(id) ?? '' };
+    };
     return orders.map((order) => ({
       confirmedAt: order.confirmedAt,
       confirmedBy: person(order.confirmedBy),
@@ -170,12 +185,16 @@ export function createOrderRuntime(options) {
       finalAmountCents: order.finalAmountCents,
       firstContactAt: order.firstContactAt,
       id: order.id,
+      isTest: order.isTest === true,
       lastMessage: latestMessageStates.get(order.conversationId) ?? null,
+      locked: order.origin === 'loja',
       missingFields: order.missingFields,
       number: order.number,
       orderDate: order.orderDate,
+      origin: order.origin ?? 'atendimento',
       paidOn: order.paidOn,
       paymentCondition: order.paymentCondition,
+      paymentDeclaredAt: order.paymentDeclaredAt ?? null,
       reopenedAt: order.reopenedAt,
       reopenedBy: person(order.reopenedBy),
       seller: person(owners.get(order.conversationId)),

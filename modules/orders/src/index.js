@@ -92,6 +92,7 @@ export {
 } from './print/ficha-canonical-v2.js';
 export {
   PRINT_TEMPLATE,
+  TEMPLATE_STORE_V1,
   TEMPLATE_V2,
   TEMPLATE_V3,
   renderOrderFicha,

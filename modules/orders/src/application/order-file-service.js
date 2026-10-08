@@ -11,6 +11,7 @@ import {
   describeOrderFile,
   requireOrderFileSlot,
 } from '../domain/order-files.js';
+import { requireUnlocked } from '../domain/store-order.js';
 
 /**
  * @typedef {{
@@ -61,7 +62,7 @@ function sha256Hex(content) {
  * @param {{
  *   files: OrderFileRepository,
  *   storage: ObjectStorage,
- *   orders: {findById(orderId: string): Promise<{id: string, status: string, conversationId: string}|null>},
+ *   orders: {findById(orderId: string): Promise<{id: string, status: string, conversationId: string|null, origin?: string}|null>},
  *   authorizeOwnership: (input: {actor: OrderActor, conversationId: string}) => Promise<void>,
  *   clock?: () => Date,
  *   idFactory?: () => string,
@@ -83,7 +84,12 @@ export function createOrderFileService(dependencies) {
   async function requireEditable(actor, orderId) {
     if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
     const order = await requireOrder(orderId);
-    await authorizeOwnership({ actor, conversationId: order.conversationId });
+    // ADR 027: a store order takes no art file, whoever asks.
+    requireUnlocked(order);
+    await authorizeOwnership({
+      actor,
+      conversationId: /** @type {string} */ (order.conversationId),
+    });
     if (order.status !== 'pendente') {
       throw new OrderConflictError(
         'Reopen the order before changing its files',

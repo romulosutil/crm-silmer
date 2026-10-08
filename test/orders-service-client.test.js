@@ -106,8 +106,11 @@ function setup() {
     );
     const order = await service.get(orderId);
     return {
-      current: (await service.currentForConversation(order.conversationId))
-        ?.ficha.summary.cliente,
+      current: (
+        await service.currentForConversation(
+          /** @type {string} */ (order.conversationId),
+        )
+      )?.ficha.summary.cliente,
       detail: order.ficha.summary.cliente,
       list: listed?.ficha.summary.cliente,
     };

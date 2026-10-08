@@ -174,6 +174,31 @@ test('moves new valid-file receipts to RustFS and keeps old ones (ADR 023)', asy
   assert.match(handoff.sql, /CHECK \(destination = 'rustfs'\) NOT VALID;/u);
 });
 
+test('ships store orders as an expand migration with locked rows (ADR 027)', async () => {
+  const store = (await loadMigrations()).find(
+    ({ version }) => version === '0029',
+  );
+  assert.ok(store, 'migration 0029 is present');
+  assert.equal(store.name, 'store_orders');
+  assert.equal(store.phase, 'expand');
+  assert.match(
+    store.sql,
+    /ADD COLUMN origin text NOT NULL DEFAULT 'atendimento'/u,
+  );
+  assert.match(store.sql, /ALTER COLUMN conversation_id DROP NOT NULL/u);
+  assert.match(
+    store.sql,
+    /CHECK \(\(origin = 'loja'\) = \(conversation_id IS NULL\)\)/u,
+  );
+  assert.match(store.sql, /CREATE TABLE crm\.store_order_receipts\b/u);
+  // The receipt never stores an IP or a phone in the clear.
+  assert.doesNotMatch(
+    store.sql,
+    /\b(?:ip_address|client_ip|phone|telefone)\s+text\b/u,
+  );
+  assert.doesNotMatch(store.sql, /\bDROP\s+(?:TABLE|COLUMN)\b/iu);
+});
+
 test('loads versioned forward-only migrations in deterministic order', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'crm-migrations-'));
   try {

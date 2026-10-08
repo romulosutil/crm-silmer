@@ -24,6 +24,7 @@ import {
   recordMilestones,
   reopenOrder,
 } from '../domain/order.js';
+import { requireUnlocked } from '../domain/store-order.js';
 import { assertOrderRepositoryContract } from '../ports/contracts.js';
 
 /**
@@ -41,6 +42,7 @@ import { assertOrderRepositoryContract } from '../ports/contracts.js';
  *   },
  *   authorizeOwnership(input: {actor: OrderActor, conversationId: string}): Promise<void>,
  *   fabCode: string,
+ *   phoneDigestsFor?: (query: string) => string[],
  *   clock?: () => Date,
  *   idFactory?: () => string,
  * }} OrderServiceOptions
@@ -59,7 +61,7 @@ export const ORDER_SECTIONS = Object.freeze(
 );
 export const DEFAULT_ORDER_PAGE_SIZE = 25;
 const MAX_QUERY_LENGTH = 120;
-const LIST_KEYS = new Set(['status', 'q', 'cursor', 'limit']);
+const LIST_KEYS = new Set(['status', 'origin', 'q', 'cursor', 'limit']);
 // "12", "012" or "12-CRM" name order 12; anything else is a customer search.
 const ORDER_NUMBER_QUERY = /^0*(\d{1,15})(?:-crm)?$/iu;
 
@@ -125,18 +127,22 @@ export function createOrderService(options) {
    * @returns {Promise<Order[]>}
    */
   async function withCurrentClient(orders) {
+    // A pending order always has a conversation; a store order (ADR 027)
+    // is born confirmed and never reads one.
     const pendingConversations = [
       ...new Set(
         orders
           .filter((order) => order.status === 'pendente')
-          .map((order) => order.conversationId),
+          .map((order) => /** @type {string} */ (order.conversationId)),
       ),
     ];
     if (pendingConversations.length === 0) return orders;
     const contexts =
       await conversations.readOrderContexts(pendingConversations);
     return orders.map((order) => {
-      const context = contexts.get(order.conversationId);
+      const context = contexts.get(
+        /** @type {string} */ (order.conversationId),
+      );
       if (order.status !== 'pendente' || !context) return order;
       return {
         ...order,
@@ -194,7 +200,12 @@ export function createOrderService(options) {
     }
     const order = await repository.findById(orderId);
     if (!order) throw new OrderNotFoundError();
-    await requireOwner(input.actor, order.conversationId);
+    // ADR 027: a store order is locked for everyone, owner or not.
+    requireUnlocked(order);
+    await requireOwner(
+      input.actor,
+      /** @type {string} */ (order.conversationId),
+    );
     if (order.version !== input.expectedVersion) {
       throw new OrderConflictError(
         `Expected order version ${input.expectedVersion}, current version is ${order.version}`,
@@ -341,9 +352,11 @@ export function createOrderService(options) {
     /**
      * PLI-02..07: status filter, number/customer/phone search and "Ver mais"
      * pages. Counts cover the search regardless of the status filter, so both
-     * groups keep their totals while one is selected.
+     * groups keep their totals while one is selected. ADR 027: `origin`
+     * narrows to store orders, which the search finds by number or by the
+     * HMAC of the whole phone.
      *
-     * @param {{status?: string, q?: string, cursor?: string|null, limit?: number}} [input]
+     * @param {{status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number}} [input]
      */
     async list(input = {}) {
       for (const key of Object.keys(input)) {
@@ -364,12 +377,17 @@ export function createOrderService(options) {
         limit: input.limit ?? DEFAULT_ORDER_PAGE_SIZE,
         status: /** @type {any} */ (input.status),
       };
+      if (input.origin !== undefined) {
+        query.origin = /** @type {any} */ (input.origin);
+      }
       if (q !== '') {
         const number = ORDER_NUMBER_QUERY.exec(q);
         if (number && Number(number[1]) > 0) {
           query.numberSequence = Number(number[1]);
         }
         query.conversationIds = await conversations.searchConversationIds(q);
+        const phoneDigests = options.phoneDigestsFor?.(q) ?? [];
+        if (phoneDigests.length > 0) query.phoneDigests = phoneDigests;
       }
       const page = await repository.list(query);
       return { ...page, items: await readAll(page.items) };

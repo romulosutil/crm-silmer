@@ -131,7 +131,8 @@ export function createDevTestWorkflow(source, options = {}) {
     name: BUILD_SYNTHETIC_EVENT,
     type: 'n8n-nodes-base.code',
     typeVersion: 2,
-    position: [trigger.position[0] + 230, trigger.position[1]],
+    // Between the webhook and the chat trigger, clear of the normalizer it feeds.
+    position: [trigger.position[0] + 120, trigger.position[1] - 150],
     parameters: {
       mode: 'runOnceForEachItem',
       jsCode: `const chatInput = typeof $json.chatInput === 'string' ? $json.chatInput.trim() : '';

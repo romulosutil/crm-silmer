@@ -57,6 +57,7 @@ import {
  *   idempotencyStore: {execute: (identity: any, operation: (transaction?: unknown) => Promise<unknown>) => Promise<unknown>},
  *   repository: any,
  *   files?: {repository: any, storage: any},
+ *   phoneDigestsFor?: (query: string) => string[],
  *   clock?: () => Date,
  *   idFactory?: () => string,
  * }} options
@@ -111,6 +112,7 @@ export function createOrderRuntime(options) {
     conversations,
     fabCode: options.fabCode,
     idFactory: options.idFactory,
+    phoneDigestsFor: options.phoneDigestsFor,
     repository: options.repository,
   });
 
@@ -491,7 +493,7 @@ function requireVersion(value) {
  * order routes share the Inbox read (session) and write (session + CSRF) rules.
  *
  * @param {any} database
- * @param {{access: OrderAccess, environment?: Record<string, string|undefined>, storage?: any}} options
+ * @param {{access: OrderAccess, environment?: Record<string, string|undefined>, storage?: any, phoneDigestsFor?: (query: string) => string[]}} options
  */
 export function createOrderApiRuntime(database, options) {
   const environment = options.environment ?? process.env;
@@ -511,6 +513,7 @@ export function createOrderApiRuntime(database, options) {
       envelopeKey,
     }),
     fabCode: required(environment.FAB_CODE, 'FAB_CODE'),
+    phoneDigestsFor: options.phoneDigestsFor,
     idempotencyStore: new PostgresIdempotencyRecordStore({
       database,
       envelopeKey: readEnvelopeKey(

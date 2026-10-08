@@ -8,6 +8,7 @@ import {
   migrate,
   withTransaction,
 } from '../modules/database/src/index.js';
+import { createStoreOrdersForServer } from '../apps/api/src/store-order-runtime.js';
 import { PostgresOrderRepository } from '../modules/orders/src/adapters/postgres-order-repository.js';
 import { createStoreOrderService } from '../modules/orders/src/application/store-order-service.js';
 import {
@@ -176,6 +177,76 @@ if (connectionString) {
       [requestId(36)],
     );
     assert.equal(refused.rows.length, 0);
+  });
+
+  test('LOJ-02/LOJ-13: the notice, its idempotency record and its audit commit together', async () => {
+    const runtime = createStoreOrdersForServer({
+      database,
+      environment: {
+        FAB_CODE: '01',
+        IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 5).toString('base64url'),
+        N8N_INTEGRATION_ENVELOPE_KEY: ENVELOPE_KEY.toString('base64url'),
+        STORE_ORDERS_ACCEPT_TEST: 'true',
+        STORE_ORDERS_ALLOWED_ORIGINS: STORE_ORIGIN,
+        STORE_ORDERS_HMAC_KEY: HMAC_KEY.toString('base64url'),
+      },
+    });
+    assert.ok(runtime);
+    const body = storeOrderBody((change) => {
+      change.pedido_id = requestId(50);
+      change.cliente.telefone = '5527900000050';
+      // The live clock is now; the notice was declared a minute ago.
+      change.pagamento.informado_pelo_cliente_em = new Date(
+        Date.now() - 60_000,
+      ).toISOString();
+    });
+    const input = {
+      body,
+      clientIp: '203.0.113.50',
+      correlationId: 'correlation-live-50',
+      idempotencyKey: body.pedido_id,
+      origin: STORE_ORIGIN,
+    };
+    const first = await runtime.receive(input);
+    const replay = await runtime.receive(input);
+    assert.equal(first.created, true);
+    assert.equal(replay.created, false);
+    assert.equal(replay.numero, first.numero);
+    await assert.rejects(
+      runtime.receive({
+        ...input,
+        body: { ...body, cliente: { ...body.cliente, nome: 'Outro Nome' } },
+      }),
+      { code: 'idempotency_conflict', statusCode: 409 },
+    );
+    const records = await pool.query(
+      `SELECT status, actor_id, action, target_type, target_id
+       FROM crm.idempotency_records WHERE idempotency_key = $1`,
+      [body.pedido_id],
+    );
+    assert.deepEqual(records.rows, [
+      {
+        action: 'store.order.create',
+        actor_id: 'system:loja-do-site',
+        status: 'completed',
+        target_id: body.pedido_id,
+        target_type: 'store_order',
+      },
+    ]);
+    const audits = await pool.query(
+      `SELECT actor_id, action FROM crm.audit_events
+       WHERE target_type = 'store_order' AND target_id = $1`,
+      [body.pedido_id],
+    );
+    assert.deepEqual(audits.rows, [
+      { action: 'store.order.create', actor_id: 'system:loja-do-site' },
+    ]);
+    const orders = await pool.query(
+      `SELECT count(*)::integer AS total FROM crm.store_order_receipts
+       WHERE request_id = $1`,
+      [body.pedido_id],
+    );
+    assert.equal(orders.rows[0].total, 1);
   });
 
   test('LOJ-07: the database itself refuses to turn a store order pending', async () => {

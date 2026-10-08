@@ -77,7 +77,13 @@
           "PIX_KEY_VALUE",
           "PIX_KEY_DISPLAY_MASKED",
           "FICHA_RECIPIENT_E164",
-          "FAB_CODE"
+          "FAB_CODE",
+          "STORE_ORDERS_HMAC_KEY",
+          "STORE_ORDERS_ALLOWED_ORIGINS",
+          "STORE_ORDERS_ACCEPT_TEST",
+          "STORE_ORDERS_MAX_PER_IP_HOUR",
+          "STORE_ORDERS_MAX_PER_PHONE_DAY",
+          "STORE_ORDERS_MAX_REQUESTS_PER_MINUTE"
         ]
       },
       "services": [

@@ -119,7 +119,7 @@ export function renderStoreFichaHtml(order) {
     dl.wide { grid-template-columns: minmax(0, 1fr); }
     dt { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
     dd { color: var(--deep); font-size: 15px; font-weight: 700; margin-top: 2px; overflow-wrap: anywhere; }
-    .paid { background: var(--raised); border-radius: 6px; padding: 8px 10px; }
+    .paid { background: var(--raised); border-radius: 6px; margin-top: 12px; padding: 8px 10px; }
   </style>
 </head>
 <body>

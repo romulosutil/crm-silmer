@@ -667,8 +667,9 @@ const getWhatsAppMedia = node({
     waitBetweenTries: 1000,
     parameters: {
       method: 'GET',
+      // A fixed Graph version: n8n 2 blocks $env in nodes by default.
       url: expr(
-        "{{ 'https://graph.facebook.com/' + ($env.SILMER_META_GRAPH_VERSION || 'v23.0') + '/' + $('Normalizar evento WhatsApp (MVP)').item.json.media_id }}",
+        "{{ 'https://graph.facebook.com/v23.0/' + $('Normalizar evento WhatsApp (MVP)').item.json.media_id }}",
       ),
       authentication: 'predefinedCredentialType',
       nodeCredentialType: 'whatsAppApi',

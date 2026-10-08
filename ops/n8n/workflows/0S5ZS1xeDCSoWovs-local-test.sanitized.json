@@ -1379,7 +1379,7 @@
       "position": [-1470, -1000],
       "parameters": {
         "method": "GET",
-        "url": "={{ 'https://graph.facebook.com/' + ($env.SILMER_META_GRAPH_VERSION || 'v23.0') + '/' + $('Normalizar evento WhatsApp (MVP)').item.json.media_id }}",
+        "url": "={{ 'https://graph.facebook.com/v23.0/' + $('Normalizar evento WhatsApp (MVP)').item.json.media_id }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "whatsAppApi",
         "options": {

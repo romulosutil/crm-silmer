@@ -660,7 +660,8 @@ paths:
       description: >-
         Ação order.read. Sem status, retorna Todos. A busca aceita número do
         pedido, cliente ou telefone e resolve cliente e telefone pelo contato da
-        conversa. `counts` traz o total de cada grupo (Confirmados e Pendentes)
+        conversa; um pedido da loja (sem conversa) é achado pelo número ou pelo
+        telefone inteiro, comparado por HMAC. `counts` traz o total de cada grupo (Confirmados e Pendentes)
         para a busca atual, independentemente da página.
       security: [{ sessionCookie: [] }]
       parameters:
@@ -670,6 +671,12 @@ paths:
             in: query,
             schema: { $ref: '#/components/schemas/OrderStatus' },
           }
+        - name: origin
+          in: query
+          description: >-
+            ADR 027: `loja` mostra só os pedidos da loja do site (filtro "Loja
+            do site"); `atendimento`, os da conversa.
+          schema: { $ref: '#/components/schemas/OrderOrigin' }
         - {
             name: q,
             in: query,
@@ -699,7 +706,9 @@ paths:
       description: >-
         Ação order.read. Totais de todos os pedidos, sem recorte pela página,
         busca ou status da listagem. Vendas e peças somam somente pedidos
-        confirmados; pendentes são contados à parte. Valores em centavos.
+        confirmados; pendentes são contados à parte. Valores em centavos. Os
+        pedidos da loja do site contam como qualquer venda; pedidos de teste
+        (isTest) ficam fora (ADR 027).
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
@@ -932,11 +941,17 @@ paths:
         paisagem, duas páginas, impresso pelo navegador. O documento não traz
         valor, condição de pagamento nem a faixa de amostra sintética; vendedor
         é quem confirmou, data é a data do pedido e o controle de produção sai
-        em branco.
+        em branco. Um pedido da loja do site (ADR 027) sai na ficha
+        simplificada ficha-loja-v1 (A4 retrato, uma página, só os campos
+        padrão). Com download=1, o mesmo documento vem como anexo
+        pedido-NN-CRM.html.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderId'
         - $ref: '#/components/parameters/HumanReadOrigin'
+        - name: download
+          in: query
+          schema: { type: string, const: '1' }
       responses:
         '200':
           description: Documento HTML pronto para impressão
@@ -2529,6 +2544,8 @@ components:
       additionalProperties: false
       required: [summary, items, observations, artwork, serviceData]
       properties:
+        loja:
+          $ref: '#/components/schemas/StoreFicha'
         summary: { $ref: '#/components/schemas/FichaSummary' }
         items:
           type: array
@@ -2571,11 +2588,32 @@ components:
           version,
           createdAt,
           updatedAt,
+          origin,
+          isTest,
+          locked,
+          paymentDeclaredAt,
         ]
       properties:
         id: { type: string }
         number: { type: string, pattern: '^[0-9]{2,}-CRM$' }
-        conversationId: { type: string }
+        conversationId:
+          type: [string, 'null']
+          description: Nulo só no pedido da loja do site (ADR 027).
+        origin: { $ref: '#/components/schemas/OrderOrigin' }
+        isTest:
+          type: boolean
+          description: >-
+            Pedido da loja recebido com `teste: true`; fica fora do Dashboard.
+        locked:
+          type: boolean
+          description: >-
+            Pedido da loja: nenhuma escrita é aceita (409 ORDER_LOCKED).
+        paymentDeclaredAt:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            Pedido da loja: instante em que o cliente informou o Pix. É
+            declaração do cliente, não confirmação do banco.
         status: { $ref: '#/components/schemas/OrderStatus' }
         fabCode: { type: string }
         ficha: { $ref: '#/components/schemas/Ficha' }
@@ -2628,7 +2666,9 @@ components:
         paidOn:
           type: [string, 'null']
           format: date
-          description: Dia do pagamento, informado por uma pessoa.
+          description: >-
+            Dia do pagamento, informado por uma pessoa; no pedido da loja, o
+            dia (São Paulo) que o cliente declarou.
         deliveredOn:
           type: [string, 'null']
           format: date
@@ -2843,6 +2883,28 @@ components:
           description: Versão atual do pedido.
         paidOn: { type: [string, 'null'], format: date }
         deliveredOn: { type: [string, 'null'], format: date }
+    OrderOrigin:
+      type: string
+      enum: [atendimento, loja]
+    StoreFicha:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [telefone, produto, retirada, informadoPeloClienteEm]
+      description: >-
+        Pedido da loja do site (ADR 027): o que o aviso trouxe além do item e
+        do cliente. Fica dentro da ficha cifrada.
+      properties:
+        telefone: { type: string, description: E.164 brasileiro sem "+". }
+        produto:
+          type: object
+          additionalProperties: false
+          required: [slug, nome]
+          properties:
+            slug: { type: string }
+            nome: { type: string }
+        retirada: { type: string }
+        informadoPeloClienteEm: { type: string, format: date-time }
     StoreOrderNotice:
       type: object
       additionalProperties: false

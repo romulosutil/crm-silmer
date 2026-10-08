@@ -5,6 +5,7 @@ import {
   OrderForbiddenError,
   OrderNotFoundError,
 } from '../domain/errors.js';
+import { StoreOrderError } from '../domain/store-order.js';
 import {
   encodeOrderCursor,
   readOrderListQuery,
@@ -24,7 +25,10 @@ const ORDER_COLUMNS = `id, number_sequence, number, conversation_id, status,
   payment_condition, order_date::text AS order_date, confirmed_at,
   confirmed_by, reopened_at, reopened_by, created_by_kind, created_by,
   first_contact_at, paid_on::text AS paid_on,
-  delivered_on::text AS delivered_on, version, created_at, updated_at`;
+  delivered_on::text AS delivered_on, origin, is_test, payment_declared_at,
+  version, created_at, updated_at`;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
 
 /** @param {string} orderId */
 function fichaAad(orderId) {
@@ -76,6 +80,35 @@ function violates(error, constraint) {
     (candidate?.code === '23505' || candidate?.code === '23503') &&
     candidate.constraint === constraint
   );
+}
+
+/**
+ * ADR 027: refuses a new store order once the window already holds `max`
+ * receipts of the same IP or phone, saying when the oldest leaves it.
+ *
+ * @param {Queryable} transaction
+ * @param {{column: 'ip_digest'|'phone_digest', digest: string, max: number, now: Date, windowMs: number}} input
+ */
+async function enforceLimit(
+  transaction,
+  { column, digest, max, now, windowMs },
+) {
+  const since = new Date(now.getTime() - windowMs).toISOString();
+  const result = await transaction.query(
+    `SELECT count(*)::integer AS total, min(received_at) AS oldest
+     FROM crm.store_order_receipts
+     WHERE ${column} = $1 AND received_at > $2`,
+    [digest, since],
+  );
+  const row = result.rows[0];
+  if (Number(row?.total ?? 0) < max) return;
+  const oldest = new Date(row.oldest ?? now).getTime();
+  throw Object.assign(new StoreOrderError(429, 'rate_limited'), {
+    retryAfterSeconds: Math.max(
+      1,
+      Math.ceil((oldest + windowMs - now.getTime()) / 1000),
+    ),
+  });
 }
 
 /**
@@ -175,11 +208,14 @@ export class PostgresOrderRepository {
         row.final_amount_cents === null ? null : Number(row.final_amount_cents),
       firstContactAt: isoOrNull(row.first_contact_at),
       id: row.id,
+      isTest: row.is_test === true,
       missingFields: [...row.missing_fields],
       number: row.number,
       numberSequence: Number(row.number_sequence),
       orderDate: row.order_date,
+      origin: row.origin ?? 'atendimento',
       paidOn: row.paid_on,
+      paymentDeclaredAt: isoOrNull(row.payment_declared_at ?? null),
       paymentCondition: row.payment_condition,
       reopenedAt: isoOrNull(row.reopened_at),
       reopenedBy: row.reopened_by,
@@ -265,6 +301,105 @@ export class PostgresOrderRepository {
     }
   }
 
+  /**
+   * ADR 027: the store order, its receipt and its `order.created` event in
+   * the caller's transaction (the idempotency record's), after the per-IP
+   * and per-phone limits. Two notices from the same IP or phone wait for
+   * each other on an advisory lock, so a burst never slips past a count.
+   *
+   * @param {import('../ports/contracts.js').CreateStoreOrderInput} input
+   * @param {{transaction: Queryable}} context
+   */
+  async createStoreOrder(input, { transaction }) {
+    const { limits, now, order, receipt } = input;
+    await transaction.query(
+      `SELECT pg_advisory_xact_lock(hashtextextended($1, 0)),
+              pg_advisory_xact_lock(hashtextextended($2, 0))`,
+      [`store-ip:${receipt.ipDigest}`, `store-phone:${receipt.phoneDigest}`],
+    );
+    await enforceLimit(transaction, {
+      column: 'ip_digest',
+      digest: receipt.ipDigest,
+      max: limits.perIpPerHour,
+      now,
+      windowMs: HOUR_MS,
+    });
+    await enforceLimit(transaction, {
+      column: 'phone_digest',
+      digest: receipt.phoneDigest,
+      max: limits.perPhonePerDay,
+      now,
+      windowMs: DAY_MS,
+    });
+    const at = now.toISOString();
+    try {
+      const inserted = await transaction.query(
+        `WITH reserved AS (SELECT nextval('crm.order_number_seq') AS sequence)
+         INSERT INTO crm.orders
+           (id, number_sequence, number, conversation_id, status, fab_code,
+            ficha_version, ficha_envelope, total_pieces, missing_fields,
+            final_amount_cents, payment_condition, order_date, confirmed_at,
+            confirmed_by, created_by_kind, created_by, first_contact_at,
+            paid_on, origin, is_test, payment_declared_at, version,
+            created_at, updated_at)
+         SELECT $1, reserved.sequence,
+                lpad(reserved.sequence::text, 2, '0') || '-CRM',
+                NULL, 'confirmado', $2, 1, $3::jsonb, $4, '{}'::text[],
+                $5, $6, $7::date, $8, $9, $10, $11, $12, $13::date, 'loja',
+                $14, $15, 1, $8, $8
+         FROM reserved
+         RETURNING ${ORDER_COLUMNS}`,
+        [
+          order.id,
+          order.fabCode,
+          JSON.stringify(
+            encryptJson(order.ficha, fichaAad(order.id), this.#envelopeKey),
+          ),
+          order.totalPieces,
+          order.finalAmountCents,
+          order.paymentCondition,
+          order.orderDate,
+          at,
+          order.confirmedBy,
+          order.createdByKind,
+          order.createdBy,
+          order.firstContactAt,
+          order.paidOn,
+          order.isTest,
+          order.paymentDeclaredAt,
+        ],
+      );
+      const saved = this.#map(inserted.rows[0]);
+      await transaction.query(
+        `INSERT INTO crm.store_order_receipts
+           (order_id, request_id, request_origin, ip_digest, phone_digest,
+            body_sha256, received_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          saved.id,
+          receipt.requestId,
+          receipt.origin,
+          receipt.ipDigest,
+          receipt.phoneDigest,
+          receipt.bodySha256,
+          at,
+        ],
+      );
+      await appendOrderEvent(
+        transaction,
+        saved,
+        'order.created',
+        input.correlationId,
+      );
+      return saved;
+    } catch (error) {
+      if (violates(error, 'store_order_receipts_request_id_key')) {
+        throw new StoreOrderError(409, 'idempotency_conflict');
+      }
+      throw error;
+    }
+  }
+
   /** @param {string} orderId */
   async findById(orderId) {
     const result = await this.#database.query(
@@ -281,7 +416,8 @@ export class PostgresOrderRepository {
          coalesce(sum(final_amount_cents) FILTER (WHERE status = 'confirmado'), 0)::bigint AS sold_amount_cents,
          count(*) FILTER (WHERE status = 'pendente')::integer AS pending_count,
          coalesce(sum(total_pieces) FILTER (WHERE status = 'confirmado'), 0)::bigint AS total_pieces_sold
-       FROM crm.orders`,
+       FROM crm.orders
+       WHERE NOT is_test`,
     );
     const row = result.rows[0];
     const confirmedCount = Number(row.confirmed_count);
@@ -320,8 +456,15 @@ export class PostgresOrderRepository {
 
   /** @param {import('../ports/contracts.js').OrderListQuery} query */
   async list(query) {
-    const { after, conversationIds, limit, numberSequence, status } =
-      readOrderListQuery(query);
+    const {
+      after,
+      conversationIds,
+      limit,
+      numberSequence,
+      origin,
+      phoneDigests,
+      status,
+    } = readOrderListQuery(query);
     /** @type {unknown[]} */
     const values = [];
     /** @param {unknown} value */
@@ -331,7 +474,11 @@ export class PostgresOrderRepository {
     };
 
     let scope = 'TRUE';
-    if (numberSequence !== undefined || conversationIds !== undefined) {
+    if (
+      numberSequence !== undefined ||
+      conversationIds !== undefined ||
+      phoneDigests !== undefined
+    ) {
       const matches = [];
       if (numberSequence !== undefined) {
         matches.push(`number_sequence = ${bind(numberSequence)}`);
@@ -339,8 +486,17 @@ export class PostgresOrderRepository {
       if (conversationIds !== undefined) {
         matches.push(`conversation_id = ANY(${bind(conversationIds)}::text[])`);
       }
+      if (phoneDigests !== undefined) {
+        // ADR 027: a store order has no conversation; its phone is found by
+        // the HMAC kept on its receipt, never by the number in the clear.
+        matches.push(
+          `id IN (SELECT order_id FROM crm.store_order_receipts
+                  WHERE phone_digest = ANY(${bind(phoneDigests)}::text[]))`,
+        );
+      }
       scope = `(${matches.join(' OR ')})`;
     }
+    if (origin !== undefined) scope = `${scope} AND origin = ${bind(origin)}`;
 
     const counted = await this.#database.query(
       `SELECT status, count(*)::integer AS total FROM crm.orders
@@ -493,11 +649,13 @@ export class PostgresOrderRepository {
    * @param {(current: {status: string}, transaction: Queryable) => Promise<{rows: any[]}>} change
    */
   async #write(order, options, eventType, change) {
+    // ADR 027: a store order has no conversation to lock and takes no write.
+    const conversationId = order.conversationId;
+    if (order.origin === 'loja' || conversationId === null) {
+      throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
+    }
     return this.#database.transaction(async (transaction) => {
-      const conversation = await lockConversation(
-        transaction,
-        order.conversationId,
-      );
+      const conversation = await lockConversation(transaction, conversationId);
       if (!conversation) throw new OrderNotFoundError();
       await assertWriteOwner(
         transaction,

@@ -361,9 +361,9 @@ WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos po
   (`https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host`) direto nos
   nós do CRM; o snapshot do repositório mantém `$env.SILMER_PANEL_BASE_URL`.
   Troque a URL nos nós quando o CRM definitivo tiver domínio. Pelo mesmo
-  motivo, o nó `WhatsApp - Enviar texto humano (MVP)` precisa do ID do número
-  de origem escolhido no próprio nó, no lugar de
-  `$env.SILMER_WHATSAPP_PHONE_NUMBER_ID`, antes de o principal ser publicado.
+  motivo, o principal implantado grava no nó `WhatsApp - Enviar texto humano
+  (MVP)` o ID do número de origem (o da conta Silmer no WhatsApp Manager), no
+  lugar de `$env.SILMER_WHATSAPP_PHONE_NUMBER_ID`.
 - Segredos não entram em export, repositório, log, chat ou Data Table.
 - Persistência de execuções manuais/sucesso e progresso deve ficar desabilitada;
   falhas são sanitizadas e têm expurgo técnico em até 30 dias.

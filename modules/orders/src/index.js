@@ -30,6 +30,24 @@ export {
   createOrderService,
 } from './application/order-service.js';
 export {
+  DEFAULT_STORE_ORDER_LIMITS,
+  createStoreOrderService,
+} from './application/store-order-service.js';
+export {
+  STORE_ACTOR_ID,
+  STORE_ACTOR_NAME,
+  STORE_PRODUCTS,
+  storeProduct,
+} from './domain/store-catalog.js';
+export {
+  ORDER_ORIGINS,
+  StoreOrderError,
+  buildStoreOrder,
+  matchStoreCatalog,
+  parseStoreOrderRequest,
+  requireUnlocked,
+} from './domain/store-order.js';
+export {
   OrderConflictError,
   OrderError,
   OrderForbiddenError,
@@ -63,6 +81,7 @@ export {
   confirmOrder,
   formatOrderNumber,
   missingForConfirmation,
+  operationalDay,
   recordMilestones,
   reopenOrder,
 } from './domain/order.js';

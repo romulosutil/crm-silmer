@@ -1,5 +1,6 @@
 import { OrderConflictError, OrderNotFoundError } from '../domain/errors.js';
 import { formatOrderNumber } from '../domain/order.js';
+import { StoreOrderError } from '../domain/store-order.js';
 import {
   encodeOrderCursor,
   readOrderListQuery,
@@ -9,8 +10,12 @@ import {
 /**
  * @typedef {import('../ports/contracts.js').Order} Order
  * @typedef {import('../ports/contracts.js').OrderWriteOptions} OrderWriteOptions
- * @typedef {{eventType: string, aggregateVersion: number, correlationId: string, occurredAt: string, payload: {orderId: string, conversationId: string}}} RecordedOrderEvent
+ * @typedef {{eventType: string, aggregateVersion: number, correlationId: string, occurredAt: string, payload: {orderId: string, conversationId: string|null}}} RecordedOrderEvent
+ * @typedef {import('../ports/contracts.js').CreateStoreOrderInput['receipt'] & {orderId: string, receivedAt: number}} StoreReceipt
  */
+
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
 
 /** @template T @param {T} value @returns {T} */
 function clone(value) {
@@ -35,6 +40,8 @@ export class InMemoryOrderRepository {
   #orders = new Map();
   /** @type {RecordedOrderEvent[]} */
   #events = [];
+  /** @type {StoreReceipt[]} */
+  #receipts = [];
   #sequence = 0;
   #tail = Promise.resolve();
 
@@ -90,12 +97,15 @@ export class InMemoryOrderRepository {
         finalAmountCents: null,
         firstContactAt: input.firstContactAt,
         id: input.id,
+        isTest: false,
         missingFields: [...input.missingFields],
         number: formatOrderNumber(this.#sequence),
         numberSequence: this.#sequence,
         orderDate: null,
+        origin: 'atendimento',
         paidOn: null,
         paymentCondition: null,
+        paymentDeclaredAt: null,
         reopenedAt: null,
         reopenedBy: null,
         status: 'pendente',
@@ -107,6 +117,75 @@ export class InMemoryOrderRepository {
       this.#record(order, 'order.created', input.correlationId);
       return clone(order);
     });
+  }
+
+  /**
+   * ADR 027: the store order and its receipt, after the per-IP and
+   * per-phone limits the PostgreSQL adapter counts. The transaction the
+   * caller passes is the idempotency record's; here it is only checked.
+   *
+   * @param {import('../ports/contracts.js').CreateStoreOrderInput} input
+   * @param {{transaction: unknown}} context
+   */
+  async createStoreOrder(input, context) {
+    if (!context || context.transaction === undefined) {
+      throw new TypeError('a store order is created inside a transaction');
+    }
+    return this.#exclusive(() => {
+      const { limits, now, order, receipt } = input;
+      const at = now.getTime();
+      for (const [key, max, windowMs] of /** @type {const} */ ([
+        ['ipDigest', limits.perIpPerHour, HOUR_MS],
+        ['phoneDigest', limits.perPhonePerDay, DAY_MS],
+      ])) {
+        const recent = this.#receipts.filter(
+          (stored) =>
+            stored[key] === receipt[key] && stored.receivedAt > at - windowMs,
+        );
+        if (recent.length >= max) {
+          const oldest = Math.min(...recent.map((stored) => stored.receivedAt));
+          throw Object.assign(new StoreOrderError(429, 'rate_limited'), {
+            retryAfterSeconds: Math.max(
+              1,
+              Math.ceil((oldest + windowMs - at) / 1000),
+            ),
+          });
+        }
+      }
+      if (
+        this.#receipts.some((stored) => stored.requestId === receipt.requestId)
+      ) {
+        throw new StoreOrderError(409, 'idempotency_conflict');
+      }
+      this.#sequence += 1;
+      const iso = now.toISOString();
+      /** @type {Order} */
+      const saved = {
+        ...clone(order),
+        createdAt: iso,
+        deliveredOn: null,
+        number: formatOrderNumber(this.#sequence),
+        numberSequence: this.#sequence,
+        reopenedAt: null,
+        reopenedBy: null,
+        updatedAt: iso,
+        version: 1,
+      };
+      this.#orders.set(saved.id, saved);
+      this.#receipts.push({ ...receipt, orderId: saved.id, receivedAt: at });
+      this.#record(saved, 'order.created', input.correlationId);
+      return clone(saved);
+    });
+  }
+
+  /**
+   * The receipt of a store order, as the PostgreSQL adapter would store it.
+   *
+   * @param {string} orderId
+   */
+  receiptFor(orderId) {
+    const receipt = this.#receipts.find((stored) => stored.orderId === orderId);
+    return receipt ? clone(receipt) : null;
   }
 
   /** @param {string} orderId */
@@ -139,13 +218,31 @@ export class InMemoryOrderRepository {
 
   /** @param {import('../ports/contracts.js').OrderListQuery} query */
   async list(query) {
-    const { after, conversationIds, limit, numberSequence, status } =
-      readOrderListQuery(query);
+    const {
+      after,
+      conversationIds,
+      limit,
+      numberSequence,
+      origin,
+      phoneDigests,
+      status,
+    } = readOrderListQuery(query);
+    const phoneOrders = new Set(
+      this.#receipts
+        .filter((receipt) => (phoneDigests ?? []).includes(receipt.phoneDigest))
+        .map((receipt) => receipt.orderId),
+    );
     const scoped = [...this.#orders.values()].filter(
       (order) =>
-        (numberSequence === undefined && conversationIds === undefined) ||
-        order.numberSequence === numberSequence ||
-        (conversationIds ?? []).includes(order.conversationId),
+        (origin === undefined || order.origin === origin) &&
+        ((numberSequence === undefined &&
+          conversationIds === undefined &&
+          phoneDigests === undefined) ||
+          order.numberSequence === numberSequence ||
+          (conversationIds ?? []).includes(
+            /** @type {string} */ (order.conversationId),
+          ) ||
+          phoneOrders.has(order.id)),
     );
     const counts = { confirmado: 0, pendente: 0 };
     for (const order of scoped) counts[order.status] += 1;
@@ -170,7 +267,8 @@ export class InMemoryOrderRepository {
   }
 
   async summary() {
-    const orders = [...this.#orders.values()];
+    // ADR 027: a test order from the site shop is never a sale.
+    const orders = [...this.#orders.values()].filter((order) => !order.isTest);
     const confirmed = orders.filter((order) => order.status === 'confirmado');
     const soldAmountCents = confirmed.reduce(
       (total, order) => total + (order.finalAmountCents ?? 0),
@@ -275,6 +373,9 @@ export class InMemoryOrderRepository {
     return this.#exclusive(() => {
       const current = this.#orders.get(orderId);
       if (!current) throw new OrderNotFoundError();
+      if (current.origin === 'loja') {
+        throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
+      }
       if (current.version !== options.expectedVersion) {
         throw new OrderConflictError(
           `Expected order version ${options.expectedVersion}, current version is ${current.version}`,

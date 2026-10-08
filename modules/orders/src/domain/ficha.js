@@ -128,6 +128,7 @@ const ITEM_BRIEFING_KEYS = Object.freeze([
  * @typedef {{
  *   summary: FichaSummary, items: FichaItem[], observations: string[],
  *   artwork?: FichaArtwork, serviceData: Record<string, unknown>,
+ *   loja?: import('./store-order.js').StoreFicha,
  * }} Ficha
  */
 

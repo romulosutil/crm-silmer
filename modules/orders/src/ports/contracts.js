@@ -1,5 +1,6 @@
 import { OrderInputError } from '../domain/errors.js';
 import { ORDER_STATUSES } from '../domain/order.js';
+import { ORDER_ORIGINS } from '../domain/store-order.js';
 
 /**
  * @typedef {import('../domain/order.js').Order} Order
@@ -17,13 +18,26 @@ import { ORDER_STATUSES } from '../domain/order.js';
  * Human writes include `actor`; only technical briefing projection omits it.
  * @typedef {{expectedVersion: number, correlationId: string, actor?: {id: string, kind: string, capabilities?: readonly string[]}}} OrderWriteOptions
  *
- * A search matches orders by exact number OR by conversation; with neither,
- * every order matches. Customer and phone search resolve to conversations
- * outside this port, so no personal data is ever queried in the clear.
+ * A search matches orders by exact number OR by conversation OR, for store
+ * orders (ADR 027), by the HMAC of the customer's phone; with none, every
+ * order matches. Customer and phone search resolve outside this port, so no
+ * personal data is ever queried in the clear. `origin` narrows the search.
  * @typedef {{
  *   status?: OrderStatus, numberSequence?: number, conversationIds?: string[],
+ *   phoneDigests?: string[], origin?: 'atendimento'|'loja',
  *   cursor?: string|null, limit: number,
  * }} OrderListQuery
+ *
+ * ADR 027: a store order born confirmed, with the receipt that limits and
+ * audits the public route. `limits` are the per-IP (hour) and per-phone
+ * (24 hours) counts of receipts that refuse one more.
+ * @typedef {{
+ *   order: ReturnType<typeof import('../domain/store-order.js').buildStoreOrder>,
+ *   receipt: {requestId: string, origin: string, ipDigest: string,
+ *     phoneDigest: string, bodySha256: string},
+ *   limits: {perIpPerHour: number, perPhonePerDay: number},
+ *   correlationId: string, now: Date,
+ * }} CreateStoreOrderInput
  *
  * @typedef {{
  *   items: Order[], nextCursor: string|null,
@@ -87,10 +101,18 @@ export function assertOrderRepositoryContract(repository) {
  * Validates the parts of a list query both adapters interpret identically.
  *
  * @param {OrderListQuery} query
- * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, after: {updatedAt: string, id: string}|null, limit: number}}
+ * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, phoneDigests: string[]|undefined, origin: 'atendimento'|'loja'|undefined, after: {updatedAt: string, id: string}|null, limit: number}}
  */
 export function readOrderListQuery(query) {
-  const { conversationIds, cursor, limit, numberSequence, status } = query;
+  const {
+    conversationIds,
+    cursor,
+    limit,
+    numberSequence,
+    origin,
+    phoneDigests,
+    status,
+  } = query;
   if (
     !Number.isSafeInteger(limit) ||
     limit < 1 ||
@@ -114,12 +136,24 @@ export function readOrderListQuery(query) {
   ) {
     throw new TypeError('conversationIds must be a list of ids');
   }
+  if (
+    phoneDigests !== undefined &&
+    (!Array.isArray(phoneDigests) ||
+      phoneDigests.some((digest) => typeof digest !== 'string'))
+  ) {
+    throw new TypeError('phoneDigests must be a list of digests');
+  }
+  if (origin !== undefined && !ORDER_ORIGINS.includes(origin)) {
+    throw new OrderInputError('origin is invalid', ['origin']);
+  }
   return {
     after:
       cursor === undefined || cursor === null ? null : decodeCursor(cursor),
     conversationIds,
     limit,
     numberSequence,
+    origin,
+    phoneDigests,
     status,
   };
 }

@@ -16,12 +16,16 @@ import OrderInfoStrips from '../components/order/OrderInfoStrips.vue';
 import OrderItemsSection from '../components/order/OrderItemsSection.vue';
 import OrderMilestonesSection from '../components/order/OrderMilestonesSection.vue';
 import OrderObservationsSection from '../components/order/OrderObservationsSection.vue';
+import OrderStoreDetails from '../components/order/OrderStoreDetails.vue';
 import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
   fabLabel,
+  isStoreOrder,
   orderStatusLabel,
   PRINT_LOCKED_REASON,
+  STORE_ORIGIN_LABEL,
+  storePaymentLabel,
 } from '../lib/order-format.js';
 
 const LIVE_REFRESH_DELAY_MS = 250;
@@ -51,6 +55,9 @@ let pendingLiveRefresh = false;
 let headingAnnounced = false;
 
 const isPending = computed(() => order.value?.status === 'pendente');
+// ADR 027: a site shop order is born confirmed and locked; the page shows it
+// read only, with its simplified ficha to download.
+const isStore = computed(() => isStoreOrder(order.value));
 const isAdmin = computed(() =>
   (sessionUser.value?.capabilities ?? []).includes('COMMERCIAL_ADMIN'),
 );
@@ -68,6 +75,10 @@ const customerName = computed(
   () => order.value?.ficha?.summary?.cliente || 'Cliente não informado',
 );
 const orderContext = computed(() => {
+  if (isStore.value) {
+    const product = order.value?.ficha?.loja?.produto?.nome;
+    return product ? `${STORE_ORIGIN_LABEL} · ${product}` : STORE_ORIGIN_LABEL;
+  }
   const event = order.value?.ficha?.summary?.nome || 'Sem evento';
   const seller = order.value?.seller?.name;
   return seller ? `${event} · com ${seller}` : event;
@@ -188,6 +199,11 @@ async function saveMilestones(value) {
     };
   }
 }
+
+/** LOJ-10: the simplified ficha of a store order, as a file to keep. */
+const downloadUrl = computed(
+  () => `/api/v1/orders/${encodeURIComponent(props.orderId)}/print?download=1`,
+);
 
 /** PIM-02: the API renders the approved document; the browser prints it. */
 function print() {
@@ -352,10 +368,18 @@ onBeforeUnmount(() => {
         <div class="op-head-text">
           <div class="op-head-title">
             <h1 ref="heading" tabindex="-1">Pedido {{ order.number }}</h1>
-            <span class="op-status" :data-status="order.status">
+            <span v-if="isStore" class="op-status" data-status="confirmado">
+              <OrderIcon name="check" />
+              {{ storePaymentLabel(order) }}
+            </span>
+            <span v-else class="op-status" :data-status="order.status">
               <OrderIcon :name="isPending ? 'clock' : 'check'" />
               {{ orderStatusLabel(order.status) }}
             </span>
+            <span v-if="isStore" class="badge" data-tone="info">Loja</span>
+            <span v-if="order.isTest" class="badge" data-tone="warning"
+              >Teste</span
+            >
           </div>
           <p>
             {{ customerName }} — {{ orderContext }} ·
@@ -369,6 +393,14 @@ onBeforeUnmount(() => {
             to="/inbox"
             >Abrir conversa</RouterLink
           >
+          <a
+            v-if="isStore"
+            class="button-link"
+            :href="downloadUrl"
+            :download="`pedido-${order.number}.html`"
+          >
+            <OrderIcon name="download" />Baixar ficha
+          </a>
           <button
             type="button"
             :disabled="isPending"
@@ -387,18 +419,24 @@ onBeforeUnmount(() => {
       <button v-if="error" type="button" @click="load(true)">
         Tentar novamente
       </button>
-      <p v-if="!canEdit" class="op-readonly">
+      <p v-if="isStore" class="op-readonly">
+        <OrderIcon name="lock" />
+        Pedido da loja do site: travado, sem edição.
+      </p>
+      <p v-else-if="!canEdit" class="op-readonly">
         <OrderIcon name="lock" />
         Somente {{ order.seller?.name || 'o dono da conversa' }} ou um
         administrador edita este pedido.
       </p>
 
-      <p class="op-guidance">
+      <OrderStoreDetails v-if="isStore" :order="order" />
+
+      <p v-if="!isStore" class="op-guidance">
         Confira o resumo, complete os itens e marque quem faz a arte. O painel
         de fechamento mostra o que falta para gerar e liberar a ficha.
       </p>
 
-      <div class="op-layout">
+      <div v-if="!isStore" class="op-layout">
         <!-- PFI-01: the order of the printed ficha, top to bottom. -->
         <div class="op-main">
           <OrderSummarySection :order="order" />

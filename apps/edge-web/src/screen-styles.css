@@ -1584,11 +1584,25 @@ details.exact summary {
   gap: 0.5rem;
 }
 
-.op-head-actions button {
+.op-head-actions button,
+.op-head-actions .button-link {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   border-radius: var(--radius-md);
+}
+
+/* ADR 027: the badges next to a site shop order's status. */
+.op-head-title .badge {
+  align-self: center;
+}
+
+.order-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-inline-start: 0.5rem;
+  vertical-align: middle;
 }
 
 .op-status {

@@ -427,3 +427,53 @@ export function orderMilestones(order) {
     };
   });
 }
+
+// ADR 027: an order from the site shop. It is born confirmed and locked;
+// "Pago" is what the customer declared, never a bank confirmation.
+export const STORE_ORIGIN_LABEL = 'Loja do site';
+
+const SAO_PAULO_DATE_TIME = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  hour: '2-digit',
+  hourCycle: 'h23',
+  minute: '2-digit',
+  month: '2-digit',
+  timeZone: 'America/Sao_Paulo',
+  year: 'numeric',
+});
+
+/** @param {Record<string, any>|null|undefined} order */
+export function isStoreOrder(order) {
+  return order?.origin === 'loja';
+}
+
+/**
+ * The instant the customer declared the Pix, as São Paulo reads it:
+ * "07/10/2026 às 23:15", or '' when there is none.
+ *
+ * @param {unknown} value
+ */
+export function declaredAtLabel(value) {
+  if (typeof value !== 'string') return '';
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) return '';
+  const parts = Object.fromEntries(
+    SAO_PAULO_DATE_TIME.formatToParts(instant).map((part) => [
+      part.type,
+      part.value,
+    ]),
+  );
+  return `${parts.day}/${parts.month}/${parts.year} às ${parts.hour}:${parts.minute}`;
+}
+
+/**
+ * LOJ-08: "Pago (informado pelo cliente em 07/10/2026 às 23:15)".
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function storePaymentLabel(order) {
+  const at = declaredAtLabel(order?.paymentDeclaredAt);
+  return at
+    ? `Pago (informado pelo cliente em ${at})`
+    : 'Pago (informado pelo cliente)';
+}

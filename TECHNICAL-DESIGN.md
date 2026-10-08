@@ -103,6 +103,7 @@ site sem sessão. `Origin` da lista `STORE_ORDERS_ALLOWED_ORIGINS`, corpo até
 8 KB, `Idempotency-Key` igual a `pedido_id` no registro de idempotência de
 sempre, limites por IP (memória e PostgreSQL) e por telefone (PostgreSQL),
 recibo com HMAC (`STORE_ORDERS_HMAC_KEY`) e auditoria na mesma transação.
+Variáveis, ordem de implantação e URLs: [loja do site](docs/runbooks/loja-do-site.md).
 
 ## 5. Pedido, impressão e métricas
 

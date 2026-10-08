@@ -111,6 +111,12 @@ verify token, limite de corpo e rate limit permanecem no workflow e no proxy.
 O n8n acessa o CRM somente pela API privada e não recebe rota ou credencial para
 `silmer-postgres`.
 
+A única escrita pública sem sessão é o aviso de Pix da loja do site,
+`POST /api/v1/public/loja/pedidos` em `/api/*` do edge
+([ADR 027](docs/adr/027-venda-da-loja-do-site.md)): origem permitida, corpo de
+8 KB, limites por IP e por telefone e auditoria na API. Variáveis e
+verificação no [runbook da loja](docs/runbooks/loja-do-site.md).
+
 ### Firewall Hostinger
 
 - `80/443`: público.

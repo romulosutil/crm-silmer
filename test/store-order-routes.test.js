@@ -374,6 +374,12 @@ test('allowed origins are checked at startup and matched exactly', () => {
   assert.equal(allows('https://silmer-a-b-romulodesigns.vercel.app'), true);
   assert.equal(allows('https://silmer--romulodesigns.vercel.app'), false);
   assert.equal(allows('https://silmer-a.b-romulodesigns.vercel.app'), false);
+  assert.equal(allows('https://silmer-romulodesigns.vercel.app'), false);
+  assert.equal(
+    allows('https://evil.example/https://silmer.com.br'),
+    false,
+    'an exact entry matches the whole origin, never a part of it',
+  );
   assert.equal(allows(undefined), false);
   for (const invalid of [
     '',
@@ -383,6 +389,9 @@ test('allowed origins are checked at startup and matched exactly', () => {
     'https://silmer.com.br/loja',
     'http://silmer-*.example',
     'https://**.example',
+    'https://*',
+    'https://*example',
+    'https://a-*-b-*.example',
   ]) {
     assert.throws(() => compileAllowedOrigins(invalid), Error, invalid);
   }

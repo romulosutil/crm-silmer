@@ -22,6 +22,7 @@
 18. Mídia de canal não promovida é transitória: remover bytes no fim da jornada ou em sete dias, o que ocorrer primeiro. Pedido, ficha, documentos comerciais válidos e auditoria seguem retenção própria.
 19. Handoff e tomada humana são definitivos para o atendimento: a conversa segue com pessoa até encerrar e não volta ao bot (ADR 015).
 20. Handoff nasce sem responsável e tem papel-alvo Vendedor (ADR 009). A reivindicação é atômica e exige pessoa ativa e elegível; editar, gerar ou reabrir pedido exige dono da conversa ou administrador.
+21. Pedido da loja do site (ADR 027) é a única exceção às regras 5, 9, 10 e 16 quanto à confirmação humana e ao dia do pagamento digitado: nasce `confirmado`, sem conversa nem Contato, pelo ator `system:loja-do-site`, ao preço do catálogo do CRM, com Pix e dia do pagamento informados pelo cliente; fica travado (sem edição, reabertura, lastro ou arquivos) e conta como venda, salvo pedido de teste.
 
 ## Regras técnicas já impostas
 
@@ -31,7 +32,7 @@
 4. WhatsApp usa API oficial e é o canal obrigatório do primeiro lançamento. Instagram pertence a `CANAL-2` e não bloqueia o piloto WhatsApp.
 5. Na futura migração entre canais, associar identidades ao mesmo Contato somente após correlação verificável e auditável; nunca por nome ou inferência da IA.
 6. n8n é obrigatório para canais, OpenAI e orquestração. Falha de n8n é visível, sem fallback silencioso.
-7. Toda mutação oficial passa por contrato autenticado, autorizado, idempotente e auditável do CRM; n8n nunca acessa diretamente o banco do CRM.
+7. Toda mutação oficial passa por contrato autenticado, autorizado, idempotente e auditável do CRM; n8n nunca acessa diretamente o banco do CRM. Exceção única: a rota pública da loja do site (ADR 027), que só cria o pedido da loja, com origem permitida, limites por IP e telefone, idempotência e auditoria.
 8. Dados pessoais seguem minimização, acesso por capacidade, auditoria e política de retenção aprovada. Controles de acesso devem refletir a implementação e as evidências atuais.
 9. No piloto interno, mídia transitória usa volume privado sem backup; arquivo válido é anexado ao pedido e guardado no RustFS interno (ADR 023). Só a API fala com o RustFS: sem URL pública, link pré-assinado ou promoção automática a partir do canal.
 10. n8n v1 usa Basic Auth com `AUTOMATION_EXECUTOR`, idempotência, correlação, identidade de workflow e `application/problem+json`; sem HMAC/timestamp nesse contrato.

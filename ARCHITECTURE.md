@@ -34,6 +34,10 @@ observa ou assume o atendimento. Instagram é CANAL-2, posterior ao piloto.
   proteção do painel de infraestrutura é um controle distinto.
 - Conversa transferida não retorna ao bot
   ([ADR 015](docs/adr/015-conversa-nao-volta-para-o-bot.md)).
+- Loja do site: `POST /api/v1/public/loja/pedidos` é a única escrita
+  pública, sem sessão e sem n8n; só cria o pedido da loja, com origem
+  permitida, limites no PostgreSQL, idempotência, recibo e auditoria
+  ([ADR 027](docs/adr/027-venda-da-loja-do-site.md)).
 
 ## Pedido e ficha
 
@@ -53,6 +57,11 @@ pela página do pedido e ficam no RustFS interno, só pela API
 ([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)). Aviso a Rose e
 automação PIX não são assumidos como entregues pelo ciclo atual de Pedido. Vendido conta
 somente confirmados; não equivale a recebimentos.
+
+O pedido da loja do site (`origin = loja`) nasce confirmado, sem conversa nem
+Contato, ao preço do catálogo do CRM, com o Pix "informado pelo cliente"; é
+travado, conta como venda normal (teste não conta) e imprime a ficha
+simplificada `ficha-loja-v1` ([ADR 027](docs/adr/027-venda-da-loja-do-site.md)).
 
 ## Baseline técnica
 

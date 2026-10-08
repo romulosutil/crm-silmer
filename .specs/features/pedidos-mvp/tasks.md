@@ -1742,3 +1742,57 @@ Branch `feat/loja-do-site`, a partir do `master`; segue a T102 (ADR 026).
   006, 008 e 018, alternativas, riscos, critérios e as decisões D1–D9 para o
   PO.
 - **Gate:** links e formatação.
+
+### T104: Decisão e rastreabilidade
+
+- **Requisitos:** LOJ-01–LOJ-14.
+- **Arquivos:** RFC 015 (status), ADR 027, índice de ADRs, RULES,
+  ARCHITECTURE, TECHNICAL-DESIGN, spec e tasks.
+- **Aceite:** D1–D9 e o adendo do PO (venda normal no Dashboard) registrados.
+- **Gate:** links e formatação.
+
+### T105: Pedido da loja no domínio e no banco
+
+- **Requisitos:** LOJ-04–LOJ-07, LOJ-09, LOJ-13.
+- **Arquivos:** migration `0029_store_orders.expand.sql`,
+  `modules/orders/src/domain/` (`store-catalog.js`, `store-order.js`),
+  repositórios, serviço e testes.
+- **Aceite:** catálogo e validação, criação travada sem conversa, recibo,
+  limites por IP e telefone, resumo sem teste, busca pelo telefone.
+- **Gate:** testes de domínio, serviço, repositório e migrations.
+
+### T106: Rota pública da loja
+
+- **Requisitos:** LOJ-01–LOJ-05, LOJ-11–LOJ-13.
+- **Arquivos:** `apps/api/src/store-order-routes.js`, runtime, OpenAPI e
+  testes de contrato com o JSON do site.
+- **Aceite:** criação, reenvio idêntico, `409`, `422` de valor e de teste,
+  CORS, `403`, `429` com `Retry-After`, rota desligada sem configuração.
+- **Gate:** testes da API e OpenAPI.
+
+### T107: Leituras e ficha simplificada
+
+- **Requisitos:** LOJ-07, LOJ-08, LOJ-10.
+- **Arquivos:** rotas de pedidos, `ficha-loja-v1.js`, nginx (hash do CSP) e
+  testes.
+- **Aceite:** escritas travadas com `409 ORDER_LOCKED`, filtro `origin`,
+  ficha com só os campos padrão, download como anexo.
+- **Gate:** testes de impressão, rotas e CSP.
+
+### T108: Interface da loja
+
+- **Requisitos:** LOJ-08, LOJ-09, LOJ-14.
+- **Arquivos:** `OrdersView.vue`, `OrderView.vue`, componente do pedido da
+  loja, `order-format.js` e E2E.
+- **Aceite:** selo "Loja", "Pago (informado pelo cliente em …)", pedido
+  travado, "Baixar ficha", filtro "Loja do site", tudo por teclado.
+- **Gate:** build, typecheck, lint e E2E de pedidos.
+
+### T109: Runbook e revisão integrada
+
+- **Requisitos:** LOJ-01–LOJ-14.
+- **Arquivos:** `docs/runbooks/loja-do-site.md`, inventário de segredos e
+  revisão final.
+- **Aceite:** variáveis, ordem de implantação, URLs e verificação pós-deploy;
+  sem deploy nem mudança no n8n sem pedido do PO.
+- **Gate:** `npm run validate`.

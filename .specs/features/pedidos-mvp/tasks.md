@@ -1716,3 +1716,20 @@ commit e um push.
 - **Aceite:** divisão gravada em `audiences`; a dica ao vendedor lê o campo;
   ordem de implantação no runbook.
 - **Gate:** testes de contrato do workflow.
+
+## Venda da loja do site (RFC 015, 07/10/2026)
+
+Branch `feat/loja-do-site`, a partir do `master`. A T102 pertence à branch
+`feat/n8n-midia-e-chat-do-site` (ADR 026); esta seção começa na T103 para não
+colidir com ela.
+
+### T103: RFC da venda da loja do site
+
+- **Requisitos:** propostos `LOJ-01`–`LOJ-14` na
+  [RFC 015](../../../docs/rfc/015-venda-da-loja-do-site.md); entram na spec com
+  a ADR 027, depois da decisão do PO.
+- **Arquivos:** RFC 015 e tasks.
+- **Aceite:** situação atual, onde mora o endpoint, conciliação com as ADRs
+  006, 008 e 018, alternativas, riscos, critérios e as decisões D1–D9 para o
+  PO.
+- **Gate:** links e formatação.

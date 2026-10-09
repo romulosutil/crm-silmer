@@ -137,7 +137,9 @@ export function createOrderRuntime(options) {
    * the seller is the conversation's current owner and internal columns
    * (sequence, creator) stay out of the response. ADR 027: a store order
    * has no conversation, so no seller or last message; "Loja do site"
-   * confirmed it and it is `locked`.
+   * confirmed it and it is `locked`. ADR 028: it carries the shop's number,
+   * the lead time of its colour and the payment InfinitePay confirmed, with
+   * the receipt link kept in its ficha.
    *
    * @param {any[]} orders
    */
@@ -184,9 +186,16 @@ export function createOrderRuntime(options) {
       ficha: order.ficha,
       finalAmountCents: order.finalAmountCents,
       firstContactAt: order.firstContactAt,
+      gatewayPayment: order.gatewayPayment
+        ? {
+            ...order.gatewayPayment,
+            receiptUrl: order.ficha?.loja?.comprovanteUrl ?? null,
+          }
+        : null,
       id: order.id,
       isTest: order.isTest === true,
       lastMessage: latestMessageStates.get(order.conversationId) ?? null,
+      leadTimeBusinessDays: order.leadTimeBusinessDays ?? null,
       locked: order.origin === 'loja',
       missingFields: order.missingFields,
       number: order.number,
@@ -194,11 +203,11 @@ export function createOrderRuntime(options) {
       origin: order.origin ?? 'atendimento',
       paidOn: order.paidOn,
       paymentCondition: order.paymentCondition,
-      paymentDeclaredAt: order.paymentDeclaredAt ?? null,
       reopenedAt: order.reopenedAt,
       reopenedBy: person(order.reopenedBy),
       seller: person(owners.get(order.conversationId)),
       status: order.status,
+      storeNumber: order.storeNumber ?? null,
       totalPieces: order.totalPieces,
       updatedAt: order.updatedAt,
       version: order.version,

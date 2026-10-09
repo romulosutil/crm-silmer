@@ -1,9 +1,12 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-// ADR 027 (LOJ-08, LOJ-10, LOJ-14): a site shop order in the list and on its
-// page — the "Loja" badge, "Pago (informado pelo cliente em …)", the lock and
-// "Baixar ficha" — all by keyboard. The customer is synthetic.
+// ADRs 027 and 028 (LOJ-08, LOJ-10, LOJ-14, LOJ-22..24): a site shop order
+// paid through InfinitePay, in the list and on its page — the "Loja · LJ-…"
+// badge, "Pago — confirmado pela InfinitePay em …", the lead time, the NSU,
+// the receipt link, the lock and "Baixar ficha" — all by keyboard; and the
+// order link the seller opens without a session comes back after the login.
+// The customer and the gateway identifiers are synthetic.
 
 const session = {
   user: {
@@ -14,6 +17,8 @@ const session = {
     name: 'Rose Sintética',
   },
 };
+
+const RECEIPT_URL = 'https://recibo.infinitepay.io/sintetico-5b0c77ed';
 
 const storeOrder = {
   confirmedAt: '2026-10-08T02:16:03.000Z',
@@ -40,13 +45,11 @@ const storeOrder = {
       },
     ],
     loja: {
-      informadoPeloClienteEm: '2026-10-08T02:15:55.693Z',
+      comprovanteUrl: RECEIPT_URL,
       produto: {
         nome: 'Camisa Masculina Lisa Dry Fit',
         slug: 'camisa-masculina-lisa',
       },
-      retirada:
-        'Av. Carlos Lindenberg, 800 — Lojas 05 e 06, Glória, Vila Velha - ES',
       telefone: '5527900000001',
     },
     observations: [],
@@ -57,11 +60,20 @@ const storeOrder = {
       nome: null,
     },
   },
-  finalAmountCents: 19364,
-  firstContactAt: '2026-10-08T02:16:03.000Z',
+  finalAmountCents: 18000,
+  firstContactAt: '2026-10-08T02:15:55.000Z',
+  gatewayPayment: {
+    confirmedAt: '2026-10-08T02:15:55.000Z',
+    invoiceSlug: 'fatura-sintetica-1',
+    paidAmountCents: 18000,
+    receiptUrl: RECEIPT_URL,
+    source: 'infinitepay',
+    transactionNsu: 'nsu-sintetico-0001',
+  },
   id: 'order-loja',
   isTest: true,
   lastMessage: null,
+  leadTimeBusinessDays: 10,
   locked: true,
   missingFields: [],
   number: '12-CRM',
@@ -69,11 +81,11 @@ const storeOrder = {
   origin: 'loja',
   paidOn: '2026-10-07',
   paymentCondition: 'pix',
-  paymentDeclaredAt: '2026-10-08T02:15:55.693Z',
   reopenedAt: null,
   reopenedBy: null,
   seller: null,
   status: 'confirmado',
+  storeNumber: 'LJ-5B0C77ED',
   totalPieces: 10,
   updatedAt: '2026-10-08T02:16:03.000Z',
   version: 1,
@@ -81,14 +93,26 @@ const storeOrder = {
 
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{onList?: (params: URLSearchParams) => void}} [options]
+ * @param {{onList?: (params: URLSearchParams) => void, signedOut?: boolean}} [options]
  */
 async function mockStore(page, options = {}) {
+  let authenticated = options.signedOut !== true;
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
-    if (path === '/api/v1/sessions/current') {
+    if (path === '/api/v1/sessions/current' && request.method() === 'GET') {
+      await route.fulfill({
+        body: JSON.stringify(
+          authenticated ? session : { error: { code: 'UNAUTHENTICATED' } },
+        ),
+        contentType: 'application/json',
+        status: authenticated ? 200 : 401,
+      });
+      return;
+    }
+    if (path === '/api/v1/sessions' && request.method() === 'POST') {
+      authenticated = true;
       await route.fulfill({
         body: JSON.stringify(session),
         contentType: 'application/json',
@@ -101,6 +125,19 @@ async function mockStore(page, options = {}) {
         contentType: 'text/event-stream',
         headers: { 'Cache-Control': 'no-cache' },
         status: 200,
+      });
+      return;
+    }
+    if (path === '/api/v1/orders/summary' && request.method() === 'GET') {
+      await route.fulfill({
+        body: JSON.stringify({
+          averageTicketCents: 0,
+          confirmedCount: 0,
+          pendingCount: 0,
+          soldAmountCents: 0,
+          totalPiecesSold: 0,
+        }),
+        contentType: 'application/json',
       });
       return;
     }
@@ -131,6 +168,16 @@ async function mockStore(page, options = {}) {
   });
 }
 
+/** @param {import('@playwright/test').Page} page */
+async function signIn(page) {
+  const loginPanel = page.getByRole('region', {
+    name: 'Boas-vindas de volta',
+  });
+  await loginPanel.getByLabel('E-mail').fill('rose@example.test');
+  await loginPanel.getByLabel('Senha').fill('senha sintetica de teste');
+  await loginPanel.getByLabel('Senha').press('Enter');
+}
+
 test('the list filters "Loja do site" by keyboard and labels the store order', async ({
   page,
 }) => {
@@ -147,25 +194,34 @@ test('the list filters "Loja do site" by keyboard and labels the store order', a
   await expect.poll(() => lists.at(-1)?.get('origin') ?? null).toBe('loja');
   expect(lists.at(-1)?.get('status')).toBeNull();
 
+  // LOJ-23: the search sends the shop's number as typed; the API finds it.
+  await page
+    .getByLabel('Buscar número, cliente ou telefone')
+    .fill('LJ-5B0C77ED');
+  await expect.poll(() => lists.at(-1)?.get('q') ?? null).toBe('LJ-5B0C77ED');
+
   const confirmed = page.getByRole('region', { name: /Confirmados/u });
   const row = confirmed.getByRole('row').nth(1);
   await expect(row).toContainText('12-CRM');
-  await expect(row.getByText('Loja', { exact: true })).toBeVisible();
+  await expect(
+    row.getByText('Loja · LJ-5B0C77ED', { exact: true }),
+  ).toBeVisible();
   await expect(row.getByText('Teste', { exact: true })).toBeVisible();
   await expect(row).toContainText('Cliente Sintetico da Loja');
   await expect(row).toContainText(
     'Loja do site · Camisa Masculina Lisa Dry Fit',
   );
-  await expect(row).toContainText('R$ 193,64');
+  await expect(row).toContainText('R$ 180,00');
   await expect(row).toContainText(
-    'Pago (informado pelo cliente em 07/10/2026 às 23:15)',
+    'Pago — confirmado pela InfinitePay em 07/10/2026 às 23:15',
   );
   await expect(row).not.toContainText('sem vendedor');
+  await expect(row).not.toContainText('informado pelo cliente');
 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('the store order page is locked, says who paid and downloads its ficha', async ({
+test('the store order page is locked, shows the InfinitePay payment and downloads its ficha', async ({
   page,
 }) => {
   await mockStore(page);
@@ -174,11 +230,14 @@ test('the store order page is locked, says who paid and downloads its ficha', as
   const heading = page.getByRole('heading', { name: 'Pedido 12-CRM' });
   await expect(heading).toBeFocused();
   await expect(
-    page.getByText('Pago (informado pelo cliente em 07/10/2026 às 23:15)', {
-      exact: true,
-    }),
+    page.getByText(
+      'Pago — confirmado pela InfinitePay em 07/10/2026 às 23:15',
+      { exact: true },
+    ),
   ).toBeVisible();
-  await expect(page.getByText('Loja', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Loja · LJ-5B0C77ED', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Teste', { exact: true })).toBeVisible();
   await expect(
     page.getByText('Pedido da loja do site: travado, sem edição.'),
@@ -186,6 +245,7 @@ test('the store order page is locked, says who paid and downloads its ficha', as
 
   const details = page.getByRole('region', { name: 'Pedido da loja do site' });
   for (const [label, value] of [
+    ['Número da loja', 'LJ-5B0C77ED'],
     ['Cliente', 'Cliente Sintetico da Loja'],
     ['Telefone', '+55 (27) 90000-0001'],
     ['Produto', 'Camisa Masculina Lisa Dry Fit'],
@@ -196,7 +256,10 @@ test('the store order page is locked, says who paid and downloads its ficha', as
     ['Gola', 'Gola redonda'],
     ['Tamanho', 'M'],
     ['Quantidade', '10'],
-    ['Valor', 'R$ 193,64'],
+    ['Prazo', '10 dias úteis'],
+    ['Valor', 'R$ 180,00'],
+    ['Valor pago', 'R$ 180,00'],
+    ['Transação InfinitePay (NSU)', 'nsu-sintetico-0001'],
     ['Origem', 'Loja do site'],
   ]) {
     await expect(
@@ -205,9 +268,16 @@ test('the store order page is locked, says who paid and downloads its ficha', as
         .filter({ has: page.getByText(label, { exact: true }) }),
     ).toContainText(value);
   }
-  await expect(details).toContainText(
-    'Av. Carlos Lindenberg, 800 — Lojas 05 e 06, Glória, Vila Velha - ES',
-  );
+  await expect(details).not.toContainText('Sicredi');
+  await expect(details).not.toContainText('Lindenberg');
+
+  // LOJ-22: the receipt opens in a new tab, and says so.
+  const receipt = details.getByRole('link', {
+    name: 'Comprovante InfinitePay (abre em nova aba)',
+  });
+  await expect(receipt).toHaveAttribute('href', RECEIPT_URL);
+  await expect(receipt).toHaveAttribute('target', '_blank');
+  await expect(receipt).toHaveAttribute('rel', 'noopener noreferrer');
 
   // Nothing to edit, generate, reopen or attach on a locked order.
   for (const name of [
@@ -241,4 +311,29 @@ test('the store order page is locked, says who paid and downloads its ficha', as
   ).toBeEnabled();
 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('LOJ-24: the order link opened without a session comes back to the order after the login', async ({
+  page,
+}) => {
+  await mockStore(page, { signedOut: true });
+  await page.goto('/pedidos/order-loja');
+  await expect(page.getByRole('status')).toHaveText('Entre para continuar.');
+  await expect(page).toHaveURL('/?voltar=/pedidos/order-loja');
+
+  await signIn(page);
+  await expect(page).toHaveURL('/pedidos/order-loja');
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 12-CRM' }),
+  ).toBeFocused();
+});
+
+test('LOJ-24: a return address outside the app is ignored', async ({
+  page,
+}) => {
+  await mockStore(page, { signedOut: true });
+  await page.goto('/?voltar=%2F%2Fevil.example%2Fpedidos');
+  await expect(page.getByRole('status')).toHaveText('Entre para continuar.');
+  await signIn(page);
+  await expect(page).toHaveURL('/dashboard');
 });

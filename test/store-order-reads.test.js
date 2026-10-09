@@ -10,6 +10,7 @@ import { renderOrderFicha } from '../modules/orders/src/print/index.js';
 import { orderContextsFrom } from './fixtures/order-contexts.js';
 import {
   STORE_NOW,
+  STORE_RECEIPT_URL,
   otherStoreOrderBody,
   storeOrderBody,
 } from './fixtures/store-order.js';
@@ -83,7 +84,7 @@ function harness() {
   return { api, assignmentReads, notify, runtime };
 }
 
-test('LOJ-06/LOJ-08: a store order reads as locked, confirmed by Loja do site, with no seller', async () => {
+test('LOJ-21/LOJ-22: a store order reads as locked, paid through InfinitePay, with no seller', async () => {
   const { api, assignmentReads, notify } = harness();
   const created = await notify();
   const response = await api.inject({
@@ -105,13 +106,24 @@ test('LOJ-06/LOJ-08: a store order reads as locked, confirmed by Loja do site, w
     name: 'Loja do site',
   });
   assert.equal(order.paidOn, '2026-10-07');
+  assert.equal(order.storeNumber, 'LJ-5B0C77ED');
+  assert.equal(order.leadTimeBusinessDays, 10);
+  assert.deepEqual(order.gatewayPayment, {
+    confirmedAt: '2026-10-08T02:15:55.000Z',
+    invoiceSlug: 'fatura-sintetica-1',
+    paidAmountCents: 18000,
+    receiptUrl: null,
+    source: 'infinitepay',
+    transactionNsu: 'nsu-sintetico-0001',
+  });
   assert.equal(order.ficha.loja.telefone, '5527900000001');
+  assert.equal('paymentDeclaredAt' in order, false);
   // No conversation was looked up for an order that has none.
   assert.deepEqual(assignmentReads, []);
   await api.close();
 });
 
-test('LOJ-08: the list filters "Loja do site" and finds a store order by its phone', async () => {
+test('LOJ-08/LOJ-23: the list filters "Loja do site" and finds a store order by its phone or LJ- number', async () => {
   const { api, notify, runtime } = harness();
   const created = await notify();
   await runtime.createManual({
@@ -146,6 +158,18 @@ test('LOJ-08: the list filters "Loja do site" and finds a store order by its pho
     byPhone.json().items.map((/** @type {any} */ order) => order.id),
     [created.id],
   );
+  for (const q of ['LJ-5B0C77ED', 'lj5b0c77ed']) {
+    const byStoreNumber = await api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url: `/api/v1/orders?q=${encodeURIComponent(q)}`,
+    });
+    assert.deepEqual(
+      byStoreNumber.json().items.map((/** @type {any} */ order) => order.id),
+      [created.id],
+      q,
+    );
+  }
   const invalid = await api.inject({
     headers: readHeaders,
     method: 'GET',
@@ -170,7 +194,7 @@ test('LOJ-07: every write on a store order answers 409 ORDER_LOCKED', async () =
     [
       'POST',
       `${base}/confirm`,
-      { amountText: '193,64', expectedVersion: 1, paymentCondition: 'pix' },
+      { amountText: '180,00', expectedVersion: 1, paymentCondition: 'pix' },
     ],
     ['POST', `${base}/reopen`, { expectedVersion: 1 }],
     [
@@ -193,9 +217,11 @@ test('LOJ-07: every write on a store order answers 409 ORDER_LOCKED', async () =
   await api.close();
 });
 
-test('LOJ-10: the store order prints its simplified ficha with the standard fields only', async () => {
+test('LOJ-10/LOJ-22: the store order prints its simplified ficha with the standard fields only', async () => {
   const { api, notify } = harness();
-  const created = await notify((body) => (body.teste = false));
+  const created = await notify(
+    (body) => (body.pagamento.receipt_url = STORE_RECEIPT_URL),
+  );
   const response = await api.inject({
     headers: readHeaders,
     method: 'GET',
@@ -207,7 +233,9 @@ test('LOJ-10: the store order prints its simplified ficha with the standard fiel
   const html = response.body;
   for (const expected of [
     'PEDIDO DA LOJA',
-    'Origem: Loja do site',
+    'Origem: Loja do site · LJ-5B0C77ED',
+    '<dt>Número da loja</dt><dd>LJ-5B0C77ED</dd>',
+    '<dt>Prazo</dt><dd>10 dias úteis</dd>',
     '01-CRM',
     '07/10/2026',
     'Cliente Sintetico da Loja',
@@ -220,8 +248,12 @@ test('LOJ-10: the store order prints its simplified ficha with the standard fiel
     'Gola redonda',
     '<dt>Tamanho</dt><dd>M</dd>',
     '<dt>Quantidade</dt><dd>10</dd>',
-    'R$ 180,00',
+    '<dt>Valor</dt><dd>R$ 180,00</dd>',
     '<dt>Forma</dt><dd>Pix</dd>',
+    '<dt>Valor pago</dt><dd>R$ 180,00</dd>',
+    '<dt>Transação (NSU)</dt><dd>nsu-sintetico-0001</dd>',
+    'Pago — confirmado pela InfinitePay em 07/10/2026 às 23:15',
+    `<a href="${STORE_RECEIPT_URL}" rel="noopener noreferrer">Comprovante InfinitePay</a>`,
   ]) {
     assert.ok(html.includes(expected), expected);
   }
@@ -232,6 +264,9 @@ test('LOJ-10: the store order prints its simplified ficha with the standard fiel
     /CONTROLE DE PRODUÇÃO/u,
     /Vendedor/u,
     /teste/iu,
+    /Retirada/u,
+    /informado pelo cliente/u,
+    /Sicredi/u,
   ]) {
     assert.doesNotMatch(html, absent);
   }
@@ -270,11 +305,26 @@ test('LOJ-10: the simplified ficha escapes what the customer typed', () => {
       loja: { telefone: '5527900000001' },
       summary: { cliente: '<img src=x onerror=alert(1)>' },
     },
+    gatewayPayment: {
+      receiptUrl: 'https://recibo.infinitepay.io/"><script>alert(1)</script>',
+    },
     number: '09-CRM',
     origin: 'loja',
   });
-  assert.doesNotMatch(html, /<img/u);
+  assert.doesNotMatch(html, /<img|<script/u);
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/u);
+  assert.match(
+    html,
+    /href="https:\/\/recibo\.infinitepay\.io\/&quot;&gt;&lt;script&gt;/u,
+  );
+  // A link that is not https is never printed.
+  const plain = renderOrderFicha({
+    ficha: { items: [], loja: {}, summary: {} },
+    gatewayPayment: { receiptUrl: 'javascript:alert(1)' },
+    number: '10-CRM',
+    origin: 'loja',
+  });
+  assert.doesNotMatch(plain, /javascript:|Comprovante InfinitePay/u);
 });
 
 test('LOJ-09: the summary counts a store sale like any sale and skips tests', async () => {

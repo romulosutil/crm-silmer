@@ -24,8 +24,8 @@ const LIVE_REFRESH_DELAY_MS = 250;
 const SEARCH_DELAY_MS = 300;
 const PAGE_SIZE = 25;
 
-// ADR 027: "Loja do site" narrows the list to the site shop's orders, all
-// of them confirmed, for the check against the Sicredi statement.
+// ADRs 027 and 028: "Loja do site" narrows the list to the site shop's
+// orders, all of them confirmed and paid through InfinitePay.
 const STORE_FILTER = 'loja';
 const FILTERS = Object.freeze([
   Object.freeze({ label: 'Todos', value: '' }),
@@ -379,11 +379,16 @@ onBeforeUnmount(() => {
                     v-if="isStoreOrder(order) || order.isTest"
                     class="order-badges"
                   >
+                    <!-- ADR 028: the shop's number next to the CRM's. -->
                     <span
                       v-if="isStoreOrder(order)"
                       class="badge"
                       data-tone="info"
-                      >Loja</span
+                      >{{
+                        order.storeNumber
+                          ? `Loja · ${order.storeNumber}`
+                          : 'Loja'
+                      }}</span
                     >
                     <span v-if="order.isTest" class="badge" data-tone="warning"
                       >Teste</span

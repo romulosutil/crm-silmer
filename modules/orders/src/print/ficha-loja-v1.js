@@ -1,10 +1,12 @@
-// ADR 027: the simplified ficha of a site shop order — the receipt Rose
-// hands over at pickup. Only the standard fields: number, date, customer,
-// product, the kit's one colour and size, amount, the Pix the customer
-// declared, the pickup address and the origin. No art, technique,
-// observations or production control, and no empty field. It is not the
-// canonical ficha: `PRINT_TEMPLATE` never selects it and it carries no
-// review hash; the print route picks it by the order's origin.
+// ADRs 027 and 028: the simplified ficha of a site shop order. Only the
+// standard fields: the CRM and shop numbers, date, lead time, customer,
+// product, the kit's one colour and size, amount, the Pix InfinitePay
+// confirmed (amount paid, transaction and invoice), the receipt link and the
+// origin. No art, technique, observations or production control, and no
+// empty field. It is not the canonical ficha: `PRINT_TEMPLATE` never selects
+// it and it carries no review hash; the print route picks it by the order's
+// origin. It was never published before ADR 028, so it changed in place; its
+// stylesheet, whose hash the print CSP allows, did not.
 import { display, filledText } from './html.js';
 
 export const TEMPLATE_STORE_V1 = 'ficha-loja-v1';
@@ -16,7 +18,7 @@ const AUDIENCE_LABELS = Object.freeze({
   masculino: 'Masculino',
   unissex: 'Unissex',
 });
-const declaredFormat = new Intl.DateTimeFormat('pt-BR', {
+const instantFormat = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
   hour: '2-digit',
   hourCycle: 'h23',
@@ -33,13 +35,11 @@ function day(value) {
 }
 
 /** An instant as São Paulo reads it: `07/10/2026 às 23:15`. @param {unknown} value */
-export function declaredAtLabel(value) {
+export function instantLabel(value) {
   const instant = new Date(filledText(value));
   if (Number.isNaN(instant.getTime())) return '';
   const parts = Object.fromEntries(
-    declaredFormat
-      .formatToParts(instant)
-      .map((part) => [part.type, part.value]),
+    instantFormat.formatToParts(instant).map((part) => [part.type, part.value]),
   );
   return `${parts.day}/${parts.month}/${parts.year} às ${parts.hour}:${parts.minute}`;
 }
@@ -49,6 +49,13 @@ export function phoneLabel(value) {
   const digits = filledText(value);
   const match = /^55(\d{2})(\d{4,5})(\d{4})$/u.exec(digits);
   return match ? `+55 (${match[1]}) ${match[2]}-${match[3]}` : digits;
+}
+
+/** ADR 028: "Pronta entrega", "1 dia útil" or "10 dias úteis". @param {unknown} days */
+export function leadTimeLabel(days) {
+  if (!Number.isSafeInteger(days) || Number(days) < 0) return '';
+  if (days === 0) return 'Pronta entrega';
+  return days === 1 ? '1 dia útil' : `${days} dias úteis`;
 }
 
 /** @param {unknown} cents */
@@ -84,12 +91,20 @@ function fields(entries) {
 export function renderStoreFichaHtml(order) {
   const ficha = order?.ficha ?? {};
   const loja = ficha.loja ?? {};
+  const payment = order?.gatewayPayment ?? {};
   const item = Array.isArray(ficha.items) ? (ficha.items[0] ?? {}) : {};
   const grade = Array.isArray(item.grade) ? item.grade : [];
   const sizes = grade
     .map((/** @type {any} */ line) => filledText(line?.tamanho))
     .join(' / ');
-  const declared = declaredAtLabel(order?.paymentDeclaredAt);
+  const confirmed = instantLabel(payment.confirmedAt);
+  const storeNumber = filledText(order?.storeNumber);
+  // The link was checked against the InfinitePay hosts when it came in;
+  // only an https link is ever printed.
+  const receiptUrl = filledText(payment.receiptUrl ?? loja.comprovanteUrl);
+  const receipt = receiptUrl.startsWith('https://')
+    ? `<section><h2>Comprovante</h2><dl class="wide"><div><dt>Comprovante InfinitePay</dt><dd><a href="${display(receiptUrl)}" rel="noopener noreferrer">Comprovante InfinitePay</a></dd></div></dl></section>`
+    : '';
   const testBand = order?.isTest
     ? '<p class="test">Pedido de teste — não entregar</p>'
     : '';
@@ -123,11 +138,13 @@ export function renderStoreFichaHtml(order) {
   </style>
 </head>
 <body>
-  <header class="sheet-header"><div><div class="brand">Silmer</div><h1>PEDIDO DA LOJA</h1><p class="origin">Origem: Loja do site</p></div><div class="order-id"><span>Pedido</span><strong>${display(order?.number ?? '')}</strong></div></header>
+  <header class="sheet-header"><div><div class="brand">Silmer</div><h1>PEDIDO DA LOJA</h1><p class="origin">${display(storeNumber ? `Origem: Loja do site · ${storeNumber}` : 'Origem: Loja do site')}</p></div><div class="order-id"><span>Pedido</span><strong>${display(order?.number ?? '')}</strong></div></header>
   ${testBand}
   <section><h2>Pedido</h2><dl>${fields([
     ['Número', filledText(order?.number)],
+    ['Número da loja', storeNumber],
     ['Data do pedido', day(order?.orderDate)],
+    ['Prazo', leadTimeLabel(order?.leadTimeBusinessDays)],
   ])}</dl></section>
   <section><h2>Cliente</h2><dl>${fields([
     ['Nome', filledText(ficha.summary?.cliente)],
@@ -154,14 +171,15 @@ export function renderStoreFichaHtml(order) {
   <section><h2>Pagamento</h2><dl>${fields([
     ['Valor', money(order?.finalAmountCents)],
     ['Forma', order?.paymentCondition === 'pix' ? 'Pix' : ''],
+    ['Valor pago', money(payment.paidAmountCents)],
+    ['Transação (NSU)', filledText(payment.transactionNsu)],
+    ['Fatura', filledText(payment.invoiceSlug)],
   ])}</dl><p class="paid">${display(
-    declared
-      ? `Pago — informado pelo cliente em ${declared}`
-      : 'Pago — informado pelo cliente',
+    confirmed
+      ? `Pago — confirmado pela InfinitePay em ${confirmed}`
+      : 'Pago — confirmado pela InfinitePay',
   )}</p></section>
-  <section><h2>Retirada</h2><dl class="wide">${fields([
-    ['Retirada na loja', filledText(loja.retirada)],
-  ])}</dl></section>
+  ${receipt}
 </body>
 </html>`;
 }

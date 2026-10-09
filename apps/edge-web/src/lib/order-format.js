@@ -428,8 +428,8 @@ export function orderMilestones(order) {
   });
 }
 
-// ADR 027: an order from the site shop. It is born confirmed and locked;
-// "Pago" is what the customer declared, never a bank confirmation.
+// ADRs 027 and 028: an order from the site shop. It is born confirmed and
+// locked; "Pago" is what InfinitePay confirmed through the n8n checkout.
 export const STORE_ORIGIN_LABEL = 'Loja do site';
 
 const SAO_PAULO_DATE_TIME = new Intl.DateTimeFormat('pt-BR', {
@@ -448,12 +448,12 @@ export function isStoreOrder(order) {
 }
 
 /**
- * The instant the customer declared the Pix, as São Paulo reads it:
- * "07/10/2026 às 23:15", or '' when there is none.
+ * An instant as São Paulo reads it: "07/10/2026 às 23:15", or '' when there
+ * is none.
  *
  * @param {unknown} value
  */
-export function declaredAtLabel(value) {
+export function instantLabel(value) {
   if (typeof value !== 'string') return '';
   const instant = new Date(value);
   if (Number.isNaN(instant.getTime())) return '';
@@ -467,13 +467,36 @@ export function declaredAtLabel(value) {
 }
 
 /**
- * LOJ-08: "Pago (informado pelo cliente em 07/10/2026 às 23:15)".
+ * LOJ-22: "Pago — confirmado pela InfinitePay em 07/10/2026 às 23:15".
  *
  * @param {Record<string, any>|null|undefined} order
  */
 export function storePaymentLabel(order) {
-  const at = declaredAtLabel(order?.paymentDeclaredAt);
+  const at = instantLabel(order?.gatewayPayment?.confirmedAt);
   return at
-    ? `Pago (informado pelo cliente em ${at})`
-    : 'Pago (informado pelo cliente)';
+    ? `Pago — confirmado pela InfinitePay em ${at}`
+    : 'Pago — confirmado pela InfinitePay';
+}
+
+/**
+ * LOJ-22: the kit's lead time — "Pronta entrega", "1 dia útil" or
+ * "10 dias úteis"; '' when the order has none.
+ *
+ * @param {unknown} days
+ */
+export function leadTimeLabel(days) {
+  if (!Number.isSafeInteger(days) || Number(days) < 0) return '';
+  if (days === 0) return 'Pronta entrega';
+  return days === 1 ? '1 dia útil' : `${days} dias úteis`;
+}
+
+/**
+ * The receipt link of a store order, only when it is an https link (the API
+ * accepted it from the InfinitePay hosts only).
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function storeReceiptUrl(order) {
+  const url = order?.gatewayPayment?.receiptUrl;
+  return typeof url === 'string' && url.startsWith('https://') ? url : '';
 }

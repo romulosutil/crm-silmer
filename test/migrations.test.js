@@ -174,7 +174,7 @@ test('moves new valid-file receipts to RustFS and keeps old ones (ADR 023)', asy
   assert.match(handoff.sql, /CHECK \(destination = 'rustfs'\) NOT VALID;/u);
 });
 
-test('ships store orders as an expand migration with locked rows (ADR 027)', async () => {
+test('ships paid store orders as an expand migration with locked rows (ADRs 027 and 028)', async () => {
   const store = (await loadMigrations()).find(
     ({ version }) => version === '0029',
   );
@@ -190,11 +190,23 @@ test('ships store orders as an expand migration with locked rows (ADR 027)', asy
     store.sql,
     /CHECK \(\(origin = 'loja'\) = \(conversation_id IS NULL\)\)/u,
   );
+  // ADR 028: paid as InfinitePay confirmed it, in full, by Pix.
+  assert.match(store.sql, /ADD CONSTRAINT orders_store_paid_by_gateway\b/u);
+  assert.match(store.sql, /paid_amount_cents >= final_amount_cents/u);
+  assert.match(store.sql, /payment_condition = 'pix'/u);
+  assert.match(
+    store.sql,
+    /CREATE UNIQUE INDEX orders_payment_transaction_nsu\b/u,
+  );
+  // The shop's number is a label, not a key.
+  assert.doesNotMatch(store.sql, /UNIQUE INDEX orders_store_number\b/u);
+  assert.doesNotMatch(store.sql, /payment_declared_at/u);
   assert.match(store.sql, /CREATE TABLE crm\.store_order_receipts\b/u);
-  // The receipt never stores an IP or a phone in the clear.
+  // The receipt never stores an IP, an Origin, a phone or a receipt link in
+  // the clear.
   assert.doesNotMatch(
     store.sql,
-    /\b(?:ip_address|client_ip|phone|telefone)\s+text\b/u,
+    /\b(?:ip_address|client_ip|ip_digest|request_origin|phone|telefone|receipt_url)\s+text\b/u,
   );
   assert.doesNotMatch(store.sql, /\bDROP\s+(?:TABLE|COLUMN)\b/iu);
 });

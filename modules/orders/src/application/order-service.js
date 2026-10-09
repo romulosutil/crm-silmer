@@ -64,6 +64,8 @@ const MAX_QUERY_LENGTH = 120;
 const LIST_KEYS = new Set(['status', 'origin', 'q', 'cursor', 'limit']);
 // "12", "012" or "12-CRM" name order 12; anything else is a customer search.
 const ORDER_NUMBER_QUERY = /^0*(\d{1,15})(?:-crm)?$/iu;
+// ADR 028: "LJ-5B0C77ED", "lj5b0c77ed" or "#LJ-5B0C77ED" name a store order.
+const STORE_NUMBER_QUERY = /^#?lj-?([0-9a-f]{8})$/iu;
 
 /**
  * Keeps the columns the list reads without decrypting in step with the ficha.
@@ -353,8 +355,8 @@ export function createOrderService(options) {
      * PLI-02..07: status filter, number/customer/phone search and "Ver mais"
      * pages. Counts cover the search regardless of the status filter, so both
      * groups keep their totals while one is selected. ADR 027: `origin`
-     * narrows to store orders, which the search finds by number or by the
-     * HMAC of the whole phone.
+     * narrows to store orders, which the search finds by number, by the
+     * HMAC of the whole phone or (ADR 028) by the shop's `LJ-…` number.
      *
      * @param {{status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number}} [input]
      */
@@ -388,6 +390,10 @@ export function createOrderService(options) {
         query.conversationIds = await conversations.searchConversationIds(q);
         const phoneDigests = options.phoneDigestsFor?.(q) ?? [];
         if (phoneDigests.length > 0) query.phoneDigests = phoneDigests;
+        const storeNumber = STORE_NUMBER_QUERY.exec(q);
+        if (storeNumber) {
+          query.storeNumber = `LJ-${storeNumber[1].toUpperCase()}`;
+        }
       }
       const page = await repository.list(query);
       return { ...page, items: await readAll(page.items) };

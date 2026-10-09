@@ -1,6 +1,9 @@
 import { OrderConflictError, OrderNotFoundError } from '../domain/errors.js';
 import { formatOrderNumber } from '../domain/order.js';
-import { StoreOrderError } from '../domain/store-order.js';
+import {
+  StoreOrderDuplicateError,
+  StoreOrderError,
+} from '../domain/store-order.js';
 import {
   encodeOrderCursor,
   readOrderListQuery,
@@ -11,11 +14,9 @@ import {
  * @typedef {import('../ports/contracts.js').Order} Order
  * @typedef {import('../ports/contracts.js').OrderWriteOptions} OrderWriteOptions
  * @typedef {{eventType: string, aggregateVersion: number, correlationId: string, occurredAt: string, payload: {orderId: string, conversationId: string|null}}} RecordedOrderEvent
- * @typedef {import('../ports/contracts.js').CreateStoreOrderInput['receipt'] & {orderId: string, receivedAt: number}} StoreReceipt
+ * @typedef {import('../ports/contracts.js').CreateStoreOrderInput['receipt'] & {orderId: string, receivedAt: string}} StoreReceipt
+ * @typedef {{actor: string, action: string, target: {type: string, id: string}, version: string, reason: string, correlationId: string, occurredAt: string}} RecordedAudit
  */
-
-const HOUR_MS = 3_600_000;
-const DAY_MS = 24 * HOUR_MS;
 
 /** @template T @param {T} value @returns {T} */
 function clone(value) {
@@ -42,6 +43,8 @@ export class InMemoryOrderRepository {
   #events = [];
   /** @type {StoreReceipt[]} */
   #receipts = [];
+  /** @type {RecordedAudit[]} */
+  #audits = [];
   #sequence = 0;
   #tail = Promise.resolve();
 
@@ -96,8 +99,10 @@ export class InMemoryOrderRepository {
         ficha: clone(input.ficha),
         finalAmountCents: null,
         firstContactAt: input.firstContactAt,
+        gatewayPayment: null,
         id: input.id,
         isTest: false,
+        leadTimeBusinessDays: null,
         missingFields: [...input.missingFields],
         number: formatOrderNumber(this.#sequence),
         numberSequence: this.#sequence,
@@ -105,10 +110,10 @@ export class InMemoryOrderRepository {
         origin: 'atendimento',
         paidOn: null,
         paymentCondition: null,
-        paymentDeclaredAt: null,
         reopenedAt: null,
         reopenedBy: null,
         status: 'pendente',
+        storeNumber: null,
         totalPieces: input.totalPieces,
         updatedAt: at,
         version: 1,
@@ -120,42 +125,60 @@ export class InMemoryOrderRepository {
   }
 
   /**
-   * ADR 027: the store order and its receipt, after the per-IP and
-   * per-phone limits the PostgreSQL adapter counts. The transaction the
-   * caller passes is the idempotency record's; here it is only checked.
+   * @param {Order} order @param {string} action @param {string} reason
+   * @param {import('../ports/contracts.js').StoreAuditContext} audit
+   */
+  #audit(order, action, reason, audit) {
+    this.#audits.push({
+      action,
+      actor: audit.actor,
+      correlationId: audit.correlationId,
+      occurredAt: order.updatedAt,
+      reason,
+      target: { id: order.id, type: 'order' },
+      version: String(order.version),
+    });
+  }
+
+  /**
+   * ADR 028: the order recorded for a `pedido_id`, with the hash a retry is
+   * compared to.
+   *
+   * @param {string} requestId
+   * @returns {Promise<import('../ports/contracts.js').StoredStoreOrder|null>}
+   */
+  async findStoreOrder(requestId) {
+    const receipt = this.#receipts.find(
+      (stored) => stored.requestId === requestId,
+    );
+    const order = receipt ? this.#orders.get(receipt.orderId) : undefined;
+    return order && receipt
+      ? { order: clone(order), recordSha256: receipt.recordSha256 }
+      : null;
+  }
+
+  /**
+   * ADR 028: the store order, its receipt, its event and its audit, as one
+   * unit of work. The PostgreSQL adapter enforces the same uniqueness of the
+   * `pedido_id` and of the gateway's `transaction_nsu`.
    *
    * @param {import('../ports/contracts.js').CreateStoreOrderInput} input
-   * @param {{transaction: unknown}} context
    */
-  async createStoreOrder(input, context) {
-    if (!context || context.transaction === undefined) {
-      throw new TypeError('a store order is created inside a transaction');
-    }
+  async createStoreOrder(input) {
     return this.#exclusive(() => {
-      const { limits, now, order, receipt } = input;
-      const at = now.getTime();
-      for (const [key, max, windowMs] of /** @type {const} */ ([
-        ['ipDigest', limits.perIpPerHour, HOUR_MS],
-        ['phoneDigest', limits.perPhonePerDay, DAY_MS],
-      ])) {
-        const recent = this.#receipts.filter(
-          (stored) =>
-            stored[key] === receipt[key] && stored.receivedAt > at - windowMs,
-        );
-        if (recent.length >= max) {
-          const oldest = Math.min(...recent.map((stored) => stored.receivedAt));
-          throw Object.assign(new StoreOrderError(429, 'rate_limited'), {
-            retryAfterSeconds: Math.max(
-              1,
-              Math.ceil((oldest + windowMs - at) / 1000),
-            ),
-          });
-        }
-      }
+      const { audit, now, order, receipt } = input;
       if (
         this.#receipts.some((stored) => stored.requestId === receipt.requestId)
       ) {
-        throw new StoreOrderError(409, 'idempotency_conflict');
+        throw new StoreOrderDuplicateError();
+      }
+      const nsu = order.gatewayPayment.transactionNsu;
+      if (
+        [...this.#orders.values()].some(
+          (stored) => stored.gatewayPayment?.transactionNsu === nsu,
+        )
+      ) {
+        throw new StoreOrderError(409, 'STORE_ORDER_CONFLICT');
       }
       this.#sequence += 1;
       const iso = now.toISOString();
@@ -172,9 +195,53 @@ export class InMemoryOrderRepository {
         version: 1,
       };
       this.#orders.set(saved.id, saved);
-      this.#receipts.push({ ...receipt, orderId: saved.id, receivedAt: at });
-      this.#record(saved, 'order.created', input.correlationId);
+      this.#receipts.push({ ...receipt, orderId: saved.id, receivedAt: iso });
+      this.#record(saved, 'order.created', audit.correlationId);
+      this.#audit(
+        saved,
+        'store.order.create',
+        'INFINITEPAY_PAYMENT_CONFIRMED',
+        audit,
+      );
       return clone(saved);
+    });
+  }
+
+  /**
+   * ADR 028: the receipt link a store order did not have yet.
+   *
+   * @param {import('../ports/contracts.js').AttachStoreReceiptInput} input
+   */
+  async attachStoreReceipt(input) {
+    return this.#exclusive(() => {
+      const current = this.#orders.get(input.orderId);
+      if (!current?.ficha.loja) throw new OrderNotFoundError();
+      const stored = current.ficha.loja.comprovanteUrl ?? null;
+      if (stored === input.receiptUrl) {
+        return { attached: false, order: clone(current) };
+      }
+      if (stored !== null) {
+        throw new StoreOrderError(409, 'STORE_ORDER_CONFLICT');
+      }
+      const ficha = clone(current.ficha);
+      /** @type {NonNullable<typeof ficha.loja>} */ (
+        ficha.loja
+      ).comprovanteUrl = input.receiptUrl;
+      const next = {
+        ...clone(current),
+        ficha,
+        updatedAt: input.now.toISOString(),
+        version: current.version + 1,
+      };
+      this.#orders.set(next.id, next);
+      this.#record(next, 'order.receipt_attached', input.audit.correlationId);
+      this.#audit(
+        next,
+        'store.order.receipt_attached',
+        'INFINITEPAY_RECEIPT_ATTACHED',
+        input.audit,
+      );
+      return { attached: true, order: clone(next) };
     });
   }
 
@@ -186,6 +253,16 @@ export class InMemoryOrderRepository {
   receiptFor(orderId) {
     const receipt = this.#receipts.find((stored) => stored.orderId === orderId);
     return receipt ? clone(receipt) : null;
+  }
+
+  /**
+   * The audit events of store orders, oldest first, as the PostgreSQL
+   * adapter writes them to `crm.audit_events`.
+   *
+   * @returns {RecordedAudit[]}
+   */
+  audits() {
+    return this.#audits.map(clone);
   }
 
   /** @param {string} orderId */
@@ -226,6 +303,7 @@ export class InMemoryOrderRepository {
       origin,
       phoneDigests,
       status,
+      storeNumber,
     } = readOrderListQuery(query);
     const phoneOrders = new Set(
       this.#receipts
@@ -237,12 +315,14 @@ export class InMemoryOrderRepository {
         (origin === undefined || order.origin === origin) &&
         ((numberSequence === undefined &&
           conversationIds === undefined &&
-          phoneDigests === undefined) ||
+          phoneDigests === undefined &&
+          storeNumber === undefined) ||
           order.numberSequence === numberSequence ||
           (conversationIds ?? []).includes(
             /** @type {string} */ (order.conversationId),
           ) ||
-          phoneOrders.has(order.id)),
+          phoneOrders.has(order.id) ||
+          (storeNumber !== undefined && order.storeNumber === storeNumber)),
     );
     const counts = { confirmado: 0, pendente: 0 };
     for (const order of scoped) counts[order.status] += 1;

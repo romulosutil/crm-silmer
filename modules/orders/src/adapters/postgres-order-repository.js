@@ -5,7 +5,10 @@ import {
   OrderForbiddenError,
   OrderNotFoundError,
 } from '../domain/errors.js';
-import { StoreOrderError } from '../domain/store-order.js';
+import {
+  StoreOrderDuplicateError,
+  StoreOrderError,
+} from '../domain/store-order.js';
 import {
   encodeOrderCursor,
   readOrderListQuery,
@@ -25,10 +28,10 @@ const ORDER_COLUMNS = `id, number_sequence, number, conversation_id, status,
   payment_condition, order_date::text AS order_date, confirmed_at,
   confirmed_by, reopened_at, reopened_by, created_by_kind, created_by,
   first_contact_at, paid_on::text AS paid_on,
-  delivered_on::text AS delivered_on, origin, is_test, payment_declared_at,
+  delivered_on::text AS delivered_on, origin, is_test, store_number,
+  lead_time_business_days, payment_source, payment_confirmed_at,
+  paid_amount_cents, payment_transaction_nsu, payment_invoice_slug,
   version, created_at, updated_at`;
-const HOUR_MS = 3_600_000;
-const DAY_MS = 24 * HOUR_MS;
 
 /** @param {string} orderId */
 function fichaAad(orderId) {
@@ -83,32 +86,31 @@ function violates(error, constraint) {
 }
 
 /**
- * ADR 027: refuses a new store order once the window already holds `max`
- * receipts of the same IP or phone, saying when the oldest leaves it.
+ * ADR 028: the audit of a store order write, in its transaction. Only the
+ * technical actor, the order id, its version and the correlation: no name,
+ * phone, receipt link or gateway identifier.
  *
  * @param {Queryable} transaction
- * @param {{column: 'ip_digest'|'phone_digest', digest: string, max: number, now: Date, windowMs: number}} input
+ * @param {Order} order
+ * @param {{action: string, reason: string, audit: import('../ports/contracts.js').StoreAuditContext}} input
  */
-async function enforceLimit(
-  transaction,
-  { column, digest, max, now, windowMs },
-) {
-  const since = new Date(now.getTime() - windowMs).toISOString();
-  const result = await transaction.query(
-    `SELECT count(*)::integer AS total, min(received_at) AS oldest
-     FROM crm.store_order_receipts
-     WHERE ${column} = $1 AND received_at > $2`,
-    [digest, since],
+async function appendStoreAudit(transaction, order, { action, audit, reason }) {
+  await transaction.query(
+    `INSERT INTO crm.audit_events
+       (id, actor_id, action, target_type, target_id, version, reason,
+        correlation_id, occurred_at)
+     VALUES ($1, $2, $3, 'order', $4, $5, $6, $7, $8)`,
+    [
+      randomUUID(),
+      audit.actor,
+      action,
+      order.id,
+      String(order.version),
+      reason,
+      audit.correlationId,
+      order.updatedAt,
+    ],
   );
-  const row = result.rows[0];
-  if (Number(row?.total ?? 0) < max) return;
-  const oldest = new Date(row.oldest ?? now).getTime();
-  throw Object.assign(new StoreOrderError(429, 'rate_limited'), {
-    retryAfterSeconds: Math.max(
-      1,
-      Math.ceil((oldest + windowMs - now.getTime()) / 1000),
-    ),
-  });
 }
 
 /**
@@ -207,19 +209,37 @@ export class PostgresOrderRepository {
       finalAmountCents:
         row.final_amount_cents === null ? null : Number(row.final_amount_cents),
       firstContactAt: isoOrNull(row.first_contact_at),
+      // ADR 028: the payment InfinitePay confirmed, on a store order only.
+      gatewayPayment:
+        row.payment_source === 'infinitepay'
+          ? {
+              confirmedAt: /** @type {string} */ (
+                isoOrNull(row.payment_confirmed_at)
+              ),
+              invoiceSlug: row.payment_invoice_slug,
+              paidAmountCents: Number(row.paid_amount_cents),
+              source: 'infinitepay',
+              transactionNsu: row.payment_transaction_nsu,
+            }
+          : null,
       id: row.id,
       isTest: row.is_test === true,
+      leadTimeBusinessDays:
+        row.lead_time_business_days === null ||
+        row.lead_time_business_days === undefined
+          ? null
+          : Number(row.lead_time_business_days),
       missingFields: [...row.missing_fields],
       number: row.number,
       numberSequence: Number(row.number_sequence),
       orderDate: row.order_date,
       origin: row.origin ?? 'atendimento',
       paidOn: row.paid_on,
-      paymentDeclaredAt: isoOrNull(row.payment_declared_at ?? null),
       paymentCondition: row.payment_condition,
       reopenedAt: isoOrNull(row.reopened_at),
       reopenedBy: row.reopened_by,
       status: row.status,
+      storeNumber: row.store_number ?? null,
       totalPieces: Number(row.total_pieces),
       updatedAt: /** @type {string} */ (isoOrNull(row.updated_at)),
       version: Number(row.version),
@@ -302,102 +322,196 @@ export class PostgresOrderRepository {
   }
 
   /**
-   * ADR 027: the store order, its receipt and its `order.created` event in
-   * the caller's transaction (the idempotency record's), after the per-IP
-   * and per-phone limits. Two notices from the same IP or phone wait for
-   * each other on an advisory lock, so a burst never slips past a count.
+   * ADR 028: the order recorded for a `pedido_id`, with the hash of the data
+   * a retry must repeat.
+   *
+   * @param {string} requestId
+   * @returns {Promise<import('../ports/contracts.js').StoredStoreOrder|null>}
+   */
+  async findStoreOrder(requestId) {
+    const result = await this.#database.query(
+      `SELECT ${ORDER_COLUMNS}, record_sha256
+       FROM crm.orders
+       JOIN crm.store_order_receipts ON order_id = id
+       WHERE request_id = $1`,
+      [requestId],
+    );
+    const row = result.rows[0];
+    return row
+      ? { order: this.#map(row), recordSha256: row.record_sha256 }
+      : null;
+  }
+
+  /**
+   * ADR 028: the store order, its receipt, its `order.created` event and its
+   * `store.order.create` audit in one transaction. Two calls for the same
+   * `pedido_id` wait for each other on an advisory lock, so the loser finds
+   * the winner's receipt before it reserves an order number.
    *
    * @param {import('../ports/contracts.js').CreateStoreOrderInput} input
-   * @param {{transaction: Queryable}} context
    */
-  async createStoreOrder(input, { transaction }) {
-    const { limits, now, order, receipt } = input;
-    await transaction.query(
-      `SELECT pg_advisory_xact_lock(hashtextextended($1, 0)),
-              pg_advisory_xact_lock(hashtextextended($2, 0))`,
-      [`store-ip:${receipt.ipDigest}`, `store-phone:${receipt.phoneDigest}`],
-    );
-    await enforceLimit(transaction, {
-      column: 'ip_digest',
-      digest: receipt.ipDigest,
-      max: limits.perIpPerHour,
-      now,
-      windowMs: HOUR_MS,
-    });
-    await enforceLimit(transaction, {
-      column: 'phone_digest',
-      digest: receipt.phoneDigest,
-      max: limits.perPhonePerDay,
-      now,
-      windowMs: DAY_MS,
-    });
+  async createStoreOrder(input) {
+    const { audit, now, order, receipt } = input;
+    const payment = order.gatewayPayment;
     const at = now.toISOString();
     try {
-      const inserted = await transaction.query(
-        `WITH reserved AS (SELECT nextval('crm.order_number_seq') AS sequence)
-         INSERT INTO crm.orders
-           (id, number_sequence, number, conversation_id, status, fab_code,
-            ficha_version, ficha_envelope, total_pieces, missing_fields,
-            final_amount_cents, payment_condition, order_date, confirmed_at,
-            confirmed_by, created_by_kind, created_by, first_contact_at,
-            paid_on, origin, is_test, payment_declared_at, version,
-            created_at, updated_at)
-         SELECT $1, reserved.sequence,
-                lpad(reserved.sequence::text, 2, '0') || '-CRM',
-                NULL, 'confirmado', $2, 1, $3::jsonb, $4, '{}'::text[],
-                $5, $6, $7::date, $8, $9, $10, $11, $12, $13::date, 'loja',
-                $14, $15, 1, $8, $8
-         FROM reserved
-         RETURNING ${ORDER_COLUMNS}`,
-        [
-          order.id,
-          order.fabCode,
-          JSON.stringify(
-            encryptJson(order.ficha, fichaAad(order.id), this.#envelopeKey),
-          ),
-          order.totalPieces,
-          order.finalAmountCents,
-          order.paymentCondition,
-          order.orderDate,
-          at,
-          order.confirmedBy,
-          order.createdByKind,
-          order.createdBy,
-          order.firstContactAt,
-          order.paidOn,
-          order.isTest,
-          order.paymentDeclaredAt,
-        ],
-      );
-      const saved = this.#map(inserted.rows[0]);
-      await transaction.query(
-        `INSERT INTO crm.store_order_receipts
-           (order_id, request_id, request_origin, ip_digest, phone_digest,
-            body_sha256, received_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          saved.id,
-          receipt.requestId,
-          receipt.origin,
-          receipt.ipDigest,
-          receipt.phoneDigest,
-          receipt.bodySha256,
-          at,
-        ],
-      );
-      await appendOrderEvent(
-        transaction,
-        saved,
-        'order.created',
-        input.correlationId,
-      );
-      return saved;
+      return await this.#database.transaction(async (transaction) => {
+        await transaction.query(
+          'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+          [`store-order:${receipt.requestId}`],
+        );
+        const known = await transaction.query(
+          'SELECT 1 FROM crm.store_order_receipts WHERE request_id = $1',
+          [receipt.requestId],
+        );
+        if (known.rows[0]) throw new StoreOrderDuplicateError();
+        const taken = await transaction.query(
+          `SELECT 1 FROM crm.orders
+           WHERE payment_source = $1 AND payment_transaction_nsu = $2`,
+          [payment.source, payment.transactionNsu],
+        );
+        if (taken.rows[0]) {
+          throw new StoreOrderError(409, 'STORE_ORDER_CONFLICT');
+        }
+        const inserted = await transaction.query(
+          `WITH reserved AS (SELECT nextval('crm.order_number_seq') AS sequence)
+           INSERT INTO crm.orders
+             (id, number_sequence, number, conversation_id, status, fab_code,
+              ficha_version, ficha_envelope, total_pieces, missing_fields,
+              final_amount_cents, payment_condition, order_date, confirmed_at,
+              confirmed_by, created_by_kind, created_by, first_contact_at,
+              paid_on, origin, is_test, store_number, lead_time_business_days,
+              payment_source, payment_confirmed_at, paid_amount_cents,
+              payment_transaction_nsu, payment_invoice_slug, version,
+              created_at, updated_at)
+           SELECT $1, reserved.sequence,
+                  lpad(reserved.sequence::text, 2, '0') || '-CRM',
+                  NULL, 'confirmado', $2, 1, $3::jsonb, $4, '{}'::text[],
+                  $5, $6, $7::date, $8, $9, $10, $11, $12, $13::date, 'loja',
+                  $14, $15, $16, $17, $18, $19, $20, $21, 1, $8, $8
+           FROM reserved
+           RETURNING ${ORDER_COLUMNS}`,
+          [
+            order.id,
+            order.fabCode,
+            JSON.stringify(
+              encryptJson(order.ficha, fichaAad(order.id), this.#envelopeKey),
+            ),
+            order.totalPieces,
+            order.finalAmountCents,
+            order.paymentCondition,
+            order.orderDate,
+            at,
+            order.confirmedBy,
+            order.createdByKind,
+            order.createdBy,
+            order.firstContactAt,
+            order.paidOn,
+            order.isTest,
+            order.storeNumber,
+            order.leadTimeBusinessDays,
+            payment.source,
+            payment.confirmedAt,
+            payment.paidAmountCents,
+            payment.transactionNsu,
+            payment.invoiceSlug,
+          ],
+        );
+        const saved = this.#map(inserted.rows[0]);
+        await transaction.query(
+          `INSERT INTO crm.store_order_receipts
+             (order_id, request_id, phone_digest, record_sha256, received_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [
+            saved.id,
+            receipt.requestId,
+            receipt.phoneDigest,
+            receipt.recordSha256,
+            at,
+          ],
+        );
+        await appendOrderEvent(
+          transaction,
+          saved,
+          'order.created',
+          audit.correlationId,
+        );
+        await appendStoreAudit(transaction, saved, {
+          action: 'store.order.create',
+          audit,
+          reason: 'INFINITEPAY_PAYMENT_CONFIRMED',
+        });
+        return saved;
+      });
     } catch (error) {
       if (violates(error, 'store_order_receipts_request_id_key')) {
-        throw new StoreOrderError(409, 'idempotency_conflict');
+        throw new StoreOrderDuplicateError();
+      }
+      if (violates(error, 'orders_payment_transaction_nsu')) {
+        throw new StoreOrderError(409, 'STORE_ORDER_CONFLICT');
       }
       throw error;
     }
+  }
+
+  /**
+   * ADR 028: the receipt link a store order did not have yet. It lives in
+   * the encrypted ficha, so the row is locked, the ficha read, changed and
+   * written back with a new version, an `order.receipt_attached` event and
+   * the `store.order.receipt_attached` audit.
+   *
+   * @param {import('../ports/contracts.js').AttachStoreReceiptInput} input
+   */
+  async attachStoreReceipt(input) {
+    return this.#database.transaction(async (transaction) => {
+      const locked = await transaction.query(
+        `SELECT ${ORDER_COLUMNS} FROM crm.orders
+         WHERE id = $1 AND origin = 'loja'
+         FOR UPDATE`,
+        [input.orderId],
+      );
+      if (!locked.rows[0]) throw new OrderNotFoundError();
+      const current = this.#map(locked.rows[0]);
+      const loja = current.ficha.loja;
+      if (!loja) throw new OrderNotFoundError();
+      const stored = loja.comprovanteUrl ?? null;
+      if (stored === input.receiptUrl)
+        return { attached: false, order: current };
+      if (stored !== null) {
+        throw new StoreOrderError(409, 'STORE_ORDER_CONFLICT');
+      }
+      const ficha = {
+        ...current.ficha,
+        loja: { ...loja, comprovanteUrl: input.receiptUrl },
+      };
+      const updated = await transaction.query(
+        `UPDATE crm.orders
+         SET ficha_envelope = $2::jsonb, version = version + 1,
+             updated_at = $3
+         WHERE id = $1
+         RETURNING ${ORDER_COLUMNS}`,
+        [
+          current.id,
+          JSON.stringify(
+            encryptJson(ficha, fichaAad(current.id), this.#envelopeKey),
+          ),
+          input.now.toISOString(),
+        ],
+      );
+      const saved = this.#map(updated.rows[0]);
+      await appendOrderEvent(
+        transaction,
+        saved,
+        'order.receipt_attached',
+        input.audit.correlationId,
+      );
+      await appendStoreAudit(transaction, saved, {
+        action: 'store.order.receipt_attached',
+        audit: input.audit,
+        reason: 'INFINITEPAY_RECEIPT_ATTACHED',
+      });
+      return { attached: true, order: saved };
+    });
   }
 
   /** @param {string} orderId */
@@ -464,6 +578,7 @@ export class PostgresOrderRepository {
       origin,
       phoneDigests,
       status,
+      storeNumber,
     } = readOrderListQuery(query);
     /** @type {unknown[]} */
     const values = [];
@@ -477,7 +592,8 @@ export class PostgresOrderRepository {
     if (
       numberSequence !== undefined ||
       conversationIds !== undefined ||
-      phoneDigests !== undefined
+      phoneDigests !== undefined ||
+      storeNumber !== undefined
     ) {
       const matches = [];
       if (numberSequence !== undefined) {
@@ -493,6 +609,10 @@ export class PostgresOrderRepository {
           `id IN (SELECT order_id FROM crm.store_order_receipts
                   WHERE phone_digest = ANY(${bind(phoneDigests)}::text[]))`,
         );
+      }
+      if (storeNumber !== undefined) {
+        // ADR 028: the shop's number, LJ- and eight hex digits.
+        matches.push(`store_number = ${bind(storeNumber)}`);
       }
       scope = `(${matches.join(' OR ')})`;
     }

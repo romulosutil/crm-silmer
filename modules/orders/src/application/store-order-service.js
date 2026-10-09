@@ -3,24 +3,19 @@ import { createHmac, randomUUID } from 'node:crypto';
 import {
   buildStoreOrder,
   matchStoreCatalog,
-  parseStoreOrderRequest,
+  parseStoreOrderRecord,
+  StoreOrderDuplicateError,
+  StoreOrderError,
+  storeRecordFingerprint,
 } from '../domain/store-order.js';
 
 /**
- * @typedef {import('../domain/store-order.js').StoreOrderRequest} StoreOrderRequest
- * @typedef {{perIpPerHour: number, perPhonePerDay: number}} StoreOrderLimits
- * @typedef {{
- *   createStoreOrder(
- *     input: import('../ports/contracts.js').CreateStoreOrderInput,
- *     context: {transaction: unknown},
- *   ): Promise<import('../domain/order.js').Order>,
- * }} StoreOrderRepository
+ * @typedef {import('../domain/store-order.js').StoreOrderRecord} StoreOrderRecord
+ * @typedef {import('../ports/contracts.js').StoreOrderRepository} StoreOrderRepository
+ * @typedef {import('../ports/contracts.js').StoredStoreOrder} StoredStoreOrder
+ * @typedef {import('../domain/order.js').Order} Order
+ * @typedef {{order: Order, created: boolean, receiptAttached: boolean}} StoreOrderOutcome
  */
-
-export const DEFAULT_STORE_ORDER_LIMITS = Object.freeze({
-  perIpPerHour: 5,
-  perPhonePerDay: 5,
-});
 
 // A whole Brazilian phone, typed in any of the usual ways; anything shorter
 // than an area code and a number is not looked up.
@@ -28,25 +23,36 @@ const PHONE_QUERY = /^[\d\s()+.-]+$/u;
 const BRAZILIAN_PHONE = /^55[1-9]{2}(?:9\d{8}|[2-5]\d{7})$/u;
 
 /**
- * ADR 027: the application side of the site shop. It reads the notice,
- * checks it against the CRM's catalog, builds the locked order and hands it
- * to the repository with the receipt that limits and audits the public
- * route. The IP and the phone only ever leave this service as HMACs.
+ * ADR 028: the application side of the paid store order. The `pedido_id` is
+ * the natural key: a retry with the same data answers the order already
+ * recorded, before the catalog is consulted, so a later price change never
+ * turns a retry into a refusal; the receipt link that arrives later is
+ * attached; any other difference is a conflict. Only a new order is checked
+ * against the catalog and built. The phone only leaves this service as an
+ * HMAC.
  *
  * @param {{
  *   repository: StoreOrderRepository,
  *   fabCode: string,
  *   hmacKey: Buffer,
  *   acceptTest: boolean,
- *   limits?: StoreOrderLimits,
  *   clock?: () => Date,
  *   idFactory?: () => string,
  * }} options
  */
 export function createStoreOrderService(options) {
   const { acceptTest, fabCode, hmacKey, repository } = options;
-  if (typeof repository?.createStoreOrder !== 'function') {
-    throw new TypeError('a store order repository is required');
+  for (const method of [
+    'attachStoreReceipt',
+    'createStoreOrder',
+    'findStoreOrder',
+  ]) {
+    if (
+      typeof (/** @type {Record<string, unknown>} */ (repository)?.[method]) !==
+      'function'
+    ) {
+      throw new TypeError(`a store order repository must implement ${method}`);
+    }
   }
   if (!Buffer.isBuffer(hmacKey) || hmacKey.length !== 32) {
     throw new TypeError('hmacKey must be a 32-byte Buffer');
@@ -56,15 +62,6 @@ export function createStoreOrderService(options) {
   }
   if (typeof acceptTest !== 'boolean') {
     throw new TypeError('acceptTest must be true or false');
-  }
-  const limits = Object.freeze({
-    ...DEFAULT_STORE_ORDER_LIMITS,
-    ...options.limits,
-  });
-  for (const value of Object.values(limits)) {
-    if (!Number.isSafeInteger(value) || value < 1) {
-      throw new TypeError('store order limits must be positive integers');
-    }
   }
   const key = Buffer.from(hmacKey);
   const clock = options.clock ?? (() => new Date());
@@ -77,50 +74,84 @@ export function createStoreOrderService(options) {
       .digest('hex');
   }
 
-  return Object.freeze({
-    limits,
+  /**
+   * LOJ-17: answers a retry from the order already recorded.
+   *
+   * @param {StoredStoreOrder} existing
+   * @param {StoreOrderRecord} record
+   * @param {string} fingerprint
+   * @param {{actor: string, correlationId: string}} audit
+   * @returns {Promise<StoreOrderOutcome>}
+   */
+  async function reconcile(existing, record, fingerprint, audit) {
+    if (existing.recordSha256 !== fingerprint) {
+      throw new StoreOrderError(409, 'STORE_ORDER_CONFLICT');
+    }
+    const stored = existing.order.ficha?.loja?.comprovanteUrl ?? null;
+    const sent = record.payment.receiptUrl;
+    if (sent === null || sent === stored) {
+      return { created: false, order: existing.order, receiptAttached: false };
+    }
+    if (stored !== null) {
+      throw new StoreOrderError(409, 'STORE_ORDER_CONFLICT');
+    }
+    const { attached, order } = await repository.attachStoreReceipt({
+      audit,
+      now: clock(),
+      orderId: existing.order.id,
+      receiptUrl: sent,
+    });
+    return { created: false, order, receiptAttached: attached };
+  }
 
-    /** @param {unknown} body @returns {StoreOrderRequest} */
+  return Object.freeze({
+    /** @param {unknown} body @returns {StoreOrderRecord} */
     parse(body) {
-      return parseStoreOrderRequest(body);
+      return parseStoreOrderRecord(body);
     },
 
     /**
-     * LOJ-01/LOJ-04..LOJ-06/LOJ-12/LOJ-13: one new store order, inside the
-     * transaction of its idempotency record. A refused notice (422, 429)
-     * throws, and the transaction rolls the record back with it.
+     * LOJ-15/LOJ-17..LOJ-21: records the paid order once. A refused record
+     * (409, 422, 400 for the instant) throws before anything is written.
      *
-     * @param {{
-     *   request: StoreOrderRequest, origin: string, clientIp: string,
-     *   bodySha256: string, correlationId: string, transaction: unknown,
-     * }} input
+     * @param {{record: StoreOrderRecord, actor: string, correlationId: string}} input
+     * @returns {Promise<StoreOrderOutcome>}
      */
-    async create(input) {
+    async record(input) {
+      const { record } = input;
+      const fingerprint = storeRecordFingerprint(record);
+      const audit = { actor: input.actor, correlationId: input.correlationId };
+      const existing = await repository.findStoreOrder(record.requestId);
+      if (existing) return reconcile(existing, record, fingerprint, audit);
+
       const now = clock();
-      const match = matchStoreCatalog(input.request, { acceptTest, now });
+      const match = matchStoreCatalog(record, { acceptTest, now });
       const order = buildStoreOrder({
         fabCode,
         id: idFactory(),
         match,
         now,
-        request: input.request,
+        record,
       });
-      return repository.createStoreOrder(
-        {
-          correlationId: input.correlationId,
-          limits,
+      try {
+        const saved = await repository.createStoreOrder({
+          audit,
           now,
           order,
           receipt: {
-            bodySha256: input.bodySha256,
-            ipDigest: digest('ip', input.clientIp),
-            origin: input.origin,
-            phoneDigest: digest('phone', input.request.customer.phone),
-            requestId: input.request.requestId,
+            phoneDigest: digest('phone', record.customer.phone),
+            recordSha256: fingerprint,
+            requestId: record.requestId,
           },
-        },
-        { transaction: input.transaction },
-      );
+        });
+        return { created: true, order: saved, receiptAttached: false };
+      } catch (error) {
+        // A concurrent retry recorded the same pedido_id first.
+        if (!(error instanceof StoreOrderDuplicateError)) throw error;
+        const raced = await repository.findStoreOrder(record.requestId);
+        if (!raced) throw error;
+        return reconcile(raced, record, fingerprint, audit);
+      }
     },
 
     /**

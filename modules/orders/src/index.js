@@ -29,23 +29,26 @@ export {
   ORDER_SECTIONS,
   createOrderService,
 } from './application/order-service.js';
-export {
-  DEFAULT_STORE_ORDER_LIMITS,
-  createStoreOrderService,
-} from './application/store-order-service.js';
+export { createStoreOrderService } from './application/store-order-service.js';
 export {
   STORE_ACTOR_ID,
   STORE_ACTOR_NAME,
+  STORE_PAYMENT_GATEWAY,
+  STORE_PAYMENT_METHOD,
   STORE_PRODUCTS,
   storeProduct,
 } from './domain/store-catalog.js';
 export {
   ORDER_ORIGINS,
+  STORE_SCHEMA_VERSION,
+  StoreOrderDuplicateError,
   StoreOrderError,
   buildStoreOrder,
   matchStoreCatalog,
-  parseStoreOrderRequest,
+  parseStoreOrderRecord,
   requireUnlocked,
+  storeNumberFor,
+  storeRecordFingerprint,
 } from './domain/store-order.js';
 export {
   OrderConflictError,

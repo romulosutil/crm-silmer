@@ -10,7 +10,7 @@ import { renderOrderFicha } from '../modules/orders/src/print/index.js';
 import { orderContextsFrom } from './fixtures/order-contexts.js';
 import {
   STORE_NOW,
-  STORE_ORIGIN,
+  otherStoreOrderBody,
   storeOrderBody,
 } from './fixtures/store-order.js';
 
@@ -71,17 +71,14 @@ function harness() {
     repository,
   });
   const api = createApi({}, { orders: runtime });
-  /** @param {(body: any) => void} [change] */
-  async function notify(change) {
-    const body = storeOrderBody(change);
-    return store.create({
-      bodySha256: 'c'.repeat(64),
-      clientIp: '203.0.113.10',
+  /** @param {(body: any) => void} [change] @param {any} [body] */
+  async function notify(change, body = storeOrderBody(change)) {
+    const outcome = await store.record({
+      actor: 'AUTOMATION_EXECUTOR',
       correlationId: `correlation-${body.pedido_id}`,
-      origin: STORE_ORIGIN,
-      request: store.parse(body),
-      transaction: {},
+      record: store.parse(body),
     });
+    return outcome.order;
   }
   return { api, assignmentReads, notify, runtime };
 }
@@ -98,7 +95,7 @@ test('LOJ-06/LOJ-08: a store order reads as locked, confirmed by Loja do site, w
   const { order } = response.json();
   assert.equal(order.origin, 'loja');
   assert.equal(order.locked, true);
-  assert.equal(order.isTest, true);
+  assert.equal(order.isTest, false);
   assert.equal(order.status, 'confirmado');
   assert.equal(order.conversationId, null);
   assert.equal(order.seller, null);
@@ -107,7 +104,6 @@ test('LOJ-06/LOJ-08: a store order reads as locked, confirmed by Loja do site, w
     id: 'system:loja-do-site',
     name: 'Loja do site',
   });
-  assert.equal(order.paymentDeclaredAt, '2026-10-08T02:15:55.693Z');
   assert.equal(order.paidOn, '2026-10-07');
   assert.equal(order.ficha.loja.telefone, '5527900000001');
   // No conversation was looked up for an order that has none.
@@ -224,11 +220,8 @@ test('LOJ-10: the store order prints its simplified ficha with the standard fiel
     'Gola redonda',
     '<dt>Tamanho</dt><dd>M</dd>',
     '<dt>Quantidade</dt><dd>10</dd>',
-    'R$ 193,64',
+    'R$ 180,00',
     '<dt>Forma</dt><dd>Pix</dd>',
-    'Pago — informado pelo cliente em 07/10/2026 às 23:15',
-    'Retirada na loja',
-    'Av. Carlos Lindenberg, 800 — Lojas 05 e 06, Glória, Vila Velha - ES',
   ]) {
     assert.ok(html.includes(expected), expected);
   }
@@ -247,7 +240,7 @@ test('LOJ-10: the store order prints its simplified ficha with the standard fiel
 
 test('LOJ-10: "Baixar ficha" sends the same document as pedido-NN-CRM.html', async () => {
   const { api, notify } = harness();
-  const created = await notify();
+  const created = await notify((body) => (body.teste = true));
   const download = await api.inject({
     headers: readHeaders,
     method: 'GET',
@@ -286,21 +279,18 @@ test('LOJ-10: the simplified ficha escapes what the customer typed', () => {
 
 test('LOJ-09: the summary counts a store sale like any sale and skips tests', async () => {
   const { api, notify } = harness();
-  await notify();
-  await notify((body) => {
-    body.pedido_id = '5b0c77ed-8c90-46ce-97a4-000000000002';
-    body.teste = false;
-  });
+  await notify((body) => (body.teste = true));
+  await notify(undefined, otherStoreOrderBody(2));
   const response = await api.inject({
     headers: readHeaders,
     method: 'GET',
     url: '/api/v1/orders/summary',
   });
   assert.deepEqual(response.json(), {
-    averageTicketCents: 19364,
+    averageTicketCents: 18000,
     confirmedCount: 1,
     pendingCount: 0,
-    soldAmountCents: 19364,
+    soldAmountCents: 18000,
     totalPiecesSold: 10,
   });
   await api.close();

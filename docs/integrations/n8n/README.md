@@ -138,6 +138,9 @@ Os três endpoints usam `Authorization: Basic`, `Idempotency-Key`,
 `X-Correlation-Id`, `X-Silmer-Workflow-Key`, `X-Silmer-Workflow-Version` e
 `X-Silmer-Execution-Id`. Upload também exige `X-Silmer-Content-SHA256`.
 
+O workflow da loja usa uma quarta rota com os mesmos cabeçalhos, só para o
+pedido pago da loja (seção [Pedido pago da loja](#pedido-pago-da-loja-adr-028)).
+
 1. `POST /api/v1/integrations/n8n/messages/inbound`
    cria ou resolve Cliente, Conversa e Mensagem e devolve `source_revision`,
    `automation_epoch`, modo, mensagens recentes e briefing.
@@ -325,6 +328,108 @@ campos da ficha no pedido `pendente` da conversa:
 - Pedido confirmado nunca recebe projeção.
 - Preço, valor, condição de pagamento, status e outros campos oficiais
   continuam recusados no `briefing_patch`, como antes.
+
+## Pedido pago da loja (ADR 028)
+
+O workflow "Silmer | Loja | Checkout InfinitePay" (id `SbNSW5jwBcXM5Afj`) cria
+o link do Checkout Integrado da InfinitePay (só Pix), recebe o webhook e
+confirma o pagamento com `payment_check` (pago é `paid` com `amount` maior ou
+igual ao valor do pedido). Só então chama o CRM, servidor a servidor, para
+registrar o pedido pago ([ADR 028](../../adr/028-pedido-pago-da-loja-pelo-n8n.md)).
+Não há WhatsApp automático ao vendedor: ele abre o pedido no CRM e atende pelo
+WhatsApp dele.
+
+```
+POST {CRM}/api/v1/integrations/n8n/store-orders
+```
+
+No cloud-dev, `{CRM}` é
+`https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host`. A rota responde
+`404` enquanto `STORE_ORDERS_HMAC_KEY` não estiver configurada na API.
+
+| Cabeçalho                   | Valor que o nó HTTP manda                                                                                                                                      |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Authorization`             | Basic da credencial n8n → CRM que o workflow principal já usa (`CRM_AUTOMATION_CLIENT_ID`:`CRM_AUTOMATION_CLIENT_SECRET`), como credencial `httpBasicAuth`.    |
+| `Content-Type`              | `application/json`                                                                                                                                             |
+| `Idempotency-Key`           | O `pedido_id`, exatamente o mesmo texto do corpo.                                                                                                              |
+| `X-Correlation-Id`          | O `pedido_id` também. Precisa ser um UUID (ou de 16 a 64 hexadecimais); um texto qualquer, como o id numérico da execução, volta `400 INVALID_CORRELATION_ID`. |
+| `X-Silmer-Workflow-Key`     | `silmer-loja-checkout-infinitepay` (texto fixo, até 128 caracteres, sem espaço nas pontas).                                                                    |
+| `X-Silmer-Workflow-Version` | Versão do workflow, até 64 caracteres; por exemplo `{{ $workflow.versionId }}` ou um rótulo fixo como `loja-checkout-1`.                                       |
+| `X-Silmer-Execution-Id`     | `{{ $execution.id }}` (até 128 caracteres).                                                                                                                    |
+
+Corpo (JSON até 16 KB; todas as chaves obrigatórias, nenhuma outra aceita):
+
+```json
+{
+  "schema_version": "1.0",
+  "pedido_id": "<uuid v4 do site = order_nsu da InfinitePay>",
+  "numero_loja": "LJ-<8 primeiros hexadecimais do pedido_id, em maiúsculas>",
+  "teste": false,
+  "produto": { "slug": "camisa-masculina-lisa" },
+  "item": {
+    "cor_id": "preta",
+    "tamanho_id": "m",
+    "quantidade": 10,
+    "prazo_dias": 10
+  },
+  "valor_centavos": 18000,
+  "cliente": { "nome": "<nome>", "telefone": "55<DDD><número>" },
+  "pagamento": {
+    "gateway": "infinitepay",
+    "forma": "pix",
+    "transaction_nsu": "<transaction_nsu do payment_check>",
+    "invoice_slug": "<invoice_slug do payment_check>",
+    "valor_pago_centavos": 18000,
+    "pago_em": "2026-10-09T19:40:59Z",
+    "receipt_url": "<receipt_url da InfinitePay> ou null"
+  }
+}
+```
+
+- `cor_id`: `branca` (prazo 0, pronta entrega), `chumbo` ou `preta` (prazo
+  10). `tamanho_id`: `pp`, `p`, `m`, `g`, `gg`, `eg`, `xg`, `xx`, `jeg`.
+- `valor_centavos` é 18000; 100 só com `teste: true` num CRM com
+  `STORE_ORDERS_ACCEPT_TEST=true`. `valor_pago_centavos` é o `amount` pago,
+  maior ou igual ao valor.
+- `pago_em` em ISO 8601 UTC com `Z`, até 5 minutos à frente do relógio do CRM
+  e até 30 dias atrás. `telefone`: E.164 brasileiro sem `+`.
+- `receipt_url`: `null` ou `https://` em `infinitepay.io`, `*.infinitepay.io`,
+  `infinitepay.com.br` ou `*.infinitepay.com.br`, sem porta nem credencial.
+
+Respostas:
+
+| Status | Quando                                                                                                                                                                                | O que o workflow faz                                                         |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `201`  | Pedido criado.                                                                                                                                                                        | Segue; guarda `numero`, `pedido_url`.                                        |
+| `200`  | Já existia com os mesmos dados; ou o `receipt_url` que faltava foi gravado agora (`comprovante_registrado: true`).                                                                    | Segue. Reenviar é seguro.                                                    |
+| `400`  | `INVALID_REQUEST`, `UNKNOWN_REQUEST_FIELD`, `UNSUPPORTED_SCHEMA_VERSION`, `INVALID_STORE_NUMBER`, `INVALID_RECEIPT_URL`, `INVALID_PAID_AT`, `INVALID_CUSTOMER`, cabeçalhos inválidos. | Não repetir igual: corrigir o nó. O Pix já foi pago — avisar uma pessoa.     |
+| `401`  | Credencial ausente ou errada.                                                                                                                                                         | Conferir a credencial; avisar uma pessoa.                                    |
+| `403`  | `FORBIDDEN_AUTOMATION_ACTION`: credencial sem a ação `store.order.record`.                                                                                                            | Avisar uma pessoa.                                                           |
+| `404`  | Rota desligada (sem `STORE_ORDERS_HMAC_KEY`) ou CRM sem a versão nova.                                                                                                                | Avisar uma pessoa.                                                           |
+| `409`  | `STORE_ORDER_CONFLICT`: mesmo `pedido_id` com outros dados ou outro comprovante, ou `transaction_nsu` de outro pedido.                                                                | Não repetir: avisar uma pessoa.                                              |
+| `422`  | `STORE_CATALOG_MISMATCH`, `AMOUNT_BELOW_PRICE`, `TEST_REFUSED`, `PAYMENT_METHOD_UNSUPPORTED`. Nada é gravado.                                                                         | Não repetir: o site, o n8n ou o catálogo do CRM divergem. Avisar uma pessoa. |
+| `429`  | `RATE_LIMITED` (60 chamadas por minuto), com `Retry-After`.                                                                                                                           | Repetir a mesma chamada depois do `Retry-After`.                             |
+| `5xx`  | `503 SERVICE_UNAVAILABLE` (com `Retry-After`) ou CRM fora do ar.                                                                                                                      | Repetir a mesma chamada com espera crescente; persistindo, avisar.           |
+
+Resposta de sucesso:
+
+```json
+{
+  "numero": "37-CRM",
+  "numero_loja": "LJ-5B0C77ED",
+  "pedido_id": "<id do pedido no CRM, diferente do pedido_id do site>",
+  "criado": true,
+  "comprovante_registrado": false,
+  "pedido_url": "<APP_BASE_URL>/pedidos/<id>",
+  "ficha_url": "<APP_BASE_URL>/api/v1/orders/<id>/print?download=1"
+}
+```
+
+Sem `APP_BASE_URL` na API, as duas URLs voltam relativas (`/pedidos/<id>`).
+As duas exigem sessão do CRM: quem abre sem sessão entra e volta ao pedido.
+Erros vêm em `application/problem+json` (`error.code`), sem eco do corpo. Toda
+resposta diferente de `2xx` é falha visível no workflow (RULES técnica 6): o
+dinheiro já entrou, então o pedido não pode sumir em silêncio.
 
 ## Workflow e configuração
 

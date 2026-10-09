@@ -18,6 +18,8 @@ As ações autorizadas pelo contrato v1 são:
 - abrir o Pedido pendente da conversa, pelo `open_order` da reserva de envio
   ou do handoff (ADR 014), ou pelo evento obsoleto `order.intent_confirmed`
   (ação `order.intent`);
+- registrar o pedido pago da loja do site depois que a InfinitePay confirma o
+  Pix, pelo workflow do checkout (ação `store.order.record`, ADR 028);
 - converter uma conversa em Negócio;
 - atualizar campos oficiais de um Negócio;
 - registrar transição de etapa validada pelo CRM.

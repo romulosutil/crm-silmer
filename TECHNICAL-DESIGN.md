@@ -98,12 +98,16 @@ antigas. Conversa transferida não volta ao bot (ADR 015).
 Contrato, diagnóstico e rollout: [n8n](docs/integrations/n8n/README.md) e
 [ator técnico](docs/runbooks/automation-executor.md).
 
-ADR 027: `POST /api/v1/public/loja/pedidos` recebe o aviso de Pix da loja do
-site sem sessão. `Origin` da lista `STORE_ORDERS_ALLOWED_ORIGINS`, corpo até
-8 KB, `Idempotency-Key` igual a `pedido_id` no registro de idempotência de
-sempre, limites por IP (memória e PostgreSQL) e por telefone (PostgreSQL),
-recibo com HMAC (`STORE_ORDERS_HMAC_KEY`) e auditoria na mesma transação.
-Variáveis, ordem de implantação e URLs: [loja do site](docs/runbooks/loja-do-site.md).
+ADR 028: `POST /api/v1/integrations/n8n/store-orders` recebe do workflow da
+loja o pedido pago, depois do `payment_check` da InfinitePay. Mesmo contrato
+das rotas n8n (Basic do `AUTOMATION_EXECUTOR`, ação `store.order.record`,
+`Idempotency-Key` igual a `pedido_id`, correlação, identidade do workflow,
+problem+json), corpo até 16 KB e 60 chamadas por minuto. A idempotência é pela
+chave natural `pedido_id` (recibo com o hash dos dados comparados); o
+comprovante que chega depois é gravado; divergência e NSU repetido são `409`.
+Desligada sem `STORE_ORDERS_HMAC_KEY`; as URLs da resposta usam
+`APP_BASE_URL`. Contrato do nó: [n8n](docs/integrations/n8n/README.md);
+variáveis e implantação: [loja do site](docs/runbooks/loja-do-site.md).
 
 ## 5. Pedido, impressão e métricas
 
@@ -133,12 +137,16 @@ artefatos de aprovação, sem prova de envio externo. V2 a v5 não são
 sobrescritas. Assinatura física de Rose/Operação na v6 segue obrigatória
 antes da produção.
 
-Pedido da loja (ADR 027): `origin = loja`, sem conversa, nasce confirmado
-pelo ator `system:loja-do-site` ao preço de
-`modules/orders/src/domain/store-catalog.js`, com `paid_on` e
-`payment_declared_at` informados pelo cliente; qualquer escrita depois é
-`409 ORDER_LOCKED`. Imprime `ficha-loja-v1` na mesma rota, com
-`?download=1` para anexo; teste (`is_test`) fica fora das métricas.
+Pedido da loja (ADRs 027 e 028): `origin = loja`, sem conversa, nasce
+confirmado pelo ator `system:loja-do-site` ao preço de
+`modules/orders/src/domain/store-catalog.js` (R$ 180,00, prazo por cor), com
+`paid_on` no dia em que a InfinitePay confirmou e as colunas do gateway
+(`payment_source`, `payment_confirmed_at`, `paid_amount_cents`,
+`payment_transaction_nsu` único, `payment_invoice_slug`), `store_number` e
+`lead_time_business_days`; o link do comprovante fica na ficha cifrada.
+Qualquer escrita humana depois é `409 ORDER_LOCKED`. Imprime `ficha-loja-v1`
+na mesma rota, com `?download=1` para anexo; teste (`is_test`) fica fora das
+métricas.
 
 Dashboard/listas usam read models autorizados. Vendido/vendas contam
 confirmados e não representam recebimentos. SSE usa IDs e metadados mínimos.

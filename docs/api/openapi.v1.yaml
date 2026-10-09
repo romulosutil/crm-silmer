@@ -541,6 +541,87 @@ paths:
         '409': { $ref: '#/components/responses/N8nProblem' }
         '422': { $ref: '#/components/responses/N8nProblem' }
         '503': { $ref: '#/components/responses/N8nProblem' }
+  /integrations/n8n/store-orders:
+    post:
+      operationId: recordStoreOrder
+      summary: Registra o pedido pago da loja do site (ADR 028)
+      description: >-
+        Ação store.order.record, só do AUTOMATION_EXECUTOR. O workflow n8n
+        "Silmer | Loja | Checkout InfinitePay" chama depois que o
+        payment_check da InfinitePay confirma o Pix (paid e amount maior ou
+        igual ao valor). O CRM confere o pedido com o próprio catálogo da loja
+        e cria um pedido confirmado, travado, sem conversa nem contato, ao
+        preço do catálogo. A chave natural é o `pedido_id`: os mesmos dados
+        respondem 200 com o mesmo pedido, antes do catálogo; o `receipt_url`
+        que antes faltava é gravado e responde 200; dados diferentes ou outro
+        comprovante, ou um `transaction_nsu` de outro pedido, respondem 409.
+        `Idempotency-Key` é o mesmo texto de `pedido_id`. `X-Correlation-Id`
+        precisa ser um UUID (ou 16 a 64 hexadecimais) — use o próprio
+        `pedido_id`. Até 60 chamadas por minuto (429 RATE_LIMITED com
+        Retry-After, antes da credencial). Corpo JSON até 16 KB. Desligada
+        (404) até STORE_ORDERS_HMAC_KEY existir. As URLs da resposta partem
+        de APP_BASE_URL; sem ela, saem relativas.
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkflowKey'
+        - $ref: '#/components/parameters/WorkflowVersion'
+        - $ref: '#/components/parameters/ExecutionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StoreOrderRecord' }
+      responses:
+        '201':
+          description: Pedido criado
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreOrderRecorded' }
+        '200':
+          description: >-
+            Pedido já registrado com os mesmos dados; ou o comprovante que
+            faltava foi gravado agora (`comprovante_registrado` true).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreOrderRecorded' }
+        '400':
+          description: >-
+            INVALID_REQUEST (corpo malformado, chave faltando ou de tipo
+            errado), UNKNOWN_REQUEST_FIELD, UNSUPPORTED_SCHEMA_VERSION,
+            INVALID_STORE_NUMBER, INVALID_RECEIPT_URL, INVALID_PAID_AT,
+            INVALID_CUSTOMER, INVALID_IDEMPOTENCY_KEY, INVALID_CORRELATION_ID
+            e INVALID_X_SILMER_* dos cabeçalhos.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/N8nProblem' }
+        '401': { $ref: '#/components/responses/N8nProblem' }
+        '403': { $ref: '#/components/responses/N8nProblem' }
+        '404': { description: Loja do site não configurada neste ambiente }
+        '409':
+          description: STORE_ORDER_CONFLICT
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/N8nProblem' }
+        '413': { $ref: '#/components/responses/N8nProblem' }
+        '415': { $ref: '#/components/responses/N8nProblem' }
+        '422':
+          description: >-
+            STORE_CATALOG_MISMATCH, AMOUNT_BELOW_PRICE, TEST_REFUSED ou
+            PAYMENT_METHOD_UNSUPPORTED. Nada é gravado.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/N8nProblem' }
+        '429':
+          description: RATE_LIMITED
+          headers:
+            Retry-After: { schema: { type: integer, minimum: 1 } }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/N8nProblem' }
+        '503': { $ref: '#/components/responses/N8nProblem' }
   /conversations/{conversationId}/messages:
     post:
       operationId: sendHumanConversationMessage
@@ -660,9 +741,11 @@ paths:
       description: >-
         Ação order.read. Sem status, retorna Todos. A busca aceita número do
         pedido, cliente ou telefone e resolve cliente e telefone pelo contato da
-        conversa; um pedido da loja (sem conversa) é achado pelo número ou pelo
-        telefone inteiro, comparado por HMAC. `counts` traz o total de cada grupo (Confirmados e Pendentes)
-        para a busca atual, independentemente da página.
+        conversa; um pedido da loja (sem conversa) é achado pelo número, pelo
+        telefone inteiro, comparado por HMAC, ou pelo número da loja
+        (LJ-XXXXXXXX, ADR 028). `counts` traz o total de cada grupo
+        (Confirmados e Pendentes) para a busca atual, independentemente da
+        página.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
@@ -1088,116 +1171,6 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/OrderNotFound' }
         '503': { $ref: '#/components/responses/Unavailable' }
-  /public/loja/pedidos:
-    post:
-      operationId: createStoreOrder
-      summary: Registra o aviso de Pix da loja do site (ADR 027)
-      description: >-
-        Única escrita pública do CRM, sem sessão. O site manda o contrato v1
-        quando a pessoa informa que pagou o Pix estático; o CRM confere o
-        aviso com o próprio catálogo da loja e cria um pedido confirmado,
-        travado, sem conversa nem contato, com o preço do catálogo e o Pix
-        "informado pelo cliente". `Origin` precisa estar em
-        STORE_ORDERS_ALLOWED_ORIGINS. A mesma `Idempotency-Key` com o mesmo
-        corpo (JSON canônico) devolve o mesmo número com 200, antes de
-        qualquer limite; com outro corpo, 409. Limites: requisições por
-        minuto por IP na rota e pedidos por hora por IP e por 24 horas por
-        telefone, contados no PostgreSQL. Desligada (404) até
-        STORE_ORDERS_HMAC_KEY e STORE_ORDERS_ALLOWED_ORIGINS existirem. Erros
-        sempre como `{"erro": "<codigo>"}`; o site só lê `numero` num 2xx.
-      security: []
-      parameters:
-        - name: Origin
-          in: header
-          required: true
-          schema: { type: string, maxLength: 255 }
-        - name: Idempotency-Key
-          in: header
-          required: true
-          description: Igual a `pedido_id`.
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/StoreOrderNotice' }
-      responses:
-        '201':
-          description: Pedido criado
-          headers:
-            Access-Control-Allow-Origin: { schema: { type: string } }
-            Cache-Control: { schema: { type: string, const: no-store } }
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoreOrderNumber' }
-        '200':
-          description: Reenvio com a mesma chave e o mesmo corpo
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoreOrderNumber' }
-        '400':
-          description: >-
-            Corpo malformado ou acima de 8 KB, chave desconhecida ou faltando,
-            versão diferente de "1", nome ou telefone inválidos, ou
-            Idempotency-Key ausente ou diferente de `pedido_id`.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StoreOrderError'
-                example: { erro: corpo_invalido }
-        '403':
-          description: '`Origin` ausente ou fora da lista'
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoreOrderError' }
-        '404': { description: Loja do site não configurada neste ambiente }
-        '409':
-          description: Mesma chave com outro corpo
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoreOrderError' }
-        '422':
-          description: >-
-            Fora do catálogo do CRM, valor ou quantidade divergentes, teste
-            recusado neste ambiente ou instante declarado fora de 7 dias antes
-            a 5 minutos depois.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoreOrderError' }
-        '429':
-          description: Limite por IP ou por telefone
-          headers:
-            Retry-After: { schema: { type: integer, minimum: 1 } }
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoreOrderError' }
-        '503':
-          description: Indisponível
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/StoreOrderError' }
-    options:
-      operationId: preflightStoreOrder
-      summary: Preflight CORS do aviso da loja
-      description: >-
-        Para uma origem da lista, libera POST com Content-Type e
-        Idempotency-Key por 600 segundos; para as outras, responde sem
-        cabeçalho CORS e o navegador bloqueia.
-      security: []
-      responses:
-        '204':
-          description: Preflight respondido
-          headers:
-            Access-Control-Allow-Origin: { schema: { type: string } }
-            Access-Control-Allow-Methods:
-              { schema: { type: string, const: 'POST, OPTIONS' } }
-            Access-Control-Allow-Headers:
-              {
-                schema:
-                  { type: string, const: 'Content-Type, Idempotency-Key' },
-              }
-            Access-Control-Max-Age: { schema: { type: string, const: '600' } }
-            Vary: { schema: { type: string, const: Origin } }
 components:
   securitySchemes:
     automationBasic:
@@ -2591,7 +2564,9 @@ components:
           origin,
           isTest,
           locked,
-          paymentDeclaredAt,
+          storeNumber,
+          leadTimeBusinessDays,
+          gatewayPayment,
         ]
       properties:
         id: { type: string }
@@ -2608,12 +2583,21 @@ components:
           type: boolean
           description: >-
             Pedido da loja: nenhuma escrita é aceita (409 ORDER_LOCKED).
-        paymentDeclaredAt:
+        storeNumber:
           type: [string, 'null']
-          format: date-time
+          pattern: '^LJ-[0-9A-F]{8}$'
           description: >-
-            Pedido da loja: instante em que o cliente informou o Pix. É
-            declaração do cliente, não confirmação do banco.
+            Pedido da loja (ADR 028): LJ- e os 8 primeiros hexadecimais do
+            pedido_id do site.
+        leadTimeBusinessDays:
+          type: [integer, 'null']
+          minimum: 0
+          description: >-
+            Pedido da loja: prazo da cor em dias úteis (0 é pronta entrega).
+        gatewayPayment:
+          oneOf:
+            - { $ref: '#/components/schemas/GatewayPayment' }
+            - { type: 'null' }
         status: { $ref: '#/components/schemas/OrderStatus' }
         fabCode: { type: string }
         ficha: { $ref: '#/components/schemas/Ficha' }
@@ -2668,7 +2652,7 @@ components:
           format: date
           description: >-
             Dia do pagamento, informado por uma pessoa; no pedido da loja, o
-            dia (São Paulo) que o cliente declarou.
+            dia (São Paulo) em que a InfinitePay confirmou o Pix.
         deliveredOn:
           type: [string, 'null']
           format: date
@@ -2890,10 +2874,10 @@ components:
       type: object
       additionalProperties: false
       readOnly: true
-      required: [telefone, produto, retirada, informadoPeloClienteEm]
+      required: [telefone, produto, comprovanteUrl]
       description: >-
-        Pedido da loja do site (ADR 027): o que o aviso trouxe além do item e
-        do cliente. Fica dentro da ficha cifrada.
+        Pedido da loja do site (ADRs 027 e 028): o que o registro trouxe além
+        do item e do cliente. Fica dentro da ficha cifrada.
       properties:
         telefone: { type: string, description: E.164 brasileiro sem "+". }
         produto:
@@ -2903,82 +2887,89 @@ components:
           properties:
             slug: { type: string }
             nome: { type: string }
-        retirada: { type: string }
-        informadoPeloClienteEm: { type: string, format: date-time }
-    StoreOrderNotice:
+        comprovanteUrl:
+          type: [string, 'null']
+          format: uri
+          description: Link do comprovante da InfinitePay, quando houver.
+    GatewayPayment:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required:
+        [
+          source,
+          confirmedAt,
+          paidAmountCents,
+          transactionNsu,
+          invoiceSlug,
+          receiptUrl,
+        ]
+      description: >-
+        Pedido da loja (ADR 028): o pagamento que a InfinitePay confirmou.
+      properties:
+        source: { type: string, const: infinitepay }
+        confirmedAt: { type: string, format: date-time }
+        paidAmountCents: { type: integer, minimum: 1 }
+        transactionNsu: { type: string }
+        invoiceSlug: { type: string }
+        receiptUrl: { type: [string, 'null'], format: uri }
+    StoreOrderRecord:
       type: object
       additionalProperties: false
       description: >-
-        Contrato v1 do site (repositório silmer-web,
-        `apps/landingpage/src/lib/pedido-loja.ts`). Todas as chaves são
-        obrigatórias e nenhuma outra é aceita.
+        ADR 028: o pedido pago que o workflow n8n da loja registra depois do
+        payment_check. Todas as chaves são obrigatórias e nenhuma outra é
+        aceita (UNKNOWN_REQUEST_FIELD).
       required:
         [
-          versao,
+          schema_version,
           pedido_id,
+          numero_loja,
           teste,
           produto,
           item,
           valor_centavos,
-          pagamento,
-          retirada,
           cliente,
+          pagamento,
         ]
       properties:
-        versao: { type: string, const: '1' }
-        pedido_id: { type: string, format: uuid, description: UUID v4 }
-        teste: { type: boolean }
+        schema_version: { type: string, const: '1.0' }
+        pedido_id:
+          type: string
+          format: uuid
+          description: UUID v4 gerado pelo site; é o order_nsu da InfinitePay.
+        numero_loja:
+          type: string
+          pattern: '^LJ-[0-9A-F]{8}$'
+          description: LJ- e os 8 primeiros hexadecimais de pedido_id, em maiúsculas.
+        teste:
+          type: boolean
+          description: >-
+            Aceito só com STORE_ORDERS_ACCEPT_TEST=true (senão 422
+            TEST_REFUSED); o pedido fica fora do Dashboard.
         produto:
           type: object
           additionalProperties: false
-          required: [slug, nome]
+          required: [slug]
           properties:
             slug: { type: string, example: camisa-masculina-lisa }
-            nome: { type: string }
         item:
           type: object
           additionalProperties: false
-          required:
-            [
-              tipo,
-              publico,
-              cor,
-              cor_id,
-              tamanho,
-              tamanho_id,
-              malha,
-              gola,
-              quantidade,
-            ]
+          required: [cor_id, tamanho_id, quantidade, prazo_dias]
           properties:
-            tipo: { type: string }
-            publico: { type: string }
-            cor: { type: string, enum: [Branco, Grafite/chumbo, Preto] }
             cor_id: { type: string, enum: [branca, chumbo, preta] }
-            tamanho:
-              { type: string, enum: [PP, P, M, G, GG, EG, XG, XX, JEGÃO] }
             tamanho_id:
               { type: string, enum: [pp, p, m, g, gg, eg, xg, xx, jeg] }
-            malha: { type: string }
-            gola: { type: string }
             quantidade: { type: integer, const: 10 }
+            prazo_dias:
+              type: integer
+              description: Dias úteis da cor — branca 0, chumbo e preta 10.
         valor_centavos:
           type: integer
-          description: Conferido com o preço do catálogo do CRM, nunca usado.
-          example: 19364
-        pagamento:
-          type: object
-          additionalProperties: false
-          required: [forma, informado_pelo_cliente_em]
-          properties:
-            forma: { type: string, const: pix }
-            informado_pelo_cliente_em: { type: string, format: date-time }
-        retirada:
-          type: object
-          additionalProperties: false
-          required: [local]
-          properties:
-            local: { type: string }
+          description: >-
+            18000; 100 só num pedido de teste aceito. Conferido com o catálogo
+            do CRM, que grava o próprio preço.
         cliente:
           type: object
           additionalProperties: false
@@ -2989,40 +2980,70 @@ components:
               type: string
               pattern: '^55[1-9]{2}(?:9[0-9]{8}|[2-5][0-9]{7})$'
               description: E.164 brasileiro sem "+".
-    StoreOrderNumber:
+        pagamento:
+          type: object
+          additionalProperties: false
+          required:
+            [
+              gateway,
+              forma,
+              transaction_nsu,
+              invoice_slug,
+              valor_pago_centavos,
+              pago_em,
+              receipt_url,
+            ]
+          properties:
+            gateway: { type: string, const: infinitepay }
+            forma: { type: string, const: pix }
+            transaction_nsu: { type: string, pattern: '^[\x21-\x7e]{1,128}$' }
+            invoice_slug: { type: string, pattern: '^[\x21-\x7e]{1,128}$' }
+            valor_pago_centavos:
+              type: integer
+              minimum: 1
+              description: Maior ou igual a valor_centavos (senão 422 AMOUNT_BELOW_PRICE).
+            pago_em:
+              type: string
+              format: date-time
+              description: >-
+                ISO 8601 em UTC (sufixo Z), no máximo 5 minutos à frente do
+                relógio do CRM e 30 dias atrás.
+            receipt_url:
+              type: [string, 'null']
+              format: uri
+              description: >-
+                Nulo, ou https em infinitepay.io, *.infinitepay.io,
+                infinitepay.com.br ou *.infinitepay.com.br, sem porta nem
+                credencial.
+    StoreOrderRecorded:
       type: object
       additionalProperties: false
-      required: [numero]
+      required:
+        [
+          numero,
+          numero_loja,
+          pedido_id,
+          criado,
+          comprovante_registrado,
+          pedido_url,
+          ficha_url,
+        ]
       properties:
         numero: { type: string, pattern: '^[0-9]{2,}-CRM$' }
-    StoreOrderError:
-      type: object
-      additionalProperties: false
-      required: [erro]
-      properties:
-        erro:
+        numero_loja: { type: string, pattern: '^LJ-[0-9A-F]{8}$' }
+        pedido_id:
           type: string
-          enum:
-            [
-              corpo_invalido,
-              versao_invalida,
-              pedido_id_invalido,
-              chave_invalida,
-              nome_invalido,
-              telefone_invalido,
-              origem_nao_permitida,
-              idempotency_conflict,
-              produto_desconhecido,
-              cor_invalida,
-              tamanho_invalido,
-              quantidade_divergente,
-              valor_divergente,
-              produto_divergente,
-              teste_recusado,
-              horario_invalido,
-              rate_limited,
-              indisponivel,
-            ]
+          description: Id do pedido no CRM (não é o pedido_id do site).
+        criado: { type: boolean }
+        comprovante_registrado: { type: boolean }
+        pedido_url:
+          type: string
+          description: APP_BASE_URL + /pedidos/{id}; relativa sem APP_BASE_URL.
+        ficha_url:
+          type: string
+          description: >-
+            APP_BASE_URL + /api/v1/orders/{id}/print?download=1; exige sessão
+            do CRM.
     OrderError:
       type: object
       additionalProperties: false

@@ -444,3 +444,37 @@ test('APP_BASE_URL is read as an origin with an optional path, without the trail
   );
   assert.equal(readBaseUrl('http://127.0.0.1:4173'), 'http://127.0.0.1:4173');
 });
+
+test('LOJ-15/LOJ-25: the OpenAPI documents the automation route, its codes and no public route', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const openapi = await readFile(
+    new URL('../docs/api/openapi.v1.yaml', import.meta.url),
+    'utf8',
+  );
+  assert.match(openapi, /^ {2}\/integrations\/n8n\/store-orders:$/mu);
+  assert.match(openapi, /operationId: recordStoreOrder/u);
+  assert.doesNotMatch(
+    openapi,
+    /public\/loja|createStoreOrder|paymentDeclaredAt/u,
+  );
+  for (const code of [
+    'store.order.record',
+    'UNKNOWN_REQUEST_FIELD',
+    'INVALID_STORE_NUMBER',
+    'INVALID_RECEIPT_URL',
+    'INVALID_PAID_AT',
+    'INVALID_CUSTOMER',
+    'INVALID_IDEMPOTENCY_KEY',
+    'STORE_ORDER_CONFLICT',
+    'STORE_CATALOG_MISMATCH',
+    'AMOUNT_BELOW_PRICE',
+    'TEST_REFUSED',
+    'PAYMENT_METHOD_UNSUPPORTED',
+    'RATE_LIMITED',
+    'StoreOrderRecord:',
+    'StoreOrderRecorded:',
+    'GatewayPayment:',
+  ]) {
+    assert.ok(openapi.includes(code), code);
+  }
+});

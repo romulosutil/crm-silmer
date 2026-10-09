@@ -1,43 +1,47 @@
-# Runbook — venda da loja do site
+# Runbook — pedido pago da loja do site
 
-Decisão: [ADR 027](../adr/027-venda-da-loja-do-site.md) e
-[RFC 015](../rfc/015-venda-da-loja-do-site.md). Requisitos `LOJ-01`–`LOJ-14`
-da [spec](../../.specs/features/pedidos-mvp/spec.md); tarefa T109 de
+Decisão: [ADR 028](../adr/028-pedido-pago-da-loja-pelo-n8n.md) e
+[RFC 016](../rfc/016-pedido-pago-da-loja-pelo-n8n.md), que supersedem em parte a
+[ADR 027](../adr/027-venda-da-loja-do-site.md). Requisitos `LOJ-15`–`LOJ-25`
+da [spec](../../.specs/features/pedidos-mvp/spec.md); tarefas T110–T115 de
 [tasks](../../.specs/features/pedidos-mvp/tasks.md).
 
-O site `silmer.com.br/loja` (repositório `silmer-web`) manda ao CRM o aviso
-"Já pagou?" depois do Pix estático. O CRM cria um pedido confirmado, travado,
-sem conversa nem contato, com "Pago (informado pelo cliente)", e devolve o
-número `NN-CRM`. Nada passa pelo n8n.
+A loja `silmer.com.br/loja` cobra pelo Checkout Integrado da InfinitePay, só
+Pix. O workflow n8n "Silmer | Loja | Checkout InfinitePay" (id
+`SbNSW5jwBcXM5Afj`) confirma o pagamento com `payment_check` e chama o CRM,
+servidor a servidor, com a credencial de automação. O CRM cria um pedido
+confirmado, travado, sem conversa nem contato, com "Pago — confirmado pela
+InfinitePay", e devolve o número `NN-CRM`, o `LJ-…` e os links do pedido e da
+ficha. O vendedor abre o pedido no CRM e atende pelo WhatsApp dele; não há
+aviso automático. O contrato exato do nó HTTP está no
+[README do n8n](../integrations/n8n/README.md#pedido-pago-da-loja-adr-028) e no
+OpenAPI (`recordStoreOrder`).
 
 ## URLs
 
-| Ambiente                           | URL do endpoint                                                                         |
-| ---------------------------------- | --------------------------------------------------------------------------------------- |
-| Cloud-dev/piloto (único hoje)      | `https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host/api/v1/public/loja/pedidos` |
-| Produção, quando o domínio existir | `https://crm.<dominio>/api/v1/public/loja/pedidos`                                      |
-| Local (`npm run dev`)              | `http://127.0.0.1:4173/api/v1/public/loja/pedidos`                                      |
+| Ambiente                           | URL da rota                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Cloud-dev/piloto (único hoje)      | `https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host/api/v1/integrations/n8n/store-orders` |
+| Produção, quando o domínio existir | `https://crm.<dominio>/api/v1/integrations/n8n/store-orders`                                      |
+| Local (`npm run dev`)              | `http://127.0.0.1:4173/api/v1/integrations/n8n/store-orders`                                      |
 
-Na Vercel, projeto `silmer` (time `romulodesigns`), variável
-`PUBLIC_LOJA_PEDIDOS_URL`: **Preview** e **Production** apontam para o
-cloud-dev/piloto até `crm.<dominio>` existir (decisão D5). Depois, Production
-passa à URL de produção.
+A rota pública da ADR 027 (`/api/v1/public/loja/pedidos`) nunca foi publicada e
+não existe mais; o site não chama o CRM.
 
 ## Variáveis da `silmer-api`
 
-| Variável                               | Valor                                                                                                                                               |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `STORE_ORDERS_HMAC_KEY`                | 32 bytes aleatórios em base64url. Segredo: nunca versionar nem reaproveitar de outra variável.                                                      |
-| `STORE_ORDERS_ALLOWED_ORIGINS`         | `https://silmer.com.br,https://www.silmer.com.br,https://silmer-*-romulodesigns.vercel.app`. `http://localhost:4330` só num CRM de desenvolvimento. |
-| `STORE_ORDERS_ACCEPT_TEST`             | `true` enquanto o Pix do site for o de teste (aceita e separa `teste: true`); `false` no CRM de produção (`422 teste_recusado`).                    |
-| `STORE_ORDERS_MAX_PER_IP_HOUR`         | Opcional, padrão `5`.                                                                                                                               |
-| `STORE_ORDERS_MAX_PER_PHONE_DAY`       | Opcional, padrão `5`.                                                                                                                               |
-| `STORE_ORDERS_MAX_REQUESTS_PER_MINUTE` | Opcional, padrão `30` (por IP, na rota, em memória).                                                                                                |
+| Variável                                                   | Valor                                                                                                                                                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `STORE_ORDERS_HMAC_KEY` (nova)                             | 32 bytes aleatórios em base64url. Liga a rota e a busca do pedido pelo telefone. Segredo: nunca versionar nem reaproveitar de outra variável.                                               |
+| `STORE_ORDERS_ACCEPT_TEST` (nova)                          | `true` enquanto o n8n testa (aceita `teste: true`, inclusive o Pix de R$ 1,00, e deixa o pedido fora do Dashboard); `false` quando só pedido real deve entrar (`422 TEST_REFUSED`).         |
+| `APP_BASE_URL` (já no inventário; passa a ser lida)        | Onde as pessoas abrem o CRM, sem barra no fim. Cloud-dev: `https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host`. Sem ela, `pedido_url` e `ficha_url` voltam relativas.               |
+| `FAB_CODE`, `N8N_INTEGRATION_ENVELOPE_KEY`                 | Já existem; o pedido usa as mesmas.                                                                                                                                                         |
+| `CRM_AUTOMATION_CLIENT_ID`, `CRM_AUTOMATION_CLIENT_SECRET` | Já existem; a ação `store.order.record` entra na lista do `AUTOMATION_EXECUTOR` com a versão nova, sem credencial nova.                                                                     |
+| Removidas                                                  | `STORE_ORDERS_ALLOWED_ORIGINS`, `STORE_ORDERS_MAX_PER_IP_HOUR`, `STORE_ORDERS_MAX_PER_PHONE_DAY` e `STORE_ORDERS_MAX_REQUESTS_PER_MINUTE` (nunca foram configuradas; se existirem, apagar). |
 
-A rota também usa `FAB_CODE`, `IDEMPOTENCY_ENVELOPE_KEY` e
-`N8N_INTEGRATION_ENVELOPE_KEY`, que o CRM já tem. Sem
-`STORE_ORDERS_HMAC_KEY` e `STORE_ORDERS_ALLOWED_ORIGINS` a rota responde
-`404`; só uma das duas, ou um valor malformado, impede a API de subir.
+Sem `STORE_ORDERS_HMAC_KEY` a rota responde `404`. Com ela, `FAB_CODE` ausente,
+chave malformada, `STORE_ORDERS_ACCEPT_TEST` diferente de `true`/`false` ou
+`APP_BASE_URL` que não seja `https://…` impedem a API de subir.
 
 Gerar a chave (fora do repositório, sem colar em chat ou log):
 
@@ -45,80 +49,95 @@ Gerar a chave (fora do repositório, sem colar em chat ou log):
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
 ```
 
-## Ordem de implantação
+## Deploy, passo a passo
 
-1. Merge no `master`; o deploy automático GitHub → EasyPanel publica
-   `silmer-api` e `silmer-edge-web` (ADR 022). O edge leva o hash do estilo
-   da `ficha-loja-v1` no CSP da impressão.
-2. Migration `0029_store_orders.expand.sql` pelo job `migrate`. É expand: a
-   API anterior continua funcionando com ela.
-3. Variáveis da tabela acima na `silmer-api` e redeploy do serviço.
-4. Verificação da seção seguinte.
-5. `PUBLIC_LOJA_PEDIDOS_URL` na Vercel e novo deploy do site.
+1. **Merge** da PR #155 no `master` (rebase, histórico linear). O deploy
+   automático GitHub → EasyPanel publica `silmer-api`, `silmer-worker` e
+   `silmer-edge-web` (ADR 022). Nada muda no n8n antes disso.
+2. **Migration** `0029_store_orders.expand.sql` pelo job `migrate`. É expand:
+   a API anterior continua funcionando com ela. Conferir em
+   `crm_meta.schema_migrations` que a `0029` entrou.
+3. **Variáveis** na `silmer-api`: `STORE_ORDERS_HMAC_KEY`,
+   `STORE_ORDERS_ACCEPT_TEST=true` e `APP_BASE_URL`; apagar as quatro removidas
+   se alguém as criou. Redeploy do serviço.
+4. **Smoke** da seção seguinte, com pedido de teste.
+5. **n8n**: no workflow da loja, o nó HTTP que chama o CRM segue o
+   [contrato](../integrations/n8n/README.md#pedido-pago-da-loja-adr-028): URL do
+   cloud-dev, credencial Basic do CRM, os cinco cabeçalhos e o corpo. Todo não
+   `2xx` vira falha visível; `429` e `5xx` repetem a mesma chamada. Testar com
+   `teste: true` e o Pix de R$ 1,00 antes de publicar.
+6. Quando o Pix real começar: `STORE_ORDERS_ACCEPT_TEST=false` no CRM que
+   recebe pedidos reais.
 
-Nenhum workflow do n8n muda.
+## Smoke depois do deploy
 
-## Verificação depois do deploy
-
-Preflight de uma origem permitida — `204` com
-`access-control-allow-origin: https://silmer.com.br`:
+Uma chamada sintética de teste (gere um UUID v4 novo; `numero_loja` é `LJ-` e
+os 8 primeiros caracteres dele em maiúsculas; `pago_em` é agora, em UTC).
+Primeira vez `201`; repetida, `200` com o mesmo `numero`:
 
 ```bash
-curl -si -X OPTIONS "https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host/api/v1/public/loja/pedidos" -H "Origin: https://silmer.com.br" -H "Access-Control-Request-Method: POST"
+ID=<uuid v4>; LJ="LJ-$(echo "$ID" | cut -c1-8 | tr a-f A-F)"; AGORA=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+curl -si -X POST "https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host/api/v1/integrations/n8n/store-orders" \
+  -u "$CRM_AUTOMATION_CLIENT_ID:$CRM_AUTOMATION_CLIENT_SECRET" \
+  -H "Content-Type: application/json" -H "Idempotency-Key: $ID" -H "X-Correlation-Id: $ID" \
+  -H "X-Silmer-Workflow-Key: silmer-loja-checkout-infinitepay" -H "X-Silmer-Workflow-Version: smoke" -H "X-Silmer-Execution-Id: smoke-1" \
+  --data "{\"schema_version\":\"1.0\",\"pedido_id\":\"$ID\",\"numero_loja\":\"$LJ\",\"teste\":true,\"produto\":{\"slug\":\"camisa-masculina-lisa\"},\"item\":{\"cor_id\":\"preta\",\"tamanho_id\":\"m\",\"quantidade\":10,\"prazo_dias\":10},\"valor_centavos\":100,\"cliente\":{\"nome\":\"Teste Sintetico\",\"telefone\":\"5527900000001\"},\"pagamento\":{\"gateway\":\"infinitepay\",\"forma\":\"pix\",\"transaction_nsu\":\"smoke-$ID\",\"invoice_slug\":\"smoke\",\"valor_pago_centavos\":100,\"pago_em\":\"$AGORA\",\"receipt_url\":null}}"
 ```
 
-Um aviso de teste sintético (gere um UUID v4 novo e use-o nos dois lugares;
-o horário precisa ser de agora) — `201 {"numero":"NN-CRM"}`; repetido, `200`
-com o mesmo número:
+As credenciais vêm do gerenciador de segredos para variáveis do shell; nunca
+digitadas na linha nem coladas em chat ou log. Depois:
 
-```bash
-curl -si -X POST "https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host/api/v1/public/loja/pedidos" -H "Origin: https://silmer.com.br" -H "Content-Type: application/json" -H "Idempotency-Key: <uuid>" --data '{"versao":"1","pedido_id":"<uuid>","teste":true,"produto":{"slug":"camisa-masculina-lisa","nome":"Camisa Masculina Lisa Dry Fit"},"item":{"tipo":"Camiseta","publico":"masculino","cor":"Preto","cor_id":"preta","tamanho":"M","tamanho_id":"m","malha":"Dry fit liso de poliéster","gola":"Gola redonda","quantidade":10},"valor_centavos":19364,"pagamento":{"forma":"pix","informado_pelo_cliente_em":"<agora em ISO UTC>"},"retirada":{"local":"Av. Carlos Lindenberg, 800 — Lojas 05 e 06, Glória, Vila Velha - ES"},"cliente":{"nome":"Teste Sintetico","telefone":"5527900000001"}}'
-```
-
-Depois, em Pedidos → "Loja do site": o pedido aparece com os selos "Loja" e
-"Teste", a página está travada e "Baixar ficha" baixa
-`pedido-NN-CRM.html`. O Dashboard não muda (pedido de teste não conta). O
-pedido de teste fica no CRM: não há exclusão.
+- sem `-u` a resposta é `401`; com `"forma":"cartao"` e outro UUID, `422
+PAYMENT_METHOD_UNSUPPORTED`;
+- em Pedidos → "Loja do site", o pedido aparece com "Loja · LJ-…" e "Teste",
+  "Pago — confirmado pela InfinitePay em …" e prazo "10 dias úteis"; a página
+  está travada e "Baixar ficha" baixa `pedido-NN-CRM.html`;
+- abrir o `pedido_url` numa janela anônima leva ao login e, depois dele, ao
+  pedido;
+- o Dashboard não muda (teste não conta). O pedido de teste fica no CRM: não
+  há exclusão.
 
 ## Respostas e diagnóstico
 
-| Resposta                                 | O que olhar                                                                                                         |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `404`                                    | Rota desligada: faltam `STORE_ORDERS_HMAC_KEY` e `STORE_ORDERS_ALLOWED_ORIGINS`.                                    |
-| `403 origem_nao_permitida`               | `Origin` fora de `STORE_ORDERS_ALLOWED_ORIGINS` (domínio novo do site, preview de outro projeto).                   |
-| `400 corpo_invalido`, `versao_invalida`… | O site mudou o contrato v1. Comparar com `pedido-loja.ts` e o OpenAPI (`createStoreOrder`).                         |
-| `409 idempotency_conflict`               | O mesmo `pedido_id` foi reenviado com outro corpo; o site gera outro id quando a pessoa muda os dados.              |
-| `422 valor_divergente` e afins           | Produto, preço, cor ou tamanho do site diferentes de `modules/orders/src/domain/store-catalog.js`. Alinhar os dois. |
-| `422 teste_recusado`                     | `teste: true` num CRM com `STORE_ORDERS_ACCEPT_TEST=false`.                                                         |
-| `422 horario_invalido`                   | Relógio do aparelho muito adiantado ou aviso reenviado depois de 7 dias.                                            |
-| `429 rate_limited`                       | Limite por IP ou por telefone; `Retry-After` diz quando liberar.                                                    |
-| `503 indisponivel`                       | Falha interna; os logs da API trazem só o código do erro, nunca nome, telefone ou IP.                               |
+| Resposta                                               | O que olhar                                                                                                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `404`                                                  | Rota desligada (falta `STORE_ORDERS_HMAC_KEY`) ou a API ainda é a versão anterior.                                                                           |
+| `401`                                                  | Credencial do nó errada. A recusa fica auditada sem o segredo.                                                                                               |
+| `400 INVALID_CORRELATION_ID`                           | `X-Correlation-Id` não é UUID: mandar o `pedido_id`.                                                                                                         |
+| `400 INVALID_IDEMPOTENCY_KEY`                          | `Idempotency-Key` ausente ou diferente do `pedido_id`.                                                                                                       |
+| `400 UNKNOWN_REQUEST_FIELD`, `INVALID_*`               | O nó mudou o corpo. Comparar com o README do n8n e o OpenAPI (`StoreOrderRecord`).                                                                           |
+| `409 STORE_ORDER_CONFLICT`                             | O mesmo `pedido_id` com outros dados (ou outro comprovante), ou um `transaction_nsu` já usado. Ver o pedido existente pelo `LJ-…` antes de qualquer ação.    |
+| `422 STORE_CATALOG_MISMATCH`                           | Produto, cor, tamanho, quantidade, prazo ou valor diferentes de `modules/orders/src/domain/store-catalog.js`. Alinhar site, n8n e CRM; mudar o CRM primeiro. |
+| `422 AMOUNT_BELOW_PRICE`, `PAYMENT_METHOD_UNSUPPORTED` | O `payment_check` aceitou o que o CRM não aceita: conferir o nó de confirmação.                                                                              |
+| `422 TEST_REFUSED`                                     | `teste: true` num CRM com `STORE_ORDERS_ACCEPT_TEST=false`.                                                                                                  |
+| `429 RATE_LIMITED`                                     | Mais de 60 chamadas por minuto; repetir depois do `Retry-After`. Se acontecer sem motivo, procurar um loop no workflow ou credencial vazada.                 |
+| `503 SERVICE_UNAVAILABLE`                              | Falha interna; os logs da API trazem só o código, nunca nome, telefone, NSU ou link.                                                                         |
 
-Mudou produto ou preço no site: mude o catálogo do CRM primeiro, publique e
-só então publique o site.
+Um `4xx` deixa um Pix pago sem pedido: alguém confere na InfinitePay, corrige
+a causa e reenvia a mesma chamada (é idempotente pelo `pedido_id`).
 
-## Conferência no Sicredi
+## Conferência
 
-"Pago" é o que o cliente informou: o QR é estático e nada liga um Pix a um
-pedido. A Rose filtra "Loja do site" em Pedidos e compara cada pedido com o
-extrato do Sicredi (valor R$ 193,64, dia e hora informados). O kit só sai na
-retirada com o Pix conferido. Um aviso sem Pix correspondente continua
-contando como venda: tirar do Vendido exige uma decisão nova (D9). Até lá,
-fale com o cliente pelo telefone do pedido e avise um administrador.
+O pagamento já vem confirmado pela InfinitePay: o pedido guarda valor pago,
+`transaction_nsu`, `invoice_slug` e, quando houver, o link do comprovante. A
+busca da lista acha o pedido por `LJ-…`, número `NN-CRM` ou telefone inteiro.
+Frete, retirada ou qualquer ajuste combinado com o cliente no WhatsApp ficam
+fora do pedido, que é travado; mudar isso exige decisão nova.
 
 ## Rollback
 
-- Desligar a rota: remover `STORE_ORDERS_HMAC_KEY` e
-  `STORE_ORDERS_ALLOWED_ORIGINS` e fazer redeploy. A rota responde `404`, e o
-  site mostra "Não conseguimos registrar agora" com o caminho do WhatsApp.
+- Desligar a rota: remover `STORE_ORDERS_HMAC_KEY` e fazer redeploy. A rota
+  responde `404`; o workflow da loja precisa tratar isso como falha visível.
 - Voltar a imagem da API: a migration é expand e a versão anterior continua
-  lendo os pedidos; os pedidos da loja já criados ficam no banco e voltam a
-  aparecer completos quando a versão nova voltar.
+  lendo os pedidos de atendimento; os pedidos da loja já criados ficam no
+  banco e voltam a aparecer completos quando a versão nova voltar.
 - Nunca apagar `crm.store_order_receipts` nem pedidos da loja: são o lastro da
-  venda e a base dos limites.
+  venda e a chave da idempotência.
 
 ## Privacidade
 
-Nome e telefone ficam só dentro da ficha cifrada do pedido. O recibo guarda
-HMACs do IP e do telefone, nunca os valores. Nenhum dos três vai para log. A
-retenção é a do pedido (documento comercial).
+Nome, telefone e link do comprovante ficam só dentro da ficha cifrada do
+pedido. O recibo guarda o `pedido_id`, o HMAC do telefone e o hash dos dados
+comparados, sem IP nem `Origin`. Nada disso vai para log ou auditoria; a
+auditoria registra ator técnico, pedido, versão e correlação. A retenção é a
+do pedido (documento comercial).

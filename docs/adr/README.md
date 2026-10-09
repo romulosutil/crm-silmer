@@ -51,3 +51,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [025 — Itens por público no pedido](025-itens-por-publico.md)
 - [026 — Imagem, áudio e chat do site no bot](026-midia-e-chat-do-site-no-bot.md)
 - [027 — Venda da loja do site no CRM](027-venda-da-loja-do-site.md)
+- [028 — Pedido pago da loja confirmado pela InfinitePay e registrado pelo n8n](028-pedido-pago-da-loja-pelo-n8n.md)

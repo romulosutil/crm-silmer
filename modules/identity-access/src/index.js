@@ -742,6 +742,7 @@ export {
 export {
   AccessControlError,
   AUTOMATION_ORDER_ACTIONS,
+  AUTOMATION_STORE_ACTIONS,
   CAPABILITIES,
   OPERATIONAL_ACTIONS,
   authorize,

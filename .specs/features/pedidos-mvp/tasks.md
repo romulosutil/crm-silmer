@@ -1796,3 +1796,67 @@ Branch `feat/loja-do-site`, a partir do `master`; segue a T102 (ADR 026).
 - **Aceite:** variáveis, ordem de implantação, URLs e verificação pós-deploy;
   sem deploy nem mudança no n8n sem pedido do PO.
 - **Gate:** `npm run validate`.
+
+## Pedido pago da loja pelo n8n (RFC 016, 09/10/2026)
+
+Mesma branch `feat/loja-do-site`; segue a T109 e supersede parte dela (ADR 028).
+A rota pública nunca foi publicada, então sai sem migração de dados.
+
+### T110: RFC, ADR e regras do pedido pago pelo n8n
+
+- **Requisitos:** LOJ-15–LOJ-25.
+- **Arquivos:** RFC 016, ADR 028, status da ADR 027, índices de ADR e RFC,
+  RULES (21 e técnica 7), spec e tasks.
+- **Aceite:** decisão do PO de 09/10/2026, alternativas (rota pública, rota de
+  automação, WhatsApp por template), impactos nas ADRs 006, 008 e 027.
+- **Gate:** links e formatação.
+
+### T111: Pedido pago no domínio e no banco
+
+- **Requisitos:** LOJ-17–LOJ-21, LOJ-23, LOJ-25.
+- **Arquivos:** migration `0029_store_orders.expand.sql` (ajustada no lugar),
+  `store-catalog.js`, `store-order.js`, serviço, repositórios, contratos e
+  testes; a rota pública e seu runtime saem.
+- **Aceite:** catálogo de R$ 180,00 com prazo por cor, idempotência pelo
+  `pedido_id` com comprovante posterior e conflito, NSU único, recibo sem IP
+  nem `Origin`, busca por `LJ-…` e pelo telefone.
+- **Gate:** testes de domínio, serviço, migrations e PostgreSQL live no CI.
+
+### T112: Rota de automação da loja
+
+- **Requisitos:** LOJ-15–LOJ-20, LOJ-25.
+- **Arquivos:** `store-order-routes.js`, `store-order-runtime.js`,
+  `n8n-routes.js` (exporta a autorização e o problem+json), ação
+  `store.order.record`, servidor, variáveis e testes de rota.
+- **Aceite:** `201`/`200`, `401`, `403`, `409`, `422`, `400`, `503`, URLs de
+  `APP_BASE_URL`, rota desligada sem `STORE_ORDERS_HMAC_KEY`.
+- **Gate:** testes da API, identidade e configuração.
+
+### T113: Leitura, ficha e interface do pedido pago
+
+- **Requisitos:** LOJ-21–LOJ-24.
+- **Arquivos:** `order-runtime.js` (`present`), `ficha-loja-v1.js`,
+  `OrderStoreDetails.vue`, `order-format.js`, `OrderView.vue`,
+  `OrdersView.vue`, `App.vue` e E2E.
+- **Aceite:** "Pago — confirmado pela InfinitePay", valor pago, NSU, prazo,
+  `LJ-…`, "Comprovante InfinitePay", busca por `LJ-…` e retorno ao link
+  profundo depois do login, por teclado.
+- **Gate:** build, typecheck, lint, testes de leitura e impressão e E2E.
+
+### T114: Contrato, integração n8n e runbook
+
+- **Requisitos:** LOJ-15–LOJ-25.
+- **Arquivos:** `docs/api/openapi.v1.yaml`, `docs/integrations/n8n/README.md`,
+  `docs/runbooks/loja-do-site.md`, ARCHITECTURE, TECHNICAL-DESIGN e
+  EASYPANEL-TOPOLOGY.
+- **Aceite:** cabeçalhos exatos e valores que o n8n manda, respostas, ordem de
+  implantação (merge, migration, variáveis, smoke) e o que muda no n8n.
+- **Gate:** teste do OpenAPI e formatação.
+
+### T115: Testes de regressão e revisão integrada
+
+- **Requisitos:** LOJ-15–LOJ-25.
+- **Arquivos:** testes de rota, serviço, PostgreSQL live e E2E da loja.
+- **Aceite:** positivos, negativos e idempotência cobertos; `npm run validate`
+  e `git diff --check` limpos; o que não roda localmente fica registrado.
+- **Gate:** `npm run validate`, E2E e CI.

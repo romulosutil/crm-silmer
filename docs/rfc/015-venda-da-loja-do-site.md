@@ -3,6 +3,10 @@
 Status: decidida pelo PO em 07/10/2026, que seguiu as recomendações D1–D9 da
 seção 7 e acrescentou que o pedido da loja aparece no Dashboard como venda
 normal (seção 3.4); registrada na [ADR 027](../adr/027-venda-da-loja-do-site.md).
+Em 09/10/2026 a loja passou ao Checkout Integrado da InfinitePay: a
+[RFC 016](016-pedido-pago-da-loja-pelo-n8n.md) e a
+[ADR 028](../adr/028-pedido-pago-da-loja-pelo-n8n.md) substituem a rota pública,
+o Pix informado pelo cliente, o preço e a proteção por `Origin` e IP.
 
 Data: 07/10/2026
 

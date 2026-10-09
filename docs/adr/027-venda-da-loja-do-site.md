@@ -1,6 +1,9 @@
 # ADR 027 — Venda da loja do site no CRM
 
-Status: aceita
+Status: aceita; parcialmente supersedida pela
+[ADR 028](028-pedido-pago-da-loja-pelo-n8n.md) em 09/10/2026 nos itens 1 e 2
+(rota pública, contrato v1 do site, sem n8n), 4 (pago informado pelo cliente),
+7 (preço e campos do produto) e 9 (`Origin`, limites por IP e por telefone).
 
 Data: 07/10/2026
 

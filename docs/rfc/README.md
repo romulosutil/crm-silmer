@@ -31,3 +31,8 @@ entre os documentos.
 ## Decisões de 07/10/2026
 
 - [014 — Imagem, áudio e chat do site no bot](014-midia-e-chat-do-site-no-bot.md), decidida na ADR 026.
+- [015 — Venda da loja do site no CRM](015-venda-da-loja-do-site.md), decidida na ADR 027.
+
+## Decisões de 09/10/2026
+
+- [016 — Pedido pago da loja confirmado pelo gateway, via n8n](016-pedido-pago-da-loja-pelo-n8n.md), decidida na ADR 028.

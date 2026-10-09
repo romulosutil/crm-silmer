@@ -51,12 +51,9 @@ const localIdentityEnvironment = {
   IDENTITY_BOOTSTRAP_TOKEN:
     process.env.IDENTITY_BOOTSTRAP_TOKEN ??
     'development-bootstrap-token-local-only',
-  // ADR 027: the site shop's route, open locally to the site's dev server
-  // (`silmer-web`, port 4330) and to its test Pix.
+  // ADR 028: the store orders the local n8n records, test ones included.
   STORE_ORDERS_HMAC_KEY:
     process.env.STORE_ORDERS_HMAC_KEY ?? localSecrets.STORE_ORDERS_HMAC_KEY,
-  STORE_ORDERS_ALLOWED_ORIGINS:
-    process.env.STORE_ORDERS_ALLOWED_ORIGINS ?? 'http://localhost:4330',
   STORE_ORDERS_ACCEPT_TEST: process.env.STORE_ORDERS_ACCEPT_TEST ?? 'true',
 };
 // ADR 023: the order's art files go to the local RustFS of

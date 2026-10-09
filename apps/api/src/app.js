@@ -18,7 +18,6 @@ import { registerIdentityRoutes } from './identity-routes.js';
 import { registerN8nRoutes } from './n8n-routes.js';
 import { registerOperationRoutes } from './operation-routes.js';
 import { registerOrderRoutes } from './order-routes.js';
-import { registerStoreOrderRoutes } from './store-order-routes.js';
 import { WEBHOOK_BODY_LIMIT_BYTES } from './whatsapp-webhook-runtime.js';
 
 export const WEBHOOK_MAX_IN_FLIGHT = 8;
@@ -44,8 +43,7 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   conversations?: any,
  *   handoffs?: any,
  *   operations?: any,
- *   orders?: any,
- *   storeOrders?: import('./store-order-runtime.js').StoreOrderRuntime
+ *   orders?: any
  * }} [runtime]
  */
 export function createApi(options = {}, runtime = {}) {
@@ -241,15 +239,6 @@ export function createApi(options = {}, runtime = {}) {
 
   if (runtime.orders) {
     registerOrderRoutes(api, runtime.orders, (request) => {
-      const context = requests.get(request);
-      if (!context) throw new Error('Missing request context');
-      return context;
-    });
-  }
-
-  // ADR 027: the site shop's public route, off until it is configured.
-  if (runtime.storeOrders) {
-    registerStoreOrderRoutes(api, runtime.storeOrders, (request) => {
       const context = requests.get(request);
       if (!context) throw new Error('Missing request context');
       return context;

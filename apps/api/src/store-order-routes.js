@@ -1,8 +1,14 @@
+import rateLimit from '@fastify/rate-limit';
+
 import { authorizeRequest, sendProblem } from './n8n-routes.js';
 import { STORE_ORDER_ACTION } from './store-order-runtime.js';
 
 export const STORE_ORDERS_PATH = '/api/v1/integrations/n8n/store-orders';
 export const STORE_ORDER_BODY_LIMIT_BYTES = 16 * 1024;
+// A paid checkout is a handful of calls a day; the cap stops a leaked
+// credential or a looping workflow from hammering the authorization and the
+// database, and n8n retries the 429 like any other retryable answer.
+export const STORE_ORDER_REQUESTS_PER_MINUTE = 60;
 
 /**
  * Fastify's own refusals before the handler, in the problem vocabulary.
@@ -41,6 +47,17 @@ function asProblem(error) {
  */
 export function registerStoreOrderRoutes(api, store, contextFor) {
   api.register(async (scope) => {
+    // Checked before the credential, so a flood never reaches the
+    // automation authorization or the database.
+    await scope.register(rateLimit, {
+      errorResponseBuilder: () =>
+        Object.assign(new Error('rate limited'), {
+          code: 'RATE_LIMITED',
+          statusCode: 429,
+        }),
+      global: false,
+    });
+
     scope.setErrorHandler((error, request, reply) => {
       reply.header('cache-control', 'no-store');
       return sendProblem(reply, request, contextFor, asProblem(error));
@@ -48,7 +65,15 @@ export function registerStoreOrderRoutes(api, store, contextFor) {
 
     scope.post(
       STORE_ORDERS_PATH,
-      { bodyLimit: STORE_ORDER_BODY_LIMIT_BYTES },
+      {
+        bodyLimit: STORE_ORDER_BODY_LIMIT_BYTES,
+        config: {
+          rateLimit: {
+            max: STORE_ORDER_REQUESTS_PER_MINUTE,
+            timeWindow: '1 minute',
+          },
+        },
+      },
       async (request, reply) => {
         const technical = await authorizeRequest(
           request,

@@ -23,7 +23,10 @@ jobs:
       contents: read
     services:
       postgres:
-        image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+        # The official image through AWS's public mirror: anonymous pulls
+        # from Docker Hub hit its rate limit on shared runners. The digest
+        # pins the same bytes, so a different image would fail the pull.
+        image: public.ecr.aws/docker/library/postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
         env:
           POSTGRES_DB: crm_silmer_test
           POSTGRES_PASSWORD: issue12-ci-only

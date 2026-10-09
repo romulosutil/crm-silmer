@@ -55,6 +55,8 @@ const localIdentityEnvironment = {
   STORE_ORDERS_HMAC_KEY:
     process.env.STORE_ORDERS_HMAC_KEY ?? localSecrets.STORE_ORDERS_HMAC_KEY,
   STORE_ORDERS_ACCEPT_TEST: process.env.STORE_ORDERS_ACCEPT_TEST ?? 'true',
+  // The order and ficha links the store route answers point here.
+  APP_BASE_URL: process.env.APP_BASE_URL ?? `http://${devHost}:${devPort}`,
 };
 // ADR 023: the order's art files go to the local RustFS of
 // docker-compose.dev.yml unless another S3 endpoint is given.

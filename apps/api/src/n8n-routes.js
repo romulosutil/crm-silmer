@@ -184,8 +184,15 @@ export function registerN8nRoutes(api, integration, contextFor) {
   });
 }
 
-/** @param {import('fastify').FastifyRequest} request @param {Function} contextFor @param {string} action */
-async function authorizeRequest(request, contextFor, action) {
+/**
+ * The technical envelope every n8n route checks: `Idempotency-Key`,
+ * `X-Correlation-Id` equal to the request's correlation, the workflow
+ * identity and the Basic credential of the `AUTOMATION_EXECUTOR` for
+ * `action`. Shared with the site shop's route (ADR 028).
+ *
+ * @param {import('fastify').FastifyRequest} request @param {Function} contextFor @param {string} action
+ */
+export async function authorizeRequest(request, contextFor, action) {
   const context = contextFor(request);
   const idempotencyKey = requireHeader(request, 'idempotency-key', 255);
   const correlationHeader = requireHeader(request, 'x-correlation-id', 128);
@@ -314,8 +321,13 @@ function attachmentLimitFor(mimeType) {
   return MAX_ATTACHMENT_BYTES;
 }
 
-/** @param {import('fastify').FastifyReply} reply @param {import('fastify').FastifyRequest} request @param {Function} contextFor @param {any} error */
-function sendProblem(reply, request, contextFor, error) {
+/**
+ * The closed `application/problem+json` answer of the n8n routes, without
+ * echoing input. Shared with the site shop's route (ADR 028).
+ *
+ * @param {import('fastify').FastifyReply} reply @param {import('fastify').FastifyRequest} request @param {Function} contextFor @param {any} error
+ */
+export function sendProblem(reply, request, contextFor, error) {
   const context = contextFor(request);
   const statusCode = normalizeStatusCode(error);
   const code = normalizeProblemCode(error, statusCode);

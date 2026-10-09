@@ -111,11 +111,13 @@ verify token, limite de corpo e rate limit permanecem no workflow e no proxy.
 O n8n acessa o CRM somente pela API privada e não recebe rota ou credencial para
 `silmer-postgres`.
 
-A única escrita pública sem sessão é o aviso de Pix da loja do site,
-`POST /api/v1/public/loja/pedidos` em `/api/*` do edge
-([ADR 027](docs/adr/027-venda-da-loja-do-site.md)): origem permitida, corpo de
-8 KB, limites por IP e por telefone e auditoria na API. Variáveis e
-verificação no [runbook da loja](docs/runbooks/loja-do-site.md).
+O pedido pago da loja do site também chega pelo n8n: o workflow do checkout
+da InfinitePay chama `POST /api/v1/integrations/n8n/store-orders` com a mesma
+credencial Basic de automação
+([ADR 028](docs/adr/028-pedido-pago-da-loja-pelo-n8n.md)). Não há escrita
+pública sem autenticação. Variáveis (`STORE_ORDERS_HMAC_KEY`,
+`STORE_ORDERS_ACCEPT_TEST`, `APP_BASE_URL`) e verificação no
+[runbook da loja](docs/runbooks/loja-do-site.md).
 
 ### Firewall Hostinger
 
@@ -376,6 +378,8 @@ PIX_KEY_VALUE
 PIX_KEY_DISPLAY_MASKED
 FICHA_RECIPIENT_E164
 FAB_CODE
+STORE_ORDERS_HMAC_KEY
+STORE_ORDERS_ACCEPT_TEST
 N8N_ENCRYPTION_KEY
 N8N_HOST
 N8N_EDITOR_BASE_URL

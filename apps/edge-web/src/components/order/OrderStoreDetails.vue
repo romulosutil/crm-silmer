@@ -5,26 +5,37 @@ import {
   amountLabel,
   audienceLabel,
   dayLabel,
+  leadTimeLabel,
   paymentConditionLabel,
   STORE_ORIGIN_LABEL,
   storePaymentLabel,
+  storeReceiptUrl,
 } from '../../lib/order-format.js';
 
 /**
- * ADR 027 (LOJ-08): what a site shop order holds, read only. The order is
- * born confirmed and locked, so there is nothing to edit: the page shows the
- * same standard fields the simplified ficha prints.
+ * ADRs 027 and 028 (LOJ-22): what a site shop order holds, read only. The
+ * order is born confirmed and locked after InfinitePay confirms the Pix, so
+ * there is nothing to edit: the page shows the same standard fields the
+ * simplified ficha prints, and the receipt link when the gateway gave one.
  */
 const props = defineProps({
   order: { type: Object, required: true },
 });
 
+const receiptUrl = computed(() => storeReceiptUrl(props.order));
+
 const entries = computed(() => {
   const ficha = props.order.ficha ?? {};
   const loja = ficha.loja ?? {};
+  const payment = props.order.gatewayPayment ?? {};
   const item = Array.isArray(ficha.items) ? (ficha.items[0] ?? {}) : {};
   const grade = Array.isArray(item.grade) ? item.grade : [];
   return [
+    {
+      key: 'numero-loja',
+      label: 'Número da loja',
+      value: props.order.storeNumber,
+    },
     { key: 'cliente', label: 'Cliente', value: ficha.summary?.cliente },
     {
       key: 'telefone',
@@ -52,6 +63,11 @@ const entries = computed(() => {
       value: String(props.order.totalPieces ?? ''),
     },
     {
+      key: 'prazo',
+      label: 'Prazo',
+      value: leadTimeLabel(props.order.leadTimeBusinessDays),
+    },
+    {
       key: 'valor',
       label: 'Valor',
       value: amountLabel(props.order.finalAmountCents),
@@ -62,11 +78,20 @@ const entries = computed(() => {
       value: `${paymentConditionLabel(props.order.paymentCondition)} · ${storePaymentLabel(props.order)}`,
     },
     {
+      key: 'valor-pago',
+      label: 'Valor pago',
+      value: amountLabel(payment.paidAmountCents),
+    },
+    {
+      key: 'nsu',
+      label: 'Transação InfinitePay (NSU)',
+      value: payment.transactionNsu,
+    },
+    {
       key: 'data',
       label: 'Data do pedido',
       value: dayLabel(props.order.orderDate),
     },
-    { key: 'retirada', label: 'Retirada na loja', value: loja.retirada },
     { key: 'origem', label: 'Origem', value: STORE_ORIGIN_LABEL },
   ].filter((entry) => typeof entry.value === 'string' && entry.value !== '');
 });
@@ -80,14 +105,23 @@ const entries = computed(() => {
     </div>
     <div class="op-sheet-body">
       <p class="op-hint">
-        O cliente pagou o Pix estático do site e informou o pagamento. O Pix não
-        identifica o pedido: confira o valor no extrato do Sicredi antes de
-        entregar o kit.
+        A InfinitePay confirmou o Pix e o pedido entrou pelo checkout do site. O
+        atendimento depois da compra segue pelo WhatsApp do vendedor.
       </p>
       <dl class="op-service">
         <div v-for="entry in entries" :key="entry.key">
           <dt>{{ entry.label }}</dt>
           <dd>{{ entry.value }}</dd>
+        </div>
+        <div v-if="receiptUrl">
+          <dt>Comprovante</dt>
+          <dd>
+            <a :href="receiptUrl" target="_blank" rel="noopener noreferrer"
+              >Comprovante InfinitePay<span class="sr-only">
+                (abre em nova aba)</span
+              ></a
+            >
+          </dd>
         </div>
       </dl>
     </div>

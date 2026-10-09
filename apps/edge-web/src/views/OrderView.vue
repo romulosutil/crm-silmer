@@ -376,7 +376,10 @@ onBeforeUnmount(() => {
               <OrderIcon :name="isPending ? 'clock' : 'check'" />
               {{ orderStatusLabel(order.status) }}
             </span>
-            <span v-if="isStore" class="badge" data-tone="info">Loja</span>
+            <!-- ADR 028: the shop's number travels with the CRM number. -->
+            <span v-if="isStore" class="badge" data-tone="info">{{
+              order.storeNumber ? `Loja · ${order.storeNumber}` : 'Loja'
+            }}</span>
             <span v-if="order.isTest" class="badge" data-tone="warning"
               >Teste</span
             >

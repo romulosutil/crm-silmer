@@ -22,6 +22,17 @@ async function workflow(options) {
   return createDevTestWorkflow(source, options);
 }
 
+/** The CRM calls carry the workflow identity; Meta media and OpenAI do not. */
+function isCrmRequest(/** @type {Record<string, any>} */ node) {
+  return (
+    node.type === 'n8n-nodes-base.httpRequest' &&
+    (node.parameters.headerParameters?.parameters ?? []).some(
+      (/** @type {Record<string, any>} */ header) =>
+        header.name === 'X-Silmer-Workflow-Key',
+    )
+  );
+}
+
 test('keeps the canonical MVP path while replacing only WhatsApp transport', async () => {
   const dev = await workflow();
   const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
@@ -30,8 +41,17 @@ test('keeps the canonical MVP path while replacing only WhatsApp transport', asy
 
   assert.equal(dev.source.id, DEV_WORKFLOW_ID);
   assert.equal(dev.source.active, false);
-  // 52 canonical nodes plus the DEV triggers and results.
-  assert.ok(nodes.length < 64);
+  // 66 canonical nodes (68 without the public site chat, ADR 026) plus the
+  // DEV triggers and results.
+  assert.ok(nodes.length < 80);
+  assert.equal(names.has('Site - Receber mensagem do chat (MVP)'), false);
+  assert.equal(names.has('Site - Montar evento do chat (MVP)'), false);
+  assert.equal(
+    Object.keys(dev.connections).some((name) =>
+      name.startsWith('Site - Receber'),
+    ),
+    false,
+  );
   assert.equal(
     nodes.some((node) => /whatsApp(?:Trigger)?$/u.test(node.type)),
     false,
@@ -54,7 +74,7 @@ test('isolates workflow identity, webhook paths and persistence settings', async
   const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
   const headers = /** @type {Array<Record<string, any>>} */ (
     nodes
-      .filter((node) => node.type === 'n8n-nodes-base.httpRequest')
+      .filter(isCrmRequest)
       .flatMap((node) => node.parameters.headerParameters.parameters)
   );
   const trigger = nodes.find(
@@ -99,7 +119,7 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   );
   assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
   assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
-  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-14');
+  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-15');
   const result = nodes.find(
     (node) => node.name === 'DEV - Resultado da resposta da IA',
   );
@@ -170,8 +190,15 @@ test('manual chat makes CRM session continuity explicit across reloads', async (
 test('adds only named Basic credential references for deployment output', async () => {
   const dev = await workflow({ deployment: true });
   const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
-  const requests = nodes.filter(
-    (node) => node.type === 'n8n-nodes-base.httpRequest',
+  const requests = nodes.filter(isCrmRequest);
+  // Meta media and OpenAI never get the CRM Basic credential.
+  assert.ok(
+    nodes
+      .filter(
+        (node) =>
+          node.type === 'n8n-nodes-base.httpRequest' && !isCrmRequest(node),
+      )
+      .every((node) => node.credentials?.httpBasicAuth === undefined),
   );
   const panel = nodes.find(
     (node) => node.name === 'Painel - Receber comando (MVP)',
@@ -193,9 +220,7 @@ test('adds only named Basic credential references for deployment output', async 
 test('makes a localhost-only workflow self-contained without exporting credentials', async () => {
   const local = await workflow({ local: true });
   const nodes = /** @type {Array<Record<string, any>>} */ (local.nodes);
-  const requests = nodes.filter(
-    (node) => node.type === 'n8n-nodes-base.httpRequest',
-  );
+  const requests = nodes.filter(isCrmRequest);
   const panel = nodes.find(
     (node) => node.name === 'Painel - Receber comando (MVP)',
   );

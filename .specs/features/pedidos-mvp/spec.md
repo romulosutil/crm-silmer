@@ -892,6 +892,27 @@ quantidade, e aceitou as recomendações D1–D7 da
 | PUB-08 | O workflow `mvp-simple-13` grava a divisão em `audiences`, nunca a pergunta, e vai ao ambiente depois do CRM que aceita o campo.                                                                                                                                                  |
 | PUB-09 | Fichas gravadas antes são lidas com `publico` e `quantidade_informada` vazios; nenhuma migração SQL.                                                                                                                                                                              |
 
+## Imagem, áudio e chat do site (ADR 026, 07/10/2026)
+
+O PO pediu que o workflow principal fique igual ao DEV, leia imagens e áudios
+e atenda no WhatsApp e no chat do site
+([RFC 014](../../../docs/rfc/014-midia-e-chat-do-site-no-bot.md)). O contrato
+com o CRM não muda.
+
+| ID      | Critério de aceite                                                                                                                                                      |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MID-01  | Áudio do WhatsApp ou do site é transcrito e entra no contexto como a mensagem do cliente; as redes de preço, pessoa e pedido do zero leem a transcrição.                |
+| MID-02  | Imagem do WhatsApp ou do site vai anexada ao agente; arte vira `artwork_status` "cliente enviou a arte por imagem", referência vai para `notes`, peça pronta transfere. |
+| MID-03  | Mídia que não pôde ser baixada, preparada ou transcrita chega ao modelo como não lida e o bot pede para o cliente escrever; nunca derruba a execução.                   |
+| MID-04  | Figurinha, localização, contato, reação, aviso de sistema e tipo desconhecido nunca geram `400` no inbound; documento, vídeo e tipo desconhecido transferem.            |
+| MID-05  | O bot não descreve pessoas nem grava dados pessoais que aparecem na imagem.                                                                                             |
+| SITE-01 | O chat do site é público só para as origens do site, aceita imagem e áudio e entra no CRM como identidade `999` + 12 dígitos estável por sessão do navegador.           |
+| SITE-02 | A resposta da IA, o aviso de transferência e o "vendedor vai falar com você" aparecem no chat; a reserva e o `message.sent` usam o mesmo contrato do WhatsApp.          |
+| SITE-03 | No chat, todo aviso de transferência pede o WhatsApp do visitante com DDD em vez de dizer que o atendimento continua ali.                                               |
+| SITE-04 | O painel recusa com `422` mensagem humana para identidade `999`; nada sai para a Meta.                                                                                  |
+| SITE-05 | DEV e LOCAL não publicam o chat público; o chat de teste aceita imagem e áudio.                                                                                         |
+| SITE-06 | O workflow passa a `mvp-simple-14` (DEV `dev-mvp-simple-15`) sem mudança de contrato nem ordem de implantação com o CRM.                                                |
+
 ## Venda da loja do site (ADR 027, 07/10/2026)
 
 O PO pediu que o aviso de Pix da loja do site vire um pedido travado e "Pago"

@@ -4,7 +4,7 @@ import { format } from 'prettier';
 
 export const DEV_WORKFLOW_ID = '0S5ZS1xeDCSoWovs';
 export const DEV_WORKFLOW_NAME = 'DEV | Silmer | Fluxo completo sem WhatsApp';
-export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-14';
+export const DEV_WORKFLOW_VERSION = 'dev-mvp-simple-15';
 export const LOCAL_WORKFLOW_NAME =
   'LOCAL | Silmer | Fluxo completo sem WhatsApp';
 
@@ -20,6 +20,12 @@ const NOTICE_SEND = 'WhatsApp - Enviar aviso de transferência (MVP)';
 const DEV_NOTICE_SEND = 'DEV - Simular aviso de transferência (MVP)';
 const DEV_HUMAN_SEND = 'DEV - Simular envio humano (MVP)';
 const PANEL_TRIGGER = 'Painel - Receber comando (MVP)';
+// ADR 026: the public site chat stays in the canonical workflow; DEV and LOCAL
+// keep their own chat, restricted to the n8n user.
+const SITE_CHAT_NODES = [
+  'Site - Receber mensagem do chat (MVP)',
+  'Site - Montar evento do chat (MVP)',
+];
 const CRM_TO_N8N_CREDENTIAL = 'Silmer CRM para n8n Basic DEV';
 const N8N_TO_CRM_CREDENTIAL = 'Silmer n8n para CRM Basic DEV';
 
@@ -68,7 +74,11 @@ export function createDevTestWorkflow(source, options = {}) {
     saveManualExecutions: false,
   };
 
-  const nodes = workflow.nodes ?? [];
+  workflow.nodes = (workflow.nodes ?? []).filter(
+    (/** @type {Record<string, any>} */ node) =>
+      !SITE_CHAT_NODES.includes(node.name),
+  );
+  const nodes = workflow.nodes;
   const trigger = requiredNode(nodes, MAIN_TRIGGER);
   trigger.name = DEV_TRIGGER;
   trigger.type = 'n8n-nodes-base.webhook';
@@ -102,6 +112,8 @@ export function createDevTestWorkflow(source, options = {}) {
       initialMessages:
         'Teste Silmer: as mensagens passam pelo CRM e pela IA reais; o WhatsApp é simulado. Ao recarregar, o histórico pode sumir da tela, mas a mesma conversa continua no CRM. Para uma conversa independente, use outra sessão do navegador.',
       options: {
+        allowFileUploads: true,
+        allowedFilesMimeTypes: 'image/*,audio/*',
         loadPreviousSession: 'notSupported',
         responseMode: 'lastNode',
         showWelcomeScreen: true,
@@ -119,7 +131,8 @@ export function createDevTestWorkflow(source, options = {}) {
     name: BUILD_SYNTHETIC_EVENT,
     type: 'n8n-nodes-base.code',
     typeVersion: 2,
-    position: [trigger.position[0] + 230, trigger.position[1]],
+    // Between the webhook and the chat trigger, clear of the normalizer it feeds.
+    position: [trigger.position[0] + 120, trigger.position[1] - 150],
     parameters: {
       mode: 'runOnceForEachItem',
       jsCode: `const chatInput = typeof $json.chatInput === 'string' ? $json.chatInput.trim() : '';
@@ -156,12 +169,22 @@ const defaultText = {
   message: 'Preciso de 120 camisetas para um evento.'
 }[scenario] ?? '';
 const text = isChat ? chatInput : String(body.message ?? body.text ?? defaultText).trim();
-if (!text) throw new Error('DEV_MESSAGE_REQUIRED');
+// ADR 026: an image or audio uploaded in the chat goes the way of a WhatsApp file.
+const file = isChat ? Object.values($input.item.binary ?? {})[0] : undefined;
+const mimeType = String(file?.mimeType ?? '').split(';')[0].toLowerCase();
+const fileType = !file ? null : mimeType.startsWith('image/') ? 'image' : mimeType.startsWith('audio/') ? 'audio' : 'document';
+if (!text && !file) throw new Error('DEV_MESSAGE_REQUIRED');
+const message = { from: contactWaId, id: eventId, timestamp: occurredAt, type: 'text', text: { body: text } };
+if (fileType) {
+  delete message.text;
+  message.type = fileType;
+  message[fileType] = { id: eventId + '-file', mime_type: mimeType, ...(text ? { caption: text } : {}) };
+}
 return { json: { __dev_input: { source: isChat ? 'chat' : 'webhook', scenario }, entry: [{ changes: [{ value: {
   metadata: { phone_number_id: phoneNumberId },
   contacts: [{ profile: { name: String(body.customer_name ?? (isChat ? 'Cliente Chat DEV' : 'Cliente de teste')) }, wa_id: contactWaId }],
-  messages: [{ from: contactWaId, id: eventId, timestamp: occurredAt, type: 'text', text: { body: text } }]
-} }] }] } };`,
+  messages: [message]
+} }] }] }, ...(file ? { binary: { data: file } } : {}) };`,
     },
   };
   nodes.push(buildSyntheticEvent);
@@ -188,7 +211,8 @@ return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-hu
   );
 
   for (const node of nodes) {
-    if (node.type === 'n8n-nodes-base.httpRequest') {
+    // Only the CRM calls change; Meta media and OpenAI keep their own accounts.
+    if (isCrmRequest(node)) {
       rewriteWorkflowHeaders(node);
       if (options.deployment) {
         node.credentials = {
@@ -225,7 +249,7 @@ return { json: { id: 'dev-human-' + command.command_id, messages: [{ id: 'dev-hu
   nodes.push(
     resultNode(
       'DEV - Resultado da resposta da IA',
-      [1350, -700],
+      [1910, -690],
       `const decision = $('Normalizar decisão da IA (MVP)').item.json;
 const input = $('${BUILD_SYNTHETIC_EVENT}').item.json.__dev_input ?? {};
 // ADR 014: whether the workflow asked to open the order and what the CRM answered.
@@ -248,7 +272,7 @@ return { json: { ok: true, scenario: input.scenario ?? 'handoff', route: 'handof
     ),
     resultNode(
       'DEV - Resultado do envio desconhecido',
-      [1350, -420],
+      [1910, -500],
       `const input = $('${BUILD_SYNTHETIC_EVENT}').item.json.__dev_input ?? {};
 const reply = $('Normalizar decisão da IA (MVP)').item.json.reply_text ?? 'O envio simulado ficou pendente de reconciliação.';
 return { json: { ok: true, scenario: input.scenario ?? 'send_unknown', route: 'send_unknown', whatsapp_simulated: true, output: reply, crm: $json } };`,
@@ -289,6 +313,7 @@ return { json: { ok: true, route: 'no_action', whatsapp_simulated: true, convers
           '- Chat: usa uma identidade sintética por sessionId. Recarregar pode ocultar o histórico visual sem trocar o sessionId; use outra sessão do navegador para isolar uma nova conversa.\n' +
           '- CRM real: inbound, briefing, handoff, reserva e callbacks.\n' +
           '- IA real: mesma decisão estruturada do MVP.\n' +
+          '- Mídia: o chat aceita imagem e áudio; a IA vê a imagem e lê o áudio transcrito.\n' +
           '- Pré-ficha: cada mensagem atualiza os campos confirmados e a IA pergunta pelo próximo dado pendente.\n' +
           '- Saída WhatsApp: simulada, com `message.sent` persistido no CRM.\n' +
           '- `simulate_send_unknown: true` exercita reconciliação.\n\n' +
@@ -302,9 +327,22 @@ return { json: { ok: true, route: 'no_action', whatsapp_simulated: true, convers
     },
   );
 
-  workflow.connections = rewriteConnections(workflow.connections ?? {});
+  const connections = { ...(workflow.connections ?? {}) };
+  for (const name of SITE_CHAT_NODES) delete connections[name];
+  workflow.connections = rewriteConnections(connections);
   workflow.nodeGroups = workflow.nodeGroups ?? [];
   return workflow;
+}
+
+/** @param {Record<string, any>} node */
+function isCrmRequest(node) {
+  return (
+    node.type === 'n8n-nodes-base.httpRequest' &&
+    (node.parameters?.headerParameters?.parameters ?? []).some(
+      (/** @type {Record<string, any>} */ header) =>
+        header.name === 'X-Silmer-Workflow-Key',
+    )
+  );
 }
 
 /** @param {Record<string, any>} node */

@@ -1717,11 +1717,20 @@ commit e um push.
   ordem de implantação no runbook.
 - **Gate:** testes de contrato do workflow.
 
+### T102: Imagem, áudio e chat do site no workflow
+
+- **Requisitos:** MID-01–MID-05, SITE-01–SITE-06.
+- **Arquivos:** SDK do workflow, render, gerador DEV/LOCAL, snapshots,
+  testes, README da integração, RFC 014 e ADR 026.
+- **Aceite:** imagem anexada ao agente, áudio transcrito, mídia não lida sem
+  derrubar a execução, tipos do WhatsApp mapeados, chat público com
+  identidade `999`, avisos que pedem o WhatsApp no chat e recusa `422` no
+  painel.
+- **Gate:** testes de contrato do workflow e `test/n8n-media-site-chat.test.js`.
+
 ## Venda da loja do site (RFC 015, 07/10/2026)
 
-Branch `feat/loja-do-site`, a partir do `master`. A T102 pertence à branch
-`feat/n8n-midia-e-chat-do-site` (ADR 026); esta seção começa na T103 para não
-colidir com ela.
+Branch `feat/loja-do-site`, a partir do `master`; segue a T102 (ADR 026).
 
 ### T103: RFC da venda da loja do site
 

@@ -84,9 +84,35 @@ primeiro dos seus pontos ou um campo que ele só grava, em geral o produto
 (ADR 014); oficial é o Pedido `confirmado`, e a confirmação permanece humana
 (ADR 006).
 
-Esta entrega ativa somente WhatsApp. Instagram, leitura multimodal pela IA e
-novas telas ficam nas fases posteriores. O adapter direto Meta → CRM permanece
-apenas como fixture de desenvolvimento e nunca é fallback silencioso.
+O bot atende no WhatsApp e no chat do site e lê imagens e áudios
+([ADR 026](../../adr/026-midia-e-chat-do-site-no-bot.md)); Instagram fica nas
+fases posteriores. O adapter direto Meta → CRM permanece apenas como fixture
+de desenvolvimento e nunca é fallback silencioso.
+
+## Imagem, áudio e chat do site (ADR 026)
+
+- **Imagem** (até 5 MB) vai anexada ao agente. **Áudio** (até 16 MB) é
+  transcrito pela mesma conta OpenAI (`gpt-4o-mini-transcribe`) e entra como
+  a mensagem do cliente. No WhatsApp, os nós `WhatsApp - Consultar mídia` e
+  `WhatsApp - Baixar mídia` usam a credencial WhatsApp na Graph API `v23.0`
+  (fixa no nó, porque o n8n 2 bloqueia `$env` nos nós por padrão); no site, o
+  arquivo já chega com a mensagem.
+- O que não pode ser consultado, baixado, preparado ou transcrito (por exemplo
+  áudio AAC ou AMR) chega ao modelo como "não consegui abrir", e o bot pede
+  para o cliente escrever. Documento, vídeo e tipo desconhecido transferem.
+- Figurinha é guardada como imagem e não vai ao modelo; localização e contato
+  viram texto; reação e avisos de sistema são ignorados.
+- **Chat do site:** `Site - Receber mensagem do chat (MVP)` é um Chat Trigger
+  público em modo `webhook`, só para `https://silmer.com.br` e
+  `https://www.silmer.com.br`, com upload de imagem e áudio. O widget
+  `@n8n/chat` do site usa a URL de produção desse nó
+  (`/webhook/<webhookId>/chat`); o `webhookId` não muda numa atualização do
+  workflow. Cada sessão do navegador vira a identidade `999` + 12 dígitos
+  ("Visitante do site"), que nunca é um número real.
+- No chat, a resposta, o aviso e o "um vendedor vai falar com você pelo
+  WhatsApp" voltam no próprio widget (`responseMode: lastNode`). Como o
+  vendedor não responde dentro do chat, o aviso pede o WhatsApp do visitante,
+  e o painel recusa com `422` uma mensagem humana para um número `999`.
 
 ## Entidades que o fluxo cria ou altera
 
@@ -117,7 +143,8 @@ Os três endpoints usam `Authorization: Basic`, `Idempotency-Key`,
    `automation_epoch`, modo, mensagens recentes e briefing.
 2. `POST /api/v1/integrations/n8n/conversations/{id}/attachments`
    recebe uma mídia por streaming, valida tamanho, hash, MIME e malware e só a
-   vincula depois da quarentena. A IA multimodal fica diferida.
+   vincula depois da quarentena. O workflow ainda não envia a mídia por este
+   endpoint: a IA a lê direto da Meta ou do chat (ADR 026).
 3. `POST /api/v1/integrations/n8n/events`
    recebe reserva de envio, callbacks de entrega, handoff, abertura do Pedido
    pendente (`open_order` na reserva ou no handoff) e falha do workflow.
@@ -329,6 +356,14 @@ WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos po
   da variável `SILMER_PILOT_SELLERS` do n8n, separados por vírgula, e conta o
   teto pelas mensagens do cliente. Os nomes não entram no repositório.
 - São necessárias duas credenciais Basic distintas: n8n → CRM e CRM → n8n.
+- O n8n 2 bloqueia `$env` nos nós por padrão (`N8N_BLOCK_ENV_ACCESS_IN_NODE`).
+  Na implantação, o DEV e o principal gravam a URL do cloud-dev
+  (`https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host`) direto nos
+  nós do CRM; o snapshot do repositório mantém `$env.SILMER_PANEL_BASE_URL`.
+  Troque a URL nos nós quando o CRM definitivo tiver domínio. Pelo mesmo
+  motivo, o principal implantado grava no nó `WhatsApp - Enviar texto humano
+(MVP)` o ID do número de origem (o da conta Silmer no WhatsApp Manager), no
+  lugar de `$env.SILMER_WHATSAPP_PHONE_NUMBER_ID`.
 - Segredos não entram em export, repositório, log, chat ou Data Table.
 - Persistência de execuções manuais/sucesso e progresso deve ficar desabilitada;
   falhas são sanitizadas e têm expurgo técnico em até 30 dias.
@@ -383,7 +418,9 @@ O CRM que aceita `audiences` no `briefing_patch` e lê a divisão por público
 (ADR 025) vai ao ambiente **antes** do workflow `mvp-simple-13` (DEV
 `dev-mvp-simple-14`), que envia o campo; um CRM antigo recusa a chave com
 `400`, e a resposta do bot não sai. O workflow anterior continua funcionando
-com o CRM novo.
+com o CRM novo. O workflow `mvp-simple-14` (DEV `dev-mvp-simple-15`, ADR 026)
+não muda o contrato e não tem ordem de implantação: imagem, áudio, documento,
+vídeo e texto já eram tipos aceitos.
 
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker e configurar as duas credenciais Basic.
@@ -407,6 +444,11 @@ incertos para reconciliação. A rota direta não é reativada automaticamente.
   [runbook do ator técnico](../../runbooks/automation-executor.md).
 - mídia em quarentena/indisponível: abrir handoff e não afirmar que os bytes
   foram recuperados.
+- bot pedindo para o cliente escrever depois de um áudio ou imagem: a mídia
+  não foi lida; ver o erro em `WhatsApp - Consultar mídia`, `Baixar mídia`,
+  `Preparar mídia para a IA` ou `OpenAI - Transcrever áudio`.
+- `422 site_chat_contact_has_no_whatsapp` no comando humano: a conversa é do
+  chat do site; responder no WhatsApp que o visitante deixou.
 
 As próximas telas e a ordem de entrega estão em
 [`docs/roadmap/PROXIMAS-FASES.md`](../../roadmap/PROXIMAS-FASES.md).

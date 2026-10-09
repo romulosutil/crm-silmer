@@ -1860,3 +1860,13 @@ A rota pública nunca foi publicada, então sai sem migração de dados.
 - **Aceite:** positivos, negativos e idempotência cobertos; `npm run validate`
   e `git diff --check` limpos; o que não roda localmente fica registrado.
 - **Gate:** `npm run validate`, E2E e CI.
+- **Verificação (09/10/2026):** os testes entraram com cada tarefa (T111–T114),
+  para cada commit ficar verde. Local (Windows, sem Docker): `npm run validate`
+  (745 testes, 3 live pulados sem `TEST_DATABASE_URL`) e `npx playwright test`
+  (118 passaram, 7 pulados) limpos. PostgreSQL live só no CI, que tem banco: no
+  run do commit `76d0197` (`Lint, tests, E2E and dependencies`) os seis testes
+  de `store-orders-postgres-live.test.js` passaram — migration `0029` real,
+  CHECKs, NSU único, comprovante posterior e chamadas concorrentes com um só
+  número. Os jobs de imagem falharam ao baixar `moby/buildkit` do Docker Hub
+  (limite/tempo do registro), sem relação com o código. Nada foi aplicado em
+  banco do cloud-dev nem publicado no n8n.

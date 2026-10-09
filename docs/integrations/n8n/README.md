@@ -354,7 +354,7 @@ No cloud-dev, `{CRM}` é
 | `Idempotency-Key`           | O `pedido_id`, exatamente o mesmo texto do corpo.                                                                                                              |
 | `X-Correlation-Id`          | O `pedido_id` também. Precisa ser um UUID (ou de 16 a 64 hexadecimais); um texto qualquer, como o id numérico da execução, volta `400 INVALID_CORRELATION_ID`. |
 | `X-Silmer-Workflow-Key`     | `silmer-loja-checkout-infinitepay` (texto fixo, até 128 caracteres, sem espaço nas pontas).                                                                    |
-| `X-Silmer-Workflow-Version` | Versão do workflow, até 64 caracteres; por exemplo `{{ $workflow.versionId }}` ou um rótulo fixo como `loja-checkout-1`.                                       |
+| `X-Silmer-Workflow-Version` | Rótulo fixo da versão do workflow, até 64 caracteres, como `loja-checkout-1`; troque a cada versão publicada.                                                  |
 | `X-Silmer-Execution-Id`     | `{{ $execution.id }}` (até 128 caracteres).                                                                                                                    |
 
 Corpo (JSON até 16 KB; todas as chaves obrigatórias, nenhuma outra aceita):

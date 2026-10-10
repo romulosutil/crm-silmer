@@ -24,6 +24,8 @@ import {
 } from '../lib/order-format.js';
 
 const LIVE_REFRESH_DELAY_MS = 250;
+// ADR 031: long enough for the print tab's request to reach the API.
+const PRINT_REFRESH_DELAY_MS = 2000;
 const SEARCH_DELAY_MS = 300;
 const PAGE_SIZE = 25;
 
@@ -59,6 +61,7 @@ const errorMode = ref('');
 const now = ref(new Date());
 let controller;
 let refreshTimer = 0;
+let printRefreshTimer = 0;
 let searchTimer = 0;
 let clockTimer = 0;
 
@@ -219,6 +222,15 @@ function print(order) {
     '_blank',
     'noopener',
   );
+  // ADR 031: the API records the first print of a new site order while the
+  // tab opens; one silent re-read clears "Ficha não impressa" even without
+  // the live stream. No polling.
+  if (!storeFichaPending(order)) return;
+  if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
+  printRefreshTimer = globalThis.setTimeout(() => {
+    printRefreshTimer = 0;
+    void load(true);
+  }, PRINT_REFRESH_DELAY_MS);
 }
 
 /** @param {string} value */
@@ -270,6 +282,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   controller?.abort();
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
+  if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
   if (searchTimer) globalThis.clearTimeout(searchTimer);
   if (clockTimer) globalThis.clearInterval(clockTimer);
 });

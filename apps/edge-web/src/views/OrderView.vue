@@ -30,6 +30,8 @@ import {
 } from '../lib/order-format.js';
 
 const LIVE_REFRESH_DELAY_MS = 250;
+// ADR 031: long enough for the print tab's request to reach the API.
+const PRINT_REFRESH_DELAY_MS = 2000;
 
 const props = defineProps({
   fromConversationId: { type: String, default: '' },
@@ -52,6 +54,7 @@ const editingSection = ref('');
 const editRequest = ref(null);
 let controller;
 let refreshTimer = 0;
+let printRefreshTimer = 0;
 let pendingLiveRefresh = false;
 let headingAnnounced = false;
 
@@ -206,6 +209,20 @@ const downloadUrl = computed(
   () => `/api/v1/orders/${encodeURIComponent(props.orderId)}/print?download=1`,
 );
 
+/**
+ * ADR 031: the first print of a new site order is recorded by the API while
+ * the tab opens. One silent re-read a moment later clears "Ficha não
+ * impressa" even when the live stream is down; no polling.
+ */
+function refreshAfterFirstPrint() {
+  if (!storeFichaPending(order.value)) return;
+  if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
+  printRefreshTimer = globalThis.setTimeout(() => {
+    printRefreshTimer = 0;
+    if (editingSection.value === '') void load(true);
+  }, PRINT_REFRESH_DELAY_MS);
+}
+
 /** PIM-02: the API renders the approved document; the browser prints it. */
 function print() {
   globalThis.open(
@@ -213,6 +230,7 @@ function print() {
     '_blank',
     'noopener',
   );
+  refreshAfterFirstPrint();
 }
 
 provide('orderEditing', {
@@ -328,6 +346,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   controller?.abort();
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
+  if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
 });
 </script>
 
@@ -406,6 +425,7 @@ onBeforeUnmount(() => {
             class="button-link"
             :href="downloadUrl"
             :download="`pedido-${order.number}.html`"
+            @click="refreshAfterFirstPrint"
           >
             <OrderIcon name="download" />Baixar ficha
           </a>

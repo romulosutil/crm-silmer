@@ -73,6 +73,18 @@ matriz de browsers e recovery. São propostas, sem alegar aprovação do usuári
   no código atual, sem gerar nem versionar grafo.
 - Não há .specs/STATE.md anterior nem lessons confirmadas no projeto.
 
+## Desempenho da validação — T28
+
+UAT de10/10 identificou espera24,20–28,86s em quatro uploads sem retry; fila
+0,55–0,96s, execução23,66–28,11s. Carregar clamscan para arquivo especial
+sintético demorou10,31s, exit2: prova de overhead, não scan limpo. Handler
+repete validação antes prepare/PUT dos mesmos bytes. T28 elimina somente
+repetição na mesma tentativa, preservando scanner/freshness, saída normalizada,
+hash no streaming/HEAD e validação completa em retries. Sem nova infraestrutura.
+Provas sem conteúdo pessoal em var/media-latency-safe-proof.json e
+var/media-clamscan-baseline-proof.json. Metadados não permitem atribuir tempo
+exato a cada scan histórico; medir novamente no worker construído e Browser.
+
 ## Deferred Ideas
 
 Receptor DEV separado, câmera, múltiplos anexos, PDF, IA multimodal, upload

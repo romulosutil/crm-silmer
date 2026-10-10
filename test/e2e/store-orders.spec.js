@@ -612,3 +612,60 @@ test('LOJ-34: the page of a new site order says its ficha waits; printed, it nam
     'success',
   );
 });
+
+test('ADR 031: after "Imprimir ficha" one re-read clears the badge without a live event', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const orders = [{ ...newStoreOrder }];
+  await mockStore(page, { orders });
+  await page.goto('/pedidos');
+  const confirmed = page.getByRole('region', { name: /Confirmados/u });
+  const row = confirmed.getByRole('row').filter({ hasText: '13-CRM' });
+  await expect(
+    row.getByText('Ficha não impressa', { exact: true }),
+  ).toBeVisible();
+
+  // The API records the first print while the tab opens; no event arrives.
+  orders[0] = {
+    ...newStoreOrder,
+    fichaFirstPrintedAt: '2026-10-08T12:12:00.000Z',
+    fichaFirstPrintedBy: { id: 'admin-rose', name: 'Rose Sintética' },
+    version: 2,
+  };
+  await row.getByRole('button', { name: 'Imprimir ficha' }).click();
+  await expect(
+    row.getByText('Ficha não impressa', { exact: true }),
+  ).toHaveCount(0, { timeout: 8000 });
+  await expect(row).toContainText('Ficha impressa por Rose Sintética');
+});
+
+test('ADR 031: on the order page, "Abrir ficha" re-reads the order once and the badge goes', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const orders = [{ ...newStoreOrder }];
+  await mockStore(page, { orders });
+  await page.goto('/pedidos/order-loja-nova');
+  const head = page.locator('.op-head');
+  await expect(
+    head.getByText('Ficha não impressa', { exact: true }),
+  ).toBeVisible();
+
+  orders[0] = {
+    ...newStoreOrder,
+    fichaFirstPrintedAt: '2026-10-08T12:12:00.000Z',
+    fichaFirstPrintedBy: { id: 'admin-rose', name: 'Rose Sintética' },
+    version: 2,
+  };
+  await page
+    .getByRole('region', { name: 'Fechamento e pagamento' })
+    .getByRole('button', { name: 'Abrir ficha' })
+    .click();
+  await expect(
+    head.getByText('Ficha não impressa', { exact: true }),
+  ).toHaveCount(0, { timeout: 8000 });
+  await expect(page.locator('.op-ficha-status')).toHaveText(
+    'Ficha impressa por Rose Sintética · 08/10/2026, 09:12',
+  );
+});

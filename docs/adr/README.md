@@ -55,3 +55,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 
 - [029 — Mídia do chat no RustFS](029-midia-do-chat-no-rustfs.md); supersede a numeração colidente da decisão original, preservada no histórico.
 - [030 — Antivírus persistente no worker](030-antivirus-persistente-no-worker.md), motor clamd no worker existente com socket Unix privado.
+- [031 — Aviso de pedido novo do site até a primeira impressão da ficha](031-aviso-de-pedido-novo-do-site.md); supersede em parte a ADR 028 (item 9).

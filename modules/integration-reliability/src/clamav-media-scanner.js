@@ -10,9 +10,11 @@ const SIGNATURE_FILES = Object.freeze([
 ]);
 
 /**
- * Fail-closed adapter for the ClamAV and libmagic binaries installed in the
- * runtime image. Command output is never returned or logged because it may
- * contain the private temporary path.
+ * Fail-closed adapter for the persistent ClamAV daemon and libmagic installed
+ * in the runtime image. The daemon config selects a private Unix socket;
+ * descriptor passing avoids exposing a TCP listener or reloading signatures
+ * per file. Command output is never returned or logged because it may contain
+ * the private temporary path.
  */
 export class ClamAvMediaScanner {
   /** @param {{execFileImpl?: Function, signatureFiles?: string[], signatureFreshnessFile?: string}} [options] */
@@ -31,13 +33,27 @@ export class ClamAvMediaScanner {
 
   /** @param {string} path @param {AbortSignal} [signal] */
   async scan(path, signal) {
+    // A scan overlapping a daemon reload must never borrow the new freshness
+    // marker after scanning with the previous signature database.
+    const signatureUpdatedAt = await confirmedSignatureTimestamp(
+      this.signatureFiles,
+      this.signatureFreshnessFile,
+    );
     let clean = true;
     try {
       await this.execFile(
-        'clamscan',
-        ['--no-summary', '--infected', '--', path],
+        'clamdscan',
+        [
+          '--fdpass',
+          '--config-file=/app/clamd.conf',
+          '--no-summary',
+          '--infected',
+          '--',
+          path,
+        ],
         {
           timeout: 60_000,
+          maxBuffer: 65_536,
           ...(signal ? { signal } : {}),
           windowsHide: true,
         },
@@ -63,10 +79,7 @@ export class ClamAvMediaScanner {
     return Object.freeze({
       clean,
       detectedMimeType,
-      signatureUpdatedAt: await confirmedSignatureTimestamp(
-        this.signatureFiles,
-        this.signatureFreshnessFile,
-      ),
+      signatureUpdatedAt,
     });
   }
 }

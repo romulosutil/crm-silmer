@@ -54,3 +54,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [028 — Pedido pago da loja confirmado pela InfinitePay e registrado pelo n8n](028-pedido-pago-da-loja-pelo-n8n.md)
 
 - [029 — Mídia do chat no RustFS](029-midia-do-chat-no-rustfs.md); supersede a numeração colidente da decisão original, preservada no histórico.
+- [030 — Antivírus persistente no worker](030-antivirus-persistente-no-worker.md), motor clamd no worker existente com socket Unix privado.

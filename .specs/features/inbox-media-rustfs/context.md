@@ -87,6 +87,12 @@ exato a cada scan histórico; medir novamente no worker construído e Browser.
 
 ## Deferred Ideas
 
+T29 foi autorizada explicitamente em 10/10/2026: «vamos usar clamd então».
+O antivírus permanece obrigatório; remover a inspeção não foi escolhido.
+O daemon permanece no worker atual. A medição por etapa encontrou 9.326 ms
+de scan por `clamscan` para uma PNG sintética de 117 bytes, contra 3 ms de
+MIME e 84 ms de ffprobe. Comparação após troca deve usar o mesmo arquivo.
+
 Receptor DEV separado, câmera, múltiplos anexos, PDF, IA multimodal, upload
 de arte do Pedido e política futura de retenção são entregas independentes.
 

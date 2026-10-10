@@ -1,5 +1,50 @@
 # Execução INBOX-MEDIA-1
 
+## T29: Clamd persistente no worker
+
+Usuário autorizou clamd em10/10. Premissas: Docker local, worker existente,
+1CPU/2GiB e contratos MED-06/14/26/30 preservados. Fronteiras alteradas:
+scanner, daemon/supervisão, atualização de assinaturas, composição worker,
+health, Docker/config, seus testes/helper e registros da entrega.
+Resultado esperado: motor carregado uma vez por ciclo, menor espera pela
+tela, malware/indisponibilidade/stale ainda bloqueados e marcador coerente.
+
+O scan agora usa clamdscan/fdpass no socket privado, com data capturada antes
+da execução. A atualização encerra o motor anterior, aguarda o novo e publica
+o marcador. Health exige PONG. Queda recupera sob supervisão; SIGTERM encerra
+os serviços e o daemon. Texto inicia antes do motor/CDN. Sem alteração de SQL,
+API de mídia, frontend, n8n, storage, ACL, quota, idempotência ou retenção.
+
+Gates: 13checks+build0; fullunit996total/993pass/zero fail/três skips antigos;
+scanner/normalizador Linux reais2/2PASS, seis formatos, EICAR, MIME/codec,
+gravação Chromium e limites300/301s. Scan final7/10ms vs9326ms anterior;
+validação completa82/86ms. Pela tela quatro uploads prontos em1116–1163ms,
+seguidos de sent/attached/completed, uma reserva/uma tentativa DEV15 cada.
+Paridade byte a byte da imagem final confirmada após detectar e corrigir
+imagem inicial anterior ao último import de timers. Nenhum bypass foi usado.
+
+Ensaio de indisponibilidade: scan rejeitado scanner_unavailable, health1,
+recuperação11271ms e health0. A primeira asserção do helper ignorado esperava
+processing_failed; foi corrigida para o contrato existente scanner_unavailable.
+Fonte da aplicação permaneceu igual. Pico1209327616bytes, abaixo2GiB.
+
+Matriz de adequação:
+
+| Critério | Teste / resultado | Necessidade |
+| --- | --- | --- |
+| MED-26: vírus e transporte | clamav-media-scanner.test.js:127 e :144, cleanfalse e rejeição | Obrigatória; não substituir por sucesso de chamada |
+| MED-26: freshness coerente | clamav-signature-refresh.test.js:154 e :158, erro preserva marcador | Obrigatória; motor confirmado antes de atualização |
+| MED-14: duas inspeções | recorded-audio-normalizer.test.js:119, saída Opus mono e duas validações | Regressão da normalização existente |
+| T29: health/recuperação | clamav-daemon.test.js:26 e :151; smoke real health1→0 e novo scan | Critério explícito de operação |
+| MED-30: pronto e envio explícito | navegador1116–1163ms e quatro callbacks sent | Confirma o resultado percebido pelo vendedor |
+
+A relação inversa de cada asserção com seu requisito está no relatório
+independente [validation-clamd.md](validation-clamd.md). Tests seguem AGENTS.md
+e CONTRIBUTING.md. Não houve exclusão/skip novo nem enfraquecimento de teste;
+expectativas clamscan foram migradas para o transporte clamdscan autorizado.
+Revisão independente e sensor3/3 integram o fechamento desta tarefa.
+T24/microfone físico, privacidade operacional, Meta e recovery externo pendem.
+
 ## T28: Validação sem repetição na mesma tentativa
 
 UAT reportou demora, com envio já funcional. Medição sanitizada de quatro uploads

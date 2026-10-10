@@ -9,17 +9,20 @@ export class ClamAvSignatureRefresh {
   #execute;
   #marker;
   #onFailure;
+  #onUpdated;
   #generation = 0;
   /** @type {Promise<void>|undefined} */ #starting;
-  /** @param {{execFileImpl?: Function,markerPath?: string,onFailure?: () => void}} [options] */
+  /** @param {{execFileImpl?: Function,markerPath?: string,onFailure?: () => void,onUpdated?: () => Promise<void>}} [options] */
   constructor({
     execFileImpl = execute,
     markerPath = '/var/lib/clamav/.freshclam-verified',
     onFailure = () => {},
+    onUpdated = async () => {},
   } = {}) {
     this.#execute = execFileImpl;
     this.#marker = markerPath;
     this.#onFailure = onFailure;
+    this.#onUpdated = onUpdated;
     this.intervalMs = 24 * 3600000;
     /** @type {Promise<void>|undefined} */ this.inFlight = undefined;
     /** @type {NodeJS.Timeout|undefined} */ this.timer = undefined;
@@ -34,6 +37,8 @@ export class ClamAvSignatureRefresh {
           ['--config-file=/app/freshclam.conf', '--stdout'],
           { timeout: 180000, maxBuffer: 65536, windowsHide: true },
         );
+        // A freshness timestamp describes the engine actually serving scans.
+        await this.#onUpdated();
         await writeFile(temporary, new Date().toISOString(), {
           mode: 0o600,
           flag: 'wx',

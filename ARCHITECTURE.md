@@ -88,8 +88,11 @@ ativação e recovery remotos permanecem gates independentes em
 [INBOX-MEDIA-1](.specs/features/inbox-media-rustfs/tasks.md).
 
 O envio só é liberado após validação de conteúdo e antivírus com definições
-vigentes; indisponibilidade temporária preserva o rascunho sem autorizar
-envio. Evidência sintética no chat DEV não homologa microfone físico nem
+vigentes. O motor `clamd` permanece no worker e recebe arquivos por socket
+Unix privado, conforme [ADR 030](docs/adr/030-antivirus-persistente-no-worker.md).
+Sua atualização confirma o novo motor antes de publicar freshness. Indisponibilidade
+temporária preserva o rascunho sem autorizar envio.
+Evidência sintética no chat DEV não homologa microfone físico nem
 WhatsApp. A minimização e o expurgo dos dados de execução n8n identificados
 na revisão de privacidade permanecem um gate de produção.
 

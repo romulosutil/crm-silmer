@@ -190,7 +190,12 @@ no [plano INBOX-MEDIA-1](.specs/features/inbox-media-rustfs/design.md). O storag
 R2 futuro não é dependência dessa entrega; backup externo/restore têm gate próprio.
 
 O pipeline falha fechado: scan e definições vigentes precedem `ready` e
-envio. Recuperar validação temporariamente indisponível reutiliza a mesma
+envio. O worker supervisiona um `clamd` persistente, com socket Unix privado
+e health por PING. `clamdscan --fdpass` conserva limites e rejeição de malware.
+Freshclam reinicia o motor sem carregamento concorrente; o marcador só muda
+após readiness. Cada scan conserva a freshness anterior à execução
+([ADR 030](docs/adr/030-antivirus-persistente-no-worker.md)).
+Recuperar validação temporariamente indisponível reutiliza a mesma
 mídia, sem upload ou envio automático. Testes sintéticos DEV não substituem
 captura com microfone físico (T24) nem homologação WhatsApp. Persistência de
 dados de execução n8n continua condicionada à minimização e ao expurgo

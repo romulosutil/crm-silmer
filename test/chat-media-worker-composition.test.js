@@ -132,3 +132,42 @@ test('T6 refresh concurrent starts share download and stop cannot resurrect time
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('T29 media waits for the local engine while text delivery starts first', async () => {
+  /** @type {string[]} */ const events = [];
+  await startWorkerServices({
+    commandWorker: {
+      async start() {
+        events.push('text');
+      },
+    },
+    scannerDaemon: {
+      async start() {
+        events.push('engine-ready');
+      },
+    },
+    mediaWorker: {
+      async start() {
+        events.push('legacy');
+      },
+    },
+    chatMediaWorker: {
+      async start() {
+        events.push('chat');
+      },
+    },
+    retentionScheduler: { async start() {} },
+    signatureRefresh: {
+      async start() {
+        events.push('refresh');
+      },
+    },
+  });
+  assert.deepEqual(events, [
+    'text',
+    'engine-ready',
+    'legacy',
+    'chat',
+    'refresh',
+  ]);
+});

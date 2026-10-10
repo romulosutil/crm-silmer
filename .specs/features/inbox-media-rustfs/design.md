@@ -431,6 +431,18 @@ Sem comprovação, registrar gate pendente e limitar uso a testes sintéticos.
 
 ## Tech Decisions
 
+### Antivírus persistente — T29
+
+Decisão explícita de 10/10/2026: usar `clamd` no worker existente
+([ADR 030](../../../docs/adr/030-antivirus-persistente-no-worker.md),
+[RFC 018](../../../docs/rfc/018-antivirus-persistente-no-worker.md)).
+Socket Unix privado, sem TCP; cliente `clamdscan --fdpass`. Inicialização,
+recuperação e parada são supervisionadas. O health exige resposta PONG.
+Atualização encerra o motor anterior, aguarda o novo e só então publica
+freshness. O scan captura a data antes da execução, preservando MED-26
+mesmo se ocorrer atualização concorrente. Não alterar ACL, hash, quota,
+normalização ou limites de recurso para obter redução de latência.
+
 Auditoria da baseline em 05/10/2026 encontrou vulnerabilidade alta em
 source-map-js (GHSA-68fv-2mgg-jv7q). Não foi introduzida pelo plano, que não
 altera dependências. Corrigir em manutenção própria antes de satisfazer o

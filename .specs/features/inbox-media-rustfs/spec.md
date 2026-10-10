@@ -190,9 +190,14 @@ O chat de UAT4183 deve usar o pipeline DEV habilitado, sessão/CSRF e worker rea
 ## Requirement Traceability
 
 Evidência automatizada T24 e matriz dos29AC em docs/runbooks/chat-media-uat.md;
-microfone físico permanece pendente. Status In Progress preservado até UAT e
+captura/revisão física observada emT32, UAT completa permanece pendente. Status In Progress preservado até UAT e
 Verifier independente. Persistência inicial de header Basic no n8n é gate P1
 de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
+
+T32 comprova configuração remota para testes internos: IAM/spool privados,
+schema/scanner/health, ready e leitura dos três tipos. Captura/revisão de
+microfone observadas após permissão em10/10/2026; os demais cenários T24 e
+envio/callback n8n remoto continuam abertos. Nenhum requisito Verified global.
 
 | Requirement ID | Story                 | Phase   | Status      | Tasks                      |
 | -------------- | --------------------- | ------- | ----------- | -------------------------- |
@@ -211,19 +216,19 @@ de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
 | MED-13         | Liberar recursos      | Execute | In Progress | T19,T21                    |
 | MED-14         | Normalização          | Execute | In Progress | T5,T6,T28,T29              |
 | MED-15         | Preservação           | Execute | In Progress | T2,T3,T9,T16,T22,T23       |
-| MED-16         | Leitura privada       | Execute | In Progress | T8,T9,T13                  |
+| MED-16         | Leitura privada       | Execute | In Progress | T8,T9,T13,T32              |
 | MED-17         | Range                 | Execute | In Progress | T3,T9,T20                  |
 | MED-18         | Range inválido        | Execute | In Progress | T9                         |
-| MED-19         | Falha S3              | Execute | In Progress | T3,T6,T9,T20,T27           |
-| MED-20         | Logs privados         | Execute | In Progress | T3,T7,T12,T13,T16,T23,T30  |
+| MED-19         | Falha S3              | Execute | In Progress | T3,T6,T9,T20,T27,T32       |
+| MED-20         | Logs privados         | Execute | In Progress | T3,T7,T12,T13,T16,T23,T30,T32 |
 | MED-21         | Reserva única         | Execute | In Progress | T12,T13,T14,T15            |
 | MED-22         | Bytes por comando     | Execute | In Progress | T13,T14,T15                |
-| MED-23         | DEV real              | Execute | In Progress | T1,T15,T30,T24             |
+| MED-23         | DEV real              | Execute | In Progress | T1,T15,T30,T32,T24         |
 | MED-24         | Resultado incerto     | Execute | In Progress | T12,T14,T15,T24            |
 | MED-25         | Acessibilidade        | Execute | In Progress | T18,T19,T20,T21,T27,T31,T24 |
-| MED-26         | Scanner               | Execute | In Progress | T4,T6,T7,T27,T28,T29        |
+| MED-26         | Scanner               | Execute | In Progress | T4,T6,T7,T27,T28,T29,T32    |
 | MED-27         | Órfãos                | Execute | In Progress | T2,T22                     |
-| MED-28         | Quota                 | Execute | In Progress | T2,T6,T7,T23               |
+| MED-28         | Quota                 | Execute | In Progress | T2,T6,T7,T23,T32           |
 | MED-29         | Reprovação assíncrona | Execute | In Progress | T4,T5,T6,T8                |
 | MED-30         | Validação automática  | Execute | In Progress | T25,T24,T28,T29            |
 | MED-31         | Composer integrado    | Execute | In Progress | T25,T24                    |

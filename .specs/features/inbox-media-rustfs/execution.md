@@ -1,5 +1,62 @@
 # Execução INBOX-MEDIA-1
 
+## T32: pipeline remoto para testes internos
+
+Premissas confirmadas pelo operador: somente testes internos n8n; autorizados
+bucket DEV privado, IAM separado, spool compartilhado e helper temporário.
+Arquivos: runbook RustFS, tasks/spec/STATE, este registro e relatório independente.
+Aceite: PUT/GET/DELETE e negativas, spool privado nos dois processos, schema,
+scanner/health, upload/validação e leitura dos três tipos; sem SEND a clientes.
+
+Configuração real em10/10/2026: bucket `crm-silmer-chat-media-dev` sem expiração;
+API GetObject, worker Get/Put/Delete somente nesse bucket, sem root herdado.
+Endpoint HTTPS existente e quota1GiB; flags true/aliaschat-dev somente para o
+ensaio interno. Segredos não versionados. Configurações anteriores preservadas.
+
+Helper `silmer-chat-spool-init` sem exposição/secrets; VolumeMount
+chat-media-spool inicializado1000:1000/0700. Host path comprovado pelo mountinfo:
+`/etc/easypanel/projects/espectro-mvp/silmer-chat-spool-init/volumes/chat-media-spool`.
+Bind igual para API/worker em `/var/lib/crm-chat-media`. Helper parado; definição
+e volume retidos. Proposta de bind `/var/lib/crm-silmer/chat-media` falhou por
+path inexistente, sem criação ali. EasyPanel reaplicou0777; wrappers persistidos
+nos dois serviços restauram0700 e verificam owner antes de exec node UID1000.
+Probes confirmaram1000/1000/700 e flagtrue nos dois. Marcador worker lido pela
+API; cleanup alcançou somente esse marcador sintético. Janela transitória0777
+continua risco para promoção operacional, registrada no runbook.
+
+Provas S3 reais: workerPUT/GET iguais e bucket alheio403; APIGet igual, Put403 e bucket alheio403;
+GET anônimo403; Delete do próprio canário e Head404. Schema0030–0033 com
+checksums/phase iguais, readiness do banco e `/api/health/ready` aprovados;
+worker PONG, freshness genuína <=36h sem futuro e health aprovado.
+
+PR157 merged rebase após7checks da revisão710ebff, masterd9e3a70.
+Deployments EasyPanel18:01:02→18:01:11UTC registraram imagem runtime API/worker
+`sha256:c30b13fab7c027118bdea0241c8d6d2123ec1725e135fa78011ba4c27a28f9d4`,
+edge `sha256:0d894085e6705d967e576544a361b66c223c0ec5b16856c8c3eeb3bec485cbbd`.
+Headers HTTPS observados18:03UTC: microphone(self), imgblob e mediablob. PNG16px decodificada;
+MP3/MP4 de2s readyState4 sem error e ready/clean com Enviar anexo habilitado.
+Operador permitiu microfone; tela iniciou/parou gravação, revisão ready, saída
+OGG/Opus clean. Captura real observada não fecha todos os cenários T24.
+
+Imagem/vídeo abriram pela rota HTTPS autenticada; imagem sem sessão401.
+Conteúdo dos três tipos lido pelo runtime real da API/repository/store, para o
+uploader: status200, tamanho e SHA256 iguais aos metadados; ator alheio403 nos
+três. Navegação direta de áudio bloqueada pelo cliente do navegador Codex;
+não alegar playback HTTP de áudio a partir dessa tentativa. Nenhuma sessão
+criada nem mensagem enviada; drafts permanecem sob cleanup próprio >24h.
+
+Provas locais ignoradas: var/T32-image-ready-proof.jpg, T32-audio-ready-proof.jpg,
+T32-video-ready-proof.jpg, T32-recording-ready-proof.jpg, T32-api-iam-proof.jpg,
+T32-worker-runtime-proof.jpg, T32-content-acl-proof.jpg, T32-api-schema-spool-proof.jpg,
+T32-worker-put-get-marker-proof.jpg, T32-api-shared-marker-proof.jpg e
+T32-worker-cleanup-health-proof.jpg e T32-worker-foreign-bucket-proof.jpg.
+T32-api-spool-proof.jpg mostra estados do
+banco; a prova de permissões está nas imagens schema-spool/shared-marker.
+Essas imagens são evidência remota, não testes Docker locais. Rollback explícito
+no runbook preserva leitura, bucket, spool, credenciais e vínculos. Antes de
+SEND verificar workflow DEV publicado: bucket DEV sozinho não seleciona n8n.
+T24, privacyP1, Meta e backup/restore continuam abertos; sem Verified global.
+
 ## T31: Incidente do edge e da ativação remota
 
 Produção10/10/2026 servia microphone=() e CSP sem blob; tela preservava arquivo

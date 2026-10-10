@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-32 tarefas planejadas; T1 a T23 e T25 a T31 concluídas; T32 configura e homologa o pipeline remoto DEV; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
+32 tarefas planejadas; T1 a T23 e T25 a T32 concluídas; T32 homologa upload/validação/leitura no pipeline remoto interno. T24 aguarda UAT completa e envio/callback DEV remoto. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -514,7 +514,7 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Requirement**: MED-16, MED-19, MED-20, MED-23, MED-26, MED-28
 **Assumptions**: Autorização explícita do operador em10/10/2026 para bucket privado DEV, duas identidades restritas, spool e provas sintéticas; nenhum envio a clientes nem promoção operacional.
 **What**: Configurar bucket DEV no RustFS existente, IAM separado API/worker, spool privado compartilhado e variáveis correspondentes; verificar schema, scanner, saúde e isolamento antes de ativar somente a prova sintética autorizada.
-**Done when**: [ ] PUT/GET/DELETE sintéticos e negativas de acesso passam; API e worker enxergam o mesmo spool0700/UID1000; PNG/áudio/vídeo chegam a ready e leitura autorizada; flags/configuração final e rollback registrados sem segredos ou mensagens a clientes.
+**Done when**: [x] PUT/GET/DELETE sintéticos e negativas de acesso passam; API e worker enxergam o mesmo spool0700/UID1000; PNG/áudio/vídeo chegam a ready e leitura autorizada; flags/configuração final e rollback registrados sem segredos ou mensagens a clientes. Revisão independente PASS, regressão18/18 e sensor3/3; limites HTTP áudio, T24, n8n, privacidade e recovery registrados em validation-production-runtime.md.
 **Tests**: smoke remoto sintético, negativas IAM/ACL, schema/health/scanner e upload/leitura dos três tipos.
 **Gate**: Evidência operacional remota + revisão independente; evidência local não substitui ambiente alvo.
 **Commit**: docs(ops): record remote chat media development pipeline
@@ -535,7 +535,8 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 Entrega automatizada T24 registrada em docs/runbooks/chat-media-uat.md e execution.md:
 quatro uploads built→DEV/callback, failed/unknown/restauração, replay/ACL/Range,
 normalização300s/negação301s, retenção e playback oito pares. Done permanece
-desmarcado por UAT de microfone físico pendente, sem Verified; Verifier/sensor
+desmarcado por matriz UAT completa pendente, sem Verified; captura/revisão
+físicas isoladas observadas emT32 não encerram essa matriz. Verifier/sensor
 após fechamento. P1 de header Basic persistido no n8n bloqueia uso operacional.
 
 ## Task Granularity Check

@@ -45,13 +45,106 @@ Plano concreto para homologação remota, antes de liberar arquivos de clientes:
    bucket operacional. Rollback desliga admissão/consumo mantendo leitura e
    todos os arquivos/chaves/vínculos; não apaga volumes nem resultados incertos.
 
+#### T32: configuração remota DEV em 10/10/2026
+
+O operador autorizou o bucket, duas identidades restritas e o helper; confirmou
+que o CRM hospedado será usado somente em testes internos com n8n. API e worker
+ficaram com `CHAT_MEDIA_ENABLED=true`, alias `chat-dev`, quota de1GiB e bucket
+`crm-silmer-chat-media-dev`, privado e sem lifecycle de expiração. Endpoint:
+`https://s3-schedule-rustfs.jicnzg.easypanel.host`, região `us-east-1`.
+As credenciais próprias ficam somente no ambiente de cada serviço. A API tem
+GetObject; o worker GetObject/PutObject/DeleteObject, somente nos objetos desse
+bucket, sem herdar a política root. Configurações e mounts anteriores preservados.
+
+#### Preparação sem SSH (executada)
+
+O console do worker observado no EasyPanel executa UID1000 e não prepara
+diretórios do host. Se não houver terminal administrativo, usar um helper
+temporário `silmer-chat-spool-init`, sem domínio, portas publicadas, secrets
+ou acesso ao banco, somente após autorização específica para esse serviço.
+O bind proposto `/var/lib/crm-silmer/chat-media` não iniciou porque o host path
+não existia. Nenhum diretório foi criado ali. O helper recebeu um VolumeMount
+EasyPanel chamado `chat-media-spool` em `/spool`. O diretório
+montado deve estar vazio; o helper recusa arquivos ou symlink, ajusta apenas
+esse diretório, sem operações recursivas, e permanece ocioso para conferência.
+O helper confirmou1000:1000/0700 e foi parado. Sua definição e seu volume
+devem permanecer: o spool persistente pertence a esse serviço. Não destruir
+o helper nem remover seu volume enquanto API/worker usarem o diretório.
+
+Dockerfile aplicado (mesma base imutável do runtime):
+
+```dockerfile
+FROM node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
+USER root
+CMD ["sh", "-ec", "test -d /spool && test ! -L /spool && test -z \"$(find /spool -mindepth 1 -maxdepth 1 -print -quit)\" && chown 1000:1000 /spool && chmod 0700 /spool && stat -c '%u:%g %a' /spool && sleep infinity"]
+```
+
+Não montar socket Docker, raiz do host, volumes RustFS ou outros diretórios.
+O host path foi lido em `/proc/self/mountinfo`, sem supor caminho Docker:
+`/etc/easypanel/projects/espectro-mvp/silmer-chat-spool-init/volumes/chat-media-spool`.
+API/worker recebem bind desse mesmo path em `/var/lib/crm-chat-media`, que também
+é `CHAT_MEDIA_SPOOL_ROOT`. O helper não executa aplicação como root; API/worker
+continuam UID1000. O domínio criado automaticamente pelo painel foi removido
+antes do deploy do helper, que ficou sem domínio, portas ou secrets.
+
+O EasyPanel reaplicou0777 ao bind no deploy. Os comandos Advanced dos dois
+serviços verificam o dono e restauram0700 antes de iniciar a aplicação:
+
+```sh
+# silmer-api
+sh -ec 'test "$(stat -c %u:%g /var/lib/crm-chat-media)" = 1000:1000; chmod 0700 /var/lib/crm-chat-media; exec node apps/api/src/server.js'
+# silmer-worker
+sh -ec 'test "$(stat -c %u:%g /var/lib/crm-chat-media)" = 1000:1000; chmod 0700 /var/lib/crm-chat-media; exec node apps/worker/src/worker.js'
+```
+
+Probes após os dois deployments confirmaram UID/dono/grupo1000, modo0700 e
+flagtrue. Um marcador sintético criado pelo worker foi lido pela API e removido
+após a prova. A reaplicação transitória de0777 pelo painel permanece risco a
+resolver antes de dados operacionais; não ampliar permissões para contorná-la.
+
+Provas remotas: worker PUT/GET com bytes iguais e DELETE seguido de HEAD404;
+API GET aprovado, PUT e GET de bucket estrangeiro negados403; worker também
+recebeu403 no GET de bucket estrangeiro. GET anônimo do
+canário negado403. Nenhum objeto alheio foi modificado. Schema0030–0033 e
+checksums correspondem às migrations; readiness da API aprovado. Worker com
+clamd PONG e marcador genuíno recente, dentro de36h e sem timestamp futuro.
+
+PR157 foi integrado por rebase emmaster `d9e3a70` após sete checks aprovados.
+Deployments EasyPanel iniciados18:01:02UTC concluíram18:01:11UTC: API/worker
+registraram imagem `sha256:c30b13fab7c027118bdea0241c8d6d2123ec1725e135fa78011ba4c27a28f9d4`;
+edge `sha256:0d894085e6705d967e576544a361b66c223c0ec5b16856c8c3eeb3bec485cbbd`.
+HTTPS passou a servir `microphone=(self)`, img-src com blob e media-src self/blob.
+Na conversa sintética, PNG, MP3 e MP4 chegaram a ready/clean, com prévias
+decodificadas e Enviar anexo habilitado. Após o operador permitir o microfone,
+a tela iniciou/parou uma gravação e chegou à revisão ready; saída normalizada
+audio/ogg. Nenhuma mensagem foi enviada a clientes. Captura/revisão observadas
+não encerram a matriz completa T24 nem homologam Meta, privacidade ou recovery.
+
+Leitura: imagem e vídeo privados abriram pela rota HTTPS autenticada, com
+decodificação válida; a mesma rota de imagem sem sessão respondeu401. A leitura
+de conteúdo no runtime real da API, usando repository/store reais e o ator
+uploader, passou nos três tipos com status200, tamanho e SHA256 iguais ao banco;
+ator sintético alheio foi recusado403 em todos. Não foi criada sessão nem
+alterada ACL. Navegação direta a áudio no navegador do Codex foi bloqueada pelo
+cliente (`ERR_BLOCKED_BY_CLIENT`); essa navegação não é prova de playback HTTP
+de áudio. A prévia de áudio/gravador na tela carregou; playback pós-envio e
+callback DEV continuam no aceite completo T24, sem contornar o navegador.
+
+Rollback: API com `CHAT_MEDIA_ENABLED=false` e `CHAT_MEDIA_READ_ENABLED=true`;
+worker com `CHAT_MEDIA_ENABLED=false`. Preservar endpoint, credenciais, bucket,
+envelope, binds, volume/helper parado, arquivos e vínculos. O flagtrue permanece
+exclusivamente para os testes internos autorizados; bucket DEV não seleciona
+automaticamente workflow n8n DEV. Antes de qualquer SEND, verificar o workflow
+e seus efeitos simulados, além dos gates abaixo.
+
 Inbox aceita imagem, áudio anexado ou gravado e vídeo; upload/preparo/envio são
 ações explícitas. API valida sessão, CSRF, ownership e versão, worker valida
 bytes e normaliza gravações, RustFS mantém variante privada, n8n reserva por
 referência imutável e confirma por callback. Mídia attached permanece salva;
 cleanup automático somente alcança rascunhos sem message_id com mais de24h.
-Pipeline construído local homologado por provas automatizadas T24; microfone
-físico permanece pendente. A matriz e as fronteiras estão em
+Pipeline construído local homologado por provas automatizadas T24; captura e
+revisão físicas remotas observadas emT32, matriz completa permanece pendente.
+A matriz e as fronteiras estão em
 [chat-media-uat.md](chat-media-uat.md). Configuração local não comprova operação
 remota, backup ou entrega real Meta. P1: execução inicial n8n PostgreSQL persiste
 recipient/caption/header Basic mesmo savesnone. Bloquear dados/credenciais
@@ -483,7 +576,8 @@ Build baixa e testa assinatura-base genuína via freshclam (timeout de 180 s).
 Worker executa freshclam no startup e a cada 24 h, timeout de 180 s, maxBuffer de 64 KiB,
 sem NotifyClamd. Falha gera código técnico CLAM_SIGNATURE_REFRESH_FAILED e
 não atualiza marcador de verificação. `.freshclam-verified` é publicado por
-rename atômico apenas depois de freshclam com exit 0; prova checagem recente
+rename atômico apenas depois de freshclam com exit0 e do daemon substituto
+confirmado pronto; prova checagem recente
 quando a base já estava atualizada sem mudar seu mtime. Scanner exige base
 instalada; marcador inválido/futuro/stale falha fechado. Sem marcador, usa
 mtime da base; mais de 36 h impede liberação. Config não aceita entrada humana.

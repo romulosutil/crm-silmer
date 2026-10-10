@@ -8,9 +8,13 @@ import {
   dateTimeBR,
   messageText,
 } from '../lib/format.js';
+import { storeNoticeText } from '../lib/order-format.js';
 
 const heading = ref(null);
 const liveEvent = inject('liveEvent', ref(null));
+// LOJ-32: the menu shows the same number; the shell does not read it again
+// while the Dashboard is open.
+const menuStoreCount = inject('storeNewCount', ref(0));
 const loading = ref(true);
 const hasLoaded = ref(false);
 const error = ref('');
@@ -21,8 +25,20 @@ const summary = ref({
   averageTicketCents: 0,
   pendingCount: 0,
   totalPiecesSold: 0,
+  storeNewCount: 0,
+  storeNewOldestPaidAt: null,
 });
 let controller;
+
+// LOJ-31 (ADR 031): paid site orders whose ficha nobody printed yet. The
+// notice is one link to the list filtered on "Loja do site"; it disappears
+// with the last first print, which reaches here as `inbox.order.changed`.
+const storeNotice = computed(() =>
+  storeNoticeText(
+    summary.value.storeNewCount,
+    summary.value.storeNewOldestPaidAt,
+  ),
+);
 let refreshTimer = 0;
 
 const moneyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -69,6 +85,9 @@ async function loadDashboard() {
     ]);
     inbox.value = inboxResponse.data;
     summary.value = summaryResponse.data;
+    const storeCount = Number(summaryResponse.data?.storeNewCount ?? 0);
+    menuStoreCount.value =
+      Number.isSafeInteger(storeCount) && storeCount > 0 ? storeCount : 0;
     hasLoaded.value = true;
     error.value = '';
   } catch (cause) {
@@ -122,6 +141,34 @@ onBeforeUnmount(() => {
         <p>Vendas confirmadas e trabalho que pede atenção, com dados do CRM.</p>
       </div>
     </header>
+
+    <!-- LOJ-31: the region exists from the first paint so the arrival of a
+         new site order is announced; the link is the whole notice. -->
+    <div class="store-notice-region" aria-live="polite">
+      <RouterLink
+        v-if="storeNotice"
+        class="store-notice"
+        :to="{ path: '/pedidos', query: { origem: 'loja' } }"
+      >
+        <span class="store-notice-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path
+              d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1Z"
+            />
+          </svg>
+        </span>
+        <span class="store-notice-text">
+          <strong>{{ storeNotice.title }}</strong>
+          <span>{{ storeNotice.detail }}</span>
+        </span>
+        <span class="store-notice-action">
+          Ver pedidos
+          <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+            <path d="m9 6 6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6Z" />
+          </svg>
+        </span>
+      </RouterLink>
+    </div>
 
     <div v-if="loading && !hasLoaded" class="loading-state" role="status">
       Carregando indicadores…

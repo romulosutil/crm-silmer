@@ -500,3 +500,127 @@ export function storeReceiptUrl(order) {
   const url = order?.gatewayPayment?.receiptUrl;
   return typeof url === 'string' && url.startsWith('https://') ? url : '';
 }
+
+// ADR 031: how people read the site shop's product. The catalog name and slug
+// stay as the order recorded them; the screen says "Camisa dry fit".
+const STORE_PRODUCT_LABELS = Object.freeze({
+  'camisa-masculina-lisa': 'Camisa dry fit',
+});
+
+/**
+ * ADR 031 (LOJ-35): the product of a store order as the screen names it.
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function storeProductLabel(order) {
+  const produto = order?.ficha?.loja?.produto;
+  const slug = typeof produto?.slug === 'string' ? produto.slug : '';
+  if (Object.hasOwn(STORE_PRODUCT_LABELS, slug)) {
+    return STORE_PRODUCT_LABELS[
+      /** @type {keyof typeof STORE_PRODUCT_LABELS} */ (slug)
+    ];
+  }
+  return typeof produto?.nome === 'string' ? produto.nome.trim() : '';
+}
+
+/** @param {unknown} value */
+function saoPauloParts(value) {
+  if (typeof value !== 'string') return null;
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) return null;
+  return Object.fromEntries(
+    SAO_PAULO_DATE_TIME.formatToParts(instant).map((part) => [
+      part.type,
+      part.value,
+    ]),
+  );
+}
+
+/**
+ * ADR 031: "07/10/2026, 23:15" as São Paulo reads it; '' when there is none.
+ *
+ * @param {unknown} value
+ */
+export function dateTimeLabel(value) {
+  const parts = saoPauloParts(value);
+  return parts
+    ? `${parts.day}/${parts.month}/${parts.year}, ${parts.hour}:${parts.minute}`
+    : '';
+}
+
+/**
+ * ADR 031: "07/10, 23:15", for the Dashboard notice.
+ *
+ * @param {unknown} value
+ */
+export function shortDateTimeLabel(value) {
+  const parts = saoPauloParts(value);
+  return parts
+    ? `${parts.day}/${parts.month}, ${parts.hour}:${parts.minute}`
+    : '';
+}
+
+/**
+ * LOJ-33/LOJ-34: when the site confirmed the order — the instant InfinitePay
+ * confirmed the Pix, else when the CRM recorded it.
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function storeConfirmationLabel(order) {
+  const at = dateTimeLabel(
+    order?.gatewayPayment?.confirmedAt ?? order?.confirmedAt,
+  );
+  return at
+    ? `Confirmado pela loja do site · ${at}`
+    : 'Confirmado pela loja do site';
+}
+
+/**
+ * LOJ-26: a store order (not a test) whose ficha nobody printed yet.
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function storeFichaPending(order) {
+  return isStoreOrder(order) && !order?.isTest && !order?.fichaFirstPrintedAt;
+}
+
+/**
+ * LOJ-33/LOJ-34: "Ficha impressa por Rose · 08/10/2026, 09:12", or '' while
+ * nobody printed it.
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function fichaPrintedLabel(order) {
+  if (!order?.fichaFirstPrintedAt) return '';
+  const who = order.fichaFirstPrintedBy?.name || 'equipe';
+  const at = dateTimeLabel(order.fichaFirstPrintedAt);
+  return at ? `Ficha impressa por ${who} · ${at}` : `Ficha impressa por ${who}`;
+}
+
+/**
+ * LOJ-31: the Dashboard notice for N new site orders, the oldest paid at
+ * `oldestPaidAt`; null when there is none.
+ *
+ * @param {unknown} count
+ * @param {unknown} oldestPaidAt
+ * @returns {{title: string, detail: string}|null}
+ */
+export function storeNoticeText(count, oldestPaidAt) {
+  const total = Number(count);
+  if (!Number.isSafeInteger(total) || total <= 0) return null;
+  const at = shortDateTimeLabel(oldestPaidAt);
+  if (total === 1) {
+    return {
+      detail: at
+        ? `Confirmado e pago por Pix em ${at}. Imprima a ficha para começar a produção.`
+        : 'Confirmado e pago por Pix. Imprima a ficha para começar a produção.',
+      title: '1 pedido novo do site',
+    };
+  }
+  return {
+    detail: at
+      ? `Confirmados e pagos por Pix, o mais antigo em ${at}. Imprima as fichas para começar a produção.`
+      : 'Confirmados e pagos por Pix. Imprima as fichas para começar a produção.',
+    title: `${total} pedidos novos do site`,
+  };
+}

@@ -3,14 +3,17 @@ import { computed, inject, nextTick, ref, watch } from 'vue';
 import { dateTimeBR } from '../../lib/format.js';
 import {
   amountLabel,
+  fichaPrintedLabel,
   formatBrl,
   isItemGap,
   isPageGap,
+  isStoreOrder,
   joinPt,
   missingFieldLabels,
   parseBrl,
   PAYMENT_CONDITION_OPTIONS,
   paymentConditionLabel,
+  storeConfirmationLabel,
 } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
 
@@ -43,7 +46,11 @@ const errorMessage = ref('');
 const fieldErrors = ref({});
 
 const isPending = computed(() => props.order.status === 'pendente');
-const canCommand = computed(() => editing.canEdit.value);
+// LOJ-34 (ADR 031): a site order shows this panel confirmed, like an order
+// generated here, with what the site confirmed and no reopening.
+const isStore = computed(() => isStoreOrder(props.order));
+const fichaPrinted = computed(() => fichaPrintedLabel(props.order));
+const canCommand = computed(() => editing.canEdit.value && !isStore.value);
 const sectionOpenElsewhere = computed(
   () => editing.editingSection.value !== '',
 );
@@ -470,7 +477,11 @@ const blockerNotes = computed(() =>
             <dt>Forma de pagamento</dt>
             <dd>{{ paymentConditionLabel(order.paymentCondition) }}</dd>
           </div>
-          <div v-if="order.confirmedAt">
+          <div v-if="isStore">
+            <dt>Confirmação</dt>
+            <dd>{{ storeConfirmationLabel(order) }}</dd>
+          </div>
+          <div v-else-if="order.confirmedAt">
             <dt>Confirmação</dt>
             <dd>
               Confirmado por {{ order.confirmedBy?.name || 'vendedor' }} ·
@@ -492,12 +503,30 @@ const blockerNotes = computed(() =>
           </span>
           <span class="op-ficha-name">
             <strong>Ficha {{ order.number }}</strong>
-            <span>2 páginas · pedido e controle de produção</span>
+            <span v-if="isStore">1 página · pedido da loja</span>
+            <span v-else>2 páginas · pedido e controle de produção</span>
           </span>
+          <!-- LOJ-34: whether the site order already left the notice. -->
+          <p
+            v-if="isStore"
+            class="op-ficha-status"
+            :data-tone="fichaPrinted ? 'success' : 'warning'"
+          >
+            {{
+              fichaPrinted ||
+              (order.isTest
+                ? 'Ainda não impressa.'
+                : 'Ainda não impressa. Ao imprimir, o pedido sai do aviso do Dashboard.')
+            }}
+          </p>
           <button type="button" class="op-save" @click="editing.print">
             Abrir ficha
           </button>
         </div>
+
+        <p v-if="isStore" class="op-hint">
+          Pedido da loja não é reaberto: valor e itens vieram do pagamento.
+        </p>
 
         <div v-if="!isPending && canCommand" class="op-reopen">
           <button type="button" :disabled="busy" @click="reopen">

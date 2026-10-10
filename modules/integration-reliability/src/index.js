@@ -1,4 +1,5 @@
 export { ClamAvMediaScanner } from './clamav-media-scanner.js';
+export { ClamAvDaemon, pingClamAv } from './clamav-daemon.js';
 export {
   createIdempotentCommandExecutor,
   fingerprintCommand,

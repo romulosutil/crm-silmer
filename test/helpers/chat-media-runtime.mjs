@@ -7,10 +7,16 @@ const { ChatMediaValidator } = await import(base + 'chat-media-validation.js');
 const { RecordedAudioNormalizer } = await import(
   base + 'recorded-audio-normalizer.js'
 );
+const { ClamAvDaemon, pingClamAv } = await import(base + 'clamav-daemon.js');
 
 const mode = process.argv[2];
 const input = JSON.parse(process.argv[3]);
+// Dedicated tooling containers do not run the worker entry point. Reuse a
+// managed engine when present; otherwise this isolated operation owns it.
+const daemon = (await pingClamAv()) ? undefined : new ClamAvDaemon();
 try {
+  await daemon?.start();
+  if (!(await pingClamAv())) throw new Error('Malware scanner is unavailable');
   const result =
     mode === 'validate'
       ? await new ChatMediaValidator().validate(input)
@@ -29,4 +35,6 @@ try {
     }),
   );
   process.exitCode = 1;
+} finally {
+  await daemon?.stop();
 }

@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-28 tarefas planejadas; T1 a T23 e T25 a T28 concluídas; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
+29 tarefas planejadas; T1 a T23 e T25 a T29 concluídas; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -18,7 +18,7 @@ Após a última tarefa, Verifier independente obrigatório, com evidência por A
 e sensor de discriminação em scratch isolado; validation.md não é criado vazio.
 Se houver achados, criar tarefas de correção e repetir no limite da skill.
 As quatro fases originais têm seis tarefas; a fase 4 inclui T25 solicitada
-durante UAT, T26 decorrente da revisão independente, T27 de recuperação e T28 de desempenho, passando a dez tarefas. Na execução, oferecer delegação conforme a
+durante UAT, T26 decorrente da revisão independente, T27 de recuperação e T28/T29 de desempenho, passando a onze tarefas. Na execução, oferecer delegação conforme a
 skill antes de despachar workers. Arquivos têm um único dono por tarefa.
 
 ## Test Coverage Matrix
@@ -81,12 +81,12 @@ T13..T18: bytes técnicos, workflow, DEV, DTO, cliente HTTP e composer.
 
 ### Phase 4: Gravação, histórico e fechamento
 
-T19..T23, T25, T26, T27, T28, T24: recorder, playback, integração Inbox, limpeza, rollout,
+T19..T23, T25, T26, T27, T28, T29, T24: recorder, playback, integração Inbox, limpeza, rollout,
 correção UX, recuperação de recusa conhecida e UAT.
 
 ```text
 T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9 -> T10 -> T11 -> T12
-T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T28 -> T24
+T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T28 -> T29 -> T24
 ```
 
 ## Task Breakdown
@@ -466,11 +466,24 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Gate**: Build + Full unit + smoke local; Verifier específico com sensor de integridade.
 **Commit**: perf(media): reuse validated output within a processing attempt
 
+### T29: Manter o antivírus carregado no worker com clamd
+
+**Where**: modules/integration-reliability/src/clamav-daemon.js
+**Supporting files**: scanner e signature-refresh; exports; worker; healthcheck; docker/runtime.Dockerfile; docker/clamd.conf; testes dessas fronteiras e helper de runtime; context/design/spec/execution/STATE/runbook, ARCHITECTURE.md e TECHNICAL-DESIGN.md, ADR/RFC com seus índices, lições geradas e relatório de validação desta tarefa.
+**Depends on**: T28
+**Requirement**: MED-06, MED-14, MED-26, MED-30
+**Assumptions**: clamd permanece dentro do worker existente, sem porta TCP; Docker local está autorizado; limites de 1CPU/2GiB, arquivos e chaves existentes são preservados.
+**What**: Carregar o motor uma vez, usar clamdscan por socket Unix privado e supervisionar inicialização, falha e parada. Confirmar carga das assinaturas antes de publicar sua atualização.
+**Done when**: [x] Arquivo infectado, scanner indisponível e assinaturas antigas continuam bloqueados; leitura/envio só usam bytes validados; gravação valida entrada e saída; health detecta indisponibilidade; atualização não publica marcador antes do novo motor pronto; scan7–10ms vs9326ms e liberação pela tela1116–1163ms; quatro envios DEV confirmados. [Revisão independente](validation-clamd.md) PASS e sensor3/3 detectados. T24 permanece pendente.
+**Tests**: unit + integração na imagem construída + navegador; cenários de infecção, indisponibilidade, atualização, recuperação, seis formatos e normalização.
+**Gate**: Quick + Build + scanner/normalizador real e envio DEV; revisão independente específica antes do commit.
+**Commit**: perf(media): keep antivirus engine loaded with clamd
+
 ### T24: Homologação da fatia e evidências
 
 **What**: Executar UAT sintético ponta a ponta do CRM ao DEV e consolidar critérios para canal real.
 **Where**: docs/runbooks/chat-media-uat.md
-**Depends on**: T28
+**Depends on**: T29
 **Requirement**: MED-01..32
 **Reuses**: Todos os testes da fatia; handoff e reserva atuais.
 **Tools**: tlc-spec-driven; Browser/Playwright; Verifier independente após commit final.
@@ -533,7 +546,8 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T26  | T25                    | T25 → T26     | Match  |
 | T27  | T26                    | T26 → T27     | Match  |
 | T28  | T27                    | T27 → T28     | Match  |
-| T24  | T28                    | T28 → T24     | Match  |
+| T29  | T28                    | T28 → T29     | Match  |
+| T24  | T29                    | T29 → T24     | Match  |
 
 ## Test Co-location Validation
 
@@ -567,6 +581,7 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T26  | Recusa de envio             | e2e + sensor                | e2e + sensor           | OK     |
 | T27  | Recuperação e captura       | e2e + smoke                 | e2e + smoke            | OK     |
 | T28  | Worker e integridade        | unit + smoke                | unit + smoke           | OK     |
+| T29  | Scanner persistente         | unit + integração + tela    | unit + integração + tela | OK   |
 
 ## Confirmação antes de Execute
 

@@ -201,7 +201,7 @@ de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
 | MED-03         | Arquivo vídeo         | Execute | In Progress | T4,T7,T18,T21              |
 | MED-04         | Validação             | Execute | In Progress | T4,T5,T7,T18               |
 | MED-05         | Persistência atômica  | Execute | In Progress | T2,T10,T11                 |
-| MED-06         | Replay                | Execute | In Progress | T7,T10,T11,T14,T15,T27,T28 |
+| MED-06         | Replay                | Execute | In Progress | T7,T10,T11,T14,T15,T27,T28,T29 |
 | MED-07         | Chave divergente      | Execute | In Progress | T7,T10,T11                 |
 | MED-08         | Autorização/estado    | Execute | In Progress | T7,T8,T10,T11,T21          |
 | MED-09         | Microfone             | Execute | In Progress | T19,T21                    |
@@ -209,7 +209,7 @@ de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
 | MED-11         | Permissão/captura     | Execute | In Progress | T19,T21,T27                |
 | MED-12         | Limites gravação      | Execute | In Progress | T5,T19                     |
 | MED-13         | Liberar recursos      | Execute | In Progress | T19,T21                    |
-| MED-14         | Normalização          | Execute | In Progress | T5,T6,T28                  |
+| MED-14         | Normalização          | Execute | In Progress | T5,T6,T28,T29              |
 | MED-15         | Preservação           | Execute | In Progress | T2,T3,T9,T16,T22,T23       |
 | MED-16         | Leitura privada       | Execute | In Progress | T8,T9,T13                  |
 | MED-17         | Range                 | Execute | In Progress | T3,T9,T20                  |
@@ -221,11 +221,11 @@ de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
 | MED-23         | DEV real              | Execute | In Progress | T1,T15,T24                 |
 | MED-24         | Resultado incerto     | Execute | In Progress | T12,T14,T15,T24            |
 | MED-25         | Acessibilidade        | Execute | In Progress | T18,T19,T20,T21,T27,T24    |
-| MED-26         | Scanner               | Execute | In Progress | T4,T6,T7,T27,T28           |
+| MED-26         | Scanner               | Execute | In Progress | T4,T6,T7,T27,T28,T29        |
 | MED-27         | Órfãos                | Execute | In Progress | T2,T22                     |
 | MED-28         | Quota                 | Execute | In Progress | T2,T6,T7,T23               |
 | MED-29         | Reprovação assíncrona | Execute | In Progress | T4,T5,T6,T8                |
-| MED-30         | Validação automática  | Execute | In Progress | T25,T24,T28                |
+| MED-30         | Validação automática  | Execute | In Progress | T25,T24,T28,T29            |
 | MED-31         | Composer integrado    | Execute | In Progress | T25,T24                    |
 | MED-32         | Erro recuperável      | Execute | In Progress | T25,T26,T27,T24            |
 

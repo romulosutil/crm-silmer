@@ -11,7 +11,55 @@
 - **Date**: 2026-10-05
 - **Status**: active
 
+### AD-002
+
+- **Decision**: Manter clamd persistente no worker existente, com socket Unix privado e inspeção obrigatória.
+- **Reason**: Usuário escolheu clamd em10/10/2026 após medição de9,326s de carregamento/scan por arquivo.
+- **Trade-off**: Memória ocupada continuamente e carregamento na inicialização/atualização; mídia bloqueia durante indisponibilidade.
+- **Scope**: MED-26/30 e T29; ADR030/RFC018. Atualização só publica freshness após motor pronto.
+- **Date**: 2026-10-10
+- **Status**: active
+
 ## Handoff
+
+T29 implementada e validada localmente na branch codex/inbox-media-rustfs-plan.
+Clamd persistente no worker; socket0600/diretório0700, sem TCP, scan fdpass.
+Scanner indisponível/infectado/stale segue bloqueado; gravação mantém duas
+inspeções. Atualização confirma motor antes do marcador; healthPONG e recovery.
+Fullunit996total/993pass/0fail/3skips antigos,13checks+build0, runtime2/2PASS.
+Imagem54918dbf91d9…aa496 confere com fontes. Só worker recriado; API/n8n/DBs,
+RustFS, env, chaves, volumes,1CPU/2GiB preservados; nenhuma migração.
+Scan PNG117bytes7/10ms vs9326ms; tela1116–1163ms em quatro arquivos, enviados
+sent/attached/completed/DEV15 com uma reserva e uma tentativa cada.
+Queda sintética bloqueou scan/health e recuperou em11271ms; pico1209327616bytes.
+Provas var/media-T29-*.json/log; revisão específica validation-clamd.md.
+Próximo passo T24: captura física/UAT humana. Sem Verified global, produção,
+Meta, privacyP1 ou recovery externo concluídos. Commit T29 inclui estes registros.
+
+### Histórico integração master
+
+MERGE-MASTER: integração com origin/master b7b26db concluída e validada em
+10/10/2026 na branch codex/inbox-media-rustfs-plan. Conflitos resolvidos;
+rotas de mídia e loja, arte RustFS, públicos, ficha v6 e chat do site
+preservados. Migrations master0027–0029 mantidas; chat0030–0033 com SQL e
+checksums originais. ADR029/RFC017 corrigem colisões; ADR original preservada.
+13 checks+build PASS, fullunit final981total/978pass/zero fail/três skips
+existentes, SQL174/174, UI217total/210pass/zero fail/sete skips existentes.
+Revisão independente e sensor isolado4/4 PASS; n8n focal66/66 e paridade PASS.
+API/worker locais healthy imagemf8f79508626b…c38b; readiness200; dados,
+credenciais, ambiente e volumes preservados. Ledger DEV reconciliado sob
+lock após snapshot protegido; só três migrations novas da master aplicadas.
+DEV n8n91nós publicado, versão dev-mvp-simple-15; classifier estrito mantido.
+Imagem/áudio/vídeo enviados pela tela: sent/attached/completed, uma reserva
+e uma tentativa cada. Provas sanitizadas var/merge-master-browser-proof.json
+e var/merge-n8n-standard-browser-send-proof.json; relatório e runbook em
+features/inbox-media-rustfs/integration-master.md e validation-master-merge.md.
+Demo4183 usa assets integrados; bridge local reiniciado sem mudar a origem.
+Próximo passo T24: UAT humana/microfone físico. PrivacyP1 n8n, Meta e recovery
+externo continuam gates próprios; transcrição inbound DEV ainda sem credencial.
+Nenhuma infraestrutura remota alterada; sem Verified global da feature.
+
+### Histórico T28
 
 T28 concluída na branch codex/inbox-media-rustfs-plan: worker reaproveita somente
 validação da saída na mesma tentativa; sem cache entre jobs ou bypass scanner.

@@ -269,6 +269,125 @@ if (connectionString) {
     assert.equal(summary.soldAmountCents, previous.soldAmountCents + 18000);
   });
 
+  test('LOJ-26/LOJ-27/LOJ-29: the first print records one person once, with its event and audit', async () => {
+    await pool.query(
+      `INSERT INTO crm.users (id, email, password_hash, name)
+       VALUES ('print-user-1', 'print-1@example.test', '$argon2id$synthetic', 'Pessoa Sintetica'),
+              ('print-user-2', 'print-2@example.test', '$argon2id$synthetic', 'Outra Pessoa')
+       ON CONFLICT (id) DO NOTHING`,
+    );
+    const before = await repository.summary();
+    const older = await record(
+      paid(20, (body) => (body.pagamento.pago_em = '2026-10-06T12:00:00Z')),
+    );
+    const newer = await record(paid(21));
+    await record(
+      paid(22, (body) => {
+        body.teste = true;
+        body.valor_centavos = 100;
+        body.pagamento.valor_pago_centavos = 100;
+        body.pagamento.pago_em = '2026-10-01T12:00:00Z';
+      }),
+    );
+    const waiting = await repository.summary();
+    assert.equal(waiting.storeNewCount, before.storeNewCount + 2);
+    // The test order paid earlier never counts nor dates the notice.
+    assert.ok(
+      waiting.storeNewOldestPaidAt !== null &&
+        waiting.storeNewOldestPaidAt <= '2026-10-06T12:00:00.000Z',
+    );
+
+    // Two people print at the same time: one of them is recorded.
+    const results = await Promise.all(
+      ['print-user-1', 'print-user-2'].map((actorId) =>
+        repository.recordFirstPrint({
+          actorId,
+          correlationId: `correlation-print-${actorId}`,
+          now: new Date('2026-10-08T12:00:00Z'),
+          orderId: older.order.id,
+        }),
+      ),
+    );
+    assert.equal(results.filter((result) => result.recorded).length, 1);
+    const winner = results.find((result) => result.recorded)?.order;
+    assert.equal(winner?.fichaFirstPrintedAt, '2026-10-08T12:00:00.000Z');
+    assert.equal(winner?.version, older.order.version + 1);
+    assert.equal(winner?.updatedAt, older.order.updatedAt);
+
+    const later = await repository.recordFirstPrint({
+      actorId: 'print-user-2',
+      correlationId: 'correlation-print-later',
+      now: new Date('2026-10-09T12:00:00Z'),
+      orderId: older.order.id,
+    });
+    assert.equal(later.recorded, false);
+    assert.equal(later.order.fichaFirstPrintedAt, winner?.fichaFirstPrintedAt);
+    assert.equal(later.order.fichaFirstPrintedBy, winner?.fichaFirstPrintedBy);
+    assert.equal(later.order.version, winner?.version);
+
+    const after = await repository.summary();
+    assert.equal(after.storeNewCount, waiting.storeNewCount - 1);
+    const events = (
+      await pool.query(
+        `SELECT event_type, payload FROM crm.domain_events
+         WHERE aggregate_type = 'order' AND aggregate_id = $1
+         ORDER BY aggregate_version`,
+        [older.order.id],
+      )
+    ).rows;
+    assert.deepEqual(events, [
+      {
+        event_type: 'order.created',
+        payload: { conversationId: null, orderId: older.order.id },
+      },
+      {
+        event_type: 'order.ficha_first_printed',
+        payload: { conversationId: null, orderId: older.order.id },
+      },
+    ]);
+    const audits = (
+      await pool.query(
+        `SELECT actor_id, action, reason, version FROM crm.audit_events
+         WHERE target_id = $1 AND action = 'order.ficha.first_print'`,
+        [older.order.id],
+      )
+    ).rows;
+    assert.deepEqual(audits, [
+      {
+        action: 'order.ficha.first_print',
+        actor_id: winner?.fichaFirstPrintedBy,
+        reason: 'STORE_FICHA_FIRST_PRINTED',
+        version: String(winner?.version),
+      },
+    ]);
+    assert.doesNotMatch(
+      JSON.stringify(audits),
+      /Cliente Sintetico|5527900|nsu-sintetico/u,
+    );
+    assert.equal(
+      (await repository.findById(newer.order.id))?.fichaFirstPrintedAt,
+      null,
+    );
+
+    // The database keeps who and when together, on a store order, by a user.
+    await assert.rejects(
+      pool.query(
+        `UPDATE crm.orders SET ficha_first_printed_at = now() WHERE id = $1`,
+        [newer.order.id],
+      ),
+      { code: '23514' },
+    );
+    await assert.rejects(
+      pool.query(
+        `UPDATE crm.orders
+         SET ficha_first_printed_at = now(), ficha_first_printed_by = 'nobody'
+         WHERE id = $1`,
+        [newer.order.id],
+      ),
+      { code: '23503' },
+    );
+  });
+
   test('LOJ-07/LOJ-21: the database itself keeps a store order confirmed and paid in full', async () => {
     const { order } = await record(paid(8));
     await assert.rejects(

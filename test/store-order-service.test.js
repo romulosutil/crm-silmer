@@ -365,6 +365,9 @@ test('LOJ-09: a store sale counts like any sale; a test order does not', async (
     confirmedCount: 0,
     pendingCount: 0,
     soldAmountCents: 0,
+    // ADR 031: a test order never shows in the Dashboard notice.
+    storeNewCount: 0,
+    storeNewOldestPaidAt: null,
     totalPiecesSold: 0,
   });
   await record(otherStoreOrderBody(2));
@@ -373,6 +376,8 @@ test('LOJ-09: a store sale counts like any sale; a test order does not', async (
     confirmedCount: 1,
     pendingCount: 0,
     soldAmountCents: 18000,
+    storeNewCount: 1,
+    storeNewOldestPaidAt: '2026-10-08T02:15:55.000Z',
     totalPiecesSold: 10,
   });
 });

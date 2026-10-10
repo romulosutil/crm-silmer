@@ -31,7 +31,8 @@ const writeHeaders = Object.freeze({
   'x-csrf-token': 'csrf-synthetic',
 });
 
-function harness() {
+/** @param {{denyRead?: boolean}} [options] */
+function harness(options = {}) {
   const repository = new InMemoryOrderRepository();
   let ids = 0;
   const store = createStoreOrderService({
@@ -46,7 +47,15 @@ function harness() {
   const assignmentReads = [];
   const runtime = createOrderRuntime({
     access: {
-      authorizeRead: async () => ({ actor: ADMIN }),
+      authorizeRead: async () => {
+        if (options.denyRead) {
+          throw Object.assign(new Error('forbidden'), {
+            code: 'FORBIDDEN',
+            statusCode: 403,
+          });
+        }
+        return { actor: ADMIN };
+      },
       authorizeWrite: async () => ({ actor: ADMIN }),
     },
     auditTrail: { append: async () => undefined },
@@ -81,7 +90,7 @@ function harness() {
     });
     return outcome.order;
   }
-  return { api, assignmentReads, notify, runtime };
+  return { api, assignmentReads, notify, repository, runtime };
 }
 
 test('LOJ-21/LOJ-22: a store order reads as locked, paid through InfinitePay, with no seller', async () => {
@@ -341,7 +350,176 @@ test('LOJ-09: the summary counts a store sale like any sale and skips tests', as
     confirmedCount: 1,
     pendingCount: 0,
     soldAmountCents: 18000,
+    storeNewCount: 1,
+    storeNewOldestPaidAt: '2026-10-08T02:15:55.000Z',
     totalPiecesSold: 10,
   });
+  await api.close();
+});
+
+/** @param {import('fastify').FastifyInstance} api */
+async function readSummary(api) {
+  const response = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: '/api/v1/orders/summary',
+  });
+  assert.equal(response.statusCode, 200);
+  return response.json();
+}
+
+test('LOJ-26: a paid store order is new until its ficha is printed; a test order never is', async () => {
+  const { api, notify } = harness();
+  assert.equal((await readSummary(api)).storeNewCount, 0);
+  assert.equal((await readSummary(api)).storeNewOldestPaidAt, null);
+  await notify((body) => (body.teste = true));
+  assert.equal((await readSummary(api)).storeNewCount, 0);
+  const created = await notify(undefined, otherStoreOrderBody(2));
+  const summary = await readSummary(api);
+  assert.equal(summary.storeNewCount, 1);
+  assert.equal(
+    summary.storeNewOldestPaidAt,
+    created.gatewayPayment?.confirmedAt,
+  );
+  const read = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${created.id}`,
+  });
+  assert.equal(read.json().order.fichaFirstPrintedAt, null);
+  assert.equal(read.json().order.fichaFirstPrintedBy, null);
+  await api.close();
+});
+
+test('LOJ-27/LOJ-28: the first print records who and when, once; later prints and downloads change nothing', async () => {
+  const { api, notify, repository } = harness();
+  const created = await notify();
+  const versionBefore = (await repository.findById(created.id))?.version;
+  const printed = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${created.id}/print`,
+  });
+  assert.equal(printed.statusCode, 200);
+  assert.match(printed.body, /PEDIDO DA LOJA/u);
+  const first = (
+    await api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url: `/api/v1/orders/${created.id}`,
+    })
+  ).json().order;
+  assert.equal(first.fichaFirstPrintedAt, STORE_NOW.toISOString());
+  assert.deepEqual(first.fichaFirstPrintedBy, {
+    id: 'admin-1',
+    name: 'Administradora',
+  });
+  assert.equal(first.version, Number(versionBefore) + 1);
+  assert.equal(first.updatedAt, created.updatedAt);
+  assert.equal((await readSummary(api)).storeNewCount, 0);
+  assert.equal((await readSummary(api)).storeNewOldestPaidAt, null);
+
+  // LOJ-29: the live event fires on the first print, with ids only.
+  const events = repository.eventsFor(created.id);
+  assert.deepEqual(
+    events.map((event) => event.eventType),
+    ['order.created', 'order.ficha_first_printed'],
+  );
+  assert.deepEqual(events[1].payload, {
+    conversationId: null,
+    orderId: created.id,
+  });
+  const audits = repository
+    .audits()
+    .filter((audit) => audit.action === 'order.ficha.first_print');
+  assert.equal(audits.length, 1);
+  assert.equal(audits[0].actor, 'admin-1');
+  assert.equal(audits[0].reason, 'STORE_FICHA_FIRST_PRINTED');
+  assert.doesNotMatch(
+    JSON.stringify(audits),
+    /Cliente Sintetico|5527900000001|nsu-sintetico/u,
+  );
+
+  for (const url of [
+    `/api/v1/orders/${created.id}/print`,
+    `/api/v1/orders/${created.id}/print?download=1`,
+  ]) {
+    const again = await api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url,
+    });
+    assert.equal(again.statusCode, 200, url);
+  }
+  const after = await repository.findById(created.id);
+  assert.ok(after);
+  assert.equal(after.fichaFirstPrintedAt, first.fichaFirstPrintedAt);
+  assert.equal(after.fichaFirstPrintedBy, 'admin-1');
+  assert.equal(after.version, first.version);
+  assert.equal(repository.eventsFor(created.id).length, 2);
+  assert.equal(
+    repository
+      .audits()
+      .filter((audit) => audit.action === 'order.ficha.first_print').length,
+    1,
+  );
+  await api.close();
+});
+
+test('LOJ-27: "Baixar ficha" counts as the first print', async () => {
+  const { api, notify } = harness();
+  const created = await notify();
+  const download = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${created.id}/print?download=1`,
+  });
+  assert.equal(download.statusCode, 200);
+  assert.equal((await readSummary(api)).storeNewCount, 0);
+  await api.close();
+});
+
+test('LOJ-28: a print without a session is refused and records nothing', async () => {
+  const denied = harness({ denyRead: true });
+  const created = await denied.notify();
+  for (const url of [
+    `/api/v1/orders/${created.id}/print`,
+    `/api/v1/orders/${created.id}/print?download=1`,
+  ]) {
+    const refused = await denied.api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url,
+    });
+    assert.equal(refused.statusCode, 403, url);
+  }
+  const stored = await denied.repository.findById(created.id);
+  assert.equal(stored?.fichaFirstPrintedAt, null);
+  assert.equal(stored?.version, created.version);
+  assert.deepEqual(
+    denied.repository.eventsFor(created.id).map((event) => event.eventType),
+    ['order.created'],
+  );
+  await denied.api.close();
+});
+
+test('LOJ-28: printing an order of the conversation records no first print', async () => {
+  const { api, runtime, repository } = harness();
+  const { order: pending } = await runtime.createManual({
+    actor: ADMIN,
+    conversationId: 'conversation-1',
+    correlationId: 'correlation-manual',
+    expectedVersion: 1,
+    idempotencyKey: 'manual-print',
+  });
+  // Only a store order records it, even when asked directly.
+  const result = await repository.recordFirstPrint({
+    actorId: 'admin-1',
+    correlationId: 'correlation-print',
+    now: STORE_NOW,
+    orderId: pending.id,
+  });
+  assert.equal(result.recorded, false);
+  assert.equal(result.order.fichaFirstPrintedAt, null);
   await api.close();
 });

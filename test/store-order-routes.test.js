@@ -174,6 +174,29 @@ test('LOJ-17: a retry answers 200 with the same order; the receipt that arrives 
   );
 });
 
+test('LOJ-30: a retry answers the same numero, also after the ficha was printed', async (t) => {
+  const { api, repository } = harness();
+  t.after(() => api.close());
+  const first = (await post(api)).json();
+  assert.match(first.numero, /^\d{2,}-CRM$/u);
+  const retry = await post(api);
+  assert.equal(retry.statusCode, 200);
+  assert.equal(retry.json().numero, first.numero);
+  // ADR 031: the first print is recorded on the order; the contract with
+  // n8n does not change and the retry still names the same order.
+  await repository.recordFirstPrint({
+    actorId: 'user-sintetico',
+    correlationId: 'correlation-print',
+    now: STORE_NOW,
+    orderId: first.pedido_id,
+  });
+  const afterPrint = await post(api);
+  assert.equal(afterPrint.statusCode, 200);
+  assert.deepEqual(afterPrint.json(), { ...first, criado: false });
+  const stored = await repository.findById(first.pedido_id);
+  assert.equal(stored?.fichaFirstPrintedBy, 'user-sintetico');
+});
+
 test('LOJ-17: different data for the same pedido_id is 409 STORE_ORDER_CONFLICT', async (t) => {
   const { api } = harness();
   t.after(() => api.close());

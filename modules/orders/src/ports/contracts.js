@@ -64,6 +64,23 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   counts: {pendente: number, confirmado: number},
  * }} OrderPage
  *
+ * ADR 031: the Dashboard figures. Sales and pieces count confirmed orders,
+ * pending orders are counted apart, test orders never count. `storeNewCount`
+ * counts the store orders whose ficha was never printed and
+ * `storeNewOldestPaidAt` is when InfinitePay confirmed the oldest of them
+ * (null when there is none).
+ * @typedef {{
+ *   confirmedCount: number, soldAmountCents: number,
+ *   averageTicketCents: number, pendingCount: number,
+ *   totalPiecesSold: number, storeNewCount: number,
+ *   storeNewOldestPaidAt: string|null,
+ * }} OrdersSummary
+ *
+ * ADR 031: the first print of a store order's ficha, signed by a person.
+ * @typedef {{
+ *   orderId: string, actorId: string, correlationId: string, now: Date,
+ * }} RecordFirstPrintInput
+ *
  * Every write bumps `version` by one, refuses a stale `expectedVersion` with
  * VERSION_CONFLICT and appends an identifier-only `order.*` domain event in
  * the same unit of work. Only one pending order may exist per conversation.
@@ -74,6 +91,11 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   its ficha, so a generated order keeps the client it showed (ADR 018).
  * - `saveMilestones` writes the manual days of the trail (`paidOn`,
  *   `deliveredOn`, `updatedAt`) of an order in either status.
+ * - `recordFirstPrint` (ADR 031) records who printed a store order's ficha
+ *   and when, only while nobody has: the first print bumps `version` and
+ *   appends an `order.ficha_first_printed` event and the
+ *   `order.ficha.first_print` audit; any later print, or an order that is
+ *   not a store order, changes nothing and answers `recorded: false`.
  *
  * @typedef {{
  *   createPending(input: CreatePendingOrderInput): Promise<Order>,
@@ -81,7 +103,8 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   findPendingByConversation(conversationId: string): Promise<Order|null>,
  *   listByConversation(conversationId: string): Promise<Order[]>,
  *   list(query: OrderListQuery): Promise<OrderPage>,
- *   summary(): Promise<{confirmedCount: number, soldAmountCents: number, averageTicketCents: number, pendingCount: number, totalPiecesSold: number}>,
+ *   summary(): Promise<OrdersSummary>,
+ *   recordFirstPrint(input: RecordFirstPrintInput): Promise<{recorded: boolean, order: Order}>,
  *   saveSection(order: Order, options: OrderWriteOptions): Promise<Order>,
  *   saveStatus(order: Order, options: OrderWriteOptions): Promise<Order>,
  *   saveMilestones(order: Order, options: OrderWriteOptions): Promise<Order>,
@@ -100,6 +123,7 @@ export const ORDER_REPOSITORY_METHODS = Object.freeze([
   'saveStatus',
   'saveMilestones',
   'projectBriefing',
+  'recordFirstPrint',
 ]);
 
 export const MAX_ORDER_PAGE_SIZE = 100;

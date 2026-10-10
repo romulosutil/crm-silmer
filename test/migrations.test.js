@@ -211,6 +211,31 @@ test('ships paid store orders as an expand migration with locked rows (ADRs 027 
   assert.doesNotMatch(store.sql, /\bDROP\s+(?:TABLE|COLUMN)\b/iu);
 });
 
+test('records the first print of a store ficha as an expand migration (ADR 031)', async () => {
+  const migration = (await loadMigrations()).find(
+    ({ version }) => version === '0034',
+  );
+  assert.ok(migration, 'migration 0034 is present');
+  assert.equal(migration.name, 'store_order_first_print');
+  assert.equal(migration.phase, 'expand');
+  assert.match(
+    migration.sql,
+    /ADD COLUMN ficha_first_printed_at timestamptz,/u,
+  );
+  assert.match(
+    migration.sql,
+    /ADD COLUMN ficha_first_printed_by text\s+REFERENCES crm\.users \(id\) ON DELETE RESTRICT/u,
+  );
+  assert.match(migration.sql, /orders_ficha_first_print_pair\b/u);
+  assert.match(
+    migration.sql,
+    /CHECK \(origin = 'loja' OR ficha_first_printed_at IS NULL\)/u,
+  );
+  // Nullable columns only: the release before keeps working.
+  assert.doesNotMatch(migration.sql, /NOT NULL DEFAULT|SET NOT NULL/u);
+  assert.doesNotMatch(migration.sql, /\bDROP\s+(?:TABLE|COLUMN)\b/iu);
+});
+
 test('loads versioned forward-only migrations in deterministic order', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'crm-migrations-'));
   try {

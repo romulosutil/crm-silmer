@@ -1,5 +1,23 @@
 # Execução INBOX-MEDIA-1
 
+## T30: Segurança dos scripts locais no PR156
+
+MED-20/23: limite de120requisições/minuto aplicado antes do hook de banco,
+identidade do workflow local comparada a literal antes do uso, download validado
+por hash/tamanho/MIME e OGG/Opus em memória. Prova JSON preserva somente hashes,
+enums e números validados; não persiste DTOs arbitrários nem áudio recebido.
+Artefatos históricos existentes permanecem preservados.
+
+Validação completa `npm run validate` exit0, incluindo build, lint, tipos e
+suíte unitária. Log ignorado var/pr156-security-gates.log.
+Testes focais11/11 e revisão independente com sensor3/3. Evidência específica
+em [validation-pr-security.md](validation-pr-security.md). Alert18 do CodeQL
+é falso positivo documentado: chave sintética persistida pelo bootstrap enviada
+intencionalmente ao IAM do RustFS no endpoint fixo loopback, redirect:error.
+Classificação registrada no GitHub em10/10/2026 às16:32:48UTC, somente alerta18.
+Nenhuma regra foi suprimida; checks remotos da nova revisão serão exigidos antes
+do merge por rebase autorizado pelo usuário. T24 permanece pendente.
+
 ## T29: Clamd persistente no worker
 
 Usuário autorizou clamd em10/10. Premissas: Docker local, worker existente,

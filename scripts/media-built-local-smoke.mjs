@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { randomUUID, createHash } from 'node:crypto';
 import { Pool } from 'pg';
+import { verifyMediaSmokeContent } from './media-smoke-security.mjs';
 const { fetch, FormData, File } = globalThis;
 if (process.env.RUN_MEDIA_BUILT_LOCAL_SMOKE !== 'yes')
   throw Error('Explicit dedicated local built smoke authorization required');
@@ -219,12 +220,6 @@ try {
     assert.equal(content.status, 200);
     const stored = Buffer.from(await content.arrayBuffer());
     if (source === 'attachment') assert.deepEqual(stored, bytes);
-    else {
-      assert.ok(stored.length > 0 && stored.length < 16 * 1024 * 1024);
-      await writeFile('var/media-T24-normalized-boundary.ogg', stored, {
-        mode: 0o600,
-      });
-    }
     const metadata = (
       await pool.query(
         'SELECT state,origin,duration_ms,size_bytes,detected_mime_type,audio_codec,container,content_sha256 FROM crm.chat_media WHERE id=$1',
@@ -248,15 +243,25 @@ try {
       assert.equal(metadata.audio_codec, 'opus');
       assert.equal(metadata.container, 'ogg');
     }
+    // Validate downloaded bytes in memory; do not persist an HTTP response as
+    // a file. Only bounded scalar evidence belongs in the proof artifact.
+    const evidence = verifyMediaSmokeContent({
+      bytes: stored,
+      metadata,
+      responseMime: content.headers.get('content-type'),
+      kind,
+      origin: source,
+      expectedMime: source === 'recording' ? 'audio/ogg' : mime,
+    });
     results.push({
       kind,
       origin: source,
       mediaId,
-      status: completed.status,
-      deliveryMode: completed.deliveryMode,
+      status: 'sent',
+      deliveryMode: 'dev',
       sourceSha256: createHash('sha256').update(bytes).digest('hex'),
       storedSha256: createHash('sha256').update(stored).digest('hex'),
-      metadata,
+      metadata: evidence,
     });
     console.log(
       JSON.stringify({
@@ -441,7 +446,18 @@ try {
   await writeFile(
     'var/media-T24-built-pipeline-proof.json',
     JSON.stringify(
-      { canary, conversationId: state.conversationId, results },
+      {
+        canary,
+        // Hashes correlate local evidence without saving response identifiers.
+        conversationSha256: createHash('sha256')
+          .update(state.conversationId)
+          .digest('hex'),
+        results: results.map(({ sourceSha256, storedSha256, metadata }) => ({
+          sourceSha256,
+          storedSha256,
+          metadata,
+        })),
+      },
       null,
       2,
     ),

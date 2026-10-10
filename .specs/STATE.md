@@ -22,6 +22,15 @@
 
 ## Handoff
 
+PR156 aberto contra master b7b26db. Histórico linearizado por rebase, árvore
+validada preservada integralmente no commit577ac16; backup local mantido.
+T30 corrige quatro fluxos de scripts apontados pelo CodeQL: rate-limit antes
+do banco, workflow local fixo, validação de bytes em memória e provas escalares.
+Revisão independente: 11/11 e sensor3/3; alerta18 é provisionamento intencional
+de chave sintética persistida ao IAM do RustFS loopback, sem redirecionamentos.
+CI da nova revisão e merge rebase ainda pendentes; merge condicionado a todos
+os checks aprovados. T24 continua pendente; não há homologação global.
+
 T29 implementada e validada localmente na branch codex/inbox-media-rustfs-plan.
 Clamd persistente no worker; socket0600/diretório0700, sem TCP, scan fdpass.
 Scanner indisponível/infectado/stale segue bloqueado; gravação mantém duas

@@ -6,6 +6,8 @@ import { resolve, join, relative } from 'node:path';
 import { promisify } from 'node:util';
 import { Readable } from 'node:stream';
 import Fastify from 'fastify';
+import rateLimit from '@fastify/rate-limit';
+import { MEDIA_SMOKE_RATE_LIMIT_OPTIONS } from './media-smoke-security.mjs';
 import { Pool } from 'pg';
 import {
   loadMigrations,
@@ -141,6 +143,9 @@ await writeFile(join(directory, 'workflow.json'), JSON.stringify(source));
 const counts = new Map();
 const faults = new Map();
 const api = Fastify({ logger: false });
+// Reject floods before authorization, fault injection or any database access.
+await api.register(rateLimit, MEDIA_SMOKE_RATE_LIMIT_OPTIONS);
+api.addHook('onRequest', api.rateLimit());
 api.decorate('automationAuth', {
   async authorize(/** @type {any} */ input) {
     assert.equal(input.authorization, 'Basic synthetic-local-n8n-media');

@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-29 tarefas planejadas; T1 a T23 e T25 a T29 concluídas; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
+30 tarefas planejadas; T1 a T23 e T25 a T30 concluídas; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -18,7 +18,7 @@ Após a última tarefa, Verifier independente obrigatório, com evidência por A
 e sensor de discriminação em scratch isolado; validation.md não é criado vazio.
 Se houver achados, criar tarefas de correção e repetir no limite da skill.
 As quatro fases originais têm seis tarefas; a fase 4 inclui T25 solicitada
-durante UAT, T26 decorrente da revisão independente, T27 de recuperação e T28/T29 de desempenho, passando a onze tarefas. Na execução, oferecer delegação conforme a
+durante UAT, T26 decorrente da revisão independente, T27 de recuperação, T28/T29 de desempenho e T30 do CI, passando a doze tarefas. Na execução, oferecer delegação conforme a
 skill antes de despachar workers. Arquivos têm um único dono por tarefa.
 
 ## Test Coverage Matrix
@@ -81,12 +81,12 @@ T13..T18: bytes técnicos, workflow, DEV, DTO, cliente HTTP e composer.
 
 ### Phase 4: Gravação, histórico e fechamento
 
-T19..T23, T25, T26, T27, T28, T29, T24: recorder, playback, integração Inbox, limpeza, rollout,
+T19..T23, T25, T26, T27, T28, T29, T30, T24: recorder, playback, integração Inbox, limpeza, rollout,
 correção UX, recuperação de recusa conhecida e UAT.
 
 ```text
 T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9 -> T10 -> T11 -> T12
-T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T28 -> T29 -> T24
+T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T28 -> T29 -> T30 -> T24
 ```
 
 ## Task Breakdown
@@ -479,11 +479,24 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Gate**: Quick + Build + scanner/normalizador real e envio DEV; revisão independente específica antes do commit.
 **Commit**: perf(media): keep antivirus engine loaded with clamd
 
+### T30: Restringir os fluxos dos scripts locais apontados pelo CodeQL
+
+**Where**: scripts/media-smoke-security.mjs
+**Supporting files**: scripts/n8n-media-local-smoke.mjs; scripts/media-built-local-smoke.mjs; scripts/media-built-local-fault-smoke.mjs; test/media-smoke-security.test.js; tasks/spec/execution/STATE e validation-pr-security.md.
+**Depends on**: T29
+**Requirement**: MED-20, MED-23
+**Assumptions**: Scripts são exclusivos do perfil sintético local; não alterar controles da aplicação nem enfraquecer checks.
+**What**: Limitar taxa antes do hook de banco; exigir identidade fixa do workflow local; preservar apenas provas escalares validadas e hashes; rever fluxo intencional de provisionamento de credencial no RustFS loopback com evidência independente.
+**Done when**: [x] Rajada não alcança banco; workflow diferente é recusado; nenhuma resposta arbitrária ou áudio de rede é escrito como artefato; limites e integridade são comprovados; cada alerta tem correção ou classificação independente documentada. Aprovação dos checks remotos permanece condição para o merge, verificada após o push.
+**Tests**: unit + revisão independente e sensor isolado + CI completo do PR.
+**Gate**: Build + Quick + revisão independente e sensor antes do commit; CodeQL e checks do PR antes do merge, sem dismiss de vulnerabilidade real ou supressão de regra.
+**Commit**: fix(dev): constrain local media smoke data flows
+
 ### T24: Homologação da fatia e evidências
 
 **What**: Executar UAT sintético ponta a ponta do CRM ao DEV e consolidar critérios para canal real.
 **Where**: docs/runbooks/chat-media-uat.md
-**Depends on**: T29
+**Depends on**: T30
 **Requirement**: MED-01..32
 **Reuses**: Todos os testes da fatia; handoff e reserva atuais.
 **Tools**: tlc-spec-driven; Browser/Playwright; Verifier independente após commit final.
@@ -547,7 +560,8 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T27  | T26                    | T26 → T27     | Match  |
 | T28  | T27                    | T27 → T28     | Match  |
 | T29  | T28                    | T28 → T29     | Match  |
-| T24  | T29                    | T29 → T24     | Match  |
+| T30  | T29                    | T29 → T30     | Match  |
+| T24  | T30                    | T30 → T24     | Match  |
 
 ## Test Co-location Validation
 
@@ -582,6 +596,7 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T27  | Recuperação e captura       | e2e + smoke                 | e2e + smoke            | OK     |
 | T28  | Worker e integridade        | unit + smoke                | unit + smoke           | OK     |
 | T29  | Scanner persistente         | unit + integração + tela    | unit + integração + tela | OK   |
+| T30  | Scripts locais e provas     | unit + CI + revisão         | unit + CI + revisão    | OK     |
 
 ## Confirmação antes de Execute
 

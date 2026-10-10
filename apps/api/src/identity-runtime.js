@@ -36,9 +36,12 @@ class IdentityHttpError extends Error {
  */
 
 /**
- * A read is authorized by the session cookie alone, so only actions that
- * change nothing pass here: every `.read` action and printing a confirmed
- * order (PIM-02), which opens in a new tab as a plain navigation.
+ * A read is authorized by the session cookie alone (plus the CRM's own
+ * Origin or Sec-Fetch-Site), so only reads pass here: every `.read` action
+ * and printing a confirmed order (PIM-02), which opens in a new tab as a
+ * plain navigation. ADR 031: `order.print` is the one read with an effect —
+ * the first GET of a store order's ficha records who printed it, once and
+ * idempotently; every later print, HEAD and other order changes nothing.
  */
 const OPERATIONAL_READ_ACTIONS = new Set([
   ...[...OPERATIONAL_ACTIONS].filter((action) => action.endsWith('.read')),

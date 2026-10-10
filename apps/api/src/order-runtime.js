@@ -479,11 +479,8 @@ export function createOrderRuntime(options) {
      * @param {{actor: OrderActor, correlationId: string, orderId: string}} input
      */
     async recordFirstPrint(input) {
-      const result = await service.recordFirstPrint(input);
-      return {
-        order: await presentOne(result.order),
-        recorded: result.recorded,
-      };
+      const { recorded } = await service.recordFirstPrint(input);
+      return { recorded };
     },
 
     /** @param {string} orderId */

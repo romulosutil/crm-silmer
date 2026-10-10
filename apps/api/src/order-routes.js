@@ -90,7 +90,8 @@ export function registerOrderRoutes(api, orders, contextFor) {
    * same document as the attachment `pedido-NN-CRM.html` (LOJ-10). ADR 031:
    * the first time a person prints or downloads a store order's ficha, the
    * order records who and when and leaves the Dashboard notice; later prints
-   * change nothing.
+   * change nothing. Fastify answers HEAD on this route too; a HEAD sends no
+   * document, so it records nothing.
    */
   api.get('/api/v1/orders/:orderId/print', async (request, reply) =>
     respond(reply, async () => {
@@ -106,7 +107,11 @@ export function registerOrderRoutes(api, orders, contextFor) {
       if (order.status !== 'confirmado') {
         throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
       }
-      if (order.origin === 'loja' && !order.fichaFirstPrintedAt) {
+      if (
+        request.method !== 'HEAD' &&
+        order.origin === 'loja' &&
+        !order.fichaFirstPrintedAt
+      ) {
         await orders.recordFirstPrint({
           actor: principal.actor,
           correlationId: contextFor(request).correlationId,

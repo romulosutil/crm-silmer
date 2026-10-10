@@ -87,7 +87,11 @@ async function start() {
         /* Try the next approved container. */
       }
     }
-    if (!capture) throw new Error('UNSUPPORTED_RECORDING');
+    if (!capture)
+      throw new DOMException(
+        'Unsupported recording format',
+        'NotSupportedError',
+      );
     recorder = capture;
     const chunks = /** @type {Blob[]} */ ([]);
     let size = 0,
@@ -161,9 +165,21 @@ async function start() {
     recorder = null;
     state.value = 'idle';
     error.value =
-      cause?.name === 'NotAllowedError'
-        ? 'Acesso ao microfone negado. Você pode anexar um arquivo de áudio.'
-        : 'Não foi possível iniciar a gravação. Você pode anexar um arquivo de áudio.';
+      /** @type {Record<string, string>} */ ({
+        NotAllowedError:
+          'Acesso ao microfone negado. Você pode anexar um arquivo de áudio.',
+        NotFoundError:
+          'Nenhum microfone foi encontrado. Conecte um microfone e confira o dispositivo de entrada do sistema.',
+        NotReadableError:
+          'Não foi possível acessar o microfone. Confira o dispositivo de entrada e o acesso ao microfone nas configurações do sistema.',
+        SecurityError:
+          'Este navegador bloqueou o acesso ao microfone. Permita o microfone ou abra o chat no Chrome ou Edge.',
+        NotSupportedError:
+          'Este navegador não conseguiu iniciar o gravador de áudio. Abra o chat no Chrome ou Edge ou anexe um áudio.',
+        AbortError:
+          'A abertura do microfone foi interrompida. Tente gravar novamente.',
+      })[cause?.name] ??
+      'Não foi possível iniciar a gravação. Você pode anexar um arquivo de áudio.';
     await nextTick();
     startButton.value?.focus();
   }

@@ -18,6 +18,14 @@ armazenar no RustFS existente; testar com n8n DEV sem WhatsApp.
 
 ## Implementation Decisions
 
+- UAT de 10/10/2026 reproduziu unavailable/stale_signatures no anexo e
+  NotFoundError ao gravar no navegador integrado. Windows enumerou somente
+  saída LG ULTRAWIDE, sem entrada de microfone. Não simular dispositivo como
+  se fosse UAT física concluída. Refresh ClamAV genuíno recuperou o anexo
+  para ready/clean pelo retry natural, sem enviar mensagem ou alterar o limite36h.
+  T27 preserva prévia/legenda e consulta a mesma mídia após indisponibilidade
+  temporária; informa causa segura da captura. Rascunhos lost antigos tinham
+  cleanupintent após24h; doze anexos enviados tiveram HEAD200 preservado.
 - UAT de 06/10/2026 reportou cinco problemas: Prepare falha, seletor nativo
   sem tema, mic colado ao envio, composição pouco familiar e Enviar anexo
   bloqueado. Registro FAILED; gravação no DOM não comprova ouvir/descarte.

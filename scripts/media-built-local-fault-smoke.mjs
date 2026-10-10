@@ -29,6 +29,12 @@ const canonical =
 const canonicalBytes = await readFile(canonical),
   canonicalDigest = createHash('sha256').update(canonicalBytes).digest('hex');
 const source = JSON.parse(canonicalBytes.toString('utf8'));
+const workflowId = '0S5ZS1xeDCSoWovs';
+assert.equal(
+  source.id,
+  workflowId,
+  'Only the dedicated local workflow is allowed',
+);
 const delayNode = source.nodes.find(
   (/** @type {any} */ n) =>
     n.name === 'DEV - Simular upload Meta de midia (MVP)',
@@ -170,7 +176,7 @@ try {
           'content-type': 'application/json',
           'idempotency-key': eventId,
           'x-correlation-id': randomUUID(),
-          'x-silmer-workflow-key': source.id,
+          'x-silmer-workflow-key': workflowId,
           'x-silmer-workflow-version': 'dev-mvp-simple-12',
           'x-silmer-execution-id': 'synthetic-T24-fault-setup',
         },

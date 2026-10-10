@@ -3,7 +3,7 @@
 > **Data:** 29/08/2026\
 > **Status:** inventário original do P0.1, reconciliado em 05/10/2026 com ADRs 006, 016 e 020\
 > **Fontes:** `ficha_exemplo.xlsx`, `PRODUCT-READINESS-TECH-LEAD.md` e `CRM-MVP-ESPECIFICACAO.md`\
-> **Baseline atual:** coleta não linear, Pedido pendente/confirmado, técnica por item, arte do pedido e impressão v5. Os grupos de perguntas não são estados nem colunas.
+> **Baseline atual:** coleta não linear, Pedido pendente/confirmado, técnica por item, arte do pedido e impressão v6 com público por item (ADR 025). Os grupos de perguntas não são estados nem colunas.
 
 Este documento transforma a planilha de exemplo em um contrato de dados e em
 uma jornada conversacional testável. Ele separa o que o cliente informa, o que
@@ -160,7 +160,7 @@ são adicionais; não bloqueiam gerar. Técnica pertence ao item e aplicação
 geral antiga permanece guardada sem uso na v5. Bot só preenche respostas
 inequívocas ainda vazias e não substitui escolha humana (ADR 020).
 
-Confirmar muda de pendente para confirmado e libera impressão v5. Reabrir
+Confirmar muda de pendente para confirmado e libera impressão v6. Reabrir
 preserva número, volta a pendente e bloqueia impressão. Pago em e Entregue em
 são datas manuais que não alteram status e não implementam cobrança ou
 comprovante. Valor e condição não saem no papel; produção permanece vazia.
@@ -193,11 +193,11 @@ idempotência, autorização e homologação próprios.
 
 ## 7. Ficha e operação
 
-PRINT_TEMPLATE seleciona ficha-canonical-v5. Aprovação provisória do PO vale
+PRINT_TEMPLATE seleciona ficha-canonical-v6 (ADR 025). Aprovação provisória do PO vale
 para desenvolvimento; Rose e Operação assinam a amostra física antes da
-produção. V2–v4 e hashes são imutáveis. Arquivos válidos e encaminhamento a
-Rose exigem procedimento durável registrado; upload/Dropbox e aviso
-automáticos ainda dependem de contrato e homologação próprios.
+produção. V2–v5 e hashes são imutáveis. Arquivos da arte são enviados e
+baixados pela página do pedido e ficam no RustFS (ADR 023); encaminhamento e
+aviso automáticos a Rose ainda dependem de contrato e homologação próprios.
 
 ## 8. Rastreabilidade do P0.1
 

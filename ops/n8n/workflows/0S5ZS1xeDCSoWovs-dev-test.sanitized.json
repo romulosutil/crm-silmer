@@ -19,7 +19,7 @@
     "saveManualExecutions": false,
     "saveDataErrorExecution": "none",
     "saveDataSuccessExecution": "none",
-    "executionTimeout": 240
+    "executionTimeout": 120
   },
   "nodes": [
     {
@@ -197,6 +197,193 @@
           "fallbackOutput": "extra",
           "renameFallbackOutput": "Sem ação"
         }
+      }
+    },
+    {
+      "name": "Ler mídia da mensagem? (MVP)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [-990, -760],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Normalizar evento WhatsApp (MVP)').item.json.media_source }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "whatsapp"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Baixar do WhatsApp"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Normalizar evento WhatsApp (MVP)').item.json.media_source }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "upload"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Arquivo do site"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Sem mídia"
+        }
+      }
+    },
+    {
+      "name": "WhatsApp - Consultar mídia (MVP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-1470, -1000],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://graph.facebook.com/v23.0/' + $('Normalizar evento WhatsApp (MVP)').item.json.media_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 15000
+        }
+      },
+      "maxTries": 2,
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 1000
+    },
+    {
+      "name": "WhatsApp - Baixar mídia (MVP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-1230, -1000],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "maxTries": 2,
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 1000
+    },
+    {
+      "name": "Preparar mídia para a IA (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-990, -1000],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const source = $('Normalizar evento WhatsApp (MVP)').item.json;\nconst binary = source.media_source === 'upload'\n  ? $('Normalizar evento WhatsApp (MVP)').item.binary\n  : $input.item.binary;\nconst file = Object.values(binary ?? {})[0];\nif (!file) throw new Error('MEDIA_MISSING');\nconst mimeType = String(source.media_mime_type || file.mimeType || '').split(';')[0].trim().toLowerCase();\nconst EXTENSIONS = {\n  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',\n  'audio/ogg': 'ogg', 'audio/opus': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/mp4': 'm4a',\n  'audio/m4a': 'm4a', 'audio/x-m4a': 'm4a', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/webm': 'webm'\n};\nconst extension = EXTENSIONS[mimeType];\nif (!extension || !mimeType.startsWith(source.media_kind + '/')) throw new Error('MEDIA_TYPE_UNSUPPORTED');\nlet size = 0;\ntry { size = Number($('WhatsApp - Consultar mídia (MVP)').item.json.file_size) || 0; } catch (error) { size = 0; }\nif (!size) {\n  const [, amount, unit] = /([0-9.]+)\\s*(B|kB|KB|MB|GB)/.exec(String(file.fileSize ?? '')) ?? [];\n  size = Number(amount || 0) * ({ B: 1, kB: 1e3, KB: 1e3, MB: 1e6, GB: 1e9 }[unit] ?? 0);\n}\nconst limit = source.media_kind === 'image' ? 5 * 1024 * 1024 : 16 * 1024 * 1024;\nif (size > limit) throw new Error('MEDIA_TOO_LARGE');\nreturn { json: { media_kind: source.media_kind }, binary: { data: { ...file, mimeType, fileExtension: extension, fileName: source.media_kind + '.' + extension } } };"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Mídia é áudio? (MVP)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-750, -1000],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.media_kind === 'audio') ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "OpenAI - Transcrever áudio (MVP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-510, -1000],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "parameterType": "formData",
+              "name": "model",
+              "value": "gpt-4o-mini-transcribe"
+            },
+            { "parameterType": "formData", "name": "language", "value": "pt" },
+            {
+              "parameterType": "formData",
+              "name": "response_format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 60000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Marcar mídia não lida (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-990, -1200],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const source = $('Normalizar evento WhatsApp (MVP)').item.json;\nreturn { json: { media_kind: source.media_kind, media_unreadable: true } };"
       }
     },
     {
@@ -390,10 +577,45 @@
       }
     },
     {
+      "name": "Enviar aviso pelo chat do site? (MVP)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1190, -1000],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($('Normalizar evento WhatsApp (MVP)').item.json.channel === 'site_chat') ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "Site - Entregar aviso de transferência (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1430, -1160],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nreturn { json: { id: 'site:' + notice.command_id, site_chat: true } };"
+      }
+    },
+    {
       "name": "DEV - Simular aviso de transferência (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1190, -1000],
+      "position": [1430, -1000],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nreturn { json: { id: 'dev-notice-' + notice.command_id, messages: [{ id: 'dev-notice-' + notice.command_id }], simulated: true } };"
@@ -404,7 +626,7 @@
       "name": "Preparar message.sent do aviso (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1430, -1070],
+      "position": [1670, -1070],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'sent:' + notice.command_id, event_type: 'message.sent',\n  occurred_at: new Date().toISOString(), command_id: notice.command_id,\n  conversation_id: notice.conversation_id,\n  external_message_id: $json.messages?.[0]?.id ?? $json.id\n}, idempotency_key: 'sent:' + notice.command_id, correlation_id: correlationId } };"
@@ -414,7 +636,7 @@
       "name": "CRM - Registrar message.sent do aviso (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [1670, -1070],
+      "position": [1910, -1070],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -435,7 +657,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-12"
+              "value": "dev-mvp-simple-15"
             },
             { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
@@ -457,7 +679,7 @@
       "name": "Preparar envio desconhecido do aviso (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1430, -930],
+      "position": [1670, -930],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const notice = $('Preparar aviso de transferência (MVP)').item.json;\nconst correlationId = String($execution.id).padStart(16, '0');\nreturn { json: { payload: {\n  schema_version: '1.0', event_id: 'unknown:' + notice.command_id,\n  event_type: 'message.send.unknown', occurred_at: new Date().toISOString(),\n  command_id: notice.command_id, conversation_id: notice.conversation_id,\n  failure: { code: 'META_SEND_OUTCOME_UNKNOWN' }\n}, idempotency_key: 'unknown:' + notice.command_id, correlation_id: correlationId } };"
@@ -467,7 +689,7 @@
       "name": "CRM - Marcar envio desconhecido do aviso (MVP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
-      "position": [1670, -930],
+      "position": [1910, -930],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SILMER_PANEL_BASE_URL + \"/api/v1/integrations/n8n/events\" }}",
@@ -488,7 +710,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-12"
+              "value": "dev-mvp-simple-15"
             },
             { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
@@ -566,7 +788,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-12"
+              "value": "dev-mvp-simple-15"
             },
             { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
@@ -661,6 +883,41 @@
           "combinator": "and"
         },
         "options": {}
+      }
+    },
+    {
+      "name": "Enviar pelo chat do site? (MVP)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [950, -620],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($('Normalizar evento WhatsApp (MVP)').item.json.channel === 'site_chat') ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "Site - Entregar resposta da IA (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1190, -800],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const command = $('Preparar reserva de envio da IA (MVP)').item.json.command_id;\nreturn { json: { id: 'site:' + command, site_chat: true } };"
       }
     },
     {
@@ -781,6 +1038,41 @@
       "waitBetweenTries": 1000
     },
     {
+      "name": "Responder no chat do site? (MVP)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1910, -1400],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($('Normalizar evento WhatsApp (MVP)').item.json.channel === 'site_chat') ? 'true' : 'false' }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "true"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "Site - Responder no chat (MVP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2150, -1400],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ran = (name) => { try { return $(name).item.json ?? null; } catch (error) { return null; } };\n// With a seller, the chat cannot carry the reply: the visitor's WhatsApp can.\nconst WITH_SELLER = 'Recebi a sua mensagem! Um dos nossos vendedores vai falar com você pelo WhatsApp. Se ainda não passou, me diga o seu número com DDD.';\nlet output = WITH_SELLER;\nif (ran('CRM - Registrar message.sent da IA (MVP)')) {\n  output = ran('Preparar reserva de envio da IA (MVP)')?.reply_text || output;\n} else if (ran('CRM - Registrar message.sent do aviso (MVP)')) {\n  output = ran('Preparar aviso de transferência (MVP)')?.text || output;\n} else if (ran('Montar contexto da IA (MVP)') && !ran('CRM - Registrar handoff (MVP)')) {\n  // A newer message, or a seller, took this turn; the newer execution answers.\n  output = 'Recebi a sua mensagem!';\n}\nreturn { json: { output } };"
+      }
+    },
+    {
       "name": "Preparar status de entrega (MVP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -853,7 +1145,7 @@
       "position": [-1700, 360],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const payload = $json.body ?? {};\nconst headerKey = $json.headers?.['idempotency-key'] ?? '';\nconst action = payload.action;\nconst stateActions = ['take_over', 'return_to_ai', 'close'];\nconst validBase = payload.schema_version === '1.0' && typeof payload.command_id === 'string' && payload.command_id === headerKey;\nconst kind = validBase && action === 'send_message' && ['text', 'image', 'audio', 'video'].includes(payload.message?.type)\n  ? 'send'\n  : validBase && stateActions.includes(action) ? 'state' : 'invalid';\nreturn { json: { payload, kind } };"
+        "jsCode": "const payload = $json.body ?? {};\nconst headerKey = $json.headers?.['idempotency-key'] ?? '';\nconst action = payload.action;\nconst stateActions = ['take_over', 'return_to_ai', 'close'];\nconst validBase = payload.schema_version === '1.0' && typeof payload.command_id === 'string' && payload.command_id === headerKey;\n// ADR 026: a site chat visitor has no WhatsApp; the seller answers on the number the visitor gives.\nconst siteChat = /^\\+?999[0-9]+$/.test(String(payload.to ?? ''));\nconst kind = validBase && action === 'send_message' && ['text', 'image', 'audio', 'video'].includes(payload.message?.type)\n  ? (siteChat ? 'site_chat' : 'send')\n  : validBase && stateActions.includes(action) ? 'state' : 'invalid';\nreturn { json: { payload, kind } };"
       }
     },
     {
@@ -1056,7 +1348,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-12"
+              "value": "dev-mvp-simple-15"
             },
             { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
@@ -1144,7 +1436,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-12"
+              "value": "dev-mvp-simple-15"
             },
             { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
@@ -1267,7 +1559,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-12"
+              "value": "dev-mvp-simple-15"
             },
             { "name": "X-Silmer-Execution-Id", "value": "={{ $execution.id }}" }
           ]
@@ -1380,6 +1672,17 @@
         "respondWith": "json",
         "responseBody": "{\"accepted\":false,\"error\":\"unsupported_or_invalid_command\"}",
         "options": { "responseCode": 400 }
+      }
+    },
+    {
+      "name": "Recusar envio ao chat do site (MVP)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [-1220, 800],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"accepted\":false,\"error\":\"site_chat_contact_has_no_whatsapp\"}",
+        "options": { "responseCode": 422 }
       }
     },
     {
@@ -2048,6 +2351,98 @@
         [
           {
             "node": "CRM - Concluir falha anterior ao envio (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Transcrever áudio (MVP)": {
+      "main": [
+        [{ "node": "Montar contexto da IA (MVP)", "type": "main", "index": 0 }],
+        [{ "node": "Marcar mídia não lida (MVP)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Mídia é áudio? (MVP)": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Transcrever áudio (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [{ "node": "Montar contexto da IA (MVP)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Preparar mídia para a IA (MVP)": {
+      "main": [
+        [{ "node": "Mídia é áudio? (MVP)", "type": "main", "index": 0 }],
+        [{ "node": "Marcar mídia não lida (MVP)", "type": "main", "index": 0 }]
+      ]
+    },
+    "WhatsApp - Consultar mídia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp - Baixar mídia (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [{ "node": "Marcar mídia não lida (MVP)", "type": "main", "index": 0 }]
+      ]
+    },
+    "WhatsApp - Baixar mídia (MVP)": {
+      "main": [
+        [
+          {
+            "node": "Preparar mídia para a IA (MVP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [{ "node": "Marcar mídia não lida (MVP)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Marcar mídia não lida (MVP)": {
+      "main": [
+        [{ "node": "Montar contexto da IA (MVP)", "type": "main", "index": 0 }]
+      ]
+    },
+    "CRM - Registrar message.sent da IA (MVP)": {
+      "main": [
+        [
+          {
+            "node": "Responder no chat do site? (MVP)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "DEV - Resultado da resposta da IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM - Registrar message.sent do aviso (MVP)": {
+      "main": [
+        [
+          {
+            "node": "Responder no chat do site? (MVP)",
+            "type": "main",
+            "index": 0
+          },
+          { "node": "DEV - Resultado do handoff", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Responder no chat do site? (MVP)": {
+      "main": [
+        [
+          {
+            "node": "Site - Responder no chat (MVP)",
             "type": "main",
             "index": 0
           }

@@ -5,7 +5,7 @@ vendas, PIX e geração da Ficha de Pedido. O produto substituirá integralmente
 Datacrazy. O primeiro MVP operacional usa WhatsApp Business no n8n; Instagram
 Direct é a próxima fase de canal.
 
-> **Estado atual:** Inbox, Clientes, usuários, Pedidos e Dashboard estão implementados; PR 142 integrada com técnica por item, arte do pedido e impressão v5. A assinatura física de Rose e Operação permanece pendente. OpenAI é o provedor escolhido. O deploy atual é automático GitHub → EasyPanel. A integração n8n usa
+> **Estado atual:** Inbox, Clientes, usuários, Pedidos e Dashboard estão implementados; PR 142 integrada com técnica por item e arte do pedido; a impressão vigente é v6 com público por item (ADR 025). Arquivos da arte no RustFS, chat do site e pedidos pagos da loja também fazem parte da baseline integrada. A assinatura física de Rose e Operação permanece pendente. OpenAI é o provedor escolhido. O deploy atual é automático GitHub → EasyPanel. A integração n8n usa
 > três endpoints e reserva de envio por epoch/revisão. Publicação e go-live
 > continuam sujeitos às duas credenciais Basic DEV, homologação WhatsApp e
 > gates externos. Veja

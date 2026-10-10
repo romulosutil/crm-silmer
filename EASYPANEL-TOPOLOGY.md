@@ -50,6 +50,13 @@ nulos e flags de workflow não descrevem automaticamente o ambiente atual.
 Atualizá-lo exige configuração e prova live; este planejamento não comprova
 a existência, ausência ou estado atual dos serviços do n8n.
 
+Os arquivos do pedido ([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md))
+usam o serviço `rustfs` já existente no projeto EasyPanel `schedule`, fora do
+`espectro-mvp` (seção 5). Ele aparece em `sharedServices` de
+`ops/easypanel/topology.json` com status `existing-with-gaps`, e o
+`objectStorageGate` de `ops/easypanel/provisioning-gate.json` fica
+`pending-external` até cada lacuna ser fechada com evidência.
+
 Não subir no MVP:
 
 - Redis ou BullMQ;
@@ -178,7 +185,7 @@ Regras operacionais:
 
 ### Mídia enviada do chat (implementada; ativação remota pendente)
 
-A [ADR 023](docs/adr/023-midia-do-chat-no-rustfs.md) escolhe o RustFS já
+A [ADR 029](docs/adr/029-midia-do-chat-no-rustfs.md) escolhe o RustFS já
 existente e preserva mídia enviada do chat sem TTL de sete dias nem expurgo
 ao encerrar. Buckets próprios privados do CRM são separados de
 `hermes-backups`; leitura usa autorização do CRM. Configuração observada,
@@ -523,7 +530,9 @@ O branch canônico atual é `master`.
    `docker/edge-web.Dockerfile`. Edge e worker têm Auto Deploy ativo; a API está
    com Auto Deploy desativado. Esta divergência precisa ser resolvida no fluxo
    escolhido antes de depender de deploy automático coordenado em produção.
-   A imagem local produzida pelo painel não comprova consumo do digest GHCR
+   Em 06/10/2026 a API recebeu deploy do `5a0391d` minutos após o merge da
+   PR #150, como o edge; o gatilho desse deploy não foi
+   verificado. A imagem local produzida pelo painel não comprova consumo do digest GHCR
    escaneado pelo CI.
 3. Registrar projeto/serviço, branch, gatilho, SHA implantado, referência da
    imagem atual e anterior e resultado da última execução, sem URLs com token.
@@ -721,9 +730,9 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Persistência de execução/manual do n8n desabilitada ou expurgada em até 30 dias, sem PII.
 - [ ] Ficha confirmada pode ser impressa pelo navegador e a operação registra
       o encaminhamento externo; geração de PDF no worker não é gate do runtime atual.
-- [ ] Ficha impressa v5 com aprovação final: assinatura física de Rose e
+- [ ] Ficha impressa v6 com aprovação final: assinatura física de Rose e
       Operação na amostra impressa registrada em
-      `docs/phase0/ficha-pdf-approval-v5.json` (ADR 020). A aprovação provisória
+      `docs/phase0/ficha-pdf-approval-v6.json` (ADR 025). A aprovação provisória
       do PO vale só para desenvolvimento e cloud-dev.
 - [ ] Monitor externo detecta parada da VPS.
 - [ ] Responsável de Privacidade aprova storage, IA e observabilidade.

@@ -39,8 +39,9 @@ toda mutação oficial usa sua API. A UI não dispara o workflow.
   operacionais de ambiente, health, isolamento, segredos e rollback.
 - Dashboard mede pedidos confirmados e valor vendido. Recebido e saldo a
   receber não entram; cobrança PIX e boas-vindas automáticas ficam adiadas.
-- Upload/Dropbox e aviso automático a Rose precisam de contrato e homologação
-  próprios. O procedimento operacional deve preservar os arquivos válidos.
+- Arquivos da arte são enviados e baixados pela página do pedido e ficam no
+  RustFS interno (ADR 023). Aviso automático a Rose precisa de contrato e
+  homologação próprios.
 - A política de privacidade do piloto foi aprovada após consulta jurídica.
   Rômulo Sutil Corrêa é o responsável. A exceção de operação solo continua
   limitada ao piloto interno e não prova segregação nem recovery.
@@ -55,5 +56,5 @@ infraestrutura ou escopo de canal exige decisão registrada.
 
 Instagram, atendimento próprio do site, cobrança e comprovante estruturados,
 boas-vindas automáticas, recebimentos/saldo, estoque, produção completa e
-pós-venda. Envio a Rose e integração Dropbox permanecem pendências operacionais
-próprias e não devem ser declarados prontos por testes locais.
+pós-venda. Envio a Rose e o provisionamento do RustFS com backup permanecem pendências
+operacionais próprias e não devem ser declarados prontos por testes locais.

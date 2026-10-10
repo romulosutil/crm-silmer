@@ -1,7 +1,7 @@
 # Mídia enviada pelo vendedor no chat — Specification
 
 Status: implementação autorizada pelo usuário; em execução.
-Data: 05/10/2026. Decisões de storage e retenção: ADR 023 / RFC 011.
+Data: 05/10/2026. Decisões de storage e retenção: ADR 029 / RFC 017.
 Tarefa guarda-chuva: INBOX-MEDIA-1; baseline: INBOX-3/4, MSG-01..03,
 PRV-01..03, T02/T06 e issue histórica #29.
 

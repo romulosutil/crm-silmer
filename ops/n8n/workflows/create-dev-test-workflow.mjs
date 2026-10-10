@@ -238,10 +238,8 @@ return { json: { messages: [{ id: 'dev-human-media-' + command.command_id }], si
         DEV_MEDIA_UPLOAD,
       );
     }
-    if (node.type === 'n8n-nodes-base.httpRequest') {
-      if (node.parameters.genericAuthType !== 'httpBasicAuth') {
-        throw new Error('DEV_UNEXPECTED_EXTERNAL_HTTP_TRANSPORT');
-      }
+    // Only the CRM calls change; Meta media and OpenAI keep their own accounts.
+    if (isCrmRequest(node)) {
       rewriteWorkflowHeaders(node);
       if (options.deployment) {
         node.credentials = {

@@ -41,8 +41,16 @@ test('keeps the canonical MVP path while replacing only WhatsApp transport', asy
 
   assert.equal(dev.source.id, DEV_WORKFLOW_ID);
   assert.equal(dev.source.active, false);
-  // 68 canonical nodes plus nine DEV triggers, builders and results.
-  assert.equal(nodes.length, 77);
+  // Canonical inbound/site/media chains, minus two public site triggers, plus nine DEV nodes.
+  assert.equal(nodes.length, 91);
+  assert.equal(names.has('Site - Receber mensagem do chat (MVP)'), false);
+  assert.equal(names.has('Site - Montar evento do chat (MVP)'), false);
+  assert.equal(
+    Object.keys(dev.connections).some((name) =>
+      name.startsWith('Site - Receber'),
+    ),
+    false,
+  );
   assert.equal(
     nodes.some((node) => /whatsApp(?:Trigger)?$/u.test(node.type)),
     false,
@@ -111,6 +119,8 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
   assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
   assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-15');
+  // T16 provenance classifies DEV from the original reservation's version.
+  assert.match(DEV_WORKFLOW_VERSION, /^dev-mvp-simple-\d+$/u);
   const result = nodes.find(
     (node) => node.name === 'DEV - Resultado da resposta da IA',
   );
@@ -261,10 +271,13 @@ test('T14/MED-21: DEV replaces only media Meta effects after real download/hash 
   assert.deepEqual(dev.connections[upload.name].main[0], [
     { node: preflight.name, type: 'main', index: 0 },
   ]);
-  assert.equal(
-    nodes.some((node) => node.parameters?.url?.includes('graph.facebook.com')),
-    false,
+  // ADR 026 adds read-only inbound Meta media; outbound Meta effects remain simulated.
+  const metaRequests = nodes.filter((node) =>
+    node.parameters?.url?.includes('graph.facebook.com'),
   );
+  assert.equal(metaRequests.length, 1);
+  assert.equal(metaRequests[0].name, 'WhatsApp - Consultar mídia (MVP)');
+  assert.equal(metaRequests[0].parameters.method, 'GET');
   assert.equal(
     nodes.some((node) => node.credentials?.whatsAppApi),
     false,

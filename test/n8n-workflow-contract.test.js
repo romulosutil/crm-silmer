@@ -188,8 +188,8 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
   assert.equal(workflow.source.active, false);
   assert.equal(workflow.source.activeVersionId, null);
-  // Existing 51 nodes plus 17 necessary media nodes (T14/MED-21/22/24).
-  assert.equal(workflow.nodes.length, 68);
+  // Baseline 51, 17 seller media nodes and 16 inbound media/site nodes.
+  assert.equal(workflow.nodes.length, 84);
   const serialized = JSON.stringify(workflow);
   assert.doesNotMatch(serialized, /claim_token|claim_id|ai-turns\/claim/u);
   assert.doesNotMatch(serialized, /silmer_failures|windowBufferMemory/u);
@@ -208,6 +208,48 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   assert.match(serialized, /pré-ficha do pedido/u);
   assert.match(serialized, /ready_for_handoff/u);
   assert.match(serialized, /next_required_field/u);
+});
+
+test('INBOX-MEDIA-1/ADR 026: site identities refuse every seller message type before the effect boundary', async () => {
+  const nodes = await workflowNodesByName();
+  const normalize = nodes.get('Normalizar comando do painel (MVP)');
+  for (const type of ['text', 'image', 'audio', 'video']) {
+    for (const to of [
+      '+999012345678901',
+      '999012345678901',
+      '+5541999990000',
+    ]) {
+      const command = {
+        schema_version: '1.0',
+        command_id: 'command-1',
+        action: 'send_message',
+        to,
+        message: { type, text: 'Mensagem sintética' },
+      };
+      const normalized = runCodeNode(
+        normalize.parameters.jsCode,
+        {
+          body: command,
+          headers: { 'idempotency-key': 'command-1' },
+        },
+        {},
+      );
+      assert.equal(
+        normalized.kind,
+        to.includes('999012') ? 'site_chat' : 'send',
+      );
+    }
+  }
+  const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
+  assert.deepEqual(
+    workflow.connections['Rotear comando do painel (MVP)'].main[2],
+    [{ node: 'Recusar envio ao chat do site (MVP)', type: 'main', index: 0 }],
+  );
+  assert.equal(
+    nodes.get('Recusar envio ao chat do site (MVP)').parameters.options
+      .responseCode,
+    422,
+  );
 });
 
 test('opens the order with the reply or the handoff, never on a call of its own (ADR 014)', async () => {

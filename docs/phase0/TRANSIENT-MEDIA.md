@@ -1,7 +1,7 @@
 # T00.4 — Mídia transitória do piloto interno
 
 > Baseline histórica do runtime transitório. Para a nova mídia enviada pelo
-> vendedor no chat, a [ADR 023](../adr/023-midia-do-chat-no-rustfs.md) determina
+> vendedor no chat, a [ADR 029](../adr/029-midia-do-chat-no-rustfs.md) determina
 > RustFS e preservação sem TTL de sete dias ou exclusão por encerramento.
 > A migração/isolamento dos jobs é implementação pendente no
 > [plano INBOX-MEDIA-1](../../.specs/features/inbox-media-rustfs/design.md).

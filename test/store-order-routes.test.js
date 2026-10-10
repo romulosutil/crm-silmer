@@ -197,6 +197,43 @@ test('LOJ-30: a retry answers the same numero, also after the ficha was printed'
   assert.equal(stored?.fichaFirstPrintedBy, 'user-sintetico');
 });
 
+test('LOJ-17: two n8n runs with another pago_em for the same pedido_id are the same order; the first instant stays', async (t) => {
+  const { api, repository } = harness();
+  t.after(() => api.close());
+  const first = await post(api);
+  assert.equal(first.statusCode, 201);
+  const later = await post(api, {
+    body: storeOrderBody(
+      (body) => (body.pagamento.pago_em = '2026-10-08T02:15:56Z'),
+    ),
+  });
+  assert.equal(later.statusCode, 200, later.body);
+  assert.deepEqual(later.json(), { ...first.json(), criado: false });
+  const stored = await repository.findById(first.json().pedido_id);
+  assert.equal(stored?.gatewayPayment?.confirmedAt, '2026-10-08T02:15:55.000Z');
+  assert.equal(stored?.version, 1);
+  // Any other difference is still a conflict, with or without another
+  // instant.
+  for (const change of [
+    (/** @type {any} */ body) => (body.pagamento.valor_pago_centavos = 18001),
+    (/** @type {any} */ body) => (body.item.tamanho_id = 'g'),
+    (/** @type {any} */ body) => {
+      body.pagamento.pago_em = '2026-10-08T02:15:57Z';
+      body.item.tamanho_id = 'g';
+    },
+    (/** @type {any} */ body) => {
+      body.pagamento.pago_em = '2026-10-08T02:15:57Z';
+      body.pagamento.transaction_nsu = 'nsu-sintetico-9999';
+    },
+  ]) {
+    assertProblem(
+      await post(api, { body: storeOrderBody(change) }),
+      409,
+      'STORE_ORDER_CONFLICT',
+    );
+  }
+});
+
 test('LOJ-17: different data for the same pedido_id is 409 STORE_ORDER_CONFLICT', async (t) => {
   const { api } = harness();
   t.after(() => api.close());

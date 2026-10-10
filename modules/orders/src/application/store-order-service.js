@@ -75,6 +75,33 @@ export function createStoreOrderService(options) {
   }
 
   /**
+   * LOJ-17 (ADR 031): the same order, even when the retry stamps another
+   * `pago_em`. Two n8n runs (the `/infinitepay` webhook and the `/status`
+   * poll) may record the same paid `pedido_id` seconds apart, each with the
+   * instant it saw the payment. The record is compared again with the
+   * instant the CRM kept from the first call, so a difference only in
+   * `pago_em` is the same order and the first instant stays; any other
+   * difference is still a conflict. The stored hash keeps its format, so
+   * orders recorded before this rule compare the same way.
+   *
+   * @param {StoredStoreOrder} existing
+   * @param {StoreOrderRecord} record
+   * @param {string} fingerprint
+   */
+  function sameOrder(existing, record, fingerprint) {
+    if (existing.recordSha256 === fingerprint) return true;
+    const firstPaidAt = existing.order.gatewayPayment?.confirmedAt;
+    if (typeof firstPaidAt !== 'string') return false;
+    return (
+      existing.recordSha256 ===
+      storeRecordFingerprint({
+        ...record,
+        payment: { ...record.payment, paidAt: firstPaidAt },
+      })
+    );
+  }
+
+  /**
    * LOJ-17: answers a retry from the order already recorded.
    *
    * @param {StoredStoreOrder} existing
@@ -84,7 +111,7 @@ export function createStoreOrderService(options) {
    * @returns {Promise<StoreOrderOutcome>}
    */
   async function reconcile(existing, record, fingerprint, audit) {
-    if (existing.recordSha256 !== fingerprint) {
+    if (!sameOrder(existing, record, fingerprint)) {
       throw new StoreOrderError(409, 'STORE_ORDER_CONFLICT');
     }
     const stored = existing.order.ficha?.loja?.comprovanteUrl ?? null;

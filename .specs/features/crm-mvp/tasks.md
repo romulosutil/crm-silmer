@@ -79,14 +79,14 @@ gates independentes; storage de mídia transitória pode seguir a exceção inte
 
 ### INBOX-MEDIA-1 — Mídia enviada pelo vendedor
 
-**Situação:** planejamento em 05/10/2026 com RustFS existente, imagem,
+**Situação:** implementação local com RustFS existente, imagem,
 áudio anexado/gravado pelo microfone e vídeo. Mídia enviada será preservada
-sem TTL de sete dias ou expurgo ao encerrar, conforme ADR 023.
+sem TTL de sete dias ou expurgo ao encerrar, conforme ADR 029.
 
-**Entrega planejada:** 24 tarefas em quatro fases; requisitos MED-01..29,
+**Entrega:** 28 tarefas em quatro fases; requisitos e critérios vigentes,
 design, matriz de testes e gates em
-[inbox-media-rustfs](../inbox-media-rustfs/tasks.md). Nenhuma tarefa de
-implementação concluída. DEV lê arquivos reais e simula apenas Meta;
+[inbox-media-rustfs](../inbox-media-rustfs/tasks.md). T24 de UAT humana permanece
+pendente. T1–T23 e T25–T28 entregues; DEV lê arquivos reais e simula apenas Meta;
 homologação WhatsApp e backup/restore permanecem evidências externas.
 
 **Rastreabilidade:** INBOX-3/4, MSG-01..03, PRV-01..03, T02/T06 e issue #29.

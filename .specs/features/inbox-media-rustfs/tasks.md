@@ -403,7 +403,7 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Supporting files**: docker-compose.media.yml; docker/runtime.Dockerfile; .dockerignore; apps/api/src/server.js; modules/integration-reliability/src/postgres-chat-media-upload-repository.js; package.json; docs/runbooks/rustfs-chat-media.md; test/chat-media-upload-postgres-live.test.js; test/media-development-profile.test.js; ABOUT.md; ARCHITECTURE.md; EASYPANEL-TOPOLOGY.md; RULES.md; TECHNICAL-DESIGN.md; .specs/STATE.md; .specs/features/inbox-media-rustfs/design.md; .specs/features/inbox-media-rustfs/execution.md; .specs/features/inbox-media-rustfs/tasks.md.
 **Depends on**: T22
 **Requirement**: MED-15, MED-19, MED-20, MED-28
-**Reuses**: Recovery/topologia atuais; ADR 023; docs canônicos e catálogos executáveis são suporte da entrega.
+**Reuses**: Recovery/topologia atuais; ADR 029; docs canônicos e catálogos executáveis são suporte da entrega.
 **Tools**: tlc-spec-driven; Browser somente para operação autorizada; ssh/CI.
 **Done when**: [x] Inventário local e plano de inventário/migração no alvo documentados; cópia por hash precede cancelamento de DELETE por item; quotas/capacidade ajustadas; backup externo/restore isolado e gates remotos explicitamente pendentes; rollback real preserva bytes/leitura e unknown.
 **Tests**: structural + integration; mínimo 6 verificações operacionais; nunca marcar recovery por mocks.

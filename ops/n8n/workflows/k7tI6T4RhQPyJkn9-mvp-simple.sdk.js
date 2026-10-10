@@ -11,7 +11,23 @@ import {
 } from '@n8n/workflow-sdk';
 
 const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-const WORKFLOW_VERSION = 'mvp-simple-12-media';
+const WORKFLOW_VERSION = 'mvp-simple-14';
+
+// ADR 026: the site chat enters the CRM as a WhatsApp identity, because the
+// CRM only knows that channel. The number starts with 999, a country code the
+// ITU never assigns, so it can never reach a real person; the panel refuses a
+// seller's message to it (SITE_CHAT_PREFIX) and the bot asks for a WhatsApp
+// instead (SITE_CHAT_RULE).
+const SITE_CHAT_PREFIX = '999';
+const SITE_CHAT_ORIGINS = 'https://silmer.com.br,https://www.silmer.com.br';
+const SITE_CHAT_NAME = 'Visitante do site';
+
+// ADR 026: a seller cannot answer inside the site chat, so every notice that
+// says the talk "continues here" asks for the visitor's WhatsApp instead.
+const SITE_CHAT_RULE = `const SITE_CHAT_CONTACT = 'Para o vendedor falar com você, me diga o seu WhatsApp com DDD.';
+const noticeForChannel = (channel, text) => channel === 'site_chat'
+  ? String(text).replace(/,? e o (seu )?atendimento continua aqui mesmo|,? aqui mesmo| right here/g, '').trim() + ' ' + SITE_CHAT_CONTACT
+  : text;`;
 
 const BRIEFING_FIELDS = [
   'artwork_locations',
@@ -1797,8 +1813,10 @@ const headerKey = $json.headers?.['idempotency-key'] ?? '';
 const action = payload.action;
 const stateActions = ['take_over', 'return_to_ai', 'close'];
 const validBase = payload.schema_version === '1.0' && typeof payload.command_id === 'string' && payload.command_id === headerKey;
+// ADR 026: a site chat visitor has no WhatsApp; the seller answers on the number the visitor gives.
+const siteChat = /^\\+?${SITE_CHAT_PREFIX}[0-9]+$/.test(String(payload.to ?? ''));
 const kind = validBase && action === 'send_message' && ['text', 'image', 'audio', 'video'].includes(payload.message?.type)
-  ? 'send'
+  ? (siteChat ? 'site_chat' : 'send')
   : validBase && stateActions.includes(action) ? 'state' : 'invalid';
 return { json: { payload, kind } };`,
 );
@@ -2238,6 +2256,21 @@ preflightHumanMedia.onError(mediaPreflightUnavailable.to(crmMediaFailure));
 prepareMetaMediaMessage.onError(mediaPreflightFailure.to(crmMediaFailure));
 sendHumanMedia.onError(prepareHumanUnknown);
 validateHumanMediaSent.onError(prepareHumanUnknown);
+// ADR 026: an audio is transcribed and an image goes to the model; what cannot
+// be read reaches the model as unread. Every end of a site turn answers it.
+prepareMedia.to(
+  isAudio
+    .onTrue(transcribeAudio.to(buildAgentContext))
+    .onFalse(buildAgentContext),
+);
+getWhatsAppMedia.onError(markMediaUnread);
+downloadWhatsAppMedia.onError(markMediaUnread);
+prepareMedia.onError(markMediaUnread);
+transcribeAudio.onError(markMediaUnread);
+markMediaUnread.to(buildAgentContext);
+crmAiSent.to(answersSite);
+crmNoticeSent.to(answersSite);
+answersSite.onTrue(answerSite);
 
 export default workflow(WORKFLOW_KEY, 'Silmer | Atendimento WhatsApp IA')
   .add(

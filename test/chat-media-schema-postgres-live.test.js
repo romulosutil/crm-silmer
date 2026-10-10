@@ -104,7 +104,7 @@ if (connectionString) {
       { applied: [], phase: 'expand' },
     );
     const result = await pool.query(
-      `SELECT count(*)::integer AS count FROM crm_meta.schema_migrations WHERE version='0027'`,
+      `SELECT count(*)::integer AS count FROM crm_meta.schema_migrations WHERE version='0030' AND name='chat_media'`,
     );
     assert.equal(result.rows[0].count, 1);
   });

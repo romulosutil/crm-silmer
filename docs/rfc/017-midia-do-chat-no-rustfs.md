@@ -1,4 +1,4 @@
-# RFC 011 — Mídia do chat no RustFS
+# RFC 017 — Mídia do chat no RustFS
 
 Refinamento T15: a configuração n8n 2.38.7 `none/none/false/false` não elimina
 o registro inicial do webhook antes do pruning. O ensaio real identificou
@@ -6,11 +6,11 @@ categorias recipient/caption na stack inicial soft-deleted; não persistiu
 runData/binary e os canários raw/base64 não apareceram em DB/WAL/arquivos/logs.
 O gate de privacidade de produção T23 permanece **não atendido** até comprovar
 minimização/expurgo de PII e retenção/pruning conforme EASYPANEL-TOPOLOGY.md.
-Isso é uma limitação observada, sem alteração do ADR-023. Fonte e contrato
+Isso é uma limitação observada, sem alteração do ADR-029. Fonte e contrato
 efetivo em [design](../../.specs/features/inbox-media-rustfs/design.md).
 
 Status: decisão de storage/retenção tomada em 05/10/2026;
-detalhes de implementação em revisão. Decisão: [ADR 023](../adr/023-midia-do-chat-no-rustfs.md).
+detalhes de implementação em revisão. Decisão: [ADR 029](../adr/029-midia-do-chat-no-rustfs.md).
 Responsável pela proposta: Tech Lead. Decisor: usuário solicitante nesta sessão.
 Revisores da implementação: Backend/Dados, Integrações, Frontend/A11y,
 QA/Privacidade e DevOps conforme a fronteira.
@@ -54,7 +54,7 @@ e recibo idempotente impedem regressão de sent/read/delivered/unknown. Ramos
 de erro após invocar `/messages` usam unknown; ErrorTrigger genérico continua
 diagnóstico. A prova do ramo anterior ao efeito pertence ao workflow T14/T15.
 
-- MED-01..29; INBOX-MEDIA-1 e MSG/PRV vigentes com a exceção da ADR 023.
+- MED-01..29; INBOX-MEDIA-1 e MSG/PRV vigentes com a exceção da ADR 029.
 - Bucket privado próprio, sem compartilhar hermes-backups; nenhuma credencial root.
 - Smoke comprova PUT/HEAD/GET/Range/DELETE e negativa de acesso entre buckets na
   versão instalada, sem presumir compatibilidade de releases posteriores.

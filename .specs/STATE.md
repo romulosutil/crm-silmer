@@ -22,26 +22,24 @@
 
 ## Handoff
 
-Incidente produção10/10/2026: Inbox com microfone bloqueado por header e upload404.
-EasyPanel confirmou API/worker sem variáveisCHAT_MEDIA_*/MEDIA_S3_* e worker
-sem mounts. T31 na branch codex/fix-production-chat-media concluiu Nginx
-(microfone self, prévias blob, upload17MiB isolado). CI38073260116 aprovou
-Nginx real8/8, unit1010pass/0fail/3skips, PostgreSQL, E2E210pass/7skips,
-build/scans; revisão independente16/16 e sensor5/5. PR157 aguarda checks
-da revisão final antes do merge rebase autorizado. Docker Desktop local sem daemon.
-T32 separa configuração e prova remota DEV autorizadas pelo operador;
-status real deve ser conferido no EasyPanel/runbook antes de ativar.
-Nenhuma mensagem de cliente enviada ou homologação global declarada.
-PR156 foi merged rebase emmaster cd4946a.
-
-PR156 aberto contra master b7b26db. Histórico linearizado por rebase, árvore
-validada preservada integralmente no commit577ac16; backup local mantido.
-T30 corrige quatro fluxos de scripts apontados pelo CodeQL: rate-limit antes
-do banco, workflow local fixo, validação de bytes em memória e provas escalares.
-Revisão independente: 11/11 e sensor3/3; alerta18 é provisionamento intencional
-de chave sintética persistida ao IAM do RustFS loopback, sem redirecionamentos.
-CI da nova revisão e merge rebase ainda pendentes; merge condicionado a todos
-os checks aprovados. T24 continua pendente; não há homologação global.
+Incidente10/10/2026 corrigido no CRM hospedado para testes internos com n8n.
+T31/PR157 merged rebase emmasterd9e3a70 após7checks da revisão710ebff; Nginx
+real8/8, unit1010pass/0fail/3skips, PostgreSQL, E2E210pass/7skips e scans PASS.
+Headers HTTPS novos confirmados, sem bloqueio same-origin do microfone/prévias.
+T32 na branch codex/remote-chat-media-dev registra pipeline remoto autorizado:
+bucket privado DEV/IAM mínimo, spool compartilhado1000:1000/0700, flags true
+somente ensaio interno. Helper parado, definição/volume preservados; bind path
+real/wrappers/rollback em docs/runbooks/rustfs-chat-media.md. EasyPanel reaplica
+0777 ao bind no deploy, corrigido antes da aplicação; risco transitório fica
+aberto para promoção operacional. Provas remotas IAM, schema, clamd/health,
+upload/ready e leitura/ACL dos3tipos em execution e validation-production-runtime.
+Microfone iniciou/parou e revisão ready observada após permissão do operador.
+Nenhuma mensagem enviada a clientes. Navegação direta áudio bloqueada pelo
+cliente Codex; conteúdo lido no runtime real com size/hash iguais e ator403.
+T24 ainda exige matriz completa, envio/callback DEV e playback pós-envio;
+workflow DEV não é selecionado pelo nome do bucket. PrivacidadeP1 n8n,
+Meta e backup/restore permanecem gates próprios. Sem Verified global.
+PR156 merged rebase emmastercd4946a; T30/revisão11/11/sensor3/3 concluídos.
 
 T29 implementada e validada localmente na branch codex/inbox-media-rustfs-plan.
 Clamd persistente no worker; socket0600/diretório0700, sem TCP, scan fdpass.

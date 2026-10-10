@@ -398,18 +398,18 @@ Corpo (JSON até 16 KB; todas as chaves obrigatórias, nenhuma outra aceita):
 
 Respostas:
 
-| Status | Quando                                                                                                                                                                                | O que o workflow faz                                                         |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `201`  | Pedido criado.                                                                                                                                                                        | Segue; guarda `numero`, `pedido_url`.                                        |
-| `200`  | Já existia com os mesmos dados; ou o `receipt_url` que faltava foi gravado agora (`comprovante_registrado: true`).                                                                    | Segue. Reenviar é seguro.                                                    |
-| `400`  | `INVALID_REQUEST`, `UNKNOWN_REQUEST_FIELD`, `UNSUPPORTED_SCHEMA_VERSION`, `INVALID_STORE_NUMBER`, `INVALID_RECEIPT_URL`, `INVALID_PAID_AT`, `INVALID_CUSTOMER`, cabeçalhos inválidos. | Não repetir igual: corrigir o nó. O Pix já foi pago — avisar uma pessoa.     |
-| `401`  | Credencial ausente ou errada.                                                                                                                                                         | Conferir a credencial; avisar uma pessoa.                                    |
-| `403`  | `FORBIDDEN_AUTOMATION_ACTION`: credencial sem a ação `store.order.record`.                                                                                                            | Avisar uma pessoa.                                                           |
-| `404`  | Rota desligada (sem `STORE_ORDERS_HMAC_KEY`) ou CRM sem a versão nova.                                                                                                                | Avisar uma pessoa.                                                           |
-| `409`  | `STORE_ORDER_CONFLICT`: mesmo `pedido_id` com outros dados ou outro comprovante, ou `transaction_nsu` de outro pedido.                                                                | Não repetir: avisar uma pessoa.                                              |
-| `422`  | `STORE_CATALOG_MISMATCH`, `AMOUNT_BELOW_PRICE`, `TEST_REFUSED`, `PAYMENT_METHOD_UNSUPPORTED`. Nada é gravado.                                                                         | Não repetir: o site, o n8n ou o catálogo do CRM divergem. Avisar uma pessoa. |
-| `429`  | `RATE_LIMITED` (60 chamadas por minuto), com `Retry-After`.                                                                                                                           | Repetir a mesma chamada depois do `Retry-After`.                             |
-| `5xx`  | `503 SERVICE_UNAVAILABLE` (com `Retry-After`) ou CRM fora do ar.                                                                                                                      | Repetir a mesma chamada com espera crescente; persistindo, avisar.           |
+| Status | Quando                                                                                                                                                                                            | O que o workflow faz                                                         |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `201`  | Pedido criado.                                                                                                                                                                                    | Segue; guarda `numero`, `pedido_url`.                                        |
+| `200`  | Já existia com os mesmos dados — ou só com outro `pagamento.pago_em` (o pedido mantém o primeiro; `LOJ-37`) —; ou o `receipt_url` que faltava foi gravado agora (`comprovante_registrado: true`). | Segue. Reenviar é seguro.                                                    |
+| `400`  | `INVALID_REQUEST`, `UNKNOWN_REQUEST_FIELD`, `UNSUPPORTED_SCHEMA_VERSION`, `INVALID_STORE_NUMBER`, `INVALID_RECEIPT_URL`, `INVALID_PAID_AT`, `INVALID_CUSTOMER`, cabeçalhos inválidos.             | Não repetir igual: corrigir o nó. O Pix já foi pago — avisar uma pessoa.     |
+| `401`  | Credencial ausente ou errada.                                                                                                                                                                     | Conferir a credencial; avisar uma pessoa.                                    |
+| `403`  | `FORBIDDEN_AUTOMATION_ACTION`: credencial sem a ação `store.order.record`.                                                                                                                        | Avisar uma pessoa.                                                           |
+| `404`  | Rota desligada (sem `STORE_ORDERS_HMAC_KEY`) ou CRM sem a versão nova.                                                                                                                            | Avisar uma pessoa.                                                           |
+| `409`  | `STORE_ORDER_CONFLICT`: mesmo `pedido_id` com outros dados ou outro comprovante, ou `transaction_nsu` de outro pedido.                                                                            | Não repetir: avisar uma pessoa.                                              |
+| `422`  | `STORE_CATALOG_MISMATCH`, `AMOUNT_BELOW_PRICE`, `TEST_REFUSED`, `PAYMENT_METHOD_UNSUPPORTED`. Nada é gravado.                                                                                     | Não repetir: o site, o n8n ou o catálogo do CRM divergem. Avisar uma pessoa. |
+| `429`  | `RATE_LIMITED` (60 chamadas por minuto), com `Retry-After`.                                                                                                                                       | Repetir a mesma chamada depois do `Retry-After`.                             |
+| `5xx`  | `503 SERVICE_UNAVAILABLE` (com `Retry-After`) ou CRM fora do ar.                                                                                                                                  | Repetir a mesma chamada com espera crescente; persistindo, avisar.           |
 
 Resposta de sucesso:
 
@@ -424,6 +424,22 @@ Resposta de sucesso:
   "ficha_url": "<APP_BASE_URL>/api/v1/orders/<id>/print?download=1"
 }
 ```
+
+**Reenvio com outro `pago_em` (ADR 031, `LOJ-37`, emenda o `LOJ-17`).** O
+`/status` do workflow chama `store-orders` assim que vê o pedido pago, em
+paralelo ao webhook `/infinitepay`, e cada execução carimba o próprio
+`pagamento.pago_em`. Duas chamadas do mesmo `pedido_id` que diferem **só**
+nesse instante são o mesmo pedido: `200`, o mesmo `numero`, e o CRM mantém o
+`pago_em` da primeira. Qualquer outra diferença (produto, cor, tamanho,
+valores, cliente, `transaction_nsu`, `invoice_slug`) continua `409
+STORE_ORDER_CONFLICT`, que é erro permanente no workflow.
+
+**Código do pedido para o site (`codigo_crm`).** O `numero` da resposta
+(`NN-CRM`) é o código que o cliente vê. O `/status` do workflow passa a
+devolvê-lo ao site como `codigo_crm` (guardado em `loja_pedidos.crm_numero`).
+Isso é do workflow; o contrato do CRM não muda (ADR 031). O aviso no
+Dashboard do CRM é consequência de o pedido ser criado: não há chamada de
+"notificação" separada.
 
 Sem `APP_BASE_URL` na API, as duas URLs voltam relativas (`/pedidos/<id>`).
 As duas exigem sessão do CRM: quem abre sem sessão entra e volta ao pedido.

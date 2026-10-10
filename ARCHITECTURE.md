@@ -64,7 +64,10 @@ Contato, ao preço do catálogo do CRM, com o Pix confirmado pela InfinitePay
 (valor pago, NSU, comprovante), o número `LJ-…` e o prazo da cor; é travado,
 conta como venda normal (teste não conta) e imprime a ficha simplificada
 `ficha-loja-v1` ([ADRs 027](docs/adr/027-venda-da-loja-do-site.md) e
-[028](docs/adr/028-pedido-pago-da-loja-pelo-n8n.md)).
+[028](docs/adr/028-pedido-pago-da-loja-pelo-n8n.md)). Até a primeira
+impressão da ficha, que registra quem e quando, ele é um "pedido novo do
+site" no aviso do Dashboard e no menu; o status continua Confirmado
+([ADR 031](docs/adr/031-aviso-de-pedido-novo-do-site.md)).
 
 ## Baseline técnica
 

@@ -473,6 +473,32 @@ test('LOJ-27/LOJ-28: the first print records who and when, once; later prints an
   await api.close();
 });
 
+test('LOJ-28: a HEAD on the print route records no first print', async () => {
+  const { api, notify, repository } = harness();
+  const created = await notify();
+  for (const url of [
+    `/api/v1/orders/${created.id}/print`,
+    `/api/v1/orders/${created.id}/print?download=1`,
+  ]) {
+    const head = await api.inject({
+      headers: readHeaders,
+      method: 'HEAD',
+      url,
+    });
+    assert.equal(head.statusCode, 200, url);
+    assert.equal(head.body, '');
+  }
+  const stored = await repository.findById(created.id);
+  assert.equal(stored?.fichaFirstPrintedAt, null);
+  assert.equal(stored?.version, created.version);
+  assert.deepEqual(
+    repository.eventsFor(created.id).map((event) => event.eventType),
+    ['order.created'],
+  );
+  assert.equal((await readSummary(api)).storeNewCount, 1);
+  await api.close();
+});
+
 test('LOJ-27: "Baixar ficha" counts as the first print', async () => {
   const { api, notify } = harness();
   const created = await notify();

@@ -1870,3 +1870,56 @@ A rota pública nunca foi publicada, então sai sem migração de dados.
   número. Os jobs de imagem falharam ao baixar `moby/buildkit` do Docker Hub
   (limite/tempo do registro), sem relação com o código. Nada foi aplicado em
   banco do cloud-dev nem publicado no n8n.
+
+## Aviso de pedido novo do site (RFC 019, 10/10/2026)
+
+Branch `feat/loja-aviso-pedido-site`, a partir do `master`. Decisão do PO de
+10/10/2026 (ADR 031): o pedido pago do site segue Confirmado; o Dashboard
+avisa até a primeira impressão da ficha; a marca "tirar" foi rejeitada.
+
+### T116: RFC, ADR e requisitos do aviso
+
+- **Requisitos:** LOJ-26–LOJ-37.
+- **Arquivos:** RFC 019, ADR 031, índices de ADR e RFC, spec e tasks.
+- **Aceite:** decisão do PO, alternativa "tirar" registrada como rejeitada,
+  supersessão parcial da ADR 028 (item 9) e emendas ao `LOJ-17` e ao `LOJ-22`.
+- **Gate:** links e formatação.
+
+### T117: Primeira impressão, resumo e reenvio no domínio e no banco
+
+- **Requisitos:** LOJ-26–LOJ-30, LOJ-37.
+- **Arquivos:** migration `0034_store_order_first_print.expand.sql`,
+  contratos, repositórios PostgreSQL e em memória, serviço, runtime, rota de
+  impressão, serviço da loja, OpenAPI e testes.
+- **Aceite:** primeira impressão idempotente e concorrente com um vencedor,
+  evento e auditoria sem PII, resumo sem teste, reenvio com outro `pago_em`.
+- **Gate:** testes da API e PostgreSQL live.
+
+### T118: Ficha impressa da loja
+
+- **Requisitos:** LOJ-36.
+- **Arquivos:** `ficha-loja-v1.js`, `docker/nginx.conf` (hash do estilo) e
+  testes de impressão e CSP.
+- **Aceite:** seções Produzir, Cliente e Pagamento, rodapé, uma página.
+- **Gate:** `test/print-csp.test.js` e leituras da loja.
+
+### T119: Interface do aviso, da lista e da página
+
+- **Requisitos:** LOJ-31–LOJ-35.
+- **Arquivos:** `DashboardView.vue`, `App.vue`, `OrdersView.vue`,
+  `OrderView.vue`, `OrderClosingSection.vue`, `OrderStoreDetails.vue`,
+  `order-format.js`, `screen-styles.css` e E2E.
+- **Aceite:** aviso como um link com `aria-live`, contador no menu, selos e
+  linhas da lista, página no layout dos confirmados, por teclado e sem
+  violação do axe.
+- **Gate:** build, lint, `check:design-tokens` e E2E.
+
+### T120: Runbook, n8n, glossário e revisão integrada
+
+- **Requisitos:** LOJ-26–LOJ-37.
+- **Arquivos:** `docs/runbooks/loja-do-site.md`,
+  `docs/integrations/n8n/README.md`, `docs/product/GLOSSARIO.md`,
+  ARCHITECTURE e RULES.
+- **Aceite:** ordem de implantação (migration `0034` antes da imagem), aviso
+  manual ao cliente pelo WhatsApp, `codigo_crm` no `/status` do n8n.
+- **Gate:** `npm run validate`, suítes live, E2E e `git diff --check`.

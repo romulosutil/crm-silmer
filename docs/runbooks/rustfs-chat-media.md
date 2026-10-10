@@ -2,6 +2,49 @@
 
 ## T23: operação implementada e gates de ativação
 
+### Diagnóstico do edge e da ativação
+
+O merge da feature não ativa automaticamente mídia na API/worker. Em10/10/2026,
+o Inbox remoto mostrou upload404 e gravação negada; o edge servia
+`Permissions-Policy: microphone=()` e CSP sem prévias blob. T31 corrige o edge:
+microfone same-origin, blob apenas em img-src/media-src e limite17MiB somente
+no POST `/api/v1/conversations/:id/media`, suficiente para16MiB mais multipart.
+O limite de1MiB das outras APIs e11MiB da arte permanecem.
+
+Após publicar a imagem do edge, confirmar os headers HTTPS e a permissão do
+navegador. Permitir `microphone=(self)` não dispensa consentimento do usuário
+nem prova disponibilidade de dispositivo físico. Se a rota ainda responder404,
+conferir revisão executada e `CHAT_MEDIA_ENABLED` na API, além de spool, secrets,
+bucket privado e configuração correspondente no worker antes de ativar.
+Não habilitar só a flag nem reutilizar bucket/credencial de arte por conveniência.
+O pipeline e os gates externos abaixo permanecem exigidos.
+
+Inspeção de10/10/2026 no EasyPanel confirmou ausência de `CHAT_MEDIA_ENABLED`,
+`CHAT_MEDIA_SPOOL_ROOT` e `MEDIA_S3_*` na API/worker. O worker estava sem mounts.
+Já existe endpoint HTTPS S3 para a porta9000 do RustFS; não é necessário criar
+domínio novo nem atualizar o serviço compartilhado.
+
+Plano concreto para homologação remota, antes de liberar arquivos de clientes:
+
+1. Criar bucket privado `crm-silmer-chat-media-dev`, sem lifecycle de expiração,
+   e duas identidades IAM exclusivas. API recebe somente GetObject; worker
+   GetObject/PutObject/DeleteObject, restritos aos objetos desse bucket. Essa
+   criação de acesso exige autorização do operador; nunca usar root no CRM.
+2. Preparar diretório privado de spool no host, proprietário1000:1000 e0700,
+   montado na API/worker em `/var/lib/crm-chat-media`, separado do spool legado.
+   Preservar mounts e arquivos existentes; validar visibilidade entre processos.
+3. Injetar secrets sem impressão/versionamento: endpoint HTTPS S3 existente,
+   região, bucket DEV e a identidade correspondente em cada serviço. Configurar
+   `CHAT_MEDIA_SPOOL_ROOT`, alias `chat-dev`, quota inicial1GiB e flag inicialmente
+   desligada. A chave de envelope da API existente permanece preservada.
+4. Confirmar schema0030–0033, revisões executadas, clamd/assinaturas/health,
+   capacidade, usuário/mounts e configuração DEV do n8n. Ativar flag na API/worker
+   somente para prova sintética autorizada; subir PNG, gravação sintética e vídeo,
+   confirmar ready e leitura autorizada. Não enviar mensagens a clientes no teste.
+5. Resolver os gates de privacidade/backup/restore abaixo antes de promover o
+   bucket operacional. Rollback desliga admissão/consumo mantendo leitura e
+   todos os arquivos/chaves/vínculos; não apaga volumes nem resultados incertos.
+
 Inbox aceita imagem, áudio anexado ou gravado e vídeo; upload/preparo/envio são
 ações explícitas. API valida sessão, CSRF, ownership e versão, worker valida
 bytes e normaliza gravações, RustFS mantém variante privada, n8n reserva por

@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-30 tarefas planejadas; T1 a T23 e T25 a T30 concluídas; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
+32 tarefas planejadas; T1 a T23 e T25 a T31 concluídas; T32 configura e homologa o pipeline remoto DEV; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -18,7 +18,7 @@ Após a última tarefa, Verifier independente obrigatório, com evidência por A
 e sensor de discriminação em scratch isolado; validation.md não é criado vazio.
 Se houver achados, criar tarefas de correção e repetir no limite da skill.
 As quatro fases originais têm seis tarefas; a fase 4 inclui T25 solicitada
-durante UAT, T26 decorrente da revisão independente, T27 de recuperação, T28/T29 de desempenho e T30 do CI, passando a doze tarefas. Na execução, oferecer delegação conforme a
+durante UAT, T26 decorrente da revisão independente, T27 de recuperação, T28/T29 de desempenho, T30 do CI e T31 do edge, passando a treze tarefas. Na execução, oferecer delegação conforme a
 skill antes de despachar workers. Arquivos têm um único dono por tarefa.
 
 ## Test Coverage Matrix
@@ -81,12 +81,13 @@ T13..T18: bytes técnicos, workflow, DEV, DTO, cliente HTTP e composer.
 
 ### Phase 4: Gravação, histórico e fechamento
 
-T19..T23, T25, T26, T27, T28, T29, T30, T24: recorder, playback, integração Inbox, limpeza, rollout,
+T19..T23, T25, T26, T27, T28, T29, T30, T31, T32, T24: recorder, playback, integração Inbox, limpeza, rollout,
 correção UX, recuperação de recusa conhecida e UAT.
 
 ```text
 T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9 -> T10 -> T11 -> T12
-T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T28 -> T29 -> T30 -> T24
+T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T28 -> T29 -> T30 -> T31 -> T24
+T23 -> T32 -> T24
 ```
 
 ## Task Breakdown
@@ -492,11 +493,37 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Gate**: Build + Quick + revisão independente e sensor antes do commit; CodeQL e checks do PR antes do merge, sem dismiss de vulnerabilidade real ou supressão de regra.
 **Commit**: fix(dev): constrain local media smoke data flows
 
+### T31: Corrigir políticas e upload do chat no edge de produção
+
+**Where**: docker/nginx.conf
+**Supporting files**: test/edge-media-policy.test.js; scripts/check-edge-media-proxy.mjs; scripts/edge-media-image-pull.mjs; test/edge-media-image-pull.test.js; .github/workflows/ci.yml; tasks/spec/execution/STATE; docs/runbooks/rustfs-chat-media.md; validation-production-edge.md.
+**Depends on**: T30
+**Requirement**: MED-01..03, MED-09, MED-25
+**Assumptions**: Origem HTTPS do CRM; nenhuma permissão de câmera/geolocalização ou origem externa; API e worker exigem ativação operacional própria.
+**What**: Permitir microfone somente na própria origem, prévias blob de imagem/áudio/vídeo e multipart até17MiB somente na rota exata de upload do chat, sem buffering do request.
+**Done when**: [x] Política não bloqueia microfone same-origin; CSP aceita prévias blob sem abrir script/connect externos; upload16MiB mais envelope passa pelo proxy; APIs comuns conservam1MiB e arte11MiB; revisão independente aprovada. Nginx real8/8 e CI38073260116 aprovados. Ativação remota e hardware seguem gates separados.
+**Tests**: testes de configuração + Nginx real com bytes sintéticos + sensor independente.
+**Gate**: Quick + Build + Nginx real; checks remotos antes de promoção.
+**Commit**: fix(edge): allow chat media capture and bounded uploads
+
+### T32: Configurar e homologar pipeline remoto DEV
+
+**Where**: docs/runbooks/rustfs-chat-media.md
+**Supporting files**: tasks/spec/execution/STATE; validation-production-runtime.md; configurações EasyPanel/RustFS sem segredos versionados.
+**Depends on**: T23
+**Requirement**: MED-16, MED-19, MED-20, MED-23, MED-26, MED-28
+**Assumptions**: Autorização explícita do operador em10/10/2026 para bucket privado DEV, duas identidades restritas, spool e provas sintéticas; nenhum envio a clientes nem promoção operacional.
+**What**: Configurar bucket DEV no RustFS existente, IAM separado API/worker, spool privado compartilhado e variáveis correspondentes; verificar schema, scanner, saúde e isolamento antes de ativar somente a prova sintética autorizada.
+**Done when**: [ ] PUT/GET/DELETE sintéticos e negativas de acesso passam; API e worker enxergam o mesmo spool0700/UID1000; PNG/áudio/vídeo chegam a ready e leitura autorizada; flags/configuração final e rollback registrados sem segredos ou mensagens a clientes.
+**Tests**: smoke remoto sintético, negativas IAM/ACL, schema/health/scanner e upload/leitura dos três tipos.
+**Gate**: Evidência operacional remota + revisão independente; evidência local não substitui ambiente alvo.
+**Commit**: docs(ops): record remote chat media development pipeline
+
 ### T24: Homologação da fatia e evidências
 
 **What**: Executar UAT sintético ponta a ponta do CRM ao DEV e consolidar critérios para canal real.
 **Where**: docs/runbooks/chat-media-uat.md
-**Depends on**: T30
+**Depends on**: T31, T32
 **Requirement**: MED-01..32
 **Reuses**: Todos os testes da fatia; handoff e reserva atuais.
 **Tools**: tlc-spec-driven; Browser/Playwright; Verifier independente após commit final.
@@ -561,7 +588,9 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T28  | T27                    | T27 → T28     | Match  |
 | T29  | T28                    | T28 → T29     | Match  |
 | T30  | T29                    | T29 → T30     | Match  |
-| T24  | T30                    | T30 → T24     | Match  |
+| T31  | T30                    | T30 → T31     | Match  |
+| T32  | T23                    | T23 → T32     | Match  |
+| T24  | T31,T32                | T31 → T24; T32 → T24 | Match  |
 
 ## Test Co-location Validation
 
@@ -597,6 +626,8 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T28  | Worker e integridade        | unit + smoke                | unit + smoke           | OK     |
 | T29  | Scanner persistente         | unit + integração + tela    | unit + integração + tela | OK   |
 | T30  | Scripts locais e provas     | unit + CI + revisão         | unit + CI + revisão    | OK     |
+| T31  | Proxy e políticas de mídia  | unit + Nginx + revisão      | unit + Nginx + revisão | OK     |
+| T32  | Pipeline remoto DEV         | smoke + IAM/ACL + runtime   | smoke + IAM/ACL + runtime | OK  |
 
 ## Confirmação antes de Execute
 

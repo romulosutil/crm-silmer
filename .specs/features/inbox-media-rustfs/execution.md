@@ -1,5 +1,37 @@
 # Execução INBOX-MEDIA-1
 
+## T31: Incidente do edge e da ativação remota
+
+Produção10/10/2026 servia microphone=() e CSP sem blob; tela preservava arquivo
+após upload404. EasyPanel confirmou ausência de flag, spool e configuração S3
+na API/worker; worker sem mounts. Nenhum segredo foi exposto na inspeção.
+
+Patch local do edge: microfone self, blob somente img-src/media-src, upload17MiB
+somente coleção `/api/v1/conversations/:id/media`, streaming sem ampliar outras
+rotas. Configuração e regressões13/13; revisão independente e sensor3/3.
+Suíte serial1010total/1007pass/0fail/3skips e build/tipos/lint/format exit0.
+Primeira suíte concorrente teve timeout de3s em teste multipart preexistente;
+reexecução serial passou sem alterar timeout/assertions/testes.
+
+Docker Desktop local não iniciou; gate Nginx real promovido ao CI com bases
+fixadas por digest e recursos descartáveis exclusivos. Runtime real e promoção
+remota permanecem pendentes antes do fechamento. Plano de configuração separado
+no runbook; não foi ligada flag sozinha nem reutilizada credencial de arte.
+
+CI38072637559 falhou no pull ECR por rate limit, antes de executar Nginx.
+O gate agora tenta ECR, cache GCR e Docker Hub, sempre com o mesmo digest
+imutável. Falha de todas as fontes mantém o gate bloqueado. Incremental:
+16/16 testes focais, tipos/lint/format e revisão independente aprovados;
+sensor total5/5 detectados. Nenhuma assertion ou limite foi relaxado.
+
+CI38073260116, job114274864563: Nginx real8/8, headers e sintaxe PASS;
+upload16778240bytes200, limite17825793bytes413, subrotas/API comum1048577bytes413,
+arte10486784bytes200 e11534337bytes413. Unit1013total/1010pass/3skips,
+PostgreSQL e E2E210pass/7skips, build e scans das duas imagens aprovados.
+T31 concluída; publicação do edge e configuração remota DEV permanecem
+verificações distintas. Evidência remota:
+https://github.com/romulosutil/crm-silmer/actions/runs/38073260116.
+
 ## T30: Segurança dos scripts locais no PR156
 
 MED-20/23: limite de120requisições/minuto aplicado antes do hook de banco,

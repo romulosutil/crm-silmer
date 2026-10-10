@@ -22,6 +22,18 @@
 
 ## Handoff
 
+Incidente produção10/10/2026: Inbox com microfone bloqueado por header e upload404.
+EasyPanel confirmou API/worker sem variáveisCHAT_MEDIA_*/MEDIA_S3_* e worker
+sem mounts. T31 na branch codex/fix-production-chat-media concluiu Nginx
+(microfone self, prévias blob, upload17MiB isolado). CI38073260116 aprovou
+Nginx real8/8, unit1010pass/0fail/3skips, PostgreSQL, E2E210pass/7skips,
+build/scans; revisão independente16/16 e sensor5/5. PR157 aguarda checks
+da revisão final antes do merge rebase autorizado. Docker Desktop local sem daemon.
+T32 separa configuração e prova remota DEV autorizadas pelo operador;
+status real deve ser conferido no EasyPanel/runbook antes de ativar.
+Nenhuma mensagem de cliente enviada ou homologação global declarada.
+PR156 foi merged rebase emmaster cd4946a.
+
 PR156 aberto contra master b7b26db. Histórico linearizado por rebase, árvore
 validada preservada integralmente no commit577ac16; backup local mantido.
 T30 corrige quatro fluxos de scripts apontados pelo CodeQL: rate-limit antes

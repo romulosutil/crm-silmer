@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-26 tarefas planejadas; T1 a T23, T25 e T26 concluídas; T24 aguarda nova UAT humana. Evidência em [execution.md](execution.md).
+27 tarefas planejadas; T1 a T23, T25, T26 e T27 concluídas; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -18,7 +18,7 @@ Após a última tarefa, Verifier independente obrigatório, com evidência por A
 e sensor de discriminação em scratch isolado; validation.md não é criado vazio.
 Se houver achados, criar tarefas de correção e repetir no limite da skill.
 As quatro fases originais têm seis tarefas; a fase 4 inclui T25 solicitada
-durante UAT e T26 decorrente da revisão independente, passando a oito tarefas. Na execução, oferecer delegação conforme a
+durante UAT, T26 decorrente da revisão independente e T27 de recuperação, passando a nove tarefas. Na execução, oferecer delegação conforme a
 skill antes de despachar workers. Arquivos têm um único dono por tarefa.
 
 ## Test Coverage Matrix
@@ -81,12 +81,12 @@ T13..T18: bytes técnicos, workflow, DEV, DTO, cliente HTTP e composer.
 
 ### Phase 4: Gravação, histórico e fechamento
 
-T19..T23, T25, T26, T24: recorder, playback, integração Inbox, limpeza, rollout,
+T19..T23, T25, T26, T27, T24: recorder, playback, integração Inbox, limpeza, rollout,
 correção UX, recuperação de recusa conhecida e UAT.
 
 ```text
 T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9 -> T10 -> T11 -> T12
-T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T24
+T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T24
 ```
 
 ## Task Breakdown
@@ -438,11 +438,25 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Gate**: Build + UI focal; Verifier independente reexecuta baseline e sensor no novo HEAD antes da nova UAT.
 **Commit**: fix(inbox): explain known media send refusals safely
 
+### T27: Recuperar validação temporária e identificar falhas de captura
+
+**What**: Corrigir a nova falha UAT de 10/10, distinguindo indisponibilidade temporária da validação e ausência/falha de microfone.
+**Where**: apps/edge-web/src/components/inbox/MediaComposer.vue
+**Supporting files**: apps/edge-web/src/components/inbox/AudioRecorder.vue; test/e2e/media-composer.spec.js; test/e2e/audio-recorder.spec.js; .specs/features/inbox-media-rustfs/spec.md; .specs/features/inbox-media-rustfs/context.md; .specs/features/inbox-media-rustfs/execution.md; .specs/features/inbox-media-rustfs/validation-ux-recovery.md; .specs/STATE.md; docs/runbooks/chat-media-uat.md.
+**Depends on**: T26
+**Requirement**: MED-06, MED-11, MED-19, MED-25, MED-26, MED-32
+**Reuses**: Motivos sanitizados existentes, polling e refresh legítimo ClamAV; sem ignorar scanner ou simular dispositivo de captura na UAT física.
+**Tools**: tlc-spec-driven; Browser; Playwright; Docker local.
+**Done when**: [x] Unavailable temporário conserva arquivo/legenda e permite consultar a mesma mídia sem novo upload/envio automático; lost/rejected continuam bloqueados; captura informa ausência/falha/permissão sem detalhe privado; demo usa assinaturas atualizadas legitimamente; reprodução pela tela identifica ausência real de microfone e envio completo do anexo. Imagem, áudio e vídeo enviados pelo navegador integrado no fluxo DEV; revisão específica PASS em [validation-ux-recovery.md](validation-ux-recovery.md). T24 permanece pendente.
+**Tests**: E2E focal e regressão; assertions de motivo, foco, preview, legenda, um upload e envio explícito; smoke pelo pipeline real e revisão independente.
+**Gate**: Build + UI + smoke local; Verifier específico antes da nova UAT.
+**Commit**: fix(inbox): recover media validation and explain microphone failures
+
 ### T24: Homologação da fatia e evidências
 
 **What**: Executar UAT sintético ponta a ponta do CRM ao DEV e consolidar critérios para canal real.
 **Where**: docs/runbooks/chat-media-uat.md
-**Depends on**: T26
+**Depends on**: T27
 **Requirement**: MED-01..32
 **Reuses**: Todos os testes da fatia; handoff e reserva atuais.
 **Tools**: tlc-spec-driven; Browser/Playwright; Verifier independente após commit final.
@@ -503,7 +517,8 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T23  | T22                    | T22 → T23     | Match  |
 | T25  | T23                    | T23 → T25     | Match  |
 | T26  | T25                    | T25 → T26     | Match  |
-| T24  | T26                    | T26 → T24     | Match  |
+| T27  | T26                    | T26 → T27     | Match  |
+| T24  | T27                    | T27 → T24     | Match  |
 
 ## Test Co-location Validation
 
@@ -535,6 +550,7 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T24  | UAT                         | integration/e2e             | integration/e2e        | OK     |
 | T25  | Composer integrado          | e2e/axe + integração real   | e2e/axe + integração   | OK     |
 | T26  | Recusa de envio             | e2e + sensor                | e2e + sensor           | OK     |
+| T27  | Recuperação e captura       | e2e + smoke                 | e2e + smoke            | OK     |
 
 ## Confirmação antes de Execute
 

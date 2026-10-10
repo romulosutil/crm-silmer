@@ -13,6 +13,24 @@
 
 ## Handoff
 
+T27 concluída na branch codex/inbox-media-rustfs-plan: recuperação de validação
+temporária sem repetir upload e mensagens seguras de falha de captura. Reprodução
+pela tela em10/10 confirmou envio explícito de PNG, M4A e MP4 com histórico DEV.
+ClamAV estava com assinatura antiga; refresh genuíno recuperou o mesmo rascunho.
+Gravação retorna NotFoundError: Windows só detecta saída do monitor, sem microfone.
+Não declarar captura física bem-sucedida. Demo4183 atualizada; dados preservados.
+Verifier específico PASS em features/inbox-media-rustfs/validation-ux-recovery.md:
+baseline independente80/80 na repetição, cinco faults mortos por assertions reais,
+isolamento e cleanup comprovados. Timeout inicial e sensor não qualificável
+registrados no relatório, sem alterações em assertions/timeouts para passar.
+Iteração2 resolveu lacuna de legenda anterior à falha: novo teste1/1pass e M6
+original morto pela assertion exata; isolamento e cleanup comprovados.
+Gates root: 862unitpass/zero fail/três skips antigos, build e13prechecks verdes,
+focal inicial80/80; final80pass/um crash Axe, rerun exato1/1pass; FullUI195pass/sete skips/três falhas existentes, rerun exato3/3pass.
+Próximo passo: conectar/habilitar entrada de áudio e executar UAT física T24.
+T24 continua In Progress; requisitos não Verified; PrivacyP1 n8n e gates de
+operação/Meta/backup continuam abertos. Commit atômico T27 inclui este registro.
+
 T25+T26: revisão independente final PASS específico, iteração 2/3, sobre
 90de325. Relatório em features/inbox-media-rustfs/validation-ux.md: 69/69 E2E
 focais, 862 unit pass/zero fail/três skips antigos, build e 13 prechecks verdes;

@@ -222,6 +222,21 @@ async function poll(token, signal, conversationId) {
         return;
       }
       if (['rejected', 'unavailable', 'lost', 'expired'].includes(data.state)) {
+        const retryable = /** @type {Record<string, string>} */ ({
+          stale_signatures:
+            'A verificação de segurança está temporariamente indisponível. Aguarde a atualização do serviço e tente validar novamente.',
+          scanner_unavailable:
+            'A verificação de segurança está temporariamente indisponível. Tente validar novamente em alguns instantes.',
+          storage_unavailable:
+            'O armazenamento está temporariamente indisponível. Tente validar novamente em alguns instantes.',
+          processing_failed:
+            'Não foi possível concluir a validação. Tente validar novamente em alguns instantes.',
+        })[data.reason];
+        if (data.state === 'unavailable' && typeof retryable === 'string') {
+          state.value = 'error';
+          error.value = retryable;
+          return;
+        }
         state.value = 'rejected';
         error.value =
           data.reason === 'invalid_format'

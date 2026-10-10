@@ -1,5 +1,82 @@
 # Execução INBOX-MEDIA-1
 
+## T27: Recuperação de validação e diagnóstico de microfone
+
+UAT de 10/10 reproduzida pela tela do navegador integrado: arquivo
+unavailable/stale_signatures impedia Enviar anexo; iniciar gravação retornava
+NotFoundError. Windows enumerou somente saída LG ULTRAWIDE, sem entrada de
+microfone. A mensagem antiga genérica ocultava essa distinção. Não houve
+captura física bem-sucedida nem simulação de dispositivo na prova Browser.
+
+Atualização legítima ClamAvSignatureRefresh.refresh() no worker built terminou
+exit0, atualizando marker de07/10 00:35UTC para10/10 14:04UTC e definições
+28145→28149. O mesmo rascunho virou ready/clean pelo retry natural, ainda sem
+mensagem. Não foram alterados scanner, limite36h, IAM, dados ou volumes.
+Doze attached tiveram HEAD200; os oito lost anteriores eram rascunhos com
+cleanupintent, reservation0 e spoolNULL, expirados legitimamente após24h.
+Não há evidência para atribuir o atraso do refresh a CDN ou suspensão do host.
+
+MediaComposer oferece Atualizar validação somente para unavailable com quatro
+motivos públicos; consulta a mesma mediaId, mantém preview/legenda e não
+reenvia upload. Lost/rejected/motivo desconhecido continuam bloqueados.
+AudioRecorder usa mensagens locais para NotFound/NotReadable/Security/Abort/
+NotSupported, preservando foco e anexos. Cause.message e reason arbitrário não
+são expostos. Doze E2Es novos; assertion de encoder antigo foi fortalecida.
+
+Browser real, sem headless ou mock de API: Anexar arquivo abriu filechooser e
+selecionou fixtures PNG/M4A/MP4 locais; ready liberou Enviar anexo; cada clique
+explícito resultou em mensagem no histórico identificada DEV: envio simulado.
+PNG e MP4 usaram legenda; áudio mostrou player. Provas ignoradas:
+var/media-T27-browser-final-dom.txt, -browser-final.jpg, -browser-proof.jpg,
+var/media-clam-refresh-safe-proof.json, var/media-storage-safe-inspect-proof.json.
+A aba original foi recarregada somente após confirmar ausência de rascunhos
+de arquivo/texto; a aba de prova mantém os anexos enviados e diagnóstico físico.
+
+Gates: typecheck, lint, build, 13 prechecks, audit e diffcheck exit0; unit
+serial865total/862pass/zero fail/três skips antigos. Focal inicial80/80. Focal final81casos:80pass e um crash do browser em AxeBuilder; rerun exato1/1pass. FullUI
+195pass/sete skips antigos/três falhas em fixtures existentes; exact --last-failed
+passou3/3 sem alterar assertions/timeouts. Não declarar FullUI clean198.
+Logs: var/media-T27-unit-serial.log, -focal.log, -final-focal-corrected.log, -final-focal-rerun.log, -full-ui.log,
+-full-ui-rerun.log, -format.log e -prechecks.log.
+
+Invocação adicional final-focal.log usou variável Firefox incorreta e omitiu
+inbox-media:66pass/1launchfail. Corrigida a invocação, nenhum teste foi alterado
+para passar. Preservados todos os logs, sem alegar suite integral limpa81.
+
+Revisão de adequação: resultados definidos pelas ACs, sem novas rotas ou
+contratos de persistência. Assertions existentes preservadas; nenhuma negativa
+removida, enfraquecida ou ignorada. Convenções de test/e2e e RULES.md mantidas.
+
+| Critério / AC | Assertion localizada | Resultado definido | Coberto |
+| --- | --- | --- | --- |
+| MED-11/25: causa pública, foco e anexo disponível | test/e2e/audio-recorder.spec.js:240 `toHaveText(message)`; :243 `toBeFocused()`; :244 `toBeEnabled()` | Mensagem local exata; foco em Gravar; arquivo habilitado | Sim |
+| MED-11: nenhuma mensagem por falha de captura | test/e2e/audio-recorder.spec.js:245 `toHaveLength(0)`; :246 `toHaveLength(0)` | Zero upload e zero envio | Sim |
+| MED-11/13: encoder e liberação | test/e2e/audio-recorder.spec.js:259 `toHaveText(...)`; :267 `toBe(1)` | Erro seguro exato; track parada | Sim |
+| MED-06/19/26/32: falha temporária recuperável | test/e2e/media-composer.spec.js:187 `toHaveText(message)`; :190 `toBeDisabled()`; :191 `toBeVisible()` | Motivo público; envio bloqueado; prévia preservada | Sim |
+| MED-06/32: mesma mídia e legenda; envio explícito | test/e2e/media-composer.spec.js:198 `toHaveValue('Legenda preservada')`; :199 `toHaveLength(1)`; :200 `toHaveLength(0)`; :205 `toEqual({mediaId: 'media-1', caption: 'Legenda preservada'})` | Um upload, zero envio antes do clique, payload exato após clique | Sim |
+| MED-19/26/32: terminal ou motivo desconhecido | test/e2e/media-composer.spec.js:223 `toHaveText(...)`; :228 `toBeDisabled()`; :231 `toHaveCount(0)`; :232 `toHaveLength(1)`; :233 `toHaveLength(0)` | Mensagem pública; bloqueio; sem retry ou envio | Sim |
+| MED-06/32: legenda digitada antes da resposta unavailable | test/e2e/media-composer.spec.js:831 `toHaveValue('Legenda antes da falha')`; :836 `toBeDisabled()`; :839 `toBeEnabled()`; :840 `toHaveLength(1)`; :841 `toHaveLength(0)` | Texto preservado; um upload; nenhum envio; retry disponível | Sim |
+| T27: runtime e tela | var/media-clam-refresh-safe-proof.json; var/media-T27-browser-final-dom.txt | Refresh legítimo; PNG/M4A/MP4 enviados DEV; captura real falha por ausência de entrada | Sim, captura bem-sucedida permanece T24 |
+
+| Assertions / cenários | Âncora | Manter |
+| --- | --- | --- |
+| audio-recorder.spec.js:240–246; cinco erros de captura | MED-11/25, edge cases de captura da T27 | Sim |
+| audio-recorder.spec.js:259–267; encoder existente fortalecido | MED-11/13, liberação de recursos | Sim |
+| media-composer.spec.js:187–208; quatro motivos públicos | MED-06/19/26/32, edge cases unavailable da T27 | Sim |
+| media-composer.spec.js:831–841; status bloqueado até preencher legenda | MED-06/32, preservação antes da primeira resposta de falha | Sim |
+| media-composer.spec.js:223–233; lost e motivo desconhecido | MED-19/26/32, edge cases terminais da T27 | Sim |
+
+Adequação PASS específico: outcomes e payload conferidos, sem assertions rasas
+ou testes fora do escopo. Verifier independente em validation-ux-recovery.md:
+baseline80/80 na repetição, cinco faults mortos por assertions reais e isolamento
+completo. Timeout inicial, faults não qualificáveis e limites físicos registrados.
+Iteração2 acrescenta teste determinístico de legenda anterior à falha:1/1pass,
+M6 original morto pela assertion exata:831; gap de cobertura resolvido,
+isolamento e cleanup novamente comprovados. Nenhuma fonte de produto mudou.
+
+T24 permanece pendente do dispositivo físico e avaliação humana. PrivacyP1
+n8n, WhatsApp/Meta e recuperação operacional continuam gates separados.
+
 ## T26: Recusas conhecidas de envio — finding MED-32
 
 O Verifier independente revisou86ab0a1: baseline59/59, unit862/0/3, cinco

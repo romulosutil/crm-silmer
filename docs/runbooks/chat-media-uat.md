@@ -2,6 +2,20 @@
 
 ## Resultado e fronteira
 
+Otimização T28 em10/10: reutiliza validação completa da mesma tentativa, com
+conferência de arquivo/tamanho, SHA/checksum no PUT e HEAD; retries preparados
+validam novamente. Gravação conserva entrada e saída validadas. Na mesma
+PNG117bytes, upload→ready caiu de20,401s para15,481/13,509s (uma tentativa cada),
+com liberação do botão pela tela em16,645/14,531s. Primeiro anexo enviado
+explicitamente chegou aDEV/sent com uma reserva e um callback; segundo permaneceu
+ready sem mensagem. A diferença observada não é SLA nem comprovação Meta.
+Worker localT28: sha256:d12e8e175b023881c74f0bbba0485bf569b4078aafa26ac01f515e4e1de8d2f4.
+API/n8n/DBs, env, chaves e volumes preservados; rollback para24f30677…0b8a pelo
+helper ignorado var/media-T28-runtime.mjs --rollback, sob fila idle.
+Provas: var/media-T28-browser-final-comparison-proof.json e runtime-proof.json;
+[revisão independente T28](../../.specs/features/inbox-media-rustfs/validation-performance.md).
+T24, captura física e gates operacionais continuam pendentes.
+
 Reteste de 10/10/2026: a tela reproduziu `unavailable/stale_signatures` no
 anexo e `NotFoundError` na captura. O Windows enumerou somente saída de áudio
 do monitor, sem microfone. A atualização legítima `ClamAvSignatureRefresh.refresh()`

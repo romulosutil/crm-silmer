@@ -1,25 +1,36 @@
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
 import { createChatMediaProcessJobHandler } from '../modules/integration-reliability/src/chat-media-process-worker.js';
 import { ChatMediaValidationError } from '../modules/integration-reliability/src/chat-media-validation.js';
+import { RecordedAudioNormalizer } from '../modules/integration-reliability/src/recorded-audio-normalizer.js';
 import {
   MediaObjectMissingError,
   MediaStorageUnavailableError,
+  RustfsMediaStore,
 } from '../modules/integration-reliability/src/rustfs-media-store.js';
 
 const BYTES = Buffer.from('synthetic');
 const SHA = createHash('sha256').update(BYTES).digest('hex');
-/** @param {{recording?: boolean,validationReason?: string,putFailure?: boolean,dbFailure?: boolean,headExisting?: boolean,leaseLost?: boolean,cleanupFailure?: boolean,delayed?: boolean,reservation?: number,bucketAlias?: string,failFailure?: boolean,failCas?: boolean}} [options] */
+/** @param {{recording?: boolean,validationReason?: string,outputValidationReason?: string,putFailure?: boolean,dbFailure?: boolean,headExisting?: boolean,prepared?: boolean,existingVariant?: boolean,afterPrepare?: Function,leaseLost?: boolean,cleanupFailure?: boolean,delayed?: boolean,reservation?: number,bucketAlias?: string,failFailure?: boolean,failCas?: boolean}} [options] */
 async function fixture(options = {}) {
   const root = await mkdtemp(join(tmpdir(), 'crm-process-'));
   const source = randomUUID();
   const key = randomUUID();
   await writeFile(join(root, source), BYTES);
+  if (options.existingVariant) await writeFile(join(root, key), BYTES);
+  const prepared = options.headExisting || options.prepared;
   const metadata = {
     sizeBytes: BYTES.length,
     sha256: SHA,
@@ -46,15 +57,17 @@ async function fixture(options = {}) {
         : 2 * BYTES.length),
     state: 'uploaded',
     version: 1,
-    content_sha256: options.headExisting ? SHA : null,
-    size_bytes: options.headExisting ? BYTES.length : null,
-    detected_mime_type: options.headExisting ? metadata.mimeType : null,
-    original_sha256: options.headExisting ? SHA : null,
+    content_sha256: prepared ? SHA : null,
+    size_bytes: prepared ? BYTES.length : null,
+    detected_mime_type: prepared ? metadata.mimeType : null,
+    original_sha256: prepared ? SHA : null,
   };
   const calls = {
     puts: 0,
     prepared: 0,
     normalized: 0,
+    validations: 0,
+    uploadedBytes: /** @type {Buffer|undefined} */ (undefined),
     ready: 0,
     heartbeats: 0,
     failures: /** @type {string[]} */ ([]),
@@ -76,6 +89,7 @@ async function fixture(options = {}) {
         original_sha256: input.originalSha256,
         version: row.version + 1,
       };
+      await options.afterPrepare?.({ row, root, source, key });
       return row;
     },
     async ready() {
@@ -92,6 +106,28 @@ async function fixture(options = {}) {
       return !options.failCas;
     },
   };
+  const verifiedStore = new RustfsMediaStore({
+    bucket: 'crm-silmer-chat-media-dev',
+    client: {
+      async send(command) {
+        assert.equal(command.input.ContentLength, metadata.sizeBytes);
+        assert.equal(command.input.ContentType, metadata.mimeType);
+        assert.deepEqual(command.input.Metadata, { sha256: SHA });
+        assert.equal(command.input.IfNoneMatch, '*');
+        assert.equal(
+          command.input.ChecksumSHA256,
+          Buffer.from(SHA, 'hex').toString('base64'),
+        );
+        const chunks = [];
+        for await (const chunk of command.input.Body)
+          chunks.push(Buffer.from(chunk));
+        calls.uploadedBytes = Buffer.concat(chunks);
+        calls.puts++;
+        if (options.putFailure) throw new MediaStorageUnavailableError();
+        return {};
+      },
+    },
+  });
   const store = {
     async head() {
       if (!options.headExisting && calls.puts === 0)
@@ -102,36 +138,45 @@ async function fixture(options = {}) {
         mimeType: metadata.mimeType,
       };
     },
-    /** @param {{stream: AsyncIterable<Uint8Array>}} input */
-    async putValidated({ stream }) {
+    /** @param {any} input */
+    async putValidated(input) {
       assert.ok(row.content_sha256, 'prepared metadata must precede PUT');
-      const chunks = [];
-      for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-      assert.deepEqual(Buffer.concat(chunks), BYTES);
-      calls.puts++;
-      if (options.putFailure) throw new MediaStorageUnavailableError();
+      await verifiedStore.putValidated(input);
     },
   };
+  const validator = {
+    /** @param {{path:string}} input */
+    async validate({ path }) {
+      calls.validations++;
+      if (options.validationReason)
+        throw new ChatMediaValidationError(options.validationReason);
+      if (options.outputValidationReason && path !== join(root, source))
+        throw new ChatMediaValidationError(options.outputValidationReason);
+      if (options.delayed)
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      return options.recording && path === join(root, source)
+        ? { ...metadata, mimeType: 'audio/webm' }
+        : metadata;
+    },
+  };
+  const normalizer = new RecordedAudioNormalizer({
+    validator,
+    /** @param {string} _command @param {string[]} args */
+    async execFileImpl(_command, args) {
+      await writeFile(/** @type {string} */ (args.at(-1)), BYTES);
+    },
+  });
   const handler = createChatMediaProcessJobHandler({
     repository,
     store,
     spoolRoot: root,
     heartbeatIntervalMs: 5,
-    validator: {
-      async validate() {
-        if (options.validationReason)
-          throw new ChatMediaValidationError(options.validationReason);
-        if (options.delayed)
-          await new Promise((resolve) => setTimeout(resolve, 30));
-        return metadata;
-      },
-    },
+    validator,
     normalizer: {
-      /** @param {{outputPath: string}} input */
-      async normalize({ outputPath }) {
+      /** @param {any} input */
+      async normalize(input) {
         calls.normalized++;
-        await writeFile(outputPath, BYTES);
-        return { ...metadata, path: outputPath, originalSha256: SHA };
+        return normalizer.normalize(input);
       },
     },
     removeFile: options.cleanupFailure
@@ -171,7 +216,12 @@ test('T6 validates, prepares before PUT, confirms HEAD, cleans spool and publish
     assert.equal((await f.handler(f.job, f.context)).outcome, 'sent');
     assert.equal((await f.handler(f.job, f.context)).outcome, 'sent');
     assert.equal(f.calls.puts, 1);
+    assert.deepEqual(f.calls.uploadedBytes, BYTES);
+    assert.equal(f.calls.validations, 1);
     assert.equal(f.calls.ready, 1);
+    assert.equal(f.row().content_sha256, SHA);
+    assert.equal(f.row().size_bytes, BYTES.length);
+    assert.equal(f.row().detected_mime_type, 'image/png');
     assert.equal(f.row().reservation_bytes, BYTES.length);
   } finally {
     await f.cleanup();
@@ -183,10 +233,151 @@ test('T6 recording produces one persisted variant before upload', async () => {
     assert.equal((await f.handler(f.job, f.context)).outcome, 'sent');
     assert.equal(f.calls.normalized, 1);
     assert.equal(f.calls.prepared, 1);
+    assert.equal(f.calls.validations, 2);
+    assert.equal(f.calls.puts, 1);
+    assert.equal(f.calls.ready, 1);
+    assert.equal(f.row().detected_mime_type, 'audio/ogg');
+    assert.deepEqual(f.calls.uploadedBytes, BYTES);
   } finally {
     await f.cleanup();
   }
 });
+test('T28/MED-06 prepared retry validates again before uploading missing object', async () => {
+  const f = await fixture({ prepared: true });
+  try {
+    assert.equal((await f.handler(f.job, f.context)).outcome, 'sent');
+    assert.equal(f.calls.validations, 1);
+    assert.equal(f.calls.prepared, 0);
+    assert.equal(f.calls.puts, 1);
+    assert.equal(f.calls.ready, 1);
+    assert.equal(f.row().content_sha256, SHA);
+  } finally {
+    await f.cleanup();
+  }
+});
+test('T28/MED-06 recording crash variant validates source and output exactly once', async () => {
+  const f = await fixture({ recording: true, existingVariant: true });
+  try {
+    assert.equal((await f.handler(f.job, f.context)).outcome, 'sent');
+    assert.equal(f.calls.validations, 2);
+    assert.equal(f.calls.normalized, 0);
+    assert.equal(f.calls.puts, 1);
+    assert.equal(f.calls.ready, 1);
+    assert.equal(f.row().content_sha256, SHA);
+    assert.equal(f.row().original_sha256, SHA);
+    assert.equal(f.row().detected_mime_type, 'audio/ogg');
+  } finally {
+    await f.cleanup();
+  }
+});
+test('T28/MED-06 infected normalized output is not prepared, uploaded or published', async () => {
+  const f = await fixture({
+    recording: true,
+    outputValidationReason: 'infected',
+  });
+  try {
+    assert.equal((await f.handler(f.job, f.context)).outcome, 'sent');
+    assert.equal(f.calls.validations, 2);
+    assert.equal(f.calls.normalized, 1);
+    assert.equal(f.calls.prepared, 0);
+    assert.equal(f.calls.puts, 0);
+    assert.equal(f.calls.ready, 0);
+    assert.deepEqual(f.calls.failures, ['infected']);
+  } finally {
+    await f.cleanup();
+  }
+});
+for (const [
+  name,
+  mutate,
+  reason,
+] of /** @type {Array<[string,(input:{root:string,source:string,row:any})=>Promise<any>,string]>} */ ([
+  [
+    'same-size bytes',
+    async ({ root, source }) =>
+      writeFile(join(root, source), Buffer.from('different')),
+    'storage_unavailable',
+  ],
+  [
+    'size',
+    async ({ root, source }) =>
+      writeFile(join(root, source), Buffer.from('short')),
+    'invalid_format',
+  ],
+  [
+    'non-file',
+    async ({ root, source }) => {
+      await rm(join(root, source));
+      await mkdir(join(root, source));
+    },
+    'invalid_format',
+  ],
+  [
+    'symlink',
+    async ({ root, source }) => {
+      await rm(join(root, source));
+      const target = join(root, 'link-target');
+      await mkdir(target);
+      // Junctions are directory symlinks available without Windows elevation.
+      await symlink(target, join(root, source), 'junction');
+    },
+    'invalid_format',
+  ],
+  [
+    'prepared SHA metadata',
+    async ({ row }) => {
+      row.content_sha256 = '0'.repeat(64);
+    },
+    'storage_unavailable',
+  ],
+  [
+    'prepared size metadata',
+    async ({ row }) => {
+      row.size_bytes++;
+    },
+    'storage_unavailable',
+  ],
+  [
+    'prepared MIME metadata',
+    async ({ row }) => {
+      row.detected_mime_type = 'image/jpeg';
+    },
+    'storage_unavailable',
+  ],
+])) {
+  test(`T28/MED-26 ${name} change after validation never publishes ready`, async () => {
+    const f = await fixture({ afterPrepare: mutate });
+    try {
+      const reserved = f.row().reservation_bytes;
+      const result = await f.handler(f.job, f.context);
+      assert.equal(
+        result.outcome,
+        reason === 'invalid_format' ? 'sent' : 'failed',
+      );
+      assert.equal(f.calls.validations, 1);
+      assert.equal(f.calls.puts, 0);
+      assert.equal(f.calls.ready, 0);
+      assert.equal(f.row().reservation_bytes, reserved);
+      assert.deepEqual(f.calls.failures, [reason]);
+    } finally {
+      await f.cleanup();
+    }
+  });
+}
+for (const reason of ['infected', 'stale_signatures', 'scanner_unavailable']) {
+  test(`T28/MED-06 prepared retry ${reason} remains blocked despite persisted SHA`, async () => {
+    const f = await fixture({ prepared: true, validationReason: reason });
+    try {
+      await f.handler(f.job, f.context);
+      assert.equal(f.calls.validations, 1);
+      assert.equal(f.calls.puts, 0);
+      assert.equal(f.calls.ready, 0);
+      assert.deepEqual(f.calls.failures, [reason]);
+    } finally {
+      await f.cleanup();
+    }
+  });
+}
 test('T6 persisted metadata and existing object reconcile without normalization or PUT', async () => {
   const f = await fixture({ recording: true, headExisting: true });
   try {

@@ -13,6 +13,22 @@
 
 ## Handoff
 
+T28 concluída na branch codex/inbox-media-rustfs-plan: worker reaproveita somente
+validação da saída na mesma tentativa; sem cache entre jobs ou bypass scanner.
+Retry preparado sem objeto valida de novo, gravação conserva entrada/saída,
+lstat/size e SHA/checksum no streaming/HEAD impedem publicar conteúdo alterado.
+Verifier específico PASS em features/inbox-media-rustfs/validation-performance.md:
+build0,67/67 testes, três faults mortos e isolamento/cleanup comprovados.
+Root Fullunit878total/875pass/zero fail/três skips antigos;13prechecks+build0.
+Demo4183 usa workerT28 imagemd12e8e175b…8d2f4; API/n8n/DBs/volumes/chaves mantidos.
+MesmaPNG117bytes: antes20,401s; depois15,481 e13,509s atéready,1tentativa cada.
+Browser liberou botão em16,645/14,531s; primeiro enviadoDEV/sent/callback único.
+Provas em var/media-T28-browser-final-comparison-proof.json e runtime-proof.json.
+Rollback worker para24f30677…0b8a disponível em helper local, sem dados removidos.
+Ainda há custo perceptível ClamAV; nenhuma garantia de latência universal.
+Próximo passo T24: microfone físico e UAT humana. Sem Verified global, sem
+encerrar PrivacyP1 n8n, Meta ou recuperação operacional. CommitT28 inclui status.
+
 T27 concluída na branch codex/inbox-media-rustfs-plan: recuperação de validação
 temporária sem repetir upload e mensagens seguras de falha de captura. Reprodução
 pela tela em10/10 confirmou envio explícito de PNG, M4A e MP4 com histórico DEV.

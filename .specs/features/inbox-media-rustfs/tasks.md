@@ -2,7 +2,7 @@
 
 Design: [design.md](design.md). Spec: [spec.md](spec.md).
 Status: Executing. Tarefa guarda-chuva: INBOX-MEDIA-1.
-27 tarefas planejadas; T1 a T23, T25, T26 e T27 concluídas; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
+28 tarefas planejadas; T1 a T23 e T25 a T28 concluídas; T24 aguarda captura física e nova UAT humana. Evidência em [execution.md](execution.md).
 
 ## Execution Protocol
 
@@ -18,7 +18,7 @@ Após a última tarefa, Verifier independente obrigatório, com evidência por A
 e sensor de discriminação em scratch isolado; validation.md não é criado vazio.
 Se houver achados, criar tarefas de correção e repetir no limite da skill.
 As quatro fases originais têm seis tarefas; a fase 4 inclui T25 solicitada
-durante UAT, T26 decorrente da revisão independente e T27 de recuperação, passando a nove tarefas. Na execução, oferecer delegação conforme a
+durante UAT, T26 decorrente da revisão independente, T27 de recuperação e T28 de desempenho, passando a dez tarefas. Na execução, oferecer delegação conforme a
 skill antes de despachar workers. Arquivos têm um único dono por tarefa.
 
 ## Test Coverage Matrix
@@ -81,12 +81,12 @@ T13..T18: bytes técnicos, workflow, DEV, DTO, cliente HTTP e composer.
 
 ### Phase 4: Gravação, histórico e fechamento
 
-T19..T23, T25, T26, T27, T24: recorder, playback, integração Inbox, limpeza, rollout,
+T19..T23, T25, T26, T27, T28, T24: recorder, playback, integração Inbox, limpeza, rollout,
 correção UX, recuperação de recusa conhecida e UAT.
 
 ```text
 T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9 -> T10 -> T11 -> T12
-T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T24
+T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T28 -> T24
 ```
 
 ## Task Breakdown
@@ -452,11 +452,25 @@ do upload e subprocesso Linux resistente a TERM. Evidência em execution.md.
 **Gate**: Build + UI + smoke local; Verifier específico antes da nova UAT.
 **Commit**: fix(inbox): recover media validation and explain microphone failures
 
+### T28: Evitar validação repetida na mesma tentativa
+
+**What**: Reduzir latência do anexo reaproveitando a validação completa da saída na mesma tentativa, preservando integridade e retries.
+**Where**: modules/integration-reliability/src/chat-media-process-worker.js
+**Supporting files**: test/chat-media-process-worker.test.js; .specs/features/inbox-media-rustfs/spec.md; .specs/features/inbox-media-rustfs/design.md; .specs/features/inbox-media-rustfs/context.md; .specs/features/inbox-media-rustfs/execution.md; .specs/features/inbox-media-rustfs/validation-performance.md; .specs/STATE.md; docs/runbooks/chat-media-uat.md.
+**Depends on**: T27
+**Requirement**: MED-06, MED-14, MED-26, MED-30
+**Reuses**: Resultado da mesma tentativa, lease, CAS, lstat, checksum do PUT e HEAD; sem cache entre jobs, nova infraestrutura ou bypass antivírus.
+**Tools**: tlc-spec-driven; Node; Docker local; Browser.
+**Done when**: [x] Anexo novo usa uma validação completa e publica ready só para os bytes validados; gravação conserva validação entrada/saída; retry preparado sem objeto valida novamente; alteração de arquivo/tamanho/hash ou metadados bloqueia ready; latência medida na demo antes/depois e revisão independente específica PASS. Mesma PNG:20,401s antes e15,481/13,509s depois; envio explícito DEV confirmado. [Revisão específica](validation-performance.md); T24 permanece pendente.
+**Tests**: Unit worker, validator e store; corrupção pós-prepare, arquivo não regular, retry e lease; smoke sintético real e envio explícito pela tela.
+**Gate**: Build + Full unit + smoke local; Verifier específico com sensor de integridade.
+**Commit**: perf(media): reuse validated output within a processing attempt
+
 ### T24: Homologação da fatia e evidências
 
 **What**: Executar UAT sintético ponta a ponta do CRM ao DEV e consolidar critérios para canal real.
 **Where**: docs/runbooks/chat-media-uat.md
-**Depends on**: T27
+**Depends on**: T28
 **Requirement**: MED-01..32
 **Reuses**: Todos os testes da fatia; handoff e reserva atuais.
 **Tools**: tlc-spec-driven; Browser/Playwright; Verifier independente após commit final.
@@ -518,7 +532,8 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T25  | T23                    | T23 → T25     | Match  |
 | T26  | T25                    | T25 → T26     | Match  |
 | T27  | T26                    | T26 → T27     | Match  |
-| T24  | T27                    | T27 → T24     | Match  |
+| T28  | T27                    | T27 → T28     | Match  |
+| T24  | T28                    | T28 → T24     | Match  |
 
 ## Test Co-location Validation
 
@@ -551,6 +566,7 @@ Migration NNNN é nome proposto: escolher número livre no momento da execução
 | T25  | Composer integrado          | e2e/axe + integração real   | e2e/axe + integração   | OK     |
 | T26  | Recusa de envio             | e2e + sensor                | e2e + sensor           | OK     |
 | T27  | Recuperação e captura       | e2e + smoke                 | e2e + smoke            | OK     |
+| T28  | Worker e integridade        | unit + smoke                | unit + smoke           | OK     |
 
 ## Confirmação antes de Execute
 

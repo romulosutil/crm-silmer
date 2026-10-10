@@ -103,6 +103,9 @@ export function createChatMediaProcessJobHandler({
       if (Number(row.reservation_bytes) < minimum)
         throw new ChatMediaValidationError('quota_exceeded');
 
+      // A validation result is reusable only within this processing attempt.
+      // Persisted metadata alone never authorizes a new upload after a retry.
+      let attemptValidation;
       if (!row.content_sha256) {
         if ((await lstat(source)).size !== Number(row.input_size_bytes))
           throw new ChatMediaValidationError('invalid_format');
@@ -161,6 +164,7 @@ export function createChatMediaProcessJobHandler({
           throw new ChatMediaValidationError('invalid_format');
         row = await repository.prepare(job, row, result);
         if (!row) throw new ChatMediaValidationError('processing_failed');
+        attemptValidation = result;
       }
       let object;
       try {
@@ -169,15 +173,22 @@ export function createChatMediaProcessJobHandler({
         if (!(error instanceof MediaObjectMissingError)) throw error;
       }
       if (!object) {
-        const validation = await validator.validate({
-          path: output,
-          kind: row.kind,
-          origin: row.origin,
-          declaredMimeType: row.detected_mime_type,
-          signal: controller.signal,
-        });
+        const validation =
+          attemptValidation ??
+          (await validator.validate({
+            path: output,
+            kind: row.kind,
+            origin: row.origin,
+            declaredMimeType: row.detected_mime_type,
+            signal: controller.signal,
+          }));
         if (!matches(row, validation)) throw new MediaStorageUnavailableError();
         await assertLease();
+        // Rechecking the file boundary preserves the validator's symlink/size
+        // guard. putValidated additionally checks SHA and size while streaming.
+        const outputInfo = await lstat(output);
+        if (!outputInfo.isFile() || outputInfo.size !== validation.sizeBytes)
+          throw new ChatMediaValidationError('invalid_format');
         // Internal immutable object effect: do not mark the generic Meta attempt
         // as sending/unknown. A retry performs HEAD/conditional PUT reconciliation.
         const objectStream = createReadStream(output);

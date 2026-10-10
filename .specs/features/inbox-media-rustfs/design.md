@@ -216,6 +216,14 @@ reserva ao objeto final; used muda apenas no vínculo T10. Falha de cleanup
 ou rollback mantém a reserva anterior. Crash PUT/DB reconcilia chave
 determinística de upload/variante; não cria segundo arquivo visível.
 
+O resultado completo da validação da saída pode ser reutilizado somente dentro
+da mesma tentativa, evitando nova carga ClamAV para os mesmos bytes. Antes do PUT
+o arquivo deve continuar regular e com tamanho confirmado; putValidated confere
+SHA/tamanho durante streaming e checksum S3, e HEAD deve corresponder aos metadados.
+Retry que encontra metadados preparados e objeto ausente valida novamente, sem
+cache entre jobs ou entre arquivos. Scan/freshness e bloqueio de arquivo infectado
+permanecem obrigatórios; gravação conserva validação da entrada e da saída.
+
 Falha conhecida antes do envio admite retry de processamento com o mesmo
 upload_id. Timeout após efeito Meta segue reconciliação, sem novo envio.
 

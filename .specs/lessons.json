@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 4,
+  "next_id": 5,
   "lessons": [
     {
       "id": "L-001",
@@ -12,7 +12,9 @@
       "signal": "gate_fail",
       "scope": "test",
       "status": "candidate",
-      "features": ["production-readiness"],
+      "features": [
+        "production-readiness"
+      ],
       "recurrence": 1,
       "harmful": 0,
       "evidence": [
@@ -28,7 +30,9 @@
       "signal": "ac_gap",
       "scope": "docs",
       "status": "candidate",
-      "features": ["production-readiness"],
+      "features": [
+        "production-readiness"
+      ],
       "recurrence": 1,
       "harmful": 0,
       "evidence": [
@@ -44,7 +48,9 @@
       "signal": "ac_gap",
       "scope": "inbox-ui",
       "status": "candidate",
-      "features": ["inbox-media-rustfs"],
+      "features": [
+        "inbox-media-rustfs"
+      ],
       "recurrence": 1,
       "harmful": 0,
       "evidence": [
@@ -52,6 +58,24 @@
       ],
       "created": "2026-10-07T01:19:31Z",
       "last_seen": "2026-10-07T01:19:31Z"
+    },
+    {
+      "id": "L-004",
+      "key": "gate_fail::confirme a paridade dos arquivos da imagem construida com as fontes finais antes de atribuir benchmarks e smoke ao patch atual",
+      "text": "Confirme a paridade dos arquivos da imagem construída com as fontes finais antes de atribuir benchmarks e smoke ao patch atual.",
+      "signal": "gate_fail",
+      "scope": "runtime-image",
+      "status": "candidate",
+      "features": [
+        "inbox-media-rustfs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/inbox-media-rustfs/validation-clamd.md:48 (runtime-image)"
+      ],
+      "created": "2026-10-10T16:12:05Z",
+      "last_seen": "2026-10-10T16:12:05Z"
     }
   ]
 }

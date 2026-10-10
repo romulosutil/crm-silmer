@@ -71,8 +71,17 @@ rascunhos sem vínculo. Homologação do pipeline construído, microfone físico
 ativação e recovery remotos permanecem gates independentes em
 [INBOX-MEDIA-1](.specs/features/inbox-media-rustfs/tasks.md).
 
-Mídia de canal no runtime legado fica em volume privado da VPS por até sete dias ou fim da
-jornada. Arquivos válidos seguem o procedimento operacional Dropbox.
+O envio só é liberado após validação de conteúdo e antivírus com definições
+vigentes. O motor `clamd` permanece no worker e recebe arquivos por socket
+Unix privado, conforme [ADR 030](docs/adr/030-antivirus-persistente-no-worker.md).
+Sua atualização confirma o novo motor antes de publicar freshness. Indisponibilidade
+temporária preserva o rascunho sem autorizar envio.
+Evidência sintética no chat DEV não homologa microfone físico nem
+WhatsApp. A minimização e o expurgo dos dados de execução n8n identificados
+na revisão de privacidade permanecem um gate de produção.
+
+Mídia de canal legada fica em volume privado da VPS por até sete dias ou fim da
+jornada. Arquivos válidos são anexados ao pedido e guardados no RustFS.
 Perda da única cópia produz `lost/unavailable`. Esse prazo não se aplica a
 Pedidos, Fichas, documentos comerciais ou auditoria. Storage externo é uma
 evolução na issue #29; backups e tombstones têm gates próprios.

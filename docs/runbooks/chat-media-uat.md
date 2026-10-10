@@ -2,6 +2,37 @@
 
 ## Resultado e fronteira
 
+T29 em 10/10/2026 mantém `clamd` no worker, com socket Unix privado e sem
+TCP. A PNG sintética de 117 bytes passou de 9.326 ms por scan para 7–10 ms
+com o motor carregado. Validação completa isolada: 82/86 ms. Pela tela,
+imagem1/imagem2/áudio/vídeo liberaram envio em 1.163/1.140/1.116/1.121 ms;
+upload→ready no banco: 545/801/1.026/366 ms. Os quatro envios terminaram
+sent/attached, uma reserva e uma tentativa, no DEV15. Comparação anterior
+pela tela integrada: 10–11 segundos. São medições locais, sem SLA.
+
+Worker T29: `sha256:54918dbf91d96f99225fbdf94e4229ead49f6c75dba2043b6ae4f40a632aa496`.
+Imagem construída confere byte a byte com scanner, daemon, refresh e worker.
+API, n8n, bancos, RustFS, ambiente, chaves e volumes foram preservados.
+Motor usa diretório0700/socket0600; pico após recuperação: 1.209.327.616 bytes,
+sob o limite2GiB/1CPU existente. Fullunit993pass/zero fail/três skips antigos;
+13checks+build PASS; scanner/normalizador reais2/2 PASS, incluindo EICAR,
+seis formatos, Chromium WebM, limite300s e recusa301s.
+
+A inicialização e a atualização ainda carregam o motor. Freshclam só
+publica o marcador após readiness do novo processo; não editar o marcador
+manualmente. A parada do antivírus em ensaio sintético provocou bloqueio de
+validação e health exit1; supervisão recuperou em11.271ms, seguida de novo
+scan válido e health exit0. Não existe fallback que dispense o daemon.
+
+Provas ignoradas: `var/media-T29-{runtime,timing,browser,send,recovery}-proof.json`,
+`var/media-T29-built-image-proof.json`, `var/media-T29-runtime-tests.log` e
+`var/media-T29-project-gates.log`. [Revisão T29](../../.specs/features/inbox-media-rustfs/validation-clamd.md).
+Rollback local preserva storage: sob fila sem jobs ativos, usar a imagem
+anterior `sha256:f8f79508626bf67242ac236e84b486092bd96039db395dcc3fc46905e644c38b`
+somente no worker. O helper local `var/media-T29-runtime.mjs --rollback`
+confere identidade dos demais containers, env, chaves, recursos e mounts.
+Nenhuma migração de banco é necessária. Produção/EasyPanel não foram alterados.
+
 Otimização T28 em10/10: reutiliza validação completa da mesma tentativa, com
 conferência de arquivo/tamanho, SHA/checksum no PUT e HEAD; retries preparados
 validam novamente. Gravação conserva entrada e saída validadas. Na mesma

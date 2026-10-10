@@ -135,3 +135,32 @@ test('T5 simultaneous refresh requests share one in-flight download', async () =
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('T29 freshness waits for the replacement engine and preserves the prior marker on failure', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'crm-daemon-freshness-'));
+  const marker = join(root, 'verified');
+  const prior = '2026-01-01T00:00:00.000Z';
+  await writeFile(marker, prior);
+  let ready = false;
+  const refresh = new ClamAvSignatureRefresh({
+    markerPath: marker,
+    async execFileImpl() {},
+    async onUpdated() {
+      assert.equal(await readFile(marker, 'utf8'), prior);
+      if (!ready) throw new Error('private daemon failure');
+    },
+  });
+  try {
+    await assert.rejects(
+      refresh.refresh(),
+      /Signature refresh is unavailable/u,
+    );
+    assert.equal(await readFile(marker, 'utf8'), prior);
+    ready = true;
+    await refresh.refresh();
+    assert.notEqual(await readFile(marker, 'utf8'), prior);
+  } finally {
+    await refresh.stop();
+    await rm(root, { recursive: true, force: true });
+  }
+});

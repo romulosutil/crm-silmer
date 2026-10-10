@@ -159,9 +159,24 @@ no worker. Homologação construída e migração de cópias legadas disponívei
 no [plano INBOX-MEDIA-1](.specs/features/inbox-media-rustfs/design.md). O storage
 R2 futuro não é dependência dessa entrega; backup externo/restore têm gate próprio.
 
-Perda da única cópia resulta em `lost/unavailable`. Arquivos válidos seguem
-procedimento Dropbox. Upload de arte e arquivo durável por API não estão
-habilitados no contrato atual. S3/R2 está diferido na issue #29; essa decisão
+O pipeline falha fechado: scan e definições vigentes precedem `ready` e
+envio. O worker supervisiona um `clamd` persistente, com socket Unix privado
+e health por PING. `clamdscan --fdpass` conserva limites e rejeição de malware.
+Freshclam reinicia o motor sem carregamento concorrente; o marcador só muda
+após readiness. Cada scan conserva a freshness anterior à execução
+([ADR 030](docs/adr/030-antivirus-persistente-no-worker.md)).
+Recuperar validação temporariamente indisponível reutiliza a mesma
+mídia, sem upload ou envio automático. Testes sintéticos DEV não substituem
+captura com microfone físico (T24) nem homologação WhatsApp. Persistência de
+dados de execução n8n continua condicionada à minimização e ao expurgo
+registrados no gate de privacidade da feature.
+
+Perda da única cópia resulta em `lost/unavailable`. Arquivos válidos são
+anexados ao pedido. Os arquivos da arte (5 de até 10 MB e a arte final) ficam
+no RustFS interno, só pela API, com catálogo cifrado, assinatura do conteúdo,
+auditoria e idempotência ([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)).
+O RustFS divide a VPS com o PostgreSQL; o risco é aceito com o bucket no
+backup off-host e no drill. S3/R2 externo segue diferido na issue #29; isso
 não dispensa backup de bancos/documentos duráveis. Pedidos/Fichas e auditoria
 não herdam a retenção curta de mídia.
 

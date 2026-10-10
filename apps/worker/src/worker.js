@@ -4,6 +4,7 @@ import { clearInterval, setInterval } from 'node:timers';
 import { createDatabase } from '@crm-silmer/database';
 import {
   ClamAvMediaScanner,
+  ClamAvDaemon,
   ClamAvSignatureRefresh,
   CHAT_MEDIA_PROCESS_JOB_TYPE,
   CHAT_MEDIA_QUEUE,
@@ -428,7 +429,7 @@ export function createChatMediaWorkerRuntime(options) {
 }
 
 /** Starts text delivery without waiting for an external signature CDN.
- * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},chatMediaCleanup?:{start:Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>}}} services */
+ * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},chatMediaCleanup?:{start:Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>},scannerDaemon?: {start: () => Promise<void>}}} services */
 export async function startWorkerServices({
   commandWorker,
   mediaWorker,
@@ -436,8 +437,10 @@ export async function startWorkerServices({
   chatMediaCleanup,
   retentionScheduler,
   signatureRefresh,
+  scannerDaemon,
 }) {
   await commandWorker.start();
+  await scannerDaemon?.start();
   await mediaWorker.start();
   await chatMediaWorker?.start();
   await chatMediaCleanup?.start();
@@ -486,7 +489,16 @@ export async function startWorkerFromEnvironment(options = {}) {
     applicationName: SERVICES.worker,
     connectionString: requiredEnvironment(environment, 'DATABASE_URL'),
   });
+  const scannerDaemon = new ClamAvDaemon({
+    onFailure: () =>
+      logger.error('worker_job_failed', {
+        error_code: 'CLAM_DAEMON_UNAVAILABLE',
+        job_type: 'media.scanner',
+        queue: 'default',
+      }),
+  });
   const signatureRefresh = new ClamAvSignatureRefresh({
+    onUpdated: () => scannerDaemon.restart(),
     onFailure: () =>
       logger.error('worker_job_failed', {
         error_code: 'CLAM_SIGNATURE_REFRESH_FAILED',
@@ -583,6 +595,7 @@ export async function startWorkerFromEnvironment(options = {}) {
       chatMediaCleanup,
       retentionScheduler,
       signatureRefresh,
+      scannerDaemon,
     });
     return Object.freeze({
       runtime: Object.freeze({
@@ -591,6 +604,7 @@ export async function startWorkerFromEnvironment(options = {}) {
         retentionScheduler,
         chatMediaWorker,
         chatMediaCleanup,
+        scannerDaemon,
       }),
       stop: async () => {
         await chatMediaCleanup?.stop();
@@ -601,11 +615,13 @@ export async function startWorkerFromEnvironment(options = {}) {
           mediaWorker.stop(),
           chatMediaWorker?.stop(),
         ]);
+        await scannerDaemon.stop();
         await database.close();
       },
     });
   } catch (error) {
     await signatureRefresh.stop();
+    await scannerDaemon.stop();
     await database.close();
     throw error;
   }
@@ -661,7 +677,19 @@ if (
 ) {
   const logger = createSafeLogger({ service: SERVICES.worker });
   try {
-    await startWorkerFromEnvironment({ logger });
+    const worker = await startWorkerFromEnvironment({ logger });
+    let stopping = false;
+    const stop = async () => {
+      if (stopping) return;
+      stopping = true;
+      await worker.stop();
+    };
+    process.once('SIGTERM', () => {
+      void stop();
+    });
+    process.once('SIGINT', () => {
+      void stop();
+    });
   } catch (error) {
     logger.error('worker_job_failed', {
       error_code: technicalErrorCode(error),

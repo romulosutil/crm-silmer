@@ -2,16 +2,84 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  dateTimeLabel,
+  fichaPrintedLabel,
   instantLabel,
   isStoreOrder,
   leadTimeLabel,
+  shortDateTimeLabel,
+  storeConfirmationLabel,
+  storeFichaPending,
+  storeNoticeText,
   storePaymentLabel,
+  storeProductLabel,
   storeReceiptUrl,
 } from '../apps/edge-web/src/lib/order-format.js';
 import {
   RETURN_QUERY,
   safeReturnPath,
 } from '../apps/edge-web/src/lib/return-path.js';
+
+test('LOJ-31: the Dashboard notice counts new site orders in the singular and the plural', () => {
+  assert.equal(storeNoticeText(0, null), null);
+  assert.equal(storeNoticeText(undefined, null), null);
+  assert.deepEqual(storeNoticeText(1, '2026-10-08T02:15:55.000Z'), {
+    detail:
+      'Confirmado e pago por Pix em 07/10, 23:15. Imprima a ficha para começar a produção.',
+    title: '1 pedido novo do site',
+  });
+  assert.deepEqual(storeNoticeText(3, '2026-10-08T02:15:55.000Z'), {
+    detail:
+      'Confirmados e pagos por Pix, o mais antigo em 07/10, 23:15. Imprima as fichas para começar a produção.',
+    title: '3 pedidos novos do site',
+  });
+  assert.equal(shortDateTimeLabel('não é data'), '');
+  assert.equal(dateTimeLabel('2026-10-08T02:15:55.000Z'), '07/10/2026, 23:15');
+});
+
+test('LOJ-33/LOJ-34/LOJ-35: a store order reads as confirmed by the site, with its first print', () => {
+  const order = {
+    confirmedAt: '2026-10-08T02:16:03.000Z',
+    ficha: {
+      loja: {
+        produto: {
+          nome: 'Camisa Masculina Lisa Dry Fit',
+          slug: 'camisa-masculina-lisa',
+        },
+      },
+    },
+    fichaFirstPrintedAt: null,
+    fichaFirstPrintedBy: null,
+    gatewayPayment: { confirmedAt: '2026-10-08T02:15:55.000Z' },
+    isTest: false,
+    origin: 'loja',
+  };
+  assert.equal(storeProductLabel(order), 'Camisa dry fit');
+  assert.equal(
+    storeProductLabel({
+      ficha: { loja: { produto: { nome: 'Outro', slug: 'outro' } } },
+    }),
+    'Outro',
+  );
+  assert.equal(
+    storeConfirmationLabel(order),
+    'Confirmado pela loja do site · 07/10/2026, 23:15',
+  );
+  assert.equal(storeFichaPending(order), true);
+  assert.equal(storeFichaPending({ ...order, isTest: true }), false);
+  assert.equal(storeFichaPending({ origin: 'atendimento' }), false);
+  assert.equal(fichaPrintedLabel(order), '');
+  const printed = {
+    ...order,
+    fichaFirstPrintedAt: '2026-10-08T12:12:00.000Z',
+    fichaFirstPrintedBy: { id: 'user-1', name: 'Rose Sintética' },
+  };
+  assert.equal(storeFichaPending(printed), false);
+  assert.equal(
+    fichaPrintedLabel(printed),
+    'Ficha impressa por Rose Sintética · 08/10/2026, 09:12',
+  );
+});
 
 test('LOJ-22: the store payment reads as confirmed by InfinitePay, in São Paulo time', () => {
   const order = {

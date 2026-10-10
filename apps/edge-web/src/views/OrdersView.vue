@@ -8,16 +8,19 @@ import {
   ref,
   watch,
 } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { request } from '../lib/api-client.js';
 import { dateTimeBR } from '../lib/format.js';
 import {
   amountLabel,
   elapsedSince,
+  fichaPrintedLabel,
   isStoreOrder,
   missingHeadline,
   STORE_ORIGIN_LABEL,
-  storePaymentLabel,
+  storeConfirmationLabel,
+  storeFichaPending,
+  storeProductLabel,
 } from '../lib/order-format.js';
 
 const LIVE_REFRESH_DELAY_MS = 250;
@@ -36,8 +39,11 @@ const FILTERS = Object.freeze([
 
 const liveEvent = inject('liveEvent', ref(null));
 const router = useRouter();
+const route = useRoute();
 const heading = ref(null);
-const filter = ref('');
+// LOJ-31: the Dashboard notice opens `/pedidos?origem=loja`, the list already
+// on "Loja do site".
+const filter = ref(route.query.origem === STORE_FILTER ? STORE_FILTER : '');
 const query = ref('');
 const items = ref([]);
 const counts = ref({ confirmado: 0, pendente: 0 });
@@ -79,7 +85,7 @@ function customerName(order) {
 /** @param {Record<string, any>} order */
 function customerContext(order) {
   if (isStoreOrder(order)) {
-    const product = order.ficha?.loja?.produto?.nome;
+    const product = storeProductLabel(order);
     return product ? `${STORE_ORIGIN_LABEL} · ${product}` : STORE_ORIGIN_LABEL;
   }
   const event = order.ficha?.summary?.nome || 'Sem evento';
@@ -89,7 +95,8 @@ function customerContext(order) {
 /** PLI-05: what is missing and for how long, or who confirmed and when. */
 /** @param {Record<string, any>} order */
 function situation(order) {
-  if (isStoreOrder(order)) return storePaymentLabel(order);
+  // LOJ-33: a site order reads like any confirmed order, confirmed by the site.
+  if (isStoreOrder(order)) return storeConfirmationLabel(order);
   if (order.status === 'confirmado') {
     const who = order.confirmedBy?.name || 'vendedor';
     return `Confirmado por ${who} · ${dateTimeBR(order.confirmedAt)}`;
@@ -393,6 +400,13 @@ onBeforeUnmount(() => {
                     <span v-if="order.isTest" class="badge" data-tone="warning"
                       >Teste</span
                     >
+                    <!-- LOJ-33: a new site order until its first print. -->
+                    <span
+                      v-if="storeFichaPending(order)"
+                      class="badge"
+                      data-tone="warning"
+                      >Ficha não impressa</span
+                    >
                   </span>
                 </td>
                 <td>
@@ -403,7 +417,14 @@ onBeforeUnmount(() => {
                 </td>
                 <td class="num">{{ order.totalPieces }}</td>
                 <td class="num">{{ amountLabel(order.finalAmountCents) }}</td>
-                <td>{{ situation(order) }}</td>
+                <td>
+                  {{ situation(order) }}
+                  <small
+                    v-if="fichaPrintedLabel(order)"
+                    class="order-context"
+                    >{{ fichaPrintedLabel(order) }}</small
+                  >
+                </td>
                 <td>
                   <div class="row-actions">
                     <button class="primary" type="button" @click="print(order)">

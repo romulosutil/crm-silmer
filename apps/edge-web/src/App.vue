@@ -120,6 +120,43 @@ provide('liveEvent', liveEvent);
 provide('liveConnection', connection);
 provide('sessionUser', user);
 
+// LOJ-32 (ADR 031): the "Pedidos" item counts the new site orders — paid,
+// not a test, ficha never printed. The Dashboard already reads the summary
+// and publishes the number here (`storeNewCount`); on every other page the
+// shell reads it when the session opens and after order events (collapsed).
+// A failed read keeps the last number.
+const storeNewCount = ref(0);
+let storeCountTimer = 0;
+const storeCountLabel = computed(() =>
+  storeNewCount.value === 1 ? ' pedido novo do site' : ' pedidos novos do site',
+);
+provide('storeNewCount', storeNewCount);
+
+async function refreshStoreCount() {
+  if (phase.value !== 'authenticated' || route.path === '/dashboard') return;
+  try {
+    const response = await request('/api/v1/orders/summary');
+    const count = Number(response.data?.storeNewCount ?? 0);
+    storeNewCount.value = Number.isSafeInteger(count) && count > 0 ? count : 0;
+  } catch {
+    // The Dashboard notice stays the primary signal; the menu waits.
+  }
+}
+
+function scheduleStoreCount() {
+  if (storeCountTimer) globalThis.clearTimeout(storeCountTimer);
+  storeCountTimer = globalThis.setTimeout(() => {
+    storeCountTimer = 0;
+    void refreshStoreCount();
+  }, 300);
+}
+
+watch(liveEvent, (event) => {
+  if (event?.reset || event?.type === 'inbox.order.changed') {
+    scheduleStoreCount();
+  }
+});
+
 watch(liveTopic, (topic) => {
   if (phase.value === 'authenticated') stream.start(topic);
 });
@@ -134,7 +171,10 @@ watch(
 );
 
 void restoreSession();
-onBeforeUnmount(() => stream.close());
+onBeforeUnmount(() => {
+  stream.close();
+  if (storeCountTimer) globalThis.clearTimeout(storeCountTimer);
+});
 
 async function restoreSession() {
   phase.value = 'restoring';
@@ -187,6 +227,7 @@ async function showSession(value, announceLogin = true) {
   }
   await redirectUnauthorizedAdminRoute();
   stream.start(liveTopic.value);
+  void refreshStoreCount();
   if (announceLogin) announce('Sessão iniciada com segurança.');
 }
 
@@ -210,6 +251,7 @@ async function redirectUnauthorizedAdminRoute() {
 async function showSignedOut(focus = true, keepReturn = false) {
   session.value = null;
   phase.value = 'signed-out';
+  storeNewCount.value = 0;
   stream.close();
   activeView.value?.dispose();
   activeView.value = null;
@@ -359,6 +401,10 @@ function onCursor(cursor) {
               />
             </svg>
             <span class="nav-label">Pedidos</span>
+            <span v-if="storeNewCount > 0" class="nav-count"
+              >{{ storeNewCount
+              }}<span class="sr-only">{{ storeCountLabel }}</span></span
+            >
           </a>
         </RouterLink>
         <RouterLink to="/clientes">
@@ -451,7 +497,11 @@ function onCursor(cursor) {
         <RouterLink to="/inbox">Caixa de Entrada</RouterLink>
         <RouterLink v-slot="{ href, navigate }" to="/pedidos" custom>
           <a :href="href" :aria-current="ordersCurrent" @click="navigate"
-            >Pedidos</a
+            >Pedidos<template v-if="storeNewCount > 0">
+              ({{ storeNewCount
+              }}<span class="sr-only">{{ storeCountLabel }}</span
+              >)</template
+            ></a
           >
         </RouterLink>
         <RouterLink to="/clientes">Clientes</RouterLink>

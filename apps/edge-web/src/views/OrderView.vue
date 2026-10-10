@@ -25,7 +25,8 @@ import {
   orderStatusLabel,
   PRINT_LOCKED_REASON,
   STORE_ORIGIN_LABEL,
-  storePaymentLabel,
+  storeFichaPending,
+  storeProductLabel,
 } from '../lib/order-format.js';
 
 const LIVE_REFRESH_DELAY_MS = 250;
@@ -76,7 +77,7 @@ const customerName = computed(
 );
 const orderContext = computed(() => {
   if (isStore.value) {
-    const product = order.value?.ficha?.loja?.produto?.nome;
+    const product = storeProductLabel(order.value);
     return product ? `${STORE_ORIGIN_LABEL} · ${product}` : STORE_ORIGIN_LABEL;
   }
   const event = order.value?.ficha?.summary?.nome || 'Sem evento';
@@ -368,11 +369,8 @@ onBeforeUnmount(() => {
         <div class="op-head-text">
           <div class="op-head-title">
             <h1 ref="heading" tabindex="-1">Pedido {{ order.number }}</h1>
-            <span v-if="isStore" class="op-status" data-status="confirmado">
-              <OrderIcon name="check" />
-              {{ storePaymentLabel(order) }}
-            </span>
-            <span v-else class="op-status" :data-status="order.status">
+            <!-- LOJ-34: a site order is Confirmado, like any generated one. -->
+            <span class="op-status" :data-status="order.status">
               <OrderIcon :name="isPending ? 'clock' : 'check'" />
               {{ orderStatusLabel(order.status) }}
             </span>
@@ -383,8 +381,15 @@ onBeforeUnmount(() => {
             <span v-if="order.isTest" class="badge" data-tone="warning"
               >Teste</span
             >
+            <span
+              v-if="storeFichaPending(order)"
+              class="badge"
+              data-tone="warning"
+              >Ficha não impressa</span
+            >
           </div>
-          <p>
+          <p v-if="isStore">{{ customerName }} — {{ orderContext }}</p>
+          <p v-else>
             {{ customerName }} — {{ orderContext }} ·
             {{ fabLabel(order.fabCode) }}
           </p>
@@ -432,7 +437,15 @@ onBeforeUnmount(() => {
         administrador edita este pedido.
       </p>
 
-      <OrderStoreDetails v-if="isStore" :order="order" />
+      <!-- LOJ-34: the same two columns as any confirmed order. -->
+      <div v-if="isStore" class="op-layout">
+        <div class="op-main">
+          <OrderStoreDetails :order="order" />
+        </div>
+        <aside class="op-rail" aria-label="Fechamento e pagamento">
+          <OrderClosingSection :order="order" />
+        </aside>
+      </div>
 
       <p v-if="!isStore" class="op-guidance">
         Confira o resumo, complete os itens e marque quem faz a arte. O painel

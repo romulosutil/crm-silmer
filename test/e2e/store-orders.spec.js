@@ -92,11 +92,60 @@ const storeOrder = {
 };
 
 /**
+ * ADR 031: a paid site order that is not a test and whose ficha nobody
+ * printed yet — a "pedido novo do site".
+ */
+const newStoreOrder = {
+  ...storeOrder,
+  fichaFirstPrintedAt: null,
+  fichaFirstPrintedBy: null,
+  id: 'order-loja-nova',
+  isTest: false,
+  number: '13-CRM',
+  storeNumber: 'LJ-0001ABCD',
+};
+
+/** The same order after Rose printed its ficha. */
+const printedStoreOrder = {
+  ...newStoreOrder,
+  fichaFirstPrintedAt: '2026-10-08T12:12:00.000Z',
+  fichaFirstPrintedBy: { id: 'admin-rose', name: 'Rose Sintética' },
+  id: 'order-loja-impressa',
+  number: '14-CRM',
+  storeNumber: 'LJ-0002ABCD',
+  version: 2,
+};
+
+/**
+ * @param {number} storeNewCount
+ * @param {string|null} [storeNewOldestPaidAt]
+ */
+function summaryWith(storeNewCount, storeNewOldestPaidAt = null) {
+  return {
+    averageTicketCents: 0,
+    confirmedCount: 0,
+    pendingCount: 0,
+    soldAmountCents: 0,
+    storeNewCount,
+    storeNewOldestPaidAt,
+    totalPiecesSold: 0,
+  };
+}
+
+/**
  * @param {import('@playwright/test').Page} page
- * @param {{onList?: (params: URLSearchParams) => void, signedOut?: boolean}} [options]
+ * @param {{
+ *   onList?: (params: URLSearchParams) => void,
+ *   signedOut?: boolean,
+ *   orders?: any[],
+ *   summary?: (read: number) => any,
+ *   liveEvent?: Promise<string>,
+ * }} [options]
  */
 async function mockStore(page, options = {}) {
   let authenticated = options.signedOut !== true;
+  let summaryReads = 0;
+  const orders = options.orders ?? [storeOrder];
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -120,8 +169,10 @@ async function mockStore(page, options = {}) {
       return;
     }
     if (path === '/api/v1/events') {
+      // ADR 031: a live event, when the test hands one, arrives once.
+      const event = options.liveEvent ? await options.liveEvent : '';
       await route.fulfill({
-        body: 'retry: 60000\n\n: connected\n\n',
+        body: `retry: 60000\n\n: connected\n\n${event}`,
         contentType: 'text/event-stream',
         headers: { 'Cache-Control': 'no-cache' },
         status: 200,
@@ -129,14 +180,18 @@ async function mockStore(page, options = {}) {
       return;
     }
     if (path === '/api/v1/orders/summary' && request.method() === 'GET') {
+      summaryReads += 1;
       await route.fulfill({
-        body: JSON.stringify({
-          averageTicketCents: 0,
-          confirmedCount: 0,
-          pendingCount: 0,
-          soldAmountCents: 0,
-          totalPiecesSold: 0,
-        }),
+        body: JSON.stringify(
+          options.summary?.(summaryReads) ?? summaryWith(0, null),
+        ),
+        contentType: 'application/json',
+      });
+      return;
+    }
+    if (path === '/api/v1/inbox/conversations' && request.method() === 'GET') {
+      await route.fulfill({
+        body: JSON.stringify({ items: [], totalCount: 0 }),
         contentType: 'application/json',
       });
       return;
@@ -145,17 +200,20 @@ async function mockStore(page, options = {}) {
       options.onList?.(url.searchParams);
       await route.fulfill({
         body: JSON.stringify({
-          counts: { confirmado: 1, pendente: 0 },
-          items: [storeOrder],
+          counts: { confirmado: orders.length, pendente: 0 },
+          items: orders,
           nextCursor: null,
         }),
         contentType: 'application/json',
       });
       return;
     }
-    if (path === '/api/v1/orders/order-loja' && request.method() === 'GET') {
+    const opened = orders.find(
+      (order) => path === `/api/v1/orders/${order.id}`,
+    );
+    if (opened && request.method() === 'GET') {
       await route.fulfill({
-        body: JSON.stringify({ order: storeOrder }),
+        body: JSON.stringify({ order: opened }),
         contentType: 'application/json',
       });
       return;
@@ -208,20 +266,153 @@ test('the list filters "Loja do site" by keyboard and labels the store order', a
   ).toBeVisible();
   await expect(row.getByText('Teste', { exact: true })).toBeVisible();
   await expect(row).toContainText('Cliente Sintetico da Loja');
-  await expect(row).toContainText(
-    'Loja do site · Camisa Masculina Lisa Dry Fit',
-  );
+  await expect(row).toContainText('Loja do site · Camisa dry fit');
   await expect(row).toContainText('R$ 180,00');
+  // LOJ-33: confirmed like any order, by the site; a test is never "new".
   await expect(row).toContainText(
-    'Pago — confirmado pela InfinitePay em 07/10/2026 às 23:15',
+    'Confirmado pela loja do site · 07/10/2026, 23:15',
   );
+  await expect(row).not.toContainText('Ficha não impressa');
+  await expect(row).not.toContainText('Pago — confirmado pela InfinitePay');
   await expect(row).not.toContainText('sem vendedor');
   await expect(row).not.toContainText('informado pelo cliente');
+  await expect(
+    row.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toBeVisible();
+  await expect(row.getByRole('link', { name: 'Abrir pedido' })).toBeVisible();
 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('the store order page is locked, shows the InfinitePay payment and downloads its ficha', async ({
+test('LOJ-33: a new site order says "Ficha não impressa"; a printed one says who printed it', async ({
+  page,
+}) => {
+  await mockStore(page, { orders: [newStoreOrder, printedStoreOrder] });
+  await page.goto('/pedidos');
+  const confirmed = page.getByRole('region', { name: /Confirmados/u });
+  const fresh = confirmed.getByRole('row').filter({ hasText: '13-CRM' });
+  await expect(
+    fresh.getByText('Ficha não impressa', { exact: true }),
+  ).toBeVisible();
+  await expect(fresh).toContainText(
+    'Confirmado pela loja do site · 07/10/2026, 23:15',
+  );
+  await expect(fresh).not.toContainText('Ficha impressa por');
+
+  const printed = confirmed.getByRole('row').filter({ hasText: '14-CRM' });
+  await expect(printed).not.toContainText('Ficha não impressa');
+  await expect(printed).toContainText(
+    'Ficha impressa por Rose Sintética · 08/10/2026, 09:12',
+  );
+
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('LOJ-31/LOJ-32: the Dashboard notice is one link to the site orders, and the menu counts them', async ({
+  page,
+}) => {
+  /** @type {URLSearchParams[]} */
+  const lists = [];
+  await mockStore(page, {
+    onList: (params) => lists.push(params),
+    orders: [newStoreOrder],
+    summary: () => summaryWith(2, '2026-10-08T02:15:55.000Z'),
+  });
+  await page.goto('/dashboard');
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeFocused();
+
+  const notice = page
+    .locator('#main-content')
+    .getByRole('link', { name: /pedidos novos do site/u });
+  await expect(notice).toHaveCount(1);
+  await expect(notice).toHaveAttribute('href', '/pedidos?origem=loja');
+  await expect(notice).toContainText('2 pedidos novos do site');
+  await expect(notice).toContainText(
+    'Confirmados e pagos por Pix, o mais antigo em 07/10, 23:15. Imprima as fichas para começar a produção.',
+  );
+  await expect(notice).toContainText('Ver pedidos');
+  // The notice sits in a polite live region, before the indicators.
+  await expect(page.locator('.store-notice-region')).toHaveAttribute(
+    'aria-live',
+    'polite',
+  );
+
+  // LOJ-32: the menu shows the same number, with words for screen readers.
+  const menu = page.getByRole('navigation', { name: 'Navegação principal' });
+  const ordersItem = menu.getByRole('link', { name: /^Pedidos/u });
+  await expect(ordersItem).toHaveAccessibleName(
+    'Pedidos 2 pedidos novos do site',
+  );
+
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // Keyboard: Enter on the notice opens the list already on "Loja do site".
+  await notice.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL('/pedidos?origem=loja');
+  await expect(
+    page.getByRole('button', { name: 'Loja do site' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => lists.at(-1)?.get('origin') ?? null).toBe('loja');
+});
+
+test('LOJ-31: one new site order reads in the singular; none hides the notice', async ({
+  page,
+}) => {
+  await mockStore(page, {
+    summary: () => summaryWith(1, '2026-10-08T02:15:55.000Z'),
+  });
+  await page.goto('/dashboard');
+  const notice = page
+    .locator('#main-content')
+    .getByRole('link', { name: /pedido novo do site/u });
+  await expect(notice).toContainText('1 pedido novo do site');
+  await expect(notice).toContainText(
+    'Confirmado e pago por Pix em 07/10, 23:15. Imprima a ficha para começar a produção.',
+  );
+
+  const empty = await page.context().newPage();
+  await mockStore(empty, { summary: () => summaryWith(0, null) });
+  await empty.goto('/dashboard');
+  await expect(empty.getByText('Valor vendido', { exact: true })).toBeVisible();
+  await expect(empty.locator('.store-notice')).toHaveCount(0);
+  await expect(
+    empty
+      .getByRole('navigation', { name: 'Navegação principal' })
+      .locator('.nav-count'),
+  ).toHaveCount(0);
+});
+
+test('LOJ-31: the notice leaves when the first print arrives as a live event', async ({
+  page,
+}) => {
+  /** @type {(event: string) => void} */
+  let sendEvent = () => {};
+  const liveEvent = new Promise((resolve) => {
+    sendEvent = resolve;
+  });
+  let printed = false;
+  await mockStore(page, {
+    liveEvent: /** @type {Promise<string>} */ (liveEvent),
+    summary: () =>
+      printed ? summaryWith(0, null) : summaryWith(1, '2026-10-08T02:15:55Z'),
+  });
+  await page.goto('/dashboard');
+  await expect(
+    page
+      .locator('#main-content')
+      .getByRole('link', { name: /1 pedido novo do site/u }),
+  ).toBeVisible();
+
+  printed = true;
+  sendEvent(
+    'event: inbox.order.changed\nid: 2\ndata: {"conversationId":"","orderId":"order-loja-nova"}\n\n',
+  );
+  await expect(page.locator('.store-notice')).toHaveCount(0);
+  await expect(page.locator('.store-notice-region')).toBeAttached();
+});
+
+test('the store order page reads like a confirmed order, is locked and downloads its ficha', async ({
   page,
 }) => {
   await mockStore(page);
@@ -229,38 +420,52 @@ test('the store order page is locked, shows the InfinitePay payment and download
 
   const heading = page.getByRole('heading', { name: 'Pedido 12-CRM' });
   await expect(heading).toBeFocused();
+  // LOJ-34: "Confirmado", like any order generated in the CRM.
+  await expect(page.locator('.op-head .op-status')).toHaveText('Confirmado');
   await expect(
-    page.getByText(
-      'Pago — confirmado pela InfinitePay em 07/10/2026 às 23:15',
-      { exact: true },
-    ),
-  ).toBeVisible();
+    page.getByText('Pago — confirmado pela InfinitePay', { exact: false }),
+  ).toHaveCount(0);
   await expect(
     page.getByText('Loja · LJ-5B0C77ED', { exact: true }),
   ).toBeVisible();
   await expect(page.getByText('Teste', { exact: true })).toBeVisible();
+  // A test order is never a new site order.
+  await expect(
+    page.getByText('Ficha não impressa', { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(
+      'Cliente Sintetico da Loja — Loja do site · Camisa dry fit',
+      {
+        exact: true,
+      },
+    ),
+  ).toBeVisible();
   await expect(
     page.getByText('Pedido da loja do site: travado, sem edição.'),
   ).toBeVisible();
 
+  // LOJ-35: only what production and the contact use.
   const details = page.getByRole('region', { name: 'Pedido da loja do site' });
+  const labels = await details.locator('dl > div > dt').allTextContents();
+  expect(labels.map((label) => label.trim())).toEqual([
+    'Produto',
+    'Cor',
+    'Tamanho',
+    'Quantidade',
+    'Prazo da cor',
+    'Cliente',
+    'WhatsApp',
+    'Comprovante',
+  ]);
   for (const [label, value] of [
-    ['Número da loja', 'LJ-5B0C77ED'],
-    ['Cliente', 'Cliente Sintetico da Loja'],
-    ['Telefone', '+55 (27) 90000-0001'],
-    ['Produto', 'Camisa Masculina Lisa Dry Fit'],
-    ['Tipo', 'Camiseta'],
-    ['Público', 'Masculino'],
+    ['Produto', 'Camisa dry fit'],
     ['Cor', 'Preto'],
-    ['Malha', 'Dry fit liso de poliéster'],
-    ['Gola', 'Gola redonda'],
     ['Tamanho', 'M'],
-    ['Quantidade', '10'],
-    ['Prazo', '10 dias úteis'],
-    ['Valor', 'R$ 180,00'],
-    ['Valor pago', 'R$ 180,00'],
-    ['Transação InfinitePay (NSU)', 'nsu-sintetico-0001'],
-    ['Origem', 'Loja do site'],
+    ['Quantidade', '10 peças'],
+    ['Prazo da cor', '10 dias úteis'],
+    ['Cliente', 'Cliente Sintetico da Loja'],
+    ['WhatsApp', '+55 (27) 90000-0001'],
   ]) {
     await expect(
       details
@@ -268,8 +473,38 @@ test('the store order page is locked, shows the InfinitePay payment and download
         .filter({ has: page.getByText(label, { exact: true }) }),
     ).toContainText(value);
   }
-  await expect(details).not.toContainText('Sicredi');
-  await expect(details).not.toContainText('Lindenberg');
+  await expect(details).toContainText(
+    'Retirada na loja é o padrão; se o cliente quiser receber, a equipe combina o frete pelo WhatsApp abaixo.',
+  );
+  for (const gone of ['nsu-sintetico', 'Camiseta', 'Gola redonda', 'Sicredi']) {
+    await expect(details).not.toContainText(gone);
+  }
+
+  // LOJ-34: the closing panel, confirmed, beside the sheet.
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await expect(closing).toContainText('pedido confirmado');
+  for (const [label, value] of [
+    ['Valor final', 'R$ 180,00'],
+    ['Forma de pagamento', 'Pix'],
+    ['Confirmação', 'Confirmado pela loja do site · 07/10/2026, 23:15'],
+  ]) {
+    await expect(
+      closing
+        .locator('.op-deal > div')
+        .filter({ has: page.getByText(label, { exact: true }) }),
+    ).toContainText(value);
+  }
+  await expect(closing).toContainText('Ficha 12-CRM');
+  await expect(closing).toContainText('1 página · pedido da loja');
+  await expect(closing.locator('.op-ficha-status')).toHaveText(
+    'Ainda não impressa.',
+  );
+  await expect(
+    closing.getByRole('button', { name: 'Abrir ficha' }),
+  ).toBeVisible();
+  await expect(closing).toContainText(
+    'Pedido da loja não é reaberto: valor e itens vieram do pagamento.',
+  );
 
   // LOJ-22: the receipt opens in a new tab, and says so.
   const receipt = details.getByRole('link', {
@@ -336,4 +571,44 @@ test('LOJ-24: a return address outside the app is ignored', async ({
   await expect(page.getByRole('status')).toHaveText('Entre para continuar.');
   await signIn(page);
   await expect(page).toHaveURL('/dashboard');
+});
+
+test('LOJ-34: the page of a new site order says its ficha waits; printed, it names who printed it', async ({
+  page,
+}) => {
+  await mockStore(page, { orders: [newStoreOrder, printedStoreOrder] });
+  await page.goto('/pedidos/order-loja-nova');
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 13-CRM' }),
+  ).toBeFocused();
+  await expect(
+    page.locator('.op-head').getByText('Ficha não impressa', { exact: true }),
+  ).toBeVisible();
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await expect(closing.locator('.op-ficha-status')).toHaveText(
+    'Ainda não impressa. Ao imprimir, o pedido sai do aviso do Dashboard.',
+  );
+  await expect(closing.locator('.op-ficha-status')).toHaveAttribute(
+    'data-tone',
+    'warning',
+  );
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  await page.goto('/pedidos/order-loja-impressa');
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 14-CRM' }),
+  ).toBeFocused();
+  await expect(
+    page.getByText('Ficha não impressa', { exact: true }),
+  ).toHaveCount(0);
+  const printedClosing = page.getByRole('region', {
+    name: 'Fechamento e pagamento',
+  });
+  await expect(printedClosing.locator('.op-ficha-status')).toHaveText(
+    'Ficha impressa por Rose Sintética · 08/10/2026, 09:12',
+  );
+  await expect(printedClosing.locator('.op-ficha-status')).toHaveAttribute(
+    'data-tone',
+    'success',
+  );
 });

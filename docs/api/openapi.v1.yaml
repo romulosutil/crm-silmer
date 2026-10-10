@@ -765,8 +765,11 @@ paths:
         e cria um pedido confirmado, travado, sem conversa nem contato, ao
         preço do catálogo. A chave natural é o `pedido_id`: os mesmos dados
         respondem 200 com o mesmo pedido, antes do catálogo; o `receipt_url`
-        que antes faltava é gravado e responde 200; dados diferentes ou outro
-        comprovante, ou um `transaction_nsu` de outro pedido, respondem 409.
+        que antes faltava é gravado e responde 200; dados que diferem só em
+        `pagamento.pago_em` (duas execuções do n8n) também respondem 200 com
+        o mesmo `numero`, e o pedido mantém o primeiro instante (ADR 031,
+        LOJ-37); dados diferentes ou outro comprovante, ou um
+        `transaction_nsu` de outro pedido, respondem 409.
         `Idempotency-Key` é o mesmo texto de `pedido_id`. `X-Correlation-Id`
         precisa ser um UUID (ou 16 a 64 hexadecimais) — use o próprio
         `pedido_id`. Até 60 chamadas por minuto (429 RATE_LIMITED com
@@ -794,8 +797,9 @@ paths:
               schema: { $ref: '#/components/schemas/StoreOrderRecorded' }
         '200':
           description: >-
-            Pedido já registrado com os mesmos dados; ou o comprovante que
-            faltava foi gravado agora (`comprovante_registrado` true).
+            Pedido já registrado com os mesmos dados (ou com outro
+            `pago_em`, mantido o primeiro); ou o comprovante que faltava foi
+            gravado agora (`comprovante_registrado` true).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/StoreOrderRecorded' }

@@ -199,6 +199,43 @@ if (connectionString) {
     ]);
   });
 
+  test('LOJ-17: concurrent calls with another pago_em for one pedido_id record one order and keep the first instant', async () => {
+    const instants = [
+      '2026-10-08T02:15:55Z',
+      '2026-10-08T02:15:56Z',
+      '2026-10-08T02:15:57Z',
+    ];
+    const results = await Promise.all(
+      instants.map((instant) =>
+        record(paid(30, (body) => (body.pagamento.pago_em = instant))),
+      ),
+    );
+    assert.equal(new Set(results.map((result) => result.order.id)).size, 1);
+    assert.equal(new Set(results.map((result) => result.order.number)).size, 1);
+    const winner = results.find((result) => result.created);
+    assert.ok(winner);
+    const stored = await repository.findById(winner.order.id);
+    assert.equal(
+      stored?.gatewayPayment?.confirmedAt,
+      winner.order.gatewayPayment?.confirmedAt,
+    );
+    // A later retry with yet another instant answers the same order.
+    const retry = await record(
+      paid(30, (body) => (body.pagamento.pago_em = '2026-10-08T02:15:59Z')),
+    );
+    assert.equal(retry.created, false);
+    assert.equal(retry.order.number, winner.order.number);
+    await assert.rejects(
+      record(
+        paid(30, (body) => {
+          body.pagamento.pago_em = '2026-10-08T02:15:59Z';
+          body.item.tamanho_id = 'g';
+        }),
+      ),
+      { code: 'STORE_ORDER_CONFLICT', statusCode: 409 },
+    );
+  });
+
   test('LOJ-17: concurrent first calls for one pedido_id record one order and one number', async () => {
     const startSequence = (
       await pool.query(`SELECT last_value FROM crm.order_number_seq`)

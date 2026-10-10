@@ -31,6 +31,7 @@ const ORDER_COLUMNS = `id, number_sequence, number, conversation_id, status,
   delivered_on::text AS delivered_on, origin, is_test, store_number,
   lead_time_business_days, payment_source, payment_confirmed_at,
   paid_amount_cents, payment_transaction_nsu, payment_invoice_slug,
+  ficha_first_printed_at, ficha_first_printed_by,
   version, created_at, updated_at`;
 
 /** @param {string} orderId */
@@ -208,6 +209,9 @@ export class PostgresOrderRepository {
       ),
       finalAmountCents:
         row.final_amount_cents === null ? null : Number(row.final_amount_cents),
+      // ADR 031: the first print of a store order's ficha.
+      fichaFirstPrintedAt: isoOrNull(row.ficha_first_printed_at ?? null),
+      fichaFirstPrintedBy: row.ficha_first_printed_by ?? null,
       firstContactAt: isoOrNull(row.first_contact_at),
       // ADR 028: the payment InfinitePay confirmed, on a store order only.
       gatewayPayment:
@@ -523,13 +527,16 @@ export class PostgresOrderRepository {
     return result.rows[0] ? this.#map(result.rows[0]) : null;
   }
 
+  /** @returns {Promise<import('../ports/contracts.js').OrdersSummary>} */
   async summary() {
     const result = await this.#database.query(
       `SELECT
          count(*) FILTER (WHERE status = 'confirmado')::integer AS confirmed_count,
          coalesce(sum(final_amount_cents) FILTER (WHERE status = 'confirmado'), 0)::bigint AS sold_amount_cents,
          count(*) FILTER (WHERE status = 'pendente')::integer AS pending_count,
-         coalesce(sum(total_pieces) FILTER (WHERE status = 'confirmado'), 0)::bigint AS total_pieces_sold
+         coalesce(sum(total_pieces) FILTER (WHERE status = 'confirmado'), 0)::bigint AS total_pieces_sold,
+         count(*) FILTER (WHERE origin = 'loja' AND ficha_first_printed_at IS NULL)::integer AS store_new_count,
+         min(payment_confirmed_at) FILTER (WHERE origin = 'loja' AND ficha_first_printed_at IS NULL) AS store_new_oldest_paid_at
        FROM crm.orders
        WHERE NOT is_test`,
     );
@@ -544,7 +551,75 @@ export class PostgresOrderRepository {
         : 0,
       pendingCount: Number(row.pending_count),
       totalPiecesSold: Number(row.total_pieces_sold),
+      // ADR 031: store orders whose ficha nobody printed yet.
+      storeNewCount: Number(row.store_new_count ?? 0),
+      storeNewOldestPaidAt: isoOrNull(row.store_new_oldest_paid_at ?? null),
     };
+  }
+
+  /**
+   * ADR 031: the first print of a store order's ficha. Only the first one
+   * writes: the guarded UPDATE matches a store order nobody printed yet, so
+   * two prints at once record one person and one instant. The version moves
+   * so the change has its own `order.ficha_first_printed` event (the live
+   * `inbox.order.changed`); `updated_at` stays, since the order itself did
+   * not change. The audit carries the user id and the order, no PII.
+   *
+   * @param {import('../ports/contracts.js').RecordFirstPrintInput} input
+   */
+  async recordFirstPrint(input) {
+    return this.#database.transaction(async (transaction) => {
+      const at = input.now.toISOString();
+      const updated = await transaction.query(
+        `UPDATE crm.orders
+         SET ficha_first_printed_at = $2, ficha_first_printed_by = $3,
+             version = version + 1
+         WHERE id = $1 AND origin = 'loja'
+           AND ficha_first_printed_at IS NULL
+         RETURNING ${ORDER_COLUMNS}`,
+        [input.orderId, at, input.actorId],
+      );
+      if (!updated.rows[0]) {
+        const current = await transaction.query(
+          `SELECT ${ORDER_COLUMNS} FROM crm.orders WHERE id = $1`,
+          [input.orderId],
+        );
+        if (!current.rows[0]) throw new OrderNotFoundError();
+        return { order: this.#map(current.rows[0]), recorded: false };
+      }
+      const saved = this.#map(updated.rows[0]);
+      await transaction.query(
+        `INSERT INTO crm.domain_events
+           (id, aggregate_type, aggregate_id, aggregate_version, event_type,
+            payload, correlation_id, occurred_at)
+         VALUES ($1, 'order', $2, $3, 'order.ficha_first_printed', $4::jsonb,
+                 $5, $6)`,
+        [
+          `event-${randomUUID()}`,
+          saved.id,
+          saved.version,
+          JSON.stringify({ conversationId: null, orderId: saved.id }),
+          input.correlationId,
+          at,
+        ],
+      );
+      await transaction.query(
+        `INSERT INTO crm.audit_events
+           (id, actor_id, action, target_type, target_id, version, reason,
+            correlation_id, occurred_at)
+         VALUES ($1, $2, 'order.ficha.first_print', 'order', $3, $4,
+                 'STORE_FICHA_FIRST_PRINTED', $5, $6)`,
+        [
+          randomUUID(),
+          input.actorId,
+          saved.id,
+          String(saved.version),
+          input.correlationId,
+          at,
+        ],
+      );
+      return { order: saved, recorded: true };
+    });
   }
 
   /** @param {string} conversationId */

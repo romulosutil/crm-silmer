@@ -279,6 +279,35 @@ export function createOrderService(options) {
     async summary() {
       return repository.summary();
     },
+
+    /**
+     * ADR 031: a person printed or downloaded a store order's ficha. The
+     * first print records who and when, and takes the order out of the
+     * Dashboard notice; every later print, and any other order, changes
+     * nothing. Printing is open to every seller (`order.print`), so there is
+     * no ownership check, only a person.
+     *
+     * @param {{orderId: string, actor: OrderActor, correlationId: string}} input
+     * @returns {Promise<{recorded: boolean, order: Order}>}
+     */
+    async recordFirstPrint(input) {
+      const orderId = requireId(input.orderId, 'orderId');
+      const correlationId = requireId(input.correlationId, 'correlationId');
+      if (
+        input.actor?.kind !== 'human' ||
+        typeof input.actor.id !== 'string' ||
+        input.actor.id === ''
+      ) {
+        throw new OrderForbiddenError('A human actor is required');
+      }
+      const result = await repository.recordFirstPrint({
+        actorId: input.actor.id,
+        correlationId,
+        now: clock(),
+        orderId,
+      });
+      return { order: await readOne(result.order), recorded: result.recorded };
+    },
     /**
      * PCL-01..03: idempotent — a pending order is reused, a conversation with
      * only confirmed orders gets a new one.

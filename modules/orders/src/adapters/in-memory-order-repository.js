@@ -97,6 +97,8 @@ export class InMemoryOrderRepository {
         deliveredOn: null,
         fabCode: input.fabCode,
         ficha: clone(input.ficha),
+        fichaFirstPrintedAt: null,
+        fichaFirstPrintedBy: null,
         finalAmountCents: null,
         firstContactAt: input.firstContactAt,
         gatewayPayment: null,
@@ -187,6 +189,8 @@ export class InMemoryOrderRepository {
         ...clone(order),
         createdAt: iso,
         deliveredOn: null,
+        fichaFirstPrintedAt: null,
+        fichaFirstPrintedBy: null,
         number: formatOrderNumber(this.#sequence),
         numberSequence: this.#sequence,
         reopenedAt: null,
@@ -256,7 +260,8 @@ export class InMemoryOrderRepository {
   }
 
   /**
-   * The audit events of store orders, oldest first, as the PostgreSQL
+   * The audit events of store orders (creation, receipt and, ADR 031, the
+   * first print of the ficha), oldest first, as the PostgreSQL
    * adapter writes them to `crm.audit_events`.
    *
    * @returns {RecordedAudit[]}
@@ -346,6 +351,7 @@ export class InMemoryOrderRepository {
     };
   }
 
+  /** @returns {Promise<import('../ports/contracts.js').OrdersSummary>} */
   async summary() {
     // ADR 027: a test order from the site shop is never a sale.
     const orders = [...this.#orders.values()].filter((order) => !order.isTest);
@@ -354,6 +360,14 @@ export class InMemoryOrderRepository {
       (total, order) => total + (order.finalAmountCents ?? 0),
       0,
     );
+    // ADR 031: store orders whose ficha nobody printed yet.
+    const storeNew = orders.filter(
+      (order) => order.origin === 'loja' && !order.fichaFirstPrintedAt,
+    );
+    const oldest = storeNew
+      .map((order) => order.gatewayPayment?.confirmedAt ?? null)
+      .filter((at) => typeof at === 'string')
+      .sort()[0];
     return {
       confirmedCount: confirmed.length,
       soldAmountCents,
@@ -365,7 +379,49 @@ export class InMemoryOrderRepository {
         (total, order) => total + order.totalPieces,
         0,
       ),
+      storeNewCount: storeNew.length,
+      storeNewOldestPaidAt: oldest ?? null,
     };
+  }
+
+  /**
+   * ADR 031: the first print of a store order's ficha, recorded once.
+   *
+   * @param {import('../ports/contracts.js').RecordFirstPrintInput} input
+   */
+  async recordFirstPrint(input) {
+    return this.#exclusive(() => {
+      const current = this.#orders.get(input.orderId);
+      if (!current) throw new OrderNotFoundError();
+      if (current.origin !== 'loja' || current.fichaFirstPrintedAt) {
+        return { order: clone(current), recorded: false };
+      }
+      const at = input.now.toISOString();
+      const next = {
+        ...clone(current),
+        fichaFirstPrintedAt: at,
+        fichaFirstPrintedBy: input.actorId,
+        version: current.version + 1,
+      };
+      this.#orders.set(next.id, next);
+      this.#events.push({
+        aggregateVersion: next.version,
+        correlationId: input.correlationId,
+        eventType: 'order.ficha_first_printed',
+        occurredAt: at,
+        payload: { conversationId: next.conversationId, orderId: next.id },
+      });
+      this.#audits.push({
+        action: 'order.ficha.first_print',
+        actor: input.actorId,
+        correlationId: input.correlationId,
+        occurredAt: at,
+        reason: 'STORE_FICHA_FIRST_PRINTED',
+        target: { id: next.id, type: 'order' },
+        version: String(next.version),
+      });
+      return { order: clone(next), recorded: true };
+    });
   }
 
   /** @param {Order} order @param {OrderWriteOptions} options */

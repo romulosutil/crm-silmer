@@ -164,6 +164,7 @@ export function createOrderRuntime(options) {
       for (const id of [
         order.confirmedBy,
         order.reopenedBy,
+        order.fichaFirstPrintedBy,
         owners.get(order.conversationId),
       ]) {
         if (id && id !== STORE_ACTOR_ID) people.add(id);
@@ -184,6 +185,9 @@ export function createOrderRuntime(options) {
       deliveredOn: order.deliveredOn,
       fabCode: order.fabCode,
       ficha: order.ficha,
+      // ADR 031: who printed a store order's ficha first, and when.
+      fichaFirstPrintedAt: order.fichaFirstPrintedAt ?? null,
+      fichaFirstPrintedBy: person(order.fichaFirstPrintedBy),
       finalAmountCents: order.finalAmountCents,
       firstContactAt: order.firstContactAt,
       gatewayPayment: order.gatewayPayment
@@ -464,6 +468,22 @@ export function createOrderRuntime(options) {
     /** @param {string} orderId @param {string} fileId */
     async openFileThumbnail(orderId, fileId) {
       return requireFiles().openThumbnail(orderId, fileId);
+    },
+
+    /**
+     * ADR 031: the print route calls this before it sends a store order's
+     * ficha. Reading twice is harmless, so there is no idempotency record;
+     * the repository writes the first print, its event and its audit in one
+     * transaction and ignores every later one.
+     *
+     * @param {{actor: OrderActor, correlationId: string, orderId: string}} input
+     */
+    async recordFirstPrint(input) {
+      const result = await service.recordFirstPrint(input);
+      return {
+        order: await presentOne(result.order),
+        recorded: result.recorded,
+      };
     },
 
     /** @param {string} orderId */

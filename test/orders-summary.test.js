@@ -18,6 +18,8 @@ test('Postgres sales summary aggregates all orders before any list pagination', 
               sold_amount_cents: '150000',
               pending_count: '4',
               total_pieces_sold: '27',
+              store_new_count: '2',
+              store_new_oldest_paid_at: new Date('2026-10-08T02:15:55.000Z'),
             },
           ],
         };
@@ -33,8 +35,16 @@ test('Postgres sales summary aggregates all orders before any list pagination', 
     averageTicketCents: 50000,
     pendingCount: 4,
     totalPiecesSold: 27,
+    storeNewCount: 2,
+    storeNewOldestPaidAt: '2026-10-08T02:15:55.000Z',
   });
   assert.equal(queries.length, 1);
   assert.match(queries[0], /FROM crm\.orders/u);
   assert.doesNotMatch(queries[0], /LIMIT|OFFSET/u);
+  // ADR 031: the notice counts unprinted store orders, never a test order.
+  assert.match(queries[0], /WHERE NOT is_test/u);
+  assert.match(
+    queries[0],
+    /origin = 'loja' AND ficha_first_printed_at IS NULL/u,
+  );
 });

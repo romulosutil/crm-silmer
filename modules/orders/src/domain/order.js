@@ -33,7 +33,9 @@ const orderDateFormat = new Intl.DateTimeFormat('en-CA', {
  * ADRs 027 and 028: a store order (`origin` `loja`) has no conversation, may
  * be a test (`isTest`), carries the shop's number (`LJ-…`) and the lead time
  * of its colour, and keeps the payment InfinitePay confirmed. Every other
- * order has these empty.
+ * order has these empty. ADR 031: a store order also records the first
+ * print of its ficha (when and by which user); absent or null means it was
+ * never printed.
  *
  * @typedef {{
  *   id: string, number: string, numberSequence: number,
@@ -41,6 +43,7 @@ const orderDateFormat = new Intl.DateTimeFormat('en-CA', {
  *   origin: 'atendimento'|'loja', isTest: boolean,
  *   storeNumber: string|null, leadTimeBusinessDays: number|null,
  *   gatewayPayment: import('./store-order.js').GatewayPayment|null,
+ *   fichaFirstPrintedAt?: string|null, fichaFirstPrintedBy?: string|null,
  *   ficha: Ficha, totalPieces: number, missingFields: string[],
  *   finalAmountCents: number|null, paymentCondition: PaymentCondition|null,
  *   orderDate: string|null, confirmedAt: string|null, confirmedBy: string|null,

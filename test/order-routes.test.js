@@ -38,6 +38,8 @@ const ORDER_KEYS = [
   'deliveredOn',
   'fabCode',
   'ficha',
+  'fichaFirstPrintedAt',
+  'fichaFirstPrintedBy',
   'finalAmountCents',
   'firstContactAt',
   'gatewayPayment',
@@ -237,6 +239,9 @@ test('summary aggregates all confirmed orders and requires a read session', asyn
     averageTicketCents: 482000,
     pendingCount: 1,
     totalPiecesSold: 32,
+    // ADR 031: no site shop order waits for its first print.
+    storeNewCount: 0,
+    storeNewOldestPaidAt: null,
   });
   const denied = orderHarness({ readActor: null });
   const blocked = await denied.api.inject({

@@ -87,7 +87,10 @@ export function registerOrderRoutes(api, orders, contextFor) {
    * with 409, the same reason the page keeps the button locked. The template
    * is chosen in one place, `PRINT_TEMPLATE` (PIM-10, ADR 017); a site shop
    * order prints its simplified ficha (ADR 027). `?download=1` sends the
-   * same document as the attachment `pedido-NN-CRM.html` (LOJ-10).
+   * same document as the attachment `pedido-NN-CRM.html` (LOJ-10). ADR 031:
+   * the first time a person prints or downloads a store order's ficha, the
+   * order records who and when and leaves the Dashboard notice; later prints
+   * change nothing.
    */
   api.get('/api/v1/orders/:orderId/print', async (request, reply) =>
     respond(reply, async () => {
@@ -98,10 +101,17 @@ export function registerOrderRoutes(api, orders, contextFor) {
       if (query.download !== undefined && query.download !== '1') {
         throw new OrderRequestError(400, 'INVALID_REQUEST');
       }
-      await authorizeRead(request, orders, 'order.print');
+      const principal = await authorizeRead(request, orders, 'order.print');
       const { order } = await orders.get(orderId);
       if (order.status !== 'confirmado') {
         throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
+      }
+      if (order.origin === 'loja' && !order.fichaFirstPrintedAt) {
+        await orders.recordFirstPrint({
+          actor: principal.actor,
+          correlationId: contextFor(request).correlationId,
+          orderId,
+        });
       }
       privateReadHeaders(reply);
       if (query.download === '1') {

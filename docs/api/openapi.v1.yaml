@@ -1003,7 +1003,10 @@ paths:
         busca ou status da listagem. Vendas e peças somam somente pedidos
         confirmados; pendentes são contados à parte. Valores em centavos. Os
         pedidos da loja do site contam como qualquer venda; pedidos de teste
-        (isTest) ficam fora (ADR 027).
+        (isTest) ficam fora (ADR 027). storeNewCount conta os pedidos novos do
+        site — da loja, sem teste, com a ficha nunca impressa — e
+        storeNewOldestPaidAt é o instante em que a InfinitePay confirmou o Pix
+        do mais antigo deles, nulo quando não há (ADR 031).
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
@@ -1239,7 +1242,11 @@ paths:
         em branco. Um pedido da loja do site (ADR 027) sai na ficha
         simplificada ficha-loja-v1 (A4 retrato, uma página, só os campos
         padrão). Com download=1, o mesmo documento vem como anexo
-        pedido-NN-CRM.html.
+        pedido-NN-CRM.html. ADR 031: a primeira impressão ou download da ficha
+        de um pedido da loja por uma pessoa grava fichaFirstPrintedAt e
+        fichaFirstPrintedBy, publica o evento order.ficha_first_printed (ao
+        vivo inbox.order.changed) e audita order.ficha.first_print, sem PII;
+        as seguintes não mudam nada. A autorização não muda.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderId'
@@ -2854,6 +2861,8 @@ components:
           storeNumber,
           leadTimeBusinessDays,
           gatewayPayment,
+          fichaFirstPrintedAt,
+          fichaFirstPrintedBy,
         ]
       properties:
         id: { type: string }
@@ -2884,6 +2893,18 @@ components:
         gatewayPayment:
           oneOf:
             - { $ref: '#/components/schemas/GatewayPayment' }
+            - { type: 'null' }
+        fichaFirstPrintedAt:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            Pedido da loja (ADR 031): quando uma pessoa imprimiu ou baixou a
+            ficha pela primeira vez. Nulo enquanto ninguém imprimiu e em todo
+            pedido do atendimento.
+        fichaFirstPrintedBy:
+          description: Quem imprimiu a ficha pela primeira vez (ADR 031).
+          oneOf:
+            - { $ref: '#/components/schemas/OrderActorRef' }
             - { type: 'null' }
         status: { $ref: '#/components/schemas/OrderStatus' }
         fabCode: { type: string }
@@ -2971,6 +2992,8 @@ components:
           averageTicketCents,
           pendingCount,
           totalPiecesSold,
+          storeNewCount,
+          storeNewOldestPaidAt,
         ]
       properties:
         confirmedCount: { type: integer, minimum: 0 }
@@ -2978,6 +3001,18 @@ components:
         averageTicketCents: { type: integer, minimum: 0 }
         pendingCount: { type: integer, minimum: 0 }
         totalPiecesSold: { type: integer, minimum: 0 }
+        storeNewCount:
+          type: integer
+          minimum: 0
+          description: >-
+            Pedidos novos do site (ADR 031): da loja, sem teste, com a ficha
+            nunca impressa.
+        storeNewOldestPaidAt:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            Instante em que a InfinitePay confirmou o Pix do pedido novo do
+            site mais antigo; nulo sem pedido novo.
     OrderFile:
       type: object
       additionalProperties: false

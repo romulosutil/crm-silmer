@@ -73,6 +73,13 @@ async function setup(page, options = {}) {
     );
     globalThis.navigator.mediaDevices.getUserMedia = (constraints) => {
       evidence.requests.push(constraints);
+      if (options.captureError)
+        return Promise.reject(
+          new globalThis.DOMException(
+            'PRIVATE_CAPTURE_ERROR',
+            options.captureError,
+          ),
+        );
       if (options.denied)
         return Promise.reject(
           new globalThis.DOMException('Denied', 'NotAllowedError'),
@@ -201,6 +208,44 @@ test('T19/T25/MED-09/10/25/30: explicit keyboard recording asks permission, stop
   expect(uploads[0].postData()).toContain('Content-Type: audio/ogg');
   expect(sends[0].postDataJSON().content).toEqual({ mediaId: 'recording-1' });
 });
+for (const [captureError, message] of [
+  [
+    'NotFoundError',
+    'Nenhum microfone foi encontrado. Conecte um microfone e confira o dispositivo de entrada do sistema.',
+  ],
+  [
+    'NotReadableError',
+    'Não foi possível acessar o microfone. Confira o dispositivo de entrada e o acesso ao microfone nas configurações do sistema.',
+  ],
+  [
+    'SecurityError',
+    'Este navegador bloqueou o acesso ao microfone. Permita o microfone ou abra o chat no Chrome ou Edge.',
+  ],
+  [
+    'AbortError',
+    'A abertura do microfone foi interrompida. Tente gravar novamente.',
+  ],
+  [
+    'UnknownError',
+    'Não foi possível iniciar a gravação. Você pode anexar um arquivo de áudio.',
+  ],
+])
+  test(`T27/MED-11: ${captureError} explains recovery without private details`, async ({
+    page,
+  }) => {
+    const { uploads, sends } = await setup(page, { captureError });
+    await page
+      .getByRole('button', { name: 'Gravar áudio', exact: true })
+      .click();
+    await expect(page.getByRole('alert')).toHaveText(message);
+    await expect(
+      page.getByRole('button', { name: 'Gravar áudio', exact: true }),
+    ).toBeFocused();
+    await expect(page.getByLabel('Arquivo para anexar')).toBeEnabled();
+    expect(uploads).toHaveLength(0);
+    expect(sends).toHaveLength(0);
+  });
+
 for (const mode of ['denied', 'unavailable', 'encoderFailure'])
   test(`T19/MED-11: ${mode} leaves audio attachments usable`, async ({
     page,
@@ -211,12 +256,16 @@ for (const mode of ['denied', 'unavailable', 'encoderFailure'])
       .click();
     await expect(page.getByRole('alert')).toBeVisible();
     await expect(page.getByLabel('Arquivo para anexar')).toBeEnabled();
-    if (mode === 'encoderFailure')
+    if (mode === 'encoderFailure') {
+      await expect(page.getByRole('alert')).toHaveText(
+        'Este navegador não conseguiu iniciar o gravador de áudio. Abra o chat no Chrome ou Edge ou anexe um áudio.',
+      );
       expect(
         await page.evaluate(
           () => /** @type {any} */ (globalThis).__capture.stops,
         ),
       ).toBe(1);
+    }
   });
 for (const action of [
   'Descartar gravação',

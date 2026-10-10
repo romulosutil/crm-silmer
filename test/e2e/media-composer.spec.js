@@ -9,6 +9,7 @@ let origin = '';
 const png = await readFile('test/fixtures/media-composer.png');
 const audio = await readFile('test/fixtures/media-composer.m4a');
 const video = await readFile('test/fixtures/media-composer.mp4');
+
 test.beforeAll(async () => {
   server = await createServer({
     configFile: resolve('apps/edge-web/vite.config.js'),
@@ -104,6 +105,7 @@ async function setup(page, options = {}) {
     }
     polls++;
     if (options.pendingStatus) return;
+    if (options.beforeStatus) await options.beforeStatus(polls);
     return route.fulfill({
       status: 200,
       json: {
@@ -118,7 +120,9 @@ async function setup(page, options = {}) {
               : options.processing && polls === 1
                 ? 'processing'
                 : 'ready'),
-        reason: options.rejected ? 'invalid_format' : undefined,
+        reason:
+          options.statusReason ??
+          (options.rejected ? 'invalid_format' : undefined),
       },
     });
   });
@@ -152,6 +156,82 @@ async function ready(page) {
     page.getByRole('button', { name: 'Enviar anexo', exact: true }),
   ).toBeEnabled();
 }
+
+for (const [reason, message] of [
+  [
+    'stale_signatures',
+    'A verificação de segurança está temporariamente indisponível. Aguarde a atualização do serviço e tente validar novamente.',
+  ],
+  [
+    'scanner_unavailable',
+    'A verificação de segurança está temporariamente indisponível. Tente validar novamente em alguns instantes.',
+  ],
+  [
+    'storage_unavailable',
+    'O armazenamento está temporariamente indisponível. Tente validar novamente em alguns instantes.',
+  ],
+  [
+    'processing_failed',
+    'Não foi possível concluir a validação. Tente validar novamente em alguns instantes.',
+  ],
+])
+  test(`T27/MED-26/32: ${reason} preserves draft and retries status without another upload`, async ({
+    page,
+  }) => {
+    const { uploads, sends } = await setup(page, {
+      stateSequence: ['unavailable', 'processing', 'ready'],
+      statusReason: reason,
+    });
+    await select(page);
+    await page.getByLabel('Legenda').fill('Legenda preservada');
+    await expect(page.getByRole('alert')).toHaveText(message);
+    await expect(
+      page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+    ).toBeDisabled();
+    await expect(page.getByAltText('Prévia do anexo')).toBeVisible();
+    expect(uploads).toHaveLength(1);
+    expect(sends).toHaveLength(0);
+    await page
+      .getByRole('button', { name: 'Atualizar validação', exact: true })
+      .click();
+    await ready(page);
+    await expect(page.getByLabel('Legenda')).toHaveValue('Legenda preservada');
+    expect(uploads).toHaveLength(1);
+    expect(sends).toHaveLength(0);
+    await page
+      .getByRole('button', { name: 'Enviar anexo', exact: true })
+      .click();
+    await expect.poll(() => sends.length).toBe(1);
+    expect(sends[0].postDataJSON().content).toEqual({
+      mediaId: 'media-1',
+      caption: 'Legenda preservada',
+    });
+  });
+
+for (const [state, reason] of [
+  ['lost', 'stale_signatures'],
+  ['unavailable', 'PRIVATE_STATUS_REASON'],
+])
+  test(`T27/MED-19/32: ${state}/${reason} remains blocked without arbitrary server details`, async ({
+    page,
+  }) => {
+    const { uploads, sends } = await setup(page, {
+      stateSequence: [state],
+      statusReason: reason,
+    });
+    await select(page);
+    await expect(page.getByRole('alert')).toHaveText(
+      'Arquivo indisponível. Escolha outro arquivo.',
+    );
+    await expect(
+      page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Atualizar validação', exact: true }),
+    ).toHaveCount(0);
+    expect(uploads).toHaveLength(1);
+    expect(sends).toHaveLength(0);
+  });
 
 for (const [kind, name, mime] of [
   ['image', 'sample.png', 'image/png'],
@@ -729,3 +809,34 @@ for (const [code, sendCode] of uncertainSendErrors)
     );
     expect(sends[0].postDataJSON()).toEqual(sends[1].postDataJSON());
   });
+
+test('T27/MED-06/32: caption entered before temporary validation failure survives the response', async ({
+  page,
+}) => {
+  let releaseStatus = () => {};
+  const statusGate = new Promise((resolve) => {
+    releaseStatus = () => resolve(undefined);
+  });
+  const { uploads, sends } = await setup(page, {
+    stateSequence: ['unavailable'],
+    statusReason: 'stale_signatures',
+    beforeStatus: () => statusGate,
+  });
+  await select(page);
+  await page.getByLabel('Legenda').fill('Legenda antes da falha');
+  releaseStatus();
+  await expect(page.getByRole('alert')).toHaveText(
+    'A verificação de segurança está temporariamente indisponível. Aguarde a atualização do serviço e tente validar novamente.',
+  );
+  await expect(page.getByLabel('Legenda')).toHaveValue(
+    'Legenda antes da falha',
+  );
+  await expect(
+    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Atualizar validação', exact: true }),
+  ).toBeEnabled();
+  expect(uploads).toHaveLength(1);
+  expect(sends).toHaveLength(0);
+});

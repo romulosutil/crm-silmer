@@ -2,6 +2,27 @@
 
 ## Resultado e fronteira
 
+Reteste de 10/10/2026: a tela reproduziu `unavailable/stale_signatures` no
+anexo e `NotFoundError` na captura. O Windows enumerou somente saída de áudio
+do monitor, sem microfone. A atualização legítima `ClamAvSignatureRefresh.refresh()`
+no worker local recuperou o anexo para `ready/clean` pelo retry natural, sem
+criar mensagem. Não alterar o limite36h nem forjar `.freshclam-verified`.
+T27 permite **Atualizar validação** para falhas temporárias, conservando a mesma
+mídia e a legenda; arquivos lost/rejected continuam exigindo substituição.
+As mensagens de captura identificam ausência, acesso, interrupção e encoder,
+sem expor texto arbitrário de exceções. Para testar voz física, conectar ou
+habilitar um dispositivo de entrada antes de **Gravar áudio**; a saída do
+monitor não é microfone. Doze anexos enviados tiveram HEAD200, enquanto os
+oito lost anteriores eram rascunhos com cleanupintent após24h. T24 continua
+pendente de captura física, sem Verified global ou liberação operacional.
+
+Na mesma tela, pelo filechooser real, PNG, M4A e MP4 passaram por validação e
+envio explícito e apareceram no histórico como **DEV: envio simulado**. PNG e
+MP4 conservaram legendas; áudio exibiu player. Evidências locais ignoradas:
+`var/media-T27-browser-final-dom.txt` e `var/media-T27-browser-proof.jpg`.
+A [revisão independente específica](../../.specs/features/inbox-media-rustfs/validation-ux-recovery.md)
+é PASS para T27; não substitui captura física nem os gates de produção de T24.
+
 Em 06/10/2026 o perfil Docker local dedicado comprovou upload pela API,
 processamento pelo worker construído (ClamAV, validação e normalização), objeto
 privado RustFS, binding, reserva, download pelo n8n DEV e callback real ao CRM.

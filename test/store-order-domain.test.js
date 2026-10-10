@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   STORE_ACTOR_ID,
   STORE_PRODUCTS,
+  storeProductLabel,
 } from '../modules/orders/src/domain/store-catalog.js';
 import {
   buildStoreOrder,
@@ -439,6 +440,22 @@ test('LOJ-17: the fingerprint ignores the receipt link and the instant format, a
   ]) {
     assert.notEqual(storeRecordFingerprint(parsed(change)), base);
   }
+});
+
+test('LOJ-35/LOJ-36: the product reads "Camisa dry fit"; the catalog name and slug stay', () => {
+  const product = STORE_PRODUCTS['camisa-masculina-lisa'];
+  assert.equal(product.nome, 'Camisa Masculina Lisa Dry Fit');
+  assert.equal(product.slug, 'camisa-masculina-lisa');
+  assert.equal(
+    storeProductLabel({ nome: product.nome, slug: product.slug }),
+    'Camisa dry fit',
+  );
+  // A product the catalog no longer has keeps the name its order recorded.
+  assert.equal(
+    storeProductLabel({ nome: 'Regata Antiga', slug: 'regata-antiga' }),
+    'Regata Antiga',
+  );
+  assert.equal(storeProductLabel(null), '');
 });
 
 test('LOJ-07: a store order is locked; any other order is not', () => {

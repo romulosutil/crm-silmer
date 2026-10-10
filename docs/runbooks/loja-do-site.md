@@ -2,18 +2,22 @@
 
 Decisão: [ADR 028](../adr/028-pedido-pago-da-loja-pelo-n8n.md) e
 [RFC 016](../rfc/016-pedido-pago-da-loja-pelo-n8n.md), que supersedem em parte a
-[ADR 027](../adr/027-venda-da-loja-do-site.md). Requisitos `LOJ-15`–`LOJ-25`
-da [spec](../../.specs/features/pedidos-mvp/spec.md); tarefas T110–T115 de
+[ADR 027](../adr/027-venda-da-loja-do-site.md), e
+[ADR 031](../adr/031-aviso-de-pedido-novo-do-site.md) /
+[RFC 019](../rfc/019-aviso-de-pedido-novo-do-site.md) (aviso de pedido novo do
+site). Requisitos `LOJ-15`–`LOJ-37` da
+[spec](../../.specs/features/pedidos-mvp/spec.md); tarefas T110–T120 de
 [tasks](../../.specs/features/pedidos-mvp/tasks.md).
 
 A loja `silmer.com.br/loja` cobra pelo Checkout Integrado da InfinitePay, só
 Pix. O workflow n8n "Silmer | Loja | Checkout InfinitePay" (id
 `SbNSW5jwBcXM5Afj`) confirma o pagamento com `payment_check` e chama o CRM,
 servidor a servidor, com a credencial de automação. O CRM cria um pedido
-confirmado, travado, sem conversa nem contato, com "Pago — confirmado pela
-InfinitePay", e devolve o número `NN-CRM`, o `LJ-…` e os links do pedido e da
-ficha. O vendedor abre o pedido no CRM e atende pelo WhatsApp dele; não há
-aviso automático. O contrato exato do nó HTTP está no
+**Confirmado**, travado, sem conversa nem contato, e devolve o número
+`NN-CRM`, o `LJ-…` e os links do pedido e da ficha. O Dashboard mostra o aviso
+"N pedidos novos do site" até alguém imprimir a ficha (seção
+[Pedido novo do site](#pedido-novo-do-site-adr-031)); não há WhatsApp
+automático ao vendedor. O contrato exato do nó HTTP está no
 [README do n8n](../integrations/n8n/README.md#pedido-pago-da-loja-adr-028) e no
 OpenAPI (`recordStoreOrder`).
 
@@ -69,6 +73,21 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 6. Quando o Pix real começar: `STORE_ORDERS_ACCEPT_TEST=false` no CRM que
    recebe pedidos reais.
 
+### Aviso de pedido novo do site (ADR 031)
+
+A versão com o aviso lê as colunas novas de `crm.orders`. A ordem é:
+
+1. **Migration** `0034_store_order_first_print.expand.sql` no console da
+   `silmer-api` (`npm run db:migrate`), **antes ou junto** do deploy da imagem
+   nova; conferir a `0034` em `crm_meta.schema_migrations`. É expand: a imagem
+   anterior continua funcionando com ela. Sem a `0034`, a imagem nova responde
+   `503` em todas as leituras de pedido.
+2. **Merge** da PR no `master` e deploy automático.
+3. **Smoke**: um pedido de teste não aparece no aviso (teste nunca conta); o
+   aviso é conferido com o primeiro pedido real (seção seguinte).
+
+Nenhuma variável nova. O contrato com o n8n não muda.
+
 ## Smoke depois do deploy
 
 Uma chamada sintética de teste (gere um UUID v4 novo; `numero_loja` é `LJ-` e
@@ -89,29 +108,33 @@ digitadas na linha nem coladas em chat ou log. Depois:
 
 - sem `-u` a resposta é `401`; com `"forma":"cartao"` e outro UUID, `422
 PAYMENT_METHOD_UNSUPPORTED`;
-- em Pedidos → "Loja do site", o pedido aparece com "Loja · LJ-…" e "Teste",
-  "Pago — confirmado pela InfinitePay em …" e prazo "10 dias úteis"; a página
-  está travada e "Baixar ficha" baixa `pedido-NN-CRM.html`;
+- repetida com outro `pago_em` (um segundo depois), `200` com o mesmo
+  `numero`: duas execuções do n8n podem carimbar instantes diferentes, e o
+  pedido mantém o primeiro (`LOJ-37`);
+- em Pedidos → "Loja do site", o pedido aparece em Confirmados com
+  "Loja · LJ-…" e "Teste" e a situação "Confirmado pela loja do site · …"; a
+  página mostra "Confirmado", está travada, tem o painel "Fechamento e
+  pagamento" com "Pix" e "Baixar ficha" baixa `pedido-NN-CRM.html`;
 - abrir o `pedido_url` numa janela anônima leva ao login e, depois dele, ao
   pedido;
-- o Dashboard não muda (teste não conta). O pedido de teste fica no CRM: não
-  há exclusão.
+- o Dashboard não muda e o aviso não aparece (teste não conta). O pedido de
+  teste fica no CRM: não há exclusão.
 
 ## Respostas e diagnóstico
 
-| Resposta                                               | O que olhar                                                                                                                                                  |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `404`                                                  | Rota desligada (falta `STORE_ORDERS_HMAC_KEY`) ou a API ainda é a versão anterior.                                                                           |
-| `401`                                                  | Credencial do nó errada. A recusa fica auditada sem o segredo.                                                                                               |
-| `400 INVALID_CORRELATION_ID`                           | `X-Correlation-Id` não é UUID: mandar o `pedido_id`.                                                                                                         |
-| `400 INVALID_IDEMPOTENCY_KEY`                          | `Idempotency-Key` ausente ou diferente do `pedido_id`.                                                                                                       |
-| `400 UNKNOWN_REQUEST_FIELD`, `INVALID_*`               | O nó mudou o corpo. Comparar com o README do n8n e o OpenAPI (`StoreOrderRecord`).                                                                           |
-| `409 STORE_ORDER_CONFLICT`                             | O mesmo `pedido_id` com outros dados (ou outro comprovante), ou um `transaction_nsu` já usado. Ver o pedido existente pelo `LJ-…` antes de qualquer ação.    |
-| `422 STORE_CATALOG_MISMATCH`                           | Produto, cor, tamanho, quantidade, prazo ou valor diferentes de `modules/orders/src/domain/store-catalog.js`. Alinhar site, n8n e CRM; mudar o CRM primeiro. |
-| `422 AMOUNT_BELOW_PRICE`, `PAYMENT_METHOD_UNSUPPORTED` | O `payment_check` aceitou o que o CRM não aceita: conferir o nó de confirmação.                                                                              |
-| `422 TEST_REFUSED`                                     | `teste: true` num CRM com `STORE_ORDERS_ACCEPT_TEST=false`.                                                                                                  |
-| `429 RATE_LIMITED`                                     | Mais de 60 chamadas por minuto; repetir depois do `Retry-After`. Se acontecer sem motivo, procurar um loop no workflow ou credencial vazada.                 |
-| `503 SERVICE_UNAVAILABLE`                              | Falha interna; os logs da API trazem só o código, nunca nome, telefone, NSU ou link.                                                                         |
+| Resposta                                               | O que olhar                                                                                                                                                                                                        |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `404`                                                  | Rota desligada (falta `STORE_ORDERS_HMAC_KEY`) ou a API ainda é a versão anterior.                                                                                                                                 |
+| `401`                                                  | Credencial do nó errada. A recusa fica auditada sem o segredo.                                                                                                                                                     |
+| `400 INVALID_CORRELATION_ID`                           | `X-Correlation-Id` não é UUID: mandar o `pedido_id`.                                                                                                                                                               |
+| `400 INVALID_IDEMPOTENCY_KEY`                          | `Idempotency-Key` ausente ou diferente do `pedido_id`.                                                                                                                                                             |
+| `400 UNKNOWN_REQUEST_FIELD`, `INVALID_*`               | O nó mudou o corpo. Comparar com o README do n8n e o OpenAPI (`StoreOrderRecord`).                                                                                                                                 |
+| `409 STORE_ORDER_CONFLICT`                             | O mesmo `pedido_id` com outros dados (ou outro comprovante), ou um `transaction_nsu` já usado. Só `pago_em` diferente não é conflito (`200`, `LOJ-37`). Ver o pedido existente pelo `LJ-…` antes de qualquer ação. |
+| `422 STORE_CATALOG_MISMATCH`                           | Produto, cor, tamanho, quantidade, prazo ou valor diferentes de `modules/orders/src/domain/store-catalog.js`. Alinhar site, n8n e CRM; mudar o CRM primeiro.                                                       |
+| `422 AMOUNT_BELOW_PRICE`, `PAYMENT_METHOD_UNSUPPORTED` | O `payment_check` aceitou o que o CRM não aceita: conferir o nó de confirmação.                                                                                                                                    |
+| `422 TEST_REFUSED`                                     | `teste: true` num CRM com `STORE_ORDERS_ACCEPT_TEST=false`.                                                                                                                                                        |
+| `429 RATE_LIMITED`                                     | Mais de 60 chamadas por minuto; repetir depois do `Retry-After`. Se acontecer sem motivo, procurar um loop no workflow ou credencial vazada.                                                                       |
+| `503 SERVICE_UNAVAILABLE`                              | Falha interna; os logs da API trazem só o código, nunca nome, telefone, NSU ou link.                                                                                                                               |
 
 Um `4xx` deixa um Pix pago sem pedido: alguém confere na InfinitePay, corrige
 a causa e reenvia a mesma chamada (é idempotente pelo `pedido_id`).
@@ -124,13 +147,35 @@ busca da lista acha o pedido por `LJ-…`, número `NN-CRM` ou telefone inteiro.
 Frete, retirada ou qualquer ajuste combinado com o cliente no WhatsApp ficam
 fora do pedido, que é travado; mudar isso exige decisão nova.
 
+## Pedido novo do site (ADR 031)
+
+- **O que é**: pedido da loja, que não é teste, cuja ficha ninguém imprimiu.
+  Chega já **Confirmado**, como um pedido depois de "Gerar pedido".
+- **Onde aparece**: no topo do Dashboard, "N pedidos novos do site", com o
+  mais antigo; o aviso inteiro abre Pedidos já em "Loja do site". O menu
+  "Pedidos" mostra o mesmo número. Na lista e na página, o selo "Ficha não
+  impressa".
+- **Como sai do aviso**: imprimindo ("Imprimir ficha", "Abrir ficha") ou
+  baixando ("Baixar ficha") a ficha pela primeira vez. O CRM grava quem e
+  quando ("Ficha impressa por … · …"), uma vez só; imprimir de novo não muda
+  nada. Não há botão de desfazer: uma ficha aberta por engano tira o pedido
+  do aviso, e o pedido continua na lista.
+- **Produção**: a ficha da loja tem uma página — Produzir (produto, cor,
+  tamanho, 10 peças, prazo da cor, quando o pedido entrou), Cliente (nome e
+  WhatsApp) e Pagamento.
+- **Avisar o cliente**: quando o kit fica pronto, alguém da equipe avisa o
+  cliente **à mão, pelo WhatsApp** da ficha, e combina retirada (padrão) ou
+  frete. Não há mensagem automática; automatizar isso é trabalho futuro.
+
 ## Rollback
 
 - Desligar a rota: remover `STORE_ORDERS_HMAC_KEY` e fazer redeploy. A rota
   responde `404`; o workflow da loja precisa tratar isso como falha visível.
-- Voltar a imagem da API: a migration é expand e a versão anterior continua
-  lendo os pedidos de atendimento; os pedidos da loja já criados ficam no
-  banco e voltam a aparecer completos quando a versão nova voltar.
+- Voltar a imagem da API: as migrations `0029` e `0034` são expand e a versão
+  anterior continua lendo os pedidos de atendimento; os pedidos da loja já
+  criados ficam no banco e voltam a aparecer completos quando a versão nova
+  voltar. Sem a versão nova não há aviso; as impressões já registradas ficam
+  guardadas.
 - Nunca apagar `crm.store_order_receipts` nem pedidos da loja: são o lastro da
   venda e a chave da idempotência.
 
@@ -139,5 +184,7 @@ fora do pedido, que é travado; mudar isso exige decisão nova.
 Nome, telefone e link do comprovante ficam só dentro da ficha cifrada do
 pedido. O recibo guarda o `pedido_id`, o HMAC do telefone e o hash dos dados
 comparados, sem IP nem `Origin`. Nada disso vai para log ou auditoria; a
-auditoria registra ator técnico, pedido, versão e correlação. A retenção é a
-do pedido (documento comercial).
+auditoria registra ator técnico, pedido, versão e correlação. A primeira
+impressão audita `order.ficha.first_print` com o id da pessoa, o pedido e a
+correlação, sem dado do cliente. A retenção é a do pedido (documento
+comercial).

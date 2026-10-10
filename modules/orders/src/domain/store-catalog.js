@@ -16,9 +16,13 @@ export const STORE_PAYMENT_GATEWAY = 'infinitepay';
 export const STORE_PAYMENT_METHOD = 'pix';
 
 /**
+ * ADR 031: `rotulo` is how the screen and the printed ficha name the product
+ * ("Camisa dry fit"); `nome` and `slug` stay what the site and the checkout
+ * send and what each order recorded.
+ *
  * @typedef {{nome: string, prazoDiasUteis: number}} StoreColor
  * @typedef {{
- *   slug: string, nome: string, tipo: string, publico: string,
+ *   slug: string, nome: string, rotulo: string, tipo: string, publico: string,
  *   malha: string, gola: string, precoCentavos: number,
  *   precoTesteCentavos: number, pecasPorKit: number,
  *   cores: Readonly<Record<string, Readonly<StoreColor>>>,
@@ -44,6 +48,7 @@ export const STORE_PRODUCTS = Object.freeze({
     // A test order (STORE_ORDERS_ACCEPT_TEST) may be paid with R$ 1,00.
     precoTesteCentavos: 100,
     publico: 'masculino',
+    rotulo: 'Camisa dry fit',
     slug: 'camisa-masculina-lisa',
     tamanhos: Object.freeze({
       eg: 'EG',
@@ -63,4 +68,17 @@ export const STORE_PRODUCTS = Object.freeze({
 /** @param {string} slug @returns {Readonly<StoreProduct>|null} */
 export function storeProduct(slug) {
   return Object.hasOwn(STORE_PRODUCTS, slug) ? STORE_PRODUCTS[slug] : null;
+}
+
+/**
+ * ADR 031: the product as people read it — the catalog's `rotulo` for a
+ * known slug, else the name the order recorded.
+ *
+ * @param {{slug?: unknown, nome?: unknown}|null|undefined} produto
+ */
+export function storeProductLabel(produto) {
+  const product =
+    typeof produto?.slug === 'string' ? storeProduct(produto.slug) : null;
+  if (product) return product.rotulo;
+  return typeof produto?.nome === 'string' ? produto.nome.trim() : '';
 }

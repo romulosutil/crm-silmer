@@ -226,7 +226,7 @@ test('LOJ-07: every write on a store order answers 409 ORDER_LOCKED', async () =
   await api.close();
 });
 
-test('LOJ-10/LOJ-22: the store order prints its simplified ficha with the standard fields only', async () => {
+test('LOJ-10/LOJ-36: the store order prints Produzir, Cliente and Pagamento only, on one page', async () => {
   const { api, notify } = harness();
   const created = await notify(
     (body) => (body.pagamento.receipt_url = STORE_RECEIPT_URL),
@@ -243,26 +243,23 @@ test('LOJ-10/LOJ-22: the store order prints its simplified ficha with the standa
   for (const expected of [
     'PEDIDO DA LOJA',
     'Origem: Loja do site · LJ-5B0C77ED',
-    '<dt>Número da loja</dt><dd>LJ-5B0C77ED</dd>',
-    '<dt>Prazo</dt><dd>10 dias úteis</dd>',
-    '01-CRM',
-    '07/10/2026',
-    'Cliente Sintetico da Loja',
-    '+55 (27) 90000-0001',
-    'Camisa Masculina Lisa Dry Fit',
-    'Camiseta',
-    'Masculino',
-    'Preto',
-    'Dry fit liso de poliéster',
-    'Gola redonda',
-    '<dt>Tamanho</dt><dd>M</dd>',
-    '<dt>Quantidade</dt><dd>10</dd>',
-    '<dt>Valor</dt><dd>R$ 180,00</dd>',
-    '<dt>Forma</dt><dd>Pix</dd>',
+    '<span>Pedido</span><strong>01-CRM</strong>',
+    '<section class="produce"><h2>Produzir</h2>',
+    '<dt>Produto</dt><dd>Camisa dry fit</dd>',
+    '<dt>Cor</dt><dd>Preto</dd>',
+    '<div class="size"><dt>Tamanho</dt><dd>M</dd></div>',
+    '<dt>Quantidade</dt><dd>10 peças</dd>',
+    '<dt>Prazo da cor</dt><dd>10 dias úteis</dd>',
+    '<dt>Pedido em</dt><dd>07/10/2026 às 23:15<span class="note">confirmado pela loja do site</span></dd>',
+    '<h2>Cliente</h2>',
+    '<dt>Nome</dt><dd>Cliente Sintetico da Loja</dd>',
+    '<dt>WhatsApp</dt><dd>+55 (27) 90000-0001</dd>',
+    '<h2>Pagamento</h2>',
     '<dt>Valor pago</dt><dd>R$ 180,00</dd>',
-    '<dt>Transação (NSU)</dt><dd>nsu-sintetico-0001</dd>',
+    '<dt>Forma</dt><dd>Pix</dd>',
     'Pago — confirmado pela InfinitePay em 07/10/2026 às 23:15',
-    `<a href="${STORE_RECEIPT_URL}" rel="noopener noreferrer">Comprovante InfinitePay</a>`,
+    `Comprovante: <a href="${STORE_RECEIPT_URL}" rel="noopener noreferrer">Comprovante InfinitePay</a>`,
+    '<span>Ficha da loja · 01-CRM · LJ-5B0C77ED</span><span>Página 1 de 1</span>',
   ]) {
     assert.ok(html.includes(expected), expected);
   }
@@ -276,9 +273,19 @@ test('LOJ-10/LOJ-22: the store order prints its simplified ficha with the standa
     /Retirada/u,
     /informado pelo cliente/u,
     /Sicredi/u,
+    // ADR 031: nothing the kit's production or contact does not use.
+    /Camisa Masculina Lisa Dry Fit/u,
+    /Camiseta|Masculino|Dry fit liso|Gola redonda/u,
+    /Número da loja|<dt>Número<\/dt>/u,
+    /<dt>Valor<\/dt>/u,
+    /NSU|nsu-sintetico|Fatura|fatura-sintetica/u,
+    /Data do pedido/u,
   ]) {
     assert.doesNotMatch(html, absent);
   }
+  // Every label prints at 12px or more.
+  assert.match(html, /dt \{[^}]*font-size: 12px;/u);
+  assert.doesNotMatch(html, /font-size: (?:[0-9]|1[01])px/u);
   await api.close();
 });
 
@@ -295,7 +302,7 @@ test('LOJ-10: "Baixar ficha" sends the same document as pedido-NN-CRM.html', asy
     download.headers['content-disposition'],
     `attachment; filename="pedido-01-CRM.html"; filename*=UTF-8''pedido-01-CRM.html`,
   );
-  assert.match(download.body, /Pedido de teste — não entregar/u);
+  assert.match(download.body, /Pedido de teste — não produzir nem entregar/u);
   for (const query of ['download=2', 'download=1&x=1', 'formato=pdf']) {
     const refused = await api.inject({
       headers: readHeaders,

@@ -37,6 +37,7 @@ export {
   STORE_PAYMENT_METHOD,
   STORE_PRODUCTS,
   storeProduct,
+  storeProductLabel,
 } from './domain/store-catalog.js';
 export {
   ORDER_ORIGINS,

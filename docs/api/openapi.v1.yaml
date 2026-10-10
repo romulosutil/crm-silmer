@@ -668,14 +668,24 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Bytes completos, Content-Length exato }
-        '206': { description: Bytes parciais com Content-Range e Content-Length exatos }
+        '206':
+          {
+            description: Bytes parciais com Content-Range e Content-Length exatos,
+          }
         '401': { description: Sessão ausente ou inválida, sem bytes }
         '403': { description: Leitura proibida, sem bytes }
         '404': { description: Mídia não encontrada nesta conversa }
         '409': { description: Mídia ainda não validada/ready }
         '410': { description: Objeto comprovadamente perdido; quota preservada }
-        '416': { description: Range inválido ou fora do objeto, Content-Range bytes */size }
-        '503': { description: Storage temporariamente indisponível ou metadata divergente }
+        '416':
+          {
+            description: Range inválido ou fora do objeto,
+            Content-Range bytes */size,
+          }
+        '503':
+          {
+            description: Storage temporariamente indisponível ou metadata divergente,
+          }
   /conversations/{conversationId}/media/{mediaId}:
     get:
       operationId: getChatMediaStatus
@@ -705,12 +715,35 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [mediaId, kind, origin, state, validationStatus, mimeType, sizeBytes, durationMs]
+                required:
+                  [
+                    mediaId,
+                    kind,
+                    origin,
+                    state,
+                    validationStatus,
+                    mimeType,
+                    sizeBytes,
+                    durationMs,
+                  ]
                 properties:
                   mediaId: { type: string, format: uuid }
                   kind: { type: string, enum: [image, audio, video] }
                   origin: { type: string, enum: [attachment, recording] }
-                  state: { type: string, enum: [uploaded, processing, ready, attached, rejected, unavailable, lost] }
+                  state:
+                    {
+                      type: string,
+                      enum:
+                        [
+                          uploaded,
+                          processing,
+                          ready,
+                          attached,
+                          rejected,
+                          unavailable,
+                          lost,
+                        ],
+                    }
                   validationStatus: { type: string }
                   mimeType: { type: [string, 'null'] }
                   sizeBytes: { type: [integer, 'null'], minimum: 1 }
@@ -720,6 +753,87 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { description: Mídia ausente na conversa }
         '503': { description: Dependência indisponível }
+  /integrations/n8n/store-orders:
+    post:
+      operationId: recordStoreOrder
+      summary: Registra o pedido pago da loja do site (ADR 028)
+      description: >-
+        Ação store.order.record, só do AUTOMATION_EXECUTOR. O workflow n8n
+        "Silmer | Loja | Checkout InfinitePay" chama depois que o
+        payment_check da InfinitePay confirma o Pix (paid e amount maior ou
+        igual ao valor). O CRM confere o pedido com o próprio catálogo da loja
+        e cria um pedido confirmado, travado, sem conversa nem contato, ao
+        preço do catálogo. A chave natural é o `pedido_id`: os mesmos dados
+        respondem 200 com o mesmo pedido, antes do catálogo; o `receipt_url`
+        que antes faltava é gravado e responde 200; dados diferentes ou outro
+        comprovante, ou um `transaction_nsu` de outro pedido, respondem 409.
+        `Idempotency-Key` é o mesmo texto de `pedido_id`. `X-Correlation-Id`
+        precisa ser um UUID (ou 16 a 64 hexadecimais) — use o próprio
+        `pedido_id`. Até 60 chamadas por minuto (429 RATE_LIMITED com
+        Retry-After, antes da credencial). Corpo JSON até 16 KB. Desligada
+        (404) até STORE_ORDERS_HMAC_KEY existir. As URLs da resposta partem
+        de APP_BASE_URL; sem ela, saem relativas.
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkflowKey'
+        - $ref: '#/components/parameters/WorkflowVersion'
+        - $ref: '#/components/parameters/ExecutionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StoreOrderRecord' }
+      responses:
+        '201':
+          description: Pedido criado
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreOrderRecorded' }
+        '200':
+          description: >-
+            Pedido já registrado com os mesmos dados; ou o comprovante que
+            faltava foi gravado agora (`comprovante_registrado` true).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreOrderRecorded' }
+        '400':
+          description: >-
+            INVALID_REQUEST (corpo malformado, chave faltando ou de tipo
+            errado), UNKNOWN_REQUEST_FIELD, UNSUPPORTED_SCHEMA_VERSION,
+            INVALID_STORE_NUMBER, INVALID_RECEIPT_URL, INVALID_PAID_AT,
+            INVALID_CUSTOMER, INVALID_IDEMPOTENCY_KEY, INVALID_CORRELATION_ID
+            e INVALID_X_SILMER_* dos cabeçalhos.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/N8nProblem' }
+        '401': { $ref: '#/components/responses/N8nProblem' }
+        '403': { $ref: '#/components/responses/N8nProblem' }
+        '404': { description: Loja do site não configurada neste ambiente }
+        '409':
+          description: STORE_ORDER_CONFLICT
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/N8nProblem' }
+        '413': { $ref: '#/components/responses/N8nProblem' }
+        '415': { $ref: '#/components/responses/N8nProblem' }
+        '422':
+          description: >-
+            STORE_CATALOG_MISMATCH, AMOUNT_BELOW_PRICE, TEST_REFUSED ou
+            PAYMENT_METHOD_UNSUPPORTED. Nada é gravado.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/N8nProblem' }
+        '429':
+          description: RATE_LIMITED
+          headers:
+            Retry-After: { schema: { type: integer, minimum: 1 } }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/N8nProblem' }
+        '503': { $ref: '#/components/responses/N8nProblem' }
   /conversations/{conversationId}/messages:
     post:
       operationId: sendHumanConversationMessage
@@ -839,8 +953,11 @@ paths:
       description: >-
         Ação order.read. Sem status, retorna Todos. A busca aceita número do
         pedido, cliente ou telefone e resolve cliente e telefone pelo contato da
-        conversa. `counts` traz o total de cada grupo (Confirmados e Pendentes)
-        para a busca atual, independentemente da página.
+        conversa; um pedido da loja (sem conversa) é achado pelo número, pelo
+        telefone inteiro, comparado por HMAC, ou pelo número da loja
+        (LJ-XXXXXXXX, ADR 028). `counts` traz o total de cada grupo
+        (Confirmados e Pendentes) para a busca atual, independentemente da
+        página.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
@@ -849,6 +966,12 @@ paths:
             in: query,
             schema: { $ref: '#/components/schemas/OrderStatus' },
           }
+        - name: origin
+          in: query
+          description: >-
+            ADR 027: `loja` mostra só os pedidos da loja do site (filtro "Loja
+            do site"); `atendimento`, os da conversa.
+          schema: { $ref: '#/components/schemas/OrderOrigin' }
         - {
             name: q,
             in: query,
@@ -878,7 +1001,9 @@ paths:
       description: >-
         Ação order.read. Totais de todos os pedidos, sem recorte pela página,
         busca ou status da listagem. Vendas e peças somam somente pedidos
-        confirmados; pendentes são contados à parte. Valores em centavos.
+        confirmados; pendentes são contados à parte. Valores em centavos. Os
+        pedidos da loja do site contam como qualquer venda; pedidos de teste
+        (isTest) ficam fora (ADR 027).
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
@@ -1111,11 +1236,17 @@ paths:
         paisagem, duas páginas, impresso pelo navegador. O documento não traz
         valor, condição de pagamento nem a faixa de amostra sintética; vendedor
         é quem confirmou, data é a data do pedido e o controle de produção sai
-        em branco.
+        em branco. Um pedido da loja do site (ADR 027) sai na ficha
+        simplificada ficha-loja-v1 (A4 retrato, uma página, só os campos
+        padrão). Com download=1, o mesmo documento vem como anexo
+        pedido-NN-CRM.html.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderId'
         - $ref: '#/components/parameters/HumanReadOrigin'
+        - name: download
+          in: query
+          schema: { type: string, const: '1' }
       responses:
         '200':
           description: Documento HTML pronto para impressão
@@ -1129,6 +1260,129 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/OrderNotFound' }
         '409': { $ref: '#/components/responses/OrderConflict' }
+  /orders/{orderId}/files:
+    get:
+      operationId: listOrderFiles
+      summary: Lista a arte final e os arquivos da arte do pedido (ADR 023)
+      description: >-
+        Ação order.read. Sem OBJECT_STORAGE_* configurado responde 503 e o
+        resto do pedido continua disponível.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Arquivos do pedido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderFiles' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+    post:
+      operationId: uploadOrderFile
+      summary: Envia um arquivo da arte ou a arte final
+      description: >-
+        Ação order.edit, restrita ao dono da conversa ou a COMMERCIAL_ADMIN e
+        ao pedido pendente (409 ORDER_STATUS_CONFLICT). Até 5 arquivos
+        `reference` (409 FILE_LIMIT_REACHED) e uma arte `final`, que substitui
+        a anterior; 10 MB cada (413 FILE_TOO_LARGE). A extensão precisa estar
+        na allowlist e o conteúdo precisa ter a assinatura dela (422
+        FILE_TYPE_NOT_ALLOWED ou FILE_CONTENT_MISMATCH). A sessão é checada
+        antes de o corpo ser lido. Replay com a mesma Idempotency-Key e os
+        mesmos bytes devolve a primeira resposta.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/OrderFileUpload' }
+      responses:
+        '201':
+          description: Arquivo guardado ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderFiles' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '413': { $ref: '#/components/responses/OrderUnprocessable' }
+        '422': { $ref: '#/components/responses/OrderUnprocessable' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /orders/{orderId}/files/{fileId}:
+    delete:
+      operationId: removeOrderFile
+      summary: Remove um arquivo da arte ou a arte final
+      description: >-
+        Ação order.edit, mesmas regras do envio. Apaga a linha e os objetos
+        (arquivo e miniatura) do RustFS.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/OrderFileId'
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200':
+          description: Arquivos que restaram ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderFiles' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /orders/{orderId}/files/{fileId}/content:
+    get:
+      operationId: downloadOrderFile
+      summary: Baixa o arquivo original como anexo
+      description: >-
+        Ação order.read, também para pedido confirmado. Sempre anexo, com
+        nosniff e CSP sandbox; o download entra na auditoria.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/OrderFileId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Bytes do arquivo
+          headers:
+            Content-Disposition:
+              { schema: { type: string, pattern: '^attachment; ' } }
+            Content-Security-Policy:
+              { schema: { type: string, const: "default-src 'none'; sandbox" } }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /orders/{orderId}/files/{fileId}/thumbnail:
+    get:
+      operationId: getOrderFileThumbnail
+      summary: Miniatura WebP de uma imagem enviada
+      description: >-
+        Ação order.read. Só existe para PNG, JPEG e WebP enviados com
+        miniatura; os demais respondem 404 FILE_NOT_FOUND.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/OrderFileId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Miniatura de até 320 px
+          content:
+            image/webp:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
 components:
   securitySchemes:
     automationBasic:
@@ -1161,6 +1415,11 @@ components:
       required: false
       description: Obrigatório para autenticação humana; não usado pelo ator técnico.
       schema: { type: string, format: uri }
+    OrderFileId:
+      name: fileId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 512 }
     HumanReadOrigin:
       name: Origin
       in: header
@@ -1496,8 +1755,7 @@ components:
       properties:
         content: { type: object, additionalProperties: true }
         expectedVersion: { type: integer, minimum: 1 }
-        messageType:
-          { type: string, enum: [text, image, audio, video] }
+        messageType: { type: string, enum: [text, image, audio, video] }
         reason: { type: string, minLength: 1, maxLength: 512 }
       description: >-
         CHAT_MEDIA_ENABLED=false impede novos envios image/audio/video (403),
@@ -1618,7 +1876,8 @@ components:
     InboxPersistentMedia:
       type: object
       additionalProperties: false
-      required: [mediaId, kind, state, mimeType, sizeBytes, durationMs, contentUrl]
+      required:
+        [mediaId, kind, state, mimeType, sizeBytes, durationMs, contentUrl]
       properties:
         mediaId: { type: string, format: uuid }
         kind: { type: string, enum: [image, audio, video] }
@@ -2436,10 +2695,13 @@ components:
       type: object
       additionalProperties: false
       description: >-
-        Item da ficha (ADRs 016 e 020). Principais, na ordem da tela: tipo
+        Item da ficha (ADRs 016, 020 e 022). Principais, na ordem da tela: tipo
         (Tipo de roupa), cor, quantidade (soma da grade; nunca enviada),
         tipo_servico (Técnica: silk, DTF, sublimação, bordado… ou Sem
-        estampa), malhas (Tecido), grade (Tamanhos) e gola (Gola). O bot pode
+        estampa), malhas (Modelo de malha), grade (Tamanhos) e gola (Gola).
+        Opcionais e sem bloquear (ADR 025): publico (masculino, feminino,
+        infantil, unissex ou vazio) e quantidade_informada (referência do que
+        o cliente disse; não entra no total). O bot pode
         preencher uma técnica vazia; é obrigatória para confirmar, mas pode
         ficar vazia enquanto pendente. Adicionais, que não bloqueiam: estampa
         (Estampa (referência)), cores do tecido por parte e vies_mangas; modelo
@@ -2467,6 +2729,13 @@ components:
         cor_manga_esquerda: { type: string, maxLength: 200 }
         vies_gola: { type: string, maxLength: 200 }
         vies_mangas: { type: string, maxLength: 200 }
+        publico:
+          type: string
+          enum: ['', masculino, feminino, infantil, unissex]
+        quantidade_informada:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 100000
     FichaArtwork:
       type: object
       additionalProperties: false
@@ -2535,6 +2804,8 @@ components:
       additionalProperties: false
       required: [summary, items, observations, artwork, serviceData]
       properties:
+        loja:
+          $ref: '#/components/schemas/StoreFicha'
         summary: { $ref: '#/components/schemas/FichaSummary' }
         items:
           type: array
@@ -2577,11 +2848,43 @@ components:
           version,
           createdAt,
           updatedAt,
+          origin,
+          isTest,
+          locked,
+          storeNumber,
+          leadTimeBusinessDays,
+          gatewayPayment,
         ]
       properties:
         id: { type: string }
         number: { type: string, pattern: '^[0-9]{2,}-CRM$' }
-        conversationId: { type: string }
+        conversationId:
+          type: [string, 'null']
+          description: Nulo só no pedido da loja do site (ADR 027).
+        origin: { $ref: '#/components/schemas/OrderOrigin' }
+        isTest:
+          type: boolean
+          description: >-
+            Pedido da loja recebido com `teste: true`; fica fora do Dashboard.
+        locked:
+          type: boolean
+          description: >-
+            Pedido da loja: nenhuma escrita é aceita (409 ORDER_LOCKED).
+        storeNumber:
+          type: [string, 'null']
+          pattern: '^LJ-[0-9A-F]{8}$'
+          description: >-
+            Pedido da loja (ADR 028): LJ- e os 8 primeiros hexadecimais do
+            pedido_id do site.
+        leadTimeBusinessDays:
+          type: [integer, 'null']
+          minimum: 0
+          description: >-
+            Pedido da loja: prazo da cor em dias úteis (0 é pronta entrega).
+        gatewayPayment:
+          oneOf:
+            - { $ref: '#/components/schemas/GatewayPayment' }
+            - { type: 'null' }
         status: { $ref: '#/components/schemas/OrderStatus' }
         fabCode: { type: string }
         ficha: { $ref: '#/components/schemas/Ficha' }
@@ -2634,7 +2937,9 @@ components:
         paidOn:
           type: [string, 'null']
           format: date
-          description: Dia do pagamento, informado por uma pessoa.
+          description: >-
+            Dia do pagamento, informado por uma pessoa; no pedido da loja, o
+            dia (São Paulo) em que a InfinitePay confirmou o Pix.
         deliveredOn:
           type: [string, 'null']
           format: date
@@ -2673,6 +2978,85 @@ components:
         averageTicketCents: { type: integer, minimum: 0 }
         pendingCount: { type: integer, minimum: 0 }
         totalPiecesSold: { type: integer, minimum: 0 }
+    OrderFile:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          slot,
+          name,
+          extension,
+          contentType,
+          sizeBytes,
+          thumbnail,
+          uploadedAt,
+          uploadedBy,
+        ]
+      properties:
+        id: { type: string }
+        slot: { type: string, enum: [reference, final] }
+        name:
+          type: string
+          maxLength: 120
+          description: Nome original sem caminho; guardado cifrado.
+        extension:
+          type: string
+          enum:
+            [
+              ai,
+              cdr,
+              eps,
+              jpeg,
+              jpg,
+              pdf,
+              png,
+              psd,
+              rar,
+              svg,
+              tif,
+              tiff,
+              webp,
+              zip,
+            ]
+        contentType: { type: string }
+        sizeBytes: { type: integer, minimum: 1, maximum: 10485760 }
+        thumbnail:
+          type: boolean
+          description: Há miniatura WebP em /thumbnail.
+        uploadedAt: { type: string, format: date-time }
+        uploadedBy: { $ref: '#/components/schemas/OrderActorRef' }
+    OrderFiles:
+      type: object
+      additionalProperties: false
+      required: [final, references, limits]
+      properties:
+        final:
+          oneOf:
+            - $ref: '#/components/schemas/OrderFile'
+            - type: 'null'
+        references:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/OrderFile' }
+        limits:
+          type: object
+          additionalProperties: false
+          required: [maxBytes, maxReferences]
+          properties:
+            maxBytes: { type: integer, const: 10485760 }
+            maxReferences: { type: integer, const: 5 }
+    OrderFileUpload:
+      type: object
+      additionalProperties: false
+      required: [slot, file]
+      properties:
+        slot: { type: string, enum: [reference, final] }
+        file: { type: string, format: binary, description: Até 10 MB. }
+        thumbnail:
+          type: string
+          format: binary
+          description: WebP de até 256 KB, só para PNG, JPEG e WebP.
     OrderResponse:
       type: object
       additionalProperties: false
@@ -2770,6 +3154,183 @@ components:
           description: Versão atual do pedido.
         paidOn: { type: [string, 'null'], format: date }
         deliveredOn: { type: [string, 'null'], format: date }
+    OrderOrigin:
+      type: string
+      enum: [atendimento, loja]
+    StoreFicha:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [telefone, produto, comprovanteUrl]
+      description: >-
+        Pedido da loja do site (ADRs 027 e 028): o que o registro trouxe além
+        do item e do cliente. Fica dentro da ficha cifrada.
+      properties:
+        telefone: { type: string, description: E.164 brasileiro sem "+". }
+        produto:
+          type: object
+          additionalProperties: false
+          required: [slug, nome]
+          properties:
+            slug: { type: string }
+            nome: { type: string }
+        comprovanteUrl:
+          type: [string, 'null']
+          format: uri
+          description: Link do comprovante da InfinitePay, quando houver.
+    GatewayPayment:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required:
+        [
+          source,
+          confirmedAt,
+          paidAmountCents,
+          transactionNsu,
+          invoiceSlug,
+          receiptUrl,
+        ]
+      description: >-
+        Pedido da loja (ADR 028): o pagamento que a InfinitePay confirmou.
+      properties:
+        source: { type: string, const: infinitepay }
+        confirmedAt: { type: string, format: date-time }
+        paidAmountCents: { type: integer, minimum: 1 }
+        transactionNsu: { type: string }
+        invoiceSlug: { type: string }
+        receiptUrl: { type: [string, 'null'], format: uri }
+    StoreOrderRecord:
+      type: object
+      additionalProperties: false
+      description: >-
+        ADR 028: o pedido pago que o workflow n8n da loja registra depois do
+        payment_check. Todas as chaves são obrigatórias e nenhuma outra é
+        aceita (UNKNOWN_REQUEST_FIELD).
+      required:
+        [
+          schema_version,
+          pedido_id,
+          numero_loja,
+          teste,
+          produto,
+          item,
+          valor_centavos,
+          cliente,
+          pagamento,
+        ]
+      properties:
+        schema_version: { type: string, const: '1.0' }
+        pedido_id:
+          type: string
+          format: uuid
+          description: UUID v4 gerado pelo site; é o order_nsu da InfinitePay.
+        numero_loja:
+          type: string
+          pattern: '^LJ-[0-9A-F]{8}$'
+          description: LJ- e os 8 primeiros hexadecimais de pedido_id, em maiúsculas.
+        teste:
+          type: boolean
+          description: >-
+            Aceito só com STORE_ORDERS_ACCEPT_TEST=true (senão 422
+            TEST_REFUSED); o pedido fica fora do Dashboard.
+        produto:
+          type: object
+          additionalProperties: false
+          required: [slug]
+          properties:
+            slug: { type: string, example: camisa-masculina-lisa }
+        item:
+          type: object
+          additionalProperties: false
+          required: [cor_id, tamanho_id, quantidade, prazo_dias]
+          properties:
+            cor_id: { type: string, enum: [branca, chumbo, preta] }
+            tamanho_id:
+              { type: string, enum: [pp, p, m, g, gg, eg, xg, xx, jeg] }
+            quantidade: { type: integer, const: 10 }
+            prazo_dias:
+              type: integer
+              description: Dias úteis da cor — branca 0, chumbo e preta 10.
+        valor_centavos:
+          type: integer
+          description: >-
+            18000; 100 só num pedido de teste aceito. Conferido com o catálogo
+            do CRM, que grava o próprio preço.
+        cliente:
+          type: object
+          additionalProperties: false
+          required: [nome, telefone]
+          properties:
+            nome: { type: string, minLength: 2, maxLength: 80 }
+            telefone:
+              type: string
+              pattern: '^55[1-9]{2}(?:9[0-9]{8}|[2-5][0-9]{7})$'
+              description: E.164 brasileiro sem "+".
+        pagamento:
+          type: object
+          additionalProperties: false
+          required:
+            [
+              gateway,
+              forma,
+              transaction_nsu,
+              invoice_slug,
+              valor_pago_centavos,
+              pago_em,
+              receipt_url,
+            ]
+          properties:
+            gateway: { type: string, const: infinitepay }
+            forma: { type: string, const: pix }
+            transaction_nsu: { type: string, pattern: '^[\x21-\x7e]{1,128}$' }
+            invoice_slug: { type: string, pattern: '^[\x21-\x7e]{1,128}$' }
+            valor_pago_centavos:
+              type: integer
+              minimum: 1
+              description: Maior ou igual a valor_centavos (senão 422 AMOUNT_BELOW_PRICE).
+            pago_em:
+              type: string
+              format: date-time
+              description: >-
+                ISO 8601 em UTC (sufixo Z), no máximo 5 minutos à frente do
+                relógio do CRM e 30 dias atrás.
+            receipt_url:
+              type: [string, 'null']
+              format: uri
+              description: >-
+                Nulo, ou https em infinitepay.io, *.infinitepay.io,
+                infinitepay.com.br ou *.infinitepay.com.br, sem porta nem
+                credencial.
+    StoreOrderRecorded:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          numero,
+          numero_loja,
+          pedido_id,
+          criado,
+          comprovante_registrado,
+          pedido_url,
+          ficha_url,
+        ]
+      properties:
+        numero: { type: string, pattern: '^[0-9]{2,}-CRM$' }
+        numero_loja: { type: string, pattern: '^LJ-[0-9A-F]{8}$' }
+        pedido_id:
+          type: string
+          description: Id do pedido no CRM (não é o pedido_id do site).
+        criado: { type: boolean }
+        comprovante_registrado: { type: boolean }
+        pedido_url:
+          type: string
+          description: APP_BASE_URL + /pedidos/{id}; relativa sem APP_BASE_URL.
+        ficha_url:
+          type: string
+          description: >-
+            APP_BASE_URL + /api/v1/orders/{id}/print?download=1; exige sessão
+            do CRM.
     OrderError:
       type: object
       additionalProperties: false
@@ -2791,6 +3352,17 @@ components:
                   INVALID_AMOUNT,
                   INVALID_GRADE,
                   INVALID_DATE,
+                  ORDER_STATUS_CONFLICT,
+                  EMPTY_FILE,
+                  FILE_CONTENT_MISMATCH,
+                  FILE_LIMIT_REACHED,
+                  FILE_NOT_FOUND,
+                  FILE_TOO_LARGE,
+                  FILE_TYPE_NOT_ALLOWED,
+                  INVALID_FILE_NAME,
+                  INVALID_FILE_SLOT,
+                  INVALID_THUMBNAIL,
+                  ORDER_LOCKED,
                 ]
             fields:
               type: array

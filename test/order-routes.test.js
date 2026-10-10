@@ -40,17 +40,23 @@ const ORDER_KEYS = [
   'ficha',
   'finalAmountCents',
   'firstContactAt',
+  'gatewayPayment',
   'id',
+  'isTest',
   'lastMessage',
+  'leadTimeBusinessDays',
+  'locked',
   'missingFields',
   'number',
   'orderDate',
+  'origin',
   'paidOn',
   'paymentCondition',
   'reopenedAt',
   'reopenedBy',
   'seller',
   'status',
+  'storeNumber',
   'totalPieces',
   'updatedAt',
   'version',
@@ -729,6 +735,56 @@ test('PATCH items takes a half-filled item, and one without the ADR 016 fields',
       ],
     },
   });
+});
+
+test('PATCH items keeps the audience and the quantity said, and refuses another audience (ADR 025)', async (t) => {
+  const { api, runtime } = orderHarness();
+  t.after(() => api.close());
+  const pending = await createPending(runtime, 'conversation-1');
+  const [first] = synthetic.pedido.itens;
+  const response = await api.inject({
+    headers: writeHeaders,
+    method: 'PATCH',
+    payload: {
+      expectedVersion: pending.version,
+      value: [
+        { ...first, publico: 'masculino', quantidade_informada: 4 },
+        { ...first, publico: 'infantil', quantidade_informada: 3 },
+      ],
+    },
+    url: `/api/v1/orders/${pending.id}/sections/items`,
+  });
+  assert.equal(response.statusCode, 200);
+  const { order } = response.json();
+  assert.deepEqual(
+    order.ficha.items.map((/** @type {any} */ item) => [
+      item.publico,
+      item.quantidade_informada,
+    ]),
+    [
+      ['masculino', 4],
+      ['infantil', 3],
+    ],
+  );
+  assert.equal(
+    order.missingFields.some((/** @type {string} */ field) =>
+      field.includes('publico'),
+    ),
+    false,
+    'the audience never blocks the order',
+  );
+
+  const refused = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'items-bad-audience' },
+    method: 'PATCH',
+    payload: {
+      expectedVersion: order.version,
+      value: [{ ...first, publico: 'baby look' }],
+    },
+    url: `/api/v1/orders/${pending.id}/sections/items`,
+  });
+  assert.equal(refused.statusCode, 400);
+  assert.doesNotMatch(refused.body, /baby look/u);
 });
 
 test('section writes answer 403 outside ownership, 409 on a stale version and 422 with fields', async (t) => {

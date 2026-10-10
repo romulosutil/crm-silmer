@@ -6,6 +6,10 @@ const sourcePath = new URL(
   import.meta.url,
 );
 let source = await readFile(sourcePath, 'utf8');
+const workflowVersion = /const WORKFLOW_VERSION = '([^']+)';/u.exec(
+  source,
+)?.[1];
+if (!workflowVersion) throw new Error('WORKFLOW_VERSION not found');
 source = source.replace(/import \{[\s\S]*?\} from '@n8n\/workflow-sdk';/u, '');
 source = source.replace(
   /export default workflow/u,
@@ -155,12 +159,13 @@ const imports = `import {
   workflow,
 } from '@n8n/workflow-sdk';\n\n`;
 const constants = `const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-const WORKFLOW_VERSION = 'mvp-simple-12-media';
+const WORKFLOW_VERSION = '${workflowVersion}';
 
 const BRIEFING_FIELDS = [
   'artwork_locations',
   'artwork_status',
   'artwork_technique',
+  'audiences',
   'briefing_status',
   'city_or_postal_code',
   'collar',

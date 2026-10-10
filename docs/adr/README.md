@@ -46,4 +46,11 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [020 — Técnica por item e arte do pedido](020-tecnica-por-item-e-arte-do-pedido.md)
 - [021 — Adotar OpenAI no MVP](021-adotar-openai-no-mvp.md)
 - [022 — Manter deploy automático GitHub → EasyPanel](022-manter-deploy-automatico-github-easypanel.md)
-- [023 — Mídia do chat no RustFS](023-midia-do-chat-no-rustfs.md)
+- [023 — Arquivos da arte do pedido no RustFS](023-arquivos-da-arte-no-rustfs.md)
+- [024 — O atendimento começa pelo produto](024-atendimento-comeca-pelo-produto.md)
+- [025 — Itens por público no pedido](025-itens-por-publico.md)
+- [026 — Imagem, áudio e chat do site no bot](026-midia-e-chat-do-site-no-bot.md)
+- [027 — Venda da loja do site no CRM](027-venda-da-loja-do-site.md)
+- [028 — Pedido pago da loja confirmado pela InfinitePay e registrado pelo n8n](028-pedido-pago-da-loja-pelo-n8n.md)
+
+- [029 — Mídia do chat no RustFS](029-midia-do-chat-no-rustfs.md); supersede a numeração colidente da decisão original, preservada no histórico.

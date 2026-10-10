@@ -254,6 +254,11 @@ test('lets any active seller run order actions but keeps order.intent for automa
   assert.throws(() => authorize(seller, 'order.intent'), /forbidden/iu);
   assert.throws(() => authorize(admin, 'order.intent'), /forbidden/iu);
   assert.ok(AUTOMATION_EXECUTOR_ACTIONS.includes('order.intent'));
+  // ADR 028: only the n8n checkout workflow records a paid store order.
+  assert.ok(AUTOMATION_EXECUTOR_ACTIONS.includes('store.order.record'));
+  assert.equal(OPERATIONAL_ACTIONS.has('store.order.record'), false);
+  assert.throws(() => authorize(seller, 'store.order.record'), /forbidden/iu);
+  assert.throws(() => authorize(admin, 'store.order.record'), /forbidden/iu);
   for (const action of AUTOMATION_EXECUTOR_ACTIONS) {
     assert.equal(
       action.startsWith('order.') && action !== 'order.intent',

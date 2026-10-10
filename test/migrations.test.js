@@ -163,6 +163,54 @@ test('ships the orders table as an expand migration that never touches deals (AD
   assert.doesNotMatch(orders.sql, /crm\.deals/iu);
 });
 
+test('moves new valid-file receipts to RustFS and keeps old ones (ADR 023)', async () => {
+  const handoff = (await loadMigrations()).find(
+    ({ version }) => version === '0028',
+  );
+  assert.ok(handoff, 'migration 0028 is present');
+  assert.equal(handoff.name, 'media_handoff_rustfs');
+  assert.equal(handoff.phase, 'expand');
+  assert.match(handoff.sql, /DROP CONSTRAINT media_handoff_destination_check/u);
+  assert.match(handoff.sql, /CHECK \(destination = 'rustfs'\) NOT VALID;/u);
+});
+
+test('ships paid store orders as an expand migration with locked rows (ADRs 027 and 028)', async () => {
+  const store = (await loadMigrations()).find(
+    ({ version }) => version === '0029',
+  );
+  assert.ok(store, 'migration 0029 is present');
+  assert.equal(store.name, 'store_orders');
+  assert.equal(store.phase, 'expand');
+  assert.match(
+    store.sql,
+    /ADD COLUMN origin text NOT NULL DEFAULT 'atendimento'/u,
+  );
+  assert.match(store.sql, /ALTER COLUMN conversation_id DROP NOT NULL/u);
+  assert.match(
+    store.sql,
+    /CHECK \(\(origin = 'loja'\) = \(conversation_id IS NULL\)\)/u,
+  );
+  // ADR 028: paid as InfinitePay confirmed it, in full, by Pix.
+  assert.match(store.sql, /ADD CONSTRAINT orders_store_paid_by_gateway\b/u);
+  assert.match(store.sql, /paid_amount_cents >= final_amount_cents/u);
+  assert.match(store.sql, /payment_condition = 'pix'/u);
+  assert.match(
+    store.sql,
+    /CREATE UNIQUE INDEX orders_payment_transaction_nsu\b/u,
+  );
+  // The shop's number is a label, not a key.
+  assert.doesNotMatch(store.sql, /UNIQUE INDEX orders_store_number\b/u);
+  assert.doesNotMatch(store.sql, /payment_declared_at/u);
+  assert.match(store.sql, /CREATE TABLE crm\.store_order_receipts\b/u);
+  // The receipt never stores an IP, an Origin, a phone or a receipt link in
+  // the clear.
+  assert.doesNotMatch(
+    store.sql,
+    /\b(?:ip_address|client_ip|ip_digest|request_origin|phone|telefone|receipt_url)\s+text\b/u,
+  );
+  assert.doesNotMatch(store.sql, /\bDROP\s+(?:TABLE|COLUMN)\b/iu);
+});
+
 test('loads versioned forward-only migrations in deterministic order', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'crm-migrations-'));
   try {

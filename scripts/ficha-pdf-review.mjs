@@ -18,6 +18,7 @@ import {
   TEMPLATE_V3,
   TEMPLATE_V4,
   TEMPLATE_V5,
+  TEMPLATE_V6,
   printSnapshot,
 } from '../modules/orders/src/print/print-snapshot.js';
 import { PRINT_TEMPLATE } from '../modules/orders/src/print/index.js';
@@ -29,6 +30,10 @@ import {
   fichaV5ApprovalStages,
   validateFichaReviewV5,
 } from './ficha-pdf-review-v5.mjs';
+import {
+  fichaV6ApprovalStages,
+  validateFichaReviewV6,
+} from './ficha-pdf-review-v6.mjs';
 
 const rootUrl = new URL('../', import.meta.url);
 const snapshotUrl = new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl);
@@ -1004,18 +1009,20 @@ export function validateFichaApprovalEvidenceV3(evidence, gate) {
  * printed order stays on the approved v2. Production also needs the final
  * signature: that is a go-live gate (EASYPANEL-TOPOLOGY.md, section 12).
  *
- * ADR 020: v5 likewise needs the PO's provisional approval of its sample.
+ * ADR 020: v5 likewise needs the PO's provisional approval of its sample,
+ * and so does v6 (ADR 025).
  *
- * @param {{gate: any, gateV4?: any, gateV5?: any, printTemplate: string}} input
+ * @param {{gate: any, gateV4?: any, gateV5?: any, gateV6?: any, printTemplate: string}} input
  */
 export function validateFichaPrintSwitch({
   gate,
   gateV4,
   gateV5,
+  gateV6,
   printTemplate,
 }) {
   invariant(
-    [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4, TEMPLATE_V5].includes(
+    [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4, TEMPLATE_V5, TEMPLATE_V6].includes(
       printTemplate,
     ),
     'PRINT_TEMPLATE must name a known ficha template',
@@ -1040,6 +1047,13 @@ export function validateFichaPrintSwitch({
       (gateV5?.templateVersion === TEMPLATE_V5 &&
         (v5Stages.provisional || v5Stages.final)),
     'PRINT_TEMPLATE selects ficha-canonical-v5 before its approval is recorded',
+  );
+  const v6Stages = fichaV6ApprovalStages(gateV6);
+  invariant(
+    printTemplate !== TEMPLATE_V6 ||
+      (gateV6?.templateVersion === TEMPLATE_V6 &&
+        (v6Stages.provisional || v6Stages.final)),
+    'PRINT_TEMPLATE selects ficha-canonical-v6 before its approval is recorded',
   );
 }
 
@@ -1270,15 +1284,17 @@ async function validateV3() {
   });
   const gateV4 = await validateFichaReviewV4();
   const gateV5 = await validateFichaReviewV5();
+  const gateV6 = await validateFichaReviewV6();
   validateFichaPrintSwitch({
     gate,
     gateV4,
     gateV5,
+    gateV6,
     printTemplate: PRINT_TEMPLATE,
   });
   const stages = fichaV3ApprovalStages(gate);
   console.log(
-    `Ficha v3 PDF review gate valid: provisional ${gate.provisionalApproval.status} (${gate.provisionalApproval.scope}); final ${gate.approval.status}${stages.final ? '' : ' (physical signature by Rose and Operação required before production)'}; v4 provisional ${gateV4.provisionalApproval.status}; v4 final ${gateV4.approval.status}; v5 provisional ${gateV5.provisionalApproval.status}; v5 final ${gateV5.approval.status}; orders print on ${PRINT_TEMPLATE}.`,
+    `Ficha v3 PDF review gate valid: provisional ${gate.provisionalApproval.status} (${gate.provisionalApproval.scope}); final ${gate.approval.status}${stages.final ? '' : ' (physical signature by Rose and Operação required before production)'}; v4 provisional ${gateV4.provisionalApproval.status}; v4 final ${gateV4.approval.status}; v5 provisional ${gateV5.provisionalApproval.status}; v5 final ${gateV5.approval.status}; v6 provisional ${gateV6.provisionalApproval.status}; v6 final ${gateV6.approval.status}; orders print on ${PRINT_TEMPLATE}.`,
   );
 }
 

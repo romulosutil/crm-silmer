@@ -1,6 +1,9 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 
-import { AUTOMATION_ORDER_ACTIONS } from './authorization.js';
+import {
+  AUTOMATION_ORDER_ACTIONS,
+  AUTOMATION_STORE_ACTIONS,
+} from './authorization.js';
 
 export const AUTOMATION_EXECUTOR_ACTOR = Object.freeze({
   id: 'AUTOMATION_EXECUTOR',
@@ -18,6 +21,7 @@ export const AUTOMATION_EXECUTOR_ACTIONS = Object.freeze([
   'deal.transition',
   'handoff.create',
   ...AUTOMATION_ORDER_ACTIONS,
+  ...AUTOMATION_STORE_ACTIONS,
 ]);
 
 const allowedActions = new Set(AUTOMATION_EXECUTOR_ACTIONS);

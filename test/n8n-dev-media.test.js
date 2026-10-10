@@ -180,9 +180,12 @@ for (const local of [false, true])
       ),
     );
     assert.deepEqual(snapshot, createDevTestWorkflow(source, { local }));
-    assert.equal(snapshot.nodes.length, 77);
-    assert.equal(
-      JSON.stringify(snapshot).includes('graph.facebook.com'),
-      false,
+    // ADR 026 inbound reading adds nodes; outbound seller transports stay simulated.
+    assert.equal(snapshot.nodes.length, 91);
+    const metaRequests = snapshot.nodes.filter((/** @type {any} */ node) =>
+      node.parameters?.url?.includes('graph.facebook.com'),
     );
+    assert.equal(metaRequests.length, 1);
+    assert.equal(metaRequests[0].name, 'WhatsApp - Consultar mídia (MVP)');
+    assert.equal(metaRequests[0].parameters.method, 'GET');
   });

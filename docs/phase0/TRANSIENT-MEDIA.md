@@ -1,7 +1,7 @@
 # T00.4 — Mídia transitória do piloto interno
 
 > Baseline histórica do runtime transitório. Para a nova mídia enviada pelo
-> vendedor no chat, a [ADR 023](../adr/023-midia-do-chat-no-rustfs.md) determina
+> vendedor no chat, a [ADR 029](../adr/029-midia-do-chat-no-rustfs.md) determina
 > RustFS e preservação sem TTL de sete dias ou exclusão por encerramento.
 > A migração/isolamento dos jobs é implementação pendente no
 > [plano INBOX-MEDIA-1](../../.specs/features/inbox-media-rustfs/design.md).
@@ -17,14 +17,14 @@ ser tratados como arquivo permanente do CRM. Eles ficam em uma área privada da
 VPS somente enquanto ajudam na jornada. O CRM apaga os bytes quando a jornada
 termina ou quando completam sete dias, o que acontecer primeiro.
 
-Se o arquivo for inválido, ele é descartado e nunca segue para o Dropbox. Um
+Se o arquivo for inválido, ele é descartado e nunca chega ao pedido. Um
 arquivo só é válido quando passa limite, MIME real, hash e varredura e uma
 pessoa o classifica como necessário à finalidade operacional. Se atender às
-duas condições, a equipe o guarda no Dropbox pelo processo
-que já utiliza hoje. O CRM registra apenas um recibo do handoff — hash,
-operador, horário e resultado — e então elimina a cópia temporária. Nesta fase
-não existe integração automática, token, SDK, OAuth ou sincronização com o
-Dropbox.
+duas condições, o operador o anexa ao pedido, que o guarda no RustFS privado
+do CRM ([ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md)). O CRM registra
+um recibo do handoff — hash, operador, horário e resultado — e então elimina a
+cópia temporária. Não existe promoção automática a partir do canal nem URL
+pública do arquivo.
 
 Perder a única cópia temporária por falha da VPS é um risco aceito para o
 produto interno. Nesse caso, o CRM mostra `lost/unavailable`; não promete
@@ -60,9 +60,9 @@ subconjunto mínimo para uma classe durável antes desse prazo.
 ## Limites desta entrega
 
 Esta entrega fixa e testa a regra de domínio. Ela não provisiona o volume no
-EasyPanel, não implementa o worker de mídia e não configura o Dropbox. Esses
-passos pertencem a T02/T06. O gate R2 permanece apenas como opção futura na
-issue `#29`; nenhuma assinatura ou bucket foi autorizado.
+EasyPanel, não implementa o worker de mídia e não provisiona o RustFS. Esses
+passos pertencem a T02/T06 e à ADR 023. O gate R2 permanece apenas como opção
+futura na issue `#29`; nenhuma assinatura ou bucket foi autorizado.
 
 ## Verificação
 

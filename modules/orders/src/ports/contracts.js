@@ -1,5 +1,6 @@
 import { OrderInputError } from '../domain/errors.js';
 import { ORDER_STATUSES } from '../domain/order.js';
+import { ORDER_ORIGINS } from '../domain/store-order.js';
 
 /**
  * @typedef {import('../domain/order.js').Order} Order
@@ -17,13 +18,46 @@ import { ORDER_STATUSES } from '../domain/order.js';
  * Human writes include `actor`; only technical briefing projection omits it.
  * @typedef {{expectedVersion: number, correlationId: string, actor?: {id: string, kind: string, capabilities?: readonly string[]}}} OrderWriteOptions
  *
- * A search matches orders by exact number OR by conversation; with neither,
- * every order matches. Customer and phone search resolve to conversations
- * outside this port, so no personal data is ever queried in the clear.
+ * A search matches orders by exact number OR by conversation OR, for store
+ * orders (ADRs 027 and 028), by the HMAC of the customer's phone or by the
+ * shop's number (`LJ-…`); with none, every order matches. Customer and phone
+ * search resolve outside this port, so no personal data is ever queried in
+ * the clear. `origin` narrows the search.
  * @typedef {{
  *   status?: OrderStatus, numberSequence?: number, conversationIds?: string[],
- *   cursor?: string|null, limit: number,
+ *   phoneDigests?: string[], storeNumber?: string,
+ *   origin?: 'atendimento'|'loja', cursor?: string|null, limit: number,
  * }} OrderListQuery
+ *
+ * ADR 028: the store order recorded by the n8n checkout workflow. The
+ * receipt keeps the `pedido_id` (the natural key of a retry), the HMAC of
+ * the phone (the list search) and the hash of the data a retry must repeat;
+ * `audit` names who called, for the audit event of the same transaction.
+ * @typedef {{actor: string, correlationId: string}} StoreAuditContext
+ * @typedef {{
+ *   order: ReturnType<typeof import('../domain/store-order.js').buildStoreOrder>,
+ *   receipt: {requestId: string, phoneDigest: string, recordSha256: string},
+ *   audit: StoreAuditContext, now: Date,
+ * }} CreateStoreOrderInput
+ * @typedef {{
+ *   orderId: string, receiptUrl: string, audit: StoreAuditContext, now: Date,
+ * }} AttachStoreReceiptInput
+ * @typedef {{order: Order, recordSha256: string}} StoredStoreOrder
+ *
+ * - `findStoreOrder` reads the order of a `pedido_id`, with its hash.
+ * - `createStoreOrder` writes the order, its receipt, an `order.created`
+ *   event and the `store.order.create` audit in one transaction. The same
+ *   `pedido_id` twice is `StoreOrderDuplicateError`; a `transaction_nsu`
+ *   another order already holds is `409 STORE_ORDER_CONFLICT`.
+ * - `attachStoreReceipt` stores the receipt link an order did not have,
+ *   with an `order.receipt_attached` event and the
+ *   `store.order.receipt_attached` audit; the same link again changes
+ *   nothing, and another one is `409 STORE_ORDER_CONFLICT`.
+ * @typedef {{
+ *   findStoreOrder(requestId: string): Promise<StoredStoreOrder|null>,
+ *   createStoreOrder(input: CreateStoreOrderInput): Promise<Order>,
+ *   attachStoreReceipt(input: AttachStoreReceiptInput): Promise<{order: Order, attached: boolean}>,
+ * }} StoreOrderRepository
  *
  * @typedef {{
  *   items: Order[], nextCursor: string|null,
@@ -69,6 +103,7 @@ export const ORDER_REPOSITORY_METHODS = Object.freeze([
 ]);
 
 export const MAX_ORDER_PAGE_SIZE = 100;
+const STORE_NUMBER = /^LJ-[0-9A-F]{8}$/u;
 
 /** @param {unknown} repository @returns {asserts repository is OrderRepository} */
 export function assertOrderRepositoryContract(repository) {
@@ -87,10 +122,19 @@ export function assertOrderRepositoryContract(repository) {
  * Validates the parts of a list query both adapters interpret identically.
  *
  * @param {OrderListQuery} query
- * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, after: {updatedAt: string, id: string}|null, limit: number}}
+ * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, phoneDigests: string[]|undefined, storeNumber: string|undefined, origin: 'atendimento'|'loja'|undefined, after: {updatedAt: string, id: string}|null, limit: number}}
  */
 export function readOrderListQuery(query) {
-  const { conversationIds, cursor, limit, numberSequence, status } = query;
+  const {
+    conversationIds,
+    cursor,
+    limit,
+    numberSequence,
+    origin,
+    phoneDigests,
+    status,
+    storeNumber,
+  } = query;
   if (
     !Number.isSafeInteger(limit) ||
     limit < 1 ||
@@ -114,13 +158,29 @@ export function readOrderListQuery(query) {
   ) {
     throw new TypeError('conversationIds must be a list of ids');
   }
+  if (
+    phoneDigests !== undefined &&
+    (!Array.isArray(phoneDigests) ||
+      phoneDigests.some((digest) => typeof digest !== 'string'))
+  ) {
+    throw new TypeError('phoneDigests must be a list of digests');
+  }
+  if (storeNumber !== undefined && !STORE_NUMBER.test(storeNumber)) {
+    throw new TypeError('storeNumber must be LJ- and eight hex digits');
+  }
+  if (origin !== undefined && !ORDER_ORIGINS.includes(origin)) {
+    throw new OrderInputError('origin is invalid', ['origin']);
+  }
   return {
     after:
       cursor === undefined || cursor === null ? null : decodeCursor(cursor),
     conversationIds,
     limit,
     numberSequence,
+    origin,
+    phoneDigests,
     status,
+    storeNumber,
   };
 }
 

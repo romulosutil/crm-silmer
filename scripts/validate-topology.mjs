@@ -9,6 +9,20 @@ const expectedServices = [
   'silmer-worker',
   'silmer-postgres',
 ];
+const objectStorageDecision = 'docs/adr/023-arquivos-da-arte-no-rustfs.md';
+const objectStorageGaps = [
+  'public-s3-and-console-domains',
+  'shared-project',
+  'cross-project-endpoint-smoke-pending',
+  'image-digest-not-confirmed',
+  'private-bucket-pending',
+  'dedicated-bucket-credential-pending',
+  'off-host-backup-not-evidenced',
+];
+const objectStorageImagePattern =
+  /^rustfs\/rustfs:[0-9][0-9A-Za-z.-]*@sha256:[0-9a-f]{64}$/u;
+const decisionRecordPattern = /^docs\/adr\/\d{3}-[a-z0-9-]+\.md$/u;
+const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/u;
 const imageReferencePattern =
   /^ghcr\.io\/romulosutil\/crm-silmer\/(edge-web|runtime)@sha256:[0-9a-f]{64}$/u;
 const evidenceReferencePattern =
@@ -32,6 +46,148 @@ function sameArray(actual, expected) {
   return (
     actual.length === expected.length &&
     actual.every((value, index) => value === expected[index])
+  );
+}
+
+/**
+ * Gaps that the observed RustFS state still implies. A gap only disappears
+ * when the state that causes it is fixed or explicitly accepted.
+ * @param {Record<string, any>} storage
+ */
+export function deriveObjectStorageGaps(storage) {
+  const routes = /** @type {Array<Record<string, any>>} */ (
+    storage.publicRoutes ?? []
+  );
+  const [bucket] = /** @type {Array<Record<string, any>>} */ (
+    storage.buckets ?? []
+  );
+  const gaps = new Set();
+  if (
+    routes.some(
+      ({ purpose, restriction }) =>
+        purpose !== 'console' || restriction === null,
+    )
+  ) {
+    gaps.add('public-s3-and-console-domains');
+  }
+  if (
+    storage.project !== 'espectro-mvp' &&
+    storage.sharedProjectRiskAcceptedRef === null
+  ) {
+    gaps.add('shared-project');
+  }
+  if (storage.crossProjectEndpointSmoked !== true) {
+    gaps.add('cross-project-endpoint-smoke-pending');
+  }
+  if (storage.imageDigestConfirmed !== true) {
+    gaps.add('image-digest-not-confirmed');
+  }
+  if (bucket?.created !== true) gaps.add('private-bucket-pending');
+  if (storage.dedicatedCredential !== 'created') {
+    gaps.add('dedicated-bucket-credential-pending');
+  }
+  if (storage.dataVolume?.offHostBackupEvidenced !== true) {
+    gaps.add('off-host-backup-not-evidenced');
+  }
+  return objectStorageGaps.filter((gap) => gaps.has(gap));
+}
+
+/**
+ * ADR 023: the order files live in the existing RustFS of the `schedule`
+ * project. Only the API reaches it, by its internal host, and every deviation
+ * from that contract stays an explicit gap.
+ * @param {Record<string, any>} project
+ */
+function validateSharedObjectStorage(project) {
+  const shared = /** @type {Array<Record<string, any>>} */ (
+    project.sharedServices ?? []
+  );
+  invariant(
+    Array.isArray(shared) &&
+      sameArray(
+        shared.map(({ name }) => name),
+        ['rustfs'],
+      ),
+    `${project.name} shared services must be exactly rustfs`,
+  );
+  const [storage] = shared;
+  invariant(
+    storage.project === 'schedule' &&
+      storage.kind === 'object-storage' &&
+      storage.decisionRecord === objectStorageDecision &&
+      isoDatePattern.test(storage.observedAt ?? ''),
+    'schedule/rustfs must trace to ADR 023 with an observation date',
+  );
+  invariant(
+    storage.internalHost === 'schedule_rustfs' &&
+      storage.internalPort === 9000 &&
+      sameArray(storage.clients ?? [], ['silmer-api']),
+    'schedule/rustfs must be reached only by silmer-api on its internal host and port 9000',
+  );
+  const routes = /** @type {Array<Record<string, any>>} */ (
+    storage.publicRoutes ?? []
+  );
+  invariant(
+    Array.isArray(storage.publicRoutes) &&
+      routes.every(
+        ({ hostname, purpose, restriction }) =>
+          hostname === null &&
+          ['s3-api', 'console'].includes(purpose) &&
+          (restriction === null || typeof restriction === 'string'),
+      ) &&
+      storage.public === routes.length > 0,
+    'schedule/rustfs public routes must be declared without storing hostnames',
+  );
+  invariant(
+    storage.imageDigestConfirmed === true
+      ? objectStorageImagePattern.test(storage.imageRef ?? '')
+      : storage.imageDigestConfirmed === false && storage.imageRef === null,
+    'schedule/rustfs must not claim an unconfirmed image digest',
+  );
+  invariant(
+    storage.sharedProjectRiskAcceptedRef === null ||
+      decisionRecordPattern.test(storage.sharedProjectRiskAcceptedRef),
+    'Shared-project risk can only be accepted by a decision record',
+  );
+  const buckets = /** @type {Array<Record<string, any>>} */ (
+    storage.buckets ?? []
+  );
+  invariant(
+    buckets.length === 1 &&
+      buckets[0].name === 'crm-silmer-arquivos' &&
+      typeof buckets[0].created === 'boolean' &&
+      buckets[0].publicAccess === false &&
+      buckets[0].offHostBackup === 'with-postgres' &&
+      buckets[0].recoveryDrill === 'with-postgres' &&
+      typeof storage.dataVolume?.offHostBackupEvidenced === 'boolean',
+    'schedule/rustfs needs a private bucket in the off-host backup and drill with PostgreSQL',
+  );
+  const inventory = /** @type {string[]} */ (project.secrets?.inventory ?? []);
+  const secretNames = /** @type {string[]} */ (storage.secretNames ?? []);
+  invariant(
+    sameArray(secretNames, [
+      'OBJECT_STORAGE_ACCESS_KEY_ID',
+      'OBJECT_STORAGE_SECRET_ACCESS_KEY',
+    ]) &&
+      secretNames.every((name) => inventory.includes(name)) &&
+      ['pending', 'created'].includes(storage.dedicatedCredential),
+    'schedule/rustfs must use a dedicated API credential, never the RustFS root keys',
+  );
+  const declared = /** @type {string[]} */ (storage.gaps ?? []);
+  const derived = deriveObjectStorageGaps(storage);
+  invariant(
+    Array.isArray(storage.gaps) &&
+      new Set(declared).size === declared.length &&
+      declared.every((gap) => objectStorageGaps.includes(gap)) &&
+      sameArray(
+        objectStorageGaps.filter((gap) => declared.includes(gap)),
+        derived,
+      ),
+    `schedule/rustfs gaps must match the observed state: ${derived.join(', ') || 'none'}`,
+  );
+  invariant(
+    storage.status === (derived.length > 0 ? 'existing-with-gaps' : 'ready'),
+    'schedule/rustfs cannot be ready while gaps remain',
   );
 }
 
@@ -141,6 +297,8 @@ export function validateTopologyDocument(document) {
       }
     }
 
+    validateSharedObjectStorage(project);
+
     invariant(
       project.secrets?.scope === 'silmer',
       `${project.name} secrets must use the Silmer scope`,
@@ -200,6 +358,56 @@ function rejectSensitiveMaterial(value) {
     );
     rejectSensitiveMaterial(child);
   }
+}
+
+/**
+ * @param {any} storageGate
+ * @param {Record<string, any>} storage
+ */
+function validateObjectStorageGate(storageGate, storage) {
+  const checks = [
+    'serviceCreated',
+    'publicDomainsRemovedOrRestricted',
+    'sharedProjectRiskAccepted',
+    'crossProjectEndpointSmoked',
+    'imageDigestConfirmed',
+    'privateBucketCreated',
+    'apiCredentialsSeparated',
+    'offHostBackupConfigured',
+    'restoreDrilledWithPostgres',
+  ];
+  invariant(
+    storageGate?.service === `${storage.project}/${storage.name}` &&
+      storageGate.decisionRecord === objectStorageDecision &&
+      isoDatePattern.test(storageGate.observedAt ?? '') &&
+      checks.every((check) => typeof storageGate[check] === 'boolean'),
+    'Object storage gate must trace schedule/rustfs to ADR 023',
+  );
+  const gaps = deriveObjectStorageGaps(storage);
+  invariant(
+    ['pending-external', 'passed'].includes(storageGate.status) &&
+      (storageGate.status !== 'passed' ||
+        (gaps.length === 0 &&
+          checks.every((check) => storageGate[check] === true))),
+    'Object storage gate cannot pass while public domains or gaps remain',
+  );
+  const [bucket] = storage.buckets;
+  invariant(
+    storageGate.serviceCreated === true &&
+      storageGate.publicDomainsRemovedOrRestricted ===
+        !gaps.includes('public-s3-and-console-domains') &&
+      storageGate.sharedProjectRiskAccepted ===
+        (storage.sharedProjectRiskAcceptedRef !== null) &&
+      storageGate.crossProjectEndpointSmoked ===
+        storage.crossProjectEndpointSmoked &&
+      storageGate.imageDigestConfirmed === storage.imageDigestConfirmed &&
+      storageGate.privateBucketCreated === bucket.created &&
+      storageGate.apiCredentialsSeparated ===
+        (storage.dedicatedCredential === 'created') &&
+      storageGate.offHostBackupConfigured ===
+        storage.dataVolume.offHostBackupEvidenced,
+    'Object storage gate must match the observed schedule/rustfs state',
+  );
 }
 
 /**
@@ -357,6 +565,10 @@ export function validateProvisioningGate(gate, topology) {
     Array.isArray(gate.acceptedRisks),
     'Provisioning gate must declare accepted risks',
   );
+  validateObjectStorageGate(
+    gate.objectStorageGate,
+    topology.projects[0].sharedServices[0],
+  );
   if (gate.status === 'passed') {
     invariant(
       gate.acceptedRisks.length === 0 &&
@@ -423,7 +635,7 @@ async function main() {
   validateEnvironmentTemplate(environmentTemplate, topology);
   validateProvisioningGate(provisioningGate, topology);
   console.log(
-    'Topology valid: shared project, prefixed services, immutable images, no secret values.',
+    'Topology valid: shared project, prefixed services, immutable images, schedule/rustfs gaps explicit, no secret values.',
   );
 }
 

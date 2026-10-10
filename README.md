@@ -5,7 +5,7 @@ vendas, PIX e geração da Ficha de Pedido. O produto substituirá integralmente
 Datacrazy. O primeiro MVP operacional usa WhatsApp Business no n8n; Instagram
 Direct é a próxima fase de canal.
 
-> **Estado atual:** Inbox, Clientes, usuários, Pedidos e Dashboard estão implementados; PR 142 integrada com técnica por item, arte do pedido e impressão v5. A assinatura física de Rose e Operação permanece pendente. OpenAI é o provedor escolhido. O deploy atual é automático GitHub → EasyPanel. A integração n8n usa
+> **Estado atual:** Inbox, Clientes, usuários, Pedidos e Dashboard estão implementados; PR 142 integrada com técnica por item e arte do pedido; a impressão vigente é v6 com público por item (ADR 025). Arquivos da arte no RustFS, chat do site e pedidos pagos da loja também fazem parte da baseline integrada. A assinatura física de Rose e Operação permanece pendente. OpenAI é o provedor escolhido. O deploy atual é automático GitHub → EasyPanel. A integração n8n usa
 > três endpoints e reserva de envio por epoch/revisão. Publicação e go-live
 > continuam sujeitos às duas credenciais Basic DEV, homologação WhatsApp e
 > gates externos. Veja
@@ -38,8 +38,8 @@ histórico e não define o sistema novo.
 - Automação: n8n obrigatório para WhatsApp, provedor de IA e jornada,
   sempre por APIs do CRM e sem acesso direto ao banco.
 - Integrações: contratos canônicos entre n8n e CRM; mídia transitória em volume
-  privado da VPS, arquivos válidos no processo operacional Dropbox e storage
-  S3-compatible diferido para a issue `#29`.
+  privado da VPS, arquivos do pedido no RustFS privado da rede interna (ADR 023)
+  e storage S3-compatible gerenciado diferido para a issue `#29`.
 
 Pinia/Nuxt, outros frameworks de frontend, Redis, microserviços adicionais e
 estado de domínio em `window` estão fora da baseline do MVP. A adoção de Vue

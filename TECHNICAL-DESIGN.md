@@ -98,6 +98,17 @@ antigas. Conversa transferida não volta ao bot (ADR 015).
 Contrato, diagnóstico e rollout: [n8n](docs/integrations/n8n/README.md) e
 [ator técnico](docs/runbooks/automation-executor.md).
 
+ADR 028: `POST /api/v1/integrations/n8n/store-orders` recebe do workflow da
+loja o pedido pago, depois do `payment_check` da InfinitePay. Mesmo contrato
+das rotas n8n (Basic do `AUTOMATION_EXECUTOR`, ação `store.order.record`,
+`Idempotency-Key` igual a `pedido_id`, correlação, identidade do workflow,
+problem+json), corpo até 16 KB e 60 chamadas por minuto. A idempotência é pela
+chave natural `pedido_id` (recibo com o hash dos dados comparados); o
+comprovante que chega depois é gravado; divergência e NSU repetido são `409`.
+Desligada sem `STORE_ORDERS_HMAC_KEY`; as URLs da resposta usam
+`APP_BASE_URL`. Contrato do nó: [n8n](docs/integrations/n8n/README.md);
+variáveis e implantação: [loja do site](docs/runbooks/loja-do-site.md).
+
 ## 5. Pedido, impressão e métricas
 
 Pedido tem `pendente` e `confirmado` (ADR 006). O primeiro ponto confirmado
@@ -112,11 +123,30 @@ Gerar exige pontos obrigatórios dos itens, arte e entrega prometida. A edição
 parcial é permitida. `summary.aplicacao`, `modelo` e campos antigos seguem
 preservados para compatibilidade, sem criar novos critérios de geração.
 
+ADR 025: cada item tem `publico` (masculino, feminino, infantil, unissex) e
+`quantidade_informada` opcionais, que não bloqueiam gerar. A divisão dita ao
+bot (`audiences`) vira um item por público quando o domínio a lê sem dúvida
+(`modules/orders/src/domain/audiences.js`); "Tecido" passa a "Modelo de
+malha". O bot pergunta pelo produto, com kits e pontos passivos (ADR 024).
+
 `GET /api/v1/orders/:orderId/print` exige sessão de leitura autorizada e
-Pedido confirmado. Retorna HTML imprimível da v5, escolhida em
-`modules/orders/src/print/index.js`. PDF sintético e hashes são artefatos
-de aprovação, sem prova de envio externo. V2/v3/v4 não são sobrescritas.
-Assinatura física de Rose/Operação na v5 segue obrigatória antes da produção.
+Pedido confirmado. Retorna HTML imprimível da v6 (público de cada item e
+"Modelo de malha"), escolhida em `modules/orders/src/print/index.js` e
+aprovada provisoriamente pelo PO em 06/10/2026. PDF sintético e hashes são
+artefatos de aprovação, sem prova de envio externo. V2 a v5 não são
+sobrescritas. Assinatura física de Rose/Operação na v6 segue obrigatória
+antes da produção.
+
+Pedido da loja (ADRs 027 e 028): `origin = loja`, sem conversa, nasce
+confirmado pelo ator `system:loja-do-site` ao preço de
+`modules/orders/src/domain/store-catalog.js` (R$ 180,00, prazo por cor), com
+`paid_on` no dia em que a InfinitePay confirmou e as colunas do gateway
+(`payment_source`, `payment_confirmed_at`, `paid_amount_cents`,
+`payment_transaction_nsu` único, `payment_invoice_slug`), `store_number` e
+`lead_time_business_days`; o link do comprovante fica na ficha cifrada.
+Qualquer escrita humana depois é `409 ORDER_LOCKED`. Imprime `ficha-loja-v1`
+na mesma rota, com `?download=1` para anexo; teste (`is_test`) fica fora das
+métricas.
 
 Dashboard/listas usam read models autorizados. Vendido/vendas contam
 confirmados e não representam recebimentos. SSE usa IDs e metadados mínimos.
@@ -159,9 +189,19 @@ no worker. Homologação construída e migração de cópias legadas disponívei
 no [plano INBOX-MEDIA-1](.specs/features/inbox-media-rustfs/design.md). O storage
 R2 futuro não é dependência dessa entrega; backup externo/restore têm gate próprio.
 
-Perda da única cópia resulta em `lost/unavailable`. Arquivos válidos seguem
-procedimento Dropbox. Upload de arte e arquivo durável por API não estão
-habilitados no contrato atual. S3/R2 está diferido na issue #29; essa decisão
+O pipeline falha fechado: scan e definições vigentes precedem `ready` e
+envio. Recuperar validação temporariamente indisponível reutiliza a mesma
+mídia, sem upload ou envio automático. Testes sintéticos DEV não substituem
+captura com microfone físico (T24) nem homologação WhatsApp. Persistência de
+dados de execução n8n continua condicionada à minimização e ao expurgo
+registrados no gate de privacidade da feature.
+
+Perda da única cópia resulta em `lost/unavailable`. Arquivos válidos são
+anexados ao pedido. Os arquivos da arte (5 de até 10 MB e a arte final) ficam
+no RustFS interno, só pela API, com catálogo cifrado, assinatura do conteúdo,
+auditoria e idempotência ([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)).
+O RustFS divide a VPS com o PostgreSQL; o risco é aceito com o bucket no
+backup off-host e no drill. S3/R2 externo segue diferido na issue #29; isso
 não dispensa backup de bancos/documentos duráveis. Pedidos/Fichas e auditoria
 não herdam a retenção curta de mídia.
 

@@ -51,6 +51,26 @@ const localIdentityEnvironment = {
   IDENTITY_BOOTSTRAP_TOKEN:
     process.env.IDENTITY_BOOTSTRAP_TOKEN ??
     'development-bootstrap-token-local-only',
+  // ADR 028: the store orders the local n8n records, test ones included.
+  STORE_ORDERS_HMAC_KEY:
+    process.env.STORE_ORDERS_HMAC_KEY ?? localSecrets.STORE_ORDERS_HMAC_KEY,
+  STORE_ORDERS_ACCEPT_TEST: process.env.STORE_ORDERS_ACCEPT_TEST ?? 'true',
+  // The order and ficha links the store route answers point here.
+  APP_BASE_URL: process.env.APP_BASE_URL ?? `http://${devHost}:${devPort}`,
+};
+// ADR 023: the order's art files go to the local RustFS of
+// docker-compose.dev.yml unless another S3 endpoint is given.
+const localObjectStorage = process.env.OBJECT_STORAGE_ENDPOINT === undefined;
+const objectStorageEnvironment = {
+  OBJECT_STORAGE_ENDPOINT:
+    process.env.OBJECT_STORAGE_ENDPOINT ?? 'http://127.0.0.1:9000',
+  OBJECT_STORAGE_REGION: process.env.OBJECT_STORAGE_REGION ?? 'us-east-1',
+  OBJECT_STORAGE_BUCKET:
+    process.env.OBJECT_STORAGE_BUCKET ?? 'crm-silmer-arquivos',
+  OBJECT_STORAGE_ACCESS_KEY_ID:
+    process.env.OBJECT_STORAGE_ACCESS_KEY_ID ?? 'rustfs_local_only',
+  OBJECT_STORAGE_SECRET_ACCESS_KEY:
+    process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY ?? 'rustfs_local_only_secret',
 };
 const localN8nClientId = 'n8n-local-development';
 const localN8nClientSecret = localSecrets.CRM_AUTOMATION_CLIENT_SECRET;
@@ -85,6 +105,7 @@ const localN8nComposeEnvironment = {
 };
 
 if (process.env.DATABASE_URL === undefined) await startLocalDatabase();
+if (localObjectStorage) await startLocalObjectStorage();
 if (localN8nEnabled) await startLocalN8n();
 await runMigrations();
 await runInitialBuild();
@@ -97,6 +118,7 @@ try {
       DATABASE_URL: databaseUrl,
       ...localIdentityEnvironment,
       ...localN8nEnvironment,
+      ...objectStorageEnvironment,
       HOST: apiHost,
       PORT: apiPort,
     }),
@@ -188,6 +210,17 @@ async function startLocalDatabase() {
   throw new Error('Local PostgreSQL did not become ready in time');
 }
 
+async function startLocalObjectStorage() {
+  await run('local RustFS', 'docker', [
+    'compose',
+    '-f',
+    'docker-compose.dev.yml',
+    'up',
+    '--detach',
+    'rustfs',
+  ]);
+}
+
 async function startLocalN8n() {
   await run('local n8n workflow generation', process.execPath, [
     'ops/n8n/workflows/create-dev-test-workflow.mjs',
@@ -255,6 +288,7 @@ async function readOrCreateLocalSecrets() {
     'N8N_COMMAND_CLIENT_SECRET',
     'N8N_INTEGRATION_ENVELOPE_KEY',
     'OPERATION_CURSOR_HMAC_KEY',
+    'STORE_ORDERS_HMAC_KEY',
   ];
   let changed = false;
   for (const name of names) {

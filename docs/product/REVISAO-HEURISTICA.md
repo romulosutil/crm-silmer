@@ -57,6 +57,6 @@ critérios comerciais validados. A interface usa sinais observáveis de tempo e
 resposta, sem porcentagem de fechamento. A comparação visual da ficha usa
 `ficha-canonica-sintetica-v3.pdf` e a candidata
 `output/pdf/ficha-canonica-sintetica-v4.pdf`; o exemplar real
-`25-CRM-ficha-v3.pdf` não deve ser copiado para testes ou relatórios. A v5 está selecionada com aprovação provisória do PO; a assinatura física de Rose e Operação continua obrigatória antes da produção. O envio ao
-Dropbox e as notificações a Rose ficam para fluxos de produção acordados com
-a Silmer.
+`25-CRM-ficha-v3.pdf` não deve ser copiado para testes ou relatórios. A v6 está selecionada com aprovação provisória do PO (ADR 025); a assinatura física de Rose e Operação continua obrigatória antes da produção. O envio de
+arquivos da arte usa o RustFS interno (ADR 023); as notificações a Rose ficam
+para fluxos de produção acordados com a Silmer.

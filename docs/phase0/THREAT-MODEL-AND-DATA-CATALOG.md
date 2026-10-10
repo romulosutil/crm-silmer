@@ -17,8 +17,8 @@ controle já implantado.
 Ativos prioritários: identidade e contato, conversas/anexos, Pedido/Ficha/PIX,
 sessões e grants, audit trail/tombstones, segredos e artefatos de build. As
 fronteiras incluem navegador/API, webhooks e mídia Meta, banco, volume privado
-da VPS, handoff operacional ao Dropbox, operador de IA, supply chain e o plano
-isolado de backup/tombstones.
+da VPS, handoff do arquivo válido ao pedido, operador de IA, supply chain e o
+plano isolado de backup/tombstones.
 
 Cada ameaça registra ativo, fronteira, mitigação, owner, teste, requisitos e
 status. A matriz cobre IDOR/ACL; CSRF/sessão; spoof/replay de webhook; SSRF de
@@ -31,9 +31,15 @@ exposição de backup/storage; e DoS.
 Cada classe P0.6 identifica PII, finalidade, sistemas/cópias, atores/operadores,
 gatilho, prazo máximo, destino, `legal_hold` e propagação da exclusão. Mídia
 transitória tem teto de sete dias e vence antes se a jornada encerrar; bytes
-ficam fora do backup e arquivos válidos usam recibo manual do Dropbox. Logs têm
+ficam fora do backup e arquivos válidos usam recibo do handoff manual. Logs têm
 retenção operacional de 30 dias e teto jurídico de 90 dias. Backups expiram em
 35 dias e todo restore reaplica tombstones antes de ficar ready.
+
+Desde a [ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md), o arquivo válido
+fica no pedido, em bucket privado do RustFS acessado só pela API e incluído no
+backup off-host. `threat-model.json` e `data-catalog.json` ainda descrevem o
+destino anterior: os dois têm hash aprovado em `security-review.json` e só
+mudam com nova revisão do Tech Lead e do Responsável de Privacidade.
 
 Cópias já entregues em WhatsApp, Instagram ou ao dispositivo da destinatária
 da Ficha são limitações por destino: o CRM registra a limitação e aciona o

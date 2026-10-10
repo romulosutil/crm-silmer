@@ -79,5 +79,20 @@
     "instagramRequiredForMvp": false,
     "instagramHomologated": false,
     "published": false
+  },
+  "objectStorageGate": {
+    "status": "pending-external",
+    "service": "schedule/rustfs",
+    "decisionRecord": "docs/adr/023-arquivos-da-arte-no-rustfs.md",
+    "observedAt": "2026-10-05",
+    "serviceCreated": true,
+    "publicDomainsRemovedOrRestricted": false,
+    "sharedProjectRiskAccepted": true,
+    "crossProjectEndpointSmoked": false,
+    "imageDigestConfirmed": false,
+    "privateBucketCreated": true,
+    "apiCredentialsSeparated": false,
+    "offHostBackupConfigured": false,
+    "restoreDrilledWithPostgres": false
   }
 }

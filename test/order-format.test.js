@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import {
   amountLabel,
+  AUDIENCE_OPTIONS,
+  audienceLabel,
   dayLabel,
   elapsedSince,
   fabLabel,
@@ -15,6 +17,7 @@ import {
   itemHeading,
   itemPieces,
   itemQuantityLabel,
+  itemQuantityWarning,
   joinPt,
   missingFieldLabels,
   missingHeadline,
@@ -131,7 +134,7 @@ test('names each point missing to generate in plain words (PIT-06)', () => {
       'tipo de roupa do item 1',
       'cor do item 1',
       'técnica do item 1',
-      'tecido do item 1',
+      'modelo de malha do item 1',
       'tamanhos do item 2',
       'gola do item 2',
       'quem faz a arte',
@@ -360,5 +363,52 @@ test('names the promised delivery and tells it apart from the amount and payment
   assert.equal(
     missingHeadline(['summary.data_entrega_confirmada']),
     'Falta entrega prometida',
+  );
+});
+
+test('an item says its audience and compares its sizes with the quantity said for it (ADR 025)', () => {
+  assert.deepEqual(
+    AUDIENCE_OPTIONS.map((option) => option.value),
+    ['masculino', 'feminino', 'infantil', 'unissex'],
+  );
+  assert.equal(audienceLabel('infantil'), 'Infantil');
+  assert.equal(audienceLabel(''), '');
+  assert.equal(audienceLabel('baby look'), '');
+
+  const feminine = {
+    grade: [{ quantidade: 8, tamanho: 'M' }],
+    publico: 'feminino',
+    quantidade_informada: 10,
+    tipo: 'CAMISETA',
+  };
+  assert.equal(
+    itemHeading(feminine, 1),
+    'Item 2 · CAMISETA · Feminino · 8 peças',
+  );
+  assert.equal(
+    itemQuantityWarning(feminine),
+    'A soma dos tamanhos (8) é diferente da quantidade informada (10)',
+  );
+  assert.equal(
+    itemQuantityWarning({ ...feminine, quantidade_informada: 8 }),
+    '',
+  );
+  assert.equal(itemQuantityWarning({ ...feminine, grade: [] }), '');
+  assert.equal(
+    itemQuantityWarning({ ...feminine, quantidade_informada: null }),
+    '',
+  );
+
+  /** @type {any} */
+  const order = { ficha: { serviceData: { quantity: 25 } }, totalPieces: 0 };
+  assert.equal(
+    itemQuantityLabel({ grade: [], quantidade_informada: 10 }, 1, order),
+    '— (cliente informou 10)',
+    'any item shows the quantity said for it',
+  );
+  assert.equal(
+    itemQuantityLabel({ grade: [], quantidade_informada: 4 }, 0, order),
+    '— (cliente informou 4)',
+    'the item quantity comes before the order quantity',
   );
 });

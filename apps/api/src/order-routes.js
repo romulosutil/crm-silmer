@@ -1,6 +1,12 @@
-import { renderOrderFicha } from '@crm-silmer/orders';
+import multipart from '@fastify/multipart';
+import {
+  MAX_ORDER_FILE_BYTES,
+  OrderFileTooLargeError,
+  renderOrderFicha,
+} from '@crm-silmer/orders';
 
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
+const ORDER_ORIGINS = new Set(['atendimento', 'loja']);
 const ORDER_SECTIONS = new Set(['summary', 'items', 'observations', 'artwork']);
 
 /**
@@ -10,11 +16,18 @@ const ORDER_SECTIONS = new Set(['summary', 'items', 'observations', 'artwork']);
  */
 const PUBLIC_CODES = new Set([
   'CONVERSATION_NOT_FOUND',
+  'EMPTY_FILE',
+  'FILE_CONTENT_MISMATCH',
+  'FILE_LIMIT_REACHED',
+  'FILE_NOT_FOUND',
+  'FILE_TOO_LARGE',
+  'FILE_TYPE_NOT_ALLOWED',
   'FORBIDDEN',
   'IDEMPOTENCY_KEY_REUSED',
   'INVALID_AMOUNT',
   'INVALID_GRADE',
   'ORDER_INVALID',
+  'ORDER_LOCKED',
   'ORDER_NOT_CONFIRMABLE',
   'ORDER_NOT_CONFIRMED',
   'ORDER_NOT_FOUND',
@@ -72,18 +85,31 @@ export function registerOrderRoutes(api, orders, contextFor) {
    * operational session may print one, so this read is not scoped to the
    * conversation owner; a pending order has no document yet and is refused
    * with 409, the same reason the page keeps the button locked. The template
-   * is chosen in one place, `PRINT_TEMPLATE` (PIM-10, ADR 017).
+   * is chosen in one place, `PRINT_TEMPLATE` (PIM-10, ADR 017); a site shop
+   * order prints its simplified ficha (ADR 027). `?download=1` sends the
+   * same document as the attachment `pedido-NN-CRM.html` (LOJ-10).
    */
   api.get('/api/v1/orders/:orderId/print', async (request, reply) =>
     respond(reply, async () => {
       const params = requireObject(request.params);
       const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+      const query = requireObject(request.query ?? {});
+      rejectUnknownKeys(query, ['download']);
+      if (query.download !== undefined && query.download !== '1') {
+        throw new OrderRequestError(400, 'INVALID_REQUEST');
+      }
       await authorizeRead(request, orders, 'order.print');
       const { order } = await orders.get(orderId);
       if (order.status !== 'confirmado') {
         throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
       }
       privateReadHeaders(reply);
+      if (query.download === '1') {
+        reply.header(
+          'content-disposition',
+          attachment('pedido-' + order.number + '.html'),
+        );
+      }
       return reply
         .code(200)
         .type('text/html; charset=utf-8')
@@ -260,6 +286,199 @@ export function registerOrderRoutes(api, orders, contextFor) {
       return reply.code(200).send({ order });
     }),
   );
+
+  registerOrderFileRoutes(api, orders, contextFor);
+}
+
+/**
+ * ADR 023: the art files of an order. Listing and downloading need order
+ * access; sending and removing are order edits (owner or admin, pending
+ * order) under an Idempotency-Key. The upload is multipart with a `slot`
+ * field, the `file` and, for an image, the `thumbnail` the page drew.
+ *
+ * @param {import('fastify').FastifyInstance} api
+ * @param {Record<string, any>} orders
+ * @param {(request: object) => {correlationId: string, requestId: string}} contextFor
+ */
+function registerOrderFileRoutes(api, orders, contextFor) {
+  api.get('/api/v1/orders/:orderId/files', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+      await authorizeRead(request, orders);
+      privateReadHeaders(reply);
+      return reply.code(200).send(await orders.listFiles(orderId));
+    }),
+  );
+
+  api.get(
+    '/api/v1/orders/:orderId/files/:fileId/content',
+    async (request, reply) =>
+      respond(reply, async () => {
+        const params = requireObject(request.params);
+        const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+        const fileId = requireIdentifier(params.fileId, 'FILE_ID');
+        const principal = await authorizeRead(request, orders);
+        const opened = await orders.openFileContent({
+          actor: principal.actor,
+          correlationId: contextFor(request).correlationId,
+          fileId,
+          orderId,
+        });
+        // Always a download, never rendered: an SVG or PDF from a client
+        // must not run in the CRM origin.
+        privateReadHeaders(reply);
+        reply.header('content-disposition', attachment(opened.file.name));
+        sandboxHeaders(reply, opened.contentLength);
+        return reply
+          .code(200)
+          .type(opened.file.contentType)
+          .send(opened.stream);
+      }),
+  );
+
+  api.get(
+    '/api/v1/orders/:orderId/files/:fileId/thumbnail',
+    async (request, reply) =>
+      respond(reply, async () => {
+        const params = requireObject(request.params);
+        const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+        const fileId = requireIdentifier(params.fileId, 'FILE_ID');
+        await authorizeRead(request, orders);
+        const opened = await orders.openFileThumbnail(orderId, fileId);
+        // A file id never changes its bytes, so the browser may keep it.
+        reply.header('cache-control', 'private, max-age=86400, immutable');
+        reply.header('vary', 'Origin, Cookie');
+        sandboxHeaders(reply, opened.contentLength);
+        return reply.code(200).type('image/webp').send(opened.stream);
+      }),
+  );
+
+  api.delete('/api/v1/orders/:orderId/files/:fileId', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+      const fileId = requireIdentifier(params.fileId, 'FILE_ID');
+      const command = await authorizeCommand(
+        request,
+        orders,
+        contextFor,
+        'order.edit',
+      );
+      return reply
+        .code(200)
+        .send(await orders.removeFile({ ...command, fileId, orderId }));
+    }),
+  );
+
+  api.register(async (scope) => {
+    await scope.register(multipart, {
+      limits: {
+        fieldNameSize: 16,
+        fieldSize: 16,
+        fields: 1,
+        fileSize: MAX_ORDER_FILE_BYTES,
+        files: 2,
+        headerPairs: 50,
+        parts: 3,
+      },
+    });
+
+    scope.post('/api/v1/orders/:orderId/files', async (request, reply) =>
+      respond(reply, async () => {
+        const params = requireObject(request.params);
+        const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+        // The session is checked before a byte of the body is read.
+        const command = await authorizeCommand(
+          request,
+          orders,
+          contextFor,
+          'order.edit',
+        );
+        const upload = await readUpload(request);
+        return reply
+          .code(201)
+          .send(await orders.uploadFile({ ...command, ...upload, orderId }));
+      }),
+    );
+  });
+}
+
+/**
+ * @param {any} request
+ * @returns {Promise<{slot: string, name: string, content: Buffer, thumbnail: Buffer|null}>}
+ */
+async function readUpload(request) {
+  /** @type {string|undefined} */
+  let slot;
+  /** @type {{name: string, content: Buffer}|undefined} */
+  let file;
+  /** @type {Buffer|null} */
+  let thumbnail = null;
+  try {
+    for await (const part of request.parts()) {
+      if (part.type === 'file' && part.fieldname === 'file' && !file) {
+        file = { content: await part.toBuffer(), name: part.filename };
+      } else if (
+        part.type === 'file' &&
+        part.fieldname === 'thumbnail' &&
+        thumbnail === null
+      ) {
+        thumbnail = await part.toBuffer();
+      } else if (
+        part.type === 'field' &&
+        part.fieldname === 'slot' &&
+        slot === undefined &&
+        typeof part.value === 'string'
+      ) {
+        slot = part.value;
+      } else {
+        throw new OrderRequestError(400, 'INVALID_REQUEST');
+      }
+    }
+  } catch (error) {
+    if (error instanceof OrderRequestError) throw error;
+    const code = /** @type {{code?: unknown}} */ (error)?.code;
+    if (code === 'FST_REQ_FILE_TOO_LARGE') throw new OrderFileTooLargeError();
+    throw new OrderRequestError(400, 'INVALID_REQUEST');
+  }
+  if (!file || slot === undefined) {
+    throw new OrderRequestError(400, 'INVALID_REQUEST');
+  }
+  return { ...file, slot, thumbnail };
+}
+
+/**
+ * Stored files are served as inert bytes: no sniffing, no scripts, no
+ * same-origin access if a browser ever renders one.
+ *
+ * @param {import('fastify').FastifyReply} reply @param {number|null} contentLength
+ */
+function sandboxHeaders(reply, contentLength) {
+  reply.header('content-security-policy', "default-src 'none'; sandbox");
+  reply.header('x-content-type-options', 'nosniff');
+  if (contentLength !== null) {
+    reply.header('content-length', String(contentLength));
+  }
+}
+
+/**
+ * RFC 6266: an ASCII fallback and the UTF-8 name, so accents survive.
+ *
+ * @param {string} name
+ */
+function attachment(name) {
+  const fallback =
+    name
+      .normalize('NFKD')
+      .replace(/[^\x20-\x7e]/gu, '')
+      .replace(/["\\]/gu, '_')
+      .trim() || 'arquivo';
+  const encoded = encodeURIComponent(name).replace(
+    /['()*]/gu,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 }
 
 /**
@@ -311,14 +530,21 @@ async function authorizeRead(request, orders, action = 'order.read') {
 /** @param {unknown} value */
 function parseListQuery(value) {
   const query = requireObject(value ?? {});
-  rejectUnknownKeys(query, ['cursor', 'limit', 'q', 'status']);
-  /** @type {{status?: string, q?: string, cursor?: string, limit?: number}} */
+  rejectUnknownKeys(query, ['cursor', 'limit', 'origin', 'q', 'status']);
+  /** @type {{status?: string, origin?: string, q?: string, cursor?: string, limit?: number}} */
   const input = {};
   if (query.status !== undefined) {
     if (!ORDER_STATUSES.has(query.status)) {
       throw new OrderRequestError(400, 'INVALID_FILTER');
     }
     input.status = query.status;
+  }
+  // ADR 027: "Loja do site" narrows the list to the site shop's orders.
+  if (query.origin !== undefined) {
+    if (!ORDER_ORIGINS.has(query.origin)) {
+      throw new OrderRequestError(400, 'INVALID_FILTER');
+    }
+    input.origin = query.origin;
   }
   if (query.q !== undefined) {
     input.q = requireIdentifier(query.q, 'QUERY', 128);

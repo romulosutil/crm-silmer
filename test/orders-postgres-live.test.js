@@ -21,6 +21,10 @@ import {
   createInboxService,
 } from '../modules/inbox-channels/src/index.js';
 import { encryptJson } from '../modules/orders/src/adapters/envelope.js';
+import { InMemoryObjectStorage } from '../modules/orders/src/adapters/in-memory-order-files.js';
+import { PostgresOrderFileRepository } from '../modules/orders/src/adapters/postgres-order-file-repository.js';
+import { S3ObjectStorage } from '../modules/orders/src/adapters/s3-object-storage.js';
+import { createOrderFileService } from '../modules/orders/src/application/order-file-service.js';
 import { PostgresOrderConversationPort } from '../modules/orders/src/adapters/postgres-order-conversation-port.js';
 import { PostgresOrderRepository } from '../modules/orders/src/adapters/postgres-order-repository.js';
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
@@ -1341,5 +1345,136 @@ if (connectionString) {
       paidOn: '2026-09-12',
     });
     assert.equal(grantedAdmin.paidOn, '2026-09-12');
+  });
+
+  // ADR 023: the file catalog takes the order locks, keeps the five-file
+  // limit under concurrency and seals the original name. With
+  // TEST_OBJECT_STORAGE_* set, the bytes go through a real RustFS/S3.
+  test('order files keep five references under concurrency and seal their names', async () => {
+    const canary = `PII-canary-${randomUUID()}`;
+    const conversationId = await seedConversation(pool);
+    await pool.query(
+      `UPDATE crm.conversations SET assigned_user_id = 'seller-contract'
+       WHERE id = $1`,
+      [conversationId],
+    );
+    const owner = {
+      capabilities: [],
+      id: 'seller-contract',
+      kind: 'human',
+    };
+    const orderService = createOrderService({
+      authorizeOwnership: async () => {},
+      clock: () => NOW,
+      conversations: {
+        readOrderContexts: orderContextsFrom(() => ({
+          briefing: { order_name: 'Equipe Sintetica' },
+          customerName: 'Cliente Sintetico',
+        })),
+        searchConversationIds: async () => [],
+      },
+      fabCode: '01',
+      repository,
+    });
+    const { order } = await orderService.ensurePendingFromIntent({
+      conversationId,
+      correlationId: 'correlation-files',
+    });
+    const storage = process.env.TEST_OBJECT_STORAGE_ENDPOINT
+      ? new S3ObjectStorage({
+          accessKeyId: String(process.env.TEST_OBJECT_STORAGE_ACCESS_KEY_ID),
+          bucket: String(process.env.TEST_OBJECT_STORAGE_BUCKET),
+          endpoint: process.env.TEST_OBJECT_STORAGE_ENDPOINT,
+          region: process.env.TEST_OBJECT_STORAGE_REGION ?? 'us-east-1',
+          secretAccessKey: String(
+            process.env.TEST_OBJECT_STORAGE_SECRET_ACCESS_KEY,
+          ),
+        })
+      : new InMemoryObjectStorage();
+    const files = createOrderFileService({
+      authorizeOwnership: async () => {},
+      files: new PostgresOrderFileRepository({
+        database: databaseFor(pool),
+        envelopeKey: ENVELOPE_KEY,
+      }),
+      orders: repository,
+      storage,
+    });
+    const pdf = (/** @type {number} */ index) =>
+      Buffer.from(`%PDF-1.7\n% synthetic ${index}\n`);
+
+    const attempts = await Promise.allSettled(
+      [1, 2, 3, 4, 5, 6, 7].map((index) =>
+        files.upload({
+          actor: owner,
+          content: pdf(index),
+          name: `${canary}-${index}.pdf`,
+          orderId: order.id,
+          slot: 'reference',
+        }),
+      ),
+    );
+    assert.equal(
+      attempts.filter((attempt) => attempt.status === 'fulfilled').length,
+      5,
+    );
+    for (const attempt of attempts) {
+      if (attempt.status === 'rejected') {
+        assert.equal(attempt.reason.code, 'FILE_LIMIT_REACHED');
+      }
+    }
+
+    const first = await files.upload({
+      actor: owner,
+      content: pdf(8),
+      name: 'arte-final.pdf',
+      orderId: order.id,
+      slot: 'final',
+    });
+    const second = await files.upload({
+      actor: owner,
+      content: pdf(9),
+      name: 'arte-final-v2.pdf',
+      orderId: order.id,
+      slot: 'final',
+    });
+    assert.equal(second.files.final?.name, 'arte-final-v2.pdf');
+    assert.equal(second.files.references.length, 5);
+    assert.equal(
+      await storage.getObject(/** @type {any} */ (first.file).objectKey),
+      null,
+      'the replaced final art is gone from storage',
+    );
+    const opened = await files.openContent(order.id, second.file.id);
+    const chunks = [];
+    for await (const chunk of opened.stream) chunks.push(chunk);
+    assert.deepEqual(Buffer.concat(chunks), pdf(9));
+
+    const raw = await pool.query(
+      `SELECT to_jsonb(order_files.*)::text AS row FROM crm.order_files
+       WHERE order_id = $1`,
+      [order.id],
+    );
+    assert.equal(raw.rows.length, 6);
+    for (const row of raw.rows) {
+      assert.doesNotMatch(row.row, new RegExp(canary, 'u'));
+    }
+
+    await assert.rejects(
+      new PostgresOrderFileRepository({
+        database: databaseFor(pool),
+        envelopeKey: ENVELOPE_KEY,
+      }).remove(order.id, second.file.id, {
+        actor: { ...owner, id: 'seller-intruder' },
+      }),
+      { code: 'FORBIDDEN', statusCode: 403 },
+    );
+    const removed = await files.remove({
+      actor: owner,
+      fileId: second.file.id,
+      orderId: order.id,
+    });
+    assert.equal(removed.files.final, null);
+    assert.equal(await storage.getObject(second.file.objectKey), null);
   });
 }

@@ -144,7 +144,7 @@ ler bucket operacional. Sem ACL pública e sem dependência de lifecycle S3.
 
 Upload fica temporariamente em spool privado montado na API/worker, UUID opaco,
 sem nome do cliente. API reserva quota transacional antes de consumir bytes.
-Migration expand 0029 registra admissões em `chat_media_admissions` com UUID
+Migration expand 0032 registra admissões em `chat_media_admissions` com UUID
 do spool, hash somente do crm_session canônico e reserva. A API não mantém
 transação SQL aberta durante streaming. Conclusão converte ledger em mídia
 e job na mesma transação e ajusta reserva aos bytes reais. Arquivo vazio usa

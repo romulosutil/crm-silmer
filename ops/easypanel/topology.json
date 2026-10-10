@@ -41,6 +41,11 @@
           "PRIVATE_MEDIA_MAX_BYTES",
           "PRIVATE_MEDIA_MAX_FILE_BYTES",
           "MEDIA_RETENTION_SCAN_INTERVAL_MS",
+          "OBJECT_STORAGE_ENDPOINT",
+          "OBJECT_STORAGE_REGION",
+          "OBJECT_STORAGE_BUCKET",
+          "OBJECT_STORAGE_ACCESS_KEY_ID",
+          "OBJECT_STORAGE_SECRET_ACCESS_KEY",
           "META_APP_ID",
           "META_APP_SECRET",
           "META_VERIFY_TOKEN",
@@ -72,7 +77,9 @@
           "PIX_KEY_VALUE",
           "PIX_KEY_DISPLAY_MASKED",
           "FICHA_RECIPIENT_E164",
-          "FAB_CODE"
+          "FAB_CODE",
+          "STORE_ORDERS_HMAC_KEY",
+          "STORE_ORDERS_ACCEPT_TEST"
         ]
       },
       "services": [
@@ -164,6 +171,72 @@
             "failureThreshold": 3,
             "checks": [{ "type": "command", "command": "pg_isready" }]
           }
+        }
+      ],
+      "sharedServices": [
+        {
+          "name": "rustfs",
+          "project": "schedule",
+          "kind": "object-storage",
+          "decisionRecord": "docs/adr/023-arquivos-da-arte-no-rustfs.md",
+          "observedAt": "2026-10-05",
+          "status": "existing-with-gaps",
+          "sharedWith": [
+            "n8n",
+            "redis",
+            "postgres-pgvector",
+            "project-hub",
+            "tecnolar",
+            "food-helper-migrations"
+          ],
+          "sharedProjectRiskAcceptedRef": "docs/adr/023-arquivos-da-arte-no-rustfs.md",
+          "internalHost": "schedule_rustfs",
+          "internalPort": 9000,
+          "consolePort": 9001,
+          "crossProjectEndpointSmoked": false,
+          "image": "rustfs",
+          "imageRef": null,
+          "imageDigestConfirmed": false,
+          "public": true,
+          "publicRoutes": [
+            {
+              "purpose": "s3-api",
+              "via": "easypanel-default-domain",
+              "targetPort": 9000,
+              "hostname": null,
+              "restriction": null
+            },
+            {
+              "purpose": "console",
+              "via": "easypanel-default-domain",
+              "targetPort": 9001,
+              "hostname": null,
+              "restriction": null
+            }
+          ],
+          "clients": ["silmer-api"],
+          "dataVolume": { "offHostBackupEvidenced": false },
+          "buckets": [
+            {
+              "name": "crm-silmer-arquivos",
+              "created": true,
+              "publicAccess": false,
+              "offHostBackup": "with-postgres",
+              "recoveryDrill": "with-postgres"
+            }
+          ],
+          "secretNames": [
+            "OBJECT_STORAGE_ACCESS_KEY_ID",
+            "OBJECT_STORAGE_SECRET_ACCESS_KEY"
+          ],
+          "dedicatedCredential": "pending",
+          "gaps": [
+            "public-s3-and-console-domains",
+            "cross-project-endpoint-smoke-pending",
+            "image-digest-not-confirmed",
+            "dedicated-bucket-credential-pending",
+            "off-host-backup-not-evidenced"
+          ]
         }
       ]
     }

@@ -39,6 +39,7 @@
         "artwork_locations": { "type": ["array", "null"] },
         "artwork_status": { "type": ["string", "null"] },
         "artwork_technique": { "type": ["string", "null"] },
+        "audiences": { "type": ["string", "null"] },
         "briefing_status": { "type": ["string", "null"] },
         "city_or_postal_code": { "type": ["string", "null"] },
         "collar": { "type": ["string", "null"] },

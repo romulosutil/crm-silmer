@@ -22,6 +22,7 @@ import { registerN8nRoutes } from './n8n-routes.js';
 import { registerN8nCommandMediaRoutes } from './n8n-command-media-routes.js';
 import { registerOperationRoutes } from './operation-routes.js';
 import { registerOrderRoutes } from './order-routes.js';
+import { registerStoreOrderRoutes } from './store-order-routes.js';
 import { WEBHOOK_BODY_LIMIT_BYTES } from './whatsapp-webhook-runtime.js';
 
 export const WEBHOOK_MAX_IN_FLIGHT = 8;
@@ -48,7 +49,8 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   chatMedia?: any,
  *   handoffs?: any,
  *   operations?: any,
- *   orders?: any
+ *   orders?: any,
+ *   storeOrders?: import('./store-order-runtime.js').StoreOrderRuntime
  * }} [runtime]
  */
 export function createApi(options = {}, runtime = {}) {
@@ -286,6 +288,16 @@ export function createApi(options = {}, runtime = {}) {
 
   if (runtime.orders) {
     registerOrderRoutes(api, runtime.orders, (request) => {
+      const context = requests.get(request);
+      if (!context) throw new Error('Missing request context');
+      return context;
+    });
+  }
+
+  // ADR 028: the n8n checkout workflow records the site shop's paid order;
+  // off (404) until STORE_ORDERS_HMAC_KEY is configured.
+  if (runtime.storeOrders) {
+    registerStoreOrderRoutes(api, runtime.storeOrders, (request) => {
       const context = requests.get(request);
       if (!context) throw new Error('Missing request context');
       return context;

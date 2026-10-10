@@ -18,6 +18,21 @@ services:
     volumes:
       - crm-silmer-postgres-data:/var/lib/postgresql/data
 
+  # ADR 023: the art files of an order. Local-only credentials; the API
+  # creates the bucket on its first upload.
+  rustfs:
+    image: rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c
+    environment:
+      RUSTFS_ACCESS_KEY: rustfs_local_only
+      RUSTFS_ADDRESS: ':9000'
+      RUSTFS_CONSOLE_ENABLE: 'false'
+      RUSTFS_SECRET_KEY: rustfs_local_only_secret
+      RUSTFS_VOLUMES: /data
+    ports:
+      - '127.0.0.1:9000:9000'
+    volumes:
+      - crm-silmer-rustfs-data:/data
+
   n8n-postgres:
     image: postgres:17-alpine
     environment:
@@ -77,5 +92,6 @@ services:
 
 volumes:
   crm-silmer-postgres-data:
+  crm-silmer-rustfs-data:
   crm-silmer-n8n-data:
   crm-silmer-n8n-postgres-data:

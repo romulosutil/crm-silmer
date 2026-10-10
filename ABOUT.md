@@ -17,7 +17,7 @@ fase de canal e reutilizará a mesma jornada. Quando essa fase chegar, o
 atendimento poderá migrar entre canais preservando o Contato somente após
 correlação verificável entre `@instagram` e telefone. O artefato central do
 domínio é `ficha_exemplo.xlsx`: os dados
-necessários para produzir e cobrar um pedido orientam as perguntas e validações. A baseline vigente é Pedido com dois status, técnica por item, arte do pedido e impressão v5 (ADRs 006 e 020); assinatura física e homologação permanecem gates de produção.
+necessários para produzir e cobrar um pedido orientam as perguntas e validações. A baseline vigente é Pedido com dois status, técnica por item, arte do pedido e impressão v6 com público por item (ADRs 006, 020 e 025); assinatura física e homologação permanecem gates de produção.
 
 Documentos principais:
 
@@ -39,14 +39,16 @@ Documentos principais:
   configuração, rollout e troubleshooting da integração.
 - `docs/roadmap/PROXIMAS-FASES.md`: ordem das próximas telas e do Instagram,
   critérios de aceite e mapa dos documentos que guiam as próximas telas.
+- `docs/roadmap/BACKLOG-POS-GO-LIVE.md`: evoluções planejadas após o go-live;
+  primeira demanda é upload e download de arquivos na Ficha do Pedido.
 - `TECHNICAL-DESIGN.md`: TDD canônico com stack, módulos, dados, APIs,
   segurança, SLOs, riscos e decisões técnicas do MVP.
 - `EASYPANEL-TOPOLOGY.md`: projetos, serviços, sizing, CI/CD, backups e
   operação na VPS Hostinger/EasyPanel.
 - `docs/runbooks/rustfs-chat-media.md`: mídia enviada pelo vendedor preservada
   no RustFS, ativação local, quotas e gates de recovery.
-- `docs/phase0/TRANSIENT-MEDIA.md`: mídia de canal legada temporária por até sete dias,
-  handoff operacional ao Dropbox e diferimento do R2.
+- `docs/phase0/TRANSIENT-MEDIA.md`: mídia temporária por até sete dias,
+  handoff do arquivo válido ao pedido no RustFS e diferimento do R2.
 - `.specs/features/crm-mvp/tasks.md`: plano de implementação por fases com
   verificação e rastreabilidade.
 - `historico-datacrazy/`: arquivo histórico, sem valor normativo para o sistema novo.

@@ -99,6 +99,273 @@ test('declares the approved shared EasyPanel project and prefixed services', asy
   }
 });
 
+/**
+ * @param {Record<string, any>} topology
+ * @returns {Record<string, any>}
+ */
+function sharedStorage(topology) {
+  return topology.projects[0].sharedServices[0];
+}
+
+/**
+ * The state ADR 023 requires before the gate can pass: no public S3 route,
+ * console only behind a restriction, every gap closed by evidence.
+ * @param {Record<string, any>} topology
+ * @param {Record<string, any>} gate
+ */
+function resolveObjectStorage(topology, gate) {
+  const storage = sharedStorage(topology);
+  storage.publicRoutes = [
+    {
+      purpose: 'console',
+      via: 'easypanel-default-domain',
+      targetPort: 9001,
+      hostname: null,
+      restriction: 'auth-and-ip-allowlist',
+    },
+  ];
+  storage.sharedProjectRiskAcceptedRef =
+    'docs/adr/023-arquivos-da-arte-no-rustfs.md';
+  storage.crossProjectEndpointSmoked = true;
+  storage.imageDigestConfirmed = true;
+  storage.imageRef = `rustfs/rustfs:1.0.1@sha256:${'a'.repeat(64)}`;
+  storage.buckets[0].created = true;
+  storage.dedicatedCredential = 'created';
+  storage.dataVolume.offHostBackupEvidenced = true;
+  storage.gaps = [];
+  storage.status = 'ready';
+  Object.assign(gate.objectStorageGate, {
+    status: 'passed',
+    publicDomainsRemovedOrRestricted: true,
+    sharedProjectRiskAccepted: true,
+    crossProjectEndpointSmoked: true,
+    imageDigestConfirmed: true,
+    privateBucketCreated: true,
+    apiCredentialsSeparated: true,
+    offHostBackupConfigured: true,
+    restoreDrilledWithPostgres: true,
+  });
+}
+
+test('records the existing schedule/rustfs with its gaps explicit (ADR 023)', async () => {
+  const topology = await json('ops/easypanel/topology.json');
+  const gate = await json('ops/easypanel/provisioning-gate.json');
+  const kit = await json('ops/recovery/off-host-kit.json');
+  const storage = sharedStorage(topology);
+
+  assert.doesNotThrow(() => validateTopologyDocument(topology));
+  assert.doesNotThrow(() => validateProvisioningGate(gate, topology));
+  assert.doesNotThrow(() => validateRecoveryKit(kit, topology));
+  assert.equal(storage.project, 'schedule');
+  assert.equal(storage.internalHost, 'schedule_rustfs');
+  assert.equal(storage.internalPort, 9000);
+  assert.deepEqual(storage.clients, ['silmer-api']);
+  assert.equal(storage.imageRef, null);
+  assert.ok(
+    storage.publicRoutes.every(
+      (/** @type {{ hostname: unknown }} */ { hostname }) => hostname === null,
+    ),
+  );
+  assert.equal(storage.status, 'existing-with-gaps');
+  assert.deepEqual(storage.gaps, [
+    'public-s3-and-console-domains',
+    'cross-project-endpoint-smoke-pending',
+    'image-digest-not-confirmed',
+    'dedicated-bucket-credential-pending',
+    'off-host-backup-not-evidenced',
+  ]);
+  assert.equal(gate.objectStorageGate.status, 'pending-external');
+  assert.equal(gate.objectStorageGate.serviceCreated, true);
+  assert.equal(kit.orderFiles.service, 'schedule/rustfs');
+  assert.equal(kit.orderFiles.restoreScope, 'crm-bucket-only');
+});
+
+test('rejects hiding, misreporting or loosening the schedule/rustfs contract', async () => {
+  const topology = await json('ops/easypanel/topology.json');
+
+  /** @type {Array<[(storage: Record<string, any>) => void, RegExp]>} */
+  const cases = [
+    [
+      (storage) => {
+        storage.gaps = storage.gaps.filter(
+          (/** @type {string} */ gap) =>
+            gap !== 'off-host-backup-not-evidenced',
+        );
+      },
+      /gaps must match.*off-host-backup-not-evidenced/iu,
+    ],
+    [
+      (storage) => {
+        storage.gaps = storage.gaps.filter(
+          (/** @type {string} */ gap) =>
+            gap !== 'public-s3-and-console-domains',
+        );
+      },
+      /gaps must match/iu,
+    ],
+    [
+      (storage) => {
+        storage.status = 'ready';
+      },
+      /cannot be ready while gaps remain/iu,
+    ],
+    [
+      (storage) => {
+        storage.publicRoutes[0].hostname = 'files.example.com';
+      },
+      /without storing hostnames/iu,
+    ],
+    [
+      (storage) => {
+        storage.public = false;
+      },
+      /without storing hostnames/iu,
+    ],
+    [
+      (storage) => {
+        storage.imageRef = `rustfs/rustfs:1.0.1@sha256:${'b'.repeat(64)}`;
+      },
+      /unconfirmed image digest/iu,
+    ],
+    [
+      (storage) => {
+        storage.imageDigestConfirmed = true;
+      },
+      /unconfirmed image digest/iu,
+    ],
+    [
+      (storage) => {
+        storage.clients = ['silmer-api', 'silmer-edge-web'];
+      },
+      /only by silmer-api/iu,
+    ],
+    [
+      (storage) => {
+        storage.internalHost = 'rustfs';
+      },
+      /only by silmer-api/iu,
+    ],
+    [
+      (storage) => {
+        storage.secretNames = ['RUSTFS_ACCESS_KEY', 'RUSTFS_SECRET_KEY'];
+      },
+      /dedicated API credential/iu,
+    ],
+    [
+      (storage) => {
+        storage.buckets[0].publicAccess = true;
+      },
+      /private bucket/iu,
+    ],
+    [
+      (storage) => {
+        storage.buckets[0].offHostBackup = 'none';
+      },
+      /off-host backup/iu,
+    ],
+    [
+      (storage) => {
+        storage.sharedProjectRiskAcceptedRef = 'accepted';
+      },
+      /decision record/iu,
+    ],
+  ];
+  for (const [mutate, expected] of cases) {
+    const unsafe = clone(topology);
+    mutate(sharedStorage(unsafe));
+    assert.throws(() => validateTopologyDocument(unsafe), expected);
+  }
+
+  const restrictedS3 = clone(topology);
+  sharedStorage(restrictedS3).publicRoutes[0].restriction =
+    'auth-and-ip-allowlist';
+  sharedStorage(restrictedS3).publicRoutes[1].restriction =
+    'auth-and-ip-allowlist';
+  assert.doesNotThrow(() => validateTopologyDocument(restrictedS3));
+  assert.ok(
+    sharedStorage(restrictedS3).gaps.includes('public-s3-and-console-domains'),
+    'a public S3 route stays a gap even behind a restriction',
+  );
+});
+
+test('keeps the object storage gate pending while public domains or gaps remain', async () => {
+  const topology = await json('ops/easypanel/topology.json');
+  const gate = await json('ops/easypanel/provisioning-gate.json');
+
+  const falsePass = clone(gate);
+  falsePass.objectStorageGate.status = 'passed';
+  assert.throws(
+    () => validateProvisioningGate(falsePass, topology),
+    /cannot pass while public domains or gaps remain/iu,
+  );
+
+  const allChecksButGaps = clone(gate);
+  for (const key of Object.keys(allChecksButGaps.objectStorageGate)) {
+    if (typeof allChecksButGaps.objectStorageGate[key] === 'boolean') {
+      allChecksButGaps.objectStorageGate[key] = true;
+    }
+  }
+  allChecksButGaps.objectStorageGate.status = 'passed';
+  assert.throws(
+    () => validateProvisioningGate(allChecksButGaps, topology),
+    /cannot pass while public domains or gaps remain/iu,
+  );
+
+  const claimedCredential = clone(gate);
+  claimedCredential.objectStorageGate.apiCredentialsSeparated = true;
+  assert.throws(
+    () => validateProvisioningGate(claimedCredential, topology),
+    /match the observed/iu,
+  );
+
+  const resolvedTopology = clone(topology);
+  const resolvedGate = clone(gate);
+  resolveObjectStorage(resolvedTopology, resolvedGate);
+  assert.doesNotThrow(() => validateTopologyDocument(resolvedTopology));
+  assert.doesNotThrow(() =>
+    validateProvisioningGate(resolvedGate, resolvedTopology),
+  );
+
+  const publicS3Again = clone(resolvedTopology);
+  sharedStorage(publicS3Again).publicRoutes.push({
+    purpose: 's3-api',
+    via: 'easypanel-default-domain',
+    targetPort: 9000,
+    hostname: null,
+    restriction: null,
+  });
+  assert.throws(
+    () => validateTopologyDocument(publicS3Again),
+    /gaps must match.*public-s3-and-console-domains/iu,
+  );
+
+  const notDrilled = clone(resolvedGate);
+  notDrilled.objectStorageGate.restoreDrilledWithPostgres = false;
+  assert.throws(
+    () => validateProvisioningGate(notDrilled, resolvedTopology),
+    /cannot pass/iu,
+  );
+});
+
+test('restores only the CRM bucket from the shared RustFS volume', async () => {
+  const topology = await json('ops/easypanel/topology.json');
+  const kit = await json('ops/recovery/off-host-kit.json');
+
+  const wholeVolume = clone(kit);
+  wholeVolume.orderFiles.restoreScope = 'full-volume';
+  assert.throws(
+    () => validateRecoveryKit(wholeVolume, topology),
+    /only the CRM bucket/iu,
+  );
+
+  const withoutBucket = clone(kit);
+  withoutBucket.orderFiles.offHostBackup = 'none';
+  assert.throws(
+    () => validateRecoveryKit(withoutBucket, topology),
+    /RustFS order files/iu,
+  );
+});
+
 test('rejects any public internal Silmer service', async () => {
   const topology = await json('ops/easypanel/topology.json');
 
@@ -181,7 +448,7 @@ test('builds a deterministic recovery plan from local files and mocks', async ()
   assert.ok(first.steps.some(({ action }) => action === 'prepare-dns-plan'));
   assert.deepEqual(first.readiness, {
     status: 'blocked',
-    checks: { passed: 0, pending: 4, blocked: 4 },
+    checks: { passed: 0, pending: 4, blocked: 5 },
     evidencePresent: { monthly: false, quarterly: false },
     blockerIds: [
       'easypanel-restorable-backup-missing',
@@ -191,6 +458,7 @@ test('builds a deterministic recovery plan from local files and mocks', async ()
       'clean-vps-drill-not-executed',
       'temporary-dns-drill-not-executed',
       'object-version-restore-not-executed',
+      'order-files-bucket-backup-not-evidenced',
       'full-smoke-not-executed',
     ],
   });
@@ -213,6 +481,7 @@ test('keeps issue 3 blocked with explicit opaque recovery evidence', async () =>
     'pending',
     'pending',
     'pending',
+    'blocked',
     'pending',
   ]);
   const blockers = /** @type {Array<{ evidenceRefs: string[] }>} */ (

@@ -14,17 +14,24 @@ import { dateTimeBR } from '../lib/format.js';
 import {
   amountLabel,
   elapsedSince,
+  isStoreOrder,
   missingHeadline,
+  STORE_ORIGIN_LABEL,
+  storePaymentLabel,
 } from '../lib/order-format.js';
 
 const LIVE_REFRESH_DELAY_MS = 250;
 const SEARCH_DELAY_MS = 300;
 const PAGE_SIZE = 25;
 
+// ADRs 027 and 028: "Loja do site" narrows the list to the site shop's
+// orders, all of them confirmed and paid through InfinitePay.
+const STORE_FILTER = 'loja';
 const FILTERS = Object.freeze([
   Object.freeze({ label: 'Todos', value: '' }),
   Object.freeze({ label: 'Confirmados', value: 'confirmado' }),
   Object.freeze({ label: 'Pendentes', value: 'pendente' }),
+  Object.freeze({ label: STORE_ORIGIN_LABEL, value: STORE_FILTER }),
 ]);
 
 const liveEvent = inject('liveEvent', ref(null));
@@ -55,8 +62,8 @@ const confirmedOrders = computed(() =>
 const pendingOrders = computed(() =>
   items.value.filter((order) => order.status === 'pendente'),
 );
-const showConfirmed = computed(
-  () => filter.value === '' || filter.value === 'confirmado',
+const showConfirmed = computed(() =>
+  ['', 'confirmado', STORE_FILTER].includes(filter.value),
 );
 const showPending = computed(
   () => filter.value === '' || filter.value === 'pendente',
@@ -71,6 +78,10 @@ function customerName(order) {
 /** PLI-04: the event and the seller travel with the customer. */
 /** @param {Record<string, any>} order */
 function customerContext(order) {
+  if (isStoreOrder(order)) {
+    const product = order.ficha?.loja?.produto?.nome;
+    return product ? `${STORE_ORIGIN_LABEL} · ${product}` : STORE_ORIGIN_LABEL;
+  }
   const event = order.ficha?.summary?.nome || 'Sem evento';
   return `${event} · ${order.seller?.name || 'sem vendedor'}`;
 }
@@ -78,6 +89,7 @@ function customerContext(order) {
 /** PLI-05: what is missing and for how long, or who confirmed and when. */
 /** @param {Record<string, any>} order */
 function situation(order) {
+  if (isStoreOrder(order)) return storePaymentLabel(order);
   if (order.status === 'confirmado') {
     const who = order.confirmedBy?.name || 'vendedor';
     return `Confirmado por ${who} · ${dateTimeBR(order.confirmedAt)}`;
@@ -118,7 +130,8 @@ function openOrder(order, event) {
 /** @param {string|null} cursor */
 function listUrl(cursor) {
   const params = new globalThis.URLSearchParams({ limit: String(PAGE_SIZE) });
-  if (filter.value) params.set('status', filter.value);
+  if (filter.value === STORE_FILTER) params.set('origin', STORE_FILTER);
+  else if (filter.value) params.set('status', filter.value);
   const needle = query.value.trim();
   if (needle) params.set('q', needle);
   if (cursor) params.set('cursor', cursor);
@@ -337,7 +350,7 @@ onBeforeUnmount(() => {
           Deslize a tabela para ver todas as colunas.
         </p>
         <div
-          class="table-wrap"
+          class="table-wrap list-scroll"
           role="region"
           tabindex="0"
           aria-label="Pedidos confirmados; role horizontalmente para ver todas as colunas"
@@ -360,7 +373,28 @@ onBeforeUnmount(() => {
                 class="clickable-row"
                 @click="openOrder(order, $event)"
               >
-                <td>#{{ order.number }}</td>
+                <td>
+                  #{{ order.number }}
+                  <span
+                    v-if="isStoreOrder(order) || order.isTest"
+                    class="order-badges"
+                  >
+                    <!-- ADR 028: the shop's number next to the CRM's. -->
+                    <span
+                      v-if="isStoreOrder(order)"
+                      class="badge"
+                      data-tone="info"
+                      >{{
+                        order.storeNumber
+                          ? `Loja · ${order.storeNumber}`
+                          : 'Loja'
+                      }}</span
+                    >
+                    <span v-if="order.isTest" class="badge" data-tone="warning"
+                      >Teste</span
+                    >
+                  </span>
+                </td>
                 <td>
                   <strong>{{ customerName(order) }}</strong>
                   <small class="order-context">{{
@@ -402,7 +436,7 @@ onBeforeUnmount(() => {
           Deslize a tabela para ver todas as colunas.
         </p>
         <div
-          class="table-wrap"
+          class="table-wrap list-scroll"
           role="region"
           tabindex="0"
           aria-label="Pedidos pendentes; role horizontalmente para ver todas as colunas"

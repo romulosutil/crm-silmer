@@ -69,6 +69,12 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
  */
 export const AUTOMATION_ORDER_ACTIONS = Object.freeze(['order.intent']);
 
+/**
+ * ADR 028: the n8n checkout workflow records the site shop's paid order. No
+ * human function or capability opens it either.
+ */
+export const AUTOMATION_STORE_ACTIONS = Object.freeze(['store.order.record']);
+
 const operationalActions = OPERATIONAL_ACTIONS;
 /** @type {Map<string, Capability>} */
 const actionCapabilities = new Map([

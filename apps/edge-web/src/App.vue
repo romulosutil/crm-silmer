@@ -13,6 +13,7 @@ import AuthPanel from './components/AuthPanel.vue';
 import ThemeSwitcher from './components/ThemeSwitcher.vue';
 import { ApiError, request } from './lib/api-client.js';
 import { LiveEventStream } from './lib/event-stream.js';
+import { RETURN_QUERY, safeReturnPath } from './lib/return-path.js';
 
 const router = useRouter();
 const route = useRoute();
@@ -147,7 +148,7 @@ async function restoreSession() {
       error instanceof ApiError &&
       [400, 401, 403, 404].includes(error.status)
     ) {
-      await showSignedOut(false);
+      await showSignedOut(false, true);
       announce('Entre para continuar.');
       return;
     }
@@ -165,7 +166,7 @@ async function refreshShellSession() {
     await redirectUnauthorizedAdminRoute();
   } catch (error) {
     if (error instanceof ApiError && [401, 403].includes(error.status)) {
-      await showSignedOut(false);
+      await showSignedOut(false, true);
     } else {
       announce('Não foi possível atualizar seu acesso. Tentaremos novamente.');
     }
@@ -178,7 +179,12 @@ async function refreshShellSession() {
 async function showSession(value, announceLogin = true) {
   session.value = value;
   phase.value = 'authenticated';
-  if (route.path === '/') await router.replace('/dashboard');
+  // LOJ-24: a link opened without a session comes back to its page.
+  if (route.path === '/') {
+    await router.replace(
+      safeReturnPath(route.query[RETURN_QUERY]) ?? '/dashboard',
+    );
+  }
   await redirectUnauthorizedAdminRoute();
   stream.start(liveTopic.value);
   if (announceLogin) announce('Sessão iniciada com segurança.');
@@ -196,14 +202,24 @@ async function redirectUnauthorizedAdminRoute() {
   announce('Você não tem acesso à área de vendedores.');
 }
 
-/** @param {boolean} [focus] */
-async function showSignedOut(focus = true) {
+/**
+ * @param {boolean} [focus]
+ * @param {boolean} [keepReturn] LOJ-24: keep the page asked for, so the
+ *   login goes back to it; an explicit logout does not.
+ */
+async function showSignedOut(focus = true, keepReturn = false) {
   session.value = null;
   phase.value = 'signed-out';
   stream.close();
   activeView.value?.dispose();
   activeView.value = null;
-  if (route.path !== '/') await router.replace('/');
+  await router.isReady();
+  if (route.path !== '/') {
+    const back = keepReturn ? safeReturnPath(route.fullPath) : null;
+    await router.replace(
+      back ? { path: '/', query: { [RETURN_QUERY]: back } } : '/',
+    );
+  }
   clearError();
   if (focus) {
     await nextTick();

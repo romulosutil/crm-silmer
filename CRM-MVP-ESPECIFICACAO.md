@@ -8,7 +8,9 @@
 
 O CRM Silmer substitui o Datacrazy e organiza conversas, clientes, pedidos e a
 ficha usada pela operação. WhatsApp oficial é o canal do primeiro lançamento;
-Instagram fica em `CANAL-2`. O site direciona para WhatsApp.
+Instagram fica em `CANAL-2`. O chat do site usa a jornada n8n da ADR 026;
+a loja do site registra pedidos pagos pela InfinitePay via n8n (ADRs 027 e
+028), com os gates próprios de implantação e homologação.
 
 A Caixa de Entrada é a superfície de atendimento e handoff. Pedidos é a
 superfície comercial. Kanban e Negócio foram aposentados (ADR 004).
@@ -87,10 +89,10 @@ impressão. Reabrir preserva número, registra autor e bloqueia impressão.
 Pagamento e entrega não mudam status automaticamente. “Pago em” e “Entregue
 em” são datas manuais; receber arquivo não confirma pagamento.
 
-A ficha impressa usa `ficha-canonical-v5`, paginação com cabeçalho e campos
+A ficha impressa usa `ficha-canonical-v6` (ADR 025, público por item e Modelo de malha), paginação com cabeçalho e campos
 posteriores de produção vazios. Valor e condição não saem no papel. Aprovação
 provisória do PO permite desenvolvimento; Rose e Operação devem assinar a
-amostra física antes da produção. Templates v2–v4 e hashes permanecem intactos.
+amostra física antes da produção. Templates v2–v5 e hashes permanecem intactos.
 
 O inventário da planilha está em `CAMPOS-FICHA-E-JORNADA-P0-1.md`; as
 exigências atuais do runtime são refinadas em
@@ -115,10 +117,15 @@ nova tentativa. Teclado, foco previsível e ARIA fazem parte do aceite.
 Toda mensagem conhecida está processada ou em pendência visível. Não prometer
 recuperação de mensagens ou bytes não observados. Mídia não promovida dura até
 o encerramento ou sete dias, o que ocorrer primeiro, em volume privado.
+Essa regra é do runtime legado: a mídia enviada pelo vendedor no chat fica
+preservada no RustFS até nova decisão de retenção (INBOX-MEDIA-1), com
+cleanup apenas de rascunhos sem vínculo após 24h. Validação e scan precedem
+o envio; falha temporária não autoriza envio inseguro.
 
-Arquivos comerciais válidos seguem retenção própria e procedimento Dropbox
-registrado. Upload automático permanece desativado até contrato, armazenamento
-durável e autorização. Rose é a destinatária operacional da ficha; eventual
+Arquivos comerciais válidos seguem retenção própria: o vendedor os envia e
+baixa pela página do pedido, e eles ficam no RustFS interno (ADR 023), com o
+bucket no backup off-host. Upload automático a partir do canal continua
+desativado. Rose é a destinatária operacional da ficha; eventual
 envio ou aviso automático exige fluxo próprio e homologação. Quando usado, o
 telefone vem de `secret://crm/order-recipient-phone`, nunca do repositório.
 

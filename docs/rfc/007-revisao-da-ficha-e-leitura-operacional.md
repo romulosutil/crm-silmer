@@ -1,6 +1,6 @@
 # RFC 007 — Ficha espelhada e leitura operacional do CRM
 
-Status: decidida para desenvolvimento pela [ADR 019](../adr/019-ficha-espelhada-e-sinais-operacionais.md); integração externa ainda proposta.
+Status: decidida para desenvolvimento pela [ADR 019](../adr/019-ficha-espelhada-e-sinais-operacionais.md); os arquivos da arte foram decididos depois pela [RFC 011](011-arquivos-da-arte-no-rustfs.md) e pela [ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md); o aviso a Rose segue proposto.
 
 Data: 03/10/2026
 
@@ -45,14 +45,15 @@ paginação, lastro e controle de produção em branco ([ADR 017](../adr/017-fic
 
 ## Integração preparada, sem ativação
 
-O destino futuro é `Dropbox/CRM/<numero-do-pedido-em-minusculas>/` (por exemplo
-`CRM/25-crm/`), criado no primeiro envio. A integração deve aceitar ao menos
-PNG, JPEG e CDR e outros tipos definidos por allowlist após validação de MIME,
-extensão, tamanho e conteúdo. O CRM deve registrar proprietário, hash, estado
-de envio, localização interna e auditoria; acesso de leitura exige autorização
-de pedido. Repetição do envio usa idempotência, sem criar duas pastas ou dois
-registros. Nenhum token ou link público entra na ficha. A tela mostra o campo
-desabilitado até haver storage durável e fluxo de recuperação.
+O destino dos arquivos da arte foi decidido depois pela
+[RFC 011](011-arquivos-da-arte-no-rustfs.md) e pela
+[ADR 023](../adr/023-arquivos-da-arte-no-rustfs.md): bucket privado do RustFS,
+com envio e download pela API do CRM e backup off-host junto do PostgreSQL. Os
+requisitos desta seção continuam valendo: allowlist com ao menos PNG, JPEG e
+CDR, após validação de MIME, extensão, tamanho e conteúdo; registro de
+proprietário, hash, estado de envio e auditoria; leitura com autorização do
+pedido; idempotência na repetição, sem dois registros; e nenhum token ou link
+público na ficha.
 
 Avisar Rose sobre pedido confirmado por n8n ou e-mail é proposta operacional.
 O evento deve levar apenas identificador e link interno, com reconsulta

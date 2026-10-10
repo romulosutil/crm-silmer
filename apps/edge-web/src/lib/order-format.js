@@ -58,10 +58,24 @@ const ITEM_POINT_LABELS = Object.freeze({
   cor: 'cor',
   gola: 'gola',
   grade: 'tamanhos',
-  malhas: 'tecido',
+  // ADR 025 (D5): the fabric is "Modelo de malha" at Silmer.
+  malhas: 'modelo de malha',
   tipo: 'tipo de roupa',
   tipo_servico: 'técnica',
 });
+
+// ADR 025 (D1): who an item is for, a closed list the API also enforces.
+export const AUDIENCE_OPTIONS = Object.freeze([
+  Object.freeze({ label: 'Masculino', value: 'masculino' }),
+  Object.freeze({ label: 'Feminino', value: 'feminino' }),
+  Object.freeze({ label: 'Infantil', value: 'infantil' }),
+  Object.freeze({ label: 'Unissex', value: 'unissex' }),
+]);
+
+/** @param {unknown} value */
+export function audienceLabel(value) {
+  return AUDIENCE_OPTIONS.find((option) => option.value === value)?.label ?? '';
+}
 
 // What the bot records when the customer leaves a point to the seller.
 const DEFERRED = 'definir com o vendedor';
@@ -217,13 +231,41 @@ export function itemPieces(item) {
 }
 
 /**
- * PIT-01: "Item 1 · CAMISETA · 150 peças".
+ * PIT-01: "Item 1 · CAMISETA · 150 peças"; ADR 025 adds the audience when
+ * there is one: "Item 2 · CAMISETA · Feminino · 10 peças".
  *
  * @param {Record<string, any>} item @param {number} index
  */
 export function itemHeading(item, index) {
   const tipo = String(item?.tipo ?? '').trim() || '—';
-  return `Item ${index + 1} · ${tipo} · ${itemPieces(item)} peças`;
+  const audience = audienceLabel(item?.publico);
+  return [`Item ${index + 1}`, tipo, audience, `${itemPieces(item)} peças`]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/**
+ * ADR 025: the quantity the customer said for this item, when it holds one.
+ *
+ * @param {Record<string, any>} item
+ * @returns {number|null}
+ */
+function itemInformed(item) {
+  const value = Number(item?.quantidade_informada);
+  return Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+/**
+ * ADR 025 (PIT-09 per item): the warning under an item whose sizes add up to
+ * something other than what the customer said for it. It never blocks.
+ *
+ * @param {Record<string, any>} item
+ */
+export function itemQuantityWarning(item) {
+  const informed = itemInformed(item);
+  const pieces = itemPieces(item);
+  if (informed === null || pieces <= 0 || informed === pieces) return '';
+  return `A soma dos tamanhos (${pieces}) é diferente da quantidade informada (${informed})`;
 }
 
 /**
@@ -271,14 +313,17 @@ export function quantityWarning(order) {
 }
 
 /**
- * PIT-09: an item's Quantidade — the sum of its sizes; with no sizes yet,
- * the first item (the one the bot fills) says what the customer told it.
+ * PIT-09: an item's Quantidade — the sum of its sizes; with no sizes yet, the
+ * quantity said for the item (ADR 025) or, on the first item (the one the bot
+ * fills), the quantity said for the order.
  *
  * @param {Record<string, any>} item @param {number} index @param {Record<string, any>} order
  */
 export function itemQuantityLabel(item, index, order) {
   const pieces = itemPieces(item);
   if (pieces > 0) return `${pieces} ${pieces === 1 ? 'peça' : 'peças'}`;
+  const own = itemInformed(item);
+  if (own !== null) return `— (cliente informou ${own})`;
   const informed = index === 0 ? informedQuantity(order) : null;
   return informed ? `— (cliente informou ${informed.text})` : '—';
 }
@@ -381,4 +426,77 @@ export function orderMilestones(order) {
       value: value || '—',
     };
   });
+}
+
+// ADRs 027 and 028: an order from the site shop. It is born confirmed and
+// locked; "Pago" is what InfinitePay confirmed through the n8n checkout.
+export const STORE_ORIGIN_LABEL = 'Loja do site';
+
+const SAO_PAULO_DATE_TIME = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  hour: '2-digit',
+  hourCycle: 'h23',
+  minute: '2-digit',
+  month: '2-digit',
+  timeZone: 'America/Sao_Paulo',
+  year: 'numeric',
+});
+
+/** @param {Record<string, any>|null|undefined} order */
+export function isStoreOrder(order) {
+  return order?.origin === 'loja';
+}
+
+/**
+ * An instant as São Paulo reads it: "07/10/2026 às 23:15", or '' when there
+ * is none.
+ *
+ * @param {unknown} value
+ */
+export function instantLabel(value) {
+  if (typeof value !== 'string') return '';
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) return '';
+  const parts = Object.fromEntries(
+    SAO_PAULO_DATE_TIME.formatToParts(instant).map((part) => [
+      part.type,
+      part.value,
+    ]),
+  );
+  return `${parts.day}/${parts.month}/${parts.year} às ${parts.hour}:${parts.minute}`;
+}
+
+/**
+ * LOJ-22: "Pago — confirmado pela InfinitePay em 07/10/2026 às 23:15".
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function storePaymentLabel(order) {
+  const at = instantLabel(order?.gatewayPayment?.confirmedAt);
+  return at
+    ? `Pago — confirmado pela InfinitePay em ${at}`
+    : 'Pago — confirmado pela InfinitePay';
+}
+
+/**
+ * LOJ-22: the kit's lead time — "Pronta entrega", "1 dia útil" or
+ * "10 dias úteis"; '' when the order has none.
+ *
+ * @param {unknown} days
+ */
+export function leadTimeLabel(days) {
+  if (!Number.isSafeInteger(days) || Number(days) < 0) return '';
+  if (days === 0) return 'Pronta entrega';
+  return days === 1 ? '1 dia útil' : `${days} dias úteis`;
+}
+
+/**
+ * The receipt link of a store order, only when it is an https link (the API
+ * accepted it from the InfinitePay hosts only).
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function storeReceiptUrl(order) {
+  const url = order?.gatewayPayment?.receiptUrl;
+  return typeof url === 'string' && url.startsWith('https://') ? url : '';
 }

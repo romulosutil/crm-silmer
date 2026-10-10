@@ -17,7 +17,9 @@ test('validates the approved internal zero-cost media policy', async () => {
   const document = await policy();
   assert.doesNotThrow(() => validateMediaRetentionPolicy(document));
   assert.equal(document.transientMedia.maximumAgeDays, 7);
-  assert.equal(document.validFileArchive.automaticApiIntegration, false);
+  assert.equal(document.validFileArchive.destination, 'crm-order-files-rustfs');
+  assert.equal(document.validFileArchive.automaticPromotion, false);
+  assert.equal(document.validFileArchive.includedInOffHostBackup, true);
   assert.equal(
     document.futureObjectStorage.subscriptionOrProvisioningAuthorized,
     false,
@@ -40,21 +42,45 @@ test('rejects a later-of retention rule or an R2 activation claim', async () => 
   );
 });
 
-test('rejects public media and an implied Dropbox API integration', async () => {
+test('rejects public media and an automatic promotion to RustFS', async () => {
   const publicMedia = await policy();
   publicMedia.storage.publicAccess = true;
   assert.throws(() => validateMediaRetentionPolicy(publicMedia), /private/iu);
 
-  const automaticDropbox = await policy();
-  automaticDropbox.validFileArchive.automaticApiIntegration = true;
+  const automaticPromotion = await policy();
+  automaticPromotion.validFileArchive.automaticPromotion = true;
   assert.throws(
-    () => validateMediaRetentionPolicy(automaticDropbox),
-    /Dropbox/iu,
+    () => validateMediaRetentionPolicy(automaticPromotion),
+    /RustFS/iu,
   );
+
+  const legacyDestination = await policy();
+  legacyDestination.validFileArchive.destination =
+    'existing-operational-repository';
+  assert.throws(
+    () => validateMediaRetentionPolicy(legacyDestination),
+    /RustFS/iu,
+  );
+});
+
+test('keeps order files in RustFS private and inside the off-host backup', async () => {
+  for (const [field, value] of /** @type {const} */ ([
+    ['publicAccess', true],
+    ['storedOnlyThroughCrmApi', false],
+    ['includedInOffHostBackup', false],
+  ])) {
+    const unsafe = await policy();
+    unsafe.validFileArchive[field] = value;
+    assert.throws(
+      () => validateMediaRetentionPolicy(unsafe),
+      /private.*CRM API.*off-host backup/iu,
+    );
+  }
 
   for (const field of [
     'tokenRef',
-    'oauthClientId',
+    'accessKeyId',
+    'secretAccessKey',
     'sdk',
     'webhook',
     'apiEndpoint',

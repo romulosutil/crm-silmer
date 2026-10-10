@@ -22,6 +22,17 @@ async function workflow(options) {
   return createDevTestWorkflow(source, options);
 }
 
+/** The CRM calls carry the workflow identity; Meta media and OpenAI do not. */
+function isCrmRequest(/** @type {Record<string, any>} */ node) {
+  return (
+    node.type === 'n8n-nodes-base.httpRequest' &&
+    (node.parameters.headerParameters?.parameters ?? []).some(
+      (/** @type {Record<string, any>} */ header) =>
+        header.name === 'X-Silmer-Workflow-Key',
+    )
+  );
+}
+
 test('keeps the canonical MVP path while replacing only WhatsApp transport', async () => {
   const dev = await workflow();
   const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
@@ -30,8 +41,16 @@ test('keeps the canonical MVP path while replacing only WhatsApp transport', asy
 
   assert.equal(dev.source.id, DEV_WORKFLOW_ID);
   assert.equal(dev.source.active, false);
-  // 68 canonical nodes plus nine DEV triggers, builders and results.
-  assert.equal(nodes.length, 77);
+  // Canonical inbound/site/media chains, minus two public site triggers, plus nine DEV nodes.
+  assert.equal(nodes.length, 91);
+  assert.equal(names.has('Site - Receber mensagem do chat (MVP)'), false);
+  assert.equal(names.has('Site - Montar evento do chat (MVP)'), false);
+  assert.equal(
+    Object.keys(dev.connections).some((name) =>
+      name.startsWith('Site - Receber'),
+    ),
+    false,
+  );
   assert.equal(
     nodes.some((node) => /whatsApp(?:Trigger)?$/u.test(node.type)),
     false,
@@ -54,7 +73,7 @@ test('isolates workflow identity, webhook paths and persistence settings', async
   const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
   const headers = /** @type {Array<Record<string, any>>} */ (
     nodes
-      .filter((node) => node.type === 'n8n-nodes-base.httpRequest')
+      .filter(isCrmRequest)
       .flatMap((node) => node.parameters.headerParameters.parameters)
   );
   const trigger = nodes.find(
@@ -99,7 +118,9 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   );
   assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
   assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
-  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-12');
+  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-15');
+  // T16 provenance classifies DEV from the original reservation's version.
+  assert.match(DEV_WORKFLOW_VERSION, /^dev-mvp-simple-\d+$/u);
   const result = nodes.find(
     (node) => node.name === 'DEV - Resultado da resposta da IA',
   );
@@ -170,8 +191,15 @@ test('manual chat makes CRM session continuity explicit across reloads', async (
 test('adds only named Basic credential references for deployment output', async () => {
   const dev = await workflow({ deployment: true });
   const nodes = /** @type {Array<Record<string, any>>} */ (dev.nodes);
-  const requests = nodes.filter(
-    (node) => node.type === 'n8n-nodes-base.httpRequest',
+  const requests = nodes.filter(isCrmRequest);
+  // Meta media and OpenAI never get the CRM Basic credential.
+  assert.ok(
+    nodes
+      .filter(
+        (node) =>
+          node.type === 'n8n-nodes-base.httpRequest' && !isCrmRequest(node),
+      )
+      .every((node) => node.credentials?.httpBasicAuth === undefined),
   );
   const panel = nodes.find(
     (node) => node.name === 'Painel - Receber comando (MVP)',
@@ -193,9 +221,7 @@ test('adds only named Basic credential references for deployment output', async 
 test('makes a localhost-only workflow self-contained without exporting credentials', async () => {
   const local = await workflow({ local: true });
   const nodes = /** @type {Array<Record<string, any>>} */ (local.nodes);
-  const requests = nodes.filter(
-    (node) => node.type === 'n8n-nodes-base.httpRequest',
-  );
+  const requests = nodes.filter(isCrmRequest);
   const panel = nodes.find(
     (node) => node.name === 'Painel - Receber comando (MVP)',
   );
@@ -245,10 +271,13 @@ test('T14/MED-21: DEV replaces only media Meta effects after real download/hash 
   assert.deepEqual(dev.connections[upload.name].main[0], [
     { node: preflight.name, type: 'main', index: 0 },
   ]);
-  assert.equal(
-    nodes.some((node) => node.parameters?.url?.includes('graph.facebook.com')),
-    false,
+  // ADR 026 adds read-only inbound Meta media; outbound Meta effects remain simulated.
+  const metaRequests = nodes.filter((node) =>
+    node.parameters?.url?.includes('graph.facebook.com'),
   );
+  assert.equal(metaRequests.length, 1);
+  assert.equal(metaRequests[0].name, 'WhatsApp - Consultar mídia (MVP)');
+  assert.equal(metaRequests[0].parameters.method, 'GET');
   assert.equal(
     nodes.some((node) => node.credentials?.whatsAppApi),
     false,

@@ -110,10 +110,11 @@ export function validateExternalEffects(document) {
     'Meta media must use the approved transient VPS retention contract',
   );
   invariant(
-    media?.validFileHandoff?.destination ===
-      'existing-dropbox-operational-repository' &&
+    media?.validFileHandoff?.destination === 'crm-order-files-rustfs' &&
+      media.validFileHandoff.decisionRecord ===
+        'docs/adr/023-arquivos-da-arte-no-rustfs.md' &&
       media.validFileHandoff.mode === 'manual-operational' &&
-      media.validFileHandoff.apiIntegration === false &&
+      media.validFileHandoff.automaticPromotion === false &&
       media.validFileHandoff.failureExtendsTransientExpiry === false,
     'Valid media handoff must remain manual and never extend transient expiry',
   );

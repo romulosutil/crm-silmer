@@ -125,9 +125,10 @@
         "unavailableState": "lost/unavailable"
       },
       "validFileHandoff": {
-        "destination": "existing-dropbox-operational-repository",
+        "destination": "crm-order-files-rustfs",
+        "decisionRecord": "docs/adr/023-arquivos-da-arte-no-rustfs.md",
         "mode": "manual-operational",
-        "apiIntegration": false,
+        "automaticPromotion": false,
         "receiptFields": [
           "attachment-id",
           "sha256",

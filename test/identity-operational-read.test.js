@@ -46,6 +46,7 @@ test('an action that changes data is never authorized as a read', async () => {
     'order.confirm',
     'order.edit',
     'order.intent',
+    'store.order.record',
     'x.read',
   ]) {
     const { database, calls } = countingDatabase();

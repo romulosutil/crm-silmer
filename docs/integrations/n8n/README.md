@@ -25,45 +25,94 @@ cliente, conversa, briefing ou memória curta.
 
 Em cada mensagem de texto, a IA extrai somente fatos confirmados para o
 `briefing_patch` criptografado da Conversa e pergunta pelo próximo ponto da
-ficha (ADR 012). A ficha que o bot pergunta tem o nome (`customer_name`) e sete
-pontos: tipo de roupa (`product_model`), cor (`colors`), quantidade
-(`quantity`), estampa (`artwork_status`), tecido (`fabrics`), tamanhos
-(`sizes`) e gola (`collar`); regata e abadá gravam a gola "regata", e polo
-grava "gola polo", sem perguntar. Os demais campos do `briefing_patch` (identificação do
-pedido, tipo de peça, técnica e locais da estampa, data desejada, finalidade,
-perfil de compra, logística e anotações) só são gravados quando o cliente fala
-deles; o bot não os pergunta e o vendedor completa. A retirada é sempre na
-"Loja da Silmer".
+ficha (ADR 012, ADR 024). A saudação pede o nome e o que o cliente quer
+personalizar, nunca "qual camisa"; se o cliente não disser o nome, a resposta
+seguinte reage ao que ele contou e pede só o nome, e depois o bot não insiste.
+Os pontos, nesta ordem, são: produto (`product_type`), modelo
+(`product_model`, só para roupa, boné, mochila ou bolsa), cor (`colors`),
+quantidade (`quantity`), onde vai a estampa (`artwork_locations`) e para
+quando o cliente precisa (`needed_by`, desejo do cliente, nunca prazo
+confirmado). Origem da arte, técnica, tecido, tamanhos, gola, personalização
+individual e divisão por público nunca são perguntados: o bot grava o que o
+cliente disser e o vendedor completa. A divisão por público vai em
+`audiences` ("4 masculinas, 3 femininas e 3 infantis"), e o CRM a transforma
+em um item por público quando a lê sem dúvida (ADR 025). O bot nunca oferece criar a arte e, de
+tecido, só fala de algodão, poliéster e dry fit. Os demais campos
+(identificação do pedido, finalidade, perfil de compra, logística e
+anotações) também só são gravados quando o cliente fala deles. A retirada é
+sempre na "Loja da Silmer".
+
+Sem perguntar, o workflow grava o que já está definido (`KITS`): abadá é
+sublimação total em poliéster branco com gola regata; sublimação total pede
+poliéster branco; regata tem gola "regata", polo tem "gola polo", e boné,
+mochila e bolsa têm gola `NAO APLICAVEL`. Também grava o produto a partir do
+modelo dito ("30 regatas"), o modelo quando o produto já o nomeia ("abadás",
+"ecobags") e o nome do produto no modelo de boné e bolsa ("bonés trucker").
+Só preenche campo vazio, e o que preenche não é perguntado. O resumo da
+transferência traz "Atenção" (`ALERTS`: sublimação em algodão ou em peça
+escura, bordado com foto) e "Dica" (`HINTS`: técnica usual do produto,
+personalização individual, divisão por público), só para o vendedor.
 
 O workflow escolhe o próximo ponto pela constante `FICHA_RHYTHM` do SDK, o
-primeiro ponto ainda vazio, um por mensagem, e calcula de forma determinística
-os pontos pendentes depois de unir o patch ao briefing atual. Ele só emite
-`briefing_complete` quando o nome e os sete pontos estiverem presentes. Para
-trocar a ordem, reordene `FICHA_RHYTHM` em
+primeiro ponto do produto ainda vazio, um por mensagem, e calcula de forma
+determinística os pontos pendentes depois de unir o patch ao briefing atual.
+O nó de contexto diz ao modelo o produto reconhecido e como perguntar o
+próximo ponto (`POINT_QUESTIONS`). Ele só emite `briefing_complete` quando os
+pontos do produto e o nome estiverem presentes; o nome pedido duas vezes sem
+resposta deixa de ser exigido. Os grupos de produto ficam em `PRODUCT_KINDS`
+e `NAMED_MODELS`. Para trocar a ordem ou acrescentar um kit, edite
 `ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sdk.js`, atualize o snapshot
 sanitizado principal com os nós gerados por `render-mvp-workflow.mjs` e rode
 `npm run generate:n8n-dev-workflow` e `npm run generate:n8n-local-workflow`.
 Os gatilhos de transferência da ADR 009 são
 aplicados pelo nó de decisão, não só pelo prompt: pergunta de preço, frete ou
 pagamento; pedido de pessoa ou de vendedor pelo nome; nome fora do CRM pedido
-duas vezes; conversa que não é pedido do zero (camisa do post, "quero essa
-camisa", pedido de contato por e-mail, WhatsApp ou telefone, algo já combinado
-com a Silmer; ADR 013); duas respostas incompreensíveis ou indecisas para o
-mesmo item; reclamação; urgência; conteúdo não suportado; e o teto de 15
-mensagens. O resumo de todo handoff traz "Ficha: X de 8 (Y%)", o indicador da
-meta de 50% da ficha; o
+duas vezes; conversa que não é pedido do zero (camisa ou boné do post, "quero
+essa camisa", pedido de contato por e-mail, WhatsApp ou telefone, algo já
+combinado com a Silmer; ADR 013); duas respostas incompreensíveis ou indecisas
+para o mesmo item; reclamação; urgência; conteúdo não suportado; e o teto de
+15 mensagens. O resumo de todo handoff traz "Ficha: X de N (Y%)", o indicador
+da meta de 50% da ficha, com N igual ao nome, enquanto o bot o pede, mais os
+pontos do produto (7 para roupa, boné ou bolsa; 6 para outro produto); o
 [roteiro do indicador da ficha](roteiro-indicador-da-ficha.md) tem as
 mensagens para testá-lo.
 `briefing_status` e `next_required_field` guardam o estado desses gatilhos e
 não vão para a Ficha. Nenhuma informação inferida vira Pedido oficial,
 catálogo, preço, prazo garantido ou pagamento. O agente pode criar um Pedido
 `pendente`, que é rascunho não oficial, na rodada em que a ficha ganha o
-primeiro dos sete pontos (ADR 014); oficial é o Pedido `confirmado`, e a
-confirmação permanece humana (ADR 006).
+primeiro dos seus pontos ou um campo que ele só grava, em geral o produto
+(ADR 014); oficial é o Pedido `confirmado`, e a confirmação permanece humana
+(ADR 006).
 
-Esta entrega ativa somente WhatsApp. Instagram, leitura multimodal pela IA e
-novas telas ficam nas fases posteriores. O adapter direto Meta → CRM permanece
-apenas como fixture de desenvolvimento e nunca é fallback silencioso.
+O bot atende no WhatsApp e no chat do site e lê imagens e áudios
+([ADR 026](../../adr/026-midia-e-chat-do-site-no-bot.md)); Instagram fica nas
+fases posteriores. O adapter direto Meta → CRM permanece apenas como fixture
+de desenvolvimento e nunca é fallback silencioso.
+
+## Imagem, áudio e chat do site (ADR 026)
+
+- **Imagem** (até 5 MB) vai anexada ao agente. **Áudio** (até 16 MB) é
+  transcrito pela mesma conta OpenAI (`gpt-4o-mini-transcribe`) e entra como
+  a mensagem do cliente. No WhatsApp, os nós `WhatsApp - Consultar mídia` e
+  `WhatsApp - Baixar mídia` usam a credencial WhatsApp na Graph API `v23.0`
+  (fixa no nó, porque o n8n 2 bloqueia `$env` nos nós por padrão); no site, o
+  arquivo já chega com a mensagem.
+- O que não pode ser consultado, baixado, preparado ou transcrito (por exemplo
+  áudio AAC ou AMR) chega ao modelo como "não consegui abrir", e o bot pede
+  para o cliente escrever. Documento, vídeo e tipo desconhecido transferem.
+- Figurinha é guardada como imagem e não vai ao modelo; localização e contato
+  viram texto; reação e avisos de sistema são ignorados.
+- **Chat do site:** `Site - Receber mensagem do chat (MVP)` é um Chat Trigger
+  público em modo `webhook`, só para `https://silmer.com.br` e
+  `https://www.silmer.com.br`, com upload de imagem e áudio. O widget
+  `@n8n/chat` do site usa a URL de produção desse nó
+  (`/webhook/<webhookId>/chat`); o `webhookId` não muda numa atualização do
+  workflow. Cada sessão do navegador vira a identidade `999` + 12 dígitos
+  ("Visitante do site"), que nunca é um número real.
+- No chat, a resposta, o aviso e o "um vendedor vai falar com você pelo
+  WhatsApp" voltam no próprio widget (`responseMode: lastNode`). Como o
+  vendedor não responde dentro do chat, o aviso pede o WhatsApp do visitante,
+  e o painel recusa com `422` uma mensagem humana para um número `999`.
 
 ## Entidades que o fluxo cria ou altera
 
@@ -89,12 +138,16 @@ Os três endpoints usam `Authorization: Basic`, `Idempotency-Key`,
 `X-Correlation-Id`, `X-Silmer-Workflow-Key`, `X-Silmer-Workflow-Version` e
 `X-Silmer-Execution-Id`. Upload também exige `X-Silmer-Content-SHA256`.
 
+O workflow da loja usa uma quarta rota com os mesmos cabeçalhos, só para o
+pedido pago da loja (seção [Pedido pago da loja](#pedido-pago-da-loja-adr-028)).
+
 1. `POST /api/v1/integrations/n8n/messages/inbound`
    cria ou resolve Cliente, Conversa e Mensagem e devolve `source_revision`,
    `automation_epoch`, modo, mensagens recentes e briefing.
 2. `POST /api/v1/integrations/n8n/conversations/{id}/attachments`
    recebe uma mídia por streaming, valida tamanho, hash, MIME e malware e só a
-   vincula depois da quarentena. A IA multimodal fica diferida.
+   vincula depois da quarentena. O workflow ainda não envia a mídia por este
+   endpoint: a IA a lê direto da Meta ou do chat (ADR 026).
 3. `POST /api/v1/integrations/n8n/events`
    recebe reserva de envio, callbacks de entrega, handoff, abertura do Pedido
    pendente (`open_order` na reserva ou no handoff) e falha do workflow.
@@ -174,8 +227,9 @@ conforme a ADR 009.
 `open_order`. O workflow o calcula pela regra da
 [ADR 014](../../adr/014-pedido-abre-no-primeiro-ponto-da-ficha.md): `true` na
 rodada em que a ficha (briefing anterior unido ao patch da rodada) ganha o
-primeiro valor real de um dos sete pontos e em todas as seguintes; o nome
-sozinho e "Definir com o vendedor" não abrem, e o que não é pedido do zero
+primeiro valor real de um dos pontos (ADR 024: o produto é o primeiro) e em
+todas as seguintes; o nome sozinho e "Definir com o vendedor" não abrem, e o
+que não é pedido do zero
 (ADR 013) nunca abre. Um valor que não seja booleano, ou o campo em outro
 evento, volta `400`. A autorização é a do próprio evento.
 
@@ -275,6 +329,108 @@ campos da ficha no pedido `pendente` da conversa:
 - Preço, valor, condição de pagamento, status e outros campos oficiais
   continuam recusados no `briefing_patch`, como antes.
 
+## Pedido pago da loja (ADR 028)
+
+O workflow "Silmer | Loja | Checkout InfinitePay" (id `SbNSW5jwBcXM5Afj`) cria
+o link do Checkout Integrado da InfinitePay (só Pix), recebe o webhook e
+confirma o pagamento com `payment_check` (pago é `paid` com `amount` maior ou
+igual ao valor do pedido). Só então chama o CRM, servidor a servidor, para
+registrar o pedido pago ([ADR 028](../../adr/028-pedido-pago-da-loja-pelo-n8n.md)).
+Não há WhatsApp automático ao vendedor: ele abre o pedido no CRM e atende pelo
+WhatsApp dele.
+
+```
+POST {CRM}/api/v1/integrations/n8n/store-orders
+```
+
+No cloud-dev, `{CRM}` é
+`https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host`. A rota responde
+`404` enquanto `STORE_ORDERS_HMAC_KEY` não estiver configurada na API.
+
+| Cabeçalho                   | Valor que o nó HTTP manda                                                                                                                                      |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Authorization`             | Basic da credencial n8n → CRM que o workflow principal já usa (`CRM_AUTOMATION_CLIENT_ID`:`CRM_AUTOMATION_CLIENT_SECRET`), como credencial `httpBasicAuth`.    |
+| `Content-Type`              | `application/json`                                                                                                                                             |
+| `Idempotency-Key`           | O `pedido_id`, exatamente o mesmo texto do corpo.                                                                                                              |
+| `X-Correlation-Id`          | O `pedido_id` também. Precisa ser um UUID (ou de 16 a 64 hexadecimais); um texto qualquer, como o id numérico da execução, volta `400 INVALID_CORRELATION_ID`. |
+| `X-Silmer-Workflow-Key`     | `silmer-loja-checkout-infinitepay` (texto fixo, até 128 caracteres, sem espaço nas pontas).                                                                    |
+| `X-Silmer-Workflow-Version` | Rótulo fixo da versão do workflow, até 64 caracteres, como `loja-checkout-1`; troque a cada versão publicada.                                                  |
+| `X-Silmer-Execution-Id`     | `{{ $execution.id }}` (até 128 caracteres).                                                                                                                    |
+
+Corpo (JSON até 16 KB; todas as chaves obrigatórias, nenhuma outra aceita):
+
+```json
+{
+  "schema_version": "1.0",
+  "pedido_id": "<uuid v4 do site = order_nsu da InfinitePay>",
+  "numero_loja": "LJ-<8 primeiros hexadecimais do pedido_id, em maiúsculas>",
+  "teste": false,
+  "produto": { "slug": "camisa-masculina-lisa" },
+  "item": {
+    "cor_id": "preta",
+    "tamanho_id": "m",
+    "quantidade": 10,
+    "prazo_dias": 10
+  },
+  "valor_centavos": 18000,
+  "cliente": { "nome": "<nome>", "telefone": "55<DDD><número>" },
+  "pagamento": {
+    "gateway": "infinitepay",
+    "forma": "pix",
+    "transaction_nsu": "<transaction_nsu do payment_check>",
+    "invoice_slug": "<invoice_slug do payment_check>",
+    "valor_pago_centavos": 18000,
+    "pago_em": "2026-10-09T19:40:59Z",
+    "receipt_url": "<receipt_url da InfinitePay> ou null"
+  }
+}
+```
+
+- `cor_id`: `branca` (prazo 0, pronta entrega), `chumbo` ou `preta` (prazo
+  10). `tamanho_id`: `pp`, `p`, `m`, `g`, `gg`, `eg`, `xg`, `xx`, `jeg`.
+- `valor_centavos` é 18000; 100 só com `teste: true` num CRM com
+  `STORE_ORDERS_ACCEPT_TEST=true`. `valor_pago_centavos` é o `amount` pago,
+  maior ou igual ao valor.
+- `pago_em` em ISO 8601 UTC com `Z`, até 5 minutos à frente do relógio do CRM
+  e até 30 dias atrás. `telefone`: E.164 brasileiro sem `+`.
+- `receipt_url`: `null` ou `https://` em `infinitepay.io`, `*.infinitepay.io`,
+  `infinitepay.com.br` ou `*.infinitepay.com.br`, sem porta nem credencial.
+
+Respostas:
+
+| Status | Quando                                                                                                                                                                                | O que o workflow faz                                                         |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `201`  | Pedido criado.                                                                                                                                                                        | Segue; guarda `numero`, `pedido_url`.                                        |
+| `200`  | Já existia com os mesmos dados; ou o `receipt_url` que faltava foi gravado agora (`comprovante_registrado: true`).                                                                    | Segue. Reenviar é seguro.                                                    |
+| `400`  | `INVALID_REQUEST`, `UNKNOWN_REQUEST_FIELD`, `UNSUPPORTED_SCHEMA_VERSION`, `INVALID_STORE_NUMBER`, `INVALID_RECEIPT_URL`, `INVALID_PAID_AT`, `INVALID_CUSTOMER`, cabeçalhos inválidos. | Não repetir igual: corrigir o nó. O Pix já foi pago — avisar uma pessoa.     |
+| `401`  | Credencial ausente ou errada.                                                                                                                                                         | Conferir a credencial; avisar uma pessoa.                                    |
+| `403`  | `FORBIDDEN_AUTOMATION_ACTION`: credencial sem a ação `store.order.record`.                                                                                                            | Avisar uma pessoa.                                                           |
+| `404`  | Rota desligada (sem `STORE_ORDERS_HMAC_KEY`) ou CRM sem a versão nova.                                                                                                                | Avisar uma pessoa.                                                           |
+| `409`  | `STORE_ORDER_CONFLICT`: mesmo `pedido_id` com outros dados ou outro comprovante, ou `transaction_nsu` de outro pedido.                                                                | Não repetir: avisar uma pessoa.                                              |
+| `422`  | `STORE_CATALOG_MISMATCH`, `AMOUNT_BELOW_PRICE`, `TEST_REFUSED`, `PAYMENT_METHOD_UNSUPPORTED`. Nada é gravado.                                                                         | Não repetir: o site, o n8n ou o catálogo do CRM divergem. Avisar uma pessoa. |
+| `429`  | `RATE_LIMITED` (60 chamadas por minuto), com `Retry-After`.                                                                                                                           | Repetir a mesma chamada depois do `Retry-After`.                             |
+| `5xx`  | `503 SERVICE_UNAVAILABLE` (com `Retry-After`) ou CRM fora do ar.                                                                                                                      | Repetir a mesma chamada com espera crescente; persistindo, avisar.           |
+
+Resposta de sucesso:
+
+```json
+{
+  "numero": "37-CRM",
+  "numero_loja": "LJ-5B0C77ED",
+  "pedido_id": "<id do pedido no CRM, diferente do pedido_id do site>",
+  "criado": true,
+  "comprovante_registrado": false,
+  "pedido_url": "<APP_BASE_URL>/pedidos/<id>",
+  "ficha_url": "<APP_BASE_URL>/api/v1/orders/<id>/print?download=1"
+}
+```
+
+Sem `APP_BASE_URL` na API, as duas URLs voltam relativas (`/pedidos/<id>`).
+As duas exigem sessão do CRM: quem abre sem sessão entra e volta ao pedido.
+Erros vêm em `application/problem+json` (`error.code`), sem eco do corpo. Toda
+resposta diferente de `2xx` é falha visível no workflow (RULES técnica 6): o
+dinheiro já entrou, então o pedido não pode sumir em silêncio.
+
 ## Workflow e configuração
 
 - Workflow: `k7tI6T4RhQPyJkn9` — `Silmer | Atendimento WhatsApp IA`.
@@ -305,6 +461,14 @@ WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos po
   da variável `SILMER_PILOT_SELLERS` do n8n, separados por vírgula, e conta o
   teto pelas mensagens do cliente. Os nomes não entram no repositório.
 - São necessárias duas credenciais Basic distintas: n8n → CRM e CRM → n8n.
+- O n8n 2 bloqueia `$env` nos nós por padrão (`N8N_BLOCK_ENV_ACCESS_IN_NODE`).
+  Na implantação, o DEV e o principal gravam a URL do cloud-dev
+  (`https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host`) direto nos
+  nós do CRM; o snapshot do repositório mantém `$env.SILMER_PANEL_BASE_URL`.
+  Troque a URL nos nós quando o CRM definitivo tiver domínio. Pelo mesmo
+  motivo, o principal implantado grava no nó `WhatsApp - Enviar texto humano
+(MVP)` o ID do número de origem (o da conta Silmer no WhatsApp Manager), no
+  lugar de `$env.SILMER_WHATSAPP_PHONE_NUMBER_ID`.
 - Segredos não entram em export, repositório, log, chat ou Data Table.
 - Persistência de execuções manuais/sucesso e progresso deve ficar desabilitada;
   falhas são sanitizadas e têm expurgo técnico em até 30 dias.
@@ -352,7 +516,16 @@ ADR 012, o CRM com o campo vai ao cloud-dev antes do workflow `mvp-simple-7`
 (DEV `dev-mvp-simple-8`). Pelo mesmo motivo, o CRM que aceita `open_order`
 (ADR 014) vai antes do workflow `mvp-simple-11` (DEV `dev-mvp-simple-12`); o
 workflow anterior continua funcionando com o CRM novo, que ainda aceita
-`order.intent_confirmed`.
+`order.intent_confirmed`. O workflow `mvp-simple-12` (DEV
+`dev-mvp-simple-13`, ADR 024) não muda o contrato e não tem ordem de
+implantação: `product_type` e o valor `NAO APLICAVEL` da gola já eram aceitos.
+O CRM que aceita `audiences` no `briefing_patch` e lê a divisão por público
+(ADR 025) vai ao ambiente **antes** do workflow `mvp-simple-13` (DEV
+`dev-mvp-simple-14`), que envia o campo; um CRM antigo recusa a chave com
+`400`, e a resposta do bot não sai. O workflow anterior continua funcionando
+com o CRM novo. O workflow `mvp-simple-14` (DEV `dev-mvp-simple-15`, ADR 026)
+não muda o contrato e não tem ordem de implantação: imagem, áudio, documento,
+vídeo e texto já eram tipos aceitos.
 
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker e configurar as duas credenciais Basic.
@@ -376,6 +549,11 @@ incertos para reconciliação. A rota direta não é reativada automaticamente.
   [runbook do ator técnico](../../runbooks/automation-executor.md).
 - mídia em quarentena/indisponível: abrir handoff e não afirmar que os bytes
   foram recuperados.
+- bot pedindo para o cliente escrever depois de um áudio ou imagem: a mídia
+  não foi lida; ver o erro em `WhatsApp - Consultar mídia`, `Baixar mídia`,
+  `Preparar mídia para a IA` ou `OpenAI - Transcrever áudio`.
+- `422 site_chat_contact_has_no_whatsapp` no comando humano: a conversa é do
+  chat do site; responder no WhatsApp que o visitante deixou.
 
 As próximas telas e a ordem de entrega estão em
 [`docs/roadmap/PROXIMAS-FASES.md`](../../roadmap/PROXIMAS-FASES.md).

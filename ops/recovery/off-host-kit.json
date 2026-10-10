@@ -48,6 +48,15 @@
     ]
   },
   "runbook": "RUNBOOK.md",
+  "orderFiles": {
+    "decisionRecord": "../../docs/adr/023-arquivos-da-arte-no-rustfs.md",
+    "service": "schedule/rustfs",
+    "bucket": "crm-silmer-arquivos",
+    "offHostBackup": "with-postgres",
+    "restoreOrder": "after-postgres-before-api",
+    "restoreScope": "crm-bucket-only",
+    "sameFailureDomainAsPostgres": true
+  },
   "adapters": {
     "meta": "mock",
     "ai": "mock",

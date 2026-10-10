@@ -11,6 +11,7 @@ import {
   RustfsMediaStore,
   processMetaWebhook,
 } from '@crm-silmer/integration-reliability';
+import { objectStorageFromEnvironment } from '@crm-silmer/orders';
 import { createApi } from './app.js';
 import { createChatMediaApiRuntime } from './chat-media-runtime.js';
 import { createAutomationAuthRuntime } from './automation-auth-runtime.js';
@@ -22,6 +23,7 @@ import { createN8nApiRuntime } from './n8n-runtime.js';
 import { createOperationReadRuntime } from './operation-runtime.js';
 import { createOperationalAuthRuntime } from './operational-auth-runtime.js';
 import { createOrderApiRuntime } from './order-runtime.js';
+import { createStoreOrdersForServer } from './store-order-runtime.js';
 import { createWhatsAppWebhookRuntime } from './whatsapp-webhook-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
@@ -50,6 +52,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   n8n?: Record<string, any>,
  *   operations?: Record<string, any>,
  *   orders?: ReturnType<typeof createOrderApiRuntime>,
+ *   storeOrders?: import('./store-order-runtime.js').StoreOrderRuntime,
  *   trustProxy?: import('fastify').FastifyServerOptions['trustProxy']
  * }} [runtime]
  */
@@ -112,12 +115,18 @@ export function createServerApi(runtime = {}) {
           identity: runtime.identity,
         })
       : undefined);
+  // ADR 028: the paid store orders n8n records, and the phone search of
+  // the order list over them.
+  const storeOrders =
+    runtime.storeOrders ??
+    createStoreOrdersForServer({ database: runtime.database, environment });
   const orders =
     runtime.orders ??
     createOrdersForServer({
       database: runtime.database,
       environment,
       operations,
+      phoneDigestsFor: storeOrders?.phoneDigestsFor,
     });
   const n8n =
     runtime.n8n ??
@@ -218,6 +227,7 @@ export function createServerApi(runtime = {}) {
       operations,
       orders,
       readiness,
+      storeOrders,
     },
   );
   const database = runtime.database;
@@ -247,13 +257,21 @@ export function requireMediaSpoolRoot(environment) {
  * runtime's session guards, so they also need that runtime; once FAB_CODE is
  * set, a missing envelope key is a startup error.
  *
- * @param {{database?: any, environment: Record<string, string|undefined>, operations?: Record<string, any>}} input
+ * @param {{database?: any, environment: Record<string, string|undefined>, operations?: Record<string, any>, phoneDigestsFor?: (query: string) => string[]}} input
  */
-export function createOrdersForServer({ database, environment, operations }) {
+export function createOrdersForServer({
+  database,
+  environment,
+  operations,
+  phoneDigestsFor,
+}) {
   if (!database || !operations || !environment.FAB_CODE) return undefined;
   return createOrderApiRuntime(database, {
     access: /** @type {any} */ (operations),
     environment,
+    phoneDigestsFor,
+    // ADR 023: the art files turn on with the OBJECT_STORAGE_* variables.
+    storage: objectStorageFromEnvironment(environment),
   });
 }
 

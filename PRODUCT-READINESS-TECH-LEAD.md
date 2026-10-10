@@ -313,14 +313,14 @@ jornada_encerrada_em)`. A jornada termina em `Sem lead`, `Perdido`, `Fechado`
 ou cancelamento. Perda do volume pode tornar essa mídia `lost/unavailable`; o
 CRM deve mostrar a limitação e nunca alegar recuperação.
 
-Arquivo inválido é eliminado e nunca segue ao Dropbox. Para esta política,
+Arquivo inválido é eliminado e nunca chega ao pedido. Para esta política,
 arquivo válido é aquele que passou limite, MIME por conteúdo, hash e varredura
 e que uma pessoa classificou como necessário à finalidade operacional; uma só
-dessas condições não basta. O arquivo válido é copiado para o repositório Dropbox já usado pela
-Silmer, por procedimento operacional registrado, e passa a seguir o prazo da
+dessas condições não basta. O operador anexa o arquivo válido ao pedido, que o
+guarda no bucket privado do RustFS (ADR 023), e ele passa a seguir o prazo da
 classe correspondente. O MVP registra hash, operador, horário e resultado do
-handoff, mas não presume API, OAuth, webhook ou sincronização automática do
-Dropbox. Pedido, Ficha versionada, orçamento aprovado, comprovante PIX válido,
+handoff; não há promoção automática a partir do canal nem URL pública do
+arquivo. Pedido, Ficha versionada, orçamento aprovado, comprovante PIX válido,
 eventos comerciais e auditoria permanecem fora do prazo transitório e mantêm
 os contratos desta matriz. Se um `legal_hold` exigir os bytes, a evidência
 mínima precisa ser promovida à classe durável antes do vencimento; o volume
@@ -406,8 +406,8 @@ Critérios da decisão:
     destinos envolvidos e timestamps sem reter o conteúdo eliminado.
 11. **PRV-P06-11:** correção, bloqueio ou exclusão é propagada aos operadores e
     registra sucesso, falha ou limitação por destino para reconciliação; no
-    Dropbox operacional, essa evidência é manual enquanto não existir adapter
-    aprovado.
+    bucket RustFS dos arquivos do pedido, a remoção passa pela API do CRM e as
+    cópias no backup off-host expiram pela rotação de 35 dias.
 12. **PRV-P06-12:** antes do piloto existem designações formais para
     Responsável de Privacidade e Administrador Técnico. A regra normal separa
     as identidades; no piloto interno de uma pessoa, a exceção aprovada exige

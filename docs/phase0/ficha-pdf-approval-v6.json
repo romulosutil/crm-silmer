@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "task": "T100",
+  "adr": "025",
+  "requirements": ["PUB-07", "PIM-10"],
+  "syntheticOnly": true,
+  "snapshotVersion": "synthetic-order-v6",
+  "templateVersion": "ficha-canonical-v6",
+  "snapshotSha256": "771d530f7d270e53afa99f7de0b60d2e482de071510f56ecd38674605e03326b",
+  "renderedHtmlSha256": "c7ca92e1e5d2361a612efbafffe0972f0a6a6c9e0e25ba508ba3f34a13f2fd1d",
+  "artifact": {
+    "path": "output/pdf/ficha-canonica-sintetica-v6.pdf",
+    "sha256": "9e227262ccaa6c3860a162df70d3fdff5c83fb6b018380b8f4858578dcc0f401",
+    "pageCount": 3
+  },
+  "provisionalApproval": {
+    "status": "approved",
+    "approved": true,
+    "scope": "development/cloud-dev",
+    "reviewedBy": {
+      "role": "PO",
+      "name": "Rômulo Sutil Corrêa"
+    },
+    "reviewedAt": "2026-10-06",
+    "snapshotSha256": "771d530f7d270e53afa99f7de0b60d2e482de071510f56ecd38674605e03326b",
+    "renderedHtmlSha256": "c7ca92e1e5d2361a612efbafffe0972f0a6a6c9e0e25ba508ba3f34a13f2fd1d",
+    "artifactSha256": "9e227262ccaa6c3860a162df70d3fdff5c83fb6b018380b8f4858578dcc0f401",
+    "decisionRef": "docs/phase0/FICHA-PDF-REVIEW-V6.md"
+  },
+  "approval": {
+    "status": "pending-human-approval",
+    "approved": false,
+    "requiredBefore": "production",
+    "signature": "physical",
+    "reviewedBy": {
+      "rose": null,
+      "operation": null
+    },
+    "reviewedAt": null,
+    "signedPaperKeptAt": null,
+    "criteria": {
+      "legibility": null,
+      "content": null,
+      "order": null,
+      "grade": null,
+      "totals": null,
+      "printing": null
+    },
+    "evidenceRef": null
+  },
+  "versioning": {
+    "overwriteApprovedVersion": false,
+    "correctionsRequireNewTemplateVersion": true,
+    "supersedesTemplateVersion": "ficha-canonical-v5"
+  }
+}

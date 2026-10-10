@@ -1907,7 +1907,7 @@ MED-05/15/27/28 permanecem em progresso; schema não comprova envio ou UI.
 
 - Premissas: último número real é 0026; IDs de conversas/usuários/mensagens
   permanecem text. A nova mídia usa UUID e não reutiliza transient_media.
-- Arquivos: `modules/database/migrations/0027_chat_media.expand.sql`,
+- Arquivos: `modules/database/migrations/0030_chat_media.expand.sql`,
   `test/chat-media-schema-postgres-live.test.js`, `spec.md`, `tasks.md`,
   `execution.md`. Migrations publicadas ficam intactas.
 - Sucesso: ao menos seis cenários live de replay, vínculo único, retenção

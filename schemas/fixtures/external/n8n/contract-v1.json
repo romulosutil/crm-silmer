@@ -48,6 +48,7 @@
     "artwork_locations",
     "artwork_status",
     "artwork_technique",
+    "audiences",
     "briefing_status",
     "city_or_postal_code",
     "collar",

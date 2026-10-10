@@ -2,9 +2,11 @@
 import { computed, inject, nextTick, ref } from 'vue';
 import { colorSwatch } from '../../lib/order-catalog.js';
 import {
+  AUDIENCE_OPTIONS,
   itemHeading,
   itemPieces,
   itemQuantityLabel,
+  itemQuantityWarning,
 } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
 
@@ -69,6 +71,8 @@ const saving = ref(false);
 const errorMessage = ref('');
 /** @type {import('vue').Ref<Record<string, string>>} */
 const lineErrors = ref({});
+/** ADR 025: what a screen reader hears after "Duplicar item". */
+const announcement = ref('');
 /** Which "Adicionais" blocks are open, by `read-N` or `edit-N`. */
 /** @type {import('vue').Ref<Record<string, boolean>>} */
 const extrasOpen = ref({});
@@ -197,6 +201,8 @@ function editable(item) {
     cor: itemColor(item),
     gola: item.gola || item.vies_gola || '',
     malhas: item.malhas?.length ? [...item.malhas] : [''],
+    publico: item.publico ?? '',
+    quantidade_informada: item.quantidade_informada ?? null,
   };
 }
 
@@ -212,6 +218,8 @@ function blankItem() {
     grade: [],
     malhas: [''],
     modelo: '',
+    publico: '',
+    quantidade_informada: null,
     tipo: '',
     tipo_servico: '',
     vies_gola: '',
@@ -228,6 +236,7 @@ async function startEditing() {
   lineErrors.value = {};
   errorMessage.value = '';
   extrasOpen.value = {};
+  announcement.value = '';
   editing.start(SECTION);
   await nextTick();
   // The first field lives inside a v-for; a ref on a repeated element would
@@ -250,6 +259,36 @@ function removeItem(index) {
   draft.value.splice(index, 1);
 }
 
+/**
+ * ADR 025 (D7): a copy right below, with everything but the sizes and the
+ * quantity said, so each audience of a split gets its own item. The focus
+ * goes to the copy's audience, the field the seller changes next.
+ *
+ * @param {number} index
+ */
+async function duplicateItem(index) {
+  const copy = JSON.parse(JSON.stringify(draft.value[index]));
+  copy.grade = [];
+  copy.quantidade_informada = null;
+  draft.value.splice(index + 1, 0, copy);
+  announcement.value = `Item ${index + 2} criado como cópia do item ${index + 1}.`;
+  await nextTick();
+  document.getElementById(`item-${index + 1}-publico`)?.focus();
+}
+
+/**
+ * The quantity said is optional: a blank field sends null, anything else the
+ * whole number the server checks again.
+ *
+ * @param {unknown} value
+ */
+function informedValue(value) {
+  if (value === null || value === undefined || String(value).trim() === '') {
+    return null;
+  }
+  return Number(value);
+}
+
 /** @param {Record<string, any>} item */
 function addMalha(item) {
   item.malhas.push('');
@@ -269,6 +308,8 @@ function addGradeLine(item) {
 function removeGradeLine(item, index) {
   item.grade.splice(index, 1);
 }
+
+const INFORMED_MESSAGE = 'Use um número inteiro de 1 a 100000.';
 
 /**
  * The sizes are checked here before the request so the error lands on the
@@ -293,6 +334,13 @@ function validate() {
         }
       },
     );
+    const informed = informedValue(item.quantidade_informada);
+    if (
+      informed !== null &&
+      (!Number.isSafeInteger(informed) || informed < 1 || informed > 100000)
+    ) {
+      errors[`${itemIndex}:informed`] = INFORMED_MESSAGE;
+    }
   });
   lineErrors.value = errors;
   return Object.keys(errors).length === 0;
@@ -324,6 +372,8 @@ async function save() {
         (malha) => String(malha).trim() !== '',
       ),
       modelo: item.modelo,
+      publico: item.publico,
+      quantidade_informada: informedValue(item.quantidade_informada),
       tipo: item.tipo,
       tipo_servico: item.tipo_servico,
       vies_gola: item.vies_gola,
@@ -393,6 +443,16 @@ async function save() {
               {{ itemHeading(item, itemIndex) }}
             </p>
             <button
+              type="button"
+              class="op-icon-button"
+              @click="duplicateItem(itemIndex)"
+            >
+              <OrderIcon name="copy" />
+              <span class="op-visually-hidden">{{
+                `Duplicar item ${itemIndex + 1}`
+              }}</span>
+            </button>
+            <button
               v-if="draft.length > 1"
               type="button"
               class="op-icon-button op-icon-button--danger"
@@ -416,6 +476,27 @@ async function save() {
                 autocomplete="off"
                 autocapitalize="characters"
               />
+            </div>
+
+            <div class="op-field">
+              <label :for="`item-${itemIndex}-publico`">Público</label>
+              <select
+                :id="`item-${itemIndex}-publico`"
+                v-model="item.publico"
+                :aria-describedby="`item-${itemIndex}-publico-hint`"
+              >
+                <option value="">Não informado</option>
+                <option
+                  v-for="option in AUDIENCE_OPTIONS"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+              <p :id="`item-${itemIndex}-publico-hint`" class="op-hint">
+                Só quando o cliente divide o pedido.
+              </p>
             </div>
 
             <div class="op-field">
@@ -447,6 +528,42 @@ async function save() {
                 >{{ itemPieces(item) }} peças</output
               >
               <p class="op-hint">Soma dos tamanhos.</p>
+              <label class="op-label" :for="`item-${itemIndex}-informada`"
+                >Quantidade informada</label
+              >
+              <input
+                :id="`item-${itemIndex}-informada`"
+                v-model="item.quantidade_informada"
+                class="op-num"
+                type="number"
+                min="1"
+                max="100000"
+                step="1"
+                inputmode="numeric"
+                :aria-invalid="
+                  Boolean(lineErrors[`${itemIndex}:informed`]) || undefined
+                "
+                :aria-describedby="
+                  lineErrors[`${itemIndex}:informed`]
+                    ? `item-${itemIndex}-informada-error`
+                    : `item-${itemIndex}-informada-hint`
+                "
+              />
+              <p
+                v-if="lineErrors[`${itemIndex}:informed`]"
+                :id="`item-${itemIndex}-informada-error`"
+                role="alert"
+                class="op-field-error"
+              >
+                {{ lineErrors[`${itemIndex}:informed`] }}
+              </p>
+              <p
+                v-else
+                :id="`item-${itemIndex}-informada-hint`"
+                class="op-hint"
+              >
+                O que o cliente disse; não entra no total.
+              </p>
             </div>
 
             <div class="op-field op-field--wide">
@@ -465,7 +582,7 @@ async function save() {
             </div>
 
             <div class="op-field op-field--wide">
-              <span class="op-label">Tecido</span>
+              <span class="op-label">Modelo de malha</span>
               <div
                 v-for="(malha, malhaIndex) in item.malhas"
                 :key="malhaIndex"
@@ -476,7 +593,7 @@ async function save() {
                   type="text"
                   autocomplete="off"
                   autocapitalize="characters"
-                  :aria-label="`Tecido ${malhaIndex + 1}`"
+                  :aria-label="`Modelo de malha ${malhaIndex + 1}`"
                 />
                 <button
                   v-if="item.malhas.length > 1"
@@ -486,7 +603,7 @@ async function save() {
                 >
                   <OrderIcon name="x" />
                   <span class="op-visually-hidden">{{
-                    `Remover tecido ${malhaIndex + 1}`
+                    `Remover modelo de malha ${malhaIndex + 1}`
                   }}</span>
                 </button>
               </div>
@@ -495,7 +612,7 @@ async function save() {
                 class="op-add-inline"
                 @click="addMalha(item)"
               >
-                <OrderIcon name="plus" />Adicionar tecido
+                <OrderIcon name="plus" />Adicionar modelo de malha
               </button>
             </div>
 
@@ -622,6 +739,9 @@ async function save() {
               />
             </div>
           </div>
+          <p v-if="itemQuantityWarning(item)" class="op-quantity-warning">
+            <OrderIcon name="alert" />{{ itemQuantityWarning(item) }}
+          </p>
 
           <div class="op-extras">
             <button
@@ -704,6 +824,7 @@ async function save() {
         <button type="button" class="op-add-item" @click="addItem">
           <OrderIcon name="plus" />Adicionar item
         </button>
+        <p class="op-visually-hidden" aria-live="polite">{{ announcement }}</p>
       </div>
 
       <div class="op-form-actions">
@@ -763,7 +884,7 @@ async function save() {
             <dd>{{ shownValue(item.tipo_servico) }}</dd>
           </div>
           <div>
-            <dt>Tecido</dt>
+            <dt>Modelo de malha</dt>
             <dd>{{ (item.malhas ?? []).join(' / ') || '—' }}</dd>
           </div>
           <div class="op-point--wide">
@@ -783,6 +904,9 @@ async function save() {
             <dd>{{ shownValue(item.gola || item.vies_gola) }}</dd>
           </div>
         </dl>
+        <p v-if="itemQuantityWarning(item)" class="op-quantity-warning">
+          <OrderIcon name="alert" />{{ itemQuantityWarning(item) }}
+        </p>
         <div class="op-extras">
           <button
             type="button"

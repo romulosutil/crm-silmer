@@ -331,7 +331,7 @@ onBeforeUnmount(() => {
       <button type="button" @click="retryInitialLoad">Tentar novamente</button>
     </section>
     <div v-else class="clients-layout">
-      <section class="surface" aria-labelledby="portfolio-title">
+      <section class="surface list-panel" aria-labelledby="portfolio-title">
         <div class="panel-head">
           <h2 id="portfolio-title">Lista de clientes</h2>
           <p>Ordenados pela atualização cadastral</p>
@@ -341,7 +341,7 @@ onBeforeUnmount(() => {
         </p>
         <div
           v-if="filtered.length"
-          class="table-wrap"
+          class="table-wrap list-scroll"
           role="region"
           tabindex="0"
           aria-label="Clientes; role horizontalmente para ver todas as colunas"

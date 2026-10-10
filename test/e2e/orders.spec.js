@@ -278,9 +278,102 @@ function eventStreamBody(event) {
   ].join('\n');
 }
 
+let uploadedSequence = 0;
+const ONE_PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/** @param {string} name @param {string} slot @param {number} index */
+function syntheticFile(name, slot, index) {
+  const extension = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
+  return {
+    contentType: 'application/octet-stream',
+    extension,
+    id: `file-${index}`,
+    name,
+    sizeBytes: 640 * 1024,
+    slot,
+    thumbnail: ['png', 'jpg', 'jpeg', 'webp'].includes(extension),
+    uploadedAt: '2026-10-05T17:12:00.000Z',
+    uploadedBy: { id: 'seller-marina', name: 'Marina Aguiar' },
+  };
+}
+
+/**
+ * The /files routes of ADR 023 over an in-memory store per order.
+ *
+ * @param {import('@playwright/test').Route} route
+ * @param {import('@playwright/test').Request} request
+ * @param {RegExpExecArray} match
+ * @param {Map<string, {final: any, references: any[]}>} store
+ * @param {any} options
+ */
+async function routeFiles(route, request, match, store, options) {
+  const [, orderId, fileId, kind] = match;
+  const state = store.get(orderId) ?? { final: null, references: [] };
+  store.set(orderId, state);
+  const json = (/** @type {number} */ status, /** @type {any} */ body) =>
+    route.fulfill({
+      status,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
+  const listing = () => ({
+    ...state,
+    limits: { maxBytes: 10 * 1024 * 1024, maxReferences: 5 },
+  });
+  if (request.method() === 'GET' && !fileId) {
+    await json(200, listing());
+    return;
+  }
+  if (request.method() === 'GET' && kind) {
+    await route.fulfill({
+      status: 200,
+      contentType: kind === 'thumbnail' ? 'image/png' : 'application/pdf',
+      headers: { 'Content-Disposition': 'attachment' },
+      body: ONE_PIXEL_PNG,
+    });
+    return;
+  }
+  expect(request.headers()['idempotency-key']).toBeTruthy();
+  if (request.method() === 'DELETE') {
+    options.onRemove?.(fileId);
+    if (state.final?.id === fileId) state.final = null;
+    state.references = state.references.filter((file) => file.id !== fileId);
+    await json(200, listing());
+    return;
+  }
+  const raw = (request.postDataBuffer() ?? Buffer.alloc(0)).toString('latin1');
+  const slot = /name="slot"\r\n\r\n([a-z]+)/u.exec(raw)?.[1] ?? '';
+  const filename = Buffer.from(
+    /name="file"; filename="([^"]+)"/u.exec(raw)?.[1] ?? '',
+    'latin1',
+  ).toString('utf8');
+  const hasThumbnail = raw.includes('name="thumbnail"');
+  options.onUpload?.({ filename, hasThumbnail, slot });
+  if (options.uploadFailure) {
+    await json(options.uploadFailure.status, {
+      error: options.uploadFailure.body,
+    });
+    return;
+  }
+  if (slot === 'reference' && state.references.length >= 5) {
+    await json(409, { error: { code: 'FILE_LIMIT_REACHED' } });
+    return;
+  }
+  const file = {
+    ...syntheticFile(filename, slot, (uploadedSequence += 1) + 100),
+    thumbnail: hasThumbnail,
+  };
+  if (slot === 'final') state.final = file;
+  else state.references.push(file);
+  await json(201, listing());
+}
+
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{orders?: any[], failDetailOnce?: boolean, failListOnce?: boolean, liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>}}} [options]
+ * @param {{orders?: any[], failDetailOnce?: boolean, failListOnce?: boolean, liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>}, files?: Record<string, {final: any, references: any[]}>, onUpload?: (call: {filename: string, hasThumbnail: boolean, slot: string}) => void, onRemove?: (fileId: string) => void, uploadFailure?: {status: number, body: Record<string, unknown>}}} [options]
  */
 async function mockOrders(page, options = {}) {
   // A write mutates the order it answers with, so each test gets its own
@@ -291,6 +384,10 @@ async function mockOrders(page, options = {}) {
     JSON.stringify(options.orders ?? [confirmedOrder, pendingOrder]),
   );
   const pages = options.pages ?? null;
+  /** @type {Map<string, {final: any, references: any[]}>} */
+  const fileStore = new Map(
+    Object.entries(JSON.parse(JSON.stringify(options.files ?? {}))),
+  );
   let listCalls = 0;
   let detailCalls = 0;
   await page.route('**/api/v1/**', async (route) => {
@@ -421,6 +518,16 @@ async function mockOrders(page, options = {}) {
         contentType: 'application/json',
         body: JSON.stringify({ order: current }),
       });
+      return;
+    }
+
+    // ADR 023: the art files of each order, kept per test like the orders.
+    const filesRoute =
+      /^\/api\/v1\/orders\/([^/]+)\/files(?:\/([^/]+)(?:\/(content|thumbnail))?)?$/u.exec(
+        path,
+      );
+    if (filesRoute) {
+      await routeFiles(route, request, filesRoute, fileStore, options);
       return;
     }
 
@@ -623,6 +730,51 @@ test('pages the list with "Ver mais"', async ({ page }) => {
   await expect(pending.getByRole('row')).toHaveCount(3);
   await expect(pending).toContainText('Loja Vitória Sports');
   await expect(page.getByRole('button', { name: 'Ver mais' })).toHaveCount(0);
+});
+
+test('keeps a long order list inside its own scrollable table', async ({
+  page,
+}) => {
+  const manyPending = Array.from({ length: 40 }, (_, index) => ({
+    ...pendingOrder,
+    id: `order-pendente-${index + 1}`,
+    number: `${index + 10}-CRM`,
+    ficha: {
+      ...pendingOrder.ficha,
+      summary: {
+        ...pendingOrder.ficha.summary,
+        cliente: `Cliente de teste ${index + 1}`,
+      },
+    },
+  }));
+  await mockOrders(page, { orders: [confirmedOrder, ...manyPending] });
+  await page.goto('/pedidos');
+  const table = page.getByRole('region', {
+    name: /Pedidos pendentes; role horizontalmente/u,
+  });
+  await expect(table.getByRole('row')).toHaveCount(41);
+
+  for (const viewport of [
+    { height: 720, width: 1280 },
+    { height: 844, width: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const metrics = await table.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      pageHeight: globalThis.document.documentElement.scrollHeight,
+      scrollHeight: element.scrollHeight,
+      viewportHeight: globalThis.innerHeight,
+    }));
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+    expect(metrics.clientHeight).toBeLessThan(metrics.viewportHeight);
+    // The page no longer grows with the list it holds.
+    expect(metrics.pageHeight).toBeLessThan(metrics.scrollHeight);
+  }
+
+  const lastOrder = table.getByRole('row', { name: /Cliente de teste 40/u });
+  await lastOrder.getByRole('link', { name: 'Abrir pedido' }).focus();
+  await expect(lastOrder).toBeInViewport();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('refreshes the list when an order changes elsewhere (PLI-08)', async ({
@@ -1117,7 +1269,7 @@ test('refreshes after leaving an edit saved over an older version', async ({
   await expect.poll(() => detailCalls).toBeGreaterThan(1);
 });
 
-test('records who makes the art and prepares its Dropbox folder without uploading yet (TEC-03)', async ({
+test('records who makes the art next to an empty file area (TEC-03, ARQ-01)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -1127,9 +1279,15 @@ test('records who makes the art and prepares its Dropbox folder without uploadin
 
   const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
   await expect(artwork).toContainText('O cliente envia a arte');
-  await expect(artwork).toContainText('CRM/07-crm/');
-  await expect(artwork.getByLabel('Adicionar arquivos da arte')).toBeDisabled();
-  await expect(artwork).toContainText('PNG, JPEG, CDR');
+  await expect(artwork).not.toContainText('Dropbox');
+  await expect(
+    artwork.getByRole('button', { name: 'Adicionar arquivos da arte' }),
+  ).toBeEnabled();
+  await expect(
+    artwork.getByRole('button', { name: 'Enviar arte final' }),
+  ).toBeEnabled();
+  await expect(artwork).toContainText('0 de 5');
+  await expect(artwork).toContainText('PNG, JPEG, WebP, CDR');
 
   await artwork.getByRole('button', { name: 'Editar' }).click();
   const client = artwork.getByLabel('O cliente envia a arte');
@@ -1160,6 +1318,187 @@ test('records who makes the art and prepares its Dropbox folder without uploadin
       },
     },
   });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('a seller sends art files and the final art, then removes one by keyboard (ARQ-02, ARQ-04, ARQ-05)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const uploads = [];
+  /** @type {string[]} */
+  const removed = [];
+  await mockOrders(page, {
+    onRemove: (/** @type {string} */ id) => removed.push(id),
+    onUpload: (/** @type {any} */ call) => uploads.push(call),
+  });
+  await page.goto('/pedidos/order-pendente');
+  const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
+
+  const chooser = page.waitForEvent('filechooser');
+  await artwork
+    .getByRole('button', { name: 'Adicionar arquivos da arte' })
+    .click();
+  await (
+    await chooser
+  ).setFiles([
+    { buffer: ONE_PIXEL_PNG, mimeType: 'image/png', name: 'logo-frente.png' },
+    {
+      buffer: Buffer.from('RIFF\0\0\0\0CDRv synthetic'),
+      mimeType: 'application/octet-stream',
+      name: 'brasao.cdr',
+    },
+  ]);
+
+  const files = artwork.getByRole('region', { name: 'Arquivos da arte' });
+  await expect(files.getByRole('listitem')).toHaveCount(2);
+  await expect(files).toContainText('2 de 5');
+  await expect(files.getByText('CDR', { exact: true })).toBeVisible();
+  await expect(
+    files.getByRole('link', { name: 'Baixar logo-frente.png' }),
+  ).toHaveAttribute(
+    'href',
+    /\/api\/v1\/orders\/order-pendente\/files\/.+\/content$/u,
+  );
+  expect(uploads).toEqual([
+    { filename: 'logo-frente.png', hasThumbnail: true, slot: 'reference' },
+    { filename: 'brasao.cdr', hasThumbnail: false, slot: 'reference' },
+  ]);
+  await expect(
+    page.getByRole('status').filter({ hasText: 'brasao.cdr' }),
+  ).toHaveText('“brasao.cdr” enviado.');
+
+  const finalChooser = page.waitForEvent('filechooser');
+  await artwork.getByRole('button', { name: 'Enviar arte final' }).click();
+  await (
+    await finalChooser
+  ).setFiles({
+    buffer: Buffer.from('%PDF-1.7 synthetic'),
+    mimeType: 'application/pdf',
+    name: 'arte-final.pdf',
+  });
+  const finalArt = artwork.getByRole('region', { name: 'Arte final' });
+  await expect(finalArt).toContainText('Enviada');
+  await expect(finalArt).toContainText('arte-final.pdf');
+  await expect(files).toContainText('2 de 5');
+
+  const remove = files.getByRole('button', { name: 'Remover logo-frente.png' });
+  await remove.focus();
+  await page.keyboard.press('Enter');
+  const confirm = files.getByRole('group', {
+    name: 'Remover logo-frente.png?',
+  });
+  await expect(confirm.getByRole('button', { name: 'Cancelar' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(confirm).toHaveCount(0);
+  await expect(remove).toBeFocused();
+  await page.keyboard.press('Enter');
+  await confirm.getByRole('button', { name: 'Remover' }).click();
+  await expect(files.getByRole('listitem')).toHaveCount(1);
+  await expect(files).toContainText('1 de 5');
+  await expect(
+    files.getByRole('link', { name: 'Baixar brasao.cdr' }),
+  ).toBeFocused();
+  expect(removed).toHaveLength(1);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('refuses files over 10 MB, outside the formats or past five (ARQ-03)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const uploads = [];
+  await mockOrders(page, {
+    files: {
+      'order-pendente': {
+        final: null,
+        references: [1, 2, 3, 4].map((index) =>
+          syntheticFile(`ref-${index}.pdf`, 'reference', index),
+        ),
+      },
+    },
+    onUpload: (/** @type {any} */ call) => uploads.push(call),
+  });
+  await page.goto('/pedidos/order-pendente');
+  const files = page.getByRole('region', { name: 'Arquivos da arte' });
+  await expect(files).toContainText('4 de 5');
+
+  const chooser = page.waitForEvent('filechooser');
+  await files
+    .getByRole('button', { name: 'Adicionar arquivos da arte' })
+    .click();
+  await (
+    await chooser
+  ).setFiles([
+    {
+      buffer: Buffer.alloc(10 * 1024 * 1024 + 1),
+      mimeType: 'image/png',
+      name: 'grande.png',
+    },
+    {
+      buffer: Buffer.from('MZ'),
+      mimeType: 'application/octet-stream',
+      name: 'setup.exe',
+    },
+    {
+      buffer: Buffer.from('%PDF-1.7'),
+      mimeType: 'application/pdf',
+      name: 'a.pdf',
+    },
+    {
+      buffer: Buffer.from('%PDF-1.7'),
+      mimeType: 'application/pdf',
+      name: 'b.pdf',
+    },
+  ]);
+
+  const alerts = files.getByRole('alert');
+  await expect(alerts).toHaveCount(3);
+  await expect(alerts.nth(0)).toContainText('“grande.png” não foi enviado');
+  await expect(alerts.nth(0)).toContainText('o limite é 10 MB');
+  await expect(alerts.nth(1)).toContainText('“setup.exe” não foi enviado');
+  await expect(alerts.nth(2)).toContainText('“b.pdf” ficou de fora');
+  await expect(files).toContainText('5 de 5');
+  await expect(files).toContainText('Limite de 5 arquivos atingido');
+  await expect(
+    files.getByRole('button', { name: 'Adicionar arquivos da arte' }),
+  ).toBeDisabled();
+  expect(uploads.map((call) => call.filename)).toEqual(['a.pdf']);
+  await expect(
+    page.getByRole('button', { name: 'Enviar arte final' }),
+  ).toBeEnabled();
+});
+
+test('a confirmed order only downloads its art files (ARQ-06)', async ({
+  page,
+}) => {
+  await mockOrders(page, {
+    files: {
+      'order-confirmado': {
+        final: syntheticFile('arte-final.cdr', 'final', 9),
+        references: [syntheticFile('mockup.png', 'reference', 1)],
+      },
+    },
+  });
+  await page.goto('/pedidos/order-confirmado');
+  const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
+  await expect(artwork).toContainText('arte-final.cdr');
+  await expect(
+    artwork.getByRole('link', { name: 'Baixar arte final arte-final.cdr' }),
+  ).toHaveAttribute(
+    'href',
+    '/api/v1/orders/order-confirmado/files/file-9/content',
+  );
+  await expect(
+    artwork.getByRole('link', { name: 'Baixar mockup.png' }),
+  ).toHaveAttribute('download', '');
+  await expect(
+    artwork.getByRole('button', {
+      name: /Remover|Adicionar|Enviar|Substituir/u,
+    }),
+  ).toHaveCount(0);
+  await expect(artwork).toContainText('Arquivos da arte');
+  await expect(artwork.getByText('1', { exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
@@ -1403,7 +1742,7 @@ test('reads each item with the seven points in order and the extras closed (PFI-
     'Cor',
     'Quantidade',
     'Técnica',
-    'Tecido',
+    'Modelo de malha',
     'Tamanhos',
     'Gola',
   ]);
@@ -1504,7 +1843,7 @@ test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)'
   await items.getByLabel('Tipo de roupa').fill('REGATA');
   await items.getByLabel('Cor', { exact: true }).fill('PRETA');
   await items.getByLabel('Técnica', { exact: true }).fill('SILK 4 CORES');
-  await items.getByLabel('Tecido 1').fill('ALGODÃO');
+  await items.getByLabel('Modelo de malha 1').fill('ALGODÃO');
   await items.getByLabel('Gola', { exact: true }).fill('REGATA');
   await items
     .getByRole('button', { name: 'Adicionais (não obrigatórios)' })
@@ -1542,7 +1881,7 @@ test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)'
   });
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await expect(closing).toContainText(
-    'Falta para gerar: cor do item 2, tecido do item 2, tamanhos do item 2, gola do item 2, valor final e forma de pagamento.',
+    'Falta para gerar: cor do item 2, modelo de malha do item 2, tamanhos do item 2, gola do item 2, valor final e forma de pagamento.',
   );
 });
 
@@ -1596,7 +1935,7 @@ test('names the fields the way the PO asked (PIT-10)', async ({ page }) => {
   for (const label of [
     'Tipo de roupa',
     'Tamanhos',
-    'Tecido',
+    'Modelo de malha',
     'Forma de pagamento',
   ]) {
     await expect(main.getByText(label, { exact: true }).first()).toBeVisible();
@@ -1736,8 +2075,10 @@ test('adds and removes items, fabrics and grade lines', async ({ page }) => {
   await items.getByRole('button', { name: 'Adicionar tamanho' }).click();
   await items.getByLabel('Tamanho da linha 3').fill('GG');
   await items.getByLabel('Quantidade do tamanho GG').fill('10');
-  await items.getByRole('button', { name: 'Adicionar tecido' }).click();
-  await items.getByLabel('Tecido 2').fill('HELANCA LIGHT');
+  await items
+    .getByRole('button', { name: 'Adicionar modelo de malha' })
+    .click();
+  await items.getByLabel('Modelo de malha 2').fill('HELANCA LIGHT');
   await items.getByRole('button', { name: 'Salvar' }).click();
 
   await expect(items).toContainText('1 item · 160 peças');
@@ -1746,6 +2087,73 @@ test('adds and removes items, fabrics and grade lines', async ({ page }) => {
     'DRY FIT 100% POLIÉSTER',
     'HELANCA LIGHT',
   ]);
+});
+
+test('splits an item by audience with Duplicar item, by keyboard (ADR 025, PUB-01, PUB-02, PUB-06)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Público').selectOption('masculino');
+  await items.getByLabel('Quantidade informada').fill('150');
+
+  const duplicate = items.getByRole('button', { name: 'Duplicar item 1' });
+  await duplicate.focus();
+  await page.keyboard.press('Enter');
+  const copyAudience = items.locator('#item-1-publico');
+  await expect(copyAudience).toBeFocused();
+  await expect(
+    items.getByText('Item 2 criado como cópia do item 1.'),
+  ).toHaveCount(1);
+  await expect(copyAudience).toHaveValue('masculino');
+  await copyAudience.selectOption('feminino');
+  await expect(items.locator('#item-1-informada')).toHaveValue('');
+  await items.locator('#item-1-informada').fill('40');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+
+  const [first, copy] = writes[0].body.value;
+  expect(first.publico).toBe('masculino');
+  expect(first.quantidade_informada).toBe(150);
+  expect(copy.publico).toBe('feminino');
+  expect(copy.quantidade_informada).toBe(40);
+  expect(copy.grade).toEqual([]);
+  expect(copy.tipo).toBe(first.tipo);
+  expect(copy.malhas).toEqual(first.malhas);
+
+  await expect(
+    items.getByRole('heading', { name: /^Item 2 · .* · Feminino · 0 peças$/u }),
+  ).toBeVisible();
+  await expect(items.getByText('— (cliente informou 40)')).toBeVisible();
+});
+
+test('warns under an item whose sizes differ from the quantity said for it (ADR 025, PUB-02)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await items.getByLabel('Quantidade informada').fill('200');
+  await expect(
+    items.getByText(
+      'A soma dos tamanhos (150) é diferente da quantidade informada (200)',
+    ),
+  ).toBeVisible();
+  await items.getByLabel('Quantidade informada').fill('0');
+  await items.getByRole('button', { name: 'Salvar' }).click();
+  await expect(
+    items.getByText('Use um número inteiro de 1 a 100000.'),
+  ).toBeVisible();
+  await expect(items.getByLabel('Quantidade informada')).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  );
 });
 
 test('shows the server grade error on the line it names', async ({ page }) => {

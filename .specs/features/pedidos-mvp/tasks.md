@@ -26,7 +26,7 @@ T01..T75 preservam planejamento e evidências datadas das entregas anteriores; c
 | T86    | Template v5 e seletor aprovado provisoriamente | commits 744c66f e 2979c81; docs/phase0/ficha-pdf-approval-v5.json          |
 | T87    | PR 142 integrada                               | baseline 2979c81; gates devem ser confirmados na release alvo              |
 
-**Pendências reais:** UAT/WhatsApp operacional (OPS-1, INT-1..2), assinatura física da v5 por Rose e Operação (INT-4), procedimento durável de arquivos e encaminhamento da ficha (ORD-03..04), privacidade OpenAI, health, backup, alertas e recovery (INT-3). Aprovação provisória do PO não satisfaz assinatura física. Upload/Dropbox e aviso automático a Rose continuam fora desta implementação.
+**Pendências reais:** UAT/WhatsApp operacional (OPS-1, INT-1..2), assinatura física da v5 por Rose e Operação (INT-4), procedimento durável de arquivos e encaminhamento da ficha (ORD-03..04), privacidade OpenAI, health, backup, alertas e recovery (INT-3). Aprovação provisória do PO não satisfaz assinatura física. O envio de arquivos da arte no RustFS chega com a ADR 023 (T88–T92); aviso automático a Rose continua fora desta implementação.
 
 ## Convenções
 
@@ -1465,8 +1465,8 @@ vendedor.
 
 As tarefas abaixo partem do `master` que já contém ADRs 008–018, v3 paginada
 e aprovação provisória. Cada fatia requer commit e push próprios antes de
-PR/merge. A ativação do Dropbox e o fluxo de aviso a Rose ficam fora desta
-entrega, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md).
+PR/merge. O envio de arquivos (depois ativado pela ADR 023, T88–T92) e o
+fluxo de aviso a Rose ficam fora desta entrega, conforme [RFC 007](../../../docs/rfc/007-revisao-da-ficha-e-leitura-operacional.md).
 
 ### T76: Decisão, contrato e glossário
 
@@ -1575,3 +1575,298 @@ A PR 142 integrou estas tarefas em 05/10/2026. A v5 está selecionada desde 2979
 - **Requisitos:** TEC-01–TEC-08.
 - **Aceite:** gates completos, PR e merge após a aprovação do PO.
 - **Gate:** `git diff --check`, `npm run validate` e E2E de pedidos.
+
+## Arquivos da arte no RustFS (ADR 023, 05/10/2026)
+
+As tarefas partem do `master` 2979c81 (v5 em uso). Cada uma vira um commit e
+um push na branch `feat/arquivos-da-arte`.
+
+### T88: Decisão, design e saída do Dropbox
+
+- **Requisitos:** ARQ-01–ARQ-09.
+- **Arquivos:** RFC 011, ADR 023, design, spec, tasks, glossário e docs de
+  arquitetura, segurança, política de mídia e topologia.
+- **Aceite:** decisão do PO registrada sem reescrever ADRs; nenhuma menção
+  ao Dropbox fora da ADR 019, da migração 0005 e dos JSON aprovados no T00.5
+  (esses aguardam nova revisão de Tech Lead e Privacidade).
+- **Gate:** validadores de topologia, mídia, spikes, catálogo e formatação.
+
+### T89: RustFS na topologia e no ambiente local
+
+- **Requisitos:** ARQ-07, ARQ-09.
+- **Arquivos:** `docker-compose.dev.yml`, `scripts/dev.mjs`, `ops/**`,
+  nginx, migrações 0027 (catálogo) e 0028 e handoff de mídia.
+- **Aceite:** RustFS fixado por digest, interno, com bucket no backup e no
+  drill; `npm run dev` sobe o RustFS local; nginx aceita 11 MB só no upload.
+- **Gate:** `validate:topology`, testes de recuperação e migrações.
+
+### T90: Arquivos no domínio e na API
+
+- **Requisitos:** ARQ-02–ARQ-08.
+- **Arquivos:** `modules/orders/src/**` (domínio, serviço, adapters S3 e
+  PostgreSQL), rotas e runtime de pedidos, OpenAPI e testes.
+- **Aceite:** limites, assinatura do conteúdo, substituição da arte final,
+  dono e status sob lock, idempotência, auditoria e 503 sem storage.
+- **Gate:** testes unitários, typecheck, lint e smoke contra um RustFS real.
+
+### T91: Tela dos arquivos da arte
+
+- **Requisitos:** ARQ-01–ARQ-06.
+- **Arquivos:** `OrderArtworkFiles.vue`, `OrderArtworkSection.vue`,
+  `lib/order-files.js`, `api-client.js`, estilos e E2E.
+- **Aceite:** estados do design (vazio, preenchido, enviando, recusado,
+  remover, somente leitura e celular) por teclado e sem violação axe.
+- **Gate:** build, tokens de design e E2E de pedidos.
+
+### T92: Revisão integrada e entrega
+
+- **Requisitos:** ARQ-01–ARQ-09.
+- **Aceite:** gates completos e PR; provisionar o RustFS e evidenciar o
+  backup do bucket antes da produção.
+- **Gate:** `git diff --check`, `npm run validate` e E2E de pedidos.
+
+## O atendimento começa pelo produto (ADR 024, 05/10/2026)
+
+As tarefas partem do `master` 2979c81. Cada uma vira um commit e um push na
+branch `feat/atendimento-por-produto`.
+
+### T93: Decisão e rastreabilidade
+
+- **Requisitos:** PRD-01–PRD-08.
+- **Arquivos:** RFC 012, ADR 024 (notas nas ADRs 011 e 012), índice de
+  ADRs, spec e tasks.
+- **Aceite:** decisões do PO e escolhas do Tech Lead registradas, com os
+  itens por público no CRM como próxima proposta.
+- **Gate:** links e formatação.
+
+### T94: Pontos por produto no workflow
+
+- **Requisitos:** PRD-01–PRD-08.
+- **Arquivos:** SDK do workflow, snapshots sanitizados (principal, DEV e
+  local), `render-mvp-workflow.mjs`, `create-dev-test-workflow.mjs`,
+  `test/n8n-workflow-contract.test.js`, `test/n8n-dev-workflow.test.js`,
+  `test/orders-ficha.test.js`, README e
+  roteiro do indicador da integração n8n.
+- **Aceite:** nome e produto na saudação; pontos e perguntas por produto;
+  arte, malha, técnica, tamanhos e gola só gravados; kits, alertas e dicas;
+  indicador pelo produto; contrato do CRM inalterado.
+- **Gate:** testes de contrato do workflow e da ficha, `npm run validate`.
+
+### T95: Homologação no DEV
+
+- **Requisitos:** PRD-01–PRD-08.
+- **Aceite:** roteiros KPI-01 a KPI-10, EXT-12 e ZERO-05 rodados no
+  `dev-mvp-simple-13`, com o registro do indicador; publicação depois da
+  aprovação do PO.
+- **Gate:** registro do roteiro.
+
+### T96: RFC dos itens por público
+
+- **Requisitos:** propostos `PUB-01`–`PUB-09` na
+  [RFC 013](../../../docs/rfc/013-itens-por-publico.md); entram na spec com a
+  ADR 025, depois da decisão do PO.
+- **Arquivos:** RFC 013 e tasks.
+- **Aceite:** situação atual, proposta, alternativas, riscos, critérios e as
+  decisões D1–D7 para o PO.
+- **Gate:** links e formatação.
+
+## Itens por público (ADR 025, 05/10/2026)
+
+Seguem a T96 na branch `feat/atendimento-por-produto`; cada tarefa vira um
+commit e um push.
+
+### T97: Decisão e rastreabilidade
+
+- **Requisitos:** PUB-01–PUB-09.
+- **Arquivos:** RFC 013 (status), ADR 025, índice de ADRs, spec e tasks.
+- **Aceite:** D1–D7 registradas conforme a recomendação aceita pelo PO.
+- **Gate:** links e formatação.
+
+### T98: Público, quantidade informada e divisão no domínio e na API
+
+- **Requisitos:** PUB-01–PUB-05, PUB-09.
+- **Arquivos:** `modules/orders/src/domain/` (`ficha.js`, `audiences.js`),
+  integração n8n (`BRIEFING_PATCH_FIELDS`, contrato e schema), OpenAPI e
+  testes.
+- **Aceite:** campos opcionais validados; leitura da divisão sem dúvida;
+  projeção em vários itens; fichas antigas lidas com os campos vazios.
+- **Gate:** testes de domínio, serviço, rotas e contrato.
+
+### T99: Tela do pedido com público e Duplicar item
+
+- **Requisitos:** PUB-01, PUB-02, PUB-06, PUB-07 (rótulo).
+- **Arquivos:** componentes do pedido, `order-format.js` e E2E.
+- **Aceite:** seletor de público por teclado, cabeçalho e aviso por item,
+  Duplicar item com foco no público, "Modelo de malha".
+- **Gate:** build, typecheck, lint e E2E de pedidos.
+
+### T100: Ficha impressa v6
+
+- **Requisitos:** PUB-07.
+- **Arquivos:** `ficha-canonical-v6.js`, amostra sintética de quatro
+  públicos, snapshot, PDF e gate da revisão.
+- **Aceite:** v2–v5 intactas; `PRINT_TEMPLATE` passa a v6 depois da aprovação
+  provisória do PO (concedida em 06/10/2026).
+- **Gate:** testes da impressão e `validate:ficha-pdf-review`.
+
+### T101: Workflow com a divisão em `audiences`
+
+- **Requisitos:** PUB-08.
+- **Arquivos:** SDK do workflow, snapshots, testes e README da integração.
+- **Aceite:** divisão gravada em `audiences`; a dica ao vendedor lê o campo;
+  ordem de implantação no runbook.
+- **Gate:** testes de contrato do workflow.
+
+### T102: Imagem, áudio e chat do site no workflow
+
+- **Requisitos:** MID-01–MID-05, SITE-01–SITE-06.
+- **Arquivos:** SDK do workflow, render, gerador DEV/LOCAL, snapshots,
+  testes, README da integração, RFC 014 e ADR 026.
+- **Aceite:** imagem anexada ao agente, áudio transcrito, mídia não lida sem
+  derrubar a execução, tipos do WhatsApp mapeados, chat público com
+  identidade `999`, avisos que pedem o WhatsApp no chat e recusa `422` no
+  painel.
+- **Gate:** testes de contrato do workflow e `test/n8n-media-site-chat.test.js`.
+
+## Venda da loja do site (RFC 015, 07/10/2026)
+
+Branch `feat/loja-do-site`, a partir do `master`; segue a T102 (ADR 026).
+
+### T103: RFC da venda da loja do site
+
+- **Requisitos:** propostos `LOJ-01`–`LOJ-14` na
+  [RFC 015](../../../docs/rfc/015-venda-da-loja-do-site.md); entram na spec com
+  a ADR 027, depois da decisão do PO.
+- **Arquivos:** RFC 015 e tasks.
+- **Aceite:** situação atual, onde mora o endpoint, conciliação com as ADRs
+  006, 008 e 018, alternativas, riscos, critérios e as decisões D1–D9 para o
+  PO.
+- **Gate:** links e formatação.
+
+### T104: Decisão e rastreabilidade
+
+- **Requisitos:** LOJ-01–LOJ-14.
+- **Arquivos:** RFC 015 (status), ADR 027, índice de ADRs, RULES,
+  ARCHITECTURE, TECHNICAL-DESIGN, spec e tasks.
+- **Aceite:** D1–D9 e o adendo do PO (venda normal no Dashboard) registrados.
+- **Gate:** links e formatação.
+
+### T105: Pedido da loja no domínio e no banco
+
+- **Requisitos:** LOJ-04–LOJ-07, LOJ-09, LOJ-13.
+- **Arquivos:** migration `0029_store_orders.expand.sql`,
+  `modules/orders/src/domain/` (`store-catalog.js`, `store-order.js`),
+  repositórios, serviço e testes.
+- **Aceite:** catálogo e validação, criação travada sem conversa, recibo,
+  limites por IP e telefone, resumo sem teste, busca pelo telefone.
+- **Gate:** testes de domínio, serviço, repositório e migrations.
+
+### T106: Rota pública da loja
+
+- **Requisitos:** LOJ-01–LOJ-05, LOJ-11–LOJ-13.
+- **Arquivos:** `apps/api/src/store-order-routes.js`, runtime, OpenAPI e
+  testes de contrato com o JSON do site.
+- **Aceite:** criação, reenvio idêntico, `409`, `422` de valor e de teste,
+  CORS, `403`, `429` com `Retry-After`, rota desligada sem configuração.
+- **Gate:** testes da API e OpenAPI.
+
+### T107: Leituras e ficha simplificada
+
+- **Requisitos:** LOJ-07, LOJ-08, LOJ-10.
+- **Arquivos:** rotas de pedidos, `ficha-loja-v1.js`, nginx (hash do CSP) e
+  testes.
+- **Aceite:** escritas travadas com `409 ORDER_LOCKED`, filtro `origin`,
+  ficha com só os campos padrão, download como anexo.
+- **Gate:** testes de impressão, rotas e CSP.
+
+### T108: Interface da loja
+
+- **Requisitos:** LOJ-08, LOJ-09, LOJ-14.
+- **Arquivos:** `OrdersView.vue`, `OrderView.vue`, componente do pedido da
+  loja, `order-format.js` e E2E.
+- **Aceite:** selo "Loja", "Pago (informado pelo cliente em …)", pedido
+  travado, "Baixar ficha", filtro "Loja do site", tudo por teclado.
+- **Gate:** build, typecheck, lint e E2E de pedidos.
+
+### T109: Runbook e revisão integrada
+
+- **Requisitos:** LOJ-01–LOJ-14.
+- **Arquivos:** `docs/runbooks/loja-do-site.md`, inventário de segredos e
+  revisão final.
+- **Aceite:** variáveis, ordem de implantação, URLs e verificação pós-deploy;
+  sem deploy nem mudança no n8n sem pedido do PO.
+- **Gate:** `npm run validate`.
+
+## Pedido pago da loja pelo n8n (RFC 016, 09/10/2026)
+
+Mesma branch `feat/loja-do-site`; segue a T109 e supersede parte dela (ADR 028).
+A rota pública nunca foi publicada, então sai sem migração de dados.
+
+### T110: RFC, ADR e regras do pedido pago pelo n8n
+
+- **Requisitos:** LOJ-15–LOJ-25.
+- **Arquivos:** RFC 016, ADR 028, status da ADR 027, índices de ADR e RFC,
+  RULES (21 e técnica 7), spec e tasks.
+- **Aceite:** decisão do PO de 09/10/2026, alternativas (rota pública, rota de
+  automação, WhatsApp por template), impactos nas ADRs 006, 008 e 027.
+- **Gate:** links e formatação.
+
+### T111: Pedido pago no domínio e no banco
+
+- **Requisitos:** LOJ-17–LOJ-21, LOJ-23, LOJ-25.
+- **Arquivos:** migration `0029_store_orders.expand.sql` (ajustada no lugar),
+  `store-catalog.js`, `store-order.js`, serviço, repositórios, contratos e
+  testes; a rota pública e seu runtime saem.
+- **Aceite:** catálogo de R$ 180,00 com prazo por cor, idempotência pelo
+  `pedido_id` com comprovante posterior e conflito, NSU único, recibo sem IP
+  nem `Origin`, busca por `LJ-…` e pelo telefone.
+- **Gate:** testes de domínio, serviço, migrations e PostgreSQL live no CI.
+
+### T112: Rota de automação da loja
+
+- **Requisitos:** LOJ-15–LOJ-20, LOJ-25.
+- **Arquivos:** `store-order-routes.js`, `store-order-runtime.js`,
+  `n8n-routes.js` (exporta a autorização e o problem+json), ação
+  `store.order.record`, servidor, variáveis e testes de rota.
+- **Aceite:** `201`/`200`, `401`, `403`, `409`, `422`, `400`, `503`, URLs de
+  `APP_BASE_URL`, rota desligada sem `STORE_ORDERS_HMAC_KEY`.
+- **Gate:** testes da API, identidade e configuração.
+
+### T113: Leitura, ficha e interface do pedido pago
+
+- **Requisitos:** LOJ-21–LOJ-24.
+- **Arquivos:** `order-runtime.js` (`present`), `ficha-loja-v1.js`,
+  `OrderStoreDetails.vue`, `order-format.js`, `OrderView.vue`,
+  `OrdersView.vue`, `App.vue` e E2E.
+- **Aceite:** "Pago — confirmado pela InfinitePay", valor pago, NSU, prazo,
+  `LJ-…`, "Comprovante InfinitePay", busca por `LJ-…` e retorno ao link
+  profundo depois do login, por teclado.
+- **Gate:** build, typecheck, lint, testes de leitura e impressão e E2E.
+
+### T114: Contrato, integração n8n e runbook
+
+- **Requisitos:** LOJ-15–LOJ-25.
+- **Arquivos:** `docs/api/openapi.v1.yaml`, `docs/integrations/n8n/README.md`,
+  `docs/runbooks/loja-do-site.md`, ARCHITECTURE, TECHNICAL-DESIGN e
+  EASYPANEL-TOPOLOGY.
+- **Aceite:** cabeçalhos exatos e valores que o n8n manda, respostas, ordem de
+  implantação (merge, migration, variáveis, smoke) e o que muda no n8n.
+- **Gate:** teste do OpenAPI e formatação.
+
+### T115: Testes de regressão e revisão integrada
+
+- **Requisitos:** LOJ-15–LOJ-25.
+- **Arquivos:** testes de rota, serviço, PostgreSQL live e E2E da loja.
+- **Aceite:** positivos, negativos e idempotência cobertos; `npm run validate`
+  e `git diff --check` limpos; o que não roda localmente fica registrado.
+- **Gate:** `npm run validate`, E2E e CI.
+- **Verificação (09/10/2026):** os testes entraram com cada tarefa (T111–T114),
+  para cada commit ficar verde. Local (Windows, sem Docker): `npm run validate`
+  (745 testes, 3 live pulados sem `TEST_DATABASE_URL`) e `npx playwright test`
+  (118 passaram, 7 pulados) limpos. PostgreSQL live só no CI, que tem banco: no
+  run do commit `76d0197` (`Lint, tests, E2E and dependencies`) os seis testes
+  de `store-orders-postgres-live.test.js` passaram — migration `0029` real,
+  CHECKs, NSU único, comprovante posterior e chamadas concorrentes com um só
+  número. Os jobs de imagem falharam ao baixar `moby/buildkit` do Docker Hub
+  (limite/tempo do registro), sem relação com o código. Nada foi aplicado em
+  banco do cloud-dev nem publicado no n8n.

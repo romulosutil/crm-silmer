@@ -196,15 +196,15 @@ de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
 
 | Requirement ID | Story                 | Phase   | Status      | Tasks                      |
 | -------------- | --------------------- | ------- | ----------- | -------------------------- |
-| MED-01         | Arquivo imagem        | Execute | In Progress | T4,T7,T18,T21              |
-| MED-02         | Arquivo áudio         | Execute | In Progress | T4,T7,T18,T21              |
-| MED-03         | Arquivo vídeo         | Execute | In Progress | T4,T7,T18,T21              |
+| MED-01         | Arquivo imagem        | Execute | In Progress | T4,T7,T18,T21,T31          |
+| MED-02         | Arquivo áudio         | Execute | In Progress | T4,T7,T18,T21,T31          |
+| MED-03         | Arquivo vídeo         | Execute | In Progress | T4,T7,T18,T21,T31          |
 | MED-04         | Validação             | Execute | In Progress | T4,T5,T7,T18               |
 | MED-05         | Persistência atômica  | Execute | In Progress | T2,T10,T11                 |
 | MED-06         | Replay                | Execute | In Progress | T7,T10,T11,T14,T15,T27,T28,T29 |
 | MED-07         | Chave divergente      | Execute | In Progress | T7,T10,T11                 |
 | MED-08         | Autorização/estado    | Execute | In Progress | T7,T8,T10,T11,T21          |
-| MED-09         | Microfone             | Execute | In Progress | T19,T21                    |
+| MED-09         | Microfone             | Execute | In Progress | T19,T21,T31                |
 | MED-10         | Revisão de áudio      | Execute | In Progress | T19,T21                    |
 | MED-11         | Permissão/captura     | Execute | In Progress | T19,T21,T27                |
 | MED-12         | Limites gravação      | Execute | In Progress | T5,T19                     |
@@ -220,7 +220,7 @@ de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
 | MED-22         | Bytes por comando     | Execute | In Progress | T13,T14,T15                |
 | MED-23         | DEV real              | Execute | In Progress | T1,T15,T30,T24             |
 | MED-24         | Resultado incerto     | Execute | In Progress | T12,T14,T15,T24            |
-| MED-25         | Acessibilidade        | Execute | In Progress | T18,T19,T20,T21,T27,T24    |
+| MED-25         | Acessibilidade        | Execute | In Progress | T18,T19,T20,T21,T27,T31,T24 |
 | MED-26         | Scanner               | Execute | In Progress | T4,T6,T7,T27,T28,T29        |
 | MED-27         | Órfãos                | Execute | In Progress | T2,T22                     |
 | MED-28         | Quota                 | Execute | In Progress | T2,T6,T7,T23               |

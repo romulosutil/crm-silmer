@@ -101,6 +101,8 @@ jobs:
           pulseaudio --start --exit-idle-time=-1 --load="module-null-sink sink_name=playwright"
       - name: Run static, unit and build gates
         run: npm run validate
+      - name: Verify real edge media policies and upload limits
+        run: node scripts/check-edge-media-proxy.mjs
       - name: Run serialized PostgreSQL gates
         env:
           TEST_DATABASE_URL: postgresql://postgres:issue12-ci-only@127.0.0.1:5432/crm_silmer_test

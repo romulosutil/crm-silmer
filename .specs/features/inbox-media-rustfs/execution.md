@@ -1,5 +1,58 @@
 # Execução INBOX-MEDIA-1
 
+## T28: Validação sem repetição na mesma tentativa
+
+UAT reportou demora, com envio já funcional. Medição sanitizada de quatro uploads
+sem retry:24,20–28,86s atéready, fila0,55–0,96s. Scanner usa clamscan novo por
+chamada, carregando a base; benchmark /dev/null levou10,31s mas exit2 (arquivo
+especial), portanto prova de overhead, não scan limpo. Handler repetia validação
+dos mesmos bytes antes prepare e antes PUT. Sem conteúdo pessoal inspecionado.
+
+T28 mantém resultado completo apenas na variável local da mesma tentativa.
+Metadados persistidos em retry nunca substituem validação nova. Gravação continua
+validando entrada e saída normalizada. Metadados preparados devem corresponder à
+validação; lstat garante arquivo regular/tamanho; store real verifica SHA/tamanho
+no streaming, checksum S3 e HEAD. Lease, cleanup, quota e CAS preservados.
+Nenhum scanner, assinatura36h, política de retenção ou infraestrutura alterados.
+
+Gates: Fullunit serial878total/875pass/zero fail/três skips antigos;
+13prechecks+type/lint/build0, Node heap128/semi4 por pressão de memória do host.
+Focal independente67/67 e build0. Sensor: retry sem validação, stream com hash
+ignorado e comparação MIME corrompida morreram por assertions; scratch físico e
+cleanup isolados. [Relatório específico](validation-performance.md).
+Logs ignorados: var/media-T28-unit-serial.log e media-T28-project-gates.log.
+
+Worker atualizado localmente somente após fila idle e build canonical0:
+imagem sha256:d12e8e175b023881c74f0bbba0485bf569b4078aafa26ac01f515e4e1de8d2f4.
+EnvDigest/user/1CPU/2GiB/network/mounts iguais; API/n8n/RustFS/DBs não recriados.
+Startup refresh ClamAV genuíno, sem reset de defs/volumes/chaves. Rollbackguard
+para24f30677…0b8a disponível em var/media-T28-runtime.mjs; proof runtime-proof.json.
+
+Browser real: mesma PNG117bytes via filechooser, SHA igual confirmado por SQL
+boolean sem imprimir hash. Antes20,401s; depois15,481/13,509s atéready. UI botão
+habilitado em16,645/14,531s; redução observada24,1%/33,8%, sem promessa universal.
+Primeiro envio explícito resultou sent/DEV/reserva única/callback único; segundo
+ficou ready sem mensagem. Rascunho do usuário estava ausente antes do envio teste.
+Provas: var/media-T28-browser-final-dom.txt e browser-final-comparison-proof.json.
+
+| Critério | Assertion localizada em test/chat-media-process-worker.test.js | Outcome definido | Coberto |
+| --- | --- | --- | --- |
+| MED-06/26/30: uma validação de anexo nesta tentativa | :220 `assert.equal(f.calls.validations,1)`; :219 bytes BYTES; :221 ready1; :222 SHA; :223 size; :224 MIME | Mesmo conteúdo aprovado e pronto após integridade, sem scan redundante | Sim |
+| MED-14/26: entrada e saída de gravação | :236 validations2; :238 ready1; :239 audio/ogg; :240 bytes BYTES; :284 ready0/:285 infected | Saída aprovada preservada; saída infectada bloqueada | Sim |
+| MED-06/26: retry preparado rescana | :249 validations1; :252 ready1/:253 SHA; :372 validations1; :374 ready0/:375 reason | Mesmo hash íntegro; scanner negativo bloqueia retry | Sim |
+| MED-26: mutações pós-prepare | :358 puts0; :359 ready0; :360 reserva; :361 `assert.deepEqual(f.calls.failures,[reason])` | Arquivo, tamanho, hash ou MIME divergentes não publicam ready | Sim |
+
+| Assertions / cenários | Âncora | Manter |
+| --- | --- | --- |
+| :219–225 e :249–253; anexo novo e retry | MED-06/26/30, Done when T28 | Sim |
+| :236–240, :262–268 e :282–285; gravação nova/variante recuperada/infectada | MED-14/26, Done when T28 | Sim |
+| :357–361 e :372–375; mutações/scanner negativo | MED-26, edge cases e Done when T28 | Sim |
+
+Adequação específica PASS: outcomes e payload conferidos em store/normalizer
+reais com dependências externas sintéticas, sem negativas removidas/enfraquecidas.
+Diretório/junction negativo prova bloqueio, não scan físico. Testes seguem
+convenções Node/test e RULES.md. T28 concluída; T24 física e PrivacyP1 permanecem.
+
 ## T27: Recuperação de validação e diagnóstico de microfone
 
 UAT de 10/10 reproduzida pela tela do navegador integrado: arquivo

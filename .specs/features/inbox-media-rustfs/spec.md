@@ -156,6 +156,12 @@ O chat de UAT4183 deve usar o pipeline DEV habilitado, sessão/CSRF e worker rea
 - Crash entre PUT e commit de metadados: reconciliar objeto com upload_id;
   nunca publicar ready antes de hash/scan e persistência consistente.
 - Callback duplicado e status fora de ordem: MED-06/21/24, manter invariantes existentes.
+- Processamento sem transformação: MED-06/26/30, reaproveitar a validação completa
+  do mesmo arquivo apenas na mesma tentativa, sem repetir scanner antes do PUT.
+  Conferir arquivo regular, tamanho e SHA dos bytes efetivamente armazenados;
+  alteração posterior ao scan nunca publica ready. Retry com metadados persistidos
+  e objeto ausente executa validação completa novamente. Gravações continuam
+  validando entrada e saída normalizada; não reutilizar resultado entre jobs.
 - Gravação sem som, cancelada antes do primeiro chunk, falha de encoder e
   navegador que recusa MIME: MED-10..14/26; não criar mensagem vazia.
 - Validação unavailable com reason stale_signatures, scanner_unavailable,
@@ -188,40 +194,40 @@ microfone físico permanece pendente. Status In Progress preservado até UAT e
 Verifier independente. Persistência inicial de header Basic no n8n é gate P1
 de ativação operacional, sem alegação de PrivacyPASS ou expurgo seguro.
 
-| Requirement ID | Story                 | Phase   | Status      | Tasks                   |
-| -------------- | --------------------- | ------- | ----------- | ----------------------- |
-| MED-01         | Arquivo imagem        | Execute | In Progress | T4,T7,T18,T21           |
-| MED-02         | Arquivo áudio         | Execute | In Progress | T4,T7,T18,T21           |
-| MED-03         | Arquivo vídeo         | Execute | In Progress | T4,T7,T18,T21           |
-| MED-04         | Validação             | Execute | In Progress | T4,T5,T7,T18            |
-| MED-05         | Persistência atômica  | Execute | In Progress | T2,T10,T11              |
-| MED-06         | Replay                | Execute | In Progress | T7,T10,T11,T14,T15,T27  |
-| MED-07         | Chave divergente      | Execute | In Progress | T7,T10,T11              |
-| MED-08         | Autorização/estado    | Execute | In Progress | T7,T8,T10,T11,T21       |
-| MED-09         | Microfone             | Execute | In Progress | T19,T21                 |
-| MED-10         | Revisão de áudio      | Execute | In Progress | T19,T21                 |
-| MED-11         | Permissão/captura     | Execute | In Progress | T19,T21,T27             |
-| MED-12         | Limites gravação      | Execute | In Progress | T5,T19                  |
-| MED-13         | Liberar recursos      | Execute | In Progress | T19,T21                 |
-| MED-14         | Normalização          | Execute | In Progress | T5,T6                   |
-| MED-15         | Preservação           | Execute | In Progress | T2,T3,T9,T16,T22,T23    |
-| MED-16         | Leitura privada       | Execute | In Progress | T8,T9,T13               |
-| MED-17         | Range                 | Execute | In Progress | T3,T9,T20               |
-| MED-18         | Range inválido        | Execute | In Progress | T9                      |
-| MED-19         | Falha S3              | Execute | In Progress | T3,T6,T9,T20,T27        |
-| MED-20         | Logs privados         | Execute | In Progress | T3,T7,T12,T13,T16,T23   |
-| MED-21         | Reserva única         | Execute | In Progress | T12,T13,T14,T15         |
-| MED-22         | Bytes por comando     | Execute | In Progress | T13,T14,T15             |
-| MED-23         | DEV real              | Execute | In Progress | T1,T15,T24              |
-| MED-24         | Resultado incerto     | Execute | In Progress | T12,T14,T15,T24         |
-| MED-25         | Acessibilidade        | Execute | In Progress | T18,T19,T20,T21,T27,T24 |
-| MED-26         | Scanner               | Execute | In Progress | T4,T6,T7,T27            |
-| MED-27         | Órfãos                | Execute | In Progress | T2,T22                  |
-| MED-28         | Quota                 | Execute | In Progress | T2,T6,T7,T23            |
-| MED-29         | Reprovação assíncrona | Execute | In Progress | T4,T5,T6,T8             |
-| MED-30         | Validação automática  | Execute | In Progress | T25,T24                 |
-| MED-31         | Composer integrado    | Execute | In Progress | T25,T24                 |
-| MED-32         | Erro recuperável      | Execute | In Progress | T25,T26,T27,T24         |
+| Requirement ID | Story                 | Phase   | Status      | Tasks                      |
+| -------------- | --------------------- | ------- | ----------- | -------------------------- |
+| MED-01         | Arquivo imagem        | Execute | In Progress | T4,T7,T18,T21              |
+| MED-02         | Arquivo áudio         | Execute | In Progress | T4,T7,T18,T21              |
+| MED-03         | Arquivo vídeo         | Execute | In Progress | T4,T7,T18,T21              |
+| MED-04         | Validação             | Execute | In Progress | T4,T5,T7,T18               |
+| MED-05         | Persistência atômica  | Execute | In Progress | T2,T10,T11                 |
+| MED-06         | Replay                | Execute | In Progress | T7,T10,T11,T14,T15,T27,T28 |
+| MED-07         | Chave divergente      | Execute | In Progress | T7,T10,T11                 |
+| MED-08         | Autorização/estado    | Execute | In Progress | T7,T8,T10,T11,T21          |
+| MED-09         | Microfone             | Execute | In Progress | T19,T21                    |
+| MED-10         | Revisão de áudio      | Execute | In Progress | T19,T21                    |
+| MED-11         | Permissão/captura     | Execute | In Progress | T19,T21,T27                |
+| MED-12         | Limites gravação      | Execute | In Progress | T5,T19                     |
+| MED-13         | Liberar recursos      | Execute | In Progress | T19,T21                    |
+| MED-14         | Normalização          | Execute | In Progress | T5,T6,T28                  |
+| MED-15         | Preservação           | Execute | In Progress | T2,T3,T9,T16,T22,T23       |
+| MED-16         | Leitura privada       | Execute | In Progress | T8,T9,T13                  |
+| MED-17         | Range                 | Execute | In Progress | T3,T9,T20                  |
+| MED-18         | Range inválido        | Execute | In Progress | T9                         |
+| MED-19         | Falha S3              | Execute | In Progress | T3,T6,T9,T20,T27           |
+| MED-20         | Logs privados         | Execute | In Progress | T3,T7,T12,T13,T16,T23      |
+| MED-21         | Reserva única         | Execute | In Progress | T12,T13,T14,T15            |
+| MED-22         | Bytes por comando     | Execute | In Progress | T13,T14,T15                |
+| MED-23         | DEV real              | Execute | In Progress | T1,T15,T24                 |
+| MED-24         | Resultado incerto     | Execute | In Progress | T12,T14,T15,T24            |
+| MED-25         | Acessibilidade        | Execute | In Progress | T18,T19,T20,T21,T27,T24    |
+| MED-26         | Scanner               | Execute | In Progress | T4,T6,T7,T27,T28           |
+| MED-27         | Órfãos                | Execute | In Progress | T2,T22                     |
+| MED-28         | Quota                 | Execute | In Progress | T2,T6,T7,T23               |
+| MED-29         | Reprovação assíncrona | Execute | In Progress | T4,T5,T6,T8                |
+| MED-30         | Validação automática  | Execute | In Progress | T25,T24,T28                |
+| MED-31         | Composer integrado    | Execute | In Progress | T25,T24                    |
+| MED-32         | Erro recuperável      | Execute | In Progress | T25,T26,T27,T24            |
 
 Coverage: 32 total, 32 mapped to tasks, 0 unmapped. Nenhum requisito Verified.
 

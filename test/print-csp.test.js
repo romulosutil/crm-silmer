@@ -107,9 +107,18 @@ test('the print route alone permits the exact styles of supported ficha template
     permittedHashes.has(`'sha256-${storeHash}'`),
     'ficha-loja-v1 must have its current CSS hash in the print CSP',
   );
+  // ADR 031: for one release the print CSP also keeps the previous
+  // ficha-loja-v1 stylesheet, because nginx (edge-web image) and the API
+  // (runtime image) deploy separately. The next release removes it.
+  assert.ok(
+    permittedHashes.has(
+      "'sha256-u7y0wEJXNxDpSaJ0qLl/zyxJ+y3teBfQYbrv469AXtE='",
+    ),
+    'the previous ficha-loja-v1 hash stays for one release',
+  );
   assert.equal(
     permittedHashes.size,
-    6,
+    7,
     'no other inline stylesheet is allowed',
   );
 });

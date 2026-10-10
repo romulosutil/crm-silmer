@@ -70,7 +70,10 @@ RESTRICT`), nulas, só em pedido da loja e sempre juntas. A rota
    exibição; o catálogo e o slug não mudam), cor, tamanho, quantidade, prazo
    da cor, cliente, WhatsApp, pagamento e comprovante. A ficha nunca foi
    publicada fora do CRM de desenvolvimento, então muda no lugar; o hash do
-   novo estilo entra no CSP do nginx.
+   novo estilo entra no CSP do nginx. Por uma versão, o CSP mantém também o
+   hash do estilo anterior: o nginx (imagem `edge-web`) e a API (imagem de
+   runtime) sobem separados, e em qualquer ordem a ficha sairia sem estilo.
+   A versão seguinte remove o hash anterior.
 8. **Contrato n8n.** Igual: corpo e resposta de `store-orders` não mudam; o
    reenvio (`200`) devolve o mesmo `numero`, também depois da impressão.
 9. **Cliente.** O aviso de que o kit está pronto é feito pela equipe, à mão,

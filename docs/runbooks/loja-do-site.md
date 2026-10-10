@@ -88,6 +88,12 @@ A versão com o aviso lê as colunas novas de `crm.orders`. A ordem é:
 
 Nenhuma variável nova. O contrato com o n8n não muda.
 
+O CSP da rota de impressão (`docker/nginx.conf`) libera, por esta versão, o
+hash do estilo novo da `ficha-loja-v1` e também o do anterior
+(`sha256-u7y0wEJ…`), porque `edge-web` e `silmer-api` sobem separados. Na
+versão seguinte, com as duas imagens novas no ar, remover o hash anterior e
+voltar o `test/print-csp.test.js` para seis hashes.
+
 ## Smoke depois do deploy
 
 Uma chamada sintética de teste (gere um UUID v4 novo; `numero_loja` é `LJ-` e

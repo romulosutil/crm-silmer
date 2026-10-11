@@ -114,7 +114,10 @@ export function createStoreOrdersForServer({ database, environment }) {
 /**
  * `APP_BASE_URL` is where people open the CRM: https (http only on the
  * local machine), no credentials, query or fragment; a trailing slash is
- * dropped. Empty means relative URLs.
+ * dropped. Empty means relative URLs. It is one URL, not a list like
+ * `APP_ORIGIN`: `new URL` accepts "https://a.example,https://b.example" and
+ * returns a broken prefix, so a comma or space is refused and the value has
+ * to read back as it was written.
  *
  * @param {string|undefined} value
  */
@@ -128,17 +131,20 @@ export function readBaseUrl(value) {
   } catch {
     throw new Error('APP_BASE_URL must be an absolute https URL');
   }
+  const base = `${url.origin}${url.pathname}`.replace(/\/+$/u, '');
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
   if (
     !(url.protocol === 'https:' || (url.protocol === 'http:' && local)) ||
     url.username !== '' ||
     url.password !== '' ||
     url.search !== '' ||
-    url.hash !== ''
+    url.hash !== '' ||
+    /[\s,]/u.test(text) ||
+    base.toLowerCase() !== text.replace(/\/+$/u, '').toLowerCase()
   ) {
     throw new Error('APP_BASE_URL must be an absolute https URL');
   }
-  return `${url.origin}${url.pathname}`.replace(/\/+$/u, '');
+  return base;
 }
 
 /** @param {string|undefined} value @param {string} name */

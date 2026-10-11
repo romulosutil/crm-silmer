@@ -478,6 +478,7 @@ test('LOJ-25: the server wiring needs the HMAC key, FAB_CODE and well-formed val
     { APP_BASE_URL: 'crm.example.test' },
     { APP_BASE_URL: 'http://crm.example.test' },
     { APP_BASE_URL: 'https://crm.example.test/?x=1' },
+    { APP_BASE_URL: 'https://crm.example.test,https://edge.example.test' },
   ]) {
     assert.throws(
       () =>
@@ -503,6 +504,26 @@ test('APP_BASE_URL is read as an origin with an optional path, without the trail
     'https://crm.example.test/app',
   );
   assert.equal(readBaseUrl('http://127.0.0.1:4173'), 'http://127.0.0.1:4173');
+  assert.equal(
+    readBaseUrl('https://CRM.Example.test'),
+    'https://crm.example.test',
+  );
+});
+
+test('APP_BASE_URL is one URL, not a list like APP_ORIGIN', () => {
+  for (const value of [
+    'https://crm.silmer.com.br,https://espectro-mvp-silmer-edge-web.jicnzg.easypanel.host',
+    'https://crm.example.test, https://edge.example.test',
+    'https://crm.example.test https://edge.example.test',
+    'https://crm.example.test,',
+    'https://crm.example.test/app,https://edge.example.test',
+  ]) {
+    assert.throws(
+      () => readBaseUrl(value),
+      { message: 'APP_BASE_URL must be an absolute https URL' },
+      value,
+    );
+  }
 });
 
 test('LOJ-15/LOJ-25: the OpenAPI documents the automation route, its codes and no public route', async () => {

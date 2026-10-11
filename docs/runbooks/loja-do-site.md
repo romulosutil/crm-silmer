@@ -45,7 +45,9 @@ não existe mais; o site não chama o CRM.
 
 Sem `STORE_ORDERS_HMAC_KEY` a rota responde `404`. Com ela, `FAB_CODE` ausente,
 chave malformada, `STORE_ORDERS_ACCEPT_TEST` diferente de `true`/`false` ou
-`APP_BASE_URL` que não seja `https://…` impedem a API de subir.
+`APP_BASE_URL` que não seja uma URL `https://…` única impedem a API de subir.
+`APP_BASE_URL` é uma URL só, não uma lista como `APP_ORIGIN`: vírgula ou espaço
+no valor reprovam.
 
 Gerar a chave (fora do repositório, sem colar em chat ou log):
 

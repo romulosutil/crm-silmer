@@ -62,8 +62,8 @@ function sha256Hex(content) {
  * @param {{
  *   files: OrderFileRepository,
  *   storage: ObjectStorage,
- *   orders: {findById(orderId: string): Promise<{id: string, status: string, conversationId: string|null, origin?: string}|null>},
- *   authorizeOwnership: (input: {actor: OrderActor, conversationId: string}) => Promise<void>,
+ *   orders: {findById(orderId: string): Promise<{id: string, status: string, conversationId: string|null, manualOwnerId?: string|null, origin?: string}|null>},
+ *   authorizeOwnership: (input: {actor: OrderActor, conversationId: string|null, order: {conversationId: string|null, manualOwnerId?: string|null}}) => Promise<void>,
  *   clock?: () => Date,
  *   idFactory?: () => string,
  * }} dependencies
@@ -88,7 +88,8 @@ export function createOrderFileService(dependencies) {
     requireUnlocked(order);
     await authorizeOwnership({
       actor,
-      conversationId: /** @type {string} */ (order.conversationId),
+      conversationId: order.conversationId,
+      order,
     });
     if (order.status !== 'pendente') {
       throw new OrderConflictError(

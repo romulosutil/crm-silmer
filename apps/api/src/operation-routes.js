@@ -202,10 +202,37 @@ export function registerOperationRoutes(api, operations, contextFor) {
 
   api.get('/api/v1/contacts', async (request, reply) =>
     respond(reply, async () => {
-      const input = parseListQuery(request.query, ['cursor', 'limit']);
+      const input = parseListQuery(request.query, ['cursor', 'limit', 'q']);
       await authorizeRead(request, operations, 'contact.read');
       privateReadHeaders(reply);
       return reply.code(200).send(await operations.listContacts(input));
+    }),
+  );
+
+  api.post('/api/v1/contacts', async (request, reply) =>
+    respond(reply, async () => {
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['displayName']);
+      const principal = await operations.authorizeWrite({
+        action: 'contact.create',
+        authorization: request.headers.authorization,
+        cookie: request.headers.cookie,
+        csrfToken: request.headers['x-csrf-token'],
+        origin: request.headers.origin,
+      });
+      const result = await operations.createContact({
+        actor: principal.actor,
+        correlationId: contextFor(request).correlationId,
+        displayName: body.displayName,
+        idempotencyKey: requireIdentifier(
+          request.headers['idempotency-key'],
+          'IDEMPOTENCY_KEY',
+        ),
+      });
+      privateReadHeaders(reply);
+      return reply
+        .code(result.created ? 201 : 200)
+        .send({ contact: result.contact });
     }),
   );
 

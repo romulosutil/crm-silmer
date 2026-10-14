@@ -17,6 +17,7 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
   new Set([
     'contact.identity.merge',
     'contact.identity.unmerge',
+    'contact.create',
     'contact.read',
     'contact.rename',
     'conversation.convert',

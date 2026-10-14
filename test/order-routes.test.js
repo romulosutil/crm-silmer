@@ -124,10 +124,18 @@ function orderHarness(options = {}) {
             }
           : null,
       ),
+      readContactNames: async (/** @type {string[]} */ ids) =>
+        new Map(
+          ids
+            .filter((id) => id === 'contact-1')
+            .map((id) => [id, 'Cliente Manual']),
+        ),
       readUserNames: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, names[id] ?? null])),
       searchConversationIds: async (/** @type {string} */ query) =>
         query === 'sintetico' ? ['conversation-2'] : [],
+      searchContactIds: async (/** @type {string} */ query) =>
+        query === 'manual' ? ['contact-1'] : [],
     },
     fabCode: '01',
     idempotencyStore: new InMemoryIdempotencyRecordStore(),
@@ -582,6 +590,30 @@ test('POST /conversations/:id/orders creates 201, then answers 200 with the pend
   });
   assert.equal(again.statusCode, 200);
   assert.equal(again.json().order.id, order.id);
+});
+
+test('POST /orders creates an editable manual draft for a selected contact', async (t) => {
+  const { api } = orderHarness();
+  t.after(() => api.close());
+  const created = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'manual-order-1' },
+    method: 'POST',
+    payload: { contactId: 'contact-1' },
+    url: '/api/v1/orders',
+  });
+  assert.equal(created.statusCode, 201);
+  const order = created.json().order;
+  assert.equal(order.conversationId, null);
+  assert.equal(order.ficha.summary.cliente, 'Cliente Manual');
+  assert.equal(order.seller.id, 'seller-1');
+  const replay = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'manual-order-1' },
+    method: 'POST',
+    payload: { contactId: 'contact-1' },
+    url: '/api/v1/orders',
+  });
+  assert.equal(replay.statusCode, 201);
+  assert.equal(replay.json().order.id, order.id);
 });
 
 test('order writes require an Idempotency-Key and expectedVersion before the session', async (t) => {

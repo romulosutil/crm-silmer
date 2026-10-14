@@ -8,7 +8,9 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  * @typedef {import('../domain/ficha.js').Ficha} Ficha
  *
  * @typedef {{
- *   id: string, conversationId: string, fabCode: string, ficha: Ficha,
+ *   id: string, conversationId: string|null, contactId?: string|null,
+ *   manualOwnerId?: string|null, manualCreateKey?: string|null,
+ *   fabCode: string, ficha: Ficha,
  *   totalPieces: number, missingFields: string[],
  *   createdByKind: 'automation'|'user', createdBy: string|null,
  *   firstContactAt: string|null, correlationId: string, now: Date,
@@ -25,6 +27,7 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  * the clear. `origin` narrows the search.
  * @typedef {{
  *   status?: OrderStatus, numberSequence?: number, conversationIds?: string[],
+ *   contactIds?: string[],
  *   phoneDigests?: string[], storeNumber?: string,
  *   origin?: 'atendimento'|'loja', cursor?: string|null, limit: number,
  * }} OrderListQuery
@@ -146,11 +149,12 @@ export function assertOrderRepositoryContract(repository) {
  * Validates the parts of a list query both adapters interpret identically.
  *
  * @param {OrderListQuery} query
- * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, phoneDigests: string[]|undefined, storeNumber: string|undefined, origin: 'atendimento'|'loja'|undefined, after: {updatedAt: string, id: string}|null, limit: number}}
+ * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, contactIds: string[]|undefined, phoneDigests: string[]|undefined, storeNumber: string|undefined, origin: 'atendimento'|'loja'|undefined, after: {updatedAt: string, id: string}|null, limit: number}}
  */
 export function readOrderListQuery(query) {
   const {
     conversationIds,
+    contactIds,
     cursor,
     limit,
     numberSequence,
@@ -183,6 +187,13 @@ export function readOrderListQuery(query) {
     throw new TypeError('conversationIds must be a list of ids');
   }
   if (
+    contactIds !== undefined &&
+    (!Array.isArray(contactIds) ||
+      contactIds.some((id) => typeof id !== 'string'))
+  ) {
+    throw new TypeError('contactIds must be a list of ids');
+  }
+  if (
     phoneDigests !== undefined &&
     (!Array.isArray(phoneDigests) ||
       phoneDigests.some((digest) => typeof digest !== 'string'))
@@ -199,6 +210,7 @@ export function readOrderListQuery(query) {
     after:
       cursor === undefined || cursor === null ? null : decodeCursor(cursor),
     conversationIds,
+    contactIds,
     limit,
     numberSequence,
     origin,

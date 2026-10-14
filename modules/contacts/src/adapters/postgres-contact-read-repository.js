@@ -13,22 +13,29 @@ export class PostgresContactReadRepository {
     this.envelopeKey = Buffer.from(envelopeKey);
   }
 
-  /** @param {{after: null|{updatedAt: string, id: string}, limit: number}} input */
+  /** @param {{after: null|{updatedAt: string, id: string}, limit: number, q?: string}} input */
   async list(input) {
     return this.#snapshot(async (database) => {
       const values = [];
-      const predicate = input.after
+      const afterPredicate = input.after
         ? (() => {
             values.push(input.after.updatedAt, input.after.id);
             return '(contact.updated_at, contact.id) < ($1, $2)';
           })()
+        : 'true';
+      const q = (input.q ?? '').trim();
+      const searchPattern = q.replace(/[\\%_]/gu, '\\$&');
+      if (q) values.push(`%${searchPattern}%`);
+      const searchValue = values.length;
+      const searchPredicate = q
+        ? `contact.display_name ILIKE $${searchValue} ESCAPE '\\'`
         : 'true';
       values.push(input.limit + 1);
       const [page, count] = await Promise.all([
         database.query(
           `WITH contact_page AS (
              SELECT contact.* FROM crm.contacts AS contact
-             WHERE ${predicate}
+             WHERE ${afterPredicate} AND ${searchPredicate}
              ORDER BY contact.updated_at DESC, contact.id DESC
              LIMIT $${values.length}
            )
@@ -53,7 +60,11 @@ export class PostgresContactReadRepository {
                     identity.created_at, identity.id`,
           values,
         ),
-        database.query('SELECT count(*)::integer count FROM crm.contacts'),
+        database.query(
+          `SELECT count(*)::integer count FROM crm.contacts contact
+           WHERE ${q ? "contact.display_name ILIKE $1 ESCAPE '\\'" : 'true'}`,
+          q ? [`%${searchPattern}%`] : [],
+        ),
       ]);
       const contacts = groupContacts(page.rows, this.envelopeKey);
       const hasMore = contacts.length > input.limit;

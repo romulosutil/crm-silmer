@@ -23,7 +23,8 @@ import { decryptJson, encryptJson } from './envelope.js';
  * @typedef {{query: Queryable['query'], transaction: <T>(work: (transaction: Queryable) => Promise<T>) => Promise<T>}} TransactionalDatabase
  */
 
-const ORDER_COLUMNS = `id, number_sequence, number, conversation_id, status,
+const ORDER_COLUMNS = `id, number_sequence, number, conversation_id,
+  contact_id, manual_owner_id, manual_create_key, status,
   fab_code, ficha_envelope, total_pieces, missing_fields, final_amount_cents,
   payment_condition, order_date::text AS order_date, confirmed_at,
   confirmed_by, reopened_at, reopened_by, created_by_kind, created_by,
@@ -197,6 +198,9 @@ export class PostgresOrderRepository {
       confirmedAt: isoOrNull(row.confirmed_at),
       confirmedBy: row.confirmed_by,
       conversationId: row.conversation_id,
+      contactId: row.contact_id ?? null,
+      manualCreateKey: row.manual_create_key ?? null,
+      manualOwnerId: row.manual_owner_id ?? null,
       createdAt: /** @type {string} */ (isoOrNull(row.created_at)),
       createdBy: row.created_by,
       createdByKind: row.created_by_kind,
@@ -254,22 +258,53 @@ export class PostgresOrderRepository {
   async createPending(input) {
     try {
       return await this.#database.transaction(async (transaction) => {
-        const conversation = await lockConversation(
-          transaction,
-          input.conversationId,
-        );
-        if (!conversation) {
-          throw new OrderNotFoundError(
-            'Conversation was not found',
-            'CONVERSATION_NOT_FOUND',
+        let contactId;
+        if (input.conversationId) {
+          const conversation = await lockConversation(
+            transaction,
+            input.conversationId,
           );
+          if (!conversation) {
+            throw new OrderNotFoundError(
+              'Conversation was not found',
+              'CONVERSATION_NOT_FOUND',
+            );
+          }
+          await assertWriteOwner(
+            transaction,
+            input.actor,
+            conversation,
+            input.createdByKind === 'automation',
+          );
+          const linked = await transaction.query(
+            `SELECT identity.current_contact_id FROM crm.conversations conversation
+             JOIN crm.contact_identities identity
+               ON identity.id = conversation.contact_identity_id
+             WHERE conversation.id = $1`,
+            [input.conversationId],
+          );
+          contactId = linked.rows[0]?.current_contact_id;
+        } else {
+          if (
+            !input.contactId ||
+            !input.manualCreateKey ||
+            input.actor?.kind !== 'human' ||
+            input.actor.id !== input.manualOwnerId
+          ) {
+            throw new OrderForbiddenError();
+          }
+          const contact = await transaction.query(
+            'SELECT id FROM crm.contacts WHERE id = $1 FOR SHARE',
+            [input.contactId],
+          );
+          if (!contact.rows[0]) {
+            throw new OrderNotFoundError(
+              'Contact was not found',
+              'CONTACT_NOT_FOUND',
+            );
+          }
+          contactId = input.contactId;
         }
-        await assertWriteOwner(
-          transaction,
-          input.actor,
-          conversation,
-          input.createdByKind === 'automation',
-        );
         const at = input.now.toISOString();
         const inserted = await transaction.query(
           `WITH reserved AS (SELECT nextval('crm.order_number_seq') AS sequence)
@@ -277,12 +312,14 @@ export class PostgresOrderRepository {
              (id, number_sequence, number, conversation_id, status, fab_code,
               ficha_version, ficha_envelope, total_pieces, missing_fields,
               created_by_kind, created_by, first_contact_at, version,
-              created_at, updated_at)
+              created_at, updated_at, contact_id, manual_owner_id,
+              manual_create_key)
            SELECT $1, reserved.sequence,
                   lpad(reserved.sequence::text, 2, '0') || '-CRM',
                   $2, 'pendente', $3, 1, $4::jsonb, $5, $6::text[], $7, $8,
-                  $10, 1, $9, $9
+                  $10, 1, $9, $9, $11, $12, $13
            FROM reserved
+           ON CONFLICT (manual_create_key) DO NOTHING
            RETURNING ${ORDER_COLUMNS}`,
           [
             input.id,
@@ -297,8 +334,29 @@ export class PostgresOrderRepository {
             input.createdBy,
             at,
             input.firstContactAt,
+            contactId,
+            input.manualOwnerId ?? null,
+            input.manualCreateKey ?? null,
           ],
         );
+        if (!inserted.rows[0] && input.manualCreateKey) {
+          const existing = await transaction.query(
+            `SELECT ${ORDER_COLUMNS} FROM crm.orders WHERE manual_create_key = $1`,
+            [input.manualCreateKey],
+          );
+          const row = existing.rows[0];
+          if (
+            !row ||
+            row.contact_id !== contactId ||
+            row.manual_owner_id !== input.manualOwnerId
+          ) {
+            throw new OrderConflictError(
+              'Idempotency key was reused',
+              'IDEMPOTENCY_KEY_REUSED',
+            );
+          }
+          return this.#map(row);
+        }
         const order = this.#map(inserted.rows[0]);
         await appendOrderEvent(
           transaction,
@@ -648,6 +706,7 @@ export class PostgresOrderRepository {
     const {
       after,
       conversationIds,
+      contactIds,
       limit,
       numberSequence,
       origin,
@@ -667,6 +726,7 @@ export class PostgresOrderRepository {
     if (
       numberSequence !== undefined ||
       conversationIds !== undefined ||
+      contactIds !== undefined ||
       phoneDigests !== undefined ||
       storeNumber !== undefined
     ) {
@@ -676,6 +736,9 @@ export class PostgresOrderRepository {
       }
       if (conversationIds !== undefined) {
         matches.push(`conversation_id = ANY(${bind(conversationIds)}::text[])`);
+      }
+      if (contactIds !== undefined) {
+        matches.push(`contact_id = ANY(${bind(contactIds)}::text[])`);
       }
       if (phoneDigests !== undefined) {
         // ADR 027: a store order has no conversation; its phone is found by
@@ -844,27 +907,47 @@ export class PostgresOrderRepository {
    * @param {(current: {status: string}, transaction: Queryable) => Promise<{rows: any[]}>} change
    */
   async #write(order, options, eventType, change) {
-    // ADR 027: a store order has no conversation to lock and takes no write.
+    // ADR 027: store orders are locked. Manual attendance orders have their
+    // own owner and no conversation to lock.
     const conversationId = order.conversationId;
-    if (order.origin === 'loja' || conversationId === null) {
+    if (
+      order.origin === 'loja' ||
+      (conversationId === null && !order.manualOwnerId)
+    ) {
       throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
     }
     return this.#database.transaction(async (transaction) => {
-      const conversation = await lockConversation(transaction, conversationId);
-      if (!conversation) throw new OrderNotFoundError();
-      await assertWriteOwner(
-        transaction,
-        options.actor,
-        conversation,
-        eventType === 'order.briefing_projected',
-      );
+      if (conversationId) {
+        const conversation = await lockConversation(
+          transaction,
+          conversationId,
+        );
+        if (!conversation) throw new OrderNotFoundError();
+        await assertWriteOwner(
+          transaction,
+          options.actor,
+          conversation,
+          eventType === 'order.briefing_projected',
+        );
+      } else {
+        await assertWriteOwner(
+          transaction,
+          options.actor,
+          { assigned_user_id: order.manualOwnerId ?? null },
+          false,
+        );
+      }
       const locked = await transaction.query(
-        `SELECT conversation_id, status, version FROM crm.orders
+        `SELECT conversation_id, manual_owner_id, status, version FROM crm.orders
          WHERE id = $1 FOR UPDATE`,
         [order.id],
       );
       const current = locked.rows[0];
-      if (!current || current.conversation_id !== order.conversationId) {
+      if (
+        !current ||
+        current.conversation_id !== order.conversationId ||
+        current.manual_owner_id !== (order.manualOwnerId ?? null)
+      ) {
         throw new OrderNotFoundError();
       }
       if (Number(current.version) !== options.expectedVersion) {

@@ -3528,6 +3528,51 @@ button.op-generate {
   gap: 0.6rem;
 }
 
+.manual-order-dialog {
+  max-block-size: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.manual-order-field {
+  display: grid;
+  gap: 0.4rem;
+  margin-block: 1rem;
+}
+
+.manual-order-field input {
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 0.65rem 0.75rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.manual-order-field button {
+  justify-self: start;
+}
+
+.manual-contact-options {
+  display: grid;
+  gap: 0.35rem;
+  max-block-size: 12rem;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.manual-contact-options button {
+  display: grid;
+  inline-size: 100%;
+  padding: 0.65rem;
+  text-align: start;
+}
+
+.manual-contact-options small {
+  color: var(--color-text-muted);
+}
+
 /* Fingers need 44px: phones and tablets get the full target. */
 @media (pointer: coarse) {
   .op-form input[type='text'],

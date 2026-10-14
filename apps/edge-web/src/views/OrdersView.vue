@@ -9,8 +9,9 @@ import {
   watch,
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { request } from '../lib/api-client.js';
+import { commandKey, request } from '../lib/api-client.js';
 import { dateTimeBR } from '../lib/format.js';
+import { openDialog } from '../lib/ui.js';
 import {
   amountLabel,
   elapsedSince,
@@ -43,6 +44,19 @@ const liveEvent = inject('liveEvent', ref(null));
 const router = useRouter();
 const route = useRoute();
 const heading = ref(null);
+const newOrderDialog = ref(null);
+const contactQuery = ref('');
+const contactOptions = ref([]);
+const selectedContact = ref(null);
+const newContactName = ref('');
+const contactSearching = ref(false);
+const contactCreating = ref(false);
+const orderCreating = ref(false);
+const createError = ref('');
+let contactController;
+let contactSearchTimer = 0;
+let contactCreateKey = '';
+let orderCreateKey = '';
 // LOJ-31: the Dashboard notice opens `/pedidos?origem=loja`, the list already
 // on "Loja do site".
 const filter = ref(route.query.origem === STORE_FILTER ? STORE_FILTER : '');
@@ -136,6 +150,121 @@ function openOrder(order, event) {
   if (event.target?.closest?.('a, button, input, select, textarea')) return;
   void router.push(`/pedidos/${order.id}`);
 }
+
+/** @param {Event} event */
+function openNewOrder(event) {
+  const dialog = newOrderDialog.value;
+  if (!(dialog instanceof HTMLDialogElement)) return;
+  contactController?.abort();
+  if (contactSearchTimer) globalThis.clearTimeout(contactSearchTimer);
+  contactQuery.value = '';
+  contactOptions.value = [];
+  selectedContact.value = null;
+  newContactName.value = '';
+  createError.value = '';
+  contactCreateKey = '';
+  orderCreateKey = '';
+  openDialog(dialog, /** @type {HTMLElement} */ (event.currentTarget));
+}
+
+async function searchContacts() {
+  contactController?.abort();
+  const needle = contactQuery.value.trim();
+  if (needle.length < 2 || selectedContact.value) {
+    contactOptions.value = [];
+    contactSearching.value = false;
+    return;
+  }
+  const currentController = new AbortController();
+  contactController = currentController;
+  contactSearching.value = true;
+  try {
+    const response = await request(
+      `/api/v1/contacts?limit=10&q=${encodeURIComponent(needle)}`,
+      { signal: currentController.signal },
+    );
+    contactOptions.value = response.data.items;
+    createError.value = '';
+  } catch (cause) {
+    if (cause?.name !== 'AbortError') {
+      createError.value = 'Não foi possível buscar clientes.';
+    }
+  } finally {
+    if (contactController === currentController) contactSearching.value = false;
+  }
+}
+
+/** @param {Record<string, any>} contact */
+function selectContact(contact) {
+  contactController?.abort();
+  if (contactSearchTimer) globalThis.clearTimeout(contactSearchTimer);
+  selectedContact.value = contact;
+  contactQuery.value = contact.label;
+  contactOptions.value = [];
+  orderCreateKey = '';
+}
+
+async function createContact() {
+  const displayName = newContactName.value.trim();
+  if (!displayName || contactCreating.value) return;
+  contactCreating.value = true;
+  createError.value = '';
+  contactCreateKey ||= commandKey();
+  try {
+    const response = await request('/api/v1/contacts', {
+      body: { displayName },
+      idempotencyKey: contactCreateKey,
+      method: 'POST',
+    });
+    selectContact(response.data.contact);
+    newContactName.value = '';
+    contactCreateKey = '';
+  } catch {
+    createError.value =
+      'Não foi possível cadastrar o cliente. Tente novamente.';
+  } finally {
+    contactCreating.value = false;
+  }
+}
+
+async function createOrder() {
+  if (!selectedContact.value || orderCreating.value) return;
+  orderCreating.value = true;
+  createError.value = '';
+  orderCreateKey ||= commandKey();
+  try {
+    const response = await request('/api/v1/orders', {
+      body: { contactId: selectedContact.value.id },
+      idempotencyKey: orderCreateKey,
+      method: 'POST',
+    });
+    newOrderDialog.value?.close();
+    orderCreateKey = '';
+    await router.push(`/pedidos/${response.data.order.id}`);
+  } catch (cause) {
+    createError.value =
+      Number(cause?.status) === 403
+        ? 'Você não tem permissão para criar pedidos.'
+        : 'Não foi possível criar o pedido. Tente novamente.';
+  } finally {
+    orderCreating.value = false;
+  }
+}
+
+watch(contactQuery, () => {
+  if (selectedContact.value?.label !== contactQuery.value) {
+    selectedContact.value = null;
+    orderCreateKey = '';
+  }
+  if (contactSearchTimer) globalThis.clearTimeout(contactSearchTimer);
+  contactSearchTimer = globalThis.setTimeout(() => {
+    contactSearchTimer = 0;
+    void searchContacts();
+  }, 250);
+});
+watch(newContactName, () => {
+  contactCreateKey = '';
+});
 
 /** @param {string|null} cursor */
 function listUrl(cursor) {
@@ -281,6 +410,8 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   controller?.abort();
+  contactController?.abort();
+  if (contactSearchTimer) globalThis.clearTimeout(contactSearchTimer);
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
   if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
   if (searchTimer) globalThis.clearTimeout(searchTimer);
@@ -299,7 +430,99 @@ onBeforeUnmount(() => {
           retomados pelo vendedor responsável ou administrador.
         </p>
       </div>
+      <button type="button" class="primary" @click="openNewOrder">
+        Novo pedido
+      </button>
     </header>
+
+    <dialog
+      ref="newOrderDialog"
+      class="op-dialog manual-order-dialog"
+      aria-labelledby="new-order-title"
+    >
+      <h2 id="new-order-title">Novo pedido</h2>
+      <p>Selecione um cliente para abrir uma ficha pendente.</p>
+      <div class="manual-order-field">
+        <label for="new-order-contact">Buscar cliente pelo nome</label>
+        <input
+          id="new-order-contact"
+          v-model="contactQuery"
+          type="search"
+          autocomplete="off"
+          aria-describedby="new-order-search-help"
+        />
+        <p id="new-order-search-help" class="op-hint">
+          Digite pelo menos duas letras. Clientes com o mesmo nome aparecem
+          separados.
+        </p>
+      </div>
+      <p v-if="contactSearching" role="status">Buscando clientes…</p>
+      <ul
+        v-if="contactOptions.length"
+        class="manual-contact-options"
+        aria-label="Resultados da busca de clientes"
+      >
+        <li v-for="contact in contactOptions" :key="contact.id">
+          <button type="button" @click="selectContact(contact)">
+            {{ contact.label }}
+            <small v-if="contact.identities?.length">
+              {{ contact.identities[0].channel }} · identificação final
+              {{ contact.identities[0].externalId?.slice(-4) }}
+            </small>
+          </button>
+        </li>
+      </ul>
+      <p
+        v-else-if="
+          contactQuery.trim().length >= 2 &&
+          !contactSearching &&
+          !selectedContact
+        "
+        role="status"
+      >
+        Nenhum cliente encontrado nesta busca.
+      </p>
+      <p v-if="selectedContact" role="status">
+        Cliente selecionado: <strong>{{ selectedContact.label }}</strong>
+      </p>
+      <div class="manual-order-field">
+        <label for="new-contact-name"
+          >Cliente não cadastrado? Informe o nome</label
+        >
+        <input
+          id="new-contact-name"
+          v-model="newContactName"
+          type="text"
+          maxlength="120"
+          autocomplete="name"
+        />
+        <button
+          type="button"
+          :disabled="contactCreating || !newContactName.trim()"
+          @click="createContact"
+        >
+          Cadastrar cliente
+        </button>
+      </div>
+      <p v-if="createError" role="alert" class="op-alert">{{ createError }}</p>
+      <div class="op-dialog-actions">
+        <button
+          type="button"
+          :disabled="orderCreating || contactCreating"
+          @click="newOrderDialog?.close()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="primary"
+          :disabled="!selectedContact || orderCreating || contactCreating"
+          @click="createOrder"
+        >
+          Criar pedido
+        </button>
+      </div>
+    </dialog>
 
     <div class="filter-bar">
       <div class="chip-row" role="group" aria-label="Filtrar pedidos">

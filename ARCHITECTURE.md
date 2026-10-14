@@ -47,6 +47,12 @@ numeração global `NN-CRM`. Pode abrir a partir do primeiro ponto confirmado
 da ficha; o bot preenche progressivamente, e o vendedor revisa/completa.
 Um pendente acompanha o Contato; a confirmação congela o snapshot.
 
+A [ADR 032](docs/adr/032-separar-pedido-conversa-e-assunto.md) separa o
+Contato da Conversa para que o vendedor crie Pedido manual em Pedidos, sem
+simular WhatsApp. O contrato legado do agente conserva um pendente por
+Conversa; vários assuntos e pendentes na mesma Conversa exigem alvo explícito
+e implantação posterior do contrato por Assunto.
+
 O template selecionado é `ficha-canonical-v6` (ADR 025).
 Técnica pertence ao item e origem da arte ao pedido. Impressão exige Pedido
 confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF

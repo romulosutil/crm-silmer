@@ -3,14 +3,14 @@
 ## Regras de produto
 
 1. Toda mensagem válida entra na Caixa de Entrada e dispara automaticamente o n8n; a UI não inicia a automação.
-2. Cliente é `Contact` + `ContactIdentity`. A chegada resolve contato e conversa, mas não confirma venda.
+2. Cliente é `Contact` com zero ou mais `ContactIdentity`: o cadastro humano pode preceder o canal. A chegada resolve contato e conversa, mas não confirma venda. Identidades só são ligadas por correlação verificável.
 3. Kanban e Negócio estão aposentados (ADR 004); novas capacidades não reutilizam tabelas ou módulos históricos desse domínio.
 4. Pedido possui somente `pendente` e `confirmado` (ADR 006). O preenchimento é progressivo e não linear.
 5. O agente cria ou completa pedido pendente por comandos autorizados da API. Nunca confirma pedido nem altera preço, pagamento ou escolha humana já registrada.
 6. Preço, prazo garantido e regra comercial nunca são inventados pelo agente. Uma pessoa autorizada decide as condições.
 7. Automação limita-se às capacidades de `AUTOMATION_EXECUTOR`, ao `automation_epoch` e aos gates; há desligamento por conversa e global.
 8. Retries e duplicidades não criam contatos, conversas, pedidos ou envios duplicados. Efeitos oficiais são auditáveis.
-9. Uma conversa pode ter vários pedidos e no máximo um pendente. Confirmação e reabertura são humanas; reabrir preserva número e bloqueia impressão.
+9. Um cliente pode ter vários pedidos pendentes. O contrato legado do agente mantém no máximo um pendente por conversa até haver Assunto/Pedido alvo explícito (ADR 032). Confirmação e reabertura são humanas; reabrir preserva número e bloqueia impressão.
 10. Pedido confirmado registra autor, horário, valor e condição. Só pedido confirmado pode ser impresso.
 11. A numeração começa em `01-CRM`, é reservada na criação e não depende da sequência legada.
 12. Rose é a destinatária operacional da ficha. Encaminhamento e eventual aviso automático exigem homologação própria; o telefone, quando usado, vem de `secret://crm/order-recipient-phone` e nunca é versionado.
@@ -21,7 +21,7 @@
 17. Rômulo Sutil Corrêa é o Responsável de Privacidade; a política do piloto foi aprovada após consulta jurídica. Aprovações externas de IA e recovery permanecem gates independentes.
 18. A nova mídia enviada pelo vendedor no chat é preservada no RustFS até nova decisão de retenção, sem expurgo por sete dias ou fim da jornada (ADR 029; implementação existente, homologação e ativação em INBOX-MEDIA-1). Cleanup automático alcança somente rascunhos sem vínculo com mais de 24h, sob guardas de writer e remoção confirmada antes de liberar quota. O runtime legado de mídia de canal não promovida continua transitório até sua migração: remover bytes no fim da jornada ou em sete dias, o que ocorrer primeiro. Pedido, ficha, documentos comerciais válidos e auditoria seguem retenção própria.
 19. Handoff e tomada humana são definitivos para o atendimento: a conversa segue com pessoa até encerrar e não volta ao bot (ADR 015).
-20. Handoff nasce sem responsável e tem papel-alvo Vendedor (ADR 009). A reivindicação é atômica e exige pessoa ativa e elegível; editar, gerar ou reabrir pedido exige dono da conversa ou administrador.
+20. Handoff nasce sem responsável e tem papel-alvo Vendedor (ADR 009). A reivindicação é atômica e exige pessoa ativa e elegível; editar, gerar ou reabrir pedido exige dono da conversa ou administrador, ou, para Pedido manual sem conversa, seu vendedor responsável ou administrador (ADR 032).
 21. Pedido da loja do site (ADRs 027 e 028) é a única exceção às regras 5, 9, 10 e 16 quanto à confirmação humana e ao dia do pagamento digitado: nasce `confirmado`, sem conversa nem Contato, registrado pelo n8n (`AUTOMATION_EXECUTOR`, ação `store.order.record`) só depois de a InfinitePay confirmar o Pix, em nome da `system:loja-do-site`, ao preço do catálogo do CRM e com o dia do pagamento confirmado pelo gateway; fica travado (sem edição, reabertura, lastro ou arquivos) e conta como venda, salvo pedido de teste. A primeira impressão da ficha registra quem e quando e tira o pedido do aviso do Dashboard, sem mudar o status (ADR 031).
 
 ## Regras técnicas já impostas

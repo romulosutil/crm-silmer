@@ -70,7 +70,6 @@ test('human conversation routes authorize, mutate state and enqueue commands', a
     ['archive', 'archive', 'conversation.archive'],
     ['unarchive', 'unarchive', 'conversation.unarchive'],
     ['takeover', 'takeover', 'conversation.takeover'],
-    ['close', 'close', 'conversation.transition'],
   ]) {
     const response = await api.inject({
       headers: baseHeaders,
@@ -90,6 +89,30 @@ test('human conversation routes authorize, mutate state and enqueue commands', a
       true,
     );
   }
+
+  const closed = await api.inject({
+    headers: baseHeaders,
+    method: 'POST',
+    payload: {
+      acknowledgePending: true,
+      expectedVersion: 6,
+      outcome: 'concluido',
+    },
+    url: '/api/v1/conversations/conversation-synthetic/close',
+  });
+  assert.equal(closed.statusCode, 202);
+  const closeCall = calls.find((call) => call.method === 'close');
+  assert.equal(closeCall?.input.outcome, 'concluido');
+  assert.equal(closeCall?.input.acknowledgePending, true);
+  assert.equal(closeCall?.input.reason, 'Encerramento: concluido');
+  assert.equal(
+    calls.some(
+      (call) =>
+        call.method === 'authorize' &&
+        call.input.action === 'conversation.transition',
+    ),
+    true,
+  );
 
   const claim = await api.inject({
     headers: baseHeaders,
@@ -139,6 +162,27 @@ test('human conversation routes reject requests without an idempotency key', asy
     false,
   );
   assert.equal(calls.length, 0);
+});
+
+test('closing rejects an unknown outcome and missing pending-order acknowledgement', async (t) => {
+  const { api, calls } = harness();
+  t.after(() => api.close());
+  for (const payload of [
+    { expectedVersion: 6, outcome: 'automatico', acknowledgePending: true },
+    { expectedVersion: 6, outcome: 'concluido' },
+  ]) {
+    const response = await api.inject({
+      headers: baseHeaders,
+      method: 'POST',
+      payload,
+      url: '/api/v1/conversations/conversation-synthetic/close',
+    });
+    assert.equal(response.statusCode, 400);
+  }
+  assert.equal(
+    calls.some((call) => call.method === 'close'),
+    false,
+  );
 });
 
 test('no route hands a conversation back to the agent (ADR 015)', async (t) => {

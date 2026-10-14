@@ -23,7 +23,6 @@ export function registerConversationRoutes(api, conversations, contextFor) {
   const stateCommands =
     /** @type {Array<[string, string, string, string|undefined]>} */ ([
       ['takeover', 'conversation.takeover', 'takeover', undefined],
-      ['close', 'conversation.transition', 'close', 'sem_lead'],
     ]);
   for (const [path, action, method, state] of stateCommands) {
     api.post(
@@ -53,6 +52,45 @@ export function registerConversationRoutes(api, conversations, contextFor) {
         }),
     );
   }
+
+  api.post(
+    '/api/v1/conversations/:conversationId/close',
+    async (request, reply) =>
+      respond(reply, request, contextFor, async () => {
+        const params = requireObject(request.params);
+        const body = requireObject(request.body);
+        rejectUnknownKeys(body, [
+          'acknowledgePending',
+          'expectedVersion',
+          'outcome',
+        ]);
+        const command = await authorizeHumanCommand(
+          request,
+          conversations,
+          contextFor,
+          'conversation.transition',
+        );
+        const outcome = requireString(body.outcome, 'OUTCOME');
+        if (!['concluido', 'sem_pedido'].includes(outcome)) {
+          throw new ConversationRequestError(400, 'INVALID_OUTCOME');
+        }
+        if (typeof body.acknowledgePending !== 'boolean') {
+          throw new ConversationRequestError(400, 'INVALID_REQUEST');
+        }
+        const result = await conversations.close({
+          ...command,
+          acknowledgePending: body.acknowledgePending,
+          conversationId: requireString(
+            params.conversationId,
+            'CONVERSATION_ID',
+          ),
+          expectedVersion: requireVersion(body.expectedVersion),
+          outcome,
+          reason: `Encerramento: ${outcome}`,
+        });
+        return reply.code(202).send({ accepted: true, ...result });
+      }),
+  );
 
   api.post(
     '/api/v1/conversations/:conversationId/archive',

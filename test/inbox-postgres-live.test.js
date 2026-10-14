@@ -312,6 +312,68 @@ if (connectionString) {
     }
   });
 
+  test('PostgreSQL records neutral closure and opens the next cycle without changing the prior one', async () => {
+    const databaseName = new URL(connectionString).pathname.slice(1);
+    assert.equal(databaseName, 'crm_silmer_test');
+    const pool = new Pool({ connectionString, max: 16 });
+    const runId = randomUUID().replaceAll('-', '');
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+      await seedAttendant(pool);
+      const { contacts, inbox } = servicesFor(pool);
+      const identity = await contacts.resolveInboundIdentity(
+        identityInput(runId),
+      );
+      const first = await inbox.receiveInbound(inboundInput(runId, identity));
+      const owned = await inbox.takeover({
+        actor: ATTENDANT,
+        conversationId: first.conversation.id,
+        correlationId: `correlation-takeover-${runId}`,
+        expectedVersion: first.conversation.version,
+        idempotencyKey: `takeover-${runId}`,
+        reason: 'Atendimento sintético',
+      });
+      const closeCommand = {
+        acknowledgePending: false,
+        actor: ATTENDANT,
+        conversationId: owned.id,
+        correlationId: `correlation-close-${runId}`,
+        expectedVersion: owned.version,
+        idempotencyKey: `close-${runId}`,
+        outcome: 'concluido',
+        reason: 'Encerramento: concluido',
+      };
+      const closed = await inbox.closeConversation(closeCommand);
+      assert.equal(closed.state, 'encerrada');
+      assert.equal(closed.closedBy, ATTENDANT.id);
+      assert.equal(closed.closureOutcome, 'concluido');
+      assert.deepEqual(await inbox.closeConversation(closeCommand), closed);
+      const next = await inbox.receiveInbound(
+        inboundInput(runId, identity, {
+          externalMessageId: `message-new-cycle-${runId}`,
+          occurredAt: '2026-09-03T12:00:00.000Z',
+        }),
+      );
+      assert.equal(next.conversation.cycleNumber, 2);
+      assert.equal(next.conversation.previousConversationId, closed.id);
+      const rows = await pool.query(
+        'SELECT state, closure_outcome, closed_by FROM crm.conversations WHERE id=$1',
+        [closed.id],
+      );
+      assert.deepEqual(rows.rows[0], {
+        state: 'encerrada',
+        closure_outcome: 'concluido',
+        closed_by: ATTENDANT.id,
+      });
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
+
   test('PostgreSQL atomically takes over, queues one human message and replays the persisted command', async () => {
     const databaseName = new URL(connectionString).pathname.slice(1);
     assert.equal(databaseName, 'crm_silmer_test');

@@ -123,7 +123,7 @@ async function appendStoreAudit(transaction, order, { action, audit, reason }) {
  */
 export async function lockConversation(transaction, conversationId) {
   const result = await transaction.query(
-    `SELECT assigned_user_id FROM crm.conversations
+    `SELECT assigned_user_id, terminal_at FROM crm.conversations
      WHERE id = $1 FOR UPDATE`,
     [conversationId],
   );
@@ -268,6 +268,12 @@ export class PostgresOrderRepository {
             throw new OrderNotFoundError(
               'Conversation was not found',
               'CONVERSATION_NOT_FOUND',
+            );
+          }
+          if (conversation.terminal_at !== null) {
+            throw new OrderConflictError(
+              'Conversation is closed',
+              'CONVERSATION_CLOSED',
             );
           }
           await assertWriteOwner(

@@ -891,7 +891,7 @@ paths:
   /conversations/{conversationId}/{command}:
     post:
       operationId: changeConversationAutomationMode
-      summary: Executa takeover ou encerramento humano
+      summary: Executa takeover humano
       description: >-
         A conversa com uma pessoa nunca volta para o bot (ADR 015). O comando
         `return-to-ai` foi removido: a rota não existe e responde 404, como
@@ -903,7 +903,7 @@ paths:
         - name: command
           in: path
           required: true
-          schema: { type: string, enum: [takeover, close] }
+          schema: { type: string, enum: [takeover] }
         - $ref: '#/components/parameters/Origin'
       requestBody:
         required: true
@@ -918,6 +918,28 @@ paths:
           {
             description: 'Comando inexistente, inclusive `return-to-ai` (ADR 015)',
           }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /conversations/{conversationId}/close:
+    post:
+      operationId: closeConversation
+      summary: Encerra explicitamente o ciclo de atendimento
+      description: >-
+        Somente o responsável ou administrador. Não altera o estado dos
+        pedidos; se houver pendente, requer reconhecimento explícito.
+        Nova mensagem válida abre um novo ciclo para a mesma identidade.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CloseConversationCommand' }
+      responses:
+        '202': { description: Ciclo encerrado, auditado e notificado ao n8n }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
   /conversations/{conversationId}/archive:
     post:
@@ -1857,6 +1879,14 @@ components:
       properties:
         expectedVersion: { type: integer, minimum: 1 }
         reason: { type: string, minLength: 1, maxLength: 512 }
+    CloseConversationCommand:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, outcome, acknowledgePending]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        outcome: { type: string, enum: [concluido, sem_pedido] }
+        acknowledgePending: { type: boolean }
     HandoffClaimRequest:
       type: object
       additionalProperties: false
@@ -1878,6 +1908,7 @@ components:
           requer_atencao,
           convertida_em_lead,
           sem_lead,
+          encerrada,
         ]
     ContactIdentityView:
       type: object
@@ -2041,6 +2072,9 @@ components:
         updatedAt: { type: string, format: date-time }
         archivedAt: { type: [string, 'null'], format: date-time }
         terminalAt: { type: [string, 'null'], format: date-time }
+        closureOutcome:
+          { type: [string, 'null'], enum: [concluido, sem_pedido, null] }
+        closedBy: { type: [string, 'null'] }
     InboxPage:
       type: object
       additionalProperties: false

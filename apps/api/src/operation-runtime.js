@@ -19,6 +19,7 @@ const CONVERSATION_STATES = new Set([
   'requer_atencao',
   'convertida_em_lead',
   'sem_lead',
+  'encerrada',
 ]);
 const CHANNELS = new Set(['instagram', 'whatsapp']);
 const AUTOMATION_STATES = new Set(['assistant', 'human']);

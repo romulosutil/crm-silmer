@@ -329,6 +329,28 @@ export class PostgresInboxRepository {
         throw new InboxConflictError('Conversation is not archived');
       }
       assertConversationOwnership(kind, current, input.actor);
+      if (kind === 'transition' && input.state === 'encerrada') {
+        if (
+          current.assigned_user_id === null &&
+          !(input.actor.capabilities ?? []).includes(ADMIN_CAPABILITY)
+        ) {
+          throw new InboxForbiddenError(
+            'Take over the conversation before closing it',
+          );
+        }
+        const pending = await transaction.query(
+          `SELECT EXISTS (
+             SELECT 1 FROM crm.orders
+             WHERE conversation_id = $1 AND status = 'pendente'
+           ) AS present`,
+          [input.conversationId],
+        );
+        if (pending.rows[0]?.present && !input.acknowledgePending) {
+          throw new InboxConflictError(
+            'Pending order requires acknowledgement',
+          );
+        }
+      }
       if (kind === 'transfer') {
         const target = await transaction.query(
           `SELECT users.id
@@ -498,7 +520,7 @@ export class PostgresInboxRepository {
       const panelAction =
         kind === 'takeover'
           ? 'take_over'
-          : kind === 'transition' && input.state === 'sem_lead'
+          : kind === 'transition' && isTerminalInboxState(input.state)
             ? 'close'
             : null;
       if (
@@ -614,7 +636,8 @@ export class PostgresInboxRepository {
 const CONVERSATION_SELECT = `id, contact_identity_id, provider,
   provider_account_id, external_conversation_id, cycle_number,
   previous_conversation_id, state, automation_state, automation_epoch,
-  assigned_user_id, version, opened_at, last_message_at, terminal_at, archived_at`;
+  assigned_user_id, version, opened_at, last_message_at, terminal_at,
+  archived_at, closure_outcome, closed_by`;
 const MESSAGE_SELECT = `id, conversation_id, provider, provider_account_id,
   external_message_id, command_id, direction, author_kind, author_id,
   message_type, content_envelope, status, occurred_at, created_at`;
@@ -628,6 +651,13 @@ function mutationAssignments(kind, input, occurredAt) {
     return { sql: 'archived_at = NULL', values: [] };
   }
   if (kind === 'transition') {
+    if (input.state === 'encerrada') {
+      return {
+        sql: `state = $2, terminal_at = $3, closure_outcome = $4,
+              closed_by = $5, automation_epoch = automation_epoch + 1`,
+        values: [input.state, occurredAt, input.outcome, input.actor.id],
+      };
+    }
     return {
       sql: 'state = $2, terminal_at = $3',
       values: [
@@ -666,6 +696,8 @@ function mapConversation(row) {
     automationState: row.automation_state,
     createdAt: iso(row.opened_at),
     cycleNumber: Number(row.cycle_number),
+    closureOutcome: row.closure_outcome ?? null,
+    closedBy: row.closed_by ?? null,
     externalConversationId: row.external_conversation_id,
     id: row.id,
     identityId: row.contact_identity_id,

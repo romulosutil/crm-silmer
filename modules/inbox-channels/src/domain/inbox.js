@@ -7,9 +7,10 @@ export const INBOX_STATES = Object.freeze([
   'requer_atencao',
   'convertida_em_lead',
   'sem_lead',
+  'encerrada',
 ]);
 
-export const TERMINAL_INBOX_STATES = Object.freeze(['sem_lead']);
+export const TERMINAL_INBOX_STATES = Object.freeze(['sem_lead', 'encerrada']);
 
 /**
  * The conversation changes a person can make. ADR 015: once a person has the

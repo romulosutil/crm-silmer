@@ -78,6 +78,9 @@ const searchInput = ref(null);
 const replyInput = ref(null);
 const nameInput = ref(null);
 const archiveConfirmationDialog = ref(null);
+const closeConfirmationDialog = ref(null);
+const closureOutcome = ref('concluido');
+const acknowledgePending = ref(false);
 const orderDrawer = ref(null);
 const presenceFilterMenu = ref(null);
 const query = ref('');
@@ -147,7 +150,7 @@ const liveStatusMessage = computed(() => {
 });
 const active = computed(() => detail.value?.conversation ?? null);
 const isTerminal = computed(() =>
-  ['convertida_em_lead', 'sem_lead'].includes(active.value?.state),
+  ['convertida_em_lead', 'sem_lead', 'encerrada'].includes(active.value?.state),
 );
 const currentUserId = computed(() => sessionUser.value?.id ?? '');
 const isAdmin = computed(() =>
@@ -197,6 +200,11 @@ const canArchive = computed(
 );
 const canUnarchive = computed(
   () => canArchive.value && Boolean(active.value?.archivedAt),
+);
+const canClose = computed(
+  () =>
+    !isTerminal.value &&
+    (isAdmin.value || owner.value?.id === currentUserId.value),
 );
 /** PCX-08/PCL-10: creating the order follows the owner of the conversation. */
 const canCreateOrder = computed(
@@ -310,6 +318,37 @@ function requestArchiveConfirmation(event) {
 async function confirmArchive() {
   archiveConfirmationDialog.value?.close();
   await archiveConversation();
+}
+
+/** @param {MouseEvent} event */
+function requestCloseConfirmation(event) {
+  const dialog = closeConfirmationDialog.value;
+  const trigger = event.currentTarget;
+  if (
+    !(dialog instanceof HTMLDialogElement) ||
+    !(trigger instanceof HTMLElement)
+  )
+    return;
+  closureOutcome.value = 'concluido';
+  acknowledgePending.value = false;
+  openDialog(dialog, trigger);
+}
+
+async function confirmClose() {
+  const closed = await runCommand(
+    'close',
+    {
+      acknowledgePending: acknowledgePending.value,
+      expectedVersion: active.value.version,
+      outcome: closureOutcome.value,
+    },
+    'Conversa encerrada. Uma nova mensagem iniciará outro atendimento.',
+  );
+  if (closed) {
+    closeConfirmationDialog.value?.close();
+    await nextTick();
+    heading.value?.focus();
+  }
 }
 
 /** @param {{authorKind?: unknown, direction?: unknown}} message */
@@ -980,6 +1019,15 @@ onBeforeUnmount(() => {
                   · {{ ownerLabel }}
                 </template>
               </p>
+              <p v-if="active.closureOutcome" class="audit-note">
+                Encerramento:
+                {{
+                  active.closureOutcome === 'concluido'
+                    ? 'atendimento concluído'
+                    : 'sem pedido neste atendimento'
+                }}
+                · {{ dateTimeBR(active.terminalAt) }}
+              </p>
               <button
                 ref="renameTrigger"
                 type="button"
@@ -1026,6 +1074,14 @@ onBeforeUnmount(() => {
               @click="openTransfer"
             >
               Repassar atendimento
+            </button>
+            <button
+              v-if="canClose"
+              type="button"
+              :disabled="busy"
+              @click="requestCloseConfirmation"
+            >
+              Encerrar conversa
             </button>
             <button
               v-if="canArchive && !showArchived"
@@ -1211,6 +1267,44 @@ onBeforeUnmount(() => {
       :conversation-version="active.version"
       @changed="refreshInbox(true)"
     />
+    <dialog
+      ref="closeConfirmationDialog"
+      class="command-dialog"
+      aria-labelledby="close-confirmation-title"
+      aria-describedby="close-confirmation-description"
+    >
+      <form @submit.prevent="confirmClose">
+        <h2 id="close-confirmation-title">Encerrar conversa?</h2>
+        <p id="close-confirmation-description">
+          Este atendimento será encerrado. Uma nova mensagem do cliente abrirá
+          outra conversa, preservando o histórico e os pedidos.
+        </p>
+        <fieldset>
+          <legend>Motivo do encerramento</legend>
+          <label>
+            <input v-model="closureOutcome" type="radio" value="concluido" />
+            Atendimento concluído
+          </label>
+          <label>
+            <input v-model="closureOutcome" type="radio" value="sem_pedido" />
+            Sem pedido neste atendimento
+          </label>
+        </fieldset>
+        <label v-if="active?.order?.status === 'pendente'">
+          <input v-model="acknowledgePending" type="checkbox" required />
+          Há um pedido pendente. Confirmo que desejo encerrar esta conversa sem
+          alterar o pedido.
+        </label>
+        <div class="inline-actions">
+          <button type="button" @click="closeConfirmationDialog?.close()">
+            Cancelar
+          </button>
+          <button type="submit" class="primary" :disabled="busy">
+            Encerrar conversa
+          </button>
+        </div>
+      </form>
+    </dialog>
     <dialog
       ref="archiveConfirmationDialog"
       class="command-dialog"

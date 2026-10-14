@@ -16,6 +16,12 @@ export class InMemoryInboxRepository {
   #messages = new Map();
   #suggestions = new Map();
   #tail = Promise.resolve();
+  #pendingOrdersForConversation;
+
+  /** @param {{pendingOrdersForConversation?: (conversationId: string) => number|Promise<number>}} [options] */
+  constructor({ pendingOrdersForConversation = () => 0 } = {}) {
+    this.#pendingOrdersForConversation = pendingOrdersForConversation;
+  }
 
   /** @template T @param {() => Promise<T>} work @returns {Promise<T>} */
   async #exclusive(work) {
@@ -177,11 +183,32 @@ export class InMemoryInboxRepository {
           'Conversation is assigned to another operator',
         );
       }
+      if (kind === 'transition' && input.state === 'encerrada') {
+        if (!conversation.assignedUserId && !isAdmin) {
+          throw new InboxForbiddenError(
+            'Take over the conversation before closing it',
+          );
+        }
+        if (
+          (await this.#pendingOrdersForConversation(input.conversationId)) >
+            0 &&
+          !input.acknowledgePending
+        ) {
+          throw new InboxConflictError(
+            'Pending order requires acknowledgement',
+          );
+        }
+      }
 
       const occurredAt = runtime.clock().toISOString();
       let result;
       if (kind === 'transition') {
         conversation.state = input.state;
+        if (input.state === 'encerrada') {
+          conversation.closureOutcome = input.outcome;
+          conversation.closedBy = input.actor.id;
+          conversation.automationEpoch += 1;
+        }
         conversation.terminalAt = isTerminalInboxState(input.state)
           ? occurredAt
           : null;

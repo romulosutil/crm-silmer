@@ -53,6 +53,11 @@ simular WhatsApp. O contrato legado do agente conserva um pendente por
 Conversa; vários assuntos e pendentes na mesma Conversa exigem alvo explícito
 e implantação posterior do contrato por Assunto.
 
+O responsável ou administrador encerra explicitamente um ciclo de Conversa
+como `concluido` ou `sem_pedido`; a hora e o autor ficam registrados. Pedido
+pendente exige confirmação consciente e permanece pendente. Arquivar continua
+independente. A próxima mensagem válida da identidade abre outro ciclo.
+
 O template selecionado é `ficha-canonical-v6` (ADR 025).
 Técnica pertence ao item e origem da arte ao pedido. Impressão exige Pedido
 confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF

@@ -33,8 +33,24 @@ em `crm_meta.schema_migrations` mostrou `0034` como última migration aplicada,
 com checksum igual ao arquivo do release. A imagem implantada contém `0035`,
 `0036` e `0037`, ausentes no banco. Isso explica o readiness 503.
 
-Antes de aplicar migrations, verificar backup, espaço livre, o estado dos
-serviços e o plano de rollback. No container `silmer-api` do release correto,
+### Recuperação confirmada em 14/10/2026
+
+O proprietário executou no console da `silmer-api` implantada
+`node /app/modules/database/src/cli.js --phase=expand`. O migrador retornou
+`{"applied_count":3,"phase":"expand","status":"ok"}`. Na sequência,
+`/api/health/ready`, `/api/health/live` e `/healthz` responderam 200. Na
+sessão publicada, Dashboard exibiu os painéis de indicadores, Pedidos carregou
+a lista e Caixa de Entrada carregou sem alerta. O painel mostra totais zerados;
+o pedido confirmado observado é de teste e não integra as vendas reais.
+
+Esta verificação confirma a recuperação das rotas observadas, não um teste de
+restauração do backup nem a ausência de falhas em fluxos de escrita. A melhoria
+de resiliência da interface permanece na branch `codex/dashboard-qa` e ainda
+precisa de integração e implantação para valer em produção.
+
+Para uma nova ocorrência, antes de aplicar migrations, verificar backup, espaço
+livre, estado dos serviços e plano de rollback. No container `silmer-api` do
+release correto,
 executar `node modules/database/src/cli.js --phase=expand` (a imagem remove
 `npm`). O migrador usa advisory lock e aplica cada migration em transação;
 não editar checksums nem executar migrations contract para tentar liberar o
@@ -42,8 +58,9 @@ health. Depois, exigir `/api/health/ready` 200 e repetir leituras autenticadas
 de Dashboard, Pedidos e Inbox, além de conferir que não há erros 5xx.
 
 O proprietário escolheu manter o deploy automático GitHub → EasyPanel
-existente. Estas checagens não alteraram serviços, segredos, DNS, workflows,
-migrations nem configuração de deploy.
+existente. A checagem de 05/10 abaixo não alterou serviços, segredos, DNS,
+workflows, migrations nem configuração de deploy. Nesta recuperação de 14/10,
+foram aplicadas somente as três migrations `expand` pendentes.
 
 ## Alvo e limites da evidência
 

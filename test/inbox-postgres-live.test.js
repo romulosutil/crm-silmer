@@ -499,6 +499,32 @@ if (connectionString) {
       assert.equal(read.orders.length, 2);
       assert.equal(read.links.length, 2);
       assert.equal(read.currentSubjectId, first.subject.id);
+      await subjects.tagMessage({
+        actor: ATTENDANT,
+        conversationId: owned.id,
+        correlationId: `correlation-retag-${runId}`,
+        idempotencyKey: `retag-${runId}`,
+        messageId: received.message.id,
+        subjectIds: [second.subject.id],
+      });
+      const correction = await pool.query(
+        `SELECT payload FROM crm.domain_events
+         WHERE aggregate_type='conversation' AND aggregate_id=$1
+           AND event_type='conversation.subjects_changed'
+         ORDER BY aggregate_version DESC LIMIT 1`,
+        [owned.id],
+      );
+      assert.deepEqual(
+        correction.rows[0].payload.previousSubjectIds,
+        [first.subject.id, general.subject.id].sort(),
+      );
+      assert.deepEqual(correction.rows[0].payload.subjectIds, [
+        second.subject.id,
+      ]);
+      assert.deepEqual(
+        (await subjects.list(owned.id)).links.map((link) => link.subjectId),
+        [second.subject.id],
+      );
       await inbox.closeConversation({
         acknowledgePending: false,
         actor: ATTENDANT,

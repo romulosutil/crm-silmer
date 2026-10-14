@@ -22,22 +22,21 @@ No EasyPanel, `silmer-api`, `silmer-edge-web`, `silmer-postgres` e
 A API mostra implantação de código recente e deploy automático desativado. A
 página Scripts da API não tem job de migration salvo. O Auto Deploy desativado
 diverge da decisão operacional registrada abaixo e precisa ser reconciliado.
-O backup do PostgreSQL
-usa Local Disk e execução manual; os dois registros visíveis são de 10/10 e
-03/10, sem cópia atual confirmada nem restore comprovado.
+O backup do PostgreSQL usa Local Disk e execução manual. Em 14/10, foi criada
+e marcada como concluída a cópia `pre-migracao-0035-0037-2026-10-14`; ela
+permanece no disco local, sem cópia externa nem restore comprovado.
 
 O código de readiness exige conexão PostgreSQL e igualdade dos checksums de
 todas as migrations `expand` carregadas pela imagem. A sessão restaurada
-indica que ao menos a leitura de identidade respondeu; ainda é preciso
-distinguir migration ausente ou divergente de falha intermitente do banco.
-A migration `0034_store_order_first_print.expand.sql` é necessária para as
-leituras atuais de Pedidos; `0035`–`0037` também fazem parte deste checkout.
+indica que ao menos a leitura de identidade respondeu. Consulta somente leitura
+em `crm_meta.schema_migrations` mostrou `0034` como última migration aplicada,
+com checksum igual ao arquivo do release. A imagem implantada contém `0035`,
+`0036` e `0037`, ausentes no banco. Isso explica o readiness 503.
 
-Para diagnosticar no EasyPanel, conferir a revisão e o horário de implantação
-de `silmer-api`, o estado de `silmer-postgres`, os logs de `api_readiness_failed`
-e o histórico de `crm_meta.schema_migrations` contra a imagem implantada.
 Antes de aplicar migrations, verificar backup, espaço livre, o estado dos
-serviços e o plano de rollback. Usar o job `migrate` expand do release correto;
+serviços e o plano de rollback. No container `silmer-api` do release correto,
+executar `node modules/database/src/cli.js --phase=expand` (a imagem remove
+`npm`). O migrador usa advisory lock e aplica cada migration em transação;
 não editar checksums nem executar migrations contract para tentar liberar o
 health. Depois, exigir `/api/health/ready` 200 e repetir leituras autenticadas
 de Dashboard, Pedidos e Inbox, além de conferir que não há erros 5xx.

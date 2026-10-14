@@ -3553,6 +3553,30 @@ button.op-generate {
   justify-self: start;
 }
 
+.manual-contact-create {
+  display: grid;
+  gap: 0.4rem;
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.manual-contact-create legend {
+  padding-inline: 0.3rem;
+  font-weight: 700;
+}
+
+.manual-contact-create input {
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 0.65rem 0.75rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
 .manual-contact-options {
   display: grid;
   gap: 0.35rem;

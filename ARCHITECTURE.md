@@ -11,6 +11,12 @@ Handoff, Pedido, auditoria e jobs. A interface Vue 3 oferece Dashboard,
 Caixa de Entrada, Clientes, Pedidos, Vendedores e Conta. Negócio/Kanban
 foram aposentados pela [ADR 004](docs/adr/004-aposentar-kanban-e-negocio.md).
 
+Novo Contato manual e novo Pedido manual exigem telefone. Nome identifica a
+pessoa na interface, e-mail é opcional e Contatos anteriores sem telefone
+continuam disponíveis para correção. A busca considera números associados a
+identidades de canal; duplicatas exigem escolha humana
+([ADR 033](docs/adr/033-telefone-no-cadastro-e-roteamento.md)).
+
 O n8n recebe/envia WhatsApp e o chat do site, chama OpenAI (texto, imagem e
 transcrição de áudio) e orquestra a coleta
 ([ADR 026](docs/adr/026-midia-e-chat-do-site-no-bot.md)). Nunca acessa
@@ -21,8 +27,11 @@ observa ou assume o atendimento. Instagram é CANAL-2, posterior ao piloto.
 ## Contratos ativos
 
 - Integração n8n MVP: três endpoints de inbound, attachment e events,
-  Basic Auth com `AUTOMATION_EXECUTOR`, briefing na Conversa e outbox
+  Basic Auth com `AUTOMATION_EXECUTOR`, briefing legado na Conversa e outbox
   CRM→n8n ([ADR 003](docs/adr/003-adotar-integracao-n8n-mvp-simples.md)).
+  O contrato `subject-v1` optativo isola briefing por Assunto e exige IDs de
+  Assunto e Pedido nas alterações posteriores à abertura. O CRM deve ser
+  implantado antes do workflow que usa esse contrato (CP-T04).
 - `message.send.requested` reserva um único efeito antes da Meta, usando
   `automation_epoch` e `source_revision`. Replay não autoriza novo envio;
   resultado incerto exige reconciliação, sem retry cego.
@@ -63,7 +72,8 @@ pedido. Um pedido pode reaparecer em outro ciclo; uma mensagem pode apontar
 para vários Assuntos. A Inbox deixa o vendedor criar, selecionar e corrigir
 esses vínculos com auditoria. O alvo atual é explícito; o workflow antigo do
 agente ainda não usa esses IDs e conserva sua restrição de um pendente por
-Conversa.
+Conversa até a atualização do workflow. O contrato novo valida o alvo antes
+de projetar na ficha e pergunta ou transfere quando a mensagem é ambígua.
 
 O template selecionado é `ficha-canonical-v6` (ADR 025).
 Técnica pertence ao item e origem da arte ao pedido. Impressão exige Pedido

@@ -57,3 +57,5 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [030 — Antivírus persistente no worker](030-antivirus-persistente-no-worker.md), motor clamd no worker existente com socket Unix privado.
 - [031 — Aviso de pedido novo do site até a primeira impressão da ficha](031-aviso-de-pedido-novo-do-site.md); supersede em parte a ADR 028 (item 9).
 - [032 — Separar Pedido, Conversa e Assunto](032-separar-pedido-conversa-e-assunto.md); Pedido manual sem canal, encerramento neutro e assuntos de atendimento.
+- [033 — Telefone no cadastro e roteamento](033-telefone-no-cadastro-e-roteamento.md); novo cadastro e Pedido manual exigem telefone, com legados consultáveis.
+- [034 — Chat do site com telefone declarado](034-chat-do-site-com-telefone-declarado.md); sessão isolada, busca interna e Pedido novo antes do WhatsApp.

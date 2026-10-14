@@ -1,16 +1,26 @@
 import { decryptContactIdentityEnvelope } from './contact-identity-envelope.js';
+import {
+  contactPhoneHash,
+  decryptContactDetails,
+  normalizeContactPhone,
+} from '../domain/contact-details.js';
+import { decryptSiteContactClaim } from '../domain/site-contact-claim.js';
 
 export class PostgresContactReadRepository {
-  /** @param {{database: {query: Function, transaction?: Function}, envelopeKey: Buffer}} options */
-  constructor({ database, envelopeKey }) {
+  /** @param {{database: {query: Function, transaction?: Function}, envelopeKey: Buffer, lookupKey: Buffer}} options */
+  constructor({ database, envelopeKey, lookupKey }) {
     if (!database || typeof database.query !== 'function') {
       throw new TypeError('database.query is required');
     }
     if (!Buffer.isBuffer(envelopeKey) || envelopeKey.length !== 32) {
       throw new TypeError('envelopeKey must be a 32-byte Buffer');
     }
+    if (!Buffer.isBuffer(lookupKey) || lookupKey.length !== 32) {
+      throw new TypeError('lookupKey must be a 32-byte Buffer');
+    }
     this.database = database;
     this.envelopeKey = Buffer.from(envelopeKey);
+    this.lookupKey = Buffer.from(lookupKey);
   }
 
   /** @param {{after: null|{updatedAt: string, id: string}, limit: number, q?: string}} input */
@@ -25,10 +35,35 @@ export class PostgresContactReadRepository {
         : 'true';
       const q = (input.q ?? '').trim();
       const searchPattern = q.replace(/[\\%_]/gu, '\\$&');
-      if (q) values.push(`%${searchPattern}%`);
+      const phone = normalizeContactPhone(q);
+      if (q)
+        values.push(
+          phone
+            ? contactPhoneHash(phone, this.lookupKey)
+            : `%${searchPattern}%`,
+        );
       const searchValue = values.length;
       const searchPredicate = q
-        ? `contact.display_name ILIKE $${searchValue} ESCAPE '\\'`
+        ? phone
+          ? `(EXISTS (
+               SELECT 1 FROM crm.contact_phone_lookup phone_lookup
+               LEFT JOIN crm.contact_identities phone_identity
+                 ON phone_identity.id = phone_lookup.identity_id
+               WHERE phone_lookup.phone_hash = $${searchValue}
+                 AND ((phone_lookup.source = 'manual'
+                       AND phone_lookup.contact_id = contact.id)
+                      OR (phone_lookup.source = 'whatsapp'
+                          AND phone_identity.current_contact_id = contact.id))
+             ) OR EXISTS (
+               SELECT 1 FROM crm.site_contact_claims site_claim
+               JOIN crm.conversations site_conversation
+                 ON site_conversation.id = site_claim.conversation_id
+               JOIN crm.contact_identities site_identity
+                 ON site_identity.id = site_conversation.contact_identity_id
+               WHERE site_identity.current_contact_id = contact.id
+                 AND site_claim.phone_hash = $${searchValue}
+             ))`
+          : `contact.display_name ILIKE $${searchValue} ESCAPE '\\'`
         : 'true';
       values.push(input.limit + 1);
       const [page, count] = await Promise.all([
@@ -44,6 +79,9 @@ export class PostgresContactReadRepository {
                   identity.identity_kind, identity.phone_status,
                   identity.external_identity_lookup_hash,
                   identity.identity_envelope,
+                  site_claim.id site_claim_id,
+                  site_claim.version site_claim_version,
+                  site_claim.details_envelope site_claim_envelope,
                   GREATEST(
                     contact_page.updated_at,
                     COALESCE((SELECT max(conversation.last_message_at)
@@ -56,17 +94,62 @@ export class PostgresContactReadRepository {
            FROM contact_page
            LEFT JOIN crm.contact_identities identity
              ON identity.current_contact_id=contact_page.id
+           LEFT JOIN LATERAL (
+             SELECT id, version, details_envelope
+             FROM crm.site_contact_claims site_claim
+             JOIN crm.conversations site_conversation
+               ON site_conversation.id = site_claim.conversation_id
+             JOIN crm.contact_identities site_identity
+               ON site_identity.id = site_conversation.contact_identity_id
+             WHERE site_identity.current_contact_id = contact_page.id
+               ${phone ? `AND site_claim.phone_hash = $${searchValue}` : ''}
+             ORDER BY site_claim.updated_at DESC, site_claim.id DESC
+             LIMIT 1
+           ) site_claim ON true
            ORDER BY contact_page.updated_at DESC, contact_page.id DESC,
                     identity.created_at, identity.id`,
           values,
         ),
         database.query(
           `SELECT count(*)::integer count FROM crm.contacts contact
-           WHERE ${q ? "contact.display_name ILIKE $1 ESCAPE '\\'" : 'true'}`,
-          q ? [`%${searchPattern}%`] : [],
+           WHERE ${
+             q
+               ? phone
+                 ? `EXISTS (
+             SELECT 1 FROM crm.contact_phone_lookup phone_lookup
+             LEFT JOIN crm.contact_identities phone_identity
+               ON phone_identity.id = phone_lookup.identity_id
+             WHERE phone_lookup.phone_hash = $1
+               AND ((phone_lookup.source = 'manual'
+                     AND phone_lookup.contact_id = contact.id)
+                    OR (phone_lookup.source = 'whatsapp'
+                        AND phone_identity.current_contact_id = contact.id))
+           ) OR EXISTS (
+             SELECT 1 FROM crm.site_contact_claims site_claim
+             JOIN crm.conversations site_conversation
+               ON site_conversation.id = site_claim.conversation_id
+             JOIN crm.contact_identities site_identity
+               ON site_identity.id = site_conversation.contact_identity_id
+             WHERE site_identity.current_contact_id = contact.id
+               AND site_claim.phone_hash = $1
+           )`
+                 : "contact.display_name ILIKE $1 ESCAPE '\\'"
+               : 'true'
+           }`,
+          q
+            ? [
+                phone
+                  ? contactPhoneHash(phone, this.lookupKey)
+                  : `%${searchPattern}%`,
+              ]
+            : [],
         ),
       ]);
-      const contacts = groupContacts(page.rows, this.envelopeKey);
+      const contacts = groupContacts(
+        page.rows,
+        this.envelopeKey,
+        Boolean(phone),
+      );
       const hasMore = contacts.length > input.limit;
       return {
         hasMore,
@@ -79,26 +162,27 @@ export class PostgresContactReadRepository {
   /** @param {string} contactId */
   async get(contactId) {
     return this.#snapshot(async (database) => {
-      const [contact, identities, conversations] = await runSequential([
-        () =>
-          database.query(
-            `SELECT id, display_name, provisional, version, created_at,
-                    updated_at
+      const [contact, identities, conversations, siteClaims] =
+        await runSequential([
+          () =>
+            database.query(
+              `SELECT id, display_name, provisional, version, created_at,
+                    updated_at, contact_details_envelope
              FROM crm.contacts WHERE id=$1`,
-            [contactId],
-          ),
-        () =>
-          database.query(
-            `SELECT id, channel, identity_kind, phone_status,
+              [contactId],
+            ),
+          () =>
+            database.query(
+              `SELECT id, channel, identity_kind, phone_status,
                     external_identity_lookup_hash, identity_envelope,
                     created_at, updated_at
              FROM crm.contact_identities
              WHERE current_contact_id=$1 ORDER BY created_at, id`,
-            [contactId],
-          ),
-        () =>
-          database.query(
-            `SELECT conversation.id, conversation.state,
+              [contactId],
+            ),
+          () =>
+            database.query(
+              `SELECT conversation.id, conversation.state,
                     conversation.automation_state, conversation.version,
                     conversation.opened_at, conversation.last_message_at,
                     conversation.terminal_at, identity.channel
@@ -107,16 +191,40 @@ export class PostgresContactReadRepository {
                ON identity.id=conversation.contact_identity_id
              WHERE identity.current_contact_id=$1
              ORDER BY conversation.last_message_at DESC, conversation.id DESC`,
-            [contactId],
-          ),
-      ]);
+              [contactId],
+            ),
+          () =>
+            database.query(
+              `SELECT site_claim.id, site_claim.version, site_claim.details_envelope
+             FROM crm.site_contact_claims site_claim
+             JOIN crm.conversations site_conversation
+               ON site_conversation.id = site_claim.conversation_id
+             JOIN crm.contact_identities site_identity
+               ON site_identity.id = site_conversation.contact_identity_id
+             WHERE site_identity.current_contact_id=$1
+             ORDER BY site_claim.updated_at DESC, site_claim.id DESC LIMIT 1`,
+              [contactId],
+            ),
+        ]);
       const row = contact.rows[0];
       if (!row) throw notFound('CONTACT_NOT_FOUND');
       const identityViews = identities.rows.map((/** @type {any} */ identity) =>
         mapIdentity(identity, this.envelopeKey),
       );
       return {
-        contact: mapContact(row, identityViews),
+        contact: mapContact(
+          row,
+          identityViews,
+          decryptContactDetails(row.contact_details_envelope, this.envelopeKey),
+          siteClaims.rows[0]
+            ? decryptSiteContactClaim(
+                siteClaims.rows[0].details_envelope,
+                siteClaims.rows[0].id,
+                Number(siteClaims.rows[0].version),
+                this.envelopeKey,
+              )
+            : null,
+        ),
         conversations: conversations.rows.map(
           (/** @type {any} */ conversation) => ({
             automationState: conversation.automation_state,
@@ -150,8 +258,8 @@ export class PostgresContactReadRepository {
   }
 }
 
-/** @param {any[]} rows @param {Buffer} key */
-function groupContacts(rows, key) {
+/** @param {any[]} rows @param {Buffer} key @param {boolean} matchedSitePhone */
+function groupContacts(rows, key, matchedSitePhone) {
   const grouped = new Map();
   for (const row of rows) {
     let current = grouped.get(row.id);
@@ -161,6 +269,15 @@ function groupContacts(rows, key) {
         displayName: row.display_name ?? null,
         id: row.id,
         identities: [],
+        details: decryptContactDetails(row.contact_details_envelope, key),
+        siteClaim: row.site_claim_id
+          ? decryptSiteContactClaim(
+              row.site_claim_envelope,
+              row.site_claim_id,
+              Number(row.site_claim_version),
+              key,
+            )
+          : null,
         latestActivityAt: iso(row.latest_activity_at),
         provisional: Boolean(row.provisional),
         updatedAt: iso(row.updated_at),
@@ -171,25 +288,66 @@ function groupContacts(rows, key) {
     if (row.identity_id) current.identities.push(mapIdentity(row, key));
   }
   return [...grouped.values()].map((contact) =>
-    mapContact(contact, contact.identities),
+    mapContact(
+      contact,
+      contact.identities,
+      contact.details,
+      contact.siteClaim,
+      matchedSitePhone,
+    ),
   );
 }
 
 /** @param {any} row @param {any[]} identities */
-function mapContact(row, identities) {
+function mapContact(
+  row,
+  identities,
+  details = /** @type {{email: string|null, phone: string|null}} */ ({
+    email: null,
+    phone: null,
+  }),
+  siteClaim = /** @type {{name: string, phone: string}|null} */ (null),
+  matchedSitePhone = false,
+) {
   const primary =
     identities.find((identity) => identity.channel === 'whatsapp') ??
     identities[0] ??
     null;
+  const confirmedPhone =
+    primary?.kind === 'phone' && primary.phoneStatus === 'confirmed'
+      ? normalizeContactPhone(primary.externalId)
+      : null;
+  const phone =
+    matchedSitePhone && siteClaim
+      ? siteClaim.phone
+      : (row.phone ??
+        details.phone ??
+        confirmedPhone ??
+        siteClaim?.phone ??
+        null);
+  const phoneSource =
+    matchedSitePhone && siteClaim
+      ? 'site_unverified'
+      : row.phone || details.phone
+        ? 'manual'
+        : confirmedPhone
+          ? 'whatsapp'
+          : siteClaim
+            ? 'site_unverified'
+            : null;
   return Object.freeze({
     createdAt: row.createdAt ?? iso(row.created_at),
     displayName: row.displayName ?? row.display_name ?? null,
     id: row.id,
     identities: Object.freeze([...identities]),
+    phone,
+    phoneSource,
+    email: details.email ?? null,
     // Operator-chosen name wins; the channel handle is only the fallback.
     label:
       row.displayName ??
       row.display_name ??
+      siteClaim?.name ??
       primary?.displayHandle ??
       primary?.externalId ??
       `Contato ${row.id}`,

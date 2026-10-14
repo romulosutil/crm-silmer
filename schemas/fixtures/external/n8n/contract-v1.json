@@ -14,8 +14,8 @@
     "x-silmer-execution-id"
   ],
   "errorMediaType": "application/problem+json",
-  "channels": ["whatsapp"],
-  "activeChannels": ["whatsapp"],
+  "channels": ["whatsapp", "site_chat"],
+  "activeChannels": ["site_chat"],
   "endpoints": [
     {
       "method": "POST",

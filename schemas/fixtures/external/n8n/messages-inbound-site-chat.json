@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "channel": "site_chat",
+  "provider": "site",
+  "event_id": "site-event-synthetic-001",
+  "external_conversation_id": "session-synthetic-001",
+  "contact": { "external_id": "999024249434048109030647017182301789831168" },
+  "site_contact": {
+    "name": "Ana Sintetica",
+    "phone": "5527999991234"
+  },
+  "message": {
+    "external_id": "site-message-synthetic-001",
+    "type": "text",
+    "text": "Quero um orcamento"
+  },
+  "metadata": { "provider_account_id": "silmer-site" },
+  "occurred_at": "2026-10-14T12:00:00.000Z"
+}

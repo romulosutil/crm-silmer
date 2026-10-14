@@ -72,10 +72,13 @@ export function registerN8nRoutes(api, integration, contextFor) {
           'channel',
           'contact',
           'event_id',
+          'external_conversation_id',
           'message',
           'metadata',
           'occurred_at',
+          'provider',
           'schema_version',
+          'site_contact',
         ]);
         requireSchemaVersion(body.schema_version);
         const technical = await authorizeRequest(
@@ -161,8 +164,11 @@ export function registerN8nRoutes(api, integration, contextFor) {
           'message',
           'occurred_at',
           'open_order',
+          'order_id',
           'schema_version',
           'source_revision',
+          'subject_id',
+          'target_contract',
         ]);
         requireSchemaVersion(body.schema_version);
         const eventType = requireIdentifier(

@@ -64,6 +64,12 @@ const targets = (source, output = 0) =>
   );
 test('T14/MED-21: original true reservation gates both sends; replay reaches no effect', () => {
   assert.deepEqual(targets('Envio humano autorizado? (MVP)'), [
+    'Resposta humana pelo site? (MVP)',
+  ]);
+  assert.deepEqual(targets('Resposta humana pelo site? (MVP)'), [
+    'Site - Entregar resposta humana (MVP)',
+  ]);
+  assert.deepEqual(targets('Resposta humana pelo site? (MVP)', 1), [
     'Mensagem humana tem midia? (MVP)',
   ]);
   assert.deepEqual(targets('Envio humano autorizado? (MVP)', 1), [

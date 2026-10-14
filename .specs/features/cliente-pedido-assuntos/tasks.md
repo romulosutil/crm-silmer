@@ -27,3 +27,25 @@ Entrega de CP-T01–T03: [PR #170](https://github.com/romulosutil/crm-silmer/pul
 adaptar workflow, gates de epoch/revisão e UAT com ambiguidades, replay e
 handoff. Implantar CRM antes do workflow. A checklist operacional final deve
 separar código do CRM, workflow n8n, privacidade e homologação do canal.
+
+## CP-T05 — Telefone como chave de busca e cadastro de Pedido
+
+**Requisitos:** CP-01..03, CP-19..20. Tornar telefone obrigatório em novos
+Contatos e Pedidos manuais, manter legados para correção, buscar por telefone
+sem unir identidades por inferência, apresentar duplicatas para escolha humana
+e simplificar o cadastro de Contato dentro do fluxo de Pedido. E-mail permanece
+opcional. Testar número já conhecido, duplicata e legado sem telefone.
+
+## CP-T06 — Ingresso do chat do site e repasse ao site
+
+**Requisitos:** CP-21..22 e CP-15..18. Receber nome e telefone declarados
+somente da sessão sintética do chat, cifrar a declaração e permitir busca
+interna com origem não confirmada. Retornar ao agente apenas a classificação
+necessária; abrir Pedido novo no Contato da sessão sem anexar histórico de
+outro canal. Adaptar o workflow depois do CRM, preparar estilo Silmer e
+fornecer implementação dirigida ao repositório do site, com botão na home e
+em `/instagram`, formulário e testes de teclado, celular, replay e duplicata.
+O repasse humano por texto usa a caixa de entrada do CRM e a consulta de
+mensagens da mesma sessão pelo widget; áudio do vendedor fica indisponível
+nesse canal até existir entrega de mídia no chat.
+Publicação e homologação do chat são gates separados.

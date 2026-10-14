@@ -1,4 +1,4 @@
-const CHANNELS = new Set(['instagram', 'whatsapp']);
+const CHANNELS = new Set(['instagram', 'whatsapp', 'site_chat']);
 const INBOUND_FIELDS = new Set([
   'channel',
   'externalConversationId',
@@ -102,12 +102,14 @@ function rejectUnknownFields(value, allowed, field) {
   }
 }
 
-/** @param {unknown} value @returns {'instagram'|'whatsapp'} */
+/** @param {unknown} value @returns {'instagram'|'whatsapp'|'site_chat'} */
 function requireChannel(value) {
   if (typeof value !== 'string' || !CHANNELS.has(value)) {
-    throw new ChannelContractError('channel must be instagram or whatsapp');
+    throw new ChannelContractError(
+      'channel must be instagram, whatsapp or site_chat',
+    );
   }
-  return /** @type {'instagram'|'whatsapp'} */ (value);
+  return /** @type {'instagram'|'whatsapp'|'site_chat'} */ (value);
 }
 
 /**
@@ -138,7 +140,7 @@ export function createScopedExternalId(input) {
 
 /**
  * @param {unknown} value
- * @param {{provider: string, providerAccountId: string, channel: 'instagram'|'whatsapp'}} scope
+ * @param {{provider: string, providerAccountId: string, channel: 'instagram'|'whatsapp'|'site_chat'}} scope
  */
 function canonicalIdentity(value, scope) {
   const identity = requireRecord(value, 'identity');
@@ -186,6 +188,17 @@ function canonicalIdentity(value, scope) {
   ) {
     throw new ChannelContractError(
       'WhatsApp identity must use a confirmed phone and no display handle',
+    );
+  }
+  if (
+    scope.channel === 'site_chat' &&
+    (scope.provider !== 'site' ||
+      kind !== 'handle' ||
+      phoneStatus !== 'pending' ||
+      !/^999[0-9]{12}$/u.test(String(identity.externalId)))
+  ) {
+    throw new ChannelContractError(
+      'Site chat identity must use a pending synthetic handle',
     );
   }
 
@@ -310,10 +323,13 @@ export function createCanonicalInboundEnvelope(input) {
   if (!['channel', 'site'].includes(origin)) {
     throw new ChannelContractError('origin must be channel or site');
   }
-  if (origin === 'site' && channel !== 'whatsapp') {
+  if (origin === 'site' && !['whatsapp', 'site_chat'].includes(channel)) {
     throw new ChannelContractError(
-      'site origin must keep WhatsApp as the conversation channel',
+      'site origin requires WhatsApp or site_chat channel',
     );
+  }
+  if (channel === 'site_chat' && origin !== 'site') {
+    throw new ChannelContractError('site_chat requires site origin');
   }
   const visibility = requireString(record.visibility, 'visibility');
   if (!['inbox', 'reconciliation'].includes(visibility)) {
@@ -387,6 +403,9 @@ export function createCanonicalOutboundEnvelope(input) {
     'providerAccountId',
   );
   const channel = requireChannel(record.channel);
+  if (channel === 'site_chat' && provider !== 'site') {
+    throw new ChannelContractError('site_chat requires site provider');
+  }
 
   return immutableClone({
     schemaVersion: 1,

@@ -68,13 +68,26 @@ test('validates every endpoint fixture and correlates required headers', async (
   assert.equal(validateEvent(event, contract), true);
 });
 
-test('scopes the executable MVP contract to WhatsApp', async () => {
+test('site chat is the active pilot while WhatsApp stays supported for rollout', async () => {
   const contract = await fixture('contract-v1.json');
   const whatsapp = await fixture('messages-inbound-whatsapp.json');
+  const site = await fixture('messages-inbound-site-chat.json');
   const instagram = await fixture('messages-inbound-instagram.json');
 
   assert.equal(validateInbound(whatsapp, contract), true);
-  assert.equal(assertChannelActive(whatsapp, contract), true);
+  assert.equal(validateInbound(site, contract), true);
+  assert.equal(assertChannelActive(site, contract), true);
+  assert.throws(() => assertChannelActive(whatsapp, contract));
+  assert.throws(
+    () =>
+      validateInbound(
+        { ...site, contact: { external_id: '5527999991234' } },
+        contract,
+      ),
+    (error) =>
+      error instanceof ContractValidationError &&
+      error.code === 'INVALID_SITE_IDENTITY',
+  );
   assert.throws(
     () => validateInbound(instagram, contract),
     (error) =>
@@ -183,7 +196,12 @@ test('open_order travels only on the reservation and the handoff (ADR 014)', asy
 
 test('the order opening answer is either the order or a typed failure (ADR 014)', () => {
   assert.equal(
-    validateOrderOpening({ created: true, id: 'order-1', opened: true }),
+    validateOrderOpening({
+      created: true,
+      id: 'order-1',
+      subject_id: 'subject-1',
+      opened: true,
+    }),
     true,
   );
   assert.equal(

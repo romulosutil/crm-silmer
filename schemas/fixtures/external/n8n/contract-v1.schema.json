@@ -31,7 +31,16 @@
       "maxLength": 512,
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
     },
-    "channel": { "const": "whatsapp" },
+    "channel": { "enum": ["whatsapp", "site_chat"] },
+    "siteContact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "phone"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "phone": { "type": "string", "minLength": 10, "maxLength": 24 }
+      }
+    },
     "briefingPatch": {
       "type": "object",
       "additionalProperties": false,
@@ -75,10 +84,11 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["opened", "id", "created"],
+          "required": ["opened", "id", "subject_id", "created"],
           "properties": {
             "opened": { "const": true },
             "id": { "$ref": "#/$defs/opaqueId" },
+            "subject_id": { "$ref": "#/$defs/opaqueId" },
             "created": { "type": "boolean" }
           }
         },
@@ -162,11 +172,11 @@
     "errorMediaType": { "const": "application/problem+json" },
     "channels": {
       "type": "array",
-      "const": ["whatsapp"]
+      "const": ["whatsapp", "site_chat"]
     },
     "activeChannels": {
       "type": "array",
-      "const": ["whatsapp"]
+      "const": ["site_chat"]
     },
     "endpoints": {
       "type": "array",

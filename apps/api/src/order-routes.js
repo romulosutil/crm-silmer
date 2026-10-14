@@ -65,10 +65,39 @@ export function registerOrderRoutes(api, orders, contextFor) {
   api.get('/api/v1/orders', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query);
+      if ((input.q?.match(/\d/gu) ?? []).length >= 8) {
+        throw new OrderRequestError(400, 'INVALID_REQUEST');
+      }
       await authorizeRead(request, orders);
       privateReadHeaders(reply);
       return reply.code(200).send(await orders.list(input));
     }),
+  );
+
+  api.post(
+    '/api/v1/orders/search',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
+    async (request, reply) =>
+      respond(reply, async () => {
+        const body = requireObject(request.body);
+        if (body.limit !== undefined && !Number.isSafeInteger(body.limit)) {
+          throw new OrderRequestError(400, 'INVALID_LIMIT');
+        }
+        const input = parseListQuery({
+          ...body,
+          ...(body.limit !== undefined ? { limit: String(body.limit) } : {}),
+        });
+        if (!input.q) throw new OrderRequestError(400, 'INVALID_QUERY');
+        await orders.authorizeWrite({
+          action: 'order.read',
+          authorization: request.headers.authorization,
+          cookie: request.headers.cookie,
+          csrfToken: request.headers['x-csrf-token'],
+          origin: request.headers.origin,
+        });
+        privateReadHeaders(reply);
+        return reply.code(200).send(await orders.list(input));
+      }),
   );
 
   api.post('/api/v1/orders', async (request, reply) =>

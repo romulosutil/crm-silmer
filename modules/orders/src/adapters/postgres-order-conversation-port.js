@@ -1,4 +1,5 @@
 import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-envelope';
+import { contactPhoneHash, normalizeContactPhone } from '@crm-silmer/contacts';
 
 import { decryptJson } from './envelope.js';
 
@@ -33,20 +34,23 @@ export class PostgresOrderConversationPort {
   #envelopeKey;
   /** @type {Buffer} */
   #contactEnvelopeKey;
+  /** @type {Buffer} */
+  #contactLookupKey;
 
   /**
    * `envelopeKey` is the n8n pre-ficha key (`N8N_INTEGRATION_ENVELOPE_KEY`);
    * `contactEnvelopeKey` opens the channel identity (`CONTACT_IDENTITY_ENVELOPE_KEY`).
    *
-   * @param {{database: Queryable, envelopeKey: Buffer, contactEnvelopeKey: Buffer}} options
+   * @param {{database: Queryable, envelopeKey: Buffer, contactEnvelopeKey: Buffer, contactLookupKey: Buffer}} options
    */
-  constructor({ contactEnvelopeKey, database, envelopeKey }) {
+  constructor({ contactEnvelopeKey, contactLookupKey, database, envelopeKey }) {
     if (!database || typeof database.query !== 'function') {
       throw new TypeError('database.query is required');
     }
     for (const [key, name] of /** @type {const} */ ([
       [envelopeKey, 'envelopeKey'],
       [contactEnvelopeKey, 'contactEnvelopeKey'],
+      [contactLookupKey, 'contactLookupKey'],
     ])) {
       if (!Buffer.isBuffer(key) || key.length !== 32) {
         throw new TypeError(`${name} must be a 32-byte Buffer`);
@@ -55,6 +59,7 @@ export class PostgresOrderConversationPort {
     this.#database = database;
     this.#envelopeKey = Buffer.from(envelopeKey);
     this.#contactEnvelopeKey = Buffer.from(contactEnvelopeKey);
+    this.#contactLookupKey = Buffer.from(contactLookupKey);
   }
 
   /**
@@ -214,10 +219,36 @@ export class PostgresOrderConversationPort {
   async searchContactIds(query) {
     const text = String(query).trim();
     if (!text) return [];
+    const phone = normalizeContactPhone(text);
+    const phoneHash = phone
+      ? contactPhoneHash(phone, this.#contactLookupKey)
+      : null;
     const result = await this.#database.query(
-      `SELECT id FROM crm.contacts WHERE display_name ILIKE $1
-       ORDER BY id`,
-      [`%${text.replace(/[\\%_]/gu, '\\$&')}%`],
+      `SELECT contact.id FROM crm.contacts AS contact
+       WHERE contact.display_name ILIKE $1 ESCAPE '\\'
+          OR ($2::text IS NOT NULL AND (
+            contact.contact_phone_hash = $2
+            OR EXISTS (
+              SELECT 1 FROM crm.contact_phone_lookup AS phone_lookup
+              LEFT JOIN crm.contact_identities AS phone_identity
+                ON phone_identity.id = phone_lookup.identity_id
+              WHERE phone_lookup.phone_hash = $2
+                AND ((phone_lookup.source = 'manual'
+                      AND phone_lookup.contact_id = contact.id)
+                     OR (phone_lookup.source = 'whatsapp'
+                         AND phone_identity.current_contact_id = contact.id))
+            ) OR EXISTS (
+              SELECT 1 FROM crm.site_contact_claims AS claim
+              JOIN crm.conversations AS conversation
+                ON conversation.id = claim.conversation_id
+              JOIN crm.contact_identities AS identity
+                ON identity.id = conversation.contact_identity_id
+              WHERE claim.phone_hash = $2
+                AND identity.current_contact_id = contact.id
+            )
+          ))
+       ORDER BY contact.id`,
+      [`%${text.replace(/[\\%_]/gu, '\\$&')}%`, phoneHash],
     );
     return result.rows.map((row) => row.id);
   }

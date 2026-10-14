@@ -159,9 +159,10 @@ test('LOJ-08/LOJ-23: the list filters "Loja do site" and finds a store order by 
   });
   assert.equal(all.json().items.length, 2);
   const byPhone = await api.inject({
-    headers: readHeaders,
-    method: 'GET',
-    url: `/api/v1/orders?q=${encodeURIComponent('(27) 90000-0001')}`,
+    headers: writeHeaders,
+    method: 'POST',
+    url: '/api/v1/orders/search',
+    payload: { q: '(27) 90000-0001' },
   });
   assert.deepEqual(
     byPhone.json().items.map((/** @type {any} */ order) => order.id),

@@ -92,6 +92,8 @@ export function createN8nApiRuntime(database, options = {}) {
     commandOutbox,
     receiveInbound: service.receiveInbound,
     recordEvent: service.recordEvent,
+    readSiteMessages: (/** @type {{sessionId: string}} */ input) =>
+      repository.readSiteMessages(input),
     readReservedMedia: (/** @type {any} */ input) =>
       repository.readReservedMedia(input),
     /**

@@ -410,3 +410,31 @@ test('the projection needs a pending order and never touches a confirmed one', a
   assert.equal(result.applied, false);
   assert.deepEqual(await repository.findById(order.id), confirmed);
 });
+
+test('explicit projection writes the chosen pending order across cycles', async () => {
+  const { repository, service } = setup();
+  const { order } = await service.ensurePendingFromIntent({
+    conversationId: 'conversation-1',
+    correlationId: 'create-explicit',
+  });
+  const result = await service.projectAgentBriefing({
+    automationState: 'assistant',
+    briefing: { order_name: 'Retomado no ciclo 2' },
+    conversationId: 'conversation-2',
+    correlationId: 'project-explicit',
+    orderId: order.id,
+    subjectId: 'subject-cycle-2',
+    automationEpoch: 2,
+    sourceRevision: 1,
+    eventId: 'event-cycle-2',
+    eventType: 'message.send.requested',
+    expectedSubjectVersion: 1,
+    expectedOrderVersion: order.version,
+  });
+  assert.equal(result.applied, true);
+  assert.equal(result.order?.id, order.id);
+  assert.equal(
+    (await repository.findById(order.id))?.ficha.summary.nome,
+    'Retomado no ciclo 2',
+  );
+});

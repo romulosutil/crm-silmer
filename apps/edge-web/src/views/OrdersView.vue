@@ -10,7 +10,7 @@ import {
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { commandKey, request } from '../lib/api-client.js';
-import { dateTimeBR } from '../lib/format.js';
+import { dateTimeBR, formatPhoneNumber } from '../lib/format.js';
 import { openDialog } from '../lib/ui.js';
 import {
   amountLabel,
@@ -46,16 +46,26 @@ const route = useRoute();
 const heading = ref(null);
 const newOrderDialog = ref(null);
 const contactQuery = ref('');
+const contactSearchInput = ref(null);
 const contactOptions = ref([]);
+const newPhoneMatches = ref([]);
+const newPhoneSearching = ref(false);
 const selectedContact = ref(null);
 const newContactName = ref('');
+const newContactPhone = ref('');
+const newContactEmail = ref('');
+const createErrorAlert = ref(null);
 const contactSearching = ref(false);
 const contactCreating = ref(false);
 const orderCreating = ref(false);
 const createError = ref('');
 let contactController;
 let contactSearchTimer = 0;
+let newPhoneController;
+let newPhoneSearchTimer = 0;
+const checkedNewPhone = ref('');
 let contactCreateKey = '';
+let detailsUpdateKey = '';
 let orderCreateKey = '';
 // LOJ-31: the Dashboard notice opens `/pedidos?origem=loja`, the list already
 // on "Loja do site".
@@ -92,6 +102,20 @@ const showPending = computed(
   () => filter.value === '' || filter.value === 'pendente',
 );
 const isEmpty = computed(() => !loading.value && items.value.length === 0);
+const canCreateOrder = computed(() =>
+  Boolean(
+    selectedContact.value
+      ? selectedContact.value.phone ||
+          newContactPhone.value.replace(/\D/gu, '').length >= 10
+      : newContactName.value.trim() &&
+          newContactPhone.value.replace(/\D/gu, '').length >= 10,
+  ),
+);
+const phoneSearchAmbiguous = computed(
+  () =>
+    contactQuery.value.replace(/\D/gu, '').length >= 10 &&
+    contactOptions.value.length > 1,
+);
 
 /** @param {Record<string, any>} order */
 function customerName(order) {
@@ -156,13 +180,21 @@ function openNewOrder(event) {
   const dialog = newOrderDialog.value;
   if (!(dialog instanceof HTMLDialogElement)) return;
   contactController?.abort();
+  newPhoneController?.abort();
   if (contactSearchTimer) globalThis.clearTimeout(contactSearchTimer);
+  if (newPhoneSearchTimer) globalThis.clearTimeout(newPhoneSearchTimer);
   contactQuery.value = '';
   contactOptions.value = [];
+  newPhoneMatches.value = [];
+  newPhoneSearching.value = false;
+  checkedNewPhone.value = '';
   selectedContact.value = null;
   newContactName.value = '';
+  newContactPhone.value = '';
+  newContactEmail.value = '';
   createError.value = '';
   contactCreateKey = '';
+  detailsUpdateKey = '';
   orderCreateKey = '';
   openDialog(dialog, /** @type {HTMLElement} */ (event.currentTarget));
 }
@@ -179,10 +211,11 @@ async function searchContacts() {
   contactController = currentController;
   contactSearching.value = true;
   try {
-    const response = await request(
-      `/api/v1/contacts?limit=10&q=${encodeURIComponent(needle)}`,
-      { signal: currentController.signal },
-    );
+    const response = await request('/api/v1/contacts/search', {
+      body: { limit: 10, q: needle },
+      method: 'POST',
+      signal: currentController.signal,
+    });
     contactOptions.value = response.data.items;
     createError.value = '';
   } catch (cause) {
@@ -197,44 +230,167 @@ async function searchContacts() {
 /** @param {Record<string, any>} contact */
 function selectContact(contact) {
   contactController?.abort();
+  newPhoneController?.abort();
   if (contactSearchTimer) globalThis.clearTimeout(contactSearchTimer);
+  if (newPhoneSearchTimer) globalThis.clearTimeout(newPhoneSearchTimer);
   selectedContact.value = contact;
   contactQuery.value = contact.label;
   contactOptions.value = [];
+  newPhoneMatches.value = [];
+  newPhoneSearching.value = false;
+  createError.value = '';
   orderCreateKey = '';
+  detailsUpdateKey = '';
+}
+
+async function changeSelectedContact() {
+  selectedContact.value = null;
+  contactQuery.value = '';
+  newPhoneMatches.value = [];
+  checkedNewPhone.value = '';
+  newContactPhone.value = '';
+  newContactEmail.value = '';
+  detailsUpdateKey = '';
+  await nextTick();
+  contactSearchInput.value?.focus();
+}
+
+async function completeLegacyContact(contact) {
+  detailsUpdateKey ||= commandKey();
+  try {
+    const response = await request(
+      `/api/v1/contacts/${encodeURIComponent(contact.id)}/details`,
+      {
+        body: {
+          expectedVersion: contact.version,
+          phone: newContactPhone.value.trim(),
+          ...(newContactEmail.value.trim()
+            ? { email: newContactEmail.value.trim() }
+            : {}),
+        },
+        idempotencyKey: detailsUpdateKey,
+        method: 'POST',
+      },
+    );
+    selectedContact.value = {
+      ...contact,
+      ...response.data.contact,
+      label: response.data.contact.label || contact.label,
+    };
+    detailsUpdateKey = '';
+    return selectedContact.value;
+  } catch (cause) {
+    createError.value =
+      Number(cause?.status) === 409
+        ? 'O cliente foi alterado ou esse telefone já está em outro cadastro. Busque pelo telefone e revise antes de continuar.'
+        : Number(cause?.status) === 400
+          ? 'Informe um telefone brasileiro válido com DDD.'
+          : 'Não foi possível salvar o telefone. Tente novamente.';
+    await nextTick();
+    createErrorAlert.value?.focus();
+    return null;
+  }
 }
 
 async function createContact() {
   const displayName = newContactName.value.trim();
-  if (!displayName || contactCreating.value) return;
+  const phone = newContactPhone.value.trim();
+  const email = newContactEmail.value.trim();
+  if (!displayName || !phone || contactCreating.value) return null;
   contactCreating.value = true;
   createError.value = '';
   contactCreateKey ||= commandKey();
   try {
+    if (checkedNewPhone.value !== phone.replace(/\D/gu, '')) {
+      const checked = await searchNewPhone();
+      if (!checked) return null;
+    }
+    if (newPhoneMatches.value.length) {
+      createError.value =
+        'Esse telefone aparece em outros cadastros. Escolha um cliente da lista antes de criar o pedido.';
+      await nextTick();
+      createErrorAlert.value?.focus();
+      return null;
+    }
     const response = await request('/api/v1/contacts', {
-      body: { displayName },
+      body: { displayName, phone, ...(email ? { email } : {}) },
       idempotencyKey: contactCreateKey,
       method: 'POST',
     });
     selectContact(response.data.contact);
     newContactName.value = '';
+    newContactPhone.value = '';
+    newContactEmail.value = '';
     contactCreateKey = '';
-  } catch {
+    return response.data.contact;
+  } catch (cause) {
     createError.value =
-      'Não foi possível cadastrar o cliente. Tente novamente.';
+      Number(cause?.status) === 400
+        ? 'Confira o telefone e o e-mail informados.'
+        : Number(cause?.status) === 409
+          ? 'Já existe um cliente com esse telefone ou o cadastro mudou. Busque pelo telefone e selecione o cadastro existente.'
+          : 'Não foi possível cadastrar o cliente. Tente novamente.';
+    await nextTick();
+    createErrorAlert.value?.focus();
+    return null;
   } finally {
     contactCreating.value = false;
   }
 }
 
+async function searchNewPhone() {
+  newPhoneController?.abort();
+  const phone = newContactPhone.value.trim();
+  const digits = phone.replace(/\D/gu, '');
+  if (digits.length < 10 || selectedContact.value) {
+    newPhoneMatches.value = [];
+    checkedNewPhone.value = '';
+    newPhoneSearching.value = false;
+    return false;
+  }
+  const currentController = new AbortController();
+  newPhoneController = currentController;
+  newPhoneSearching.value = true;
+  try {
+    const response = await request('/api/v1/contacts/search', {
+      body: { limit: 10, q: phone },
+      method: 'POST',
+      signal: currentController.signal,
+    });
+    if (newContactPhone.value.trim() !== phone) return false;
+    newPhoneMatches.value = response.data.items;
+    checkedNewPhone.value = digits;
+    return true;
+  } catch (cause) {
+    if (
+      newPhoneController === currentController &&
+      cause?.name !== 'AbortError'
+    ) {
+      createError.value =
+        'Não foi possível conferir esse telefone. Tente novamente.';
+    }
+    if (newPhoneController === currentController) checkedNewPhone.value = '';
+    return false;
+  } finally {
+    if (newPhoneController === currentController)
+      newPhoneSearching.value = false;
+  }
+}
+
 async function createOrder() {
-  if (!selectedContact.value || orderCreating.value) return;
+  if (!canCreateOrder.value || orderCreating.value) return;
   orderCreating.value = true;
   createError.value = '';
-  orderCreateKey ||= commandKey();
   try {
+    let contact = selectedContact.value ?? (await createContact());
+    if (!contact) return;
+    if (!contact.phone) {
+      contact = await completeLegacyContact(contact);
+      if (!contact) return;
+    }
+    orderCreateKey ||= commandKey();
     const response = await request('/api/v1/orders', {
-      body: { contactId: selectedContact.value.id },
+      body: { contactId: contact.id },
       idempotencyKey: orderCreateKey,
       method: 'POST',
     });
@@ -246,6 +402,8 @@ async function createOrder() {
       Number(cause?.status) === 403
         ? 'Você não tem permissão para criar pedidos.'
         : 'Não foi possível criar o pedido. Tente novamente.';
+    await nextTick();
+    createErrorAlert.value?.focus();
   } finally {
     orderCreating.value = false;
   }
@@ -265,16 +423,49 @@ watch(contactQuery, () => {
 watch(newContactName, () => {
   contactCreateKey = '';
 });
+watch([newContactPhone, newContactEmail], () => {
+  contactCreateKey = '';
+  detailsUpdateKey = '';
+});
+watch(newContactPhone, () => {
+  newPhoneController?.abort();
+  if (newPhoneSearchTimer) globalThis.clearTimeout(newPhoneSearchTimer);
+  checkedNewPhone.value = '';
+  newPhoneMatches.value = [];
+  if (newContactPhone.value.replace(/\D/gu, '').length < 10) return;
+  newPhoneSearchTimer = globalThis.setTimeout(() => {
+    newPhoneSearchTimer = 0;
+    void searchNewPhone();
+  }, SEARCH_DELAY_MS);
+});
 
 /** @param {string|null} cursor */
-function listUrl(cursor) {
+function listRequest(cursor) {
   const params = new globalThis.URLSearchParams({ limit: String(PAGE_SIZE) });
   if (filter.value === STORE_FILTER) params.set('origin', STORE_FILTER);
   else if (filter.value) params.set('status', filter.value);
   const needle = query.value.trim();
+  if ((needle.match(/\d/gu) ?? []).length >= 8) {
+    return {
+      url: '/api/v1/orders/search',
+      options: {
+        method: 'POST',
+        body: {
+          limit: PAGE_SIZE,
+          q: needle,
+          ...(filter.value === STORE_FILTER
+            ? { origin: STORE_FILTER }
+            : filter.value
+              ? { status: filter.value }
+              : {}),
+          ...(cursor ? { cursor } : {}),
+        },
+      },
+    };
+  }
   if (needle) params.set('q', needle);
   if (cursor) params.set('cursor', cursor);
-  return `/api/v1/orders?${params}`;
+  return { url: `/api/v1/orders?${params}`, options: {} };
 }
 
 /** @param {boolean} [silent] */
@@ -287,7 +478,9 @@ async function load(silent = false) {
     error.value = '';
   } else refreshing.value = true;
   try {
-    const response = await request(listUrl(null), {
+    const listing = listRequest(null);
+    const response = await request(listing.url, {
+      ...listing.options,
       signal: currentController.signal,
     });
     items.value = response.data.items;
@@ -317,7 +510,8 @@ async function loadMore() {
   if (!nextCursor.value || loadingMore.value) return;
   loadingMore.value = true;
   try {
-    const response = await request(listUrl(nextCursor.value));
+    const listing = listRequest(nextCursor.value);
+    const response = await request(listing.url, listing.options);
     items.value = [...items.value, ...response.data.items];
     counts.value = response.data.counts;
     nextCursor.value = response.data.nextCursor;
@@ -411,7 +605,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   controller?.abort();
   contactController?.abort();
+  newPhoneController?.abort();
   if (contactSearchTimer) globalThis.clearTimeout(contactSearchTimer);
+  if (newPhoneSearchTimer) globalThis.clearTimeout(newPhoneSearchTimer);
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
   if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
   if (searchTimer) globalThis.clearTimeout(searchTimer);
@@ -441,22 +637,32 @@ onBeforeUnmount(() => {
       aria-labelledby="new-order-title"
     >
       <h2 id="new-order-title">Novo pedido</h2>
-      <p>Selecione um cliente para abrir uma ficha pendente.</p>
+      <p>
+        Encontre o cliente pelo telefone ou nome, ou informe os dados abaixo
+        para criar o pedido.
+      </p>
       <div class="manual-order-field">
-        <label for="new-order-contact">Buscar cliente pelo nome</label>
+        <label for="new-order-contact"
+          >Buscar cliente por telefone ou nome</label
+        >
         <input
           id="new-order-contact"
+          ref="contactSearchInput"
           v-model="contactQuery"
           type="search"
           autocomplete="off"
           aria-describedby="new-order-search-help"
         />
         <p id="new-order-search-help" class="op-hint">
-          Digite pelo menos duas letras. Clientes com o mesmo nome aparecem
-          separados.
+          Informe o telefone completo ou ao menos duas letras do nome. Confira o
+          telefone antes de selecionar um cliente com nome repetido.
         </p>
       </div>
       <p v-if="contactSearching" role="status">Buscando clientes…</p>
+      <p v-if="phoneSearchAmbiguous" role="alert" class="op-alert">
+        Há mais de um cadastro para esse telefone. Confira a ficha e o histórico
+        de cada cliente antes de escolher.
+      </p>
       <ul
         v-if="contactOptions.length"
         class="manual-contact-options"
@@ -464,12 +670,35 @@ onBeforeUnmount(() => {
       >
         <li v-for="contact in contactOptions" :key="contact.id">
           <button type="button" @click="selectContact(contact)">
-            {{ contact.label }}
-            <small v-if="contact.identities?.length">
-              {{ contact.identities[0].channel }} · identificação final
+            Selecionar {{ contact.label }}
+            <small v-if="contact.phone">
+              {{ formatPhoneNumber(contact.phone) }} ·
+              {{
+                contact.phoneSource === 'site_unverified'
+                  ? 'informado no site · não confirmado'
+                  : 'telefone'
+              }}
+            </small>
+            <small v-if="!contact.identities?.length"
+              >Cadastro sem canal vinculado</small
+            >
+            <small
+              v-if="
+                contact.identities?.length &&
+                contact.identities[0].channel !== 'site_chat'
+              "
+            >
+              {{ contact.identities[0].channel }} · final
               {{ contact.identities[0].externalId?.slice(-4) }}
             </small>
           </button>
+          <RouterLink
+            :to="`/clientes/${contact.id}`"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Conferir ficha de {{ contact.label }} em outra aba
+          </RouterLink>
         </li>
       </ul>
       <p
@@ -484,27 +713,126 @@ onBeforeUnmount(() => {
       </p>
       <p v-if="selectedContact" role="status">
         Cliente selecionado: <strong>{{ selectedContact.label }}</strong>
-      </p>
-      <div class="manual-order-field">
-        <label for="new-contact-name"
-          >Cliente não cadastrado? Informe o nome</label
+        <button
+          type="button"
+          class="link-button"
+          @click="changeSelectedContact"
         >
+          Trocar cliente
+        </button>
+      </p>
+      <fieldset
+        v-if="selectedContact && !selectedContact.phone"
+        class="manual-contact-create"
+      >
+        <legend>Completar telefone deste cliente</legend>
+        <p class="op-hint">
+          Para criar um pedido novo, informe o telefone deste cadastro legado.
+        </p>
+        <label for="legacy-contact-phone">Telefone</label>
+        <input
+          id="legacy-contact-phone"
+          v-model="newContactPhone"
+          type="tel"
+          inputmode="tel"
+          autocomplete="tel"
+          required
+        />
+        <label for="legacy-contact-email"
+          >E-mail <span class="op-hint">(opcional)</span></label
+        >
+        <input
+          id="legacy-contact-email"
+          v-model="newContactEmail"
+          type="email"
+          autocomplete="email"
+          maxlength="254"
+        />
+      </fieldset>
+      <fieldset v-if="!selectedContact" class="manual-contact-create">
+        <legend>Cliente novo</legend>
+        <p class="op-hint">
+          O telefone é obrigatório. O nome identifica a pessoa no CRM; e-mail é
+          opcional.
+        </p>
+        <label for="new-contact-name">Nome</label>
         <input
           id="new-contact-name"
           v-model="newContactName"
           type="text"
           maxlength="120"
           autocomplete="name"
+          required
         />
-        <button
-          type="button"
-          :disabled="contactCreating || !newContactName.trim()"
-          @click="createContact"
+        <label for="new-contact-phone">Telefone</label>
+        <input
+          id="new-contact-phone"
+          v-model="newContactPhone"
+          type="tel"
+          inputmode="tel"
+          autocomplete="tel"
+          placeholder="(11) 99999-9999"
+          required
+        />
+        <p v-if="newPhoneSearching" role="status">
+          Conferindo cadastros com esse telefone…
+        </p>
+        <p v-else-if="checkedNewPhone" role="status" aria-live="polite">
+          {{
+            newPhoneMatches.length
+              ? `${newPhoneMatches.length} cadastro${newPhoneMatches.length === 1 ? '' : 's'} encontrado${newPhoneMatches.length === 1 ? '' : 's'} para esse telefone. Escolha um cliente da lista antes de criar o pedido.`
+              : 'Nenhum cadastro encontrado com esse telefone.'
+          }}
+        </p>
+        <div
+          v-if="newPhoneMatches.length"
+          class="op-alert"
+          role="group"
+          aria-label="Cadastros com o telefone informado"
         >
-          Cadastrar cliente
-        </button>
-      </div>
-      <p v-if="createError" role="alert" class="op-alert">{{ createError }}</p>
+          <p>
+            Esse telefone já aparece no CRM. Confira e escolha o cadastro antes
+            de criar o pedido.
+          </p>
+          <ul class="manual-contact-options">
+            <li v-for="contact in newPhoneMatches" :key="contact.id">
+              <button type="button" @click="selectContact(contact)">
+                Selecionar {{ contact.label }} ·
+                {{ formatPhoneNumber(contact.phone) }}
+                <span v-if="contact.phoneSource === 'site_unverified'">
+                  · informado no site · não confirmado
+                </span>
+              </button>
+              <RouterLink
+                :to="`/clientes/${contact.id}`"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Conferir ficha de {{ contact.label }} em outra aba
+              </RouterLink>
+            </li>
+          </ul>
+        </div>
+        <label for="new-contact-email"
+          >E-mail <span class="op-hint">(opcional)</span></label
+        >
+        <input
+          id="new-contact-email"
+          v-model="newContactEmail"
+          type="email"
+          autocomplete="email"
+          maxlength="254"
+        />
+      </fieldset>
+      <p
+        v-if="createError"
+        ref="createErrorAlert"
+        tabindex="-1"
+        role="alert"
+        class="op-alert"
+      >
+        {{ createError }}
+      </p>
       <div class="op-dialog-actions">
         <button
           type="button"
@@ -516,7 +844,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="primary"
-          :disabled="!selectedContact || orderCreating || contactCreating"
+          :disabled="!canCreateOrder || orderCreating || contactCreating"
           @click="createOrder"
         >
           Criar pedido

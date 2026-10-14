@@ -311,6 +311,36 @@ export class PostgresOrderRepository {
           }
           contactId = input.contactId;
         }
+        const reachable = await transaction.query(
+          `SELECT 1 FROM crm.contacts AS contact
+           WHERE contact.id = $1 AND (
+             contact.contact_phone_hash IS NOT NULL OR EXISTS (
+               SELECT 1 FROM crm.contact_phone_lookup AS phone
+               LEFT JOIN crm.contact_identities AS identity
+                 ON identity.id = phone.identity_id
+               WHERE (phone.source = 'manual' AND phone.contact_id = contact.id)
+                  OR (phone.source = 'whatsapp'
+                      AND identity.current_contact_id = contact.id)
+             ) OR ($2::text IS NOT NULL AND EXISTS (
+               SELECT 1 FROM crm.site_contact_claims AS claim
+               JOIN crm.conversations AS conversation
+                 ON conversation.id = claim.conversation_id
+               JOIN crm.contact_identities AS identity
+                 ON identity.id = conversation.contact_identity_id
+               WHERE claim.conversation_id = $2
+                 AND claim.contact_id = contact.id
+                 AND identity.current_contact_id = contact.id
+                 AND identity.channel = 'site_chat'
+             ))
+           ) FOR SHARE OF contact`,
+          [contactId, input.conversationId ?? null],
+        );
+        if (!reachable.rows[0]) {
+          throw new OrderConflictError(
+            'Contact needs a phone before opening an order',
+            'CONTACT_PHONE_REQUIRED',
+          );
+        }
         const at = input.now.toISOString();
         const inserted = await transaction.query(
           `WITH reserved AS (SELECT nextval('crm.order_number_seq') AS sequence)
@@ -923,7 +953,189 @@ export class PostgresOrderRepository {
       throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
     }
     return this.#database.transaction(async (transaction) => {
-      if (conversationId) {
+      if (options.agentTarget) {
+        const completed = await transaction.query(
+          `SELECT order_id, subject_id FROM crm.agent_briefing_projections
+           WHERE event_id = $1`,
+          [options.agentTarget.eventId],
+        );
+        if (completed.rows[0]) {
+          if (
+            completed.rows[0].order_id !== order.id ||
+            completed.rows[0].subject_id !== options.agentTarget.subjectId
+          ) {
+            throw new OrderConflictError(
+              'Projection event belongs to another target',
+              'IDEMPOTENCY_CONFLICT',
+            );
+          }
+          const current = await transaction.query(
+            `SELECT ${ORDER_COLUMNS} FROM crm.orders WHERE id = $1`,
+            [order.id],
+          );
+          if (!current.rows[0]) throw new OrderNotFoundError();
+          return this.#map(current.rows[0]);
+        }
+      }
+      if (options.agentTarget) {
+        if (
+          eventType !== 'order.briefing_projected' ||
+          options.actor ||
+          options.agentTarget.orderId !== order.id
+        ) {
+          throw new OrderForbiddenError();
+        }
+        const target = options.agentTarget;
+        const active = (
+          await transaction.query(
+            `SELECT conversation.*, identity.current_contact_id,
+                    identity.channel AS identity_channel
+             FROM crm.conversations AS conversation
+             JOIN crm.contact_identities AS identity
+               ON identity.id = conversation.contact_identity_id
+             WHERE conversation.id = $1 FOR UPDATE OF conversation`,
+            [target.conversationId],
+          )
+        ).rows[0];
+        if (
+          active?.identity_channel === 'site_chat' &&
+          order.conversationId !== target.conversationId
+        ) {
+          throw new OrderConflictError(
+            'Site chat can only project its own conversation order',
+            'SUBJECT_TARGET_INVALID',
+          );
+        }
+        let acceptedRecovery = false;
+        if (target.recovery) {
+          const receipt = await transaction.query(
+            `SELECT 1 FROM crm.n8n_events
+             WHERE idempotency_scope = 'n8n.events'
+               AND conversation_id = $1 AND external_event_id = $2
+               AND event_type = $3 AND source_revision = $4
+               AND automation_epoch = $5
+               AND (outcome->>'projectionSubjectVersion')::bigint = $6
+               AND (outcome->>'projectionOrderVersion')::bigint = $7
+               AND outcome->>'projectionSubjectId' = $8
+               AND outcome->>'projectionOrderId' = $9`,
+            [
+              target.conversationId,
+              target.eventId,
+              target.eventType,
+              target.sourceRevision,
+              target.automationEpoch,
+              target.expectedSubjectVersion,
+              target.expectedOrderVersion,
+              target.subjectId,
+              target.orderId,
+            ],
+          );
+          acceptedRecovery = Boolean(receipt.rows[0]);
+          if (!acceptedRecovery) {
+            throw new OrderConflictError(
+              'Accepted event snapshot is unavailable for recovery',
+              'PROJECTION_SNAPSHOT_MISSING',
+            );
+          }
+        }
+        const sameRevision =
+          active &&
+          !active.terminal_at &&
+          (acceptedRecovery
+            ? Number(active.inbound_revision) >= target.sourceRevision &&
+              Number(active.claimed_revision) >= target.sourceRevision
+            : Number(active.inbound_revision) === target.sourceRevision &&
+              Number(active.claimed_revision) === target.sourceRevision) &&
+          active.current_contact_id === order.contactId;
+        const activeSend =
+          sameRevision &&
+          target.eventType === 'message.send.requested' &&
+          active.automation_state === 'assistant' &&
+          Number(active.automation_epoch) === target.automationEpoch;
+        let acceptedHandoff = false;
+        if (
+          sameRevision &&
+          target.eventType === 'handoff.requested' &&
+          active.automation_state === 'human' &&
+          Number(active.automation_epoch) === target.automationEpoch + 1
+        ) {
+          const receipt = await transaction.query(
+            `SELECT 1 FROM crm.n8n_events WHERE conversation_id = $1
+               AND external_event_id = $2 AND event_type = 'handoff.requested'`,
+            [target.conversationId, target.eventId],
+          );
+          acceptedHandoff = Boolean(receipt.rows[0]);
+        }
+        if (!activeSend && !acceptedHandoff) {
+          throw new OrderConflictError(
+            'Automated projection is stale',
+            'STALE_AUTOMATION_FENCE',
+          );
+        }
+        const subject = (
+          await transaction.query(
+            `SELECT subject.id, briefing.version AS briefing_version
+             FROM crm.conversation_subjects AS subject
+             JOIN crm.orders AS orders ON orders.id = subject.order_id
+             JOIN crm.subject_briefings AS briefing
+               ON briefing.subject_id = subject.id
+             WHERE subject.id = $1 AND subject.conversation_id = $2
+               AND subject.order_id = $3 AND subject.contact_id = $4
+               AND orders.contact_id = $4 AND orders.status = 'pendente'
+             FOR SHARE OF subject, orders, briefing`,
+            [
+              target.subjectId,
+              target.conversationId,
+              order.id,
+              order.contactId,
+            ],
+          )
+        ).rows[0];
+        if (!subject)
+          throw new OrderConflictError(
+            'Subject target changed',
+            'SUBJECT_TARGET_INVALID',
+          );
+        if (
+          Number(subject.briefing_version) !== target.expectedSubjectVersion
+        ) {
+          throw new OrderConflictError(
+            'Subject briefing changed after the accepted event',
+            'SUBJECT_SUPERSEDED',
+          );
+        }
+        const selected = (
+          await transaction.query(
+            `SELECT id FROM crm.conversation_subjects
+             WHERE conversation_id = $1 AND is_current AND selected_source = 'human'`,
+            [target.conversationId],
+          )
+        ).rows[0];
+        if (selected && selected.id !== target.subjectId) {
+          throw new OrderConflictError(
+            'Human-selected subject changed',
+            'SUBJECT_TARGET_CONFLICT',
+          );
+        }
+        const links = await transaction.query(
+          `SELECT DISTINCT link.subject_id
+           FROM crm.message_subject_links AS link
+           JOIN crm.messages AS message ON message.id = link.message_id
+           WHERE message.conversation_id = $1 AND message.direction = 'inbound'
+             AND message.inbound_revision = $2`,
+          [target.conversationId, target.sourceRevision],
+        );
+        if (
+          links.rows.length > 1 ||
+          (links.rows.length === 1 &&
+            links.rows[0].subject_id !== target.subjectId)
+        ) {
+          throw new OrderConflictError(
+            'Inbound message is ambiguous',
+            'SUBJECT_AMBIGUOUS',
+          );
+        }
+      } else if (conversationId) {
         const conversation = await lockConversation(
           transaction,
           conversationId,
@@ -944,7 +1156,7 @@ export class PostgresOrderRepository {
         );
       }
       const locked = await transaction.query(
-        `SELECT conversation_id, manual_owner_id, status, version FROM crm.orders
+        `SELECT ${ORDER_COLUMNS} FROM crm.orders
          WHERE id = $1 FOR UPDATE`,
         [order.id],
       );
@@ -956,13 +1168,54 @@ export class PostgresOrderRepository {
       ) {
         throw new OrderNotFoundError();
       }
+      if (options.agentTarget) {
+        const projected = await transaction.query(
+          `SELECT order_id, subject_id FROM crm.agent_briefing_projections
+           WHERE event_id = $1`,
+          [options.agentTarget.eventId],
+        );
+        if (projected.rows[0]) {
+          if (
+            projected.rows[0].order_id !== order.id ||
+            projected.rows[0].subject_id !== options.agentTarget.subjectId
+          ) {
+            throw new OrderConflictError(
+              'Projection event belongs to another target',
+              'IDEMPOTENCY_CONFLICT',
+            );
+          }
+          return this.#map(current);
+        }
+      }
       if (Number(current.version) !== options.expectedVersion) {
         throw new OrderConflictError(
           `Expected order version ${options.expectedVersion}, current version is ${current.version}`,
         );
       }
+      if (
+        options.agentTarget &&
+        Number(current.version) !== options.agentTarget.expectedOrderVersion
+      ) {
+        throw new OrderConflictError(
+          'Order changed after the accepted event',
+          'ORDER_CHANGED_SINCE_EVENT',
+        );
+      }
       const updated = await change(current, transaction);
       const saved = this.#map(updated.rows[0]);
+      if (options.agentTarget) {
+        await transaction.query(
+          `INSERT INTO crm.agent_briefing_projections
+             (event_id, order_id, subject_id, projected_at)
+           VALUES ($1, $2, $3, $4)`,
+          [
+            options.agentTarget.eventId,
+            order.id,
+            options.agentTarget.subjectId,
+            saved.updatedAt,
+          ],
+        );
+      }
       await appendOrderEvent(
         transaction,
         saved,

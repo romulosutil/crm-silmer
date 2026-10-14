@@ -1246,8 +1246,8 @@ test('filters the Inbox by queue and by who must act through the server read mod
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({ archived: 'true' });
-  expect(inboxQueries.at(-1)?.automationState).toBeUndefined();
-  expect(inboxQueries.at(-1)?.pendingHandoff).toBeUndefined();
+  await expect.poll(() => inboxQueries.at(-1)?.automationState).toBeUndefined();
+  await expect.poll(() => inboxQueries.at(-1)?.pendingHandoff).toBeUndefined();
 
   await pickState('Ver caixa de entrada');
   await expect
@@ -1491,6 +1491,90 @@ test('does not expose the technical contact identifier in the client list', asyn
 
   await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
   await expect(page.getByText(contact.id, { exact: true })).toHaveCount(0);
+});
+
+test('checks a new customer phone privately and requires choosing an existing candidate', async ({
+  page,
+}) => {
+  await mockCrm(page);
+  /** @type {any[]} */
+  const searched = [];
+  let createdContacts = 0;
+  await page.route('**/api/v1/contacts/search', async (route) => {
+    const request = route.request();
+    searched.push(request.postDataJSON());
+    expect(request.method()).toBe('POST');
+    expect(request.url()).not.toContain('98765');
+    expect(request.headers()['x-csrf-token']).toBe('csrf-test');
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [
+          {
+            ...contact,
+            id: 'site-contact',
+            identities: [
+              {
+                channel: 'site_chat',
+                externalId: '999123456789012',
+                id: 'site-identity',
+                kind: 'handle',
+                phoneStatus: 'pending',
+              },
+            ],
+            label: 'Ana do site',
+            phone: '5511987654321',
+            phoneSource: 'site_unverified',
+          },
+          {
+            ...contact,
+            id: 'whatsapp-contact',
+            label: 'Ana WhatsApp',
+            phone: '5511987654321',
+            phoneSource: 'whatsapp',
+          },
+        ],
+        nextCursor: null,
+        totalCount: 2,
+      }),
+    });
+  });
+  page.on('request', (request) => {
+    if (
+      new URL(request.url()).pathname === '/api/v1/contacts' &&
+      request.method() === 'POST'
+    ) {
+      createdContacts += 1;
+    }
+  });
+  await page.goto('/pedidos');
+  await page.evaluate(() => {
+    globalThis.document.cookie = 'crm_csrf=csrf-test; Path=/; SameSite=Lax';
+  });
+  await page.getByRole('button', { name: 'Novo pedido' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Novo pedido' });
+  await dialog.getByLabel('Nome', { exact: true }).fill('Ana Nova');
+  await dialog
+    .getByLabel('Telefone', { exact: true })
+    .last()
+    .fill('(11) 98765-4321');
+  await expect(
+    dialog.getByText('Esse telefone já aparece no CRM.'),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText('informado no site · não confirmado'),
+  ).toBeVisible();
+  await expect(dialog.getByText('999123456789012')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Criar pedido' }).click();
+  await expect(
+    dialog
+      .getByRole('alert')
+      .filter({ hasText: 'Escolha um cliente da lista' }),
+  ).toBeVisible();
+  expect(createdContacts).toBe(0);
+  expect(searched.some((search) => search.q === '(11) 98765-4321')).toBe(true);
+  await dialog.getByRole('button', { name: /Selecionar Ana do site/ }).click();
+  await expect(dialog.getByText('Cliente selecionado:')).toBeVisible();
 });
 
 test('opens a client by clicking the whole row while keeping its keyboard link', async ({

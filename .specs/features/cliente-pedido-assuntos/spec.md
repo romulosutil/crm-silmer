@@ -5,8 +5,10 @@ Decisão: [RFC 019](../../../docs/rfc/019-cliente-pedido-manual-e-assuntos.md) /
 
 ## Pedido sem canal
 
-- **CP-01:** Vendedor autorizado pode cadastrar Contato com nome, sem criar
-  identidade de canal ou Conversa; nomes iguais não são unidos.
+- **CP-01:** Vendedor autorizado pode cadastrar Contato com nome e telefone
+  obrigatórios, e-mail opcional, sem criar Conversa ou presumir identidade de
+  canal confirmada; nomes iguais não são unidos. Contatos antigos sem telefone
+  permanecem consultáveis para correção.
 - **CP-02:** Pedidos oferece “Novo pedido” com busca paginada por nome,
   seleção por teclado e cadastro de Contato ausente.
 - **CP-03:** Criar Pedido para Contato selecionado cria um `pendente` numerado,
@@ -54,3 +56,29 @@ Decisão: [RFC 019](../../../docs/rfc/019-cliente-pedido-manual-e-assuntos.md) /
   ou mensagem duplicados.
 - **CP-18:** Até o workflow adotar esse contrato, a via legada mantém um
   pendente por Conversa. A ampliação depende de implantação CRM antes do n8n.
+
+## Identificação por telefone
+
+- **CP-19:** A busca e o roteamento de Contatos priorizam o telefone
+  normalizado, incluindo números já associados a identidades de canal. O nome
+  é o identificador legível na interface e o e-mail é opcional. Duplicatas de
+  telefone exigem escolha humana; nenhuma identidade de canal é confirmada só
+  porque alguém digitou um número.
+- **CP-20:** A criação de Pedido manual exige telefone no Contato. Um Contato
+  legado sem telefone continua visível e editável, mas precisa ser corrigido
+  antes de receber um Pedido novo. O fluxo de Pedidos permite cadastrar o
+  Contato e criar o Pedido em uma sequência contínua, com estados e erros
+  acessíveis.
+- **CP-21:** No chat direto do site, nome e telefone são coletados antes da
+  primeira mensagem e guardados como informação declarada, separada de
+  identidade WhatsApp confirmada. O CRM consulta possíveis coincidências de
+  telefone somente para roteamento interno; o chat não recebe identificadores,
+  histórico ou detalhes de Contatos encontrados. Duplicatas são ambíguas.
+- **CP-22:** O chat do site atende e pode abrir Pedido novo na sessão própria
+  mesmo sem WhatsApp ativo. Acesso ao histórico ou alteração de Pedido anterior
+  exige futura confirmação do número pelo WhatsApp e correlação auditada. O
+  atendimento direto por WhatsApp não pede novamente nome e telefone em um
+  formulário do site. Quando o agente transfere, o vendedor responde por texto
+  na caixa de entrada do CRM e o visitante recebe a resposta na mesma sessão
+  do chat. O identificador aleatório da sessão permite consultar apenas as
+  mensagens daquela conversa, sem usar o telefone declarado para essa leitura.

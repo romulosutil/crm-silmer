@@ -7,6 +7,7 @@ import {
 
 import {
   ContactIdentityConflictError,
+  ContactIdentityForbiddenError,
   ContactIdentityNotFoundError,
 } from '../domain/errors.js';
 
@@ -119,6 +120,8 @@ export class PostgresContactIdentityRepository {
             command.idempotencyKey,
           );
           if (replay) {
+            if (replay.channel === 'site_chat')
+              throw new ContactIdentityForbiddenError();
             if (replay.merge_fingerprint !== command.fingerprint) {
               throw new ContactIdentityConflictError();
             }
@@ -131,6 +134,8 @@ export class PostgresContactIdentityRepository {
             true,
           );
           if (!identity) throw new ContactIdentityNotFoundError();
+          if (identity.channel === 'site_chat')
+            throw new ContactIdentityForbiddenError();
           if (
             Number(identity.identity_version) !== command.expectedVersion ||
             identity.current_contact_id === command.targetContactId

@@ -4,9 +4,12 @@ const inboundKeys = Object.freeze([
   'channel',
   'contact',
   'event_id',
+  'external_conversation_id',
   'message',
   'metadata',
   'occurred_at',
+  'provider',
+  'site_contact',
 ]);
 const attachmentKeys = Object.freeze([
   ...commonEnvelopeKeys,
@@ -32,7 +35,10 @@ const eventKeys = Object.freeze([
   'message',
   'occurred_at',
   'open_order',
+  'order_id',
   'source_revision',
+  'subject_id',
+  'target_contract',
 ]);
 
 export class ContractValidationError extends Error {
@@ -54,10 +60,10 @@ export function validateContract(contract) {
   if (contract.errorMediaType !== 'application/problem+json') {
     fail('INVALID_ERROR_MEDIA_TYPE');
   }
-  exactMembers(contract.channels, ['whatsapp'], 'INVALID_CHANNELS');
+  exactMembers(contract.channels, ['whatsapp', 'site_chat'], 'INVALID_CHANNELS');
   exactMembers(
     contract.activeChannels,
-    ['whatsapp'],
+    ['site_chat'],
     'INVALID_ACTIVE_CHANNELS',
   );
   if (!Array.isArray(contract.endpoints) || contract.endpoints.length !== 3) {
@@ -131,6 +137,22 @@ export function validateInbound(payload, contract) {
   object(payload.contact, 'INVALID_CONTACT');
   rejectUnknown(payload.contact, ['display_name', 'external_id']);
   nonEmpty(payload.contact.external_id, 'INVALID_CONTACT');
+  if (payload.channel === 'site_chat') {
+    if (!/^999[0-9]{39}$/u.test(payload.contact.external_id)) {
+      fail('INVALID_SITE_IDENTITY');
+    }
+    if (payload.provider !== undefined && payload.provider !== 'site') {
+      fail('INVALID_SITE_PROVIDER');
+    }
+    if (payload.site_contact !== undefined) {
+      object(payload.site_contact, 'INVALID_SITE_CONTACT');
+      rejectUnknown(payload.site_contact, ['name', 'phone']);
+      nonEmpty(payload.site_contact.name, 'INVALID_SITE_CONTACT');
+      nonEmpty(payload.site_contact.phone, 'INVALID_SITE_CONTACT');
+    }
+  } else if (payload.site_contact !== undefined) {
+    fail('INVALID_SITE_CONTACT');
+  }
   object(payload.message, 'INVALID_MESSAGE');
   rejectUnknown(payload.message, [
     'attachment',
@@ -236,6 +258,35 @@ export function validateEvent(payload, contract) {
       fail('INVALID_OPEN_ORDER_EVENT');
     }
   }
+  if (Boolean(payload.subject_id) !== Boolean(payload.order_id)) {
+    fail('INVALID_SUBJECT_TARGET');
+  }
+  if (
+    payload.target_contract !== undefined &&
+    payload.target_contract !== 'subject-v1'
+  ) {
+    fail('INVALID_SUBJECT_CONTRACT');
+  }
+  if (
+    payload.target_contract === 'subject-v1' &&
+    payload.briefing_patch !== undefined &&
+    payload.subject_id === undefined &&
+    payload.open_order !== true
+  ) {
+    fail('INVALID_SUBJECT_TARGET');
+  }
+  if (payload.subject_id !== undefined) {
+    nonEmpty(payload.subject_id, 'INVALID_SUBJECT_TARGET');
+    nonEmpty(payload.order_id, 'INVALID_SUBJECT_TARGET');
+    if (
+      !['message.send.requested', 'handoff.requested'].includes(
+        payload.event_type,
+      ) ||
+      payload.open_order === true
+    ) {
+      fail('INVALID_SUBJECT_TARGET');
+    }
+  }
   if (payload.briefing_patch !== undefined) {
     if (
       !['handoff.requested', 'message.send.requested'].includes(
@@ -263,8 +314,9 @@ export function validateBriefingPatch(patch, contract) {
 export function validateOrderOpening(order) {
   object(order, 'INVALID_ORDER_OPENING');
   if (order.opened === true) {
-    rejectUnknown(order, ['created', 'id', 'opened']);
+    rejectUnknown(order, ['created', 'id', 'subject_id', 'opened']);
     nonEmpty(order.id, 'INVALID_ORDER_OPENING');
+    nonEmpty(order.subject_id, 'INVALID_ORDER_OPENING');
     if (typeof order.created !== 'boolean') fail('INVALID_ORDER_OPENING');
     return true;
   }

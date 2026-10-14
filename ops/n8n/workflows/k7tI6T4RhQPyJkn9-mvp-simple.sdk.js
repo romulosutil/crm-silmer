@@ -11,23 +11,55 @@ import {
 } from '@n8n/workflow-sdk';
 
 const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-const WORKFLOW_VERSION = 'mvp-simple-14';
+const WORKFLOW_VERSION = 'mvp-simple-15';
 
-// ADR 026: the site chat enters the CRM as a WhatsApp identity, because the
-// CRM only knows that channel. The number starts with 999, a country code the
-// ITU never assigns, so it can never reach a real person; the panel refuses a
-// seller's message to it (SITE_CHAT_PREFIX) and the bot asks for a WhatsApp
-// instead (SITE_CHAT_RULE).
+// ADR 034: site sessions have a separate channel and a reversible synthetic
+// identity. They never borrow a contact's earlier history from a typed phone.
 const SITE_CHAT_PREFIX = '999';
 const SITE_CHAT_ORIGINS = 'https://silmer.com.br,https://www.silmer.com.br';
 const SITE_CHAT_NAME = 'Visitante do site';
+const SITE_CHAT_HOSTED_CSS = `:root {
+  --chat--color--primary: #ff5b01;
+  --chat--color--primary-shade-50: #ff7b33;
+  --chat--color--primary--shade-100: #d64c00;
+  --chat--color--secondary: #250c8d;
+  --chat--color-secondary-shade-50: #19085e;
+  --chat--color-white: #ffffff;
+  --chat--color-light: #f0ecfd;
+  --chat--color-light-shade-50: #d8d0fb;
+  --chat--color-light-shade-100: #b2a1f7;
+  --chat--color-medium: #a39dbe;
+  --chat--color-dark: #0c042d;
+  --chat--color-disabled: #615a7c;
+  --chat--color-typing: #a39dbe;
+  --chat--font-family: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --chat--spacing: 1rem;
+  --chat--border-radius: 1rem;
+  --chat--window--width: min(25rem, calc(100vw - 2rem));
+  --chat--window--height: min(39rem, calc(100dvh - 2rem));
+  --chat--header--background: #0c042d;
+  --chat--header--color: #f0ecfd;
+  --chat--message--bot--background: #110642;
+  --chat--message--bot--color: #f0ecfd;
+  --chat--message--user--background: #250c8d;
+  --chat--message--user--color: #ffffff;
+  --chat--toggle--background: #ff5b01;
+  --chat--toggle--color: #0c042d;
+  --chat--button--background--primary: #ff5b01;
+  --chat--button--color--primary: #0c042d;
+  --chat--input--background: #110642;
+  --chat--input--text-color: #f0ecfd;
+  --chat--body--background: #0c042d;
+  --chat--footer--background: #0c042d;
+  --chat--footer--color: #f0ecfd;
+}
+button:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible {
+  outline: 3px solid #8b72f3;
+  outline-offset: 3px;
+}`;
 
-// ADR 026: a seller cannot answer inside the site chat, so every notice that
-// says the talk "continues here" asks for the visitor's WhatsApp instead.
-const SITE_CHAT_RULE = `const SITE_CHAT_CONTACT = 'Para o vendedor falar com você, me diga o seu WhatsApp com DDD.';
-const noticeForChannel = (channel, text) => channel === 'site_chat'
-  ? String(text).replace(/,? e o (seu )?atendimento continua aqui mesmo|,? aqui mesmo| right here/g, '').trim() + ' ' + SITE_CHAT_CONTACT
-  : text;`;
+// The site polls CRM for the seller's replies after the initial n8n response.
+const SITE_CHAT_RULE = `const noticeForChannel = (_channel, text) => text;`;
 
 const BRIEFING_FIELDS = [
   'artwork_locations',
@@ -495,6 +527,7 @@ return { json: {
   channel,
   from: message?.from ?? status?.recipient_id ?? '',
   customer_name: contact?.profile?.name ?? '',
+  site_contact: channel === 'site_chat' ? root.__site_contact ?? null : null,
   phone_number_id: metadata.phone_number_id ?? '',
   message_type: messageType,
   text: String(text).slice(0, 4096),
@@ -578,8 +611,10 @@ return { json: {
     schema_version: '1.0',
     event_id: n.event_id,
     occurred_at: n.occurred_at,
-    channel: 'whatsapp',
-    contact: { wa_id: n.from, name: n.customer_name },
+    channel: n.channel === 'site_chat' ? 'site_chat' : 'whatsapp',
+    ...(n.channel === 'site_chat'
+      ? { provider: 'site', contact: { external_id: n.from }, site_contact: n.site_contact }
+      : { contact: { wa_id: n.from, name: n.customer_name } }),
     message: {
       external_id: n.event_id,
       type: n.message_type,
@@ -587,7 +622,9 @@ return { json: {
       reply_to: n.reply_to,
       attachment: n.media_id ? { external_id: n.media_id, mime_type: n.media_mime_type || null, filename: n.media_filename || null } : null
     },
-    metadata: { phone_number_id: n.phone_number_id }
+    metadata: n.channel === 'site_chat'
+      ? { provider_account_id: 'silmer-site' }
+      : { phone_number_id: n.phone_number_id }
   },
   idempotency_key: n.event_id,
   correlation_id: correlationId
@@ -825,9 +862,27 @@ const messageLine = mediaUnread
       ? 'Mensagem atual do cliente (imagem anexada' + (source.text ? ', com a legenda): ' + source.text : ', sem legenda)')
       : 'Mensagem atual do cliente: ' + source.text;
 const siteChat = source.channel === 'site_chat';
+const siteName = siteChat ? String(inbound.site_contact?.name ?? source.site_contact?.name ?? '').trim() : '';
 const profileName = siteChat ? '' : source.customer_name || '';
-const briefing = inbound.briefing ?? {};
-const recentMessages = inbound.recent_messages ?? [];
+const subjects = Array.isArray(inbound.subjects) ? inbound.subjects : [];
+const pendingSubjects = subjects.filter((subject) => subject.kind === 'pedido' && subject.order_id && subject.order_status === 'pendente');
+const linkedIds = [...new Set(Array.isArray(inbound.source_subject_ids) ? inbound.source_subject_ids : [])];
+const humanChoice = subjects.find((subject) => subject.is_current && subject.selected_source === 'human');
+const tokens = String(source.text ?? '').toUpperCase().split(/[^A-Z0-9-]+/).filter(Boolean);
+const numbered = pendingSubjects.filter((subject) => subject.order_number && tokens.includes(String(subject.order_number).toUpperCase()));
+let target = null;
+if (linkedIds.length === 1) target = pendingSubjects.find((subject) => subject.subject_id === linkedIds[0]) ?? null;
+else if (linkedIds.length === 0 && humanChoice) target = pendingSubjects.find((subject) => subject.subject_id === humanChoice.subject_id) ?? null;
+else if (linkedIds.length === 0 && numbered.length === 1) target = numbered[0];
+else if (linkedIds.length === 0 && pendingSubjects.length === 1) target = pendingSubjects[0];
+const ambiguousTarget = linkedIds.length > 1 || (humanChoice && target && humanChoice.subject_id !== target.subject_id)
+  || (subjects.length > 0 && !target) || (pendingSubjects.length > 1 && !humanChoice && linkedIds.length === 0 && numbered.length !== 1);
+if (ambiguousTarget) target = null;
+const bootstrapOrder = subjects.length === 0 && !target;
+const briefing = target?.briefing ?? (bootstrapOrder ? inbound.briefing ?? {} : {});
+if (siteName && !briefing.customer_name) briefing.customer_name = siteName;
+// Other orders' message history is excluded from the model context.
+const recentMessages = subjects.length > 1 ? [] : inbound.recent_messages ?? [];
 // BOT-03: the CRM counts the agent's messages and lists the active sellers.
 // Against a CRM without it, the cap falls back to customer messages.
 const crmCounter = Number.isInteger(inbound.automation_message_count);
@@ -900,6 +955,12 @@ return { json: {
   wa_id: source.from,
   phone_number_id: source.phone_number_id,
   channel: source.channel || 'whatsapp',
+  target_subject_id: target?.subject_id ?? null,
+  target_order_id: target?.order_id ?? null,
+  target_order_number: target?.order_number ?? null,
+  target_ambiguous: Boolean(ambiguousTarget),
+  bootstrap_order: bootstrapOrder,
+  site_contact_name: siteName,
   briefing,
   recent_messages: recentMessages,
   current_text: currentText,
@@ -914,8 +975,10 @@ return { json: {
   prompt: [
     messageLine,
     siteChat
-      ? 'Canal: chat do site da Silmer (sem nome de perfil)'
+      ? 'Canal: chat do site da Silmer. Nome informado no formulário: ' + (siteName || 'não informado') + '. Não peça o nome novamente.'
       : 'Nome no perfil do WhatsApp (só uma pista, não confirmado): ' + (profileName || 'não informado'),
+    'Pedido selecionado: ' + (target?.order_number ?? (bootstrapOrder ? 'primeiro pedido desta conversa' : 'indefinido')),
+    ...(ambiguousTarget ? ['Há mais de um pedido possível. Não atribua fatos a nenhum pedido; o atendimento será transferido.'] : []),
     'Sua resposta será a mensagem ' + turn + ' de no máximo ' + messageCap,
     'Ponto perguntado na rodada anterior: ' + (pending ? point(pending) : 'nenhum'),
     'Produto: ' + (kinds.length ? kinds.map((kind) => PRODUCT_LABELS[kind]).join(' e ') : 'ainda não informado'),
@@ -1100,6 +1163,7 @@ if (patch.customer_name && fold(patch.customer_name) === fold(context.profile_na
   delete patch.customer_name;
 }
 const previous = context.briefing ?? {};
+if (context.site_contact_name && !previous.customer_name) patch.customer_name = context.site_contact_name;
 const pendingBefore = previous.next_required_field;
 // "Estampa na frente" confirms the location, not whether the artwork is ready.
 // Keep that fact even when the model forgets to include it in briefing_patch.
@@ -1239,7 +1303,10 @@ const previousStatus = String(previous.briefing_status ?? '');
 // (ADR 024: the product is the first), on the reply or on the handoff, and stays open. Something already going on elsewhere
 // never opens one (ADR 013). The model's order_intent_confirmed, if it still sends one, is ignored.
 ${OPEN_ORDER_RULE}
-const openOrder = orderAlreadyOpen(previous) || (!externalContext && holdsFichaPoint(briefing));
+const legacyContext = !('bootstrap_order' in context);
+const openOrder = legacyContext
+  ? orderAlreadyOpen(previous) || (!externalContext && holdsFichaPoint(briefing))
+  : context.bootstrap_order === true && !externalContext && holdsFichaPoint(briefing);
 // A conversation left on the retired order_intent question, or on a field the bot no longer
 // asks (ADR 012), has nothing pending.
 const stillPending = Boolean(pendingBefore) && missing.includes(pendingBefore);
@@ -1262,7 +1329,7 @@ const capReached = Number(context.turn) >= messageCap;
 const modelEscalation = decision.handoff_required === true
   && ['complaint', 'urgency', 'unsupported'].includes(decision.handoff_reason) ? decision.handoff_reason : null;
 const foreignLanguage = decision.foreign_language === true;
-const trigger = asksPrice ? 'price'
+const trigger = context.target_ambiguous === true ? 'subject_ambiguous' : asksPrice ? 'price'
   : personTrigger ?? (externalContext ? 'external_context' : null)
   ?? (foreignLanguage ? 'foreign_language' : null) ?? modelEscalation
   ?? (attemptsTrigger ? 'two_attempts' : null)
@@ -1276,6 +1343,7 @@ const reasonByTrigger = {
   external_context: 'human_requested',
   unsupported: 'unsupported', foreign_language: 'unsupported', two_attempts: 'low_confidence',
   ignored_twice: 'low_confidence',
+  subject_ambiguous: 'low_confidence',
   briefing_complete: 'briefing_complete',
   // iteration_limit exists from migration 0025 (BOT-03); an older CRM only knows low_confidence.
   message_limit: context.crm_counter ? 'iteration_limit' : 'low_confidence'
@@ -1296,7 +1364,8 @@ const notices = {
     : 'Desculpe, acho que não entendi direito. Um dos nossos vendedores vai te ajudar, e o atendimento continua aqui mesmo.',
   ignored_twice: 'Para te ajudar melhor, um dos nossos vendedores vai continuar o seu atendimento aqui mesmo e tirar todas as suas dúvidas.',
   briefing_complete: 'Perfeito, anotei tudo! Um dos nossos vendedores vai continuar o seu pedido com você aqui mesmo.',
-  message_limit: 'Obrigada pelas informações! Já anotei tudo o que você me passou, e um dos nossos vendedores vai continuar o seu pedido aqui mesmo.'
+  message_limit: 'Obrigada pelas informações! Já anotei tudo o que você me passou, e um dos nossos vendedores vai continuar o seu pedido aqui mesmo.',
+  subject_ambiguous: 'Para não misturar seus pedidos, vou pedir que um vendedor continue seu atendimento.'
 };
 const labels = {
   price: 'Perguntou o valor', human_requested: 'Pediu uma pessoa', seller_requested: 'Pediu um vendedor pelo nome',
@@ -1305,7 +1374,8 @@ const labels = {
   unsupported: 'Conteúdo não suportado', foreign_language: 'Cliente escreve em outro idioma',
   two_attempts: 'Não entendeu o cliente em duas tentativas',
   ignored_twice: 'Cliente não respondeu à mesma pergunta duas vezes',
-  briefing_complete: 'Pré-ficha completa', message_limit: 'Limite de ' + messageCap + ' mensagens do agente'
+  briefing_complete: 'Pré-ficha completa', message_limit: 'Limite de ' + messageCap + ' mensagens do agente',
+  subject_ambiguous: 'Mensagem pode se referir a mais de um pedido'
 };
 const handoffRequired = trigger !== null;
 // D25: the workflow picks the next point, the first one missing in FICHA_RHYTHM, as the
@@ -1388,7 +1458,7 @@ ${SITE_CHAT_RULE}
 return { json: {
   ...context,
   reply_text: String(handoffRequired ? noticeForChannel(context.channel, notices[trigger]) : replyText).slice(0, 4096),
-  briefing_patch: patch,
+  briefing_patch: context.target_ambiguous === true || (!legacyContext && !context.target_subject_id && !openOrder) ? null : patch,
   handoff_ready: handoffReady,
   handoff_required: handoffRequired,
   handoff_reason: handoffRequired ? reasonByTrigger[trigger] : null,
@@ -1398,7 +1468,7 @@ return { json: {
   missing_briefing_fields: missing,
   ficha_filled: fichaFilled,
   ficha_total: required.length,
-  open_order: openOrder,
+  open_order: context.target_ambiguous === true ? false : openOrder,
   reasoning: handoffRequired ? summary : (reasoning || 'Decisão do agente')
 } };`,
 );
@@ -1422,7 +1492,10 @@ return { json: {
     schema_version: '1.0', event_id: command, event_type: 'handoff.requested',
     occurred_at: new Date().toISOString(), conversation_id: d.conversation_id,
     automation_epoch: d.automation_epoch, source_revision: d.source_revision,
-    briefing_patch: d.briefing_patch, open_order: d.open_order === true,
+    target_contract: 'subject-v1',
+    ...(d.target_subject_id ? { subject_id: d.target_subject_id, order_id: d.target_order_id } : {}),
+    ...(d.briefing_patch ? { briefing_patch: d.briefing_patch } : {}),
+    open_order: d.open_order === true,
     handoff: { reason: d.handoff_reason, summary: d.reasoning, ...(notice ? { notice } : {}) }
   }, idempotency_key: command, correlation_id: correlationId
 } };`,
@@ -1436,9 +1509,7 @@ const correlationId = String($execution.id).padStart(16, '0');
 const source = $('Normalizar evento WhatsApp (MVP)').item.json;
 const command = inbound.conversation_id + ':' + inbound.source_revision + ':unsupported';
 // ADR 014 (D29): a handoff of any reason opens the order when the ficha already holds a point.
-${OPEN_ORDER_RULE}
 ${SITE_CHAT_RULE}
-const briefing = inbound.briefing ?? {};
 // ADR 026: images and audios go to the model; this is a document, a video or a type it does not read.
 const received = { audio: 'o seu áudio', image: 'a sua imagem', text: 'a sua mensagem' }[source.message_type] ?? 'o seu arquivo';
 return { json: {
@@ -1446,7 +1517,7 @@ return { json: {
     schema_version: '1.0', event_id: command, event_type: 'handoff.requested',
     occurred_at: new Date().toISOString(), conversation_id: inbound.conversation_id,
     automation_epoch: inbound.automation_epoch, source_revision: inbound.source_revision,
-    open_order: orderAlreadyOpen(briefing) || holdsFichaPoint(briefing),
+    target_contract: 'subject-v1', open_order: false,
     handoff: {
       reason: 'unsupported',
       summary: 'Conteúdo ' + source.message_type + ' requer atendimento humano no MVP.',
@@ -1483,7 +1554,7 @@ const notice = handoff?.handoff?.notice ?? null;
 const source = $('Normalizar evento WhatsApp (MVP)').item.json;
 // Only a notice the CRM reserved may reach Meta; a replay or a spent cap returns false.
 return { json: {
-  send_authorized: crm.notice?.send_authorized === true && notice !== null,
+  send_authorized: crm.notice?.send_authorized === true && crm.projection?.applied !== false && notice !== null,
   command_id: crm.notice?.command_id ?? null,
   text: notice?.text ?? '',
   conversation_id: handoff?.conversation_id ?? null,
@@ -1611,7 +1682,10 @@ return { json: {
     event_type: 'message.send.requested', occurred_at: new Date().toISOString(),
     conversation_id: d.conversation_id, automation_epoch: d.automation_epoch,
     source_revision: d.source_revision, command_id: command,
-    message: { type: 'text', text: d.reply_text }, briefing_patch: d.briefing_patch,
+    target_contract: 'subject-v1',
+    ...(d.target_subject_id ? { subject_id: d.target_subject_id, order_id: d.target_order_id } : {}),
+    message: { type: 'text', text: d.reply_text },
+    ...(d.briefing_patch ? { briefing_patch: d.briefing_patch } : {}),
     open_order: d.open_order === true
   }, idempotency_key: 'reserve:' + command, correlation_id: correlationId,
   command_id: command, reply_text: d.reply_text
@@ -1626,7 +1700,7 @@ const crmReserveAi = crmPost(
 const aiAuthorized = ifBoolean(
   'Envio da IA autorizado? (MVP)',
   [710, -620],
-  '{{ $json.send_authorized === true }}',
+  '{{ $json.send_authorized === true && $json.projection?.applied !== false }}',
 );
 
 const replyBySite = ifBoolean(
@@ -1697,8 +1771,7 @@ const answerSite = codeStep(
   'Site - Responder no chat (MVP)',
   [2150, -1400],
   `const ran = (name) => { try { return $(name).item.json ?? null; } catch (error) { return null; } };
-// With a seller, the chat cannot carry the reply: the visitor's WhatsApp can.
-const WITH_SELLER = 'Recebi a sua mensagem! Um dos nossos vendedores vai falar com você pelo WhatsApp. Se ainda não passou, me diga o seu número com DDD.';
+const WITH_SELLER = 'Recebi sua mensagem. Um vendedor vai continuar o atendimento por aqui.';
 let output = WITH_SELLER;
 if (ran('CRM - Registrar message.sent da IA (MVP)')) {
   output = ran('Preparar reserva de envio da IA (MVP)')?.reply_text || output;
@@ -1729,6 +1802,7 @@ const siteChatTrigger = trigger({
         allowedFilesMimeTypes: 'image/*,audio/*',
         loadPreviousSession: 'notSupported',
         responseMode: 'lastNode',
+        customCss: SITE_CHAT_HOSTED_CSS,
       },
     },
   },
@@ -1737,12 +1811,14 @@ const siteChatTrigger = trigger({
 const buildSiteEvent = codeStep(
   'Site - Montar evento do chat (MVP)',
   [-1940, -700],
-  `const session = String($json.sessionId ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
-if (!session) throw new Error('SITE_CHAT_SESSION_REQUIRED');
-// One identity per browser session. ${SITE_CHAT_PREFIX} is never assigned to a country: no real number.
-let hash = 0;
-for (const char of session) hash = (hash * 31 + char.charCodeAt(0)) % 1000000000000;
-const waId = '${SITE_CHAT_PREFIX}' + String(hash).padStart(12, '0');
+  `const session = String($json.sessionId ?? '').trim().toLowerCase();
+if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(session)) throw new Error('SITE_CHAT_SESSION_REQUIRED');
+// UUIDv4 -> decimal is bijective. The 999 prefix is reserved for site identities.
+const siteId = '${SITE_CHAT_PREFIX}' + BigInt('0x' + session.replace(/-/g, '')).toString(10).padStart(39, '0');
+const siteContact = $json.metadata?.site_contact ?? null;
+if (!siteContact || typeof siteContact.name !== 'string' || typeof siteContact.phone !== 'string') throw new Error('SITE_CHAT_CONTACT_REQUIRED');
+const messageId = String($json.metadata?.site_message_id ?? '').trim().toLowerCase();
+if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(messageId)) throw new Error('SITE_CHAT_MESSAGE_ID_REQUIRED');
 const text = String($json.chatInput ?? '').trim().slice(0, 2000);
 // Only the first file is read; the others stay out of the turn.
 const entry = Object.entries($input.item.binary ?? {})[0];
@@ -1751,8 +1827,10 @@ const mimeType = String(file?.mimeType ?? '').split(';')[0].toLowerCase();
 const fileType = !file ? null : mimeType.startsWith('image/') ? 'image'
   : mimeType.startsWith('audio/') ? 'audio' : mimeType.startsWith('video/') ? 'video' : 'document';
 if (!text && !file) throw new Error('SITE_CHAT_MESSAGE_REQUIRED');
-const eventId = 'site-' + session + '-' + $execution.id;
-const message = { from: waId, id: eventId, timestamp: String(Math.floor(Date.now() / 1000)) };
+// The browser reuses this ID when retrying the same POST; a new user message
+// must have a new ID even if the text is identical.
+const eventId = 'site-' + session + '-' + messageId;
+const message = { from: siteId, id: eventId, timestamp: String(Math.floor(Date.now() / 1000)) };
 if (fileType) {
   message.type = fileType;
   message[fileType] = { id: eventId + '-file', mime_type: mimeType, ...(fileType === 'document' ? { filename: String(file.fileName ?? 'arquivo').slice(0, 255) } : {}), ...(text ? { caption: text } : {}) };
@@ -1760,9 +1838,9 @@ if (fileType) {
   message.type = 'text';
   message.text = { body: text };
 }
-return { json: { __channel: 'site_chat', entry: [{ changes: [{ value: {
+return { json: { __channel: 'site_chat', __site_contact: siteContact, entry: [{ changes: [{ value: {
   metadata: { phone_number_id: 'site-chat' },
-  contacts: [{ profile: { name: '${SITE_CHAT_NAME}' }, wa_id: waId }],
+  contacts: [{ profile: { name: siteContact.name }, wa_id: siteId }],
   messages: [message]
 } }] }] }, ...(file ? { binary: { data: file } } : {}) };`,
 );
@@ -1813,10 +1891,10 @@ const headerKey = $json.headers?.['idempotency-key'] ?? '';
 const action = payload.action;
 const stateActions = ['take_over', 'return_to_ai', 'close'];
 const validBase = payload.schema_version === '1.0' && typeof payload.command_id === 'string' && payload.command_id === headerKey;
-// ADR 026: a site chat visitor has no WhatsApp; the seller answers on the number the visitor gives.
+// Site messages are delivered through CRM and polled by the browser session.
 const siteChat = /^\\+?${SITE_CHAT_PREFIX}[0-9]+$/.test(String(payload.to ?? ''));
 const kind = validBase && action === 'send_message' && ['text', 'image', 'audio', 'video'].includes(payload.message?.type)
-  ? (siteChat ? 'site_chat' : 'send')
+  ? (siteChat ? payload.message.type === 'text' ? 'site_chat' : 'site_chat_media' : 'send')
   : validBase && stateActions.includes(action) ? 'state' : 'invalid';
 return { json: { payload, kind } };`,
 );
@@ -1835,8 +1913,9 @@ const routePanelCommand = switchCase({
           stringRule(
             '{{ $json.kind }}',
             'site_chat',
-            'Contato do chat do site',
+            'Responder no chat do site',
           ),
+          stringRule('{{ $json.kind }}', 'site_chat_media', 'Mídia do site indisponível'),
         ],
       },
       options: { fallbackOutput: 'extra', renameFallbackOutput: 'Inválido' },
@@ -1871,6 +1950,17 @@ const humanAuthorized = ifBoolean(
   'Envio humano autorizado? (MVP)',
   [-740, 250],
   '{{ $json.send_authorized === true }}',
+);
+const humanBySite = ifBoolean(
+  'Resposta humana pelo site? (MVP)',
+  [-620, 250],
+  "{{ $('Normalizar comando do painel (MVP)').item.json.kind === 'site_chat' }}",
+);
+const deliverSiteHuman = codeStep(
+  'Site - Entregar resposta humana (MVP)',
+  [-500, 20],
+  `const command = $('Preparar reserva de envio humano (MVP)').item.json.command;
+return { json: { id: 'site:' + command.command_id } };`,
 );
 const humanHasMedia = ifBoolean(
   'Mensagem humana tem midia? (MVP)',
@@ -2159,11 +2249,11 @@ const respondInvalid = responseNode(
   '{"accepted":false,"error":"unsupported_or_invalid_command"}',
   400,
 );
-// The CRM records a rejected command as failed: the message never leaves.
+// Site media is rejected before a send reservation; text is delivered by CRM.
 const respondSiteChat = responseNode(
-  'Recusar envio ao chat do site (MVP)',
+  'Recusar mídia no chat do site (MVP)',
   [-1220, 800],
-  '{"accepted":false,"error":"site_chat_contact_has_no_whatsapp"}',
+  '{"accepted":false,"error":"site_chat_media_unsupported"}',
   422,
 );
 const prepareHumanUnknown = codeStep(
@@ -2357,12 +2447,16 @@ export default workflow(WORKFLOW_KEY, 'Silmer | Atendimento WhatsApp IA')
           crmReserveHuman.to(
             humanAuthorized
               .onTrue(
-                humanHasMedia
-                  .onTrue(downloadHumanMedia)
+                humanBySite
+                  .onTrue(deliverSiteHuman.to(prepareHumanSent))
                   .onFalse(
-                    sendHuman.to(
-                      prepareHumanSent.to(crmHumanSent.to(respondAccepted)),
-                    ),
+                    humanHasMedia
+                      .onTrue(downloadHumanMedia)
+                      .onFalse(
+                        sendHuman.to(
+                          prepareHumanSent.to(crmHumanSent.to(respondAccepted)),
+                        ),
+                      ),
                   ),
               )
               .onFalse(respondState),
@@ -2370,8 +2464,9 @@ export default workflow(WORKFLOW_KEY, 'Silmer | Atendimento WhatsApp IA')
         ),
       )
       .onCase(1, respondState)
-      .onCase(2, respondSiteChat)
-      .onCase(3, respondInvalid),
+      .onCase(2, prepareHumanReservation)
+      .onCase(3, respondSiteChat)
+      .onCase(4, respondInvalid),
   )
   .add(errorTrigger)
   .to(prepareWorkflowFailure)

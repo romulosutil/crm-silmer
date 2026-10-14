@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { normalizeContactPhone } from '@crm-silmer/contacts';
 
 import {
   N8nConflictError,
@@ -102,10 +103,17 @@ export function createN8nIntegrationService({
       const technical = normalizeTechnical(input?.technical);
       requireSchema(input?.schema_version);
       const occurredAt = instant(input?.occurred_at, 'occurred_at');
-      const channel = /** @type {'whatsapp'} */ (
-        oneOf(input?.channel, ['whatsapp'], 'channel')
+      const channel = /** @type {'whatsapp'|'site_chat'} */ (
+        oneOf(input?.channel, ['whatsapp', 'site_chat'], 'channel')
       );
-      const provider = identifier(input?.provider ?? 'meta', 'provider', 64);
+      const provider = identifier(
+        input?.provider ?? (channel === 'site_chat' ? 'site' : 'meta'),
+        'provider',
+        64,
+      );
+      if (channel === 'site_chat' && provider !== 'site') {
+        throw new N8nValidationError('site_chat requires the site provider');
+      }
       const providerAccountId = identifier(
         input?.metadata?.provider_account_id ??
           input?.metadata?.phone_number_id ??
@@ -113,9 +121,24 @@ export function createN8nIntegrationService({
         'metadata.provider_account_id',
         512,
       );
-      const externalIdentityId = normalizeWhatsAppIdentity(
-        input?.contact?.external_id ?? input?.contact?.wa_id,
-      );
+      const externalIdentityId =
+        channel === 'site_chat'
+          ? normalizeSiteIdentity(input?.contact?.external_id)
+          : normalizeWhatsAppIdentity(
+              input?.contact?.external_id ?? input?.contact?.wa_id,
+            );
+      if (channel === 'site_chat' && input?.contact?.wa_id !== undefined) {
+        throw new N8nValidationError(
+          'site_chat cannot claim a WhatsApp identity',
+        );
+      }
+      const siteContact =
+        channel === 'site_chat'
+          ? normalizeSiteContact(input?.site_contact)
+          : null;
+      if (channel === 'whatsapp' && input?.site_contact !== undefined) {
+        throw new N8nValidationError('site_contact requires site_chat');
+      }
       const externalMessageId = identifier(
         input?.message?.external_id,
         'message.external_id',
@@ -154,6 +177,7 @@ export function createN8nIntegrationService({
             eventFingerprint: fingerprint({
               channel,
               contact: input.contact,
+              siteContact,
               eventId: input.event_id,
               message: input.message,
               occurredAt,
@@ -164,11 +188,12 @@ export function createN8nIntegrationService({
             externalEventId: identifier(input?.event_id, 'event_id', 512),
             externalIdentityId,
             externalMessageId,
-            identityKind: 'phone',
+            identityKind: channel === 'site_chat' ? 'handle' : 'phone',
             displayHandle: null,
             message: { content, type: canonicalMessageType },
             occurredAt,
-            phoneStatus: 'confirmed',
+            phoneStatus: channel === 'site_chat' ? 'pending' : 'confirmed',
+            siteContact,
             provider,
             providerAccountId,
             technical,
@@ -265,6 +290,16 @@ export function createN8nIntegrationService({
           input?.source_revision === undefined
             ? null
             : positiveInteger(input.source_revision, 'source_revision'),
+        subjectId: optionalString(input?.subject_id, 512),
+        orderId: optionalString(input?.order_id, 512),
+        targetContract:
+          input?.target_contract === undefined
+            ? null
+            : oneOf(input.target_contract, ['subject-v1'], 'target_contract'),
+        subjectContractRequired: requiresSubjectContract(
+          input?.target_contract,
+          technical.workflowVersion,
+        ),
         technical,
       });
       validateEventShape(normalized);
@@ -277,6 +312,30 @@ export function createN8nIntegrationService({
 
 /** @param {any} input */
 function validateEventShape(input) {
+  const requiresSubjectTarget = input.subjectContractRequired;
+  if (
+    requiresSubjectTarget &&
+    input.briefingPatch &&
+    !input.subjectId &&
+    input.openOrder !== true
+  ) {
+    throw new N8nValidationError(
+      'subject-v1 briefing changes require subject_id and order_id',
+    );
+  }
+  if ((input.subjectId === null) !== (input.orderId === null)) {
+    throw new N8nValidationError(
+      'subject_id and order_id must be supplied together',
+    );
+  }
+  if (input.subjectId && !EVENTS_THAT_OPEN_ORDERS.has(input.eventType)) {
+    throw new N8nValidationError(
+      'subject_id and order_id are only allowed on send reservation or handoff',
+    );
+  }
+  if (input.subjectId && input.openOrder === true) {
+    throw new N8nValidationError('open_order cannot target an existing order');
+  }
   if (
     input.eventType === 'workflow.failed' &&
     input.failure?.phase !== undefined
@@ -372,6 +431,15 @@ function validateEventShape(input) {
   if (input.eventType === 'message.send.unknown' && !input.commandId) {
     throw new N8nValidationError('message.send.unknown requires command_id');
   }
+}
+
+/** @param {unknown} contract @param {string} workflowVersion */
+function requiresSubjectContract(contract, workflowVersion) {
+  const version = /^(dev-)?mvp-simple-(\d+)$/u.exec(workflowVersion);
+  return (
+    contract === 'subject-v1' ||
+    Boolean(version && Number(version[2]) >= (version[1] ? 16 : 15))
+  );
 }
 
 /** @param {unknown} value */
@@ -502,6 +570,38 @@ function normalizeWhatsAppIdentity(value) {
     throw new N8nValidationError('contact.wa_id must be a valid E.164 number');
   }
   return `+${compact}`;
+}
+
+/** @param {unknown} value */
+function normalizeSiteIdentity(value) {
+  const identity = identifier(value, 'contact.external_id', 512);
+  if (!/^999[0-9]{39}$/u.test(identity)) {
+    throw new N8nValidationError('site_chat requires a synthetic 999 identity');
+  }
+  return identity;
+}
+
+/** @param {unknown} value */
+function normalizeSiteContact(value) {
+  if (value === undefined) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new N8nValidationError('site_contact is invalid');
+  }
+  const details = /** @type {Record<string, unknown>} */ (value);
+  if (Object.keys(details).some((key) => !['name', 'phone'].includes(key))) {
+    throw new N8nValidationError('site_contact has unknown fields');
+  }
+  const name = typeof details.name === 'string' ? details.name.trim() : '';
+  const phone = normalizeContactPhone(details.phone);
+  if (
+    !name ||
+    name.length > 120 ||
+    /[\u0000-\u001f\u007f]/u.test(name) ||
+    !phone
+  ) {
+    throw new N8nValidationError('site_contact requires valid name and phone');
+  }
+  return { name, phone };
 }
 
 /** @param {unknown} value @param {string} field */

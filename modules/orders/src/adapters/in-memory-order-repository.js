@@ -537,6 +537,17 @@ export class InMemoryOrderRepository {
       if (current.origin === 'loja') {
         throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
       }
+      if (
+        options.agentTarget &&
+        (eventType !== 'order.briefing_projected' ||
+          options.agentTarget.orderId !== orderId ||
+          !options.agentTarget.subjectId)
+      ) {
+        throw new OrderConflictError(
+          'Subject target does not match the order',
+          'SUBJECT_TARGET_INVALID',
+        );
+      }
       if (current.version !== options.expectedVersion) {
         throw new OrderConflictError(
           `Expected order version ${options.expectedVersion}, current version is ${current.version}`,

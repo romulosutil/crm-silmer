@@ -189,7 +189,7 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   assert.equal(workflow.source.active, false);
   assert.equal(workflow.source.activeVersionId, null);
   // Baseline 51, 17 seller media nodes and 16 inbound media/site nodes.
-  assert.equal(workflow.nodes.length, 84);
+  assert.equal(workflow.nodes.length, 86);
   const serialized = JSON.stringify(workflow);
   assert.doesNotMatch(serialized, /claim_token|claim_id|ai-turns\/claim/u);
   assert.doesNotMatch(serialized, /silmer_failures|windowBufferMemory/u);
@@ -210,7 +210,7 @@ test('keeps the simplified workflow inactive and free of removed runtime concept
   assert.match(serialized, /next_required_field/u);
 });
 
-test('INBOX-MEDIA-1/ADR 026: site identities refuse every seller message type before the effect boundary', async () => {
+test('site text reaches CRM delivery and unsupported media is refused', async () => {
   const nodes = await workflowNodesByName();
   const normalize = nodes.get('Normalizar comando do painel (MVP)');
   for (const type of ['text', 'image', 'audio', 'video']) {
@@ -236,17 +236,31 @@ test('INBOX-MEDIA-1/ADR 026: site identities refuse every seller message type be
       );
       assert.equal(
         normalized.kind,
-        to.includes('999012') ? 'site_chat' : 'send',
+        to.includes('999012')
+          ? type === 'text'
+            ? 'site_chat'
+            : 'site_chat_media'
+          : 'send',
       );
     }
   }
   const workflow = JSON.parse(await readFile(workflowSnapshot, 'utf8'));
   assert.deepEqual(
     workflow.connections['Rotear comando do painel (MVP)'].main[2],
-    [{ node: 'Recusar envio ao chat do site (MVP)', type: 'main', index: 0 }],
+    [
+      {
+        node: 'Preparar reserva de envio humano (MVP)',
+        type: 'main',
+        index: 0,
+      },
+    ],
+  );
+  assert.deepEqual(
+    workflow.connections['Rotear comando do painel (MVP)'].main[3],
+    [{ node: 'Recusar mídia no chat do site (MVP)', type: 'main', index: 0 }],
   );
   assert.equal(
-    nodes.get('Recusar envio ao chat do site (MVP)').parameters.options
+    nodes.get('Recusar mídia no chat do site (MVP)').parameters.options
       .responseCode,
     422,
   );
@@ -860,7 +874,7 @@ test('sends the handoff notice the CRM reserved, and only that one (BOT-03)', as
   );
   assert.equal(
     siteMedia.payload.handoff.notice.text,
-    'Recebi o seu arquivo, obrigada! Um dos nossos vendedores vai continuar o seu atendimento. Para o vendedor falar com você, me diga o seu WhatsApp com DDD.',
+    'Recebi o seu arquivo, obrigada! Um dos nossos vendedores vai continuar o seu atendimento aqui mesmo.',
   );
   assert.equal(
     runCodeNode(
@@ -2759,8 +2773,7 @@ test('the pending order opens at the first real point of the ficha (ADR 014)', a
   assert.equal(handoff.payload.open_order, true);
   assert.equal(validateEvent(handoff.payload, contract), true);
 
-  // A file or audio hands off without the model: the same rule reads the
-  // briefing the CRM returned.
+  // Unsupported media hands off without changing or opening an order.
   const media = byName.get('Preparar handoff de conteúdo (MVP)').parameters
     .jsCode;
   /** @param {any} briefing */
@@ -2775,7 +2788,7 @@ test('the pending order opens at the first real point of the ficha (ADR 014)', a
       },
       { 'Normalizar evento WhatsApp (MVP)': { message_type: 'image' } },
     ).payload;
-  assert.equal(mediaHandoff({ colors: 'azul' }).open_order, true);
+  assert.equal(mediaHandoff({ colors: 'azul' }).open_order, false);
   assert.equal(mediaHandoff({ customer_name: 'Ana' }).open_order, false);
   assert.equal(
     mediaHandoff({ sizes: 'Definir com o vendedor' }).open_order,
@@ -2783,8 +2796,135 @@ test('the pending order opens at the first real point of the ficha (ADR 014)', a
   );
   assert.equal(
     mediaHandoff({ briefing_status: 'quote_collecting' }).open_order,
-    true,
+    false,
   );
   assert.equal(mediaHandoff(undefined).open_order, false);
   assert.equal(validateEvent(mediaHandoff({ colors: 'azul' }), contract), true);
+});
+
+test('CP-T04: the agent targets one order, switches briefing, and transfers ambiguous turns', async () => {
+  const nodes = await workflowNodesByName();
+  const contextCode = nodes.get('Montar contexto da IA (MVP)').parameters
+    .jsCode;
+  const decisionCode = nodes.get('Normalizar decisão da IA (MVP)').parameters
+    .jsCode;
+  const handoffCode = nodes.get('Preparar handoff da IA (MVP)').parameters
+    .jsCode;
+  const subjects = [
+    {
+      subject_id: 'subject-shirt',
+      order_id: 'order-shirt',
+      order_number: 'PED-101',
+      order_status: 'pendente',
+      kind: 'pedido',
+      is_current: true,
+      selected_source: 'agent',
+      briefing: { product_type: 'camisetas', quantity: 30 },
+    },
+    {
+      subject_id: 'subject-cap',
+      order_id: 'order-cap',
+      order_number: 'PED-102',
+      order_status: 'pendente',
+      kind: 'pedido',
+      is_current: false,
+      selected_source: null,
+      briefing: { product_type: 'bonés', quantity: 12 },
+    },
+  ];
+  /** @param {any} inbound @param {string} text */
+  const context = (inbound, text) =>
+    runCodeNode(contextCode, inbound, {
+      'CRM - Registrar inbound (MVP)': inbound,
+      'Normalizar evento WhatsApp (MVP)': {
+        channel: 'whatsapp',
+        from: '5527900000001',
+        phone_number_id: 'phone-1',
+        message_type: 'text',
+        text,
+      },
+    });
+  const base = {
+    conversation_id: 'conversation-1',
+    automation_epoch: 2,
+    source_revision: 7,
+    automation_message_count: 2,
+    automation_message_cap: 15,
+    recent_messages: [
+      { sender_type: 'customer', text: 'Conversa de outro pedido' },
+    ],
+    sellers: [],
+    subjects,
+  };
+  const shirt = context(
+    { ...base, source_subject_ids: ['subject-shirt'] },
+    'As camisetas serão azuis',
+  );
+  assert.deepEqual(
+    [
+      shirt.target_subject_id,
+      shirt.target_order_id,
+      shirt.briefing.product_type,
+    ],
+    ['subject-shirt', 'order-shirt', 'camisetas'],
+  );
+  assert.deepEqual(shirt.recent_messages, []);
+  const cap = context(
+    { ...base, source_revision: 8, source_subject_ids: ['subject-cap'] },
+    'Os bonés serão pretos',
+  );
+  assert.deepEqual(
+    [cap.target_subject_id, cap.target_order_id, cap.briefing.product_type],
+    ['subject-cap', 'order-cap', 'bonés'],
+  );
+  const numbered = context(
+    { ...base, source_subject_ids: [] },
+    'Sobre o PED-102: bonés pretos',
+  );
+  assert.equal(numbered.target_order_id, 'order-cap');
+
+  const ambiguous = context(
+    { ...base, source_subject_ids: [] },
+    'Quero mudar a quantidade',
+  );
+  assert.equal(ambiguous.target_ambiguous, true);
+  assert.deepEqual(ambiguous.briefing, {});
+  const output = {
+    output: {
+      reply_text: 'Resposta',
+      briefing_patch: { quantity: 50 },
+      answer_status: 'answered',
+      person_request: 'none',
+    },
+  };
+  const decision = runCodeNode(decisionCode, output, {
+    'Montar contexto da IA (MVP)': ambiguous,
+  });
+  assert.equal(decision.handoff_required, true);
+  assert.equal(decision.briefing_patch, null);
+  assert.equal(decision.open_order, false);
+  const handoff = runCodeNode(handoffCode, decision, {});
+  assert.equal(handoff.payload.target_contract, 'subject-v1');
+  assert.equal('briefing_patch' in handoff.payload, false);
+  assert.equal('subject_id' in handoff.payload, false);
+  const replay = runCodeNode(handoffCode, decision, {});
+  assert.deepEqual(
+    { ...replay, payload: { ...replay.payload, occurred_at: null } },
+    { ...handoff, payload: { ...handoff.payload, occurred_at: null } },
+  );
+
+  const nextCycle = context(
+    {
+      ...base,
+      conversation_id: 'conversation-2',
+      source_revision: 1,
+      subjects: [],
+      source_subject_ids: [],
+      briefing: {},
+    },
+    'Quero camisetas novas',
+  );
+  assert.equal(nextCycle.bootstrap_order, true);
+  assert.equal(nextCycle.target_subject_id, null);
+  assert.deepEqual(nextCycle.briefing, {});
 });

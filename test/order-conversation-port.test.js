@@ -8,6 +8,7 @@ test('last message status is read in one batch without content or identity', asy
   const queries = [];
   const port = new PostgresOrderConversationPort({
     contactEnvelopeKey: Buffer.alloc(32, 1),
+    contactLookupKey: Buffer.alloc(32, 3),
     envelopeKey: Buffer.alloc(32, 2),
     database: {
       query: async (
@@ -98,4 +99,31 @@ test('last message status is read in one batch without content or identity', asy
     queries[0].sql,
     /content_envelope|author_id|external_message_id/u,
   );
+});
+
+test('order contact search compares a full phone by keyed hash across contact sources', async () => {
+  /** @type {{sql?: string, values?: unknown[]}} */
+  const observed = {};
+  const port = new PostgresOrderConversationPort({
+    contactEnvelopeKey: Buffer.alloc(32, 1),
+    contactLookupKey: Buffer.alloc(32, 3),
+    envelopeKey: Buffer.alloc(32, 2),
+    database: {
+      query: async (
+        /** @type {string} */ sql,
+        /** @type {unknown[]} */ values = [],
+      ) => {
+        observed.sql = sql;
+        observed.values = values;
+        return { rows: [{ id: 'contact-existing' }] };
+      },
+    },
+  });
+  assert.deepEqual(await port.searchContactIds('(27) 99999-1234'), [
+    'contact-existing',
+  ]);
+  assert.match(observed.sql ?? '', /contact_phone_lookup/u);
+  assert.match(observed.sql ?? '', /site_contact_claims/u);
+  assert.match(String(observed.values?.[1]), /^[0-9a-f]{64}$/u);
+  assert.doesNotMatch(JSON.stringify(observed.values), /27999991234/u);
 });

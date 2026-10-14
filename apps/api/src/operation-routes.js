@@ -203,16 +203,46 @@ export function registerOperationRoutes(api, operations, contextFor) {
   api.get('/api/v1/contacts', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query, ['cursor', 'limit', 'q']);
+      // A phone in the request URL would be retained by proxies and browser history.
+      if ((input.q?.match(/\d/gu) ?? []).length >= 8) {
+        throw new OperationReadRequestError(400, 'INVALID_REQUEST');
+      }
       await authorizeRead(request, operations, 'contact.read');
       privateReadHeaders(reply);
       return reply.code(200).send(await operations.listContacts(input));
     }),
   );
 
+  api.post(
+    '/api/v1/contacts/search',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
+    async (request, reply) =>
+      respond(reply, async () => {
+        const body = requireObject(request.body);
+        rejectUnknownKeys(body, ['q', 'cursor', 'limit']);
+        const input = {
+          q: requireIdentifier(body.q, 'QUERY', 120),
+          ...(body.cursor !== undefined
+            ? { cursor: requireIdentifier(body.cursor, 'CURSOR', 1024) }
+            : {}),
+          ...(body.limit !== undefined ? { limit: body.limit } : {}),
+        };
+        await operations.authorizeWrite({
+          action: 'contact.read',
+          authorization: request.headers.authorization,
+          cookie: request.headers.cookie,
+          csrfToken: request.headers['x-csrf-token'],
+          origin: request.headers.origin,
+        });
+        privateReadHeaders(reply);
+        return reply.code(200).send(await operations.listContacts(input));
+      }),
+  );
+
   api.post('/api/v1/contacts', async (request, reply) =>
     respond(reply, async () => {
       const body = requireObject(request.body);
-      rejectUnknownKeys(body, ['displayName']);
+      rejectUnknownKeys(body, ['displayName', 'phone', 'email']);
       const principal = await operations.authorizeWrite({
         action: 'contact.create',
         authorization: request.headers.authorization,
@@ -224,6 +254,8 @@ export function registerOperationRoutes(api, operations, contextFor) {
         actor: principal.actor,
         correlationId: contextFor(request).correlationId,
         displayName: body.displayName,
+        phone: body.phone,
+        email: body.email,
         idempotencyKey: requireIdentifier(
           request.headers['idempotency-key'],
           'IDEMPOTENCY_KEY',
@@ -258,6 +290,35 @@ export function registerOperationRoutes(api, operations, contextFor) {
       });
       privateReadHeaders(reply);
       return reply.code(200).send(result);
+    }),
+  );
+
+  api.post('/api/v1/contacts/:contactId/details', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['phone', 'email', 'expectedVersion']);
+      const principal = await operations.authorizeWrite({
+        action: 'contact.rename',
+        authorization: request.headers.authorization,
+        cookie: request.headers.cookie,
+        csrfToken: request.headers['x-csrf-token'],
+        origin: request.headers.origin,
+      });
+      const result = await operations.setContactDetails({
+        actor: principal.actor,
+        contactId: requireIdentifier(params.contactId, 'CONTACT_ID'),
+        correlationId: contextFor(request).correlationId,
+        email: body.email,
+        expectedVersion: body.expectedVersion,
+        idempotencyKey: requireIdentifier(
+          request.headers['idempotency-key'],
+          'IDEMPOTENCY_KEY',
+        ),
+        phone: body.phone,
+      });
+      privateReadHeaders(reply);
+      return reply.code(200).send({ contact: result });
     }),
   );
 
@@ -373,6 +434,7 @@ async function respond(reply, operation) {
     const publicStatus = statusCode >= 500 ? 503 : statusCode;
     const allowed = new Set([
       'CONTACT_CONFLICT',
+      'CONTACT_PHONE_MATCH',
       'CONTACT_NOT_FOUND',
       'CONVERSATION_NOT_FOUND',
       'FORBIDDEN',

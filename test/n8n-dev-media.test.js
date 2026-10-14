@@ -181,7 +181,7 @@ for (const local of [false, true])
     );
     assert.deepEqual(snapshot, createDevTestWorkflow(source, { local }));
     // ADR 026 inbound reading adds nodes; outbound seller transports stay simulated.
-    assert.equal(snapshot.nodes.length, 91);
+    assert.equal(snapshot.nodes.length, 93);
     const metaRequests = snapshot.nodes.filter((/** @type {any} */ node) =>
       node.parameters?.url?.includes('graph.facebook.com'),
     );

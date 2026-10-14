@@ -80,7 +80,8 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 A versão com o aviso lê as colunas novas de `crm.orders`. A ordem é:
 
 1. **Migration** `0034_store_order_first_print.expand.sql` no console da
-   `silmer-api` (`npm run db:migrate`), **antes ou junto** do deploy da imagem
+   `silmer-api` (`node modules/database/src/cli.js --phase=expand`; a imagem
+   de produção não inclui `npm`), **antes ou junto** do deploy da imagem
    nova; conferir a `0034` em `crm_meta.schema_migrations`. É expand: a imagem
    anterior continua funcionando com ela. Sem a `0034`, a imagem nova responde
    `503` em todas as leituras de pedido.

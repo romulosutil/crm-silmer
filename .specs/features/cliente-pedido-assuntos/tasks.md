@@ -19,6 +19,8 @@ e push atômicos.
 explícito Pedido/Contato, leitura da Inbox e teste de mensagens com dois
 assuntos e retomada em novo ciclo. Commit e push atômicos.
 
+Entrega de CP-T01–T03: [PR #170](https://github.com/romulosutil/crm-silmer/pull/170).
+
 ## CP-T04 — Contrato do agente
 
 **Requisitos:** CP-15..18. Expandir API n8n, migrar briefing por Assunto,

@@ -270,18 +270,18 @@ export class PostgresOrderRepository {
               'CONVERSATION_NOT_FOUND',
             );
           }
-          if (conversation.terminal_at !== null) {
-            throw new OrderConflictError(
-              'Conversation is closed',
-              'CONVERSATION_CLOSED',
-            );
-          }
           await assertWriteOwner(
             transaction,
             input.actor,
             conversation,
             input.createdByKind === 'automation',
           );
+          if (conversation.terminal_at != null) {
+            throw new OrderConflictError(
+              'Conversation is closed',
+              'CONVERSATION_CLOSED',
+            );
+          }
           const linked = await transaction.query(
             `SELECT identity.current_contact_id FROM crm.conversations conversation
              JOIN crm.contact_identities identity

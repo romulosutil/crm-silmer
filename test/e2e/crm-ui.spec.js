@@ -349,6 +349,22 @@ async function mockCrm(page, options = {}) {
       });
       return;
     }
+    if (
+      /^\/api\/v1\/inbox\/conversations\/[^/]+\/subjects$/u.test(path) &&
+      request.method() === 'GET'
+    ) {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          currentSubjectId: null,
+          links: [],
+          orders: [],
+          ordersHasMore: false,
+          subjects: [],
+        }),
+      });
+      return;
+    }
     const inboxDetail = /^\/api\/v1\/inbox\/conversations\/([^/]+)$/u.exec(
       path,
     );
@@ -747,6 +763,75 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
   ).toBeFocused();
   await expect(page.getByRole('link', { name: 'Studio Malu' })).toBeVisible();
 
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('selects a conversation subject by keyboard and restores focus', async ({
+  page,
+}) => {
+  await mockCrm(page);
+  let currentSubjectId = 'subject-general';
+  await page.route(
+    '**/api/v1/inbox/conversations/conversation-1/subjects?*',
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          currentSubjectId,
+          links: [],
+          orders: [],
+          ordersHasMore: false,
+          subjects: [
+            {
+              id: 'subject-general',
+              kind: 'geral',
+              orderId: null,
+              orderNumber: null,
+              orderStatus: null,
+              position: 1,
+              isCurrent: currentSubjectId === 'subject-general',
+              selectedSource: 'human',
+              version: 1,
+            },
+            {
+              id: 'subject-order',
+              kind: 'pedido',
+              orderId: 'order-1',
+              orderNumber: '01-CRM',
+              orderStatus: 'pendente',
+              position: 2,
+              isCurrent: currentSubjectId === 'subject-order',
+              selectedSource: 'human',
+              version: 1,
+            },
+          ],
+        }),
+      });
+    },
+  );
+  await page.route(
+    '**/api/v1/inbox/conversations/conversation-1/subjects/subject-order/select',
+    async (route) => {
+      expect(route.request().headers()['idempotency-key']).toBeTruthy();
+      currentSubjectId = 'subject-order';
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ currentSubjectId, version: 2 }),
+      });
+    },
+  );
+
+  await page.goto('/inbox');
+  const panel = page.locator('.subject-panel');
+  const select = panel.getByRole('button', { name: 'Selecionar' });
+  await expect(select).toBeVisible();
+  await select.focus();
+  await select.press('Enter');
+  await expect(
+    panel.getByRole('heading', { name: 'Assuntos deste atendimento' }),
+  ).toBeFocused();
+  await expect(panel.getByRole('status')).toHaveText('Assunto atual alterado.');
+  expect(currentSubjectId).toBe('subject-order');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 

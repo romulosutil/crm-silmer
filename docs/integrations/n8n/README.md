@@ -557,6 +557,11 @@ incertos para reconciliação. A rota direta não é reativada automaticamente.
 - `401/403`: conferir credencial e capacidade do `AUTOMATION_EXECUTOR`.
 - `409 STALE_AUTOMATION_FENCE`: a pessoa assumiu, chegou mensagem nova ou a
   revisão já foi respondida; não enviar.
+- `409 SUBJECT_TARGET_REQUIRED`: o assunto atual não corresponde ao único
+  pendente que o workflow antigo conhece, ou há vários pendentes na conversa.
+  Não enviar nem repetir a mesma decisão; encaminhar para revisão humana até
+  o workflow usar identificadores explícitos de Assunto e Pedido (CP-T04).
+  Um handoff sem `briefing_patch` nem `open_order` continua permitido.
 - `send_authorized: false`: replay; não chamar a Meta novamente.
 - `message.send.unknown`: reconciliar pelo `command_id` antes de qualquer ação.
 - `order.opened: false` na reserva ou no handoff: o Pedido pendente não abriu,

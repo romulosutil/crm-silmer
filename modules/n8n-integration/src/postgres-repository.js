@@ -576,6 +576,42 @@ export class PostgresN8nIntegrationRepository {
         }
       }
 
+      // CP-14/CP-18: the legacy workflow only knows the conversation's one
+      // pending order. A selected different subject makes that target unsafe.
+      // Stop before reserving a reply, merging briefing or opening an order.
+      // A handoff without a patch or order request remains a safe escape.
+      if (
+        conversation &&
+        (eventInput.eventType === 'message.send.requested' ||
+          (eventInput.eventType === 'handoff.requested' &&
+            (eventInput.briefingPatch || eventInput.openOrder === true)))
+      ) {
+        const target = (
+          await client.query(
+            `SELECT
+               (SELECT count(*)::integer FROM crm.orders
+                WHERE conversation_id=$1 AND status='pendente') AS pending_count,
+               (SELECT id FROM crm.orders
+                WHERE conversation_id=$1 AND status='pendente' LIMIT 1)
+                 AS pending_id,
+               (SELECT id FROM crm.conversation_subjects
+                WHERE conversation_id=$1 AND is_current) AS subject_id,
+               (SELECT order_id FROM crm.conversation_subjects
+                WHERE conversation_id=$1 AND is_current) AS subject_order_id`,
+            [conversation.id],
+          )
+        ).rows[0];
+        if (
+          target.pending_count > 1 ||
+          (target.subject_id && target.subject_order_id !== target.pending_id)
+        ) {
+          throw new N8nConflictError(
+            'The selected subject requires an explicit order target',
+            'SUBJECT_TARGET_REQUIRED',
+          );
+        }
+      }
+
       let messageId = null;
       const outcome = {};
       if (eventInput.eventType === 'message.send.requested') {

@@ -147,10 +147,57 @@ if (connectionString) {
         source_revision: first.source_revision,
         technical: technical('send-1', 'send-request-1'),
       };
+      const contact = await pool.query(
+        `SELECT identity.current_contact_id AS id
+         FROM crm.conversations conversation
+         JOIN crm.contact_identities identity
+           ON identity.id=conversation.contact_identity_id
+         WHERE conversation.id=$1`,
+        [first.conversation_id],
+      );
+      await pool.query(
+        `INSERT INTO crm.conversation_subjects
+           (id, conversation_id, contact_id, order_id, kind, position,
+            is_current, selected_source, selected_by, selected_at,
+            created_by, created_by_kind, version, created_at, updated_at)
+         VALUES ($1,$2,$3,NULL,'geral',1,true,'human','seller-test',$4,
+                 'seller-test','human',1,$4,$4)`,
+        ['subject-other-topic', first.conversation_id, contact.rows[0].id, NOW],
+      );
+      await assert.rejects(service.recordEvent(reservation), {
+        code: 'SUBJECT_TARGET_REQUIRED',
+      });
+      assert.equal(
+        (
+          await pool.query(
+            `SELECT count(*)::integer AS count FROM crm.messages
+                           WHERE command_id=$1`,
+            [reservation.command_id],
+          )
+        ).rows[0].count,
+        0,
+      );
+      assert.equal(
+        (
+          await pool.query(
+            'SELECT briefing_version FROM crm.conversations WHERE id=$1',
+            [first.conversation_id],
+          )
+        ).rows[0].briefing_version,
+        '0',
+      );
+      await pool.query(
+        `UPDATE crm.conversation_subjects
+         SET kind='pedido', order_id=$2 WHERE id=$1`,
+        ['subject-other-topic', pendingOnFirst.id],
+      );
       assert.equal(
         (await service.recordEvent(reservation)).send_authorized,
         true,
       );
+      await pool.query('DELETE FROM crm.conversation_subjects WHERE id=$1', [
+        'subject-other-topic',
+      ]);
       assert.equal(
         (await service.recordEvent(reservation)).send_authorized,
         false,
@@ -351,6 +398,55 @@ if (connectionString) {
         handoffs: 1,
         messages: 3,
       });
+
+      // A conflicting subject still permits a pure handoff: the seller can
+      // resolve the ambiguity without the legacy agent touching any order.
+      const ambiguous = await service.receiveInbound({
+        ...inbound,
+        contact: { name: 'Another Synthetic', wa_id: '5527999999998' },
+        event_id: 'wamid.inbound.ambiguous',
+        message: {
+          external_id: 'wamid.inbound.ambiguous',
+          text: 'Quero tratar de outro assunto',
+          type: 'text',
+        },
+        occurred_at: currentTime.toISOString(),
+        technical: technical('inbound-ambiguous', 'inbound-ambiguous'),
+      });
+      const ambiguousContact = await pool.query(
+        `SELECT identity.current_contact_id AS id
+         FROM crm.conversations conversation
+         JOIN crm.contact_identities identity
+           ON identity.id=conversation.contact_identity_id
+         WHERE conversation.id=$1`,
+        [ambiguous.conversation_id],
+      );
+      await pool.query(
+        `INSERT INTO crm.conversation_subjects
+           (id, conversation_id, contact_id, order_id, kind, position,
+            is_current, selected_source, selected_by, selected_at,
+            created_by, created_by_kind, version, created_at, updated_at)
+         VALUES ($1,$2,$3,NULL,'geral',1,true,'human','seller-test',$4,
+                 'seller-test','human',1,$4,$4)`,
+        [
+          'subject-ambiguous',
+          ambiguous.conversation_id,
+          ambiguousContact.rows[0].id,
+          currentTime,
+        ],
+      );
+      const safeHandoff = await service.recordEvent({
+        automation_epoch: ambiguous.automation_epoch,
+        conversation_id: ambiguous.conversation_id,
+        event_id: 'handoff-ambiguous',
+        event_type: 'handoff.requested',
+        handoff: { reason: 'negotiation', summary: 'Outro assunto.' },
+        occurred_at: currentTime.toISOString(),
+        schema_version: '1.0',
+        source_revision: ambiguous.source_revision,
+        technical: technical('handoff-ambiguous', 'handoff-ambiguous'),
+      });
+      assert.match(safeHandoff.handoff_id, /^handoff-/u);
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

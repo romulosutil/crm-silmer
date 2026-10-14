@@ -550,8 +550,9 @@ const blockerNotes = computed(() =>
     >
       <h2 id="generate-title">Gerar o pedido {{ order.number }}?</h2>
       <p id="generate-description">
-        O pedido é confirmado, a data do pedido passa a ser hoje e a ficha em
-        PDF fica pronta para imprimir. Para mudar algo depois, reabra o pedido.
+        O pedido é confirmado, a data do pedido passa a ser hoje e a ficha para
+        impressão fica disponível no navegador. Para mudar algo depois, reabra o
+        pedido.
       </p>
       <dl>
         <div>

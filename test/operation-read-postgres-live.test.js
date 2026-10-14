@@ -247,12 +247,16 @@ if (connectionString) {
       const insertOrder = (sequence, conversationId, status) =>
         pool.query(
           `INSERT INTO crm.orders
-             (id, number_sequence, number, conversation_id, status, fab_code,
+             (id, number_sequence, number, conversation_id, contact_id, status, fab_code,
               ficha_envelope, created_by_kind, created_at, updated_at,
               final_amount_cents, payment_condition, order_date, confirmed_at,
               confirmed_by)
            VALUES ($1, $2::bigint, lpad($2::bigint::text, 2, '0') || '-CRM',
-                   $3, $4, '01',
+                   $3, (SELECT identity.current_contact_id
+                        FROM crm.conversations conversation
+                        JOIN crm.contact_identities identity
+                          ON identity.id = conversation.contact_identity_id
+                        WHERE conversation.id = $3), $4, '01',
                    '{"algorithm":"AES-256-GCM"}'::jsonb, 'user', $5, $5,
                    $6, $7, $8, $9, $10)`,
           [

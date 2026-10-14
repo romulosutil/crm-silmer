@@ -67,6 +67,16 @@ async function setup(page, options = {}) {
       return route.fulfill({
         json: { items: conversations, totalCount: 2, nextCursor: null },
       });
+    if (/^\/api\/v1\/inbox\/conversations\/[^/]+\/subjects$/.test(path))
+      return route.fulfill({
+        json: {
+          currentSubjectId: null,
+          links: [],
+          orders: [],
+          ordersHasMore: false,
+          subjects: [],
+        },
+      });
     const detail = /^\/api\/v1\/inbox\/conversations\/([^/]+)$/.exec(path);
     if (detail)
       return route.fulfill({

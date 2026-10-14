@@ -560,11 +560,19 @@ async function loadSubjects(conversationId) {
     );
     if (controller !== subjectController || activeId.value !== conversationId)
       return;
-    subjectState.value = response.data;
+    const subjects = response.data;
+    if (
+      !Array.isArray(subjects?.subjects) ||
+      !Array.isArray(subjects.links) ||
+      !Array.isArray(subjects.orders)
+    ) {
+      throw new Error('Invalid conversation subjects response');
+    }
+    subjectState.value = subjects;
     messageSubjectDrafts.value = Object.fromEntries(
       (detail.value?.messages ?? []).map((message) => [
         message.id,
-        response.data.links
+        subjects.links
           .filter((link) => link.messageId === message.id)
           .map((link) => link.subjectId),
       ]),

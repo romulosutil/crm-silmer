@@ -276,7 +276,7 @@ export class PostgresOrderRepository {
             conversation,
             input.createdByKind === 'automation',
           );
-          if (conversation.terminal_at != null) {
+          if (conversation.terminal_at !== null) {
             throw new OrderConflictError(
               'Conversation is closed',
               'CONVERSATION_CLOSED',

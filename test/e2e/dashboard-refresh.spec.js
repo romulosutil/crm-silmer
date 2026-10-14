@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{failFirst?: boolean}} [options]
+ * @param {{failFirstInbox?: boolean, failFirstSummary?: boolean}} [options]
  */
 async function mockDashboard(page, options = {}) {
   let summaryReads = 0;
@@ -40,11 +40,15 @@ async function mockDashboard(page, options = {}) {
       });
     }
     if (path === '/api/v1/inbox/conversations') {
+      if (options.failFirstInbox) {
+        options.failFirstInbox = false;
+        return json({ code: 'UNAVAILABLE' }, 503);
+      }
       return json({ items: [], totalCount: 0 });
     }
     if (path === '/api/v1/orders/summary') {
       summaryReads += 1;
-      if ((summaryReads === 1 && options.failFirst) || failNext) {
+      if ((summaryReads === 1 && options.failFirstSummary) || failNext) {
         failNext = false;
         return json({ code: 'UNAVAILABLE' }, 503);
       }
@@ -93,7 +97,10 @@ test('keeps loaded sales visible after a live refresh fails and retries on deman
 test('shows a clear initial error and recovers with retry', async ({
   page,
 }) => {
-  await mockDashboard(page, { failFirst: true });
+  await mockDashboard(page, {
+    failFirstInbox: true,
+    failFirstSummary: true,
+  });
   await page.goto('/dashboard');
 
   await expect(
@@ -101,4 +108,40 @@ test('shows a clear initial error and recovers with retry', async ({
   ).toBeVisible();
   await page.getByRole('button', { name: 'Tentar novamente' }).click();
   await expect(page.getByText('R$ 2.500,00')).toBeVisible();
+});
+
+test('keeps sales visible when the inbox read fails and recovers', async ({
+  page,
+}) => {
+  await mockDashboard(page, { failFirstInbox: true });
+  await page.goto('/dashboard');
+
+  await expect(page.getByText('R$ 2.500,00')).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText(
+    'indicadores de atendimento',
+  );
+  await expect(
+    page.getByRole('heading', { name: 'Atendimento agora' }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Atendimento agora' }),
+  ).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('keeps inbox visible when the sales read fails and recovers', async ({
+  page,
+}) => {
+  await mockDashboard(page, { failFirstSummary: true });
+  await page.goto('/dashboard');
+
+  await expect(
+    page.getByRole('heading', { name: 'Atendimento agora' }),
+  ).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('indicadores de vendas');
+  await expect(page.getByText('R$ 0,00')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(page.getByText('R$ 2.500,00')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });

@@ -436,6 +436,10 @@ button.chip:hover,
   gap: 1rem;
 }
 
+.dash-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .dash-grid > *,
 .inbox > *,
 .clients-layout > * {

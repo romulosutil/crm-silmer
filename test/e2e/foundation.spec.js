@@ -24,7 +24,9 @@ test('keeps the status announcement and document language available', async ({
   await page.goto('/');
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
-  await expect(page.getByRole('status')).toHaveText('Entre para continuar.');
+  await expect(page.locator('p.sr-only[role="status"]')).toHaveText(
+    'Entre para continuar.',
+  );
 });
 
 test('uses the light theme by default, even when the system is dark', async ({
@@ -279,7 +281,9 @@ test('submits login, restores and closes a session by keyboard without browser s
   });
 
   await page.goto('/');
-  await expect(page.getByRole('status')).toHaveText('Entre para continuar.');
+  await expect(page.locator('p.sr-only[role="status"]')).toHaveText(
+    'Entre para continuar.',
+  );
 
   const loginPanel = page.getByRole('region', {
     name: 'Boas-vindas de volta',
@@ -298,7 +302,7 @@ test('submits login, restores and closes a session by keyboard without browser s
   await expect(
     page.getByRole('heading', { name: 'Dashboard', level: 1 }),
   ).toBeFocused();
-  await expect(page.getByRole('status')).toHaveText(
+  await expect(page.locator('p.sr-only[role="status"]')).toHaveText(
     'Sessão iniciada com segurança.',
   );
 
@@ -334,7 +338,9 @@ test('submits login, restores and closes a session by keyboard without browser s
   await expect(page.getByRole('button', { name: 'Sistema' })).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByRole('status')).toHaveText('Sessão restaurada.');
+  await expect(page.locator('p.sr-only[role="status"]')).toHaveText(
+    'Sessão restaurada.',
+  );
   await expect(
     page.getByRole('heading', { name: 'Dashboard', level: 1 }),
   ).toBeFocused();
@@ -342,7 +348,9 @@ test('submits login, restores and closes a session by keyboard without browser s
 
   await page.getByRole('button', { name: 'Sair' }).focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('status')).toHaveText('Sessão encerrada.');
+  await expect(page.locator('p.sr-only[role="status"]')).toHaveText(
+    'Sessão encerrada.',
+  );
   await expect(
     page.getByRole('heading', { name: 'Boas-vindas de volta' }),
   ).toBeFocused();

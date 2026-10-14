@@ -16,7 +16,9 @@ const liveEvent = inject('liveEvent', ref(null));
 // while the Dashboard is open.
 const menuStoreCount = inject('storeNewCount', ref(0));
 const loading = ref(true);
-const hasLoaded = ref(false);
+const inboxLoaded = ref(false);
+const summaryLoaded = ref(false);
+const hasLoaded = computed(() => inboxLoaded.value || summaryLoaded.value);
 const error = ref('');
 const inbox = ref({ items: [], totalCount: 0 });
 const summary = ref({
@@ -77,19 +79,38 @@ async function loadDashboard() {
   controller = currentController;
   loading.value = true;
   try {
-    const [inboxResponse, summaryResponse] = await Promise.all([
+    const [inboxResult, summaryResult] = await Promise.allSettled([
       request('/api/v1/inbox/conversations?limit=100', {
         signal: currentController.signal,
       }),
       request('/api/v1/orders/summary', { signal: currentController.signal }),
     ]);
-    inbox.value = inboxResponse.data;
-    summary.value = summaryResponse.data;
-    const storeCount = Number(summaryResponse.data?.storeNewCount ?? 0);
-    menuStoreCount.value =
-      Number.isSafeInteger(storeCount) && storeCount > 0 ? storeCount : 0;
-    hasLoaded.value = true;
-    error.value = '';
+    if (controller !== currentController || currentController.signal.aborted)
+      return;
+    if (inboxResult.status === 'fulfilled') {
+      inbox.value = inboxResult.value.data;
+      inboxLoaded.value = true;
+    }
+    if (summaryResult.status === 'fulfilled') {
+      summary.value = summaryResult.value.data;
+      summaryLoaded.value = true;
+      const storeCount = Number(summaryResult.value.data?.storeNewCount ?? 0);
+      menuStoreCount.value =
+        Number.isSafeInteger(storeCount) && storeCount > 0 ? storeCount : 0;
+    }
+    const failed = [];
+    if (summaryResult.status === 'rejected') failed.push('vendas');
+    if (inboxResult.status === 'rejected') failed.push('atendimento');
+    const stale =
+      (summaryResult.status === 'rejected' && summaryLoaded.value) ||
+      (inboxResult.status === 'rejected' && inboxLoaded.value);
+    error.value = failed.length
+      ? `Não foi possível ${stale ? 'atualizar' : 'carregar'} os indicadores de ${failed.join(' e ')}. ${
+          stale
+            ? 'Os dados exibidos podem estar desatualizados.'
+            : 'Tente novamente.'
+        }`
+      : '';
   } catch (cause) {
     if (cause?.name !== 'AbortError') {
       error.value = hasLoaded.value
@@ -185,7 +206,7 @@ onBeforeUnmount(() => {
           {{ loading ? 'Consultando…' : 'Tentar novamente' }}
         </button>
       </div>
-      <dl class="kpi-grid">
+      <dl v-if="summaryLoaded" class="kpi-grid">
         <div class="kpi kpi--accent">
           <dt>Valor vendido</dt>
           <dd class="kpi-value">{{ money(summary.soldAmountCents) }}</dd>
@@ -210,8 +231,16 @@ onBeforeUnmount(() => {
         </div>
       </dl>
 
-      <div class="dash-grid section-gap">
-        <section class="surface" aria-labelledby="sales-reading-title">
+      <div
+        v-if="summaryLoaded || inboxLoaded"
+        class="dash-grid section-gap"
+        :class="{ 'dash-grid--single': !(summaryLoaded && inboxLoaded) }"
+      >
+        <section
+          v-if="summaryLoaded"
+          class="surface"
+          aria-labelledby="sales-reading-title"
+        >
           <div class="panel-head">
             <h2 id="sales-reading-title">Leitura das vendas</h2>
             <p>Somente pedidos confirmados</p>
@@ -228,7 +257,11 @@ onBeforeUnmount(() => {
           </dl>
           <p><RouterLink to="/pedidos">Analisar pedidos</RouterLink></p>
         </section>
-        <section class="surface" aria-labelledby="attention-title">
+        <section
+          v-if="inboxLoaded"
+          class="surface"
+          aria-labelledby="attention-title"
+        >
           <div class="panel-head">
             <h2 id="attention-title">Atendimento agora</h2>
             <p>Nas 100 conversas mais recentes</p>
@@ -247,7 +280,7 @@ onBeforeUnmount(() => {
         </section>
       </div>
 
-      <div class="section-gap">
+      <div v-if="inboxLoaded" class="section-gap">
         <section class="surface" aria-labelledby="channels-title">
           <div class="panel-head">
             <h2 id="channels-title">Conversas por canal</h2>
@@ -276,7 +309,11 @@ onBeforeUnmount(() => {
         </section>
       </div>
 
-      <section class="surface section-gap" aria-labelledby="recent-title">
+      <section
+        v-if="inboxLoaded"
+        class="surface section-gap"
+        aria-labelledby="recent-title"
+      >
         <div class="panel-head">
           <h2 id="recent-title">Conversas recentes</h2>
           <p>Conteúdo mínimo necessário à operação</p>

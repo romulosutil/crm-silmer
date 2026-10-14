@@ -123,6 +123,7 @@ export function createOrderRuntime(options) {
   const fileService = options.files
     ? createOrderFileService({
         async authorizeOwnership({ actor, conversationId }) {
+          if (!conversationId) throw new OrderForbiddenError();
           await ownConversation(actor, conversationId);
         },
         clock: options.clock,

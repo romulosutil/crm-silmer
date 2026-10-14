@@ -75,6 +75,52 @@ test('normalizes WhatsApp buttons inside canonical text content', async () => {
   assert.equal(normalized.technical.actor, 'AUTOMATION_EXECUTOR');
 });
 
+test('site chat keeps its synthetic identity apart from the claimed phone', async () => {
+  const { calls, service } = harness();
+  const payload = {
+    channel: 'site_chat',
+    contact: { external_id: '999024249434048109030647017182301789831168' },
+    event_id: 'site-event-1',
+    message: {
+      external_id: 'site-message-1',
+      text: 'Quero orçamento',
+      type: 'text',
+    },
+    metadata: { provider_account_id: 'silmer-site' },
+    occurred_at: NOW.toISOString(),
+    schema_version: '1.0',
+    site_contact: { name: ' Ana Silva ', phone: '(27) 99999-1234' },
+    technical: TECHNICAL,
+  };
+  await service.receiveInbound(payload);
+  assert.equal(calls[0].input.channel, 'site_chat');
+  assert.equal(calls[0].input.provider, 'site');
+  assert.equal(calls[0].input.externalIdentityId, payload.contact.external_id);
+  assert.equal(calls[0].input.identityKind, 'handle');
+  assert.equal(calls[0].input.phoneStatus, 'pending');
+  assert.deepEqual(calls[0].input.siteContact, {
+    name: 'Ana Silva',
+    phone: '5527999991234',
+  });
+  for (const invalid of [
+    { ...payload, contact: { wa_id: payload.contact.external_id } },
+    { ...payload, contact: { external_id: '5527999991234' } },
+    { ...payload, contact: { external_id: '999123456789012' } },
+    { ...payload, provider: 'meta' },
+    { ...payload, site_contact: { name: 'Ana', phone: '999' } },
+    {
+      ...payload,
+      site_contact: { name: 'Ana', phone: '5527999991234', role: 'owner' },
+    },
+  ]) {
+    await assert.rejects(service.receiveInbound(invalid), N8nValidationError);
+  }
+  await assert.rejects(
+    service.receiveInbound({ ...payload, channel: 'whatsapp' }),
+    N8nValidationError,
+  );
+});
+
 test('passes source revision, epoch and briefing patch to the event repository', async () => {
   const { calls, service } = harness();
   for (const eventType of ['message.send.requested', 'message.send.unknown']) {
@@ -112,6 +158,59 @@ test('passes source revision, epoch and briefing patch to the event repository',
       [3, 7, null],
     ],
   );
+});
+
+test('explicit subject target is an inseparable pair and cannot open a different order', async () => {
+  const { calls, service } = harness();
+  const payload = {
+    automation_epoch: 3,
+    briefing_patch: { order_name: 'Pedido B' },
+    command_id: 'command-target-b',
+    conversation_id: 'conversation-1',
+    event_id: 'event-target-b',
+    event_type: 'message.send.requested',
+    message: { text: 'Qual a cor?', type: 'text' },
+    occurred_at: NOW.toISOString(),
+    source_revision: 7,
+    schema_version: '1.0',
+    technical: TECHNICAL,
+  };
+  await service.recordEvent({
+    ...payload,
+    subject_id: 'subject-b',
+    order_id: 'order-b',
+  });
+  assert.equal(calls.at(-1)?.input.subjectId, 'subject-b');
+  assert.equal(calls.at(-1)?.input.orderId, 'order-b');
+  for (const invalid of [
+    { subject_id: 'subject-b' },
+    { order_id: 'order-b' },
+    { subject_id: 'subject-b', order_id: 'order-b', open_order: true },
+  ]) {
+    await assert.rejects(
+      service.recordEvent({ ...payload, ...invalid }),
+      N8nValidationError,
+    );
+  }
+  await assert.rejects(
+    service.recordEvent({ ...payload, target_contract: 'subject-v1' }),
+    N8nValidationError,
+  );
+  await assert.rejects(
+    service.recordEvent({
+      ...payload,
+      technical: {
+        ...TECHNICAL,
+        workflowVersion: 'mvp-simple-15',
+      },
+    }),
+    N8nValidationError,
+  );
+  await service.recordEvent({
+    ...payload,
+    target_contract: 'subject-v1',
+    open_order: true,
+  });
 });
 
 test('accepts only the structured pre-ficha fields used by the guided agent', async () => {

@@ -100,7 +100,15 @@ test('keeps committed n8n fixtures free from recognizable PII and secrets', asyn
   assert.ok(names.length >= 7);
 
   for (const name of names) {
-    const content = await readFile(new URL(name, fixtureRoot), 'utf8');
+    let content = await readFile(new URL(name, fixtureRoot), 'utf8');
+    if (name === 'messages-inbound-site-chat.json') {
+      const siteEvent = JSON.parse(content);
+      assert.match(siteEvent.contact.external_id, /^999\d{39}$/u);
+      assert.equal(siteEvent.site_contact.phone, '5527999991234');
+      siteEvent.contact.external_id = '[synthetic-site-id]';
+      siteEvent.site_contact.phone = '[synthetic-phone]';
+      content = JSON.stringify(siteEvent);
+    }
     for (const pattern of piiOrSecretPatterns) {
       assert.doesNotMatch(
         content,

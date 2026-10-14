@@ -93,6 +93,19 @@ async function seedConversation(pool, options = {}) {
     provider: 'meta',
     providerAccountId: `account-orders-${runId}`,
   });
+  // Order creation now requires a callable phone. The order suite uses a
+  // synthetic manual alias when it seeds a non-WhatsApp channel.
+  await pool.query(
+    `INSERT INTO crm.contact_phone_lookup
+       (contact_id, identity_id, phone_hash, source)
+     VALUES ($1, $2, $3, $4)`,
+    [
+      resolved.contact.id,
+      whatsapp ? resolved.identity.id : null,
+      runId.padEnd(64, '0'),
+      whatsapp ? 'whatsapp' : 'manual',
+    ],
+  );
   const { conversation } = await inbox.receiveInbound({
     contactId: resolved.contact.id,
     correlationId: `correlation-message-${runId}`,
@@ -307,6 +320,7 @@ if (connectionString) {
     );
     const port = new PostgresOrderConversationPort({
       contactEnvelopeKey: CONTACT_KEY,
+      contactLookupKey: Buffer.alloc(32, 66),
       database,
       envelopeKey: ENVELOPE_KEY,
     });
@@ -383,6 +397,7 @@ if (connectionString) {
     const database = databaseFor(pool);
     const port = new PostgresOrderConversationPort({
       contactEnvelopeKey: CONTACT_KEY,
+      contactLookupKey: Buffer.alloc(32, 66),
       database,
       envelopeKey: ENVELOPE_KEY,
     });
@@ -466,6 +481,7 @@ if (connectionString) {
     const tag = randomUUID().replaceAll('-', '').slice(0, 8);
     const port = new PostgresOrderConversationPort({
       contactEnvelopeKey: CONTACT_KEY,
+      contactLookupKey: Buffer.alloc(32, 66),
       database: databaseFor(pool),
       envelopeKey: ENVELOPE_KEY,
     });
@@ -702,6 +718,7 @@ if (connectionString) {
       auditTrail: new PostgresAuditTrail(database),
       conversations: new PostgresOrderConversationPort({
         contactEnvelopeKey: CONTACT_KEY,
+        contactLookupKey: Buffer.alloc(32, 66),
         database,
         envelopeKey: ENVELOPE_KEY,
       }),
@@ -1193,6 +1210,7 @@ if (connectionString) {
     });
     const port = new PostgresOrderConversationPort({
       contactEnvelopeKey: CONTACT_KEY,
+      contactLookupKey: Buffer.alloc(32, 66),
       database: databaseFor(pool),
       envelopeKey: ENVELOPE_KEY,
     });

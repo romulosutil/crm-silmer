@@ -913,6 +913,18 @@ com o CRM não muda.
 | SITE-05 | DEV e LOCAL não publicam o chat público; o chat de teste aceita imagem e áudio.                                                                                         |
 | SITE-06 | O workflow passa a `mvp-simple-14` (DEV `dev-mvp-simple-15`) sem mudança de contrato nem ordem de implantação com o CRM.                                                |
 
+### Evolução do chat para o piloto de outubro (ADR 034)
+
+Os critérios SITE-01..06 acima descrevem a entrega anterior da ADR 026.
+Para o piloto com nome e telefone declarados, prevalecem [CP-21..22](../cliente-pedido-assuntos/spec.md),
+[CP-T06](../cliente-pedido-assuntos/tasks.md) e a [ADR 034](../../../docs/adr/034-chat-do-site-com-telefone-declarado.md):
+o formulário coleta os dados antes da primeira mensagem, o CRM os guarda como
+declaração não confirmada da sessão, e o Pedido novo permanece isolado no
+Contato sintético. O chat não recebe histórico ou Pedidos de outra identidade.
+O CRM deve estar atualizado antes da nova versão do workflow. A confirmação
+pelo WhatsApp e a eventual correlação auditada ficam para uma etapa posterior;
+o piloto de chat funciona sem o canal WhatsApp disponível.
+
 ## Venda da loja do site (ADR 027, 07/10/2026)
 
 O PO pediu que o aviso de Pix da loja do site vire um pedido travado e "Pago"

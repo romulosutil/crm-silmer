@@ -43,7 +43,7 @@ test('ships connected screens without the demonstration dataset', async () => {
     'utf8',
   );
   assert.match(format, /whatsapp: 'WhatsApp'/u);
-  assert.doesNotMatch(format, /instagram/iu);
+  assert.match(format, /site_chat: 'Chat do site'/u);
   await assert.rejects(
     access(new URL('apps/edge-web/src/data/demo-crm.js', rootUrl)),
   );

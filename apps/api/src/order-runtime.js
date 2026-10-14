@@ -591,6 +591,10 @@ export function createOrderApiRuntime(database, options) {
         environment.CONTACT_IDENTITY_ENVELOPE_KEY,
         'CONTACT_IDENTITY_ENVELOPE_KEY',
       ),
+      contactLookupKey: readEnvelopeKey(
+        environment.CONTACT_IDENTITY_LOOKUP_KEY,
+        'CONTACT_IDENTITY_LOOKUP_KEY',
+      ),
       database,
       envelopeKey,
     }),

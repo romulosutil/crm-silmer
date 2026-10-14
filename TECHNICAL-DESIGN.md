@@ -126,6 +126,20 @@ A identidade do canal permanece ausente até correlação verificável. O fluxo
 legado n8n continua restrito a um pendente por Conversa até Assuntos e alvo
 explícito serem implantados em CRM e workflow.
 
+O contrato `subject-v1` (CP-T04) devolve os Assuntos e seus briefings cifrados
+por Assunto no inbound. Toda alteração posterior à abertura leva
+`subject_id` e `order_id` no evento n8n; o CRM valida Contato, Pedido, seleção
+humana, epoch, revisão e idempotência antes de projetar na ficha. O primeiro
+`open_order` cria/recupera Assunto junto ao Pedido e retorna ambos os IDs;
+replay não autoriza novo envio. O workflow legado mantém seu briefing na
+Conversa até a troca, feita somente após instalar o CRM.
+
+Novo cadastro manual exige nome e telefone; e-mail é opcional (ADR 033).
+Novo Pedido manual exige telefone no Contato, inclusive se legado, mas a
+consulta e a correção do legado permanecem disponíveis. A busca por telefone
+usa números normalizados das identidades confirmadas e do cadastro manual;
+duplicatas são apresentadas para escolha humana sem união automática.
+
 Encerrar Conversa usa comando humano com versão e chave idempotente. A
 transação registra `state = encerrada`, `terminal_at`, `closed_by`, motivo
 `concluido`/`sem_pedido`, auditoria e comando de fechamento ao n8n. Com Pedido

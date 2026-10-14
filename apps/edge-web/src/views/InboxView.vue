@@ -1465,7 +1465,7 @@ onBeforeUnmount(() => {
           :key="active.id"
           :conversation-id="active.id"
           :expected-version="active.version"
-          :disabled="busy || !canReply"
+          :disabled="busy || !canReply || active.channel === 'site_chat'"
           @sending-change="mediaSending = $event"
           @sent="mediaSent"
         >

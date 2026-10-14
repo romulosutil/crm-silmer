@@ -42,7 +42,7 @@ test('keeps the canonical MVP path while replacing only WhatsApp transport', asy
   assert.equal(dev.source.id, DEV_WORKFLOW_ID);
   assert.equal(dev.source.active, false);
   // Canonical inbound/site/media chains, minus two public site triggers, plus nine DEV nodes.
-  assert.equal(nodes.length, 91);
+  assert.equal(nodes.length, 93);
   assert.equal(names.has('Site - Receber mensagem do chat (MVP)'), false);
   assert.equal(names.has('Site - Montar evento do chat (MVP)'), false);
   assert.equal(

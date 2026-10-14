@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { Pool } from 'pg';
+import { contactPhoneHash } from '../modules/contacts/src/index.js';
 
 import { createN8nApiRuntime } from '../apps/api/src/n8n-runtime.js';
 import {
@@ -52,6 +53,7 @@ if (connectionString) {
       authorizeOwnership: async () => {},
       conversations: new PostgresOrderConversationPort({
         contactEnvelopeKey,
+        contactLookupKey: Buffer.alloc(32, 73),
         database,
         envelopeKey,
       }),
@@ -195,6 +197,14 @@ if (connectionString) {
         (await service.recordEvent(reservation)).send_authorized,
         true,
       );
+      await pool.query(
+        'DELETE FROM crm.agent_briefing_projections WHERE subject_id=$1',
+        ['subject-other-topic'],
+      );
+      await pool.query(
+        'DELETE FROM crm.subject_briefings WHERE subject_id=$1',
+        ['subject-other-topic'],
+      );
       await pool.query('DELETE FROM crm.conversation_subjects WHERE id=$1', [
         'subject-other-topic',
       ]);
@@ -284,6 +294,7 @@ if (connectionString) {
       });
       const latestMessage = await new PostgresOrderConversationPort({
         contactEnvelopeKey,
+        contactLookupKey: Buffer.alloc(32, 73),
         database,
         envelopeKey,
       }).readLatestMessageStates([first.conversation_id]);
@@ -469,6 +480,7 @@ if (connectionString) {
       authorizeOwnership: async () => {},
       conversations: new PostgresOrderConversationPort({
         contactEnvelopeKey,
+        contactLookupKey: Buffer.alloc(32, 73),
         database,
         envelopeKey,
       }),
@@ -811,6 +823,7 @@ if (connectionString) {
       authorizeOwnership: async () => {},
       conversations: new PostgresOrderConversationPort({
         contactEnvelopeKey,
+        contactLookupKey: Buffer.alloc(32, 73),
         database,
         envelopeKey,
       }),
@@ -818,14 +831,14 @@ if (connectionString) {
       repository: new PostgresOrderRepository({ database, envelopeKey }),
     });
     /** @param {any} ordersPort */
-    const serviceWith = (ordersPort) =>
+    const serviceWith = (ordersPort, databasePort = database) =>
       createN8nIntegrationService({
         clock: () => NOW,
         idFactory: (kind) => `${kind}-open-${++sequence}`,
         repository: new PostgresN8nIntegrationRepository({
           contactEnvelopeKey,
           contactLookupKey: Buffer.alloc(32, 73),
-          database,
+          database: databasePort,
           envelopeKey,
           messageEnvelopeKey: Buffer.alloc(32, 74),
           orders: ordersPort,
@@ -922,6 +935,7 @@ if (connectionString) {
       assert.equal(original.order.opened, true);
       assert.equal(replay.order.opened, true);
       assert.equal(replay.order.id, original.order.id);
+      assert.equal(replay.order.subject_id, original.order.subject_id);
       assert.deepEqual([original.order.created, replay.order.created].sort(), [
         false,
         true,
@@ -945,6 +959,7 @@ if (connectionString) {
       assert.deepEqual(reused.order, {
         created: false,
         id: original.order.id,
+        subject_id: original.order.subject_id,
         opened: true,
       });
       const projected = await orders.get(original.order.id);
@@ -1108,6 +1123,75 @@ if (connectionString) {
         healed.order.id,
       ]);
 
+      // A crash after the send fence and order creation but before subject
+      // insertion is repaired by a replay. Replay never authorizes Meta again.
+      let failSubjectInsert = true;
+      const brokenSubjectDatabase = {
+        ...database,
+        transaction: (/** @type {(client: any) => Promise<any>} */ work) =>
+          withTransaction(pool, (client) =>
+            work({
+              query: (
+                /** @type {string} */ sql,
+                /** @type {unknown[]} */ values,
+              ) => {
+                if (
+                  failSubjectInsert &&
+                  sql.includes('INSERT INTO crm.conversation_subjects')
+                ) {
+                  failSubjectInsert = false;
+                  throw Object.assign(
+                    new Error('synthetic subject insert failure'),
+                    { code: '57P01' },
+                  );
+                }
+                return client.query(sql, values);
+              },
+            }),
+          ),
+      };
+      const interrupted = serviceWith(orders, brokenSubjectDatabase);
+      const crashContext = await inbound('5527900000106', 1);
+      const crashEvent = reservation(crashContext, 'subject-crash-1', {
+        briefing_patch: { product_type: 'camisa' },
+        open_order: true,
+      });
+      console.error = () => {};
+      let crashed;
+      try {
+        crashed = await interrupted.recordEvent(crashEvent);
+      } finally {
+        console.error = originalError;
+      }
+      assert.equal(crashed.send_authorized, true);
+      assert.equal(crashed.order.opened, false);
+      assert.equal(
+        (await pendingOrders(crashContext.conversation_id)).length,
+        1,
+      );
+      const recovered = await service.recordEvent(crashEvent);
+      assert.equal(recovered.duplicate, true);
+      assert.equal(recovered.send_authorized, false);
+      assert.equal(recovered.order.opened, true);
+      assert.equal(recovered.order.created, false);
+      const persistedSubject = await pool.query(
+        'SELECT id FROM crm.conversation_subjects WHERE conversation_id = $1 AND order_id = $2',
+        [crashContext.conversation_id, recovered.order.id],
+      );
+      assert.equal(persistedSubject.rows[0]?.id, recovered.order.subject_id);
+      const secondTurn = await inbound('5527900000106', 2);
+      await assert.rejects(
+        service.recordEvent({
+          ...reservation(secondTurn, 'subject-second-turn', {
+            briefing_patch: { quantity: 40 },
+            open_order: true,
+          }),
+          target_contract: 'subject-v1',
+        }),
+        (error) =>
+          /** @type {any} */ (error)?.code === 'SUBJECT_TARGET_REQUIRED',
+      );
+
       // Older workflows still send order.intent_confirmed (deprecated).
       const key = Buffer.alloc(32, 91).toString('base64');
       const runtime = createN8nApiRuntime(database, {
@@ -1136,6 +1220,478 @@ if (connectionString) {
       assert.deepEqual(await pendingOrders(quiet.conversation_id), [
         legacyNew.order_id,
       ]);
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
+
+  test('subject target fences two active orders, ambiguity, replay and cross-cycle projection', async () => {
+    assertTestDatabase(connectionString);
+    const pool = new Pool({ connectionString, max: 12 });
+    const originalError = console.error;
+    const database = {
+      query: pool.query.bind(pool),
+      transaction: (/** @type {(client: any) => Promise<any>} */ work) =>
+        withTransaction(pool, work),
+    };
+    const envelopeKey = Buffer.alloc(32, 81);
+    const contactEnvelopeKey = Buffer.alloc(32, 82);
+    const orders = createOrderService({
+      authorizeOwnership: async () => {},
+      conversations: new PostgresOrderConversationPort({
+        contactEnvelopeKey,
+        contactLookupKey: Buffer.alloc(32, 73),
+        database,
+        envelopeKey,
+      }),
+      fabCode: 'FAB-TEST',
+      repository: new PostgresOrderRepository({ database, envelopeKey }),
+    });
+    let sequence = 0;
+    let failProjection = true;
+    let switchHumanTarget = false;
+    let activeConversationId = '';
+    const ordersPort = {
+      ensurePendingFromIntent: orders.ensurePendingFromIntent,
+      async projectAgentBriefing(/** @type {any} */ input) {
+        if (failProjection) {
+          failProjection = false;
+          throw Object.assign(new Error('synthetic projection failure'), {
+            code: 'PROJECTION_UNAVAILABLE',
+          });
+        }
+        if (switchHumanTarget) {
+          switchHumanTarget = false;
+          await pool.query(
+            `UPDATE crm.conversation_subjects SET is_current = false
+             WHERE conversation_id = $1 AND is_current`,
+            [activeConversationId],
+          );
+          await pool.query(
+            `UPDATE crm.conversation_subjects
+             SET is_current = true, selected_source = 'human', selected_by = 'seller-test',
+                 selected_at = $1 WHERE id = 'subject-a'`,
+            [NOW],
+          );
+        }
+        return orders.projectAgentBriefing(input);
+      },
+    };
+    const service = createN8nIntegrationService({
+      clock: () => NOW,
+      idFactory: (kind) => `${kind}-subjects-${++sequence}`,
+      repository: new PostgresN8nIntegrationRepository({
+        contactEnvelopeKey,
+        contactLookupKey: Buffer.alloc(32, 83),
+        database,
+        envelopeKey,
+        messageEnvelopeKey: Buffer.alloc(32, 84),
+        orders: ordersPort,
+      }),
+    });
+    const technical = (/** @type {string} */ id) => ({
+      actor: 'AUTOMATION_EXECUTOR',
+      correlationId: `correlation-${id}`,
+      credentialVersion: 'current',
+      executionId: id,
+      idempotencyKey: id,
+      requestId: `request-${id}`,
+      workflowKey: 'whatsapp-mvp',
+      workflowVersion: 'mvp-simple-15',
+    });
+    const inbound = (/** @type {string} */ phone, /** @type {number} */ turn) =>
+      service.receiveInbound({
+        channel: 'whatsapp',
+        contact: { wa_id: phone },
+        event_id: `wamid.subjects.${phone}.${turn}`,
+        message: {
+          external_id: `wamid.subjects.${phone}.${turn}`,
+          text: `Mensagem ${turn}`,
+          type: 'text',
+        },
+        metadata: { phone_number_id: 'phone-subjects' },
+        occurred_at: NOW.toISOString(),
+        schema_version: '1.0',
+        technical: technical(`inbound-${phone}-${turn}`),
+      });
+    const reserve = (/** @type {any} */ context, /** @type {string} */ id) => ({
+      automation_epoch: context.automation_epoch,
+      briefing_patch: { order_name: `Pedido ${id}`, quantity: 12 },
+      command_id: `${context.conversation_id}:${context.source_revision}:ai-response`,
+      conversation_id: context.conversation_id,
+      event_id: `reserve-subjects-${id}`,
+      event_type: 'message.send.requested',
+      message: { type: 'text', text: 'Qual a cor?' },
+      occurred_at: NOW.toISOString(),
+      schema_version: '1.0',
+      source_revision: context.source_revision,
+      target_contract: 'subject-v1',
+      subject_id: 'subject-b',
+      technical: technical(`reserve-subjects-${id}`),
+    });
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+      const a = await inbound('5527900000201', 1);
+      const b = await inbound('5527900000202', 1);
+      const c = await inbound('5527900000203', 1);
+      await pool.query(
+        `UPDATE crm.contact_identities SET current_contact_id = $1
+         WHERE id IN (SELECT contact_identity_id FROM crm.conversations
+                      WHERE id = ANY($2::text[]))`,
+        [a.contact_id, [b.conversation_id, c.conversation_id]],
+      );
+      const orderA = (
+        await orders.ensurePendingFromIntent({
+          conversationId: a.conversation_id,
+          correlationId: 'create-a',
+        })
+      ).order;
+      const orderB = (
+        await orders.ensurePendingFromIntent({
+          conversationId: b.conversation_id,
+          correlationId: 'create-b',
+        })
+      ).order;
+      activeConversationId = c.conversation_id;
+      for (const { id, order, position, current } of [
+        { id: 'subject-a', order: orderA, position: 1, current: false },
+        { id: 'subject-b', order: orderB, position: 2, current: true },
+      ]) {
+        await pool.query(
+          `INSERT INTO crm.conversation_subjects
+             (id, conversation_id, contact_id, order_id, kind, position,
+              is_current, selected_source, selected_by, selected_at,
+              created_by, created_by_kind, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, 'pedido', $5, $6, 'human', 'seller-test', $7,
+                   'seller-test', 'human', $7, $7)`,
+          [
+            id,
+            c.conversation_id,
+            a.contact_id,
+            order.id,
+            position,
+            current,
+            NOW,
+          ],
+        );
+      }
+      const source = await pool.query(
+        `SELECT id FROM crm.messages WHERE conversation_id = $1
+           AND inbound_revision = 1`,
+        [c.conversation_id],
+      );
+      for (const id of ['subject-a', 'subject-b']) {
+        await pool.query(
+          `INSERT INTO crm.message_subject_links
+             (message_id, subject_id, conversation_id, assigned_by,
+              assigned_by_kind, assigned_at)
+           VALUES ($1, $2, $3, 'seller-test', 'human', $4)`,
+          [source.rows[0].id, id, c.conversation_id, NOW],
+        );
+      }
+      await assert.rejects(
+        service.recordEvent({
+          ...reserve(c, 'ambiguous'),
+          order_id: orderB.id,
+        }),
+        (error) => /** @type {any} */ (error)?.code === 'SUBJECT_AMBIGUOUS',
+      );
+      await pool.query(
+        `DELETE FROM crm.message_subject_links WHERE message_id = $1
+           AND subject_id = 'subject-a'`,
+        [source.rows[0].id],
+      );
+      const event = { ...reserve(c, 'chosen'), order_id: orderB.id };
+      console.error = () => {};
+      let first;
+      try {
+        first = await service.recordEvent(event);
+      } finally {
+        console.error = originalError;
+      }
+      assert.equal(first.send_authorized, true);
+      assert.deepEqual(first.projection, {
+        applied: false,
+        error: 'PROJECTION_UNAVAILABLE',
+      });
+      // A later inbound advances the conversation revision but does not
+      // change this subject's accepted briefing or the pending order.
+      const laterInbound = await inbound('5527900000203', 2);
+      assert.equal(laterInbound.source_revision, 2);
+      const replay = await service.recordEvent(event);
+      assert.equal(replay.send_authorized, false);
+      assert.deepEqual(replay.projection, { applied: true });
+      const after = await orders.get(orderB.id);
+      assert.equal(after.ficha.summary.nome, 'Pedido chosen');
+      assert.equal((await orders.get(orderA.id)).ficha.summary.nome, null);
+      await service.recordEvent(event);
+      assert.equal((await orders.get(orderB.id)).version, after.version);
+      const next = await inbound('5527900000203', 3);
+      assert.equal(
+        next.subjects.find(
+          (/** @type {any} */ subject) => subject.subject_id === 'subject-b',
+        ).briefing.order_name,
+        'Pedido chosen',
+      );
+      assert.equal(
+        next.subjects.find(
+          (/** @type {any} */ subject) => subject.subject_id === 'subject-b',
+        ).order_number,
+        orderB.number,
+      );
+      assert.equal(
+        next.subjects.find(
+          (/** @type {any} */ subject) => subject.subject_id === 'subject-b',
+        ).order_status,
+        'pendente',
+      );
+      assert.deepEqual(
+        next.subjects.find(
+          (/** @type {any} */ subject) => subject.subject_id === 'subject-a',
+        ).briefing,
+        {},
+      );
+      failProjection = true;
+      const supersededEvent = {
+        ...reserve(next, 'superseded'),
+        order_id: orderB.id,
+      };
+      console.error = () => {};
+      let supersededFirst;
+      try {
+        supersededFirst = await service.recordEvent(supersededEvent);
+      } finally {
+        console.error = originalError;
+      }
+      assert.deepEqual(supersededFirst.projection, {
+        applied: false,
+        error: 'PROJECTION_UNAVAILABLE',
+      });
+      const later = await inbound('5527900000203', 4);
+      const latest = await service.recordEvent({
+        ...reserve(later, 'latest'),
+        order_id: orderB.id,
+      });
+      assert.deepEqual(latest.projection, { applied: true });
+      const latestOrder = await orders.get(orderB.id);
+      const staleReplay = await service.recordEvent(supersededEvent);
+      assert.deepEqual(staleReplay.projection, {
+        applied: false,
+        error: 'SUBJECT_SUPERSEDED',
+      });
+      assert.equal((await orders.get(orderB.id)).version, latestOrder.version);
+      const humanTurn = await inbound('5527900000203', 5);
+      switchHumanTarget = true;
+      const changed = await service.recordEvent({
+        ...reserve(humanTurn, 'human-switch'),
+        order_id: orderB.id,
+      });
+      assert.deepEqual(changed.projection, {
+        applied: false,
+        error: 'SUBJECT_TARGET_CONFLICT',
+      });
+      assert.equal((await orders.get(orderB.id)).version, latestOrder.version);
+    } finally {
+      console.error = originalError;
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
+
+  test('site claim stays isolated, immutable and permits a new synthetic order', async () => {
+    assertTestDatabase(connectionString);
+    const pool = new Pool({ connectionString, max: 12 });
+    const database = {
+      query: pool.query.bind(pool),
+      transaction: (/** @type {(client: any) => Promise<any>} */ work) =>
+        withTransaction(pool, work),
+    };
+    const lookupKey = Buffer.alloc(32, 96);
+    const envelopeKey = Buffer.alloc(32, 97);
+    const contactEnvelopeKey = Buffer.alloc(32, 98);
+    const orders = createOrderService({
+      authorizeOwnership: async () => {},
+      conversations: new PostgresOrderConversationPort({
+        contactEnvelopeKey,
+        contactLookupKey: Buffer.alloc(32, 73),
+        database,
+        envelopeKey,
+      }),
+      fabCode: 'FAB-TEST',
+      repository: new PostgresOrderRepository({ database, envelopeKey }),
+    });
+    let sequence = 0;
+    const service = createN8nIntegrationService({
+      clock: () => NOW,
+      idFactory: (kind) => `${kind}-site-${++sequence}`,
+      repository: new PostgresN8nIntegrationRepository({
+        contactEnvelopeKey,
+        contactLookupKey: lookupKey,
+        database,
+        envelopeKey,
+        messageEnvelopeKey: Buffer.alloc(32, 99),
+        orders,
+      }),
+    });
+    const inbound = (
+      /** @type {string} */ syntheticId,
+      /** @type {number} */ turn,
+    ) => ({
+      channel: 'site_chat',
+      provider: 'site',
+      contact: { external_id: syntheticId },
+      event_id: `site-${syntheticId}-${turn}`,
+      external_conversation_id: `session-${syntheticId}`,
+      message: {
+        external_id: `message-${syntheticId}-${turn}`,
+        text: 'Preciso de camisetas',
+        type: 'text',
+      },
+      metadata: { provider_account_id: 'silmer-site' },
+      occurred_at: NOW.toISOString(),
+      schema_version: '1.0',
+      site_contact: { name: 'Ana Sintetica', phone: '5527999991234' },
+      technical: {
+        actor: 'AUTOMATION_EXECUTOR',
+        correlationId: `correlation-${syntheticId}-${turn}`,
+        credentialVersion: 'current',
+        executionId: `execution-${syntheticId}-${turn}`,
+        idempotencyKey: `site-${syntheticId}-${turn}`,
+        requestId: `request-${syntheticId}-${turn}`,
+        workflowKey: 'site-chat-mvp',
+        workflowVersion: 'mvp-simple-15',
+      },
+    });
+    const siteId = (/** @type {number} */ ordinal) =>
+      `999${(BigInt('0x123e4567e89b12d3a456426614174000') + BigInt(ordinal))
+        .toString(10)
+        .padStart(39, '0')}`;
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+      const withoutClaim = inbound(siteId(5), 1);
+      delete (/** @type {any} */ (withoutClaim).site_contact);
+      await assert.rejects(
+        service.receiveInbound(withoutClaim),
+        (error) => /** @type {any} */ (error)?.code === 'SITE_CONTACT_REQUIRED',
+      );
+      const firstPayload = inbound(siteId(0), 1);
+      const first = await service.receiveInbound(firstPayload);
+      const replay = await service.receiveInbound(firstPayload);
+      assert.equal(first.site_contact_match, 'new');
+      assert.deepEqual(first.site_contact, { name: 'Ana Sintetica' });
+      assert.equal(first.briefing.customer_name, 'Ana Sintetica');
+      assert.equal(replay.duplicate, true);
+      assert.equal(replay.conversation_id, first.conversation_id);
+      const claim = await pool.query(
+        `SELECT version, details_envelope::text AS secret
+         FROM crm.site_contact_claims WHERE conversation_id = $1`,
+        [first.conversation_id],
+      );
+      assert.equal(Number(claim.rows[0].version), 1);
+      assert.doesNotMatch(claim.rows[0].secret, /5527999991234|Ana Sintetica/u);
+      const syntheticContact = await pool.query(
+        'SELECT display_name, contact_phone_hash FROM crm.contacts WHERE id = $1',
+        [first.contact_id],
+      );
+      assert.equal(syntheticContact.rows[0].display_name, 'Ana Sintetica');
+      assert.equal(syntheticContact.rows[0].contact_phone_hash, null);
+      const opened = await orders.ensurePendingFromIntent({
+        conversationId: first.conversation_id,
+        correlationId: 'site-order-first',
+      });
+      assert.equal(opened.created, true);
+      assert.equal(opened.order.contactId, first.contact_id);
+      const sameSession = await service.receiveInbound(inbound(siteId(0), 2));
+      assert.equal(sameSession.source_revision, 2);
+      await assert.rejects(
+        service.receiveInbound({
+          ...inbound(siteId(0), 3),
+          site_contact: { name: 'Ana Sintetica', phone: '5527999990000' },
+        }),
+        (error) => /** @type {any} */ (error)?.code === 'SITE_CONTACT_CONFLICT',
+      );
+      assert.equal(
+        Number(
+          (
+            await pool.query(
+              'SELECT version FROM crm.site_contact_claims WHERE conversation_id=$1',
+              [first.conversation_id],
+            )
+          ).rows[0].version,
+        ),
+        1,
+      );
+      const secondSession = await service.receiveInbound(inbound(siteId(1), 1));
+      assert.equal(secondSession.site_contact_match, 'new');
+      assert.notEqual(secondSession.contact_id, first.contact_id);
+      const secondOrder = await orders.ensurePendingFromIntent({
+        conversationId: secondSession.conversation_id,
+        correlationId: 'site-order-second',
+      });
+      assert.notEqual(secondOrder.order.id, opened.order.id);
+      // A new cycle of the same synthetic session still cannot target a
+      // pending order that belongs to its earlier conversation.
+      const laterCycle = await service.receiveInbound({
+        ...inbound(siteId(0), 4),
+        external_conversation_id: `session-${siteId(0)}-next-cycle`,
+      });
+      assert.equal(laterCycle.contact_id, first.contact_id);
+      await pool.query(
+        `INSERT INTO crm.conversation_subjects
+           (id, conversation_id, contact_id, order_id, kind, position,
+            is_current, selected_source, selected_by, selected_at,
+            created_by, created_by_kind, created_at, updated_at)
+         VALUES ('site-old-order-target', $1, $2, $3, 'pedido', 1,
+                 true, 'agent', 'AUTOMATION_EXECUTOR', $4,
+                 'AUTOMATION_EXECUTOR', 'agent', $4, $4)`,
+        [laterCycle.conversation_id, first.contact_id, opened.order.id, NOW],
+      );
+      await assert.rejects(
+        service.recordEvent({
+          automation_epoch: laterCycle.automation_epoch,
+          briefing_patch: { quantity: 20 },
+          command_id: 'site-old-order-command',
+          conversation_id: laterCycle.conversation_id,
+          event_id: 'site-old-order-event',
+          event_type: 'message.send.requested',
+          message: { type: 'text', text: 'Qual cor?' },
+          occurred_at: NOW.toISOString(),
+          order_id: opened.order.id,
+          schema_version: '1.0',
+          source_revision: laterCycle.source_revision,
+          subject_id: 'site-old-order-target',
+          target_contract: 'subject-v1',
+          technical: inbound(siteId(0), 5).technical,
+        }),
+        (error) =>
+          /** @type {any} */ (error)?.code === 'SUBJECT_TARGET_INVALID',
+      );
+      const phoneHash = contactPhoneHash('5527999991234', lookupKey);
+      await pool.query(
+        `INSERT INTO crm.contacts
+           (id, provisional, version, created_at, updated_at, contact_phone_hash)
+         VALUES ('known-site-1', false, 1, $1, $1, $2)`,
+        [NOW, phoneHash],
+      );
+      const oneMatch = await service.receiveInbound(inbound(siteId(2), 1));
+      assert.equal(oneMatch.site_contact_match, 'existing');
+      assert.ok(!JSON.stringify(oneMatch).includes('known-site-1'));
+      await pool.query(
+        `INSERT INTO crm.contacts
+           (id, provisional, version, created_at, updated_at, contact_phone_hash)
+         VALUES ('known-site-2', false, 1, $1, $1, $2)`,
+        [NOW, phoneHash],
+      );
+      const ambiguous = await service.receiveInbound(inbound(siteId(3), 1));
+      assert.equal(ambiguous.site_contact_match, 'ambiguous');
+      assert.ok(!JSON.stringify(ambiguous).includes('known-site-2'));
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

@@ -438,19 +438,49 @@ export function createOrderService(options) {
      * PAG-01/PAG-02: projects the merged pre-ficha into the pending order only
      * while the agent holds the conversation.
      *
-     * @param {{conversationId: string, correlationId: string, briefing: Record<string, unknown>|null, automationState: string}} input
+     * @param {{conversationId: string, correlationId: string, briefing: Record<string, unknown>|null, automationState: string, orderId?: string|null, subjectId?: string|null, automationEpoch?: number|null, sourceRevision?: number|null, eventId?: string|null, eventType?: string|null, expectedSubjectVersion?: number|null, expectedOrderVersion?: number|null, recovery?: boolean}} input
      * @returns {Promise<{applied: boolean, order: Order|null, reason: string|null}>}
      */
     async projectAgentBriefing(input) {
       const conversationId = requireId(input.conversationId, 'conversationId');
       const correlationId = requireId(input.correlationId, 'correlationId');
-      if (input.automationState !== 'assistant') {
+      if (
+        input.automationState !== 'assistant' &&
+        input.eventType !== 'handoff.requested' &&
+        !input.orderId
+      ) {
         return { applied: false, order: null, reason: 'human' };
       }
-      const pending =
-        await repository.findPendingByConversation(conversationId);
+      if (Boolean(input.orderId) !== Boolean(input.subjectId)) {
+        throw new OrderInputError(
+          'Explicit projection requires subject and order',
+        );
+      }
+      const pending = input.orderId
+        ? await repository.findById(requireId(input.orderId, 'orderId'))
+        : await repository.findPendingByConversation(conversationId);
       if (!pending) {
         return { applied: false, order: null, reason: 'no_pending_order' };
+      }
+      if (
+        input.orderId &&
+        (pending.status !== 'pendente' || pending.origin !== 'atendimento')
+      ) {
+        throw new OrderConflictError(
+          'The selected order is not pending',
+          'ORDER_STATUS_CONFLICT',
+        );
+      }
+      if (
+        input.orderId &&
+        (!Number.isSafeInteger(input.automationEpoch) ||
+          !Number.isSafeInteger(input.sourceRevision) ||
+          !Number.isSafeInteger(input.expectedSubjectVersion) ||
+          !Number.isSafeInteger(input.expectedOrderVersion))
+      ) {
+        throw new OrderInputError(
+          'Explicit projection requires epoch and revision',
+        );
       }
       // The projection writes the client the order shows now (ADR 018).
       const [shown] = await withCurrentClient([pending]);
@@ -462,6 +492,26 @@ export function createOrderService(options) {
       const order = await repository.projectBriefing(next, {
         correlationId,
         expectedVersion: pending.version,
+        ...(input.orderId
+          ? {
+              agentTarget: {
+                conversationId,
+                orderId: input.orderId,
+                subjectId: /** @type {string} */ (input.subjectId),
+                automationEpoch: /** @type {number} */ (input.automationEpoch),
+                sourceRevision: /** @type {number} */ (input.sourceRevision),
+                eventId: requireId(input.eventId, 'eventId'),
+                eventType: requireId(input.eventType, 'eventType'),
+                expectedSubjectVersion: /** @type {number} */ (
+                  input.expectedSubjectVersion
+                ),
+                expectedOrderVersion: /** @type {number} */ (
+                  input.expectedOrderVersion
+                ),
+                recovery: input.recovery === true,
+              },
+            }
+          : {}),
       });
       return { applied: true, order: current(order), reason: null };
     },

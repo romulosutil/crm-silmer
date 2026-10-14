@@ -92,6 +92,8 @@ export function createServerApi(runtime = {}) {
     environment.OPERATION_CURSOR_HMAC_KEY ?? environment.KANBAN_CURSOR_HMAC_KEY;
   const operationSecretValues = [
     environment.CONTACT_IDENTITY_ENVELOPE_KEY,
+    environment.CONTACT_IDENTITY_LOOKUP_KEY,
+    environment.IDEMPOTENCY_ENVELOPE_KEY,
     environment.INBOX_MESSAGE_ENVELOPE_KEY,
     environment.HANDOFF_ENVELOPE_KEY,
     operationCursorKey,
@@ -103,7 +105,7 @@ export function createServerApi(runtime = {}) {
     !operationSecretValues.every(Boolean)
   ) {
     throw new Error(
-      'Operation read runtime requires CONTACT_IDENTITY_ENVELOPE_KEY, INBOX_MESSAGE_ENVELOPE_KEY, HANDOFF_ENVELOPE_KEY and OPERATION_CURSOR_HMAC_KEY together',
+      'Operation read runtime requires CONTACT_IDENTITY_ENVELOPE_KEY, CONTACT_IDENTITY_LOOKUP_KEY, IDEMPOTENCY_ENVELOPE_KEY, INBOX_MESSAGE_ENVELOPE_KEY, HANDOFF_ENVELOPE_KEY and OPERATION_CURSOR_HMAC_KEY together',
     );
   }
   const operations =

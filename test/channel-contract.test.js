@@ -90,6 +90,42 @@ test('keeps site as WhatsApp origin instead of inventing another channel', async
   );
 });
 
+test('accepts site_chat only with a pending synthetic site identity', async () => {
+  const fixture = await json(
+    'schemas/fixtures/external/meta-whatsapp-canonical-inbound.json',
+  );
+  fixture.provider = 'site';
+  fixture.channel = 'site_chat';
+  fixture.origin = 'site';
+  fixture.identity = {
+    automaticMergeAllowed: false,
+    displayHandle: null,
+    externalId: '999123456789012',
+    kind: 'handle',
+    phoneStatus: 'pending',
+  };
+  const envelope = createCanonicalInboundEnvelope(fixture);
+  assert.equal(envelope.channel, 'site_chat');
+  assert.equal(envelope.identity.kind, 'handle');
+  assert.equal(envelope.identity.phoneStatus, 'pending');
+  assert.throws(
+    () =>
+      createCanonicalInboundEnvelope({
+        ...fixture,
+        identity: { ...fixture.identity, externalId: '5511987654321' },
+      }),
+    ChannelContractError,
+  );
+  assert.throws(
+    () =>
+      createCanonicalInboundEnvelope({
+        ...fixture,
+        origin: 'channel',
+      }),
+    ChannelContractError,
+  );
+});
+
 test('keeps Instagram handle pending and forbids automatic identity merge', async () => {
   const fixture = await json(
     'schemas/fixtures/external/meta-instagram-canonical-inbound.json',

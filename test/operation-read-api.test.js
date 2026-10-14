@@ -161,7 +161,7 @@ test('searches contacts by name and creates a manual contact with a protected co
     },
     method: 'POST',
     url: '/api/v1/contacts',
-    payload: { displayName: 'Cliente Novo' },
+    payload: { displayName: 'Cliente Novo', phone: '11999999999' },
   });
   assert.equal(created.statusCode, 201);
   assert.equal(calls[2][0], 'authorize-write');
@@ -172,9 +172,77 @@ test('searches contacts by name and creates a manual contact with a protected co
       actor: { id: 'operator-1', kind: 'human' },
       correlationId: created.headers['x-request-id'],
       displayName: 'Cliente Novo',
+      phone: '11999999999',
+      email: undefined,
       idempotencyKey: 'contact-request-1',
     },
   ]);
+  await api.close();
+});
+
+test('searches a phone in a protected request body and rejects phone in URL', async () => {
+  const { api, calls, headers } = harness({
+    async authorizeWrite(/** @type {any} */ input) {
+      calls.push(['authorize-write', input]);
+      return { actor: { id: 'operator-1', kind: 'human' } };
+    },
+  });
+  const search = await api.inject({
+    headers: { ...headers, 'x-csrf-token': 'csrf-synthetic' },
+    method: 'POST',
+    url: '/api/v1/contacts/search',
+    payload: { q: '11987654321', limit: 10 },
+  });
+  assert.equal(search.statusCode, 200);
+  assert.equal(search.headers['cache-control'], 'private, no-cache');
+  assert.equal(calls[0][0], 'authorize-write');
+  assert.equal(calls[0][1].action, 'contact.read');
+  assert.equal(calls[0][1].csrfToken, 'csrf-synthetic');
+  assert.deepEqual(calls[1], ['contacts', { q: '11987654321', limit: 10 }]);
+
+  const leaked = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/contacts?q=11987654321',
+  });
+  assert.equal(leaked.statusCode, 400);
+  assert.equal(leaked.json().error.code, 'INVALID_REQUEST');
+  assert.equal(calls.length, 2);
+  await api.close();
+});
+
+test('completes a legacy contact with version and idempotency key before an order', async () => {
+  const { api, calls, headers } = harness({
+    async authorizeWrite(/** @type {any} */ input) {
+      calls.push(['authorize-write', input]);
+      return { actor: { id: 'operator-1', kind: 'human' } };
+    },
+    async setContactDetails(/** @type {any} */ input) {
+      calls.push(['contact-details', input]);
+      return { id: input.contactId, phone: input.phone, version: 2 };
+    },
+  });
+  const response = await api.inject({
+    headers: {
+      ...headers,
+      'idempotency-key': 'details-request-1',
+      'x-csrf-token': 'csrf-synthetic',
+    },
+    method: 'POST',
+    url: '/api/v1/contacts/contact-legacy/details',
+    payload: { expectedVersion: 1, phone: '11987654321' },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(calls[0][1].action, 'contact.rename');
+  assert.deepEqual(calls[1][1], {
+    actor: { id: 'operator-1', kind: 'human' },
+    contactId: 'contact-legacy',
+    correlationId: response.headers['x-request-id'],
+    email: undefined,
+    expectedVersion: 1,
+    idempotencyKey: 'details-request-1',
+    phone: '11987654321',
+  });
   await api.close();
 });
 

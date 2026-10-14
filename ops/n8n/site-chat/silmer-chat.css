@@ -1,0 +1,59 @@
+/* Silmer palette reference for the custom site widget. Its own markup needs
+   matching CSS; the stock @n8n/chat widget cannot provide the per-message ID
+   and asynchronous CRM Inbox replies required by this contract. */
+#silmer-chat {
+  --chat--color--primary: #ff5b01;
+  --chat--color--primary-shade-50: #ff7b33;
+  --chat--color--primary--shade-100: #d64c00;
+  --chat--color--secondary: #250c8d;
+  --chat--color-secondary-shade-50: #19085e;
+  --chat--color-white: #fff;
+  --chat--color-light: #f0ecfd;
+  --chat--color-light-shade-50: #d8d0fb;
+  --chat--color-light-shade-100: #b2a1f7;
+  --chat--color-medium: #a39dbe;
+  --chat--color-dark: #0c042d;
+  --chat--color-disabled: #615a7c;
+  --chat--color-typing: #a39dbe;
+  --chat--font-family: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --chat--spacing: 1rem;
+  --chat--border-radius: 1rem;
+  --chat--window--width: min(25rem, calc(100vw - 2rem));
+  --chat--window--height: min(39rem, calc(100dvh - 2rem));
+  --chat--window--right: max(1rem, env(safe-area-inset-right));
+  --chat--window--bottom: max(1rem, env(safe-area-inset-bottom));
+  --chat--window--z-index: 1000;
+  --chat--window--border: 1px solid #250c8d;
+  --chat--window--border-radius: 1rem;
+  --chat--header--background: #0c042d;
+  --chat--header--color: #f0ecfd;
+  --chat--message--bot--background: #110642;
+  --chat--message--bot--color: #f0ecfd;
+  --chat--message--user--background: #250c8d;
+  --chat--message--user--color: #fff;
+  --chat--toggle--background: #ff5b01;
+  --chat--toggle--hover--background: #ff7b33;
+  --chat--toggle--active--background: #d64c00;
+  --chat--toggle--color: #0c042d;
+  --chat--button--background--primary: #ff5b01;
+  --chat--button--color--primary: #0c042d;
+  --chat--input--background: #110642;
+  --chat--input--text-color: #f0ecfd;
+  --chat--body--background: #0c042d;
+  --chat--footer--background: #0c042d;
+  --chat--footer--color: #f0ecfd;
+}
+
+#silmer-chat :is(button, textarea, input, a):focus-visible {
+  outline: 3px solid #8b72f3;
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  #silmer-chat {
+    --chat--window--width: calc(100vw - 1rem);
+    --chat--window--height: min(42rem, calc(100dvh - 1rem));
+    --chat--window--right: max(0.5rem, env(safe-area-inset-right));
+    --chat--window--bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}

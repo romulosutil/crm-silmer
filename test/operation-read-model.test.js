@@ -107,6 +107,12 @@ test('binds signed Inbox cursors to closed filters', async () => {
   );
 });
 
+test('accepts site chat as an Inbox filter without treating it as WhatsApp', async () => {
+  const { calls, service } = serviceHarness();
+  await service.listInbox({ channel: 'site_chat', limit: 20 });
+  assert.equal(calls[0][1].channel, 'site_chat');
+});
+
 test('binds handoff cursors to the pending queue scope', async () => {
   const { calls, service } = serviceHarness();
   const first = await service.listOpenHandoffs({ limit: 20 });

@@ -63,6 +63,7 @@ if (connectionString) {
       contactRepository: new PostgresContactReadRepository({
         database,
         envelopeKey: CONTACT_KEY,
+        lookupKey: Buffer.alloc(32, 43),
       }),
       cursorKey: Buffer.alloc(32, 44),
       handoffRepository: new PostgresHandoffReadRepository({

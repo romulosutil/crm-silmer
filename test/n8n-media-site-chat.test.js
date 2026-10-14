@@ -151,36 +151,73 @@ test('stores every WhatsApp message type the CRM knows, and reads image and audi
   }
 });
 
-test('the site chat enters as a WhatsApp identity that can never be a real number (ADR 026)', async () => {
+test('the site chat uses a unique synthetic session and keeps name and phone separate (ADR 034)', async () => {
   const build = await code('Site - Montar evento do chat (MVP)');
   const normalize = await code('Normalizar evento WhatsApp (MVP)');
+  const prepare = await code('Preparar inbound CRM (MVP)');
   /** @param {any} json @param {any} [binary] */
   const event = (json, binary) => run(build, { json, binary });
+  const metadata = {
+    site_contact: { name: 'Ana Sintética', phone: '5527999991234' },
+    site_message_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  };
+  const sessionId = '11111111-1111-4111-8111-111111111111';
 
   const first = event({
-    sessionId: 'session-a',
+    sessionId,
+    metadata,
     chatInput: '  Quero 30 camisetas ',
   });
-  const again = event({ sessionId: 'session-a', chatInput: 'Brancas' });
-  const other = event({ sessionId: 'session-b', chatInput: 'Oi' });
+  const replay = event({
+    sessionId,
+    metadata,
+    chatInput: '  Quero 30 camisetas ',
+  });
+  const again = event({
+    sessionId,
+    metadata: {
+      ...metadata,
+      site_message_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    },
+    chatInput: 'Brancas',
+  });
+  const other = event({
+    sessionId: '22222222-2222-4222-8222-222222222222',
+    metadata,
+    chatInput: 'Oi',
+  });
   const value = first.json.entry[0].changes[0].value;
-  const waId = value.contacts[0].wa_id;
+  const siteId = value.contacts[0].wa_id;
 
-  // The CRM accepts it as E.164, 999 is never assigned, and it is per session.
-  assert.match(waId, /^999[0-9]{12}$/u);
-  assert.match(waId, /^[1-9][0-9]{7,14}$/u);
-  assert.equal(again.json.entry[0].changes[0].value.contacts[0].wa_id, waId);
-  assert.notEqual(other.json.entry[0].changes[0].value.contacts[0].wa_id, waId);
-  assert.equal(value.contacts[0].profile.name, 'Visitante do site');
+  assert.match(siteId, /^999[0-9]{39}$/u);
+  assert.equal(again.json.entry[0].changes[0].value.contacts[0].wa_id, siteId);
+  assert.equal(
+    replay.json.entry[0].changes[0].value.messages[0].id,
+    value.messages[0].id,
+  );
+  assert.notEqual(
+    again.json.entry[0].changes[0].value.messages[0].id,
+    value.messages[0].id,
+  );
+  assert.notEqual(
+    other.json.entry[0].changes[0].value.contacts[0].wa_id,
+    siteId,
+  );
+  assert.equal(value.contacts[0].profile.name, metadata.site_contact.name);
   assert.equal(value.metadata.phone_number_id, 'site-chat');
   assert.deepEqual(value.messages[0].text, { body: 'Quero 30 camisetas' });
   assert.equal(first.json.__channel, 'site_chat');
+  assert.deepEqual(first.json.__site_contact, metadata.site_contact);
 
   const normalized = run(normalize, { json: first.json }).json;
   assert.deepEqual(
     [normalized.channel, normalized.from, normalized.ai_readable],
-    ['site_chat', waId, true],
+    ['site_chat', siteId, true],
   );
+  const inbound = run(prepare, { json: normalized }).json.payload;
+  assert.equal(inbound.provider, 'site');
+  assert.deepEqual(inbound.contact, { external_id: siteId });
+  assert.deepEqual(inbound.site_contact, metadata.site_contact);
 
   // An uploaded file is the message; the binary goes along for the model.
   const file = {
@@ -189,7 +226,7 @@ test('the site chat enters as a WhatsApp identity that can never be a real numbe
     fileSize: '120 kB',
   };
   const withAudio = event(
-    { sessionId: 'session-a', chatInput: '' },
+    { sessionId, metadata, chatInput: '' },
     { data0: file },
   );
   const audioMessage = withAudio.json.entry[0].changes[0].value.messages[0];
@@ -203,12 +240,25 @@ test('the site chat enters as a WhatsApp identity that can never be a real numbe
   );
 
   assert.throws(
-    () => event({ sessionId: 'session-a', chatInput: ' ' }),
+    () => event({ sessionId, metadata, chatInput: ' ' }),
     /SITE_CHAT_MESSAGE_REQUIRED/u,
   );
   assert.throws(
-    () => event({ chatInput: 'Oi' }),
+    () => event({ metadata, chatInput: 'Oi' }),
     /SITE_CHAT_SESSION_REQUIRED/u,
+  );
+  assert.throws(
+    () => event({ sessionId, chatInput: 'Oi' }),
+    /SITE_CHAT_CONTACT_REQUIRED/u,
+  );
+  assert.throws(
+    () =>
+      event({
+        sessionId,
+        metadata: { site_contact: metadata.site_contact },
+        chatInput: 'Oi',
+      }),
+    /SITE_CHAT_MESSAGE_ID_REQUIRED/u,
   );
 });
 
@@ -371,7 +421,7 @@ test('the model gets the transcript as the message and the image as binary (ADR 
   );
 });
 
-test('on the site chat every handoff notice asks for a WhatsApp instead of "aqui mesmo" (ADR 026)', async () => {
+test('site handoff notices keep the visitor in the chat (ADR 034)', async () => {
   const decision = await code('Normalizar decisão da IA (MVP)');
   /** @param {any} output @param {string} channel @param {string} [text] */
   const decide = (output, channel, text = '') =>
@@ -425,14 +475,14 @@ test('on the site chat every handoff notice asks for a WhatsApp instead of "aqui
     const site = decide(output, 'site_chat', text);
     assert.equal(whatsapp.handoff_required, true, JSON.stringify(output));
     assert.match(whatsapp.reply_text, /aqui mesmo/u);
-    assert.doesNotMatch(site.reply_text, /aqui mesmo|right here|,\s*\./u);
-    assert.match(site.reply_text, /me diga o seu WhatsApp com DDD\.$/u);
+    assert.match(site.reply_text, /aqui mesmo/u);
+    assert.doesNotMatch(site.reply_text, /me diga o seu WhatsApp/u);
   }
   // A reply that is not a notice is the model's, on both channels.
   assert.equal(decide({}, 'site_chat').reply_text, 'Resposta');
 });
 
-test('the site chat shows what the CRM recorded, or that a seller follows on WhatsApp', async () => {
+test('the site chat shows what the CRM recorded and keeps human follow-up in chat', async () => {
   const answer = await code('Site - Responder no chat (MVP)');
   const reply = run(
     answer,
@@ -466,10 +516,10 @@ test('the site chat shows what the CRM recorded, or that a seller follows on Wha
   assert.equal(stale.json.output, 'Recebi a sua mensagem!');
 
   const withSeller = run(answer, { json: {} });
-  assert.match(withSeller.json.output, /pelo WhatsApp/u);
+  assert.match(withSeller.json.output, /por aqui/u);
 });
 
-test('a seller message to a site chat visitor never leaves n8n (ADR 026)', async () => {
+test('a seller text to a site visitor is reserved and sent through CRM (ADR 034)', async () => {
   const normalize = await code('Normalizar comando do painel (MVP)');
   /** @param {string} to */
   const kind = (to) =>
@@ -493,13 +543,23 @@ test('a seller message to a site chat visitor never leaves n8n (ADR 026)', async
   const route = workflow.connections['Rotear comando do painel (MVP)'].main;
   assert.deepEqual(
     route[2].map((/** @type {any} */ edge) => edge.node),
-    ['Recusar envio ao chat do site (MVP)'],
+    ['Preparar reserva de envio humano (MVP)'],
+  );
+  assert.deepEqual(
+    route[3].map((/** @type {any} */ edge) => edge.node),
+    ['Recusar mídia no chat do site (MVP)'],
   );
   const refusal = workflow.nodes.find(
     (/** @type {any} */ node) =>
-      node.name === 'Recusar envio ao chat do site (MVP)',
+      node.name === 'Recusar mídia no chat do site (MVP)',
   );
   assert.equal(refusal.parameters.options.responseCode, 422);
+  assert.deepEqual(
+    workflow.connections['Resposta humana pelo site? (MVP)'].main[0].map(
+      (/** @type {any} */ edge) => edge.node,
+    ),
+    ['Site - Entregar resposta humana (MVP)'],
+  );
 });
 
 test('the public site chat is wired into the same path and answers last (ADR 026)', async () => {

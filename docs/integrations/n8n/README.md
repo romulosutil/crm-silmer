@@ -107,21 +107,22 @@ de desenvolvimento e nunca é fallback silencioso.
   `https://www.silmer.com.br`, com upload de imagem e áudio. O widget
   `@n8n/chat` do site usa a URL de produção desse nó
   (`/webhook/<webhookId>/chat`); o `webhookId` não muda numa atualização do
-  workflow. Cada sessão do navegador vira a identidade `999` + 12 dígitos
-  ("Visitante do site"), que nunca é um número real.
-- No chat, a resposta, o aviso e o "um vendedor vai falar com você pelo
-  WhatsApp" voltam no próprio widget (`responseMode: lastNode`). Como o
-  vendedor não responde dentro do chat, o aviso pede o WhatsApp do visitante,
-  e o painel recusa com `422` uma mensagem humana para um número `999`.
+  workflow. Cada sessão do navegador vira a identidade `999` + 39 dígitos
+  sintética, que nunca é um número real. Nome e telefone informados antes da
+  primeira mensagem entram como `site_contact`, declaração cifrada e não
+  confirmada da sessão (CP-T06); não são `wa_id` nem unem históricos.
+- No chat, resposta e aviso voltam no widget (`responseMode: lastNode`). O
+  painel recusa com `422` uma mensagem humana para a identidade sintética;
+  o encaminhamento humano do piloto precisa ser comunicado no aviso.
 
 ## Entidades que o fluxo cria ou altera
 
 | Conceito de produto | Persistência oficial                    | Comportamento no fluxo                                                                                                            |
 | ------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Cliente             | `contacts` + `contact_identities`       | Criado provisoriamente na primeira identidade de WhatsApp; não existe tabela paralela `customers` ou `leads`.                     |
-| Conversa            | `conversations`                         | Uma conversa aberta por identidade/canal; guarda modo, `automation_epoch`, revisão inbound e o snapshot atual do briefing.        |
+| Cliente             | `contacts` + `contact_identities`       | Criado provisoriamente na primeira identidade de canal; o site guarda telefone declarado à parte em `site_contact_claims`.        |
+| Conversa            | `conversations`                         | Uma conversa aberta por identidade/canal; guarda modo, `automation_epoch` e revisão inbound.                                      |
 | Mensagem            | `messages`                              | Inbound e outbound cifrados; identidade externa ou `command_id` impede duplicidade. O estado de entrega fica na própria mensagem. |
-| Briefing            | colunas cifradas da `conversation`      | Um snapshot consolidado; `briefing_patch` ignora nulos e só aceita campos de qualificação. Não promove dado oficial.              |
+| Briefing            | `subject_briefings`                     | Um snapshot cifrado por Assunto; `briefing_patch` exige Assunto e Pedido explícitos no contrato novo. Não promove dado oficial.   |
 | Handoff             | `handoffs`                              | Criado sem responsável para a função humana vigente `Vendedor`; uma pessoa compatível o reivindica atomicamente.                  |
 | Pedido              | `orders`                                | Criado `pendente` pelo `open_order` da reserva ou do handoff (ADR 014), nunca pela chegada de mensagem. Confirmar é ação humana.  |
 | Comando humano      | `n8n_commands` + `outbox_jobs`          | Estado oficial e outbox são gravados antes de o worker chamar o webhook do n8n.                                                   |
@@ -143,7 +144,8 @@ pedido pago da loja (seção [Pedido pago da loja](#pedido-pago-da-loja-adr-028)
 
 1. `POST /api/v1/integrations/n8n/messages/inbound`
    cria ou resolve Cliente, Conversa e Mensagem e devolve `source_revision`,
-   `automation_epoch`, modo, mensagens recentes e briefing.
+   `automation_epoch`, modo, mensagens recentes, `subjects` e
+   `source_subject_ids`.
 2. `POST /api/v1/integrations/n8n/conversations/{id}/attachments`
    recebe uma mídia por streaming, valida tamanho, hash, MIME e malware e só a
    vincula depois da quarentena. O workflow ainda não envia a mídia por este
@@ -258,7 +260,12 @@ responde no mesmo corpo:
 {
   "accepted": true,
   "send_authorized": true,
-  "order": { "opened": true, "id": "<pedido>", "created": true }
+  "order": {
+    "opened": true,
+    "id": "<pedido>",
+    "subject_id": "<assunto>",
+    "created": true
+  }
 }
 ```
 
@@ -328,6 +335,154 @@ campos da ficha no pedido `pendente` da conversa:
 - Pedido confirmado nunca recebe projeção.
 - Preço, valor, condição de pagamento, status e outros campos oficiais
   continuam recusados no `briefing_patch`, como antes.
+
+## Contrato por Assunto (CP-T04, CP-15..18)
+
+Implantar esta versão do CRM e a migration `0039_subject_briefings` antes de
+ativar o workflow novo. O inbound devolve `subjects` com `subject_id`,
+`order_id`, `order_number`, `order_status`, `is_current`, `selected_source`, `briefing` e
+`briefing_version` por Assunto, mais `source_subject_ids` da mensagem atual.
+O briefing por Assunto é cifrado. O campo `briefing` no nível da Conversa
+permanece para o workflow legado durante a transição.
+
+Na primeira rodada de um Pedido da Conversa, quando ainda não há Assunto nem
+Pedido pendente nela, `open_order: true` pode acompanhar o primeiro
+`briefing_patch`, ainda sem IDs. O CRM reserva o envio, cria ou
+reutiliza o único pendente legado da Conversa e cria ou recupera seu Assunto;
+a resposta traz `order.id` e `order.subject_id`. O primeiro patch compõe a
+Ficha e é copiado para o briefing do Assunto. Se a criação do Assunto falhar,
+`order.opened` é `false`; repetir a mesma chave recupera o Assunto sem
+autorizar outro envio. Esse bootstrap **reutiliza** um pendente existente na
+Conversa e não cria um segundo pendente nela.
+
+Nas alterações posteriores, o workflow envia `target_contract: "subject-v1"`
+e o par `subject_id`/`order_id` no evento de reserva ou handoff. O CRM valida
+ambos contra a Conversa e o Contato atual, Pedido pendente, seleção humana,
+`automation_epoch`, `source_revision` e `Idempotency-Key`. A projeção usa o
+Pedido indicado, inclusive quando ele nasceu em outro ciclo, e repete essas
+validações após a reserva antes de gravar a Ficha. As versões
+`mvp-simple-15+` e `dev-mvp-simple-16+` exigem o mesmo par para qualquer
+`briefing_patch`, mesmo se `target_contract` for omitido.
+Eventos explícitos com patch respondem também com
+`projection: { "applied": true }` ou
+`projection: { "applied": false, "error": "<CÓDIGO>" }`. Em falha transitória,
+repetir a mesma chave tenta a projeção novamente sem autorizar outro envio;
+uma projeção já concluída é reconhecida pelo ID do evento e não grava uma
+segunda versão do Pedido. Uma mensagem posterior sem nova alteração do
+Assunto permite reparar a projeção do evento aceito; o recibo fixa as versões
+de Assunto e Pedido. Se o briefing, a Ficha, takeover ou seleção humana
+invalidar a decisão, a projeção falha fechada (`SUBJECT_SUPERSEDED` ou
+`ORDER_CHANGED_SINCE_EVENT`) e o workflow pede esclarecimento ou transfere.
+
+```json
+{
+  "schema_version": "1.0",
+  "event_id": "reserve:conv-7:2",
+  "event_type": "message.send.requested",
+  "conversation_id": "conv-7",
+  "automation_epoch": 0,
+  "source_revision": 2,
+  "command_id": "conv-7:2:ai-response",
+  "target_contract": "subject-v1",
+  "subject_id": "subject-4",
+  "order_id": "order-9",
+  "briefing_patch": { "quantity": 30 },
+  "message": { "type": "text", "text": "Qual a cor?" },
+  "occurred_at": "2026-10-14T12:00:00.000Z"
+}
+```
+
+Quando `source_subject_ids` contiver mais de um Assunto, ou a mensagem puder
+referir-se a dois Pedidos, o workflow pergunta qual Pedido é o alvo com um
+envio **sem** `briefing_patch`, `subject_id` e `order_id`, ou transfere sem
+patch. Um alvo incorreto ou uma seleção humana divergente retorna `409`
+(`SUBJECT_AMBIGUOUS`, `SUBJECT_TARGET_INVALID` ou
+`SUBJECT_TARGET_CONFLICT`); um evento legado inseguro retorna
+`SUBJECT_TARGET_REQUIRED`. Não reenviar a mesma decisão após o conflito.
+`source_subject_ids` pode incluir Assunto geral ou Pedido confirmado; o
+workflow só altera quando o Assunto tem `kind: "pedido"` e
+`order_status: "pendente"`. Outra reserva `open_order:true` sem IDs após
+existir Assunto ou pendente recebe `SUBJECT_TARGET_REQUIRED`.
+O workflow legado ainda opera sob o limite de um pendente por Conversa.
+Criar um **segundo** pendente na mesma Conversa ainda não é um comando do
+agente: `open_order: true` reaproveita o pendente legado. Pedidos adicionais
+criados pela pessoa ou em outro ciclo podem ser vinculados como Assuntos e
+receber atualizações pelo par explícito. Telefone informado no chat do site
+serve só para busca interna; acesso ao histórico ou edição de Pedido anterior
+dependem de confirmação pelo WhatsApp. Ele nunca vira `wa_id` confirmado por
+inferência nem entra na identidade WhatsApp.
+
+## Ingresso do chat do site (CP-T06, CP-21..22)
+
+Instalar as migrations `0038` a `0040` e este contrato no CRM antes de mudar o
+workflow. O piloto do site usa `channel: "site_chat"`, `provider: "site"` e
+`contact.external_id` com o identificador sintético de sessão `999` seguido
+de 39 dígitos decimais do UUID da sessão. O workflow calcula
+`999 + BigInt('0x' + uuidSemHifens).toString(10).padStart(39, '0')` e exige
+UUID válido do Chat Trigger; o CRM rejeita o identificador legado de 12
+dígitos neste contrato. Cada envio do widget inclui `site_contact` com o
+mesmo nome e telefone informado no início da Conversa. O CRM também aceita
+sua omissão após o primeiro inbound, mas o nó atual do n8n exige esses campos
+em toda mensagem. Outro nome ou telefone na mesma Conversa recebe `409
+SITE_CONTACT_CONFLICT`; a correção exigirá um fluxo humano auditado.
+Cada envio do widget inclui `metadata.site_message_id` UUIDv4 novo; se a
+requisição for repetida após falha de rede, o widget reutiliza o mesmo ID.
+Assim o `event_id` do CRM permanece estável no replay, mesmo que o n8n crie
+outra execução. Duas mensagens intencionalmente iguais usam IDs diferentes.
+
+```json
+{
+  "schema_version": "1.0",
+  "channel": "site_chat",
+  "provider": "site",
+  "contact": { "external_id": "999024249434048109030647017182301789831168" },
+  "site_contact": { "name": "Ana Sintetica", "phone": "5527999991234" },
+  "external_conversation_id": "session-synthetic-001",
+  "event_id": "site-event-synthetic-001",
+  "message": {
+    "external_id": "site-message-synthetic-001",
+    "type": "text",
+    "text": "Quero um orçamento"
+  },
+  "metadata": { "provider_account_id": "silmer-site" },
+  "occurred_at": "2026-10-14T12:00:00.000Z"
+}
+```
+
+O CRM cifra o claim por Conversa, mantém o Contato e o Pedido novos na
+identidade sintética e põe o nome no rótulo do Contato e no briefing inicial.
+O inbound devolve `site_contact: {"name":"..."}` e
+`site_contact_match: "new"|"existing"|"ambiguous"`. A classificação é apenas
+sinal interno para a operação; não contém ID ou histórico de candidatos e
+não deve ir ao prompt do agente nem à resposta do widget. O telefone declarado
+não entra como alias WhatsApp confirmado. O novo Pedido dessa Conversa pode
+ser criado com `open_order:true`, mas o agente não pode projetar alterações
+num Pedido de outro ciclo do chat do site. O CRM recusa um primeiro inbound
+sem claim (`SITE_CONTACT_REQUIRED`) e replay com payload diferente usa o
+conflito de idempotência existente.
+
+O vendedor continua o atendimento transferido **na caixa de entrada do CRM**.
+Uma resposta humana de texto no canal `site_chat` passa pelo comando autenticado
+do painel, pela reserva idempotente e pelo evento `message.sent`. O widget do
+site consulta `POST {CRM}/api/v1/site-chat/messages` com
+`{"session_id":"<UUIDv4 da sessão>"}` e recebe apenas mensagens de texto
+daquela sessão (até 100); a API exige `Origin: https://silmer.com.br` ou
+`https://www.silmer.com.br`, limita requisições e desabilita cache. O UUID é
+segredo de acesso da sessão; o telefone declarado não é usado para consultar
+mensagens. O widget mantém o UUID no navegador durante a conversa, atualiza a
+lista após enviar e periodicamente enquanto aberto, e deduplica por `id`.
+Áudio e anexos enviados pelo vendedor estão desabilitados no `site_chat` até
+existir um caminho de entrega de mídia ao navegador. O chat hospedado pelo n8n
+não recebe respostas humanas assíncronas; o widget próprio do site usa essa
+consulta para exibi-las.
+
+O nó `Site - Receber mensagem do chat (MVP)` contém a opção **Custom Chat
+Styling** com as cores Silmer para a página hospedada do n8n. O estilo do
+widget incorporado está em
+[`ops/n8n/site-chat/silmer-chat.css`](../../../ops/n8n/site-chat/silmer-chat.css).
+O nó deve usar **Embedded Chat** quando o widget próprio do site estiver
+publicado, pois esse modo expõe o webhook ao front. A página hospedada serve
+só como prévia visual; não é o canal homologado para o repasse humano.
 
 ## Pedido pago da loja (ADR 028)
 
@@ -542,6 +697,12 @@ O CRM que aceita `audiences` no `briefing_patch` e lê a divisão por público
 com o CRM novo. O workflow `mvp-simple-14` (DEV `dev-mvp-simple-15`, ADR 026)
 não muda o contrato e não tem ordem de implantação: imagem, áudio, documento,
 vídeo e texto já eram tipos aceitos.
+O CRM que implementa CP-T04, CP-T05 e CP-T06, inclusive as migrations `0038` a
+`0040` e a consulta de mensagens do site, deve ser implantado e verificado
+**antes** do workflow `mvp-simple-15`. O fluxo anterior permanece publicado até
+esse gate. Depois, homologar em ambiente real os cenários de replay, dois
+Pedidos ativos, troca de Assunto, retorno em outro ciclo, nome/telefone e
+resposta humana do CRM chegando ao mesmo widget.
 
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker e configurar as duas credenciais Basic.
@@ -573,8 +734,8 @@ incertos para reconciliação. A rota direta não é reativada automaticamente.
 - bot pedindo para o cliente escrever depois de um áudio ou imagem: a mídia
   não foi lida; ver o erro em `WhatsApp - Consultar mídia`, `Baixar mídia`,
   `Preparar mídia para a IA` ou `OpenAI - Transcrever áudio`.
-- `422 site_chat_contact_has_no_whatsapp` no comando humano: a conversa é do
-  chat do site; responder no WhatsApp que o visitante deixou.
+- `422 site_chat_media_unsupported` no comando humano: o chat do site ainda
+  entrega somente texto do vendedor. Responder por texto na caixa de entrada.
 
 As próximas telas e a ordem de entrega estão em
 [`docs/roadmap/PROXIMAS-FASES.md`](../../roadmap/PROXIMAS-FASES.md).

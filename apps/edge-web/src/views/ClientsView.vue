@@ -32,6 +32,8 @@ const hasLoadedContacts = ref(false);
 const error = ref('');
 const contacts = ref([]);
 const totalCount = ref(0);
+const nextCursor = ref(null);
+const loadingMore = ref(false);
 const detail = ref(null);
 const busy = ref(false);
 const renaming = ref(false);
@@ -45,16 +47,9 @@ const renameTrigger = ref(null);
 let listController;
 let detailController;
 let refreshTimer = 0;
+let searchTimer = 0;
 
-const filtered = computed(() => {
-  const needle = query.value.trim().toLocaleLowerCase('pt-BR');
-  if (!needle) return contacts.value;
-  return contacts.value.filter((contact) =>
-    `${contact.label} ${contact.identities.map((identity) => identity.externalId).join(' ')}`
-      .toLocaleLowerCase('pt-BR')
-      .includes(needle),
-  );
-});
+const filtered = computed(() => contacts.value);
 const selected = computed(() => detail.value?.contact ?? null);
 
 function openContact(contact, event) {
@@ -84,11 +79,20 @@ async function loadContacts(silent = false) {
     error.value = '';
   } else refreshing.value = true;
   try {
-    const response = await request('/api/v1/contacts?limit=100', {
-      signal: currentController.signal,
-    });
+    const needle = query.value.trim();
+    const response = await request(
+      needle ? '/api/v1/contacts/search' : '/api/v1/contacts?limit=100',
+      needle
+        ? {
+            body: { limit: 100, q: needle },
+            method: 'POST',
+            signal: currentController.signal,
+          }
+        : { signal: currentController.signal },
+    );
     contacts.value = response.data.items;
     totalCount.value = response.data.totalCount;
+    nextCursor.value = response.data.nextCursor;
     hasLoadedContacts.value = true;
     error.value = '';
     const id = props.selectedId || selected.value?.id || contacts.value[0]?.id;
@@ -105,6 +109,28 @@ async function loadContacts(silent = false) {
       loading.value = false;
       refreshing.value = false;
     }
+  }
+}
+
+async function loadMoreContacts() {
+  if (!nextCursor.value || loadingMore.value) return;
+  loadingMore.value = true;
+  const needle = query.value.trim();
+  const cursor = nextCursor.value;
+  try {
+    const response = await request(
+      needle
+        ? '/api/v1/contacts/search'
+        : `/api/v1/contacts?limit=100&cursor=${encodeURIComponent(cursor)}`,
+      needle ? { body: { cursor, limit: 100, q: needle }, method: 'POST' } : {},
+    );
+    if (query.value.trim() !== needle) return;
+    contacts.value = [...contacts.value, ...response.data.items];
+    nextCursor.value = response.data.nextCursor;
+  } catch {
+    error.value = 'Não foi possível carregar mais clientes.';
+  } finally {
+    loadingMore.value = false;
   }
 }
 
@@ -264,9 +290,18 @@ onMounted(() => {
 watch(liveEvent, (event) => {
   if (event) scheduleLiveRefresh();
 });
+watch(query, () => {
+  listController?.abort();
+  if (searchTimer) globalThis.clearTimeout(searchTimer);
+  searchTimer = globalThis.setTimeout(() => {
+    searchTimer = 0;
+    void loadContacts();
+  }, 300);
+});
 onBeforeUnmount(() => {
   listController?.abort();
   detailController?.abort();
+  if (searchTimer) globalThis.clearTimeout(searchTimer);
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });
 </script>
@@ -286,7 +321,7 @@ onBeforeUnmount(() => {
 
     <div class="filter-bar">
       <div class="search-control">
-        <label for="client-search">Buscar contato ou identificador</label>
+        <label for="client-search">Buscar cliente por nome ou telefone</label>
         <div class="search-field">
           <input
             id="client-search"
@@ -350,7 +385,7 @@ onBeforeUnmount(() => {
             <thead>
               <tr>
                 <th scope="col">Contato</th>
-                <th scope="col">Canais</th>
+                <th scope="col">Telefone e canais</th>
                 <th scope="col">Situação</th>
                 <th scope="col">Última atividade</th>
               </tr>
@@ -369,10 +404,21 @@ onBeforeUnmount(() => {
                   </RouterLink>
                 </td>
                 <td>
+                  <span v-if="contact.phone">{{
+                    formatPhoneNumber(contact.phone)
+                  }}</span>
+                  <span v-if="contact.phoneSource === 'site_unverified'">
+                    · informado no site · não confirmado
+                  </span>
                   {{
                     contact.identities
-                      .map((identity) => CHANNEL_LABELS[identity.channel])
-                      .join(', ') || 'Sem canal'
+                      .map((identity) =>
+                        identity.channel === 'site_chat'
+                          ? 'Chat do site'
+                          : CHANNEL_LABELS[identity.channel],
+                      )
+                      .join(', ') ||
+                    (contact.phone ? '· sem canal' : 'Sem canal')
                   }}
                 </td>
                 <td>{{ contact.provisional ? 'Provisório' : 'Canônico' }}</td>
@@ -385,6 +431,14 @@ onBeforeUnmount(() => {
           <h3>Nenhum contato encontrado</h3>
           <p>Revise a busca informada.</p>
         </div>
+        <button
+          v-if="nextCursor"
+          type="button"
+          :disabled="loadingMore"
+          @click="loadMoreContacts"
+        >
+          {{ loadingMore ? 'Carregando…' : 'Carregar mais clientes' }}
+        </button>
       </section>
 
       <section
@@ -457,6 +511,19 @@ onBeforeUnmount(() => {
               <dt>Cadastrado em</dt>
               <dd>{{ dateTimeBR(selected.createdAt) }}</dd>
             </div>
+            <div v-if="selected.phone">
+              <dt>Telefone informado</dt>
+              <dd>
+                {{ formatPhoneNumber(selected.phone) }}
+                <span v-if="selected.phoneSource === 'site_unverified'">
+                  · informado no site · não confirmado
+                </span>
+              </dd>
+            </div>
+            <div v-if="selected.email">
+              <dt>E-mail</dt>
+              <dd>{{ selected.email }}</dd>
+            </div>
           </dl>
 
           <div class="panel-head subsection-heading">
@@ -466,9 +533,13 @@ onBeforeUnmount(() => {
             <li v-for="identity in detail.identities" :key="identity.id">
               <template v-if="identity.kind !== 'phone'">
                 <strong>{{
-                  CHANNEL_LABELS[identity.channel] ?? identity.channel
+                  identity.channel === 'site_chat'
+                    ? 'Chat do site'
+                    : (CHANNEL_LABELS[identity.channel] ?? identity.channel)
                 }}</strong>
-                <span>{{ identity.displayHandle ?? identity.externalId }}</span>
+                <span v-if="identity.channel !== 'site_chat'">{{
+                  identity.displayHandle ?? identity.externalId
+                }}</span>
               </template>
               <dl v-if="identity.kind === 'phone'" class="contact-phone">
                 <div>

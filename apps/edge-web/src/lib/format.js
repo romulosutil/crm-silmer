@@ -30,6 +30,8 @@ export function conversationLabel(conversation) {
 }
 
 export const CHANNEL_LABELS = Object.freeze({
+  instagram: 'Instagram',
+  site_chat: 'Chat do site',
   whatsapp: 'WhatsApp',
 });
 

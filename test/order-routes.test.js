@@ -498,6 +498,32 @@ test('GET /orders refuses unknown or malformed parameters with 400', async (t) =
   assert.equal(guards.length, 1);
 });
 
+test('phone search stays in a protected POST body, never in an order URL', async (t) => {
+  const { api, guards, runtime } = orderHarness();
+  t.after(() => api.close());
+  await createPending(runtime, 'conversation-2');
+  const phone = '5527999991234';
+  const inUrl = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders?q=${phone}`,
+  });
+  assert.equal(inUrl.statusCode, 400);
+  const searched = await api.inject({
+    headers: { ...readHeaders, 'x-csrf-token': 'csrf-synthetic' },
+    method: 'POST',
+    url: '/api/v1/orders/search',
+    payload: { q: phone, limit: 25 },
+  });
+  assert.equal(searched.statusCode, 200);
+  assert.match(String(searched.headers['cache-control']), /private, no-cache/u);
+  const searchGuard = guards.at(-1);
+  assert.ok(searchGuard);
+  assert.equal(searchGuard.method, 'authorizeWrite');
+  assert.equal(searchGuard.input.action, 'order.read');
+  assert.equal(searchGuard.input.csrfToken, 'csrf-synthetic');
+});
+
 test('GET /conversations/:conversationId/order returns the current order or null', async (t) => {
   const { api, runtime } = orderHarness();
   t.after(() => api.close());

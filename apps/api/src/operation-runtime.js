@@ -6,7 +6,16 @@ import {
 } from 'node:crypto';
 
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
-import { PostgresContactReadRepository } from '@crm-silmer/contacts';
+import { PostgresIdempotencyRecordStore } from '@crm-silmer/integration-reliability';
+import {
+  PostgresContactReadRepository,
+  contactPhoneHash,
+  decryptContactIdentityEnvelope,
+  decryptContactDetails,
+  encryptContactDetails,
+  normalizeContactEmail,
+  normalizeContactPhone,
+} from '@crm-silmer/contacts';
 import { PostgresInboxReadRepository } from '@crm-silmer/inbox-channels';
 import { PostgresHandoffReadRepository } from '@crm-silmer/work-management';
 
@@ -21,7 +30,7 @@ const CONVERSATION_STATES = new Set([
   'sem_lead',
   'encerrada',
 ]);
-const CHANNELS = new Set(['instagram', 'whatsapp']);
+const CHANNELS = new Set(['instagram', 'whatsapp', 'site_chat']);
 const AUTOMATION_STATES = new Set(['assistant', 'human']);
 
 export class OperationReadError extends Error {
@@ -255,13 +264,26 @@ export function createOperationReadService({
  */
 export function createOperationReadRuntime(database, options = {}) {
   const environment = options.environment ?? process.env;
+  const contactKey = readKey(
+    environment.CONTACT_IDENTITY_ENVELOPE_KEY,
+    'CONTACT_IDENTITY_ENVELOPE_KEY',
+  );
+  const contactLookupKey = readKey(
+    environment.CONTACT_IDENTITY_LOOKUP_KEY,
+    'CONTACT_IDENTITY_LOOKUP_KEY',
+  );
+  const contactDetailsIdempotency = new PostgresIdempotencyRecordStore({
+    database,
+    envelopeKey: readKey(
+      environment.IDEMPOTENCY_ENVELOPE_KEY,
+      'IDEMPOTENCY_ENVELOPE_KEY',
+    ),
+  });
   const service = createOperationReadService({
     contactRepository: new PostgresContactReadRepository({
       database,
-      envelopeKey: readKey(
-        environment.CONTACT_IDENTITY_ENVELOPE_KEY,
-        'CONTACT_IDENTITY_ENVELOPE_KEY',
-      ),
+      envelopeKey: contactKey,
+      lookupKey: contactLookupKey,
     }),
     database,
     cursorKey: readKey(
@@ -298,45 +320,102 @@ export function createOperationReadRuntime(database, options = {}) {
     ...service,
 
     /** A manual contact has no unverified channel identity (CP-01).
-     * @param {{actor: {id: string}, correlationId: string, displayName: unknown, idempotencyKey: string}} input
+     * @param {{actor: {id: string}, correlationId: string, displayName: unknown, email?: unknown, phone: unknown, idempotencyKey: string}} input
      */
     async createContact(input) {
       const displayName = readDisplayName(input.displayName);
       if (!displayName)
         throw new OperationReadError(400, 'INVALID_DISPLAY_NAME');
+      const phone = normalizeContactPhone(input.phone);
+      if (!phone) throw new OperationReadError(400, 'INVALID_PHONE');
+      const email = normalizeContactEmail(input.email);
+      if (email === undefined)
+        throw new OperationReadError(400, 'INVALID_EMAIL');
+      const phoneHash = contactPhoneHash(phone, contactLookupKey);
       const key = requireId(input.idempotencyKey, 'IDEMPOTENCY_KEY');
       if (!input.actor?.id) throw new OperationReadError(403, 'FORBIDDEN');
       return database.transaction(async (/** @type {any} */ transaction) => {
         const occurredAt = new Date().toISOString();
         const contactId = randomUUID();
-        const inserted = await transaction.query(
-          `INSERT INTO crm.contacts
+        await transaction.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          phoneHash,
+        ]);
+        const replay = (
+          await transaction.query(
+            `SELECT id, display_name, version, manually_created_by,
+                    contact_phone_hash, contact_details_envelope
+             FROM crm.contacts WHERE manual_create_key = $1`,
+            [key],
+          )
+        ).rows[0];
+        if (!replay) {
+          const candidates = await transaction.query(
+            `SELECT EXISTS (
+               SELECT 1 FROM crm.contacts WHERE contact_phone_hash = $1
+               UNION ALL
+               SELECT 1 FROM crm.contact_phone_lookup WHERE phone_hash = $1
+               UNION ALL
+               SELECT 1 FROM crm.site_contact_claims WHERE phone_hash = $1
+             ) AS found`,
+            [phoneHash],
+          );
+          if (candidates.rows[0]?.found) {
+            throw new OperationReadError(409, 'CONTACT_PHONE_MATCH');
+          }
+        }
+        const inserted = replay
+          ? { rows: [] }
+          : await transaction.query(
+              `INSERT INTO crm.contacts
              (id, provisional, version, created_at, updated_at,
               display_name, display_name_source, manual_create_key,
-              manually_created_by)
-           VALUES ($1, false, 1, $2, $2, $3, 'manual', $4, $5)
-           ON CONFLICT (manual_create_key) DO NOTHING
-           RETURNING id, display_name, version, manually_created_by`,
-          [contactId, occurredAt, displayName, key, input.actor.id],
-        );
+              manually_created_by, contact_phone_hash, contact_details_envelope)
+           VALUES ($1, false, 1, $2, $2, $3, 'manual', $4, $5, $6, $7::jsonb)
+           ON CONFLICT DO NOTHING
+           RETURNING id, display_name, version, manually_created_by, contact_phone_hash, contact_details_envelope`,
+              [
+                contactId,
+                occurredAt,
+                displayName,
+                key,
+                input.actor.id,
+                phoneHash,
+                JSON.stringify(
+                  encryptContactDetails({ email, phone }, contactKey),
+                ),
+              ],
+            );
         const created = Boolean(inserted.rows[0]);
         const row =
           inserted.rows[0] ??
+          replay ??
           (
             await transaction.query(
-              `SELECT id, display_name, version, manually_created_by
+              `SELECT id, display_name, version, manually_created_by,
+                      contact_phone_hash, contact_details_envelope
              FROM crm.contacts WHERE manual_create_key = $1`,
               [key],
             )
           ).rows[0];
+        const storedDetails = row?.contact_details_envelope
+          ? decryptContactDetails(row.contact_details_envelope, contactKey)
+          : null;
         if (
           !row ||
           row.display_name !== displayName ||
-          row.manually_created_by !== input.actor.id
+          row.manually_created_by !== input.actor.id ||
+          row.contact_phone_hash !== phoneHash ||
+          storedDetails?.email !== email ||
+          storedDetails?.phone !== phone
         ) {
           throw new OperationReadError(409, 'CONTACT_CONFLICT');
         }
         if (created) {
+          await transaction.query(
+            `INSERT INTO crm.contact_phone_lookup (contact_id, phone_hash, source)
+             VALUES ($1, $2, 'manual') ON CONFLICT DO NOTHING`,
+            [row.id, phoneHash],
+          );
           await auditPort.append(
             {
               action: 'contact.created',
@@ -369,10 +448,210 @@ export function createOperationReadRuntime(database, options = {}) {
             displayName: row.display_name,
             id: row.id,
             label: row.display_name,
+            phone,
+            email,
             version: Number(row.version),
           },
         };
       });
+    },
+
+    /** Completes a legacy contact before a new manual order without changing channel identity. */
+    /** @param {{actor: {id: string}, contactId: unknown, correlationId: string, email?: unknown, expectedVersion: unknown, idempotencyKey: unknown, phone: unknown}} input */
+    async setContactDetails(input) {
+      const contactId = requireId(input.contactId, 'CONTACT_ID');
+      const phone = normalizeContactPhone(input.phone);
+      if (!phone) throw new OperationReadError(400, 'INVALID_PHONE');
+      const email = normalizeContactEmail(input.email);
+      if (email === undefined)
+        throw new OperationReadError(400, 'INVALID_EMAIL');
+      const expectedVersion = Number(input.expectedVersion);
+      if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+        throw new OperationReadError(400, 'INVALID_REQUEST');
+      }
+      if (!input.actor?.id) throw new OperationReadError(403, 'FORBIDDEN');
+      const phoneHash = contactPhoneHash(phone, contactLookupKey);
+      const key = requireId(input.idempotencyKey, 'IDEMPOTENCY_KEY');
+      try {
+        return await contactDetailsIdempotency.execute(
+          {
+            scope: 'contact.details.complete',
+            key,
+            fingerprint: createHmac('sha256', contactLookupKey)
+              .update(
+                JSON.stringify({
+                  actorId: input.actor.id,
+                  contactId,
+                  email,
+                  expectedVersion,
+                  phoneHash,
+                }),
+              )
+              .digest('hex'),
+            actor: input.actor.id,
+            action: 'contact.details.complete',
+            target: { type: 'contact', id: contactId },
+            version: expectedVersion,
+            reason: 'MANUAL_ORDER_CONTACT_PHONE',
+            correlationId: input.correlationId,
+          },
+          async (/** @type {any} */ transaction) => {
+            await transaction.query(
+              'SELECT pg_advisory_xact_lock(hashtext($1))',
+              [phoneHash],
+            );
+            const current = (
+              await transaction.query(
+                `SELECT id, display_name, manual_create_key, contact_phone_hash,
+                    contact_details_envelope, contact_details_key,
+                    contact_details_actor_id, version
+             FROM crm.contacts WHERE id = $1 FOR UPDATE`,
+                [contactId],
+              )
+            ).rows[0];
+            if (!current)
+              throw new OperationReadError(404, 'CONTACT_NOT_FOUND');
+            if (current.contact_details_key === key) {
+              const saved = decryptContactDetails(
+                current.contact_details_envelope,
+                contactKey,
+              );
+              if (
+                current.contact_details_actor_id !== input.actor.id ||
+                saved.phone !== phone ||
+                saved.email !== email ||
+                Number(current.version) !== expectedVersion + 1
+              ) {
+                throw new OperationReadError(409, 'CONTACT_CONFLICT');
+              }
+              return {
+                id: contactId,
+                label: current.display_name,
+                displayName: current.display_name,
+                phone,
+                email,
+                version: Number(current.version),
+              };
+            }
+            if (
+              Number(current.version) !== expectedVersion ||
+              (current.contact_phone_hash &&
+                current.contact_phone_hash !== phoneHash)
+            ) {
+              throw new OperationReadError(409, 'CONTACT_CONFLICT');
+            }
+            const candidates = await transaction.query(
+              `SELECT EXISTS (
+                 SELECT 1 FROM crm.contacts
+                 WHERE contact_phone_hash = $1 AND id <> $2
+                 UNION ALL
+                 SELECT 1 FROM crm.contact_phone_lookup lookup
+                 LEFT JOIN crm.contact_identities identity
+                   ON identity.id = lookup.identity_id
+                 WHERE lookup.phone_hash = $1
+                   AND CASE WHEN lookup.source = 'whatsapp'
+                     THEN identity.current_contact_id <> $2
+                     ELSE lookup.contact_id <> $2 END
+                 UNION ALL
+                 SELECT 1 FROM crm.site_contact_claims claim
+                 JOIN crm.conversations conversation
+                   ON conversation.id = claim.conversation_id
+                 JOIN crm.contact_identities identity
+                   ON identity.id = conversation.contact_identity_id
+                 WHERE claim.phone_hash = $1
+                   AND identity.current_contact_id <> $2
+               ) AS found`,
+              [phoneHash, contactId],
+            );
+            if (candidates.rows[0]?.found) {
+              throw new OperationReadError(409, 'CONTACT_PHONE_MATCH');
+            }
+            const identities = await transaction.query(
+              `SELECT external_identity_lookup_hash, identity_envelope
+             FROM crm.contact_identities
+             WHERE current_contact_id = $1 AND identity_kind = 'phone'
+               AND phone_status = 'confirmed'`,
+              [contactId],
+            );
+            for (const identity of identities.rows) {
+              const saved = decryptContactIdentityEnvelope(
+                identity.identity_envelope,
+                identity.external_identity_lookup_hash,
+                contactKey,
+              );
+              const confirmedPhone = normalizeContactPhone(
+                saved.externalIdentityId,
+              );
+              if (confirmedPhone && confirmedPhone !== phone) {
+                throw new OperationReadError(409, 'CONTACT_CONFLICT');
+              }
+            }
+            const occurredAt = new Date().toISOString();
+            const row = (
+              await transaction.query(
+                `UPDATE crm.contacts
+             SET contact_phone_hash = $2, contact_details_envelope = $3::jsonb,
+                 contact_details_key = $4, contact_details_actor_id = $5,
+                 version = version + 1, updated_at = $6
+             WHERE id = $1 RETURNING id, display_name, version`,
+                [
+                  contactId,
+                  phoneHash,
+                  JSON.stringify(
+                    encryptContactDetails({ email, phone }, contactKey),
+                  ),
+                  key,
+                  input.actor.id,
+                  occurredAt,
+                ],
+              )
+            ).rows[0];
+            await transaction.query(
+              `INSERT INTO crm.contact_phone_lookup (contact_id, phone_hash, source)
+               VALUES ($1, $2, 'manual') ON CONFLICT DO NOTHING`,
+              [contactId, phoneHash],
+            );
+            await auditPort.append(
+              {
+                action: 'contact.details.completed',
+                actor: input.actor.id,
+                correlationId: input.correlationId,
+                occurredAt,
+                reason: 'MANUAL_ORDER_CONTACT_PHONE',
+                target: { id: contactId, type: 'contact' },
+                version: Number(row.version),
+              },
+              { transaction },
+            );
+            await transaction.query(
+              `INSERT INTO crm.domain_events
+               (id, aggregate_type, aggregate_id, aggregate_version,
+                event_type, payload, correlation_id, occurred_at)
+             VALUES ($1, 'contact', $2, $3, 'contact.details.completed', $4::jsonb, $5, $6)`,
+              [
+                `event-${randomUUID()}`,
+                contactId,
+                Number(row.version),
+                JSON.stringify({ contactId }),
+                input.correlationId,
+                occurredAt,
+              ],
+            );
+            return {
+              id: contactId,
+              label: row.display_name,
+              displayName: row.display_name,
+              phone,
+              email,
+              version: Number(row.version),
+            };
+          },
+        );
+      } catch (cause) {
+        if (/** @type {any} */ (cause)?.code === '23505')
+          throw new OperationReadError(409, 'CONTACT_CONFLICT');
+        throw cause;
+      }
     },
 
     /**

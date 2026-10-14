@@ -422,6 +422,7 @@ test('the automation intent reuses the pending order without ownership', async (
 const KEY = Buffer.alloc(32, 7).toString('base64url');
 const ENVIRONMENT = Object.freeze({
   CONTACT_IDENTITY_ENVELOPE_KEY: KEY,
+  CONTACT_IDENTITY_LOOKUP_KEY: KEY,
   FAB_CODE: '01',
   IDEMPOTENCY_ENVELOPE_KEY: KEY,
   N8N_INTEGRATION_ENVELOPE_KEY: KEY,
@@ -451,6 +452,7 @@ test('the PostgreSQL wiring refuses incomplete configuration', () => {
     ['FAB_CODE', undefined, /FAB_CODE is required/u],
     ['N8N_INTEGRATION_ENVELOPE_KEY', 'c2hvcnQ', /32 bytes/u],
     ['CONTACT_IDENTITY_ENVELOPE_KEY', undefined, /CONTACT_IDENTITY/u],
+    ['CONTACT_IDENTITY_LOOKUP_KEY', undefined, /CONTACT_IDENTITY_LOOKUP_KEY/u],
     ['IDEMPOTENCY_ENVELOPE_KEY', undefined, /IDEMPOTENCY_ENVELOPE_KEY/u],
   ])) {
     assert.throws(

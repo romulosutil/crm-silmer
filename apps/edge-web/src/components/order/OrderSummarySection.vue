@@ -186,7 +186,9 @@ async function save() {
           <dt>Cliente</dt>
           <dd>
             {{ summary.cliente || '—' }}
-            <span class="op-origin-note">vem da conversa</span>
+            <span v-if="order.conversationId" class="op-origin-note">
+              vem da conversa
+            </span>
           </dd>
         </div>
         <div>

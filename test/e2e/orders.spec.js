@@ -1192,6 +1192,22 @@ test('reads the order summary and marks the customer as locked (PFI-02)', async 
   );
 });
 
+test('does not attribute a manual order customer to a conversation', async ({
+  page,
+}) => {
+  const manualOrder = {
+    ...pendingOrder,
+    conversationId: null,
+    id: 'order-manual',
+  };
+  await mockOrders(page, { orders: [manualOrder] });
+  await page.goto('/pedidos/order-manual');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await expect(summary).toContainText('Colégio Ápice');
+  await expect(summary).not.toContainText('vem da conversa');
+});
+
 test('edits the summary and saves the whole section at once (PFI-06)', async ({
   page,
 }) => {

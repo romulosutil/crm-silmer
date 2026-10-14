@@ -616,6 +616,7 @@ async function subjectCommand(kind, target = null) {
     }
     subjectCommandKeys.delete(signature);
     await loadSubjects(conversationId);
+    if (activeId.value !== conversationId) return;
     if (!subjectError.value) {
       subjectNotice.value =
         kind === 'tag'
@@ -629,6 +630,7 @@ async function subjectCommand(kind, target = null) {
       subjectHeading.value?.focus();
     }
   } catch (cause) {
+    if (activeId.value !== conversationId) return;
     subjectError.value = describeError(cause);
     if (cause?.status === 409) {
       subjectCommandKeys.delete(signature);

@@ -342,6 +342,10 @@ export class PostgresInboxRepository {
           `SELECT EXISTS (
              SELECT 1 FROM crm.orders
              WHERE conversation_id = $1 AND status = 'pendente'
+             UNION ALL
+             SELECT 1 FROM crm.conversation_subjects subject
+             JOIN crm.orders orders ON orders.id = subject.order_id
+             WHERE subject.conversation_id = $1 AND orders.status = 'pendente'
            ) AS present`,
           [input.conversationId],
         );

@@ -78,7 +78,24 @@ export class InMemoryOrderRepository {
   /** @param {import('../ports/contracts.js').CreatePendingOrderInput} input */
   async createPending(input) {
     return this.#exclusive(() => {
-      if (this.#pendingFor(input.conversationId)) {
+      const replay = input.manualCreateKey
+        ? [...this.#orders.values()].find(
+            (order) => order.manualCreateKey === input.manualCreateKey,
+          )
+        : null;
+      if (replay) {
+        if (
+          replay.contactId !== input.contactId ||
+          replay.manualOwnerId !== input.manualOwnerId
+        ) {
+          throw new OrderConflictError(
+            'Idempotency key was reused',
+            'IDEMPOTENCY_KEY_REUSED',
+          );
+        }
+        return clone(replay);
+      }
+      if (input.conversationId && this.#pendingFor(input.conversationId)) {
         throw new OrderConflictError(
           'The conversation already has a pending order',
           'ORDER_PENDING_EXISTS',
@@ -91,6 +108,7 @@ export class InMemoryOrderRepository {
         confirmedAt: null,
         confirmedBy: null,
         conversationId: input.conversationId,
+        contactId: input.contactId ?? null,
         createdAt: at,
         createdBy: input.createdBy,
         createdByKind: input.createdByKind,
@@ -106,6 +124,8 @@ export class InMemoryOrderRepository {
         isTest: false,
         leadTimeBusinessDays: null,
         missingFields: [...input.missingFields],
+        manualCreateKey: input.manualCreateKey ?? null,
+        manualOwnerId: input.manualOwnerId ?? null,
         number: formatOrderNumber(this.#sequence),
         numberSequence: this.#sequence,
         orderDate: null,
@@ -303,6 +323,7 @@ export class InMemoryOrderRepository {
     const {
       after,
       conversationIds,
+      contactIds,
       limit,
       numberSequence,
       origin,
@@ -320,11 +341,15 @@ export class InMemoryOrderRepository {
         (origin === undefined || order.origin === origin) &&
         ((numberSequence === undefined &&
           conversationIds === undefined &&
+          contactIds === undefined &&
           phoneDigests === undefined &&
           storeNumber === undefined) ||
           order.numberSequence === numberSequence ||
           (conversationIds ?? []).includes(
             /** @type {string} */ (order.conversationId),
+          ) ||
+          (contactIds ?? []).includes(
+            /** @type {string} */ (order.contactId),
           ) ||
           phoneOrders.has(order.id) ||
           (storeNumber !== undefined && order.storeNumber === storeNumber)),

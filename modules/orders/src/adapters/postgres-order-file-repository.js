@@ -174,21 +174,38 @@ export class PostgresOrderFileRepository {
    */
   async #lockPending(transaction, orderId, actor) {
     const order = await transaction.query(
-      `SELECT conversation_id FROM crm.orders WHERE id = $1`,
+      `SELECT conversation_id, manual_owner_id, origin
+       FROM crm.orders WHERE id = $1`,
       [orderId],
     );
-    const conversationId = order.rows[0]?.conversation_id;
-    if (!conversationId) throw new OrderNotFoundError();
-    const conversation = await lockConversation(transaction, conversationId);
-    if (!conversation) throw new OrderNotFoundError();
-    await assertWriteOwner(transaction, actor, conversation, false);
+    const row = order.rows[0];
+    if (!row || row.origin === 'loja') throw new OrderNotFoundError();
+    const conversationId = row.conversation_id;
+    if (conversationId) {
+      const conversation = await lockConversation(transaction, conversationId);
+      if (!conversation) throw new OrderNotFoundError();
+      await assertWriteOwner(transaction, actor, conversation, false);
+    } else if (row.manual_owner_id) {
+      await assertWriteOwner(
+        transaction,
+        actor,
+        { assigned_user_id: row.manual_owner_id },
+        false,
+      );
+    } else {
+      throw new OrderNotFoundError();
+    }
     const locked = await transaction.query(
-      `SELECT conversation_id, status FROM crm.orders
+      `SELECT conversation_id, manual_owner_id, status FROM crm.orders
        WHERE id = $1 FOR UPDATE`,
       [orderId],
     );
     const current = locked.rows[0];
-    if (!current || current.conversation_id !== conversationId) {
+    if (
+      !current ||
+      current.conversation_id !== conversationId ||
+      current.manual_owner_id !== row.manual_owner_id
+    ) {
       throw new OrderNotFoundError();
     }
     if (current.status !== 'pendente') {

@@ -15,6 +15,7 @@ const ORDER_SECTIONS = new Set(['summary', 'items', 'observations', 'artwork']);
  * and identifiers never reach the client.
  */
 const PUBLIC_CODES = new Set([
+  'CONTACT_NOT_FOUND',
   'CONVERSATION_NOT_FOUND',
   'EMPTY_FILE',
   'FILE_CONTENT_MISMATCH',
@@ -67,6 +68,25 @@ export function registerOrderRoutes(api, orders, contextFor) {
       await authorizeRead(request, orders);
       privateReadHeaders(reply);
       return reply.code(200).send(await orders.list(input));
+    }),
+  );
+
+  api.post('/api/v1/orders', async (request, reply) =>
+    respond(reply, async () => {
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['contactId']);
+      const command = await authorizeCommand(
+        request,
+        orders,
+        contextFor,
+        'order.create',
+      );
+      const order = await orders.createForContact({
+        ...command,
+        contactId: requireIdentifier(body.contactId, 'CONTACT_ID'),
+      });
+      privateReadHeaders(reply);
+      return reply.code(201).send({ order });
     }),
   );
 

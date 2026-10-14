@@ -67,17 +67,25 @@ export function createOperationReadService({
     },
     /** @param {any} input */
     async listContacts(input = {}) {
-      rejectUnknownKeys(input, ['cursor', 'limit']);
+      rejectUnknownKeys(input, ['cursor', 'limit', 'q']);
+      const q = input.q === undefined ? '' : String(input.q).trim();
+      if (
+        q.length > 120 ||
+        (input.q !== undefined && typeof input.q !== 'string')
+      ) {
+        throw new OperationReadError(400, 'INVALID_REQUEST');
+      }
       const limit = readLimit(input.limit);
+      const filters = q ? { q } : {};
       const after = readCursor(input.cursor, {
         cursorKey,
-        fingerprint: filterFingerprint({}),
+        fingerprint: filterFingerprint(filters),
         scope: 'contacts',
       });
-      const result = await contactRepository.list({ after, limit });
+      const result = await contactRepository.list({ after, limit, ...filters });
       return pageResponse(result, {
         cursorKey,
-        fingerprint: filterFingerprint({}),
+        fingerprint: filterFingerprint(filters),
         scope: 'contacts',
       });
     },
@@ -287,6 +295,84 @@ export function createOperationReadRuntime(database, options = {}) {
 
   return Object.freeze({
     ...service,
+
+    /** A manual contact has no unverified channel identity (CP-01).
+     * @param {{actor: {id: string}, correlationId: string, displayName: unknown, idempotencyKey: string}} input
+     */
+    async createContact(input) {
+      const displayName = readDisplayName(input.displayName);
+      if (!displayName)
+        throw new OperationReadError(400, 'INVALID_DISPLAY_NAME');
+      const key = requireId(input.idempotencyKey, 'IDEMPOTENCY_KEY');
+      if (!input.actor?.id) throw new OperationReadError(403, 'FORBIDDEN');
+      return database.transaction(async (/** @type {any} */ transaction) => {
+        const occurredAt = new Date().toISOString();
+        const contactId = randomUUID();
+        const inserted = await transaction.query(
+          `INSERT INTO crm.contacts
+             (id, provisional, version, created_at, updated_at,
+              display_name, display_name_source, manual_create_key,
+              manually_created_by)
+           VALUES ($1, false, 1, $2, $2, $3, 'manual', $4, $5)
+           ON CONFLICT (manual_create_key) DO NOTHING
+           RETURNING id, display_name, version, manually_created_by`,
+          [contactId, occurredAt, displayName, key, input.actor.id],
+        );
+        const created = Boolean(inserted.rows[0]);
+        const row =
+          inserted.rows[0] ??
+          (
+            await transaction.query(
+              `SELECT id, display_name, version, manually_created_by
+             FROM crm.contacts WHERE manual_create_key = $1`,
+              [key],
+            )
+          ).rows[0];
+        if (
+          !row ||
+          row.display_name !== displayName ||
+          row.manually_created_by !== input.actor.id
+        ) {
+          throw new OperationReadError(409, 'CONTACT_CONFLICT');
+        }
+        if (created) {
+          await auditPort.append(
+            {
+              action: 'contact.created',
+              actor: input.actor.id,
+              correlationId: input.correlationId,
+              occurredAt,
+              reason: 'MANUAL_CONTACT',
+              target: { id: row.id, type: 'contact' },
+              version: 1,
+            },
+            { transaction },
+          );
+          await transaction.query(
+            `INSERT INTO crm.domain_events
+               (id, aggregate_type, aggregate_id, aggregate_version,
+                event_type, payload, correlation_id, occurred_at)
+             VALUES ($1, 'contact', $2, 1, 'contact.created', $3::jsonb, $4, $5)`,
+            [
+              `event-${randomUUID()}`,
+              row.id,
+              JSON.stringify({ contactId: row.id }),
+              input.correlationId,
+              occurredAt,
+            ],
+          );
+        }
+        return {
+          created,
+          contact: {
+            displayName: row.display_name,
+            id: row.id,
+            label: row.display_name,
+            version: Number(row.version),
+          },
+        };
+      });
+    },
 
     /**
      * Renames a contact. The channel handle in contact_identities keeps

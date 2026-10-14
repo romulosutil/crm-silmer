@@ -59,9 +59,16 @@ function harness() {
             ? { briefing: null, customerName: 'Cliente Sintetico' }
             : null,
       ),
+      readContactNames: async (/** @type {string[]} */ ids) =>
+        new Map(
+          ids
+            .filter((id) => id === 'contact-1')
+            .map((id) => [id, 'Cliente Sintético']),
+        ),
       readUserNames: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, `Nome ${id}`])),
       searchConversationIds: async () => [],
+      searchContactIds: async () => ['contact-1'],
     },
     fabCode: '01',
     idempotencyStore: new InMemoryIdempotencyRecordStore(),
@@ -69,6 +76,36 @@ function harness() {
   });
   return { access, assignmentReads, assignments, audits, runtime };
 }
+
+test('a seller creates a manual contact order and its owner may edit it', async () => {
+  const { runtime } = harness();
+  const input = command(OWNER, { contactId: 'contact-1' });
+  const created = await runtime.createForContact(input);
+  assert.equal(created.conversationId, null);
+  assert.equal(created.seller?.id, OWNER.id);
+  assert.equal(created.ficha.summary.cliente, 'Cliente Sintético');
+  assert.deepEqual(await runtime.createForContact(input), created);
+  await assert.rejects(
+    runtime.patchSection(
+      command(OTHER, {
+        orderId: created.id,
+        expectedVersion: created.version,
+        section: 'summary',
+        value: { data_entrega_confirmada: '2026-10-24', nome: 'Evento' },
+      }),
+    ),
+    { code: 'FORBIDDEN' },
+  );
+  const edited = await runtime.patchSection(
+    command(OWNER, {
+      orderId: created.id,
+      expectedVersion: created.version,
+      section: 'summary',
+      value: { data_entrega_confirmada: '2026-10-24', nome: 'Evento' },
+    }),
+  );
+  assert.equal(edited.ficha.summary.nome, 'Evento');
+});
 
 let commandSequence = 0;
 /** @param {any} actor @param {Record<string, unknown>} extra @returns {any} */

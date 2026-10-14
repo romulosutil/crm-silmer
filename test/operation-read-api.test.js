@@ -132,6 +132,52 @@ test('publishes authorized Contact list and detail read models', async () => {
   await api.close();
 });
 
+test('searches contacts by name and creates a manual contact with a protected command', async () => {
+  const { api, calls, headers } = harness({
+    async authorizeWrite(/** @type {any} */ input) {
+      calls.push(['authorize-write', input]);
+      return { actor: { id: 'operator-1', kind: 'human' } };
+    },
+    async createContact(/** @type {any} */ input) {
+      calls.push(['create-contact', input]);
+      return {
+        contact: { id: 'contact-new', label: input.displayName },
+        created: true,
+      };
+    },
+  });
+  const search = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/contacts?q=Cliente&limit=10',
+  });
+  assert.equal(search.statusCode, 200);
+  assert.deepEqual(calls[1], ['contacts', { limit: 10, q: 'Cliente' }]);
+  const created = await api.inject({
+    headers: {
+      ...headers,
+      'idempotency-key': 'contact-request-1',
+      'x-csrf-token': 'csrf-synthetic',
+    },
+    method: 'POST',
+    url: '/api/v1/contacts',
+    payload: { displayName: 'Cliente Novo' },
+  });
+  assert.equal(created.statusCode, 201);
+  assert.equal(calls[2][0], 'authorize-write');
+  assert.equal(calls[2][1].action, 'contact.create');
+  assert.deepEqual(calls[3], [
+    'create-contact',
+    {
+      actor: { id: 'operator-1', kind: 'human' },
+      correlationId: created.headers['x-request-id'],
+      displayName: 'Cliente Novo',
+      idempotencyKey: 'contact-request-1',
+    },
+  ]);
+  await api.close();
+});
+
 test('publishes the pending handoff queue through the read-only contract', async () => {
   const { api, calls, headers } = harness();
   const response = await api.inject({

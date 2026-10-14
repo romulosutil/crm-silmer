@@ -38,9 +38,12 @@ import { assertOrderRepositoryContract } from '../ports/contracts.js';
  *   repository: import('../ports/contracts.js').OrderRepository,
  *   conversations: {
  *     readOrderContexts(conversationIds: string[]): Promise<Map<string, OrderConversationContext>>,
+ *     readContactNames?(contactIds: string[]): Promise<Map<string, string|null>>,
  *     searchConversationIds(query: string): Promise<string[]>,
+ *     searchContactIds?(query: string): Promise<string[]>,
  *   },
  *   authorizeOwnership(input: {actor: OrderActor, conversationId: string}): Promise<void>,
+ *   authorizeManualOwnership?(input: {actor: OrderActor, ownerId: string}): Promise<void>,
  *   fabCode: string,
  *   phoneDigestsFor?: (query: string) => string[],
  *   clock?: () => Date,
@@ -138,14 +141,48 @@ export function createOrderService(options) {
           .map((order) => /** @type {string} */ (order.conversationId)),
       ),
     ];
-    if (pendingConversations.length === 0) return orders;
-    const contexts =
-      await conversations.readOrderContexts(pendingConversations);
+    const pendingManualContacts = [
+      ...new Set(
+        orders
+          .filter(
+            (order) => order.status === 'pendente' && !order.conversationId,
+          )
+          .map((order) => order.contactId)
+          .filter((id) => typeof id === 'string'),
+      ),
+    ];
+    if (
+      pendingConversations.length === 0 &&
+      pendingManualContacts.length === 0
+    ) {
+      return orders;
+    }
+    const [contexts, contactNames] = await Promise.all([
+      conversations.readOrderContexts(pendingConversations),
+      pendingManualContacts.length && conversations.readContactNames
+        ? conversations.readContactNames(
+            /** @type {string[]} */ (pendingManualContacts),
+          )
+        : new Map(),
+    ]);
     return orders.map((order) => {
+      if (order.status !== 'pendente') return order;
+      if (!order.conversationId && order.contactId) {
+        return {
+          ...order,
+          ficha: {
+            ...order.ficha,
+            summary: {
+              ...order.ficha.summary,
+              cliente: contactNames.get(order.contactId) ?? '',
+            },
+          },
+        };
+      }
       const context = contexts.get(
         /** @type {string} */ (order.conversationId),
       );
-      if (order.status !== 'pendente' || !context) return order;
+      if (!context) return order;
       return {
         ...order,
         ficha: {
@@ -172,8 +209,8 @@ export function createOrderService(options) {
     return read;
   }
 
-  /** @param {OrderActor} actor @param {string} conversationId */
-  async function requireOwner(actor, conversationId) {
+  /** @param {OrderActor} actor @param {Order} order */
+  async function requireOwner(actor, order) {
     if (
       actor?.kind !== 'human' ||
       typeof actor.id !== 'string' ||
@@ -181,7 +218,16 @@ export function createOrderService(options) {
     ) {
       throw new OrderForbiddenError('A human actor is required');
     }
-    await authorizeOwnership({ actor, conversationId });
+    if (order.conversationId) {
+      await authorizeOwnership({ actor, conversationId: order.conversationId });
+    } else if (order.manualOwnerId && options.authorizeManualOwnership) {
+      await options.authorizeManualOwnership({
+        actor,
+        ownerId: order.manualOwnerId,
+      });
+    } else {
+      throw new OrderForbiddenError();
+    }
   }
 
   /**
@@ -204,10 +250,7 @@ export function createOrderService(options) {
     if (!order) throw new OrderNotFoundError();
     // ADR 027: a store order is locked for everyone, owner or not.
     requireUnlocked(order);
-    await requireOwner(
-      input.actor,
-      /** @type {string} */ (order.conversationId),
-    );
+    await requireOwner(input.actor, order);
     if (order.version !== input.expectedVersion) {
       throw new OrderConflictError(
         `Expected order version ${input.expectedVersion}, current version is ${order.version}`,
@@ -331,7 +374,10 @@ export function createOrderService(options) {
      */
     async createManual(input) {
       const conversationId = requireId(input.conversationId, 'conversationId');
-      await requireOwner(input.actor, conversationId);
+      if (input.actor?.kind !== 'human' || !input.actor.id) {
+        throw new OrderForbiddenError('A human actor is required');
+      }
+      await authorizeOwnership({ actor: input.actor, conversationId });
       return ensurePending({
         conversationId,
         correlationId: requireId(input.correlationId, 'correlationId'),
@@ -339,6 +385,53 @@ export function createOrderService(options) {
         createdByKind: 'user',
         actor: input.actor,
       });
+    },
+
+    /** CP-03: a seller opens a new draft for a contact without a chat. */
+    /** @param {{contactId: string, idempotencyKey: string, correlationId: string, actor: OrderActor}} input */
+    async createForContact(input) {
+      const contactId = requireId(input.contactId, 'contactId');
+      const manualCreateKey = requireId(input.idempotencyKey, 'idempotencyKey');
+      if (
+        input.actor?.kind !== 'human' ||
+        !input.actor.id ||
+        typeof conversations.readContactNames !== 'function'
+      ) {
+        throw new OrderForbiddenError();
+      }
+      const names = await conversations.readContactNames([contactId]);
+      if (!names.has(contactId)) {
+        throw new OrderNotFoundError(
+          'Contact was not found',
+          'CONTACT_NOT_FOUND',
+        );
+      }
+      const ficha = briefingToFicha(null);
+      ficha.summary.cliente = names.get(contactId) ?? '';
+      const derived = withDerivedFields({
+        finalAmountCents: null,
+        ficha,
+        paymentCondition: null,
+        status: /** @type {const} */ ('pendente'),
+      });
+      const order = await repository.createPending({
+        actor: input.actor,
+        contactId,
+        conversationId: null,
+        correlationId: requireId(input.correlationId, 'correlationId'),
+        createdBy: input.actor.id,
+        createdByKind: 'user',
+        fabCode,
+        ficha,
+        firstContactAt: null,
+        id: idFactory(),
+        manualCreateKey,
+        manualOwnerId: input.actor.id,
+        missingFields: derived.missingFields,
+        now: clock(),
+        totalPieces: derived.totalPieces,
+      });
+      return readOne(order);
     },
 
     /**
@@ -417,6 +510,9 @@ export function createOrderService(options) {
           query.numberSequence = Number(number[1]);
         }
         query.conversationIds = await conversations.searchConversationIds(q);
+        if (conversations.searchContactIds) {
+          query.contactIds = await conversations.searchContactIds(q);
+        }
         const phoneDigests = options.phoneDigestsFor?.(q) ?? [];
         if (phoneDigests.length > 0) query.phoneDigests = phoneDigests;
         const storeNumber = STORE_NUMBER_QUERY.exec(q);

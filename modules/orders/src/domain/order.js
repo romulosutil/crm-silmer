@@ -39,7 +39,9 @@ const orderDateFormat = new Intl.DateTimeFormat('en-CA', {
  *
  * @typedef {{
  *   id: string, number: string, numberSequence: number,
- *   conversationId: string|null, status: OrderStatus, fabCode: string,
+ *   conversationId: string|null, contactId?: string|null,
+ *   manualOwnerId?: string|null, manualCreateKey?: string|null,
+ *   status: OrderStatus, fabCode: string,
  *   origin: 'atendimento'|'loja', isTest: boolean,
  *   storeNumber: string|null, leadTimeBusinessDays: number|null,
  *   gatewayPayment: import('./store-order.js').GatewayPayment|null,

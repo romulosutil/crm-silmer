@@ -31,8 +31,10 @@ import {
  *   readAssignments(conversationIds: string[]): Promise<Map<string, string|null>>,
  *   readLatestMessageStates(conversationIds: string[]): Promise<Map<string, {direction: string, occurredAt: string, sentAt: string|null, deliveryStatus: string|null, status: string}>>,
  *   readOrderContexts(conversationIds: string[]): Promise<Map<string, any>>,
+ *   readContactNames?(contactIds: string[]): Promise<Map<string, string|null>>,
  *   readUserNames(userIds: string[]): Promise<Map<string, string|null>>,
  *   searchConversationIds(query: string): Promise<string[]>,
+ *   searchContactIds?(query: string): Promise<string[]>,
  * }} OrderConversationPort
  * @typedef {{id: string, kind: string, capabilities?: readonly string[]}} OrderActor
  * @typedef {{actor: OrderActor, correlationId: string, idempotencyKey: string}} OrderCommand
@@ -105,11 +107,25 @@ export function createOrderRuntime(options) {
     return assignment;
   }
 
+  /** @param {OrderActor} actor @param {string} ownerId */
+  async function ownManualOrder(actor, ownerId) {
+    if (
+      actor.kind !== 'human' ||
+      !actor.id ||
+      (actor.id !== ownerId &&
+        !(actor.capabilities ?? []).includes(CAPABILITIES.COMMERCIAL_ADMIN))
+    ) {
+      throw new OrderForbiddenError();
+    }
+  }
+
   const service = createOrderService({
     /** @param {{actor: OrderActor, conversationId: string}} input */
     async authorizeOwnership({ actor, conversationId }) {
       await ownConversation(actor, conversationId);
     },
+    authorizeManualOwnership: async ({ actor, ownerId }) =>
+      ownManualOrder(actor, ownerId),
     clock: options.clock,
     conversations,
     fabCode: options.fabCode,
@@ -122,8 +138,13 @@ export function createOrderRuntime(options) {
   // answer 503, while the rest of the order keeps working.
   const fileService = options.files
     ? createOrderFileService({
-        async authorizeOwnership({ actor, conversationId }) {
-          await ownConversation(actor, conversationId);
+        async authorizeOwnership({ actor, order }) {
+          if (order.conversationId) {
+            await ownConversation(actor, order.conversationId);
+          } else {
+            if (!order.manualOwnerId) throw new OrderForbiddenError();
+            await ownManualOrder(actor, order.manualOwnerId);
+          }
         },
         clock: options.clock,
         files: options.files.repository,
@@ -166,6 +187,7 @@ export function createOrderRuntime(options) {
         order.reopenedBy,
         order.fichaFirstPrintedBy,
         owners.get(order.conversationId),
+        order.manualOwnerId,
       ]) {
         if (id && id !== STORE_ACTOR_ID) people.add(id);
       }
@@ -209,7 +231,7 @@ export function createOrderRuntime(options) {
       paymentCondition: order.paymentCondition,
       reopenedAt: order.reopenedAt,
       reopenedBy: person(order.reopenedBy),
-      seller: person(owners.get(order.conversationId)),
+      seller: person(order.manualOwnerId ?? owners.get(order.conversationId)),
       status: order.status,
       storeNumber: order.storeNumber ?? null,
       totalPieces: order.totalPieces,
@@ -331,6 +353,21 @@ export function createOrderRuntime(options) {
             order: await presentOne(result.order),
           };
         },
+      );
+    },
+
+    /** CP-03: an attendance order whose contact is known but chat is absent. */
+    /** @param {OrderCommand & {contactId: string}} input */
+    async createForContact(input) {
+      return run(
+        input,
+        {
+          action: 'order.create',
+          command: { contactId: input.contactId },
+          expectedVersion: 'new',
+          target: { id: input.contactId, type: 'contact' },
+        },
+        async () => presentOne(await service.createForContact(input)),
       );
     },
 

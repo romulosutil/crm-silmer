@@ -190,6 +190,38 @@ export class PostgresOrderConversationPort {
     );
   }
 
+  /** Current operator-entered names of contacts used by manual orders. */
+  /** @param {string[]} contactIds */
+  async readContactNames(contactIds) {
+    if (contactIds.length === 0) return new Map();
+    const result = await this.#database.query(
+      `SELECT id, display_name, display_name_source
+       FROM crm.contacts WHERE id = ANY($1::text[])`,
+      [contactIds],
+    );
+    return new Map(
+      result.rows.map((row) => [
+        row.id,
+        CONFIRMED_NAME_SOURCES.has(row.display_name_source)
+          ? (row.display_name ?? null)
+          : null,
+      ]),
+    );
+  }
+
+  /** The list search includes a manual order even without a conversation. */
+  /** @param {string} query */
+  async searchContactIds(query) {
+    const text = String(query).trim();
+    if (!text) return [];
+    const result = await this.#database.query(
+      `SELECT id FROM crm.contacts WHERE display_name ILIKE $1
+       ORDER BY id`,
+      [`%${text.replace(/[\\%_]/gu, '\\$&')}%`],
+    );
+    return result.rows.map((row) => row.id);
+  }
+
   /**
    * Conversations with orders whose customer name, handle or phone matches.
    * Phone matching compares digits only, so "(11) 98765" finds 5511987650000.

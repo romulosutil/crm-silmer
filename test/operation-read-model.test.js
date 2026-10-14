@@ -165,4 +165,10 @@ test('uses a separate cursor scope for Contact pages', async () => {
     service.listInbox({ cursor: first.nextCursor }),
     (error) => /** @type {any} */ (error).code === 'INVALID_CURSOR',
   );
+  const searched = await service.listContacts({ q: 'Cliente' });
+  assert.deepEqual(calls[2][1], { after: null, limit: 50, q: 'Cliente' });
+  await assert.rejects(
+    service.listContacts({ cursor: searched.nextCursor, q: 'Outro' }),
+    (error) => /** @type {any} */ (error).code === 'INVALID_CURSOR',
+  );
 });

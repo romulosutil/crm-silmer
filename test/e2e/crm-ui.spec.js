@@ -915,7 +915,11 @@ test('never offers to hand the conversation back to the AI and keeps the actions
   // The remaining actions form one tab sequence, with no gap where the
   // removed button was.
   await order.focus();
-  for (const name of ['Repassar atendimento', 'Arquivar conversa']) {
+  for (const name of [
+    'Repassar atendimento',
+    'Encerrar conversa',
+    'Arquivar conversa',
+  ]) {
     await page.keyboard.press('Tab');
     await expect(actions.getByRole('button', { name })).toBeFocused();
   }

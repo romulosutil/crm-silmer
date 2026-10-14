@@ -49,14 +49,36 @@ export function createInboxService({
     async transitionConversation(/** @type {any} */ command) {
       validateHumanCommand(command);
       assertInboxState(command.state);
-      if (command.state === 'convertida_em_lead') {
+      if (['convertida_em_lead', 'encerrada'].includes(command.state)) {
         throw new InboxValidationError(
-          'converted state is reserved for transactional lead conversion',
+          'state is reserved for its dedicated command',
         );
       }
       return repository.mutateConversation(
         'transition',
         normalizeHumanCommand(command, { state: command.state }),
+        runtime,
+      );
+    },
+
+    /** CP-07/10: explicit human closure, with a bounded outcome and pending-order acknowledgement. */
+    async closeConversation(/** @type {any} */ command) {
+      validateHumanCommand(command);
+      if (!['concluido', 'sem_pedido'].includes(command.outcome)) {
+        throw new InboxValidationError(
+          'outcome must be an approved closure outcome',
+        );
+      }
+      if (typeof command.acknowledgePending !== 'boolean') {
+        throw new InboxValidationError('acknowledgePending must be boolean');
+      }
+      return repository.mutateConversation(
+        'transition',
+        normalizeHumanCommand(command, {
+          acknowledgePending: command.acknowledgePending,
+          outcome: command.outcome,
+          state: 'encerrada',
+        }),
         runtime,
       );
     },

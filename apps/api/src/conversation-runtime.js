@@ -26,7 +26,7 @@ export function createConversationApiRuntime(
     archive: service.archiveConversation,
     authorize: access.authorize,
     claimHandoff: handoffs.claimHandoff,
-    close: service.transitionConversation,
+    close: service.closeConversation,
     sendMessage: service.sendHumanMessage,
     takeover: service.takeover,
     transfer: service.transferConversation,

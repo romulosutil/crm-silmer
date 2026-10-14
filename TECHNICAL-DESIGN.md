@@ -124,6 +124,13 @@ A identidade do canal permanece ausente até correlação verificável. O fluxo
 legado n8n continua restrito a um pendente por Conversa até Assuntos e alvo
 explícito serem implantados em CRM e workflow.
 
+Encerrar Conversa usa comando humano com versão e chave idempotente. A
+transação registra `state = encerrada`, `terminal_at`, `closed_by`, motivo
+`concluido`/`sem_pedido`, auditoria e comando de fechamento ao n8n. Com Pedido
+pendente na Conversa, a API exige reconhecimento explícito, sem alterar o
+Pedido. A reserva de novos pedidos na Conversa rejeita ciclo terminal; uma
+nova mensagem válida abre o próximo ciclo pela chave da identidade.
+
 ADR 020 / PR #142 define Técnica por item (`tipo_servico`) e Arte por pedido.
 Gerar exige pontos obrigatórios dos itens, arte e entrega prometida. A edição
 parcial é permitida. `summary.aplicacao`, `modelo` e campos antigos seguem

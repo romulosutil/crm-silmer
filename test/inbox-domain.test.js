@@ -18,11 +18,14 @@ const ATTENDANT = Object.freeze({
   kind: 'human',
 });
 
-function createHarness() {
+/** @param {number} [pendingOrders] */
+function createHarness(pendingOrders = 0) {
   /** @type {any[]} */
   const audits = [];
   let sequence = 0;
-  const repository = new InMemoryInboxRepository();
+  const repository = new InMemoryInboxRepository({
+    pendingOrdersForConversation: () => pendingOrders,
+  });
   const service = createInboxService({
     auditPort: {
       append: async (/** @type {any} */ event) =>
@@ -60,6 +63,7 @@ test('defines the approved backlog states and receives inbound without creating 
       'requer_atencao',
       'convertida_em_lead',
       'sem_lead',
+      'encerrada',
     ],
   );
   const { service } = createHarness();
@@ -390,6 +394,54 @@ test('keeps an assigned conversation off limits to every other seller', async ()
     }),
     InboxForbiddenError,
   );
+});
+
+test('neutral closure requires the owner and pending-order acknowledgement, then a new inbound starts a cycle', async () => {
+  const { audits, service } = createHarness(1);
+  const owned = await conversationOwnedByAttendant(service);
+  const command = {
+    acknowledgePending: false,
+    actor: ATTENDANT,
+    conversationId: owned.id,
+    correlationId: 'correlation-close-neutral',
+    expectedVersion: owned.version,
+    idempotencyKey: 'close-neutral',
+    outcome: 'concluido',
+    reason: 'Encerramento: concluido',
+  };
+  await assert.rejects(service.closeConversation(command), InboxConflictError);
+  await assert.rejects(
+    service.closeConversation({
+      ...command,
+      actor: OTHER_SELLER,
+      acknowledgePending: true,
+    }),
+    InboxForbiddenError,
+  );
+  const closed = await service.closeConversation({
+    ...command,
+    acknowledgePending: true,
+  });
+  assert.equal(closed.state, 'encerrada');
+  assert.equal(closed.closureOutcome, 'concluido');
+  assert.equal(closed.closedBy, ATTENDANT.id);
+  assert.equal(closed.terminalAt, NOW.toISOString());
+  assert.equal(closed.automationEpoch, owned.automationEpoch + 1);
+  assert.deepEqual(
+    await service.closeConversation({ ...command, acknowledgePending: true }),
+    closed,
+  );
+  assert.equal(audits.at(-1)?.action, 'conversation.state_transitioned');
+  const next = await service.receiveInbound(
+    inbound({
+      correlationId: 'correlation-next-cycle',
+      externalMessageId: 'external-message-next',
+      occurredAt: '2026-09-03T12:00:00.000Z',
+    }),
+  );
+  assert.equal(next.conversation.cycleNumber, 2);
+  assert.equal(next.conversation.previousConversationId, owned.id);
+  assert.equal(next.conversation.automationState, 'assistant');
 });
 
 test('never hands a conversation with a person back to the agent (ADR 015)', async () => {

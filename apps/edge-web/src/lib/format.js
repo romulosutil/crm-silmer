@@ -10,6 +10,7 @@ export const CONVERSATION_LABELS = Object.freeze({
   nova: 'Nova',
   requer_atencao: 'Requer atenção',
   sem_lead: 'Atendimento encerrado',
+  encerrada: 'Conversa encerrada',
 });
 
 /** @param {{automationState?: unknown, state?: unknown}|null|undefined} conversation */

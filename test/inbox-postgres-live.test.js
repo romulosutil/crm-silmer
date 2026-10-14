@@ -19,6 +19,7 @@ import {
   createChannelEventHandler,
   createChannelEventJobHandler,
   createInboxService,
+  createSubjectService,
 } from '../modules/inbox-channels/src/index.js';
 import {
   PostgresOutboundMessageOutbox,
@@ -367,6 +368,195 @@ if (connectionString) {
         closure_outcome: 'concluido',
         closed_by: ATTENDANT.id,
       });
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
+
+  test('PostgreSQL keeps two active orders and a general topic distinct within one conversation', async () => {
+    const databaseName = new URL(connectionString).pathname.slice(1);
+    assert.equal(databaseName, 'crm_silmer_test');
+    const pool = new Pool({ connectionString, max: 16 });
+    const runId = randomUUID().replaceAll('-', '');
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, { migrations: await loadMigrations() });
+      await seedAttendant(pool);
+      const { contacts, inbox } = servicesFor(pool);
+      const identity = await contacts.resolveInboundIdentity(
+        identityInput(runId),
+      );
+      const received = await inbox.receiveInbound(
+        inboundInput(runId, identity),
+      );
+      const owned = await inbox.takeover({
+        actor: ATTENDANT,
+        conversationId: received.conversation.id,
+        correlationId: `correlation-takeover-${runId}`,
+        expectedVersion: received.conversation.version,
+        idempotencyKey: `takeover-${runId}`,
+        reason: 'Atendimento sintético',
+      });
+      const contactId = identity.contact.id;
+      const insertOrder = async (
+        /** @type {string} */ orderId,
+        /** @type {string} */ key,
+        /** @type {string} */ ownerContactId = contactId,
+      ) => {
+        await pool.query(
+          `WITH numbered AS (SELECT nextval('crm.order_number_seq') AS sequence)
+           INSERT INTO crm.orders
+             (id, number_sequence, number, conversation_id, contact_id,
+              manual_owner_id, manual_create_key, status, fab_code,
+              ficha_envelope, created_by_kind, created_by, created_at, updated_at)
+           SELECT $1, numbered.sequence,
+                  lpad(numbered.sequence::text,2,'0') || '-CRM',
+                  NULL, $2, $3, $4, 'pendente', '01', '{}'::jsonb,
+                  'user', $3, now(), now()
+           FROM numbered`,
+          [orderId, ownerContactId, ATTENDANT.id, key],
+        );
+      };
+      await insertOrder(`order-a-${runId}`, `manual-a-${runId}`);
+      await insertOrder(`order-b-${runId}`, `manual-b-${runId}`);
+      const unrelated = await contacts.resolveInboundIdentity(
+        identityInput(`unrelated-${runId}`),
+      );
+      await insertOrder(
+        `unrelated-order-${runId}`,
+        `unrelated-manual-${runId}`,
+        unrelated.contact.id,
+      );
+      const subjects = createSubjectService(databaseFor(pool));
+      const command = (
+        /** @type {string|null} */ orderId,
+        /** @type {string} */ key,
+      ) => ({
+        actor: ATTENDANT,
+        conversationId: owned.id,
+        correlationId: `correlation-${key}`,
+        idempotencyKey: key,
+        orderId,
+      });
+      const first = await subjects.create(
+        command(`order-a-${runId}`, `subject-a-${runId}`),
+      );
+      const second = await subjects.create(
+        command(`order-b-${runId}`, `subject-b-${runId}`),
+      );
+      const general = await subjects.create(
+        command(null, `subject-general-${runId}`),
+      );
+      assert.notEqual(first.subject.id, second.subject.id);
+      assert.equal(general.subject.kind, 'geral');
+      assert.deepEqual(
+        await subjects.create(
+          command(`order-a-${runId}`, `subject-a-${runId}`),
+        ),
+        first,
+      );
+      await assert.rejects(
+        subjects.create(
+          command(`order-a-${runId}`, `subject-duplicate-${runId}`),
+        ),
+        { code: 'SUBJECT_EXISTS' },
+      );
+      await assert.rejects(
+        subjects.create(
+          command(`unrelated-order-${runId}`, `subject-other-contact-${runId}`),
+        ),
+        { code: 'ORDER_CONTACT_MISMATCH' },
+      );
+      await assert.rejects(
+        subjects.create({
+          ...command(null, `subject-wrong-owner-${runId}`),
+          actor: { ...ATTENDANT, id: 'other-seller' },
+        }),
+        { code: 'FORBIDDEN' },
+      );
+      const target = await subjects.select({
+        actor: ATTENDANT,
+        conversationId: owned.id,
+        correlationId: `correlation-select-${runId}`,
+        idempotencyKey: `select-${runId}`,
+        subjectId: first.subject.id,
+      });
+      assert.equal(target.currentSubjectId, first.subject.id);
+      const tagged = await subjects.tagMessage({
+        actor: ATTENDANT,
+        conversationId: owned.id,
+        correlationId: `correlation-tag-${runId}`,
+        idempotencyKey: `tag-${runId}`,
+        messageId: received.message.id,
+        subjectIds: [first.subject.id, general.subject.id],
+      });
+      assert.equal(tagged.subjectIds.length, 2);
+      const read = await subjects.list(owned.id);
+      assert.equal(read.subjects.length, 3);
+      assert.equal(read.orders.length, 2);
+      assert.equal(read.links.length, 2);
+      assert.equal(read.currentSubjectId, first.subject.id);
+      await inbox.closeConversation({
+        acknowledgePending: false,
+        actor: ATTENDANT,
+        conversationId: owned.id,
+        correlationId: `correlation-close-subject-${runId}`,
+        expectedVersion: owned.version,
+        idempotencyKey: `close-subject-${runId}`,
+        outcome: 'concluido',
+        reason: 'Encerramento sintético',
+      });
+      const resumed = await inbox.receiveInbound(
+        inboundInput(runId, identity, {
+          externalMessageId: `message-resumed-${runId}`,
+          occurredAt: '2026-09-03T12:00:00.000Z',
+        }),
+      );
+      const nextOwner = await inbox.takeover({
+        actor: ATTENDANT,
+        conversationId: resumed.conversation.id,
+        correlationId: `correlation-resume-takeover-${runId}`,
+        expectedVersion: resumed.conversation.version,
+        idempotencyKey: `resume-takeover-${runId}`,
+        reason: 'Retomada sintética',
+      });
+      const reused = await subjects.create({
+        ...command(`order-a-${runId}`, `subject-resumed-${runId}`),
+        conversationId: nextOwner.id,
+      });
+      assert.equal(reused.subject.orderId, `order-a-${runId}`);
+      assert.notEqual(reused.subject.id, first.subject.id);
+      await contacts.mergeIdentity({
+        actor: ATTENDANT,
+        correlationId: `correlation-subject-merge-${runId}`,
+        expectedVersion: identity.identity.version,
+        idempotencyKey: `subject-merge-${runId}`,
+        identityId: identity.identity.id,
+        reason: 'Correlação sintética verificada',
+        targetContactId: unrelated.contact.id,
+      });
+      const afterCorrelation = await subjects.list(nextOwner.id);
+      assert.equal(
+        afterCorrelation.orders.some(
+          (order) => order.id === `order-a-${runId}`,
+        ),
+        true,
+      );
+      assert.equal(
+        (
+          await subjects.select({
+            actor: ATTENDANT,
+            conversationId: nextOwner.id,
+            correlationId: `correlation-reselect-${runId}`,
+            idempotencyKey: `reselect-${runId}`,
+            subjectId: reused.subject.id,
+          })
+        ).currentSubjectId,
+        reused.subject.id,
+      );
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

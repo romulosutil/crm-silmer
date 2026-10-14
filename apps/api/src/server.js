@@ -24,6 +24,7 @@ import { createOperationReadRuntime } from './operation-runtime.js';
 import { createOperationalAuthRuntime } from './operational-auth-runtime.js';
 import { createOrderApiRuntime } from './order-runtime.js';
 import { createStoreOrdersForServer } from './store-order-runtime.js';
+import { createSubjectApiRuntime } from './subject-runtime.js';
 import { createWhatsAppWebhookRuntime } from './whatsapp-webhook-runtime.js';
 import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 
@@ -53,6 +54,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   operations?: Record<string, any>,
  *   orders?: ReturnType<typeof createOrderApiRuntime>,
  *   storeOrders?: import('./store-order-runtime.js').StoreOrderRuntime,
+ *   subjects?: Record<string, any>,
  *   trustProxy?: import('fastify').FastifyServerOptions['trustProxy']
  * }} [runtime]
  */
@@ -167,6 +169,13 @@ export function createServerApi(runtime = {}) {
           { mediaEnabled: environment.CHAT_MEDIA_ENABLED === 'true' },
         )
       : undefined);
+  const subjects =
+    runtime.subjects ??
+    (runtime.database &&
+    typeof operations?.authorizeRead === 'function' &&
+    typeof operations?.authorizeWrite === 'function'
+      ? createSubjectApiRuntime(runtime.database, operations)
+      : undefined);
   const chatMedia =
     runtime.chatMedia ??
     (runtime.database &&
@@ -228,6 +237,7 @@ export function createServerApi(runtime = {}) {
       orders,
       readiness,
       storeOrders,
+      subjects,
     },
   );
   const database = runtime.database;

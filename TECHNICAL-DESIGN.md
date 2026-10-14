@@ -87,7 +87,9 @@ attachment e events. Usam Basic Auth de serviço com `AUTOMATION_EXECUTOR`,
 idempotência, correlação e identificação de workflow. Credenciais n8n→CRM e
 CRM→n8n são distintas, sem sessão humana nem acesso administrativo.
 
-Briefing pertence à Conversa. O CRM confere epoch/revisão antes do efeito.
+No contrato legado do n8n, briefing pertence à Conversa. O contrato por
+Assunto da ADR 032 ainda requer adaptação do agente e do workflow. O CRM
+confere epoch/revisão antes do efeito.
 `message.send.requested` reserva um único envio antes da Meta.
 `send_authorized: false` em replay não permite novo envio. Timeout após o
 ponto de não retorno vira `message.send.unknown`, sem retry cego.
@@ -130,6 +132,15 @@ transação registra `state = encerrada`, `terminal_at`, `closed_by`, motivo
 pendente na Conversa, a API exige reconhecimento explícito, sem alterar o
 Pedido. A reserva de novos pedidos na Conversa rejeita ciclo terminal; uma
 nova mensagem válida abre o próximo ciclo pela chave da identidade.
+
+Assuntos da Conversa são gravados em `crm.conversation_subjects` (migração
+0037), com Pedido opcional do Contato corrente e um alvo atual por ciclo.
+`crm.message_subject_links` aceita múltiplos Assuntos por Mensagem; a
+atribuição pode ser corrigida. Comandos humanos de criação, seleção e
+atribuição são idempotentes, autorizados ao responsável ou administrador e
+auditados. A Inbox consulta até 100 Pedidos por vez, com filtro por trecho do
+número; a API confirma o vínculo Pedido/Contato. O vínculo de Assunto com
+Pedido manual não altera o dono nem a ficha do Pedido.
 
 ADR 020 / PR #142 define Técnica por item (`tipo_servico`) e Arte por pedido.
 Gerar exige pontos obrigatórios dos itens, arte e entrega prometida. A edição

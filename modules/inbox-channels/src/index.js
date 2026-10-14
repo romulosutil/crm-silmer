@@ -23,6 +23,10 @@ export {
 } from './application/channel-event-handler.js';
 export { createInboxService } from './application/inbox-service.js';
 export {
+  createSubjectService,
+  SubjectError,
+} from './application/subject-service.js';
+export {
   InboxConflictError,
   InboxError,
   InboxForbiddenError,

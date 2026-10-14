@@ -363,6 +363,102 @@ paths:
               schema: { $ref: '#/components/schemas/InboxConversationDetail' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /inbox/conversations/{conversationId}/subjects:
+    get:
+      operationId: listConversationSubjects
+      summary: Lista assuntos, vínculos de mensagens e pedidos do contato
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - name: order
+          in: query
+          required: false
+          description: Trecho literal do número do pedido para filtrar os primeiros 100 resultados
+          schema: { type: string, maxLength: 40 }
+      responses:
+        '200':
+          description: Assuntos da conversa e até 100 pedidos do contato filtrados por número
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationSubjects' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createConversationSubject
+      summary: Abre assunto sem pedido ou ligado a pedido do mesmo contato
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateConversationSubject' }
+      responses:
+        '201': { description: Assunto criado e selecionado }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /inbox/conversations/{conversationId}/subjects/{subjectId}/select:
+    post:
+      operationId: selectConversationSubject
+      summary: Define o assunto atual pela decisão do vendedor
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - {
+            name: subjectId,
+            in: path,
+            required: true,
+            schema: { type: string },
+          }
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false }
+      responses:
+        '200': { description: Seleção auditada }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /inbox/conversations/{conversationId}/messages/{messageId}/subjects:
+    put:
+      operationId: assignMessageSubjects
+      summary: Substitui os vínculos de assuntos de uma mensagem
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - {
+            name: messageId,
+            in: path,
+            required: true,
+            schema: { type: string },
+          }
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [subjectIds]
+              properties:
+                subjectIds:
+                  type: array
+                  maxItems: 20
+                  uniqueItems: true
+                  items: { type: string }
+      responses:
+        '200': { description: Vínculos auditados }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /inbox/handoffs:
     get:
       operationId: listOpenHandoffs
@@ -2095,6 +2191,65 @@ components:
           type: array
           items: { $ref: '#/components/schemas/InboxMessageView' }
         suggestion: { type: [object, 'null'] }
+    ConversationSubject:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          kind,
+          orderId,
+          orderNumber,
+          orderStatus,
+          position,
+          isCurrent,
+          selectedSource,
+          version,
+        ]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [pedido, geral] }
+        orderId: { type: [string, 'null'] }
+        orderNumber: { type: [string, 'null'] }
+        orderStatus: { type: [string, 'null'] }
+        position: { type: integer, minimum: 1 }
+        isCurrent: { type: boolean }
+        selectedSource: { type: [string, 'null'], enum: [human, agent, null] }
+        version: { type: integer, minimum: 1 }
+    ConversationSubjects:
+      type: object
+      additionalProperties: false
+      required: [currentSubjectId, subjects, orders, ordersHasMore, links]
+      properties:
+        currentSubjectId: { type: [string, 'null'] }
+        subjects:
+          type: array
+          items: { $ref: '#/components/schemas/ConversationSubject' }
+        orders:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, number, status]
+            properties:
+              id: { type: string }
+              number: { type: string }
+              status: { $ref: '#/components/schemas/OrderStatus' }
+        ordersHasMore: { type: boolean }
+        links:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [messageId, subjectId]
+            properties:
+              messageId: { type: string }
+              subjectId: { type: string }
+    CreateConversationSubject:
+      type: object
+      additionalProperties: false
+      properties:
+        orderId: { type: [string, 'null'] }
     HandoffView:
       type: object
       additionalProperties: false

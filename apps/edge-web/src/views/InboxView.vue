@@ -98,6 +98,18 @@ const conversations = ref([]);
 const totalCount = ref(0);
 const activeId = ref('');
 const detail = ref(null);
+const subjectState = ref({
+  currentSubjectId: null,
+  links: [],
+  orders: [],
+  ordersHasMore: false,
+  subjects: [],
+});
+const subjectError = ref('');
+const subjectBusy = ref(false);
+const selectedSubjectOrderId = ref('');
+const subjectOrderQuery = ref('');
+const messageSubjectDrafts = ref({});
 const reply = ref('');
 const renaming = ref(false);
 const draftName = ref('');
@@ -113,6 +125,8 @@ const assignableUsers = ref([]);
 const now = ref(new Date());
 let listController;
 let detailController;
+let subjectController;
+const subjectCommandKeys = new Map();
 let refreshTimer = 0;
 
 const filtered = computed(() => {
@@ -205,6 +219,14 @@ const canClose = computed(
   () =>
     !isTerminal.value &&
     (isAdmin.value || owner.value?.id === currentUserId.value),
+);
+const availableSubjectOrders = computed(() =>
+  subjectState.value.orders.filter(
+    (order) =>
+      !subjectState.value.subjects.some(
+        (subject) => subject.orderId === order.id,
+      ),
+  ),
 );
 /** PCX-08/PCL-10: creating the order follows the owner of the conversation. */
 const canCreateOrder = computed(
@@ -458,6 +480,14 @@ async function selectVisibleConversation(refreshActive = true) {
   if (!nextId) {
     activeId.value = '';
     detail.value = null;
+    subjectController?.abort();
+    subjectState.value = {
+      currentSubjectId: null,
+      links: [],
+      orders: [],
+      ordersHasMore: false,
+      subjects: [],
+    };
     return;
   }
   // Typing in the search box must not refetch the open conversation on every
@@ -470,14 +500,25 @@ async function selectVisibleConversation(refreshActive = true) {
 async function selectConversation(id, silent = false) {
   if (!id) return;
   detailController?.abort();
+  subjectController?.abort();
   const controller = new AbortController();
   detailController = controller;
   if (activeId.value !== id) {
     detail.value = null;
+    subjectOrderQuery.value = '';
+    selectedSubjectOrderId.value = '';
     renaming.value = false;
     renameBase.value = null;
     renameConflict.value = false;
     transferring.value = false;
+    subjectState.value = {
+      currentSubjectId: null,
+      links: [],
+      orders: [],
+      ordersHasMore: false,
+      subjects: [],
+    };
+    subjectError.value = '';
   }
   activeId.value = id;
   if (!silent) detailLoading.value = true;
@@ -488,6 +529,7 @@ async function selectConversation(id, silent = false) {
     );
     if (controller !== detailController || activeId.value !== id) return;
     detail.value = response.data;
+    void loadSubjects(id);
   } catch (cause) {
     if (
       controller === detailController &&
@@ -501,6 +543,105 @@ async function selectConversation(id, silent = false) {
     if (controller === detailController && activeId.value === id)
       detailLoading.value = false;
   }
+}
+
+/** @param {string} conversationId */
+async function loadSubjects(conversationId) {
+  subjectController?.abort();
+  const controller = new AbortController();
+  subjectController = controller;
+  try {
+    const response = await request(
+      `/api/v1/inbox/conversations/${encodeURIComponent(conversationId)}/subjects?order=${encodeURIComponent(subjectOrderQuery.value.trim())}`,
+      { signal: controller.signal },
+    );
+    if (controller !== subjectController || activeId.value !== conversationId)
+      return;
+    subjectState.value = response.data;
+    messageSubjectDrafts.value = Object.fromEntries(
+      (detail.value?.messages ?? []).map((message) => [
+        message.id,
+        response.data.links
+          .filter((link) => link.messageId === message.id)
+          .map((link) => link.subjectId),
+      ]),
+    );
+    subjectError.value = '';
+  } catch (cause) {
+    if (controller === subjectController && cause?.name !== 'AbortError') {
+      subjectError.value =
+        'Não foi possível consultar os assuntos desta conversa.';
+    }
+  }
+}
+
+/** @param {string} kind @param {string|null} [target] */
+async function subjectCommand(kind, target = null) {
+  if (!active.value || subjectBusy.value) return;
+  subjectBusy.value = true;
+  subjectError.value = '';
+  const conversationId = active.value.id;
+  const base = `/api/v1/inbox/conversations/${encodeURIComponent(conversationId)}`;
+  const subjectIds =
+    kind === 'tag'
+      ? [...(messageSubjectDrafts.value[target] ?? [])].sort()
+      : [];
+  const signature = JSON.stringify([conversationId, kind, target, subjectIds]);
+  const idempotencyKey = subjectCommandKeys.get(signature) ?? commandKey();
+  subjectCommandKeys.set(signature, idempotencyKey);
+  try {
+    if (kind === 'create') {
+      await request(`${base}/subjects`, {
+        body: { orderId: target },
+        idempotencyKey,
+        method: 'POST',
+      });
+      selectedSubjectOrderId.value = '';
+    } else if (kind === 'select') {
+      await request(`${base}/subjects/${encodeURIComponent(target)}/select`, {
+        body: {},
+        idempotencyKey,
+        method: 'POST',
+      });
+    } else if (kind === 'tag') {
+      await request(`${base}/messages/${encodeURIComponent(target)}/subjects`, {
+        body: { subjectIds },
+        idempotencyKey,
+        method: 'PUT',
+      });
+    }
+    subjectCommandKeys.delete(signature);
+    await loadSubjects(conversationId);
+  } catch (cause) {
+    subjectError.value = describeError(cause);
+    if (cause?.status === 409) {
+      subjectCommandKeys.delete(signature);
+      await loadSubjects(conversationId);
+    }
+  } finally {
+    subjectBusy.value = false;
+  }
+}
+
+/** @param {Record<string, any>} subject */
+function subjectLabel(subject) {
+  return subject.orderId
+    ? `Pedido ${subject.orderNumber ?? ''}`
+    : `Assunto sem pedido ${subject.position}`;
+}
+
+/** @param {string} messageId */
+function messageSubjectLabels(messageId) {
+  return subjectState.value.links
+    .filter((link) => link.messageId === messageId)
+    .map((link) =>
+      subjectState.value.subjects.find(
+        (subject) => subject.id === link.subjectId,
+      ),
+    )
+    .filter(Boolean)
+    .map(subjectLabel)
+    .join(', ');
 }
 
 /** @param {string} path @param {Record<string, unknown>} body @param {string} successMessage */
@@ -770,6 +911,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   listController?.abort();
   detailController?.abort();
+  subjectController?.abort();
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });
 </script>
@@ -1149,6 +1291,79 @@ onBeforeUnmount(() => {
           </p>
         </form>
 
+        <section class="subject-panel" aria-labelledby="subject-panel-title">
+          <h3 id="subject-panel-title">Assuntos deste atendimento</h3>
+          <p v-if="subjectError" role="alert">{{ subjectError }}</p>
+          <p v-if="!subjectState.subjects.length" class="op-hint">
+            Ainda não há assunto classificado. As mensagens permanecem no
+            histórico.
+          </p>
+          <ul v-else class="subject-list">
+            <li v-for="subject in subjectState.subjects" :key="subject.id">
+              <span>{{ subjectLabel(subject) }}</span>
+              <strong v-if="subject.isCurrent">Atual</strong>
+              <button
+                v-else-if="canClose"
+                type="button"
+                :disabled="subjectBusy"
+                @click="subjectCommand('select', subject.id)"
+              >
+                Selecionar
+              </button>
+            </li>
+          </ul>
+          <div v-if="canClose" class="inline-actions">
+            <button
+              type="button"
+              :disabled="subjectBusy"
+              @click="subjectCommand('create')"
+            >
+              Novo assunto sem pedido
+            </button>
+            <form
+              class="subject-order-search"
+              @submit.prevent="loadSubjects(active.id)"
+            >
+              <label :for="`subject-order-query-${active.id}`">
+                Buscar pedido pelo número
+              </label>
+              <input
+                :id="`subject-order-query-${active.id}`"
+                v-model="subjectOrderQuery"
+                type="search"
+                maxlength="40"
+                autocomplete="off"
+              />
+              <button type="submit" :disabled="subjectBusy">Buscar</button>
+            </form>
+            <label :for="`subject-order-${active.id}`">Vincular pedido</label>
+            <select
+              :id="`subject-order-${active.id}`"
+              v-model="selectedSubjectOrderId"
+            >
+              <option value="">Selecione um pedido</option>
+              <option
+                v-for="order in availableSubjectOrders"
+                :key="order.id"
+                :value="order.id"
+              >
+                {{ order.number }} · {{ orderStatusLabel(order.status) }}
+              </option>
+            </select>
+            <button
+              type="button"
+              :disabled="subjectBusy || !selectedSubjectOrderId"
+              @click="subjectCommand('create', selectedSubjectOrderId)"
+            >
+              Criar assunto do pedido
+            </button>
+          </div>
+          <p v-if="subjectState.ordersHasMore" class="op-hint">
+            Há mais pedidos deste cliente. Busque pelo número para localizar o
+            pedido desejado.
+          </p>
+        </section>
+
         <div v-if="detailLoading" class="loading-state" role="status">
           Carregando histórico…
         </div>
@@ -1173,6 +1388,37 @@ onBeforeUnmount(() => {
               <span>{{ dateTimeBR(message.occurredAt) }}</span>
             </div>
             <p>{{ message.preview }}</p>
+            <details
+              v-if="canClose && subjectState.subjects.length"
+              class="message-subjects"
+            >
+              <summary>Assuntos desta mensagem</summary>
+              <fieldset>
+                <legend>Marque todos os assuntos mencionados</legend>
+                <label
+                  v-for="subject in subjectState.subjects"
+                  :key="subject.id"
+                >
+                  <input
+                    v-model="messageSubjectDrafts[message.id]"
+                    type="checkbox"
+                    :value="subject.id"
+                    :disabled="subjectBusy"
+                  />
+                  {{ subjectLabel(subject) }}
+                </label>
+              </fieldset>
+              <button
+                type="button"
+                :disabled="subjectBusy"
+                @click="subjectCommand('tag', message.id)"
+              >
+                Salvar assuntos
+              </button>
+            </details>
+            <small v-else-if="messageSubjectLabels(message.id)">
+              Assuntos: {{ messageSubjectLabels(message.id) }}
+            </small>
             <MediaMessage v-if="message.media" :media="message.media" />
             <small v-if="message.deliveryMode === 'dev'"
               >DEV: envio simulado</small

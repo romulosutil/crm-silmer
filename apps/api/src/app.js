@@ -23,6 +23,7 @@ import { registerN8nCommandMediaRoutes } from './n8n-command-media-routes.js';
 import { registerOperationRoutes } from './operation-routes.js';
 import { registerOrderRoutes } from './order-routes.js';
 import { registerStoreOrderRoutes } from './store-order-routes.js';
+import { registerSubjectRoutes } from './subject-routes.js';
 import { WEBHOOK_BODY_LIMIT_BYTES } from './whatsapp-webhook-runtime.js';
 
 export const WEBHOOK_MAX_IN_FLIGHT = 8;
@@ -51,6 +52,7 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   operations?: any,
  *   orders?: any,
  *   storeOrders?: import('./store-order-runtime.js').StoreOrderRuntime
+ *   subjects?: Record<string, any>,
  * }} [runtime]
  */
 export function createApi(options = {}, runtime = {}) {
@@ -238,6 +240,14 @@ export function createApi(options = {}, runtime = {}) {
 
   if (runtime.conversations) {
     registerConversationRoutes(api, runtime.conversations, (request) => {
+      const context = requests.get(request);
+      if (!context) throw new Error('Missing request context');
+      return context;
+    });
+  }
+
+  if (runtime.subjects) {
+    registerSubjectRoutes(api, runtime.subjects, (request) => {
       const context = requests.get(request);
       if (!context) throw new Error('Missing request context');
       return context;

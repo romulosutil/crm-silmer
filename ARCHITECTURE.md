@@ -58,6 +58,13 @@ como `concluido` ou `sem_pedido`; a hora e o autor ficam registrados. Pedido
 pendente exige confirmação consciente e permanece pendente. Arquivar continua
 independente. A próxima mensagem válida da identidade abre outro ciclo.
 
+Dentro do ciclo, Assuntos distinguem pedidos do mesmo Contato e temas sem
+pedido. Um pedido pode reaparecer em outro ciclo; uma mensagem pode apontar
+para vários Assuntos. A Inbox deixa o vendedor criar, selecionar e corrigir
+esses vínculos com auditoria. O alvo atual é explícito; o workflow antigo do
+agente ainda não usa esses IDs e conserva sua restrição de um pendente por
+Conversa.
+
 O template selecionado é `ficha-canonical-v6` (ADR 025).
 Técnica pertence ao item e origem da arte ao pedido. Impressão exige Pedido
 confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF

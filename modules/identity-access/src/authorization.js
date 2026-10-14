@@ -23,6 +23,7 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
     'conversation.convert',
     'conversation.archive',
     'conversation.read',
+    'conversation.subject.manage',
     'conversation.message.send',
     'conversation.reactivate-agent',
     'conversation.takeover',

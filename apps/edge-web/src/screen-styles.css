@@ -3730,3 +3730,59 @@ button.op-generate {
     inline-size: 100vw;
   }
 }
+.subject-panel {
+  border: 1px solid var(--border, #d9dedf);
+  border-radius: 0.75rem;
+  margin-block: 1rem;
+  padding: 1rem;
+}
+
+.subject-panel h3 {
+  margin-block: 0 0.5rem;
+}
+
+.subject-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.subject-list li {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding-block: 0.3rem;
+}
+
+.subject-order-search {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.subject-order-search label {
+  flex-basis: 100%;
+}
+
+.subject-order-search input {
+  min-inline-size: 12rem;
+}
+
+.message-subjects {
+  margin-block: 0.5rem;
+}
+
+.message-subjects fieldset,
+.subject-panel fieldset {
+  border: 0;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+
+.message-subjects label {
+  display: block;
+  margin-block: 0.25rem;
+}

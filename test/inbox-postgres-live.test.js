@@ -527,7 +527,7 @@ if (connectionString) {
         ),
         [second.subject.id],
       );
-      await inbox.closeConversation({
+      const closeWithLinkedPending = {
         acknowledgePending: false,
         actor: ATTENDANT,
         conversationId: owned.id,
@@ -536,6 +536,15 @@ if (connectionString) {
         idempotencyKey: `close-subject-${runId}`,
         outcome: 'concluido',
         reason: 'Encerramento sintético',
+      };
+      await assert.rejects(
+        inbox.closeConversation(closeWithLinkedPending),
+        /Pending order requires acknowledgement/u,
+      );
+      await inbox.closeConversation({
+        ...closeWithLinkedPending,
+        acknowledgePending: true,
+        idempotencyKey: `close-subject-acknowledged-${runId}`,
       });
       const resumed = await inbox.receiveInbound(
         inboundInput(runId, identity, {

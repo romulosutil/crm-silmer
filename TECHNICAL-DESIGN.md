@@ -129,8 +129,9 @@ explícito serem implantados em CRM e workflow.
 Encerrar Conversa usa comando humano com versão e chave idempotente. A
 transação registra `state = encerrada`, `terminal_at`, `closed_by`, motivo
 `concluido`/`sem_pedido`, auditoria e comando de fechamento ao n8n. Com Pedido
-pendente na Conversa, a API exige reconhecimento explícito, sem alterar o
-Pedido. A reserva de novos pedidos na Conversa rejeita ciclo terminal; uma
+pendente criado na Conversa ou vinculado por Assunto, a API exige
+reconhecimento explícito, sem alterar o Pedido. A reserva de novos pedidos na
+Conversa rejeita ciclo terminal; uma
 nova mensagem válida abre o próximo ciclo pela chave da identidade.
 
 Assuntos da Conversa são gravados em `crm.conversation_subjects` (migração

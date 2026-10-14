@@ -522,7 +522,9 @@ if (connectionString) {
         second.subject.id,
       ]);
       assert.deepEqual(
-        (await subjects.list(owned.id)).links.map((link) => link.subjectId),
+        (await subjects.list(owned.id)).links.map(
+          (/** @type {{subjectId: string}} */ link) => link.subjectId,
+        ),
         [second.subject.id],
       );
       await inbox.closeConversation({
@@ -567,7 +569,8 @@ if (connectionString) {
       const afterCorrelation = await subjects.list(nextOwner.id);
       assert.equal(
         afterCorrelation.orders.some(
-          (order) => order.id === `order-a-${runId}`,
+          (/** @type {{id: string}} */ order) =>
+            order.id === `order-a-${runId}`,
         ),
         true,
       );

@@ -106,7 +106,9 @@ const subjectState = ref({
   subjects: [],
 });
 const subjectError = ref('');
+const subjectNotice = ref('');
 const subjectBusy = ref(false);
+const subjectHeading = ref(null);
 const selectedSubjectOrderId = ref('');
 const subjectOrderQuery = ref('');
 const messageSubjectDrafts = ref({});
@@ -519,6 +521,7 @@ async function selectConversation(id, silent = false) {
       subjects: [],
     };
     subjectError.value = '';
+    subjectNotice.value = '';
   }
   activeId.value = id;
   if (!silent) detailLoading.value = true;
@@ -580,6 +583,7 @@ async function subjectCommand(kind, target = null) {
   if (!active.value || subjectBusy.value) return;
   subjectBusy.value = true;
   subjectError.value = '';
+  subjectNotice.value = '';
   const conversationId = active.value.id;
   const base = `/api/v1/inbox/conversations/${encodeURIComponent(conversationId)}`;
   const subjectIds =
@@ -612,6 +616,18 @@ async function subjectCommand(kind, target = null) {
     }
     subjectCommandKeys.delete(signature);
     await loadSubjects(conversationId);
+    if (!subjectError.value) {
+      subjectNotice.value =
+        kind === 'tag'
+          ? 'Assuntos da mensagem salvos.'
+          : kind === 'select'
+            ? 'Assunto atual alterado.'
+            : 'Assunto criado e selecionado.';
+    }
+    if (kind === 'create' || kind === 'select') {
+      await nextTick();
+      subjectHeading.value?.focus();
+    }
   } catch (cause) {
     subjectError.value = describeError(cause);
     if (cause?.status === 409) {
@@ -1292,8 +1308,11 @@ onBeforeUnmount(() => {
         </form>
 
         <section class="subject-panel" aria-labelledby="subject-panel-title">
-          <h3 id="subject-panel-title">Assuntos deste atendimento</h3>
+          <h3 id="subject-panel-title" ref="subjectHeading" tabindex="-1">
+            Assuntos deste atendimento
+          </h3>
           <p v-if="subjectError" role="alert">{{ subjectError }}</p>
+          <p v-if="subjectNotice" role="status">{{ subjectNotice }}</p>
           <p v-if="!subjectState.subjects.length" class="op-hint">
             Ainda não há assunto classificado. As mensagens permanecem no
             histórico.

@@ -97,7 +97,7 @@ export function createSubjectService(database) {
     return result;
   }
 
-  /** @param {any} transaction @param {any} input @param {string} action @param {string} targetType @param {string} targetId @param {number} version */
+  /** @param {any} transaction @param {any} input @param {string} action @param {string} targetType @param {string} targetId @param {number} version @param {Record<string, unknown>} details */
   async function record(
     transaction,
     input,
@@ -105,6 +105,7 @@ export function createSubjectService(database) {
     targetType,
     targetId,
     version,
+    details,
   ) {
     const occurredAt = new Date().toISOString();
     await audit.append(
@@ -132,7 +133,7 @@ export function createSubjectService(database) {
       [
         `event-${randomUUID()}`,
         input.conversationId,
-        JSON.stringify({ conversationId: input.conversationId }),
+        JSON.stringify({ conversationId: input.conversationId, ...details }),
         input.correlationId,
         occurredAt,
       ],
@@ -252,10 +253,10 @@ export function createSubjectService(database) {
           );
           const now = new Date().toISOString();
           const subjectId = randomUUID();
-          await transaction.query(
+          const previous = await transaction.query(
             `UPDATE crm.conversation_subjects SET is_current=false,
                     version=version+1, updated_at=$2
-             WHERE conversation_id=$1 AND is_current`,
+             WHERE conversation_id=$1 AND is_current RETURNING id`,
             [conversationId, now],
           );
           await transaction.query(
@@ -282,6 +283,11 @@ export function createSubjectService(database) {
             'conversation_subject',
             subjectId,
             1,
+            {
+              subjectId,
+              orderId,
+              previousSubjectId: previous.rows[0]?.id ?? null,
+            },
           );
           return {
             subject: {
@@ -327,6 +333,11 @@ export function createSubjectService(database) {
           if (!selected.rows[0]) {
             throw new SubjectError(404, 'SUBJECT_NOT_FOUND');
           }
+          const previous = await transaction.query(
+            `SELECT id FROM crm.conversation_subjects
+             WHERE conversation_id=$1 AND is_current`,
+            [conversationId],
+          );
           const now = new Date().toISOString();
           await transaction.query(
             `UPDATE crm.conversation_subjects SET is_current=false,
@@ -349,6 +360,10 @@ export function createSubjectService(database) {
             'conversation_subject',
             subjectId,
             version,
+            {
+              subjectId,
+              previousSubjectId: previous.rows[0]?.id ?? null,
+            },
           );
           return { currentSubjectId: subjectId, version };
         }),
@@ -405,6 +420,11 @@ export function createSubjectService(database) {
                 throw new SubjectError(409, 'SUBJECT_CONTACT_MISMATCH');
               }
             }
+            const previous = await transaction.query(
+              `SELECT subject_id FROM crm.message_subject_links
+               WHERE message_id=$1 ORDER BY subject_id FOR UPDATE`,
+              [messageId],
+            );
             await transaction.query(
               'DELETE FROM crm.message_subject_links WHERE message_id=$1',
               [messageId],
@@ -425,6 +445,13 @@ export function createSubjectService(database) {
               'message',
               messageId,
               1,
+              {
+                messageId,
+                previousSubjectIds: previous.rows.map(
+                  (/** @type {any} */ row) => row.subject_id,
+                ),
+                subjectIds,
+              },
             );
             return { messageId, subjectIds };
           },

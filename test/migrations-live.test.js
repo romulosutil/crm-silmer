@@ -155,16 +155,17 @@ if (connectionString) {
       );
       await pool.query(
         `INSERT INTO crm.orders
-           (id, number_sequence, number, conversation_id, status, fab_code,
+           (id, number_sequence, number, conversation_id, contact_id, status, fab_code,
             ficha_envelope, final_amount_cents, payment_condition, order_date,
             confirmed_at, confirmed_by, created_by_kind, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, '01', '{}'::jsonb, $6, $7, $8, $9, $10,
-                 'automation', $11, $11)`,
+         VALUES ($1, $2, $3, $4, $5, $6, '01', '{}'::jsonb, $7, $8, $9, $10, $11,
+                 'automation', $12, $12)`,
         [
           `order-${sequence}`,
           sequence,
           `${String(sequence).padStart(2, '0')}-CRM`,
           conversationId,
+          `contact-${conversationId}`,
           values.status,
           values.final_amount_cents,
           values.payment_condition,
@@ -247,9 +248,10 @@ if (connectionString) {
       await assert.rejects(
         pool.query(
           `INSERT INTO crm.orders
-             (id, number_sequence, number, conversation_id, status, fab_code,
+             (id, number_sequence, number, conversation_id, contact_id, status, fab_code,
               ficha_envelope, created_by_kind, created_at, updated_at)
            VALUES ('order-wrong-number', 999, '12-CRM', 'conversation-f',
+                   'contact-conversation-f',
                    'pendente', '01', '{}'::jsonb, 'user', $1, $1)`,
           [now],
         ),

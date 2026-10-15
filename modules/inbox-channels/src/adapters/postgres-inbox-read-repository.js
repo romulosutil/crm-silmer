@@ -1,3 +1,4 @@
+import { decryptSiteContactClaim } from '@crm-silmer/contacts';
 import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-envelope';
 import { decryptInboxMessageEnvelope } from './postgres-inbox-repository.js';
 
@@ -138,6 +139,8 @@ export class PostgresInboxReadRepository {
                   identity.external_identity_lookup_hash,
                   identity.identity_envelope, contact.display_name,
                   contact.version contact_version,
+                  site_claim.id site_claim_id, site_claim.version site_claim_version,
+                  site_claim.details_envelope site_claim_envelope,
                   assigned_function.function_name,
                   handoff.id handoff_id, handoff.status handoff_status,
                   handoff.version handoff_version,
@@ -162,6 +165,8 @@ export class PostgresInboxReadRepository {
            JOIN crm.contact_identities identity
              ON identity.id=conversation.contact_identity_id
            JOIN crm.contacts contact ON contact.id=identity.current_contact_id
+           LEFT JOIN crm.site_contact_claims site_claim
+             ON site_claim.conversation_id=conversation.id
            LEFT JOIN crm.user_functions assigned_function
              ON assigned_function.user_id=conversation.assigned_user_id
            LEFT JOIN LATERAL (
@@ -226,6 +231,8 @@ export class PostgresInboxReadRepository {
                     identity.external_identity_lookup_hash,
                     identity.identity_envelope, contact.display_name,
                     contact.version contact_version,
+                    site_claim.id site_claim_id, site_claim.version site_claim_version,
+                    site_claim.details_envelope site_claim_envelope,
                     assigned_function.function_name,
                     handoff.id handoff_id, handoff.status handoff_status,
                     handoff.version handoff_version,
@@ -239,6 +246,8 @@ export class PostgresInboxReadRepository {
              JOIN crm.contact_identities identity
                ON identity.id=conversation.contact_identity_id
              JOIN crm.contacts contact ON contact.id=identity.current_contact_id
+             LEFT JOIN crm.site_contact_claims site_claim
+               ON site_claim.conversation_id=conversation.id
              LEFT JOIN crm.user_functions assigned_function
                ON assigned_function.user_id=conversation.assigned_user_id
              LEFT JOIN LATERAL (
@@ -317,6 +326,15 @@ function mapConversationSummary(row, repository) {
     row.external_identity_lookup_hash,
     repository.contactEnvelopeKey,
   );
+  const siteClaim =
+    row.channel === 'site_chat' && row.site_claim_id
+      ? decryptSiteContactClaim(
+          row.site_claim_envelope,
+          row.site_claim_id,
+          Number(row.site_claim_version),
+          repository.contactEnvelopeKey,
+        )
+      : null;
   const lastMessage = row.last_message_id
     ? mapMessage(
         {
@@ -346,6 +364,8 @@ function mapConversationSummary(row, repository) {
       displayName: row.display_name ?? null,
       externalId: identity.externalIdentityId,
       id: row.contact_id,
+      phone: siteClaim?.phone ?? null,
+      phoneSource: siteClaim ? 'site_unverified' : null,
       // Operator-chosen name wins; the channel handle is only the fallback.
       label:
         row.display_name ??

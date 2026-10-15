@@ -135,7 +135,7 @@ const filtered = computed(() => {
   const needle = query.value.trim().toLocaleLowerCase('pt-BR');
   const matching = needle
     ? conversations.value.filter((conversation) =>
-        `${conversation.contact.label} ${conversation.contact.externalId} ${messageText(conversation.lastMessage)}`
+        `${conversation.contact.label} ${conversation.channel === 'site_chat' ? (conversation.contact.phone ?? '') : conversation.contact.externalId} ${messageText(conversation.lastMessage)}`
           .toLocaleLowerCase('pt-BR')
           .includes(needle),
       )
@@ -1185,7 +1185,20 @@ onBeforeUnmount(() => {
                 {{ active.contact.label }}
               </h2>
               <p class="conv-identity">
-                {{ formatPhoneNumber(active.contact.externalId) }} ·
+                <template v-if="active.channel === 'site_chat'">
+                  {{
+                    active.contact.phone
+                      ? formatPhoneNumber(active.contact.phone)
+                      : 'Telefone do chat indisponível'
+                  }}
+                  <template v-if="active.contact.phone">
+                    · telefone informado no site</template
+                  >
+                </template>
+                <template v-else>{{
+                  formatPhoneNumber(active.contact.externalId)
+                }}</template>
+                ·
                 {{ conversationLabel(active) }}
                 <template v-if="active.automationState === 'human'">
                   · {{ ownerLabel }}

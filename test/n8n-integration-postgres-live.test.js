@@ -10,6 +10,7 @@ import {
   migrate,
   withTransaction,
 } from '../modules/database/src/index.js';
+import { PostgresInboxReadRepository } from '../modules/inbox-channels/src/index.js';
 import {
   PostgresN8nIntegrationRepository,
   createN8nIntegrationService,
@@ -1602,6 +1603,20 @@ if (connectionString) {
       );
       assert.equal(syntheticContact.rows[0].display_name, 'Ana Sintetica');
       assert.equal(syntheticContact.rows[0].contact_phone_hash, null);
+      const inbox = new PostgresInboxReadRepository({
+        contactEnvelopeKey,
+        database,
+        messageEnvelopeKey: Buffer.alloc(32, 99),
+      });
+      const inboxList = await inbox.list({ archived: false, limit: 50 });
+      const inboxItem = inboxList.items.find(
+        (/** @type {any} */ item) => item.id === first.conversation_id,
+      );
+      assert.equal(inboxItem?.contact.phone, '5527999991234');
+      assert.equal(inboxItem?.contact.phoneSource, 'site_unverified');
+      const inboxDetail = await inbox.get(first.conversation_id);
+      assert.equal(inboxDetail.conversation.contact.phone, '5527999991234');
+      assert.equal(inboxDetail.conversation.contact.label, 'Ana Sintetica');
       const opened = await orders.ensurePendingFromIntent({
         conversationId: first.conversation_id,
         correlationId: 'site-order-first',

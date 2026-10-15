@@ -2883,6 +2883,14 @@ test('CP-T04: the agent targets one order, switches briefing, and transfers ambi
   );
   assert.equal(numbered.target_order_id, 'order-cap');
 
+  const newOrderRequest = context(
+    { ...base, subjects: [subjects[0]], source_subject_ids: [] },
+    'Quero fazer outro pedido de bonés',
+  );
+  assert.equal(newOrderRequest.target_ambiguous, true);
+  assert.equal(newOrderRequest.target_order_id, null);
+  assert.deepEqual(newOrderRequest.briefing, {});
+
   const ambiguous = context(
     { ...base, source_subject_ids: [] },
     'Quero mudar a quantidade',
@@ -2903,6 +2911,12 @@ test('CP-T04: the agent targets one order, switches briefing, and transfers ambi
   assert.equal(decision.handoff_required, true);
   assert.equal(decision.briefing_patch, null);
   assert.equal(decision.open_order, false);
+  const newOrderDecision = runCodeNode(decisionCode, output, {
+    'Montar contexto da IA (MVP)': newOrderRequest,
+  });
+  assert.equal(newOrderDecision.handoff_required, true);
+  assert.equal(newOrderDecision.briefing_patch, null);
+  assert.equal(newOrderDecision.open_order, false);
   const handoff = runCodeNode(handoffCode, decision, {});
   assert.equal(handoff.payload.target_contract, 'subject-v1');
   assert.equal('briefing_patch' in handoff.payload, false);

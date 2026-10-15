@@ -779,13 +779,31 @@ não substitui a homologação de dois Pedidos ativos, troca de Assunto e retoma
 em outro ciclo no canal real. Não registrar o segredo nem repetir mensagens
 anteriores marcadas como falhas sem reconciliação.
 
-Na mesma data, outra sessão sintética do chat iniciou um Pedido de 12
-camisetas. Ao receber "Agora quero outro pedido de bonés, separado das
-camisetas", o agente respondeu que um vendedor continuaria o atendimento
-para não misturar os pedidos. A resposta visível confirma o handoff do
-workflow para a troca de intenção; a conferência dos briefings e da Ficha no
-CRM ainda é necessária. Os cenários com dois Pedidos vinculados à mesma
-Conversa e com retomada em outro ciclo continuam sem evidência de canal.
+Na mesma data, uma sessão sintética do chat iniciou o Pedido `06-CRM` de 12
+camisetas brancas. Ao receber "Agora quero outro pedido de bonés, separado das
+camisetas", o agente transferiu para um vendedor sem alterar a Ficha: ela
+continuou com apenas as camisetas, brancas e quantidade informada 12. Outra
+sessão sintética abriu o Pedido `07-CRM` de 10 ecobags azuis. Repetir o mesmo
+`site_message_id`, instante e corpo retornou `200` com "Recebi a sua
+mensagem!"; a Inbox manteve uma única mensagem de entrada, uma resposta da IA
+e um único Pedido nesse ciclo.
+
+O ciclo do `07-CRM` foi encerrado com o Pedido pendente. Uma nova mensagem da
+mesma sessão pedindo "outro pedido" abriu outra Conversa e foi transferida sem
+criar Pedido nem alterar o `07-CRM`. Após encerrar esse atendimento sem Pedido,
+uma nova mensagem, agora com pedido explícito de 20 bonés pretos, abriu outro
+ciclo e criou o Pedido `08-CRM` para o mesmo Contato. O CRM mostrou ambos
+pendentes e separados: `07-CRM` com ecobags azuis, quantidade informada 10;
+`08-CRM` com bonés pretos, bordado e quantidade informada 20. O vendedor
+vinculou o `07-CRM` como segundo Assunto da nova Conversa, tornando-o o
+Assunto selecionado. A mensagem "Sobre o pedido 08-CRM, mude a quantidade de
+bonés para 30 unidades" entrou em conflito com essa seleção. O agente
+transferiu sem patch; as duas Fichas permaneceram com quantidades informadas
+10 e 20, respectivamente. Isso cobre no chat do site replay, troca de
+intenção, dois Pedidos ativos, seleção humana conflitante e retomada em outro
+ciclo. O telefone do site permaneceu marcado como informado e não confirmado;
+editar pelo agente um Pedido de ciclo anterior ou homologar o WhatsApp exige
+confirmação da posse do número no canal aprovado.
 
 Na ativação de 15/10/2026, a importação pelo CLI e o comando
 `n8n publish:workflow` deixaram o workflow marcado como ativo, mas o webhook

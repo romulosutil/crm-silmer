@@ -19,6 +19,7 @@ import {
   fichaPrintedLabel,
   isStoreOrder,
   missingHeadline,
+  orderStatusLabel,
   STORE_ORIGIN_LABEL,
   storeConfirmationLabel,
   storeFichaPending,
@@ -1046,7 +1047,12 @@ onBeforeUnmount(() => {
                 :data-exception="isException(order) || undefined"
                 @click="openOrder(order, $event)"
               >
-                <td class="order-cell-number">#{{ order.number }}</td>
+                <td class="order-cell-number">
+                  #{{ order.number }}
+                  <span class="badge order-card-status" data-tone="warning">{{
+                    orderStatusLabel(order.status)
+                  }}</span>
+                </td>
                 <td class="order-cell-customer">
                   <strong>{{ customerName(order) }}</strong>
                   <small class="order-context">{{
@@ -1164,6 +1170,9 @@ onBeforeUnmount(() => {
                       >Ficha não impressa</span
                     >
                   </span>
+                  <span class="badge order-card-status" data-tone="success">{{
+                    orderStatusLabel(order.status)
+                  }}</span>
                 </td>
                 <td class="order-cell-customer">
                   <strong>{{ customerName(order) }}</strong>

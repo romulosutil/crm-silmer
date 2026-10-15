@@ -689,6 +689,8 @@ async function save() {
                       min="1"
                       step="1"
                       inputmode="numeric"
+                      pattern="[0-9]*"
+                      enterkeyhint="next"
                       :aria-invalid="
                         Boolean(lineErrors[`${itemIndex}:${lineIndex}`]) ||
                         undefined

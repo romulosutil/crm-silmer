@@ -2467,15 +2467,19 @@ test('keeps "Gerar pedido" as the only primary button of the page (PFI-13)', asy
   await mockOrders(page);
   await page.goto('/pedidos/order-pendente');
 
-  await expect(page.locator('main button.primary')).toHaveText([
-    'Gerar pedido',
-  ]);
+  // One visible primary per screen size: the closing panel on a wide
+  // screen, the fixed footer on a phone (mobile first).
+  const primary = page.locator('main button.primary:visible');
+  await expect(primary).toHaveText(['Gerar pedido']);
+  await expect(primary).not.toHaveClass(/op-mobile/u);
+  await page.setViewportSize({ height: 844, width: 390 });
+  await expect(primary).toHaveText(['Gerar pedido']);
+  await expect(page.locator('.op-mobile-action button.primary')).toBeVisible();
+  await page.setViewportSize({ height: 800, width: 1280 });
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await summary.getByRole('button', { name: 'Editar' }).click();
-  await expect(page.locator('main button.primary')).toHaveText([
-    'Gerar pedido',
-  ]);
+  await expect(primary).toHaveText(['Gerar pedido']);
 });
 
 test('hides Gerar and Reabrir from whoever does not own the conversation', async ({
@@ -2712,6 +2716,131 @@ test('stacks the orders as cards on a phone, with no sideways scroll', async ({
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(40);
   // Still a table for a screen reader: rows, cells and column headers.
   await expect(confirmed.getByRole('columnheader')).toHaveCount(7);
+  // Mobile first: a card says its own status, which the section heading
+  // says on a wide screen.
+  await expect(card.locator('.order-card-status')).toHaveText('Confirmado');
+  await expect(
+    page
+      .getByRole('region', { name: 'Pedidos pendentes' })
+      .getByRole('row', { name: /Pendente Parado/u })
+      .locator('.order-card-status'),
+  ).toHaveText('Pendente');
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  await page.setViewportSize({ height: 800, width: 1280 });
+  await expect(card.locator('.order-card-status')).toBeHidden();
+  await expect(confirmed.locator('thead th').first()).toBeVisible();
+});
+
+test('keeps the main action of the order in a fixed footer on a phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+  // The shell's bottom navigation reserves its height in this token.
+  await page.addStyleTag({
+    content: ':root { --mobile-nav-block-size: 64px; }',
+  });
+
+  const footer = page.locator('.op-mobile-action');
+  const generate = footer.getByRole('button', { name: 'Gerar pedido' });
+  await expect(generate).toBeVisible();
+  // One "Gerar pedido" and no print button on a phone: the footer holds it.
+  await expect(page.getByRole('button', { name: 'Gerar pedido' })).toHaveCount(
+    1,
+  );
+  await expect(
+    page.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toHaveCount(0);
+  const box = await footer.boundingBox();
+  expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(844 - 64);
+  const target = await generate.boundingBox();
+  expect(target?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+  // Nothing is missing on the page but the amount: the focus goes there.
+  await generate.click();
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await expect(closing.getByLabel('Valor final')).toBeFocused();
+  await expect(closing).toContainText('Use o formato 4.820,00.');
+  await closing.getByLabel('Valor final').fill('4.820,00');
+  await closing.getByLabel('Pix').check();
+  await generate.click();
+  await expect(
+    page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' }),
+  ).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.keyboard.press('Escape');
+
+  // The footer steps aside while a section is edited.
+  await page
+    .getByRole('region', { name: 'Itens e especificações' })
+    .getByRole('button', { name: 'Editar' })
+    .click();
+  await expect(footer).toHaveCount(0);
+});
+
+test('prints a confirmed order from the footer without covering the page', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page);
+  await page.goto('/pedidos/order-confirmado');
+
+  const footer = page.locator('.op-mobile-action');
+  await expect(
+    footer.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toHaveCount(1);
+  await page.evaluate(() =>
+    globalThis.scrollTo(0, globalThis.document.documentElement.scrollHeight),
+  );
+  const last = await page.locator('.op-rail > :last-child').boundingBox();
+  const bar = await footer.boundingBox();
+  expect((last?.y ?? 0) + (last?.height ?? 0)).toBeLessThanOrEqual(bar?.y ?? 0);
+
+  // From 48rem the action is back in the header and the footer is gone.
+  await page.setViewportSize({ height: 800, width: 1280 });
+  await expect(footer).toBeHidden();
+  await expect(
+    page.locator('.op-head-actions').getByRole('button', {
+      name: 'Imprimir ficha',
+    }),
+  ).toBeVisible();
+});
+
+test('edits the size grade with the thumb on a phone', async ({ page }) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  const quantity = items.getByLabel('Quantidade do tamanho M');
+  await expect(quantity).toHaveAttribute('inputmode', 'numeric');
+  for (const control of [
+    quantity,
+    items.getByLabel('Tamanho da linha 1'),
+    items.getByRole('button', { name: 'Uma peça a mais na linha 1' }),
+    items.getByRole('button', { name: 'Uma peça a menos na linha 1' }),
+    items.getByRole('button', { name: 'Remover linha 1' }),
+    items.getByRole('button', { name: 'Adicionar tamanho' }).first(),
+  ]) {
+    const box = await control.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  }
+  await items
+    .getByRole('button', { name: 'Uma peça a mais na linha 1' })
+    .click();
+  await expect(quantity).toHaveValue('101');
+  const overflow = await page.evaluate(
+    () =>
+      globalThis.document.documentElement.scrollWidth -
+      globalThis.document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 

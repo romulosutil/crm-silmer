@@ -1467,6 +1467,249 @@ test('opens one section at a time (PFI-06)', async ({ page }) => {
   await expect(items.getByRole('button', { name: 'Editar' })).toBeEnabled();
 });
 
+test('heads each section with its state in words and "Editar" naming the section (PFI-17)', async ({
+  page,
+}) => {
+  await mockOrders(page, { orders: [incompleteOrder] });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
+  const observations = page.getByRole('region', {
+    name: 'Observações do pedido',
+  });
+
+  // The region keeps only the title as its name; the state sits beside it.
+  await expect(
+    page.getByRole('region', { exact: true, name: 'Itens e especificações' }),
+  ).toHaveCount(1);
+  const states = page.locator('main .op-sheet-state');
+  await expect(states).toHaveText([
+    'Falta entrega prometida',
+    '1 de 3 datas',
+    'Falta: cor do item 1 e gola do item 1',
+    'Falta marcar quem faz a arte',
+    '1 de 5 linhas',
+  ]);
+  // The tone has an icon besides the colour, and the text says it anyway.
+  await expect(items.locator('.op-sheet-state')).toHaveAttribute(
+    'data-tone',
+    'missing',
+  );
+  await expect(items.locator('.op-sheet-state svg')).toHaveCount(1);
+  await expect(trail.locator('.op-sheet-state')).toHaveAttribute(
+    'data-tone',
+    'neutral',
+  );
+
+  // Verb and object on every button; none says only "Editar".
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
+    'Editar resumo',
+    'Editar datas',
+    'Editar itens',
+    'Editar arte',
+    'Editar observações',
+  ]);
+  await expect(
+    page.getByRole('button', { exact: true, name: 'Editar' }),
+  ).toHaveCount(0);
+
+  // Once the items are complete their state counts items and pieces.
+  await items.getByRole('button', { name: 'Editar itens' }).click();
+  await items.getByLabel('Cor', { exact: true }).fill('BRANCA');
+  await items.getByLabel('Gola', { exact: true }).fill('GOLA V');
+  await items.getByRole('button', { name: 'Salvar itens' }).click();
+  await expect(items.locator('.op-sheet-state')).toHaveText(
+    '1 item · 150 peças',
+  );
+  await expect(items.locator('.op-sheet-state')).toHaveAttribute(
+    'data-tone',
+    'ok',
+  );
+
+  // The promised delivery and who makes the art read as done once saved.
+  await summary.getByRole('button', { name: 'Editar resumo' }).click();
+  await summary.getByLabel('Entrega prometida').fill('2026-11-20');
+  await summary.getByRole('button', { name: 'Salvar resumo' }).click();
+  await expect(summary.locator('.op-sheet-state')).toHaveText(
+    'Entrega 20/11/2026',
+  );
+  await artwork.getByRole('button', { name: 'Editar arte' }).click();
+  await artwork.getByLabel('O cliente envia a arte').check();
+  await artwork.getByRole('button', { name: 'Salvar arte' }).click();
+  await expect(artwork.locator('.op-sheet-state')).toHaveText(
+    'O cliente envia a arte',
+  );
+  await expect(observations.locator('.op-sheet-state')).toHaveText(
+    '1 de 5 linhas',
+  );
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('keeps the other "Editar" focusable but unavailable, with the reason, while one section is open (PFI-17, PFI-06)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const editItems = items.getByRole('button', { name: 'Editar itens' });
+  await editItems.focus();
+  await page.keyboard.press('Enter');
+  await expect(items.getByLabel('Tipo de roupa')).toBeFocused();
+  await items.getByLabel('Tipo de roupa').fill('REGATA');
+
+  const others = page.getByRole('button', { name: /^Editar\b/u });
+  await expect(others).toHaveText([
+    'Editar resumo',
+    'Editar datas',
+    'Editar arte',
+    'Editar observações',
+  ]);
+  for (const other of await others.all()) {
+    await expect(other).toHaveAttribute('aria-disabled', 'true');
+    await expect(other).toHaveAccessibleDescription(
+      'Salve ou cancele a edição aberta.',
+    );
+  }
+
+  // Enter and a click on a waiting button open nothing and keep the draft.
+  const editSummary = summary.getByRole('button', { name: 'Editar resumo' });
+  await editSummary.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Space');
+  await editSummary.dispatchEvent('click');
+  await expect(editSummary).toBeFocused();
+  await expect(summary.getByLabel('Nome do pedido')).toHaveCount(0);
+  await expect(items.getByLabel('Tipo de roupa')).toHaveValue('REGATA');
+  // After the attempt the reason shows on screen, next to the button.
+  await expect(
+    summary.getByText('Salve ou cancele a edição aberta.'),
+  ).toBeVisible();
+  expect(writes).toHaveLength(0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // Cancelling frees every "Editar" again, without the reason.
+  await items.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(others).toHaveCount(5);
+  for (const other of await others.all()) {
+    await expect(other).not.toHaveAttribute('aria-disabled', /./u);
+    await expect(other).not.toHaveAttribute('aria-describedby', /./u);
+  }
+  await expect(page.getByText('Salve ou cancele a edição aberta.')).toHaveCount(
+    0,
+  );
+});
+
+test('opens the items from the next step by keyboard, through the section itself (PFI-15, PFI-17)', async ({
+  page,
+}) => {
+  const noColour = {
+    ...pendingOrder,
+    ficha: {
+      ...pendingOrder.ficha,
+      items: [{ ...pendingOrder.ficha.items[0], cor: '' }],
+    },
+    missingFields: ['items[0].cor', 'finalAmount', 'paymentCondition'],
+  };
+  await mockOrders(page, { orders: [noColour] });
+  await page.goto('/pedidos/order-pendente');
+
+  const progress = page.getByRole('region', { name: 'Para gerar o pedido' });
+  const next = progress.getByRole('button', { name: 'Completar itens' });
+  await next.focus();
+  await page.keyboard.press('Enter');
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await expect(items.getByLabel('Tipo de roupa')).toBeFocused();
+  await expect(
+    items.getByRole('button', { name: 'Salvar itens' }),
+  ).toBeVisible();
+  await expect(next).toHaveAttribute('aria-disabled', 'true');
+
+  // Phone: the fixed footer opens the same editor.
+  await items.getByRole('button', { name: 'Cancelar' }).click();
+  await page.setViewportSize({ height: 844, width: 390 });
+  const footer = page.locator('.op-mobile-action');
+  const step = footer.getByRole('button', { name: 'Completar itens' });
+  await step.focus();
+  await page.keyboard.press('Enter');
+  await expect(items.getByLabel('Tipo de roupa')).toBeFocused();
+});
+
+test('counts a blocker the screen does not know as a step that leads to the closing panel (PFI-15)', async ({
+  page,
+}) => {
+  const newer = {
+    ...pendingOrder,
+    missingFields: ['summary.futuro', 'finalAmount', 'paymentCondition'],
+  };
+  await mockOrders(page, { orders: [newer] });
+  await page.goto('/pedidos/order-pendente');
+
+  const progress = page.getByRole('region', { name: 'Para gerar o pedido' });
+  // Never "3 de 3" while the server still refuses to generate.
+  await expect(progress.getByRole('status')).toHaveText('3 de 4 prontos');
+  await expect(progress.locator('li[aria-current="step"]')).toHaveText(
+    /Outras pendências\s*falta: summary\.futuro/u,
+  );
+  const review = progress.getByRole('button', { name: 'Revisar pendências' });
+  await review.focus();
+  await page.keyboard.press('Enter');
+
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await expect(
+    closing.getByRole('heading', { name: 'Fechamento e pagamento' }),
+  ).toBeFocused();
+  await expect(closing.locator('#closing-readiness')).toContainText(
+    'summary.futuro',
+  );
+  // No section opened for a blocker no section fills.
+  await expect(page.locator('main .op-editing-tag')).toHaveCount(0);
+  await expect(
+    closing.getByRole('button', { name: 'Gerar pedido' }),
+  ).toHaveAttribute('aria-disabled', 'true');
+
+  // Phone: the footer names the same step, as step 4 of 4.
+  await page.setViewportSize({ height: 844, width: 390 });
+  const footer = page.locator('.op-mobile-action');
+  await expect(footer).toContainText('Passo 4 de 4 para gerar');
+  await expect(
+    footer.getByRole('button', { name: 'Revisar pendências' }),
+  ).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('keeps the section heads readable and their buttons thumb sized, light and dark (PFI-17)', async ({
+  page,
+}) => {
+  await mockOrders(page, { orders: [incompleteOrder] });
+  for (const colorScheme of /** @type {const} */ (['light', 'dark'])) {
+    await page.emulateMedia({ colorScheme });
+    await page.setViewportSize({ height: 844, width: 390 });
+    await page.goto('/pedidos/order-pendente');
+    const edits = page.getByRole('button', { name: /^Editar\b/u });
+    await expect(edits).toHaveCount(5);
+    for (const edit of await edits.all()) {
+      const box = await edit.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    // Something open, so the waiting buttons are checked too.
+    await page
+      .getByRole('region', { name: 'Observações do pedido' })
+      .getByRole('button', { name: 'Editar observações' })
+      .click();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+    await page.setViewportSize({ height: 800, width: 1280 });
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  }
+});
+
 test('edits the observations and stops at five lines (PFI-05)', async ({
   page,
 }) => {

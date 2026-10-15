@@ -1,7 +1,12 @@
 <script setup>
 import { computed, inject, nextTick, ref, watch } from 'vue';
-import { fabLabel, quantityWarning } from '../../lib/order-format.js';
+import {
+  fabLabel,
+  orderSteps,
+  quantityWarning,
+} from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
+import OrderSheetHead from './OrderSheetHead.vue';
 
 const SECTION = 'summary';
 
@@ -35,6 +40,18 @@ function dateBR(value) {
   return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
 }
 
+// PFI-17: the promised delivery is what this section owes to "Gerar"; the
+// server's missingFields says whether it is still missing (PFI-15).
+const headState = computed(() => {
+  const step = orderSteps(props.order).find((one) => one.key === 'delivery');
+  if (step && !step.done) {
+    return { text: 'Falta entrega prometida', tone: 'missing' };
+  }
+  const day = dateBR(summary.value.data_entrega_confirmada);
+  if (day) return { text: `Entrega ${day}`, tone: 'ok' };
+  return { text: 'Sem entrega prometida', tone: 'neutral' };
+});
+
 async function startEditing() {
   draft.value = {
     data_entrega_confirmada: summary.value.data_entrega_confirmada ?? '',
@@ -54,7 +71,7 @@ function cancel() {
 // ADR 016: "Informar no Resumo" from "Gerar pedido" opens this editor on
 // Entrega prometida; with another section open, it only brings the summary
 // into view.
-const heading = ref(null);
+const sheet = ref(null);
 watch(
   () => editing.editRequest?.value,
   (request) => {
@@ -63,7 +80,7 @@ watch(
       void startEditing();
       return;
     }
-    heading.value?.scrollIntoView?.({ block: 'start' });
+    sheet.value?.scrollIntoView?.({ block: 'start' });
   },
 );
 
@@ -89,23 +106,22 @@ async function save() {
 
 <template>
   <section
+    ref="sheet"
     class="op-sheet"
     :data-editing="isEditing || undefined"
     aria-labelledby="order-summary-title"
   >
-    <div class="op-sheet-head">
-      <h2 id="order-summary-title" ref="heading">Resumo do pedido</h2>
-      <span v-if="isEditing" class="op-editing-tag">Editando</span>
-      <button
-        v-if="canEdit && !isEditing"
-        type="button"
-        class="op-edit"
-        :disabled="otherSectionOpen"
-        @click="startEditing"
-      >
-        <OrderIcon name="pencil" />Editar
-      </button>
-    </div>
+    <OrderSheetHead
+      title-id="order-summary-title"
+      title="Resumo do pedido"
+      :state="headState.text"
+      :tone="headState.tone"
+      edit-label="Editar resumo"
+      :can-edit="canEdit"
+      :blocked="otherSectionOpen"
+      :editing="isEditing"
+      @edit="startEditing"
+    />
 
     <p v-if="errorMessage" role="alert" class="op-alert">
       {{ errorMessage }}

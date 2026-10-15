@@ -1,7 +1,8 @@
 <script setup>
 import { computed, inject, nextTick, ref, watch } from 'vue';
+import { orderSteps } from '../../lib/order-format.js';
 import OrderArtworkFiles from './OrderArtworkFiles.vue';
-import OrderIcon from './OrderIcon.vue';
+import OrderSheetHead from './OrderSheetHead.vue';
 
 const SECTION = 'artwork';
 // ADR 020: who makes the art of the whole order. The customer and Silmer may
@@ -32,12 +33,19 @@ const canEdit = computed(
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
 );
-const sources = computed(
-  () =>
-    ORIGINS.filter((origin) => artwork.value[origin.key] === true)
-      .map((origin) => origin.label)
-      .join(' · ') || 'Falta marcar quem faz a arte.',
-);
+// PFI-17: who makes the art is the head's state; "Falta" is a blocker only
+// while the server lists `artwork` (PFI-15).
+const headState = computed(() => {
+  const marked = ORIGINS.filter(
+    (origin) => artwork.value[origin.key] === true,
+  ).map((origin) => origin.label);
+  if (marked.length > 0) return { text: marked.join(' · '), tone: 'ok' };
+  const step = orderSteps(props.order).find((one) => one.key === 'artwork');
+  return {
+    text: 'Falta marcar quem faz a arte',
+    tone: step && !step.done ? 'missing' : 'neutral',
+  };
+});
 
 async function startEditing() {
   draft.value = {
@@ -75,7 +83,7 @@ function mark(key, checked) {
 
 // "Informar em Estampa e arquivos" from "Gerar pedido" opens this editor;
 // with another section open, it only brings the section into view.
-const heading = ref(null);
+const sheet = ref(null);
 watch(
   () => editing.editRequest?.value,
   (request) => {
@@ -84,7 +92,7 @@ watch(
       void startEditing();
       return;
     }
-    heading.value?.scrollIntoView?.({ block: 'start' });
+    sheet.value?.scrollIntoView?.({ block: 'start' });
   },
 );
 
@@ -103,20 +111,18 @@ async function save() {
 </script>
 
 <template>
-  <section class="op-sheet" aria-labelledby="order-artwork-title">
-    <div class="op-sheet-head">
-      <h2 id="order-artwork-title" ref="heading">Estampa e arquivos</h2>
-      <span v-if="isEditing" class="op-editing-tag">Editando</span>
-      <button
-        v-if="canEdit && !isEditing"
-        type="button"
-        class="op-edit"
-        :disabled="otherSectionOpen"
-        @click="startEditing"
-      >
-        <OrderIcon name="pencil" />Editar
-      </button>
-    </div>
+  <section ref="sheet" class="op-sheet" aria-labelledby="order-artwork-title">
+    <OrderSheetHead
+      title-id="order-artwork-title"
+      title="Estampa e arquivos"
+      :state="headState.text"
+      :tone="headState.tone"
+      edit-label="Editar arte"
+      :can-edit="canEdit"
+      :blocked="otherSectionOpen"
+      :editing="isEditing"
+      @edit="startEditing"
+    />
 
     <p v-if="errorMessage" role="alert" class="op-alert">
       {{ errorMessage }}
@@ -159,10 +165,6 @@ async function save() {
         </button>
       </div>
     </form>
-
-    <div v-else class="op-sheet-body">
-      <p>{{ sources }}</p>
-    </div>
 
     <OrderArtworkFiles :order="order" />
   </section>

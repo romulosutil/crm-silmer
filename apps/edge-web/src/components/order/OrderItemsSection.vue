@@ -1,5 +1,5 @@
 <script setup>
-import { computed, inject, nextTick, ref } from 'vue';
+import { computed, inject, nextTick, ref, watch } from 'vue';
 import { colorSwatch } from '../../lib/order-catalog.js';
 import {
   AUDIENCE_OPTIONS,
@@ -9,9 +9,11 @@ import {
   itemPieces,
   itemQuantityLabel,
   itemQuantityWarning,
+  orderSteps,
   sortedGrade,
 } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
+import OrderSheetHead from './OrderSheetHead.vue';
 
 const SECTION = 'items';
 // The value the ficha prints when a garment has no sleeve or no viés (PFI-07).
@@ -99,6 +101,18 @@ const draftTotal = computed(() =>
 const headline = computed(() => {
   const count = items.value.length;
   return `${count} ${count === 1 ? 'item' : 'itens'} · ${draftTotal.value} peças`;
+});
+// PFI-17: what the items still owe to "Gerar", in the words of the progress
+// (PFI-15); with nothing missing, how many items and pieces there are.
+const headState = computed(() => {
+  const step = orderSteps(props.order).find((one) => one.key === 'items');
+  if (step && !step.done) {
+    return {
+      text: step.missing.charAt(0).toUpperCase() + step.missing.slice(1),
+      tone: 'missing',
+    };
+  }
+  return { text: headline.value, tone: items.value.length ? 'ok' : 'neutral' };
 });
 
 /** @param {unknown} value */
@@ -264,6 +278,22 @@ function cancel() {
   editing.stop();
 }
 
+// PFI-15/PFI-16: "Completar itens" (the progress, the footer or "Gerar
+// pedido") opens this editor, like the other sections answer their own
+// request; with another section open it only brings the items into view.
+const sheet = ref(null);
+watch(
+  () => editing.editRequest?.value,
+  (request) => {
+    if (request?.section !== SECTION || isEditing.value) return;
+    if (canEdit.value && !otherSectionOpen.value) {
+      void startEditing();
+      return;
+    }
+    sheet.value?.scrollIntoView?.({ block: 'start' });
+  },
+);
+
 function addItem() {
   draft.value.push(blankItem());
 }
@@ -413,24 +443,22 @@ async function save() {
 
 <template>
   <section
+    ref="sheet"
     class="op-sheet"
     :data-editing="isEditing || undefined"
     aria-labelledby="order-items-title"
   >
-    <div class="op-sheet-head">
-      <h2 id="order-items-title">Itens e especificações</h2>
-      <p class="op-num">{{ headline }}</p>
-      <span v-if="isEditing" class="op-editing-tag">Editando</span>
-      <button
-        v-if="canEdit && !isEditing"
-        type="button"
-        class="op-edit"
-        :disabled="otherSectionOpen"
-        @click="startEditing"
-      >
-        <OrderIcon name="pencil" />Editar
-      </button>
-    </div>
+    <OrderSheetHead
+      title-id="order-items-title"
+      title="Itens e especificações"
+      :state="headState.text"
+      :tone="headState.tone"
+      edit-label="Editar itens"
+      :can-edit="canEdit"
+      :blocked="otherSectionOpen"
+      :editing="isEditing"
+      @edit="startEditing"
+    />
 
     <p v-if="errorMessage" role="alert" class="op-alert">
       {{ errorMessage }}

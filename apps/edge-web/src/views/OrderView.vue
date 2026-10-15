@@ -24,6 +24,7 @@ import {
   fabLabel,
   isStoreOrder,
   nextOrderStep,
+  ORDER_REVIEW_SECTION,
   orderStatusLabel,
   orderSteps,
   PRINT_LOCKED_REASON,
@@ -270,25 +271,29 @@ function print() {
 
 /**
  * PFI-15/PFI-16: the button of the next step opens the section that fills
- * it. A section that answers editRequest opens its own editor; one that does
- * not yet (the items) is opened through its own "Editar", or brought into view
- * when it cannot open.
+ * it. Each section answers editRequest itself: it opens its own editor, or
+ * only comes into view when it cannot open (PFI-06).
+ *
+ * "Revisar pendências" (a blocker this screen does not know) has no section
+ * to open: it leads to the closing panel, whose "Falta para gerar" names it.
+ * The focus moves to the panel's title unless it is already in the panel.
  *
  * @param {string} section
  */
-async function goToSection(section) {
-  editRequest.value = { at: Date.now(), section };
-  await nextTick();
-  if (editingSection.value !== '') return;
-  const sheet = globalThis.document
-    ?.getElementById(`order-${section}-title`)
-    ?.closest('section');
-  const edit = sheet?.querySelector('.op-sheet-head button.op-edit');
-  if (edit instanceof HTMLButtonElement && !edit.disabled) {
-    edit.click();
+function goToSection(section) {
+  if (section !== ORDER_REVIEW_SECTION) {
+    editRequest.value = { at: Date.now(), section };
     return;
   }
-  sheet?.scrollIntoView?.({ block: 'start' });
+  const doc = globalThis.document;
+  const title = doc?.getElementById('order-closing-title');
+  const panel = title?.closest('section');
+  (doc?.getElementById('closing-readiness') ?? panel)?.scrollIntoView?.({
+    block: 'center',
+  });
+  if (title && !panel?.contains(doc.activeElement)) {
+    title.focus({ preventScroll: true });
+  }
 }
 
 provide('orderEditing', {

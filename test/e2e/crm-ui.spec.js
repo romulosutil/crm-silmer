@@ -166,7 +166,7 @@ const conversationOrder = {
   version: 2,
 };
 
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, failedDelivery?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyContacts?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, failedDelivery?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyContacts?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, siteChat?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -207,6 +207,17 @@ async function mockCrm(page, options = {}) {
   /** The list and the detail answer the same conversation, order included. */
   const withOrder = () => ({
     ...inboxConversation,
+    ...(options.siteChat
+      ? {
+          channel: 'site_chat',
+          contact: {
+            ...inboxConversation.contact,
+            externalId: '999001899004479995964365389745407152128',
+            phone: '5527999991234',
+            phoneSource: 'site_unverified',
+          },
+        }
+      : {}),
     ...(options.otherOwner
       ? { assignedUser: { functionName: 'Vendedor', id: 'operator-2' } }
       : {}),
@@ -1040,6 +1051,23 @@ test('shows a failed delivery code to the seller in the Inbox', async ({
   await page.goto('/inbox');
   await expect(
     page.getByText('Falha no envio · código técnico: N8N_COMMAND_HTTP_401'),
+  ).toBeVisible();
+});
+
+test('shows the declared site phone instead of the synthetic chat ID', async ({
+  page,
+}) => {
+  await mockCrm(page, { siteChat: true });
+  await page.goto('/inbox');
+  await expect(page.locator('.conv-identity')).toContainText(
+    /\+55 \(27\) 99999-1234\s*·\s*telefone informado no site/u,
+  );
+  await expect(
+    page.getByText('999001899004479995964365389745407152128'),
+  ).toHaveCount(0);
+  await page.locator('#inbox-search').fill('5527999991234');
+  await expect(
+    page.getByRole('button', { name: /Studio Malu/u }),
   ).toBeVisible();
 });
 

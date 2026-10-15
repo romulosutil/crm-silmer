@@ -468,6 +468,10 @@ ser criado com `open_order:true`, mas o agente não pode projetar alterações
 num Pedido de outro ciclo do chat do site. O CRM recusa um primeiro inbound
 sem claim (`SITE_CONTACT_REQUIRED`) e replay com payload diferente usa o
 conflito de idempotência existente.
+Na Inbox, o vendedor vê o telefone declarado com a indicação "telefone
+informado no site"; o identificador técnico da sessão não aparece como
+telefone. Esse número permanece não verificado e não une a identidade do
+chat à identidade do WhatsApp.
 
 O vendedor continua o atendimento transferido **na caixa de entrada do CRM**.
 Uma resposta humana de texto no canal `site_chat` passa pelo comando autenticado

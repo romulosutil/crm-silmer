@@ -62,6 +62,11 @@ const ICONS = Object.freeze({
   ],
   moon: ['M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z'],
   chevron: ['m9 18 6-6-6-6'],
+  more: [
+    'M11 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
+    'M18 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
+    'M4 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
+  ],
 });
 
 const props = defineProps({

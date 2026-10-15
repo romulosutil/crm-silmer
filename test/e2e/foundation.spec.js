@@ -405,19 +405,25 @@ test('keeps Pedidos in the menu after Caixa de Entrada, active across its pages'
   await expect(page.locator('.topbar-title')).toHaveText('Pedidos');
 
   await page.setViewportSize({ height: 800, width: 480 });
-  await page.getByRole('button', { name: 'Menu' }).click();
+  // Mobile-first: the four daily places live in a bottom bar under the
+  // thumb, and "Mais" opens the rest, admin and exit included.
   const mobile = page.getByRole('navigation', { name: 'Navegação móvel' });
-  // The phone menu offers the same places as the sidebar, admin and exit
-  // included.
-  await expect(mobile.getByRole('link')).toHaveText([
-    'Dashboard',
-    'Caixa de Entrada',
-    'Pedidos',
-    'Clientes',
-    'Vendedores',
-    'Conta',
-  ]);
-  await expect(mobile.getByRole('button', { name: 'Sair' })).toBeVisible();
+  for (const name of ['Início', 'Caixa de Entrada', 'Pedidos', 'Clientes']) {
+    await expect(mobile.getByRole('link', { name, exact: true })).toBeVisible();
+  }
+  await expect(
+    mobile.getByRole('link', { name: 'Pedidos', exact: true }),
+  ).toHaveAttribute('aria-current', 'page');
+  const more = mobile.getByRole('button', { name: 'Mais' });
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await more.click();
+  const sheet = page.getByRole('region', { name: 'Mais opções' });
+  await expect(sheet.getByRole('link')).toHaveText(['Vendedores', 'Conta']);
+  await expect(sheet.getByRole('button', { name: 'Sair' })).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Escuro' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(more).toBeFocused();
 
   await page.setViewportSize({ height: 900, width: 1280 });
   // PGE-01: the order page belongs to Pedidos, so the menu item stays lit on

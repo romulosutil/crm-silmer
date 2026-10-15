@@ -170,10 +170,10 @@
   flex: 1 1 0;
   min-inline-size: 0;
   min-block-size: calc(var(--control-height) - 0.5rem);
-  padding: 0 var(--space-3);
+  padding: var(--space-1) var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
-  white-space: nowrap;
+  line-height: 1.2;
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);
@@ -1488,10 +1488,6 @@ details.exact summary {
 
   .thread {
     max-block-size: min(28rem, 48vh);
-  }
-
-  .mobile-nav {
-    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   }
 }
 

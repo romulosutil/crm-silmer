@@ -199,15 +199,25 @@ Base de `4px`: `4`, `8`, `12`, `16`, `20`, `24`, `32`, `40`, `48`, `64`.
 
 ### App shell
 
+**Mobile-first (15/10/2026):** os vendedores operam pelo celular. Toda tela é
+desenhada primeiro para 390×844.
+
+- **Celular (≤ 768 px):** topo de 56 px com o logotipo e o estado da conexão;
+  barra inferior fixa de `--mobile-nav-block-size` (64 px + safe-area) com
+  Início, Caixa, Pedidos, Clientes e Mais. "Mais" abre uma folha inferior com
+  conta, Vendedores (admin), Conta, aparência e Sair; Escape fecha e devolve o
+  foco. As telas reservam a barra no fim da rolagem e acima de rodapés fixos.
+  Campos usam 16 px para o iOS não dar zoom.
+
 - Sidebar de `248px` no canvas, sem borda; item ativo é um cartão branco com
   sombra curta e ícone na cor da marca. Recolhe para rail de `72px` entre 769 e
   1199 px, com o monograma da marca.
 - O trabalho fica num painel inset (`--color-page`, raio `xl`) com topbar de
   `56px`: trilha "Empresa › Tela", função, estado da conexão e tema.
-- Uma lista de rotas alimenta a sidebar e o menu móvel; os dois oferecem os
-  mesmos destinos, inclusive Vendedores (admin) e Sair.
-- Cabeçalho de página: h1 de 24 px, uma linha de contexto e a ação primária da
-  tela. Sem eyebrow.
+- Uma lista de rotas alimenta a sidebar, a barra inferior e a folha "Mais";
+  todos oferecem os mesmos destinos, inclusive Vendedores (admin) e Sair.
+- Cabeçalho de página: h1 de 24 px (20 px no celular), uma linha de contexto e
+  a ação primária da tela, que no celular ocupa a largura toda. Sem eyebrow.
 - Conexão: verde discreto quando ativa, atenção durante reconexão, erro só
   quando indisponível.
 - Títulos recebem foco programático na navegação sem desenhar anel; controles

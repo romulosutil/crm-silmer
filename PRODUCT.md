@@ -21,10 +21,23 @@ do código das telas.
 
 | Pessoa | Frequência | Onde | O que precisa |
 |---|---|---|---|
-| Atendente/vendedora | o dia todo | notebook 1366×768 | fila, conversa e resposta sem rolar; pedido a partir da conversa |
+| Atendente/vendedora | o dia todo | **celular** (principal) e notebook 1366×768 | fila, conversa e resposta sem rolar; pedido a partir da conversa |
 | Dono/gestor | poucas vezes ao dia | celular | saúde do dia, atrasos, equipe e assistente em 30 segundos |
 | Produção/PCP | por pedido confirmado | desktop antigo ou tablet | conferir itens, tamanhos e arte sem ambiguidade; imprimir a ficha |
 | Empresa avaliando (whitelabel) | uma demo | qualquer | ver a própria marca e entender sem treinamento |
+
+## Mobile-first
+
+Decisão do PO em 15/10/2026: os vendedores usam o celular o tempo todo. Toda
+tela é desenhada primeiro para 390×844 e depois ampliada para desktop:
+
+- navegação na barra inferior, ao alcance do polegar (Início, Caixa, Pedidos,
+  Clientes, Mais);
+- alvos de toque ≥ 44 px, campos de 16 px (sem zoom no iOS), nada que dependa
+  de hover;
+- uma coluna, listas em cartões (não tabelas com rolagem lateral) e a ação
+  principal fixa no rodapé quando a tela é longa;
+- safe-area respeitada (`viewport-fit=cover`).
 
 ## Modo de superfície
 

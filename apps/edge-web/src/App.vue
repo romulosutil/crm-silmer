@@ -10,6 +10,7 @@ import {
 } from 'vue';
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import AppIcon from './components/AppIcon.vue';
+import AppToast from './components/AppToast.vue';
 import AuthPanel from './components/AuthPanel.vue';
 import BrandMark from './components/BrandMark.vue';
 import ThemeSwitcher from './components/ThemeSwitcher.vue';
@@ -158,6 +159,19 @@ const stream = new LiveEventStream({
 provide('liveEvent', liveEvent);
 provide('liveConnection', connection);
 provide('sessionUser', user);
+
+// Pesquisa UX 2026-10-15, achado 6: a visible confirmation of what a person
+// just did, with an optional "Desfazer"; screen readers hear it once.
+const toast = ref(null);
+/**
+ * @param {string} message
+ * @param {{actionLabel?: string, onAction?: () => unknown}} [options]
+ */
+function notify(message, options) {
+  toast.value?.notify(message, options);
+  announce(message);
+}
+provide('notify', notify);
 
 // LOJ-32 (ADR 031): the "Pedidos" item counts the new site orders — paid,
 // not a test, ficha never printed. The Dashboard already reads the summary
@@ -606,6 +620,7 @@ function onCursor(cursor) {
   </div>
 
   <p class="sr-only" role="status" aria-live="polite">{{ runtimeStatus }}</p>
+  <AppToast ref="toast" />
   <div
     v-if="errorMessage"
     ref="errorSummary"

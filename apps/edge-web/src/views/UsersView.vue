@@ -17,6 +17,12 @@ const props = defineProps({
 });
 const liveEvent = inject('liveEvent', ref(null));
 const liveConnection = inject('liveConnection', ref('indisponível'));
+// Pesquisa UX 2026-10-15, achado 6: the shell's visible notice; without a
+// shell (tests of the view alone) the screen-reader announcement remains.
+const notify = inject(
+  'notify',
+  /** @param {string} message */ (message) => props.announce(message),
+);
 
 const CREATE_REASON = 'Conta criada pelo administrador comercial';
 const UPDATE_REASON = 'Conta atualizada pelo administrador comercial';
@@ -32,6 +38,10 @@ const handover = ref(null);
 const editing = ref(null);
 const copied = ref(false);
 const confirmingDelete = ref(null);
+const confirmingDisable = ref(null);
+const disableCancel = ref(null);
+/** @type {HTMLElement|null} */
+let disableTrigger = null;
 const deleteCancel = ref(null);
 const deleteTrigger = ref(null);
 const actionMenu = ref(null);
@@ -41,7 +51,12 @@ const actionMenuTrigger = ref(null);
 const interactionBlocked = computed(
   () =>
     busy.value ||
-    Boolean(editing.value || confirmingDelete.value || actionMenuFor.value),
+    Boolean(
+      editing.value ||
+      confirmingDelete.value ||
+      confirmingDisable.value ||
+      actionMenuFor.value,
+    ),
 );
 let fallbackTimer = 0;
 let pendingLiveRefresh = false;
@@ -195,6 +210,7 @@ async function changeDisabled(user, disabled) {
   closeActionMenu();
   props.showError('');
   busy.value = true;
+  let changed = false;
   try {
     await request(
       `/api/v1/users/${encodeURIComponent(user.id)}/${
@@ -208,17 +224,67 @@ async function changeDisabled(user, disabled) {
     );
     editing.value = null;
     await load();
-    props.announce(
-      disabled
-        ? `Conta de ${user.name} desativada.`
-        : `Conta de ${user.name} reativada.`,
-    );
+    changed = true;
+    if (disabled) {
+      notify(`Conta de ${user.name} desativada.`, {
+        actionLabel: 'Desfazer',
+        onAction: () => changeDisabled(user, false),
+      });
+    } else {
+      notify(`Conta de ${user.name} reativada.`);
+    }
   } catch (error) {
     props.showError(publicMessage(error));
   } finally {
     busy.value = false;
   }
+  return changed;
 }
+
+/** @param {Record<string, any>} user */
+function rowTrigger(user) {
+  return /** @type {HTMLElement|null} */ (
+    globalThis.document.querySelector(
+      `[aria-controls="user-actions-${globalThis.CSS.escape(user.id)}"]`,
+    )
+  );
+}
+
+/**
+ * Pesquisa UX 2026-10-15, achado 6: disabling locks a person out at once,
+ * so it is confirmed first. From the edit dialog the confirmation replaces
+ * it — never a dialog over a dialog.
+ *
+ * @param {Record<string, any>} user
+ */
+function requestDisable(user) {
+  disableTrigger = actionMenuTrigger.value ?? rowTrigger(user);
+  closeActionMenu();
+  editing.value = null;
+  props.showError('');
+  confirmingDisable.value = user;
+}
+
+function cancelDisable() {
+  confirmingDisable.value = null;
+  nextTick(() => disableTrigger?.focus());
+}
+
+async function confirmDisable() {
+  const user = confirmingDisable.value;
+  if (!user) return;
+  const changed = await changeDisabled(user, true);
+  if (!changed) return;
+  confirmingDisable.value = null;
+  await nextTick();
+  (rowTrigger(user) ?? disableTrigger)?.focus();
+}
+
+watch(confirmingDisable, async (user) => {
+  if (!user) return;
+  await nextTick();
+  disableCancel.value?.focus();
+});
 
 /** @param {Record<string, any>} user */
 function requestDelete(user) {
@@ -488,7 +554,11 @@ function formValues(form) {
             class="small quiet"
             type="button"
             :disabled="busy"
-            @click="changeDisabled(actionMenuFor, !actionMenuFor.disabledAt)"
+            @click="
+              actionMenuFor.disabledAt
+                ? changeDisabled(actionMenuFor, false)
+                : requestDisable(actionMenuFor)
+            "
           >
             {{ actionMenuFor.disabledAt ? 'Reativar' : 'Desativar' }}
           </button>
@@ -602,7 +672,7 @@ function formValues(form) {
               class="danger"
               type="button"
               :disabled="busy"
-              @click="changeDisabled(editing, true)"
+              @click="requestDisable(editing)"
             >
               Desativar conta
             </button>
@@ -618,6 +688,50 @@ function formValues(form) {
           </div>
         </form>
       </div>
+    </div>
+
+    <div
+      v-if="confirmingDisable"
+      class="overlay"
+      @click.self="cancelDisable"
+      @keydown.esc="cancelDisable"
+    >
+      <section
+        class="dialog delete-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="disable-title"
+        aria-describedby="disable-description"
+      >
+        <h2 id="disable-title">Desativar {{ confirmingDisable.name }}?</h2>
+        <p id="disable-description">
+          A pessoa perde o acesso ao CRM na hora e deixa de poder assumir
+          atendimentos. Conversas e pedidos já registrados continuam no
+          histórico, e a conta pode ser reativada depois.
+        </p>
+        <div class="dialog-footer">
+          <span></span>
+          <div class="button-row">
+            <button
+              ref="disableCancel"
+              class="quiet"
+              type="button"
+              :disabled="busy"
+              @click="cancelDisable"
+            >
+              Cancelar
+            </button>
+            <button
+              class="danger"
+              type="button"
+              :disabled="busy"
+              @click="confirmDisable"
+            >
+              {{ busy ? 'Desativando…' : 'Desativar conta' }}
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
 
     <div

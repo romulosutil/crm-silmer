@@ -1017,6 +1017,144 @@ details.exact summary {
   font-size: var(--text-xs);
 }
 
+/*
+ * Pesquisa UX 2026-10-15, achado 3: the promised delivery and how far it is.
+ * The tone repeats what the words already say (late, today, this week).
+ */
+.order-cell-due,
+.order-table td.num {
+  white-space: nowrap;
+}
+
+.order-due-date {
+  display: block;
+  font-weight: 600;
+  text-align: start;
+}
+
+.order-due {
+  display: block;
+  margin-block-start: 0.15rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.order-due[data-tone] {
+  display: inline-flex;
+  padding: 0.1rem 0.5rem;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+}
+
+.order-due[data-tone='error'] {
+  color: var(--status-error-text);
+  background: var(--status-error-surface);
+}
+
+.order-due[data-tone='warning'] {
+  color: var(--status-warning-text);
+  background: var(--status-warning-surface);
+}
+
+.order-due[data-tone='info'] {
+  color: var(--status-info-text);
+  background: var(--status-info-surface);
+}
+
+.order-due[data-tone='success'] {
+  color: var(--status-success-text);
+  background: var(--status-success-surface);
+}
+
+/* An exception rides at the top of its group with a mark on its edge. */
+.order-table tr[data-exception] > td:first-child {
+  box-shadow: inset 3px 0 0 var(--status-warning-text);
+}
+
+/*
+ * Below 48rem the order tables become stacked cards: no sideways scroll, the
+ * page scrolls instead of a nested region, and the column name rides next to
+ * the values that need it. The table keeps its semantics for screen readers.
+ */
+@media (width < 48rem) {
+  .table-wrap.order-list {
+    max-block-size: none;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .order-table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .order-table,
+  .order-table tbody {
+    display: block;
+  }
+
+  .order-table tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+
+  .order-table tr + tr {
+    margin-block-start: var(--space-3);
+  }
+
+  .order-table tr[data-exception] {
+    border-inline-start: 3px solid var(--status-warning-text);
+  }
+
+  .order-table tr[data-exception] > td:first-child {
+    box-shadow: none;
+  }
+
+  .data-table.order-table td {
+    display: block;
+    min-inline-size: 0;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+  }
+
+  .data-table.order-table td.num {
+    text-align: start;
+  }
+
+  .order-table .order-cell-number,
+  .order-table .order-cell-customer,
+  .order-table .order-cell-situation,
+  .order-table .order-cell-actions {
+    grid-column: 1 / -1;
+  }
+
+  .order-table .order-cell-number {
+    font-weight: 700;
+  }
+
+  .order-table td[data-label]::before {
+    content: attr(data-label) / '';
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    font-weight: 500;
+  }
+
+  .order-table .order-cell-actions .row-actions > * {
+    flex: 1 1 10rem;
+    justify-content: center;
+  }
+}
+
 .order-trail {
   display: flex;
   flex-wrap: wrap;
@@ -2333,6 +2471,8 @@ button.op-add-item {
 
 .op-points > div {
   display: grid;
+  /* A long grade wraps inside the point instead of widening it. */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 0.2rem;
   min-inline-size: 0;
@@ -2356,32 +2496,55 @@ button.op-add-item {
 .op-grade-tiles {
   display: grid;
   flex: 1 1 auto;
-  grid-template-columns: repeat(auto-fill, minmax(2.9rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(3.75rem, 1fr));
   gap: 0.4rem;
-  max-inline-size: 24rem;
+  min-inline-size: 0;
+  max-inline-size: 28rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/*
+ * Pesquisa UX 2026-10-15, achado 4: the size and its quantity carry the same
+ * size and weight, split by a rule, so "M 60" never reads as a lone "60".
+ */
 .op-grade-tiles li {
   display: grid;
   justify-items: center;
-  padding: 0.35rem 0.25rem 0.4rem;
+  padding: 0.3rem 0.25rem;
   background: var(--color-surface-active);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
 }
 
-.op-grade-tiles span {
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  font-weight: 600;
+.op-grade-tile-size,
+.op-grade-tile-qty {
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.25;
 }
 
-.op-grade-tiles strong {
-  color: var(--color-brand-ink);
-  font-size: var(--text-lg);
-  line-height: 1.2;
+.op-grade-tile-size {
+  padding-block-end: 0.15rem;
+  overflow-wrap: anywhere;
+  text-align: center;
+  border-block-end: 1px solid var(--color-border-strong);
+}
+
+.op-grade-tiles li[data-duplicate] {
+  background: var(--status-warning-surface);
+  border-color: var(--status-warning-text);
+}
+
+.op-grade-tiles li[data-duplicate] .op-grade-tile-size,
+.op-grade-tiles li[data-duplicate] .op-grade-tile-qty {
+  color: var(--status-warning-text);
+}
+
+.op-grade-line[data-duplicate] .op-grade-size {
+  border-color: var(--status-warning-text);
 }
 
 /* PIT-02: the optional fields, behind one button per item. */

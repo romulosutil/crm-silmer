@@ -35,7 +35,11 @@ const props = defineProps({
 });
 
 const editing = inject('orderEditing');
+const notify = inject('notify', () => {});
 const dialog = ref(null);
+const reopenDialog = ref(null);
+const reopenOpen = ref(false);
+const closingTitle = ref(null);
 const amountText = ref(formatBrl(props.order.finalAmountCents));
 const paymentCondition = ref(props.order.paymentCondition ?? '');
 const busy = ref(false);
@@ -293,13 +297,40 @@ async function generate() {
   errorMessage.value = result.message;
 }
 
-async function reopen() {
+/**
+ * Pesquisa UX 2026-10-15, achado 6: reopening blocks the print the shop
+ * floor may already be using, so it asks first and says what happens.
+ */
+async function requestReopen() {
   errorMessage.value = '';
   justGenerated.value = false;
+  reopenOpen.value = true;
+  await nextTick();
+  reopenDialog.value?.showModal?.();
+}
+
+function closeReopen() {
+  reopenDialog.value?.close?.();
+  reopenOpen.value = false;
+}
+
+async function reopen() {
+  const number = props.order.number;
   busy.value = true;
   const result = await editing.command('reopen', {});
   busy.value = false;
-  if (!result.ok) errorMessage.value = result.message;
+  closeReopen();
+  if (!result.ok) {
+    errorMessage.value = result.message;
+    return;
+  }
+  notify(
+    `Pedido ${number} reaberto. A ficha só volta a ser impressa depois de gerar de novo.`,
+  );
+  // The button is gone with the confirmed view; the panel's title keeps the
+  // focus where the seller was working.
+  await nextTick();
+  closingTitle.value?.focus();
 }
 
 const blockerNotes = computed(() =>
@@ -312,7 +343,9 @@ const blockerNotes = computed(() =>
 <template>
   <section class="op-sheet op-closing" aria-labelledby="order-closing-title">
     <div class="op-sheet-head">
-      <h2 id="order-closing-title">Fechamento e pagamento</h2>
+      <h2 id="order-closing-title" ref="closingTitle" tabindex="-1">
+        Fechamento e pagamento
+      </h2>
       <p>{{ isPending ? 'pedido pendente' : 'pedido confirmado' }}</p>
     </div>
 
@@ -529,7 +562,7 @@ const blockerNotes = computed(() =>
         </p>
 
         <div v-if="!isPending && canCommand" class="op-reopen">
-          <button type="button" :disabled="busy" @click="reopen">
+          <button type="button" :disabled="busy" @click="requestReopen">
             {{ busy ? 'Reabrindo…' : 'Reabrir pedido' }}
           </button>
           <p class="op-hint">
@@ -589,6 +622,31 @@ const blockerNotes = computed(() =>
         >
           <OrderIcon name="ficha" />
           {{ busy ? 'Gerando…' : 'Confirmar e gerar ficha' }}
+        </button>
+      </div>
+    </dialog>
+
+    <dialog
+      v-if="reopenOpen"
+      ref="reopenDialog"
+      class="op-dialog"
+      aria-labelledby="reopen-title"
+      aria-describedby="reopen-description"
+      @cancel.prevent="closeReopen"
+    >
+      <h2 id="reopen-title">Reabrir o pedido {{ order.number }}?</h2>
+      <p id="reopen-description">
+        O pedido volta a Pendente e a ficha deixa de poder ser impressa até ser
+        gerada de novo. Se a produção já recebeu a ficha, avise antes. O número,
+        o valor e a forma de pagamento continuam registrados, e a reabertura
+        fica no histórico com o seu nome.
+      </p>
+      <div class="op-dialog-actions">
+        <button type="button" :disabled="busy" @click="closeReopen">
+          Manter confirmado
+        </button>
+        <button type="button" class="danger" :disabled="busy" @click="reopen">
+          {{ busy ? 'Reabrindo…' : `Reabrir pedido ${order.number}` }}
         </button>
       </div>
     </dialog>

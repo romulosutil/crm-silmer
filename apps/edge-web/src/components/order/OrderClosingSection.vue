@@ -10,6 +10,7 @@ import {
   isStoreOrder,
   joinPt,
   missingFieldLabels,
+  nextOrderStep,
   parseBrl,
   PAYMENT_CONDITION_OPTIONS,
   paymentConditionLabel,
@@ -26,8 +27,6 @@ const BLOCKER_MESSAGES = Object.freeze({
   'summary.data_entrega_confirmada':
     'Informe a entrega prometida no Resumo do pedido.',
 });
-const DELIVERY = 'summary.data_entrega_confirmada';
-const ARTWORK = 'artwork';
 const AMOUNT_FORMAT_MESSAGE = 'Use o formato 4.820,00.';
 
 const props = defineProps({
@@ -61,87 +60,19 @@ const sectionOpenElsewhere = computed(
 );
 const missing = computed(() => (props.order.missingFields ?? []).map(String));
 const amountValid = computed(() => parseBrl(amountText.value) !== null);
-// ADR 016: the points the items still lack, as the server listed them.
-const itemGaps = computed(() =>
-  missingFieldLabels(missing.value.filter(isItemGap)),
-);
-const deliveryMissing = computed(() => missing.value.includes(DELIVERY));
-const artworkMissing = computed(() => missing.value.includes(ARTWORK));
-const artworkLabel = computed(() => {
-  const artwork = props.order.ficha?.artwork ?? {};
-  if (artwork.sem_estampa) return 'sem estampa';
-  return [
-    artwork.feito_pelo_cliente && 'cliente envia',
-    artwork.feito_pela_silmer && 'Silmer cria',
-  ]
-    .filter(Boolean)
-    .join(' e ');
-});
-const deliveryDay = computed(() =>
-  dateBR(props.order.ficha?.summary?.data_entrega_confirmada),
-);
 const items = computed(() => props.order.ficha?.items ?? []);
 const itemsHeadline = computed(() => {
   const count = items.value.length;
   return `${count} ${count === 1 ? 'item' : 'itens'} · ${props.order.totalPieces} peças`;
 });
-
-/**
- * PFI-09/PIT-05: the checklist next to the button. The items are judged by
- * the server; amount and payment method by what the seller is typing right
- * now, since both only reach the order when it is generated.
- */
-const checks = computed(() => [
-  {
-    hint:
-      itemGaps.value.length === 0
-        ? itemsHeadline.value
-        : missing.value.includes('items')
-          ? 'nenhum item'
-          : `${itemGaps.value.length} ${itemGaps.value.length === 1 ? 'ponto' : 'pontos'} a preencher`,
-    key: 'items',
-    label: 'Itens completos',
-    ok: itemGaps.value.length === 0,
-  },
-  {
-    // ADR 020: who makes the art is marked once, for the whole order.
-    go: {
-      label: 'Informar na Estampa',
-      name: 'quem faz a arte',
-      section: 'artwork',
-    },
-    hint: artworkMissing.value ? 'em Estampa e arquivos' : artworkLabel.value,
-    key: 'artwork',
-    label: 'Arte do pedido',
-    ok: !artworkMissing.value,
-  },
-  {
-    // ADR 016: filled in the summary; the row says where.
-    go: {
-      label: 'Informar no Resumo',
-      name: 'entrega prometida',
-      section: 'summary',
-    },
-    hint: deliveryMissing.value ? 'no Resumo do pedido' : deliveryDay.value,
-    key: 'delivery',
-    label: 'Entrega prometida',
-    ok: !deliveryMissing.value,
-  },
-  {
-    hint: amountValid.value ? `R$ ${amountText.value.trim()}` : 'pendente',
-    key: 'finalAmount',
-    label: 'Valor final',
-    ok: amountValid.value,
-  },
-  {
-    hint: paymentCondition.value
-      ? paymentConditionLabel(paymentCondition.value)
-      : 'pendente',
-    key: 'paymentCondition',
-    label: 'Forma de pagamento',
-    ok: paymentCondition.value !== '',
-  },
-]);
+// PFI-15/PFI-16 (RFC 024): the progress at the top of the page replaced the
+// checklist that lived here. While a step is missing or a section is open,
+// "Gerar pedido" stays focusable but unavailable (aria-disabled); activating
+// it leads to the step instead of sending the confirmation.
+const nextStep = computed(() => nextOrderStep(props.order));
+const generateBlocked = computed(
+  () => nextStep.value !== null || sectionOpenElsewhere.value,
+);
 // PIT-06: "Falta para gerar" names every point, item by item, then who makes
 // the art, the promised delivery, the amount and the payment method.
 const pendingLabels = computed(() => [
@@ -149,9 +80,6 @@ const pendingLabels = computed(() => [
   ...(amountValid.value ? [] : ['valor final']),
   ...(paymentCondition.value === '' ? ['forma de pagamento'] : []),
 ]);
-const readyCount = computed(
-  () => checks.value.filter((check) => check.ok).length,
-);
 const readiness = computed(() => {
   if (pendingLabels.value.length > 0) {
     return `Falta para gerar: ${joinPt(pendingLabels.value)}.`;
@@ -246,27 +174,39 @@ function blockerErrors(fields) {
 /**
  * PFI-11: a malformed amount is caught here so the message lands under the
  * field; the server parses the same text again and would answer 422.
+ * PFI-16: while a step is missing, "Gerar pedido" leads to it and never sends
+ * the confirmation; with a section open it waits for Salvar or Cancelar, as
+ * #closing-readiness says.
+ *
+ * @returns {Promise<'busy'|'section'|'step'|'fields'|'dialog'>}
  */
 async function requestGenerate() {
+  if (busy.value) return 'busy';
+  if (sectionOpenElsewhere.value) return 'section';
+  if (nextStep.value) {
+    void editing.goToSection(nextStep.value.section);
+    return 'step';
+  }
   fieldErrors.value = {};
   errorMessage.value = '';
   justGenerated.value = false;
   if (!amountValid.value) {
     fieldErrors.value = { finalAmount: AMOUNT_FORMAT_MESSAGE };
-    return;
+    return 'fields';
   }
   if (paymentCondition.value === '') {
     fieldErrors.value = { paymentCondition: BLOCKER_MESSAGES.paymentCondition };
-    return;
+    return 'fields';
   }
   const pageGaps = missing.value.filter(isPageGap);
   if (pageGaps.length > 0) {
     fieldErrors.value = blockerErrors(pageGaps);
-    return;
+    return 'fields';
   }
   confirmOpen.value = true;
   await nextTick();
   dialog.value?.showModal?.();
+  return 'dialog';
 }
 
 /**
@@ -275,8 +215,7 @@ async function requestGenerate() {
  * field to fix, instead of leaving the error out of sight.
  */
 async function generateFromFooter() {
-  await requestGenerate();
-  if (confirmOpen.value) return;
+  if ((await requestGenerate()) !== 'fields') return;
   await nextTick();
   const errors = fieldErrors.value;
   /** @type {HTMLElement|null|undefined} */
@@ -386,45 +325,6 @@ const blockerNotes = computed(() =>
       </p>
 
       <template v-if="isPending && canCommand">
-        <div class="op-checklist">
-          <h3 class="op-checklist-title">
-            Pronto para gerar
-            <span class="op-num" :data-ready="readyCount === checks.length"
-              >{{ readyCount }} de {{ checks.length }}</span
-            >
-          </h3>
-          <ul>
-            <li
-              v-for="check in checks"
-              :key="check.key"
-              :data-ok="check.ok || undefined"
-            >
-              <span class="op-check-mark" aria-hidden="true">
-                <OrderIcon v-if="check.ok" name="check" />
-              </span>
-              <span class="op-check-label">
-                {{ check.label }}
-                <span class="op-visually-hidden">{{
-                  check.ok ? '— pronto' : '— pendente'
-                }}</span>
-              </span>
-              <button
-                v-if="!check.ok && check.go"
-                type="button"
-                class="op-check-go"
-                :disabled="sectionOpenElsewhere"
-                @click="editing.request(check.go.section)"
-              >
-                {{ check.go.label
-                }}<span class="op-visually-hidden">{{
-                  ` (${check.go.name})`
-                }}</span>
-              </button>
-              <span v-else class="op-check-hint op-num">{{ check.hint }}</span>
-            </li>
-          </ul>
-        </div>
-
         <form
           class="op-closing-form"
           novalidate
@@ -504,11 +404,14 @@ const blockerNotes = computed(() =>
             {{ note.message }}
           </p>
 
-          <!-- PFI-13: the only primary button of the page. -->
+          <!-- PFI-13: the only primary button of the page once every step is
+               done; until then the next step is (PFI-16). -->
           <button
-            class="primary op-generate op-generate--inline"
+            class="op-generate op-generate--inline"
+            :class="{ primary: nextStep === null }"
             type="submit"
-            :disabled="busy || sectionOpenElsewhere"
+            :disabled="busy"
+            :aria-disabled="generateBlocked || undefined"
             aria-describedby="closing-readiness"
           >
             <OrderIcon name="ficha" />Gerar pedido

@@ -16,13 +16,16 @@ import OrderInfoStrips from '../components/order/OrderInfoStrips.vue';
 import OrderItemsSection from '../components/order/OrderItemsSection.vue';
 import OrderMilestonesSection from '../components/order/OrderMilestonesSection.vue';
 import OrderObservationsSection from '../components/order/OrderObservationsSection.vue';
+import OrderProgress from '../components/order/OrderProgress.vue';
 import OrderStoreDetails from '../components/order/OrderStoreDetails.vue';
 import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
   fabLabel,
   isStoreOrder,
+  nextOrderStep,
   orderStatusLabel,
+  orderSteps,
   PRINT_LOCKED_REASON,
   STORE_ORIGIN_LABEL,
   storeFichaPending,
@@ -88,16 +91,31 @@ const orderContext = computed(() => {
   const seller = order.value?.seller?.name;
   return seller ? `${event} · com ${seller}` : event;
 });
+// PFI-15 (RFC 024): the real steps to generate, for whoever may generate.
+const steps = computed(() => orderSteps(order.value));
+const nextStep = computed(() => nextOrderStep(order.value));
+const nextStepNumber = computed(
+  () => steps.value.findIndex((step) => step.key === nextStep.value?.key) + 1,
+);
+const showProgress = computed(
+  () =>
+    isPending.value &&
+    canEdit.value &&
+    !isStore.value &&
+    steps.value.length > 0,
+);
 /**
  * Mobile first (PO, 15/10/2026): on a phone the page's main action stays in
- * a fixed footer — "Gerar pedido" for whoever may confirm a pending order,
- * "Imprimir ficha" once it is confirmed. It steps aside while a section is
- * being edited, so the editor's own Salvar and Cancelar stay in reach.
+ * a fixed footer — the next step while one is missing and "Gerar pedido" once
+ * none is (PFI-16), for whoever may confirm a pending order, and "Imprimir
+ * ficha" once it is confirmed. It steps aside while a section is being
+ * edited, so the editor's own Salvar and Cancelar stay in reach.
  */
 const mobileAction = computed(() => {
   if (!order.value || editingSection.value !== '') return '';
   if (!isPending.value) return 'print';
-  return canEdit.value && !isStore.value ? 'generate' : '';
+  if (!canEdit.value || isStore.value) return '';
+  return nextStep.value ? 'step' : 'generate';
 });
 const itemCount = computed(() => order.value?.ficha?.items?.length ?? 0);
 /** The conversation this order came from, opened directly in the Inbox. */
@@ -250,11 +268,35 @@ function print() {
   refreshAfterFirstPrint();
 }
 
+/**
+ * PFI-15/PFI-16: the button of the next step opens the section that fills
+ * it. A section that answers editRequest opens its own editor; one that does
+ * not yet (the items) is opened through its own "Editar", or brought into view
+ * when it cannot open.
+ *
+ * @param {string} section
+ */
+async function goToSection(section) {
+  editRequest.value = { at: Date.now(), section };
+  await nextTick();
+  if (editingSection.value !== '') return;
+  const sheet = globalThis.document
+    ?.getElementById(`order-${section}-title`)
+    ?.closest('section');
+  const edit = sheet?.querySelector('.op-sheet-head button.op-edit');
+  if (edit instanceof HTMLButtonElement && !edit.disabled) {
+    edit.click();
+    return;
+  }
+  sheet?.scrollIntoView?.({ block: 'start' });
+}
+
 provide('orderEditing', {
   canEdit,
   command: runCommand,
   editingSection,
   editRequest,
+  goToSection,
   print,
   /** @param {string} section */
   request(section) {
@@ -485,14 +527,11 @@ onBeforeUnmount(() => {
         </aside>
       </div>
 
-      <p v-if="!isStore" class="op-guidance">
-        Confira o resumo, complete os itens e marque quem faz a arte. O painel
-        de fechamento mostra o que falta para gerar e liberar a ficha.
-      </p>
-
       <div v-if="!isStore" class="op-layout">
-        <!-- PFI-01: the order of the printed ficha, top to bottom. -->
+        <!-- PFI-01: the order of the printed ficha, top to bottom, under the
+             real progress to generate it (PFI-15). -->
         <div class="op-main">
+          <OrderProgress v-if="showProgress" :order="order" />
           <OrderSummarySection :order="order" />
           <OrderMilestonesSection :order="order" />
           <OrderItemsSection :order="order" />
@@ -515,9 +554,27 @@ onBeforeUnmount(() => {
         </aside>
       </div>
 
-      <div v-if="mobileAction" class="op-mobile-action">
+      <div
+        v-if="mobileAction"
+        class="op-mobile-action"
+        :data-step="mobileAction === 'step' || undefined"
+      >
+        <!-- PFI-16: never "Gerar pedido" while a step is missing. -->
+        <template v-if="mobileAction === 'step' && nextStep">
+          <p id="order-next-step-caption" class="op-mobile-caption">
+            Passo {{ nextStepNumber }} de {{ steps.length }} para gerar
+          </p>
+          <button
+            type="button"
+            class="primary"
+            aria-describedby="order-next-step-caption"
+            @click="goToSection(nextStep.section)"
+          >
+            {{ nextStep.action }}
+          </button>
+        </template>
         <button
-          v-if="mobileAction === 'generate'"
+          v-else-if="mobileAction === 'generate'"
           type="button"
           class="primary op-generate"
           @click="closingSection?.generateFromFooter()"

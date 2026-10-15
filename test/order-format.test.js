@@ -25,7 +25,9 @@ import {
   joinPt,
   missingFieldLabels,
   missingHeadline,
+  nextOrderStep,
   operationalDay,
+  orderSteps,
   orderMilestones,
   orderStatusLabel,
   parseBrl,
@@ -369,6 +371,114 @@ test('names the promised delivery and tells it apart from the amount and payment
     missingHeadline(['summary.data_entrega_confirmada']),
     'Falta entrega prometida',
   );
+});
+
+/** @param {ReturnType<typeof orderSteps>} steps */
+function stepStates(steps) {
+  return steps.map(({ done, key, missing }) => ({ done, key, missing }));
+}
+
+test('derives the three steps to generate from missingFields only (PFI-15)', () => {
+  const order = {
+    missingFields: [
+      'items[0].cor',
+      'artwork',
+      'summary.data_entrega_confirmada',
+      'finalAmount',
+      'paymentCondition',
+    ],
+    status: 'pendente',
+  };
+  const steps = orderSteps(order);
+  assert.deepEqual(
+    steps.map(({ action, key, label, section }) => ({
+      action,
+      key,
+      label,
+      section,
+    })),
+    [
+      {
+        action: 'Informar entrega prometida',
+        key: 'delivery',
+        label: 'Entrega prometida',
+        section: 'summary',
+      },
+      {
+        action: 'Completar itens',
+        key: 'items',
+        label: 'Itens',
+        section: 'items',
+      },
+      {
+        action: 'Marcar quem faz a arte',
+        key: 'artwork',
+        label: 'Arte do pedido',
+        section: 'artwork',
+      },
+    ],
+  );
+  assert.deepEqual(stepStates(steps), [
+    { done: false, key: 'delivery', missing: 'falta: a data combinada' },
+    { done: false, key: 'items', missing: 'falta: cor do item 1' },
+    { done: false, key: 'artwork', missing: 'falta: quem faz a arte' },
+  ]);
+  assert.equal(nextOrderStep(order)?.key, 'delivery');
+
+  // The amount and the payment method are not steps: with only them left,
+  // every step is done and there is no next one.
+  const ready = { missingFields: ['finalAmount', 'paymentCondition'] };
+  assert.deepEqual(
+    orderSteps(ready).map((step) => step.done),
+    [true, true, true],
+  );
+  assert.equal(nextOrderStep(ready), null);
+  assert.equal(nextOrderStep({ missingFields: [] }), null);
+});
+
+test('names what an item step lacks without inventing progress (PFI-15)', () => {
+  // An item without colour: only the items step is missing.
+  const noColour = { missingFields: ['items[1].cor'] };
+  assert.deepEqual(stepStates(orderSteps(noColour)), [
+    { done: true, key: 'delivery', missing: '' },
+    { done: false, key: 'items', missing: 'falta: cor do item 2' },
+    { done: true, key: 'artwork', missing: '' },
+  ]);
+  assert.equal(nextOrderStep(noColour)?.action, 'Completar itens');
+
+  // No item at all.
+  assert.equal(
+    orderSteps({ missingFields: ['items'] })[1].missing,
+    'falta: ao menos um item',
+  );
+
+  // PIT-04: an order recorded before ADR 016 reads with colour, technique and
+  // collar blank; the step counts them as missing, two by name and the rest.
+  const older = {
+    missingFields: [
+      'items[0].cor',
+      'items[0].tipo_servico',
+      'items[0].gola',
+      'finalAmount',
+      'paymentCondition',
+    ],
+  };
+  assert.equal(
+    orderSteps(older)[1].missing,
+    'falta: cor do item 1, técnica do item 1 e mais 1 ponto',
+  );
+  assert.equal(nextOrderStep(older)?.key, 'items');
+});
+
+test('has no steps for a store order or an order without the list (PFI-15, LOJ-34)', () => {
+  assert.deepEqual(
+    orderSteps({ missingFields: ['artwork'], origin: 'loja' }),
+    [],
+  );
+  assert.equal(nextOrderStep({ missingFields: [], origin: 'loja' }), null);
+  assert.deepEqual(orderSteps({}), []);
+  assert.deepEqual(orderSteps(null), []);
+  assert.equal(nextOrderStep(undefined), null);
 });
 
 test('an item says its audience and compares its sizes with the quantity said for it (ADR 025)', () => {

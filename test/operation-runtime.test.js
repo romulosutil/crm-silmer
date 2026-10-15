@@ -363,6 +363,7 @@ test('Painel: the Inbox summary reads the server clock and maps counts without e
         /** @type {unknown[]} */ values,
       ) => {
         queries.push({ sql, values });
+        if (/pending_count/u.test(sql)) return { rows: [{ pending_count: 2 }] };
         return /failed_conversation_count/u.test(sql)
           ? {
               rows: [
@@ -410,6 +411,7 @@ test('Painel: the Inbox summary reads the server clock and maps counts without e
       awaitingReplyCount: 1,
       count: 3,
       oldestAwaitingSince: '2026-10-15T14:20:00.000Z',
+      pendingOrderCount: 2,
     },
     waitingHandoff: {
       count: 4,
@@ -417,7 +419,11 @@ test('Painel: the Inbox summary reads the server clock and maps counts without e
       overdueCount: 1,
     },
   });
-  const [queue, sends] = queries;
+  const [queue, myOrders, sends] = queries;
+  // The seller's orders follow the rule that names the seller.
+  assert.deepEqual(myOrders.values, ['seller-1']);
+  assert.match(myOrders.sql, /manual_owner_id = \$1/u);
+  assert.match(myOrders.sql, /conversation\.assigned_user_id = \$1/u);
   // The reader, "now" and the stall threshold are bound, never inlined.
   assert.deepEqual(queue.values, [
     'seller-1',

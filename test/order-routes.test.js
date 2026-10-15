@@ -139,6 +139,8 @@ function orderHarness(options = {}) {
         new Map(ids.map((id) => [id, names[id] ?? null])),
       searchConversationIds: async (/** @type {string} */ query) =>
         query === 'sintetico' ? ['conversation-2'] : [],
+      listAssignedOrderConversationIds: async (/** @type {string} */ id) =>
+        Object.keys(assignments).filter((key) => assignments[key] === id),
       searchContactIds: async (/** @type {string} */ query) =>
         query === 'manual' ? ['contact-1'] : [],
     },
@@ -360,6 +362,38 @@ test('Painel: the summary reads a period and the server works out overdue and up
     '/api/v1/orders/summary?from=2026-01-01',
     '/api/v1/orders?delivery=late',
     '/api/v1/orders?delivery=overdue&status=pendente',
+  ]) {
+    const rejected = await api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url,
+    });
+    assert.equal(rejected.statusCode, 400, url);
+  }
+});
+
+test('Painel: owner=me lists only the session seller orders', async () => {
+  const { api, assignments, runtime } = orderHarness({ readActor: SELLER });
+  const mine = await createPending(runtime, 'conversation-1');
+  await createPending(runtime, 'conversation-3');
+  // The conversation went to another seller: so did its order.
+  assignments['conversation-3'] = 'seller-2';
+  const listed = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: '/api/v1/orders?status=pendente&owner=me',
+  });
+  assert.equal(listed.statusCode, 200);
+  assert.deepEqual(
+    listed.json().items.map((/** @type {any} */ order) => order.id),
+    [mine.id],
+  );
+  assert.deepEqual(listed.json().counts, { confirmado: 0, pendente: 1 });
+  // The owner is always the session's: no id travels in the URL.
+  for (const url of [
+    '/api/v1/orders?owner=seller-2',
+    '/api/v1/orders?ownerId=seller-2',
+    '/api/v1/orders?owner=me&delivery=overdue',
   ]) {
     const rejected = await api.inject({
       headers: readHeaders,

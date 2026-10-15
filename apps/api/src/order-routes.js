@@ -77,9 +77,11 @@ export function registerOrderRoutes(api, orders, contextFor) {
       if ((input.q?.match(/\d/gu) ?? []).length >= 8) {
         throw new OrderRequestError(400, 'INVALID_REQUEST');
       }
-      await authorizeRead(request, orders);
+      const access = await authorizeRead(request, orders);
       privateReadHeaders(reply);
-      return reply.code(200).send(await orders.list(input));
+      return reply
+        .code(200)
+        .send(await orders.list(withOwner(input, access.actor.id)));
     }),
   );
 
@@ -97,7 +99,7 @@ export function registerOrderRoutes(api, orders, contextFor) {
           ...(body.limit !== undefined ? { limit: String(body.limit) } : {}),
         });
         if (!input.q) throw new OrderRequestError(400, 'INVALID_QUERY');
-        await orders.authorizeWrite({
+        const principal = await orders.authorizeWrite({
           action: 'order.read',
           authorization: request.headers.authorization,
           cookie: request.headers.cookie,
@@ -105,7 +107,9 @@ export function registerOrderRoutes(api, orders, contextFor) {
           origin: request.headers.origin,
         });
         privateReadHeaders(reply);
-        return reply.code(200).send(await orders.list(input));
+        return reply
+          .code(200)
+          .send(await orders.list(withOwner(input, principal.actor.id)));
       }),
   );
 
@@ -608,11 +612,19 @@ function parseListQuery(value) {
     'delivery',
     'limit',
     'origin',
+    'owner',
     'q',
     'status',
   ]);
-  /** @type {{status?: string, origin?: string, q?: string, cursor?: string, limit?: number, delivery?: string}} */
+  /** @type {{status?: string, origin?: string, q?: string, cursor?: string, limit?: number, delivery?: string, owner?: 'me'}} */
   const input = {};
+  // Painel ("Meus pedidos"): only "me"; the seller is always the session's.
+  if (query.owner !== undefined) {
+    if (query.owner !== 'me') {
+      throw new OrderRequestError(400, 'INVALID_FILTER');
+    }
+    input.owner = 'me';
+  }
   // Painel: confirmed orders whose promised day passed or comes this week.
   if (query.delivery !== undefined) {
     if (!DELIVERY_FILTERS.has(query.delivery)) {
@@ -651,6 +663,14 @@ function parseListQuery(value) {
     input.limit = Number(query.limit);
   }
   return input;
+}
+
+/**
+ * @param {{owner?: 'me'} & Record<string, unknown>} input
+ * @param {string} actorId
+ */
+function withOwner({ owner, ...input }, actorId) {
+  return owner === 'me' ? { ...input, ownerId: actorId } : input;
 }
 
 /** @param {unknown} value */

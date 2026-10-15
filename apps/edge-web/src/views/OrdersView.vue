@@ -33,10 +33,13 @@ const PAGE_SIZE = 25;
 // ADRs 027 and 028: "Loja do site" narrows the list to the site shop's
 // orders, all of them confirmed and paid through InfinitePay.
 const STORE_FILTER = 'loja';
+// Painel ("Meus pedidos pendentes"): the session seller's pending orders.
+const MINE_FILTER = 'meus';
 const FILTERS = Object.freeze([
   Object.freeze({ label: 'Todos', value: '' }),
   Object.freeze({ label: 'Confirmados', value: 'confirmado' }),
   Object.freeze({ label: 'Pendentes', value: 'pendente' }),
+  Object.freeze({ label: 'Meus pendentes', value: MINE_FILTER }),
   Object.freeze({ label: STORE_ORIGIN_LABEL, value: STORE_FILTER }),
   Object.freeze({ label: 'Entrega atrasada', value: 'atrasada' }),
   Object.freeze({ label: 'Próximas entregas', value: 'proxima' }),
@@ -81,6 +84,7 @@ let orderCreateKey = '';
 /** @returns {string} */
 function filterFromRoute() {
   if (route.query.origem === STORE_FILTER) return STORE_FILTER;
+  if (route.query.vendedor === 'eu') return MINE_FILTER;
   const delivery = String(route.query.entrega ?? '');
   if (Object.hasOwn(DELIVERY_FILTERS, delivery)) return delivery;
   const status = String(route.query.status ?? '');
@@ -123,8 +127,8 @@ const showConfirmed = computed(
     ['', 'confirmado', STORE_FILTER].includes(filter.value) ||
     Boolean(deliveryFilter.value),
 );
-const showPending = computed(
-  () => filter.value === '' || filter.value === 'pendente',
+const showPending = computed(() =>
+  ['', 'pendente', MINE_FILTER].includes(filter.value),
 );
 const isEmpty = computed(() => !loading.value && items.value.length === 0);
 const canCreateOrder = computed(() =>
@@ -480,7 +484,10 @@ function listRequest(cursor) {
   }
   const params = new globalThis.URLSearchParams({ limit: String(PAGE_SIZE) });
   if (filter.value === STORE_FILTER) params.set('origin', STORE_FILTER);
-  else if (filter.value) params.set('status', filter.value);
+  else if (filter.value === MINE_FILTER) {
+    params.set('status', 'pendente');
+    params.set('owner', 'me');
+  } else if (filter.value) params.set('status', filter.value);
   const needle = query.value.trim();
   if ((needle.match(/\d/gu) ?? []).length >= 8) {
     return {
@@ -492,9 +499,11 @@ function listRequest(cursor) {
           q: needle,
           ...(filter.value === STORE_FILTER
             ? { origin: STORE_FILTER }
-            : filter.value
-              ? { status: filter.value }
-              : {}),
+            : filter.value === MINE_FILTER
+              ? { owner: 'me', status: 'pendente' }
+              : filter.value
+                ? { status: filter.value }
+                : {}),
           ...(cursor ? { cursor } : {}),
         },
       },

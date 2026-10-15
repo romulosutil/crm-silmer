@@ -101,6 +101,24 @@ export class PostgresOrderConversationPort {
   }
 
   /**
+   * Painel ("Meus pedidos"): the conversations with an order that are
+   * assigned to this user now.
+   *
+   * @param {string} userId
+   * @returns {Promise<string[]>}
+   */
+  async listAssignedOrderConversationIds(userId) {
+    const result = await this.#database.query(
+      `SELECT DISTINCT conversation.id FROM crm.orders orders
+       JOIN crm.conversations conversation
+         ON conversation.id = orders.conversation_id
+       WHERE conversation.assigned_user_id = $1`,
+      [userId],
+    );
+    return result.rows.map((row) => row.id);
+  }
+
+  /**
    * Display names of the people an order mentions (seller, confirmer,
    * reopener); unknown ids are left out.
    *

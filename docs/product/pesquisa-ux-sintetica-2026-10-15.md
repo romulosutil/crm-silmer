@@ -53,6 +53,12 @@ Ordenados por severidade. Cada item cita a persona e a evidência original.
    10 min ou mais, envio falho em 24 h). "A receber" ficou fora: RULES.md,
    regra 16, deixa recebimentos e saldo fora do MVP. A entrega prometida vem
    da ficha (`data_entrega_confirmada`); pedido da loja não tem e não entra.
+   *Mobile-first (PO, 15/10/2026):* desenhado a partir de 390×844, com
+   indicadores em grade 2×2 e alvos de 44 px ou mais. A home do vendedor é
+   "Minha fila" — responder agora, conversas paradas esperando vendedor
+   (sentido de "parado" da Caixa, PCX-03) e "Meus pedidos pendentes"
+   (`/pedidos?status=pendente&vendedor=eu`, API `owner=me`) — e depois
+   "Entregas".
 3. **Pedidos para produção (Rose, Sílvio, sev. 4).** Pendentes e exceções
    primeiro; coluna "Entrega" com prazo relativo; filtro "Prontos para produção";
    cartões empilhados no celular em vez de tabela com rolagem lateral.

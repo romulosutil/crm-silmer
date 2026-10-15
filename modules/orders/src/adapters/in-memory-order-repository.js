@@ -327,6 +327,7 @@ export class InMemoryOrderRepository {
       limit,
       numberSequence,
       origin,
+      owner,
       phoneDigests,
       status,
       storeNumber,
@@ -339,6 +340,11 @@ export class InMemoryOrderRepository {
     const scoped = [...this.#orders.values()].filter(
       (order) =>
         (origin === undefined || order.origin === origin) &&
+        (owner === undefined ||
+          order.manualOwnerId === owner.userId ||
+          owner.conversationIds.includes(
+            /** @type {string} */ (order.conversationId),
+          )) &&
         ((numberSequence === undefined &&
           conversationIds === undefined &&
           contactIds === undefined &&

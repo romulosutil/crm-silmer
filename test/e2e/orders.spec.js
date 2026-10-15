@@ -708,7 +708,7 @@ test('filters by status and searches by number, customer or phone', async ({
     '1 confirmados · 1 pendentes',
   );
 
-  await page.getByRole('button', { name: 'Pendentes' }).click();
+  await page.getByRole('button', { name: 'Pendentes', exact: true }).click();
   await expect(page.getByRole('region', { name: /Confirmados/u })).toHaveCount(
     0,
   );

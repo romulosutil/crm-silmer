@@ -103,7 +103,51 @@ export function mineIndicator(mine, now) {
 }
 
 /**
- * Handoffs nobody took yet. The SLA (`due_at`) is the server's.
+ * Seller home: the clients waiting for the reader's answer right now.
+ *
+ * @param {Record<string, any>|undefined} mine @param {unknown} now
+ * @returns {Indicator}
+ */
+export function replyIndicator(mine, now) {
+  const total = count(mine?.count);
+  const awaiting = count(mine?.awaitingReplyCount);
+  if (!awaiting) {
+    return {
+      badge: '',
+      detail: total
+        ? `Ninguém esperando; ${plural(total, 'conversa sua', 'conversas suas')} em andamento`
+        : 'Nenhuma conversa com você agora',
+      tone: null,
+      value: '0',
+    };
+  }
+  const oldest = elapsedLabel(mine?.oldestAwaitingSince, now);
+  return {
+    badge: '',
+    detail: oldest
+      ? `O primeiro cliente escreveu ${oldest}`
+      : `${plural(awaiting, 'cliente espera', 'clientes esperam')} sua resposta`,
+    tone: 'warning',
+    value: String(awaiting),
+  };
+}
+
+/** Seller home: the reader's own pending orders. @param {unknown} pending @returns {Indicator} */
+export function myOrdersIndicator(pending) {
+  const total = count(pending);
+  return {
+    badge: '',
+    detail: total
+      ? 'Ainda sem valor e condição confirmados'
+      : 'Nenhum pedido seu esperando confirmação',
+    tone: null,
+    value: String(total),
+  };
+}
+
+/**
+ * Handoffs nobody took yet. The SLA (`due_at`) is the server's; "parada"
+ * counts from the handoff, as in the Inbox (PCX-03/A02).
  *
  * @param {Record<string, any>|undefined} waiting @param {unknown} now
  * @returns {Indicator}
@@ -120,12 +164,13 @@ export function waitingIndicator(waiting, now) {
     };
   }
   const oldest = elapsedLabel(waiting?.oldestSince, now);
-  const since = oldest ? `A mais antiga chegou ${oldest}` : '';
+  // Short enough for half a phone row: the badge says how many broke the
+  // SLA, the detail how long the oldest has been stalled.
   return {
-    badge: overdue ? 'Fora do prazo' : '',
-    detail: overdue
-      ? `${plural(overdue, 'passou', 'passaram')} do prazo de resposta${since ? `. ${since}` : ''}`
-      : since || 'Dentro do prazo de resposta',
+    badge: overdue ? `${overdue} fora do prazo` : '',
+    detail: oldest
+      ? `A mais antiga está parada ${oldest}`
+      : 'Dentro do prazo de resposta',
     tone: overdue ? 'error' : 'warning',
     value: String(total),
   };
@@ -144,17 +189,14 @@ export function assistantIndicator(assistant, now) {
   const failed = count(assistant?.failedDeliveryCount);
   const lastReply = elapsedLabel(assistant?.lastReplyAt, now);
   if (stalled || failed) {
+    // Counts of conversations, short enough for half a phone row.
     const problems = [];
     if (stalled) {
       problems.push(
-        `${plural(stalled, 'conversa', 'conversas')} sem resposta há mais de ${Number(assistant?.stallMinutes) || 10} min`,
+        `${stalled} sem resposta há ${Number(assistant?.stallMinutes) || 10} min ou mais`,
       );
     }
-    if (failed) {
-      problems.push(
-        `${plural(failed, 'conversa', 'conversas')} com envio falho nas últimas 24 h`,
-      );
-    }
+    if (failed) problems.push(`${failed} com envio falho em 24 h`);
     return {
       badge: 'Atenção',
       detail: problems.join('; '),

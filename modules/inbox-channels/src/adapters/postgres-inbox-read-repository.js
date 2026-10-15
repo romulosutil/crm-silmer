@@ -311,8 +311,9 @@ export class PostgresInboxReadRepository {
    *
    * - `waitingHandoff`: handoffs nobody took yet; `overdueCount` are the ones
    *   past the `due_at` their SLA set when they opened.
-   * - `mine`: the open conversations assigned to the reader, and how many end
-   *   on a client message (the client waits for an answer).
+   * - `mine`: the open conversations assigned to the reader, how many end
+   *   on a client message (the client waits for an answer) and the reader's
+   *   pending orders.
    * - `assistant`: conversations with the assistant, the ones whose last
    *   client message got no answer for `stallMinutes`, conversations with a
    *   failed or unknown send in the last 24 hours and the assistant's last
@@ -327,7 +328,7 @@ export class PostgresInboxReadRepository {
     ).toISOString();
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
     return this.#snapshot(async (database) => {
-      const [queue, sends] = await Promise.all([
+      const [queue, myOrders, sends] = await Promise.all([
         database.query(
           `SELECT
              count(*) FILTER (WHERE handoff.status='pending')::integer waiting_count,
@@ -365,6 +366,18 @@ export class PostgresInboxReadRepository {
           [actorId, at, stalledBefore],
         ),
         database.query(
+          // The seller's pending orders, by the rule that names the seller:
+          // the manual order they own, or the order of their conversation.
+          `SELECT count(*)::integer pending_count
+           FROM crm.orders orders
+           LEFT JOIN crm.conversations conversation
+             ON conversation.id = orders.conversation_id
+           WHERE orders.status = 'pendente' AND NOT orders.is_test
+             AND (orders.manual_owner_id = $1
+               OR conversation.assigned_user_id = $1)`,
+          [actorId],
+        ),
+        database.query(
           `SELECT
              count(DISTINCT message.conversation_id) FILTER (
                WHERE message.status IN ('failed','outcome_unknown')
@@ -396,6 +409,7 @@ export class PostgresInboxReadRepository {
         mine: Object.freeze({
           awaitingReplyCount: Number(row.mine_awaiting_count ?? 0),
           count: Number(row.mine_count ?? 0),
+          pendingOrderCount: Number(myOrders.rows[0]?.pending_count ?? 0),
           oldestAwaitingSince: row.mine_oldest_awaiting_since
             ? iso(row.mine_oldest_awaiting_since)
             : null,

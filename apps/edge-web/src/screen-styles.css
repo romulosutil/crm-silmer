@@ -232,17 +232,26 @@ button.chip[aria-pressed='true']:hover:not(:disabled) {
 }
 
 .dashboard-section-head .segmented-options {
+  flex: 1 1 100%;
   margin: 0;
+}
+
+/* Phone: the period selector gets its own row and 44 px targets. */
+.dashboard-section-head .segmented-options button {
+  min-block-size: var(--target-min);
 }
 
 .dashboard-section .audit-note {
   margin-block-end: var(--space-3);
 }
 
+/* Mobile-first: two by two on the phone so the day reads in one screen;
+   an odd last card takes the whole row. Wider screens fit as many as the
+   row allows. Every card is one link, well above the 44 px touch target. */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -253,13 +262,16 @@ button.chip[aria-pressed='true']:hover:not(:disabled) {
   min-inline-size: 0;
 }
 
+.metric-grid > li:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .metric-card {
-  position: relative;
   display: grid;
   align-content: start;
   gap: var(--space-1);
-  min-block-size: 100%;
-  padding: var(--space-4) var(--space-10) var(--space-4) var(--space-4);
+  min-block-size: max(100%, var(--target-min));
+  padding: var(--space-3);
   color: var(--color-text);
   text-decoration: none;
   background: var(--color-surface);
@@ -279,14 +291,23 @@ button.chip[aria-pressed='true']:hover:not(:disabled) {
   background: var(--color-surface-active);
 }
 
+.metric-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .metric-label {
+  min-inline-size: 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   font-weight: 500;
+  line-height: 1.35;
 }
 
 .metric-value {
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -295,6 +316,10 @@ button.chip[aria-pressed='true']:hover:not(:disabled) {
 
 .metric-card[data-tone='error'] .metric-value {
   color: var(--status-error-text);
+}
+
+.metric-card[data-tone='warning'] .metric-value {
+  color: var(--status-warning-text);
 }
 
 .metric-detail {
@@ -307,9 +332,7 @@ button.chip[aria-pressed='true']:hover:not(:disabled) {
 }
 
 .metric-go {
-  position: absolute;
-  inset-block-start: var(--space-4);
-  inset-inline-end: var(--space-3);
+  flex: none;
   inline-size: 1.25rem;
   block-size: 1.25rem;
   color: var(--color-text-muted);
@@ -325,19 +348,30 @@ button.chip[aria-pressed='true']:hover:not(:disabled) {
   }
 }
 
-/* On the phone the manager scans every indicator in one pass. */
-@media (max-width: 480px) {
+@media (min-width: 769px) {
+  .dashboard-section-head .segmented-options {
+    flex: none;
+  }
+
+  .dashboard-section-head .segmented-options button {
+    min-block-size: calc(var(--control-height) - 0.5rem);
+  }
+
   .metric-grid {
-    gap: var(--space-2);
+    grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+    gap: var(--space-3);
+  }
+
+  .metric-grid > li:last-child:nth-child(odd) {
+    grid-column: auto;
   }
 
   .metric-card {
-    gap: 0;
-    padding-block: var(--space-3);
+    padding: var(--space-4);
   }
 
-  .metric-go {
-    inset-block-start: var(--space-3);
+  .metric-value {
+    font-size: var(--text-2xl);
   }
 }
 
@@ -3634,21 +3668,6 @@ button.op-generate {
     inline-size: 100vw;
   }
 }
-/* Phone: indicators sit two by two so the day reads in one screen. */
-@media (max-width: 768px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .kpi {
-    padding: var(--space-3);
-  }
-
-  .kpi-value {
-    font-size: var(--text-lg);
-  }
-}
-
 /*
  * Caixa de Entrada como workspace (pesquisa UX 15/10, achado 1).
  *

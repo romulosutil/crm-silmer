@@ -24,12 +24,15 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  * orders (ADRs 027 and 028), by the HMAC of the customer's phone or by the
  * shop's number (`LJ-…`); with none, every order matches. Customer and phone
  * search resolve outside this port, so no personal data is ever queried in
- * the clear. `origin` narrows the search.
+ * the clear. `origin` narrows the search. `owner` (Painel, "Meus pedidos")
+ * narrows to one seller's orders, by the rule that names the seller: the
+ * manual order they own, or an order of a conversation assigned to them.
  * @typedef {{
  *   status?: OrderStatus, numberSequence?: number, conversationIds?: string[],
  *   contactIds?: string[],
  *   phoneDigests?: string[], storeNumber?: string,
  *   origin?: 'atendimento'|'loja', cursor?: string|null, limit: number,
+ *   owner?: {userId: string, conversationIds: string[]},
  * }} OrderListQuery
  *
  * ADR 028: the store order recorded by the n8n checkout workflow. The
@@ -159,7 +162,7 @@ export function assertOrderRepositoryContract(repository) {
  * Validates the parts of a list query both adapters interpret identically.
  *
  * @param {OrderListQuery} query
- * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, contactIds: string[]|undefined, phoneDigests: string[]|undefined, storeNumber: string|undefined, origin: 'atendimento'|'loja'|undefined, after: {updatedAt: string, id: string}|null, limit: number}}
+ * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, contactIds: string[]|undefined, phoneDigests: string[]|undefined, storeNumber: string|undefined, origin: 'atendimento'|'loja'|undefined, owner: {userId: string, conversationIds: string[]}|undefined, after: {updatedAt: string, id: string}|null, limit: number}}
  */
 export function readOrderListQuery(query) {
   const {
@@ -169,6 +172,7 @@ export function readOrderListQuery(query) {
     limit,
     numberSequence,
     origin,
+    owner,
     phoneDigests,
     status,
     storeNumber,
@@ -216,6 +220,15 @@ export function readOrderListQuery(query) {
   if (origin !== undefined && !ORDER_ORIGINS.includes(origin)) {
     throw new OrderInputError('origin is invalid', ['origin']);
   }
+  if (
+    owner !== undefined &&
+    (typeof owner?.userId !== 'string' ||
+      owner.userId === '' ||
+      !Array.isArray(owner.conversationIds) ||
+      owner.conversationIds.some((id) => typeof id !== 'string'))
+  ) {
+    throw new TypeError('owner must name a user and their conversations');
+  }
   return {
     after:
       cursor === undefined || cursor === null ? null : decodeCursor(cursor),
@@ -224,6 +237,7 @@ export function readOrderListQuery(query) {
     limit,
     numberSequence,
     origin,
+    owner,
     phoneDigests,
     status,
     storeNumber,

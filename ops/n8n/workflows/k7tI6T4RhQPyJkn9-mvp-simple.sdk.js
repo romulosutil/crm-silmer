@@ -870,12 +870,15 @@ const linkedIds = [...new Set(Array.isArray(inbound.source_subject_ids) ? inboun
 const humanChoice = subjects.find((subject) => subject.is_current && subject.selected_source === 'human');
 const tokens = String(source.text ?? '').toUpperCase().split(/[^A-Z0-9-]+/).filter(Boolean);
 const numbered = pendingSubjects.filter((subject) => subject.order_number && tokens.includes(String(subject.order_number).toUpperCase()));
+// A new request must not inherit the sole pending order just because it is the only target.
+// A seller can create/select the new subject after the safe handoff.
+const newOrderRequest = subjects.length > 0 && /\\b(?:outro|novo|mais um|segundo) pedido\\b|\\b(?:agora|tamb[eé]m)\\s+quero\\b/i.test(String(currentText ?? ''));
 let target = null;
 if (linkedIds.length === 1) target = pendingSubjects.find((subject) => subject.subject_id === linkedIds[0]) ?? null;
 else if (linkedIds.length === 0 && humanChoice) target = pendingSubjects.find((subject) => subject.subject_id === humanChoice.subject_id) ?? null;
 else if (linkedIds.length === 0 && numbered.length === 1) target = numbered[0];
 else if (linkedIds.length === 0 && pendingSubjects.length === 1) target = pendingSubjects[0];
-const ambiguousTarget = linkedIds.length > 1 || (humanChoice && target && humanChoice.subject_id !== target.subject_id)
+const ambiguousTarget = newOrderRequest || linkedIds.length > 1 || (humanChoice && target && humanChoice.subject_id !== target.subject_id)
   || (subjects.length > 0 && !target) || (pendingSubjects.length > 1 && !humanChoice && linkedIds.length === 0 && numbered.length !== 1);
 if (ambiguousTarget) target = null;
 const bootstrapOrder = subjects.length === 0 && !target;
@@ -978,7 +981,7 @@ return { json: {
       ? 'Canal: chat do site da Silmer. Nome informado no formulário: ' + (siteName || 'não informado') + '. Não peça o nome novamente.'
       : 'Nome no perfil do WhatsApp (só uma pista, não confirmado): ' + (profileName || 'não informado'),
     'Pedido selecionado: ' + (target?.order_number ?? (bootstrapOrder ? 'primeiro pedido desta conversa' : 'indefinido')),
-    ...(ambiguousTarget ? ['Há mais de um pedido possível. Não atribua fatos a nenhum pedido; o atendimento será transferido.'] : []),
+    ...(ambiguousTarget ? ['O alvo do pedido precisa de confirmação. Não atribua fatos a nenhum pedido; o atendimento será transferido.'] : []),
     'Sua resposta será a mensagem ' + turn + ' de no máximo ' + messageCap,
     'Ponto perguntado na rodada anterior: ' + (pending ? point(pending) : 'nenhum'),
     'Produto: ' + (kinds.length ? kinds.map((kind) => PRODUCT_LABELS[kind]).join(' e ') : 'ainda não informado'),
@@ -1375,7 +1378,7 @@ const labels = {
   two_attempts: 'Não entendeu o cliente em duas tentativas',
   ignored_twice: 'Cliente não respondeu à mesma pergunta duas vezes',
   briefing_complete: 'Pré-ficha completa', message_limit: 'Limite de ' + messageCap + ' mensagens do agente',
-  subject_ambiguous: 'Mensagem pode se referir a mais de um pedido'
+  subject_ambiguous: 'Mensagem pede outro pedido ou tem alvo indefinido'
 };
 const handoffRequired = trigger !== null;
 // D25: the workflow picks the next point, the first one missing in FICHA_RHYTHM, as the

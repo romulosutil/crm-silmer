@@ -411,6 +411,9 @@ receber atualizações pelo par explícito. Telefone informado no chat do site
 serve só para busca interna; acesso ao histórico ou edição de Pedido anterior
 dependem de confirmação pelo WhatsApp. Ele nunca vira `wa_id` confirmado por
 inferência nem entra na identidade WhatsApp.
+Mesmo com um único pendente, uma mensagem como "outro pedido" ou "agora quero
+bonés" não herda esse alvo: o workflow transfere sem alterar o briefing ou a
+Ficha. O vendedor escolhe ou cria o Assunto antes de continuar.
 
 ## Ingresso do chat do site (CP-T06, CP-21..22)
 

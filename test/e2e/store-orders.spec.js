@@ -263,10 +263,23 @@ test('the list filters "Loja do site" by keyboard and labels the store order', a
   await page.goto('/pedidos');
   await expect(page.getByRole('heading', { name: 'Pedidos' })).toBeFocused();
 
-  const storeFilter = page.getByRole('button', { name: 'Loja do site' });
-  await storeFilter.focus();
+  // PLI-09: "Loja do site" lives in the "Filtros" sheet, by keyboard too.
+  const filters = page.getByRole('button', { name: 'Filtros' });
+  await filters.focus();
   await page.keyboard.press('Enter');
-  await expect(storeFilter).toHaveAttribute('aria-pressed', 'true');
+  const sheet = page.getByRole('dialog', { name: 'Filtros' });
+  const storeFilter = sheet.getByRole('radio', { name: 'Loja do site' });
+  await storeFilter.focus();
+  await page.keyboard.press('Space');
+  await expect(storeFilter).toBeChecked();
+  await sheet.getByRole('button', { name: 'Ver resultados' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(sheet).toBeHidden();
+  await expect(filters).toBeFocused();
+  // PLI-10: no chip says it, so the list names it.
+  await expect(page.locator('.orders-active-filter')).toContainText(
+    'Filtro: Loja do site',
+  );
   await expect.poll(() => lists.at(-1)?.get('origin') ?? null).toBe('loja');
   expect(lists.at(-1)?.get('status')).toBeNull();
 
@@ -368,9 +381,10 @@ test('LOJ-31/LOJ-32: the Dashboard notice is one link to the site orders, and th
   await notice.focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL('/pedidos?origem=loja');
-  await expect(
-    page.getByRole('button', { name: 'Loja do site' }),
-  ).toHaveAttribute('aria-pressed', 'true');
+  // PLI-10: the filter lives in the sheet, so the list names it.
+  await expect(page.locator('.orders-active-filter')).toContainText(
+    'Filtro: Loja do site',
+  );
   await expect.poll(() => lists.at(-1)?.get('origin') ?? null).toBe('loja');
 });
 

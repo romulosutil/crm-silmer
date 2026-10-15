@@ -1,3 +1,104 @@
+/*
+ * RFC 024 (PLI-09, PLI-10), mobile first: a one-line heading, then the
+ * search, three chips and "Filtros" — five controls — and the result count,
+ * so the first order card sits whole above the bottom bar on a phone.
+ */
+.page-heading.orders-heading {
+  display: flex;
+  align-items: center;
+  margin-block-end: var(--space-3);
+}
+
+.page-heading.orders-heading h1 {
+  margin-block-end: 0;
+}
+
+.filter-bar.orders-filter-bar {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-end: var(--space-2);
+}
+
+.search-control.orders-search {
+  max-inline-size: none;
+}
+
+.orders-search .search-field {
+  position: relative;
+  align-items: center;
+}
+
+.orders-search-icon {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: var(--space-3);
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--color-text-muted);
+  translate: 0 -50%;
+  pointer-events: none;
+}
+
+.orders-search input {
+  padding-inline-start: 2.25rem;
+}
+
+.chip-row.orders-chip-row {
+  gap: var(--space-2);
+}
+
+/* "Filtros" closes the row; it reads as in use while a sheet filter is. */
+.chip.orders-filters-button {
+  margin-inline-start: auto;
+}
+
+.chip.orders-filters-button[data-active='true'] {
+  color: var(--color-text);
+  font-weight: 600;
+  background: var(--color-selected);
+  border-color: var(--color-focus);
+}
+
+.orders-result-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-block-size: 1.25rem;
+  margin-block-end: var(--space-3);
+}
+
+.orders-active-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.orders-active-filter button {
+  min-block-size: var(--control-height-sm);
+  padding-inline: var(--space-3);
+}
+
+@media (width >= 48rem) {
+  .filter-bar.orders-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .search-control.orders-search {
+    max-inline-size: 24rem;
+  }
+
+  .chip.orders-filters-button {
+    margin-inline-start: 0;
+  }
+}
+
 .order-context {
   display: block;
   margin-block-start: 0.15rem;

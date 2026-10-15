@@ -46,13 +46,26 @@ Ordenados por severidade. Cada item cita a persona e a evidência original.
 3. **Pedidos para produção (Rose, Sílvio, sev. 4).** Pendentes e exceções
    primeiro; coluna "Entrega" com prazo relativo; filtro "Prontos para produção";
    cartões empilhados no celular em vez de tabela com rolagem lateral.
+   *Resolvido na tela (branch `design/pedidos-producao-celular`):* Pendentes
+   antes de Confirmados; dentro de cada grupo, exceções (entrega atrasada,
+   pedido parado, ficha da loja não impressa) e depois a entrega mais
+   próxima. Coluna "Entrega" com prazo relativo, filtro "Prontos para
+   produção" (confirmados, sem teste e não entregues) e cartões abaixo de
+   768 px. A ordem vale para as páginas já carregadas; a API não mudou.
 4. **Grade de tamanhos (Rose, sev. 4).** Tamanho e quantidade com o mesmo peso,
    ordem canônica, alerta de tamanho duplicado — na tela e na ficha impressa.
+   *Resolvido na tela:* a ordem canônica só reordena a leitura; os dados e a
+   edição mantêm a ordem digitada. *Pendente:* a ficha impressa segue a ordem
+   digitada e sem alerta até um ADR que supersede o ADR 017. Adicionais
+   preenchidos já abrem em pedido confirmado.
 5. **Glossário único (todas, sev. 3).** O assistente aparece como "IA",
    "agente", "Assistente Silmer" e "Vendedor Silmer". Um termo, configurável.
 6. **Ações destrutivas e feedback (Sílvio, sev. 3).** "Desativar" e "Reabrir
    pedido" sem confirmação; sucesso só anunciado para leitor de tela. Toast
    visível com "Desfazer".
+   *Resolvido para Reabrir pedido e Desativar vendedor:* confirmação que
+   descreve a consequência e toast visível (`AppToast`); "Desfazer" só onde
+   a volta é segura (reativar a conta), não na reabertura.
 7. **Vocabulário de segmento (Marina, sev. 4).** Os sete pontos da ficha,
    catálogo, "FAB", "feito_pela_silmer" e a grade de tamanhos são de confecção.
    Esquema de item por segmento e template de impressão parametrizado (pede ADR).

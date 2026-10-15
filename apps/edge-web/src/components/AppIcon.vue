@@ -67,6 +67,7 @@ const ICONS = Object.freeze({
     'M18 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
     'M4 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
   ],
+  check: ['M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0', 'm9 12 2 2 4-4'],
 });
 
 const props = defineProps({

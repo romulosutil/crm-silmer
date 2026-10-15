@@ -14,6 +14,7 @@ import { dateTimeBR, formatPhoneNumber } from '../lib/format.js';
 import { openDialog } from '../lib/ui.js';
 import {
   amountLabel,
+  deliveryDue,
   elapsedSince,
   fichaPrintedLabel,
   isStoreOrder,
@@ -33,10 +34,15 @@ const PAGE_SIZE = 25;
 // ADRs 027 and 028: "Loja do site" narrows the list to the site shop's
 // orders, all of them confirmed and paid through InfinitePay.
 const STORE_FILTER = 'loja';
+// Pesquisa UX 2026-10-15, achado 3: the production queue — confirmed orders
+// (rule 10: only those print) not delivered yet and not tests, by the
+// promised delivery. The API filters by status; the rest is read here.
+const PRODUCTION_FILTER = 'producao';
 const FILTERS = Object.freeze([
   Object.freeze({ label: 'Todos', value: '' }),
-  Object.freeze({ label: 'Confirmados', value: 'confirmado' }),
   Object.freeze({ label: 'Pendentes', value: 'pendente' }),
+  Object.freeze({ label: 'Prontos para produção', value: PRODUCTION_FILTER }),
+  Object.freeze({ label: 'Confirmados', value: 'confirmado' }),
   Object.freeze({ label: STORE_ORIGIN_LABEL, value: STORE_FILTER }),
 ]);
 
@@ -90,19 +96,42 @@ let printRefreshTimer = 0;
 let searchTimer = 0;
 let clockTimer = 0;
 
+const isProductionQueue = computed(() => filter.value === PRODUCTION_FILTER);
+// Pesquisa UX 2026-10-15, achado 3: exceptions first, then the nearest
+// promised delivery; the server's order breaks the ties.
 const confirmedOrders = computed(() =>
-  items.value.filter((order) => order.status === 'confirmado'),
+  queueOrder(
+    items.value.filter(
+      (order) =>
+        order.status === 'confirmado' &&
+        (!isProductionQueue.value || (!order.isTest && !order.deliveredOn)),
+    ),
+  ),
 );
 const pendingOrders = computed(() =>
-  items.value.filter((order) => order.status === 'pendente'),
+  queueOrder(items.value.filter((order) => order.status === 'pendente')),
 );
 const showConfirmed = computed(() =>
-  ['', 'confirmado', STORE_FILTER].includes(filter.value),
+  ['', 'confirmado', PRODUCTION_FILTER, STORE_FILTER].includes(filter.value),
+);
+const confirmedTitle = computed(() =>
+  isProductionQueue.value ? 'Prontos para produção' : 'Confirmados',
+);
+const confirmedCount = computed(() =>
+  isProductionQueue.value
+    ? `${confirmedOrders.value.length}${nextCursor.value ? '+' : ''}`
+    : String(counts.value.confirmado),
 );
 const showPending = computed(
   () => filter.value === '' || filter.value === 'pendente',
 );
-const isEmpty = computed(() => !loading.value && items.value.length === 0);
+const isEmpty = computed(
+  () =>
+    !loading.value &&
+    (showConfirmed.value ? confirmedOrders.value.length : 0) +
+      (showPending.value ? pendingOrders.value.length : 0) ===
+      0,
+);
 const canCreateOrder = computed(() =>
   Boolean(
     selectedContact.value
@@ -170,6 +199,47 @@ function priority(order) {
   if (clientWaiting(order)) return 'Retomar contato';
   const age = now.value.getTime() - new Date(order.updatedAt).getTime();
   return Number.isFinite(age) && age >= 72 * 3_600_000 ? 'Revisar pedido' : '';
+}
+
+/** @param {Record<string, any>} order */
+function due(order) {
+  return deliveryDue(order, now.value);
+}
+
+/**
+ * What puts an order at the top of its group: a late promised delivery, a
+ * pending order to resume or review, a site order nobody printed yet.
+ *
+ * @param {Record<string, any>} order
+ */
+function isException(order) {
+  return (
+    due(order).overdue ||
+    Boolean(priority(order)) ||
+    (order.status === 'confirmado' && storeFichaPending(order))
+  );
+}
+
+/** @param {Record<string, any>[]} orders */
+function queueOrder(orders) {
+  const delivered = (/** @type {Record<string, any>} */ order) =>
+    Boolean(order.deliveredOn);
+  return orders
+    .map((order, index) => ({ days: due(order).days, index, order }))
+    .sort((a, b) => {
+      const exception =
+        Number(isException(b.order)) - Number(isException(a.order));
+      if (exception !== 0) return exception;
+      const done = Number(delivered(a.order)) - Number(delivered(b.order));
+      if (done !== 0) return done;
+      if (a.days !== b.days) {
+        if (a.days === null) return 1;
+        if (b.days === null) return -1;
+        return a.days - b.days;
+      }
+      return a.index - b.index;
+    })
+    .map(({ order }) => order);
 }
 
 function openOrder(order, event) {
@@ -449,8 +519,10 @@ watch(newContactPhone, () => {
 /** @param {string|null} cursor */
 function listRequest(cursor) {
   const params = new globalThis.URLSearchParams({ limit: String(PAGE_SIZE) });
+  const status =
+    filter.value === PRODUCTION_FILTER ? 'confirmado' : filter.value;
   if (filter.value === STORE_FILTER) params.set('origin', STORE_FILTER);
-  else if (filter.value) params.set('status', filter.value);
+  else if (status) params.set('status', status);
   const needle = query.value.trim();
   if ((needle.match(/\d/gu) ?? []).length >= 8) {
     return {
@@ -462,8 +534,8 @@ function listRequest(cursor) {
           q: needle,
           ...(filter.value === STORE_FILTER
             ? { origin: STORE_FILTER }
-            : filter.value
-              ? { status: filter.value }
+            : status
+              ? { status }
               : {}),
           ...(cursor ? { cursor } : {}),
         },
@@ -918,11 +990,109 @@ onBeforeUnmount(() => {
       <p>{{ error }}</p>
       <button type="button" @click="retryInitialLoad">Tentar novamente</button>
     </section>
+    <section
+      v-else-if="isEmpty && isProductionQueue"
+      class="surface empty-list"
+      aria-live="polite"
+    >
+      <h2>Nenhum pedido na fila de produção</h2>
+      <p>
+        Pedidos confirmados aparecem aqui, pela entrega mais próxima, até serem
+        marcados como entregues.
+      </p>
+    </section>
     <section v-else-if="isEmpty" class="surface empty-list" aria-live="polite">
       <h2>Nenhum pedido por aqui</h2>
       <p>Revise o filtro ou a busca informada.</p>
     </section>
     <template v-else>
+      <!-- Pesquisa UX 2026-10-15, achado 3: what still needs a person comes
+           first; inside each group, exceptions and the nearest delivery. -->
+      <section
+        v-if="showPending && pendingOrders.length"
+        class="surface section-gap"
+        aria-labelledby="orders-pending-title"
+      >
+        <div class="panel-head">
+          <h2 id="orders-pending-title">
+            Pendentes
+            <span class="badge" data-tone="warning">{{ counts.pendente }}</span>
+          </h2>
+          <p>o vendedor responsável ou administrador pode continuar</p>
+        </div>
+        <div
+          class="table-wrap list-scroll order-list"
+          role="region"
+          tabindex="0"
+          aria-label="Pedidos pendentes"
+        >
+          <table class="data-table order-table">
+            <thead>
+              <tr>
+                <th scope="col">Pedido</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Entrega</th>
+                <th scope="col" class="num">Peças</th>
+                <th scope="col" class="num">Valor</th>
+                <th scope="col">Situação</th>
+                <th scope="col"><span class="sr-only">Ações</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="order in pendingOrders"
+                :key="order.id"
+                class="clickable-row"
+                :data-exception="isException(order) || undefined"
+                @click="openOrder(order, $event)"
+              >
+                <td class="order-cell-number">#{{ order.number }}</td>
+                <td class="order-cell-customer">
+                  <strong>{{ customerName(order) }}</strong>
+                  <small class="order-context">{{
+                    customerContext(order)
+                  }}</small>
+                </td>
+                <td class="order-cell-due" data-label="Entrega">
+                  <span class="order-due-date num">{{ due(order).date }}</span>
+                  <span
+                    v-if="due(order).relative"
+                    class="order-due"
+                    :data-tone="due(order).tone || undefined"
+                    >{{ due(order).relative }}</span
+                  >
+                </td>
+                <td class="num" data-label="Peças">{{ order.totalPieces }}</td>
+                <td class="num" data-label="Valor">
+                  {{ amountLabel(order.finalAmountCents) }}
+                </td>
+                <td class="order-cell-situation">
+                  <span
+                    v-if="priority(order)"
+                    class="badge"
+                    :data-tone="clientWaiting(order) ? 'warning' : 'info'"
+                    >{{ priority(order) }}</span
+                  >
+                  <small v-if="clientWaiting(order)" class="order-context">{{
+                    clientWaiting(order)
+                  }}</small>
+                  <small class="order-context">{{ situation(order) }}</small>
+                </td>
+                <td class="order-cell-actions">
+                  <div class="row-actions">
+                    <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
+                      >Abrir pedido<span class="sr-only">
+                        {{ order.number }}</span
+                      ></RouterLink
+                    >
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section
         v-if="showConfirmed && confirmedOrders.length"
         class="surface section-gap"
@@ -930,27 +1100,28 @@ onBeforeUnmount(() => {
       >
         <div class="panel-head">
           <h2 id="orders-confirmed-title">
-            Confirmados
-            <span class="badge" data-tone="success">{{
-              counts.confirmado
-            }}</span>
+            {{ confirmedTitle }}
+            <span class="badge" data-tone="success">{{ confirmedCount }}</span>
           </h2>
-          <p>valor e forma de pagamento registrados</p>
+          <p v-if="isProductionQueue">
+            confirmados e ainda não entregues, pela entrega mais próxima
+          </p>
+          <p v-else>valor e forma de pagamento registrados</p>
         </div>
-        <p class="table-scroll-hint">
-          Deslize a tabela para ver todas as colunas.
-        </p>
         <div
-          class="table-wrap list-scroll"
+          class="table-wrap list-scroll order-list"
           role="region"
           tabindex="0"
-          aria-label="Pedidos confirmados; role horizontalmente para ver todas as colunas"
+          :aria-label="
+            isProductionQueue ? 'Fila de produção' : 'Pedidos confirmados'
+          "
         >
-          <table class="data-table">
+          <table class="data-table order-table">
             <thead>
               <tr>
                 <th scope="col">Pedido</th>
                 <th scope="col">Cliente</th>
+                <th scope="col">Entrega</th>
                 <th scope="col" class="num">Peças</th>
                 <th scope="col" class="num">Valor</th>
                 <th scope="col">Situação</th>
@@ -962,9 +1133,10 @@ onBeforeUnmount(() => {
                 v-for="order in confirmedOrders"
                 :key="order.id"
                 class="clickable-row"
+                :data-exception="isException(order) || undefined"
                 @click="openOrder(order, $event)"
               >
-                <td>
+                <td class="order-cell-number">
                   #{{ order.number }}
                   <span
                     v-if="isStoreOrder(order) || order.isTest"
@@ -993,15 +1165,26 @@ onBeforeUnmount(() => {
                     >
                   </span>
                 </td>
-                <td>
+                <td class="order-cell-customer">
                   <strong>{{ customerName(order) }}</strong>
                   <small class="order-context">{{
                     customerContext(order)
                   }}</small>
                 </td>
-                <td class="num">{{ order.totalPieces }}</td>
-                <td class="num">{{ amountLabel(order.finalAmountCents) }}</td>
-                <td>
+                <td class="order-cell-due" data-label="Entrega">
+                  <span class="order-due-date num">{{ due(order).date }}</span>
+                  <span
+                    v-if="due(order).relative"
+                    class="order-due"
+                    :data-tone="due(order).tone || undefined"
+                    >{{ due(order).relative }}</span
+                  >
+                </td>
+                <td class="num" data-label="Peças">{{ order.totalPieces }}</td>
+                <td class="num" data-label="Valor">
+                  {{ amountLabel(order.finalAmountCents) }}
+                </td>
+                <td class="order-cell-situation">
                   {{ situation(order) }}
                   <small
                     v-if="fichaPrintedLabel(order)"
@@ -1009,13 +1192,17 @@ onBeforeUnmount(() => {
                     >{{ fichaPrintedLabel(order) }}</small
                   >
                 </td>
-                <td>
+                <td class="order-cell-actions">
                   <div class="row-actions">
                     <button type="button" @click="print(order)">
-                      Imprimir ficha
+                      Imprimir ficha<span class="sr-only">
+                        {{ order.number }}</span
+                      >
                     </button>
                     <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
-                      >Abrir pedido</RouterLink
+                      >Abrir pedido<span class="sr-only">
+                        {{ order.number }}</span
+                      ></RouterLink
                     >
                   </div>
                 </td>
@@ -1024,90 +1211,16 @@ onBeforeUnmount(() => {
           </table>
         </div>
       </section>
-
-      <section
-        v-if="showPending && pendingOrders.length"
-        class="surface section-gap"
-        aria-labelledby="orders-pending-title"
-      >
-        <div class="panel-head">
-          <h2 id="orders-pending-title">
-            Pendentes
-            <span class="badge" data-tone="warning">{{ counts.pendente }}</span>
-          </h2>
-          <p>o vendedor responsável ou administrador pode continuar</p>
-        </div>
-        <p class="table-scroll-hint">
-          Deslize a tabela para ver todas as colunas.
-        </p>
-        <div
-          class="table-wrap list-scroll"
-          role="region"
-          tabindex="0"
-          aria-label="Pedidos pendentes; role horizontalmente para ver todas as colunas"
-        >
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Pedido</th>
-                <th scope="col">Cliente</th>
-                <th scope="col" class="num">Peças</th>
-                <th scope="col" class="num">Valor</th>
-                <th scope="col">Situação</th>
-                <th scope="col"><span class="sr-only">Ações</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="order in pendingOrders"
-                :key="order.id"
-                class="clickable-row"
-                @click="openOrder(order, $event)"
-              >
-                <td>#{{ order.number }}</td>
-                <td>
-                  <strong>{{ customerName(order) }}</strong>
-                  <small class="order-context">{{
-                    customerContext(order)
-                  }}</small>
-                </td>
-                <td class="num">{{ order.totalPieces }}</td>
-                <td class="num">{{ amountLabel(order.finalAmountCents) }}</td>
-                <td>
-                  <span
-                    v-if="priority(order)"
-                    class="badge"
-                    :data-tone="clientWaiting(order) ? 'warning' : 'info'"
-                    >{{ priority(order) }}</span
-                  >
-                  <small v-if="clientWaiting(order)" class="order-context">{{
-                    clientWaiting(order)
-                  }}</small>
-                  <small class="order-context">{{ situation(order) }}</small>
-                </td>
-                <td>
-                  <div class="row-actions">
-                    <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
-                      >Abrir pedido</RouterLink
-                    >
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <button
-        v-if="nextCursor"
-        class="load-more"
-        type="button"
-        :disabled="loadingMore"
-        @click="loadMore"
-      >
-        {{ loadingMore ? 'Carregando…' : 'Ver mais' }}
-      </button>
     </template>
+    <button
+      v-if="nextCursor && !loading && hasLoaded"
+      class="load-more"
+      type="button"
+      :disabled="loadingMore"
+      @click="loadMore"
+    >
+      {{ loadingMore ? 'Carregando…' : 'Ver mais' }}
+    </button>
   </div>
 </template>
 

@@ -584,10 +584,16 @@ test('groups orders by status with counts, columns and actions', async ({
   await expect(confirmed.locator('thead th')).toHaveText([
     'Pedido',
     'Cliente',
+    'Entrega',
     'Peças',
     'Valor',
     'Situação',
     'Ações',
+  ]);
+  // Pesquisa UX 2026-10-15, achado 3: what still needs a person comes first.
+  await expect(page.locator('main section h2')).toHaveText([
+    /^\s*Pendentes/u,
+    /^\s*Confirmados/u,
   ]);
 
   const confirmedRow = confirmed.getByRole('row').nth(1);
@@ -597,6 +603,7 @@ test('groups orders by status with counts, columns and actions', async ({
   await expect(confirmedRow).toContainText('Ricardo Lima');
   await expect(confirmedRow).toContainText('60');
   await expect(confirmedRow).toContainText('R$ 1.180,00');
+  await expect(confirmedRow).toContainText('24/10');
   await expect(confirmedRow).toContainText('Confirmado por Ricardo Lima');
 
   const pendingRow = pending.getByRole('row').nth(1);
@@ -748,28 +755,21 @@ test('keeps a long order list inside its own scrollable table', async ({
     },
   }));
   await mockOrders(page, { orders: [confirmedOrder, ...manyPending] });
+  await page.setViewportSize({ height: 720, width: 1280 });
   await page.goto('/pedidos');
-  const table = page.getByRole('region', {
-    name: /Pedidos pendentes; role horizontalmente/u,
-  });
+  const table = page.getByRole('region', { name: 'Pedidos pendentes' });
   await expect(table.getByRole('row')).toHaveCount(41);
 
-  for (const viewport of [
-    { height: 720, width: 1280 },
-    { height: 844, width: 390 },
-  ]) {
-    await page.setViewportSize(viewport);
-    const metrics = await table.evaluate((element) => ({
-      clientHeight: element.clientHeight,
-      pageHeight: globalThis.document.documentElement.scrollHeight,
-      scrollHeight: element.scrollHeight,
-      viewportHeight: globalThis.innerHeight,
-    }));
-    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
-    expect(metrics.clientHeight).toBeLessThan(metrics.viewportHeight);
-    // The page no longer grows with the list it holds.
-    expect(metrics.pageHeight).toBeLessThan(metrics.scrollHeight);
-  }
+  const metrics = await table.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    pageHeight: globalThis.document.documentElement.scrollHeight,
+    scrollHeight: element.scrollHeight,
+    viewportHeight: globalThis.innerHeight,
+  }));
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+  expect(metrics.clientHeight).toBeLessThan(metrics.viewportHeight);
+  // The page no longer grows with the list it holds.
+  expect(metrics.pageHeight).toBeLessThan(metrics.scrollHeight);
 
   const lastOrder = table.getByRole('row', { name: /Cliente de teste 40/u });
   await lastOrder.getByRole('link', { name: 'Abrir pedido' }).focus();
@@ -1768,10 +1768,13 @@ test('reads each item with the seven points in order and the extras closed (PFI-
     '150 peças',
     'SUBLIMAÇÃO TOTAL',
     'DRY FIT 100% POLIÉSTER',
-    'M100G50',
+    /^M\s*100\s*peças\s*G\s*50\s*peças$/u,
     'GOLA REDONDA',
   ]);
-  await expect(card.getByRole('listitem')).toHaveText(['M100', 'G50']);
+  await expect(card.getByRole('listitem')).toHaveText([
+    /^M\s*100\s*peças$/u,
+    /^G\s*50\s*peças$/u,
+  ]);
 
   // PIT-02: the extras start closed and do not show their values.
   const toggle = card.getByRole('button', {
@@ -2334,7 +2337,33 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
     paymentCondition: 'pix',
   });
 
-  await closing.getByRole('button', { name: 'Reabrir pedido' }).click();
+  // Pesquisa UX 2026-10-15, achado 6: reopening asks first and says what
+  // happens to the print; backing out changes nothing.
+  const reopenButton = closing.getByRole('button', { name: 'Reabrir pedido' });
+  await reopenButton.click();
+  const reopenDialog = page.getByRole('dialog', {
+    name: 'Reabrir o pedido 07-CRM?',
+  });
+  await expect(reopenDialog).toContainText(
+    'a ficha deixa de poder ser impressa',
+  );
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(reopenDialog).toHaveCount(0);
+  await expect(reopenButton).toBeFocused();
+  await reopenButton.click();
+  await reopenDialog.getByRole('button', { name: 'Manter confirmado' }).click();
+  await expect(reopenDialog).toHaveCount(0);
+  expect(writes).toHaveLength(1);
+  await expect(
+    page.getByRole('button', { name: 'Imprimir ficha' }),
+  ).toBeEnabled();
+
+  await reopenButton.click();
+  await reopenDialog
+    .getByRole('button', { name: 'Reabrir pedido 07-CRM' })
+    .click();
+  await expect(reopenDialog).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Imprimir ficha' }),
   ).toBeDisabled();
@@ -2342,6 +2371,14 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
   // PCL-07: the amount and the condition survive the reopen.
   await expect(closing.getByLabel('Valor final')).toHaveValue('4.820,00');
   expect(writes[1].action).toBe('reopen');
+  await expect(
+    closing.getByRole('heading', { name: 'Fechamento e pagamento' }),
+  ).toBeFocused();
+  const toast = page.locator('.notice-toast');
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText('Pedido 07-CRM reaberto.');
+  await toast.getByRole('button', { name: 'Fechar aviso' }).click();
+  await expect(toast).toHaveCount(0);
 });
 
 test('refuses a malformed amount next to the field, before the request', async ({
@@ -2461,4 +2498,323 @@ test('hides Gerar and Reabrir from whoever does not own the conversation', async
   await expect(
     page.getByRole('button', { name: 'Imprimir ficha' }),
   ).toBeEnabled();
+});
+
+// Pesquisa UX 2026-10-15, achados 3 e 4: the production view of Pedidos.
+const TODAY = new Date('2026-10-15T12:00:00-03:00');
+
+/** @param {string} id @param {Record<string, any>} [overrides] @param {Record<string, any>} [summary] */
+function orderAt(id, overrides = {}, summary = {}) {
+  const base = overrides.status === 'pendente' ? pendingOrder : confirmedOrder;
+  return {
+    ...base,
+    ...overrides,
+    ficha: {
+      ...base.ficha,
+      summary: { ...base.ficha.summary, ...summary },
+    },
+    id,
+  };
+}
+
+const queueOrders = [
+  orderAt(
+    'order-soon',
+    { number: '11-CRM' },
+    { cliente: 'Academia Norte', data_entrega_confirmada: '2026-10-24' },
+  ),
+  orderAt(
+    'order-done',
+    { deliveredOn: '2026-10-10', number: '12-CRM' },
+    { cliente: 'Clube Entregue', data_entrega_confirmada: '2026-10-11' },
+  ),
+  orderAt(
+    'order-late',
+    { number: '13-CRM' },
+    { cliente: 'Escola Atrasada', data_entrega_confirmada: '2026-10-13' },
+  ),
+  orderAt(
+    'order-test',
+    { isTest: true, number: '14-CRM' },
+    { cliente: 'Pedido de Teste', data_entrega_confirmada: '2026-10-16' },
+  ),
+  orderAt(
+    'order-later',
+    { number: '15-CRM' },
+    { cliente: 'Time Sem Data', data_entrega_confirmada: null },
+  ),
+  orderAt(
+    'order-pending-calm',
+    {
+      number: '16-CRM',
+      status: 'pendente',
+      updatedAt: '2026-10-15T14:00:00.000Z',
+    },
+    { cliente: 'Pendente Tranquilo', data_entrega_confirmada: '2026-10-30' },
+  ),
+  orderAt(
+    'order-pending-stale',
+    {
+      number: '17-CRM',
+      status: 'pendente',
+      updatedAt: '2026-10-01T14:00:00.000Z',
+    },
+    { cliente: 'Pendente Parado', data_entrega_confirmada: '2026-11-20' },
+  ),
+];
+
+/** @param {import('@playwright/test').Locator} region */
+async function customerOrder(region) {
+  return region.locator('tbody tr td:nth-child(2) strong').allTextContents();
+}
+
+test('puts pending orders and exceptions first, with the delivery deadline', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(TODAY);
+  await mockOrders(page, { orders: queueOrders });
+  await page.goto('/pedidos');
+
+  const pending = page.getByRole('region', { name: 'Pedidos pendentes' });
+  const confirmed = page.getByRole('region', { name: 'Pedidos confirmados' });
+  await expect(pending.getByRole('row')).toHaveCount(3);
+  // A stalled pending order is an exception: it rides above a calm one even
+  // with a later delivery.
+  expect(await customerOrder(pending)).toEqual([
+    'Pendente Parado',
+    'Pendente Tranquilo',
+  ]);
+  await expect(
+    pending.getByRole('row', { name: /Pendente Parado/u }),
+  ).toContainText('Revisar pedido');
+  // Late first, then the nearest delivery, no date after, delivered last.
+  expect(await customerOrder(confirmed)).toEqual([
+    'Escola Atrasada',
+    'Pedido de Teste',
+    'Academia Norte',
+    'Time Sem Data',
+    'Clube Entregue',
+  ]);
+  const late = confirmed.getByRole('row', { name: /Escola Atrasada/u });
+  await expect(late.locator('td').nth(2)).toHaveText(
+    /13\/10\s*Atrasada há 2 dias/u,
+  );
+  await expect(late).toHaveAttribute('data-exception', 'true');
+  await expect(
+    confirmed
+      .getByRole('row', { name: /Pedido de Teste/u })
+      .locator('td')
+      .nth(2),
+  ).toHaveText(/16\/10\s*Amanhã/u);
+  await expect(
+    confirmed
+      .getByRole('row', { name: /Academia Norte/u })
+      .locator('td')
+      .nth(2),
+  ).toHaveText(/24\/10\s*em 9 dias/u);
+  await expect(
+    confirmed
+      .getByRole('row', { name: /Time Sem Data/u })
+      .locator('td')
+      .nth(2),
+  ).toHaveText('Sem data');
+  await expect(
+    confirmed
+      .getByRole('row', { name: /Clube Entregue/u })
+      .locator('td')
+      .nth(2),
+  ).toHaveText(/Entregue em 10\/10/u);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('filters the orders ready for production, by the nearest delivery', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(TODAY);
+  /** @type {URLSearchParams[]} */
+  const calls = [];
+  await mockOrders(page, {
+    onList: (params) => calls.push(params),
+    orders: queueOrders,
+  });
+  await page.goto('/pedidos');
+
+  const chip = page.getByRole('button', { name: 'Prontos para produção' });
+  await chip.click();
+  await expect(chip).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => calls.at(-1)?.get('status')).toBe('confirmado');
+  await expect(page.getByRole('region', { name: /Pendentes/u })).toHaveCount(0);
+
+  const queue = page.getByRole('region', { name: 'Fila de produção' });
+  await expect(
+    page.getByRole('heading', { level: 2, name: /Prontos para produção/u }),
+  ).toContainText('3');
+  // Neither the delivered order nor the test order is production work.
+  expect(await customerOrder(queue)).toEqual([
+    'Escola Atrasada',
+    'Academia Norte',
+    'Time Sem Data',
+  ]);
+  await expect(
+    queue.getByRole('button', { name: 'Imprimir ficha 13-CRM' }),
+  ).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('says the production queue is empty when every order was delivered', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(TODAY);
+  await mockOrders(page, {
+    orders: [queueOrders[1], queueOrders[5]],
+  });
+  await page.goto('/pedidos');
+  await page.getByRole('button', { name: 'Prontos para produção' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Nenhum pedido na fila de produção' }),
+  ).toBeVisible();
+});
+
+test('stacks the orders as cards on a phone, with no sideways scroll', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(TODAY);
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page, { orders: queueOrders });
+  await page.goto('/pedidos');
+
+  const confirmed = page.getByRole('region', { name: 'Pedidos confirmados' });
+  const card = confirmed.getByRole('row', { name: /Academia Norte/u });
+  await expect(card).toBeVisible();
+  const layout = await page.evaluate(() => {
+    const doc = globalThis.document.documentElement;
+    const regions = [...globalThis.document.querySelectorAll('.order-list')];
+    const row = globalThis.document.querySelector('.order-table tbody tr');
+    return {
+      overflow: doc.scrollWidth - doc.clientWidth,
+      regionOverflow: regions.map((r) => r.scrollWidth - r.clientWidth),
+      rowDisplay: row ? globalThis.getComputedStyle(row).display : '',
+    };
+  });
+  expect(layout.overflow).toBeLessThanOrEqual(0);
+  expect(layout.regionOverflow.every((value) => value <= 0)).toBe(true);
+  expect(layout.rowDisplay).toBe('grid');
+  // The column names travel with the values; the header row is not drawn.
+  const header = await confirmed.locator('thead').boundingBox();
+  expect(header?.height ?? 0).toBeLessThanOrEqual(1);
+  await expect(card.locator('td').nth(2)).toHaveText(/24\/10\s*em 9 dias/u);
+  const open = card.getByRole('link', { name: 'Abrir pedido 11-CRM' });
+  await open.focus();
+  await expect(open).toBeInViewport();
+  const box = await open.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(40);
+  // Still a table for a screen reader: rows, cells and column headers.
+  await expect(confirmed.getByRole('columnheader')).toHaveCount(7);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+const repeatedSizes = {
+  ...confirmedOrder,
+  ficha: {
+    ...confirmedOrder.ficha,
+    items: [
+      {
+        ...confirmedOrder.ficha.items[0],
+        grade: [
+          { quantidade: 10, tamanho: 'G' },
+          { quantidade: 5, tamanho: 'P' },
+          { quantidade: 30, tamanho: 'M' },
+          { quantidade: 2, tamanho: 'm' },
+          { quantidade: 13, tamanho: 'GG' },
+        ],
+      },
+    ],
+  },
+  id: 'order-repeated',
+  totalPieces: 60,
+};
+
+test('reads sizes in the canonical order, as heavy as their quantity, and flags a repeated size', async ({
+  page,
+}) => {
+  await mockOrders(page, { orders: [repeatedSizes] });
+  await page.goto('/pedidos/order-repeated');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const sizes = items.getByRole('list', { name: 'Tamanhos do item 1' });
+  await expect(sizes.getByRole('listitem')).toHaveText([
+    /^P\s*5\s*peças$/u,
+    /^M\s*30\s*peças, tamanho repetido$/u,
+    /^m\s*2\s*peças, tamanho repetido$/u,
+    /^G\s*10\s*peças$/u,
+    /^GG\s*13\s*peças$/u,
+  ]);
+  const weights = await sizes
+    .getByRole('listitem')
+    .first()
+    .evaluate((tile) =>
+      [...tile.querySelectorAll('.op-grade-tile-size, .op-grade-tile-qty')].map(
+        (part) => {
+          const style = globalThis.getComputedStyle(part);
+          return `${style.fontSize} ${style.fontWeight}`;
+        },
+      ),
+    );
+  expect(weights).toHaveLength(2);
+  expect(weights[0]).toBe(weights[1]);
+  await expect(items).toContainText(
+    'O tamanho M aparece em mais de uma linha. Junte as quantidades numa linha só.',
+  );
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // On a phone the tiles wrap inside the item instead of running past it.
+  await page.setViewportSize({ height: 844, width: 390 });
+  const fits = await sizes.evaluate((list) => {
+    const item = /** @type {HTMLElement} */ (list.closest('.op-item'));
+    const edge = item.getBoundingClientRect().right;
+    return [...list.children].every(
+      (tile) => tile.getBoundingClientRect().right <= edge,
+    );
+  });
+  expect(fits).toBe(true);
+});
+
+test('warns about a repeated size while the seller types it', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: 'Editar' }).click();
+  await expect(items.getByText(/aparece em mais de uma linha/u)).toHaveCount(0);
+  await items.getByRole('button', { name: 'Adicionar tamanho' }).click();
+  await items.getByLabel('Tamanho da linha 3').fill('g');
+  await expect(items).toContainText(
+    'O tamanho G aparece em mais de uma linha.',
+  );
+  await items.getByLabel('Tamanho da linha 3').fill('GG');
+  await expect(items.getByText(/aparece em mais de uma linha/u)).toHaveCount(0);
+});
+
+test('opens the filled extras of a confirmed order for the shop floor', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-confirmado');
+
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const toggle = items.getByRole('button', {
+    name: /Adicionais \(não obrigatórios\)/u,
+  });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(
+    items.getByText('Cor do tecido — manga direita', { exact: true }),
+  ).toBeVisible();
+  await expect(items).toContainText('VERDE BANDEIRA');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(
+    items.getByText('Cor do tecido — manga direita', { exact: true }),
+  ).toBeHidden();
 });

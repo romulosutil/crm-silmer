@@ -166,7 +166,7 @@ const conversationOrder = {
   version: 2,
 };
 
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, failedDelivery?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyContacts?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, siteChat?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, claimGate?: Promise<void>, claimTakesOver?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, failedDelivery?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyContacts?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, siteChat?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -204,9 +204,11 @@ async function mockCrm(page, options = {}) {
           automationState: 'assistant',
         }
       : conversation;
+  // PCX-13: once the claim is accepted, the conversation is the seller's.
+  let claimed = false;
   /** The list and the detail answer the same conversation, order included. */
   const withOrder = () => ({
-    ...inboxConversation,
+    ...(claimed ? conversation : inboxConversation),
     ...(options.siteChat
       ? {
           channel: 'site_chat',
@@ -493,6 +495,9 @@ async function mockCrm(page, options = {}) {
       expect(request.headers()['idempotency-key']).toBeTruthy();
       expect(request.headers()['x-csrf-token']).toBe('csrf-test');
       options.onHandoffClaim?.(request.postDataJSON());
+      // Held open by the test, so a second press lands while it is in flight.
+      if (options.claimGate) await options.claimGate;
+      if (options.claimTakesOver) claimed = true;
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({ accepted: true }),
@@ -904,7 +909,17 @@ test('claims a pending handoff from its conversation in the Caixa de Entrada', a
   await expect(
     page.getByRole('heading', { name: 'Handoffs pendentes' }),
   ).toHaveCount(0);
-  await page.getByRole('button', { name: 'Assumir atendimento' }).click();
+  // PCX-13: the action takes the reply's place, with the reason it stopped;
+  // the header no longer carries it.
+  await expect(
+    page.locator('.conv-actions').getByRole('button', {
+      name: 'Assumir atendimento',
+    }),
+  ).toHaveCount(0);
+  const composer = page.locator('.inbox-composer');
+  await expect(composer).toContainText('Aguardando vendedor');
+  await expect(composer).toContainText('Esperando um vendedor assumir.');
+  await composer.getByRole('button', { name: 'Assumir atendimento' }).click();
   await expect(
     page.getByText('Atendimento de Studio Malu assumido.', { exact: true }),
   ).toBeVisible();
@@ -913,6 +928,72 @@ test('claims a pending handoff from its conversation in the Caixa de Entrada', a
     expectedHandoffVersion: 1,
     reasonCode: 'handoff_claimed',
   });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('PCX-13: takes the conversation from the composer by keyboard, once, and lands on the reply', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  /** @type {any[]} */
+  const claims = [];
+  /** @type {() => void} */
+  let release = () => {};
+  const claimGate = new Promise((resolve) => {
+    release = () => resolve(undefined);
+  });
+  await mockCrm(page, {
+    claimGate,
+    claimTakesOver: true,
+    onHandoffClaim: (body) => claims.push(body),
+    pendingHandoff: true,
+  });
+  await page.goto('/inbox/conversation-1');
+  await page.evaluate(() => {
+    globalThis.document.cookie = 'crm_csrf=csrf-test; Path=/; SameSite=Lax';
+  });
+  const conversation = page.locator('.inbox-conversation');
+  const composer = page.locator('.inbox-composer');
+  const takeOver = composer.getByRole('button', {
+    name: 'Assumir atendimento',
+  });
+  // Before: one primary action in the whole conversation, in the composer.
+  await expect(takeOver).toBeInViewport({ ratio: 1 });
+  await expect(conversation.locator('.primary')).toHaveCount(1);
+  await expect(page.getByLabel('Responder')).toHaveCount(0);
+  await expect(takeOver).toHaveAccessibleDescription(
+    'Aguardando vendedor Esperando um vendedor assumir.',
+  );
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // A second Enter while the claim is in flight sends nothing more.
+  await takeOver.focus();
+  await page.keyboard.press('Enter');
+  await expect(takeOver).toHaveAttribute('aria-busy', 'true');
+  await page.keyboard.press('Enter');
+  await expect(takeOver).toBeFocused();
+  release();
+
+  // After: the reply takes its place and the focus; the outcome is announced.
+  const reply = page.locator('#reply');
+  await expect(reply).toBeFocused();
+  await expect(reply).toBeEnabled();
+  await expect(
+    page.locator('.inbox-pane-notices').getByRole('status'),
+  ).toHaveText('Atendimento de Studio Malu assumido.');
+  await expect(takeOver).toHaveCount(0);
+  await expect(conversation.locator('.primary')).toHaveCount(1);
+  await expect(
+    composer.getByRole('button', { name: 'Enviar resposta' }),
+  ).toHaveClass(/primary/u);
+  expect(claims).toEqual([
+    {
+      expectedConversationVersion: 3,
+      expectedHandoffVersion: 1,
+      reasonCode: 'handoff_claimed',
+    },
+  ]);
+  await expect(page.getByRole('button', { name: /Devolver/u })).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
@@ -963,13 +1044,18 @@ test('never offers to hand the conversation back to the AI and keeps the actions
   await expect(page.getByText(/à IA/u)).toHaveCount(0);
 
   // Achado 1: two visible actions and the rest under "Mais", in one tab
-  // sequence with no gap where the removed button was.
+  // sequence with no gap where the removed button was. PCX-13: "Encerrar
+  // conversa" left the header for "Mais" and no primary sits here.
   await createOrder.focus();
-  for (const name of ['Encerrar conversa', 'Mais ações', 'Detalhes']) {
+  for (const name of ['Mais ações', 'Detalhes']) {
     await page.keyboard.press('Tab');
     await expect(actions.getByRole('button', { name })).toBeFocused();
   }
-  await expect(actions.locator('button:visible')).toHaveCount(4);
+  await expect(actions.locator('button:visible')).toHaveCount(3);
+  await expect(actions.locator('button.primary')).toHaveCount(0);
+  await expect(
+    actions.locator(':scope > button', { hasText: 'Encerrar conversa' }),
+  ).toHaveCount(0);
 
   // "Mais" opens from the keyboard on its first entry; Esc hands focus back.
   const more = actions.getByRole('button', { name: 'Mais ações' });
@@ -982,6 +1068,10 @@ test('never offers to hand the conversation back to the AI and keeps the actions
   await page.keyboard.press('Tab');
   await expect(
     actions.getByRole('button', { name: 'Arquivar conversa' }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(
+    actions.getByRole('button', { name: 'Encerrar conversa' }),
   ).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(more).toBeFocused();
@@ -1001,13 +1091,19 @@ test('never offers to hand the conversation back to the AI and keeps the actions
   ).toHaveAttribute('href', '/clientes/contact-1');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
-  // With the agent, or waiting for a seller, taking over is the only change.
+  // With the agent, or waiting for a seller, taking over is the only change,
+  // and it takes the reply's place (PCX-13).
   for (const state of [{ assistant: true }, { pendingHandoff: true }]) {
     await mockCrm(page, state);
     await page.reload();
     await expect(
-      actions.getByRole('button', { name: 'Assumir atendimento' }),
+      page
+        .locator('.inbox-composer')
+        .getByRole('button', { name: 'Assumir atendimento' }),
     ).toBeVisible();
+    await expect(
+      actions.getByRole('button', { name: 'Assumir atendimento' }),
+    ).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Devolver/ })).toHaveCount(0);
   }
   expect(handBackRequests).toEqual([]);
@@ -1627,13 +1723,16 @@ test('PCX-11: offers "Criar pedido" in the header only to the owner and creates 
   );
 
   // An administrator may create it while the agent still answers: from
-  // "Mais", never beside the primary action.
+  // "Mais", never beside the primary action, which sits in the composer
+  // (PCX-13).
   await mockCrm(page, { assistant: true, order: null });
   await page.reload();
   await expect(heading).toBeVisible();
   const actions = page.locator('.conv-actions');
   await expect(
-    actions.getByRole('button', { name: 'Assumir atendimento' }),
+    page
+      .locator('.inbox-composer')
+      .getByRole('button', { name: 'Assumir atendimento' }),
   ).toBeVisible();
   await expect(
     actions.locator(':scope > button', { hasText: 'Criar pedido' }),
@@ -2094,7 +2193,20 @@ test('on a phone the address decides between the list and the conversation', asy
     page.getByRole('heading', { level: 2, name: 'Studio Malu' }),
   ).toBeFocused();
   await expect(page.locator('.inbox-list')).toBeHidden();
-  await expect(page.getByLabel('Responder')).toBeInViewport();
+  // PCX-13: waiting for a seller, "Assumir atendimento" takes the reply's
+  // place, with the reason and the time stopped, as the one primary action.
+  const composerRegion = page.locator('.inbox-composer');
+  const takeOver = composerRegion.getByRole('button', {
+    name: 'Assumir atendimento',
+  });
+  await expect(takeOver).toBeInViewport({ ratio: 1 });
+  await expect(composerRegion).toContainText('Perguntou o valor');
+  await expect(composerRegion).toContainText(
+    /Esperando vendedor há 2h \d\dmin\./u,
+  );
+  await expect(page.getByLabel('Responder')).toHaveCount(0);
+  await expect(page.locator('.inbox-conversation .primary')).toHaveCount(1);
+  expect((await takeOver.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   expect(
     await page.evaluate(
       () =>
@@ -2116,7 +2228,7 @@ test('on a phone the address decides between the list and the conversation', asy
   await more.click();
   const sheet = page.locator('#conv-more-menu');
   // PCX-11: waiting for a seller, an administrator creates the order from
-  // here; the header keeps "Assumir atendimento" as its one action.
+  // here; "Encerrar conversa" closes the list (PCX-13).
   await expect(sheet.getByRole('button')).toHaveText([
     'Detalhes da conversa',
     'Criar pedido',

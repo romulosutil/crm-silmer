@@ -28,6 +28,8 @@ const canEdit = computed(() => editing.canEdit.value);
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
 );
+// PFI-18: on a phone the body is shown only while the accordion opens it.
+const open = computed(() => editing.isSectionOpen?.(SECTION) ?? true);
 const steps = computed(() => orderMilestones(props.order));
 const recordedCount = computed(
   () => steps.value.filter((step) => step.recorded).length,
@@ -108,14 +110,23 @@ async function save() {
       :can-edit="canEdit"
       :blocked="otherSectionOpen"
       :editing="isEditing"
+      section="milestones"
+      body-id="order-milestones-body"
       @edit="startEditing"
     />
 
-    <p v-if="errorMessage" role="alert" class="op-alert">
+    <p v-if="errorMessage" role="alert" class="op-alert" :hidden="!open">
       {{ errorMessage }}
     </p>
 
-    <form v-if="isEditing" class="op-form" novalidate @submit.prevent="save">
+    <form
+      v-if="isEditing"
+      id="order-milestones-body"
+      class="op-form"
+      novalidate
+      :hidden="!open"
+      @submit.prevent="save"
+    >
       <div class="op-form-grid">
         <div class="op-field">
           <label for="milestone-paid">Pago em</label>
@@ -189,7 +200,12 @@ async function save() {
       </div>
     </form>
 
-    <div v-else class="op-sheet-body">
+    <div
+      v-else
+      id="order-milestones-body"
+      class="op-sheet-body"
+      :hidden="!open"
+    >
       <ol class="op-milestones">
         <li
           v-for="step in steps"

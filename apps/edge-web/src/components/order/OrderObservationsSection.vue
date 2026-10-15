@@ -24,6 +24,8 @@ const canEdit = computed(
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
 );
+// PFI-18: on a phone the body is shown only while the accordion opens it.
+const open = computed(() => editing.isSectionOpen?.(SECTION) ?? true);
 const observations = computed(() => props.order.ficha.observations);
 const headline = computed(
   () => `${observations.value.length} de ${MAX_OBSERVATIONS} linhas`,
@@ -88,18 +90,22 @@ async function save() {
       :can-edit="canEdit"
       :blocked="otherSectionOpen"
       :editing="isEditing"
+      section="observations"
+      body-id="order-observations-body"
       @edit="startEditing"
     />
 
-    <p v-if="errorMessage" role="alert" class="op-alert">
+    <p v-if="errorMessage" role="alert" class="op-alert" :hidden="!open">
       {{ errorMessage }}
     </p>
 
     <form
       v-if="isEditing"
+      id="order-observations-body"
       ref="form"
       class="op-form"
       novalidate
+      :hidden="!open"
       @submit.prevent="save"
     >
       <ol class="op-sheet-body op-observation-lines">
@@ -147,7 +153,12 @@ async function save() {
       </div>
     </form>
 
-    <div v-else class="op-sheet-body">
+    <div
+      v-else
+      id="order-observations-body"
+      class="op-sheet-body"
+      :hidden="!open"
+    >
       <ol v-if="observations.length" class="op-observations">
         <li v-for="(line, index) in observations" :key="index">{{ line }}</li>
       </ol>

@@ -1,6 +1,9 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import OrderIcon from './OrderIcon.vue';
+import OrderSheetHead from './OrderSheetHead.vue';
+
+const SECTION = 'service';
 
 // PFI-20 (RFC 024): the production control is only on paper — page 2 of the
 // printed ficha, filled by hand on the shop floor — so the page no longer
@@ -61,11 +64,36 @@ const serviceEntries = computed(() =>
     value: Array.isArray(value) ? value.join(', ') : String(value),
   })),
 );
+
+/*
+ * PFI-08, PFI-18: on a phone this section is one more fold of the accordion,
+ * so its head opens it like the others and the "Ver" disclosure steps aside;
+ * on a wide screen it keeps "Ver" and "Ocultar".
+ */
+const editing = inject('orderEditing', null);
+const accordion = computed(() => Boolean(editing?.isPhone?.value));
+const open = computed(() => editing?.isSectionOpen?.(SECTION) ?? true);
+const showEntries = computed(() =>
+  accordion.value ? open.value : serviceOpen.value,
+);
+const headState = computed(() => {
+  const count = serviceEntries.value.length;
+  if (count === 0) return 'Sem dados · não sai na ficha';
+  return `${count} ${count === 1 ? 'dado' : 'dados'} · não sai na ficha`;
+});
 </script>
 
 <template>
   <section class="op-sheet" aria-labelledby="order-service-title">
-    <div class="op-sheet-head">
+    <OrderSheetHead
+      v-if="accordion"
+      title-id="order-service-title"
+      title="Dados do atendimento"
+      :state="headState"
+      :section="SECTION"
+      body-id="order-service-body"
+    />
+    <div v-else class="op-sheet-head">
       <h2 id="order-service-title">Dados do atendimento</h2>
       <span class="op-quiet-tag">não sai na ficha</span>
       <button
@@ -79,19 +107,19 @@ const serviceEntries = computed(() =>
         <OrderIcon name="chevron" />
       </button>
     </div>
-    <div id="order-service-body" class="op-sheet-body">
+    <div id="order-service-body" class="op-sheet-body" :hidden="!open">
       <p class="op-hint">
         Arte, locais, logística, finalidade e perfil de compra, e o que o
         cliente disse sem virar campo do pedido — ficam no CRM e não saem na
         ficha impressa.
       </p>
-      <dl v-if="serviceOpen && serviceEntries.length" class="op-service">
+      <dl v-if="showEntries && serviceEntries.length" class="op-service">
         <div v-for="entry in serviceEntries" :key="entry.key">
           <dt>{{ entry.label }}</dt>
           <dd>{{ entry.value }}</dd>
         </div>
       </dl>
-      <p v-else-if="serviceOpen" class="op-empty">
+      <p v-else-if="showEntries" class="op-empty">
         A conversa ainda não trouxe dados de atendimento.
       </p>
     </div>

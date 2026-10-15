@@ -32,6 +32,8 @@ const warning = computed(() => quantityWarning(props.order));
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
 );
+// PFI-18: on a phone the body is shown only while the accordion opens it.
+const open = computed(() => editing.isSectionOpen?.(SECTION) ?? true);
 
 /** The stored value is an ISO day; the operation reads dd/mm/yyyy. */
 /** @param {unknown} value */
@@ -120,14 +122,22 @@ async function save() {
       :can-edit="canEdit"
       :blocked="otherSectionOpen"
       :editing="isEditing"
+      section="summary"
+      body-id="order-summary-body"
       @edit="startEditing"
     />
 
-    <p v-if="errorMessage" role="alert" class="op-alert">
+    <p v-if="errorMessage" role="alert" class="op-alert" :hidden="!open">
       {{ errorMessage }}
     </p>
 
-    <form v-if="isEditing" class="op-form" @submit.prevent="save">
+    <form
+      v-if="isEditing"
+      id="order-summary-body"
+      class="op-form"
+      :hidden="!open"
+      @submit.prevent="save"
+    >
       <div class="op-form-grid">
         <div class="op-field">
           <label for="summary-cliente">Cliente</label>
@@ -196,7 +206,7 @@ async function save() {
       </div>
     </form>
 
-    <div v-else class="op-sheet-body">
+    <div v-else id="order-summary-body" class="op-sheet-body" :hidden="!open">
       <dl class="op-summary-main">
         <div>
           <dt>Cliente</dt>

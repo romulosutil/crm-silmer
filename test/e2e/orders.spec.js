@@ -832,6 +832,11 @@ for (const width of [390, 1280]) {
     await expect(
       artwork.getByRole('heading', { level: 2, name: 'Arte do pedido' }),
     ).toBeVisible();
+    // PFI-18: on a phone the section is a fold of the accordion; it opens
+    // before its content is read.
+    if (width < 769) {
+      await artwork.getByRole('button', { name: /^Arte do pedido/u }).click();
+    }
     // Fixed hints tell the final art from the reference files (ARQ-01, ARQ-04).
     await expect(
       artwork.getByRole('region', { name: 'Arte final' }),
@@ -1797,22 +1802,307 @@ test('keeps the section heads readable and their buttons thumb sized, light and 
     await page.emulateMedia({ colorScheme });
     await page.setViewportSize({ height: 844, width: 390 });
     await page.goto('/pedidos/order-pendente');
+    // PFI-18: on a phone every head is a thumb-sized button and only the
+    // open section shows its "Editar".
+    const heads = page.locator('main h2 button[aria-expanded]');
+    await expect(heads).toHaveCount(6);
+    for (const head of await heads.all()) {
+      const box = await head.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
     const edits = page.getByRole('button', { name: /^Editar\b/u });
-    await expect(edits).toHaveCount(5);
+    await expect(edits).toHaveText(['Editar resumo']);
     for (const edit of await edits.all()) {
       const box = await edit.boundingBox();
       expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
     }
-    // Something open, so the waiting buttons are checked too.
-    await page
-      .getByRole('region', { name: 'Observações do pedido' })
-      .getByRole('button', { name: 'Editar observações' })
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    // Something open, so the waiting heads are checked too.
+    const observations = page.getByRole('region', {
+      name: 'Observações do pedido',
+    });
+    await observations
+      .getByRole('button', { name: /^Observações do pedido/u })
       .click();
+    const editObservations = observations.getByRole('button', {
+      name: 'Editar observações',
+    });
+    expect(
+      (await editObservations.boundingBox())?.height ?? 0,
+    ).toBeGreaterThanOrEqual(44);
+    await editObservations.click();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
     await page.setViewportSize({ height: 800, width: 1280 });
+    // On a wide screen every "Editar" is back, and the edit is still open.
+    await expect(edits).toHaveCount(4);
+    await expect(observations.getByText('Editando')).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
+});
+
+test('folds the sections into an accordion on a phone, by keyboard, with the state in each head (PFI-18)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page, { orders: [incompleteOrder] });
+  await page.goto('/pedidos/order-pendente');
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeFocused();
+
+  // Every section has one head button, in the order of the ficha, whose
+  // name starts with the title and carries the state in words.
+  const heads = page.locator('main h2 button[aria-expanded]');
+  await expect(heads).toHaveCount(6);
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const trail = page.getByRole('region', { name: 'Datas do pedido' });
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const summaryHead = summary.getByRole('button', {
+    name: /^Resumo do pedido/u,
+  });
+  const trailHead = trail.getByRole('button', { name: /^Datas do pedido/u });
+  const itemsHead = items.getByRole('button', {
+    name: /^Itens e especificações/u,
+  });
+  await expect(summaryHead).toHaveAccessibleName(
+    /^Resumo do pedido\s*,\s*Falta entrega prometida$/u,
+  );
+  await expect(itemsHead).toHaveAccessibleName(
+    /^Itens e especificações\s*,\s*Falta: cor do item 1 e gola do item 1$/u,
+  );
+  await expect(
+    page.getByRole('button', {
+      name: /^Dados do atendimento\s*,\s*4 dados · não sai na ficha$/u,
+    }),
+  ).toHaveCount(1);
+  // The region keeps only the title as its name.
+  await expect(
+    page.getByRole('region', { exact: true, name: 'Itens e especificações' }),
+  ).toHaveCount(1);
+
+  // The first missing step (the promised delivery) opens with the page; the
+  // other folds are closed and their bodies hidden.
+  await expect(summaryHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(summaryHead).toHaveAttribute(
+    'aria-controls',
+    'order-summary-body',
+  );
+  await expect(page.locator('#order-summary-body')).toBeVisible();
+  await expect(itemsHead).toHaveAttribute('aria-expanded', 'false');
+  await expect(itemsHead).toHaveAttribute('aria-controls', 'order-items-body');
+  await expect(page.locator('#order-items-body')).toBeHidden();
+  await expect(
+    page.locator('main h2 button[aria-expanded="true"]'),
+  ).toHaveCount(1);
+  // One "Editar" on screen, the open section's, and one primary.
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
+    'Editar resumo',
+  ]);
+  await expect(page.locator('main button.primary:visible')).toHaveCount(1);
+
+  // Tab walks the closed heads in order.
+  await trailHead.focus();
+  for (const title of [
+    /^Itens e especificações/u,
+    /^Arte do pedido/u,
+    /^Observações do pedido/u,
+    /^Dados do atendimento/u,
+  ]) {
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: title })).toBeFocused();
+  }
+
+  // Enter opens a fold, closes the other and keeps the focus on the head;
+  // the hash names the open section.
+  await itemsHead.focus();
+  await page.keyboard.press('Enter');
+  await expect(itemsHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(itemsHead).toBeFocused();
+  await expect(summaryHead).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#order-items-body')).toBeVisible();
+  await expect(page.locator('#order-summary-body')).toBeHidden();
+  await expect(page).toHaveURL(/\/pedidos\/order-pendente#itens$/u);
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
+    'Editar itens',
+  ]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // Space closes it again, and opens it back.
+  await page.keyboard.press('Space');
+  await expect(itemsHead).toHaveAttribute('aria-expanded', 'false');
+  await expect(itemsHead).toBeFocused();
+  await expect(
+    page.locator('main h2 button[aria-expanded="true"]'),
+  ).toHaveCount(0);
+  await expect(page).toHaveURL(/\/pedidos\/order-pendente$/u);
+  await page.keyboard.press('Space');
+  await expect(itemsHead).toHaveAttribute('aria-expanded', 'true');
+
+  // The hash is how the page resumes: a reload opens the same section.
+  await page.reload();
+  await expect(itemsHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(summaryHead).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('opens the section of the hash and of the next step, and never folds an edit (PFI-18)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [incompleteOrder],
+  });
+  await page.goto('/pedidos/order-pendente#observacoes');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const observations = page.getByRole('region', {
+    name: 'Observações do pedido',
+  });
+  const summaryHead = summary.getByRole('button', {
+    name: /^Resumo do pedido/u,
+  });
+  const itemsHead = items.getByRole('button', {
+    name: /^Itens e especificações/u,
+  });
+  const observationsHead = observations.getByRole('button', {
+    name: /^Observações do pedido/u,
+  });
+  // The hash wins over the next step, and the section comes into view.
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeFocused();
+  await expect(observationsHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(summaryHead).toHaveAttribute('aria-expanded', 'false');
+  await expect(observationsHead).toBeInViewport();
+  await expect(observations.getByRole('listitem')).toHaveText([
+    'Separar os itens por tamanho.',
+  ]);
+
+  // The next step in the footer opens its section and its editor.
+  const footer = page.locator('.op-mobile-action');
+  await footer
+    .getByRole('button', { name: 'Informar entrega prometida' })
+    .focus();
+  await page.keyboard.press('Enter');
+  const delivery = summary.getByLabel('Entrega prometida');
+  await expect(delivery).toBeFocused();
+  await expect(summaryHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(observationsHead).toHaveAttribute('aria-expanded', 'false');
+  await expect(summaryHead).toBeInViewport();
+  await expect(page).toHaveURL(/\/pedidos\/order-pendente#resumo$/u);
+  await delivery.fill('2026-11-20');
+
+  // While the summary is in edit every head waits, its own included: no
+  // other fold opens and the edit never folds.
+  for (const head of await page
+    .locator('main h2 button[aria-expanded]')
+    .all()) {
+    await expect(head).toHaveAttribute('aria-disabled', 'true');
+    await expect(head).toHaveAccessibleDescription(
+      'Salve ou cancele a edição aberta.',
+    );
+  }
+  await itemsHead.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Space');
+  await itemsHead.dispatchEvent('click');
+  await expect(itemsHead).toBeFocused();
+  await expect(itemsHead).toHaveAttribute('aria-expanded', 'false');
+  await expect(
+    items.getByText('Salve ou cancele a edição aberta.'),
+  ).toBeVisible();
+  await summaryHead.focus();
+  await page.keyboard.press('Enter');
+  await expect(summaryHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(delivery).toHaveValue('2026-11-20');
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // The draft survives the window going wide and back.
+  await page.setViewportSize({ height: 800, width: 1280 });
+  await expect(page.locator('main h2 button')).toHaveCount(0);
+  await expect(delivery).toHaveValue('2026-11-20');
+  await expect(
+    items.getByRole('button', { name: 'Editar itens' }),
+  ).toBeVisible();
+  await page.setViewportSize({ height: 844, width: 390 });
+  await expect(delivery).toHaveValue('2026-11-20');
+  await expect(summaryHead).toHaveAttribute('aria-expanded', 'true');
+  expect(writes).toHaveLength(0);
+
+  // Cancelling frees the heads again.
+  await summary.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(itemsHead).not.toHaveAttribute('aria-disabled', /./u);
+  await expect(page.getByText('Salve ou cancele a edição aberta.')).toHaveCount(
+    0,
+  );
+});
+
+test('keeps a confirmed order and a store order coherent in the accordion (PFI-18, PFI-10, LOJ-07)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page, {
+    orders: [
+      ownConfirmedOrder,
+      { ...incompleteOrder, id: 'order-loja', origin: 'loja' },
+    ],
+  });
+  await page.goto('/pedidos/order-confirmado');
+
+  // Nothing is missing on a confirmed order: the summary opens, read only.
+  const summaryHead = page.getByRole('button', { name: /^Resumo do pedido/u });
+  await expect(summaryHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('main h2 button[aria-expanded]')).toHaveCount(6);
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
+  // PLA-04: only the dates are written after the order is generated.
+  await page.getByRole('button', { name: /^Datas do pedido/u }).click();
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
+    'Editar datas',
+  ]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // LOJ-07: a store order has no "Editar" and no fold to open.
+  await page.goto('/pedidos/order-loja');
+  await expect(
+    page.getByText('Pedido da loja do site: travado, sem edição.'),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
+  await expect(page.locator('main h2 button[aria-expanded]')).toHaveCount(0);
+});
+
+test('keeps every section open and the heads plain on a wide screen (PFI-18)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 800, width: 1280 });
+  await mockOrders(page, { orders: [incompleteOrder] });
+  await page.goto('/pedidos/order-pendente#itens');
+
+  // No accordion: no head button, no aria-expanded on a heading, every
+  // body on screen and every "Editar" in place.
+  await expect(page.locator('main h2 button')).toHaveCount(0);
+  await expect(page.locator('main h2 [aria-expanded]')).toHaveCount(0);
+  for (const body of [
+    '#order-summary-body',
+    '#order-milestones-body',
+    '#order-items-body',
+    '#order-artwork-body',
+    '#order-observations-body',
+  ]) {
+    await expect(page.locator(body)).toBeVisible();
+  }
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(5);
+  await expect(page.locator('main .op-sheet-state')).toHaveCount(5);
+  // "Dados do atendimento" keeps its own "Ver" on a wide screen.
+  await expect(
+    page
+      .getByRole('region', { name: 'Dados do atendimento' })
+      .getByRole('button', { name: 'Ver' }),
+  ).toHaveAttribute('aria-expanded', 'false');
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('edits the observations and stops at five lines (PFI-05)', async ({
@@ -2280,11 +2570,11 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.keyboard.press('Escape');
 
-  // The footer steps aside while a section is edited.
-  await page
-    .getByRole('region', { name: 'Itens e especificações' })
-    .getByRole('button', { name: 'Editar' })
-    .click();
+  // The footer steps aside while a section is edited (PFI-18: the items
+  // fold opens first on a phone).
+  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  await items.getByRole('button', { name: /^Itens e especificações/u }).click();
+  await items.getByRole('button', { name: 'Editar' }).click();
   await expect(footer).toHaveCount(0);
 });
 
@@ -2354,6 +2644,8 @@ test('edits the size grade with the thumb on a phone', async ({ page }) => {
   await page.goto('/pedidos/order-pendente');
 
   const items = page.getByRole('region', { name: 'Itens e especificações' });
+  // PFI-18: the items are a closed fold of the accordion until opened.
+  await items.getByRole('button', { name: /^Itens e especificações/u }).click();
   await items.getByRole('button', { name: 'Editar' }).click();
   const quantity = items.getByLabel('Quantidade do tamanho M');
   await expect(quantity).toHaveAttribute('inputmode', 'numeric');
@@ -2436,7 +2728,10 @@ test('reads sizes in the canonical order, as heavy as their quantity, and flags 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
   // On a phone the tiles wrap inside the item instead of running past it.
+  // PFI-18: the items fold opens first, so the tiles are really measured.
   await page.setViewportSize({ height: 844, width: 390 });
+  await items.getByRole('button', { name: /^Itens e especificações/u }).click();
+  await expect(sizes).toBeVisible();
   const fits = await sizes.evaluate((list) => {
     const item = /** @type {HTMLElement} */ (list.closest('.op-item'));
     const edge = item.getBoundingClientRect().right;

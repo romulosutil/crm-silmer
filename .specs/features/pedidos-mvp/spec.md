@@ -10,6 +10,7 @@
 **Itens com os sete pontos (02/10/2026):** [ADR 016](../../../docs/adr/016-itens-com-os-sete-pontos-da-ficha.md) · história P1-11
 **Ficha impressa com os sete pontos (02/10/2026):** [ADR 017](../../../docs/adr/017-ficha-impressa-com-os-sete-pontos.md) · P1-5 (PIM-06..10) e PLA-08
 **Cliente acompanha o contato (03/10/2026):** [ADR 018](../../../docs/adr/018-cliente-do-pedido-acompanha-o-contato.md) · história P1-12
+**Jornadas com menos botões (15/10/2026):** [ADR 036](../../../docs/adr/036-padroes-de-jornada.md) · [RFC 024](../../../docs/rfc/024-jornadas-com-menos-botoes.md) · PFI-15..20, PCX-10..14, PLI-09..10 (T121–T133)
 **Mockups:** `.design/mesa-de-trabalho/` (canvas "Mesa de Trabalho Silmer")
 
 ## Baseline vigente
@@ -135,7 +136,9 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
    Resumo do pedido, Itens e especificações, Observações do pedido, Controle
    de produção (informativo), Dados do atendimento (não impresso), Fechamento
    e pagamento. Desde a ADR 008, o Lastro do pedido entra logo depois do
-   Resumo (PLA-01).
+   Resumo (PLA-01). Emendado por PFI-18 e PFI-20 (RFC 024): "Controle de
+   produção" sai da tela, o lastro aparece como "Datas do pedido" e, no
+   celular, as seções viram acordeão.
 2. **PFI-02** Resumo SHALL conter: cliente (vindo do contato, bloqueado; só
    nome confirmado desde a ADR 016, PIT-11; acompanha o contato enquanto o
    pedido está pendente desde a ADR 018, PCT-01),
@@ -156,7 +159,9 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
 5. **PFI-05** Observações SHALL aceitar de 0 a 5 linhas de texto.
 6. **PFI-06** WHEN o vendedor clica "Editar" numa seção THEN a seção SHALL
    virar formulário com Salvar e Cancelar; salvar grava a seção inteira de uma
-   vez. Só uma seção fica em edição por vez.
+   vez. Só uma seção fica em edição por vez. Emendado por PFI-17 (RFC 024):
+   o botão nomeia a seção ("Editar itens") e, com outra seção em edição, os
+   demais ficam com `aria-disabled` e o motivo.
 7. **PFI-07** Cores de manga e viés SHALL aceitar o valor explícito "Não
    aplicável".
 8. **PFI-08** "Dados do atendimento" (arte, locais, logística, finalidade,
@@ -164,10 +169,12 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
    marcados como "não saem na ficha impressa". Desde a ADR 016, ali ficam
    também a quantidade, os tamanhos e a estampa ditos pelo cliente que não
    viraram campo do pedido ("Quantidade informada", "Tamanhos informados",
-   "Estampa desejada") e todo ponto deixado para o vendedor.
+   "Estampa desejada") e todo ponto deixado para o vendedor. Emendado por
+   PFI-18 (RFC 024): no celular, a seção fica dentro do acordeão.
 9. **PFI-09** O banner do topo SHALL listar o que falta para confirmar. Desde
    a ADR 016, lista só o que impede gerar (PIT-05, PIT-06); campo em branco
-   que não bloqueia não é listado.
+   que não bloqueia não é listado. Emendado por PFI-15 (RFC 024): o banner
+   vira o progresso real "Para gerar o pedido: N de 3" no topo.
 10. **PAU-01** WHEN quem não é dono da conversa nem administrador abre o pedido
     THEN a página SHALL ser somente leitura e a API SHALL recusar edições com 403.
 11. **PFI-10** WHEN o pedido está confirmado THEN todas as seções SHALL ficar
@@ -212,6 +219,9 @@ valor e forma de pagamento, para liberar a impressão.
 7. **PCL-08** Nenhum status SHALL mudar por pagamento, produção, tempo ou
    agente — só por Confirmar e Reabrir.
 8. **PFI-13** "Confirmar pedido" SHALL ser o único botão primário da página.
+   Emendado por PFI-16 e PFI-19 (RFC 024): a única primária passa a ser a do
+   próximo passo ou, com tudo pronto, "Gerar pedido", que abre o diálogo com
+   valor final e forma de pagamento.
 
 **Teste independente:** preencher valor e condição, confirmar e ver o pedido
 em Confirmados com "Confirmado por <nome> · <data hora>".
@@ -306,7 +316,9 @@ de `docs/phase0/FICHA-PDF-REVIEW-V3.md`.
 1. **PLI-01** O menu lateral SHALL ter "Pedidos" logo após "Caixa de Entrada",
    levando a `/pedidos`.
 2. **PLI-02** A lista SHALL ter filtro Todos · Confirmados · Pendentes e busca
-   por número, cliente ou telefone.
+   por número, cliente ou telefone. Emendado por PLI-09 e PLI-10 (RFC 024):
+   três chips (Todos, Meus pendentes, Prontos para produção) e o botão
+   "Filtros" com os demais filtros; a busca continua.
 3. **PLI-03** Os pedidos SHALL aparecer agrupados em Confirmados e Pendentes,
    com contagem em cada grupo.
 4. **PLI-04** Colunas: Pedido, Cliente (com evento e vendedor), Peças, Valor,
@@ -332,7 +344,9 @@ de `docs/phase0/FICHA-PDF-REVIEW-V3.md`.
 1. **PCX-01** O filtro "Situação" atual (estados da conversa) e o bloco
    "Sugestão pendente da IA" SHALL ser removidos.
 2. **PCX-02** O inbox SHALL ter o filtro "Estado" com: Todas · Aguardando
-   vendedor · Com o agente · Com vendedor.
+   vendedor · Com o agente · Com vendedor. Emendado por PCX-14 (RFC 024): os
+   estados passam para Situação, na folha "Filtros", e a fila mostra os
+   atalhos Todas · Aguardando · Minhas com contagem.
 3. **PCX-03** WHEN a conversa tem handoff pendente THEN SHALL mostrar o motivo
    da parada (a partir do `reason_code`) e há quanto tempo está parada.
 4. **PCX-04** WHEN "Aguardando vendedor" está selecionado THEN a lista SHALL
@@ -341,22 +355,34 @@ de `docs/phase0/FICHA-PDF-REVIEW-V3.md`.
    responsável, Arquivar e ver arquivadas, Repassar atendimento, Assumir,
    Editar nome e Ver contato. A Caixa de Entrada SHALL NOT oferecer
    "Devolver à IA": a conversa com uma pessoa não volta para o bot (ADR 015).
+   Emendado por PCX-13 e PCX-14 (RFC 024): a fila Todas/Minhas/Sem
+   responsável vira o filtro Responsável da folha "Filtros", "Assumir
+   atendimento" ocupa o lugar do campo de mensagem e "Encerrar conversa" vai
+   para "Mais"; as demais ações continuam.
 
 ---
 
 ### P1-9: Gaveta do pedido na conversa ⭐ MVP
 
+Superado por PCX-10 a PCX-12 (RFC 024, ADR 036): o botão "Pedido" e a gaveta
+dão lugar ao link do pedido no cabeçalho e ao resumo em Detalhes › Pedido.
+PCX-06 a PCX-09 ficam abaixo como histórico e valem até a T126 chegar ao
+`master`.
+
 **Aceite:**
 
 1. **PCX-06** O cabeçalho da conversa SHALL ter um botão "Pedido" com o status
-   atual (Pendente, Confirmado ou Sem pedido).
+   atual (Pendente, Confirmado ou Sem pedido). Superado por PCX-10 (RFC 024).
 2. **PCX-07** WHEN o botão é acionado THEN uma gaveta lateral SHALL abrir com
    número, status, o que falta, itens (tipo, modelo, peças), total de peças,
    valor (quando houver) e o botão "Abrir pedido". A gaveta não edita.
+   Superado por PCX-12 (RFC 024).
 3. **PCX-08** WHEN não há pedido pendente e o usuário é dono ou administrador
-   THEN a gaveta SHALL oferecer "Criar pedido" (PCL-10).
+   THEN a gaveta SHALL oferecer "Criar pedido" (PCL-10). Superado por PCX-11
+   (RFC 024).
 4. **PCX-09** A gaveta SHALL fechar com Esc e com clique fora, devolvendo o
-   foco ao botão que a abriu.
+   foco ao botão que a abriu. Superado por PCX-10 e PCX-12 (RFC 024): sem
+   gaveta, o pedido abre por link.
 
 ---
 
@@ -371,7 +397,9 @@ fato entregamos, na ficha digital e na impressa.
 1. **PLA-01** WHEN o pedido é aberto THEN a página SHALL mostrar a seção
    "Lastro do pedido" logo depois do Resumo, com cinco datas nesta ordem:
    Primeiro contato, Pedido fechado, Pagamento, Entrega prometida e Entrega
-   realizada, e quantas delas já existem.
+   realizada, e quantas delas já existem. Emendado por PFI-20 (RFC 024): na
+   tela a seção se chama "Datas do pedido"; a ficha impressa mantém "Lastro
+   do pedido".
 2. **PLA-02** Primeiro contato SHALL ser a abertura da conversa que originou o
    pedido, copiada na criação e nunca digitada; pedidos criados antes da
    migração SHALL recebê-la da conversa.
@@ -391,7 +419,8 @@ fato entregamos, na ficha digital e na impressa.
    bloquear.
 7. **PLA-07** WHEN quem não é dono nem administrador tenta gravar THEN a
    interface SHALL não exibir "Editar" no lastro e a API SHALL responder 403;
-   uma versão desatualizada SHALL receber 409.
+   uma versão desatualizada SHALL receber 409. Emendado por PFI-17 (RFC
+   024): o botão de quem pode gravar se chama "Editar datas".
 8. **PLA-08** A ficha impressa SHALL trazer as cinco datas do lastro na
    página 1 do template `ficha-canonical-v3` com os sete pontos (ADR 017, que
    supera a v3 por produto), cada uma uma vez só: Data do pedido e Entrega
@@ -447,7 +476,12 @@ que substitui a regra A01 do [contexto](context.md).
    `finalAmount` e `paymentCondition`, nesta ordem. O que se preenche em
    outra seção SHALL dizer onde ("Informar no Resumo" abre o resumo na
    entrega prometida). A Situação da lista de Pedidos e a gaveta da conversa
-   SHALL usar a mesma lista.
+   SHALL usar a mesma lista. Emendado por PFI-15 e PFI-19 (RFC 024): na
+   página do pedido, "Falta para gerar" nomeia os passos do topo (Entrega
+   prometida, Itens, Arte do pedido) e o botão do próximo passo diz o verbo
+   ("Informar a entrega prometida"); valor final e forma de pagamento saem da
+   lista da página e passam a ser digitados no diálogo "Gerar o pedido". A
+   API e `missingFields` não mudam.
 7. **PIT-07** WHEN o bot projeta a pré-ficha THEN o item 1 SHALL receber:
    `product_model` (ou, sem ele, `product_type`) em Tipo de roupa; `colors` em
    Cor; `artwork_status` em Estampa, com os locais de `artwork_locations`
@@ -827,7 +861,7 @@ Estes critérios superam REV-02–REV-05 onde divergem.
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TEC-01 | `items[].tipo_servico` aparece como **Técnica**, ponto 4 do item, na tela e no papel; é obrigatória para gerar. O bot preenche o primeiro item quando o cliente nomeia uma técnica (silk, sublimação, DTF, DTG, bordado, transfer) ou diz que a peça é lisa (“Sem estampa”); outra descrição fica em Dados do atendimento como “Técnica informada”.                                                                                                                                                 |
 | TEC-02 | `summary.aplicacao` não é escrita pelo bot, editada nem impressa a partir da v5. O valor antigo continua guardado e a API aceita a chave de um cliente antigo sem usá-la.                                                                                                                                                                                                                                                                                                                           |
-| TEC-03 | **Estampa e arquivos** oferece **O cliente envia a arte**, **A Silmer cria a arte** e **Sem estampa**. As duas primeiras coexistem; “Sem estampa” exclui as outras (a API recusa a combinação). **Gerar pedido** exige uma marcação (`artwork` em `missingFields`). O bot projeta a origem a partir de `artwork_status` só quando a resposta é inequívoca; o vendedor corrige.                                                                                                                      |
+| TEC-03 | **Estampa e arquivos** oferece **O cliente envia a arte**, **A Silmer cria a arte** e **Sem estampa**. As duas primeiras coexistem; “Sem estampa” exclui as outras (a API recusa a combinação). **Gerar pedido** exige uma marcação (`artwork` em `missingFields`). O bot projeta a origem a partir de `artwork_status` só quando a resposta é inequívoca; o vendedor corrige. Emendado por PFI-20 (RFC 024): na tela a seção se chama **Arte do pedido**.                                          |
 | TEC-04 | `items[].estampa` deixa os pontos principais, não bloqueia e aparece como **Estampa (referência)** nos adicionais. O bot grava ali só os locais da estampa.                                                                                                                                                                                                                                                                                                                                         |
 | TEC-05 | Pontos do item: Tipo de roupa, Cor, Quantidade, Técnica, Tecido, Tamanhos e **Gola**. Adicionais: Estampa (referência), **Cor do tecido — frente/costas/manga direita/manga esquerda** e **Viés das mangas**. “Tipo de peça” do bot aparece como “Tipo de roupa informado”; o aviso do `modelo` antigo sai da tela, e o valor continua guardado.                                                                                                                                                    |
 | TEC-06 | Lastro com **Pago em** e **Entregue em** na tela e no papel; resumo com **Nome do pedido**; a dica da entrega prometida diz “A data combinada com o cliente.”; o total de peças não mostra “cliente informou N” (o aviso de diferença continua).                                                                                                                                                                                                                                                    |
@@ -852,6 +886,8 @@ REV-04 onde divergem.
 | ARQ-07 | Os bytes ficam no RustFS interno, sem link público nem URL pré-assinada; a chave do objeto é opaca e o nome original fica cifrado no banco. O download sai com `Content-Disposition: attachment`, `nosniff` e CSP `sandbox`.                                                                                                                                                |
 | ARQ-08 | Envio, remoção e download entram na auditoria; envio e remoção são idempotentes. Sem `OBJECT_STORAGE_*` as rotas respondem 503 e o resto do pedido funciona.                                                                                                                                                                                                                |
 | ARQ-09 | O bucket entra no backup off-host, no drill e no restore com o PostgreSQL; o handoff manual de mídia válida do canal anexa o arquivo ao pedido.                                                                                                                                                                                                                             |
+
+Emenda da RFC 024 (ADR 036) a ARQ-01: na tela a seção se chama **Arte do pedido** e mostra um só controle de adicionar arquivo por vez (PFI-20).
 
 ## O atendimento começa pelo produto (ADR 024, 05/10/2026)
 
@@ -997,3 +1033,191 @@ confirmado pela InfinitePay", que fica só na ficha) e `LOJ-17` por `LOJ-37`.
 | LOJ-35 | A folha "Pedido da loja do site" mostra só Produto ("Camisa dry fit"), Cor, Tamanho, Quantidade ("10 peças"), Prazo da cor, Cliente, WhatsApp e Comprovante; o catálogo e o slug não mudam.                                                                                                                                                                                                                           |
 | LOJ-36 | A ficha `ficha-loja-v1` (A4, uma página) traz o cabeçalho de sempre, a faixa "Pedido de teste — não produzir nem entregar" no teste e as seções Produzir (produto, cor, tamanho em destaque, quantidade, prazo, "Pedido em"), Cliente (nome, WhatsApp) e Pagamento (valor pago, Pix, a faixa da InfinitePay e o comprovante), sem tipo, público, malha, gola, NSU nem fatura; o CSP do nginx libera só o novo estilo. |
 | LOJ-37 | Emenda o `LOJ-17`: o mesmo `pedido_id` com dados que diferem só em `pagamento.pago_em` (duas execuções do n8n) responde `200` com o mesmo `numero` e mantém o primeiro instante; qualquer outra diferença continua `409 STORE_ORDER_CONFLICT`.                                                                                                                                                                        |
+
+## Jornadas com menos botões (ADR 036, 15/10/2026)
+
+O PO aprovou em 15/10/2026 o
+[RFC 024](../../../docs/rfc/024-jornadas-com-menos-botoes.md) com as opções
+recomendadas (pergunta D1) e a premissa D2: valor final e forma de pagamento
+passam a ser digitados no diálogo "Gerar o pedido". A pergunta D3 (o vendedor
+entra pela Caixa de Entrada em "Minhas" depois do login) ficou adiada: PNL-04
+e a T131 não são implementadas. A decisão durável está no
+[ADR 036](../../../docs/adr/036-padroes-de-jornada.md) e os padrões em
+[`design.md`](../../../design.md) §16. O Painel (PNL-01 a PNL-04) fica na
+[spec do CRM MVP](../crm-mvp/spec.md), junto de FIN-02.
+
+Nenhum critério abaixo muda API, contrato de dados, migração, dependência ou a
+ficha impressa: tudo usa `missingFields`, os filtros por query string e os
+resumos que já existem. Onde divergem, estes critérios superam os anteriores;
+cada critério emendado tem a nota no próprio texto e na tabela "Emendas".
+Continuam valendo, sem mudança: PIT-05, PLA-04, TEC-08, PIM-01, PAU-01,
+PCL-07, PCL-10, PCL-11, PCX-04, PLI-03, PLI-08, LOJ-07, LOJ-24, LOJ-31,
+LOJ-33, LOJ-34, REV-06, REV-10 e FIN-02.
+
+### Página do pedido
+
+1. **PFI-15** WHEN quem pode editar o pedido (dono da conversa, vendedor
+   responsável do Pedido manual ou administrador) abre um pedido pendente do
+   atendimento THEN o topo da página SHALL mostrar "Para gerar o pedido: N de
+   3", com três passos nesta ordem: Entrega prometida
+   (`summary.data_entrega_confirmada`), Itens (`items` e `items[N].*`) e Arte
+   do pedido (`artwork`). Um passo SHALL contar como feito só quando
+   `missingFields` não traz nenhuma chave dele; o total SHALL ser sempre 3, e
+   abrir, visitar ou salvar uma seção sem resolver a pendência SHALL NOT
+   avançar a contagem. Só o primeiro passo pendente SHALL ter botão, com verbo
+   e objeto ("Informar a entrega prometida", "Completar os itens", "Marcar
+   quem faz a arte"), que abre a seção no ponto pendente; os outros passos
+   mostram o estado em texto ("Completo", "Falta a cor do item 2").
+   `finalAmount` e `paymentCondition` SHALL NOT entrar na contagem (PFI-19).
+   WHEN quem abre não pode editar (PAU-01), o pedido está confirmado ou é da
+   loja do site (LOJ-07, LOJ-34) THEN o progresso SHALL NOT aparecer. WHEN a
+   leitura do pedido falha THEN a página SHALL mostrar o erro com "Tentar
+   novamente" e SHALL NOT mostrar contagem nenhuma.
+2. **PFI-16** O rodapé fixo da página SHALL mostrar o próximo passo de PFI-15
+   como a única ação primária enquanto houver pendência e "Gerar pedido" só
+   quando os três passos estão feitos. WHEN "Gerar pedido" aparece com
+   pendência THEN ele SHALL ter `aria-disabled="true"`, continuar focável,
+   descrever o que falta ("Falta: entrega prometida") e, ativado por clique,
+   Enter ou Espaço, SHALL NOT abrir o diálogo nem chamar a confirmação. Quem
+   não pode gerar continua sem o botão (PCL-06).
+3. **PFI-17** Cada seção do pedido SHALL ter um cabeçalho com o título, o
+   estado em texto ("Completo", "Falta: cor do item 2", "2 itens · 40
+   peças", "Sem arquivos") e o botão com verbo e objeto: "Editar resumo",
+   "Editar datas", "Editar itens", "Editar arte" e "Editar observações". WHEN
+   uma seção está em edição THEN os outros "Editar" SHALL ficar com
+   `aria-disabled="true"`, focáveis, com a descrição "Salve ou cancele a
+   edição aberta", e ativá-los SHALL NOT abrir outra edição nem descartar a
+   aberta (mantém PFI-06). Leitor sem permissão (PAU-01), pedido confirmado,
+   salvo "Editar datas" (PFI-10, PLA-04), e pedido da loja (LOJ-07) SHALL NOT
+   ver os botões "Editar".
+4. **PFI-18** WHEN a tela tem até 768 px THEN as seções do pedido SHALL formar
+   um acordeão com uma seção aberta por vez, Dados do atendimento inclusive
+   (PFI-08). Cada cabeçalho SHALL ser um botão com `aria-expanded` e
+   `aria-controls` cujo nome acessível traz o título e o estado ("Itens, falta
+   a cor do item 2"); abrir uma seção fecha a outra, salvo a que está em
+   edição, que SHALL continuar aberta até Salvar ou Cancelar. Ao carregar,
+   SHALL abrir a seção do hash da URL (por exemplo `#itens`); sem hash, ou com
+   um hash desconhecido, a do primeiro passo pendente de PFI-15; sem
+   pendência, o Resumo. WHEN a tela tem mais de 768 px THEN todas as seções
+   SHALL ficar abertas e empilhadas, sem acordeão.
+5. **PFI-19** WHEN os três passos estão feitos e quem pode gerar aciona "Gerar
+   pedido" THEN SHALL abrir o diálogo "Gerar o pedido" (`role="dialog"`,
+   `aria-modal="true"`, foco contido) com a revisão do que vai ser gerado
+   (cliente, entrega prometida, itens com peças e total, arte do pedido) e os
+   campos "Valor final" (PFI-11) e "Forma de pagamento" (PFI-12). O bloco
+   sempre aberto de valor final e forma de pagamento SHALL deixar de existir
+   no pedido pendente: o diálogo é o único modelo de edição desses campos. O
+   foco inicial SHALL ir para "Valor final"; Esc ou "Cancelar" SHALL fechar
+   sem gravar e devolver o foco a "Gerar pedido". Pedido reaberto SHALL abrir
+   o diálogo com o valor e a forma gravados (PCL-07). WHEN o valor é inválido
+   ou falta a forma THEN o erro SHALL aparecer junto ao campo e nada SHALL ser
+   enviado. WHEN a API responde 422 `ORDER_NOT_CONFIRMABLE` com pendência fora
+   do diálogo THEN o diálogo SHALL fechar, o progresso SHALL ser relido e o
+   foco SHALL ir para o botão do próximo passo; o status continua `pendente`
+   (PCL-05). WHEN a API responde 409 de versão THEN o diálogo SHALL pedir para
+   recarregar, sem gravar. Pedido confirmado e pedido da loja continuam com
+   "Fechamento e pagamento" em leitura (LOJ-34). Premissa D2 aprovada pelo PO
+   em 15/10/2026.
+6. **PFI-20** A página do pedido SHALL dizer "Arte do pedido" no lugar de
+   "Estampa e arquivos" e "Datas do pedido" no lugar de "Lastro do pedido";
+   o bloco "Controle de produção" SHALL sair da página. A ficha impressa
+   SHALL NOT mudar: mantém "Lastro do pedido" e o controle de produção, com
+   os mesmos templates e hashes (PIM-10, TEC-07). O nome da empresa na página
+   (por exemplo, em "A Silmer cria a arte") SHALL vir de `brand`, nunca
+   escrito no componente (ADR 035). A seção Arte do pedido SHALL mostrar um
+   só controle de adicionar arquivo por vez; os limites e as regras de ARQ-02
+   a ARQ-06 não mudam.
+
+### Conversa e fila da Caixa de Entrada
+
+7. **PCX-10** WHEN a conversa tem pedido THEN o cabeçalho SHALL mostrar o link
+   "Pedido NN-CRM · <status>" (Pendente ou Confirmado) para o pedido que o
+   botão "Pedido" mostrava (PCX-06), que abre a página do pedido com a origem
+   (PGE-01) e acompanha mudanças sem recarregar (PLI-08). WHEN a conversa não
+   tem pedido THEN o cabeçalho SHALL NOT mostrar status de pedido. O botão
+   "Pedido" e a gaveta SHALL deixar de existir (supera PCX-06 a PCX-09).
+8. **PCX-11** "Criar pedido" SHALL aparecer só para o dono da conversa ou um
+   administrador, numa conversa sem pedido pendente (PCL-10, PCL-11). Outro
+   vendedor SHALL NOT ver a ação, e a API continua autorizando: 403 para quem
+   não pode e o pedido existente quando já há pendente.
+9. **PCX-12** O resumo do pedido (número, status, o que falta pela lista de
+   PIT-06, itens com tipo e peças, total de peças, valor quando houver e
+   "Abrir pedido") SHALL ficar em Detalhes › Pedido, só para leitura. Sem
+   pedido, a seção SHALL dizer "Sem pedido" uma vez e oferecer "Criar pedido"
+   só a quem PCX-11 permite.
+10. **PCX-13** WHEN a conversa ainda não tem uma pessoa responsável e quem a
+    abre pode assumi-la THEN "Assumir atendimento" SHALL ocupar o lugar do
+    campo de mensagem, com o motivo da parada e o tempo parado (PCX-03), como
+    única ação primária da região; depois de assumir, o campo de mensagem
+    SHALL aparecer com "Enviar resposta" como única primária e receber o
+    foco. A reivindicação continua atômica (ADR 009). Quem não pode assumir
+    SHALL NOT ver o botão ativo e SHALL ver o motivo em texto. "Encerrar
+    conversa" SHALL ficar em "Mais" em todas as larguras (emenda PCX-05).
+11. **PCX-14** A fila da Caixa de Entrada SHALL ter a busca, os atalhos Todas
+    · Aguardando · Minhas, cada um com contagem e seleção neutra, e o botão
+    "Filtros", que abre uma folha com Situação (Todas, Aguardando vendedor,
+    Com o agente, Com vendedor, Arquivadas) e Responsável (Todas, Minhas, Sem
+    responsável). Os filtros ativos SHALL aparecer num resumo, cada um com
+    botão para removê-lo; Esc fecha a folha e devolve o foco a "Filtros".
+    Aguardando continua ordenada por tempo parado (PCX-04). Os links
+    `?fila=` e `?situacao=` SHALL abrir a lista com o filtro no resumo; valor
+    desconhecido SHALL ser ignorado sem erro. As abas de estado e o seletor
+    "Fila" SHALL deixar de existir (emenda PCX-02 e PCX-05).
+
+### Lista de Pedidos
+
+12. **PLI-09** A lista de Pedidos SHALL ter três chips (Todos, Meus
+    pendentes, Prontos para produção) e o botão "Filtros", que abre uma folha
+    com os oito filtros de hoje agrupados em Situação (Pendentes,
+    Confirmados), Responsável (Meus pendentes), Origem (Loja do site),
+    Entrega (Entrega atrasada, Próximas entregas) e Produção (Prontos para
+    produção), além de Todos. A escolha continua única. Os grupos Confirmados
+    e Pendentes continuam (PLI-03), e os links `?status=`, `?entrega=`,
+    `?vendedor=eu` e `?origem=loja` continuam abrindo a lista filtrada
+    (LOJ-31, LOJ-33). Emenda PLI-02.
+13. **PLI-10** WHEN o filtro ativo não é um dos três chips (veio da folha ou
+    de um link do Painel) THEN a lista SHALL mostrar o nome dele com o botão
+    "Limpar filtro", que volta a Todos. A contagem do resultado ("12
+    pedidos") SHALL substituir o resumo de filtro atual e ser anunciada em
+    região `aria-live="polite"`. WHEN o filtro não acha nada THEN a lista
+    SHALL dizer que nenhum pedido atende ao filtro e oferecer "Limpar
+    filtro", diferente do vazio inicial sem pedidos.
+
+### Emendas
+
+| Critério        | Emendado ou superado por | O que muda                                                             |
+| --------------- | ------------------------ | ---------------------------------------------------------------------- |
+| PFI-01          | PFI-18, PFI-20           | "Controle de produção" sai da tela; "Datas do pedido"; acordeão        |
+| PFI-06          | PFI-17                   | "Editar" com objeto e `aria-disabled` com motivo                       |
+| PFI-08          | PFI-18                   | Dados do atendimento dentro do acordeão no celular                     |
+| PFI-09          | PFI-15                   | O banner do topo vira o progresso real                                 |
+| PFI-13          | PFI-16, PFI-19           | A única primária é a do próximo passo ou "Gerar pedido"                |
+| PIT-06          | PFI-15, PFI-19           | "Falta para gerar" nomeia os passos; valor e forma vão para o diálogo  |
+| PLA-01, PLA-07  | PFI-20, PFI-17           | "Datas do pedido" na tela; "Editar datas"                              |
+| TEC-03, ARQ-01  | PFI-20                   | "Arte do pedido" na tela; um só controle de adicionar arquivo por vez  |
+| PCX-02, PCX-05  | PCX-13, PCX-14           | Atalhos com contagem e folha de filtros; "Encerrar conversa" em "Mais" |
+| PCX-06 a PCX-09 | PCX-10 a PCX-12          | Superados: link no cabeçalho e Detalhes › Pedido no lugar da gaveta    |
+| PLI-02          | PLI-09, PLI-10           | Três chips e folha de filtros                                          |
+
+### Rastreabilidade das jornadas
+
+A evidência entra com cada tarefa, no mesmo commit; até lá o requisito não
+conta como verificado.
+
+| ID     | Tarefa | Fatia | Status                                    |
+| ------ | ------ | ----- | ----------------------------------------- |
+| PFI-15 | T121   | A1    | Em andamento (`ux/jornadas`)              |
+| PFI-16 | T121   | A1    | Em andamento (`ux/jornadas`)              |
+| PFI-17 | T122   | A2a   | Em andamento (`ux/jornadas`)              |
+| PFI-20 | T123   | A4    | Em andamento (`ux/jornadas`)              |
+| PFI-18 | T124   | A2b   | Em andamento (`ux/jornadas`)              |
+| PFI-19 | T125   | A3    | Em andamento (`ux/jornadas`); D2 aprovada |
+| PCX-10 | T126   | B1    | Em andamento (`ux/jornadas`)              |
+| PCX-11 | T126   | B1    | Em andamento (`ux/jornadas`)              |
+| PCX-12 | T126   | B1    | Em andamento (`ux/jornadas`)              |
+| PCX-13 | T127   | B2    | Em andamento (`ux/jornadas`)              |
+| PCX-14 | T128   | B3    | Em andamento (`ux/jornadas`)              |
+| PLI-09 | T129   | C1    | Em andamento (`ux/jornadas`)              |
+| PLI-10 | T129   | C1    | Em andamento (`ux/jornadas`)              |
+
+PNL-01 a PNL-04 têm a rastreabilidade na [spec do CRM MVP](../crm-mvp/spec.md).

@@ -629,6 +629,36 @@ if (connectionString) {
       null,
     );
   });
+  test('CP-T06: Inbox exposes only a safe delivery code for a failed command', async () => {
+    const f = await mediaPanelCommand('text');
+    const reads = new PostgresInboxReadRepository({
+      database,
+      contactEnvelopeKey: KEY,
+      messageEnvelopeKey: KEY,
+    });
+    await pool.query(
+      "UPDATE crm.n8n_commands SET status='failed',locked_by=NULL,locked_until=NULL,completed_at=now(),last_error_code='N8N_COMMAND_REJECTED',retryable=false,retry_safe=false WHERE command_id=$1",
+      [f.row.command_id],
+    );
+    await pool.query(
+      "UPDATE crm.messages SET status='failed',delivery_status='failed',delivery_status_at=now() WHERE id=$1",
+      [f.sent.id],
+    );
+    let message = (await reads.get('bind-conversation')).messages[0];
+    assert.equal(message.deliveryErrorCode, 'N8N_COMMAND_REJECTED');
+    await pool.query(
+      "UPDATE crm.n8n_commands SET last_error_code='PII_LEAK' WHERE command_id=$1",
+      [f.row.command_id],
+    );
+    message = (await reads.get('bind-conversation')).messages[0];
+    assert.equal(message.deliveryErrorCode, null);
+    await pool.query(
+      "UPDATE crm.n8n_commands SET status='sent',last_error_code='N8N_COMMAND_REJECTED' WHERE command_id=$1",
+      [f.row.command_id],
+    );
+    message = (await reads.get('bind-conversation')).messages[0];
+    assert.equal(message.deliveryErrorCode, null);
+  });
   for (const status of ['failed', 'outcome_unknown'])
     test(`T16/MED-19/23/24: DEV ${status} is identified from original reservation, independent of external ID`, async () => {
       const f = await mediaPanelCommand();

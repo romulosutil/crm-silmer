@@ -18,6 +18,24 @@ const MEDIA_JOIN = `LEFT JOIN crm.chat_media media
       AND event_type='message.send.requested'
   ) reservation ON true`;
 
+const DELIVERY_ERROR_CODES = new Set([
+  'COMMAND_LEASE_EXPIRED',
+  'N8N_COMMAND_ACK_MISMATCH',
+  'N8N_COMMAND_DELIVERY_FAILED',
+  'N8N_COMMAND_ID_MISMATCH',
+  'N8N_COMMAND_INVALID',
+  'N8N_COMMAND_NETWORK_ERROR',
+  'N8N_COMMAND_NOT_FOUND',
+  'N8N_COMMAND_PAYLOAD_CHANGED',
+  'N8N_COMMAND_PAYLOAD_INVALID',
+  'N8N_COMMAND_RECONCILED_FAILED',
+  'N8N_COMMAND_REJECTED',
+  'N8N_COMMAND_REMOTE_UNAVAILABLE',
+  'N8N_COMMAND_STALE',
+  'N8N_COMMAND_TIMEOUT',
+  'OUTCOME_UNKNOWN',
+]);
+
 /**
  * The order the Inbox shows for a conversation: the pending one, otherwise the
  * most recently confirmed (same rule as GET /conversations/:id/order). Only
@@ -238,8 +256,13 @@ export class PostgresInboxReadRepository {
             `SELECT message.id, message.conversation_id, message.direction,
                     message.author_kind, message.author_id, message.message_type,
                     message.content_envelope, message.status, message.delivery_status,
+                    CASE WHEN message.delivery_status IN ('failed', 'outcome_unknown')
+                               AND command.status IN ('failed', 'outcome_unknown')
+                               AND command.last_error_code ~ '^[A-Z0-9_]{1,64}$'
+                         THEN command.last_error_code ELSE NULL END delivery_error_code,
                     message.occurred_at, message.created_at, ${MEDIA_PROJECTION}
              FROM crm.messages message ${MEDIA_JOIN}
+             LEFT JOIN crm.n8n_commands command ON command.message_id=message.id
              WHERE message.conversation_id=$1
              ORDER BY message.occurred_at, message.id`,
             [conversationId],
@@ -371,6 +394,9 @@ function mapMessage(row, repository) {
     authorId: row.author_id,
     authorKind: row.author_kind,
     createdAt: row.created_at ? iso(row.created_at) : iso(row.occurred_at),
+    deliveryErrorCode: DELIVERY_ERROR_CODES.has(row.delivery_error_code)
+      ? row.delivery_error_code
+      : null,
     deliveryStatus: row.delivery_status ?? null,
     direction: row.direction,
     id: row.id,

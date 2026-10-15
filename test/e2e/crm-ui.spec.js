@@ -166,7 +166,7 @@ const conversationOrder = {
   version: 2,
 };
 
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyContacts?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, failedDelivery?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyContacts?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -228,6 +228,10 @@ async function mockCrm(page, options = {}) {
           ...conversation.lastMessage,
           authorId: 'operator-1',
           authorKind: 'human',
+          deliveryErrorCode: options.failedDelivery
+            ? 'N8N_COMMAND_REJECTED'
+            : null,
+          deliveryStatus: options.failedDelivery ? 'failed' : null,
           direction: 'outbound',
           id: 'message-human',
           preview: 'Vou assumir seu atendimento agora.',
@@ -1027,6 +1031,16 @@ test('identifies customer, assistant, and seller messages in the conversation', 
     page.locator(".message[data-from='humano'] .msg-role"),
   ).toHaveText('Vendedor');
   await expect(page.getByText('Entrega: sent')).toHaveCount(0);
+});
+
+test('shows a failed delivery code to the seller in the Inbox', async ({
+  page,
+}) => {
+  await mockCrm(page, { failedDelivery: true, mixedAuthors: true });
+  await page.goto('/inbox');
+  await expect(
+    page.getByText('Falha no envio · código técnico: N8N_COMMAND_REJECTED'),
+  ).toBeVisible();
 });
 
 test('restores search focus after removing filter controls', async ({

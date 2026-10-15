@@ -629,7 +629,11 @@ WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos po
 - Baseline preservada: `98f96069-ede2-4900-aa5c-7fec0d3b80cb`.
 - Rascunho simplificado validado: `fae803db-eef0-4074-a7ae-1a6bb786e203`,
   com 42 nós e sem avisos estruturais.
-- O workflow simplificado permanece inativo até credenciais e homologação.
+- O snapshot sanitizado permanece inativo. O workflow operacional foi ativado
+  em 15/10/2026; o teste sintético do chat do site recebeu resposta após o
+  vínculo da credencial n8n → CRM. A homologação completa de CP-T04 no canal
+  ainda exige repetição, troca de assunto, dois pedidos ativos e retomada em
+  outro ciclo.
 - Vendedores do piloto: o nó `Montar contexto da IA (MVP)` usa a lista
   `sellers` do inbound. Diante de um CRM sem o BOT-03, ele lê os primeiros nomes
   da variável `SILMER_PILOT_SELLERS` do n8n, separados por vírgula, e conta o
@@ -654,7 +658,16 @@ de um export autenticado do workflow principal, execute
 `node ops/n8n/workflows/create-dev-test-workflow.mjs <origem.json>
 <destino.json> --deployment`. O arquivo de implantação preserva credenciais não
 WhatsApp já vinculadas e referencia, somente por nome, as duas credenciais
-Basic DEV. Nenhum segredo deve ser salvo no repositório.
+Basic DEV. **O importador CLI do n8n não resolve referências que contêm apenas
+o nome da credencial**: antes de importar o workflow operacional, vincule o ID
+da credencial n8n → CRM existente em todos os nós `CRM -` com
+`node ops/n8n/bind-crm-credential.mjs <export.json> <preparado.json>
+<id-da-credencial>`. O ID aparece na URL da credencial no n8n. O script exige
+autenticação Basic nesses nós, preserva os demais vínculos e recusa um ID
+divergente. Importe apenas `<preparado.json>`, publique o workflow e reinicie o
+serviço n8n para a nova versão entrar em execução; confira que todos os nós
+`CRM -` exportados têm `credentials.httpBasicAuth.id` antes de testar o canal.
+Nenhum segredo ou ID de credencial deve ser salvo no repositório.
 
 ### Loop local completo
 

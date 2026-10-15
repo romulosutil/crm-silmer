@@ -1961,17 +1961,13 @@ test('opens a conversation by its address and keeps the Inbox while moving betwe
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('opens the conversation straight from the Dashboard and from Clientes', async ({
+test('opens the conversation straight from its address and from Clientes', async ({
   page,
 }) => {
+  // The Dashboard (Painel) lists indicators, each opening the Inbox already
+  // filtered; the conversation itself is reached by its address.
   await mockCrm(page);
-  await page.goto('/dashboard');
-  const recent = page
-    .locator('.pend-list')
-    .getByRole('link', { name: 'Studio Malu' });
-  await expect(recent).toHaveAttribute('href', '/inbox/conversation-1');
-  await recent.click();
-  await expect(page).toHaveURL('/inbox/conversation-1');
+  await page.goto('/inbox/conversation-1');
   await expect(
     page.getByRole('heading', { level: 2, name: 'Studio Malu' }),
   ).toBeVisible();

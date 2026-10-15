@@ -1,8 +1,7 @@
 # RFC 022 — Fundação visual whitelabel do CRM
 
-Status: em revisão. A fundação (tokens, shell, componentes base) está
-implementada na branch `design/fundacao-whitelabel` para avaliação; o ADR só
-será escrito depois da aprovação do PO.
+Status: decidida em 15/10/2026. O PO aprovou a fundação depois de vê-la rodando
+no celular. Decisão: [ADR 035](../adr/035-fundacao-visual-whitelabel-mobile-first.md).
 
 Responsável: Tech Lead. Aprovador: PO (Rômulo), que pediu reestruturar o design
 a partir da base, com o logotipo real da Silmer, as cores da marca nas ações, o
@@ -123,4 +122,5 @@ vocabulário por segmento e configuração de empresa em runtime. Ver a seção
 
 ## Resultado
 
-Pendente de revisão do PO.
+Aprovada pelo PO em 15/10/2026, com o acréscimo de mobile-first, e registrada
+no [ADR 035](../adr/035-fundacao-visual-whitelabel-mobile-first.md).

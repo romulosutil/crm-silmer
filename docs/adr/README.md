@@ -59,3 +59,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [032 — Separar Pedido, Conversa e Assunto](032-separar-pedido-conversa-e-assunto.md); Pedido manual sem canal, encerramento neutro e assuntos de atendimento.
 - [033 — Telefone no cadastro e roteamento](033-telefone-no-cadastro-e-roteamento.md); novo cadastro e Pedido manual exigem telefone, com legados consultáveis.
 - [034 — Chat do site com telefone declarado](034-chat-do-site-com-telefone-declarado.md); sessão isolada, busca interna e Pedido novo antes do WhatsApp.
+- [035 — Fundação visual whitelabel e mobile-first](035-fundacao-visual-whitelabel-mobile-first.md); tokens de marca em três camadas, logotipo por configuração e barra inferior no celular.

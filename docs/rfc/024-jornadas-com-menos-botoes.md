@@ -1,6 +1,7 @@
 # RFC 024 — Jornadas com menos botões
 
-Status: proposta, em revisão desde 15/10/2026.
+Status: aprovada pelo PO em 15/10/2026, com as opções recomendadas. Decisão:
+[ADR 036](../adr/036-padroes-de-jornada.md).
 
 Responsável: Tech Lead UX. Aprovador: PO (Rômulo). Base: `origin/master` em
 15/10/2026 (`e9dc75e`).
@@ -10,8 +11,9 @@ com vínculo a FIN-02 de [crm-mvp](../../.specs/features/crm-mvp/spec.md)
 (seção "Emendas de requisitos"). Princípios: [`design.md`](../../design.md) §3 e §9,
 [`PRODUCT.md`](../../PRODUCT.md) e [`RULES.md`](../../RULES.md).
 Evidência: [pesquisa com usuários sintéticos](../product/pesquisa-ux-sintetica-2026-10-15.md).
-Tarefas: T121–T133 (a criar em `.specs/features/pedidos-mvp/tasks.md`).
-Issues e PRs: a vincular quando as fatias forem abertas.
+Tarefas: T121–T133 em [`tasks.md`](../../.specs/features/pedidos-mvp/tasks.md)
+(T131 adiada).
+Issues e PRs: a vincular quando as fatias forem integradas.
 
 ## Contexto e evidência
 
@@ -221,16 +223,16 @@ ou dependência.
 | 3    | A4 ∥ B3                  | Pedido e Conversa                                                      | Onda 2            |
 | 4    | A2b                      | Pedido                                                                 | Onda 3            |
 | 5    | A3                       | Diálogo "Gerar o pedido" com valor final e forma de pagamento          | Pergunta D2 do PO |
-| 6    | E1                       | Entrada do vendedor pela Caixa em "Minhas"                             | Pergunta D3 do PO |
-| 7    | F1, F2                   | A detalhar em S4                                                       | Ondas anteriores  |
+| 6    | E1                       | Entrada do vendedor pela Caixa em "Minhas" (adiada pelo PO, D3)        | Pergunta D3 do PO |
+| 7    | F1, F2                   | T132: orçamento de controles; T133: fechamento da documentação         | Ondas anteriores  |
 
-O escopo de cada fatia (S2, S3, A1–A4, B1–B3, C1, D1, E1, F1 e F2) é
-detalhado nas tarefas T121–T133 criadas em S4; a letra indica o tema da
-seção "Propostas e opções".
+O escopo de cada fatia de A1 a F2 (A1–A4, B1–B3, C1, D1, E1, F1 e F2) está
+nas tarefas T121–T133 criadas em S4; a letra indica o tema da seção
+"Propostas e opções". S2 e S3 foram preparação técnica, sem tarefa T.
 
 ## Emendas de requisitos
 
-Aplicadas em S4, só depois da aprovação do PO. IDs novos, todos a criar:
+Aplicadas em S4, depois da aprovação do PO (ver "Resultado"). IDs novos:
 
 | Grupo           | IDs novos       | Tema                                                           |
 | --------------- | --------------- | -------------------------------------------------------------- |
@@ -336,8 +338,38 @@ Pedem ADR próprio:
 
 ## Resultado
 
-A preencher após a revisão.
+Aprovada pelo PO em 15/10/2026 e registrada no
+[ADR 036](../adr/036-padroes-de-jornada.md), seguindo o precedente do RFC 022
+→ ADR 035.
 
-Depois da aprovação, recomenda-se registrar a decisão durável no ADR 036
-("Padrões de jornada: próximo passo único, filtros em folha e progresso
-real"), seguindo o precedente do RFC 022 → ADR 035.
+- **D1 — sim.** Valem as opções recomendadas: A2 (progresso real e uma seção
+  por vez), B2 (uma ação por vez na conversa), C2 (atalhos com contagem e
+  folha de filtros) e D2 (cartão "Próximo passo" por papel).
+- **D2 — sim.** Valor final e forma de pagamento passam a ser digitados no
+  diálogo "Gerar o pedido" (PFI-19, T125).
+- **D3 — adiada.** O vendedor continua entrando pelo Painel depois do login;
+  a E1 não é implementada. PNL-04 fica registrado como adiado e a T131 sem
+  implementação ativa até nova decisão.
+
+Emendas aplicadas na S4: PFI-15 a PFI-20, PCX-10 a PCX-14 e PLI-09 a PLI-10
+em [Pedidos MVP](../../.specs/features/pedidos-mvp/spec.md), PNL-01 a PNL-04
+em [CRM MVP](../../.specs/features/crm-mvp/spec.md), notas nos critérios
+emendados, glossário e [`design.md`](../../design.md) §16.
+
+| Fatia      | Tarefa    | Situação em 15/10/2026                                                     |
+| ---------- | --------- | -------------------------------------------------------------------------- |
+| S1         | —         | Concluída: este RFC                                                        |
+| S2         | —         | Concluída: `screen-styles` separado por tela                               |
+| S3         | —         | Concluída: suporte do E2E e `orders-list.spec.js` separados                |
+| D0         | —         | Concluída: a falha da fila no demo era API defasada no ambiente, não bug   |
+| S4         | —         | Concluída: emendas de requisitos, tarefas T121–T133 e ADR 036              |
+| A1         | T121      | Em andamento em `ux/jornadas`: progresso real e rodapé do próximo passo    |
+| A2a        | T122      | Em andamento em `ux/jornadas`: cabeçalhos com estado e "Editar" com objeto |
+| A4         | T123      | Em andamento em `ux/jornadas`: microcopy da página do pedido               |
+| A2b        | T124      | Em andamento em `ux/jornadas`: acordeão no celular                         |
+| A3         | T125      | Em andamento em `ux/jornadas`: diálogo "Gerar o pedido"                    |
+| B1, B2, B3 | T126–T128 | Em andamento em `ux/jornadas`: link do pedido, Assumir e fila da Caixa     |
+| C1         | T129      | Em andamento em `ux/jornadas`: chips e folha de filtros em Pedidos         |
+| D1         | T130      | Em andamento em `ux/jornadas`: Painel com o próximo passo por papel        |
+| E1         | T131      | Adiada pelo PO (D3)                                                        |
+| F1, F2     | T132–T133 | A fazer: teste de orçamento de controles e fechamento da documentação      |

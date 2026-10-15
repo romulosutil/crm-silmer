@@ -1,7 +1,8 @@
 # Glossário de produto e texto da interface
 
-Rastreabilidade: `PCL-01..12`, `PFI-01..13`, `PLI-01..08`, `PCX-01..09`,
-`ORD-01..04`, `TEC-01..08`, tarefas `T24..T38` e `T83..T87` de Pedidos MVP. As alterações solicitadas em
+Rastreabilidade: `PCL-01..12`, `PFI-01..20`, `PLI-01..10`, `PCX-01..14`,
+`ORD-01..04`, `TEC-01..08`, `PNL-01..04`, tarefas `T24..T38`, `T83..T87` e
+`T121..T133` de Pedidos MVP. As alterações solicitadas em
 03/10/2026 acrescentam técnica por item, arte do pedido (ADR 020) e a
 leitura operacional de vendas e inatividade. Este glossário fixa a redação; as regras de
 permissão e estado continuam em `RULES.md` e na especificação.
@@ -11,7 +12,7 @@ permissão e estado continuam em `RULES.md` e na especificação.
 | **Cliente**                              | Pessoa ou organização atendida; o cadastro técnico é `Contact`.                                                                                                                                                            | Alternar entre lead, contato e cliente na mesma tela.                           |
 | **Conversa**                             | Histórico do canal e local de atendimento.                                                                                                                                                                                 | Tratar chegada de mensagem como venda ou pedido.                                |
 | **Atendimento**                          | Trabalho do agente ou de uma pessoa sobre a conversa.                                                                                                                                                                      | Usar “concluído” para indicar pedido confirmado.                                |
-| **Agente**                               | O atendimento automático que conversa antes de uma pessoa. O nome vem de `brand.assistant` (whitelabel); na Caixa de Entrada: aba e selo “Com o agente”, autor “Agente”.                                               | “IA”, “Assistente Silmer”, “Vendedor Silmer” ou outro nome na mesma tela.        |
+| **Agente**                               | O atendimento automático que conversa antes de uma pessoa. O nome vem de `brand.assistant` (whitelabel); na Caixa de Entrada: aba e selo “Com o agente”, autor “Agente”.                                                   | “IA”, “Assistente Silmer”, “Vendedor Silmer” ou outro nome na mesma tela.       |
 | **Pedido**                               | Registro comercial ligado à conversa, com número `NN-CRM`, itens e situação.                                                                                                                                               | “Ficha” como nome do registro editável.                                         |
 | **Pendente**                             | Pedido em edição; ainda não foi confirmado por pessoa autorizada.                                                                                                                                                          | “Aprovado”, “em produção” ou “pago”.                                            |
 | **Confirmado**                           | Pedido gerado por pessoa autorizada, com valor e condição registrados; permite imprimir.                                                                                                                                   | Inferir recebimento ou início da produção.                                      |
@@ -24,7 +25,10 @@ permissão e estado continuam em `RULES.md` e na especificação.
 | **Estampa (referência)**                 | Adicional do item: o que vai estampado e onde, quando ajuda a produção. Não bloqueia.                                                                                                                                      | Usar para dizer quem faz a arte.                                                |
 | **Cor do tecido — frente/costas/mangas** | Adicionais com a cor do tecido de cada parte, quando difere da cor do item.                                                                                                                                                | Confundir com o número de cores da arte.                                        |
 | **Viés das mangas**                      | Acabamento das mangas quando aplicável.                                                                                                                                                                                    | Confundir com a gola.                                                           |
-| **Arte do pedido**                       | Quem faz a arte, em Estampa e arquivos: “O cliente envia a arte”, “A Silmer cria a arte” (podem coexistir) ou “Sem estampa”. Uma marcação é obrigatória para gerar; o bot preenche e o vendedor confere.                   | Repetir a origem da arte dentro do item.                                        |
+| **Arte do pedido**                       | Quem faz a arte, na seção Arte do pedido: “O cliente envia a arte”, “A Silmer cria a arte” (podem coexistir) ou “Sem estampa”. Uma marcação é obrigatória para gerar; o bot preenche e o vendedor confere.                 | Repetir a origem da arte dentro do item.                                        |
+| **Datas do pedido**                      | Seção da página do pedido com as datas do lastro (ADR 008). Na ficha impressa continua “Lastro do pedido” (RFC 024).                                                                                                       | “Lastro” na tela.                                                               |
+| **Próximo passo**                        | O único passo que a pessoa deve dar agora: no pedido, o primeiro pendente de “Para gerar o pedido: N de 3”; no Painel, o cartão por papel. Só conta pendência real (ADR 036).                                              | Progresso por visita, total que muda ou “0” quando a leitura falhou.            |
+| **Filtros**                              | Botão que abre a folha (painel que sobe sobre a tela) com os filtros menos usados; os ativos ficam num resumo, cada um com botão de remover, e a lista mostra a contagem (ADR 036).                                        | Abas, seletores e chips competindo pelo mesmo filtro.                           |
 | **Arquivo da arte**                      | Um dos até cinco arquivos, de até 10 MB cada, que orientam designers e impressão. É enviado na página do pedido e guardado no RustFS; PNG, JPEG e WebP mostram miniatura, os demais formatos o ícone da extensão.          | Expor link público, nome com PII ou mostrar o arquivo antes do envio concluído. |
 | **Arte final**                           | O arquivo definitivo da arte do pedido: um por pedido, fora da conta dos cinco arquivos da arte, com as mesmas regras de envio e download.                                                                                 | Chamar referência de arte final ou anexar mais de uma.                          |
 | **Cores da arte**                        | Bloco do controle de produção: número de cores de tinta por parte da peça, preenchido à mão.                                                                                                                               | “Cor frente”, que é a cor do tecido.                                            |
@@ -46,6 +50,26 @@ permissão e estado continuam em `RULES.md` e na especificação.
 | Reabrir               | **Reabrir pedido**                       | Volta a Pendente e bloqueia a impressão.                       |
 | Imprimir              | **Imprimir ficha**                       | Abre o documento do pedido confirmado.                         |
 | Recarregar após falha | **Tentar novamente**                     | Consulta novamente após erro; atualização normal é automática. |
+| Editar seção          | **Editar** + nome da seção               | Abre só aquela seção; as outras ficam indisponíveis.           |
+| Assumir               | **Assumir atendimento**                  | Torna a pessoa dona da conversa e mostra a resposta.           |
+| Tirar o filtro        | **Limpar filtro**                        | Volta a lista para Todos.                                      |
+
+Desde a RFC 024 (ADR 036), **Gerar pedido** abre o diálogo “Gerar o pedido”,
+onde se digitam valor final e forma de pagamento, e os botões de edição
+nomeiam a seção: **Editar resumo**, **Editar datas**, **Editar itens**,
+**Editar arte** e **Editar observações**.
+
+## Tela × ficha impressa (RFC 024)
+
+A tela usa a palavra de quem opera; a ficha impressa não muda (templates e
+hashes intactos).
+
+| Na tela                                                     | Antes na tela        | Na ficha impressa                                                                                                      |
+| ----------------------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Arte do pedido** (quem faz a arte, arte final e arquivos) | Estampa e arquivos   | Linha “Arte do pedido” com quem faz a arte; os arquivos não saem no papel.                                             |
+| **Datas do pedido**                                         | Lastro do pedido     | Faixa “Lastro do pedido” (Primeiro contato, Pago em, Entregue em); Data do pedido e Entrega prometida ficam no Resumo. |
+| Não aparece                                                 | Controle de produção | Página “Controle de produção”, preenchida à mão pela produção.                                                         |
+| **Estampa (referência)**, adicional do item                 | Igual                | Igual, no bloco de adicionais do item. Não diz quem faz a arte.                                                        |
 
 ## Para quem cada informação serve
 

@@ -126,7 +126,7 @@ um canal não corrompe o histórico do outro.
 **Critérios de aceite:**
 
 1. **FIN-01:** WHEN Pedido é confirmado THEN o sistema SHALL registrar valor, data e pessoa responsável e contabilizar a venda uma vez.
-2. **FIN-02:** WHEN gestor consulta Dashboard THEN o sistema SHALL explicitar período e universo dos totais de confirmados, sem contar pendentes ou recebimentos.
+2. **FIN-02:** WHEN gestor consulta Dashboard THEN o sistema SHALL explicitar período e universo dos totais de confirmados, sem contar pendentes ou recebimentos. O seletor de período declara o que afeta (PNL-02).
 3. **FIN-03:** WHEN Pedido é reaberto THEN o sistema SHALL preservar histórico e retirá-lo dos totais de confirmados; cancelamento/perda comercial permanecem fora do ciclo MVP (ADR 006).
 
 **Teste independente:** confirmar, reabrir e consultar totais de pedidos em um universo conhecido; valores recebidos e saldo a receber não integram o cálculo do MVP.
@@ -146,6 +146,48 @@ um canal não corrompe o histórico do outro.
 **Teste independente:** validar acesso por função e executar o procedimento de
 retenção em dados de teste com relógio controlado, cobrindo encerramento antes
 de sete dias, teto de sete dias e documento comercial excluído da purga curta.
+
+### P1.7 Painel por papel
+
+**User story:** Como vendedor ou gestor, quero abrir o Painel e saber o que
+fazer agora, sem ler todos os indicadores.
+
+Decisão do PO de 15/10/2026 no [RFC 024](../../../docs/rfc/024-jornadas-com-menos-botoes.md),
+registrada no [ADR 036](../../../docs/adr/036-padroes-de-jornada.md). FIN-02 e
+REV-06 continuam valendo. Nada aqui muda API, contrato de dados ou migração: o
+Painel usa os resumos que já lê. Tarefas T130 e T131 em
+[Pedidos MVP](../pedidos-mvp/tasks.md).
+
+**Critérios de aceite:**
+
+1. **PNL-01:** WHEN um vendedor ou um gestor abre o Painel THEN o topo SHALL
+   mostrar um único cartão "Próximo passo", com uma frase e um link para a
+   lista já filtrada, escolhido pela primeira condição verdadeira na ordem do
+   papel. Vendedor: conversas suas a responder → conversas aguardando vendedor
+   para assumir → seus pedidos pendentes a completar → entregas atrasadas →
+   "Nada urgente agora", sem link. Gestor: conversas fora do SLA (Esperando
+   vendedor) → entregas atrasadas → agente parado → pedidos a confirmar. WHEN
+   a fonte de uma condição falhou THEN o cartão SHALL NOT pular essa condição
+   nem dizer "Nada urgente agora": SHALL dizer que não conseguiu ler aquela
+   informação, com "Tentar novamente".
+2. **PNL-02:** O seletor de período SHALL declarar em texto visível "Vale para
+   Vendido"; trocar o período SHALL mudar só o indicador Vendido e anunciá-lo,
+   sem mudar os demais (FIN-02).
+3. **PNL-03:** WHEN a leitura da fila falha THEN a seção da fila (Atendimento
+   do gestor, Minha fila do vendedor) SHALL continuar visível, com "—" no
+   lugar de cada número e "Tentar novamente"; a seção SHALL NOT sumir e
+   nenhum número SHALL aparecer como "0" sem leitura bem-sucedida. Os
+   indicadores de pedidos continuam com os próprios valores.
+4. **PNL-04:** Destino do login por papel (o vendedor entra em
+   `/inbox?fila=minhas` em vez do Painel). **Adiado** pelo PO em 15/10/2026
+   (pergunta D3 do RFC 024): não implementar; o login continua levando ao
+   Painel ou à rota pedida (LOJ-24). A tarefa T131 fica sem implementação
+   ativa até nova decisão.
+
+**Teste independente:** como vendedor com uma conversa a responder, ver o
+cartão apontar para "Minhas conversas"; derrubar a leitura da fila e ver "—"
+com "Tentar novamente" no cartão e na seção; trocar o período e ver só Vendido
+mudar.
 
 ### P2.1 PIX e boas-vindas — diferido
 
@@ -190,8 +232,9 @@ A ADR 006 retirou cobrança, comprovante e status de pagamento do MVP. PAY-01..0
 | Financeiro         | FIN-01 a FIN-03 | Confirmados e valor vendido implementados; UAT pendente                           |
 | Privacidade        | PRV-01 a PRV-03 | Coberta no contrato; homologação pendente                                         |
 | PIX e boas-vindas  | PAY-01 a PAY-05 | Diferidos pela ADR 006; datas manuais não implementam cobrança                    |
+| Painel por papel   | PNL-01 a PNL-04 | PNL-01..03 em andamento (T130, `ux/jornadas`); PNL-04 adiado pelo PO (D3, T131)   |
 
-**Cobertura:** 41 IDs preservados, incluindo 5 PAY diferidos; implementação, homologação e aprovação externa têm estados distintos. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.
+**Cobertura:** 45 IDs preservados, incluindo 5 PAY diferidos e o PNL-04 adiado; implementação, homologação e aprovação externa têm estados distintos. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.
 
 ## Critério de passagem
 

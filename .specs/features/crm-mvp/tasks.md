@@ -74,6 +74,8 @@ tombstones, backup externo e recuperação. Issues #3, #11 e #29 preservam seus
 gates independentes; storage de mídia transitória pode seguir a exceção interna.
 
 **Rastreabilidade:** FIN-01..03, PRV-02..03, REV-06..09 e T06.3/T07.3.
+Painel por papel (RFC 024, ADR 036): PNL-01..03 na T130 e PNL-04, adiado pelo
+PO, na T131, ambas em [Pedidos MVP](../pedidos-mvp/tasks.md).
 
 ## Objetivo 2 — Inbox Multicanal
 

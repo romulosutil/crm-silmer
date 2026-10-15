@@ -60,3 +60,4 @@ canônicos; ele registra o contexto e o motivo da escolha.
 - [033 — Telefone no cadastro e roteamento](033-telefone-no-cadastro-e-roteamento.md); novo cadastro e Pedido manual exigem telefone, com legados consultáveis.
 - [034 — Chat do site com telefone declarado](034-chat-do-site-com-telefone-declarado.md); sessão isolada, busca interna e Pedido novo antes do WhatsApp.
 - [035 — Fundação visual whitelabel e mobile-first](035-fundacao-visual-whitelabel-mobile-first.md); tokens de marca em três camadas, logotipo por configuração e barra inferior no celular.
+- [036 — Padrões de jornada: próximo passo único, filtros em folha e progresso real](036-padroes-de-jornada.md); decidido no RFC 024, com o valor final no diálogo de gerar e o destino do login por papel adiado.

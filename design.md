@@ -268,6 +268,11 @@ Cada componente precisa documentar: propósito, anatomia, variantes, estados, co
 
 ## 9. Padrões por superfície do CRM
 
+> Desde o [ADR 036](docs/adr/036-padroes-de-jornada.md) (RFC 024, 15/10/2026),
+> os padrões de jornada da §16 prevalecem sobre esta seção onde divergirem:
+> filtros e cabeçalho da Caixa de Entrada, gaveta do pedido e ficha de pedido.
+> O texto abaixo é atualizado na T133, quando as fatias estiverem entregues.
+
 ### Caixa de Entrada
 
 Workspace de altura fixa para a atendente (pesquisa UX de 15/10/2026, achado 1):
@@ -413,6 +418,95 @@ Uma tela ou componente só está pronto quando:
 - Criar um novo estilo de botão, input, badge ou panel dentro de uma feature.
 - Truncar conteúdo crítico sem alternativa para leitura completa.
 - Usar drag-and-drop como única forma de alterar etapa.
+
+## 16. Padrões de jornada
+
+Decisão: [ADR 036](docs/adr/036-padroes-de-jornada.md), a partir do
+[RFC 024](docs/rfc/024-jornadas-com-menos-botoes.md), aprovado pelo PO em
+15/10/2026. Requisitos: PFI-15 a PFI-20, PCX-10 a PCX-14 e PLI-09 a PLI-10
+em [Pedidos MVP](.specs/features/pedidos-mvp/spec.md); PNL-01 a PNL-04 em
+[CRM MVP](.specs/features/crm-mvp/spec.md). Valem para toda tela nova ou
+alterada e completam a §3 (baixa carga cognitiva) e a §11 (acessibilidade).
+
+### Orçamento de ações por região
+
+- No máximo uma ação primária e duas secundárias visíveis por região; o resto
+  vai para "Mais".
+- Rótulo de botão é verbo + objeto: "Assumir atendimento", "Editar itens",
+  "Limpar filtro"; nunca só "Assumir" ou "Editar".
+- Alvos de toque de 44 px ou mais, com 8 px entre eles.
+- Abas só de 2 a 7, com 1 a 3 palavras cada; mais que isso vira atalho com
+  contagem ou filtro em folha.
+
+### Próximo passo único, com progresso real
+
+- Quando uma tarefa tem passos, a tela mostra quantos estão feitos ("Para
+  gerar o pedido: 1 de 3") e dá botão só ao próximo passo pendente.
+- O progresso é honesto: cada passo é uma pendência real lida do domínio
+  (`missingFields`), o total não muda no meio e visitar ou abrir uma seção não
+  conta como feito. Sem leitura, não há número.
+- O rodapé fixo do celular leva a mesma ação primária do próximo passo; a
+  ação final ("Gerar pedido") só vira primária quando não há pendência.
+- O preenchimento continua progressivo e não linear (`RULES.md`, regra 4):
+  nada de assistente em páginas separadas.
+
+### Ação indisponível
+
+- Ação indisponível mas relevante usa `aria-disabled="true"`, continua
+  focável e mostra o motivo ao lado ou na descrição acessível ("Salve ou
+  cancele a edição aberta", "Falta: entrega prometida").
+- Ativá-la não executa nada nem perde dado; nunca some sem explicação.
+
+### Filtros em folha
+
+- Na lista: busca, até três atalhos com contagem e o botão "Filtros".
+- "Filtros" abre uma folha (painel que sobe sobre a tela no celular) com os
+  grupos de filtro; Esc fecha e devolve o foco ao botão.
+- Os filtros ativos aparecem num resumo, cada um com botão de remover;
+  filtro fora dos atalhos aparece nomeado com "Limpar filtro".
+- A contagem do resultado fica junto da lista, em região
+  `aria-live="polite"`.
+- Links profundos por query string abrem a lista com o filtro já no resumo.
+- Vazio por filtro é diferente do vazio inicial: diz que nada atende ao filtro
+  e oferece "Limpar filtro".
+
+### Acordeão no celular
+
+- Até 768 px, páginas longas de seções viram acordeão de uma seção aberta por
+  vez; acima disso, as seções ficam abertas e empilhadas.
+- O cabeçalho de cada seção é um botão com `aria-expanded` e `aria-controls`
+  e mostra o estado em texto ("Completo", "Falta a cor do item 2"), que entra
+  no nome acessível.
+- A seção inicial vem do hash da URL ou do primeiro passo pendente; uma seção
+  em edição não fecha até Salvar ou Cancelar.
+
+### Um só modelo de edição
+
+- Todo dado editável fica atrás de "Editar" + seção → Salvar/Cancelar ou do
+  diálogo da ação; nunca num bloco sempre aberto ao lado de seções em
+  leitura.
+- O diálogo da ação final (por exemplo, "Gerar o pedido") revisa o que vai
+  acontecer, pede só o que falta, foca o primeiro campo e devolve o foco com
+  Esc.
+
+### Estados desenhados
+
+- Carregando, vazio, erro e sem permissão têm desenho próprio em toda região.
+- Erro de leitura nunca vira "0" nem faz a seção sumir: o número mostra "—"
+  com "Tentar novamente".
+- Sem permissão, a ação não aparece; a API continua autorizando.
+
+### Metas de controles na primeira tela
+
+Contagem fora da navegação do app, com dados sintéticos, em 390×844 e
+1366×768. A T132 transforma as metas em teste.
+
+| Tela             | Celular                                                      | Notebook |
+| ---------------- | ------------------------------------------------------------ | -------- |
+| Pedido aberto    | ≤ 12; documento ≤ 1.800 px; ≤ 1 "Editar" visível; 1 primária | ≤ 16     |
+| Conversa         | ≤ 9 antes de assumir; ≤ 12 depois; cabeçalho ≤ 2             | ≤ 24     |
+| Caixa de Entrada | ≤ 15; barra de ferramentas de 7 para 5                       | ≤ 24     |
+| Pedidos          | ≤ 12, com o 1º cartão inteiro acima da barra inferior        | ≤ 19     |
 
 ---
 

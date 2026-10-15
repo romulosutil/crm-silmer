@@ -51,11 +51,8 @@ entre os documentos.
 ## Decisão de 15/10/2026
 
 - [022 — Fundação visual whitelabel do CRM](022-fundacao-visual-whitelabel.md), decidida na ADR 035.
+- [024 — Jornadas com menos botões](024-jornadas-com-menos-botoes.md), aprovada pelo PO e decidida na ADR 036; o destino do login por papel (D3) ficou adiado.
 
 ## Proposta de 14/10/2026
 
 - [023 — Backup externo e recuperação do CRM e do n8n](023-backup-externo-e-recuperacao-do-crm-e-n8n.md), pendente de destino externo, execução e drill.
-
-## Proposta de 15/10/2026
-
-- [024 — Jornadas com menos botões](024-jornadas-com-menos-botoes.md), pendente de aprovação do PO; recomenda o ADR 036 depois da decisão.

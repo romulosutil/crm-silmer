@@ -1923,3 +1923,173 @@ avisa até a primeira impressão da ficha; a marca "tirar" foi rejeitada.
 - **Aceite:** ordem de implantação (migration `0034` antes da imagem), aviso
   manual ao cliente pelo WhatsApp, `codigo_crm` no `/status` do n8n.
 - **Gate:** `npm run validate`, suítes live, E2E e `git diff --check`.
+
+## Jornadas com menos botões (RFC 024, 15/10/2026)
+
+Branch de integração `ux/jornadas`, a partir do `master`. Decisão do PO de
+15/10/2026 ([ADR 036](../../../docs/adr/036-padroes-de-jornada.md)): opções
+recomendadas do RFC 024, D2 = sim (valor final e forma de pagamento no
+diálogo "Gerar o pedido") e D3 adiada (a E1 não é implementada). Requisitos:
+PFI-15–PFI-20, PCX-10–PCX-14 e PLI-09–PLI-10 nesta spec; PNL-01–PNL-04 na
+[spec do CRM MVP](../crm-mvp/spec.md).
+
+Regras comuns a todas as tarefas: nenhuma muda API, contrato de dados,
+migração, dependência ou a ficha impressa; a fatia trata no mesmo commit os
+testes listados em "Testes impactados" do RFC 024; `aria-disabled` é ativado
+nos testes por foco e Enter, porque o Playwright espera e falha no `click()`.
+
+Já concluídas na onda 0: S1 (o RFC 024), S2 (`screen-styles` separado por
+tela), S3 (suporte do E2E e lista de Pedidos em arquivo próprio) e D0 (a falha
+da fila no demo era API defasada no ambiente, não bug do Painel). S4 é este
+registro de emendas, ADR 036 e tarefas.
+
+| Tarefa | Fatia | Onda | Depende de     | Status                          |
+| ------ | ----- | ---- | -------------- | ------------------------------- |
+| T121   | A1    | 1    | S4             | Em andamento em `ux/jornadas`   |
+| T122   | A2a   | 2    | T121           | Em andamento em `ux/jornadas`   |
+| T123   | A4    | 3    | T122           | Em andamento em `ux/jornadas`   |
+| T124   | A2b   | 4    | T123           | Em andamento em `ux/jornadas`   |
+| T125   | A3    | 5    | T124; D2 (sim) | Em andamento em `ux/jornadas`   |
+| T126   | B1    | 1    | S4             | Em andamento em `ux/jornadas`   |
+| T127   | B2    | 2    | T126           | Em andamento em `ux/jornadas`   |
+| T128   | B3    | 3    | T127           | Em andamento em `ux/jornadas`   |
+| T129   | C1    | 1    | S4             | Em andamento em `ux/jornadas`   |
+| T130   | D1    | 1    | S4             | Em andamento em `ux/jornadas`   |
+| T131   | E1    | 6    | D3 do PO       | Adiada pelo PO; não implementar |
+| T132   | F1    | 7    | T121–T130      | A fazer                         |
+| T133   | F2    | 7    | T132           | A fazer                         |
+
+### T121: Progresso real e rodapé do próximo passo
+
+- **Requisitos:** PFI-15, PFI-16; emenda PFI-09, PFI-13 e PIT-06.
+- **Arquivos:** `OrderView.vue`, componentes de `components/order/`,
+  `lib/order-format.js`, `styles/screens/40-order.css`,
+  `test/order-format.test.js` e `test/e2e/orders.spec.js`.
+- **Aceite:** "Para gerar o pedido: N de 3" derivado de `missingFields`, só o
+  próximo passo com botão, rodapé com uma primária, "Gerar pedido" com
+  `aria-disabled` e sem chamar a confirmação enquanto houver pendência;
+  ausente para leitor sem permissão, pedido confirmado e pedido da loja.
+- **Gate:** build, lint, `check:design-tokens`, `test/order-format.test.js` e
+  E2E de pedidos.
+
+### T122: Cabeçalhos com estado e "Editar" com objeto
+
+- **Requisitos:** PFI-17; emenda PFI-06 e PLA-07.
+- **Arquivos:** seções de `components/order/`, `lib/order-format.js` e
+  `test/e2e/orders.spec.js`, com os cerca de 40 botões "Editar" que os
+  testes localizam pelo nome.
+- **Aceite:** estado em texto em cada cabeçalho, "Editar" com o nome da
+  seção, os outros com `aria-disabled` e o motivo durante uma
+  edição, sem descartar a aberta.
+- **Gate:** build, lint e E2E de pedidos, inclusive axe.
+
+### T123: Microcopy da página do pedido
+
+- **Requisitos:** PFI-20; emenda PFI-01, PLA-01, TEC-03 e ARQ-01.
+- **Arquivos:** seções de `components/order/`, `brand/index.js` (só leitura),
+  `test/e2e/orders.spec.js` e `test/e2e/store-orders.spec.js`.
+- **Aceite:** "Arte do pedido", "Datas do pedido", sem "Controle de produção"
+  na página, nome da empresa vindo de `brand`, um só controle de adicionar
+  arquivo por vez; templates e hashes da ficha intactos.
+- **Gate:** build, lint, testes de impressão sem mudança e E2E.
+
+### T124: Acordeão no celular
+
+- **Requisitos:** PFI-18; emenda PFI-01 e PFI-08.
+- **Arquivos:** `OrderView.vue`, seções de `components/order/`,
+  `styles/screens/40-order.css`, `50-touch.css` e `test/e2e/orders.spec.js`.
+- **Aceite:** até 768 px, uma seção aberta por vez, estado no nome acessível
+  do cabeçalho, abertura inicial pelo hash ou pelo primeiro passo pendente,
+  seção em edição não fecha; acima de 768 px, tudo aberto.
+- **Gate:** build, lint e E2E em 390×844 e 1366×768.
+
+### T125: Diálogo "Gerar o pedido"
+
+- **Requisitos:** PFI-19; emenda PFI-13 e PIT-06. Premissa D2 aprovada.
+- **Arquivos:** `OrderClosingSection.vue` ou o novo diálogo em
+  `components/order/`, `OrderView.vue`, `test/e2e/orders.spec.js` e
+  `test/e2e/store-orders.spec.js`.
+- **Aceite:** revisão, "Valor final" e "Forma de pagamento" só no diálogo,
+  foco inicial em "Valor final", Esc devolve o foco, erro no campo sem enviar,
+  422 com pendência fecha e foca o próximo passo, 409 pede para recarregar;
+  pedido da loja e confirmado sem mudança.
+- **Gate:** build, lint e E2E de pedidos e da loja, inclusive axe.
+
+### T126: Pedido como link na conversa
+
+- **Requisitos:** PCX-10, PCX-11, PCX-12; supera PCX-06 a PCX-09.
+- **Arquivos:** `InboxView.vue`, `components/order/OrderDrawer.vue` (sai),
+  `styles/screens/60-order-drawer.css`, `70-inbox.css` e
+  `test/e2e/crm-ui.spec.js`.
+- **Aceite:** link "Pedido NN-CRM · status", sem gaveta e sem "Sem pedido" no
+  cabeçalho, "Criar pedido" só para dono ou administrador, resumo em Detalhes
+  › Pedido, atualização ao vivo.
+- **Gate:** build, lint e E2E da Caixa de Entrada.
+
+### T127: "Assumir atendimento" no lugar do campo de mensagem
+
+- **Requisitos:** PCX-13; emenda PCX-05.
+- **Arquivos:** `InboxView.vue`, `styles/screens/70-inbox.css` e
+  `test/e2e/crm-ui.spec.js`.
+- **Aceite:** uma primária por vez na região da resposta, motivo e tempo
+  parado, foco no campo depois de assumir, "Encerrar conversa" em "Mais" em
+  todas as larguras, cabeçalho com no máximo dois controles.
+- **Gate:** build, lint e E2E da Caixa de Entrada.
+
+### T128: Atalhos e folha de filtros na Caixa de Entrada
+
+- **Requisitos:** PCX-14; emenda PCX-02 e PCX-05; mantém PCX-04.
+- **Arquivos:** `InboxView.vue`, `styles/screens/70-inbox.css` e
+  `test/e2e/crm-ui.spec.js` (grupo "Estado das conversas" e
+  `getByLabel('Fila')`).
+- **Aceite:** busca, Todas · Aguardando · Minhas com contagem, folha com
+  Situação e Responsável, resumo removível, links `?fila=` e `?situacao=` do
+  Painel.
+- **Gate:** build, lint e E2E da Caixa de Entrada.
+
+### T129: Chips e folha de filtros em Pedidos
+
+- **Requisitos:** PLI-09, PLI-10; emenda PLI-02; mantém PLI-03, LOJ-31 e
+  LOJ-33.
+- **Arquivos:** `OrdersView.vue`, `styles/screens/30-orders-list.css` e
+  `test/e2e/orders-list.spec.js`.
+- **Aceite:** três chips, oito filtros agrupados com escolha única, filtro
+  nomeado com "Limpar filtro", contagem do resultado no lugar do resumo, links
+  do Painel.
+- **Gate:** build, lint e E2E da lista.
+
+### T130: Painel com o próximo passo por papel
+
+- **Requisitos:** PNL-01, PNL-02, PNL-03 (crm-mvp); mantém FIN-02 e REV-06.
+- **Arquivos:** `DashboardView.vue`, `styles/screens/10-dashboard.css`,
+  `test/e2e/dashboard-roles.spec.js` e `test/e2e/dashboard-refresh.spec.js`.
+- **Aceite:** cartão "Próximo passo" por papel, "Vale para Vendido" no
+  período, falha da fila com "—" e "Tentar novamente", nunca "0".
+- **Gate:** build, lint e E2E do Painel.
+
+### T131: Entrada do vendedor pela Caixa em "Minhas" (adiada)
+
+- **Requisitos:** PNL-04 (crm-mvp), adiado pelo PO (D3).
+- **Situação:** não implementar. Volta a ser planejada só com nova decisão do
+  PO registrada no RFC 024 ou num RFC próprio.
+
+### T132: Orçamento de controles por região
+
+- **Requisitos:** metas do RFC 024; padrões de `design.md` §16; PFI-15–PFI-20,
+  PCX-10–PCX-14, PLI-09–PLI-10 e PNL-01–PNL-03.
+- **Arquivos:** um E2E novo de orçamento de controles e o seu suporte.
+- **Aceite:** em 390×844 e 1366×768, com dados sintéticos, a contagem de
+  controles na primeira tela fica dentro das metas do RFC (pedido aberto,
+  conversa antes e depois de assumir, Caixa de Entrada e Pedidos) e cada
+  região tem no máximo uma primária e duas secundárias visíveis.
+- **Gate:** E2E completo e `npm run validate`.
+
+### T133: Fechamento da documentação
+
+- **Requisitos:** todos os da RFC 024; REV-10 e TEC-08 (glossário).
+- **Arquivos:** rastreabilidade desta spec e da spec do CRM MVP, `design.md`
+  §9, glossário, `PRODUCT.md`, RFC 024 (links de PRs) e índices.
+- **Aceite:** evidência (arquivo:linha) de cada ID novo, §9 alinhada ao que
+  foi entregue, metas medidas registradas, nenhum link quebrado; o ADR 036
+  não é reescrito.
+- **Gate:** `npm run format:check`, links e `git diff --check`.

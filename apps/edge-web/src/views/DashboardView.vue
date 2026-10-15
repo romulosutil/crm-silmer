@@ -1,34 +1,52 @@
 <script setup>
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
+import AppIcon from '../components/AppIcon.vue';
 import { request } from '../lib/api-client.js';
 import {
-  CHANNEL_LABELS,
-  conversationLabel,
-  dateTimeBR,
-  messageText,
-} from '../lib/format.js';
+  PERIODS,
+  assistantIndicator,
+  dueSoonIndicator,
+  longDay,
+  mineIndicator,
+  overdueIndicator,
+  pendingIndicator,
+  soldIndicator,
+  waitingIndicator,
+} from '../lib/dashboard-format.js';
 import { storeNoticeText } from '../lib/order-format.js';
+
+// Pesquisa de UX de 15/10/2026, achado 2: o Painel responde às perguntas de
+// cada papel. O gestor vê o dia (vendas do período, entregas, quem espera
+// uma pessoa e a saúde do assistente); a atendente vê a própria fila
+// primeiro. Cada indicador é um link para a lista já filtrada.
+const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
 
 const heading = ref(null);
 const liveEvent = inject('liveEvent', ref(null));
+const sessionUser = inject(
+  'sessionUser',
+  computed(() => ({})),
+);
 // LOJ-32: the menu shows the same number; the shell does not read it again
 // while the Dashboard is open.
 const menuStoreCount = inject('storeNewCount', ref(0));
 const loading = ref(true);
 const hasLoaded = ref(false);
 const error = ref('');
-const inbox = ref({ items: [], totalCount: 0 });
-const summary = ref({
-  confirmedCount: 0,
-  soldAmountCents: 0,
-  averageTicketCents: 0,
-  pendingCount: 0,
-  totalPiecesSold: 0,
-  storeNewCount: 0,
-  storeNewOldestPaidAt: null,
-});
+const queueError = ref('');
+const period = ref('hoje');
+const periodAnnouncement = ref('');
+/** @type {import('vue').Ref<Record<string, any>>} */
+const summary = ref({});
+/** @type {import('vue').Ref<Record<string, any>|null>} */
+const queue = ref(null);
 let controller;
+let refreshTimer = 0;
+
+const isManager = computed(() =>
+  (sessionUser.value?.capabilities ?? []).includes(ADMIN_CAPABILITY),
+);
 
 // LOJ-31 (ADR 031): paid site orders whose ficha nobody printed yet. The
 // notice is one link to the list filtered on "Loja do site"; it disappears
@@ -39,66 +57,122 @@ const storeNotice = computed(() =>
     summary.value.storeNewOldestPaidAt,
   ),
 );
-let refreshTimer = 0;
 
-const moneyFormatter = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
+const today = computed(() => longDay(summary.value.today));
+const intro = computed(() => {
+  const context = isManager.value
+    ? 'vendas, entregas e quem espera atendimento'
+    : 'sua fila primeiro, depois pedidos e entregas';
+  return today.value ? `${today.value}: ${context}.` : `Hoje: ${context}.`;
 });
-const money = (cents) => moneyFormatter.format(Number(cents || 0) / 100);
-const piecesPerSale = computed(() =>
-  summary.value.confirmedCount
-    ? (
-        summary.value.totalPiecesSold / summary.value.confirmedCount
-      ).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
-    : '—',
+const soldLabel = computed(
+  () => PERIODS.find((option) => option.key === period.value)?.sold ?? '',
 );
 
-const attentionCount = computed(
-  () => inbox.value.items.filter((item) => item.requiresAttention).length,
-);
-const unassignedCount = computed(
-  () => inbox.value.items.filter((item) => !item.assignedUser).length,
-);
-const channelCounts = computed(() =>
-  Object.entries(CHANNEL_LABELS).map(([channel, label]) => ({
-    channel,
-    count: inbox.value.items.filter((item) => item.channel === channel).length,
-    label,
-  })),
-);
-const maxChannel = computed(() =>
-  Math.max(1, ...channelCounts.value.map((channel) => channel.count)),
-);
+const now = computed(() => queue.value?.generatedAt);
+const cards = computed(() => ({
+  assistant: {
+    ...assistantIndicator(queue.value?.assistant, now.value),
+    label: 'Assistente',
+    to: { path: '/inbox', query: { situacao: 'agente' } },
+  },
+  dueSoon: {
+    ...dueSoonIndicator(summary.value.deliveries),
+    label: 'Próximas entregas',
+    to: { path: '/pedidos', query: { entrega: 'proxima' } },
+  },
+  mine: {
+    ...mineIndicator(queue.value?.mine, now.value),
+    label: 'Minhas conversas',
+    to: { path: '/inbox', query: { fila: 'minhas' } },
+  },
+  overdue: {
+    ...overdueIndicator(summary.value.deliveries),
+    label: 'Entregas atrasadas',
+    to: { path: '/pedidos', query: { entrega: 'atrasada' } },
+  },
+  pending: {
+    ...pendingIndicator(summary.value.pendingCount),
+    label: 'Pedidos a confirmar',
+    to: { path: '/pedidos', query: { status: 'pendente' } },
+  },
+  sold: {
+    ...soldIndicator(summary.value.period),
+    label: soldLabel.value,
+    to: { path: '/pedidos', query: { status: 'confirmado' } },
+  },
+  waiting: {
+    ...waitingIndicator(queue.value?.waitingHandoff, now.value),
+    label: 'Esperando vendedor',
+    to: { path: '/inbox', query: { situacao: 'aguardando' } },
+  },
+}));
 
-async function loadDashboard() {
+// The manager reads the day first; the seller reads their own queue first.
+const sections = computed(() => {
+  const orders = {
+    cards: ['sold', 'pending', 'overdue', 'dueSoon'],
+    id: 'orders',
+    period: true,
+    title: isManager.value ? 'Vendas e entregas' : 'Pedidos e entregas',
+  };
+  const attendance = {
+    cards: isManager.value
+      ? ['waiting', 'assistant', 'mine']
+      : ['mine', 'waiting'],
+    id: 'attendance',
+    queue: true,
+    title: isManager.value ? 'Atendimento' : 'Minha fila',
+  };
+  return isManager.value ? [orders, attendance] : [attendance, orders];
+});
+
+async function loadDashboard({ announce = false } = {}) {
   controller?.abort();
   const currentController = new AbortController();
   controller = currentController;
   loading.value = true;
-  try {
-    const [inboxResponse, summaryResponse] = await Promise.all([
-      request('/api/v1/inbox/conversations?limit=100', {
-        signal: currentController.signal,
-      }),
-      request('/api/v1/orders/summary', { signal: currentController.signal }),
-    ]);
-    inbox.value = inboxResponse.data;
-    summary.value = summaryResponse.data;
-    const storeCount = Number(summaryResponse.data?.storeNewCount ?? 0);
+  const signal = currentController.signal;
+  const [orders, inbox] = await Promise.allSettled([
+    request(
+      `/api/v1/orders/summary?period=${encodeURIComponent(period.value)}`,
+      {
+        signal,
+      },
+    ),
+    request('/api/v1/inbox/summary', { signal }),
+  ]);
+  if (controller !== currentController) return;
+  loading.value = false;
+  if (orders.status === 'fulfilled') {
+    summary.value = orders.value.data ?? {};
+    const storeCount = Number(summary.value.storeNewCount ?? 0);
     menuStoreCount.value =
       Number.isSafeInteger(storeCount) && storeCount > 0 ? storeCount : 0;
     hasLoaded.value = true;
     error.value = '';
-  } catch (cause) {
-    if (cause?.name !== 'AbortError') {
-      error.value = hasLoaded.value
-        ? 'Não foi possível atualizar os indicadores. Os dados exibidos podem estar desatualizados.'
-        : 'Não foi possível carregar os indicadores.';
-    }
-  } finally {
-    if (controller === currentController) loading.value = false;
+    if (announce) periodAnnouncement.value = `${soldLabel.value} atualizado.`;
+  } else if (orders.reason?.name !== 'AbortError') {
+    error.value = hasLoaded.value
+      ? 'Não foi possível atualizar os indicadores. Os dados exibidos podem estar desatualizados.'
+      : 'Não foi possível carregar os indicadores.';
   }
+  if (inbox.status === 'fulfilled') {
+    queue.value = inbox.value.data ?? null;
+    queueError.value = '';
+  } else if (inbox.reason?.name !== 'AbortError') {
+    queueError.value = queue.value
+      ? 'A fila não foi atualizada agora. Os números podem estar desatualizados.'
+      : 'Não foi possível consultar a fila agora.';
+  }
+}
+
+/** @param {string} key */
+function choosePeriod(key) {
+  if (period.value === key) return;
+  period.value = key;
+  periodAnnouncement.value = '';
+  void loadDashboard({ announce: true });
 }
 
 function scheduleLiveRefresh() {
@@ -133,11 +207,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page dashboard-page">
     <header class="page-heading">
       <div>
         <h1 ref="heading" tabindex="-1">Dashboard</h1>
-        <p>Vendas confirmadas e trabalho que pede atenção, com dados do CRM.</p>
+        <p>{{ intro }}</p>
       </div>
     </header>
 
@@ -184,154 +258,64 @@ onBeforeUnmount(() => {
           {{ loading ? 'Consultando…' : 'Tentar novamente' }}
         </button>
       </div>
-      <dl class="kpi-grid">
-        <div class="kpi kpi--accent">
-          <dt>Valor vendido</dt>
-          <dd class="kpi-value">{{ money(summary.soldAmountCents) }}</dd>
-          <dd class="kpi-meta">Total histórico dos pedidos confirmados</dd>
-        </div>
-        <div class="kpi">
-          <dt>Vendas</dt>
-          <dd class="kpi-value">{{ summary.confirmedCount }}</dd>
-          <dd class="kpi-meta">Pedidos confirmados</dd>
-        </div>
-        <div class="kpi">
-          <dt>Ticket médio</dt>
-          <dd class="kpi-value">{{ money(summary.averageTicketCents) }}</dd>
-          <dd class="kpi-meta">Valor vendido dividido pelas vendas</dd>
-        </div>
-        <div class="kpi">
-          <dt>Pedidos pendentes</dt>
-          <dd class="kpi-value">{{ summary.pendingCount }}</dd>
-          <dd class="kpi-meta">
-            <RouterLink to="/pedidos">Ver carteira de pedidos</RouterLink>
-          </dd>
-        </div>
-      </dl>
+      <p v-if="periodAnnouncement" class="sr-only" role="status">
+        {{ periodAnnouncement }}
+      </p>
 
-      <div class="dash-grid section-gap">
-        <section class="surface" aria-labelledby="sales-reading-title">
-          <div class="panel-head">
-            <h2 id="sales-reading-title">Leitura das vendas</h2>
-            <p>Somente pedidos confirmados</p>
-          </div>
-          <dl class="rank">
-            <div class="rank-row metric-row">
-              <dt>Peças vendidas</dt>
-              <dd class="rank-value">{{ summary.totalPiecesSold }}</dd>
-            </div>
-            <div class="rank-row metric-row">
-              <dt>Peças por venda</dt>
-              <dd class="rank-value">{{ piecesPerSale }}</dd>
-            </div>
-          </dl>
-          <p><RouterLink to="/pedidos">Analisar pedidos</RouterLink></p>
-        </section>
-        <section class="surface" aria-labelledby="attention-title">
-          <div class="panel-head">
-            <h2 id="attention-title">Atendimento agora</h2>
-            <p>Nas 100 conversas mais recentes</p>
-          </div>
-          <dl class="rank">
-            <div class="rank-row metric-row">
-              <dt>Pedem atenção</dt>
-              <dd class="rank-value">{{ attentionCount }}</dd>
-            </div>
-            <div class="rank-row metric-row">
-              <dt>Sem responsável</dt>
-              <dd class="rank-value">{{ unassignedCount }}</dd>
-            </div>
-          </dl>
-          <p><RouterLink to="/inbox">Abrir Caixa de Entrada</RouterLink></p>
-        </section>
-      </div>
-
-      <div class="section-gap">
-        <section class="surface" aria-labelledby="channels-title">
-          <div class="panel-head">
-            <h2 id="channels-title">Conversas por canal</h2>
-            <p>Até 100 conversas mais recentes</p>
-          </div>
-          <dl class="rank">
-            <div
-              v-for="channel in channelCounts"
-              :key="channel.channel"
-              class="rank-row channel-row"
-            >
-              <dt>{{ channel.label }}</dt>
-              <dd>
-                <span class="rank-track">
-                  <span
-                    class="rank-fill"
-                    :style="{
-                      '--rank-size': `${Math.round((channel.count / maxChannel) * 100)}%`,
-                    }"
-                  ></span>
-                </span>
-              </dd>
-              <dd class="rank-value">{{ channel.count }}</dd>
-            </div>
-          </dl>
-        </section>
-      </div>
-
-      <section class="surface section-gap" aria-labelledby="recent-title">
-        <div class="panel-head">
-          <h2 id="recent-title">Conversas recentes</h2>
-          <p>Conteúdo mínimo necessário à operação</p>
-        </div>
-        <ul v-if="inbox.items.length" class="pend-list">
-          <li
-            v-for="conversation in inbox.items.slice(0, 6)"
-            :key="conversation.id"
+      <section
+        v-for="section in sections"
+        :key="section.id"
+        class="dashboard-section"
+        :aria-labelledby="`dashboard-${section.id}-title`"
+      >
+        <div class="dashboard-section-head">
+          <h2 :id="`dashboard-${section.id}-title`">{{ section.title }}</h2>
+          <div
+            v-if="section.period"
+            class="segmented-options"
+            role="group"
+            aria-label="Período das vendas"
           >
-            <div>
-              <RouterLink
-                class="pend-link"
-                :to="`/inbox/${encodeURIComponent(conversation.id)}`"
-                >{{ conversation.contact.label }}</RouterLink
-              >
-              <p>
-                {{
-                  CHANNEL_LABELS[conversation.channel] ?? conversation.channel
-                }}
-                · {{ messageText(conversation.lastMessage) }}
-              </p>
-            </div>
-            <div>
-              <span
-                class="badge"
-                :data-tone="conversation.requiresAttention ? 'error' : 'info'"
-              >
-                {{ conversationLabel(conversation) }}
+            <button
+              v-for="option in PERIODS"
+              :key="option.key"
+              type="button"
+              :aria-pressed="period === option.key"
+              @click="choosePeriod(option.key)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+        <div v-if="section.queue && queueError" class="audit-note" role="alert">
+          <p>{{ queueError }}</p>
+          <button type="button" :disabled="loading" @click="loadDashboard()">
+            {{ loading ? 'Consultando…' : 'Tentar novamente' }}
+          </button>
+        </div>
+        <ul v-if="!section.queue || queue" class="metric-grid" role="list">
+          <li v-for="key in section.cards" :key="key">
+            <RouterLink
+              class="metric-card"
+              :to="cards[key].to"
+              :data-tone="cards[key].tone || undefined"
+            >
+              <span class="metric-label">{{ cards[key].label }}</span>
+              <span class="metric-value">{{ cards[key].value }}</span>
+              <span class="metric-detail">
+                <span
+                  v-if="cards[key].badge"
+                  class="badge"
+                  :data-tone="cards[key].tone"
+                  >{{ cards[key].badge }}</span
+                >
+                {{ cards[key].detail }}
               </span>
-              <p>{{ dateTimeBR(conversation.updatedAt) }}</p>
-            </div>
+              <AppIcon name="chevron" class="metric-go" />
+            </RouterLink>
           </li>
         </ul>
-        <div v-else class="empty-list">
-          <h3>Nenhuma conversa recebida</h3>
-          <p>A Caixa de Entrada será preenchida pelos canais conectados.</p>
-        </div>
       </section>
     </template>
   </div>
 </template>
-
-<style scoped>
-.metric-row {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-.metric-row .rank-value {
-  grid-column: auto;
-}
-@media (max-width: 480px) {
-  .channel-row {
-    grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr) auto;
-    gap: 0.5rem;
-  }
-  .channel-row .rank-value {
-    grid-column: auto;
-  }
-}
-</style>

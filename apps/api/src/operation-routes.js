@@ -154,6 +154,21 @@ export function registerOperationRoutes(api, operations, contextFor) {
     },
   );
 
+  api.get('/api/v1/inbox/summary', async (request, reply) =>
+    respond(reply, async () => {
+      rejectUnknownKeys(requireObject(request.query ?? {}), []);
+      const access = await authorizeRead(
+        request,
+        operations,
+        'conversation.read',
+      );
+      privateReadHeaders(reply);
+      return reply
+        .code(200)
+        .send(await operations.summarizeInbox({ actorId: access.actor.id }));
+    }),
+  );
+
   api.get('/api/v1/inbox/conversations', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query, [

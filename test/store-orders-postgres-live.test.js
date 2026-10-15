@@ -19,6 +19,8 @@ import {
 const connectionString = process.env.TEST_DATABASE_URL;
 const ENVELOPE_KEY = Buffer.alloc(32, 61);
 const HMAC_KEY = Buffer.alloc(32, 27);
+// Painel: the repository counts a period's sales between two São Paulo days.
+const SUMMARY_PERIOD = Object.freeze({ from: '2026-10-01', to: '2026-10-31' });
 
 if (connectionString) {
   const databaseName = new URL(connectionString).pathname.slice(1);
@@ -273,7 +275,7 @@ if (connectionString) {
   });
 
   test('LOJ-23/LOJ-09: the list finds store orders by origin, phone and LJ- number; tests are not sales', async () => {
-    const previous = await repository.summary();
+    const previous = await repository.summary(SUMMARY_PERIOD);
     const real = await record(paid(6));
     await record(
       paid(7, (body) => {
@@ -301,7 +303,7 @@ if (connectionString) {
       byNumber.items.map((order) => order.id),
       [real.order.id],
     );
-    const summary = await repository.summary();
+    const summary = await repository.summary(SUMMARY_PERIOD);
     assert.equal(summary.confirmedCount, previous.confirmedCount + 1);
     assert.equal(summary.soldAmountCents, previous.soldAmountCents + 18000);
   });
@@ -313,7 +315,7 @@ if (connectionString) {
               ('print-user-2', 'print-2@example.test', '$argon2id$synthetic', 'Outra Pessoa')
        ON CONFLICT (id) DO NOTHING`,
     );
-    const before = await repository.summary();
+    const before = await repository.summary(SUMMARY_PERIOD);
     const older = await record(
       paid(20, (body) => (body.pagamento.pago_em = '2026-10-06T12:00:00Z')),
     );
@@ -326,7 +328,7 @@ if (connectionString) {
         body.pagamento.pago_em = '2026-10-01T12:00:00Z';
       }),
     );
-    const waiting = await repository.summary();
+    const waiting = await repository.summary(SUMMARY_PERIOD);
     assert.equal(waiting.storeNewCount, before.storeNewCount + 2);
     // The test order paid earlier never counts nor dates the notice.
     assert.ok(
@@ -362,7 +364,7 @@ if (connectionString) {
     assert.equal(later.order.fichaFirstPrintedBy, winner?.fichaFirstPrintedBy);
     assert.equal(later.order.version, winner?.version);
 
-    const after = await repository.summary();
+    const after = await repository.summary(SUMMARY_PERIOD);
     assert.equal(after.storeNewCount, waiting.storeNewCount - 1);
     const events = (
       await pool.query(

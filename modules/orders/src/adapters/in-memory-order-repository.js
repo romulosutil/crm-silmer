@@ -376,14 +376,23 @@ export class InMemoryOrderRepository {
     };
   }
 
-  /** @returns {Promise<import('../ports/contracts.js').OrdersSummary>} */
-  async summary() {
+  /**
+   * @param {import('../ports/contracts.js').OrdersSummaryQuery} query
+   * @returns {Promise<import('../ports/contracts.js').OrdersSummary>}
+   */
+  async summary(query) {
     // ADR 027: a test order from the site shop is never a sale.
     const orders = [...this.#orders.values()].filter((order) => !order.isTest);
     const confirmed = orders.filter((order) => order.status === 'confirmado');
     const soldAmountCents = confirmed.reduce(
       (total, order) => total + (order.finalAmountCents ?? 0),
       0,
+    );
+    const inPeriod = confirmed.filter(
+      (order) =>
+        order.orderDate !== null &&
+        order.orderDate >= query.from &&
+        order.orderDate <= query.to,
     );
     // ADR 031: store orders whose ficha nobody printed yet.
     const storeNew = orders.filter(
@@ -406,7 +415,27 @@ export class InMemoryOrderRepository {
       ),
       storeNewCount: storeNew.length,
       storeNewOldestPaidAt: oldest ?? null,
+      period: {
+        confirmedCount: inPeriod.length,
+        soldAmountCents: inPeriod.reduce(
+          (total, order) => total + (order.finalAmountCents ?? 0),
+          0,
+        ),
+      },
     };
+  }
+
+  async openDeliveries() {
+    return [...this.#orders.values()]
+      .filter(
+        (order) =>
+          order.status === 'confirmado' &&
+          order.origin === 'atendimento' &&
+          !order.deliveredOn &&
+          !order.isTest,
+      )
+      .sort((left, right) => left.numberSequence - right.numberSequence)
+      .map(clone);
   }
 
   /**

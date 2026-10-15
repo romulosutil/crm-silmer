@@ -360,7 +360,14 @@ test('LOJ-23: the list narrows to store orders and finds one by phone or by its 
 test('LOJ-09: a store sale counts like any sale; a test order does not', async () => {
   const { orders, record } = setup();
   await record(testOrderBody());
-  assert.deepEqual(await orders.summary(), {
+  /** @param {any} summary */
+  const totals = ({
+    deliveries: _deliveries,
+    period: _period,
+    today: _today,
+    ...rest
+  }) => rest;
+  assert.deepEqual(totals(await orders.summary()), {
     averageTicketCents: 0,
     confirmedCount: 0,
     pendingCount: 0,
@@ -370,8 +377,10 @@ test('LOJ-09: a store sale counts like any sale; a test order does not', async (
     storeNewOldestPaidAt: null,
     totalPiecesSold: 0,
   });
+  assert.equal((await orders.summary()).period.confirmedCount, 0);
   await record(otherStoreOrderBody(2));
-  assert.deepEqual(await orders.summary(), {
+  const summary = await orders.summary();
+  assert.deepEqual(totals(summary), {
     averageTicketCents: 18000,
     confirmedCount: 1,
     pendingCount: 0,
@@ -379,6 +388,21 @@ test('LOJ-09: a store sale counts like any sale; a test order does not', async (
     storeNewCount: 1,
     storeNewOldestPaidAt: '2026-10-08T02:15:55.000Z',
     totalPiecesSold: 10,
+  });
+  // Painel: the sale lands on the São Paulo day InfinitePay confirmed the Pix.
+  assert.equal(summary.today, '2026-10-07');
+  assert.deepEqual(summary.period, {
+    confirmedCount: 1,
+    from: '2026-10-07',
+    key: 'hoje',
+    soldAmountCents: 18000,
+    timeZone: 'America/Sao_Paulo',
+    to: '2026-10-07',
+  });
+  // A store order promises no delivery day, so it is never late.
+  assert.equal(summary.deliveries.overdueCount, 0);
+  await assert.rejects(orders.summary({ period: 'ano' }), {
+    name: 'OrderInputError',
   });
 });
 

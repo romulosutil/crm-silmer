@@ -621,11 +621,16 @@ export class PostgresOrderRepository {
     return result.rows[0] ? this.#map(result.rows[0]) : null;
   }
 
-  /** @returns {Promise<import('../ports/contracts.js').OrdersSummary>} */
-  async summary() {
+  /**
+   * @param {import('../ports/contracts.js').OrdersSummaryQuery} query
+   * @returns {Promise<import('../ports/contracts.js').OrdersSummary>}
+   */
+  async summary(query) {
     const result = await this.#database.query(
       `SELECT
          count(*) FILTER (WHERE status = 'confirmado')::integer AS confirmed_count,
+         count(*) FILTER (WHERE status = 'confirmado' AND order_date BETWEEN $1::date AND $2::date)::integer AS period_confirmed_count,
+         coalesce(sum(final_amount_cents) FILTER (WHERE status = 'confirmado' AND order_date BETWEEN $1::date AND $2::date), 0)::bigint AS period_sold_amount_cents,
          coalesce(sum(final_amount_cents) FILTER (WHERE status = 'confirmado'), 0)::bigint AS sold_amount_cents,
          count(*) FILTER (WHERE status = 'pendente')::integer AS pending_count,
          coalesce(sum(total_pieces) FILTER (WHERE status = 'confirmado'), 0)::bigint AS total_pieces_sold,
@@ -633,6 +638,7 @@ export class PostgresOrderRepository {
          min(payment_confirmed_at) FILTER (WHERE origin = 'loja' AND ficha_first_printed_at IS NULL) AS store_new_oldest_paid_at
        FROM crm.orders
        WHERE NOT is_test`,
+      [query.from, query.to],
     );
     const row = result.rows[0];
     const confirmedCount = Number(row.confirmed_count);
@@ -648,7 +654,26 @@ export class PostgresOrderRepository {
       // ADR 031: store orders whose ficha nobody printed yet.
       storeNewCount: Number(row.store_new_count ?? 0),
       storeNewOldestPaidAt: isoOrNull(row.store_new_oldest_paid_at ?? null),
+      period: {
+        confirmedCount: Number(row.period_confirmed_count ?? 0),
+        soldAmountCents: Number(row.period_sold_amount_cents ?? 0),
+      },
     };
+  }
+
+  /**
+   * Painel: confirmed attendance orders still waiting for "Entregue em".
+   * The promised day lives in the encrypted ficha, so the rows are read
+   * whole; the set stays small because delivering an order leaves it.
+   */
+  async openDeliveries() {
+    const result = await this.#database.query(
+      `SELECT ${ORDER_COLUMNS} FROM crm.orders
+       WHERE status = 'confirmado' AND origin = 'atendimento'
+         AND delivered_on IS NULL AND NOT is_test
+       ORDER BY number_sequence`,
+    );
+    return result.rows.map((row) => this.#map(row));
   }
 
   /**

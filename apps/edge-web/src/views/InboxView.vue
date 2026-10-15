@@ -8,7 +8,7 @@ import {
   ref,
   watch,
 } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { brand } from '../brand/index.js';
 import AppIcon from '../components/AppIcon.vue';
 import OrderDrawer from '../components/order/OrderDrawer.vue';
@@ -118,8 +118,22 @@ const transferSelect = ref(null);
 const moreOpen = ref(false);
 const contextOpen = ref(initialContextOpen());
 const query = ref('');
-const stateTab = ref('all');
-const queueFilter = ref('all');
+// Painel: each indicator opens the Inbox already filtered
+// (`?fila=minhas|sem-responsavel`, `?situacao=aguardando|agente|vendedor`).
+const route = useRoute();
+const ROUTE_STATE_TAB = Object.freeze({
+  agente: 'assistant',
+  aguardando: 'waiting',
+  vendedor: 'human',
+});
+const ROUTE_QUEUE = Object.freeze({
+  minhas: 'mine',
+  'sem-responsavel': 'unassignedHumanHandoff',
+});
+const stateTab = ref(
+  ROUTE_STATE_TAB[String(route.query.situacao ?? '')] ?? 'all',
+);
+const queueFilter = ref(ROUTE_QUEUE[String(route.query.fila ?? '')] ?? 'all');
 /** @type {import('vue').Ref<Record<string, number>>} */
 const counts = ref({});
 const loading = ref(true);

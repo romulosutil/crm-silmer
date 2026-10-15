@@ -42,3 +42,7 @@ entre os documentos.
 - [017 — Mídia do chat no RustFS](017-midia-do-chat-no-rustfs.md), decisão de 05/10/2026 reafirmada na ADR 029 após corrigir a colisão de numeração.
 - [018 — Antivírus persistente no worker](018-antivirus-persistente-no-worker.md), decidida na ADR 030.
 - [019 — Aviso de pedido novo do site no Dashboard](019-aviso-de-pedido-novo-do-site.md), decidida na ADR 031.
+
+## Proposta de 14/10/2026
+
+- [022 — Backup externo e recuperação do CRM e do n8n](022-backup-externo-e-recuperacao-do-crm-e-n8n.md), pendente de destino externo, execução e drill.

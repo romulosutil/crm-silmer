@@ -275,6 +275,124 @@ export function overdueIndicator(deliveries) {
   };
 }
 
+/**
+ * PNL-03: a queue card when the queue could not be read. It never reads as
+ * "0": nothing is known, so the value is a dash.
+ *
+ * @returns {Indicator}
+ */
+export function unavailableIndicator() {
+  return {
+    badge: '',
+    detail: 'Sem dados da fila agora',
+    tone: null,
+    value: '—',
+  };
+}
+
+/**
+ * @typedef {{key: string, label: string, to: {path: string, query: Record<string, string>}|null}} NextStep
+ */
+
+/**
+ * PNL-01 (RFC 024, proposta D): the one thing to do now, by role, from the
+ * summaries the Painel already reads. The first rule with something pending
+ * wins. While the queue fails, the rules that read it are skipped; nothing is
+ * invented from a missing number, and the step never says "nada urgente"
+ * when it could not look at the queue.
+ *
+ * @param {{isManager?: boolean, summary?: Record<string, any>|null, queue?: Record<string, any>|null, queueError?: unknown}} input
+ * @returns {NextStep}
+ */
+export function nextStep({ isManager, summary, queue, queueError }) {
+  const hasQueue = Boolean(queue) && !queueError;
+  const lateDeliveries = count(summary?.deliveries?.overdueCount);
+  /** @type {Array<NextStep|null>} */
+  const rules = [];
+  if (isManager) {
+    const outOfSla = hasQueue ? count(queue?.waitingHandoff?.overdueCount) : 0;
+    const assistant = hasQueue ? queue?.assistant : null;
+    const pending = count(summary?.pendingCount);
+    rules.push(
+      outOfSla
+        ? {
+            key: 'out-of-sla',
+            label: `Atender ${plural(outOfSla, 'conversa', 'conversas')} fora do prazo`,
+            to: { path: '/inbox', query: { situacao: 'aguardando' } },
+          }
+        : null,
+      lateDeliveries
+        ? {
+            key: 'late-deliveries',
+            label: `Conferir ${plural(lateDeliveries, 'entrega atrasada', 'entregas atrasadas')}`,
+            to: { path: '/pedidos', query: { entrega: 'atrasada' } },
+          }
+        : null,
+      count(assistant?.stalledCount) || count(assistant?.failedDeliveryCount)
+        ? {
+            key: 'assistant',
+            label: 'Verificar as conversas do assistente',
+            to: { path: '/inbox', query: { situacao: 'agente' } },
+          }
+        : null,
+      pending
+        ? {
+            key: 'pending',
+            label: `Confirmar ${plural(pending, 'pedido pendente', 'pedidos pendentes')}`,
+            to: { path: '/pedidos', query: { status: 'pendente' } },
+          }
+        : null,
+    );
+  } else {
+    const awaiting = hasQueue ? count(queue?.mine?.awaitingReplyCount) : 0;
+    const waiting = hasQueue ? count(queue?.waitingHandoff?.count) : 0;
+    const myPending = hasQueue ? count(queue?.mine?.pendingOrderCount) : 0;
+    rules.push(
+      awaiting
+        ? {
+            key: 'reply',
+            label: `Responder ${plural(awaiting, 'conversa', 'conversas')}`,
+            to: { path: '/inbox', query: { fila: 'minhas' } },
+          }
+        : null,
+      waiting
+        ? {
+            key: 'take-over',
+            label: `Assumir ${plural(waiting, 'conversa em espera', 'conversas em espera')}`,
+            to: { path: '/inbox', query: { situacao: 'aguardando' } },
+          }
+        : null,
+      myPending
+        ? {
+            key: 'my-pending',
+            label: `Completar ${plural(myPending, 'pedido pendente', 'pedidos pendentes')}`,
+            to: {
+              path: '/pedidos',
+              query: { status: 'pendente', vendedor: 'eu' },
+            },
+          }
+        : null,
+      lateDeliveries
+        ? {
+            key: 'late-deliveries',
+            label: `Conferir ${plural(lateDeliveries, 'entrega atrasada', 'entregas atrasadas')}`,
+            to: { path: '/pedidos', query: { entrega: 'atrasada' } },
+          }
+        : null,
+    );
+  }
+  const step = rules.find(Boolean);
+  if (step) return step;
+  if (!hasQueue) {
+    return {
+      key: 'queue-unavailable',
+      label: 'A fila não respondeu; tente de novo mais abaixo.',
+      to: null,
+    };
+  }
+  return { key: 'calm', label: 'Nada urgente agora.', to: null };
+}
+
 /** @param {Record<string, any>|undefined} deliveries @returns {Indicator} */
 export function dueSoonIndicator(deliveries) {
   const total = count(deliveries?.dueSoonCount);

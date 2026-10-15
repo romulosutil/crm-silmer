@@ -8,11 +8,13 @@ import {
   longDay,
   mineIndicator,
   myOrdersIndicator,
+  nextStep,
   overdueIndicator,
   pendingIndicator,
   replyIndicator,
   shortDay,
   soldIndicator,
+  unavailableIndicator,
   waitingIndicator,
 } from '../apps/edge-web/src/lib/dashboard-format.js';
 
@@ -176,4 +178,218 @@ test('Painel: sales, pending orders and deliveries tolerate a missing field', ()
     dueSoonIndicator({ dueSoonCount: 3, dueSoonUntil: '2026-10-21' }).detail,
     'Prometidas de hoje até 21/10',
   );
+});
+
+// PNL-01 e PNL-03 (RFC 024, proposta D): one next step per role, first rule
+// with something pending wins; the queue rules are skipped while it fails.
+const CALM_QUEUE = Object.freeze({
+  assistant: { activeCount: 2, failedDeliveryCount: 0, stalledCount: 0 },
+  mine: { awaitingReplyCount: 0, count: 1, pendingOrderCount: 0 },
+  waitingHandoff: { count: 0, overdueCount: 0 },
+});
+const CALM_SUMMARY = Object.freeze({
+  deliveries: { overdueCount: 0 },
+  pendingCount: 0,
+});
+
+/**
+ * @param {Record<string, any>} base
+ * @param {Record<string, any>} changes
+ */
+function withChanges(base, changes) {
+  /** @type {Record<string, any>} */
+  const copy = structuredClone(base);
+  for (const [group, values] of Object.entries(changes)) {
+    copy[group] =
+      values && typeof values === 'object'
+        ? { ...copy[group], ...values }
+        : values;
+  }
+  return copy;
+}
+
+/**
+ * @param {boolean} isManager
+ * @param {{queue?: Record<string, any>, summary?: Record<string, any>, queueError?: string}} [changes]
+ */
+function stepFor(
+  isManager,
+  { queue = {}, summary = {}, queueError = '' } = {},
+) {
+  return nextStep({
+    isManager,
+    queue: withChanges(CALM_QUEUE, queue),
+    queueError,
+    summary: withChanges(CALM_SUMMARY, summary),
+  });
+}
+
+test('Painel: the seller next step follows the priority of the queue', () => {
+  const all = {
+    queue: {
+      mine: { awaitingReplyCount: 3, pendingOrderCount: 2 },
+      waitingHandoff: { count: 4 },
+    },
+    summary: { deliveries: { overdueCount: 2 } },
+  };
+  assert.deepEqual(stepFor(false, all), {
+    key: 'reply',
+    label: 'Responder 3 conversas',
+    to: { path: '/inbox', query: { fila: 'minhas' } },
+  });
+  assert.equal(
+    stepFor(false, { queue: { mine: { awaitingReplyCount: 1 } } }).label,
+    'Responder 1 conversa',
+  );
+
+  const takeOver = stepFor(false, {
+    queue: { mine: { pendingOrderCount: 2 }, waitingHandoff: { count: 4 } },
+    summary: { deliveries: { overdueCount: 2 } },
+  });
+  assert.equal(takeOver.label, 'Assumir 4 conversas em espera');
+  assert.deepEqual(takeOver.to, {
+    path: '/inbox',
+    query: { situacao: 'aguardando' },
+  });
+
+  const myPending = stepFor(false, {
+    queue: { mine: { pendingOrderCount: 1 } },
+    summary: { deliveries: { overdueCount: 2 } },
+  });
+  assert.equal(myPending.label, 'Completar 1 pedido pendente');
+  assert.deepEqual(myPending.to, {
+    path: '/pedidos',
+    query: { status: 'pendente', vendedor: 'eu' },
+  });
+
+  const late = stepFor(false, { summary: { deliveries: { overdueCount: 2 } } });
+  assert.equal(late.label, 'Conferir 2 entregas atrasadas');
+  assert.deepEqual(late.to, {
+    path: '/pedidos',
+    query: { entrega: 'atrasada' },
+  });
+
+  // Store orders have their own notice; the manager's pending orders and the
+  // assistant are not the seller's next step.
+  assert.deepEqual(
+    stepFor(false, {
+      queue: { assistant: { stalledCount: 3 } },
+      summary: { pendingCount: 5, storeNewCount: 2 },
+    }),
+    { key: 'calm', label: 'Nada urgente agora.', to: null },
+  );
+});
+
+test('Painel: the manager next step starts from the SLA', () => {
+  const all = {
+    queue: {
+      assistant: { failedDeliveryCount: 1, stalledCount: 1 },
+      mine: { awaitingReplyCount: 5 },
+      waitingHandoff: { count: 3, overdueCount: 2 },
+    },
+    summary: { deliveries: { overdueCount: 1 }, pendingCount: 6 },
+  };
+  assert.deepEqual(stepFor(true, all), {
+    key: 'out-of-sla',
+    label: 'Atender 2 conversas fora do prazo',
+    to: { path: '/inbox', query: { situacao: 'aguardando' } },
+  });
+
+  const late = stepFor(true, {
+    queue: { assistant: { stalledCount: 1 }, waitingHandoff: { count: 3 } },
+    summary: { deliveries: { overdueCount: 1 }, pendingCount: 6 },
+  });
+  assert.equal(late.label, 'Conferir 1 entrega atrasada');
+
+  for (const assistant of [{ stalledCount: 1 }, { failedDeliveryCount: 2 }]) {
+    const step = stepFor(true, {
+      queue: { assistant },
+      summary: { pendingCount: 6 },
+    });
+    assert.equal(step.label, 'Verificar as conversas do assistente');
+    assert.deepEqual(step.to, {
+      path: '/inbox',
+      query: { situacao: 'agente' },
+    });
+  }
+
+  const pending = stepFor(true, { summary: { pendingCount: 6 } });
+  assert.equal(pending.label, 'Confirmar 6 pedidos pendentes');
+  assert.deepEqual(pending.to, {
+    path: '/pedidos',
+    query: { status: 'pendente' },
+  });
+
+  // Waiting within the SLA and the manager's own conversations are not it.
+  assert.equal(
+    stepFor(true, {
+      queue: {
+        mine: { awaitingReplyCount: 4 },
+        waitingHandoff: { count: 2 },
+      },
+    }).label,
+    'Nada urgente agora.',
+  );
+});
+
+test('Painel: with the queue failing, the next step invents nothing', () => {
+  const busyQueue = {
+    assistant: { stalledCount: 2 },
+    mine: { awaitingReplyCount: 3, pendingOrderCount: 2 },
+    waitingHandoff: { count: 4, overdueCount: 2 },
+  };
+  const queueError = 'Não foi possível consultar a fila agora.';
+  // Stale numbers of an earlier read are skipped as well.
+  assert.equal(
+    stepFor(false, {
+      queue: busyQueue,
+      queueError,
+      summary: { deliveries: { overdueCount: 2 } },
+    }).label,
+    'Conferir 2 entregas atrasadas',
+  );
+  assert.equal(
+    stepFor(true, {
+      queue: busyQueue,
+      queueError,
+      summary: { pendingCount: 3 },
+    }).label,
+    'Confirmar 3 pedidos pendentes',
+  );
+  for (const isManager of [false, true]) {
+    assert.deepEqual(stepFor(isManager, { queue: busyQueue, queueError }), {
+      key: 'queue-unavailable',
+      label: 'A fila não respondeu; tente de novo mais abaixo.',
+      to: null,
+    });
+    assert.equal(
+      nextStep({ isManager, queue: null, queueError: '', summary: {} }).key,
+      'queue-unavailable',
+    );
+  }
+  assert.deepEqual(unavailableIndicator(), {
+    badge: '',
+    detail: 'Sem dados da fila agora',
+    tone: null,
+    value: '—',
+  });
+});
+
+test('Painel: no next step link is named like an indicator', () => {
+  const steps = [false, true].flatMap((isManager) =>
+    [
+      { queue: { mine: { awaitingReplyCount: 2 } } },
+      { queue: { waitingHandoff: { count: 2, overdueCount: 1 } } },
+      { queue: { mine: { pendingOrderCount: 2 } } },
+      { queue: { assistant: { stalledCount: 1 } } },
+      { summary: { deliveries: { overdueCount: 2 }, pendingCount: 2 } },
+      { summary: { pendingCount: 2 } },
+    ].map((changes) => stepFor(isManager, changes)),
+  );
+  for (const step of steps) {
+    assert.doesNotMatch(
+      step.label,
+      /^(Vendido|Minhas conversas|Responder agora|Esperando vendedor|Assistente|Entregas atrasadas|Meus pedidos pendentes|Pedidos a confirmar)/u,
+    );
+  }
 });

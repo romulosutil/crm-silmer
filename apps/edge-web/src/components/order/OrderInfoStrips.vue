@@ -2,9 +2,9 @@
 import { computed, ref } from 'vue';
 import OrderIcon from './OrderIcon.vue';
 
-// The 14 production fields of `ficha-canonical-v2`, which reach the shop
-// floor blank and are filled by hand there. The CRM never writes them.
-const PRODUCTION_FIELD_COUNT = 14;
+// PFI-20 (RFC 024): the production control is only on paper — page 2 of the
+// printed ficha, filled by hand on the shop floor — so the page no longer
+// shows it; the ficha card names it ("pedido e controle de produção").
 
 /**
  * D11: what the agent collected that has no place on the printed ficha.
@@ -64,17 +64,6 @@ const serviceEntries = computed(() =>
 </script>
 
 <template>
-  <section class="op-strip" aria-labelledby="order-production-title">
-    <div class="op-strip-text">
-      <h2 id="order-production-title">Controle de produção</h2>
-      <p>
-        Arremate · Conferência e embalagem · Cores da arte —
-        {{ PRODUCTION_FIELD_COUNT }} campos que saem em branco na página 2 da
-        ficha e são preenchidos à mão na fábrica.
-      </p>
-    </div>
-  </section>
-
   <section class="op-sheet" aria-labelledby="order-service-title">
     <div class="op-sheet-head">
       <h2 id="order-service-title">Dados do atendimento</h2>

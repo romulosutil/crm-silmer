@@ -98,10 +98,11 @@ async function save() {
     aria-labelledby="order-milestones-title"
   >
     <!-- PFI-17, PLA-07: the dates never block "Gerar" (PLA-06), so their
-         state is a plain count. -->
+         state is a plain count. PFI-20: "Datas do pedido" on the screen; the
+         printed ficha keeps "Lastro do pedido". -->
     <OrderSheetHead
       title-id="order-milestones-title"
-      title="Lastro do pedido"
+      title="Datas do pedido"
       :state="`${recordedCount} de ${steps.length} datas`"
       edit-label="Editar datas"
       :can-edit="canEdit"

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, inject, nextTick, ref, watch } from 'vue';
+import { brand } from '../../brand/index.js';
 import { orderSteps } from '../../lib/order-format.js';
 import OrderArtworkFiles from './OrderArtworkFiles.vue';
 import OrderSheetHead from './OrderSheetHead.vue';
@@ -7,11 +8,17 @@ import OrderSheetHead from './OrderSheetHead.vue';
 const SECTION = 'artwork';
 // ADR 020: who makes the art of the whole order. The customer and Silmer may
 // both be marked; "Sem estampa" stands alone. One mark is needed to generate.
+// PFI-20 (ADR 035): the company's name comes from the brand, never written
+// here; the key `feito_pela_silmer` is the API's and does not change.
 const ORIGINS = Object.freeze([
   Object.freeze({ key: 'feito_pelo_cliente', label: 'O cliente envia a arte' }),
-  Object.freeze({ key: 'feito_pela_silmer', label: 'A Silmer cria a arte' }),
+  Object.freeze({
+    key: 'feito_pela_silmer',
+    label: `A ${brand.companyName} cria a arte`,
+  }),
   Object.freeze({ key: 'sem_estampa', label: 'Sem estampa' }),
 ]);
+const SOURCE_HINT = `Obrigatório para gerar. O cliente e a ${brand.companyName} podem ser marcados juntos; “Sem estampa” vale sozinho.`;
 const props = defineProps({
   order: { type: Object, required: true },
 });
@@ -81,7 +88,7 @@ function mark(key, checked) {
   draft.value = next;
 }
 
-// "Informar em Estampa e arquivos" from "Gerar pedido" opens this editor;
+// The next step, "Marcar quem faz a arte" (PFI-15), opens this editor;
 // with another section open, it only brings the section into view.
 const sheet = ref(null);
 watch(
@@ -114,7 +121,7 @@ async function save() {
   <section ref="sheet" class="op-sheet" aria-labelledby="order-artwork-title">
     <OrderSheetHead
       title-id="order-artwork-title"
-      title="Estampa e arquivos"
+      title="Arte do pedido"
       :state="headState.text"
       :tone="headState.tone"
       edit-label="Editar arte"
@@ -135,8 +142,7 @@ async function save() {
       >
         <legend>Quem faz a arte?</legend>
         <p id="order-artwork-source-hint" class="op-hint">
-          Obrigatório para gerar. O cliente e a Silmer podem ser marcados
-          juntos; “Sem estampa” vale sozinho.
+          {{ SOURCE_HINT }}
         </p>
         <label
           v-for="(origin, index) in ORIGINS"

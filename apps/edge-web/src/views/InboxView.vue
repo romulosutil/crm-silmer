@@ -407,13 +407,17 @@ function messageInitials(message) {
   return 'IA';
 }
 
-/** @param {{deliveryStatus?: unknown}} message */
+/** @param {{deliveryStatus?: unknown, deliveryErrorCode?: unknown}} message */
 function deliveryNotice(message) {
-  return (
+  const notice =
     DELIVERY_NOTICES[
       /** @type {keyof typeof DELIVERY_NOTICES} */ (message.deliveryStatus)
-    ] ?? null
-  );
+    ] ?? null;
+  if (!notice) return null;
+  const code = message.deliveryErrorCode;
+  return typeof code === 'string' && /^[A-Z0-9_]{1,64}$/u.test(code)
+    ? `${notice} · código técnico: ${code}`
+    : notice;
 }
 
 /** @param {unknown} cause */

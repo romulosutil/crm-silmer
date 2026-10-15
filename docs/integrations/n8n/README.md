@@ -490,10 +490,12 @@ publicado e que `N8N_COMMAND_CLIENT_ID`/`N8N_COMMAND_CLIENT_SECRET` correspondem
 à credencial Basic vinculada a esse nó. A URL do workflow DEV e credenciais
 locais não servem para o chat publicado. Use uma conversa **sintética**: assuma
 o atendimento, envie uma resposta humana por texto, confira `Enviado` no CRM e
-a mesma resposta uma única vez no widget. `Falha no envio` com
-`N8N_COMMAND_REJECTED` em `crm.n8n_commands.last_error_code` indica que o
-webhook recusou o comando; verifique destino e autenticação sem imprimir
-segredos nem reenviar o comando com outra chave.
+a mesma resposta uma única vez no widget. A Inbox mostra o código técnico ao
+lado de `Falha no envio` ou `Envio aguardando confirmação` quando há um comando
+associado. `N8N_COMMAND_REJECTED` indica que o webhook recusou o comando;
+verifique destino e autenticação sem imprimir segredos nem reenviar o comando
+com outra chave. O código só aparece na leitura autenticada da conversa; o
+widget do visitante não o recebe.
 
 O nó `Site - Receber mensagem do chat (MVP)` contém a opção **Custom Chat
 Styling** com as cores Silmer para a página hospedada do n8n. O estilo do

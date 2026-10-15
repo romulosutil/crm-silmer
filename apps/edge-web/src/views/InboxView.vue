@@ -104,6 +104,7 @@ const notify = inject('notify', () => {});
 const heading = ref(null);
 const searchInput = ref(null);
 const replyInput = ref(null);
+const takeoverButton = ref(null);
 const nameInput = ref(null);
 const archiveConfirmationDialog = ref(null);
 const closeConfirmationDialog = ref(null);
@@ -259,6 +260,36 @@ const canReply = computed(
 const pendingHandoff = computed(
   () => active.value?.handoff?.status === 'pending',
 );
+/**
+ * PCX-13: until a person has the conversation, taking it is the one thing to
+ * do, so "Assumir atendimento" sits where the reply would be. Whoever cannot
+ * act keeps the disabled reply and the reason beside it.
+ */
+const needsTakeover = computed(
+  () =>
+    canAct.value &&
+    (pendingHandoff.value || active.value?.automationState === 'assistant'),
+);
+/** PCX-03: why the conversation stopped, or who is still answering it. */
+const takeoverReason = computed(() => {
+  const conversation = active.value;
+  if (!conversation) return { detail: '', title: '' };
+  if (pendingHandoff.value) {
+    const elapsed = elapsedSince(conversation.handoff.createdAt, now.value);
+    return {
+      detail: elapsed
+        ? `Esperando vendedor há ${elapsed}.`
+        : 'Esperando um vendedor assumir.',
+      title: stopReason(conversation),
+    };
+  }
+  const assistant = brand.assistant.reference;
+  return {
+    // ADR 015: once taken, the conversation never goes back to the bot.
+    detail: `Ao assumir, a conversa fica com você e não volta para ${assistant}.`,
+    title: `${assistant.charAt(0).toLocaleUpperCase('pt-BR')}${assistant.slice(1)} está atendendo.`,
+  };
+});
 const canTransfer = computed(
   () =>
     canAct.value &&
@@ -337,6 +368,7 @@ const hasMoreActions = computed(
   () =>
     isPhone.value ||
     createOrderInMore.value ||
+    canClose.value ||
     canTransfer.value ||
     canArchiveActive.value ||
     canUnarchive.value,
@@ -349,9 +381,9 @@ const canSendReply = computed(
     Boolean(reply.value.trim()),
 );
 /**
- * Mobile first (ADR 035): on a phone the header keeps the primary action,
+ * Mobile first (ADR 035): on a phone the header keeps the order link,
  * "Criar pedido" when it is due and "Mais"; everything else goes to the
- * "Mais" sheet.
+ * "Mais" sheet. The one primary action sits in the composer (PCX-13).
  */
 const phoneQuery = globalThis.matchMedia?.('(max-width: 768px)');
 const isPhone = ref(phoneQuery?.matches ?? false);
@@ -699,12 +731,7 @@ async function confirmArchive() {
   await archiveConversation();
 }
 
-/** @param {MouseEvent} event */
-function requestCloseConfirmation(event) {
-  openCloseConfirmation(event.currentTarget);
-}
-
-/** On a phone "Encerrar" lives in the "Mais" sheet; focus returns to it. */
+/** PCX-13: "Encerrar conversa" lives in "Mais" at every width; focus returns to it. */
 function requestCloseFromMore() {
   closeMore();
   openCloseConfirmation(moreToggle.value);
@@ -1230,6 +1257,35 @@ async function claimHandoff() {
   }
 }
 
+/**
+ * PCX-13: the one way to take a conversation, whichever state it is in:
+ * claiming the pending handoff (atomic on the server, ADR 009) or taking it
+ * from the agent. Once it is yours the reply field appears and takes the
+ * focus; the outcome is announced in the status above the conversation.
+ */
+async function takeOver() {
+  const conversation = active.value;
+  if (!conversation || !needsTakeover.value || busy.value) return;
+  if (pendingHandoff.value) {
+    await claimHandoff();
+  } else {
+    await changeAutomation(
+      'takeover',
+      `Atendimento de ${conversation.contact.label} assumido.`,
+    );
+  }
+  if (activeId.value !== conversation.id) return;
+  await nextTick();
+  const field = /** @type {HTMLTextAreaElement|null} */ (replyInput.value);
+  if (canReply.value && field && !field.disabled) {
+    field.focus();
+  } else if (!takeoverButton.value?.isConnected) {
+    // The bar left without handing over the reply (someone else took it):
+    // the reader lands on the conversation instead of the page body.
+    conversationHeading.value?.focus();
+  }
+}
+
 async function openRename() {
   if (!active.value) return;
   draftName.value = active.value?.contact.displayName ?? '';
@@ -1653,34 +1709,13 @@ onBeforeUnmount(() => {
                 </template>
               </p>
             </div>
-            <!-- One primary action, two visible, the rest under "Mais"
+            <!-- No primary here: the conversation's one primary action sits
+                 in the composer, "Assumir atendimento" or "Enviar resposta"
+                 (PCX-13). Two visible at most, the rest under "Mais"
                  (pesquisa UX, achado 1). ADR 015: once a person has the
                  conversation it never goes back to the bot, so there is no
                  hand-back action here. -->
             <div class="conv-actions">
-              <button
-                v-if="pendingHandoff"
-                type="button"
-                class="primary"
-                :disabled="busy || !canAct"
-                @click="claimHandoff"
-              >
-                Assumir atendimento
-              </button>
-              <button
-                v-else-if="active.automationState === 'assistant'"
-                type="button"
-                class="primary"
-                :disabled="busy || !canAct"
-                @click="
-                  changeAutomation(
-                    'takeover',
-                    'Atendimento assumido por uma pessoa.',
-                  )
-                "
-              >
-                Assumir atendimento
-              </button>
               <button
                 v-if="createOrderInHeader"
                 type="button"
@@ -1689,14 +1724,6 @@ onBeforeUnmount(() => {
                 @click="createOrder()"
               >
                 Criar pedido
-              </button>
-              <button
-                v-if="canClose && !isPhone"
-                type="button"
-                :disabled="busy"
-                @click="requestCloseConfirmation"
-              >
-                Encerrar conversa
               </button>
               <div
                 v-if="hasMoreActions"
@@ -1771,7 +1798,7 @@ onBeforeUnmount(() => {
                     Desarquivar conversa
                   </button>
                   <button
-                    v-if="canClose && isPhone"
+                    v-if="canClose"
                     type="button"
                     :disabled="busy"
                     @click="requestCloseFromMore"
@@ -1931,7 +1958,28 @@ onBeforeUnmount(() => {
           </ol>
 
           <div class="inbox-composer">
+            <!-- PCX-13: until a person has the conversation, taking it is the
+                 one action where the reply would be, with why it stopped and
+                 for how long (PCX-03). -->
+            <div v-if="needsTakeover" class="inbox-takeover">
+              <p id="takeover-reason" class="inbox-takeover-reason">
+                <strong>{{ takeoverReason.title }}</strong
+                >{{ ' ' }}<span>{{ takeoverReason.detail }}</span>
+              </p>
+              <button
+                ref="takeoverButton"
+                type="button"
+                class="primary"
+                aria-describedby="takeover-reason"
+                :aria-disabled="busy ? 'true' : undefined"
+                :aria-busy="busy ? 'true' : undefined"
+                @click="takeOver"
+              >
+                Assumir atendimento
+              </button>
+            </div>
             <AudioRecorder
+              v-else
               :key="active.id"
               :conversation-id="active.id"
               :expected-version="active.version"
@@ -1966,10 +2014,7 @@ onBeforeUnmount(() => {
                     <template v-else-if="!canAct"
                       >Somente o vendedor responsável pode responder.</template
                     >
-                    <template
-                      v-else-if="
-                        pendingHandoff || active.automationState !== 'human'
-                      "
+                    <template v-else-if="!canReply"
                       >Assuma o atendimento antes de responder.</template
                     >
                     <template v-else-if="touchInput"

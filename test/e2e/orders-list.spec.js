@@ -690,3 +690,42 @@ test('PLI-09: on a phone the first order sits whole above the bottom bar, and "F
   }
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test('PLI-09: on a notebook the "Filtros" sheet keeps 44 px targets, 8 px apart, without scroll', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 768, width: 1366 });
+  await mockOrders(page);
+  await page.goto('/pedidos');
+  await page.getByRole('button', { name: 'Filtros' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Filtros' });
+  await expect(sheet).toBeVisible();
+
+  /** @param {Element[]} elements */
+  const rects = (elements) =>
+    elements.map((element) => {
+      const { bottom, height, left, top } = element.getBoundingClientRect();
+      return { bottom, height, left, top };
+    });
+  const targets = await sheet
+    .locator('.filter-sheet-option, button')
+    .evaluateAll(rects);
+  expect(targets).toHaveLength(11);
+  for (const rect of targets) expect(rect.height).toBeGreaterThanOrEqual(44);
+  // Side by side in columns: 8 px between options stacked in one group.
+  const options = await sheet
+    .locator('.filter-sheet-option')
+    .evaluateAll(rects);
+  for (let index = 1; index < options.length; index += 1) {
+    const [above, below] = [options[index - 1], options[index]];
+    if (above.left !== below.left || below.top < above.bottom) continue;
+    expect(below.top - above.bottom).toBeGreaterThanOrEqual(8);
+  }
+  const body = await sheet
+    .locator('.filter-sheet-body')
+    .evaluate(({ clientHeight, scrollHeight }) => ({
+      clientHeight,
+      scrollHeight,
+    }));
+  expect(body.scrollHeight).toBeLessThanOrEqual(body.clientHeight);
+});

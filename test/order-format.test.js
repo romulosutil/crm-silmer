@@ -27,6 +27,7 @@ import {
   missingHeadline,
   nextOrderStep,
   operationalDay,
+  ORDER_REVIEW_SECTION,
   orderSteps,
   orderMilestones,
   orderStatusLabel,
@@ -479,6 +480,78 @@ test('has no steps for a store order or an order without the list (PFI-15, LOJ-3
   assert.deepEqual(orderSteps({}), []);
   assert.deepEqual(orderSteps(null), []);
   assert.equal(nextOrderStep(undefined), null);
+});
+
+test('turns a blocker the screen does not know into "Revisar pendências", never a false 3 de 3 (PFI-15)', () => {
+  // A key newer than this screen, with the three steps done: four steps, the
+  // last one pending and naming the key as the server sent it.
+  const newer = {
+    missingFields: ['summary.futuro', 'finalAmount', 'paymentCondition'],
+  };
+  const steps = orderSteps(newer);
+  assert.equal(steps.length, 4);
+  assert.deepEqual(stepStates(steps), [
+    { done: true, key: 'delivery', missing: '' },
+    { done: true, key: 'items', missing: '' },
+    { done: true, key: 'artwork', missing: '' },
+    { done: false, key: 'review', missing: 'falta: summary.futuro' },
+  ]);
+  const next = nextOrderStep(newer);
+  assert.equal(next?.key, 'review');
+  assert.equal(next?.label, 'Outras pendências');
+  assert.equal(next?.action, 'Revisar pendências');
+  // No section fills it: the step leads to the closing panel.
+  assert.equal(next?.section, ORDER_REVIEW_SECTION);
+  assert.equal(ORDER_REVIEW_SECTION, 'closing');
+  assert.notEqual(
+    steps.filter((step) => step.done).length,
+    steps.length,
+    'the count never reads as complete while the server lists a blocker',
+  );
+
+  // Alongside known gaps it comes last, after the steps of the page, and a
+  // known label is used when the screen has one.
+  const mixed = {
+    missingFields: [
+      'cliente.documento',
+      'artwork',
+      'items[0].cor',
+      'summary.futuro',
+      'items[2].novo_ponto',
+      'paymentCondition',
+    ],
+  };
+  assert.deepEqual(
+    orderSteps(mixed).map((step) => step.key),
+    ['delivery', 'items', 'artwork', 'review'],
+  );
+  assert.equal(nextOrderStep(mixed)?.key, 'items');
+  assert.equal(
+    orderSteps(mixed)[1].missing,
+    'falta: cor do item 1 e items[2].novo_ponto',
+  );
+  assert.equal(
+    orderSteps(mixed)[3].missing,
+    'falta: cliente.documento e summary.futuro',
+  );
+
+  // Many unknown keys: two by name and the rest counted.
+  assert.equal(
+    orderSteps({ missingFields: ['a.um', 'b.dois', 'c.tres', 'd.quatro'] })[3]
+      .missing,
+    'falta: a.um, b.dois e mais 2 pontos',
+  );
+
+  // The amount and the payment method are never a step, known or not.
+  assert.equal(
+    orderSteps({ missingFields: ['finalAmount', 'paymentCondition'] }).length,
+    3,
+  );
+  // A store order still has no steps at all.
+  assert.deepEqual(
+    orderSteps({ missingFields: ['summary.futuro'], origin: 'loja' }),
+    [],
+  );
 });
 
 test('an item says its audience and compares its sizes with the quantity said for it (ADR 025)', () => {

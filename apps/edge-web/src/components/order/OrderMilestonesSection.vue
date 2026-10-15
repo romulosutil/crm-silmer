@@ -2,6 +2,7 @@
 import { computed, inject, nextTick, ref } from 'vue';
 import { operationalDay, orderMilestones } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
+import OrderSheetHead from './OrderSheetHead.vue';
 
 const SECTION = 'milestones';
 const FUTURE_DAY_MESSAGE = 'Use uma data até hoje.';
@@ -96,20 +97,18 @@ async function save() {
     :data-editing="isEditing || undefined"
     aria-labelledby="order-milestones-title"
   >
-    <div class="op-sheet-head">
-      <h2 id="order-milestones-title">Lastro do pedido</h2>
-      <p class="op-num">{{ recordedCount }} de {{ steps.length }} datas</p>
-      <span v-if="isEditing" class="op-editing-tag">Editando</span>
-      <button
-        v-if="canEdit && !isEditing"
-        type="button"
-        class="op-edit"
-        :disabled="otherSectionOpen"
-        @click="startEditing"
-      >
-        <OrderIcon name="pencil" />Editar
-      </button>
-    </div>
+    <!-- PFI-17, PLA-07: the dates never block "Gerar" (PLA-06), so their
+         state is a plain count. -->
+    <OrderSheetHead
+      title-id="order-milestones-title"
+      title="Lastro do pedido"
+      :state="`${recordedCount} de ${steps.length} datas`"
+      edit-label="Editar datas"
+      :can-edit="canEdit"
+      :blocked="otherSectionOpen"
+      :editing="isEditing"
+      @edit="startEditing"
+    />
 
     <p v-if="errorMessage" role="alert" class="op-alert">
       {{ errorMessage }}

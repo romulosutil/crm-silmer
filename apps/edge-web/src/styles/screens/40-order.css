@@ -450,6 +450,42 @@
   margin-inline-start: auto;
 }
 
+/* PFI-17: the state of the section, in words beside the title; the icon
+   repeats the tone, the colour never carries it alone. */
+.op-sheet-head > p.op-sheet-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.op-sheet-state .op-icon {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.op-sheet-head > p.op-sheet-state[data-tone='ok'] {
+  color: var(--status-success-text);
+}
+
+.op-sheet-head > p.op-sheet-state[data-tone='missing'] {
+  color: var(--status-warning-text);
+  font-weight: 600;
+}
+
+.op-sheet-head > button.op-edit {
+  margin-inline-start: auto;
+}
+
+/* PFI-06/PFI-17: the reason a blocked "Editar …" waits, on its own line
+   under the button once someone tries it. */
+.op-sheet-head > p.op-edit-reason {
+  flex-basis: 100%;
+  text-align: end;
+}
+
 .op-editing-tag,
 .op-quiet-tag {
   padding: 0.15rem 0.65rem;
@@ -472,7 +508,7 @@ button.op-edit {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  min-block-size: 40px;
+  min-block-size: var(--target-min);
   padding: 0.4rem 0.8rem;
   color: var(--color-link);
   background: transparent;
@@ -480,15 +516,16 @@ button.op-edit {
   border-radius: var(--radius-md);
 }
 
-button.op-edit:hover:not(:disabled) {
+button.op-edit:hover:not(:disabled, [aria-disabled='true']) {
   color: var(--color-link);
   background: var(--color-surface-raised);
   border-color: transparent;
 }
 
-button.op-edit:disabled {
+/* Focusable and readable while it waits (PFI-17): muted, not faded. */
+button.op-edit:is(:disabled, [aria-disabled='true']) {
+  color: var(--color-text-muted);
   cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .op-disclosure .op-icon {

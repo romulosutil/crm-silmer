@@ -248,9 +248,33 @@ function stepGapText(key, gaps) {
 }
 
 /**
+ * Where the step "Revisar pendências" leads: the closing panel, whose
+ * "Falta para gerar" (#closing-readiness) names every blocker, known or not.
+ * No section of the page fills a blocker this screen does not know.
+ */
+export const ORDER_REVIEW_SECTION = 'closing';
+
+const REVIEW_STEP = Object.freeze({
+  action: 'Revisar pendências',
+  key: 'review',
+  label: 'Outras pendências',
+  section: ORDER_REVIEW_SECTION,
+});
+
+/** @param {string} field */
+function isKnownStepGap(field) {
+  return ORDER_STEPS.some((step) => step.owns(field));
+}
+
+/**
  * PFI-15: the three steps to generate an order, judged only by the server's
  * `missingFields` so the progress is never ahead of what the API accepts. A
- * store order (ADR 027) or an order without the list has no steps.
+ * blocker of the page that none of the three knows (a key newer than this
+ * screen) becomes a fourth step, "Revisar pendências", never done while the
+ * server lists it: otherwise the count would say "3 de 3" with "Gerar pedido"
+ * still refused. The amount and the payment method are typed when generating
+ * and never count. A store order (ADR 027) or an order without the list has
+ * no steps.
  *
  * @param {Record<string, any>|null|undefined} order
  * @returns {{key: string, label: string, done: boolean, missing: string, section: string, action: string}[]}
@@ -260,7 +284,7 @@ export function orderSteps(order) {
     return [];
   }
   const missing = order.missingFields.map(String);
-  return ORDER_STEPS.map(({ owns, ...step }) => {
+  const steps = ORDER_STEPS.map(({ owns, ...step }) => {
     const gaps = missing.filter(owns);
     return {
       ...step,
@@ -268,6 +292,18 @@ export function orderSteps(order) {
       missing: gaps.length === 0 ? '' : `falta: ${stepGapText(step.key, gaps)}`,
     };
   });
+  const unknown = missing.filter(
+    (field) => isPageGap(field) && !isKnownStepGap(field),
+  );
+  if (unknown.length === 0) return steps;
+  return [
+    ...steps,
+    {
+      ...REVIEW_STEP,
+      done: false,
+      missing: `falta: ${stepGapText(REVIEW_STEP.key, unknown)}`,
+    },
+  ];
 }
 
 /**

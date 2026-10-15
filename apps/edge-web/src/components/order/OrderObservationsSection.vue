@@ -1,6 +1,7 @@
 <script setup>
 import { computed, inject, nextTick, ref } from 'vue';
 import OrderIcon from './OrderIcon.vue';
+import OrderSheetHead from './OrderSheetHead.vue';
 
 const SECTION = 'observations';
 // PFI-05: zero to five lines, the same ceiling the ficha prints.
@@ -78,20 +79,17 @@ async function save() {
     :data-editing="isEditing || undefined"
     aria-labelledby="order-observations-title"
   >
-    <div class="op-sheet-head">
-      <h2 id="order-observations-title">Observações do pedido</h2>
-      <p class="op-num">{{ headline }}</p>
-      <span v-if="isEditing" class="op-editing-tag">Editando</span>
-      <button
-        v-if="canEdit && !isEditing"
-        type="button"
-        class="op-edit"
-        :disabled="otherSectionOpen"
-        @click="startEditing"
-      >
-        <OrderIcon name="pencil" />Editar
-      </button>
-    </div>
+    <!-- PFI-17: observations never block "Gerar"; the state is the count. -->
+    <OrderSheetHead
+      title-id="order-observations-title"
+      title="Observações do pedido"
+      :state="headline"
+      edit-label="Editar observações"
+      :can-edit="canEdit"
+      :blocked="otherSectionOpen"
+      :editing="isEditing"
+      @edit="startEditing"
+    />
 
     <p v-if="errorMessage" role="alert" class="op-alert">
       {{ errorMessage }}

@@ -9,8 +9,11 @@ import {
   watch,
 } from 'vue';
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
+import AppIcon from './components/AppIcon.vue';
 import AuthPanel from './components/AuthPanel.vue';
+import BrandMark from './components/BrandMark.vue';
 import ThemeSwitcher from './components/ThemeSwitcher.vue';
+import { brand } from './brand/index.js';
 import { ApiError, request } from './lib/api-client.js';
 import { LiveEventStream } from './lib/event-stream.js';
 import { RETURN_QUERY, safeReturnPath } from './lib/return-path.js';
@@ -58,17 +61,31 @@ const isAdmin = computed(() =>
 const canAccessCurrentRoute = computed(
   () => route.meta.requiresAdmin !== true || isAdmin.value,
 );
+// One list feeds the sidebar and the mobile menu, so both always offer the
+// same places (Vendedores and Sair included on a phone).
+const navItems = computed(() => [
+  { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { to: '/inbox', label: 'Caixa de Entrada', icon: 'inbox' },
+  { to: '/pedidos', label: 'Pedidos', icon: 'orders', count: storeNewCount },
+  { to: '/clientes', label: 'Clientes', icon: 'clients' },
+  ...(isAdmin.value
+    ? [{ to: '/usuarios', label: 'Vendedores', icon: 'team' }]
+    : []),
+  { to: '/conta', label: 'Conta', icon: 'account' },
+]);
+
 // PGE-01: the order page belongs to Pedidos. RouterLink only marks a link it
-// matches exactly, so `/pedidos/07-CRM` would leave the menu dark; the item
-// claims the whole section instead.
-const ordersCurrent = computed(() =>
-  route.path === '/pedidos' || route.path.startsWith('/pedidos/')
+// matches exactly, so `/pedidos/07-CRM` would leave the menu dark; each item
+// claims its whole section instead.
+/** @param {string} to */
+function sectionCurrent(to) {
+  return route.path === to || route.path.startsWith(`${to}/`)
     ? 'page'
-    : undefined,
-);
+    : undefined;
+}
 const connectionLabel = computed(() => {
   if (connection.value === 'conectado') return 'Atualizado agora';
-  if (connection.value === 'reconectando') return 'Sincronizando atualizações…';
+  if (connection.value === 'reconectando') return 'Reconectando…';
   if (connection.value === 'indisponível')
     return 'Atualização automática pausada';
   return 'Preparando atualização…';
@@ -327,22 +344,18 @@ function onCursor(cursor) {
 
   <div v-if="phase !== 'authenticated'" class="public-shell">
     <header class="site-header">
-      <a class="brand" href="/" aria-label="CRM Silmer, início">
-        <span class="brand-word" aria-hidden="true">SILMER<span>.</span></span>
+      <a class="brand" href="/" :aria-label="`${brand.productName}, início`">
+        <BrandMark class="brand-logo" />
         <span class="product-label">CRM</span>
       </a>
       <p class="environment">
-        <span aria-hidden="true">●</span> Ambiente seguro
+        <span class="environment-dot" aria-hidden="true"></span> Ambiente seguro
       </p>
     </header>
     <main id="main-content" class="public-content" tabindex="-1">
       <div class="intro">
-        <p class="eyebrow">Acesso à operação</p>
-        <h1>O comercial inteiro,<br /><em>em movimento.</em></h1>
-        <p>
-          Acompanhe negociações, resolva pendências e mantenha cada pedido no
-          ritmo certo.
-        </p>
+        <h1>{{ brand.productName }}</h1>
+        <p>{{ brand.tagline }}</p>
       </div>
       <p v-if="phase === 'restoring'" class="loading-state" role="status">
         Verificando sua sessão…
@@ -352,7 +365,6 @@ function onCursor(cursor) {
         class="surface unavailable-state"
         aria-labelledby="unavailable-title"
       >
-        <p class="section-kicker">Conexão indisponível</p>
         <h2 id="unavailable-title">Não foi possível verificar sua sessão</h2>
         <p>
           Seus dados não foram enviados. Confira a conexão e tente novamente.
@@ -375,61 +387,33 @@ function onCursor(cursor) {
       <RouterLink
         class="brand app-brand"
         to="/dashboard"
-        aria-label="CRM Silmer, Dashboard"
+        :aria-label="`${brand.productName}, Dashboard`"
       >
-        <span class="brand-word" aria-hidden="true">SILMER<span>.</span></span>
+        <BrandMark class="brand-logo" />
+        <BrandMark class="brand-monogram" variant="monogram" />
         <span class="product-label brand-label">CRM</span>
       </RouterLink>
       <nav aria-label="Navegação principal">
-        <RouterLink to="/dashboard">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path d="M4 13h6v7H4zm10-9h6v16h-6zM4 4h6v5H4z" />
-          </svg>
-          <span class="nav-label">Dashboard</span>
-        </RouterLink>
-        <RouterLink to="/inbox">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path d="M3 5h18v13H7l-4 3zm2 2v10l1.2-1H19V7z" />
-          </svg>
-          <span class="nav-label">Caixa de Entrada</span>
-        </RouterLink>
-        <RouterLink v-slot="{ href, navigate }" to="/pedidos" custom>
-          <a :href="href" :aria-current="ordersCurrent" @click="navigate">
-            <svg aria-hidden="true" viewBox="0 0 24 24">
-              <path
-                d="M7 3h7l5 5v13H7zm6 1.5V9h4.5zM9 12h8v1.6H9zm0 3.4h8V17H9z"
-              />
-            </svg>
-            <span class="nav-label">Pedidos</span>
-            <span v-if="storeNewCount > 0" class="nav-count"
-              >{{ storeNewCount
+        <RouterLink
+          v-for="item in navItems"
+          :key="item.to"
+          v-slot="{ href, navigate }"
+          :to="item.to"
+          custom
+        >
+          <a
+            :href="href"
+            :aria-current="sectionCurrent(item.to)"
+            :title="item.label"
+            @click="navigate"
+          >
+            <AppIcon :name="item.icon" />
+            <span class="nav-label">{{ item.label }}</span>
+            <span v-if="item.count?.value > 0" class="nav-count"
+              >{{ item.count.value
               }}<span class="sr-only">{{ storeCountLabel }}</span></span
             >
           </a>
-        </RouterLink>
-        <RouterLink to="/clientes">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path
-              d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 20a6 6 0 0 1 12 0Zm12.5-6a5.5 5.5 0 0 1 5.5 5.5V20h-4a8 8 0 0 0-1.5-4.7Z"
-            />
-          </svg>
-          <span class="nav-label">Clientes</span>
-        </RouterLink>
-        <RouterLink v-if="isAdmin" to="/usuarios">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path
-              d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 12.6-4.2A7 7 0 0 0 16 20Zm16.4-4.6 1.1.5-.8 1.7-1.1-.5a3.4 3.4 0 0 1-1 .6l-.2 1.2h-1.9l-.2-1.2a3.4 3.4 0 0 1-1-.6l-1.1.5-.9-1.7 1.1-.5a3.5 3.5 0 0 1 0-1.2l-1.1-.5.9-1.7 1.1.5a3.4 3.4 0 0 1 1-.6l.2-1.2h1.9l.2 1.2a3.4 3.4 0 0 1 1 .6l1.1-.5.8 1.7-1.1.5a3.5 3.5 0 0 1 0 1.2Zm-3.9 2a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8Z"
-            />
-          </svg>
-          <span class="nav-label">Vendedores</span>
-        </RouterLink>
-        <RouterLink to="/conta">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path
-              d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0Z"
-            />
-          </svg>
-          <span class="nav-label">Conta</span>
         </RouterLink>
       </nav>
       <div class="sidebar-footer">
@@ -450,13 +434,10 @@ function onCursor(cursor) {
           class="quiet sidebar-logout"
           type="button"
           :disabled="logoutBusy"
+          :title="logoutBusy ? 'Saindo…' : 'Sair'"
           @click="logout"
         >
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path
-              d="M10 4H4v16h6v-2H6V6h4zm5 3-1.4 1.4 2.6 2.6H9v2h7.2l-2.6 2.6L15 17l5-5z"
-            />
-          </svg>
+          <AppIcon name="logout" />
           <span class="nav-label">{{ logoutBusy ? 'Saindo…' : 'Sair' }}</span>
         </button>
       </div>
@@ -471,21 +452,29 @@ function onCursor(cursor) {
           aria-controls="mobile-nav"
           @click="mobileOpen = !mobileOpen"
         >
+          <AppIcon :name="mobileOpen ? 'close' : 'menu'" />
           Menu
         </button>
-        <strong class="topbar-title">{{ pageTitle }}</strong>
-        <p>{{ sessionSummary }}</p>
-        <span
-          class="connection-state"
-          :data-state="connection"
-          :data-updated-at="lastUpdatedAt"
-          :title="connectionDetail"
-          :aria-label="`${connectionLabel}. ${connectionDetail}`"
-        >
-          {{ connectionLabel }}
-          <span class="sr-only">{{ connectionDetail }}</span>
-        </span>
-        <ThemeSwitcher />
+        <BrandMark class="topbar-monogram" />
+        <p class="topbar-trail">
+          <span class="topbar-company">{{ brand.companyName }}</span>
+          <AppIcon class="topbar-separator" name="chevron" />
+          <strong class="topbar-title">{{ pageTitle }}</strong>
+        </p>
+        <div class="topbar-tools">
+          <span class="topbar-role">{{ sessionSummary }}</span>
+          <span
+            class="connection-state"
+            :data-state="connection"
+            :data-updated-at="lastUpdatedAt"
+            :title="connectionDetail"
+            :aria-label="`${connectionLabel}. ${connectionDetail}`"
+          >
+            {{ connectionLabel }}
+            <span class="sr-only">{{ connectionDetail }}</span>
+          </span>
+          <ThemeSwitcher />
+        </div>
       </header>
       <nav
         id="mobile-nav"
@@ -493,19 +482,34 @@ function onCursor(cursor) {
         aria-label="Navegação móvel"
         :hidden="!mobileOpen"
       >
-        <RouterLink to="/dashboard">Dashboard</RouterLink>
-        <RouterLink to="/inbox">Caixa de Entrada</RouterLink>
-        <RouterLink v-slot="{ href, navigate }" to="/pedidos" custom>
-          <a :href="href" :aria-current="ordersCurrent" @click="navigate"
-            >Pedidos<template v-if="storeNewCount > 0">
-              ({{ storeNewCount
-              }}<span class="sr-only">{{ storeCountLabel }}</span
-              >)</template
+        <RouterLink
+          v-for="item in navItems"
+          :key="item.to"
+          v-slot="{ href, navigate }"
+          :to="item.to"
+          custom
+        >
+          <a
+            :href="href"
+            :aria-current="sectionCurrent(item.to)"
+            @click="navigate"
+          >
+            <AppIcon :name="item.icon" />{{ item.label
+            }}<span v-if="item.count?.value > 0" class="nav-count"
+              >{{ item.count.value
+              }}<span class="sr-only">{{ storeCountLabel }}</span></span
             ></a
           >
         </RouterLink>
-        <RouterLink to="/clientes">Clientes</RouterLink>
-        <RouterLink to="/conta">Conta</RouterLink>
+        <button
+          class="quiet mobile-logout"
+          type="button"
+          :disabled="logoutBusy"
+          @click="logout"
+        >
+          <AppIcon name="logout" />
+          {{ logoutBusy ? 'Saindo…' : 'Sair' }}
+        </button>
       </nav>
       <main id="main-content" tabindex="-1">
         <RouterView v-slot="{ Component }">

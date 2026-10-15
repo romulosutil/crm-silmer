@@ -136,7 +136,6 @@ onBeforeUnmount(() => {
   <div class="page">
     <header class="page-heading">
       <div>
-        <p class="eyebrow">Indicadores do CRM</p>
         <h1 ref="heading" tabindex="-1">Dashboard</h1>
         <p>Vendas confirmadas e trabalho que pede atenção, com dados do CRM.</p>
       </div>

@@ -626,7 +626,6 @@ onBeforeUnmount(() => {
   <div class="page">
     <header class="page-heading">
       <div>
-        <p class="eyebrow">Carteira</p>
         <h1 ref="heading" tabindex="-1">Pedidos</h1>
         <p>
           Confirmados já podem ter a ficha impressa. Pedidos pendentes podem ser
@@ -1012,7 +1011,7 @@ onBeforeUnmount(() => {
                 </td>
                 <td>
                   <div class="row-actions">
-                    <button class="primary" type="button" @click="print(order)">
+                    <button type="button" @click="print(order)">
                       Imprimir ficha
                     </button>
                     <RouterLink class="button-link" :to="`/pedidos/${order.id}`"

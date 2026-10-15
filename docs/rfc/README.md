@@ -47,3 +47,7 @@ entre os documentos.
 
 - [020 — Telefone no cadastro e roteamento](020-telefone-no-cadastro-e-roteamento.md), decidida na ADR 033.
 - [021 — Chat do site com telefone declarado](021-chat-do-site-com-telefone-declarado.md), decidida na ADR 034.
+
+## Em revisão desde 15/10/2026
+
+- [022 — Fundação visual whitelabel do CRM](022-fundacao-visual-whitelabel.md), aguardando aprovação do PO; o ADR vem depois.

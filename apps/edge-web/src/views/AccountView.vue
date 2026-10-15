@@ -66,13 +66,11 @@ onBeforeUnmount(() => {
   <div class="page account-page">
     <header class="page-heading">
       <div>
-        <p class="eyebrow">Preferências</p>
         <h1 ref="heading" tabindex="-1">Conta e segurança</h1>
         <p>Gerencie sua sessão e as proteções da conta.</p>
       </div>
     </header>
     <section class="surface">
-      <p class="section-kicker">Acesso atual</p>
       <h2>Sessão ativa</h2>
       <dl class="account-facts">
         <div>

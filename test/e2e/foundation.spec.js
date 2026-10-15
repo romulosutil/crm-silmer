@@ -7,9 +7,9 @@ test('renders the semantic foundation without critical accessibility violations'
   await page.goto('/');
 
   await expect(page).toHaveTitle('CRM Silmer');
-  await expect(page.getByRole('main')).toContainText(
-    'O comercial inteiro,em movimento.',
-  );
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'CRM Silmer' }),
+  ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Entrar com segurança' }),
   ).toBeVisible();
@@ -35,16 +35,13 @@ test('uses the light theme by default, even when the system is dark', async ({
 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
-  await expect
-    .poll(() =>
-      page.evaluate(() =>
-        globalThis
-          .getComputedStyle(globalThis.document.documentElement)
-          .getPropertyValue('--color-canvas')
-          .trim(),
-      ),
-    )
-    .toBe('#f7f6fb');
+  // RFC 022: the canvas derives from the brand ink (5% over white), so the
+  // light page paints that near-white tint even under a dark system
+  // preference. Chromium serializes the mix as `color(srgb …)`.
+  await expect(page.locator('body')).toHaveCSS(
+    'background-color',
+    /^color\(srgb 0\.95\d* 0\.95\d* 0\.95\d*\)$/u,
+  );
 });
 
 test('applies a saved dark theme before the application bundle loads', async ({
@@ -410,13 +407,17 @@ test('keeps Pedidos in the menu after Caixa de Entrada, active across its pages'
   await page.setViewportSize({ height: 800, width: 480 });
   await page.getByRole('button', { name: 'Menu' }).click();
   const mobile = page.getByRole('navigation', { name: 'Navegação móvel' });
+  // The phone menu offers the same places as the sidebar, admin and exit
+  // included.
   await expect(mobile.getByRole('link')).toHaveText([
     'Dashboard',
     'Caixa de Entrada',
     'Pedidos',
     'Clientes',
+    'Vendedores',
     'Conta',
   ]);
+  await expect(mobile.getByRole('button', { name: 'Sair' })).toBeVisible();
 
   await page.setViewportSize({ height: 900, width: 1280 });
   // PGE-01: the order page belongs to Pedidos, so the menu item stays lit on

@@ -11,6 +11,7 @@ import {
 import { useRoute, useRouter } from 'vue-router';
 import { brand } from '../brand/index.js';
 import AppIcon from '../components/AppIcon.vue';
+import FilterSheet from '../components/FilterSheet.vue';
 import AudioRecorder from '../components/inbox/AudioRecorder.vue';
 import ConversationOrderSummary from '../components/inbox/ConversationOrderSummary.vue';
 import MediaMessage from '../components/inbox/MediaMessage.vue';
@@ -41,9 +42,8 @@ const DELIVERY_NOTICES = Object.freeze({
  * "Aguardando vendedor", so the other two exclude it — an agent that stopped
  * and is waiting must never be counted as still working the conversation.
  *
- * One segmented axis (pesquisa UX 15/10, achado 1): the archived conversations
- * (PCX-05) are its last tab instead of a second switch hidden in a menu, and
- * every tab shows how many conversations it holds.
+ * PCX-14 (RFC 024): these are the "Situação" of the "Filtros" sheet; the
+ * archived conversations (PCX-05) are its last option.
  */
 const STATE_TABS = Object.freeze([
   Object.freeze({ label: 'Todas', params: {}, value: 'all' }),
@@ -69,11 +69,26 @@ const STATE_TABS = Object.freeze([
     value: 'archived',
   }),
 ]);
-/** PCX-05: whose conversations are listed, combined with the tab above. */
+/** PCX-05: whose conversations are listed — "Responsável" in the sheet. */
 const QUEUE_FILTERS = Object.freeze([
   { label: 'Todas', value: 'all' },
   { label: 'Minhas', value: 'mine' },
   { label: 'Sem responsável', value: 'unassignedHumanHandoff' },
+]);
+/**
+ * PCX-14: the three questions of every day, one tap each, with their totals.
+ * Each is a fixed pair of the two filters; any other pair is named in the
+ * summary under the toolbar.
+ */
+const SHORTCUTS = Object.freeze([
+  Object.freeze({ label: 'Todas', queue: 'all', tab: 'all', value: 'all' }),
+  Object.freeze({
+    label: 'Aguardando',
+    queue: 'all',
+    tab: 'waiting',
+    value: 'waiting',
+  }),
+  Object.freeze({ label: 'Minhas', queue: 'mine', tab: 'all', value: 'mine' }),
 ]);
 const CONTEXT_STORAGE_KEY = 'crm.inbox.contextOpen';
 const LIST_TIME = new Intl.DateTimeFormat('pt-BR', {
@@ -139,7 +154,16 @@ const stateTab = ref(
   ROUTE_STATE_TAB[String(route.query.situacao ?? '')] ?? 'all',
 );
 const queueFilter = ref(ROUTE_QUEUE[String(route.query.fila ?? '')] ?? 'all');
-/** @type {import('vue').Ref<Record<string, number>>} */
+const filterSheet = ref(null);
+const filtersButton = ref(null);
+// The sheet edits a draft; "Ver resultados" applies it, Esc discards it.
+const draftTab = ref('all');
+const draftQueue = ref('all');
+/**
+ * Totals of the shortcuts, by shortcut value; a failed one is absent.
+ *
+ * @type {import('vue').Ref<Record<string, number>>}
+ */
 const counts = ref({});
 const loading = ref(true);
 const detailLoading = ref(false);
@@ -360,6 +384,34 @@ const createOrderInMore = computed(
   () => canOfferOrder.value && !createOrderInHeader.value,
 );
 const showArchived = computed(() => stateTab.value === 'archived');
+/** PCX-14: the shortcut the two filters add up to, if any. */
+const activeShortcut = computed(
+  () =>
+    SHORTCUTS.find(
+      (shortcut) =>
+        shortcut.tab === stateTab.value && shortcut.queue === queueFilter.value,
+    )?.value ?? '',
+);
+/**
+ * PCX-14: a pair no shortcut covers is named, one removable filter per axis.
+ * Empty while a shortcut is pressed: the shortcut already says it.
+ */
+const activeFilters = computed(() => {
+  /** @type {Array<{key: 'queue'|'tab', label: string}>} */
+  const filters = [];
+  if (activeShortcut.value) return filters;
+  const tab = STATE_TABS.find((item) => item.value === stateTab.value);
+  if (tab && tab.value !== 'all')
+    filters.push({ key: 'tab', label: tab.label });
+  const queue = QUEUE_FILTERS.find((item) => item.value === queueFilter.value);
+  if (queue && queue.value !== 'all') {
+    filters.push({ key: 'queue', label: queue.label });
+  }
+  return filters;
+});
+const filteredByChoice = computed(
+  () => stateTab.value !== 'all' || queueFilter.value !== 'all',
+);
 const canArchiveActive = computed(
   () => canArchive.value && !active.value?.archivedAt,
 );
@@ -431,17 +483,21 @@ function messageWhen(value) {
     : `${listWhen(value)}, ${time}`;
 }
 
-/** @param {string} value */
-function tabCount(value) {
+/** @param {string} value a shortcut value */
+function shortcutCount(value) {
   const count = counts.value[value];
   return Number.isFinite(count) ? count : null;
 }
 
 /**
- * @param {string} [tabValue]
- * @param {number} [limit] 1 when only the total of a tab is wanted
+ * @param {{tab?: string, queue?: string}} [filter] the situation and the
+ *   owner; the ones on screen by default
+ * @param {number} [limit] 1 when only the total is wanted
  */
-function listUrl(tabValue = stateTab.value, limit = 100) {
+function listUrl(
+  { tab: tabValue = stateTab.value, queue = queueFilter.value } = {},
+  limit = 100,
+) {
   const tab =
     STATE_TABS.find((item) => item.value === tabValue) ?? STATE_TABS[0];
   const params = new URLSearchParams({
@@ -451,13 +507,70 @@ function listUrl(tabValue = stateTab.value, limit = 100) {
   for (const [name, value] of Object.entries(tab.params)) {
     params.set(name, value);
   }
-  if (queueFilter.value === 'mine' && currentUserId.value) {
+  if (queue === 'mine' && currentUserId.value) {
     params.set('assignedUserId', currentUserId.value);
   }
-  if (queueFilter.value === 'unassignedHumanHandoff') {
+  if (queue === 'unassignedHumanHandoff') {
     params.set('unassignedHumanHandoff', 'true');
   }
   return `/api/v1/inbox/conversations?${params.toString()}`;
+}
+
+/**
+ * PCX-14: a shortcut sets both filters at once, so the list is read once.
+ *
+ * @param {(typeof SHORTCUTS)[number]} shortcut
+ */
+function selectShortcut(shortcut) {
+  stateTab.value = shortcut.tab;
+  queueFilter.value = shortcut.queue;
+}
+
+/** PCX-14: the sheet opens on the filters in use. @param {Event} event */
+function openFilters(event) {
+  draftTab.value = stateTab.value;
+  draftQueue.value = queueFilter.value;
+  /** @type {any} */ (filterSheet.value)?.open(
+    /** @type {HTMLElement} */ (event.currentTarget),
+  );
+}
+
+function applySheetFilters() {
+  stateTab.value = draftTab.value;
+  queueFilter.value = draftQueue.value;
+}
+
+function clearSheetDraft() {
+  draftTab.value = 'all';
+  draftQueue.value = 'all';
+}
+
+/**
+ * PCX-14: removes one filter of the summary. The focus stays in the summary
+ * while it has a filter left, and goes to "Filtros" once it is gone.
+ *
+ * @param {'queue'|'tab'} key
+ */
+async function removeFilter(key) {
+  if (key === 'tab') stateTab.value = 'all';
+  else queueFilter.value = 'all';
+  await nextTick();
+  focusAfterFilterChange();
+}
+
+/** Back to every conversation; the focus lands on "Filtros". */
+async function clearFilters() {
+  stateTab.value = 'all';
+  queueFilter.value = 'all';
+  await nextTick();
+  focusAfterFilterChange();
+}
+
+function focusAfterFilterChange() {
+  const next = /** @type {HTMLElement|null} */ (
+    globalThis.document.querySelector('.inbox-active-filter button')
+  );
+  (next ?? /** @type {HTMLElement|null} */ (filtersButton.value))?.focus();
 }
 
 /**
@@ -845,10 +958,15 @@ async function loadInbox(silent = false) {
     if (controller !== listController) return;
     conversations.value = response.data.items;
     totalCount.value = response.data.totalCount;
-    counts.value = {
-      ...counts.value,
-      [stateTab.value]: Number(response.data.totalCount),
-    };
+    if (
+      activeShortcut.value &&
+      (queueFilter.value !== 'mine' || currentUserId.value)
+    ) {
+      counts.value = {
+        ...counts.value,
+        [activeShortcut.value]: Number(response.data.totalCount),
+      };
+    }
     now.value = new Date();
     listError.value = '';
     void loadCounts();
@@ -867,29 +985,33 @@ async function loadInbox(silent = false) {
 }
 
 /**
- * The other tabs only need their totals: one `limit=1` read each, in
- * parallel, with the same queue. A failed total hides its number rather than
- * keeping a stale one.
+ * The other shortcuts only need their totals: one `limit=1` read each, in
+ * parallel. A failed total hides its number rather than keeping a stale one,
+ * and "Minhas" has none until the session says who is reading.
  */
 async function loadCounts() {
   countController?.abort();
   const controller = new AbortController();
   countController = controller;
-  const others = STATE_TABS.filter((tab) => tab.value !== stateTab.value);
+  const others = SHORTCUTS.filter(
+    (shortcut) => shortcut.value !== activeShortcut.value,
+  );
   const results = await Promise.allSettled(
-    others.map((tab) =>
-      request(listUrl(tab.value, 1), { signal: controller.signal }),
+    others.map((shortcut) =>
+      shortcut.queue === 'mine' && !currentUserId.value
+        ? Promise.reject(new Error('Sessão sem usuário'))
+        : request(listUrl(shortcut, 1), { signal: controller.signal }),
     ),
   );
   if (controller !== countController) return;
   const next = { ...counts.value };
   results.forEach((result, index) => {
     const value = others[index].value;
-    if (result.status === 'fulfilled') {
-      next[value] = Number(result.value.data.totalCount);
-    } else {
-      delete next[value];
-    }
+    const total = Number(
+      result.status === 'fulfilled' ? result.value.data.totalCount : NaN,
+    );
+    if (Number.isFinite(total)) next[value] = total;
+    else delete next[value];
   });
   counts.value = next;
 }
@@ -1403,12 +1525,8 @@ function scheduleLiveRefresh() {
 }
 
 watch(query, () => void selectVisibleConversation(false));
-watch(stateTab, () => void refreshInbox());
-watch(queueFilter, () => {
-  // Every total changes with the queue; none of the old ones may linger.
-  counts.value = {};
-  void refreshInbox();
-});
+// A shortcut or the sheet may change both filters at once: one read.
+watch([stateTab, queueFilter], () => void refreshInbox());
 watch(
   () => props.conversationId,
   async (id, previous) => {
@@ -1479,41 +1597,113 @@ onBeforeUnmount(() => {
   <div class="page inbox-page" :data-view="workspaceView">
     <div class="inbox-toolbar">
       <h1 ref="heading" class="inbox-title" tabindex="-1">Caixa de Entrada</h1>
-      <div class="inbox-tabs" role="group" aria-label="Estado das conversas">
+      <!-- PCX-14 (RFC 024): search, three shortcuts and "Filtros". -->
+      <div class="inbox-tabs" role="group" aria-label="Atalhos da Caixa">
         <button
-          v-for="tab in STATE_TABS"
-          :key="tab.value"
+          v-for="shortcut in SHORTCUTS"
+          :key="shortcut.value"
           type="button"
           class="inbox-tab"
-          :aria-pressed="stateTab === tab.value"
-          @click="stateTab = tab.value"
+          :aria-pressed="activeShortcut === shortcut.value"
+          @click="selectShortcut(shortcut)"
         >
-          {{ tab.label }}
+          {{ shortcut.label }}
           <span
-            v-if="tabCount(tab.value) !== null"
+            v-if="shortcutCount(shortcut.value) !== null"
             class="inbox-tab-count"
             :data-tone="
-              tab.value === 'waiting' && tabCount(tab.value) > 0
+              shortcut.value === 'waiting' && shortcutCount(shortcut.value) > 0
                 ? 'attention'
                 : undefined
             "
-            >{{ tabCount(tab.value) }}</span
+            >{{ shortcutCount(shortcut.value) }}</span
           >
         </button>
       </div>
-      <div class="inbox-queue">
-        <label for="inbox-queue">Fila</label>
-        <select id="inbox-queue" v-model="queueFilter">
-          <option
-            v-for="filter in QUEUE_FILTERS"
-            :key="filter.value"
-            :value="filter.value"
-          >
-            {{ filter.label }}
-          </option>
-        </select>
+      <button
+        ref="filtersButton"
+        type="button"
+        class="inbox-filters-button"
+        aria-haspopup="dialog"
+        :data-active="activeFilters.length ? 'true' : undefined"
+        @click="openFilters"
+      >
+        Filtros
+        <span v-if="activeFilters.length" class="inbox-tab-count"
+          >{{ activeFilters.length
+          }}<span class="sr-only">
+            {{ activeFilters.length === 1 ? 'ativo' : 'ativos' }}</span
+          ></span
+        >
+      </button>
+      <div
+        v-if="activeFilters.length"
+        class="inbox-active-filter"
+        role="group"
+        aria-labelledby="inbox-active-filter-label"
+      >
+        <span id="inbox-active-filter-label">Filtro:</span>
+        <button
+          v-for="filter in activeFilters"
+          :key="filter.key"
+          type="button"
+          class="inbox-filter-chip"
+          :aria-label="`Remover filtro ${filter.label}`"
+          @click="removeFilter(filter.key)"
+        >
+          {{ filter.label }}
+          <AppIcon name="close" />
+        </button>
+        <button
+          v-if="activeFilters.length > 1"
+          type="button"
+          class="quiet"
+          @click="clearFilters"
+        >
+          Limpar filtros
+        </button>
       </div>
     </div>
+
+    <FilterSheet
+      ref="filterSheet"
+      title="Filtrar conversas"
+      @apply="applySheetFilters"
+      @clear="clearSheetDraft"
+    >
+      <fieldset class="filter-sheet-group">
+        <legend>Situação</legend>
+        <label
+          v-for="tab in STATE_TABS"
+          :key="tab.value"
+          class="filter-sheet-option"
+        >
+          <input
+            v-model="draftTab"
+            type="radio"
+            name="inbox-situacao"
+            :value="tab.value"
+          />
+          {{ tab.label }}
+        </label>
+      </fieldset>
+      <fieldset class="filter-sheet-group">
+        <legend>Responsável</legend>
+        <label
+          v-for="queue in QUEUE_FILTERS"
+          :key="queue.value"
+          class="filter-sheet-option"
+        >
+          <input
+            v-model="draftQueue"
+            type="radio"
+            name="inbox-responsavel"
+            :value="queue.value"
+          />
+          {{ queue.label }}
+        </label>
+      </fieldset>
+    </FilterSheet>
 
     <div v-if="liveStatusMessage" class="inbox-notice inbox-live-notice">
       <p role="status">{{ liveStatusMessage }}</p>
@@ -1623,14 +1813,22 @@ onBeforeUnmount(() => {
             </button>
           </li>
           <li v-if="!loading && !filtered.length" class="empty-list">
-            <h2>Nenhuma conversa encontrada</h2>
-            <p>
-              {{
-                query
-                  ? 'Revise a busca informada.'
-                  : 'Nada nesta aba agora. Escolha outra aba ou fila.'
-              }}
-            </p>
+            <template v-if="query">
+              <h2>Nenhuma conversa encontrada</h2>
+              <p>Revise a busca informada.</p>
+            </template>
+            <!-- PCX-14: nothing matches the filter, which is not an empty Inbox. -->
+            <template v-else-if="filteredByChoice">
+              <h2>Nenhuma conversa com esse filtro</h2>
+              <p>Volte para todas as conversas ou escolha outro filtro.</p>
+              <button type="button" @click="clearFilters">
+                Limpar filtros
+              </button>
+            </template>
+            <template v-else>
+              <h2>Nenhuma conversa por enquanto</h2>
+              <p>Quando um cliente escrever, a conversa aparece aqui.</p>
+            </template>
           </li>
         </ul>
       </div>

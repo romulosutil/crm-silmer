@@ -166,7 +166,7 @@ const conversationOrder = {
   version: 2,
 };
 
-/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, claimGate?: Promise<void>, claimTakesOver?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, failBoard?: boolean, failDetailOnce?: boolean, failedDelivery?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyContacts?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, siteChat?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
+/** @param {import('@playwright/test').Page} page @param {{assistant?: boolean, assistantKeepsOwner?: boolean, claimGate?: Promise<void>, claimTakesOver?: boolean, conflict?: boolean, confirmOnRefresh?: boolean, empty?: boolean, emptyWhen?:(params:URLSearchParams)=>boolean, failBoard?: boolean, failDetailOnce?: boolean, failInboxList?:(params:URLSearchParams)=>boolean, failedDelivery?: boolean, liveEvent?: Record<string, unknown>|null, longThread?: boolean, manyContacts?: boolean, manyConversations?: boolean, mixedAuthors?: boolean, newMessageOnRefresh?: boolean, noAdmin?: boolean, onBoard?:()=>void, onCreateOrder?:(body:any)=>void, onHandoffClaim?:(body:any)=>void, onInboxList?:(params:URLSearchParams)=>void, onMessage?:(body:any)=>void, order?: any, otherOwner?: boolean, pendingHandoff?:boolean, siteChat?:boolean, suggestion?:boolean, waitingQueue?:boolean}} [options] */
 async function mockCrm(page, options = {}) {
   let conflict = options.conflict ?? false;
   let failDetail = options.failDetailOnce ?? false;
@@ -356,39 +356,48 @@ async function mockCrm(page, options = {}) {
     if (path === '/api/v1/inbox/conversations' && request.method() === 'GET') {
       options.onInboxList?.(url.searchParams);
       inboxListCalls += 1;
+      if (options.failInboxList?.(url.searchParams)) {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/problem+json',
+          body: JSON.stringify({ code: 'UNAVAILABLE' }),
+        });
+        return;
+      }
       // Somebody else confirmed the order between the first read and the
       // refresh the live event triggers.
       if (options.confirmOnRefresh && inboxListCalls > 1 && currentOrder) {
         currentOrder = { ...currentOrder, status: 'confirmado' };
       }
       const currentConversation = withOrder();
-      const items = options.empty
-        ? []
-        : waiting.length
-          ? waiting
-          : options.manyConversations
-            ? Array.from({ length: 40 }, (_, index) => ({
-                ...currentConversation,
-                contact: {
-                  ...currentConversation.contact,
-                  label: `Cliente de teste ${index + 1}`,
-                },
-                id: index
-                  ? `conversation-${index + 1}`
-                  : currentConversation.id,
-              }))
-            : [
-                options.newMessageOnRefresh && inboxListCalls > 1
-                  ? {
-                      ...currentConversation,
-                      lastMessage: {
-                        ...currentConversation.lastMessage,
-                        id: 'message-new',
-                        preview: 'Mensagem nova de teste',
-                      },
-                    }
-                  : currentConversation,
-              ];
+      const items =
+        options.empty || options.emptyWhen?.(url.searchParams)
+          ? []
+          : waiting.length
+            ? waiting
+            : options.manyConversations
+              ? Array.from({ length: 40 }, (_, index) => ({
+                  ...currentConversation,
+                  contact: {
+                    ...currentConversation.contact,
+                    label: `Cliente de teste ${index + 1}`,
+                  },
+                  id: index
+                    ? `conversation-${index + 1}`
+                    : currentConversation.id,
+                }))
+              : [
+                  options.newMessageOnRefresh && inboxListCalls > 1
+                    ? {
+                        ...currentConversation,
+                        lastMessage: {
+                          ...currentConversation.lastMessage,
+                          id: 'message-new',
+                          preview: 'Mensagem nova de teste',
+                        },
+                      }
+                    : currentConversation,
+                ];
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
@@ -1274,7 +1283,11 @@ test('refreshes the Inbox manually when live updates fail and keeps focus on liv
   });
   await page.goto('/inbox');
   await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
-  await page.getByLabel('Fila').selectOption('mine');
+  // PCX-14: "Minhas" is a shortcut now, not an option of the "Fila" select.
+  await page
+    .getByRole('group', { name: 'Atalhos da Caixa' })
+    .getByRole('button', { name: /^Minhas/u })
+    .click();
   await expect
     .poll(() => inboxQueries.at(-1)?.assignedUserId)
     .toBe('operator-1');
@@ -1357,7 +1370,39 @@ test('finds a new last message after the live event without moving search focus'
   await expect(search).toBeFocused();
 });
 
-test('filters the Inbox on one segmented axis with totals, combined with the queue', async ({
+/**
+ * PCX-14: what a person can reach and use in the Inbox without scrolling,
+ * outside the app navigation (design.md §16, "Metas de controles").
+ *
+ * @param {import('@playwright/test').Page} page
+ */
+function firstScreenControls(page) {
+  return page.evaluate(() => {
+    const viewport = {
+      height: globalThis.innerHeight,
+      width: globalThis.innerWidth,
+    };
+    return [
+      ...globalThis.document.querySelectorAll(
+        '#main-content :is(a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"]))',
+      ),
+    ].filter((element) => {
+      const box = element.getBoundingClientRect();
+      return (
+        box.width > 0 &&
+        box.height > 0 &&
+        box.bottom > 0 &&
+        box.right > 0 &&
+        box.top < viewport.height &&
+        box.left < viewport.width &&
+        globalThis.getComputedStyle(element).visibility !== 'hidden' &&
+        !element.closest('dialog:not([open])')
+      );
+    }).length;
+  });
+}
+
+test('PCX-14: filters the Inbox with three shortcuts with totals and the "Filtros" sheet', async ({
   page,
 }) => {
   const inboxQueries = /** @type {Array<Record<string, string>>} */ ([]);
@@ -1370,63 +1415,112 @@ test('filters the Inbox on one segmented axis with totals, combined with the que
   });
   await page.goto('/inbox');
 
-  const tabs = page.getByRole('group', { name: 'Estado das conversas' });
+  const shortcuts = page.getByRole('group', { name: 'Atalhos da Caixa' });
   /** @param {string} name */
-  const tab = (name) =>
-    tabs.getByRole('button', { name: new RegExp(`^${name}`, 'u') });
+  const shortcut = (name) =>
+    shortcuts.getByRole('button', { name: new RegExp(`^${name}`, 'u') });
+  const filters = page.getByRole('button', { name: /^Filtros/u });
 
-  // PCX-01: the conversation-state filter is gone, name and options alike.
-  await expect(page.getByText('Situação', { exact: true })).toHaveCount(0);
+  // PCX-01: the old conversation-state filter is gone. "Situação" only
+  // names a group of the closed sheet (PCX-14), never a control on the list.
+  await expect(page.getByText('Situação', { exact: true })).toBeHidden();
   await expect(
     page.getByRole('button', { name: 'Requer atenção' }),
   ).toHaveCount(0);
-  // Achado 1: one axis, archived included, each tab with its total.
-  await expect(tabs.getByRole('button')).toHaveText([
+  // PCX-14: the five tabs and the "Fila" select give way to the search, three
+  // shortcuts with their totals and "Filtros": five controls, not seven.
+  await expect(shortcuts.getByRole('button')).toHaveText([
     /^Todas\s*1$/u,
-    /^Aguardando vendedor\s*1$/u,
-    /^Com o agente\s*1$/u,
-    /^Com vendedor\s*1$/u,
-    /^Arquivadas\s*1$/u,
+    /^Aguardando\s*1$/u,
+    /^Minhas\s*1$/u,
   ]);
-  await expect(tab('Todas')).toHaveAttribute('aria-pressed', 'true');
-  expect(countQueries.slice(0, 4)).toEqual(
+  await expect(page.locator('.inbox-toolbar select')).toHaveCount(0);
+  await expect(page.locator('#inbox-queue')).toHaveCount(0);
+  await expect(page.locator('.inbox-toolbar button:visible')).toHaveCount(4);
+  await expect(page.locator('#inbox-search')).toBeVisible();
+  await expect(shortcut('Todas')).toHaveAttribute('aria-pressed', 'true');
+  await expect(filters).toHaveAttribute('aria-haspopup', 'dialog');
+  await expect(filters).toHaveAccessibleName('Filtros');
+  // The totals of the other two shortcuts: one `limit=1` read each, with the
+  // same API filters the list uses.
+  expect(countQueries.slice(0, 2)).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ archived: 'false', pendingHandoff: 'true' }),
-      expect.objectContaining({ archived: 'true' }),
+      expect.objectContaining({
+        archived: 'false',
+        assignedUserId: 'operator-1',
+      }),
     ]),
   );
 
-  // PCX-05: the queue keeps deciding whose conversations are listed, and the
-  // totals follow it.
-  await page.getByLabel('Fila').selectOption('mine');
+  // PCX-05: "Minhas" keeps deciding whose conversations are listed.
+  await shortcut('Minhas').click();
   await expect
     .poll(() => inboxQueries.at(-1))
-    .toMatchObject({ assignedUserId: 'operator-1' });
-  await expect
-    .poll(() => countQueries.at(-1)?.assignedUserId)
-    .toBe('operator-1');
+    .toMatchObject({ archived: 'false', assignedUserId: 'operator-1' });
+  expect(inboxQueries.at(-1)?.pendingHandoff).toBeUndefined();
+  await expect(shortcut('Minhas')).toHaveAttribute('aria-pressed', 'true');
+  await expect(shortcut('Todas')).toHaveAttribute('aria-pressed', 'false');
 
-  // PCX-02: the four states, each combined with the queue already chosen.
-  await tab('Aguardando vendedor').click();
+  // PCX-02/PCX-04: "Aguardando" is every waiting conversation, whoever owns it.
+  await shortcut('Aguardando').click();
   await expect
     .poll(() => inboxQueries.at(-1))
-    .toMatchObject({ assignedUserId: 'operator-1', pendingHandoff: 'true' });
+    .toMatchObject({ archived: 'false', pendingHandoff: 'true' });
   expect(inboxQueries.at(-1)?.automationState).toBeUndefined();
-  await expect(tab('Aguardando vendedor')).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  expect(inboxQueries.at(-1)?.assignedUserId).toBeUndefined();
+  await expect(shortcut('Aguardando')).toHaveAttribute('aria-pressed', 'true');
 
-  await tab('Com o agente').click();
-  await expect
-    .poll(() => inboxQueries.at(-1))
-    .toMatchObject({
-      assignedUserId: 'operator-1',
-      automationState: 'assistant',
-      pendingHandoff: 'false',
-    });
+  // The sheet opens from the keyboard on the filters in use.
+  await filters.focus();
+  await page.keyboard.press('Enter');
+  const sheet = page.getByRole('dialog', { name: 'Filtrar conversas' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('legend')).toHaveText(['Situação', 'Responsável']);
+  const situation = sheet.getByRole('group', { name: 'Situação' });
+  const owner = sheet.getByRole('group', { name: 'Responsável' });
+  await expect(situation.getByRole('radio')).toHaveCount(5);
+  await expect(situation.locator('label')).toHaveText([
+    'Todas',
+    'Aguardando vendedor',
+    'Com o agente',
+    'Com vendedor',
+    'Arquivadas',
+  ]);
+  await expect(owner.locator('label')).toHaveText([
+    'Todas',
+    'Minhas',
+    'Sem responsável',
+  ]);
+  const waiting = situation.getByRole('radio', { name: 'Aguardando vendedor' });
+  await expect(waiting).toBeFocused();
+  await expect(waiting).toBeChecked();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
-  await page.getByLabel('Fila').selectOption('unassignedHumanHandoff');
+  // Arrows change the option, Tab moves to the next group and on to the
+  // footer; "Ver resultados" applies both at once.
+  await page.keyboard.press('ArrowDown');
+  await expect(
+    situation.getByRole('radio', { name: 'Com o agente' }),
+  ).toBeChecked();
+  await page.keyboard.press('Tab');
+  await expect(owner.getByRole('radio', { name: 'Todas' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await expect(
+    owner.getByRole('radio', { name: 'Sem responsável' }),
+  ).toBeChecked();
+  await page.keyboard.press('Tab');
+  await expect(
+    sheet.getByRole('button', { name: 'Limpar filtros' }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(
+    sheet.getByRole('button', { name: 'Ver resultados' }),
+  ).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(sheet).toBeHidden();
+  await expect(filters).toBeFocused();
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({
@@ -1436,7 +1530,40 @@ test('filters the Inbox on one segmented axis with totals, combined with the que
     });
   expect(inboxQueries.at(-1)?.assignedUserId).toBeUndefined();
 
-  await tab('Com vendedor').click();
+  // A pair no shortcut covers: no shortcut pressed, "Filtros" says how many
+  // are on and the summary names each one with a way to remove it.
+  for (const name of ['Todas', 'Aguardando', 'Minhas']) {
+    await expect(shortcut(name)).toHaveAttribute('aria-pressed', 'false');
+  }
+  await expect(filters).toHaveAccessibleName('Filtros 2 ativos');
+  const summary = page.getByRole('group', { name: 'Filtro:' });
+  await expect(summary.getByRole('button')).toHaveText([
+    'Com o agente',
+    'Sem responsável',
+    'Limpar filtros',
+  ]);
+  await expect(
+    summary.getByRole('button', { name: 'Remover filtro Com o agente' }),
+  ).toBeVisible();
+
+  // Esc leaves the list as it was.
+  const before = inboxQueries.length;
+  await page.keyboard.press('Enter');
+  await expect(sheet).toBeVisible();
+  await expect(
+    situation.getByRole('radio', { name: 'Com o agente' }),
+  ).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(filters).toBeFocused();
+  expect(inboxQueries).toHaveLength(before);
+  await expect(filters).toHaveAccessibleName('Filtros 2 ativos');
+
+  // PCX-02: "Com vendedor", still combined with the owner already chosen.
+  await filters.click();
+  await situation.getByText('Com vendedor', { exact: true }).click();
+  await sheet.getByRole('button', { name: 'Ver resultados' }).click();
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({
@@ -1445,19 +1572,243 @@ test('filters the Inbox on one segmented axis with totals, combined with the que
       unassignedHumanHandoff: 'true',
     });
 
-  // PCX-05: archived conversations are the last tab of the same axis.
-  await tab('Arquivadas').click();
+  // PCX-05: the archived conversations are reached from the sheet.
+  await filters.click();
+  await situation.getByText('Arquivadas', { exact: true }).click();
+  await sheet.getByRole('button', { name: 'Ver resultados' }).click();
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({ archived: 'true', unassignedHumanHandoff: 'true' });
   expect(inboxQueries.at(-1)?.automationState).toBeUndefined();
   expect(inboxQueries.at(-1)?.pendingHandoff).toBeUndefined();
 
-  await tab('Todas').click();
+  // Removing one filter keeps the other, and the focus, in the summary.
+  await summary
+    .getByRole('button', { name: 'Remover filtro Sem responsável' })
+    .click();
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({ archived: 'true' });
+  expect(inboxQueries.at(-1)?.unassignedHumanHandoff).toBeUndefined();
+  await expect(summary.getByRole('button')).toHaveText(['Arquivadas']);
+  await expect(
+    summary.getByRole('button', { name: 'Remover filtro Arquivadas' }),
+  ).toBeFocused();
+  await expect(filters).toHaveAccessibleName('Filtros 1 ativo');
+
+  // The last one gone, the list is every conversation and "Filtros" has the
+  // focus.
+  await page.keyboard.press('Enter');
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({ archived: 'false' });
+  await expect(summary).toHaveCount(0);
+  await expect(shortcut('Todas')).toHaveAttribute('aria-pressed', 'true');
+  await expect(filters).toBeFocused();
+  await expect(filters).toHaveAccessibleName('Filtros');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('PCX-14: on a 390 px phone the shortcuts fit, the sheet works by keyboard and the first screen keeps its budget', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockCrm(page);
+  await page.goto('/inbox');
+  const shortcuts = page.getByRole('group', { name: 'Atalhos da Caixa' });
+  await expect(shortcuts.getByRole('button')).toHaveText([
+    /^Todas\s*1$/u,
+    /^Aguardando\s*1$/u,
+    /^Minhas\s*1$/u,
+  ]);
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
+
+  // Every shortcut whole on screen: no sideways scroll, nothing cut.
+  const layout = await page.evaluate(() => {
+    const doc = globalThis.document.documentElement;
+    const row = /** @type {HTMLElement} */ (
+      globalThis.document.querySelector('.inbox-tabs')
+    );
+    return {
+      overflow: doc.scrollWidth - doc.clientWidth,
+      rowOverflow: row.scrollWidth - row.clientWidth,
+    };
+  });
+  expect(layout.overflow).toBeLessThanOrEqual(0);
+  expect(layout.rowOverflow).toBeLessThanOrEqual(0);
+  const filters = page.getByRole('button', { name: /^Filtros/u });
+  for (const control of [
+    ...(await shortcuts.getByRole('button').all()),
+    filters,
+  ]) {
+    await expect(control).toBeInViewport({ ratio: 1 });
+    expect((await control.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+  await expect(page.locator('#inbox-search')).toBeInViewport();
+  // design.md §16: at most 15 controls on the first screen of a phone.
+  expect(await firstScreenControls(page)).toBeLessThanOrEqual(15);
+
+  // The sheet: 44 px options, the option in use first, Esc back to "Filtros".
+  await filters.focus();
+  await page.keyboard.press('Enter');
+  const sheet = page.getByRole('dialog', { name: 'Filtrar conversas' });
+  await expect(sheet).toBeVisible();
+  const situation = sheet.getByRole('group', { name: 'Situação' });
+  await expect(situation.getByRole('radio', { name: 'Todas' })).toBeFocused();
+  for (const option of await sheet.locator('.filter-sheet-option').all()) {
+    expect((await option.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+  for (const button of await sheet.getByRole('button').all()) {
+    expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.keyboard.press('ArrowDown');
+  await expect(
+    situation.getByRole('radio', { name: 'Aguardando vendedor' }),
+  ).toBeChecked();
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(filters).toBeFocused();
+  await expect(
+    shortcuts.getByRole('button', { name: /^Todas/u }),
+  ).toHaveAttribute('aria-pressed', 'true');
+
+  // A pair outside the shortcuts: the summary sits under them, targets intact.
+  await page.keyboard.press('Enter');
+  await situation.getByText('Com o agente', { exact: true }).click();
+  await sheet
+    .getByRole('group', { name: 'Responsável' })
+    .getByText('Sem responsável', { exact: true })
+    .click();
+  await sheet.getByRole('button', { name: 'Ver resultados' }).click();
+  const summary = page.getByRole('group', { name: 'Filtro:' });
+  for (const button of await summary.getByRole('button').all()) {
+    await expect(button).toBeInViewport();
+    expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+  expect(await firstScreenControls(page)).toBeLessThanOrEqual(15);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // design.md §16: at most 24 on a 1366×768 notebook.
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto('/inbox');
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
+  await expect(page.locator('.conv-head')).toBeVisible();
+  expect(await firstScreenControls(page)).toBeLessThanOrEqual(24);
+});
+
+test('PCX-14: the Painel links open the Inbox with their shortcut pressed', async ({
+  page,
+}) => {
+  const inboxQueries = /** @type {Array<Record<string, string>>} */ ([]);
+  await mockCrm(page, {
+    onInboxList: (params) => {
+      if (params.get('limit') !== '1') {
+        inboxQueries.push(Object.fromEntries(params));
+      }
+    },
+  });
+  const shortcuts = page.getByRole('group', { name: 'Atalhos da Caixa' });
+  /** @param {string} name */
+  const shortcut = (name) =>
+    shortcuts.getByRole('button', { name: new RegExp(`^${name}`, 'u') });
+  const summary = page.getByRole('group', { name: 'Filtro:' });
+
+  await page.goto('/inbox?fila=minhas');
+  await expect(shortcut('Minhas')).toHaveAttribute('aria-pressed', 'true');
+  await expect(shortcut('Todas')).toHaveAttribute('aria-pressed', 'false');
+  await expect(summary).toHaveCount(0);
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({ assignedUserId: 'operator-1' });
+
+  await page.goto('/inbox?situacao=aguardando');
+  await expect(shortcut('Aguardando')).toHaveAttribute('aria-pressed', 'true');
+  await expect(summary).toHaveCount(0);
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({ pendingHandoff: 'true' });
+
+  // A link outside the shortcuts opens with its filters in the summary.
+  await page.goto('/inbox?situacao=agente&fila=sem-responsavel');
+  await expect(summary.getByRole('button')).toHaveText([
+    'Com o agente',
+    'Sem responsável',
+    'Limpar filtros',
+  ]);
+  await expect
+    .poll(() => inboxQueries.at(-1))
+    .toMatchObject({
+      automationState: 'assistant',
+      unassignedHumanHandoff: 'true',
+    });
+
+  // An unknown value is ignored, without an error.
+  await page.goto('/inbox?situacao=inventada&fila=outra');
+  await expect(shortcut('Todas')).toHaveAttribute('aria-pressed', 'true');
+  await expect(summary).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
+});
+
+test('PCX-14: an empty filter is not an empty Inbox and offers "Limpar filtros"', async ({
+  page,
+}) => {
+  await mockCrm(page, {
+    emptyWhen: (params) => params.get('pendingHandoff') === 'true',
+  });
+  await page.goto('/inbox');
+  const shortcuts = page.getByRole('group', { name: 'Atalhos da Caixa' });
+  const list = page.getByRole('list', { name: 'Conversas' });
+  // The count is the API's answer: 0 waiting, not a hidden number.
+  await expect(shortcuts.getByRole('button')).toHaveText([
+    /^Todas\s*1$/u,
+    /^Aguardando\s*0$/u,
+    /^Minhas\s*1$/u,
+  ]);
+
+  await shortcuts.getByRole('button', { name: /^Aguardando/u }).click();
+  await expect(
+    list.getByRole('heading', { name: 'Nenhuma conversa com esse filtro' }),
+  ).toBeVisible();
+  const clear = list.getByRole('button', { name: 'Limpar filtros' });
+  await expect(clear).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await clear.focus();
+  await page.keyboard.press('Enter');
+  await expect(list.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
+  await expect(
+    shortcuts.getByRole('button', { name: /^Todas/u }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: /^Filtros/u })).toBeFocused();
+
+  // An Inbox with no conversation at all says so, with no filter to clear.
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await mockCrm(page, { empty: true });
+  await page.goto('/inbox');
+  await expect(
+    list.getByRole('heading', { name: 'Nenhuma conversa por enquanto' }),
+  ).toBeVisible();
+  await expect(
+    list.getByRole('button', { name: 'Limpar filtros' }),
+  ).toHaveCount(0);
+});
+
+test('PCX-14: a total that fails to load is left out, never guessed', async ({
+  page,
+}) => {
+  await mockCrm(page, {
+    failInboxList: (params) =>
+      params.get('limit') === '1' && params.has('assignedUserId'),
+  });
+  await page.goto('/inbox');
+  const shortcuts = page.getByRole('group', { name: 'Atalhos da Caixa' });
+  await expect(shortcuts.getByRole('button')).toHaveText([
+    /^Todas\s*1$/u,
+    /^Aguardando\s*1$/u,
+    /^Minhas\s*$/u,
+  ]);
+  await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
 });
 
 test('names the stop reason and waits, oldest first, when the seller is due', async ({
@@ -1466,9 +1817,10 @@ test('names the stop reason and waits, oldest first, when the seller is due', as
   await mockCrm(page, { waitingQueue: true });
   await page.goto('/inbox');
 
+  // PCX-14: "Aguardando" is the shortcut to the waiting conversations.
   await page
-    .getByRole('group', { name: 'Estado das conversas' })
-    .getByRole('button', { name: /^Aguardando vendedor/u })
+    .getByRole('group', { name: 'Atalhos da Caixa' })
+    .getByRole('button', { name: /^Aguardando/u })
     .click();
 
   // PCX-04: the conversation waiting the longest leads, whatever order the

@@ -556,9 +556,10 @@ onBeforeUnmount(() => {
               v-for="conversation in detail.conversations"
               :key="conversation.id"
             >
-              <RouterLink to="/inbox">{{
-                CHANNEL_LABELS[conversation.channel]
-              }}</RouterLink>
+              <RouterLink
+                :to="`/inbox/${encodeURIComponent(conversation.id)}`"
+                >{{ CHANNEL_LABELS[conversation.channel] }}</RouterLink
+              >
               <span>{{ conversationLabel(conversation) }}</span>
               <small
                 >Última mensagem em

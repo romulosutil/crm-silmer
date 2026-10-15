@@ -20,9 +20,15 @@ export const router = createRouter({
       meta: { title: 'Dashboard' },
     },
     {
-      path: '/inbox',
+      // Deep link to one conversation (Pedido, Clientes and Dashboard open it
+      // directly). `viewKey` keeps one InboxView alive while the reader moves
+      // between conversations, so the list, filters and search survive.
+      path: '/inbox/:conversationId?',
       component: InboxView,
-      meta: { title: 'Caixa de Entrada' },
+      props: (route) => ({
+        conversationId: String(route.params.conversationId ?? ''),
+      }),
+      meta: { title: 'Caixa de Entrada', viewKey: 'inbox' },
     },
     {
       path: '/handoffs',

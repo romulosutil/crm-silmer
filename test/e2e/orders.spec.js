@@ -841,9 +841,10 @@ test('opens the order page inside Pedidos, with the trail and the sections in or
   );
   await expect(trail).toContainText('07-CRM');
   await expect(trail).toContainText('aberto a partir da conversa');
+  // The way back is the conversation itself, not the Inbox in general.
   await expect(
     page.getByRole('link', { name: 'Abrir conversa' }),
-  ).toBeVisible();
+  ).toHaveAttribute('href', '/inbox/conversation-7');
 
   await expect(page.locator('main h2')).toHaveText([
     'Resumo do pedido',
@@ -868,9 +869,10 @@ test('keeps the trail without an origin when the list opened the order', async (
 
   const trail = page.getByRole('navigation', { name: 'Rastro' });
   await expect(trail).not.toContainText('aberto a partir da conversa');
-  await expect(page.getByRole('link', { name: 'Abrir conversa' })).toHaveCount(
-    0,
-  );
+  // The order still knows its conversation and opens it directly.
+  await expect(
+    page.getByRole('link', { name: 'Abrir conversa' }),
+  ).toHaveAttribute('href', '/inbox/conversation-7');
 });
 
 test('locks printing while the order is pending and says why (PIM-01)', async ({

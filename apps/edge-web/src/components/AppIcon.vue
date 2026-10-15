@@ -67,6 +67,13 @@ const ICONS = Object.freeze({
     'M18 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
     'M4 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
   ],
+  'chevron-down': ['m6 9 6 6 6-6'],
+  back: ['m15 18-6-6 6-6'],
+  panel: [
+    'M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+    'M15 3v18',
+  ],
+  search: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'm21 21-4.3-4.3'],
 });
 
 const props = defineProps({

@@ -270,10 +270,44 @@ Cada componente precisa documentar: propósito, anatomia, variantes, estados, co
 
 ### Caixa de Entrada
 
-- Layout list/detail para manter contexto durante a triagem.
-- Lista prioriza nome, trecho recente, horário, estado, responsável e indicador de atenção.
-- Filtros padrão: estado, responsável e pendência; busca permanece separada.
-- `Transformar em lead` é a ação primária apenas quando a conversa ainda não foi convertida.
+Workspace de altura fixa para a atendente (pesquisa UX de 15/10/2026, achado 1):
+a página ocupa exatamente a altura abaixo da barra superior e nunca rola; cada
+coluna rola por dentro.
+
+- **Colunas:** lista | conversa | contexto. O contexto (pedido, assuntos,
+  cliente) é recolhível pelo botão `Detalhes` do cabeçalho; abre por padrão a
+  partir de 1440 px e a última escolha da pessoa vale naquele navegador. No
+  tablet o contexto cobre a conversa; no celular aparece um painel por vez.
+- **Celular primeiro (ADR 035):** desenhada para 390×844 e ampliada. Lista e
+  conversa são telas separadas, com voltar; o cabeçalho mantém só a ação
+  primária, `Pedido` e `Mais`, que abre uma folha inferior acima da barra de
+  navegação (Detalhes, Repassar, Arquivar, Encerrar). A resposta fica acima da
+  barra; ao digitar, a barra sai e a resposta encosta no teclado
+  (`interactive-widget=resizes-content`). Alvos de 44 px; nada depende de
+  hover.
+- **Endereço:** `/inbox/:conversationId` abre a conversa direto (Pedido,
+  Clientes e Dashboard linkam assim). A conversa aberta pelo endereço continua
+  aberta mesmo fora do filtro, arquivada ou além das 100 carregadas; trocar de
+  conversa muda o endereço sem recarregar a lista, a busca ou os filtros. No
+  celular o endereço decide entre a lista e a conversa (voltar = `Conversas`).
+- **Filtros:** um único eixo segmentado com totais (`Todas · Aguardando
+  vendedor · Com o agente · Com vendedor · Arquivadas`), seleção neutra e a
+  fila (`Todas · Minhas · Sem responsável`, PCX-05) num seletor ao lado. A busca
+  fica no topo da lista.
+- **Lista:** nome, horário curto (hora hoje, dia no ano, data antes; a data
+  completa no tooltip), trecho de uma linha, canal, estado, motivo e tempo
+  parado. O item aberto usa `--color-selected`, sem borda lateral colorida.
+- **Cabeçalho da conversa:** compacto, nome e uma linha de identidade; no
+  máximo uma ação primária (`Assumir atendimento`), duas visíveis
+  (`Pedido · status`, `Encerrar conversa`) e o resto em `Mais` (Repassar,
+  Arquivar/Desarquivar). `Mais` abre pelo teclado no primeiro item e Esc
+  devolve o foco.
+- **Histórico:** abre na última mensagem e acompanha as novas, salvo quando a
+  pessoa rolou para ler algo antigo; conversa curta fica junto da resposta.
+- **Resposta:** sempre visível no rodapé da conversa. Enter envia, Shift+Enter
+  quebra a linha; em teclado de toque Enter só quebra a linha. Sem espaço,
+  Anexar e Gravar ficam só com ícone (nome acessível mantido) e Enviar continua
+  na mesma linha.
 - Conversa encerrada usa `Sem lead`; nunca reutilizar o estado visual `Perdido` do Kanban.
 
 ### Kanban Comercial

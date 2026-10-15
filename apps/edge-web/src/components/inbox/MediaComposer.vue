@@ -478,6 +478,7 @@ watch(
         <button
           ref="attachButton"
           type="button"
+          title="Anexar arquivo"
           :disabled="disabled || state === 'sending'"
           :aria-describedby="status ? statusId : undefined"
           @click="fileInput?.click()"
@@ -487,7 +488,7 @@ watch(
               d="m8 12 6-6a4 4 0 0 1 6 6l-8 8a6 6 0 0 1-8-8l8-8m-4 12 8-8a2 2 0 0 1 3 3l-8 8"
             />
           </svg>
-          Anexar arquivo
+          <span class="composer-tool-label">Anexar arquivo</span>
         </button>
         <slot name="tools" />
       </div>

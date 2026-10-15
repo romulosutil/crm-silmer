@@ -525,6 +525,11 @@ test('T25/MED-31: one contextual send preserves unsent text when a draft is remo
   await expect(
     page.getByRole('button', { name: 'Enviar resposta', exact: true }),
   ).toBeEnabled();
+  // Opening the conversation by its address keeps it on screen on a phone,
+  // where the Inbox shows one pane at a time.
+  await page.locator('.conversation-row[aria-current="true"]').click();
+  await expect(page).toHaveURL(/\/inbox\/conversation-1$/u);
+  await expect(text).toHaveValue('Rascunho de texto preservado');
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 800 });
     const mic = await page

@@ -286,7 +286,11 @@ onBeforeUnmount(() => {
             :key="conversation.id"
           >
             <div>
-              <strong>{{ conversation.contact.label }}</strong>
+              <RouterLink
+                class="pend-link"
+                :to="`/inbox/${encodeURIComponent(conversation.id)}`"
+                >{{ conversation.contact.label }}</RouterLink
+              >
               <p>
                 {{
                   CHANNEL_LABELS[conversation.channel] ?? conversation.channel

@@ -1,3 +1,5 @@
+import { brand } from '../brand/index.js';
+
 const DATE_TIME = new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short',
   timeStyle: 'short',
@@ -13,12 +15,17 @@ export const CONVERSATION_LABELS = Object.freeze({
   encerrada: 'Conversa encerrada',
 });
 
-/** @param {{automationState?: unknown, state?: unknown}|null|undefined} conversation */
+/**
+ * Who is serving the conversation, in the same words as the Inbox filter
+ * ("Com o agente" · "Com vendedor"), so a badge never contradicts its tab.
+ *
+ * @param {{automationState?: unknown, state?: unknown}|null|undefined} conversation
+ */
 export function conversationLabel(conversation) {
   if (conversation?.state === 'em_atendimento') {
     return conversation.automationState === 'human'
-      ? 'Em atendimento por vendedor'
-      : 'Em atendimento por IA';
+      ? 'Com vendedor'
+      : `Com ${brand.assistant.reference}`;
   }
   return (
     CONVERSATION_LABELS[

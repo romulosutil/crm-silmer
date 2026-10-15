@@ -139,12 +139,24 @@ async function mockConcurrentContact(page) {
   };
 }
 
+/**
+ * In the Inbox the client sits in the context panel, which a 1280 px screen
+ * keeps closed until asked for.
+ *
+ * @param {import('@playwright/test').Page} page @param {string} route
+ */
+async function openClientDetails(page, route) {
+  if (route !== '/inbox') return;
+  await page.getByRole('button', { name: 'Detalhes', exact: true }).click();
+}
+
 for (const route of ['/clientes', '/inbox']) {
   test(`${route} still saves a name from the version opened for editing`, async ({
     page,
   }) => {
     const mock = await mockConcurrentContact(page);
     await page.goto(route);
+    await openClientDetails(page, route);
     await page.getByRole('button', { name: 'Editar nome' }).click();
     await page
       .getByRole('textbox', { name: 'Nome do contato' })
@@ -166,6 +178,7 @@ for (const route of ['/clientes', '/inbox']) {
   }) => {
     const mock = await mockConcurrentContact(page);
     await page.goto(route);
+    await openClientDetails(page, route);
     await page.getByRole('button', { name: 'Editar nome' }).click();
     const input = page.getByRole('textbox', { name: 'Nome do contato' });
     await input.fill('Meu rascunho');

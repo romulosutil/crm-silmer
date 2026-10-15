@@ -45,8 +45,9 @@ o pedido confirmado observado é de teste e não integra as vendas reais.
 
 Esta verificação confirma a recuperação das rotas observadas, não um teste de
 restauração do backup nem a ausência de falhas em fluxos de escrita. A melhoria
-de resiliência da interface permanece na branch `codex/dashboard-qa` e ainda
-precisa de integração e implantação para valer em produção.
+de resiliência da interface (indicadores disponíveis preservados quando uma
+API falha) chegou com o Painel por papel (#192) e só vale em produção depois
+da implantação.
 
 Para uma nova ocorrência, antes de aplicar migrations, verificar backup, espaço
 livre, estado dos serviços e plano de rollback. No container `silmer-api` do

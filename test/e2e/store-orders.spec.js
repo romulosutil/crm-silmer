@@ -196,6 +196,24 @@ async function mockStore(page, options = {}) {
       });
       return;
     }
+    if (path === '/api/v1/inbox/summary' && request.method() === 'GET') {
+      await route.fulfill({
+        body: JSON.stringify({
+          assistant: {
+            activeCount: 3,
+            failedDeliveryCount: 0,
+            lastReplyAt: '2026-10-15T14:58:00.000Z',
+            stallMinutes: 10,
+            stalledCount: 0,
+          },
+          generatedAt: '2026-10-15T15:00:00.000Z',
+          mine: { awaitingReplyCount: 0, count: 0, oldestAwaitingSince: null },
+          waitingHandoff: { count: 0, oldestSince: null, overdueCount: 0 },
+        }),
+        contentType: 'application/json',
+      });
+      return;
+    }
     if (path === '/api/v1/orders' && request.method() === 'GET') {
       options.onList?.(url.searchParams);
       await route.fulfill({
@@ -374,7 +392,7 @@ test('LOJ-31: one new site order reads in the singular; none hides the notice', 
   const empty = await page.context().newPage();
   await mockStore(empty, { summary: () => summaryWith(0, null) });
   await empty.goto('/dashboard');
-  await expect(empty.getByText('Valor vendido', { exact: true })).toBeVisible();
+  await expect(empty.getByText('Vendido hoje', { exact: true })).toBeVisible();
   await expect(empty.locator('.store-notice')).toHaveCount(0);
   await expect(
     empty

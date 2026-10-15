@@ -1,4 +1,8 @@
-import { OrderConflictError, OrderValidationError } from './errors.js';
+import {
+  OrderConflictError,
+  OrderInputError,
+  OrderValidationError,
+} from './errors.js';
 import { hasArtworkOrigin, ITEM_REQUIRED_FIELDS } from './ficha.js';
 
 // ADR 006: an order is `pendente` (unofficial draft) or `confirmado`
@@ -63,6 +67,65 @@ const orderDateFormat = new Intl.DateTimeFormat('en-CA', {
  */
 export function operationalDay(instant) {
   return orderDateFormat.format(instant);
+}
+
+/**
+ * The Painel's periods: today, the last seven days (today included) and the
+ * month so far, all on São Paulo days.
+ */
+export const SUMMARY_PERIODS = Object.freeze(
+  /** @type {const} */ (['hoje', '7dias', 'mes']),
+);
+
+/**
+ * @param {string} day YYYY-MM-DD
+ * @param {number} days
+ */
+export function shiftDay(day, days) {
+  const [year, month, date] = day.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, date + days))
+    .toISOString()
+    .slice(0, 10);
+}
+
+/**
+ * The first and last day (inclusive) of a Painel period, read on the
+ * operation's clock so "hoje" is the São Paulo day, not the UTC one.
+ *
+ * @param {typeof SUMMARY_PERIODS[number]} key
+ * @param {Date} now
+ */
+export function summaryPeriod(key, now) {
+  if (!SUMMARY_PERIODS.includes(key)) {
+    throw new OrderInputError('period is invalid', ['period']);
+  }
+  const today = operationalDay(now);
+  const from =
+    key === 'hoje'
+      ? today
+      : key === '7dias'
+        ? shiftDay(today, -6)
+        : `${today.slice(0, 8)}01`;
+  return Object.freeze({
+    from,
+    key,
+    timeZone: OPERATIONAL_TIME_ZONE,
+    to: today,
+  });
+}
+
+/**
+ * The day an order promised to deliver: the ficha's confirmed delivery. A
+ * store order (ADR 028) carries only its colour's lead time, never a
+ * promised day, so it has none.
+ *
+ * @param {Pick<Order, 'origin'|'ficha'>} order
+ * @returns {string|null}
+ */
+export function promisedDeliveryOn(order) {
+  if (order.origin === 'loja') return null;
+  const day = order.ficha?.summary?.data_entrega_confirmada;
+  return isCalendarDay(day) ? /** @type {string} */ (day) : null;
 }
 
 /** @param {number} sequence */

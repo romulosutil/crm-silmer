@@ -305,6 +305,112 @@ export class PostgresInboxReadRepository {
     });
   }
 
+  /**
+   * Painel: what waits for a person right now, read in one snapshot. Only
+   * counts and instants leave here; no envelope is opened.
+   *
+   * - `waitingHandoff`: handoffs nobody took yet; `overdueCount` are the ones
+   *   past the `due_at` their SLA set when they opened.
+   * - `mine`: the open conversations assigned to the reader, and how many end
+   *   on a client message (the client waits for an answer).
+   * - `assistant`: conversations with the assistant, the ones whose last
+   *   client message got no answer for `stallMinutes`, conversations with a
+   *   failed or unknown send in the last 24 hours and the assistant's last
+   *   reply in that window.
+   *
+   * @param {{actorId: string, now: Date, stallMinutes: number}} input
+   */
+  async summary({ actorId, now, stallMinutes }) {
+    const at = now.toISOString();
+    const stalledBefore = new Date(
+      now.getTime() - stallMinutes * 60_000,
+    ).toISOString();
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
+    return this.#snapshot(async (database) => {
+      const [queue, sends] = await Promise.all([
+        database.query(
+          `SELECT
+             count(*) FILTER (WHERE handoff.status='pending')::integer waiting_count,
+             count(*) FILTER (WHERE handoff.status='pending'
+               AND handoff.due_at <= $2::timestamptz)::integer waiting_overdue_count,
+             min(handoff.created_at) FILTER (WHERE handoff.status='pending') waiting_oldest_since,
+             count(*) FILTER (WHERE conversation.assigned_user_id=$1)::integer mine_count,
+             count(*) FILTER (WHERE conversation.assigned_user_id=$1
+               AND last_message.direction='inbound')::integer mine_awaiting_count,
+             min(last_message.occurred_at) FILTER (WHERE conversation.assigned_user_id=$1
+               AND last_message.direction='inbound') mine_oldest_awaiting_since,
+             count(*) FILTER (WHERE conversation.automation_state='assistant'
+               AND handoff.id IS NULL)::integer assistant_active_count,
+             count(*) FILTER (WHERE conversation.automation_state='assistant'
+               AND handoff.id IS NULL AND last_message.direction='inbound'
+               AND last_message.occurred_at <= $3::timestamptz)::integer assistant_stalled_count
+           FROM crm.conversations conversation
+           LEFT JOIN LATERAL (
+             SELECT candidate.id, candidate.status, candidate.due_at,
+                    candidate.created_at
+             FROM crm.handoffs candidate
+             WHERE candidate.conversation_id=conversation.id
+               AND candidate.status IN ('pending','accepted')
+             ORDER BY candidate.created_at DESC, candidate.id DESC LIMIT 1
+           ) handoff ON true
+           LEFT JOIN LATERAL (
+             SELECT message.direction, message.occurred_at
+             FROM crm.messages message
+             WHERE message.conversation_id=conversation.id
+             ORDER BY message.occurred_at DESC, message.id DESC LIMIT 1
+           ) last_message ON true
+           WHERE conversation.archived_at IS NULL
+             AND conversation.state NOT IN
+               ('convertida_em_lead','sem_lead','encerrada')`,
+          [actorId, at, stalledBefore],
+        ),
+        database.query(
+          `SELECT
+             count(DISTINCT message.conversation_id) FILTER (
+               WHERE message.status IN ('failed','outcome_unknown')
+                  OR message.delivery_status IN ('failed','outcome_unknown')
+             )::integer failed_conversation_count,
+             max(message.occurred_at) FILTER (
+               WHERE message.author_kind='assistant'
+             ) last_assistant_reply_at
+           FROM crm.messages message
+           WHERE message.direction='outbound'
+             AND message.occurred_at > $1::timestamptz
+             AND message.occurred_at <= $2::timestamptz`,
+          [dayAgo, at],
+        ),
+      ]);
+      const row = queue.rows[0] ?? {};
+      const sent = sends.rows[0] ?? {};
+      return Object.freeze({
+        assistant: Object.freeze({
+          activeCount: Number(row.assistant_active_count ?? 0),
+          failedDeliveryCount: Number(sent.failed_conversation_count ?? 0),
+          lastReplyAt: sent.last_assistant_reply_at
+            ? iso(sent.last_assistant_reply_at)
+            : null,
+          stalledCount: Number(row.assistant_stalled_count ?? 0),
+          stallMinutes,
+        }),
+        generatedAt: at,
+        mine: Object.freeze({
+          awaitingReplyCount: Number(row.mine_awaiting_count ?? 0),
+          count: Number(row.mine_count ?? 0),
+          oldestAwaitingSince: row.mine_oldest_awaiting_since
+            ? iso(row.mine_oldest_awaiting_since)
+            : null,
+        }),
+        waitingHandoff: Object.freeze({
+          count: Number(row.waiting_count ?? 0),
+          oldestSince: row.waiting_oldest_since
+            ? iso(row.waiting_oldest_since)
+            : null,
+          overdueCount: Number(row.waiting_overdue_count ?? 0),
+        }),
+      });
+    });
+  }
+
   /** @template T @param {(database: any) => Promise<T>} work */
   async #snapshot(work) {
     if (typeof this.database.transaction !== 'function') {

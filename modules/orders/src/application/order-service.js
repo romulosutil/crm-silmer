@@ -21,11 +21,18 @@ import { parseBrlAmount } from '../domain/money.js';
 import {
   confirmOrder,
   missingForConfirmation,
+  operationalDay,
+  promisedDeliveryOn,
   recordMilestones,
   reopenOrder,
+  shiftDay,
+  summaryPeriod,
 } from '../domain/order.js';
 import { requireUnlocked } from '../domain/store-order.js';
-import { assertOrderRepositoryContract } from '../ports/contracts.js';
+import {
+  MAX_ORDER_PAGE_SIZE,
+  assertOrderRepositoryContract,
+} from '../ports/contracts.js';
 
 /**
  * `openedAt` is when the first inbound message opened the conversation.
@@ -64,7 +71,18 @@ export const ORDER_SECTIONS = Object.freeze(
 );
 export const DEFAULT_ORDER_PAGE_SIZE = 25;
 const MAX_QUERY_LENGTH = 120;
-const LIST_KEYS = new Set(['status', 'origin', 'q', 'cursor', 'limit']);
+const LIST_KEYS = new Set([
+  'status',
+  'origin',
+  'q',
+  'cursor',
+  'limit',
+  'delivery',
+]);
+// Painel: "Entrega atrasada" (promised day before today) and "Próximas
+// entregas" (today and the six days after), on São Paulo days.
+const DELIVERY_FILTERS = new Set(['overdue', 'due_soon']);
+const DUE_SOON_DAYS = 7;
 // "12", "012" or "12-CRM" name order 12; anything else is a customer search.
 const ORDER_NUMBER_QUERY = /^0*(\d{1,15})(?:-crm)?$/iu;
 // ADR 028: "LJ-5B0C77ED", "lj5b0c77ed" or "#LJ-5B0C77ED" name a store order.
@@ -318,9 +336,67 @@ export function createOrderService(options) {
     }
   }
 
+  /**
+   * The open deliveries with their promised day, earliest first. Orders
+   * without a promised day (store orders, older fichas) are left out.
+   *
+   * @param {Date} now
+   */
+  async function promisedDeliveries(now) {
+    const today = operationalDay(now);
+    const dueSoonUntil = shiftDay(today, DUE_SOON_DAYS - 1);
+    const deliveries = (await repository.openDeliveries())
+      .map((order) => ({ day: promisedDeliveryOn(order), order }))
+      .filter(
+        /** @returns {entry is {day: string, order: Order}} */
+        (entry) => entry.day !== null,
+      )
+      .sort(
+        (left, right) =>
+          left.day.localeCompare(right.day) ||
+          left.order.numberSequence - right.order.numberSequence,
+      );
+    return {
+      dueSoon: deliveries.filter(
+        ({ day }) => day >= today && day <= dueSoonUntil,
+      ),
+      dueSoonUntil,
+      overdue: deliveries.filter(({ day }) => day < today),
+      today,
+    };
+  }
+
   return Object.freeze({
-    async summary() {
-      return repository.summary();
+    /**
+     * The Painel figures. The all-time totals stay as ADR 031 defined them;
+     * `period` adds the confirmed sales of today, the last seven days or the
+     * month so far, and `deliveries` the promised days that passed without
+     * "Entregue em" and the ones due this week. Days are São Paulo days and
+     * are worked out here, so every screen agrees on what "hoje" is.
+     *
+     * @param {{period?: unknown}} [input]
+     */
+    async summary(input = {}) {
+      const now = clock();
+      const period = summaryPeriod(
+        /** @type {any} */ (input.period ?? 'hoje'),
+        now,
+      );
+      const [totals, deliveries] = await Promise.all([
+        repository.summary({ from: period.from, to: period.to }),
+        promisedDeliveries(now),
+      ]);
+      return {
+        ...totals,
+        deliveries: {
+          dueSoonCount: deliveries.dueSoon.length,
+          dueSoonUntil: deliveries.dueSoonUntil,
+          oldestOverdueOn: deliveries.overdue[0]?.day ?? null,
+          overdueCount: deliveries.overdue.length,
+        },
+        period: { ...period, ...totals.period },
+        today: deliveries.today,
+      };
     },
 
     /**
@@ -530,7 +606,10 @@ export function createOrderService(options) {
      * narrows to store orders, which the search finds by number, by the
      * HMAC of the whole phone or (ADR 028) by the shop's `LJ-…` number.
      *
-     * @param {{status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number}} [input]
+     * Painel: `delivery` lists the confirmed orders whose promised day
+     * passed (`overdue`) or comes this week (`due_soon`), earliest first.
+     *
+     * @param {{status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number, delivery?: string}} [input]
      */
     async list(input = {}) {
       for (const key of Object.keys(input)) {
@@ -544,6 +623,30 @@ export function createOrderService(options) {
       const q = (input.q ?? '').trim();
       if (q.length > MAX_QUERY_LENGTH) {
         throw new OrderInputError('q is too long', ['q']);
+      }
+      if (input.delivery !== undefined) {
+        // A delivery view is one short list in promised order: it does not
+        // combine with the other filters or page with a cursor.
+        if (
+          !DELIVERY_FILTERS.has(/** @type {string} */ (input.delivery)) ||
+          ['status', 'origin', 'q', 'cursor'].some(
+            (key) => /** @type {any} */ (input)[key] !== undefined,
+          )
+        ) {
+          throw new OrderInputError('delivery is invalid', ['delivery']);
+        }
+        const deliveries = await promisedDeliveries(clock());
+        const matching =
+          input.delivery === 'overdue'
+            ? deliveries.overdue
+            : deliveries.dueSoon;
+        return {
+          counts: { confirmado: matching.length, pendente: 0 },
+          items: await readAll(
+            matching.slice(0, MAX_ORDER_PAGE_SIZE).map((entry) => entry.order),
+          ),
+          nextCursor: null,
+        };
       }
       /** @type {import('../ports/contracts.js').OrderListQuery} */
       const query = {

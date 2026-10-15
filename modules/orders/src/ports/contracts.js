@@ -72,12 +72,17 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  * counts the store orders whose ficha was never printed and
  * `storeNewOldestPaidAt` is when InfinitePay confirmed the oldest of them
  * (null when there is none).
+ * `period` (Painel) counts the confirmed orders whose order day falls in
+ * `from`..`to` (São Paulo days, inclusive) and the amount they sold.
  * @typedef {{
  *   confirmedCount: number, soldAmountCents: number,
  *   averageTicketCents: number, pendingCount: number,
  *   totalPiecesSold: number, storeNewCount: number,
  *   storeNewOldestPaidAt: string|null,
+ *   period: {confirmedCount: number, soldAmountCents: number},
  * }} OrdersSummary
+ *
+ * @typedef {{from: string, to: string}} OrdersSummaryQuery
  *
  * ADR 031: the first print of a store order's ficha, signed by a person.
  * @typedef {{
@@ -99,6 +104,9 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   appends an `order.ficha_first_printed` event and the
  *   `order.ficha.first_print` audit; any later print, or an order that is
  *   not a store order, changes nothing and answers `recorded: false`.
+ * - `openDeliveries` (Painel) reads, whole and unpaginated, the confirmed
+ *   attendance orders nobody marked delivered (`deliveredOn` empty), test
+ *   orders aside, so the promised day inside the ficha can be compared.
  *
  * @typedef {{
  *   createPending(input: CreatePendingOrderInput): Promise<Order>,
@@ -106,7 +114,8 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   findPendingByConversation(conversationId: string): Promise<Order|null>,
  *   listByConversation(conversationId: string): Promise<Order[]>,
  *   list(query: OrderListQuery): Promise<OrderPage>,
- *   summary(): Promise<OrdersSummary>,
+ *   summary(query: OrdersSummaryQuery): Promise<OrdersSummary>,
+ *   openDeliveries(): Promise<Order[]>,
  *   recordFirstPrint(input: RecordFirstPrintInput): Promise<{recorded: boolean, order: Order}>,
  *   saveSection(order: Order, options: OrderWriteOptions): Promise<Order>,
  *   saveStatus(order: Order, options: OrderWriteOptions): Promise<Order>,
@@ -122,6 +131,7 @@ export const ORDER_REPOSITORY_METHODS = Object.freeze([
   'listByConversation',
   'list',
   'summary',
+  'openDeliveries',
   'saveSection',
   'saveStatus',
   'saveMilestones',

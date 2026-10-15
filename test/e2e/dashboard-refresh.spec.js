@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test';
 
+const QUEUE_SUMMARY = Object.freeze({
+  assistant: {
+    activeCount: 3,
+    failedDeliveryCount: 0,
+    lastReplyAt: '2026-10-15T14:58:00.000Z',
+    stallMinutes: 10,
+    stalledCount: 0,
+  },
+  generatedAt: '2026-10-15T15:00:00.000Z',
+  mine: { awaitingReplyCount: 0, count: 0, oldestAwaitingSince: null },
+  waitingHandoff: { count: 0, oldestSince: null, overdueCount: 0 },
+});
+
 /**
  * @param {import('@playwright/test').Page} page
  * @param {{failFirst?: boolean}} [options]
@@ -39,8 +52,8 @@ async function mockDashboard(page, options = {}) {
         status: 200,
       });
     }
-    if (path === '/api/v1/inbox/conversations') {
-      return json({ items: [], totalCount: 0 });
+    if (path === '/api/v1/inbox/summary') {
+      return json(QUEUE_SUMMARY);
     }
     if (path === '/api/v1/orders/summary') {
       summaryReads += 1;
@@ -48,12 +61,23 @@ async function mockDashboard(page, options = {}) {
         failNext = false;
         return json({ code: 'UNAVAILABLE' }, 503);
       }
+      const confirmedCount = summaryReads >= 3 ? 3 : 2;
+      const soldAmountCents = summaryReads >= 3 ? 450000 : 250000;
       return json({
         averageTicketCents: summaryReads >= 3 ? 150000 : 125000,
-        confirmedCount: summaryReads >= 3 ? 3 : 2,
+        confirmedCount,
         pendingCount: 1,
-        soldAmountCents: summaryReads >= 3 ? 450000 : 250000,
+        soldAmountCents,
         totalPiecesSold: 300,
+        period: {
+          confirmedCount,
+          from: '2026-10-15',
+          key: 'hoje',
+          soldAmountCents,
+          timeZone: 'America/Sao_Paulo',
+          to: '2026-10-15',
+        },
+        today: '2026-10-15',
       });
     }
     return json({ code: 'NOT_FOUND' }, 404);

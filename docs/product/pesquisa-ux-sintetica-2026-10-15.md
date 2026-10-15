@@ -44,6 +44,16 @@ Ordenados por severidade. Cada item cita a persona e a evidência original.
    atrasados, esperando resposta, saúde do assistente. Atendente: "Minha fila"
    primeiro. Cartões clicáveis que abrem listas filtradas. Exige período e SLA no
    endpoint de resumo.
+   *Resposta (branch `design/painel-por-papel`, FIN-02/REV-06):* o gestor
+   (`COMMERCIAL_ADMIN`) vê "Vendas e entregas" com período Hoje/7 dias/Mês e
+   depois "Atendimento" (esperando vendedor, assistente, minhas conversas); a
+   atendente vê "Minha fila" primeiro. `GET /api/v1/orders/summary?period=`
+   devolve vendas do período e entregas atrasadas/próximas (dias de São Paulo
+   no servidor); `GET /api/v1/inbox/summary` devolve a fila do leitor, os
+   handoffs além do `due_at` do SLA e a saúde do assistente (sem resposta há
+   10 min ou mais, envio falho em 24 h). "A receber" ficou fora: RULES.md,
+   regra 16, deixa recebimentos e saldo fora do MVP. A entrega prometida vem
+   da ficha (`data_entrega_confirmada`); pedido da loja não tem e não entra.
 3. **Pedidos para produção (Rose, Sílvio, sev. 4).** Pendentes e exceções
    primeiro; coluna "Entrega" com prazo relativo; filtro "Prontos para produção";
    cartões empilhados no celular em vez de tabela com rolagem lateral.

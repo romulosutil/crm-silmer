@@ -31,6 +31,10 @@ function harness(overrides = {}) {
       calls.push(['handoffs', input]);
       return { items: [], nextCursor: null, totalCount: 0 };
     },
+    async summarizeInbox(/** @type {any} */ input) {
+      calls.push(['summary', input]);
+      return { mine: { count: 2 } };
+    },
     ...overrides,
   };
   const api = createApi(
@@ -312,4 +316,45 @@ test('maps missing projections without leaking repository details', async () => 
   assert.equal(response.json().error.code, 'CONTACT_NOT_FOUND');
   assert.doesNotMatch(response.body, /secret database detail/u);
   await api.close();
+});
+
+test('Painel: the Inbox summary is read for the session user and takes no query', async () => {
+  const { api, calls, headers } = harness();
+  const response = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/inbox/summary',
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['cache-control'], 'private, no-cache');
+  assert.deepEqual(response.json(), { mine: { count: 2 } });
+  assert.equal(calls[0][1].action, 'conversation.read');
+  // The queue is always the reader's own: the actor comes from the session.
+  assert.deepEqual(calls[1], ['summary', { actorId: 'operator-1' }]);
+
+  const forged = await api.inject({
+    headers,
+    method: 'GET',
+    url: '/api/v1/inbox/summary?actorId=someone-else',
+  });
+  assert.equal(forged.statusCode, 400);
+  assert.equal(calls.length, 2);
+
+  const denied = harness({
+    async authorizeRead() {
+      throw Object.assign(new Error('FORBIDDEN'), {
+        code: 'FORBIDDEN',
+        statusCode: 403,
+      });
+    },
+  });
+  const blocked = await denied.api.inject({
+    headers: denied.headers,
+    method: 'GET',
+    url: '/api/v1/inbox/summary',
+  });
+  assert.equal(blocked.statusCode, 403);
+  assert.equal(denied.calls.length, 0);
+  await api.close();
+  await denied.api.close();
 });

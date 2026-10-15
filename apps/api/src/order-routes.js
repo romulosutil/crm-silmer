@@ -8,6 +8,8 @@ import {
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
 const ORDER_ORIGINS = new Set(['atendimento', 'loja']);
 const ORDER_SECTIONS = new Set(['summary', 'items', 'observations', 'artwork']);
+const SUMMARY_PERIODS = new Set(['hoje', '7dias', 'mes']);
+const DELIVERY_FILTERS = new Set(['overdue', 'due_soon']);
 
 /**
  * Codes an order route may return as they are. Anything else collapses to
@@ -57,9 +59,16 @@ class OrderRequestError extends Error {
 export function registerOrderRoutes(api, orders, contextFor) {
   api.get('/api/v1/orders/summary', async (request, reply) =>
     respond(reply, async () => {
+      const query = requireObject(request.query ?? {});
+      rejectUnknownKeys(query, ['period']);
+      if (query.period !== undefined && !SUMMARY_PERIODS.has(query.period)) {
+        throw new OrderRequestError(400, 'INVALID_FILTER');
+      }
       await authorizeRead(request, orders);
       privateReadHeaders(reply);
-      return reply.code(200).send(await orders.summary());
+      return reply
+        .code(200)
+        .send(await orders.summary({ period: query.period ?? 'hoje' }));
     }),
   );
   api.get('/api/v1/orders', async (request, reply) =>
@@ -594,9 +603,23 @@ async function authorizeRead(request, orders, action = 'order.read') {
 /** @param {unknown} value */
 function parseListQuery(value) {
   const query = requireObject(value ?? {});
-  rejectUnknownKeys(query, ['cursor', 'limit', 'origin', 'q', 'status']);
-  /** @type {{status?: string, origin?: string, q?: string, cursor?: string, limit?: number}} */
+  rejectUnknownKeys(query, [
+    'cursor',
+    'delivery',
+    'limit',
+    'origin',
+    'q',
+    'status',
+  ]);
+  /** @type {{status?: string, origin?: string, q?: string, cursor?: string, limit?: number, delivery?: string}} */
   const input = {};
+  // Painel: confirmed orders whose promised day passed or comes this week.
+  if (query.delivery !== undefined) {
+    if (!DELIVERY_FILTERS.has(query.delivery)) {
+      throw new OrderRequestError(400, 'INVALID_FILTER');
+    }
+    input.delivery = query.delivery;
+  }
   if (query.status !== undefined) {
     if (!ORDER_STATUSES.has(query.status)) {
       throw new OrderRequestError(400, 'INVALID_FILTER');

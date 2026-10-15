@@ -32,7 +32,10 @@ test('ships connected screens without the demonstration dataset', async () => {
   const screens = await Promise.all(
     paths.map((path) => readFile(new URL(path, rootUrl), 'utf8')),
   );
-  assert.match(screens[0], /\/api\/v1\/inbox\/conversations/u);
+  // Painel: the Dashboard reads the server's queue summary, not a page of
+  // conversations it would have to count itself.
+  assert.match(screens[0], /\/api\/v1\/inbox\/summary/u);
+  assert.doesNotMatch(screens[0], /\/api\/v1\/inbox\/conversations/u);
   assert.match(screens[1], /\/api\/v1\/inbox\/conversations/u);
   assert.match(screens[2], /\/api\/v1\/contacts/u);
   assert.ok(screens.every((screen) => !screen.includes('demo-crm')));

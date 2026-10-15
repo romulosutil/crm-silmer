@@ -2882,6 +2882,25 @@ test('CP-T04: the agent targets one order, switches briefing, and transfers ambi
     'Sobre o PED-102: bonés pretos',
   );
   assert.equal(numbered.target_order_id, 'order-cap');
+  const transcribedNumber = runCodeNode(
+    contextCode,
+    { ...base, source_subject_ids: [] },
+    {
+      'CRM - Registrar inbound (MVP)': { ...base, source_subject_ids: [] },
+      'Normalizar evento WhatsApp (MVP)': {
+        channel: 'whatsapp',
+        from: '5527900000001',
+        media_kind: 'audio',
+        message_type: 'audio',
+        phone_number_id: 'phone-1',
+        text: '',
+      },
+      'OpenAI - Transcrever áudio (MVP)': {
+        text: 'Sobre o PED-102: bonés pretos',
+      },
+    },
+  );
+  assert.equal(transcribedNumber.target_order_id, 'order-cap');
 
   const newOrderRequest = context(
     { ...base, subjects: [subjects[0]], source_subject_ids: [] },
@@ -2897,6 +2916,38 @@ test('CP-T04: the agent targets one order, switches briefing, and transfers ambi
   );
   assert.equal(ambiguous.target_ambiguous, true);
   assert.deepEqual(ambiguous.briefing, {});
+  const confirmedCap = { ...subjects[1], order_status: 'confirmado' };
+  const mixedOrders = {
+    ...base,
+    subjects: [subjects[0], confirmedCap],
+    source_subject_ids: [],
+  };
+  const mixedAmbiguous = context(mixedOrders, 'Quero mudar a quantidade');
+  assert.equal(mixedAmbiguous.target_ambiguous, true);
+  assert.equal(mixedAmbiguous.target_order_id, null);
+  assert.deepEqual(mixedAmbiguous.briefing, {});
+  const mixedPendingNumber = context(
+    mixedOrders,
+    'Sobre o PED-101: mudar a quantidade',
+  );
+  assert.equal(mixedPendingNumber.target_order_id, 'order-shirt');
+  assert.equal(mixedPendingNumber.target_ambiguous, false);
+  const mixedConfirmedNumber = context(
+    mixedOrders,
+    'Sobre o PED-102: mudar a quantidade',
+  );
+  assert.equal(mixedConfirmedNumber.target_ambiguous, true);
+  assert.equal(mixedConfirmedNumber.target_order_id, null);
+  const humanNumberConflict = context(
+    {
+      ...base,
+      subjects: [{ ...subjects[0], selected_source: 'human' }, subjects[1]],
+      source_subject_ids: [],
+    },
+    'Sobre o PED-102: mudar a quantidade',
+  );
+  assert.equal(humanNumberConflict.target_ambiguous, true);
+  assert.equal(humanNumberConflict.target_order_id, null);
   const output = {
     output: {
       reply_text: 'Resposta',

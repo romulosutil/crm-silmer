@@ -758,6 +758,13 @@ do site, o reenvio recebe uma confirmação breve. Publique esta revisão antes
 de liberar o widget que reenvia o mesmo ID e instante; confirme com duas
 requisições idênticas ao webhook, separadas no tempo, e uma única mensagem no
 CRM.
+O workflow `mvp-simple-18` (DEV `dev-mvp-simple-18`) exige alvo inequívoco
+também quando há um Pedido pendente e outro confirmado. Sem vínculo da mensagem,
+seleção humana ou número de Pedido explícito, ele transfere sem atualizar o
+briefing. Um número confirmado ou que conflita com a seleção humana também
+transfere; não redireciona silenciosamente para o único pendente. O teste do
+contrato cobre esses casos antes da publicação e a homologação do canal deve
+repeti-los após publicar a versão.
 
 Na ativação de 15/10/2026, a importação pelo CLI e o comando
 `n8n publish:workflow` deixaram o workflow marcado como ativo, mas o webhook

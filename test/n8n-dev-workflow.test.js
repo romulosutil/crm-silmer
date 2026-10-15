@@ -118,7 +118,7 @@ test('keeps test scenarios at the synthetic boundary', async () => {
   );
   assert.match(trigger.parameters.jsCode, /DEV_SCENARIO_INVALID/u);
   assert.match(send.parameters.jsCode, /scenario === 'send_unknown'/u);
-  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-17');
+  assert.equal(DEV_WORKFLOW_VERSION, 'dev-mvp-simple-18');
   // T16 provenance classifies DEV from the original reservation's version.
   assert.match(DEV_WORKFLOW_VERSION, /^dev-mvp-simple-\d+$/u);
   const result = nodes.find(

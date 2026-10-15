@@ -40,6 +40,7 @@ const dialog = ref(null);
 const reopenDialog = ref(null);
 const reopenOpen = ref(false);
 const closingTitle = ref(null);
+const section = ref(null);
 const amountText = ref(formatBrl(props.order.finalAmountCents));
 const paymentCondition = ref(props.order.paymentCondition ?? '');
 const busy = ref(false);
@@ -268,6 +269,27 @@ async function requestGenerate() {
   dialog.value?.showModal?.();
 }
 
+/**
+ * Mobile first: "Gerar pedido" also lives in the page's fixed footer, far
+ * from this form. When something is missing the focus comes here, to the
+ * field to fix, instead of leaving the error out of sight.
+ */
+async function generateFromFooter() {
+  await requestGenerate();
+  if (confirmOpen.value) return;
+  await nextTick();
+  const errors = fieldErrors.value;
+  /** @type {HTMLElement|null|undefined} */
+  const target = errors.finalAmount
+    ? section.value?.querySelector('#closing-amount')
+    : errors.paymentCondition
+      ? section.value?.querySelector('input[name="payment-condition"]')
+      : closingTitle.value;
+  target?.focus();
+}
+
+defineExpose({ generateFromFooter });
+
 function closeDialog() {
   dialog.value?.close?.();
   confirmOpen.value = false;
@@ -341,7 +363,11 @@ const blockerNotes = computed(() =>
 </script>
 
 <template>
-  <section class="op-sheet op-closing" aria-labelledby="order-closing-title">
+  <section
+    ref="section"
+    class="op-sheet op-closing"
+    aria-labelledby="order-closing-title"
+  >
     <div class="op-sheet-head">
       <h2 id="order-closing-title" ref="closingTitle" tabindex="-1">
         Fechamento e pagamento
@@ -480,7 +506,7 @@ const blockerNotes = computed(() =>
 
           <!-- PFI-13: the only primary button of the page. -->
           <button
-            class="primary op-generate"
+            class="primary op-generate op-generate--inline"
             type="submit"
             :disabled="busy || sectionOpenElsewhere"
             aria-describedby="closing-readiness"

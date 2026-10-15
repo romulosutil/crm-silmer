@@ -1530,11 +1530,6 @@ details.exact summary {
  * Pesquisa UX 2026-10-15, achado 3: the promised delivery and how far it is.
  * The tone repeats what the words already say (late, today, this week).
  */
-.order-cell-due,
-.order-table td.num {
-  white-space: nowrap;
-}
-
 .order-due-date {
   display: block;
   font-weight: 600;
@@ -1575,92 +1570,186 @@ details.exact summary {
   background: var(--status-success-surface);
 }
 
-/* An exception rides at the top of its group with a mark on its edge. */
-.order-table tr[data-exception] > td:first-child {
-  box-shadow: inset 3px 0 0 var(--status-warning-text);
+/*
+ * Mobile first (PO, 15/10/2026: sellers live on their phones). The order
+ * tables are stacked cards by default — number and status, customer, then
+ * delivery, pieces and amount, the situation and the actions — with no
+ * sideways scroll and the page scrolling instead of a nested region. From
+ * 48rem they are tables again. The table keeps its semantics throughout.
+ */
+.table-wrap.order-list {
+  max-block-size: none;
+  overflow: visible;
+  scrollbar-gutter: auto;
 }
 
-/*
- * Below 48rem the order tables become stacked cards: no sideways scroll, the
- * page scrolls instead of a nested region, and the column name rides next to
- * the values that need it. The table keeps its semantics for screen readers.
- */
-@media (width < 48rem) {
+.order-table thead {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.order-table,
+.order-table tbody {
+  display: block;
+}
+
+.order-table tr {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.order-table tr + tr {
+  margin-block-start: var(--space-3);
+}
+
+.order-table tr[data-exception] {
+  border-inline-start: 3px solid var(--status-warning-text);
+}
+
+.data-table.order-table td {
+  display: block;
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  white-space: normal;
+}
+
+.data-table.order-table td.num {
+  text-align: start;
+}
+
+.order-table .order-cell-number,
+.order-table .order-cell-customer,
+.order-table .order-cell-situation,
+.order-table .order-cell-actions {
+  grid-column: 1 / -1;
+}
+
+.data-table.order-table td.order-cell-number {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+
+/* The section heading says the status on a wide screen; a card says it. */
+.order-card-status {
+  margin-inline-start: auto;
+}
+
+.order-table .order-badges {
+  margin-inline-start: 0;
+}
+
+.order-table td[data-label]::before {
+  content: attr(data-label) / '';
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.order-table .order-cell-actions .row-actions {
+  justify-content: stretch;
+}
+
+.order-table .order-cell-actions .row-actions > * {
+  flex: 1 1 9rem;
+  justify-content: center;
+  min-block-size: var(--target-min);
+}
+
+@media (width >= 48rem) {
   .table-wrap.order-list {
-    max-block-size: none;
-    overflow: visible;
-    scrollbar-gutter: auto;
+    max-block-size: min(36rem, 65dvh);
+    overflow: auto;
+    scrollbar-gutter: stable;
   }
 
   .order-table thead {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    overflow: visible;
+    clip-path: none;
+    display: table-header-group;
   }
 
-  .order-table,
+  .order-table {
+    display: table;
+  }
+
   .order-table tbody {
-    display: block;
+    display: table-row-group;
   }
 
   .order-table tr {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-2) var(--space-3);
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
+    display: table-row;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
   }
 
   .order-table tr + tr {
-    margin-block-start: var(--space-3);
+    margin-block-start: 0;
   }
 
   .order-table tr[data-exception] {
-    border-inline-start: 3px solid var(--status-warning-text);
+    border-inline-start: 0;
   }
 
+  /* An exception rides at the top of its group with a mark on its edge. */
   .order-table tr[data-exception] > td:first-child {
-    box-shadow: none;
+    box-shadow: inset 3px 0 0 var(--status-warning-text);
   }
 
   .data-table.order-table td {
-    display: block;
-    min-inline-size: 0;
-    padding: 0;
-    border: 0;
-    white-space: normal;
+    display: table-cell;
+    padding: 0.75rem;
+    border-block-end: 1px solid var(--color-border-subtle);
   }
 
   .data-table.order-table td.num {
-    text-align: start;
+    text-align: end;
   }
 
-  .order-table .order-cell-number,
-  .order-table .order-cell-customer,
-  .order-table .order-cell-situation,
-  .order-table .order-cell-actions {
-    grid-column: 1 / -1;
+  .data-table.order-table td.num,
+  .data-table.order-table td.order-cell-due,
+  .data-table.order-table td.order-cell-number {
+    white-space: nowrap;
   }
 
   .order-table .order-cell-number {
-    font-weight: 700;
+    font-weight: 400;
+  }
+
+  .order-table .order-badges {
+    margin-inline-start: 0.5rem;
+  }
+
+  .order-card-status {
+    display: none;
   }
 
   .order-table td[data-label]::before {
-    content: attr(data-label) / '';
-    display: block;
-    color: var(--color-text-muted);
-    font-size: var(--text-xs);
-    font-weight: 500;
+    content: none;
+  }
+
+  .order-table .order-cell-actions .row-actions {
+    justify-content: flex-end;
   }
 
   .order-table .order-cell-actions .row-actions > * {
-    flex: 1 1 10rem;
-    justify-content: center;
+    flex: none;
   }
 }
 
@@ -1854,12 +1943,12 @@ details.exact summary {
   border-radius: var(--radius-md);
 }
 
-/* Layout */
+/* Layout: one stack of sections first; the closing rail joins at 75rem. */
 .op-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(19rem, 22rem);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 1.75rem;
+  gap: 1.25rem;
 }
 
 .op-main,
@@ -1869,18 +1958,81 @@ details.exact summary {
   min-inline-size: 0;
 }
 
-.op-rail {
-  position: sticky;
-  inset-block-start: 1.25rem;
-}
-
-@media (width < 75rem) {
+@media (width >= 75rem) {
   .op-layout {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(19rem, 22rem);
+    gap: 1.75rem;
   }
 
   .op-rail {
-    position: static;
+    position: sticky;
+    inset-block-start: 1.25rem;
+  }
+}
+
+/*
+ * Mobile first: the page's main action ("Gerar pedido" or "Imprimir ficha")
+ * is fixed above the bottom navigation (--mobile-nav-block-size, which
+ * already holds the safe area). Without that bar the footer pads the safe
+ * area itself: the calc adds it only when the token is not defined. From
+ * 48rem the action lives in the header and the closing panel again.
+ */
+.op-mobile-action {
+  position: fixed;
+  z-index: 20;
+  inset-inline: 0;
+  inset-block-end: var(--mobile-nav-block-size, 0px);
+  display: flex;
+  padding: var(--space-3) var(--space-4)
+    calc(
+      var(--space-3) +
+        var(--mobile-nav-block-size, env(safe-area-inset-bottom, 0px)) -
+        var(--mobile-nav-block-size, 0px)
+    );
+  background: var(--color-surface);
+  border-block-start: 1px solid var(--color-border);
+  box-shadow: var(--shadow-overlay);
+}
+
+.op-mobile-action button {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-block-size: var(--target-min);
+}
+
+.op-page[data-mobile-action] {
+  padding-block-end: calc(var(--target-min) + 3rem);
+}
+
+/* The print button and the reason it is locked step aside together. */
+.op-head-actions .op-print,
+.op-print-reason,
+.op-closing-form button.op-generate--inline {
+  display: none;
+}
+
+@media (width >= 48rem) {
+  .op-mobile-action {
+    display: none;
+  }
+
+  .op-page[data-mobile-action] {
+    padding-block-end: 0;
+  }
+
+  .op-head-actions .op-print {
+    display: inline-flex;
+  }
+
+  .op-print-reason {
+    display: block;
+  }
+
+  .op-closing-form button.op-generate--inline {
+    display: inline-flex;
   }
 }
 
@@ -3807,9 +3959,22 @@ button.op-generate {
     gap: 0.2rem;
   }
 
+  /* Thumb first: 44px targets and 16px text, so the phone does not zoom. */
+  button.op-icon-button {
+    inline-size: var(--target-min);
+    min-block-size: var(--target-min);
+    block-size: var(--target-min);
+  }
+
+  .op-form input.op-grade-size,
+  .op-form input.op-grade-qty {
+    min-block-size: var(--target-min);
+    font-size: var(--text-base);
+  }
+
   .op-form input.op-grade-size {
-    flex: 0 0 2.9rem;
-    inline-size: 2.9rem;
+    flex: 0 0 3.75rem;
+    inline-size: 3.75rem;
     padding-inline: 0.2rem;
   }
 
@@ -3818,6 +3983,10 @@ button.op-generate {
     inline-size: 0;
     min-inline-size: 3rem;
     padding-inline: 0.2rem;
+  }
+
+  button.op-add-inline {
+    min-block-size: var(--target-min);
   }
 }
 

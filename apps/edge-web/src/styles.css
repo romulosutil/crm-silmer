@@ -881,6 +881,24 @@ html[data-theme='dark'] .sidebar-account-avatar {
   inline-size: 1.1rem;
   block-size: 1.1rem;
 }
+/* On a phone the notice rides above the bottom navigation and, on a page
+   with a fixed action footer, above that footer too. */
+@media (max-width: 768px) {
+  .notice-toast-region {
+    inset: auto var(--space-3)
+      calc(
+        var(--mobile-nav-block-size) + env(safe-area-inset-bottom, 0px) +
+          var(--space-3)
+      );
+    inline-size: auto;
+  }
+  body:has(.op-mobile-action) .notice-toast-region {
+    inset-block-end: calc(
+      var(--mobile-nav-block-size) + env(safe-area-inset-bottom, 0px) +
+        var(--target-min) + 3 * var(--space-3)
+    );
+  }
+}
 @keyframes notice-toast-in {
   from {
     opacity: 0;

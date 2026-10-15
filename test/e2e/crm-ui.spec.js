@@ -1617,6 +1617,23 @@ test('checks a new customer phone privately and requires choosing an existing ca
   expect(searched.some((search) => search.q === '(11) 98765-4321')).toBe(true);
   await dialog.getByRole('button', { name: /Selecionar Ana do site/ }).click();
   await expect(dialog.getByText('Cliente selecionado:')).toBeVisible();
+  const unverifiedPhone = dialog
+    .getByRole('status')
+    .filter({ hasText: 'Este telefone foi informado no chat' });
+  await expect(unverifiedPhone).toBeFocused();
+  await expect(
+    dialog.getByRole('button', { name: 'Criar pedido' }),
+  ).toBeDisabled();
+  await expect(
+    unverifiedPhone.getByRole('link', { name: 'ficha do contato' }),
+  ).toHaveAttribute('href', '/clientes/site-contact');
+
+  await dialog.getByRole('button', { name: 'Trocar cliente' }).click();
+  await dialog.getByLabel('Buscar cliente por telefone ou nome').fill('Ana');
+  await dialog.getByRole('button', { name: /Selecionar Ana WhatsApp/ }).click();
+  await expect(
+    dialog.getByRole('button', { name: 'Criar pedido' }),
+  ).toBeEnabled();
 });
 
 test('opens a client by clicking the whole row while keeping its keyboard link', async ({

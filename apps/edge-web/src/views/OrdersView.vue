@@ -55,6 +55,7 @@ const newContactName = ref('');
 const newContactPhone = ref('');
 const newContactEmail = ref('');
 const createErrorAlert = ref(null);
+const unverifiedPhoneNotice = ref(null);
 const contactSearching = ref(false);
 const contactCreating = ref(false);
 const orderCreating = ref(false);
@@ -105,8 +106,9 @@ const isEmpty = computed(() => !loading.value && items.value.length === 0);
 const canCreateOrder = computed(() =>
   Boolean(
     selectedContact.value
-      ? selectedContact.value.phone ||
-          newContactPhone.value.replace(/\D/gu, '').length >= 10
+      ? selectedContact.value.phoneSource !== 'site_unverified' &&
+          (selectedContact.value.phone ||
+            newContactPhone.value.replace(/\D/gu, '').length >= 10)
       : newContactName.value.trim() &&
           newContactPhone.value.replace(/\D/gu, '').length >= 10,
   ),
@@ -241,6 +243,9 @@ function selectContact(contact) {
   createError.value = '';
   orderCreateKey = '';
   detailsUpdateKey = '';
+  if (contact.phoneSource === 'site_unverified') {
+    void nextTick(() => unverifiedPhoneNotice.value?.focus());
+  }
 }
 
 async function changeSelectedContact() {
@@ -399,9 +404,11 @@ async function createOrder() {
     await router.push(`/pedidos/${response.data.order.id}`);
   } catch (cause) {
     createError.value =
-      Number(cause?.status) === 403
-        ? 'Você não tem permissão para criar pedidos.'
-        : 'Não foi possível criar o pedido. Tente novamente.';
+      cause?.code === 'CONTACT_PHONE_REQUIRED'
+        ? 'O telefone deste contato foi apenas informado no chat. Abra a conversa na Caixa de Entrada para criar o pedido deste atendimento.'
+        : Number(cause?.status) === 403
+          ? 'Você não tem permissão para criar pedidos.'
+          : 'Não foi possível criar o pedido. Tente novamente.';
     await nextTick();
     createErrorAlert.value?.focus();
   } finally {
@@ -720,6 +727,20 @@ onBeforeUnmount(() => {
         >
           Trocar cliente
         </button>
+      </p>
+      <p
+        v-if="selectedContact?.phoneSource === 'site_unverified'"
+        ref="unverifiedPhoneNotice"
+        class="op-alert"
+        role="status"
+        tabindex="-1"
+      >
+        Este telefone foi informado no chat e ainda não foi confirmado. Abra a
+        conversa pela
+        <RouterLink :to="`/clientes/${selectedContact.id}`">
+          ficha do contato</RouterLink
+        >
+        para criar o pedido deste atendimento.
       </p>
       <fieldset
         v-if="selectedContact && !selectedContact.phone"

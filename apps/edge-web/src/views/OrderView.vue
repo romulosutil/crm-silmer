@@ -9,6 +9,7 @@ import {
   ref,
   watch,
 } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import OrderClosingSection from '../components/order/OrderClosingSection.vue';
 import OrderArtworkSection from '../components/order/OrderArtworkSection.vue';
 import OrderIcon from '../components/order/OrderIcon.vue';
@@ -20,6 +21,7 @@ import OrderProgress from '../components/order/OrderProgress.vue';
 import OrderStoreDetails from '../components/order/OrderStoreDetails.vue';
 import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import { commandKey, request } from '../lib/api-client.js';
+import { usePhone } from '../lib/media-query.js';
 import {
   fabLabel,
   isStoreOrder,
@@ -32,6 +34,19 @@ import {
   storeFichaPending,
   storeProductLabel,
 } from '../lib/order-format.js';
+
+/**
+ * PFI-18 (RFC 024): the sections of the phone accordion, in page order, and
+ * the hash that opens each one again (`/pedidos/<id>#itens`).
+ */
+const SECTION_HASHES = Object.freeze({
+  summary: 'resumo',
+  milestones: 'datas',
+  items: 'itens',
+  artwork: 'arte',
+  observations: 'observacoes',
+  service: 'atendimento',
+});
 
 const LIVE_REFRESH_DELAY_MS = 250;
 // ADR 031: long enough for the print tab's request to reach the API.
@@ -57,6 +72,13 @@ const editingSection = ref('');
 /** @type {import('vue').Ref<{section: string, at: number}|null>} */
 const editRequest = ref(null);
 const closingSection = ref(null);
+const route = useRoute();
+const router = useRouter();
+// PFI-18: up to 768 px the sections form an accordion, one open at a time.
+const isPhone = usePhone();
+const openSection = ref('');
+let sectionChosen = false;
+let revealOnLoad = false;
 let controller;
 let refreshTimer = 0;
 let printRefreshTimer = 0;
@@ -296,12 +318,119 @@ function goToSection(section) {
   }
 }
 
+/** @param {string} section */
+function isAccordionSection(section) {
+  return Object.hasOwn(SECTION_HASHES, section);
+}
+
+/**
+ * PFI-18: the open section is kept in the URL's hash, so a reload or the way
+ * back resumes it, with no state of its own anywhere else. The hash is
+ * written to the router's history directly: the shell keys each view by its
+ * full path, hash included, so a router navigation would mount the page
+ * again and drop the focus and any draft.
+ *
+ * @param {string} section
+ */
+function rememberSection(section) {
+  if (!isPhone.value) return;
+  const hash = isAccordionSection(section) ? `#${SECTION_HASHES[section]}` : '';
+  const path = route.fullPath.replace(/#.*$/su, '');
+  router.options.history.replace(`${path}${hash}`);
+}
+
+/**
+ * PFI-18: the router has no scroll behaviour, so a section opened by the
+ * hash, by the next step or by "Gerar pedido" is brought into view by its
+ * head.
+ *
+ * @param {string} section
+ */
+function scrollToSection(section) {
+  if (!isPhone.value) return;
+  globalThis.document
+    ?.getElementById(`order-${section}-title`)
+    ?.closest('section')
+    ?.scrollIntoView?.({ block: 'start' });
+}
+
+/**
+ * PFI-18: the section the page opens with — the one named by the hash, else
+ * the first step still missing (PFI-15), else the summary.
+ */
+function initialSection() {
+  const hash = String(route.hash ?? '').replace(/^#/u, '');
+  const named = Object.keys(SECTION_HASHES).find(
+    (section) =>
+      SECTION_HASHES[/** @type {keyof typeof SECTION_HASHES} */ (section)] ===
+      hash,
+  );
+  if (named) return { reveal: true, section: named };
+  const step = nextOrderStep(order.value);
+  if (step && isAccordionSection(step.section)) {
+    return { reveal: false, section: step.section };
+  }
+  return { reveal: false, section: 'summary' };
+}
+
+/**
+ * PFI-18: opens one section and closes the other; the section in edit stays
+ * open (isSectionOpen) until Salvar or Cancelar.
+ *
+ * @param {string} section
+ */
+async function revealSection(section) {
+  if (!isAccordionSection(section)) return;
+  if (openSection.value !== section) {
+    openSection.value = section;
+    rememberSection(section);
+  }
+  await nextTick();
+  scrollToSection(section);
+}
+
+/**
+ * PFI-18: a head opens its section or closes it. While a section is in edit
+ * every head waits (PFI-06), so a draft is never hidden from its owner.
+ *
+ * @param {string} section
+ */
+function toggleSection(section) {
+  if (!isPhone.value || editingSection.value !== '') return;
+  if (!isAccordionSection(section)) return;
+  openSection.value = openSection.value === section ? '' : section;
+  rememberSection(openSection.value);
+}
+
+/**
+ * PFI-18: every section is open on a wide screen; on a phone only the chosen
+ * one and the one in edit.
+ *
+ * @param {string} section
+ */
+function isSectionOpen(section) {
+  return (
+    !isPhone.value ||
+    openSection.value === section ||
+    editingSection.value === section
+  );
+}
+
+// The next step, "Gerar pedido" and the progress open the section they ask
+// for before the section answers the request itself.
+watch(editRequest, (next) => {
+  if (next) void revealSection(next.section);
+});
+
 provide('orderEditing', {
   canEdit,
   command: runCommand,
   editingSection,
   editRequest,
   goToSection,
+  isPhone,
+  isSectionOpen,
+  openSection,
   print,
   /** @param {string} section */
   request(section) {
@@ -317,6 +446,10 @@ provide('orderEditing', {
       pendingLiveRefresh = true;
     }
     editingSection.value = section;
+    if (isAccordionSection(section) && openSection.value !== section) {
+      openSection.value = section;
+      rememberSection(section);
+    }
   },
   stop() {
     editingSection.value = '';
@@ -325,6 +458,7 @@ provide('orderEditing', {
       scheduleLiveRefresh();
     }
   },
+  toggleSection,
 });
 
 /** @param {boolean} [silent] */
@@ -344,6 +478,14 @@ async function load(silent = false) {
     order.value = response.data.order;
     notFound.value = false;
     error.value = '';
+    // PFI-18: chosen once, with the first order read; a live refresh never
+    // moves the seller to another section.
+    if (!sectionChosen) {
+      const initial = initialSection();
+      openSection.value = initial.section;
+      revealOnLoad = initial.reveal;
+      sectionChosen = true;
+    }
   } catch (cause) {
     if (cause?.name === 'AbortError') return;
     if (Number(cause?.status) === 404) {
@@ -362,6 +504,13 @@ async function load(silent = false) {
         await nextTick();
         heading.value?.focus();
         headingAnnounced = Boolean(heading.value);
+      }
+      // PFI-18: a section named by the hash comes into view once the page
+      // has announced itself.
+      if (revealOnLoad && order.value) {
+        revealOnLoad = false;
+        await nextTick();
+        scrollToSection(openSection.value);
       }
     }
   }

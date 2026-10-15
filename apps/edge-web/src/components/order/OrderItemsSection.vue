@@ -89,6 +89,8 @@ const canEdit = computed(
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
 );
+// PFI-18: on a phone the body is shown only while the accordion opens it.
+const open = computed(() => editing.isSectionOpen?.(SECTION) ?? true);
 const items = computed(() =>
   isEditing.value ? draft.value : shownItems.value,
 );
@@ -457,10 +459,12 @@ async function save() {
       :can-edit="canEdit"
       :blocked="otherSectionOpen"
       :editing="isEditing"
+      section="items"
+      body-id="order-items-body"
       @edit="startEditing"
     />
 
-    <p v-if="errorMessage" role="alert" class="op-alert">
+    <p v-if="errorMessage" role="alert" class="op-alert" :hidden="!open">
       {{ errorMessage }}
     </p>
 
@@ -468,9 +472,11 @@ async function save() {
          its own message; the error belongs on the size line, in Portuguese. -->
     <form
       v-if="isEditing"
+      id="order-items-body"
       ref="form"
       class="op-form"
       novalidate
+      :hidden="!open"
       @submit.prevent="save"
     >
       <div class="op-sheet-body op-item-list">
@@ -899,7 +905,12 @@ async function save() {
       </div>
     </form>
 
-    <div v-else class="op-sheet-body op-item-list">
+    <div
+      v-else
+      id="order-items-body"
+      class="op-sheet-body op-item-list"
+      :hidden="!open"
+    >
       <div
         v-for="(item, itemIndex) in shownItems"
         :key="itemIndex"

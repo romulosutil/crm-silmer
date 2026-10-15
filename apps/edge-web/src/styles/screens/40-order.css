@@ -536,6 +536,112 @@ button.op-edit:is(:disabled, [aria-disabled='true']) {
   transform: rotate(180deg);
 }
 
+/*
+ * PFI-18 (RFC 024): on a phone the head is the button that opens and closes
+ * its section: the title, the state in words under it and a chevron that
+ * turns, so the state never rests on colour alone. "Editar <seção>" stays
+ * beside it, outside the button, while the section is open.
+ */
+.op-sheet-head[data-accordion] {
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+}
+
+.op-sheet-head[data-collapsed] {
+  border-block-end: 0;
+}
+
+/* "Editar <seção>" fits beside the head on a 390 px phone. */
+.op-sheet-head h2.op-sheet-title {
+  flex: 1 1 9rem;
+  min-inline-size: 0;
+}
+
+button.op-sheet-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  inline-size: 100%;
+  min-block-size: var(--target-min);
+  padding: 0.375rem 0.5rem 0.375rem 1rem;
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: inherit;
+  line-height: 1.25;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+button.op-sheet-toggle:hover:not([aria-disabled='true']) {
+  background: var(--color-surface-raised);
+}
+
+.op-sheet-toggle-text {
+  display: grid;
+  gap: 0.15rem;
+  min-inline-size: 0;
+}
+
+.op-sheet-toggle .op-sheet-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.op-sheet-toggle .op-sheet-state[data-tone='ok'] {
+  color: var(--status-success-text);
+}
+
+.op-sheet-toggle .op-sheet-state[data-tone='missing'] {
+  color: var(--status-warning-text);
+  font-weight: 600;
+}
+
+.op-sheet-chevron {
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+.op-sheet-toggle[aria-expanded='true'] .op-sheet-chevron {
+  transform: rotate(180deg);
+}
+
+/* PFI-06: a head that waits for Salvar or Cancelar stays a readable head. */
+.op-page .op-sheet-head button.op-sheet-toggle[aria-disabled='true'],
+.op-page
+  .op-sheet-head
+  button.op-sheet-toggle[aria-disabled='true']:hover:not(:disabled) {
+  color: var(--color-text-muted);
+  background: transparent;
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-sheet-chevron {
+    transition: none;
+  }
+}
+
+/* PFI-18: closed folds sit closer together, so the page stays short. */
+@media (width < 48rem) {
+  .op-layout,
+  .op-main,
+  .op-rail {
+    gap: 0.75rem;
+  }
+
+  /* A fold brought into view stops below the sticky top bar. */
+  .op-sheet {
+    scroll-margin-block-start: calc(var(--topbar-block-size) + var(--space-2));
+  }
+}
+
 .op-sheet-body {
   display: grid;
   gap: 0.75rem;

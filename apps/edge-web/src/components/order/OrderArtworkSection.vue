@@ -40,6 +40,8 @@ const canEdit = computed(
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
 );
+// PFI-18: on a phone the body is shown only while the accordion opens it.
+const open = computed(() => editing.isSectionOpen?.(SECTION) ?? true);
 // PFI-17: who makes the art is the head's state; "Falta" is a blocker only
 // while the server lists `artwork` (PFI-15).
 const headState = computed(() => {
@@ -128,14 +130,21 @@ async function save() {
       :can-edit="canEdit"
       :blocked="otherSectionOpen"
       :editing="isEditing"
+      section="artwork"
+      body-id="order-artwork-body"
       @edit="startEditing"
     />
 
-    <p v-if="errorMessage" role="alert" class="op-alert">
+    <p v-if="errorMessage" role="alert" class="op-alert" :hidden="!open">
       {{ errorMessage }}
     </p>
 
-    <form v-if="isEditing" class="op-form" @submit.prevent="save">
+    <form
+      v-if="isEditing"
+      class="op-form"
+      :hidden="!open"
+      @submit.prevent="save"
+    >
       <fieldset
         class="op-artwork-source"
         aria-describedby="order-artwork-source-hint"
@@ -172,6 +181,6 @@ async function save() {
       </div>
     </form>
 
-    <OrderArtworkFiles :order="order" />
+    <OrderArtworkFiles id="order-artwork-body" :order="order" :hidden="!open" />
   </section>
 </template>

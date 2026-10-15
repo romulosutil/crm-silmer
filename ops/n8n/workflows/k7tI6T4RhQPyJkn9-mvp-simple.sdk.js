@@ -11,7 +11,7 @@ import {
 } from '@n8n/workflow-sdk';
 
 const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-const WORKFLOW_VERSION = 'mvp-simple-17';
+const WORKFLOW_VERSION = 'mvp-simple-18';
 
 // ADR 034: site sessions have a separate channel and a reversible synthetic
 // identity. They never borrow a contact's earlier history from a typed phone.
@@ -865,11 +865,13 @@ const siteChat = source.channel === 'site_chat';
 const siteName = siteChat ? String(inbound.site_contact?.name ?? source.site_contact?.name ?? '').trim() : '';
 const profileName = siteChat ? '' : source.customer_name || '';
 const subjects = Array.isArray(inbound.subjects) ? inbound.subjects : [];
-const pendingSubjects = subjects.filter((subject) => subject.kind === 'pedido' && subject.order_id && subject.order_status === 'pendente');
+const orderSubjects = subjects.filter((subject) => subject.kind === 'pedido' && subject.order_id);
+const pendingSubjects = orderSubjects.filter((subject) => subject.order_status === 'pendente');
 const linkedIds = [...new Set(Array.isArray(inbound.source_subject_ids) ? inbound.source_subject_ids : [])];
 const humanChoice = subjects.find((subject) => subject.is_current && subject.selected_source === 'human');
-const tokens = String(source.text ?? '').toUpperCase().split(/[^A-Z0-9-]+/).filter(Boolean);
-const numbered = pendingSubjects.filter((subject) => subject.order_number && tokens.includes(String(subject.order_number).toUpperCase()));
+const tokens = String(currentText ?? '').toUpperCase().split(/[^A-Z0-9-]+/).filter(Boolean);
+const mentionedOrders = orderSubjects.filter((subject) => subject.order_number && tokens.includes(String(subject.order_number).toUpperCase()));
+const numbered = mentionedOrders.filter((subject) => subject.order_status === 'pendente');
 // A new request must not inherit the sole pending order just because it is the only target.
 // A seller can create/select the new subject after the safe handoff.
 const newOrderRequest = subjects.length > 0 && /\\b(?:outro|novo|mais um|segundo) pedido\\b|\\b(?:agora|tamb[eé]m)\\s+quero\\b/i.test(String(currentText ?? ''));
@@ -877,9 +879,10 @@ let target = null;
 if (linkedIds.length === 1) target = pendingSubjects.find((subject) => subject.subject_id === linkedIds[0]) ?? null;
 else if (linkedIds.length === 0 && humanChoice) target = pendingSubjects.find((subject) => subject.subject_id === humanChoice.subject_id) ?? null;
 else if (linkedIds.length === 0 && numbered.length === 1) target = numbered[0];
-else if (linkedIds.length === 0 && pendingSubjects.length === 1) target = pendingSubjects[0];
+else if (linkedIds.length === 0 && orderSubjects.length === 1 && pendingSubjects.length === 1) target = pendingSubjects[0];
 const ambiguousTarget = newOrderRequest || linkedIds.length > 1 || (humanChoice && target && humanChoice.subject_id !== target.subject_id)
-  || (subjects.length > 0 && !target) || (pendingSubjects.length > 1 && !humanChoice && linkedIds.length === 0 && numbered.length !== 1);
+  || (mentionedOrders.length > 0 && (mentionedOrders.length !== 1 || target?.subject_id !== mentionedOrders[0].subject_id))
+  || (subjects.length > 0 && !target) || (orderSubjects.length > 1 && !humanChoice && linkedIds.length === 0 && numbered.length !== 1);
 if (ambiguousTarget) target = null;
 const bootstrapOrder = subjects.length === 0 && !target;
 const briefing = target?.briefing ?? (bootstrapOrder ? inbound.briefing ?? {} : {});

@@ -766,6 +766,18 @@ transfere; não redireciona silenciosamente para o único pendente. O teste do
 contrato cobre esses casos antes da publicação e a homologação do canal deve
 repeti-los após publicar a versão.
 
+Em 15/10/2026, a versão `mvp-simple-18` foi publicada no workflow de produção.
+Um POST sintético ao webhook do chat retornou `200` com resposta da IA; repetir
+o mesmo `message_id` e corpo retornou `200` com confirmação breve, sem novo
+inbound nem segunda resposta da IA na Inbox. Isso valida a ativação e o replay
+do chat do site, mas não substitui a homologação de dois Pedidos ativos, troca
+de Assunto e retomada em outro ciclo no canal real. O repasse humano CRM→site
+permanece pendente: uma tentativa sintética posterior foi registrada no CRM,
+mas falhou com `N8N_COMMAND_HTTP_403` e não apareceu no widget. Antes de
+repetir o teste, confira no worker as três variáveis de comando contra a URL
+de produção `/webhook/silmer/panel-command` e a credencial Basic selecionada
+no nó `Painel - Receber comando (MVP)`; não registre os valores secretos.
+
 Na ativação de 15/10/2026, a importação pelo CLI e o comando
 `n8n publish:workflow` deixaram o workflow marcado como ativo, mas o webhook
 do chat respondeu `404`. A publicação da versão importada em **Version

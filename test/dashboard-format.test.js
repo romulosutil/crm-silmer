@@ -7,8 +7,10 @@ import {
   elapsedLabel,
   longDay,
   mineIndicator,
+  myOrdersIndicator,
   overdueIndicator,
   pendingIndicator,
+  replyIndicator,
   shortDay,
   soldIndicator,
   waitingIndicator,
@@ -62,6 +64,35 @@ test('Painel: my queue says who waits for my answer', () => {
   );
 });
 
+test('Painel: the seller home says what to answer now and their own orders', () => {
+  assert.deepEqual(
+    replyIndicator(
+      {
+        awaitingReplyCount: 2,
+        count: 3,
+        oldestAwaitingSince: '2026-10-15T14:35:00.000Z',
+      },
+      NOW,
+    ),
+    {
+      badge: '',
+      detail: 'O primeiro cliente escreveu há 25 min',
+      tone: 'warning',
+      value: '2',
+    },
+  );
+  assert.equal(
+    replyIndicator({ awaitingReplyCount: 0, count: 3 }, NOW).detail,
+    'Ninguém esperando; 3 conversas suas em andamento',
+  );
+  assert.equal(replyIndicator(undefined, NOW).value, '0');
+  assert.equal(myOrdersIndicator(2).value, '2');
+  assert.equal(
+    myOrdersIndicator(undefined).detail,
+    'Nenhum pedido seu esperando confirmação',
+  );
+});
+
 test('Painel: handoffs past the server SLA are an error with a text badge', () => {
   assert.equal(waitingIndicator({ count: 0 }, NOW).tone, null);
   const onTime = waitingIndicator(
@@ -70,17 +101,14 @@ test('Painel: handoffs past the server SLA are an error with a text badge', () =
   );
   assert.equal(onTime.tone, 'warning');
   assert.equal(onTime.badge, '');
-  assert.equal(onTime.detail, 'A mais antiga chegou há 10 min');
+  assert.equal(onTime.detail, 'A mais antiga está parada há 10 min');
   const late = waitingIndicator(
     { count: 3, oldestSince: '2026-10-15T09:00:00.000Z', overdueCount: 2 },
     NOW,
   );
   assert.equal(late.tone, 'error');
-  assert.equal(late.badge, 'Fora do prazo');
-  assert.equal(
-    late.detail,
-    '2 passaram do prazo de resposta. A mais antiga chegou há 6 h',
-  );
+  assert.equal(late.badge, '2 fora do prazo');
+  assert.equal(late.detail, 'A mais antiga está parada há 6 h');
 });
 
 test('Painel: the assistant reports trouble before activity', () => {
@@ -97,8 +125,7 @@ test('Painel: the assistant reports trouble before activity', () => {
     ),
     {
       badge: 'Atenção',
-      detail:
-        '2 conversas sem resposta há mais de 10 min; 1 conversa com envio falho nas últimas 24 h',
+      detail: '2 sem resposta há 10 min ou mais; 1 com envio falho em 24 h',
       tone: 'warning',
       value: 'Pede atenção',
     },

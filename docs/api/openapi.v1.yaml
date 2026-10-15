@@ -1288,6 +1288,15 @@ paths:
             `status`, `origin`, `q` ou `cursor`. Pedido da loja não tem entrega
             prometida e fica fora.
           schema: { type: string, enum: [overdue, due_soon] }
+        - name: owner
+          in: query
+          description: >-
+            Painel ("Meus pedidos pendentes"): `me` mantém só os pedidos da
+            pessoa da sessão — o pedido manual de que ela é dona ou o pedido
+            de uma conversa atribuída a ela. Nenhum outro valor é aceito; o
+            dono nunca viaja na URL. Combina com `status` e `q`, não com
+            `delivery`.
+          schema: { type: string, enum: [me] }
         - {
             name: q,
             in: query,
@@ -3625,9 +3634,16 @@ components:
         mine:
           type: object
           additionalProperties: false
-          required: [count, awaitingReplyCount, oldestAwaitingSince]
+          required:
+            [count, awaitingReplyCount, oldestAwaitingSince, pendingOrderCount]
           properties:
             count: { type: integer, minimum: 0 }
+            pendingOrderCount:
+              type: integer
+              minimum: 0
+              description: >-
+                Pedidos pendentes do leitor: manuais de que é dono ou de
+                conversas atribuídas a ele; teste fica fora.
             awaitingReplyCount:
               type: integer
               minimum: 0

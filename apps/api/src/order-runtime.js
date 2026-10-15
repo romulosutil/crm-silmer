@@ -35,6 +35,7 @@ import {
  *   readUserNames(userIds: string[]): Promise<Map<string, string|null>>,
  *   searchConversationIds(query: string): Promise<string[]>,
  *   searchContactIds?(query: string): Promise<string[]>,
+ *   listAssignedOrderConversationIds?(userId: string): Promise<string[]>,
  * }} OrderConversationPort
  * @typedef {{id: string, kind: string, capabilities?: readonly string[]}} OrderActor
  * @typedef {{actor: OrderActor, correlationId: string, idempotencyKey: string}} OrderCommand

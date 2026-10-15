@@ -20,6 +20,7 @@ import {
   createInboxService,
 } from '../modules/inbox-channels/src/index.js';
 import { encryptJson } from '../modules/orders/src/adapters/envelope.js';
+import { PostgresOrderConversationPort } from '../modules/orders/src/adapters/postgres-order-conversation-port.js';
 import { PostgresOrderRepository } from '../modules/orders/src/adapters/postgres-order-repository.js';
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
 
@@ -79,10 +80,18 @@ if (connectionString) {
       database,
       envelopeKey: ORDER_KEY,
     });
+    const conversationPort = new PostgresOrderConversationPort({
+      contactEnvelopeKey: CONTACT_KEY,
+      contactLookupKey: Buffer.alloc(32, 74),
+      database,
+      envelopeKey: ORDER_KEY,
+    });
     const orders = createOrderService({
       authorizeOwnership: async () => undefined,
       clock: () => READ_AT,
       conversations: {
+        listAssignedOrderConversationIds: (/** @type {string} */ userId) =>
+          conversationPort.listAssignedOrderConversationIds(userId),
         readOrderContexts: async () => new Map(),
         searchConversationIds: async () => [],
       },
@@ -215,6 +224,7 @@ if (connectionString) {
           awaitingReplyCount: 1,
           count: 2,
           oldestAwaitingSince: '2026-09-08T12:10:00.000Z',
+          pendingOrderCount: 0,
         },
         waitingHandoff: {
           count: 2,
@@ -361,6 +371,24 @@ if (connectionString) {
       const upcoming = await orders.list({ delivery: 'due_soon' });
       assert.equal(upcoming.items[0].id, dueToday);
       assert.equal(upcoming.counts.confirmado, 2);
+
+      // "Meus pedidos pendentes": the seller's conversation has one; the
+      // pending order of an unassigned handoff is nobody's yet.
+      const myPending = await insertOrder({
+        conversationId: awaiting,
+        status: 'pendente',
+      });
+      assert.equal(
+        (await reads.summarizeInbox({ actorId: sellerId })).mine
+          .pendingOrderCount,
+        1,
+      );
+      const mine = await orders.list({ ownerId: sellerId, status: 'pendente' });
+      assert.deepEqual(
+        mine.items.map((order) => order.id),
+        [myPending],
+      );
+      assert.deepEqual(mine.counts, { confirmado: 5, pendente: 1 });
     } finally {
       await pool.end();
     }

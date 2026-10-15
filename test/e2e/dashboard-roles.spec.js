@@ -17,6 +17,7 @@ const QUEUE = Object.freeze({
     awaitingReplyCount: 2,
     count: 3,
     oldestAwaitingSince: '2026-10-15T14:35:00.000Z',
+    pendingOrderCount: 2,
   },
   waitingHandoff: {
     count: 3,
@@ -152,10 +153,10 @@ test('the manager reads the day first, with the period on the server', async ({
   ).toContainText('A mais antiga era para 09/10');
   await expect(
     page.getByRole('link', { name: /^Esperando vendedor 3/u }),
-  ).toContainText('Fora do prazo');
+  ).toContainText('1 fora do prazo');
   await expect(
     page.getByRole('link', { name: /^Assistente Pede atenção/u }),
-  ).toContainText('1 conversa sem resposta há mais de 10 min');
+  ).toContainText('1 sem resposta há 10 min ou mais');
 
   const periodGroup = page.getByRole('group', { name: 'Período das vendas' });
   await expect(
@@ -195,21 +196,40 @@ test('the manager reads the day first, with the period on the server', async ({
     .toBe('true');
 });
 
-test('the seller reads their own queue first', async ({ page }) => {
+test('the seller home is their queue: answer now, stalled, their orders', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
   const mock = await mockPainel(page, { manager: false });
   await page.goto('/dashboard');
-  await expect(sectionTitles(page)).toHaveText([
-    'Minha fila',
-    'Pedidos e entregas',
-  ]);
-  const mine = page.getByRole('link', { name: /^Minhas conversas 3/u });
-  await expect(mine).toContainText(
-    '2 clientes esperam sua resposta; o primeiro escreveu há 25 min',
+  await expect(sectionTitles(page)).toHaveText(['Minha fila', 'Entregas']);
+  const mine = page.getByRole('link', { name: /^Responder agora 2/u });
+  await expect(mine).toContainText('O primeiro cliente escreveu há 25 min');
+  await expect(
+    page.getByRole('link', { name: /^Esperando vendedor 3/u }),
+  ).toContainText('A mais antiga está parada há 6 h');
+  const myOrders = page.getByRole('link', {
+    name: /^Meus pedidos pendentes 2/u,
+  });
+  await expect(myOrders).toHaveAttribute(
+    'href',
+    '/pedidos?status=pendente&vendedor=eu',
   );
   // The assistant's health is the manager's question.
   await expect(page.getByRole('link', { name: /^Assistente/u })).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
+  await myOrders.click();
+  await expect(page).toHaveURL('/pedidos?status=pendente&vendedor=eu');
+  await expect(
+    page.getByRole('button', { name: 'Meus pendentes' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .poll(() => mock.orderLists.at(-1)?.get('owner') ?? null)
+    .toBe('me');
+  expect(mock.orderLists.at(-1)?.get('status')).toBe('pendente');
+
+  await page.goBack();
   await mine.click();
   await expect(page).toHaveURL('/inbox?fila=minhas');
   await expect
@@ -217,7 +237,7 @@ test('the seller reads their own queue first', async ({ page }) => {
     .toBe('seller-1');
 });
 
-test('on a 390 px phone the indicators stack without sideways scrolling', async ({
+test('on a 390 px phone the indicators sit two by two, tappable, without sideways scrolling', async ({
   page,
 }) => {
   await page.setViewportSize({ height: 844, width: 390 });
@@ -233,10 +253,32 @@ test('on a 390 px phone the indicators stack without sideways scrolling', async 
   );
   expect(overflow).toBeLessThanOrEqual(0);
   const boxes = await page
+    .locator('#dashboard-orders-title')
+    .locator('xpath=../..')
     .locator('.metric-card')
     .evaluateAll((cards) =>
-      cards.map((card) => card.getBoundingClientRect().left),
+      cards.map((card) => {
+        const box = card.getBoundingClientRect();
+        return { height: box.height, left: Math.round(box.left) };
+      }),
     );
-  expect(new Set(boxes.map(Math.round)).size).toBe(1);
+  // Four sales and delivery indicators in a 2×2 grid, each a 44 px target.
+  expect(boxes).toHaveLength(4);
+  expect(new Set(boxes.map((box) => box.left)).size).toBe(2);
+  for (const box of boxes) expect(box.height).toBeGreaterThanOrEqual(44);
+
+  // Scrolled to the end, the last indicator clears the fixed bottom bar.
+  await page.locator('.metric-card').last().scrollIntoViewIfNeeded();
+  await page.mouse.wheel(0, 2000);
+  const nav = await page
+    .getByRole('navigation', { name: 'Navegação móvel' })
+    .boundingBox();
+  const last = await page.locator('.metric-card').last().boundingBox();
+  expect(nav).not.toBeNull();
+  expect(last).not.toBeNull();
+  expect(
+    /** @type {{y: number, height: number}} */ (last).y +
+      /** @type {{y: number, height: number}} */ (last).height,
+  ).toBeLessThanOrEqual(/** @type {{y: number}} */ (nav).y);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

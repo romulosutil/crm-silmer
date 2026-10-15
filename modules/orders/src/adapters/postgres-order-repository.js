@@ -771,6 +771,7 @@ export class PostgresOrderRepository {
       limit,
       numberSequence,
       origin,
+      owner,
       phoneDigests,
       status,
       storeNumber,
@@ -816,6 +817,10 @@ export class PostgresOrderRepository {
       scope = `(${matches.join(' OR ')})`;
     }
     if (origin !== undefined) scope = `${scope} AND origin = ${bind(origin)}`;
+    if (owner !== undefined) {
+      scope = `${scope} AND (manual_owner_id = ${bind(owner.userId)}
+        OR conversation_id = ANY(${bind(owner.conversationIds)}::text[]))`;
+    }
 
     const counted = await this.#database.query(
       `SELECT status, count(*)::integer AS total FROM crm.orders

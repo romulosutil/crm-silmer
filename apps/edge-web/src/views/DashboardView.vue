@@ -9,8 +9,10 @@ import {
   dueSoonIndicator,
   longDay,
   mineIndicator,
+  myOrdersIndicator,
   overdueIndicator,
   pendingIndicator,
+  replyIndicator,
   soldIndicator,
   waitingIndicator,
 } from '../lib/dashboard-format.js';
@@ -62,7 +64,7 @@ const today = computed(() => longDay(summary.value.today));
 const intro = computed(() => {
   const context = isManager.value
     ? 'vendas, entregas e quem espera atendimento'
-    : 'sua fila primeiro, depois pedidos e entregas';
+    : 'sua fila e as entregas';
   return today.value ? `${today.value}: ${context}.` : `Hoje: ${context}.`;
 });
 const soldLabel = computed(
@@ -84,6 +86,16 @@ const cards = computed(() => ({
   mine: {
     ...mineIndicator(queue.value?.mine, now.value),
     label: 'Minhas conversas',
+    to: { path: '/inbox', query: { fila: 'minhas' } },
+  },
+  myOrders: {
+    ...myOrdersIndicator(queue.value?.mine?.pendingOrderCount),
+    label: 'Meus pedidos pendentes',
+    to: { path: '/pedidos', query: { status: 'pendente', vendedor: 'eu' } },
+  },
+  reply: {
+    ...replyIndicator(queue.value?.mine, now.value),
+    label: 'Responder agora',
     to: { path: '/inbox', query: { fila: 'minhas' } },
   },
   overdue: {
@@ -108,24 +120,36 @@ const cards = computed(() => ({
   },
 }));
 
-// The manager reads the day first; the seller reads their own queue first.
-const sections = computed(() => {
-  const orders = {
-    cards: ['sold', 'pending', 'overdue', 'dueSoon'],
-    id: 'orders',
-    period: true,
-    title: isManager.value ? 'Vendas e entregas' : 'Pedidos e entregas',
-  };
-  const attendance = {
-    cards: isManager.value
-      ? ['waiting', 'assistant', 'mine']
-      : ['mine', 'waiting'],
-    id: 'attendance',
-    queue: true,
-    title: isManager.value ? 'Atendimento' : 'Minha fila',
-  };
-  return isManager.value ? [orders, attendance] : [attendance, orders];
-});
+// Mobile-first (PO, 15/10/2026): the seller works from the phone, so their
+// home is "Minha fila" — what to answer now, what is stalled waiting for a
+// seller and their own pending orders — then the deliveries. The manager
+// reads the day first: sales of the period, deliveries, then attendance.
+const sections = computed(() =>
+  isManager.value
+    ? [
+        {
+          cards: ['sold', 'pending', 'overdue', 'dueSoon'],
+          id: 'orders',
+          period: true,
+          title: 'Vendas e entregas',
+        },
+        {
+          cards: ['waiting', 'assistant', 'mine'],
+          id: 'attendance',
+          queue: true,
+          title: 'Atendimento',
+        },
+      ]
+    : [
+        {
+          cards: ['reply', 'waiting', 'myOrders'],
+          id: 'attendance',
+          queue: true,
+          title: 'Minha fila',
+        },
+        { cards: ['overdue', 'dueSoon'], id: 'orders', title: 'Entregas' },
+      ],
+);
 
 async function loadDashboard({ announce = false } = {}) {
   controller?.abort();
@@ -300,7 +324,10 @@ onBeforeUnmount(() => {
               :to="cards[key].to"
               :data-tone="cards[key].tone || undefined"
             >
-              <span class="metric-label">{{ cards[key].label }}</span>
+              <span class="metric-head">
+                <span class="metric-label">{{ cards[key].label }}</span>
+                <AppIcon name="chevron" class="metric-go" />
+              </span>
               <span class="metric-value">{{ cards[key].value }}</span>
               <span class="metric-detail">
                 <span
@@ -311,7 +338,6 @@ onBeforeUnmount(() => {
                 >
                 {{ cards[key].detail }}
               </span>
-              <AppIcon name="chevron" class="metric-go" />
             </RouterLink>
           </li>
         </ul>

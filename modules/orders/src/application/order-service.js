@@ -48,6 +48,7 @@ import {
  *     readContactNames?(contactIds: string[]): Promise<Map<string, string|null>>,
  *     searchConversationIds(query: string): Promise<string[]>,
  *     searchContactIds?(query: string): Promise<string[]>,
+ *     listAssignedOrderConversationIds?(userId: string): Promise<string[]>,
  *   },
  *   authorizeOwnership(input: {actor: OrderActor, conversationId: string}): Promise<void>,
  *   authorizeManualOwnership?(input: {actor: OrderActor, ownerId: string}): Promise<void>,
@@ -78,6 +79,7 @@ const LIST_KEYS = new Set([
   'cursor',
   'limit',
   'delivery',
+  'ownerId',
 ]);
 // Painel: "Entrega atrasada" (promised day before today) and "Próximas
 // entregas" (today and the six days after), on São Paulo days.
@@ -609,7 +611,9 @@ export function createOrderService(options) {
      * Painel: `delivery` lists the confirmed orders whose promised day
      * passed (`overdue`) or comes this week (`due_soon`), earliest first.
      *
-     * @param {{status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number, delivery?: string}} [input]
+     * `ownerId` (Painel, "Meus pedidos") keeps one seller's orders.
+     *
+     * @param {{status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number, delivery?: string, ownerId?: string}} [input]
      */
     async list(input = {}) {
       for (const key of Object.keys(input)) {
@@ -629,7 +633,7 @@ export function createOrderService(options) {
         // combine with the other filters or page with a cursor.
         if (
           !DELIVERY_FILTERS.has(/** @type {string} */ (input.delivery)) ||
-          ['status', 'origin', 'q', 'cursor'].some(
+          ['status', 'origin', 'q', 'cursor', 'ownerId'].some(
             (key) => /** @type {any} */ (input)[key] !== undefined,
           )
         ) {
@@ -656,6 +660,15 @@ export function createOrderService(options) {
       };
       if (input.origin !== undefined) {
         query.origin = /** @type {any} */ (input.origin);
+      }
+      if (input.ownerId !== undefined) {
+        const userId = requireId(input.ownerId, 'ownerId');
+        query.owner = {
+          conversationIds:
+            (await conversations.listAssignedOrderConversationIds?.(userId)) ??
+            [],
+          userId,
+        };
       }
       if (q !== '') {
         const number = ORDER_NUMBER_QUERY.exec(q);

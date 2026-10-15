@@ -39,9 +39,12 @@ const STORE_FILTER = 'loja';
 // (rule 10: only those print) not delivered yet and not tests, by the
 // promised delivery. The API filters by status; the rest is read here.
 const PRODUCTION_FILTER = 'producao';
+// Painel ("Meus pedidos pendentes"): the session seller's pending orders.
+const MINE_FILTER = 'meus';
 const FILTERS = Object.freeze([
   Object.freeze({ label: 'Todos', value: '' }),
   Object.freeze({ label: 'Pendentes', value: 'pendente' }),
+  Object.freeze({ label: 'Meus pendentes', value: MINE_FILTER }),
   Object.freeze({ label: 'Prontos para produção', value: PRODUCTION_FILTER }),
   Object.freeze({ label: 'Confirmados', value: 'confirmado' }),
   Object.freeze({ label: STORE_ORIGIN_LABEL, value: STORE_FILTER }),
@@ -88,6 +91,7 @@ let orderCreateKey = '';
 /** @returns {string} */
 function filterFromRoute() {
   if (route.query.origem === STORE_FILTER) return STORE_FILTER;
+  if (route.query.vendedor === 'eu') return MINE_FILTER;
   const delivery = String(route.query.entrega ?? '');
   if (Object.hasOwn(DELIVERY_FILTERS, delivery)) return delivery;
   const status = String(route.query.status ?? '');
@@ -148,8 +152,8 @@ const confirmedCount = computed(() =>
     ? `${confirmedOrders.value.length}${nextCursor.value ? '+' : ''}`
     : String(counts.value.confirmado),
 );
-const showPending = computed(
-  () => filter.value === '' || filter.value === 'pendente',
+const showPending = computed(() =>
+  ['', 'pendente', MINE_FILTER].includes(filter.value),
 );
 const isEmpty = computed(
   () =>
@@ -554,7 +558,10 @@ function listRequest(cursor) {
   const status =
     filter.value === PRODUCTION_FILTER ? 'confirmado' : filter.value;
   if (filter.value === STORE_FILTER) params.set('origin', STORE_FILTER);
-  else if (status) params.set('status', status);
+  else if (filter.value === MINE_FILTER) {
+    params.set('status', 'pendente');
+    params.set('owner', 'me');
+  } else if (status) params.set('status', status);
   const needle = query.value.trim();
   if ((needle.match(/\d/gu) ?? []).length >= 8) {
     return {
@@ -566,9 +573,11 @@ function listRequest(cursor) {
           q: needle,
           ...(filter.value === STORE_FILTER
             ? { origin: STORE_FILTER }
-            : status
-              ? { status }
-              : {}),
+            : filter.value === MINE_FILTER
+              ? { owner: 'me', status: 'pendente' }
+              : status
+                ? { status }
+                : {}),
           ...(cursor ? { cursor } : {}),
         },
       },

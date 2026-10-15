@@ -74,6 +74,7 @@ const ICONS = Object.freeze({
     'M15 3v18',
   ],
   search: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'm21 21-4.3-4.3'],
+  check: ['M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0', 'm9 12 2 2 4-4'],
 });
 
 const props = defineProps({

@@ -624,3 +624,185 @@ export function storeNoticeText(count, oldestPaidAt) {
     title: `${total} pedidos novos do site`,
   };
 }
+
+/**
+ * Pesquisa UX 2026-10-15, achado 3: the promised delivery against today, on
+ * São Paulo days. `date` is the short day ("24/10"), `relative` the distance
+ * ("em 9 dias", "Amanhã", "Atrasada há 2 dias"), and `days` what the queue
+ * sorts by — null when there is no ISO day to count from. A delivered order
+ * stops counting: it reads "Entregue em 26/10" and is no longer late.
+ *
+ * @param {Record<string, any>|null|undefined} order @param {Date} [now]
+ * @returns {{date: string, relative: string, tone: ''|'error'|'warning'|'info'|'success', days: number|null, overdue: boolean}}
+ */
+export function deliveryDue(order, now = new Date()) {
+  const raw = order?.ficha?.summary?.data_entrega_confirmada;
+  const delivered = ISO_DAY.exec(String(order?.deliveredOn ?? ''));
+  const match = ISO_DAY.exec(typeof raw === 'string' ? raw : '');
+  if (delivered) {
+    return {
+      date: match ? `${match[3]}/${match[2]}` : '—',
+      days: null,
+      overdue: false,
+      relative: `Entregue em ${delivered[3]}/${delivered[2]}`,
+      tone: 'success',
+    };
+  }
+  if (!match) {
+    const typed = typeof raw === 'string' ? raw.trim() : '';
+    return {
+      date: typed || 'Sem data',
+      days: null,
+      overdue: false,
+      relative: '',
+      tone: '',
+    };
+  }
+  const today = ISO_DAY.exec(operationalDay(now));
+  const days = today
+    ? Math.round(
+        (Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) -
+          Date.UTC(Number(today[1]), Number(today[2]) - 1, Number(today[3]))) /
+          DAY_MS,
+      )
+    : null;
+  /** @type {''|'error'|'warning'|'info'} */
+  let tone = '';
+  let relative = '';
+  if (days === null) relative = '';
+  else if (days < 0) {
+    relative = `Atrasada há ${-days} ${days === -1 ? 'dia' : 'dias'}`;
+    tone = 'error';
+  } else if (days === 0) {
+    relative = 'Entrega hoje';
+    tone = 'warning';
+  } else if (days === 1) {
+    relative = 'Amanhã';
+    tone = 'warning';
+  } else {
+    relative = `em ${days} dias`;
+    tone = days <= 7 ? 'info' : '';
+  }
+  return {
+    date: `${match[3]}/${match[2]}`,
+    days,
+    overdue: days !== null && days < 0,
+    relative,
+    tone,
+  };
+}
+
+// Pesquisa UX 2026-10-15, achado 4: the order the shop floor counts sizes in
+// — babies by month, children by number, then the adult letters of the
+// catalog and the plus sizes. A size outside this list keeps the place it
+// was typed in, after the known ones.
+const LETTER_SIZE_ORDER = Object.freeze([
+  'PP',
+  'P',
+  'M',
+  'G',
+  'GG',
+  'EG',
+  'XG',
+  'EGG',
+  'XGG',
+  'XX',
+  'JEGAO',
+  'G1',
+  'G2',
+  'G3',
+  'G4',
+  'G5',
+]);
+
+/** @param {unknown} size */
+function sizeKey(size) {
+  return String(size ?? '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toUpperCase()
+    .replace(/[‐-―]/gu, '-')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
+/** @param {unknown} size @returns {number} */
+function sizeRank(size) {
+  const key = sizeKey(size);
+  const months = /^(\d{1,2}) ?- ?(\d{1,2}) ?MES(?:ES)?$/u.exec(key);
+  if (months) return Number(months[1]) / 100;
+  if (/^\d{1,2}$/u.test(key)) return 100 + Number(key);
+  const letter = LETTER_SIZE_ORDER.indexOf(key);
+  return letter === -1 ? Number.POSITIVE_INFINITY : 1000 + letter;
+}
+
+/**
+ * The grade in canonical size order for reading, each line with the index
+ * it has in the ficha. Editing keeps the typed order; only the screen sorts.
+ *
+ * @param {unknown} grade
+ * @returns {{tamanho: string, quantidade: unknown, index: number}[]}
+ */
+export function sortedGrade(grade) {
+  const lines = Array.isArray(grade) ? grade : [];
+  return lines
+    .map((line, index) => ({
+      index,
+      quantidade: line?.quantidade,
+      rank: sizeRank(line?.tamanho),
+      tamanho: String(line?.tamanho ?? ''),
+    }))
+    .sort((a, b) =>
+      a.rank === b.rank ? a.index - b.index : a.rank < b.rank ? -1 : 1,
+    )
+    .map(({ index, quantidade, tamanho }) => ({ index, quantidade, tamanho }));
+}
+
+/**
+ * The sizes written on more than one line of the same item ("M" and "m "
+ * are the same size), in the order they first appear.
+ *
+ * @param {unknown} grade
+ * @returns {string[]}
+ */
+export function duplicateSizes(grade) {
+  const lines = Array.isArray(grade) ? grade : [];
+  /** @type {Map<string, {label: string, count: number}>} */
+  const seen = new Map();
+  for (const line of lines) {
+    const key = sizeKey(line?.tamanho);
+    if (key === '') continue;
+    const entry = seen.get(key);
+    if (entry) entry.count += 1;
+    else seen.set(key, { count: 1, label: String(line.tamanho).trim() });
+  }
+  return [...seen.values()]
+    .filter((entry) => entry.count > 1)
+    .map((entry) => entry.label);
+}
+
+/**
+ * The warning under an item whose grade repeats a size: the ficha would
+ * print two lines for it and the floor could cut one of them twice.
+ *
+ * @param {unknown} grade
+ */
+export function duplicateSizeWarning(grade) {
+  const repeated = duplicateSizes(grade);
+  if (repeated.length === 0) return '';
+  const named = joinPt(repeated);
+  return repeated.length === 1
+    ? `O tamanho ${named} aparece em mais de uma linha. Junte as quantidades numa linha só.`
+    : `Os tamanhos ${named} aparecem em mais de uma linha. Junte as quantidades de cada um numa linha só.`;
+}
+
+/**
+ * True when `size` is one of the sizes the grade repeats.
+ *
+ * @param {unknown} grade @param {unknown} size
+ */
+export function isDuplicateSize(grade, size) {
+  const key = sizeKey(size);
+  if (key === '' || !Array.isArray(grade)) return false;
+  return grade.filter((line) => sizeKey(line?.tamanho) === key).length > 1;
+}

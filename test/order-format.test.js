@@ -6,10 +6,14 @@ import {
   AUDIENCE_OPTIONS,
   audienceLabel,
   dayLabel,
+  deliveryDue,
+  duplicateSizes,
+  duplicateSizeWarning,
   elapsedSince,
   fabLabel,
   formatBrl,
   HANDOFF_REASON_LABELS,
+  isDuplicateSize,
   handoffReasonLabel,
   informedQuantity,
   isItemGap,
@@ -29,6 +33,7 @@ import {
   paymentConditionLabel,
   PRINT_LOCKED_REASON,
   quantityWarning,
+  sortedGrade,
 } from '../apps/edge-web/src/lib/order-format.js';
 
 test('names the two order statuses of ADR 006', () => {
@@ -411,4 +416,99 @@ test('an item says its audience and compares its sizes with the quantity said fo
     '— (cliente informou 4)',
     'the item quantity comes before the order quantity',
   );
+});
+
+// Pesquisa UX 2026-10-15, achado 3: the "Entrega" column of Pedidos.
+test('reads the promised delivery against today on São Paulo days', () => {
+  // 15/10/2026 at 23:30 in São Paulo is already the 16th in UTC.
+  const now = new Date('2026-10-16T02:30:00.000Z');
+  /** @param {string|null} day @param {string|null} [deliveredOn] */
+  const order = (day, deliveredOn = null) => ({
+    deliveredOn,
+    ficha: { summary: { data_entrega_confirmada: day } },
+  });
+  assert.deepEqual(deliveryDue(order('2026-10-24'), now), {
+    date: '24/10',
+    days: 9,
+    overdue: false,
+    relative: 'em 9 dias',
+    tone: '',
+  });
+  assert.equal(deliveryDue(order('2026-10-20'), now).tone, 'info');
+  assert.equal(deliveryDue(order('2026-10-16'), now).relative, 'Amanhã');
+  assert.equal(deliveryDue(order('2026-10-15'), now).relative, 'Entrega hoje');
+  const late = deliveryDue(order('2026-10-13'), now);
+  assert.equal(late.relative, 'Atrasada há 2 dias');
+  assert.equal(late.tone, 'error');
+  assert.equal(late.overdue, true);
+  assert.equal(
+    deliveryDue(order('2026-10-14'), now).relative,
+    'Atrasada há 1 dia',
+  );
+  assert.deepEqual(deliveryDue(order('2026-10-13', '2026-10-12'), now), {
+    date: '13/10',
+    days: null,
+    overdue: false,
+    relative: 'Entregue em 12/10',
+    tone: 'success',
+  });
+  assert.equal(deliveryDue(order(null), now).date, 'Sem data');
+  assert.equal(
+    deliveryDue(order('fim de outubro'), now).date,
+    'fim de outubro',
+  );
+  assert.equal(deliveryDue(order('fim de outubro'), now).days, null);
+});
+
+// Pesquisa UX 2026-10-15, achado 4: the size grade as the floor counts it.
+test('sorts a grade in canonical size order and keeps unknown sizes last', () => {
+  const grade = [
+    { quantidade: 5, tamanho: 'GG' },
+    { quantidade: 3, tamanho: 'Baby look' },
+    { quantidade: 10, tamanho: 'm' },
+    { quantidade: 2, tamanho: '12' },
+    { quantidade: 4, tamanho: 'PP' },
+    { quantidade: 1, tamanho: 'JEGÃO' },
+    { quantidade: 6, tamanho: '3–6 meses' },
+    { quantidade: 7, tamanho: '4' },
+    { quantidade: 8, tamanho: 'XG' },
+    { quantidade: 9, tamanho: 'EG' },
+  ];
+  assert.deepEqual(
+    sortedGrade(grade).map((line) => line.tamanho),
+    ['3–6 meses', '4', '12', 'PP', 'm', 'GG', 'EG', 'XG', 'JEGÃO', 'Baby look'],
+  );
+  assert.deepEqual(
+    sortedGrade(grade).map((line) => line.index),
+    [6, 7, 3, 4, 2, 0, 9, 8, 5, 1],
+    'each line keeps its index in the ficha',
+  );
+  assert.deepEqual(sortedGrade(undefined), []);
+});
+
+test('flags a size written on more than one line of the same item', () => {
+  const grade = [
+    { quantidade: 10, tamanho: 'M' },
+    { quantidade: 5, tamanho: 'G' },
+    { quantidade: 3, tamanho: ' m ' },
+  ];
+  assert.deepEqual(duplicateSizes(grade), ['M']);
+  assert.equal(isDuplicateSize(grade, 'm'), true);
+  assert.equal(isDuplicateSize(grade, 'G'), false);
+  assert.equal(
+    duplicateSizeWarning(grade),
+    'O tamanho M aparece em mais de uma linha. Junte as quantidades numa linha só.',
+  );
+  assert.equal(
+    duplicateSizeWarning([...grade, { quantidade: 1, tamanho: 'G' }]),
+    'Os tamanhos M e G aparecem em mais de uma linha. Junte as quantidades de cada um numa linha só.',
+  );
+  assert.equal(
+    duplicateSizeWarning([
+      { quantidade: 1, tamanho: '' },
+      { quantidade: 1, tamanho: '' },
+    ]),
+    '',
+  );
+  assert.equal(duplicateSizeWarning(null), '');
 });

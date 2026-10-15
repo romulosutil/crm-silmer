@@ -117,6 +117,13 @@ async function mockUsers(page, options = {}) {
       if (target) target.disabledAt = '2026-09-09T13:00:00.000Z';
       return json({ user: target });
     }
+    if (path.endsWith('/enable') && method === 'POST') {
+      const body = request.postDataJSON();
+      commands.push({ body, method, path });
+      const target = users.find((user) => path.includes(user.id));
+      if (target) target.disabledAt = null;
+      return json({ user: target });
+    }
     return route.fulfill({ body: '{}', status: 404 });
   });
 
@@ -259,14 +266,69 @@ test('edits one field at a time and disables an account', async ({ page }) => {
   expect(commands[0].body.email).toBeUndefined();
   expect(commands[0].body.password).toBeUndefined();
 
-  await page
+  const trigger = page
     .getByRole('row', { name: /Marina Duarte Lima/u })
-    .getByLabel('Mais ações para Marina Duarte Lima')
-    .click();
+    .getByLabel('Mais ações para Marina Duarte Lima');
+  await trigger.click();
   await page.getByRole('button', { name: 'Desativar' }).click();
+  // Pesquisa UX 2026-10-15, achado 6: asked first, never on the first click.
+  const confirm = page.getByRole('alertdialog', {
+    name: 'Desativar Marina Duarte Lima?',
+  });
+  await expect(confirm).toBeVisible();
+  await expect(confirm).toContainText('perde o acesso ao CRM');
+  await expect(confirm.getByRole('button', { name: 'Cancelar' })).toBeFocused();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await confirm.press('Escape');
+  await expect(confirm).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  expect(commands).toHaveLength(1);
+
+  await trigger.click();
+  await page.getByRole('button', { name: 'Desativar' }).click();
+  await confirm.getByRole('button', { name: 'Desativar conta' }).click();
+  await expect(confirm).toHaveCount(0);
   await expect(
     page.getByText('2 contas · 1 ativas · 1 desativadas'),
   ).toBeVisible();
+  expect(commands.at(-1)?.path).toMatch(/\/disable$/u);
+  await expect(trigger).toBeFocused();
+
+  // The result is seen, not only announced, and can be undone from there.
+  const toast = page.locator('.notice-toast');
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText('Conta de Marina Duarte Lima desativada.');
+  await toast.getByRole('button', { name: 'Desfazer' }).click();
+  await expect(
+    page.getByText('2 contas · 2 ativas · 0 desativadas'),
+  ).toBeVisible();
+  expect(commands.at(-1)?.path).toMatch(/\/enable$/u);
+  await expect(toast).toContainText('Conta de Marina Duarte Lima reativada.');
+});
+
+test('asks before disabling from the edit dialog, without a dialog over it', async ({
+  page,
+}) => {
+  const { commands } = await mockUsers(page);
+  await page.goto('/usuarios');
+
+  await page.getByLabel('Mais ações para Marina Duarte').click();
+  await page.getByRole('button', { name: 'Editar' }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Desativar conta' })
+    .click();
+
+  const confirm = page.getByRole('alertdialog', {
+    name: 'Desativar Marina Duarte?',
+  });
+  await expect(confirm).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(commands).toHaveLength(0);
+  await confirm.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(page.getByLabel('Mais ações para Marina Duarte')).toBeFocused();
+  expect(commands).toHaveLength(0);
 });
 
 test('offers permanent deletion only for a seller without history', async ({

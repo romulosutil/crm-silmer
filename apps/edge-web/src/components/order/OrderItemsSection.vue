@@ -3,10 +3,13 @@ import { computed, inject, nextTick, ref } from 'vue';
 import { colorSwatch } from '../../lib/order-catalog.js';
 import {
   AUDIENCE_OPTIONS,
+  duplicateSizeWarning,
+  isDuplicateSize,
   itemHeading,
   itemPieces,
   itemQuantityLabel,
   itemQuantityWarning,
+  sortedGrade,
 } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
 
@@ -137,12 +140,23 @@ function extrasKey(mode, index) {
  */
 function toggleExtras(mode, index) {
   const key = extrasKey(mode, index);
-  extrasOpen.value = { ...extrasOpen.value, [key]: !extrasOpen.value[key] };
+  extrasOpen.value = { ...extrasOpen.value, [key]: !isExtrasOpen(mode, index) };
 }
 
-/** @param {string} mode @param {number} index */
+/**
+ * Pesquisa UX 2026-10-15: on a confirmed order the shop floor reads the
+ * extras, so a block that holds data starts open there; the seller's own
+ * toggle always wins.
+ *
+ * @param {string} mode @param {number} index
+ */
 function isExtrasOpen(mode, index) {
-  return Boolean(extrasOpen.value[extrasKey(mode, index)]);
+  const key = extrasKey(mode, index);
+  if (Object.hasOwn(extrasOpen.value, key)) return extrasOpen.value[key];
+  const item = mode === 'read' ? shownItems.value[index] : null;
+  return Boolean(
+    item && props.order.status === 'confirmado' && filledExtras(item) > 0,
+  );
 }
 
 /**
@@ -636,6 +650,9 @@ async function save() {
                       Boolean(lineErrors[`${itemIndex}:${lineIndex}`]) ||
                       undefined
                     "
+                    :data-duplicate="
+                      isDuplicateSize(item.grade, line.tamanho) || undefined
+                    "
                   >
                     <input
                       v-model="line.tamanho"
@@ -719,6 +736,16 @@ async function save() {
                 </div>
               </div>
               <p v-else class="op-hint">Nenhum tamanho ainda.</p>
+              <div aria-live="polite">
+                <p
+                  v-if="duplicateSizeWarning(item.grade)"
+                  class="op-quantity-warning"
+                >
+                  <OrderIcon name="alert" />{{
+                    duplicateSizeWarning(item.grade)
+                  }}
+                </p>
+              </div>
               <button
                 type="button"
                 class="op-add-inline"
@@ -890,10 +917,32 @@ async function save() {
           <div class="op-point--wide">
             <dt>Tamanhos</dt>
             <dd>
-              <ul v-if="item.grade.length" class="op-grade-tiles">
-                <li v-for="(line, lineIndex) in item.grade" :key="lineIndex">
-                  <span>{{ line.tamanho }}</span
-                  ><strong class="op-num">{{ line.quantidade }}</strong>
+              <!-- Pesquisa UX 2026-10-15, achado 4: size and quantity with
+                   the same weight, in the order the floor counts them. -->
+              <ul
+                v-if="item.grade.length"
+                class="op-grade-tiles"
+                :aria-label="`Tamanhos do item ${itemIndex + 1}`"
+              >
+                <li
+                  v-for="line in sortedGrade(item.grade)"
+                  :key="line.index"
+                  :data-duplicate="
+                    isDuplicateSize(item.grade, line.tamanho) || undefined
+                  "
+                >
+                  <span class="op-grade-tile-size">{{ line.tamanho }}</span>
+                  <span class="op-grade-tile-qty op-num"
+                    >{{ line.quantidade
+                    }}<span class="op-visually-hidden">
+                      {{ Number(line.quantidade) === 1 ? 'peça' : 'peças' }}
+                    </span></span
+                  >
+                  <span
+                    v-if="isDuplicateSize(item.grade, line.tamanho)"
+                    class="op-visually-hidden"
+                    >, tamanho repetido</span
+                  >
                 </li>
               </ul>
               <template v-else>—</template>
@@ -906,6 +955,9 @@ async function save() {
         </dl>
         <p v-if="itemQuantityWarning(item)" class="op-quantity-warning">
           <OrderIcon name="alert" />{{ itemQuantityWarning(item) }}
+        </p>
+        <p v-if="duplicateSizeWarning(item.grade)" class="op-quantity-warning">
+          <OrderIcon name="alert" />{{ duplicateSizeWarning(item.grade) }}
         </p>
         <div class="op-extras">
           <button

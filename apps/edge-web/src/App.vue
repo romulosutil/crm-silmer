@@ -29,7 +29,7 @@ const errorSummary = ref(null);
 const runtimeStatus = ref('Verificando sua sessão…');
 const connection = ref('conectando');
 const lastUpdatedAt = ref(0);
-const mobileOpen = ref(false);
+const moreOpen = ref(false);
 const logoutBusy = ref(false);
 let lastAnnouncement = '';
 let sessionRefreshInFlight = false;
@@ -64,8 +64,8 @@ const canAccessCurrentRoute = computed(
 // One list feeds the sidebar and the mobile menu, so both always offer the
 // same places (Vendedores and Sair included on a phone).
 const navItems = computed(() => [
-  { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-  { to: '/inbox', label: 'Caixa de Entrada', icon: 'inbox' },
+  { to: '/dashboard', label: 'Dashboard', short: 'Início', icon: 'dashboard' },
+  { to: '/inbox', label: 'Caixa de Entrada', short: 'Caixa', icon: 'inbox' },
   { to: '/pedidos', label: 'Pedidos', icon: 'orders', count: storeNewCount },
   { to: '/clientes', label: 'Clientes', icon: 'clients' },
   ...(isAdmin.value
@@ -73,6 +73,28 @@ const navItems = computed(() => [
     : []),
   { to: '/conta', label: 'Conta', icon: 'account' },
 ]);
+
+// Mobile-first: sellers live on the phone. The four daily places sit in a
+// bottom bar under the thumb; the rest opens from "Mais".
+const MOBILE_TABS = new Set(['/dashboard', '/inbox', '/pedidos', '/clientes']);
+const mobileTabs = computed(() =>
+  navItems.value.filter((item) => MOBILE_TABS.has(item.to)),
+);
+const mobileMore = computed(() =>
+  navItems.value.filter((item) => !MOBILE_TABS.has(item.to)),
+);
+const moreActive = computed(() =>
+  mobileMore.value.some((item) => sectionCurrent(item.to)),
+);
+/** @param {{label: string, count?: import('vue').Ref<number>}} item */
+function tabName(item) {
+  // The visible word must start the accessible name (WCAG 2.5.3): "Caixa"
+  // reads "Caixa de Entrada"; "Início" stands for the Dashboard on its own.
+  const base =
+    item.short && !item.label.startsWith(item.short) ? item.short : item.label;
+  const count = item.count?.value ?? 0;
+  return count > 0 ? `${base}, ${count}${storeCountLabel.value}` : base;
+}
 
 // PGE-01: the order page belongs to Pedidos. RouterLink only marks a link it
 // matches exactly, so `/pedidos/07-CRM` would leave the menu dark; each item
@@ -181,7 +203,7 @@ watch(liveTopic, (topic) => {
 watch(
   () => route.fullPath,
   () => {
-    mobileOpen.value = false;
+    moreOpen.value = false;
     clearError();
     void redirectUnauthorizedAdminRoute();
   },
@@ -306,9 +328,9 @@ async function logout() {
 
 /** @param {KeyboardEvent} event */
 function handleShellKey(event) {
-  if (event.key !== 'Escape' || !mobileOpen.value) return;
-  mobileOpen.value = false;
-  document.querySelector('#nav-toggle')?.focus();
+  if (event.key !== 'Escape' || !moreOpen.value) return;
+  moreOpen.value = false;
+  document.querySelector('#more-toggle')?.focus();
 }
 
 /** @param {string} message */
@@ -444,18 +466,13 @@ function onCursor(cursor) {
     </aside>
     <div class="app-frame">
       <header class="app-topbar">
-        <button
-          id="nav-toggle"
-          class="icon-button"
-          type="button"
-          :aria-expanded="mobileOpen"
-          aria-controls="mobile-nav"
-          @click="mobileOpen = !mobileOpen"
+        <RouterLink
+          class="topbar-brand"
+          to="/dashboard"
+          :aria-label="`${brand.productName}, Dashboard`"
         >
-          <AppIcon :name="mobileOpen ? 'close' : 'menu'" />
-          Menu
-        </button>
-        <BrandMark class="topbar-monogram" />
+          <BrandMark class="topbar-logo" />
+        </RouterLink>
         <p class="topbar-trail">
           <span class="topbar-company">{{ brand.companyName }}</span>
           <AppIcon class="topbar-separator" name="chevron" />
@@ -473,44 +490,9 @@ function onCursor(cursor) {
             {{ connectionLabel }}
             <span class="sr-only">{{ connectionDetail }}</span>
           </span>
-          <ThemeSwitcher />
+          <ThemeSwitcher class="topbar-theme" />
         </div>
       </header>
-      <nav
-        id="mobile-nav"
-        class="mobile-nav"
-        aria-label="Navegação móvel"
-        :hidden="!mobileOpen"
-      >
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.to"
-          v-slot="{ href, navigate }"
-          :to="item.to"
-          custom
-        >
-          <a
-            :href="href"
-            :aria-current="sectionCurrent(item.to)"
-            @click="navigate"
-          >
-            <AppIcon :name="item.icon" />{{ item.label
-            }}<span v-if="item.count?.value > 0" class="nav-count"
-              >{{ item.count.value
-              }}<span class="sr-only">{{ storeCountLabel }}</span></span
-            ></a
-          >
-        </RouterLink>
-        <button
-          class="quiet mobile-logout"
-          type="button"
-          :disabled="logoutBusy"
-          @click="logout"
-        >
-          <AppIcon name="logout" />
-          {{ logoutBusy ? 'Saindo…' : 'Sair' }}
-        </button>
-      </nav>
       <main id="main-content" tabindex="-1">
         <RouterView v-slot="{ Component }">
           <component
@@ -525,6 +507,101 @@ function onCursor(cursor) {
           />
         </RouterView>
       </main>
+      <nav class="mobile-nav" aria-label="Navegação móvel">
+        <RouterLink
+          v-for="item in mobileTabs"
+          :key="item.to"
+          v-slot="{ href, navigate }"
+          :to="item.to"
+          custom
+        >
+          <a
+            class="mobile-tab"
+            :href="href"
+            :aria-current="sectionCurrent(item.to)"
+            :aria-label="tabName(item)"
+            @click="navigate"
+          >
+            <span class="mobile-tab-icon">
+              <AppIcon :name="item.icon" />
+              <span
+                v-if="item.count?.value > 0"
+                class="nav-count"
+                aria-hidden="true"
+                >{{ item.count.value }}</span
+              >
+            </span>
+            <span class="mobile-tab-label">{{ item.short ?? item.label }}</span>
+          </a>
+        </RouterLink>
+        <button
+          id="more-toggle"
+          class="mobile-tab"
+          type="button"
+          :aria-expanded="moreOpen"
+          aria-controls="mobile-more"
+          :data-active="moreActive || undefined"
+          @click="moreOpen = !moreOpen"
+        >
+          <span class="mobile-tab-icon"><AppIcon name="more" /></span>
+          <span class="mobile-tab-label">Mais</span>
+        </button>
+      </nav>
+      <div
+        v-if="moreOpen"
+        class="mobile-more-backdrop"
+        aria-hidden="true"
+        @click="moreOpen = false"
+      ></div>
+      <section
+        id="mobile-more"
+        class="mobile-more"
+        aria-label="Mais opções"
+        :hidden="!moreOpen"
+      >
+        <template v-if="moreOpen">
+          <div class="mobile-more-account">
+            <span class="sidebar-account-avatar" aria-hidden="true">{{
+              sidebarUserInitials
+            }}</span>
+            <span class="sidebar-account-copy">
+              <strong class="sidebar-account-name">{{
+                sidebarUserName
+              }}</strong>
+              <span>{{ sessionSummary }}</span>
+            </span>
+          </div>
+          <RouterLink
+            v-for="item in mobileMore"
+            :key="item.to"
+            v-slot="{ href, navigate }"
+            :to="item.to"
+            custom
+          >
+            <a
+              class="mobile-more-link"
+              :href="href"
+              :aria-current="sectionCurrent(item.to)"
+              @click="navigate"
+            >
+              <AppIcon :name="item.icon" />{{ item.label }}
+            </a>
+          </RouterLink>
+          <div class="mobile-more-theme">
+            <span>Aparência</span>
+            <ThemeSwitcher />
+          </div>
+          <button
+            class="quiet mobile-logout"
+            type="button"
+            :disabled="logoutBusy"
+            @click="logout"
+          >
+            <AppIcon name="logout" />
+            {{ logoutBusy ? 'Saindo…' : 'Sair' }}
+          </button>
+        </template>
+      </section>
     </div>
   </div>
 

@@ -167,8 +167,7 @@ b {
   block-size: 1.375rem;
   inline-size: auto;
 }
-.brand-monogram,
-.topbar-monogram {
+.brand-monogram {
   display: none;
   block-size: 1.5rem;
   inline-size: auto;
@@ -698,8 +697,10 @@ html[data-theme='dark'] .sidebar-account-avatar {
     opacity: 0.3;
   }
 }
-.icon-button,
-.mobile-nav {
+.topbar-brand,
+.mobile-nav,
+.mobile-more,
+.mobile-more-backdrop {
   display: none;
 }
 #main-content {
@@ -894,20 +895,40 @@ html[data-theme='dark'] .sidebar-account-avatar {
 }
 
 /* Phone: one column, the menu opens under the top bar ------------------ */
+/* Phone (mobile-first for sellers): brand on top, the four daily places in
+   a bottom bar under the thumb, everything else in "Mais". */
 @media (max-width: 768px) {
   .public-content {
     grid-template-columns: 1fr;
     align-items: start;
     gap: var(--space-6);
+    margin-block-start: 0;
+  }
+  /* On a phone the form is the task: the welcome shrinks to a line. */
+  .site-header {
+    padding-block: var(--space-4);
+  }
+  .public-content {
+    padding-block: 0 var(--space-6);
   }
   .intro h1 {
-    font-size: var(--text-3xl);
+    margin-block-end: var(--space-1);
+    font-size: var(--text-2xl);
   }
   .intro > p:last-child {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
+  }
+  .page-heading p:last-child {
+    font-size: var(--text-sm);
   }
   .surface.auth-panel {
     padding: var(--space-6);
+  }
+  /* 16px fields stop iOS from zooming into the form on focus. */
+  input,
+  select,
+  textarea {
+    font-size: var(--text-base);
   }
   .app-shell {
     display: block;
@@ -918,54 +939,162 @@ html[data-theme='dark'] .sidebar-account-avatar {
   }
   .app-frame {
     min-block-size: 100vh;
+    min-block-size: 100dvh;
     margin: 0;
     border: 0;
     border-radius: 0;
     box-shadow: none;
   }
   .app-topbar {
-    gap: var(--space-2);
-    padding-inline: var(--space-3);
+    gap: var(--space-3);
+    min-block-size: var(--topbar-block-size);
+    padding: env(safe-area-inset-top) var(--space-4) 0;
     border-radius: 0;
   }
-  .icon-button {
+  .topbar-brand {
     display: inline-flex;
-    padding-inline: var(--space-3);
+    align-items: center;
+    min-block-size: var(--target-min);
+    border-radius: var(--radius-sm);
   }
-  .topbar-monogram {
-    display: block;
-    block-size: 1.125rem;
+  .topbar-logo {
+    block-size: 1.25rem;
+    inline-size: auto;
   }
-  /* The page h1 sits right below; the phone bar keeps the brand instead. */
   .topbar-trail,
-  .topbar-role {
+  .topbar-role,
+  .topbar-theme {
     display: none;
   }
-  .topbar-tools {
-    gap: var(--space-2);
-  }
   .connection-state {
-    padding-inline: var(--space-2);
+    inline-size: var(--target-min);
+    min-block-size: var(--target-min);
+    justify-content: center;
+    padding: 0;
     font-size: 0;
     gap: 0;
+    background: transparent;
+    border: 0;
+  }
+  .connection-state[data-state='reconectando'],
+  .connection-state[data-state='conectando'],
+  .connection-state[data-state='indisponível'] {
+    background: transparent;
   }
   .connection-state::before {
-    margin: 0;
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+  }
+  #main-content {
+    padding-block-end: calc(
+      var(--mobile-nav-block-size) + env(safe-area-inset-bottom)
+    );
   }
   .mobile-nav {
-    position: sticky;
-    z-index: 4;
-    inset-block-start: var(--topbar-block-size);
-    padding: var(--space-2) var(--space-3) var(--space-3);
-    background: var(--color-surface);
-    border-block-end: 1px solid var(--color-border);
-    box-shadow: var(--shadow-overlay);
+    position: fixed;
+    z-index: 20;
+    inset: auto 0 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-block-size: var(--mobile-nav-block-size);
+    padding: 0.25rem var(--space-1) env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    border-block-start: 1px solid var(--color-border);
+    backdrop-filter: saturate(1.4) blur(12px);
   }
-  .mobile-nav:not([hidden]) {
+  .mobile-tab {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 0.125rem;
+    min-block-size: calc(var(--mobile-nav-block-size) - 0.5rem);
+    min-inline-size: 0;
+    padding: var(--space-1) 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-md);
+    box-shadow: none;
+  }
+  button.mobile-tab:hover:not(:disabled) {
+    background: transparent;
+  }
+  .mobile-tab-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 3.5rem;
+    block-size: 1.875rem;
+    border-radius: var(--radius-pill);
+    transition: background-color var(--duration-fast) var(--easing-standard);
+  }
+  .mobile-tab .app-icon {
+    inline-size: 1.375rem;
+    block-size: 1.375rem;
+  }
+  .mobile-tab-label {
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-tab[aria-current],
+  .mobile-tab[data-active],
+  .mobile-tab[aria-expanded='true'] {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+  .mobile-tab[aria-current] .mobile-tab-icon,
+  .mobile-tab[data-active] .mobile-tab-icon,
+  .mobile-tab[aria-expanded='true'] .mobile-tab-icon {
+    color: var(--color-accent-solid);
+    background: var(--color-accent-subtle);
+  }
+  .mobile-tab .nav-count {
+    position: absolute;
+    inset: -0.25rem 0.125rem auto auto;
+    min-inline-size: 1.125rem;
+    block-size: 1.125rem;
+    padding-inline: 0.25rem;
+    font-size: var(--text-xs);
+    box-shadow: 0 0 0 2px var(--color-surface);
+  }
+  .mobile-more-backdrop {
+    position: fixed;
+    z-index: 18;
+    inset: 0;
+    display: block;
+    background: var(--color-overlay);
+  }
+  .mobile-more:not([hidden]) {
+    position: fixed;
+    z-index: 19;
+    inset: auto 0
+      calc(var(--mobile-nav-block-size) + env(safe-area-inset-bottom));
     display: grid;
     gap: 0.125rem;
+    max-block-size: 70vh;
+    overflow-y: auto;
+    padding: var(--space-4) var(--space-3) var(--space-3);
+    background: var(--color-surface);
+    border-block-start: 1px solid var(--color-border);
+    border-start-start-radius: var(--radius-xl);
+    border-start-end-radius: var(--radius-xl);
+    box-shadow: var(--shadow-overlay);
   }
-  .mobile-nav a,
+  .mobile-more-account {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-block-end: var(--space-2);
+    padding: var(--space-2) var(--space-3) var(--space-4);
+    border-block-end: 1px solid var(--color-border-subtle);
+  }
+  .mobile-more-link,
   .mobile-logout {
     display: flex;
     align-items: center;
@@ -974,22 +1103,44 @@ html[data-theme='dark'] .sidebar-account-avatar {
     min-block-size: var(--target-min);
     padding: var(--space-2) var(--space-3);
     color: var(--color-text);
+    font-size: var(--text-base);
     font-weight: 500;
     text-decoration: none;
     border-radius: var(--radius-md);
   }
-  .mobile-nav a[aria-current] {
+  .mobile-more-link[aria-current] {
     font-weight: 600;
     background: var(--color-surface-raised);
   }
-  .mobile-nav a[aria-current] .app-icon {
-    color: var(--color-accent);
+  .mobile-more-link .app-icon,
+  .mobile-logout .app-icon {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    color: var(--color-text-muted);
+  }
+  .mobile-more-theme {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-block-size: var(--target-min);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-base);
+    font-weight: 500;
+  }
+  .mobile-more-theme .theme-switcher button {
+    min-inline-size: var(--target-min);
+    min-block-size: var(--target-min);
   }
   .mobile-logout {
     margin-block-start: var(--space-2);
+    color: var(--status-error-text);
     border-block-start: 1px solid var(--color-border-subtle);
     border-radius: 0;
     box-shadow: none;
+  }
+  .mobile-logout .app-icon {
+    color: currentColor;
   }
   .page {
     padding: var(--space-4) var(--space-4) var(--space-8);
@@ -997,16 +1148,28 @@ html[data-theme='dark'] .sidebar-account-avatar {
   .page-heading,
   .detail-heading {
     display: grid;
+    gap: var(--space-3);
     margin-block-end: var(--space-4);
   }
+  .page-heading h1 {
+    font-size: var(--text-xl);
+  }
   .page-heading > button {
-    justify-self: start;
+    justify-self: stretch;
   }
   .account-page {
     grid-template-columns: 1fr;
   }
   .account-page .page-heading {
     grid-column: auto;
+  }
+  .toast {
+    inset: auto var(--space-3)
+      calc(
+        var(--mobile-nav-block-size) + env(safe-area-inset-bottom) +
+          var(--space-3)
+      );
+    inline-size: auto;
   }
 }
 @media (max-width: 360px) {

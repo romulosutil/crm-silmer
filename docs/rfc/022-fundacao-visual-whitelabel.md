@@ -82,6 +82,11 @@ Nome da empresa, nome do produto, slogan, logotipo e monograma em um só objeto.
 
 ### Shell e componentes base
 
+**Mobile-first.** Pedido do PO em 15/10/2026: "Quero foco no mobile first,
+principalmente porque os vendedores usam celular o tempo todo". No celular, a
+navegação fica numa barra inferior fixa (Início, Caixa, Pedidos, Clientes,
+Mais), com folha "Mais" para o restante; o desktop amplia esse desenho.
+
 - Sidebar no canvas e trabalho num painel inset (ReUI `c-sidebar-1`); trilha
   "Empresa › Tela" no topo; rail de ícones entre 769 e 1199 px.
 - Uma lista de rotas alimenta sidebar e menu móvel (paridade, Sair no celular).

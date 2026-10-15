@@ -204,6 +204,81 @@ export function isPageGap(field) {
   return field !== 'finalAmount' && field !== 'paymentCondition';
 }
 
+// PFI-15 (RFC 024): the steps to generate an order, in the order of the page.
+// The amount and the payment method are typed when generating, not here.
+const ORDER_STEPS = Object.freeze([
+  {
+    action: 'Informar entrega prometida',
+    key: 'delivery',
+    label: 'Entrega prometida',
+    /** @param {string} field */
+    owns: (field) => field === 'summary.data_entrega_confirmada',
+    section: 'summary',
+  },
+  {
+    action: 'Completar itens',
+    key: 'items',
+    label: 'Itens',
+    owns: isItemGap,
+    section: 'items',
+  },
+  {
+    action: 'Marcar quem faz a arte',
+    key: 'artwork',
+    label: 'Arte do pedido',
+    /** @param {string} field */
+    owns: (field) => field === 'artwork',
+    section: 'artwork',
+  },
+]);
+
+/**
+ * What a step still lacks, in the words of "Falta para gerar" (PIT-06).
+ *
+ * @param {string} key @param {string[]} gaps
+ */
+function stepGapText(key, gaps) {
+  if (key === 'delivery') return 'a data combinada';
+  if (key === 'artwork') return 'quem faz a arte';
+  if (gaps.includes('items')) return 'ao menos um item';
+  const labels = missingFieldLabels(gaps);
+  if (labels.length <= 2) return joinPt(labels);
+  const more = labels.length - 2;
+  return `${labels[0]}, ${labels[1]} e mais ${more} ${more === 1 ? 'ponto' : 'pontos'}`;
+}
+
+/**
+ * PFI-15: the three steps to generate an order, judged only by the server's
+ * `missingFields` so the progress is never ahead of what the API accepts. A
+ * store order (ADR 027) or an order without the list has no steps.
+ *
+ * @param {Record<string, any>|null|undefined} order
+ * @returns {{key: string, label: string, done: boolean, missing: string, section: string, action: string}[]}
+ */
+export function orderSteps(order) {
+  if (!order || isStoreOrder(order) || !Array.isArray(order.missingFields)) {
+    return [];
+  }
+  const missing = order.missingFields.map(String);
+  return ORDER_STEPS.map(({ owns, ...step }) => {
+    const gaps = missing.filter(owns);
+    return {
+      ...step,
+      done: gaps.length === 0,
+      missing: gaps.length === 0 ? '' : `falta: ${stepGapText(step.key, gaps)}`,
+    };
+  });
+}
+
+/**
+ * PFI-15/PFI-16: the first step still missing, or null when all are done.
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function nextOrderStep(order) {
+  return orderSteps(order).find((step) => !step.done) ?? null;
+}
+
 /**
  * PLI-05: one line for the Situação column and the drawer: the first two
  * points still missing, and how many more.

@@ -40,7 +40,9 @@ test('opens the order page inside Pedidos, with the trail and the sections in or
     page.getByRole('link', { name: 'Abrir conversa' }),
   ).toHaveAttribute('href', '/inbox/conversation-7');
 
+  // PFI-15: the real progress to generate opens the page.
   await expect(page.locator('main h2')).toHaveText([
+    'Para gerar o pedido',
     'Resumo do pedido',
     'Lastro do pedido',
     'Itens e especificações',
@@ -83,40 +85,47 @@ test('locks printing while the order is pending and says why (PIM-01)', async ({
   await expect(print).toHaveAttribute('aria-describedby', /./u);
 });
 
-test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05, PIT-06, TEC-03)', async ({
+// ADR 016: of the summary, only the promised delivery blocks; this order
+// misses one of each step plus the amount and the payment method.
+const incompleteOrder = {
+  ...pendingOrder,
+  ficha: {
+    ...pendingOrder.ficha,
+    artwork: {
+      feito_pelo_cliente: false,
+      feito_pela_silmer: false,
+      files: [],
+      sem_estampa: false,
+    },
+    items: [
+      { ...pendingOrder.ficha.items[0], cor: '', gola: '', vies_gola: '' },
+    ],
+    summary: {
+      aplicacao: null,
+      cliente: 'Colégio Ápice',
+      data_entrega_confirmada: null,
+      nome: null,
+    },
+  },
+  missingFields: [
+    'items[0].cor',
+    'items[0].gola',
+    'artwork',
+    'summary.data_entrega_confirmada',
+    'finalAmount',
+    'paymentCondition',
+  ],
+};
+
+test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03)', async ({
   page,
 }) => {
-  const incomplete = {
-    ...pendingOrder,
-    ficha: {
-      ...pendingOrder.ficha,
-      artwork: {
-        feito_pelo_cliente: false,
-        feito_pela_silmer: false,
-        files: [],
-        sem_estampa: false,
-      },
-      items: [
-        { ...pendingOrder.ficha.items[0], cor: '', gola: '', vies_gola: '' },
-      ],
-      // ADR 016: of the summary, only the promised delivery blocks.
-      summary: {
-        aplicacao: null,
-        cliente: 'Colégio Ápice',
-        data_entrega_confirmada: null,
-        nome: null,
-      },
-    },
-    missingFields: [
-      'items[0].cor',
-      'items[0].gola',
-      'artwork',
-      'summary.data_entrega_confirmada',
-      'finalAmount',
-      'paymentCondition',
-    ],
-  };
-  await mockOrders(page, { orders: [incomplete] });
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [incompleteOrder],
+  });
   await page.goto('/pedidos/order-pendente');
 
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
@@ -126,55 +135,69 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PIT-05,
   );
   await expect(page.getByText('Ainda em branco na ficha')).toHaveCount(0);
 
+  // PFI-15: the real progress on top, in the order of the page, with only
+  // the next step as a button; the amount and payment method are not steps.
+  const progress = page.getByRole('region', { name: 'Para gerar o pedido' });
+  const count = progress.getByRole('status');
+  await expect(count).toHaveText('0 de 3 prontos');
+  await expect(progress.getByRole('listitem')).toHaveText([
+    /Entrega prometida\s*falta: a data combinada/u,
+    /Itens\s*falta: cor do item 1 e gola do item 1/u,
+    /Arte do pedido\s*falta: quem faz a arte/u,
+  ]);
+  await expect(progress.getByRole('button')).toHaveText([
+    'Informar entrega prometida',
+  ]);
+
   await closing.getByLabel('Valor final').fill('4.820,00');
   await closing.getByLabel('Pix').check();
   await expect(readiness).toHaveText(
     'Falta para gerar: cor do item 1, gola do item 1, quem faz a arte e entrega prometida.',
   );
-  // What is filled elsewhere keeps the order from being sent to be generated.
-  await closing.getByRole('button', { name: 'Gerar pedido' }).click();
+  await expect(count).toHaveText('0 de 3 prontos');
+  // PFI-16: what is filled elsewhere keeps "Gerar pedido" unavailable but
+  // focusable; activating it leads to the next step and never confirms.
+  const generate = closing.getByRole('button', { name: 'Gerar pedido' });
+  await expect(generate).toHaveAttribute('aria-disabled', 'true');
+  await generate.focus();
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(closing).toContainText(
-    'Complete os itens antes de gerar: cor do item 1 e gola do item 1.',
-  );
-  await expect(closing).toContainText(
-    'Marque quem faz a arte em Estampa e arquivos.',
-  );
-  await expect(closing).toContainText(
-    'Informe a entrega prometida no Resumo do pedido.',
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const delivery = summary.getByLabel('Entrega prometida');
+  await expect(delivery).toBeFocused();
+  expect(writes.filter((call) => call.action === 'confirm')).toHaveLength(0);
+
+  // Saving the delivery moves the progress without reloading the page.
+  await delivery.fill('2026-10-24');
+  await summary.getByRole('button', { name: 'Salvar resumo' }).click();
+  await expect(count).toHaveText('1 de 3 prontos');
+  await expect(readiness).toHaveText(
+    'Falta para gerar: cor do item 1, gola do item 1 e quem faz a arte.',
   );
 
+  // The next step opens the items editor.
+  await progress.getByRole('button', { name: 'Completar itens' }).click();
   const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
   await items.getByLabel('Cor', { exact: true }).fill('BRANCA');
   await items.getByLabel('Gola', { exact: true }).fill('GOLA V');
   await items.getByRole('button', { name: 'Salvar itens' }).click();
-  await expect(readiness).toHaveText(
-    'Falta para gerar: quem faz a arte e entrega prometida.',
-  );
+  await expect(count).toHaveText('2 de 3 prontos');
+  await expect(readiness).toHaveText('Falta para gerar: quem faz a arte.');
 
-  // ADR 020: the checklist sends the seller to who makes the art.
-  await closing
-    .getByRole('button', { name: 'Informar na Estampa (quem faz a arte)' })
+  // ADR 020: the last step sends the seller to who makes the art.
+  await progress
+    .getByRole('button', { name: 'Marcar quem faz a arte' })
     .click();
   const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
   await expect(artwork.getByLabel('O cliente envia a arte')).toBeFocused();
   await artwork.getByLabel('Sem estampa').check();
   await artwork.getByRole('button', { name: 'Salvar arte' }).click();
-  await expect(readiness).toHaveText('Falta para gerar: entrega prometida.');
-
-  // The checklist sends the seller to the summary, on the promised delivery.
-  await closing
-    .getByRole('button', { name: 'Informar no Resumo (entrega prometida)' })
-    .click();
-  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
-  const delivery = summary.getByLabel('Entrega prometida');
-  await expect(delivery).toBeFocused();
-  await delivery.fill('2026-10-24');
-  await summary.getByRole('button', { name: 'Salvar resumo' }).click();
+  await expect(count).toHaveText('3 de 3 prontos');
+  await expect(progress.getByRole('button')).toHaveCount(0);
   await expect(readiness).toHaveText(
     'Tudo pronto. Gerar confirma o pedido e libera a ficha.',
   );
+  await expect(generate).not.toHaveAttribute('aria-disabled', /./u);
   // The paid day stays empty: generating means paid until the CRM handles
   // payments.
   await expect(
@@ -224,6 +247,47 @@ test('shows the order read-only to whoever does not own the conversation (PAU-01
   await expect(
     page.getByRole('button', { name: 'Reabrir pedido' }),
   ).toHaveCount(0);
+  // PFI-15: no progress to generate for whoever cannot generate.
+  await expect(
+    page.getByRole('region', { name: 'Para gerar o pedido' }),
+  ).toHaveCount(0);
+});
+
+test('shows no progress to generate on a confirmed order or a store order (PFI-15, LOJ-34)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page, {
+    orders: [
+      ownConfirmedOrder,
+      // A store order is locked even if it ever reads as pending.
+      {
+        ...incompleteOrder,
+        id: 'order-loja',
+        origin: 'loja',
+      },
+    ],
+  });
+  await page.goto('/pedidos/order-confirmado');
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 05-CRM' }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole('region', { name: 'Para gerar o pedido' }),
+  ).toHaveCount(0);
+  await expect(page.locator('.op-mobile-action')).toHaveText('Imprimir ficha');
+
+  await page.goto('/pedidos/order-loja');
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeFocused();
+  await expect(
+    page.getByText('Pedido da loja do site: travado, sem edição.'),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Para gerar o pedido' }),
+  ).toHaveCount(0);
+  await expect(page.locator('.op-mobile-action')).toHaveCount(0);
 });
 
 test('names a missing order with the way back to the list', async ({
@@ -1482,7 +1546,9 @@ test('keeps the sections in the order of the printed ficha (PFI-01, PLA-01)', as
   await mockOrders(page);
   await page.goto('/pedidos/order-pendente');
 
+  // PFI-15: the progress to generate comes before the sections of the ficha.
   await expect(page.locator('main h2')).toHaveText([
+    'Para gerar o pedido',
     'Resumo do pedido',
     'Lastro do pedido',
     'Itens e especificações',
@@ -1676,6 +1742,121 @@ test('keeps "Gerar pedido" as the only primary button of the page (PFI-13)', asy
   await expect(primary).toHaveText(['Gerar pedido']);
 });
 
+test('makes the next step the only primary while one is missing (PFI-13, PFI-16)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [incompleteOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  // Wide screen: the next step on top is the primary; "Gerar pedido" stays
+  // in the rail, unavailable, with what is missing beside it.
+  const primary = page.locator('main button.primary:visible');
+  await expect(primary).toHaveText(['Informar entrega prometida']);
+  const generate = page
+    .getByRole('region', { name: 'Fechamento e pagamento' })
+    .getByRole('button', { name: 'Gerar pedido' });
+  await expect(generate).toHaveAttribute('aria-disabled', 'true');
+  await expect(generate).toHaveAttribute(
+    'aria-describedby',
+    'closing-readiness',
+  );
+
+  // Phone: the fixed footer carries the next step, never "Gerar pedido".
+  await page.setViewportSize({ height: 844, width: 390 });
+  const footer = page.locator('.op-mobile-action');
+  const step = footer.getByRole('button', {
+    name: 'Informar entrega prometida',
+  });
+  await expect(primary).toHaveText(['Informar entrega prometida']);
+  await expect(footer.locator('button.primary')).toHaveText(
+    'Informar entrega prometida',
+  );
+  await expect(
+    footer.getByRole('button', { name: 'Gerar pedido' }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Gerar pedido' })).toHaveCount(
+    0,
+  );
+  await expect(step).toHaveAccessibleDescription('Passo 1 de 3 para gerar');
+  const box = await footer.boundingBox();
+  expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(844 - 64);
+  expect((await step.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+  // The progress is in the first screen, above the sections.
+  const progress = page.getByRole('region', { name: 'Para gerar o pedido' });
+  const progressBox = await progress.boundingBox();
+  expect(
+    (progressBox?.y ?? 0) + (progressBox?.height ?? 0),
+  ).toBeLessThanOrEqual(box?.y ?? 0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // The footer opens the summary on the promised delivery; nothing confirms.
+  await step.click();
+  await expect(
+    page
+      .getByRole('region', { name: 'Resumo do pedido' })
+      .getByLabel('Entrega prometida'),
+  ).toBeFocused();
+  await expect(footer).toHaveCount(0);
+  expect(writes).toHaveLength(0);
+});
+
+test('reaches and opens the next step by keyboard, and announces the count (PFI-15)', async ({
+  page,
+}) => {
+  await mockOrders(page, { orders: [incompleteOrder] });
+  await page.goto('/pedidos/order-pendente');
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeFocused();
+
+  const progress = page.getByRole('region', { name: 'Para gerar o pedido' });
+  const next = progress.getByRole('button', {
+    name: 'Informar entrega prometida',
+  });
+  await expect(progress.locator('li[aria-current="step"]')).toContainText(
+    'Entrega prometida',
+  );
+  // From the heading, the next step comes before any section control.
+  let presses = 0;
+  while (
+    presses < 4 &&
+    !(await next.evaluate((el) => el === el.ownerDocument.activeElement))
+  ) {
+    await page.keyboard.press('Tab');
+    presses += 1;
+  }
+  await expect(next).toBeFocused();
+  expect(presses).toBeLessThanOrEqual(3);
+
+  await page.keyboard.press('Enter');
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const delivery = summary.getByLabel('Entrega prometida');
+  await expect(delivery).toBeFocused();
+
+  // PFI-06: with a section open the step waits, focusable, and says why.
+  await expect(next).toHaveAttribute('aria-disabled', 'true');
+  await expect(next).toHaveAccessibleDescription(
+    'Salve ou cancele a edição aberta.',
+  );
+
+  await delivery.fill('2026-10-24');
+  await summary.getByRole('button', { name: 'Salvar resumo' }).focus();
+  await page.keyboard.press('Enter');
+  const status = progress.getByRole('status');
+  await expect(status).toHaveText('1 de 3 prontos');
+  await expect(progress.locator('li[aria-current="step"]')).toContainText(
+    'Itens',
+  );
+  await expect(progress.getByRole('button')).toHaveText(['Completar itens']);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
 test('hides Gerar and Reabrir from whoever does not own the conversation', async ({
   page,
 }) => {
@@ -1790,9 +1971,14 @@ test('shows the reopen notice above the footer and the bottom navigation', async
   const toast = page.locator('.notice-toast');
   await expect(toast).toContainText('Pedido 05-CRM reaberto.');
   const footer = page.locator('.op-mobile-action');
+  // PFI-16: the reopened fixture predates ADR 020 (its item has no
+  // technique), so the footer carries that step instead of "Gerar pedido".
+  await expect(
+    footer.getByRole('button', { name: 'Completar itens' }),
+  ).toBeVisible();
   await expect(
     footer.getByRole('button', { name: 'Gerar pedido' }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   const note = await toast.boundingBox();
   const bar = await footer.boundingBox();
   expect((note?.y ?? 0) + (note?.height ?? 0)).toBeLessThanOrEqual(bar?.y ?? 0);

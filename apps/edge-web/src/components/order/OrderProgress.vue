@@ -1,0 +1,85 @@
+<script setup>
+import { computed, inject } from 'vue';
+import { nextOrderStep, orderSteps } from '../../lib/order-format.js';
+import OrderIcon from './OrderIcon.vue';
+
+/*
+ * PFI-15 (RFC 024): the real progress to generate the order, at the top of
+ * the page. The steps come from the server's missingFields only, and only the
+ * next one has a button. On a phone that button lives in the fixed footer
+ * (PFI-16), so this list only says where the order stands.
+ */
+const props = defineProps({
+  order: { type: Object, required: true },
+});
+
+const editing = inject('orderEditing');
+const steps = computed(() => orderSteps(props.order));
+const next = computed(() => nextOrderStep(props.order));
+const doneCount = computed(
+  () => steps.value.filter((step) => step.done).length,
+);
+// PFI-06: one section in edit at a time; the step waits for Salvar or
+// Cancelar and says so, instead of disappearing.
+const sectionOpen = computed(() => editing.editingSection.value !== '');
+
+function goToNext() {
+  if (sectionOpen.value || !next.value) return;
+  void editing.goToSection(next.value.section);
+}
+</script>
+
+<template>
+  <section class="op-progress" aria-labelledby="order-progress-title">
+    <div class="op-progress-head">
+      <h2 id="order-progress-title">Para gerar o pedido</h2>
+      <p
+        role="status"
+        class="op-progress-count op-num"
+        :data-ready="next === null || undefined"
+      >
+        {{ doneCount }} de {{ steps.length }} prontos
+      </p>
+    </div>
+
+    <ol class="op-progress-steps">
+      <li
+        v-for="(step, index) in steps"
+        :key="step.key"
+        :data-done="step.done || undefined"
+        :aria-current="step.key === next?.key ? 'step' : undefined"
+      >
+        <span class="op-progress-mark" aria-hidden="true">
+          <OrderIcon v-if="step.done" name="check" />
+          <template v-else>{{ index + 1 }}</template>
+        </span>
+        <span class="op-progress-text">
+          <span class="op-progress-label">{{ step.label }}</span>
+          <span class="op-progress-state">{{
+            step.done ? 'pronto' : step.missing
+          }}</span>
+        </span>
+        <div v-if="step.key === next?.key" class="op-progress-action">
+          <button
+            type="button"
+            class="primary op-progress-go"
+            :aria-disabled="sectionOpen || undefined"
+            :aria-describedby="
+              sectionOpen ? 'order-progress-reason' : undefined
+            "
+            @click="goToNext"
+          >
+            {{ step.action }}
+          </button>
+          <p v-if="sectionOpen" id="order-progress-reason" class="op-hint">
+            Salve ou cancele a edição aberta.
+          </p>
+        </div>
+      </li>
+    </ol>
+
+    <p class="op-progress-note">
+      Valor e forma de pagamento: no painel Fechamento e pagamento
+    </p>
+  </section>
+</template>

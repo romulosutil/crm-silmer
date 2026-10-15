@@ -479,6 +479,17 @@ existir um caminho de entrega de mídia ao navegador. O chat hospedado pelo n8n
 não recebe respostas humanas assíncronas; o widget próprio do site usa essa
 consulta para exibi-las.
 
+Antes de homologar esse repasse, confira no **worker** que `N8N_COMMAND_URL`
+aponta para a URL de produção do nó `Painel - Receber comando (MVP)` do workflow
+publicado e que `N8N_COMMAND_CLIENT_ID`/`N8N_COMMAND_CLIENT_SECRET` correspondem
+à credencial Basic vinculada a esse nó. A URL do workflow DEV e credenciais
+locais não servem para o chat publicado. Use uma conversa **sintética**: assuma
+o atendimento, envie uma resposta humana por texto, confira `Enviado` no CRM e
+a mesma resposta uma única vez no widget. `Falha no envio` com
+`N8N_COMMAND_REJECTED` em `crm.n8n_commands.last_error_code` indica que o
+webhook recusou o comando; verifique destino e autenticação sem imprimir
+segredos nem reenviar o comando com outra chave.
+
 O nó `Site - Receber mensagem do chat (MVP)` contém a opção **Custom Chat
 Styling** com as cores Silmer para a página hospedada do n8n. O estilo do
 widget incorporado está em
@@ -631,9 +642,12 @@ WhatsApp`. Ele deriva da mesma definição do MVP, recebe eventos sintéticos po
   com 42 nós e sem avisos estruturais.
 - O snapshot sanitizado permanece inativo. O workflow operacional foi ativado
   em 15/10/2026; o teste sintético do chat do site recebeu resposta após o
-  vínculo da credencial n8n → CRM. A homologação completa de CP-T04 no canal
-  ainda exige repetição, troca de assunto, dois pedidos ativos e retomada em
-  outro ciclo.
+  vínculo da credencial n8n → CRM. O teste de resposta humana pelo CRM em
+  15/10/2026 falhou porque o worker apontava para o webhook DEV com uma
+  credencial diferente da vinculada ao workflow publicado; o repasse ao widget
+  aguarda alinhamento do destino e da autenticação. A homologação completa de
+  CP-T04 no canal ainda exige repetição, troca de assunto, dois pedidos ativos
+  e retomada em outro ciclo.
 - Vendedores do piloto: o nó `Montar contexto da IA (MVP)` usa a lista
   `sellers` do inbound. Diante de um CRM sem o BOT-03, ele lê os primeiros nomes
   da variável `SILMER_PILOT_SELLERS` do n8n, separados por vírgula, e conta o
@@ -721,7 +735,8 @@ Pedidos ativos, troca de Assunto, retorno em outro ciclo, nome/telefone e
 resposta humana do CRM chegando ao mesmo widget.
 
 1. Aplicar migrações com a integração desligada.
-2. Implantar API e worker e configurar as duas credenciais Basic.
+2. Implantar API e worker, configurar as duas credenciais Basic e conferir o
+   destino e a autenticação do webhook de comandos do painel no worker.
 3. Testar o workflow inativo com dados sintéticos e o número Meta de homologação.
 4. Homologar inbound → contexto → IA/handoff → reserva → Meta → status.
 5. Publicar o workflow, transferir o webhook da Meta e desabilitar a entrada direta.

@@ -1,0 +1,164 @@
+/* Painel (achado 2 da pesquisa de 15/10/2026): each indicator is one link
+   to the list it counts. Calm cards; tone lives in a text badge, never in an
+   accent stripe. */
+.dashboard-section {
+  margin-block-end: var(--space-6);
+}
+
+.dashboard-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-3);
+}
+
+.dashboard-section-head h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.dashboard-section-head .segmented-options {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+/* Phone: the period selector gets its own row and 44 px targets. */
+.dashboard-section-head .segmented-options button {
+  min-block-size: var(--target-min);
+}
+
+.dashboard-section .audit-note {
+  margin-block-end: var(--space-3);
+}
+
+/* Mobile-first: two by two on the phone so the day reads in one screen;
+   an odd last card takes the whole row. Wider screens fit as many as the
+   row allows. Every card is one link, well above the 44 px touch target. */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.metric-grid > li {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.metric-grid > li:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.metric-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-block-size: max(100%, var(--target-min));
+  padding: var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.metric-card:hover {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border-strong);
+}
+
+.metric-card:active {
+  background: var(--color-surface-active);
+}
+
+.metric-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.metric-label {
+  min-inline-size: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.metric-value {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.metric-card[data-tone='error'] .metric-value {
+  color: var(--status-error-text);
+}
+
+.metric-card[data-tone='warning'] .metric-value {
+  color: var(--status-warning-text);
+}
+
+.metric-detail {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.metric-detail .badge {
+  margin-inline-end: var(--space-1);
+}
+
+.metric-go {
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  color: var(--color-text-muted);
+}
+
+.metric-card:hover .metric-go {
+  color: var(--color-link);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metric-card {
+    transition: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .dashboard-section-head .segmented-options {
+    flex: none;
+  }
+
+  .dashboard-section-head .segmented-options button {
+    min-block-size: calc(var(--control-height) - 0.5rem);
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+    gap: var(--space-3);
+  }
+
+  .metric-grid > li:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .metric-card {
+    padding: var(--space-4);
+  }
+
+  .metric-value {
+    font-size: var(--text-2xl);
+  }
+}

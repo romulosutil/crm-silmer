@@ -1,0 +1,84 @@
+/* Fingers need 44px: phones and tablets get the full target. */
+@media (pointer: coarse) {
+  .op-form input[type='text'],
+  .op-form input[type='date'],
+  .op-form input[type='number'],
+  .op-closing-form input[type='text'] {
+    min-block-size: 48px;
+    font-size: var(--text-base);
+  }
+
+  button.op-icon-button {
+    inline-size: 44px;
+    min-block-size: 44px;
+    block-size: 44px;
+  }
+
+  .op-check,
+  button.op-add-inline {
+    min-block-size: 44px;
+  }
+
+  .op-condition span {
+    min-block-size: 44px;
+  }
+}
+
+@media (width < 48rem) {
+  .op-grade-lines {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .op-grade-cell {
+    min-inline-size: 0;
+  }
+
+  .op-grade-line {
+    inline-size: 100%;
+    box-sizing: border-box;
+  }
+
+  .op-grade-line {
+    gap: 0.2rem;
+  }
+
+  /* Thumb first: 44px targets and 16px text, so the phone does not zoom. */
+  button.op-icon-button {
+    inline-size: var(--target-min);
+    min-block-size: var(--target-min);
+    block-size: var(--target-min);
+  }
+
+  .op-form input.op-grade-size,
+  .op-form input.op-grade-qty {
+    min-block-size: var(--target-min);
+    font-size: var(--text-base);
+  }
+
+  .op-form input.op-grade-size {
+    flex: 0 0 3.75rem;
+    inline-size: 3.75rem;
+    padding-inline: 0.2rem;
+  }
+
+  .op-form input.op-grade-qty {
+    flex: 1 1 0;
+    inline-size: 0;
+    min-inline-size: 3rem;
+    padding-inline: 0.2rem;
+  }
+
+  button.op-add-inline {
+    min-block-size: var(--target-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-sheet,
+  .op-disclosure .op-icon,
+  .op-extras-toggle .op-icon,
+  .op-condition span {
+    transition: none;
+  }
+}

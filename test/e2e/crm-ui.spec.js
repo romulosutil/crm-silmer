@@ -956,14 +956,15 @@ test('never offers to hand the conversation back to the AI and keeps the actions
   await mockCrm(page);
   await page.goto('/inbox');
   const actions = page.locator('.conv-actions');
-  const order = actions.getByRole('button', { name: /^Pedido/ });
-  await expect(order).toBeVisible();
+  // PCX-11: the owner of a conversation with no order is offered to create it.
+  const createOrder = actions.getByRole('button', { name: 'Criar pedido' });
+  await expect(createOrder).toBeVisible();
   await expect(page.getByRole('button', { name: /Devolver/ })).toHaveCount(0);
   await expect(page.getByText(/à IA/u)).toHaveCount(0);
 
   // Achado 1: two visible actions and the rest under "Mais", in one tab
   // sequence with no gap where the removed button was.
-  await order.focus();
+  await createOrder.focus();
   for (const name of ['Encerrar conversa', 'Mais ações', 'Detalhes']) {
     await page.keyboard.press('Tab');
     await expect(actions.getByRole('button', { name })).toBeFocused();
@@ -1398,32 +1399,58 @@ test('names the stop reason and waits, oldest first, when the seller is due', as
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('names the order status on the button that opens the drawer', async ({
+test('PCX-10: links the conversation header to its order, with the status in words', async ({
   page,
 }) => {
-  // PCX-06: the three things the button can say, read from the conversation.
+  // PCX-10: the header names the order and its status; it is a link to the
+  // order page, not a status dressed as a button.
   await mockCrm(page, { order: conversationOrder });
   await page.goto('/inbox');
-  await expect(
-    page.getByRole('button', { name: 'Pedido · Pendente' }),
-  ).toBeVisible();
+  const head = page.locator('.conv-head');
+  const link = head.getByRole('link', {
+    name: 'Abrir pedido 07-CRM, pendente',
+  });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute(
+    'href',
+    '/pedidos/order-pendente?conversa=conversation-1',
+  );
+  await expect(link).toHaveAccessibleName('Abrir pedido 07-CRM, pendente');
+  // The status is a word in a badge, never a colour alone.
+  await expect(link.locator('.badge')).toHaveText('Pendente');
+  await expect(head.getByRole('button', { name: /^Pedido/ })).toHaveCount(0);
 
   await mockCrm(page, {
     order: { ...conversationOrder, missingFields: [], status: 'confirmado' },
   });
   await page.reload();
   await expect(
-    page.getByRole('button', { name: 'Pedido · Confirmado' }),
+    head.getByRole('link', { name: 'Abrir pedido 07-CRM, confirmado' }),
   ).toBeVisible();
 
+  // No order: the header says nothing about it, and "Sem pedido" is said
+  // once, in Detalhes › Pedido.
   await mockCrm(page, { order: null });
   await page.reload();
   await expect(
-    page.getByRole('button', { name: 'Pedido · Sem pedido' }),
+    page.getByRole('heading', { level: 2, name: 'Studio Malu' }),
   ).toBeVisible();
+  await expect(head.getByRole('link', { name: /pedido/i })).toHaveCount(0);
+  await page
+    .locator('.conv-actions')
+    .getByRole('button', { name: 'Detalhes' })
+    .click();
+  await expect(
+    page
+      .getByRole('complementary', { name: 'Detalhes' })
+      .getByRole('region', { name: 'Pedido', exact: true }),
+  ).toContainText('Sem pedido nesta conversa.');
+  await expect(
+    page.getByText(/Sem pedido/).filter({ visible: true }),
+  ).toHaveCount(1);
 });
 
-test('updates the order button when the order changes elsewhere', async ({
+test('PCX-10: updates the order link when the order changes elsewhere', async ({
   page,
 }) => {
   // PLI-08: the confirmation happened on the order page, in another tab. The
@@ -1441,122 +1468,189 @@ test('updates the order button when the order changes elsewhere', async ({
   });
   await page.goto('/inbox');
 
-  await expect(
-    page.getByRole('button', { name: 'Pedido · Confirmado' }),
-  ).toBeVisible();
+  const link = page
+    .locator('.conv-head')
+    .getByRole('link', { name: 'Abrir pedido 07-CRM, confirmado' });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute(
+    'href',
+    '/pedidos/order-pendente?conversa=conversation-1',
+  );
   expect(page.url()).toContain('/inbox');
+  // Detalhes › Pedido reads the same, confirmed order.
+  await page
+    .locator('.conv-actions')
+    .getByRole('button', { name: 'Detalhes' })
+    .click();
+  await expect(
+    page
+      .getByRole('complementary', { name: 'Detalhes' })
+      .getByRole('region', { name: 'Pedido', exact: true })
+      .locator('.badge'),
+  ).toHaveText('Confirmado');
 });
 
-test('summarises the order in a drawer that closes with Esc and gives focus back', async ({
+test('PCX-12: summarises the order in Detalhes, opened and closed from the keyboard', async ({
   page,
 }) => {
   await mockCrm(page, { order: conversationOrder });
+  await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto('/inbox');
 
-  const trigger = page.getByRole('button', { name: /^Pedido/ });
-  await trigger.click();
-
-  // PCX-07: number, status, what is missing, items, pieces, amount and the
-  // one way out of the summary and into the order itself.
-  const drawer = page.getByRole('dialog', { name: /Pedido 07-CRM/ });
-  await expect(drawer).toBeVisible();
-  await expect(drawer).toContainText('Pendente');
-  await expect(drawer).toContainText('Falta valor final e forma de pagamento');
-  await expect(drawer).toContainText('CAMISETA · GOLA OLÍMPICA');
-  await expect(drawer).toContainText('150 peças');
-  await expect(drawer).toContainText('—');
+  // Enter opens the panel and the reader lands on its heading.
+  const toggle = page
+    .locator('.conv-actions')
+    .getByRole('button', { name: 'Detalhes' });
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  const context = page.getByRole('complementary', { name: 'Detalhes' });
+  await expect(context).toBeVisible();
   await expect(
-    drawer.getByRole('link', { name: 'Abrir pedido' }),
+    context.getByRole('heading', { level: 2, name: 'Detalhes' }),
+  ).toBeFocused();
+
+  // PCX-12: number, status, what is missing, items, pieces, amount and the
+  // one way out of the summary and into the order itself.
+  const summary = context.getByRole('region', { name: 'Pedido', exact: true });
+  await expect(summary).toContainText('07-CRM');
+  await expect(summary).toContainText('Pendente');
+  await expect(summary).toContainText(
+    'Falta para gerar: valor final e forma de pagamento.',
+  );
+  await expect(summary).toContainText('CAMISETA · GOLA OLÍMPICA');
+  await expect(summary).toContainText('150 peças');
+  await expect(summary).toContainText('—');
+  await expect(
+    summary.getByRole('link', { name: 'Abrir pedido' }),
   ).toHaveAttribute('href', '/pedidos/order-pendente?conversa=conversation-1');
-  // The drawer reads the order; it never edits it.
-  await expect(drawer.locator('input, textarea, select')).toHaveCount(0);
+  // The summary reads the order; it never edits it.
+  await expect(summary.locator('input, textarea, select')).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
-  // PCX-09: Esc closes it and the button that opened it takes focus back.
+  // Esc closes it and the button that opened it takes focus back.
   await page.keyboard.press('Escape');
-  await expect(drawer).toBeHidden();
-  await expect(trigger).toBeFocused();
+  await expect(context).toBeHidden();
+  await expect(toggle).toBeFocused();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 });
 
-test('closes the order drawer on a click outside', async ({ page }) => {
-  await mockCrm(page, { order: conversationOrder });
-  await page.goto('/inbox');
-
-  const trigger = page.getByRole('button', { name: /^Pedido/ });
-  await trigger.click();
-  const drawer = page.getByRole('dialog', { name: /Pedido 07-CRM/ });
-  await expect(drawer).toBeVisible();
-
-  // PCX-09: the backdrop is the dialog itself outside its panel.
-  await page.mouse.click(8, 8);
-  await expect(drawer).toBeHidden();
-  await expect(trigger).toBeFocused();
-});
-
-test('operates the order drawer with the keyboard alone', async ({ page }) => {
-  await mockCrm(page, { order: conversationOrder });
-  await page.goto('/inbox');
-
-  const trigger = page.getByRole('button', { name: /^Pedido/ });
-  await trigger.focus();
-  await page.keyboard.press('Enter');
-
-  const drawer = page.getByRole('dialog', { name: /Pedido 07-CRM/ });
-  await expect(drawer).toBeVisible();
-
-  // PCX-09: focus opens inside the drawer, and Tab only ever reaches what the
-  // drawer offers — the Inbox behind it is inert, so nothing there can be
-  // reached or acted on while the drawer is open.
-  /** @returns {Promise<string>} */
-  const focusHere = () =>
-    page.evaluate(() => {
-      const active = globalThis.document.activeElement;
-      const dialog = globalThis.document.querySelector('.order-drawer');
-      if (active === globalThis.document.body) return 'body';
-      return dialog?.contains(active) ? 'drawer' : 'behind';
-    });
-
-  const ring = [await focusHere()];
-  for (let step = 0; step < 4; step += 1) {
-    await page.keyboard.press('Tab');
-    ring.push(await focusHere());
-  }
-  expect(ring[0]).toBe('drawer');
-  expect(ring).not.toContain('behind');
-  expect(ring.slice(1)).toContain('drawer');
-
-  await drawer.getByRole('button', { name: 'Fechar' }).focus();
-  await page.keyboard.press('Enter');
-  await expect(drawer).toBeHidden();
-  await expect(trigger).toBeFocused();
-});
-
-test('creates the order from the drawer only for the owner or an administrator', async ({
+test('PCX-12: on a phone Detalhes › Pedido opens from "Mais" and Esc hands focus back', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockCrm(page, { order: conversationOrder });
+  await page.goto('/inbox/conversation-1');
+
+  // The order link keeps a 44 px target in the header.
+  const link = page
+    .locator('.conv-head')
+    .getByRole('link', { name: 'Abrir pedido 07-CRM, pendente' });
+  expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+
+  const more = page.getByRole('button', { name: 'Mais ações' });
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('button', { name: 'Detalhes da conversa' }),
+  ).toBeFocused();
+  await page.keyboard.press('Enter');
+  const context = page.getByRole('complementary', { name: 'Detalhes' });
+  await expect(context).toBeVisible();
+  await expect(
+    context.getByRole('heading', { level: 2, name: 'Detalhes' }),
+  ).toBeFocused();
+  await expect(
+    context.getByRole('region', { name: 'Pedido', exact: true }),
+  ).toContainText('Falta para gerar: valor final e forma de pagamento.');
+
+  // The close button keeps a 44 px target, 8 px or more from the edge.
+  const close = context.getByRole('button', { name: 'Recolher detalhes' });
+  const box = await close.boundingBox();
+  if (!box) throw new Error('The close button must be visible');
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(390 - (box.x + box.width)).toBeGreaterThanOrEqual(8);
+  expect(
+    await page.evaluate(
+      () =>
+        globalThis.document.documentElement.scrollWidth <=
+        globalThis.innerWidth,
+    ),
+  ).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  await page.keyboard.press('Escape');
+  await expect(context).toBeHidden();
+  await expect(more).toBeFocused();
+});
+
+test('PCX-10: reaches the order page from the header with the keyboard alone', async ({
+  page,
+}) => {
+  await mockCrm(page, { order: conversationOrder });
+  await page.goto('/inbox/conversation-1');
+
+  // The link follows the name of the conversation in the tab order.
+  await page.getByRole('heading', { level: 2, name: 'Studio Malu' }).focus();
+  await page.keyboard.press('Tab');
+  const link = page
+    .locator('.conv-head')
+    .getByRole('link', { name: 'Abrir pedido 07-CRM, pendente' });
+  await expect(link).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(
+    '/pedidos/order-pendente?conversa=conversation-1',
+  );
+});
+
+test('PCX-11: offers "Criar pedido" in the header only to the owner and creates it there', async ({
+  page,
+}) => {
+  const heading = page.getByRole('heading', { level: 2, name: 'Studio Malu' });
   // PCL-11: a conversation that already has a pending order never offers it.
   await mockCrm(page, { order: conversationOrder });
   await page.goto('/inbox');
-  await page.getByRole('button', { name: /^Pedido/ }).click();
+  await expect(
+    page.getByRole('link', { name: 'Abrir pedido 07-CRM, pendente' }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Criar pedido' })).toHaveCount(
     0,
   );
 
-  // PCX-08: a reader who neither owns the conversation nor administrates it
-  // sees the drawer without the action the API would refuse.
+  // PCL-10: a seller who neither owns the conversation nor administrates it
+  // is never offered the action the API would refuse with 403.
   await mockCrm(page, { noAdmin: true, order: null, otherOwner: true });
   await page.reload();
-  await page.getByRole('button', { name: /^Pedido/ }).click();
-  const drawer = page.getByRole('dialog', { name: /pedido/i });
-  await expect(drawer).toContainText('Sem pedido');
-  await expect(
-    drawer.getByRole('button', { name: 'Criar pedido' }),
-  ).toHaveCount(0);
+  await expect(heading).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Criar pedido' })).toHaveCount(
+    0,
+  );
 
-  // PCL-10: the owner creates it, pre-filled from the conversation, and the
-  // drawer switches to the order that came back.
+  // An administrator may create it while the agent still answers: from
+  // "Mais", never beside the primary action.
+  await mockCrm(page, { assistant: true, order: null });
+  await page.reload();
+  await expect(heading).toBeVisible();
+  const actions = page.locator('.conv-actions');
+  await expect(
+    actions.getByRole('button', { name: 'Assumir atendimento' }),
+  ).toBeVisible();
+  await expect(
+    actions.locator(':scope > button', { hasText: 'Criar pedido' }),
+  ).toHaveCount(0);
+  await actions.getByRole('button', { name: 'Mais ações' }).click();
+  await expect(
+    page
+      .locator('#conv-more-menu')
+      .getByRole('button', { name: 'Criar pedido' }),
+  ).toBeVisible();
+
+  // PCX-11: the seller who has the conversation creates it from the header,
+  // pre-filled from the conversation; the link takes the button's place and
+  // the focus.
   let createdBody;
   await mockCrm(page, {
+    noAdmin: true,
     onCreateOrder: (body) => (createdBody = body),
     order: null,
   });
@@ -1564,15 +1658,22 @@ test('creates the order from the drawer only for the owner or an administrator',
   await page.evaluate(() => {
     globalThis.document.cookie = 'crm_csrf=csrf-test; Path=/; SameSite=Lax';
   });
-  await page.getByRole('button', { name: /^Pedido/ }).click();
-  await page.getByRole('button', { name: 'Criar pedido' }).click();
-  await expect(
-    page.getByRole('dialog', { name: /Pedido 11-CRM/ }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'Abrir pedido' }),
-  ).toHaveAttribute('href', '/pedidos/order-novo?conversa=conversation-1');
+  const create = actions.getByRole('button', { name: 'Criar pedido' });
+  await create.click();
+  const link = page
+    .locator('.conv-head')
+    .getByRole('link', { name: 'Abrir pedido 11-CRM, pendente' });
+  await expect(link).toBeFocused();
+  await expect(link).toHaveAttribute(
+    'href',
+    '/pedidos/order-novo?conversa=conversation-1',
+  );
+  await expect(page.locator('.notice-toast')).toContainText(
+    'Pedido 11-CRM criado.',
+  );
+  await expect(create).toHaveCount(0);
   expect(createdBody).toEqual({ expectedVersion: 3 });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('drops the pending AI suggestion block from the conversation', async ({
@@ -2014,8 +2115,11 @@ test('on a phone the address decides between the list and the conversation', asy
   expect((await more.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await more.click();
   const sheet = page.locator('#conv-more-menu');
+  // PCX-11: waiting for a seller, an administrator creates the order from
+  // here; the header keeps "Assumir atendimento" as its one action.
   await expect(sheet.getByRole('button')).toHaveText([
     'Detalhes da conversa',
+    'Criar pedido',
     'Arquivar conversa',
     'Encerrar conversa',
   ]);

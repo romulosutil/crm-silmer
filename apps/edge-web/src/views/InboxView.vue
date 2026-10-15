@@ -11,8 +11,8 @@ import {
 import { useRoute, useRouter } from 'vue-router';
 import { brand } from '../brand/index.js';
 import AppIcon from '../components/AppIcon.vue';
-import OrderDrawer from '../components/order/OrderDrawer.vue';
 import AudioRecorder from '../components/inbox/AudioRecorder.vue';
+import ConversationOrderSummary from '../components/inbox/ConversationOrderSummary.vue';
 import MediaMessage from '../components/inbox/MediaMessage.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
@@ -99,6 +99,7 @@ const sessionUser = inject(
   'sessionUser',
   computed(() => ({})),
 );
+const notify = inject('notify', () => {});
 
 const heading = ref(null);
 const searchInput = ref(null);
@@ -108,7 +109,10 @@ const archiveConfirmationDialog = ref(null);
 const closeConfirmationDialog = ref(null);
 const closureOutcome = ref('concluido');
 const acknowledgePending = ref(false);
-const orderDrawer = ref(null);
+const orderLink = ref(null);
+const orderCreating = ref(false);
+/** Bumped when the order changed, so Detalhes › Pedido reads it again. */
+const orderRevision = ref(0);
 const conversationHeading = ref(null);
 const thread = ref(null);
 const moreToggle = ref(null);
@@ -180,6 +184,7 @@ let detailController;
 let subjectController;
 const subjectCommandKeys = new Map();
 let refreshTimer = 0;
+let orderChangedLive = false;
 let threadFollowsLatest = true;
 
 const filtered = computed(() => {
@@ -285,6 +290,44 @@ const availableSubjectOrders = computed(() =>
 const canCreateOrder = computed(
   () => isAdmin.value || owner.value?.id === currentUserId.value,
 );
+/** PCX-10: the order the conversation has, as a link to its page. */
+const orderPath = computed(() =>
+  active.value?.order
+    ? `/pedidos/${encodeURIComponent(active.value.order.id)}?conversa=${encodeURIComponent(active.value.id)}`
+    : '',
+);
+/**
+ * Says where the link goes and keeps the visible words in order ("Pedido
+ * 04-CRM", "Pendente"), so voice control finds it by what it shows.
+ */
+const orderLinkLabel = computed(() => {
+  const order = active.value?.order;
+  if (!order) return undefined;
+  const status = orderStatusLabel(order.status).toLocaleLowerCase('pt-BR');
+  return `Abrir pedido ${order.number}, ${status}`;
+});
+/** PCL-11: never while the conversation already has a pending order. */
+const canOfferOrder = computed(
+  () => canCreateOrder.value && active.value?.order?.status !== 'pendente',
+);
+/**
+ * PCX-11: "Criar pedido" sits in the header only for the seller who has the
+ * conversation, once it is with a person and has no order. Whatever else the
+ * API accepts (an administrator, the agent still answering, a confirmed order
+ * already there) is offered from "Mais".
+ */
+const createOrderInHeader = computed(
+  () =>
+    canOfferOrder.value &&
+    !active.value?.order &&
+    !isTerminal.value &&
+    !pendingHandoff.value &&
+    active.value?.automationState === 'human' &&
+    owner.value?.id === currentUserId.value,
+);
+const createOrderInMore = computed(
+  () => canOfferOrder.value && !createOrderInHeader.value,
+);
 const showArchived = computed(() => stateTab.value === 'archived');
 const canArchiveActive = computed(
   () => canArchive.value && !active.value?.archivedAt,
@@ -293,6 +336,7 @@ const canArchiveActive = computed(
 const hasMoreActions = computed(
   () =>
     isPhone.value ||
+    createOrderInMore.value ||
     canTransfer.value ||
     canArchiveActive.value ||
     canUnarchive.value,
@@ -306,7 +350,8 @@ const canSendReply = computed(
 );
 /**
  * Mobile first (ADR 035): on a phone the header keeps the primary action,
- * "Pedido" and "Mais"; everything else goes to the "Mais" sheet.
+ * "Criar pedido" when it is due and "Mais"; everything else goes to the
+ * "Mais" sheet.
  */
 const phoneQuery = globalThis.matchMedia?.('(max-width: 768px)');
 const isPhone = ref(phoneQuery?.matches ?? false);
@@ -441,11 +486,12 @@ async function toggleContext(open = !contextOpen.value) {
     }
   }
   await nextTick();
-  if (open && !isWide()) {
+  if (open) {
+    // Opened on purpose, at any width: the reader lands on its heading.
     /** @type {HTMLElement|null} */ (
       globalThis.document.querySelector('#inbox-context-title')
     )?.focus();
-  } else if (!open) {
+  } else {
     // On a phone the panel opens from the "Mais" sheet instead.
     (contextToggle.value ?? moreToggle.value)?.focus();
   }
@@ -456,9 +502,22 @@ function openContextFromMore() {
   void toggleContext(true);
 }
 
-/** Esc closes the context panel where it covers the conversation. */
-function closeContextOverlay() {
-  if (contextOpen.value && !isWide()) void toggleContext(false);
+/**
+ * Esc closes the panel and hands focus back to whoever opened it. A search
+ * box keeps its own Esc, which clears what was typed.
+ *
+ * @param {KeyboardEvent} event
+ */
+function closeContextOnEscape(event) {
+  const target = event.target;
+  if (
+    target instanceof HTMLInputElement &&
+    target.type === 'search' &&
+    target.value
+  ) {
+    return;
+  }
+  if (contextOpen.value) void toggleContext(false);
 }
 
 /** @param {string} id */
@@ -566,14 +625,59 @@ async function unarchiveConversation() {
 }
 
 /**
- * PCX-07/PCX-09: the drawer opens over the conversation and hands focus back
- * to this button when it closes.
+ * PCL-10/PCX-11: the pending order is created from the pré-ficha the
+ * conversation already holds. It rides the conversation version on screen,
+ * so a create typed over a stale view loses to a 409 instead of racing the
+ * winner. On success the header shows the order link and focus moves to it.
  *
- * @param {MouseEvent} event
+ * @param {boolean} [fromMore] asked from "Mais", which takes focus back on failure
  */
-function openOrderDrawer(event) {
-  const trigger = event.currentTarget;
-  if (trigger instanceof HTMLElement) void orderDrawer.value?.open(trigger);
+async function createOrder(fromMore = false) {
+  const conversation = active.value;
+  if (!conversation || orderCreating.value || busy.value) return;
+  closeMore();
+  orderCreating.value = true;
+  error.value = '';
+  actionMessage.value = '';
+  let created = null;
+  try {
+    const response = await request(
+      `/api/v1/conversations/${encodeURIComponent(conversation.id)}/orders`,
+      {
+        body: { expectedVersion: conversation.version },
+        idempotencyKey: commandKey(),
+        method: 'POST',
+      },
+    );
+    created = response.data.order ?? null;
+  } catch (cause) {
+    error.value = describeError(cause);
+    if (/** @type {any} */ (cause)?.status === 409) await refreshInbox(true);
+  } finally {
+    orderCreating.value = false;
+  }
+  if (created) {
+    if (activeId.value === conversation.id && detail.value) {
+      // The link appears at once; the refresh below confirms it.
+      detail.value.conversation.order = {
+        id: created.id,
+        number: created.number,
+        status: created.status,
+      };
+    }
+    notify(`Pedido ${created.number} criado.`);
+    orderRevision.value += 1;
+    await refreshInbox(true);
+  }
+  await nextTick();
+  const link = /** @type {any} */ (orderLink.value)?.$el;
+  if (created && link instanceof HTMLElement) {
+    link.focus();
+  } else if (fromMore) {
+    moreToggle.value?.focus();
+  } else if (!globalThis.document.activeElement?.closest('.conv-actions')) {
+    conversationHeading.value?.focus();
+  }
 }
 
 /** Asked from "Mais", so the dialog hands focus back to that button. */
@@ -1232,9 +1336,13 @@ function clearSearch() {
  */
 function scheduleLiveRefresh() {
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
-  refreshTimer = globalThis.setTimeout(() => {
+  refreshTimer = globalThis.setTimeout(async () => {
     refreshTimer = 0;
-    void refreshInbox(true);
+    const orderChanged = orderChangedLive;
+    orderChangedLive = false;
+    await refreshInbox(true);
+    // Together with the refreshed header, so the summary reads once.
+    if (orderChanged) orderRevision.value += 1;
   }, LIVE_REFRESH_DELAY_MS);
 }
 
@@ -1283,7 +1391,12 @@ watch(
   { flush: 'post' },
 );
 watch(liveEvent, (event) => {
-  if (event) scheduleLiveRefresh();
+  if (!event) return;
+  // PLI-08: an order changed elsewhere; Detalhes › Pedido reads it again.
+  if (event.reset || event.type === 'inbox.order.changed') {
+    orderChangedLive = true;
+  }
+  scheduleLiveRefresh();
 });
 watch(liveConnection, (state, previous) => {
   if (state === 'conectado' && previous !== 'conectado') {
@@ -1486,13 +1599,38 @@ onBeforeUnmount(() => {
               <AppIcon name="back" /><span class="sr-only">Conversas</span>
             </RouterLink>
             <div class="conv-title">
-              <h2
-                :id="`conversation-${active.id}`"
-                ref="conversationHeading"
-                tabindex="-1"
-              >
-                {{ active.contact.label }}
-              </h2>
+              <div class="conv-title-row">
+                <h2
+                  :id="`conversation-${active.id}`"
+                  ref="conversationHeading"
+                  tabindex="-1"
+                >
+                  {{ active.contact.label }}
+                </h2>
+                <!-- PCX-10: the order is a place to go, not a status dressed
+                     as a button. The status reads as text in its badge; with
+                     no order nothing shows here (Detalhes › Pedido says so). -->
+                <RouterLink
+                  v-if="active.order"
+                  ref="orderLink"
+                  class="conv-order-link"
+                  :to="orderPath"
+                  :aria-label="orderLinkLabel"
+                >
+                  <span class="conv-order-number"
+                    >Pedido {{ active.order.number }}</span
+                  >
+                  <span
+                    class="badge"
+                    :data-tone="
+                      active.order.status === 'confirmado'
+                        ? 'success'
+                        : 'warning'
+                    "
+                    >{{ orderStatusLabel(active.order.status) }}</span
+                  >
+                </RouterLink>
+              </div>
               <p class="conv-identity">
                 {{ CHANNEL_LABELS[active.channel] }} ·
                 <template v-if="active.channel === 'site_chat'">
@@ -1543,8 +1681,14 @@ onBeforeUnmount(() => {
               >
                 Assumir atendimento
               </button>
-              <button type="button" @click="openOrderDrawer">
-                Pedido · {{ orderStatusLabel(active.order?.status) }}
+              <button
+                v-if="createOrderInHeader"
+                type="button"
+                :aria-disabled="orderCreating || busy ? 'true' : undefined"
+                :aria-busy="orderCreating ? 'true' : undefined"
+                @click="createOrder()"
+              >
+                Criar pedido
               </button>
               <button
                 v-if="canClose && !isPhone"
@@ -1590,6 +1734,14 @@ onBeforeUnmount(() => {
                     @click="openContextFromMore"
                   >
                     <AppIcon name="panel" />Detalhes da conversa
+                  </button>
+                  <button
+                    v-if="createOrderInMore"
+                    type="button"
+                    :aria-disabled="orderCreating || busy ? 'true' : undefined"
+                    @click="createOrder(true)"
+                  >
+                    Criar pedido
                   </button>
                   <button
                     v-if="canTransfer"
@@ -1866,7 +2018,7 @@ onBeforeUnmount(() => {
         class="inbox-context"
         aria-labelledby="inbox-context-title"
         :hidden="!contextOpen"
-        @keydown.esc="closeContextOverlay"
+        @keydown.esc="closeContextOnEscape"
       >
         <div class="inbox-context-head">
           <h2 id="inbox-context-title" tabindex="-1">Detalhes</h2>
@@ -1880,25 +2032,12 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <section class="context-section" aria-labelledby="context-order-title">
-          <h3 id="context-order-title">Pedido</h3>
-          <template v-if="active.order">
-            <p class="context-order">
-              <strong>{{ active.order.number }}</strong>
-              <span class="badge" data-tone="info">{{
-                orderStatusLabel(active.order.status)
-              }}</span>
-            </p>
-            <RouterLink
-              :to="`/pedidos/${encodeURIComponent(active.order.id)}?conversa=${encodeURIComponent(active.id)}`"
-              >Ir para o pedido {{ active.order.number }}</RouterLink
-            >
-          </template>
-          <p v-else class="op-hint">
-            Esta conversa ainda não tem pedido. O botão “Pedido” mostra o resumo
-            e cria o pedido quando você puder.
-          </p>
-        </section>
+        <ConversationOrderSummary
+          :conversation-id="active.id"
+          :order="active.order ?? null"
+          :open="contextOpen"
+          :revision="orderRevision"
+        />
 
         <section class="subject-panel" aria-labelledby="subject-panel-title">
           <h3 id="subject-panel-title" ref="subjectHeading" tabindex="-1">
@@ -2052,14 +2191,6 @@ onBeforeUnmount(() => {
         </section>
       </aside>
     </div>
-    <OrderDrawer
-      v-if="active"
-      ref="orderDrawer"
-      :can-create="canCreateOrder"
-      :conversation-id="active.id"
-      :conversation-version="active.version"
-      @changed="refreshInbox(true)"
-    />
     <dialog
       ref="closeConfirmationDialog"
       class="command-dialog"

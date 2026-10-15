@@ -136,7 +136,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -582,7 +582,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -742,7 +742,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -808,7 +808,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -902,7 +902,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -969,7 +969,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1119,7 +1119,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1185,7 +1185,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1274,7 +1274,7 @@
       "position": [-1940, -700],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const session = String($json.sessionId ?? '').trim().toLowerCase();\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(session)) throw new Error('SITE_CHAT_SESSION_REQUIRED');\n// UUIDv4 -> decimal is bijective. The 999 prefix is reserved for site identities.\nconst siteId = '999' + BigInt('0x' + session.replace(/-/g, '')).toString(10).padStart(39, '0');\nconst siteContact = $json.metadata?.site_contact ?? null;\nif (!siteContact || typeof siteContact.name !== 'string' || typeof siteContact.phone !== 'string') throw new Error('SITE_CHAT_CONTACT_REQUIRED');\nconst messageId = String($json.metadata?.site_message_id ?? '').trim().toLowerCase();\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(messageId)) throw new Error('SITE_CHAT_MESSAGE_ID_REQUIRED');\nconst text = String($json.chatInput ?? '').trim().slice(0, 2000);\n// Only the first file is read; the others stay out of the turn.\nconst entry = Object.entries($input.item.binary ?? {})[0];\nconst file = entry?.[1];\nconst mimeType = String(file?.mimeType ?? '').split(';')[0].toLowerCase();\nconst fileType = !file ? null : mimeType.startsWith('image/') ? 'image'\n  : mimeType.startsWith('audio/') ? 'audio' : mimeType.startsWith('video/') ? 'video' : 'document';\nif (!text && !file) throw new Error('SITE_CHAT_MESSAGE_REQUIRED');\n// The browser reuses this ID when retrying the same POST; a new user message\n// must have a new ID even if the text is identical.\nconst eventId = 'site-' + session + '-' + messageId;\nconst message = { from: siteId, id: eventId, timestamp: String(Math.floor(Date.now() / 1000)) };\nif (fileType) {\n  message.type = fileType;\n  message[fileType] = { id: eventId + '-file', mime_type: mimeType, ...(fileType === 'document' ? { filename: String(file.fileName ?? 'arquivo').slice(0, 255) } : {}), ...(text ? { caption: text } : {}) };\n} else {\n  message.type = 'text';\n  message.text = { body: text };\n}\nreturn { json: { __channel: 'site_chat', __site_contact: siteContact, entry: [{ changes: [{ value: {\n  metadata: { phone_number_id: 'site-chat' },\n  contacts: [{ profile: { name: siteContact.name }, wa_id: siteId }],\n  messages: [message]\n} }] }] }, ...(file ? { binary: { data: file } } : {}) };"
+        "jsCode": "const session = String($json.sessionId ?? '').trim().toLowerCase();\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(session)) throw new Error('SITE_CHAT_SESSION_REQUIRED');\n// UUIDv4 -> decimal is bijective. The 999 prefix is reserved for site identities.\nconst siteId = '999' + BigInt('0x' + session.replace(/-/g, '')).toString(10).padStart(39, '0');\nconst siteContact = $json.metadata?.site_contact ?? null;\nif (!siteContact || typeof siteContact.name !== 'string' || typeof siteContact.phone !== 'string') throw new Error('SITE_CHAT_CONTACT_REQUIRED');\nconst messageId = String($json.metadata?.site_message_id ?? '').trim().toLowerCase();\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(messageId)) throw new Error('SITE_CHAT_MESSAGE_ID_REQUIRED');\nconst messageAt = $json.metadata?.site_message_at;\nconst parsedAt = typeof messageAt === 'string' ? Date.parse(messageAt) : NaN;\nif (messageAt !== undefined && (!Number.isFinite(parsedAt) || new Date(parsedAt).toISOString() !== messageAt)) throw new Error('SITE_CHAT_MESSAGE_AT_INVALID');\nconst text = String($json.chatInput ?? '').trim().slice(0, 2000);\n// Only the first file is read; the others stay out of the turn.\nconst entry = Object.entries($input.item.binary ?? {})[0];\nconst file = entry?.[1];\nconst mimeType = String(file?.mimeType ?? '').split(';')[0].toLowerCase();\nconst fileType = !file ? null : mimeType.startsWith('image/') ? 'image'\n  : mimeType.startsWith('audio/') ? 'audio' : mimeType.startsWith('video/') ? 'video' : 'document';\nif (!text && !file) throw new Error('SITE_CHAT_MESSAGE_REQUIRED');\n// The browser reuses this ID when retrying the same POST; a new user message\n// must have a new ID even if the text is identical. Its original timestamp\n// must also survive retries because the CRM fingerprints occurred_at.\nconst eventId = 'site-' + session + '-' + messageId;\nconst timestamp = messageAt === undefined ? Date.now() : parsedAt;\nconst message = { from: siteId, id: eventId, timestamp: String(Math.floor(timestamp / 1000)) };\nif (fileType) {\n  message.type = fileType;\n  message[fileType] = { id: eventId + '-file', mime_type: mimeType, ...(fileType === 'document' ? { filename: String(file.fileName ?? 'arquivo').slice(0, 255) } : {}), ...(text ? { caption: text } : {}) };\n} else {\n  message.type = 'text';\n  message.text = { body: text };\n}\nreturn { json: { __channel: 'site_chat', __site_contact: siteContact, entry: [{ changes: [{ value: {\n  metadata: { phone_number_id: 'site-chat' },\n  contacts: [{ profile: { name: siteContact.name }, wa_id: siteId }],\n  messages: [message]\n} }] }] }, ...(file ? { binary: { data: file } } : {}) };"
       }
     },
     {
@@ -1318,7 +1318,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1519,7 +1519,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1661,7 +1661,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1793,7 +1793,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1952,7 +1952,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -2036,7 +2036,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -2154,7 +2154,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -2227,7 +2227,7 @@
             },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "mvp-simple-15"
+              "value": "mvp-simple-16"
             },
             {
               "name": "X-Silmer-Execution-Id",

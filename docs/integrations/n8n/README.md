@@ -428,10 +428,15 @@ mesmo nome e telefone informado no início da Conversa. O CRM também aceita
 sua omissão após o primeiro inbound, mas o nó atual do n8n exige esses campos
 em toda mensagem. Outro nome ou telefone na mesma Conversa recebe `409
 SITE_CONTACT_CONFLICT`; a correção exigirá um fluxo humano auditado.
-Cada envio do widget inclui `metadata.site_message_id` UUIDv4 novo; se a
-requisição for repetida após falha de rede, o widget reutiliza o mesmo ID.
-Assim o `event_id` do CRM permanece estável no replay, mesmo que o n8n crie
-outra execução. Duas mensagens intencionalmente iguais usam IDs diferentes.
+Cada envio do widget inclui `metadata.site_message_id` UUIDv4 novo e
+`metadata.site_message_at` como instante ISO canônico da criação da mensagem.
+Se a requisição for repetida após falha de rede, o widget reutiliza ambos.
+Assim o `event_id` **e** `occurred_at` do CRM permanecem estáveis no replay,
+mesmo que o n8n crie outra execução. O CRM inclui o instante no fingerprint de
+idempotência; reutilizar apenas o ID causaria conflito. Duas mensagens
+intencionalmente iguais usam IDs e instantes próprios. Clientes antigos sem
+`site_message_at` ainda entram com o horário do servidor, mas não têm a mesma
+garantia de replay tardio.
 
 ```json
 {
@@ -733,6 +738,10 @@ O CRM que implementa CP-T04, CP-T05 e CP-T06, inclusive as migrations `0038` a
 esse gate. Depois, homologar em ambiente real os cenários de replay, dois
 Pedidos ativos, troca de Assunto, retorno em outro ciclo, nome/telefone e
 resposta humana do CRM chegando ao mesmo widget.
+O workflow `mvp-simple-16` (DEV `dev-mvp-simple-16`) aceita
+`metadata.site_message_at` do widget e deve ser publicado **antes** da versão
+do site que passa a enviá-lo. Ele mantém fallback para clientes antigos; não
+exige migração no CRM.
 
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker, configurar as duas credenciais Basic e conferir o

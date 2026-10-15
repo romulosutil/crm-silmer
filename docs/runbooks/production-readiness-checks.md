@@ -6,6 +6,42 @@ Rastreabilidade: [INT-3 / OPS-CHK-01](../../.specs/features/crm-mvp/tasks.md),
 T00.3, T00.7 e [ADR 022](../adr/022-manter-deploy-automatico-github-easypanel.md).
 Responsável pela coleta: agente DevOps/QA, sob integração do Tech Lead.
 
+## Incidente observado em 14/10/2026 — dashboard indisponível
+
+No domínio `https://crm.silmer.com.br`, a sessão autenticada foi restaurada,
+mas Dashboard e Pedidos exibiram erro de carregamento. Checagens públicas,
+sem cookie nem corpo de rota de negócio: `/healthz` e `/api/health/live`
+responderam 200; `/api/health/ready` respondeu 503 com
+`{"service":"crm-silmer-api","status":"unavailable"}`. Esta é uma
+regressão em relação à leitura de 05/10 abaixo, não evidência de recuperação.
+Rastreabilidade: FIN-02, CRM-4 e T80 de Pedidos MVP.
+
+No EasyPanel, `silmer-api`, `silmer-edge-web`, `silmer-postgres` e
+`silmer-worker` aparecem em execução; o worker exibiu heartbeat recente. O
+`silmer-chat-spool-init` está parado, como previsto após a preparação do spool.
+A API mostra implantação de código recente e deploy automático desativado. A
+página Scripts da API não tem job de migration salvo. O Auto Deploy desativado
+diverge da decisão operacional registrada abaixo e precisa ser reconciliado.
+O backup do PostgreSQL
+usa Local Disk e execução manual; os dois registros visíveis são de 10/10 e
+03/10, sem cópia atual confirmada nem restore comprovado.
+
+O código de readiness exige conexão PostgreSQL e igualdade dos checksums de
+todas as migrations `expand` carregadas pela imagem. A sessão restaurada
+indica que ao menos a leitura de identidade respondeu; ainda é preciso
+distinguir migration ausente ou divergente de falha intermitente do banco.
+A migration `0034_store_order_first_print.expand.sql` é necessária para as
+leituras atuais de Pedidos; `0035`–`0037` também fazem parte deste checkout.
+
+Para diagnosticar no EasyPanel, conferir a revisão e o horário de implantação
+de `silmer-api`, o estado de `silmer-postgres`, os logs de `api_readiness_failed`
+e o histórico de `crm_meta.schema_migrations` contra a imagem implantada.
+Antes de aplicar migrations, verificar backup, espaço livre, o estado dos
+serviços e o plano de rollback. Usar o job `migrate` expand do release correto;
+não editar checksums nem executar migrations contract para tentar liberar o
+health. Depois, exigir `/api/health/ready` 200 e repetir leituras autenticadas
+de Dashboard, Pedidos e Inbox, além de conferir que não há erros 5xx.
+
 O proprietário escolheu manter o deploy automático GitHub → EasyPanel
 existente. Estas checagens não alteraram serviços, segredos, DNS, workflows,
 migrations nem configuração de deploy.

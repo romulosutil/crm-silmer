@@ -52,6 +52,7 @@ const editingSection = ref('');
 // missing point; the section opens its own editor when it can.
 /** @type {import('vue').Ref<{section: string, at: number}|null>} */
 const editRequest = ref(null);
+const closingSection = ref(null);
 let controller;
 let refreshTimer = 0;
 let printRefreshTimer = 0;
@@ -86,6 +87,17 @@ const orderContext = computed(() => {
   const event = order.value?.ficha?.summary?.nome || 'Sem evento';
   const seller = order.value?.seller?.name;
   return seller ? `${event} · com ${seller}` : event;
+});
+/**
+ * Mobile first (PO, 15/10/2026): on a phone the page's main action stays in
+ * a fixed footer — "Gerar pedido" for whoever may confirm a pending order,
+ * "Imprimir ficha" once it is confirmed. It steps aside while a section is
+ * being edited, so the editor's own Salvar and Cancelar stay in reach.
+ */
+const mobileAction = computed(() => {
+  if (!order.value || editingSection.value !== '') return '';
+  if (!isPending.value) return 'print';
+  return canEdit.value && !isStore.value ? 'generate' : '';
 });
 const itemCount = computed(() => order.value?.ficha?.items?.length ?? 0);
 /** The conversation this order came from, opened directly in the Inbox. */
@@ -356,7 +368,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page op-page">
+  <div class="page op-page" :data-mobile-action="mobileAction || undefined">
     <div v-if="loading" class="loading-state" role="status">
       Carregando pedido…
     </div>
@@ -436,6 +448,7 @@ onBeforeUnmount(() => {
           </a>
           <button
             type="button"
+            class="op-print"
             :disabled="isPending"
             :aria-describedby="isPending ? 'order-print-reason' : undefined"
             @click="print"
@@ -468,7 +481,7 @@ onBeforeUnmount(() => {
           <OrderStoreDetails :order="order" />
         </div>
         <aside class="op-rail" aria-label="Fechamento e pagamento">
-          <OrderClosingSection :order="order" />
+          <OrderClosingSection ref="closingSection" :order="order" />
         </aside>
       </div>
 
@@ -488,7 +501,7 @@ onBeforeUnmount(() => {
           <OrderInfoStrips :order="order" />
         </div>
         <aside class="op-rail" aria-label="Gerar pedido">
-          <OrderClosingSection :order="order" />
+          <OrderClosingSection ref="closingSection" :order="order" />
           <p class="op-total">
             <span class="op-total-label">
               Total de peças
@@ -500,6 +513,20 @@ onBeforeUnmount(() => {
             <strong class="op-num">{{ order.totalPieces }}</strong>
           </p>
         </aside>
+      </div>
+
+      <div v-if="mobileAction" class="op-mobile-action">
+        <button
+          v-if="mobileAction === 'generate'"
+          type="button"
+          class="primary op-generate"
+          @click="closingSection?.generateFromFooter()"
+        >
+          <OrderIcon name="ficha" />Gerar pedido
+        </button>
+        <button v-else type="button" class="primary" @click="print">
+          <OrderIcon name="printer" />Imprimir ficha
+        </button>
       </div>
     </template>
   </div>

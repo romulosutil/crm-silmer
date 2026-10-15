@@ -1101,8 +1101,10 @@ details.exact summary {
   margin-block-start: var(--space-3);
 }
 
+/* An exception rides at the top of its group and says why in words (late,
+   stalled, ficha not printed); its card outline takes the warning tone. */
 .order-table tr[data-exception] {
-  border-inline-start: 3px solid var(--status-warning-text);
+  border-color: var(--status-warning-text);
 }
 
 .data-table.order-table td {
@@ -1192,15 +1194,6 @@ details.exact summary {
 
   .order-table tr + tr {
     margin-block-start: 0;
-  }
-
-  .order-table tr[data-exception] {
-    border-inline-start: 0;
-  }
-
-  /* An exception rides at the top of its group with a mark on its edge. */
-  .order-table tr[data-exception] > td:first-child {
-    box-shadow: inset 3px 0 0 var(--status-warning-text);
   }
 
   .data-table.order-table td {

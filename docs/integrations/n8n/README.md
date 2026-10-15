@@ -749,6 +749,22 @@ de liberar o widget que reenvia o mesmo ID e instante; confirme com duas
 requisições idênticas ao webhook, separadas no tempo, e uma única mensagem no
 CRM.
 
+Na ativação de 15/10/2026, a importação pelo CLI e o comando
+`n8n publish:workflow` deixaram o workflow marcado como ativo, mas o webhook
+do chat respondeu `404`. A publicação da versão importada em **Version
+history → Current changes → Actions → Publish version** registrou novamente
+os webhooks. Antes de liberar o site, confira o POST de produção do chat e o
+POST sem credenciais do comando do painel: o primeiro deve chegar ao workflow;
+o segundo deve responder `401`, comprovando que a rota existe e exige Basic.
+Não trate `active: true` no export como prova de disponibilidade das rotas.
+
+A versão `mvp-simple-17` foi publicada e duas chamadas com o mesmo
+`site_message_id` e `site_message_at` retornaram `200`: a primeira com a
+resposta da IA e a segunda somente com `Recebi a sua mensagem!`. O CRM exibiu
+uma única mensagem do cliente e uma única resposta da IA. O site com horário
+estável foi publicado em [silmer-web#23](https://github.com/romulosutil/silmer-web/pull/23).
+Esse teste não substitui a homologação do repasse humano nem a do WhatsApp real.
+
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker, configurar as duas credenciais Basic e conferir o
    destino e a autenticação do webhook de comandos do painel no worker.

@@ -74,7 +74,8 @@ defineExpose({ dismiss, notify });
 <template>
   <!-- Screen readers hear the message through the shell's status region
        (App.vue announces it); this is what the eyes see. -->
-  <div class="notice-toast-region">
+  <!-- A labelled landmark: the notice sits outside <main> (axe "region"). -->
+  <section class="notice-toast-region" aria-label="Avisos">
     <div
       v-if="notice"
       :key="notice.id"
@@ -103,5 +104,5 @@ defineExpose({ dismiss, notify });
         <AppIcon name="close" />
       </button>
     </div>
-  </div>
+  </section>
 </template>

@@ -1972,23 +1972,19 @@ details.exact summary {
 
 /*
  * Mobile first: the page's main action ("Gerar pedido" or "Imprimir ficha")
- * is fixed above the bottom navigation (--mobile-nav-block-size, which
- * already holds the safe area). Without that bar the footer pads the safe
- * area itself: the calc adds it only when the token is not defined. From
- * 48rem the action lives in the header and the closing panel again.
+ * is fixed right above the shell's bottom navigation, which is
+ * --mobile-nav-block-size tall plus the safe area. From 48rem the action
+ * lives in the header and the closing panel again.
  */
 .op-mobile-action {
   position: fixed;
   z-index: 20;
   inset-inline: 0;
-  inset-block-end: var(--mobile-nav-block-size, 0px);
+  inset-block-end: calc(
+    var(--mobile-nav-block-size) + env(safe-area-inset-bottom, 0px)
+  );
   display: flex;
-  padding: var(--space-3) var(--space-4)
-    calc(
-      var(--space-3) +
-        var(--mobile-nav-block-size, env(safe-area-inset-bottom, 0px)) -
-        var(--mobile-nav-block-size, 0px)
-    );
+  padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
   border-block-start: 1px solid var(--color-border);
   box-shadow: var(--shadow-overlay);

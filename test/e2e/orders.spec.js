@@ -2736,10 +2736,6 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   await page.setViewportSize({ height: 844, width: 390 });
   await mockOrders(page);
   await page.goto('/pedidos/order-pendente');
-  // The shell's bottom navigation reserves its height in this token.
-  await page.addStyleTag({
-    content: ':root { --mobile-nav-block-size: 64px; }',
-  });
 
   const footer = page.locator('.op-mobile-action');
   const generate = footer.getByRole('button', { name: 'Gerar pedido' });
@@ -2799,6 +2795,9 @@ test('prints a confirmed order from the footer without covering the page', async
   const bar = await footer.boundingBox();
   expect((last?.y ?? 0) + (last?.height ?? 0)).toBeLessThanOrEqual(bar?.y ?? 0);
 
+  // The shell's bottom navigation (4rem) sits right below the footer.
+  expect(Math.round((bar?.y ?? 0) + (bar?.height ?? 0))).toBe(844 - 64);
+
   // From 48rem the action is back in the header and the footer is gone.
   await page.setViewportSize({ height: 800, width: 1280 });
   await expect(footer).toBeHidden();
@@ -2807,6 +2806,27 @@ test('prints a confirmed order from the footer without covering the page', async
       name: 'Imprimir ficha',
     }),
   ).toBeVisible();
+});
+
+test('shows the reopen notice above the footer and the bottom navigation', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page, { orders: [ownConfirmedOrder] });
+  await page.goto('/pedidos/order-confirmado');
+
+  await page.getByRole('button', { name: 'Reabrir pedido' }).click();
+  await page.getByRole('button', { name: 'Reabrir pedido 05-CRM' }).click();
+  const toast = page.locator('.notice-toast');
+  await expect(toast).toContainText('Pedido 05-CRM reaberto.');
+  const footer = page.locator('.op-mobile-action');
+  await expect(
+    footer.getByRole('button', { name: 'Gerar pedido' }),
+  ).toBeVisible();
+  const note = await toast.boundingBox();
+  const bar = await footer.boundingBox();
+  expect((note?.y ?? 0) + (note?.height ?? 0)).toBeLessThanOrEqual(bar?.y ?? 0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('edits the size grade with the thumb on a phone', async ({ page }) => {

@@ -66,9 +66,10 @@ test('the manager reads the day first, with the period on the server', async ({
   await page.getByRole('link', { name: /^Entregas atrasadas/u }).focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL('/pedidos?entrega=atrasada');
-  await expect(
-    page.getByRole('button', { name: 'Entrega atrasada' }),
-  ).toHaveAttribute('aria-pressed', 'true');
+  // PLI-10: the filter lives in the "Filtros" sheet, so the list names it.
+  await expect(page.locator('.orders-active-filter')).toContainText(
+    'Filtro: Entrega atrasada',
+  );
   await expect
     .poll(() => mock.orderLists.at(-1)?.get('delivery') ?? null)
     .toBe('overdue');

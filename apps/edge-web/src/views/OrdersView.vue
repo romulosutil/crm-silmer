@@ -1,3 +1,11 @@
+<script>
+// RFC 024 (PLI-10): "Limpar filtro" drops a Painel filter from the address,
+// which opens a new list (the app keys each view by its address). The search
+// and the focus travel to that list once, so clearing is not starting over.
+/** @type {{query: string}|null} */
+let clearedFromRoute = null;
+</script>
+
 <script setup>
 import {
   computed,
@@ -9,6 +17,8 @@ import {
   watch,
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import AppIcon from '../components/AppIcon.vue';
+import FilterSheet from '../components/FilterSheet.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import { dateTimeBR, formatPhoneNumber } from '../lib/format.js';
 import { openDialog } from '../lib/ui.js';
@@ -41,15 +51,59 @@ const STORE_FILTER = 'loja';
 const PRODUCTION_FILTER = 'producao';
 // Painel ("Meus pedidos pendentes"): the session seller's pending orders.
 const MINE_FILTER = 'meus';
-const FILTERS = Object.freeze([
-  Object.freeze({ label: 'Todos', value: '' }),
-  Object.freeze({ label: 'Pendentes', value: 'pendente' }),
-  Object.freeze({ label: 'Meus pendentes', value: MINE_FILTER }),
-  Object.freeze({ label: 'Prontos para produção', value: PRODUCTION_FILTER }),
-  Object.freeze({ label: 'Confirmados', value: 'confirmado' }),
-  Object.freeze({ label: STORE_ORIGIN_LABEL, value: STORE_FILTER }),
-  Object.freeze({ label: 'Entrega atrasada', value: 'atrasada' }),
-  Object.freeze({ label: 'Próximas entregas', value: 'proxima' }),
+/** @param {string} label @param {string} value */
+const filterOption = (label, value) => Object.freeze({ label, value });
+// RFC 024 (PLI-09): three chips answer the daily questions; the eight filters
+// stay, grouped in the "Filtros" sheet. The choice is still a single one, and
+// "Pendentes" and "Confirmados" no longer repeat the groups (PLI-03) up front.
+const QUICK_FILTERS = Object.freeze([
+  filterOption('Todos', ''),
+  filterOption('Meus pendentes', MINE_FILTER),
+  filterOption('Prontos para produção', PRODUCTION_FILTER),
+]);
+const FILTER_GROUPS = Object.freeze([
+  Object.freeze({
+    legend: 'Situação',
+    options: Object.freeze([
+      filterOption('Todos', ''),
+      filterOption('Pendentes', 'pendente'),
+      filterOption('Confirmados', 'confirmado'),
+    ]),
+  }),
+  Object.freeze({
+    legend: 'Responsável',
+    options: Object.freeze([filterOption('Meus pendentes', MINE_FILTER)]),
+  }),
+  Object.freeze({
+    legend: 'Origem',
+    options: Object.freeze([filterOption(STORE_ORIGIN_LABEL, STORE_FILTER)]),
+  }),
+  Object.freeze({
+    legend: 'Entrega',
+    options: Object.freeze([
+      filterOption('Entrega atrasada', 'atrasada'),
+      filterOption('Próximas entregas', 'proxima'),
+    ]),
+  }),
+  Object.freeze({
+    legend: 'Produção',
+    options: Object.freeze([
+      filterOption('Prontos para produção', PRODUCTION_FILTER),
+    ]),
+  }),
+]);
+const FILTER_LABELS = new Map(
+  FILTER_GROUPS.flatMap((group) =>
+    group.options.map((option) => [option.value, option.label]),
+  ),
+);
+const QUICK_VALUES = new Set(QUICK_FILTERS.map((option) => option.value));
+// The Painel's links name their filter in the address (filterFromRoute).
+const FILTER_QUERY_KEYS = Object.freeze([
+  'entrega',
+  'origem',
+  'status',
+  'vendedor',
 ]);
 // Painel: confirmed orders whose promised day passed, or comes in the next
 // seven days, read in promised order. The API answers one short list.
@@ -98,7 +152,13 @@ function filterFromRoute() {
   return ['confirmado', 'pendente'].includes(status) ? status : '';
 }
 const filter = ref(filterFromRoute());
-const query = ref('');
+const carried = clearedFromRoute;
+clearedFromRoute = null;
+const query = ref(carried?.query ?? '');
+const filterSheet = ref(null);
+const filtersButton = ref(null);
+// The sheet edits a draft; "Ver resultados" applies it, Esc discards it.
+const draftFilter = ref('');
 const items = ref([]);
 const counts = ref({ confirmado: 0, pendente: 0 });
 const nextCursor = ref(null);
@@ -155,6 +215,22 @@ const confirmedCount = computed(() =>
 const showPending = computed(() =>
   ['', 'pendente', MINE_FILTER].includes(filter.value),
 );
+// PLI-10: a filter only the sheet offers is named, with a way out.
+const sheetFilterLabel = computed(() =>
+  QUICK_VALUES.has(filter.value) ? '' : (FILTER_LABELS.get(filter.value) ?? ''),
+);
+// PLI-10: the result replaces the old "N confirmados · N pendentes" line; the
+// group headings keep both counts (PLI-03). The API counts the search, the
+// origin and the owner; the production queue is read here.
+const resultLabel = computed(() => {
+  const total = isProductionQueue.value
+    ? confirmedCount.value
+    : String(
+        (showConfirmed.value ? counts.value.confirmado : 0) +
+          (showPending.value ? counts.value.pendente : 0),
+      );
+  return `${total} ${total === '1' ? 'pedido' : 'pedidos'}`;
+});
 const isEmpty = computed(
   () =>
     !loading.value &&
@@ -683,6 +759,37 @@ function selectFilter(value) {
   void load();
 }
 
+/** PLI-09: the sheet opens on the filter in use. @param {Event} event */
+function openFilters(event) {
+  draftFilter.value = filter.value;
+  /** @type {any} */ (filterSheet.value)?.open(
+    /** @type {HTMLElement} */ (event.currentTarget),
+  );
+}
+
+function applySheetFilter() {
+  selectFilter(draftFilter.value);
+}
+
+/**
+ * PLI-10: back to every order. A filter that came in the address leaves it
+ * too; the focus lands on "Filtros", where another filter is chosen.
+ */
+async function clearFilter() {
+  const rest = { ...route.query };
+  const fromRoute = FILTER_QUERY_KEYS.filter((key) => key in rest);
+  if (fromRoute.length) {
+    for (const key of fromRoute) delete rest[key];
+    clearedFromRoute = { query: query.value };
+    const failure = await router.replace({ path: route.path, query: rest });
+    if (failure) clearedFromRoute = null;
+    return;
+  }
+  selectFilter('');
+  await nextTick();
+  /** @type {HTMLElement|null} */ (filtersButton.value)?.focus();
+}
+
 /** Collapses bursts of live events into one silent refresh. */
 function scheduleLiveRefresh() {
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
@@ -719,7 +826,8 @@ watch(liveEvent, (event) => {
 });
 
 onMounted(() => {
-  heading.value?.focus();
+  if (carried) /** @type {HTMLElement|null} */ (filtersButton.value)?.focus();
+  else heading.value?.focus();
   void load();
   clockTimer = globalThis.setInterval(() => {
     now.value = new Date();
@@ -740,14 +848,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page">
-    <header class="page-heading">
-      <div>
-        <h1 ref="heading" tabindex="-1">Pedidos</h1>
-        <p>
-          Confirmados já podem ter a ficha impressa. Pedidos pendentes podem ser
-          retomados pelo vendedor responsável ou administrador.
-        </p>
-      </div>
+    <!-- RFC 024: one line, so the first order shows on a phone. -->
+    <header class="page-heading orders-heading">
+      <h1 ref="heading" tabindex="-1">Pedidos</h1>
       <button type="button" class="primary" @click="openNewOrder">
         Novo pedido
       </button>
@@ -988,10 +1091,29 @@ onBeforeUnmount(() => {
       </div>
     </dialog>
 
-    <div class="filter-bar">
-      <div class="chip-row" role="group" aria-label="Filtrar pedidos">
+    <!-- RFC 024 (PLI-09): search, three chips and "Filtros" — five controls. -->
+    <div class="filter-bar orders-filter-bar">
+      <div class="search-control orders-search" role="search">
+        <label for="order-search" class="sr-only"
+          >Buscar número, cliente ou telefone</label
+        >
+        <div class="search-field">
+          <AppIcon class="orders-search-icon" name="search" />
+          <input
+            id="order-search"
+            v-model="query"
+            type="search"
+            placeholder="Número, cliente ou telefone"
+          />
+        </div>
+      </div>
+      <div
+        class="chip-row orders-chip-row"
+        role="group"
+        aria-label="Filtrar pedidos"
+      >
         <button
-          v-for="option in FILTERS"
+          v-for="option in QUICK_FILTERS"
           :key="option.value"
           class="chip"
           type="button"
@@ -1000,17 +1122,59 @@ onBeforeUnmount(() => {
         >
           {{ option.label }}
         </button>
+        <button
+          ref="filtersButton"
+          type="button"
+          class="chip orders-filters-button"
+          aria-haspopup="dialog"
+          :data-active="sheetFilterLabel ? 'true' : undefined"
+          @click="openFilters"
+        >
+          Filtros
+        </button>
       </div>
-      <div class="search-control">
-        <label for="order-search">Buscar número, cliente ou telefone</label>
-        <div class="search-field">
-          <input id="order-search" v-model="query" type="search" />
-        </div>
-      </div>
-      <p class="filter-summary">
-        {{ counts.confirmado }} confirmados · {{ counts.pendente }} pendentes
+    </div>
+    <div class="orders-result-line">
+      <p v-if="sheetFilterLabel" class="orders-active-filter">
+        <span
+          >Filtro: <strong>{{ sheetFilterLabel }}</strong></span
+        >
+        <button type="button" class="quiet" @click="clearFilter">
+          Limpar filtro
+        </button>
+      </p>
+      <p class="filter-summary" role="status">
+        {{ loading ? '' : resultLabel }}
       </p>
     </div>
+
+    <FilterSheet
+      ref="filterSheet"
+      title="Filtros"
+      @apply="applySheetFilter"
+      @clear="draftFilter = ''"
+    >
+      <fieldset
+        v-for="group in FILTER_GROUPS"
+        :key="group.legend"
+        class="filter-sheet-group"
+      >
+        <legend>{{ group.legend }}</legend>
+        <label
+          v-for="option in group.options"
+          :key="option.value"
+          class="filter-sheet-option"
+        >
+          <input
+            v-model="draftFilter"
+            type="radio"
+            name="orders-filter"
+            :value="option.value"
+          />
+          {{ option.label }}
+        </label>
+      </fieldset>
+    </FilterSheet>
 
     <div v-if="error && hasLoaded" role="alert" class="audit-note">
       <p>{{ error }}</p>

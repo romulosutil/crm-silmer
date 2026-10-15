@@ -148,20 +148,24 @@ test('filters by status and searches by number, customer or phone', async ({
   await mockOrders(page, { onList: (params) => calls.push(params) });
   await page.goto('/pedidos');
 
-  await expect(page.locator('.filter-summary')).toHaveText(
-    '1 confirmados · 1 pendentes',
-  );
+  // PLI-10: the count of the result replaces the old summary.
+  await expect(page.locator('.filter-summary')).toHaveText('2 pedidos');
 
-  await page.getByRole('button', { name: 'Pendentes', exact: true }).click();
+  // PLI-09: "Pendentes" lives in the "Filtros" sheet.
+  await page.getByRole('button', { name: 'Filtros' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Filtros' });
+  await sheet.getByRole('radio', { name: 'Pendentes', exact: true }).check();
+  await sheet.getByRole('button', { name: 'Ver resultados' }).click();
+  await expect(sheet).toBeHidden();
   await expect(page.getByRole('region', { name: /Confirmados/u })).toHaveCount(
     0,
   );
-  await expect(page.getByRole('region', { name: /Pendentes/u })).toBeVisible();
+  const pending = page.getByRole('region', { name: /Pendentes/u });
+  await expect(pending).toBeVisible();
   await expect.poll(() => calls.at(-1)?.get('status')).toBe('pendente');
-  // PLI-03: the counts keep covering both groups while one is selected.
-  await expect(page.locator('.filter-summary')).toHaveText(
-    '1 confirmados · 1 pendentes',
-  );
+  await expect(page.locator('.filter-summary')).toHaveText('1 pedido');
+  // PLI-03: the group keeps its own count while it is the one selected.
+  await expect(pending.getByRole('heading', { level: 2 })).toContainText('1');
 
   await page.getByRole('button', { name: 'Todos' }).click();
   await expect.poll(() => calls.at(-1)?.get('status')).toBe(null);
@@ -485,4 +489,204 @@ test('stacks the orders as cards on a phone, with no sideways scroll', async ({
   await page.setViewportSize({ height: 800, width: 1280 });
   await expect(card.locator('.order-card-status')).toBeHidden();
   await expect(confirmed.locator('thead th').first()).toBeVisible();
+});
+
+// RFC 024 (PLI-09, PLI-10): three chips and a "Filtros" sheet.
+test('PLI-09/PLI-10: the "Filtros" sheet works by keyboard and names the filter it applies', async ({
+  page,
+}) => {
+  /** @type {URLSearchParams[]} */
+  const calls = [];
+  await page.setViewportSize({ height: 768, width: 1366 });
+  await mockOrders(page, { onList: (params) => calls.push(params) });
+  await page.goto('/pedidos');
+  await expect(page.locator('.filter-summary')).toHaveText('2 pedidos');
+
+  const group = page.getByRole('group', { name: 'Filtrar pedidos' });
+  await expect(group.getByRole('button')).toHaveText([
+    'Todos',
+    'Meus pendentes',
+    'Prontos para produção',
+    'Filtros',
+  ]);
+  const all = group.getByRole('button', { name: 'Todos' });
+  await expect(all).toHaveAttribute('aria-pressed', 'true');
+
+  // The sheet opens on the filter in use; Esc leaves the list as it was.
+  const filters = page.getByRole('button', { name: 'Filtros' });
+  await filters.focus();
+  await page.keyboard.press('Enter');
+  const sheet = page.getByRole('dialog', { name: 'Filtros' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('legend')).toHaveText([
+    'Situação',
+    'Responsável',
+    'Origem',
+    'Entrega',
+    'Produção',
+  ]);
+  await expect(sheet.getByRole('radio')).toHaveCount(8);
+  await expect(sheet.getByRole('radio', { name: 'Todos' })).toBeFocused();
+  await expect(sheet.getByRole('radio', { name: 'Todos' })).toBeChecked();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.keyboard.press('ArrowDown');
+  await expect(
+    sheet.getByRole('radio', { name: 'Pendentes', exact: true }),
+  ).toBeChecked();
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(filters).toBeFocused();
+  await expect(all).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.getByRole('region', { name: /Confirmados/u }),
+  ).toBeVisible();
+  await expect(page.locator('.filter-summary')).toHaveText('2 pedidos');
+
+  // Arrows move between the options of every group; Tab reaches the footer.
+  await page.keyboard.press('Enter');
+  await expect(sheet.getByRole('radio', { name: 'Todos' })).toBeFocused();
+  for (let step = 0; step < 5; step += 1)
+    await page.keyboard.press('ArrowDown');
+  const late = sheet.getByRole('radio', { name: 'Entrega atrasada' });
+  await expect(late).toBeFocused();
+  await expect(late).toBeChecked();
+  await page.keyboard.press('Tab');
+  await expect(
+    sheet.getByRole('button', { name: 'Limpar filtros' }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(
+    sheet.getByRole('button', { name: 'Ver resultados' }),
+  ).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(sheet).toBeHidden();
+  await expect(filters).toBeFocused();
+  await expect
+    .poll(() => calls.at(-1)?.get('delivery') ?? null)
+    .toBe('overdue');
+
+  // PLI-10: no chip says it, so the list names it, with a way out.
+  await expect(all).toHaveAttribute('aria-pressed', 'false');
+  const active = page.locator('.orders-active-filter');
+  await expect(active).toHaveText(
+    /^\s*Filtro: Entrega atrasada\s*Limpar filtro\s*$/u,
+  );
+  await expect(page.locator('.filter-summary')).toHaveText('1 pedido');
+
+  // "Limpar filtros" resets the draft; a click outside discards it.
+  await filters.click();
+  await expect(late).toBeChecked();
+  await sheet.getByRole('button', { name: 'Limpar filtros' }).click();
+  await expect(sheet.getByRole('radio', { name: 'Todos' })).toBeChecked();
+  await expect(sheet).toBeVisible();
+  await page.mouse.click(8, 8);
+  await expect(sheet).toBeHidden();
+  await expect(filters).toBeFocused();
+  await expect(active).toContainText('Entrega atrasada');
+
+  await page
+    .getByRole('button', { name: 'Limpar filtro', exact: true })
+    .focus();
+  await page.keyboard.press('Enter');
+  await expect(active).toHaveCount(0);
+  await expect(filters).toBeFocused();
+  await expect(all).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => calls.at(-1)?.get('delivery') ?? null).toBe(null);
+  await expect(page.locator('.filter-summary')).toHaveText('2 pedidos');
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('PLI-10: a Painel filter in the address is named, combines with the search and leaves the address when cleared', async ({
+  page,
+}) => {
+  /** @type {URLSearchParams[]} */
+  const calls = [];
+  await mockOrders(page, { onList: (params) => calls.push(params) });
+  await page.goto('/pedidos?origem=loja');
+  const active = page.locator('.orders-active-filter');
+  await expect(active).toContainText('Filtro: Loja do site');
+  await expect.poll(() => calls.at(-1)?.get('origin') ?? null).toBe('loja');
+
+  const search = page.getByRole('searchbox', {
+    name: 'Buscar número, cliente ou telefone',
+  });
+  await search.fill('Casa Rosa');
+  await expect.poll(() => calls.at(-1)?.get('q') ?? null).toBe('Casa Rosa');
+  expect(calls.at(-1)?.get('origin')).toBe('loja');
+  await expect(active).toContainText('Loja do site');
+
+  // Clearing drops the filter from the address and keeps the search.
+  await page
+    .getByRole('button', { name: 'Limpar filtro', exact: true })
+    .click();
+  await expect(page).toHaveURL('/pedidos');
+  await expect(active).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Filtros' })).toBeFocused();
+  await expect(search).toHaveValue('Casa Rosa');
+  await expect.poll(() => calls.at(-1)?.get('origin') ?? null).toBe(null);
+  expect(calls.at(-1)?.get('q')).toBe('Casa Rosa');
+
+  // The delivery view is one short list the API does not search: a search
+  // reads every order again, and the filter's name leaves with it.
+  await page.goto('/pedidos?entrega=atrasada');
+  await expect(active).toContainText('Filtro: Entrega atrasada');
+  await expect
+    .poll(() => calls.at(-1)?.get('delivery') ?? null)
+    .toBe('overdue');
+  await search.fill('05-CRM');
+  await expect.poll(() => calls.at(-1)?.get('q') ?? null).toBe('05-CRM');
+  expect(calls.at(-1)?.get('delivery')).toBeNull();
+  await expect(active).toHaveCount(0);
+});
+
+test('PLI-09: on a phone the first order sits whole above the bottom bar, and "Filtros" is a bottom sheet', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(TODAY);
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page, { orders: queueOrders });
+  await page.goto('/pedidos');
+
+  const first = page.locator('.order-table tbody tr').first();
+  await expect(first).toBeVisible();
+  // One line of heading, then five controls: search, three chips, "Filtros".
+  await expect(page.locator('.page-heading p')).toHaveCount(0);
+  await expect(
+    page.locator('.filter-bar').locator('button, input'),
+  ).toHaveCount(5);
+  const card = await first.boundingBox();
+  const nav = await page
+    .getByRole('navigation', { name: 'Navegação móvel' })
+    .boundingBox();
+  expect((card?.y ?? 0) + (card?.height ?? Infinity)).toBeLessThanOrEqual(
+    nav?.y ?? 0,
+  );
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  await page.getByRole('button', { name: 'Filtros' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Filtros' });
+  await expect(sheet).toBeVisible();
+  const box = await sheet.boundingBox();
+  expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(844);
+  // 44 px targets, 8 px apart.
+  /** @param {Element[]} elements */
+  const rects = (elements) =>
+    elements.map((element) => {
+      const { bottom, height, top } = element.getBoundingClientRect();
+      return { bottom, height, top };
+    });
+  const targets = await sheet
+    .locator('.filter-sheet-option, button')
+    .evaluateAll(rects);
+  expect(targets).toHaveLength(11);
+  expect(targets.every((rect) => rect.height >= 44)).toBe(true);
+  const options = await sheet
+    .locator('.filter-sheet-option')
+    .evaluateAll(rects);
+  for (let index = 1; index < options.length; index += 1) {
+    expect(
+      options[index].top - options[index - 1].bottom,
+    ).toBeGreaterThanOrEqual(8);
+  }
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

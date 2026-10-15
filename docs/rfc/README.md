@@ -51,3 +51,7 @@ entre os documentos.
 ## Decisão de 15/10/2026
 
 - [022 — Fundação visual whitelabel do CRM](022-fundacao-visual-whitelabel.md), decidida na ADR 035.
+
+## Proposta de 14/10/2026
+
+- [023 — Backup externo e recuperação do CRM e do n8n](023-backup-externo-e-recuperacao-do-crm-e-n8n.md), pendente de destino externo, execução e drill.

@@ -55,3 +55,7 @@ entre os documentos.
 ## Proposta de 14/10/2026
 
 - [023 — Backup externo e recuperação do CRM e do n8n](023-backup-externo-e-recuperacao-do-crm-e-n8n.md), pendente de destino externo, execução e drill.
+
+## Proposta de 15/10/2026
+
+- [024 — Jornadas com menos botões](024-jornadas-com-menos-botoes.md), pendente de aprovação do PO; recomenda o ADR 036 depois da decisão.

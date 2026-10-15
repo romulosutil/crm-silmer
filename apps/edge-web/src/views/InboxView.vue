@@ -950,7 +950,6 @@ onBeforeUnmount(() => {
   <div class="page">
     <header class="page-heading">
       <div>
-        <p class="eyebrow">Atendimentos</p>
         <h1 ref="heading" tabindex="-1">Caixa de Entrada</h1>
         <p>
           Acompanhe as conversas recebidas pelos canais de atendimento, com
@@ -1133,7 +1132,7 @@ onBeforeUnmount(() => {
       >
         <div class="conv-head">
           <div>
-            <p class="section-kicker">{{ CHANNEL_LABELS[active.channel] }}</p>
+            <p class="channel-label">{{ CHANNEL_LABELS[active.channel] }}</p>
             <form
               v-if="renaming"
               class="rename-form"
@@ -1413,7 +1412,13 @@ onBeforeUnmount(() => {
         <div v-if="detailLoading" class="loading-state" role="status">
           Carregando histórico…
         </div>
-        <ol v-else class="thread" aria-label="Histórico da conversa">
+        <!-- A scrollable history must be reachable by keyboard (WCAG 2.1.1). -->
+        <ol
+          v-else
+          class="thread"
+          aria-label="Histórico da conversa"
+          tabindex="0"
+        >
           <li
             v-for="message in detail.messages"
             :key="message.id"

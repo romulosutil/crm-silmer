@@ -310,7 +310,6 @@ onBeforeUnmount(() => {
   <div class="page">
     <header class="page-heading">
       <div>
-        <p class="eyebrow">Relacionamento</p>
         <h1 ref="heading" tabindex="-1">Clientes</h1>
         <p>
           Clientes, canais de contato e histórico de atendimento, atualizados
@@ -447,7 +446,6 @@ onBeforeUnmount(() => {
         :aria-labelledby="`client-${selected.id}`"
       >
         <div class="client-head">
-          <p class="section-kicker">Ficha do contato</p>
           <form v-if="renaming" class="rename-form" @submit.prevent="saveName">
             <h2 :id="`client-${selected.id}`" class="sr-only">
               {{ selected.label }}

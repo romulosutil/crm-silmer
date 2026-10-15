@@ -1,9 +1,10 @@
 <script setup>
 import { onMounted, ref } from 'vue';
+import AppIcon from './AppIcon.vue';
 
 const options = [
-  { label: 'Claro', shortLabel: 'C', value: 'light' },
-  { label: 'Escuro', shortLabel: 'E', value: 'dark' },
+  { icon: 'sun', label: 'Claro', value: 'light' },
+  { icon: 'moon', label: 'Escuro', value: 'dark' },
 ];
 const theme = ref(readStoredTheme());
 
@@ -34,10 +35,11 @@ function applyTheme() {
       :key="option.value"
       type="button"
       :aria-pressed="theme === option.value"
-      :data-short-label="option.shortLabel"
+      :title="`Tema ${option.label.toLocaleLowerCase('pt-BR')}`"
       @click="selectTheme(option.value)"
     >
-      {{ option.label }}
+      <AppIcon :name="option.icon" />
+      <span class="sr-only">{{ option.label }}</span>
     </button>
   </fieldset>
 </template>

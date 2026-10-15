@@ -379,7 +379,6 @@ function formValues(form) {
   <div class="page users-page">
     <header class="page-heading">
       <div>
-        <p class="eyebrow">Administração</p>
         <h1 ref="heading" tabindex="-1">Vendedores</h1>
         <p>
           Gerencie as contas dos vendedores que acessam o CRM. O acesso a esta
@@ -396,7 +395,6 @@ function formValues(form) {
       <section class="surface" aria-labelledby="users-overview">
         <div class="count-line">
           <div>
-            <p class="section-kicker">Visão geral</p>
             <h2 id="users-overview">Vendedores do CRM</h2>
           </div>
           <p v-if="!loading">
@@ -511,7 +509,6 @@ function formValues(form) {
         class="surface handover-panel"
         aria-labelledby="handover-title"
       >
-        <p class="section-kicker">Conta criada</p>
         <h2 id="handover-title">{{ handover.name }}</h2>
         <p class="field-help">
           Copie o bloco abaixo e entregue à pessoa. A senha não volta a ser
@@ -535,7 +532,6 @@ function formValues(form) {
       </section>
 
       <section v-else class="surface" aria-labelledby="create-user">
-        <p class="section-kicker">Nova conta</p>
         <h2 id="create-user">Criar vendedor</h2>
         <form @submit.prevent="submitCreate">
           <label for="new-name">Nome</label>
@@ -570,7 +566,6 @@ function formValues(form) {
         aria-modal="true"
         aria-labelledby="edit-title"
       >
-        <p class="section-kicker">Editar usuário</p>
         <h2 id="edit-title">{{ editing.name }}</h2>
         <form @submit.prevent="submitEdit">
           <label for="edit-name">Nome</label>
@@ -638,7 +633,6 @@ function formValues(form) {
         aria-labelledby="delete-title"
         aria-describedby="delete-description"
       >
-        <p class="section-kicker">Excluir conta</p>
         <h2 id="delete-title">Excluir {{ confirmingDelete.name }}?</h2>
         <p id="delete-description">
           Esta ação remove a conta permanentemente e não pode ser desfeita.

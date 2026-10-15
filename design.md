@@ -76,25 +76,49 @@ Os componentes consomem somente tokens semânticos. Cores brutas não devem ser 
 - Novos valores brutos de cor (`#...`, `rgb()`, `hsl()` ou cores nomeadas) só podem ser declarados em `tokens.css`. Se um papel ainda não existe, criar ou evoluir o token semântico antes de usá-lo.
 - `npm run check:design-tokens` é o guardrail executável dessa regra e integra `npm run validate`; uma alteração de frontend não está pronta se ele falhar.
 
-### Paleta base
+### Camadas de token e whitelabel (RFC 022)
+
+O produto é whitelabel e a Silmer é o piloto. `tokens.css` tem três camadas:
+
+1. **Marca** — as únicas entradas por empresa:
+
+| Entrada | Silmer | Papel |
+|---|---|---|
+| `--brand-primary` | `#ff5b01` | assinatura: logotipo, faixas, ícone ativo |
+| `--brand-primary-strong` | `#c94300` | preenchimento de ação; branco sobre ele passa 4.78:1 |
+| `--brand-ink` | `#0c042d` | texto, neutros, superfícies escuras e tema escuro |
+| `--brand-secondary` / `-light` | `#6544ee` / `#b2a1f7` | link, foco e seleção (claro / escuro) |
+| `--brand-font` | Poppins | família única |
+| `--brand-radius` | `0.5rem` | raio base; `sm`, `lg` e `xl` derivam dele |
+
+2. **Semânticos** — derivados da marca com `color-mix()`; componentes só usam
+   estes. Os neutros são a tinta misturada ao branco em poucas porcentagens, por
+   isso trocar `--brand-ink` re-tinge canvas, bordas, texto e sombras.
 
 | Papel | Light | Dark | Uso |
-|---|---:|---:|---|
-| `--color-canvas` | `#f7f6fb` | `#0c042d` | fundo da aplicação |
-| `--color-surface` | `#ffffff` | `#110642` | painéis, cards e campos |
-| `--color-surface-raised` | `#f0eef8` | `#19085e` | seleção, hover e segundo nível |
-| `--color-surface-active` | `#e8e3fa` | `#250c8d` | item ativo ou pressionado |
-| `--color-text` | `#1b1530` | `#f0ecfd` | texto principal |
-| `--color-text-muted` | `#625b75` | `#a39dbe` | texto secundário |
-| `--color-border` | `#d8d4e4` | `#38249a` | limites de componentes |
-| `--color-border-subtle` | `#e8e5ef` | `#250c8d` | divisores e agrupamentos |
-| `--color-accent` | `#ff5b01` | `#ff5b01` | ação primária |
-| `--color-on-accent` | `#0c042d` | `#0c042d` | conteúdo sobre o laranja |
-| `--color-link` | `#5b3fd1` | `#a78bfa` | links e ações textuais |
-| `--color-focus` | `#6f50e8` | `#b9a6ff` | anel de foco |
-| `--color-brand-ink` | `#0c042d` | `#f0ecfd` | logo e marca institucional |
+|---|---|---|---|
+| `--color-canvas` | tinta 5% | tinta + preto | fundo do shell e da navegação |
+| `--color-page` | tinta 1.5% | tinta | painel de trabalho (inset) |
+| `--color-surface` | branco | branco 5% | cards, campos, botões secundários |
+| `--color-surface-raised` | tinta 4% | branco 9% | hover e segundo nível |
+| `--color-surface-active` | tinta 8% | branco 14% | pressionado |
+| `--color-text` | tinta | branco 94% | texto principal (≥ 16:1) |
+| `--color-text-muted` | tinta 64% | branco 68% | texto secundário (≥ 5.5:1) |
+| `--color-border` / `-strong` / `-subtle` | tinta 14% / 30% / 8% | branco 16% / 30% / 10% | limites; `strong` em campos (3:1) |
+| `--color-accent` | primária | primária | faixa, ícone ativo, assinatura |
+| `--color-accent-solid` | primária forte | primária forte | botão primário (texto branco) |
+| `--color-link` / `--color-focus` | secundária | secundária clara | links, anel e halo de foco |
+| `--color-selected` | secundária 9% | secundária 22% | chip ou linha selecionada |
 
-O contraste de texto principal supera `16:1` nos dois temas. Texto secundário supera `5.9:1`. Texto `--color-on-accent` sobre `--color-accent` atinge aproximadamente `6.3:1`.
+3. **Componentes** — `--control-height` (40 px; 44 px em `pointer: coarse`),
+   `--target-min`, `--sidebar-inline-size`, `--sidebar-rail-size`,
+   `--topbar-block-size`.
+
+Regras para uma nova marca: `--brand-ink` escura (luminância < 5%) e
+`--brand-primary-strong` com contraste ≥ 4.5:1 com branco. Nome da empresa,
+nome do produto, slogan e logotipo ficam em `apps/edge-web/src/brand/index.js`;
+`BrandMark.vue` desenha o logotipo oficial. Nenhum componente escreve o nome da
+empresa.
 
 ### Cores semânticas
 
@@ -116,8 +140,9 @@ Cada estado combina cor, ícone e rótulo. Os nomes dos tokens devem expressar f
 - Aplicar o tema antes da primeira pintura para evitar flash entre temas.
 - Nenhuma informação, ação ou ilustração pode existir apenas em um dos temas.
 
-O roxo profundo é tinta de marca no modo claro, não fundo de navegação. O
-documento visual aprovado é `design-system/branding-book.html`.
+A tinta da marca é texto no modo claro, não fundo de navegação. Laranja nunca
+marca seleção (chip, segmentado, aba): seleção é neutra ou usa
+`--color-selected`; o laranja fica para a ação primária e a assinatura.
 
 ## 5. Tipografia
 
@@ -127,16 +152,17 @@ Uma única família reduz ruído e custo de carregamento. Pesos permitidos: `400
 
 | Token | Tamanho / linha | Peso | Uso |
 |---|---:|---:|---|
-| `--text-xs` | `0.75rem / 1.5` | 500 | metadados e legendas |
+| `--text-xs` | `0.8125rem / 1.5` | 500 | metadados, legendas e rótulos (piso do produto) |
 | `--text-sm` | `0.875rem / 1.5` | 400–600 | controles compactos e tabelas |
 | `--text-base` | `1rem / 1.5` | 400 | texto e campos |
 | `--text-lg` | `1.125rem / 1.4` | 600 | título de painel |
 | `--text-xl` | `1.25rem / 1.35` | 600 | seção |
-| `--text-2xl` | `1.5rem / 1.25` | 700 | título de página |
+| `--text-2xl` | `1.5rem / 1.25` | 600 | título de página (h1) |
 | `--text-3xl` | `2rem / 1.2` | 700 | estados especiais e autenticação |
 
 - Texto corrido não ultrapassa aproximadamente 75 caracteres por linha.
-- Não usar caixa alta em frases; caixa alta é permitida apenas em micro-rótulos de até três palavras.
+- Não usar caixa alta nem eyebrow acima de títulos; rótulos ficam em caixa normal, peso 500 e cor secundária.
+- Nenhum texto abaixo de `--text-xs` (13 px).
 - Números financeiros usam `font-variant-numeric: tabular-nums`.
 - Placeholder é dica, nunca substituto de `label`.
 
@@ -155,10 +181,11 @@ Base de `4px`: `4`, `8`, `12`, `16`, `20`, `24`, `32`, `40`, `48`, `64`.
 
 | Token | Valor | Uso |
 |---|---:|---|
-| `--radius-sm` | `6px` | checkbox, badge e item compacto |
-| `--radius-md` | `10px` | inputs, botões e menus |
-| `--radius-lg` | `14px` | cards, painéis e dialogs |
-| `--radius-full` | `999px` | pills, avatar e toggle |
+| `--radius-sm` | `6px` | badge, item compacto, segmento |
+| `--radius-md` | `8px` | inputs, botões e menus |
+| `--radius-lg` | `12px` | cards, painéis e dialogs |
+| `--radius-xl` | `16px` | painel de trabalho e tela de acesso |
+| `--radius-pill` | `999px` | chips, contadores e avatar |
 
 ### Elevação
 
@@ -172,10 +199,19 @@ Base de `4px`: `4`, `8`, `12`, `16`, `20`, `24`, `32`, `40`, `48`, `64`.
 
 ### App shell
 
-- Sidebar de `240px`, recolhível para `72px`; estado ativo tem fundo, ícone e texto identificáveis.
-- Topbar de `64px` com título/contexto, busca quando aplicável, notificações, tema e conta.
-- Área principal fluida com padding de `24px` no desktop e `16px` no mobile.
-- Conteúdo textual ou formulário usa largura de leitura; tabelas e Kanban podem ocupar a largura disponível.
+- Sidebar de `248px` no canvas, sem borda; item ativo é um cartão branco com
+  sombra curta e ícone na cor da marca. Recolhe para rail de `72px` entre 769 e
+  1199 px, com o monograma da marca.
+- O trabalho fica num painel inset (`--color-page`, raio `xl`) com topbar de
+  `56px`: trilha "Empresa › Tela", função, estado da conexão e tema.
+- Uma lista de rotas alimenta a sidebar e o menu móvel; os dois oferecem os
+  mesmos destinos, inclusive Vendedores (admin) e Sair.
+- Cabeçalho de página: h1 de 24 px, uma linha de contexto e a ação primária da
+  tela. Sem eyebrow.
+- Conexão: verde discreto quando ativa, atenção durante reconexão, erro só
+  quando indisponível.
+- Títulos recebem foco programático na navegação sem desenhar anel; controles
+  sempre mostram o anel.
 
 ### Responsividade
 
@@ -191,7 +227,7 @@ Base de `4px`: `4`, `8`, `12`, `16`, `20`, `24`, `32`, `40`, `48`, `64`.
 
 | Componente | Variantes ou responsabilidades |
 |---|---|
-| `Button` | `primary`, `secondary`, `ghost`, `danger`; `sm`, `md`; loading e disabled |
+| `Button` | secundário por padrão; `.primary` (uma por região), `.quiet`, `.danger`, `.link-button`; `.button-link` para links com cara de botão; loading e disabled |
 | `IconButton` | alvo mínimo de `44×44px`, tooltip e nome acessível |
 | `Field` | label, descrição, input/select/textarea, erro e estado obrigatório |
 | `Checkbox` / `Radio` / `Switch` | label clicável, foco visível e estado indeterminado quando necessário |

@@ -43,9 +43,22 @@ for (const token of [
 assert.match(tokens, /html\[data-theme='light'\]/u);
 assert.match(tokens, /html\[data-theme='dark'\]/u);
 assert.doesNotMatch(tokens, /:root:not\(\[data-theme\]\)/u);
-assert.match(tokens, /--color-navigation-surface: #ffffff;/u);
-assert.match(tokens, /--color-navigation-border: #e6e0fa;/u);
-assert.match(tokens, /--color-brand-ink: #0c042d;/u);
+// RFC 022: the brand layer is the only place a company's colors live. Every
+// semantic role derives from it, so a whitelabel swap touches these inputs.
+for (const input of [
+  '--brand-primary',
+  '--brand-primary-strong',
+  '--brand-ink',
+  '--brand-secondary',
+  '--brand-font',
+  '--brand-radius',
+]) {
+  assert.match(tokens, new RegExp(`${input}:`, 'u'), `missing ${input}`);
+}
+assert.match(tokens, /--brand-ink: #0c042d;/u);
+assert.match(tokens, /--brand-primary: #ff5b01;/u);
+assert.match(tokens, /--color-accent: var\(--brand-primary\);/u);
+assert.match(tokens, /--color-text: var\(--brand-ink\);/u);
 
 const literalColor = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(/iu;
 const namedColor =

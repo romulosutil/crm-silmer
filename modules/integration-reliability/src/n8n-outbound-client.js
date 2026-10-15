@@ -4,6 +4,12 @@ import { clearTimeout, setTimeout } from 'node:timers';
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_PATH = '/webhook/silmer/panel-command';
 const RETRYABLE_STATUS_CODES = new Set([408, 425, 429]);
+const DIAGNOSTIC_REJECTION_CODES = new Map([
+  [401, 'N8N_COMMAND_HTTP_401'],
+  [403, 'N8N_COMMAND_HTTP_403'],
+  [404, 'N8N_COMMAND_HTTP_404'],
+  [405, 'N8N_COMMAND_HTTP_405'],
+]);
 
 /**
  * Bounded technical error. Remote bodies, URLs, credentials and command
@@ -190,7 +196,10 @@ export class N8nCommandDeliveryClient {
     const retryable =
       RETRYABLE_STATUS_CODES.has(statusCode) || statusCode >= 500;
     throw new N8nCommandDeliveryError(
-      retryable ? 'N8N_COMMAND_REMOTE_UNAVAILABLE' : 'N8N_COMMAND_REJECTED',
+      retryable
+        ? 'N8N_COMMAND_REMOTE_UNAVAILABLE'
+        : (DIAGNOSTIC_REJECTION_CODES.get(statusCode) ??
+            'N8N_COMMAND_REJECTED'),
       {
         outcomeKnown: !retryable,
         retryable,

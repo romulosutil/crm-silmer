@@ -647,6 +647,12 @@ if (connectionString) {
     let message = (await reads.get('bind-conversation')).messages[0];
     assert.equal(message.deliveryErrorCode, 'N8N_COMMAND_REJECTED');
     await pool.query(
+      "UPDATE crm.n8n_commands SET last_error_code='N8N_COMMAND_HTTP_401' WHERE command_id=$1",
+      [f.row.command_id],
+    );
+    message = (await reads.get('bind-conversation')).messages[0];
+    assert.equal(message.deliveryErrorCode, 'N8N_COMMAND_HTTP_401');
+    await pool.query(
       "UPDATE crm.n8n_commands SET last_error_code='PII_LEAK' WHERE command_id=$1",
       [f.row.command_id],
     );

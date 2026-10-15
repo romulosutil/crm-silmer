@@ -229,7 +229,7 @@ async function mockCrm(page, options = {}) {
           authorId: 'operator-1',
           authorKind: 'human',
           deliveryErrorCode: options.failedDelivery
-            ? 'N8N_COMMAND_REJECTED'
+            ? 'N8N_COMMAND_HTTP_401'
             : null,
           deliveryStatus: options.failedDelivery ? 'failed' : null,
           direction: 'outbound',
@@ -1039,7 +1039,7 @@ test('shows a failed delivery code to the seller in the Inbox', async ({
   await mockCrm(page, { failedDelivery: true, mixedAuthors: true });
   await page.goto('/inbox');
   await expect(
-    page.getByText('Falha no envio · código técnico: N8N_COMMAND_REJECTED'),
+    page.getByText('Falha no envio · código técnico: N8N_COMMAND_HTTP_401'),
   ).toBeVisible();
 });
 

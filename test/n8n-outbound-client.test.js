@@ -168,12 +168,28 @@ test('aborts a command request at the configured timeout', async () => {
 test('classifies definitive rejection separately from unavailable remote', async () => {
   for (const fixture of [
     {
-      code: 'N8N_COMMAND_REJECTED',
+      code: 'N8N_COMMAND_HTTP_401',
       outcomeKnown: true,
       replaySafe: false,
       retrySafe: false,
       retryable: false,
       status: 401,
+    },
+    ...[403, 404, 405].map((status) => ({
+      code: `N8N_COMMAND_HTTP_${status}`,
+      outcomeKnown: true,
+      replaySafe: false,
+      retrySafe: false,
+      retryable: false,
+      status,
+    })),
+    {
+      code: 'N8N_COMMAND_REJECTED',
+      outcomeKnown: true,
+      replaySafe: false,
+      retrySafe: false,
+      retryable: false,
+      status: 400,
     },
     {
       code: 'N8N_COMMAND_REMOTE_UNAVAILABLE',

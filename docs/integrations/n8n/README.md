@@ -496,6 +496,10 @@ associado. `N8N_COMMAND_REJECTED` indica que o webhook recusou o comando;
 verifique destino e autenticação sem imprimir segredos nem reenviar o comando
 com outra chave. O código só aparece na leitura autenticada da conversa; o
 widget do visitante não o recebe.
+Para tentativas novas, `N8N_COMMAND_HTTP_401` ou `_403` aponta para acesso
+negado no webhook; `N8N_COMMAND_HTTP_404` ou `_405` aponta para a URL ou método
+do endpoint publicado. Mensagens que falharam antes dessa distinção conservam
+o código genérico.
 
 O nó `Site - Receber mensagem do chat (MVP)` contém a opção **Custom Chat
 Styling** com as cores Silmer para a página hospedada do n8n. O estilo do

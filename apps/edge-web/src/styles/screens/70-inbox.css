@@ -359,6 +359,44 @@
   white-space: nowrap;
 }
 
+/* PCX-10: the name, then the order as a link, its status in words. A long
+   name keeps the link whole and moves it to the next line. */
+.conv-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-3);
+  min-inline-size: 0;
+}
+
+.conv-title-row h2 {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.conv-order-link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--control-height-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+}
+
+.conv-order-number {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.conv-order-link:hover .conv-order-number {
+  text-decoration-thickness: 2px;
+}
+
 .conv-identity {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
@@ -736,6 +774,54 @@
   gap: var(--space-2);
 }
 
+/* PCX-12: Detalhes › Pedido, read only. */
+.context-order-summary .context-order-missing {
+  font-weight: 600;
+}
+
+.context-order-items {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.context-order-items li,
+.context-order-facts div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.context-order-items li {
+  padding-block-end: var(--space-1);
+  border-block-end: 1px solid var(--color-border-subtle);
+}
+
+.context-order-items li > span:last-child,
+.context-order-facts dd {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.context-order-facts dd {
+  font-weight: 600;
+}
+
+.context-order-error {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+}
+
+.context-order-error button {
+  min-block-size: var(--control-height-sm);
+  padding: var(--space-1) var(--space-3);
+}
+
 .context-facts {
   display: grid;
   gap: var(--space-2);
@@ -961,9 +1047,11 @@
   .conv-actions > button,
   .conv-more > button,
   .conv-more-panel button,
+  .conv-order-link,
   .inbox-tabs .inbox-tab,
   .inbox-live-notice button,
   .inbox-context-head button,
+  .context-order-error button,
   .subject-list button,
   .subject-actions button,
   .subject-order-search button,

@@ -110,7 +110,11 @@ async function mockPainel(page, { manager = true } = {}) {
       });
     }
     if (url.pathname === '/api/v1/inbox/conversations') {
-      inboxLists.push(url.searchParams);
+      // The Inbox also reads one-item lists to count its tabs; only the
+      // list the person sees (limit 100) is recorded.
+      if (url.searchParams.get('limit') !== '1') {
+        inboxLists.push(url.searchParams);
+      }
       return json({ hasMore: false, items: [], totalCount: 0 });
     }
     if (url.pathname === '/api/v1/users/assignable') {

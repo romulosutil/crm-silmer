@@ -226,8 +226,9 @@ defineExpose({ close, open });
     align-items: start;
   }
 
+  /* 44 px with a mouse too (design.md §16), not the 40 px control height. */
   .filter-sheet-option {
-    min-block-size: var(--control-height);
+    min-block-size: var(--target-min);
   }
 
   .filter-sheet-panel {
@@ -242,6 +243,7 @@ defineExpose({ close, open });
 
   .filter-sheet-actions button {
     flex: none;
+    min-block-size: var(--target-min);
   }
 }
 </style>

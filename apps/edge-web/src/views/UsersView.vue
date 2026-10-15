@@ -8,6 +8,7 @@ import {
   ref,
   watch,
 } from 'vue';
+import { brand } from '../brand/index.js';
 import { ApiError, commandKey, request } from '../lib/api-client.js';
 
 const props = defineProps({
@@ -72,7 +73,7 @@ const activeCount = computed(
 const markdown = computed(() => {
   if (!handover.value) return '';
   return [
-    '**Acesso ao CRM Silmer**',
+    `**Acesso ao ${brand.productName}**`,
     '',
     `- Nome: ${handover.value.name}`,
     `- E-mail: ${handover.value.email}`,

@@ -284,6 +284,39 @@ async function mockCrm(page, options = {}) {
           pendingCount: 1,
           soldAmountCents: 250000,
           totalPiecesSold: 300,
+          period: {
+            confirmedCount: 2,
+            from: '2026-10-15',
+            key: 'hoje',
+            soldAmountCents: 250000,
+            timeZone: 'America/Sao_Paulo',
+            to: '2026-10-15',
+          },
+          deliveries: {
+            dueSoonCount: 0,
+            dueSoonUntil: '2026-10-21',
+            oldestOverdueOn: null,
+            overdueCount: 0,
+          },
+          today: '2026-10-15',
+        }),
+      });
+      return;
+    }
+    if (path === '/api/v1/inbox/summary' && request.method() === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          assistant: {
+            activeCount: 1,
+            failedDeliveryCount: 0,
+            lastReplyAt: null,
+            stallMinutes: 10,
+            stalledCount: 0,
+          },
+          generatedAt: '2026-10-15T15:00:00.000Z',
+          mine: { awaitingReplyCount: 1, count: 1, oldestAwaitingSince: null },
+          waitingHandoff: { count: 0, oldestSince: null, overdueCount: 0 },
         }),
       });
       return;
@@ -748,15 +781,13 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
         .getByRole('link', { name }),
     ).toBeVisible();
   }
-  await expect(page.getByText('Studio Malu').first()).toBeVisible();
-  await expect(page.getByText('R$ 2.500,00')).toBeVisible();
+  // Painel: each indicator is a link to the list it counts.
   await expect(
-    page
-      .getByText('Vendas', { exact: true })
-      .locator('..')
-      .locator('.kpi-value'),
-  ).toHaveText('2');
-  await expect(page.getByText('Peças por venda')).toBeVisible();
+    page.getByRole('link', { name: /^Vendido hoje R\$\s2\.500,00/u }),
+  ).toHaveAttribute('href', '/pedidos?status=confirmado');
+  await expect(
+    page.getByRole('link', { name: /^Minhas conversas 1/u }),
+  ).toHaveAttribute('href', '/inbox?fila=minhas');
 
   await page
     .getByRole('navigation', { name: 'Navegação principal' })

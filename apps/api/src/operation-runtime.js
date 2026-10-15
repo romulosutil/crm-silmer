@@ -32,6 +32,9 @@ const CONVERSATION_STATES = new Set([
 ]);
 const CHANNELS = new Set(['instagram', 'whatsapp', 'site_chat']);
 const AUTOMATION_STATES = new Set(['assistant', 'human']);
+// Painel: a client message the assistant left unanswered this long counts as
+// a stalled conversation in the assistant's health.
+export const ASSISTANT_STALL_MINUTES = 10;
 
 export class OperationReadError extends Error {
   /** @param {number} statusCode @param {string} code */
@@ -43,8 +46,9 @@ export class OperationReadError extends Error {
   }
 }
 
-/** @param {{contactRepository: any, cursorKey: Buffer, database?: any, handoffRepository: any, inboxRepository: any}} dependencies */
+/** @param {{clock?: () => Date, contactRepository: any, cursorKey: Buffer, database?: any, handoffRepository: any, inboxRepository: any}} dependencies */
 export function createOperationReadService({
+  clock = () => new Date(),
   contactRepository,
   cursorKey,
   database,
@@ -65,6 +69,19 @@ export function createOperationReadService({
   }
 
   return Object.freeze({
+    /**
+     * Painel: the reader's queue, the handoffs past their SLA and the
+     * assistant's health, all worked out on the server clock.
+     *
+     * @param {{actorId: string}} input
+     */
+    async summarizeInbox(input) {
+      return inboxRepository.summary({
+        actorId: requireId(input?.actorId, 'ACTOR_ID'),
+        now: clock(),
+        stallMinutes: ASSISTANT_STALL_MINUTES,
+      });
+    },
     /** @param {any} input */
     async getContact(input) {
       return contactRepository.get(requireId(input?.contactId, 'CONTACT_ID'));

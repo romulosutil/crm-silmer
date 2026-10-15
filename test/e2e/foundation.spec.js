@@ -253,6 +253,25 @@ test('submits login, restores and closes a session by keyboard without browser s
       return;
     }
 
+    if (path === '/api/v1/inbox/summary' && method === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          assistant: {
+            activeCount: 3,
+            failedDeliveryCount: 0,
+            lastReplyAt: '2026-10-15T14:58:00.000Z',
+            stallMinutes: 10,
+            stalledCount: 0,
+          },
+          generatedAt: '2026-10-15T15:00:00.000Z',
+          mine: { awaitingReplyCount: 0, count: 0, oldestAwaitingSince: null },
+          waitingHandoff: { count: 0, oldestSince: null, overdueCount: 0 },
+        }),
+      });
+      return;
+    }
+
     if (path === '/api/v1/orders/summary' && method === 'GET') {
       await route.fulfill({
         contentType: 'application/json',
@@ -295,9 +314,13 @@ test('submits login, restores and closes a session by keyboard without browser s
   await expect(
     page.getByRole('heading', { name: 'Dashboard', level: 1 }),
   ).toBeFocused();
-  await expect(page.getByRole('status')).toHaveText(
-    'Sessão iniciada com segurança.',
-  );
+  // The Dashboard may still show its own "Carregando indicadores…" status
+  // while the shell announces the session.
+  await expect(
+    page
+      .getByRole('status')
+      .filter({ hasText: 'Sessão iniciada com segurança.' }),
+  ).toHaveCount(1);
 
   await page.getByRole('link', { name: 'Conta' }).click();
   await expect(
@@ -331,7 +354,9 @@ test('submits login, restores and closes a session by keyboard without browser s
   await expect(page.getByRole('button', { name: 'Sistema' })).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByRole('status')).toHaveText('Sessão restaurada.');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Sessão restaurada.' }),
+  ).toHaveCount(1);
   await expect(
     page.getByRole('heading', { name: 'Dashboard', level: 1 }),
   ).toBeFocused();

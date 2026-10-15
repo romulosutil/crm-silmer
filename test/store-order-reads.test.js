@@ -353,7 +353,8 @@ test('LOJ-09: the summary counts a store sale like any sale and skips tests', as
     method: 'GET',
     url: '/api/v1/orders/summary',
   });
-  assert.deepEqual(response.json(), {
+  const { deliveries, period, today, ...totals } = response.json();
+  assert.deepEqual(totals, {
     averageTicketCents: 18000,
     confirmedCount: 1,
     pendingCount: 0,
@@ -362,6 +363,10 @@ test('LOJ-09: the summary counts a store sale like any sale and skips tests', as
     storeNewOldestPaidAt: '2026-10-08T02:15:55.000Z',
     totalPiecesSold: 10,
   });
+  // A store order promises no delivery day, so it is never late.
+  assert.equal(deliveries.overdueCount, 0);
+  assert.equal(typeof today, 'string');
+  assert.equal(period.key, 'hoje');
   await api.close();
 });
 

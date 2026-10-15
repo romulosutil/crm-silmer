@@ -82,12 +82,15 @@ export { formatBrlAmount, parseBrlAmount } from './domain/money.js';
 export {
   ORDER_STATUSES,
   PAYMENT_CONDITIONS,
+  SUMMARY_PERIODS,
   confirmOrder,
   formatOrderNumber,
   missingForConfirmation,
   operationalDay,
+  promisedDeliveryOn,
   recordMilestones,
   reopenOrder,
+  summaryPeriod,
 } from './domain/order.js';
 export {
   PRODUCTION_FIELDS,

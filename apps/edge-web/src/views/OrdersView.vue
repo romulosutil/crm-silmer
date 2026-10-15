@@ -38,7 +38,15 @@ const FILTERS = Object.freeze([
   Object.freeze({ label: 'Confirmados', value: 'confirmado' }),
   Object.freeze({ label: 'Pendentes', value: 'pendente' }),
   Object.freeze({ label: STORE_ORIGIN_LABEL, value: STORE_FILTER }),
+  Object.freeze({ label: 'Entrega atrasada', value: 'atrasada' }),
+  Object.freeze({ label: 'Próximas entregas', value: 'proxima' }),
 ]);
+// Painel: confirmed orders whose promised day passed, or comes in the next
+// seven days, read in promised order. The API answers one short list.
+const DELIVERY_FILTERS = Object.freeze({
+  atrasada: 'overdue',
+  proxima: 'due_soon',
+});
 
 const liveEvent = inject('liveEvent', ref(null));
 const router = useRouter();
@@ -69,8 +77,16 @@ let contactCreateKey = '';
 let detailsUpdateKey = '';
 let orderCreateKey = '';
 // LOJ-31: the Dashboard notice opens `/pedidos?origem=loja`, the list already
-// on "Loja do site".
-const filter = ref(route.query.origem === STORE_FILTER ? STORE_FILTER : '');
+// on "Loja do site"; the Dashboard indicators open `?status=` and `?entrega=`.
+/** @returns {string} */
+function filterFromRoute() {
+  if (route.query.origem === STORE_FILTER) return STORE_FILTER;
+  const delivery = String(route.query.entrega ?? '');
+  if (Object.hasOwn(DELIVERY_FILTERS, delivery)) return delivery;
+  const status = String(route.query.status ?? '');
+  return ['confirmado', 'pendente'].includes(status) ? status : '';
+}
+const filter = ref(filterFromRoute());
 const query = ref('');
 const items = ref([]);
 const counts = ref({ confirmado: 0, pendente: 0 });
@@ -96,8 +112,16 @@ const confirmedOrders = computed(() =>
 const pendingOrders = computed(() =>
   items.value.filter((order) => order.status === 'pendente'),
 );
-const showConfirmed = computed(() =>
-  ['', 'confirmado', STORE_FILTER].includes(filter.value),
+const deliveryFilter = computed(
+  () =>
+    DELIVERY_FILTERS[
+      /** @type {keyof typeof DELIVERY_FILTERS} */ (filter.value)
+    ] ?? '',
+);
+const showConfirmed = computed(
+  () =>
+    ['', 'confirmado', STORE_FILTER].includes(filter.value) ||
+    Boolean(deliveryFilter.value),
 );
 const showPending = computed(
   () => filter.value === '' || filter.value === 'pendente',
@@ -448,6 +472,12 @@ watch(newContactPhone, () => {
 
 /** @param {string|null} cursor */
 function listRequest(cursor) {
+  if (deliveryFilter.value) {
+    return {
+      url: `/api/v1/orders?delivery=${deliveryFilter.value}`,
+      options: {},
+    };
+  }
   const params = new globalThis.URLSearchParams({ limit: String(PAGE_SIZE) });
   if (filter.value === STORE_FILTER) params.set('origin', STORE_FILTER);
   else if (filter.value) params.set('status', filter.value);
@@ -580,6 +610,9 @@ function scheduleLiveRefresh() {
 }
 
 watch(query, () => {
+  // A delivery view is a short list in promised order; a search reads every
+  // order again.
+  if (deliveryFilter.value && query.value.trim()) filter.value = '';
   if (searchTimer) globalThis.clearTimeout(searchTimer);
   searchTimer = globalThis.setTimeout(() => {
     searchTimer = 0;

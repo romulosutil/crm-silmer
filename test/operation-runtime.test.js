@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createOperationReadService } from '../apps/api/src/operation-runtime.js';
+import {
+  ASSISTANT_STALL_MINUTES,
+  createOperationReadService,
+} from '../apps/api/src/operation-runtime.js';
+import { PostgresInboxReadRepository } from '../modules/inbox-channels/src/index.js';
 
 /** @param {Array<Record<string, unknown>>} rows */
 function liveService(rows) {
@@ -344,5 +348,91 @@ test('an empty restored event stream resets to zero, while a current cursor does
     cursor: 500,
     events: [],
     reset: false,
+  });
+});
+
+test('Painel: the Inbox summary reads the server clock and maps counts without envelopes', async () => {
+  /** @type {Array<{sql: string, values: unknown[]}>} */
+  const queries = [];
+  const now = new Date('2026-10-15T15:00:00.000Z');
+  const repository = new PostgresInboxReadRepository({
+    contactEnvelopeKey: Buffer.alloc(32, 2),
+    database: {
+      query: async (
+        /** @type {string} */ sql,
+        /** @type {unknown[]} */ values,
+      ) => {
+        queries.push({ sql, values });
+        return /failed_conversation_count/u.test(sql)
+          ? {
+              rows: [
+                {
+                  failed_conversation_count: 1,
+                  last_assistant_reply_at: new Date('2026-10-15T14:58:00Z'),
+                },
+              ],
+            }
+          : {
+              rows: [
+                {
+                  assistant_active_count: 7,
+                  assistant_stalled_count: 2,
+                  mine_awaiting_count: 1,
+                  mine_count: 3,
+                  mine_oldest_awaiting_since: '2026-10-15T14:20:00.000Z',
+                  waiting_count: 4,
+                  waiting_oldest_since: new Date('2026-10-15T09:00:00Z'),
+                  waiting_overdue_count: 1,
+                },
+              ],
+            };
+      },
+    },
+    messageEnvelopeKey: Buffer.alloc(32, 3),
+  });
+  const service = createOperationReadService({
+    clock: () => now,
+    contactRepository: {},
+    cursorKey: Buffer.alloc(32, 1),
+    handoffRepository: {},
+    inboxRepository: repository,
+  });
+  assert.deepEqual(await service.summarizeInbox({ actorId: 'seller-1' }), {
+    assistant: {
+      activeCount: 7,
+      failedDeliveryCount: 1,
+      lastReplyAt: '2026-10-15T14:58:00.000Z',
+      stalledCount: 2,
+      stallMinutes: ASSISTANT_STALL_MINUTES,
+    },
+    generatedAt: '2026-10-15T15:00:00.000Z',
+    mine: {
+      awaitingReplyCount: 1,
+      count: 3,
+      oldestAwaitingSince: '2026-10-15T14:20:00.000Z',
+    },
+    waitingHandoff: {
+      count: 4,
+      oldestSince: '2026-10-15T09:00:00.000Z',
+      overdueCount: 1,
+    },
+  });
+  const [queue, sends] = queries;
+  // The reader, "now" and the stall threshold are bound, never inlined.
+  assert.deepEqual(queue.values, [
+    'seller-1',
+    '2026-10-15T15:00:00.000Z',
+    '2026-10-15T14:50:00.000Z',
+  ]);
+  assert.match(queue.sql, /handoff\.due_at <= \$2::timestamptz/u);
+  assert.match(queue.sql, /conversation\.archived_at IS NULL/u);
+  assert.deepEqual(sends.values, [
+    '2026-10-14T15:00:00.000Z',
+    '2026-10-15T15:00:00.000Z',
+  ]);
+  // Counts only: no message or contact envelope is selected.
+  for (const { sql } of queries) assert.doesNotMatch(sql, /envelope/u);
+  await assert.rejects(service.summarizeInbox({ actorId: '' }), {
+    statusCode: 400,
   });
 });

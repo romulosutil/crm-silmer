@@ -8,6 +8,7 @@ import {
   ref,
   watch,
 } from 'vue';
+import { useRoute } from 'vue-router';
 import OrderDrawer from '../components/order/OrderDrawer.vue';
 import AudioRecorder from '../components/inbox/AudioRecorder.vue';
 import MediaMessage from '../components/inbox/MediaMessage.vue';
@@ -85,8 +86,22 @@ const orderDrawer = ref(null);
 const presenceFilterMenu = ref(null);
 const query = ref('');
 const showArchived = ref(false);
-const presenceFilter = ref('all');
-const queueFilter = ref('all');
+// Painel: each indicator opens the Inbox already filtered
+// (`?fila=minhas|sem-responsavel`, `?situacao=aguardando|agente|vendedor`).
+const route = useRoute();
+const ROUTE_PRESENCE = Object.freeze({
+  agente: 'assistant',
+  aguardando: 'waiting',
+  vendedor: 'human',
+});
+const ROUTE_QUEUE = Object.freeze({
+  minhas: 'mine',
+  'sem-responsavel': 'unassignedHumanHandoff',
+});
+const presenceFilter = ref(
+  ROUTE_PRESENCE[String(route.query.situacao ?? '')] ?? 'all',
+);
+const queueFilter = ref(ROUTE_QUEUE[String(route.query.fila ?? '')] ?? 'all');
 const loading = ref(true);
 const detailLoading = ref(false);
 const busy = ref(false);

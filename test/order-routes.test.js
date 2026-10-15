@@ -70,6 +70,11 @@ function orderHarness(options = {}) {
   const assignments = {
     'conversation-1': 'seller-1',
     'conversation-2': 'seller-1',
+    // Painel: more of the same seller's conversations for the delivery views.
+    'conversation-3': 'seller-1',
+    'conversation-4': 'seller-1',
+    'conversation-5': 'seller-1',
+    'conversation-6': 'seller-1',
     'conversation-empty': null,
   };
   /** @type {Record<string, string|null>} */
@@ -250,6 +255,22 @@ test('summary aggregates all confirmed orders and requires a read session', asyn
     // ADR 031: no site shop order waits for its first print.
     storeNewCount: 0,
     storeNewOldestPaidAt: null,
+    // Painel: the period defaults to today, on the São Paulo day.
+    period: {
+      confirmedCount: 1,
+      from: '2026-09-12',
+      key: 'hoje',
+      soldAmountCents: 482000,
+      timeZone: 'America/Sao_Paulo',
+      to: '2026-09-12',
+    },
+    deliveries: {
+      dueSoonCount: 0,
+      dueSoonUntil: '2026-09-18',
+      oldestOverdueOn: null,
+      overdueCount: 0,
+    },
+    today: '2026-09-12',
   });
   const denied = orderHarness({ readActor: null });
   const blocked = await denied.api.inject({
@@ -258,6 +279,95 @@ test('summary aggregates all confirmed orders and requires a read session', asyn
     url: '/api/v1/orders/summary',
   });
   assert.equal(blocked.statusCode, 403);
+});
+
+test('Painel: the summary reads a period and the server works out overdue and upcoming deliveries', async () => {
+  const { api, runtime } = orderHarness();
+  // The harness clock reads 12/09/2026 in São Paulo.
+  const late = await createConfirmed(runtime, 'conversation-1', {
+    ...PROMISED_SUMMARY,
+    data_entrega_confirmada: '2026-09-10',
+  });
+  const later = await createConfirmed(runtime, 'conversation-2', {
+    ...PROMISED_SUMMARY,
+    data_entrega_confirmada: '2026-09-11',
+  });
+  const soon = await createConfirmed(runtime, 'conversation-3', {
+    ...PROMISED_SUMMARY,
+    data_entrega_confirmada: '2026-09-18',
+  });
+  await createConfirmed(runtime, 'conversation-4', {
+    ...PROMISED_SUMMARY,
+    data_entrega_confirmada: '2026-09-19',
+  });
+  // A promised day already delivered is no longer late.
+  const delivered = await createConfirmed(runtime, 'conversation-5', {
+    ...PROMISED_SUMMARY,
+    data_entrega_confirmada: '2026-09-01',
+  });
+  await runtime.recordMilestones({
+    ...seed({}),
+    deliveredOn: '2026-09-02',
+    expectedVersion: delivered.version,
+    orderId: delivered.id,
+    paidOn: null,
+  });
+  await createPending(runtime, 'conversation-6');
+
+  const summary = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: '/api/v1/orders/summary?period=mes',
+  });
+  assert.equal(summary.statusCode, 200);
+  const body = summary.json();
+  assert.deepEqual(body.deliveries, {
+    dueSoonCount: 1,
+    dueSoonUntil: '2026-09-18',
+    oldestOverdueOn: '2026-09-10',
+    overdueCount: 2,
+  });
+  assert.equal(body.period.key, 'mes');
+  assert.equal(body.period.from, '2026-09-01');
+  assert.equal(body.period.to, '2026-09-12');
+  assert.equal(body.period.confirmedCount, 5);
+  assert.equal(body.period.soldAmountCents, 5 * 482000);
+
+  const overdue = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: '/api/v1/orders?delivery=overdue',
+  });
+  assert.equal(overdue.statusCode, 200);
+  assert.deepEqual(
+    overdue.json().items.map((/** @type {any} */ order) => order.id),
+    [late.id, later.id],
+  );
+  assert.deepEqual(overdue.json().counts, { confirmado: 2, pendente: 0 });
+  assert.equal(overdue.json().nextCursor, null);
+  const upcoming = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: '/api/v1/orders?delivery=due_soon',
+  });
+  assert.deepEqual(
+    upcoming.json().items.map((/** @type {any} */ order) => order.id),
+    [soon.id],
+  );
+
+  for (const url of [
+    '/api/v1/orders/summary?period=ano',
+    '/api/v1/orders/summary?from=2026-01-01',
+    '/api/v1/orders?delivery=late',
+    '/api/v1/orders?delivery=overdue&status=pendente',
+  ]) {
+    const rejected = await api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url,
+    });
+    assert.equal(rejected.statusCode, 400, url);
+  }
 });
 
 test('orders expose last-message delivery state without message content', async () => {

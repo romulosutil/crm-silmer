@@ -1,6 +1,8 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { readdir, readFile } from 'node:fs/promises';
 
+import { brand } from '../../apps/edge-web/src/brand/index.js';
 import {
   confirmedOrder,
   eventStreamBody,
@@ -10,6 +12,27 @@ import {
   pendingOrder,
   syntheticFile,
 } from './support/orders-mock.js';
+
+/**
+ * PFI-20: the controls that add art files — the drop area's button while
+ * there are none, then the grid's last tile; never both.
+ *
+ * @param {import('@playwright/test').Locator} scope
+ */
+function addFileControls(scope) {
+  return scope.getByRole('button', { name: /^Adicionar arquivo/u });
+}
+
+/**
+ * The tiles of the art files themselves, without the tile that adds one.
+ *
+ * @param {import('@playwright/test').Locator} files
+ */
+function fileTiles(files) {
+  return files.getByRole('listitem').filter({
+    hasNot: files.page().getByRole('button', { name: /^Adicionar arquivo/u }),
+  });
+}
 
 test('opens the order page inside Pedidos, with the trail and the sections in order', async ({
   page,
@@ -40,15 +63,15 @@ test('opens the order page inside Pedidos, with the trail and the sections in or
     page.getByRole('link', { name: 'Abrir conversa' }),
   ).toHaveAttribute('href', '/inbox/conversation-7');
 
-  // PFI-15: the real progress to generate opens the page.
+  // PFI-15: the real progress to generate opens the page. PFI-20: the words
+  // of the screen, and no production control (it is only on paper).
   await expect(page.locator('main h2')).toHaveText([
     'Para gerar o pedido',
     'Resumo do pedido',
-    'Lastro do pedido',
+    'Datas do pedido',
     'Itens e especificações',
-    'Estampa e arquivos',
+    'Arte do pedido',
     'Observações do pedido',
-    'Controle de produção',
     'Dados do atendimento',
     'Fechamento e pagamento',
   ]);
@@ -188,7 +211,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   await progress
     .getByRole('button', { name: 'Marcar quem faz a arte' })
     .click();
-  const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
+  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
   await expect(artwork.getByLabel('O cliente envia a arte')).toBeFocused();
   await artwork.getByLabel('Sem estampa').check();
   await artwork.getByRole('button', { name: 'Salvar arte' }).click();
@@ -201,7 +224,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   // The paid day stays empty: generating means paid until the CRM handles
   // payments.
   await expect(
-    page.getByRole('region', { name: 'Lastro do pedido' }),
+    page.getByRole('region', { name: 'Datas do pedido' }),
   ).toContainText('Pago em');
   await closing.getByRole('button', { name: 'Gerar pedido' }).click();
   await expect(
@@ -553,7 +576,7 @@ test('records who makes the art next to an empty file area (TEC-03, ARQ-01)', as
   await mockOrders(page, { onWrite: (call) => writes.push(call) });
   await page.goto('/pedidos/order-pendente');
 
-  const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
+  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
   await expect(artwork).toContainText('O cliente envia a arte');
   await expect(artwork).not.toContainText('Dropbox');
   await expect(
@@ -565,9 +588,13 @@ test('records who makes the art next to an empty file area (TEC-03, ARQ-01)', as
   await expect(artwork).toContainText('0 de 5');
   await expect(artwork).toContainText('PNG, JPEG, WebP, CDR');
 
+  // PFI-20: one control adds files; with none yet, the drop area's button.
+  await expect(addFileControls(artwork)).toHaveCount(1);
+
   await artwork.getByRole('button', { name: 'Editar' }).click();
   const client = artwork.getByLabel('O cliente envia a arte');
-  const silmer = artwork.getByLabel('A Silmer cria a arte');
+  // PFI-20 (ADR 035): the company's name comes from the brand.
+  const silmer = artwork.getByLabel(`A ${brand.companyName} cria a arte`);
   const plain = artwork.getByLabel('Sem estampa');
   await expect(client).toBeFocused();
   await expect(client).toBeChecked();
@@ -580,7 +607,7 @@ test('records who makes the art next to an empty file area (TEC-03, ARQ-01)', as
   await artwork.getByRole('button', { name: 'Salvar arte' }).click();
 
   await expect(artwork).toContainText(
-    'O cliente envia a arte · A Silmer cria a arte',
+    `O cliente envia a arte · A ${brand.companyName} cria a arte`,
   );
   expect(writes).toHaveLength(1);
   expect(writes[0]).toEqual({
@@ -609,7 +636,7 @@ test('a seller sends art files and the final art, then removes one by keyboard (
     onUpload: (/** @type {any} */ call) => uploads.push(call),
   });
   await page.goto('/pedidos/order-pendente');
-  const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
+  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
 
   const chooser = page.waitForEvent('filechooser');
   await artwork
@@ -627,8 +654,13 @@ test('a seller sends art files and the final art, then removes one by keyboard (
   ]);
 
   const files = artwork.getByRole('region', { name: 'Arquivos da arte' });
-  await expect(files.getByRole('listitem')).toHaveCount(2);
+  await expect(fileTiles(files)).toHaveCount(2);
   await expect(files).toContainText('2 de 5');
+  // PFI-20: with files, the grid's last tile is the one control that adds.
+  await expect(addFileControls(artwork)).toHaveCount(1);
+  await expect(addFileControls(artwork)).toHaveAccessibleName(
+    /^Adicionar arquivo 3 vagas/u,
+  );
   await expect(files.getByText('CDR', { exact: true })).toBeVisible();
   await expect(
     files.getByRole('link', { name: 'Baixar logo-frente.png' }),
@@ -670,11 +702,12 @@ test('a seller sends art files and the final art, then removes one by keyboard (
   await expect(remove).toBeFocused();
   await page.keyboard.press('Enter');
   await confirm.getByRole('button', { name: 'Remover' }).click();
-  await expect(files.getByRole('listitem')).toHaveCount(1);
+  await expect(fileTiles(files)).toHaveCount(1);
   await expect(files).toContainText('1 de 5');
   await expect(
     files.getByRole('link', { name: 'Baixar brasao.cdr' }),
   ).toBeFocused();
+  await expect(addFileControls(artwork)).toHaveCount(1);
   expect(removed).toHaveLength(1);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
@@ -700,9 +733,7 @@ test('refuses files over 10 MB, outside the formats or past five (ARQ-03)', asyn
   await expect(files).toContainText('4 de 5');
 
   const chooser = page.waitForEvent('filechooser');
-  await files
-    .getByRole('button', { name: 'Adicionar arquivos da arte' })
-    .click();
+  await files.getByRole('button', { name: 'Adicionar arquivo' }).click();
   await (
     await chooser
   ).setFiles([
@@ -736,8 +767,10 @@ test('refuses files over 10 MB, outside the formats or past five (ARQ-03)', asyn
   await expect(alerts.nth(2)).toContainText('“b.pdf” ficou de fora');
   await expect(files).toContainText('5 de 5');
   await expect(files).toContainText('Limite de 5 arquivos atingido');
+  // PFI-20: still one control that adds, now disabled for lack of slots.
+  await expect(addFileControls(files)).toHaveCount(1);
   await expect(
-    files.getByRole('button', { name: 'Adicionar arquivos da arte' }),
+    files.getByRole('button', { name: 'Adicionar arquivo' }),
   ).toBeDisabled();
   expect(uploads.map((call) => call.filename)).toEqual(['a.pdf']);
   await expect(
@@ -757,7 +790,7 @@ test('a confirmed order only downloads its art files (ARQ-06)', async ({
     },
   });
   await page.goto('/pedidos/order-confirmado');
-  const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
+  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
   await expect(artwork).toContainText('arte-final.cdr');
   await expect(
     artwork.getByRole('link', { name: 'Baixar arte final arte-final.cdr' }),
@@ -776,6 +809,78 @@ test('a confirmed order only downloads its art files (ARQ-06)', async ({
   await expect(artwork).toContainText('Arquivos da arte');
   await expect(artwork.getByText('1', { exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+for (const width of [390, 1280]) {
+  test(`says "Arte do pedido" with one control to add files at ${width}px (PFI-20)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await mockOrders(page, {
+      files: {
+        'order-pendente': {
+          final: null,
+          references: [1, 2].map((index) =>
+            syntheticFile(`ref-${index}.pdf`, 'reference', index),
+          ),
+        },
+      },
+    });
+    await page.goto('/pedidos/order-pendente');
+
+    const artwork = page.getByRole('region', { name: 'Arte do pedido' });
+    await expect(
+      artwork.getByRole('heading', { level: 2, name: 'Arte do pedido' }),
+    ).toBeVisible();
+    // Fixed hints tell the final art from the reference files (ARQ-01, ARQ-04).
+    await expect(
+      artwork.getByRole('region', { name: 'Arte final' }),
+    ).toHaveAccessibleDescription('A versão aprovada que vai para a produção.');
+    await expect(
+      artwork.getByRole('region', { name: 'Arquivos da arte' }),
+    ).toHaveAccessibleDescription(
+      /^Referências e rascunhos; não vão para a produção\. Até 5 arquivos/u,
+    );
+
+    const add = addFileControls(artwork);
+    await expect(add).toHaveCount(1);
+    await expect(add).toBeVisible();
+    await expect(add).toHaveAccessibleName(/^Adicionar arquivo 3 vagas/u);
+    const box = await add.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    await expect(
+      page.getByRole('button', { name: 'Enviar arte final' }),
+    ).toHaveCSS('min-block-size', width < 640 ? '44px' : '40px');
+
+    await page.getByRole('button', { name: 'Editar arte' }).click();
+    await expect(
+      artwork.getByLabel(`A ${brand.companyName} cria a arte`),
+    ).toBeVisible();
+    await expect(artwork.locator('#order-artwork-source-hint')).toHaveText(
+      `Obrigatório para gerar. O cliente e a ${brand.companyName} podem ser marcados juntos; “Sem estampa” vale sozinho.`,
+    );
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+}
+
+test('no order component writes the company name itself (PFI-20, ADR 035)', async () => {
+  const sources = new URL('../../apps/edge-web/src/', import.meta.url);
+  const files = [
+    ...(await readdir(new URL('components/order/', sources)))
+      .filter((name) => name.endsWith('.vue'))
+      .map((name) => new URL(`components/order/${name}`, sources)),
+    new URL('views/OrderView.vue', sources),
+  ];
+  expect(files.length).toBeGreaterThan(10);
+  for (const file of files) {
+    const code = (await readFile(file, 'utf8'))
+      .replaceAll(/<!--[\s\S]*?-->/gu, '')
+      .replaceAll(/\/\*[\s\S]*?\*\//gu, '')
+      .replaceAll(/(^|[^:])\/\/.*$/gmu, '$1');
+    // Comments may cite the pilot; code and templates take `brand`.
+    expect(code, file.pathname).not.toContain(brand.companyName);
+  }
 });
 
 test('requires a technique for each item before the seller can generate the order (TEC-01)', async ({
@@ -868,7 +973,7 @@ test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', as
   await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(1);
   await expect(
     page
-      .getByRole('region', { name: 'Lastro do pedido' })
+      .getByRole('region', { name: 'Datas do pedido' })
       .getByRole('button', { name: 'Editar' }),
   ).toBeVisible();
 });
@@ -879,7 +984,7 @@ test('shows the three trail dates without repeating the summary (PLA-01..03, PLA
   await mockOrders(page);
   await page.goto('/pedidos/order-confirmado');
 
-  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  const trail = page.getByRole('region', { name: 'Datas do pedido' });
   await expect(trail).toContainText('2 de 3 datas');
   await expect(trail.getByRole('listitem')).toHaveText([
     /Primeiro contato\s*02\/09\/2026\s*vem da conversa/u,
@@ -908,7 +1013,7 @@ test('records payment and delivery on a confirmed order without reopening it (PL
   await page.clock.setFixedTime(new Date('2026-09-20T15:00:00.000Z'));
   await page.goto('/pedidos/order-confirmado');
 
-  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  const trail = page.getByRole('region', { name: 'Datas do pedido' });
   await trail.getByRole('button', { name: 'Editar' }).click();
   await expect(trail.getByLabel('Pago em')).toBeFocused();
   await expect(trail.getByLabel('Pago em')).toHaveValue('2026-09-10');
@@ -951,7 +1056,7 @@ test('clears a recorded day and refuses a day after today, next to the field (PL
   await page.clock.setFixedTime(new Date('2026-09-20T15:00:00.000Z'));
   await page.goto('/pedidos/order-confirmado');
 
-  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  const trail = page.getByRole('region', { name: 'Datas do pedido' });
   await trail.getByRole('button', { name: 'Editar' }).click();
   await trail.getByLabel('Entregue em').fill('2026-09-21');
   await trail.getByRole('button', { name: 'Salvar datas' }).click();
@@ -979,7 +1084,7 @@ test('names the day the server refused as invalid', async ({ page }) => {
   });
   await page.goto('/pedidos/order-pendente');
 
-  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  const trail = page.getByRole('region', { name: 'Datas do pedido' });
   await trail.getByRole('button', { name: 'Editar' }).click();
   await trail.getByLabel('Pago em').fill('2026-09-11');
   await trail.getByRole('button', { name: 'Salvar datas' }).click();
@@ -1474,9 +1579,9 @@ test('heads each section with its state in words and "Editar" naming the section
   await page.goto('/pedidos/order-pendente');
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
-  const trail = page.getByRole('region', { name: 'Lastro do pedido' });
+  const trail = page.getByRole('region', { name: 'Datas do pedido' });
   const items = page.getByRole('region', { name: 'Itens e especificações' });
-  const artwork = page.getByRole('region', { name: 'Estampa e arquivos' });
+  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
   const observations = page.getByRole('region', {
     name: 'Observações do pedido',
   });
@@ -1762,16 +1867,21 @@ test('drops a blank observation instead of storing an empty line', async ({
   expect(writes[0].body.value).toEqual(['Separar os itens por tamanho.']);
 });
 
-test('shows production as informative and service data as not printed (PFI-08)', async ({
+test('leaves production to the printed ficha and shows service data as not printed (PFI-08, PFI-20)', async ({
   page,
 }) => {
   await mockOrders(page);
   await page.goto('/pedidos/order-pendente');
 
-  const production = page.getByRole('region', { name: 'Controle de produção' });
-  await expect(production).toContainText('14 campos');
-  await expect(production).toContainText('saem em branco');
-  await expect(production.getByRole('button')).toHaveCount(0);
+  // PFI-20: the production control is filled by hand on page 2 of the
+  // printed ficha; the page has no block, nor a button, for it.
+  await expect(page.locator('main')).toContainText('Dados do atendimento');
+  await expect(
+    page.getByRole('region', { name: 'Controle de produção' }),
+  ).toHaveCount(0);
+  await expect(page.locator('main')).not.toContainText(
+    /controle de produção/iu,
+  );
 
   const service = page.getByRole('region', { name: 'Dados do atendimento' });
   await expect(service).toContainText('não saem na ficha impressa');
@@ -1781,6 +1891,15 @@ test('shows production as informative and service data as not printed (PFI-08)',
   await expect(service).toContainText('Salvador/BA');
   await expect(service).toContainText('Uso próprio');
   await expect(service.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+
+  // The ficha card of a generated order still says it prints the control.
+  await page.goto('/pedidos/order-confirmado');
+  await expect(
+    page.getByRole('region', { name: 'Fechamento e pagamento' }),
+  ).toContainText('2 páginas · pedido e controle de produção');
+  await expect(
+    page.getByRole('region', { name: 'Controle de produção' }),
+  ).toHaveCount(0);
 });
 
 test('keeps the sections in the order of the printed ficha (PFI-01, PLA-01)', async ({
@@ -1790,14 +1909,15 @@ test('keeps the sections in the order of the printed ficha (PFI-01, PLA-01)', as
   await page.goto('/pedidos/order-pendente');
 
   // PFI-15: the progress to generate comes before the sections of the ficha.
+  // PFI-20: the ficha's order, in the words of the screen; the production
+  // control stays on the printed ficha only.
   await expect(page.locator('main h2')).toHaveText([
     'Para gerar o pedido',
     'Resumo do pedido',
-    'Lastro do pedido',
+    'Datas do pedido',
     'Itens e especificações',
-    'Estampa e arquivos',
+    'Arte do pedido',
     'Observações do pedido',
-    'Controle de produção',
     'Dados do atendimento',
     'Fechamento e pagamento',
   ]);
@@ -1937,7 +2057,7 @@ test('names each blocker the server refused the confirmation with', async ({
     'Complete os itens antes de gerar: cor do item 1 e gola do item 1.',
   );
   await expect(closing).toContainText(
-    'Marque quem faz a arte em Estampa e arquivos.',
+    'Marque quem faz a arte em Arte do pedido.',
   );
   await expect(closing).toContainText('pedido pendente');
 });

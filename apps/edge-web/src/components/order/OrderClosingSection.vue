@@ -21,7 +21,7 @@ import OrderIcon from './OrderIcon.vue';
 // PCL-05: what each blocker outside the items means to the seller when the
 // server refuses it; the item points are named one by one (PIT-06).
 const BLOCKER_MESSAGES = Object.freeze({
-  artwork: 'Marque quem faz a arte em Estampa e arquivos.',
+  artwork: 'Marque quem faz a arte em Arte do pedido.',
   finalAmount: 'Informe o valor final aprovado pelo cliente.',
   paymentCondition: 'Escolha a forma de pagamento.',
   'summary.data_entrega_confirmada':

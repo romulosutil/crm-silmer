@@ -980,10 +980,6 @@ button.op-save:hover:not(:disabled) {
   block-size: 0.85rem;
 }
 
-.op-files-add-head {
-  margin-inline-start: auto;
-}
-
 a.op-files-button,
 button.op-files-button,
 button.op-files-quiet {
@@ -1288,10 +1284,8 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
   border-radius: var(--radius-md);
 }
 
-.op-files-add-tile {
-  display: none;
-}
-
+/* PFI-20: the grid's last tile is the only "Adicionar arquivo" once there are
+   files, at every width. */
 .op-files-add-tile button {
   display: grid;
   place-items: center;
@@ -1312,6 +1306,11 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
   color: var(--color-text-muted);
   font-size: var(--text-xs);
   font-weight: 400;
+}
+
+.op-files-add-tile button:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
 }
 
 .op-final {
@@ -1394,12 +1393,13 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  button.op-files-add-head {
-    display: none;
-  }
-
-  .op-files-add-tile {
-    display: block;
+  /* Thumb targets for the art's text buttons (Enviar arte final, Baixar,
+     Substituir, Tentar de novo). */
+  a.op-files-button,
+  button.op-files-button,
+  button.op-files-quiet,
+  .op-files-drop button {
+    min-block-size: var(--target-min);
   }
 
   .op-final {
@@ -1794,23 +1794,6 @@ button.op-extras-toggle:hover {
 }
 
 /* Production and service data */
-.op-strip {
-  padding: 1rem 1.25rem;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-}
-
-.op-strip h2 {
-  margin: 0 0 0.2rem;
-  font-size: var(--text-base);
-}
-
-.op-strip p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-}
-
 .op-service {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));

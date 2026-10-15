@@ -318,7 +318,8 @@ async function remove(file) {
     const next = isFinal
       ? null
       : references.value[Math.min(position, references.value.length - 1)];
-    // On a phone the heading button is hidden and the grid tile adds.
+    // With no file left the drop area's button adds; while an upload is
+    // still on the grid, its last tile does (PFI-20).
     const adder = addButton.value?.offsetParent
       ? addButton.value
       : addTile.value;
@@ -372,7 +373,11 @@ onBeforeUnmount(() => {
     </div>
 
     <template v-else>
-      <section class="op-files-block" aria-labelledby="order-final-art-title">
+      <section
+        class="op-files-block"
+        aria-labelledby="order-final-art-title"
+        aria-describedby="order-final-art-hint"
+      >
         <div class="op-files-head">
           <h3 id="order-final-art-title">Arte final</h3>
           <span class="op-files-tag" :data-tone="final ? 'success' : 'warning'">
@@ -381,6 +386,10 @@ onBeforeUnmount(() => {
             }}
           </span>
         </div>
+        <!-- PFI-20: a fixed hint tells the final art from the art files. -->
+        <p id="order-final-art-hint" class="op-hint">
+          A versão aprovada que vai para a produção.
+        </p>
 
         <div v-if="finalUpload" class="op-final" data-state="busy">
           <div class="op-file-thumb">
@@ -527,8 +536,8 @@ onBeforeUnmount(() => {
           <p>
             <strong>Nenhuma arte final enviada</strong>
             <template v-if="canChange"
-              >A versão aprovada que vai para a produção. Um arquivo, até 10 MB;
-              não conta nos 5 arquivos da arte.</template
+              >Um arquivo, até 10 MB; não conta nos 5 arquivos da
+              arte.</template
             >
           </p>
           <button
@@ -556,19 +565,12 @@ onBeforeUnmount(() => {
           <span class="op-files-count" :data-full="full || undefined">{{
             countLabel
           }}</span>
-          <button
-            v-if="canChange && !showDropzone"
-            ref="addButton"
-            type="button"
-            class="op-files-button op-files-add-head"
-            :disabled="full"
-            @click="choose('reference')"
-          >
-            <OrderIcon name="plus" />Adicionar arquivos da arte
-          </button>
         </div>
+        <!-- PFI-20: one control adds files at a time — the drop area while
+             there are none, then the last tile of the grid. -->
         <p id="order-artwork-files-hint" class="op-hint">
-          Até 5 arquivos, 10 MB cada · {{ FORMATS_LABEL }}.
+          Referências e rascunhos; não vão para a produção. Até 5 arquivos, 10
+          MB cada · {{ FORMATS_LABEL }}.
         </p>
 
         <p v-if="full" class="op-files-alert" data-tone="warning">
@@ -750,10 +752,16 @@ onBeforeUnmount(() => {
             </div>
           </li>
 
-          <li v-if="canChange && freeSlots > 0" class="op-files-add-tile">
-            <button ref="addTile" type="button" @click="choose('reference')">
-              <OrderIcon name="plus" />Adicionar
-              <small
+          <li v-if="canChange" class="op-files-add-tile">
+            <button
+              ref="addTile"
+              type="button"
+              :disabled="full"
+              @click="choose('reference')"
+            >
+              <OrderIcon name="plus" />Adicionar arquivo
+              <small v-if="full">Sem vagas</small>
+              <small v-else
                 >{{ freeSlots }} {{ freeSlots === 1 ? 'vaga' : 'vagas' }} · 10
                 MB cada</small
               >

@@ -49,3 +49,16 @@ O repasse humano por texto usa a caixa de entrada do CRM e a consulta de
 mensagens da mesma sessão pelo widget; áudio do vendedor fica indisponível
 nesse canal até existir entrega de mídia no chat.
 Publicação e homologação do chat são gates separados.
+
+## CP-T07 — Continuar cliente conhecido pelo WhatsApp
+
+**Requisitos:** CP-23..24 e CP-19..22. Após aprovação operacional da Meta e
+de um modelo de mensagem, coletar no site consentimento específico para a
+Silmer chamar o visitante no WhatsApp. Para uma coincidência única de telefone,
+reservar uma abertura idempotente e encaminhar o atendimento à Inbox; somente
+após a reserva autorizada o chat anuncia “Vou te chamar no WhatsApp”. A resposta
+WhatsApp confirma o número e permite vincular, com auditoria, as identidades
+ao mesmo Contato, preservando Conversas separadas e a propriedade dos Pedidos.
+Tratar duplicatas, ausência de consentimento, indisponibilidade, falha ou
+resultado incerto de envio, replay e resposta de outro número. O piloto CP-T06
+continua atendendo pelo chat do site até esses gates estarem homologados.

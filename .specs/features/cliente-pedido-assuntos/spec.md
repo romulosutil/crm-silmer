@@ -82,3 +82,16 @@ Decisão: [RFC 019](../../../docs/rfc/019-cliente-pedido-manual-e-assuntos.md) /
   na caixa de entrada do CRM e o visitante recebe a resposta na mesma sessão
   do chat. O identificador aleatório da sessão permite consultar apenas as
   mensagens daquela conversa, sem usar o telefone declarado para essa leitura.
+- **CP-23:** Depois de a Meta liberar o envio iniciado pela Silmer, um visitante
+  do chat do site com telefone correspondente a um único cliente existente
+  pode optar expressamente por continuar no WhatsApp. O CRM só anuncia
+  “Vou te chamar no WhatsApp” quando a abertura da conversa estiver autorizada
+  e reservada de modo idempotente. O primeiro envio usa um modelo aprovado;
+  falha, indisponibilidade ou coincidência ambígua mantém o atendimento no
+  chat do site e encaminha à equipe, sem promessa de envio.
+- **CP-24:** A resposta recebida no WhatsApp ao contato iniciado confirma o
+  controle do número. Só então uma correlação auditada pode vincular a
+  identidade do chat ao mesmo Contato da identidade WhatsApp. As Conversas
+  continuam separadas por canal, mas o histórico e os Pedidos passam a
+  pertencer ao cliente correto no CRM. Antes dessa confirmação, o número
+  digitado no site não libera histórico nem altera Pedido anterior.

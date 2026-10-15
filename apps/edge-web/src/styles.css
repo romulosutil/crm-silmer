@@ -822,7 +822,8 @@ html[data-theme='dark'] .sidebar-account-avatar {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-overlay);
 }
-/* Pesquisa UX 2026-10-15, achado 6: what a person just did, seen. */
+/* Pesquisa UX 2026-10-15, achado 6: what a person just did, seen. Success
+   is the icon on its tinted disc plus the words; no coloured side stripe. */
 .notice-toast-region {
   position: fixed;
   z-index: 50;
@@ -838,7 +839,6 @@ html[data-theme='dark'] .sidebar-account-avatar {
   color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-inline-start: 3px solid var(--status-success-text);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-overlay);
   pointer-events: auto;
@@ -846,9 +846,13 @@ html[data-theme='dark'] .sidebar-account-avatar {
 }
 .notice-toast > .app-icon {
   flex: none;
-  inline-size: 1.25rem;
-  block-size: 1.25rem;
+  box-sizing: border-box;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  padding: 0.25rem;
   color: var(--status-success-text);
+  background: var(--status-success-surface);
+  border-radius: var(--radius-pill);
 }
 .notice-toast-message {
   flex: 1 1 auto;

@@ -769,14 +769,23 @@ repeti-los após publicar a versão.
 Em 15/10/2026, a versão `mvp-simple-18` foi publicada no workflow de produção.
 Um POST sintético ao webhook do chat retornou `200` com resposta da IA; repetir
 o mesmo `message_id` e corpo retornou `200` com confirmação breve, sem novo
-inbound nem segunda resposta da IA na Inbox. Isso valida a ativação e o replay
-do chat do site, mas não substitui a homologação de dois Pedidos ativos, troca
-de Assunto e retomada em outro ciclo no canal real. O repasse humano CRM→site
-permanece pendente: uma tentativa sintética posterior foi registrada no CRM,
-mas falhou com `N8N_COMMAND_HTTP_403` e não apareceu no widget. Antes de
-repetir o teste, confira no worker as três variáveis de comando contra a URL
-de produção `/webhook/silmer/panel-command` e a credencial Basic selecionada
-no nó `Painel - Receber comando (MVP)`; não registre os valores secretos.
+inbound nem segunda resposta da IA na Inbox. O repasse humano CRM→site foi
+retomado após corrigir `N8N_COMMAND_CLIENT_ID` no novo contêiner do worker:
+uma chamada do próprio worker com comando vazio recebeu `400`, indicando que
+a autenticação Basic passou. O operador confirmou que a resposta sintética
+`QA-1510-06` saiu da Caixa de Entrada sem aviso de falha e apareceu uma única
+vez no mesmo chat. Isso valida replay do chat e resposta humana por texto, mas
+não substitui a homologação de dois Pedidos ativos, troca de Assunto e retomada
+em outro ciclo no canal real. Não registrar o segredo nem repetir mensagens
+anteriores marcadas como falhas sem reconciliação.
+
+Na mesma data, outra sessão sintética do chat iniciou um Pedido de 12
+camisetas. Ao receber "Agora quero outro pedido de bonés, separado das
+camisetas", o agente respondeu que um vendedor continuaria o atendimento
+para não misturar os pedidos. A resposta visível confirma o handoff do
+workflow para a troca de intenção; a conferência dos briefings e da Ficha no
+CRM ainda é necessária. Os cenários com dois Pedidos vinculados à mesma
+Conversa e com retomada em outro ciclo continuam sem evidência de canal.
 
 Na ativação de 15/10/2026, a importação pelo CLI e o comando
 `n8n publish:workflow` deixaram o workflow marcado como ativo, mas o webhook

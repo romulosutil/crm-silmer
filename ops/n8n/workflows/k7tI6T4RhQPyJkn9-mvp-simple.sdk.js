@@ -11,7 +11,7 @@ import {
 } from '@n8n/workflow-sdk';
 
 const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-const WORKFLOW_VERSION = 'mvp-simple-15';
+const WORKFLOW_VERSION = 'mvp-simple-16';
 
 // ADR 034: site sessions have a separate channel and a reversible synthetic
 // identity. They never borrow a contact's earlier history from a typed phone.
@@ -1822,6 +1822,9 @@ const siteContact = $json.metadata?.site_contact ?? null;
 if (!siteContact || typeof siteContact.name !== 'string' || typeof siteContact.phone !== 'string') throw new Error('SITE_CHAT_CONTACT_REQUIRED');
 const messageId = String($json.metadata?.site_message_id ?? '').trim().toLowerCase();
 if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(messageId)) throw new Error('SITE_CHAT_MESSAGE_ID_REQUIRED');
+const messageAt = $json.metadata?.site_message_at;
+const parsedAt = typeof messageAt === 'string' ? Date.parse(messageAt) : NaN;
+if (messageAt !== undefined && (!Number.isFinite(parsedAt) || new Date(parsedAt).toISOString() !== messageAt)) throw new Error('SITE_CHAT_MESSAGE_AT_INVALID');
 const text = String($json.chatInput ?? '').trim().slice(0, 2000);
 // Only the first file is read; the others stay out of the turn.
 const entry = Object.entries($input.item.binary ?? {})[0];
@@ -1831,9 +1834,11 @@ const fileType = !file ? null : mimeType.startsWith('image/') ? 'image'
   : mimeType.startsWith('audio/') ? 'audio' : mimeType.startsWith('video/') ? 'video' : 'document';
 if (!text && !file) throw new Error('SITE_CHAT_MESSAGE_REQUIRED');
 // The browser reuses this ID when retrying the same POST; a new user message
-// must have a new ID even if the text is identical.
+// must have a new ID even if the text is identical. Its original timestamp
+// must also survive retries because the CRM fingerprints occurred_at.
 const eventId = 'site-' + session + '-' + messageId;
-const message = { from: siteId, id: eventId, timestamp: String(Math.floor(Date.now() / 1000)) };
+const timestamp = messageAt === undefined ? Date.now() : parsedAt;
+const message = { from: siteId, id: eventId, timestamp: String(Math.floor(timestamp / 1000)) };
 if (fileType) {
   message.type = fileType;
   message[fileType] = { id: eventId + '-file', mime_type: mimeType, ...(fileType === 'document' ? { filename: String(file.fileName ?? 'arquivo').slice(0, 255) } : {}), ...(text ? { caption: text } : {}) };
@@ -1918,7 +1923,11 @@ const routePanelCommand = switchCase({
             'site_chat',
             'Responder no chat do site',
           ),
-          stringRule('{{ $json.kind }}', 'site_chat_media', 'Mídia do site indisponível'),
+          stringRule(
+            '{{ $json.kind }}',
+            'site_chat_media',
+            'Mídia do site indisponível',
+          ),
         ],
       },
       options: { fallbackOutput: 'extra', renameFallbackOutput: 'Inválido' },

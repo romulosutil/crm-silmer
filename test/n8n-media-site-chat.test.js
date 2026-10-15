@@ -160,6 +160,7 @@ test('the site chat uses a unique synthetic session and keeps name and phone sep
   const metadata = {
     site_contact: { name: 'Ana Sintética', phone: '5527999991234' },
     site_message_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    site_message_at: '2026-10-14T12:34:56.000Z',
   };
   const sessionId = '11111111-1111-4111-8111-111111111111';
 
@@ -195,6 +196,11 @@ test('the site chat uses a unique synthetic session and keeps name and phone sep
     replay.json.entry[0].changes[0].value.messages[0].id,
     value.messages[0].id,
   );
+  assert.equal(value.messages[0].timestamp, '1791981296');
+  assert.equal(
+    replay.json.entry[0].changes[0].value.messages[0].timestamp,
+    value.messages[0].timestamp,
+  );
   assert.notEqual(
     again.json.entry[0].changes[0].value.messages[0].id,
     value.messages[0].id,
@@ -218,6 +224,7 @@ test('the site chat uses a unique synthetic session and keeps name and phone sep
   assert.equal(inbound.provider, 'site');
   assert.deepEqual(inbound.contact, { external_id: siteId });
   assert.deepEqual(inbound.site_contact, metadata.site_contact);
+  assert.equal(inbound.occurred_at, metadata.site_message_at);
 
   // An uploaded file is the message; the binary goes along for the model.
   const file = {
@@ -259,6 +266,15 @@ test('the site chat uses a unique synthetic session and keeps name and phone sep
         chatInput: 'Oi',
       }),
     /SITE_CHAT_MESSAGE_ID_REQUIRED/u,
+  );
+  assert.throws(
+    () =>
+      event({
+        sessionId,
+        metadata: { ...metadata, site_message_at: 'ontem' },
+        chatInput: 'Oi',
+      }),
+    /SITE_CHAT_MESSAGE_AT_INVALID/u,
   );
 });
 

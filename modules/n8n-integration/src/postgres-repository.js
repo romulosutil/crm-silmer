@@ -163,7 +163,7 @@ export class PostgresN8nIntegrationRepository {
            AND identity.provider_account_id = 'silmer-site'
            AND identity.channel = 'site_chat'
            AND identity.external_identity_lookup_hash = $1
-           AND conversation.channel = 'site_chat'
+           AND identity.channel = 'site_chat'
            AND message.message_type = 'text'
            AND ((message.direction = 'inbound' AND message.status = 'received')
              OR (message.direction = 'outbound'

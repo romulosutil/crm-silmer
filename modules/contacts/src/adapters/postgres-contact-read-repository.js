@@ -95,7 +95,8 @@ export class PostgresContactReadRepository {
            LEFT JOIN crm.contact_identities identity
              ON identity.current_contact_id=contact_page.id
            LEFT JOIN LATERAL (
-             SELECT id, version, details_envelope
+             SELECT site_claim.id, site_claim.version,
+                    site_claim.details_envelope
              FROM crm.site_contact_claims site_claim
              JOIN crm.conversations site_conversation
                ON site_conversation.id = site_claim.conversation_id

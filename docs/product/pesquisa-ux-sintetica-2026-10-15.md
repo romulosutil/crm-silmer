@@ -34,7 +34,8 @@
 
 Ordenados por severidade. Cada item cita a persona e a evidência original.
 
-1. **Caixa de Entrada como workspace (Camila, sev. 4).** Altura fixa na viewport:
+1. **Caixa de Entrada como workspace (Camila, sev. 4).** _Entregue em
+   `design/inbox-workspace`; contrato em `design.md` §9 Caixa de Entrada._ Altura fixa na viewport:
    lista | conversa | contexto recolhível; composer sempre visível; histórico
    ancorado na última mensagem; uma ação primária + duas visíveis + menu "Mais";
    rota `/inbox/:conversationId` para links profundos (`OrderView.vue`,
@@ -50,6 +51,8 @@ Ordenados por severidade. Cada item cita a persona e a evidência original.
    ordem canônica, alerta de tamanho duplicado — na tela e na ficha impressa.
 5. **Glossário único (todas, sev. 3).** O assistente aparece como "IA",
    "agente", "Assistente Silmer" e "Vendedor Silmer". Um termo, configurável.
+   _Na Caixa de Entrada e nos selos de conversa: "Agente", vindo de
+   `brand.assistant` (`src/brand/index.js`); demais telas no próximo ciclo._
 6. **Ações destrutivas e feedback (Sílvio, sev. 3).** "Desativar" e "Reabrir
    pedido" sem confirmação; sucesso só anunciado para leitor de tela. Toast
    visível com "Desfazer".

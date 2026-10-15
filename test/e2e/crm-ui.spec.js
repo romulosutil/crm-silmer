@@ -837,6 +837,8 @@ test('selects a conversation subject by keyboard and restores focus', async ({
   );
 
   await page.goto('/inbox');
+  // The subjects sit in the context panel, closed by default below 1440 px.
+  await page.getByRole('button', { name: 'Detalhes', exact: true }).click();
   const panel = page.locator('.subject-panel');
   const select = panel.getByRole('button', { name: 'Selecionar' });
   await expect(select).toBeVisible();
@@ -888,11 +890,11 @@ test('labels human and AI service distinctly and only permits transfer after tak
 }) => {
   await mockCrm(page);
   await page.goto('/inbox');
+  // Glossário: the badge uses the words of its tab.
   await expect(
-    page.locator('.inbox-list .badge', {
-      hasText: 'Em atendimento por vendedor',
-    }),
+    page.locator('.inbox-list .badge', { hasText: 'Com vendedor' }),
   ).toBeVisible();
+  await page.getByRole('button', { name: 'Mais ações' }).click();
   await expect(
     page.getByRole('button', { name: 'Repassar atendimento' }),
   ).toBeVisible();
@@ -900,9 +902,10 @@ test('labels human and AI service distinctly and only permits transfer after tak
   await mockCrm(page, { assistant: true, assistantKeepsOwner: true });
   await page.reload();
   await expect(
-    page.locator('.inbox-list .badge', { hasText: 'Em atendimento por IA' }),
+    page.locator('.inbox-list .badge', { hasText: 'Com o agente' }),
   ).toBeVisible();
   await expect(page.locator('.conv-identity')).not.toContainText('Você');
+  await page.getByRole('button', { name: 'Mais ações' }).click();
   await expect(
     page.getByRole('button', { name: 'Repassar atendimento' }),
   ).toHaveCount(0);
@@ -927,24 +930,43 @@ test('never offers to hand the conversation back to the AI and keeps the actions
   await expect(page.getByRole('button', { name: /Devolver/ })).toHaveCount(0);
   await expect(page.getByText(/à IA/u)).toHaveCount(0);
 
-  // The remaining actions form one tab sequence, with no gap where the
-  // removed button was.
+  // Achado 1: two visible actions and the rest under "Mais", in one tab
+  // sequence with no gap where the removed button was.
   await order.focus();
-  for (const name of [
-    'Repassar atendimento',
-    'Encerrar conversa',
-    'Arquivar conversa',
-  ]) {
+  for (const name of ['Encerrar conversa', 'Mais ações', 'Detalhes']) {
     await page.keyboard.press('Tab');
     await expect(actions.getByRole('button', { name })).toBeFocused();
   }
+  await expect(actions.locator('button:visible')).toHaveCount(4);
+
+  // "Mais" opens from the keyboard on its first entry; Esc hands focus back.
+  const more = actions.getByRole('button', { name: 'Mais ações' });
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await expect(
+    actions.getByRole('button', { name: 'Repassar atendimento' }),
+  ).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(
-    actions.getByRole('link', { name: 'Ver contato' }),
+    actions.getByRole('button', { name: 'Arquivar conversa' }),
   ).toBeFocused();
-  await actions.getByRole('button', { name: 'Repassar atendimento' }).focus();
+  await page.keyboard.press('Escape');
+  await expect(more).toBeFocused();
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await expect(
+    actions.getByRole('button', { name: 'Repassar atendimento' }),
+  ).toBeHidden();
   await page.keyboard.press('Enter');
-  await expect(page.getByLabel('Repassar venda para')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Repassar venda para')).toBeFocused();
+  // The contact sits with the client, in the context panel.
+  await actions.getByRole('button', { name: 'Detalhes' }).click();
+  await expect(
+    page
+      .getByRole('complementary', { name: 'Detalhes' })
+      .getByRole('link', { name: 'Ver contato' }),
+  ).toHaveAttribute('href', '/clientes/contact-1');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
   // With the agent, or waiting for a seller, taking over is the only change.
@@ -1035,12 +1057,14 @@ test('identifies customer, assistant, and seller messages in the conversation', 
   await expect(
     page.locator(".message[data-from='cliente'] .msg-role"),
   ).toHaveText('Cliente');
+  // Glossário (achado 5): one name for the assistant, from the brand.
   await expect(
-    page.locator(".message[data-from='agente'] .msg-role"),
-  ).toHaveText('IA');
+    page.locator(".message[data-from='agente'] .msg-author"),
+  ).toHaveText('Agente');
   await expect(
-    page.locator(".message[data-from='humano'] .msg-role"),
+    page.locator(".message[data-from='humano'] .msg-author"),
   ).toHaveText('Vendedor');
+  await expect(page.getByText('Assistente Silmer')).toHaveCount(0);
   await expect(page.getByText('Entrega: sent')).toHaveCount(0);
 });
 
@@ -1113,11 +1137,16 @@ test('refreshes the Inbox manually when live updates fail and keeps focus on liv
     testGlobal.EventSource = FakeEventSource;
   });
   await mockCrm(page, {
-    onInboxList: (params) => inboxQueries.push(Object.fromEntries(params)),
+    // The tab totals (`limit=1`) ride along; only the list reads count here.
+    onInboxList: (params) => {
+      if (params.get('limit') !== '1') {
+        inboxQueries.push(Object.fromEntries(params));
+      }
+    },
   });
   await page.goto('/inbox');
   await expect(page.getByRole('button', { name: /Studio Malu/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Minhas conversas' }).click();
+  await page.getByLabel('Fila').selectOption('mine');
   await expect
     .poll(() => inboxQueries.at(-1)?.assignedUserId)
     .toBe('operator-1');
@@ -1200,50 +1229,67 @@ test('finds a new last message after the live event without moving search focus'
   await expect(search).toBeFocused();
 });
 
-test('filters the Inbox by queue and by who must act through the server read model', async ({
+test('filters the Inbox on one segmented axis with totals, combined with the queue', async ({
   page,
 }) => {
   const inboxQueries = /** @type {Array<Record<string, string>>} */ ([]);
+  const countQueries = /** @type {Array<Record<string, string>>} */ ([]);
   await mockCrm(page, {
-    onInboxList: (params) => inboxQueries.push(Object.fromEntries(params)),
+    onInboxList: (params) =>
+      (params.get('limit') === '1' ? countQueries : inboxQueries).push(
+        Object.fromEntries(params),
+      ),
   });
   await page.goto('/inbox');
 
-  const summary = page.locator('.inbox-state-menu summary');
-  const menu = page.locator('.inbox-state-panel');
-  /** Each menu entry closes the panel, so every pick reopens it first. */
+  const tabs = page.getByRole('group', { name: 'Estado das conversas' });
   /** @param {string} name */
-  const pickState = async (name) => {
-    await summary.click();
-    await menu.getByRole('button', { name, exact: true }).click();
-  };
+  const tab = (name) =>
+    tabs.getByRole('button', { name: new RegExp(`^${name}`, 'u') });
 
   // PCX-01: the conversation-state filter is gone, name and options alike.
   await expect(page.getByText('Situação', { exact: true })).toHaveCount(0);
-  await summary.click();
   await expect(
-    menu.getByRole('button', { name: 'Requer atenção' }),
+    page.getByRole('button', { name: 'Requer atenção' }),
   ).toHaveCount(0);
-  await expect(menu.getByRole('button', { name: 'Em análise' })).toHaveCount(0);
-  await summary.click();
+  // Achado 1: one axis, archived included, each tab with its total.
+  await expect(tabs.getByRole('button')).toHaveText([
+    /^Todas\s*1$/u,
+    /^Aguardando vendedor\s*1$/u,
+    /^Com o agente\s*1$/u,
+    /^Com vendedor\s*1$/u,
+    /^Arquivadas\s*1$/u,
+  ]);
+  await expect(tab('Todas')).toHaveAttribute('aria-pressed', 'true');
+  expect(countQueries.slice(0, 4)).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ archived: 'false', pendingHandoff: 'true' }),
+      expect.objectContaining({ archived: 'true' }),
+    ]),
+  );
 
-  // PCX-05: the queue keeps deciding whose conversations are listed.
-  await page.getByRole('button', { name: 'Minhas conversas' }).click();
+  // PCX-05: the queue keeps deciding whose conversations are listed, and the
+  // totals follow it.
+  await page.getByLabel('Fila').selectOption('mine');
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({ assignedUserId: 'operator-1' });
-  await expect(
-    page.getByRole('button', { name: 'Minhas conversas' }),
-  ).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .poll(() => countQueries.at(-1)?.assignedUserId)
+    .toBe('operator-1');
 
   // PCX-02: the four states, each combined with the queue already chosen.
-  await pickState('Aguardando vendedor');
+  await tab('Aguardando vendedor').click();
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({ assignedUserId: 'operator-1', pendingHandoff: 'true' });
   expect(inboxQueries.at(-1)?.automationState).toBeUndefined();
+  await expect(tab('Aguardando vendedor')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 
-  await pickState('Com o agente');
+  await tab('Com o agente').click();
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({
@@ -1252,7 +1298,7 @@ test('filters the Inbox by queue and by who must act through the server read mod
       pendingHandoff: 'false',
     });
 
-  await page.getByRole('button', { name: 'Aguardando atendimento' }).click();
+  await page.getByLabel('Fila').selectOption('unassignedHumanHandoff');
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({
@@ -1261,11 +1307,8 @@ test('filters the Inbox by queue and by who must act through the server read mod
       unassignedHumanHandoff: 'true',
     });
   expect(inboxQueries.at(-1)?.assignedUserId).toBeUndefined();
-  await expect(
-    page.getByRole('button', { name: 'Aguardando atendimento' }),
-  ).toHaveAttribute('aria-pressed', 'true');
 
-  await pickState('Com vendedor');
+  await tab('Com vendedor').click();
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({
@@ -1274,24 +1317,15 @@ test('filters the Inbox by queue and by who must act through the server read mod
       unassignedHumanHandoff: 'true',
     });
 
-  // PCX-05: archived conversations stay one click away, under any state.
-  await pickState('Ver arquivadas');
+  // PCX-05: archived conversations are the last tab of the same axis.
+  await tab('Arquivadas').click();
   await expect
     .poll(() => inboxQueries.at(-1))
-    .toMatchObject({
-      archived: 'true',
-      automationState: 'human',
-      pendingHandoff: 'false',
-    });
+    .toMatchObject({ archived: 'true', unassignedHumanHandoff: 'true' });
+  expect(inboxQueries.at(-1)?.automationState).toBeUndefined();
+  expect(inboxQueries.at(-1)?.pendingHandoff).toBeUndefined();
 
-  await pickState('Todas');
-  await expect
-    .poll(() => inboxQueries.at(-1))
-    .toMatchObject({ archived: 'true' });
-  await expect.poll(() => inboxQueries.at(-1)?.automationState).toBeUndefined();
-  await expect.poll(() => inboxQueries.at(-1)?.pendingHandoff).toBeUndefined();
-
-  await pickState('Ver caixa de entrada');
+  await tab('Todas').click();
   await expect
     .poll(() => inboxQueries.at(-1))
     .toMatchObject({ archived: 'false' });
@@ -1304,11 +1338,9 @@ test('names the stop reason and waits, oldest first, when the seller is due', as
   await mockCrm(page, { waitingQueue: true });
   await page.goto('/inbox');
 
-  const summary = page.locator('.inbox-state-menu summary');
-  await summary.click();
   await page
-    .locator('.inbox-state-panel')
-    .getByRole('button', { name: 'Aguardando vendedor', exact: true })
+    .getByRole('group', { name: 'Estado das conversas' })
+    .getByRole('button', { name: /^Aguardando vendedor/u })
     .click();
 
   // PCX-04: the conversation waiting the longest leads, whatever order the
@@ -1852,6 +1884,254 @@ test('formats the contact phone without an editable input', async ({
   ).toHaveCount(0);
 });
 
+test('opens a conversation by its address and keeps the Inbox while moving between them', async ({
+  page,
+}) => {
+  await mockCrm(page, { waitingQueue: true });
+  await page.goto('/inbox/conversation-3');
+
+  await expect(
+    page.getByRole('heading', { name: 'Caixa de Entrada', level: 1 }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Igreja Nova Aliança' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /Igreja Nova Aliança/u }),
+  ).toHaveAttribute('aria-current', 'true');
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Navegação principal' })
+      .getByRole('link', { name: 'Caixa de Entrada' }),
+  ).toHaveAttribute('aria-current', 'page');
+
+  // The opened conversation stays while the search narrows the list.
+  const search = page.locator('#inbox-search');
+  await search.fill('Studio');
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Igreja Nova Aliança' }),
+  ).toBeVisible();
+
+  // Picking another one changes the address, not the Inbox around it.
+  const studio = page.getByRole('button', { name: /Studio Malu/u });
+  await studio.click();
+  await expect(page).toHaveURL('/inbox/conversation-1');
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Studio Malu' }),
+  ).toBeVisible();
+  await expect(search).toHaveValue('Studio');
+  await expect(studio).toBeFocused();
+
+  await page.goBack();
+  await expect(page).toHaveURL('/inbox/conversation-3');
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Igreja Nova Aliança' }),
+  ).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('opens the conversation straight from the Dashboard and from Clientes', async ({
+  page,
+}) => {
+  await mockCrm(page);
+  await page.goto('/dashboard');
+  const recent = page
+    .locator('.pend-list')
+    .getByRole('link', { name: 'Studio Malu' });
+  await expect(recent).toHaveAttribute('href', '/inbox/conversation-1');
+  await recent.click();
+  await expect(page).toHaveURL('/inbox/conversation-1');
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Studio Malu' }),
+  ).toBeVisible();
+
+  await page.goto('/clientes/contact-1');
+  await expect(
+    page.locator('.history-list').getByRole('link', { name: 'WhatsApp' }),
+  ).toHaveAttribute('href', '/inbox/conversation-1');
+});
+
+test('on a phone the address decides between the list and the conversation', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockCrm(page, { waitingQueue: true });
+  await page.goto('/inbox');
+
+  await expect(page.locator('.inbox-list')).toBeVisible();
+  await expect(page.locator('.inbox-conversation')).toBeHidden();
+  await page.getByRole('button', { name: /Studio Malu/u }).click();
+  await expect(page).toHaveURL('/inbox/conversation-1');
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Studio Malu' }),
+  ).toBeFocused();
+  await expect(page.locator('.inbox-list')).toBeHidden();
+  await expect(page.getByLabel('Responder')).toBeInViewport();
+  expect(
+    await page.evaluate(
+      () =>
+        globalThis.document.documentElement.scrollWidth <=
+        globalThis.innerWidth,
+    ),
+  ).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // Mobile first (ADR 035): the reply sits above the bottom navigation bar.
+  const composer = await page.locator('.inbox-composer').boundingBox();
+  const bar = await page.locator('.mobile-nav').boundingBox();
+  if (!composer || !bar) throw new Error('Composer and bar must be visible');
+  expect(composer.y + composer.height).toBeLessThanOrEqual(bar.y + 1);
+
+  // Secondary actions live in the "Mais" bottom sheet, with 44 px targets.
+  const more = page.getByRole('button', { name: 'Mais ações' });
+  expect((await more.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  await more.click();
+  const sheet = page.locator('#conv-more-menu');
+  await expect(sheet.getByRole('button')).toHaveText([
+    'Detalhes da conversa',
+    'Arquivar conversa',
+    'Encerrar conversa',
+  ]);
+  await expect(
+    sheet.getByRole('button', { name: 'Detalhes da conversa' }),
+  ).toBeFocused();
+  for (const box of await sheet
+    .getByRole('button')
+    .evaluateAll((items) =>
+      items.map((item) => item.getBoundingClientRect().height),
+    )) {
+    expect(box).toBeGreaterThanOrEqual(44);
+  }
+  const sheetBox = await sheet.boundingBox();
+  if (!sheetBox) throw new Error('The sheet must be visible');
+  expect(sheetBox.y + sheetBox.height).toBeLessThanOrEqual(bar.y + 1);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(more).toBeFocused();
+
+  await page.getByRole('link', { name: 'Conversas', exact: true }).click();
+  await expect(page).toHaveURL('/inbox');
+  await expect(
+    page.getByRole('button', { name: /Studio Malu/u }),
+  ).toBeFocused();
+});
+
+test('on a phone the reply goes right above the keyboard while typing', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockCrm(page);
+  await page.goto('/inbox/conversation-1');
+  const bar = page.locator('.mobile-nav');
+  await expect(bar).toBeVisible();
+  await page.getByLabel('Responder').focus();
+  // The navigation bar steps aside; the composer takes the bottom edge.
+  await expect(bar).toBeHidden();
+  const composer = await page.locator('.inbox-composer').boundingBox();
+  if (!composer) throw new Error('The composer must be visible');
+  expect(composer.y + composer.height).toBeGreaterThan(844 - 8);
+  await page.getByLabel('Responder').blur();
+  await expect(bar).toBeVisible();
+});
+
+test('sends the reply with Enter and breaks the line with Shift+Enter', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const sent = [];
+  await mockCrm(page, { onMessage: (body) => sent.push(body) });
+  await page.goto('/inbox/conversation-1');
+  await page.evaluate(() => {
+    globalThis.document.cookie = 'crm_csrf=csrf-test; Path=/; SameSite=Lax';
+  });
+  await expect(page.locator('#reply-help')).toHaveText(
+    'Enter envia · Shift+Enter quebra a linha.',
+  );
+
+  const reply = page.getByLabel('Responder');
+  await reply.click();
+  await page.keyboard.press('Enter');
+  expect(sent).toEqual([]);
+  await reply.pressSequentially('Primeira linha');
+  await page.keyboard.press('Shift+Enter');
+  await reply.pressSequentially('Segunda linha');
+  await expect(reply).toHaveValue('Primeira linha\nSegunda linha');
+  expect(sent).toEqual([]);
+
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('Mensagem aceita para envio.')).toBeVisible();
+  expect(sent).toEqual([
+    {
+      content: { text: 'Primeira linha\nSegunda linha' },
+      expectedVersion: 3,
+      messageType: 'text',
+      reason: 'Resposta humana na Caixa de Entrada',
+    },
+  ]);
+  await expect(reply).toHaveValue('');
+  await expect(reply).toBeFocused();
+});
+
+test('keeps the reply in view and opens the history on the latest message at 1366×768', async ({
+  page,
+}) => {
+  await mockCrm(page, { longThread: true });
+  // 768 is the screen; 657 is what a browser with its bars leaves of it.
+  for (const height of [768, 657]) {
+    await page.setViewportSize({ width: 1366, height });
+    await page.goto('/inbox/conversation-1');
+    const thread = page.locator('.thread');
+    await expect(thread.getByText('Mensagem de teste 30:')).toBeInViewport();
+    await expect(thread.getByText('Mensagem de teste 1:')).not.toBeInViewport();
+    await expect(page.getByLabel('Responder')).toBeInViewport({ ratio: 1 });
+    await expect(
+      page.getByRole('button', { name: 'Enviar resposta' }),
+    ).toBeInViewport({ ratio: 1 });
+    // On a 1366 notebook the conversation comes first: context on demand.
+    await expect(
+      page.getByRole('complementary', { name: 'Detalhes' }),
+    ).toBeHidden();
+    // The workspace fits the screen: the page itself never scrolls.
+    expect(
+      await page.evaluate(
+        () =>
+          globalThis.document.documentElement.scrollHeight <=
+          globalThis.innerHeight,
+      ),
+    ).toBe(true);
+  }
+});
+
+test('collapses the context panel and remembers it on this browser', async ({
+  page,
+}) => {
+  await mockCrm(page);
+  // Wide enough to sit beside the conversation, the panel starts open.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/inbox/conversation-1');
+  const context = page.getByRole('complementary', { name: 'Detalhes' });
+  const toggle = page
+    .locator('.conv-actions')
+    .getByRole('button', { name: 'Detalhes' });
+  await expect(context).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+  await context.getByRole('button', { name: 'Recolher detalhes' }).click();
+  await expect(context).toBeHidden();
+  await expect(toggle).toBeFocused();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+  await page.reload();
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Studio Malu' }),
+  ).toBeVisible();
+  await expect(context).toBeHidden();
+  await toggle.click();
+  await expect(context).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
 test('formats the phone in the active conversation identity', async ({
   page,
 }) => {
@@ -1860,7 +2140,7 @@ test('formats the phone in the active conversation identity', async ({
   await page.goto('/inbox');
 
   await expect(page.locator('.conv-identity')).toContainText(
-    '+55 (11) 99999-9999 · Em atendimento por IA',
+    '+55 (11) 99999-9999 · Com o agente',
   );
 });
 

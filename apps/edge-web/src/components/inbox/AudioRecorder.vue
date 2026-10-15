@@ -229,6 +229,7 @@ onBeforeUnmount(clear);
         <button
           ref="startButton"
           type="button"
+          title="Gravar áudio"
           :disabled="disabled || active || sending"
           @click="start"
         >
@@ -237,7 +238,7 @@ onBeforeUnmount(clear);
               d="M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0V5Zm-3 6v1a6 6 0 0 0 12 0v-1m-6 7v4m-4 0h8"
             />
           </svg>
-          Gravar áudio
+          <span class="composer-tool-label">Gravar áudio</span>
         </button>
         <button
           v-if="state === 'recording'"

@@ -13,6 +13,11 @@ export const brand = Object.freeze({
   productName: 'CRM Silmer',
   /** Frase curta da tela de acesso. */
   tagline: 'Conversas, pedidos e fichas da Silmer em um só lugar.',
+  /**
+   * Como a equipe chama o atendimento automático (glossário: um termo só).
+   * `name` rotula as mensagens; `reference` entra nas frases ("Com o agente").
+   */
+  assistant: Object.freeze({ name: 'Agente', reference: 'o agente' }),
   /** Logotipo oficial (silmer-web/brand.svg), desenhado com a cor da marca. */
   logo: Object.freeze({
     viewBox: '0 0 442 136',

@@ -498,7 +498,7 @@ function onCursor(cursor) {
           <component
             v-if="canAccessCurrentRoute"
             :is="Component"
-            :key="route.fullPath"
+            :key="route.meta.viewKey ?? route.fullPath"
             :session="session"
             :announce="announce"
             :show-error="showError"

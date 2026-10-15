@@ -88,6 +88,11 @@ const orderContext = computed(() => {
   return seller ? `${event} · com ${seller}` : event;
 });
 const itemCount = computed(() => order.value?.ficha?.items?.length ?? 0);
+/** The conversation this order came from, opened directly in the Inbox. */
+const conversationLink = computed(() => {
+  const id = order.value?.conversationId || props.fromConversationId;
+  return id ? `/inbox/${encodeURIComponent(id)}` : '';
+});
 const deliveryLabel = computed(() => {
   const match = /^\d{4}-(\d{2})-(\d{2})$/u.exec(
     String(order.value?.ficha?.summary?.data_entrega_confirmada ?? ''),
@@ -415,9 +420,9 @@ onBeforeUnmount(() => {
         </div>
         <div class="op-head-actions">
           <RouterLink
-            v-if="fromConversationId"
+            v-if="conversationLink"
             class="button-link quiet-link"
-            to="/inbox"
+            :to="conversationLink"
             >Abrir conversa</RouterLink
           >
           <a

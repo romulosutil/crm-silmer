@@ -531,8 +531,48 @@ test('the site chat shows what the CRM recorded and keeps human follow-up in cha
   );
   assert.equal(stale.json.output, 'Recebi a sua mensagem!');
 
+  const replay = run(
+    answer,
+    { json: {} },
+    { 'CRM - Registrar inbound (MVP)': { json: { duplicate: true } } },
+  );
+  assert.equal(replay.json.output, 'Recebi a sua mensagem!');
+
   const withSeller = run(answer, { json: {} });
   assert.match(withSeller.json.output, /por aqui/u);
+});
+
+test('an inbound replay stops before IA, media handoff and external effects (CP-T04)', async () => {
+  const workflow = await canonical();
+  const route = workflow.nodes.find(
+    (/** @type {any} */ node) =>
+      node.name === 'Rotear conversa registrada (MVP)',
+  );
+  assert.ok(route);
+  const rules = route.parameters.rules.values;
+  /** @param {any} rule @param {boolean} duplicate @param {boolean} aiReadable */
+  const matches = (rule, duplicate, aiReadable) => {
+    const condition = rule.conditions.conditions[0];
+    const expression = condition.leftValue.slice(3, -2).trim();
+    const value = vm.runInNewContext(expression, {
+      $json: { mode: 'ai_active', duplicate },
+      $: () => ({ item: { json: { ai_readable: aiReadable } } }),
+    });
+    return value === condition.rightValue;
+  };
+  assert.equal(matches(rules[0], false, true), true);
+  assert.equal(matches(rules[0], false, false), false);
+  assert.equal(matches(rules[1], false, false), true);
+  for (const rule of rules) {
+    assert.equal(matches(rule, true, true), false);
+    assert.equal(matches(rule, true, false), false);
+  }
+  assert.deepEqual(
+    workflow.connections[route.name].main[2].map(
+      (/** @type {any} */ edge) => edge.node,
+    ),
+    ['Responder no chat do site? (MVP)'],
+  );
 });
 
 test('a seller text to a site visitor is reserved and sent through CRM (ADR 034)', async () => {

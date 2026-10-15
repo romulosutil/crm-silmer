@@ -11,7 +11,7 @@ import {
 } from '@n8n/workflow-sdk';
 
 const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-const WORKFLOW_VERSION = 'mvp-simple-16';
+const WORKFLOW_VERSION = 'mvp-simple-17';
 
 // ADR 034: site sessions have a separate channel and a reversible synthetic
 // identity. They never borrow a contact's earlier history from a typed phone.
@@ -647,12 +647,12 @@ const routeConversation = switchCase({
       rules: {
         values: [
           stringRule(
-            "{{ $json.mode === 'ai_active' && $('Normalizar evento WhatsApp (MVP)').item.json.ai_readable === true ? 'ai_reply' : 'no_action' }}",
+            "{{ $json.duplicate !== true && $json.mode === 'ai_active' && $('Normalizar evento WhatsApp (MVP)').item.json.ai_readable === true ? 'ai_reply' : 'no_action' }}",
             'ai_reply',
             'Responder com IA',
           ),
           stringRule(
-            "{{ $json.mode === 'ai_active' ? 'media_handoff' : 'no_action' }}",
+            "{{ $json.duplicate !== true && $json.mode === 'ai_active' ? 'media_handoff' : 'no_action' }}",
             'media_handoff',
             'Handoff de mídia',
           ),
@@ -1780,6 +1780,9 @@ if (ran('CRM - Registrar message.sent da IA (MVP)')) {
   output = ran('Preparar reserva de envio da IA (MVP)')?.reply_text || output;
 } else if (ran('CRM - Registrar message.sent do aviso (MVP)')) {
   output = ran('Preparar aviso de transferência (MVP)')?.text || output;
+} else if (ran('CRM - Registrar inbound (MVP)')?.duplicate === true) {
+  // The first execution owns all effects. A retry only acknowledges receipt.
+  output = 'Recebi a sua mensagem!';
 } else if (ran('Montar contexto da IA (MVP)') && !ran('CRM - Registrar handoff (MVP)')) {
   // A newer message, or a seller, took this turn; the newer execution answers.
   output = 'Recebi a sua mensagem!';

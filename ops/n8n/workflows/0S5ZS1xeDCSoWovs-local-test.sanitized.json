@@ -123,7 +123,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -167,7 +167,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.mode === 'ai_active' && $('Normalizar evento WhatsApp (MVP)').item.json.ai_readable === true ? 'ai_reply' : 'no_action' }}",
+                    "leftValue": "={{ $json.duplicate !== true && $json.mode === 'ai_active' && $('Normalizar evento WhatsApp (MVP)').item.json.ai_readable === true ? 'ai_reply' : 'no_action' }}",
                     "operator": { "type": "string", "operation": "equals" },
                     "rightValue": "ai_reply"
                   }
@@ -187,7 +187,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.mode === 'ai_active' ? 'media_handoff' : 'no_action' }}",
+                    "leftValue": "={{ $json.duplicate !== true && $json.mode === 'ai_active' ? 'media_handoff' : 'no_action' }}",
                     "operator": { "type": "string", "operation": "equals" },
                     "rightValue": "media_handoff"
                   }
@@ -528,7 +528,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -668,7 +668,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -727,7 +727,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -811,7 +811,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -871,7 +871,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1001,7 +1001,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1060,7 +1060,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1117,7 +1117,7 @@
       "position": [2150, -1400],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const ran = (name) => { try { return $(name).item.json ?? null; } catch (error) { return null; } };\nconst WITH_SELLER = 'Recebi sua mensagem. Um vendedor vai continuar o atendimento por aqui.';\nlet output = WITH_SELLER;\nif (ran('CRM - Registrar message.sent da IA (MVP)')) {\n  output = ran('Preparar reserva de envio da IA (MVP)')?.reply_text || output;\n} else if (ran('CRM - Registrar message.sent do aviso (MVP)')) {\n  output = ran('Preparar aviso de transferência (MVP)')?.text || output;\n} else if (ran('Montar contexto da IA (MVP)') && !ran('CRM - Registrar handoff (MVP)')) {\n  // A newer message, or a seller, took this turn; the newer execution answers.\n  output = 'Recebi a sua mensagem!';\n}\nreturn { json: { output } };"
+        "jsCode": "const ran = (name) => { try { return $(name).item.json ?? null; } catch (error) { return null; } };\nconst WITH_SELLER = 'Recebi sua mensagem. Um vendedor vai continuar o atendimento por aqui.';\nlet output = WITH_SELLER;\nif (ran('CRM - Registrar message.sent da IA (MVP)')) {\n  output = ran('Preparar reserva de envio da IA (MVP)')?.reply_text || output;\n} else if (ran('CRM - Registrar message.sent do aviso (MVP)')) {\n  output = ran('Preparar aviso de transferência (MVP)')?.text || output;\n} else if (ran('CRM - Registrar inbound (MVP)')?.duplicate === true) {\n  // The first execution owns all effects. A retry only acknowledges receipt.\n  output = 'Recebi a sua mensagem!';\n} else if (ran('Montar contexto da IA (MVP)') && !ran('CRM - Registrar handoff (MVP)')) {\n  // A newer message, or a seller, took this turn; the newer execution answers.\n  output = 'Recebi a sua mensagem!';\n}\nreturn { json: { output } };"
       }
     },
     {
@@ -1154,7 +1154,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1335,7 +1335,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1464,7 +1464,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1558,7 +1558,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1687,7 +1687,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1757,7 +1757,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1860,7 +1860,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",
@@ -1926,7 +1926,7 @@
             { "name": "X-Silmer-Workflow-Key", "value": "0S5ZS1xeDCSoWovs" },
             {
               "name": "X-Silmer-Workflow-Version",
-              "value": "dev-mvp-simple-16"
+              "value": "dev-mvp-simple-17"
             },
             {
               "name": "X-Silmer-Execution-Id",

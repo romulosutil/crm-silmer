@@ -742,6 +742,12 @@ O workflow `mvp-simple-16` (DEV `dev-mvp-simple-16`) aceita
 `metadata.site_message_at` do widget e deve ser publicado **antes** da versão
 do site que passa a enviá-lo. Ele mantém fallback para clientes antigos; não
 exige migração no CRM.
+O workflow `mvp-simple-17` (DEV `dev-mvp-simple-17`) interrompe a IA e os
+efeitos externos quando o CRM responde `duplicate: true` a um inbound. No chat
+do site, o reenvio recebe uma confirmação breve. Publique esta revisão antes
+de liberar o widget que reenvia o mesmo ID e instante; confirme com duas
+requisições idênticas ao webhook, separadas no tempo, e uma única mensagem no
+CRM.
 
 1. Aplicar migrações com a integração desligada.
 2. Implantar API e worker, configurar as duas credenciais Basic e conferir o

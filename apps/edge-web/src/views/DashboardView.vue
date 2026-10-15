@@ -1,5 +1,13 @@
 <script setup>
-import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+  computed,
+  inject,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
 import { RouterLink } from 'vue-router';
 import AppIcon from '../components/AppIcon.vue';
 import { request } from '../lib/api-client.js';
@@ -10,10 +18,12 @@ import {
   longDay,
   mineIndicator,
   myOrdersIndicator,
+  nextStep,
   overdueIndicator,
   pendingIndicator,
   replyIndicator,
   soldIndicator,
+  unavailableIndicator,
   waitingIndicator,
 } from '../lib/dashboard-format.js';
 import { storeNoticeText } from '../lib/order-format.js';
@@ -71,10 +81,25 @@ const soldLabel = computed(
   () => PERIODS.find((option) => option.key === period.value)?.sold ?? '',
 );
 
+// PNL-01: one next step for the reader's role, from the same summaries.
+const step = computed(() =>
+  nextStep({
+    isManager: isManager.value,
+    queue: queue.value,
+    queueError: queueError.value,
+    summary: summary.value,
+  }),
+);
+
 const now = computed(() => queue.value?.generatedAt);
+// PNL-03: without any queue answer the queue cards read "—", never "0". A
+// queue read earlier keeps its numbers, flagged as possibly outdated.
+/** @param {() => import('../lib/dashboard-format.js').Indicator} indicator */
+const fromQueue = (indicator) =>
+  queue.value ? indicator() : unavailableIndicator();
 const cards = computed(() => ({
   assistant: {
-    ...assistantIndicator(queue.value?.assistant, now.value),
+    ...fromQueue(() => assistantIndicator(queue.value?.assistant, now.value)),
     label: 'Assistente',
     to: { path: '/inbox', query: { situacao: 'agente' } },
   },
@@ -84,17 +109,17 @@ const cards = computed(() => ({
     to: { path: '/pedidos', query: { entrega: 'proxima' } },
   },
   mine: {
-    ...mineIndicator(queue.value?.mine, now.value),
+    ...fromQueue(() => mineIndicator(queue.value?.mine, now.value)),
     label: 'Minhas conversas',
     to: { path: '/inbox', query: { fila: 'minhas' } },
   },
   myOrders: {
-    ...myOrdersIndicator(queue.value?.mine?.pendingOrderCount),
+    ...fromQueue(() => myOrdersIndicator(queue.value?.mine?.pendingOrderCount)),
     label: 'Meus pedidos pendentes',
     to: { path: '/pedidos', query: { status: 'pendente', vendedor: 'eu' } },
   },
   reply: {
-    ...replyIndicator(queue.value?.mine, now.value),
+    ...fromQueue(() => replyIndicator(queue.value?.mine, now.value)),
     label: 'Responder agora',
     to: { path: '/inbox', query: { fila: 'minhas' } },
   },
@@ -114,7 +139,9 @@ const cards = computed(() => ({
     to: { path: '/pedidos', query: { status: 'confirmado' } },
   },
   waiting: {
-    ...waitingIndicator(queue.value?.waitingHandoff, now.value),
+    ...fromQueue(() =>
+      waitingIndicator(queue.value?.waitingHandoff, now.value),
+    ),
     label: 'Esperando vendedor',
     to: { path: '/inbox', query: { situacao: 'aguardando' } },
   },
@@ -189,6 +216,23 @@ async function loadDashboard({ announce = false } = {}) {
       ? 'A fila não foi atualizada agora. Os números podem estar desatualizados.'
       : 'Não foi possível consultar a fila agora.';
   }
+}
+
+/** @type {HTMLElement|null} */
+let queueHeading = null;
+/** @param {any} element */
+function setQueueHeading(element) {
+  queueHeading = element instanceof HTMLElement ? element : null;
+}
+
+// PNL-03: the queue retry stays focusable while it runs (aria-disabled); when
+// the queue answers, the button leaves and focus goes to the section title.
+async function retryQueue() {
+  if (loading.value) return;
+  await loadDashboard();
+  if (queueError.value) return;
+  await nextTick();
+  queueHeading?.focus();
 }
 
 /** @param {string} key */
@@ -276,6 +320,19 @@ onBeforeUnmount(() => {
       <button type="button" @click="loadDashboard()">Tentar novamente</button>
     </div>
     <template v-else>
+      <!-- PNL-01: one next step for the role, no heading of its own (the
+           section titles stay the page outline); one link at most. -->
+      <section class="next-step" aria-labelledby="dashboard-next-step-label">
+        <p id="dashboard-next-step-label" class="next-step-label">
+          Próximo passo
+        </p>
+        <RouterLink v-if="step.to" class="next-step-link" :to="step.to">
+          {{ step.label }}
+          <AppIcon name="chevron" class="next-step-go" />
+        </RouterLink>
+        <p v-else class="next-step-text">{{ step.label }}</p>
+      </section>
+
       <div v-if="error" class="audit-note" role="alert">
         <p>{{ error }}</p>
         <button type="button" :disabled="loading" @click="loadDashboard()">
@@ -293,31 +350,48 @@ onBeforeUnmount(() => {
         :aria-labelledby="`dashboard-${section.id}-title`"
       >
         <div class="dashboard-section-head">
-          <h2 :id="`dashboard-${section.id}-title`">{{ section.title }}</h2>
-          <div
-            v-if="section.period"
-            class="segmented-options"
-            role="group"
-            aria-label="Período das vendas"
+          <h2
+            :id="`dashboard-${section.id}-title`"
+            :ref="section.queue ? setQueueHeading : undefined"
+            :tabindex="section.queue ? -1 : undefined"
           >
-            <button
-              v-for="option in PERIODS"
-              :key="option.key"
-              type="button"
-              :aria-pressed="period === option.key"
-              @click="choosePeriod(option.key)"
+            {{ section.title }}
+          </h2>
+          <!-- PNL-02: the period only changes "Vendido"; the legend says so. -->
+          <div v-if="section.period" class="dashboard-period">
+            <p id="dashboard-period-scope" class="dashboard-period-scope">
+              Vale para Vendido
+            </p>
+            <div
+              class="segmented-options"
+              role="group"
+              aria-label="Período das vendas"
+              aria-describedby="dashboard-period-scope"
             >
-              {{ option.label }}
-            </button>
+              <button
+                v-for="option in PERIODS"
+                :key="option.key"
+                type="button"
+                :aria-pressed="period === option.key"
+                @click="choosePeriod(option.key)"
+              >
+                {{ option.label }}
+              </button>
+            </div>
           </div>
         </div>
+        <!-- PNL-03: the section never disappears when the queue fails. -->
         <div v-if="section.queue && queueError" class="audit-note" role="alert">
           <p>{{ queueError }}</p>
-          <button type="button" :disabled="loading" @click="loadDashboard()">
+          <button
+            type="button"
+            :aria-disabled="loading ? 'true' : undefined"
+            @click="retryQueue()"
+          >
             {{ loading ? 'Consultando…' : 'Tentar novamente' }}
           </button>
         </div>
-        <ul v-if="!section.queue || queue" class="metric-grid" role="list">
+        <ul class="metric-grid" role="list">
           <li v-for="key in section.cards" :key="key">
             <RouterLink
               class="metric-card"

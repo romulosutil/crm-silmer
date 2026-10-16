@@ -889,6 +889,7 @@ test('no order component writes the company name itself (PFI-20, ADR 035)', asyn
   expect(files.length).toBeGreaterThan(10);
   // Comments may cite the pilot; code and templates take `brand`. Read line by
   // line instead of stripping comments, so no markup is ever rewritten.
+  /** @param {string} line */
   const isCommentLine = (line) => /^\s*(\/\/|\/\*|\*|<!--)/u.test(line);
   for (const file of files) {
     const offending = (await readFile(file, 'utf8'))

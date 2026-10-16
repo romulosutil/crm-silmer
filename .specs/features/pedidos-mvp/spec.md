@@ -11,6 +11,7 @@
 **Ficha impressa com os sete pontos (02/10/2026):** [ADR 017](../../../docs/adr/017-ficha-impressa-com-os-sete-pontos.md) · P1-5 (PIM-06..10) e PLA-08
 **Cliente acompanha o contato (03/10/2026):** [ADR 018](../../../docs/adr/018-cliente-do-pedido-acompanha-o-contato.md) · história P1-12
 **Jornadas com menos botões (15/10/2026):** [ADR 036](../../../docs/adr/036-padroes-de-jornada.md) · [RFC 024](../../../docs/rfc/024-jornadas-com-menos-botoes.md) · PFI-15..20, PCX-10..14, PLI-09..10 (T121–T133)
+**PDF da ficha no celular (16/10/2026):** [ADR 037](../../../docs/adr/037-gerar-pdf-da-ficha-para-uso-mobile.md) · [RFC 025](../../../docs/rfc/025-ficha-em-pdf-para-uso-mobile.md) · PIM-13..14 e LOJ-38 (T134)
 **Mockups:** `.design/mesa-de-trabalho/` (canvas "Mesa de Trabalho Silmer")
 
 ## Baseline vigente
@@ -289,6 +290,16 @@ continua no repositório, travada por hash.
     páginas e SHALL manter o número; observações e total SHALL fechar a última
     página de itens; o controle de produção SHALL vir por último, com o seu
     cabeçalho.
+
+13. **PIM-13** WHEN o Pedido está confirmado THEN “Gerar PDF” SHALL baixar
+    `pedido-NN-CRM.pdf` com o template aprovado, sem exigir a janela de impressão.
+    No aparelho compatível, “Compartilhar PDF” SHALL oferecer o arquivo à folha
+    nativa para a pessoa escolher o WhatsApp ou outro destino. Sem suporte ao
+    compartilhamento, o download SHALL continuar disponível.
+14. **PIM-14** A rota PDF SHALL exigir sessão e `order.print`, recusar Pedido
+    pendente com 409 e retornar anexo `application/pdf` privado sem cache.
+    Falhas e `HEAD` SHALL não contar como primeira ficha da loja. O servidor
+    SHALL não enviar automaticamente nem guardar uma cópia do PDF.
 
 **Teste independente (v3):** abrir `output/pdf/ficha-canonica-sintetica-v3.pdf`
 e conferir os sete pontos, os adicionais e o lastro na página 1, com o roteiro
@@ -1051,6 +1062,7 @@ confirmado pela InfinitePay", que fica só na ficha) e `LOJ-17` por `LOJ-37`.
 | LOJ-35 | A folha "Pedido da loja do site" mostra só Produto ("Camisa dry fit"), Cor, Tamanho, Quantidade ("10 peças"), Prazo da cor, Cliente, WhatsApp e Comprovante; o catálogo e o slug não mudam.                                                                                                                                                                                                                           |
 | LOJ-36 | A ficha `ficha-loja-v1` (A4, uma página) traz o cabeçalho de sempre, a faixa "Pedido de teste — não produzir nem entregar" no teste e as seções Produzir (produto, cor, tamanho em destaque, quantidade, prazo, "Pedido em"), Cliente (nome, WhatsApp) e Pagamento (valor pago, Pix, a faixa da InfinitePay e o comprovante), sem tipo, público, malha, gola, NSU nem fatura; o CSP do nginx libera só o novo estilo. |
 | LOJ-37 | Emenda o `LOJ-17`: o mesmo `pedido_id` com dados que diferem só em `pagamento.pago_em` (duas execuções do n8n) responde `200` com o mesmo `numero` e mantém o primeiro instante; qualquer outra diferença continua `409 STORE_ORDER_CONFLICT`.                                                                                                                                                                        |
+| LOJ-38 | A primeira geração bem-sucedida do PDF da ficha da loja registra a mesma primeira impressão idempotente de LOJ-27..29 e tira o pedido do aviso; `HEAD`, erro de geração e acesso negado não registram. A interface passa a dizer “Ficha ainda sem PDF” e “PDF gerado por …”, preservando os nomes dos campos e eventos internos. |
 
 ## Jornadas com menos botões (ADR 036, 15/10/2026)
 

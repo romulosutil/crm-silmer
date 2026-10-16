@@ -150,6 +150,14 @@ async function mockStore(page, options = {}) {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
+    if (/^\/api\/v1\/orders\/[^/]+\/pdf$/u.test(path)) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/pdf',
+        body: '%PDF-1.4\n% synthetic store ficha\n',
+      });
+      return;
+    }
     if (path === '/api/v1/sessions/current' && request.method() === 'GET') {
       await route.fulfill({
         body: JSON.stringify(
@@ -303,19 +311,17 @@ test('the list filters "Loja do site" by keyboard and labels the store order', a
   await expect(row).toContainText(
     'Confirmado pela loja do site · 07/10/2026, 23:15',
   );
-  await expect(row).not.toContainText('Ficha não impressa');
+  await expect(row).not.toContainText('Ficha ainda sem PDF');
   await expect(row).not.toContainText('Pago — confirmado pela InfinitePay');
   await expect(row).not.toContainText('sem vendedor');
   await expect(row).not.toContainText('informado pelo cliente');
-  await expect(
-    row.getByRole('button', { name: 'Imprimir ficha' }),
-  ).toBeVisible();
+  await expect(row.getByRole('button', { name: 'Gerar PDF' })).toBeVisible();
   await expect(row.getByRole('link', { name: 'Abrir pedido' })).toBeVisible();
 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('LOJ-33: a new site order says "Ficha não impressa"; a printed one says who printed it', async ({
+test('LOJ-33: a new site order says "Ficha ainda sem PDF"; a printed one says who printed it', async ({
   page,
 }) => {
   await mockStore(page, { orders: [newStoreOrder, printedStoreOrder] });
@@ -323,17 +329,17 @@ test('LOJ-33: a new site order says "Ficha não impressa"; a printed one says wh
   const confirmed = page.getByRole('region', { name: /Confirmados/u });
   const fresh = confirmed.getByRole('row').filter({ hasText: '13-CRM' });
   await expect(
-    fresh.getByText('Ficha não impressa', { exact: true }),
+    fresh.getByText('Ficha ainda sem PDF', { exact: true }),
   ).toBeVisible();
   await expect(fresh).toContainText(
     'Confirmado pela loja do site · 07/10/2026, 23:15',
   );
-  await expect(fresh).not.toContainText('Ficha impressa por');
+  await expect(fresh).not.toContainText('PDF gerado por');
 
   const printed = confirmed.getByRole('row').filter({ hasText: '14-CRM' });
-  await expect(printed).not.toContainText('Ficha não impressa');
+  await expect(printed).not.toContainText('Ficha ainda sem PDF');
   await expect(printed).toContainText(
-    'Ficha impressa por Rose Sintética · 08/10/2026, 09:12',
+    'PDF gerado por Rose Sintética · 08/10/2026, 09:12',
   );
 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -359,7 +365,7 @@ test('LOJ-31/LOJ-32: the Dashboard notice is one link to the site orders, and th
   await expect(notice).toHaveAttribute('href', '/pedidos?origem=loja');
   await expect(notice).toContainText('2 pedidos novos do site');
   await expect(notice).toContainText(
-    'Confirmados e pagos por Pix, o mais antigo em 07/10, 23:15. Imprima as fichas para começar a produção.',
+    'Confirmados e pagos por Pix, o mais antigo em 07/10, 23:15. Gere os PDFs das fichas para começar a produção.',
   );
   await expect(notice).toContainText('Ver pedidos');
   // The notice sits in a polite live region, before the indicators.
@@ -400,7 +406,7 @@ test('LOJ-31: one new site order reads in the singular; none hides the notice', 
     .getByRole('link', { name: /pedido novo do site/u });
   await expect(notice).toContainText('1 pedido novo do site');
   await expect(notice).toContainText(
-    'Confirmado e pago por Pix em 07/10, 23:15. Imprima a ficha para começar a produção.',
+    'Confirmado e pago por Pix em 07/10, 23:15. Gere o PDF da ficha para começar a produção.',
   );
 
   const empty = await page.context().newPage();
@@ -463,7 +469,7 @@ test('the store order page reads like a confirmed order, is locked and downloads
   await expect(page.getByText('Teste', { exact: true })).toBeVisible();
   // A test order is never a new site order.
   await expect(
-    page.getByText('Ficha não impressa', { exact: true }),
+    page.getByText('Ficha ainda sem PDF', { exact: true }),
   ).toHaveCount(0);
   await expect(
     page.getByText(
@@ -529,10 +535,10 @@ test('the store order page reads like a confirmed order, is locked and downloads
   await expect(closing).toContainText('Ficha 12-CRM');
   await expect(closing).toContainText('1 página · pedido da loja');
   await expect(closing.locator('.op-ficha-status')).toHaveText(
-    'Ainda não impressa.',
+    'PDF ainda não gerado.',
   );
   await expect(
-    closing.getByRole('button', { name: 'Abrir ficha' }),
+    closing.getByRole('button', { name: 'Baixar ficha em PDF' }),
   ).toBeVisible();
   await expect(closing).toContainText(
     'Pedido da loja não é reaberto: valor e itens vieram do pagamento.',
@@ -557,16 +563,11 @@ test('the store order page reads like a confirmed order, is locked and downloads
     await expect(page.getByRole('button', { name })).toHaveCount(0);
   }
 
-  // Tab reaches "Baixar ficha"; it is a download of the simplified ficha.
-  const download = page.getByRole('link', { name: 'Baixar ficha' });
-  await expect(download).toHaveAttribute(
-    'href',
-    '/api/v1/orders/order-loja/print?download=1',
-  );
-  await expect(download).toHaveAttribute('download', 'pedido-12-CRM.html');
+  // Keyboard reaches the PDF action for the simplified store ficha.
+  const download = page.getByRole('button', { name: 'Baixar ficha em PDF' });
   await heading.focus();
   let reached = false;
-  for (let step = 0; step < 12 && !reached; step += 1) {
+  for (let step = 0; step < 40 && !reached; step += 1) {
     await page.keyboard.press('Tab');
     reached = await download.evaluate(
       (element) => element === element.ownerDocument.activeElement,
@@ -574,7 +575,7 @@ test('the store order page reads like a confirmed order, is locked and downloads
   }
   expect(reached).toBe(true);
   await expect(
-    page.getByRole('button', { name: 'Imprimir ficha' }),
+    page.locator('.op-head-actions').getByRole('button', { name: 'Gerar PDF' }),
   ).toBeEnabled();
 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -614,11 +615,11 @@ test('LOJ-34: the page of a new site order says its ficha waits; printed, it nam
     page.getByRole('heading', { name: 'Pedido 13-CRM' }),
   ).toBeFocused();
   await expect(
-    page.locator('.op-head').getByText('Ficha não impressa', { exact: true }),
+    page.locator('.op-head').getByText('Ficha ainda sem PDF', { exact: true }),
   ).toBeVisible();
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await expect(closing.locator('.op-ficha-status')).toHaveText(
-    'Ainda não impressa. Ao imprimir, o pedido sai do aviso do Dashboard.',
+    'PDF ainda não gerado. Ao gerar, o pedido sai do aviso do Dashboard.',
   );
   await expect(closing.locator('.op-ficha-status')).toHaveAttribute(
     'data-tone',
@@ -631,13 +632,13 @@ test('LOJ-34: the page of a new site order says its ficha waits; printed, it nam
     page.getByRole('heading', { name: 'Pedido 14-CRM' }),
   ).toBeFocused();
   await expect(
-    page.getByText('Ficha não impressa', { exact: true }),
+    page.getByText('Ficha ainda sem PDF', { exact: true }),
   ).toHaveCount(0);
   const printedClosing = page.getByRole('region', {
     name: 'Fechamento e pagamento',
   });
   await expect(printedClosing.locator('.op-ficha-status')).toHaveText(
-    'Ficha impressa por Rose Sintética · 08/10/2026, 09:12',
+    'PDF gerado por Rose Sintética · 08/10/2026, 09:12',
   );
   await expect(printedClosing.locator('.op-ficha-status')).toHaveAttribute(
     'data-tone',
@@ -645,7 +646,7 @@ test('LOJ-34: the page of a new site order says its ficha waits; printed, it nam
   );
 });
 
-test('ADR 031: after "Imprimir ficha" one re-read clears the badge without a live event', async ({
+test('ADR 031: after "Gerar PDF" one re-read clears the badge without a live event', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -655,7 +656,7 @@ test('ADR 031: after "Imprimir ficha" one re-read clears the badge without a liv
   const confirmed = page.getByRole('region', { name: /Confirmados/u });
   const row = confirmed.getByRole('row').filter({ hasText: '13-CRM' });
   await expect(
-    row.getByText('Ficha não impressa', { exact: true }),
+    row.getByText('Ficha ainda sem PDF', { exact: true }),
   ).toBeVisible();
 
   // The API records the first print while the tab opens; no event arrives.
@@ -665,14 +666,14 @@ test('ADR 031: after "Imprimir ficha" one re-read clears the badge without a liv
     fichaFirstPrintedBy: { id: 'admin-rose', name: 'Rose Sintética' },
     version: 2,
   };
-  await row.getByRole('button', { name: 'Imprimir ficha' }).click();
+  await row.getByRole('button', { name: 'Gerar PDF' }).click();
   await expect(
-    row.getByText('Ficha não impressa', { exact: true }),
+    row.getByText('Ficha ainda sem PDF', { exact: true }),
   ).toHaveCount(0, { timeout: 8000 });
-  await expect(row).toContainText('Ficha impressa por Rose Sintética');
+  await expect(row).toContainText('PDF gerado por Rose Sintética');
 });
 
-test('ADR 031: on the order page, "Abrir ficha" re-reads the order once and the badge goes', async ({
+test('ADR 037: on the order page, the first PDF re-reads the order and clears the badge', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -681,7 +682,7 @@ test('ADR 031: on the order page, "Abrir ficha" re-reads the order once and the 
   await page.goto('/pedidos/order-loja-nova');
   const head = page.locator('.op-head');
   await expect(
-    head.getByText('Ficha não impressa', { exact: true }),
+    head.getByText('Ficha ainda sem PDF', { exact: true }),
   ).toBeVisible();
 
   orders[0] = {
@@ -692,12 +693,12 @@ test('ADR 031: on the order page, "Abrir ficha" re-reads the order once and the 
   };
   await page
     .getByRole('region', { name: 'Fechamento e pagamento' })
-    .getByRole('button', { name: 'Abrir ficha' })
+    .getByRole('button', { name: 'Baixar ficha em PDF' })
     .click();
   await expect(
-    head.getByText('Ficha não impressa', { exact: true }),
+    head.getByText('Ficha ainda sem PDF', { exact: true }),
   ).toHaveCount(0, { timeout: 8000 });
   await expect(page.locator('.op-ficha-status')).toHaveText(
-    'Ficha impressa por Rose Sintética · 08/10/2026, 09:12',
+    'PDF gerado por Rose Sintética · 08/10/2026, 09:12',
   );
 });

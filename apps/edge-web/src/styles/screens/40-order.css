@@ -201,7 +201,7 @@
 }
 
 /*
- * Mobile first: the page's main action ("Gerar pedido" or "Imprimir ficha")
+ * Mobile first: the page's main action ("Gerar pedido" or "Gerar PDF")
  * is fixed right above the shell's bottom navigation, which is
  * --mobile-nav-block-size tall plus the safe area. From 48rem the action
  * lives in the header and the closing panel again.
@@ -214,6 +214,7 @@
     var(--mobile-nav-block-size) + env(safe-area-inset-bottom, 0px)
   );
   display: flex;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
   border-block-start: 1px solid var(--color-border);

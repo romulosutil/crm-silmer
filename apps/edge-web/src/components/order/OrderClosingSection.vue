@@ -512,12 +512,12 @@ async function reopen() {
             {{
               fichaPrinted ||
               (order.isTest
-                ? 'Ainda não impressa.'
-                : 'Ainda não impressa. Ao imprimir, o pedido sai do aviso do Dashboard.')
+                ? 'PDF ainda não gerado.'
+                : 'PDF ainda não gerado. Ao gerar, o pedido sai do aviso do Dashboard.')
             }}
           </p>
           <button type="button" class="op-save" @click="editing.print">
-            Abrir ficha
+            Baixar ficha em PDF
           </button>
         </div>
 
@@ -550,9 +550,8 @@ async function reopen() {
     >
       <h2 id="generate-title">Gerar o pedido {{ order.number }}?</h2>
       <p id="generate-description">
-        O pedido é confirmado, a data do pedido passa a ser hoje e a ficha para
-        impressão fica disponível no navegador. Para mudar algo depois, reabra o
-        pedido.
+        O pedido é confirmado, a data do pedido passa a ser hoje e o PDF da
+        ficha fica disponível. Para mudar algo depois, reabra o pedido.
       </p>
       <dl>
         <div>

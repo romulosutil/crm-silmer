@@ -696,7 +696,7 @@ export function storeFichaPending(order) {
 }
 
 /**
- * LOJ-33/LOJ-34: "Ficha impressa por Rose · 08/10/2026, 09:12", or '' while
+ * LOJ-33/LOJ-34: "PDF gerado por Rose · 08/10/2026, 09:12", or '' while
  * nobody printed it.
  *
  * @param {Record<string, any>|null|undefined} order
@@ -705,7 +705,7 @@ export function fichaPrintedLabel(order) {
   if (!order?.fichaFirstPrintedAt) return '';
   const who = order.fichaFirstPrintedBy?.name || 'equipe';
   const at = dateTimeLabel(order.fichaFirstPrintedAt);
-  return at ? `Ficha impressa por ${who} · ${at}` : `Ficha impressa por ${who}`;
+  return at ? `PDF gerado por ${who} · ${at}` : `PDF gerado por ${who}`;
 }
 
 /**
@@ -723,15 +723,15 @@ export function storeNoticeText(count, oldestPaidAt) {
   if (total === 1) {
     return {
       detail: at
-        ? `Confirmado e pago por Pix em ${at}. Imprima a ficha para começar a produção.`
-        : 'Confirmado e pago por Pix. Imprima a ficha para começar a produção.',
+        ? `Confirmado e pago por Pix em ${at}. Gere o PDF da ficha para começar a produção.`
+        : 'Confirmado e pago por Pix. Gere o PDF da ficha para começar a produção.',
       title: '1 pedido novo do site',
     };
   }
   return {
     detail: at
-      ? `Confirmados e pagos por Pix, o mais antigo em ${at}. Imprima as fichas para começar a produção.`
-      : 'Confirmados e pagos por Pix. Imprima as fichas para começar a produção.',
+      ? `Confirmados e pagos por Pix, o mais antigo em ${at}. Gere os PDFs das fichas para começar a produção.`
+      : 'Confirmados e pagos por Pix. Gere os PDFs das fichas para começar a produção.',
     title: `${total} pedidos novos do site`,
   };
 }

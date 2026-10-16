@@ -1,9 +1,11 @@
 import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
 import {
   MAX_ORDER_FILE_BYTES,
   OrderFileTooLargeError,
   renderOrderFicha,
 } from '@crm-silmer/orders';
+import { renderOrderPdf } from './order-pdf.js';
 
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
 const ORDER_ORIGINS = new Set(['atendimento', 'loja']);
@@ -56,7 +58,12 @@ class OrderRequestError extends Error {
  * @param {Record<string, any>} orders
  * @param {(request: object) => {correlationId: string, requestId: string}} contextFor
  */
-export function registerOrderRoutes(api, orders, contextFor) {
+export function registerOrderRoutes(
+  api,
+  orders,
+  contextFor,
+  pdfRenderer = renderOrderPdf,
+) {
   api.get('/api/v1/orders/summary', async (request, reply) =>
     respond(reply, async () => {
       const query = requireObject(request.query ?? {});
@@ -193,6 +200,49 @@ export function registerOrderRoutes(api, orders, contextFor) {
         .send(renderOrderFicha(order));
     }),
   );
+
+  /** PIM-13: an authenticated, shareable PDF of the approved ficha. */
+  api.register(async (pdfScope) => {
+    await pdfScope.register(rateLimit, { global: false });
+    pdfScope.get(
+      '/api/v1/orders/:orderId/pdf',
+      { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+      async (request, reply) =>
+        respond(reply, async () => {
+          const params = requireObject(request.params);
+          const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+          rejectUnknownKeys(requireObject(request.query ?? {}), []);
+          const principal = await authorizeRead(request, orders, 'order.print');
+          const { order } = await orders.get(orderId);
+          if (order.status !== 'confirmado') {
+            throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
+          }
+          reply.header('cache-control', 'private, no-store');
+          reply.header('vary', 'Origin, Cookie');
+          reply.header('x-content-type-options', 'nosniff');
+          reply.header(
+            'content-security-policy',
+            "default-src 'none'; sandbox",
+          );
+          reply.header(
+            'content-disposition',
+            attachment(`pedido-${order.number}.pdf`),
+          );
+          if (request.method === 'HEAD') {
+            return reply.code(200).type('application/pdf').send();
+          }
+          const pdf = await pdfRenderer(renderOrderFicha(order));
+          if (order.origin === 'loja' && !order.fichaFirstPrintedAt) {
+            await orders.recordFirstPrint({
+              actor: principal.actor,
+              correlationId: contextFor(request).correlationId,
+              orderId,
+            });
+          }
+          return reply.code(200).type('application/pdf').send(pdf);
+        }),
+    );
+  });
 
   api.get(
     '/api/v1/conversations/:conversationId/order',

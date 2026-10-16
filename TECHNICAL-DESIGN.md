@@ -176,6 +176,15 @@ artefatos de aprovação, sem prova de envio externo. V2 a v5 não são
 sobrescritas. Assinatura física de Rose/Operação na v6 segue obrigatória
 antes da produção.
 
+`GET /api/v1/orders/:orderId/pdf` usa a mesma permissão e a mesma ficha,
+renderizada no Chromium headless incluído na imagem do runtime (ADR 037).
+Responde `application/pdf` como anexo privado sem cache; pendente responde 409.
+O renderer desliga JavaScript, bloqueia requisições externas, limita duas
+renderizações simultâneas e a rota limita dez requisições por minuto. O PDF
+não é persistido. A Web Share API compartilha o arquivo quando disponível;
+o WhatsApp é escolhido pela pessoa no aparelho. Na loja, o registro de
+primeiro acesso ocorre após renderização bem-sucedida; `HEAD` não registra.
+
 Pedido da loja (ADRs 027 e 028): `origin = loja`, sem conversa, nasce
 confirmado pelo ator `system:loja-do-site` ao preço de
 `modules/orders/src/domain/store-catalog.js` (R$ 180,00, prazo por cor), com

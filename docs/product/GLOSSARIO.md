@@ -80,6 +80,10 @@ nome deve revisar esse rótulo; a chave `feito_pela_silmer` da API não muda.
 
 ## Para quem cada informação serve
 
+**Gerar PDF** baixa a ficha confirmada como arquivo `.pdf`. Em celulares
+compatíveis, **Compartilhar PDF** oferece o arquivo ao menu do aparelho para
+escolha manual do WhatsApp ou outro destino. Não envia automaticamente.
+
 - **Vendedor:** resolve pendências, confirma os dados e a arte do pedido. A IA apenas coleta relatos e sugere dados dentro de sua capacidade.
 - **Rômulo:** acompanha valor vendido, quantidade de vendas e pontos que pedem
   intervenção. Indicadores devem declarar período e universo considerado.

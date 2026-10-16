@@ -52,7 +52,8 @@ FROM node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd
 
 ENV HOST=0.0.0.0 \
     NODE_ENV=production \
-    PORT=3000
+    PORT=3000 \
+    PLAYWRIGHT_BROWSERS_PATH=0
 WORKDIR /app
 
 RUN apt-get update \
@@ -74,6 +75,7 @@ RUN mkdir -p /var/lib/crm-chat-media /var/lib/crm-legacy-media \
 RUN rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=production-dependencies --chown=node:node /workspace/node_modules ./node_modules
+RUN node node_modules/playwright/cli.js install --with-deps --only-shell chromium
 COPY --from=build --chown=node:node /workspace/dist/runtime/apps ./apps
 COPY --from=build --chown=node:node /workspace/dist/runtime/modules ./modules
 COPY --chown=node:node scripts/runtime-healthcheck.mjs ./runtime-healthcheck.mjs

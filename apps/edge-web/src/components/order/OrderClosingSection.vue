@@ -1,6 +1,8 @@
 <script setup>
 import { computed, inject, nextTick, ref, watch } from 'vue';
+import { brand } from '../../brand/index.js';
 import { dateTimeBR } from '../../lib/format.js';
+import { openDialog } from '../../lib/ui.js';
 import {
   amountLabel,
   fichaPrintedLabel,
@@ -28,6 +30,22 @@ const BLOCKER_MESSAGES = Object.freeze({
     'Informe a entrega prometida no Resumo do pedido.',
 });
 const AMOUNT_FORMAT_MESSAGE = 'Use o formato 4.820,00.';
+// PFI-19 (RFC 024): the amount and the payment method are typed only in the
+// dialog "Gerar o pedido", so the rail says where they are asked.
+const ASKED_WHEN_GENERATING =
+  'Valor e forma de pagamento você informa ao gerar.';
+const OFFLINE_MESSAGE =
+  'Sem conexão com o servidor. O pedido não foi gerado; tente de novo.';
+// ADR 020, PFI-20 (ADR 035): who makes the art, in the words of the Arte do
+// pedido section; the company's name comes from the brand.
+const ARTWORK_LABELS = Object.freeze([
+  Object.freeze({ key: 'feito_pelo_cliente', label: 'O cliente envia a arte' }),
+  Object.freeze({
+    key: 'feito_pela_silmer',
+    label: `A ${brand.companyName} cria a arte`,
+  }),
+  Object.freeze({ key: 'sem_estampa', label: 'Sem estampa' }),
+]);
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -36,18 +54,30 @@ const props = defineProps({
 const editing = inject('orderEditing');
 const notify = inject('notify', () => {});
 const dialog = ref(null);
+const amountInput = ref(null);
+const dialogAlert = ref(null);
 const reopenDialog = ref(null);
 const reopenOpen = ref(false);
 const closingTitle = ref(null);
-const section = ref(null);
 const amountText = ref(formatBrl(props.order.finalAmountCents));
 const paymentCondition = ref(props.order.paymentCondition ?? '');
 const busy = ref(false);
 const confirmOpen = ref(false);
 const justGenerated = ref(false);
+// The rail's alert (a failed reopening) and the dialog's own alert.
 const errorMessage = ref('');
+const dialogMessage = ref('');
 /** @type {import('vue').Ref<Record<string, string>>} */
 const fieldErrors = ref({});
+/** @type {import('vue').Ref<{field: string, message: string}[]>} */
+const blockerNotes = ref([]);
+/**
+ * Who opened the dialog — "Gerar pedido" in the rail or in the phone's
+ * footer — so Esc and "Voltar" give the focus back to it.
+ *
+ * @type {HTMLElement|null}
+ */
+let opener = null;
 
 const isPending = computed(() => props.order.status === 'pendente');
 // LOJ-34 (ADR 031): a site order shows this panel confirmed, like an order
@@ -65,29 +95,33 @@ const itemsHeadline = computed(() => {
   const count = items.value.length;
   return `${count} ${count === 1 ? 'item' : 'itens'} · ${props.order.totalPieces} peças`;
 });
+const artworkHeadline = computed(() => {
+  const artwork = props.order.ficha?.artwork ?? {};
+  const marked = ARTWORK_LABELS.filter(({ key }) => artwork[key] === true);
+  return marked.length > 0 ? marked.map(({ label }) => label).join(' · ') : '—';
+});
 // PFI-15/PFI-16 (RFC 024): the progress at the top of the page replaced the
 // checklist that lived here. While a step is missing or a section is open,
 // "Gerar pedido" stays focusable but unavailable (aria-disabled); activating
-// it leads to the step instead of sending the confirmation.
+// it leads to the step instead of opening the dialog.
 const nextStep = computed(() => nextOrderStep(props.order));
 const generateBlocked = computed(
   () => nextStep.value !== null || sectionOpenElsewhere.value,
 );
-// PIT-06: "Falta para gerar" names every point, item by item, then who makes
-// the art, the promised delivery, the amount and the payment method.
-const pendingLabels = computed(() => [
-  ...missingFieldLabels(missing.value.filter(isPageGap)),
-  ...(amountValid.value ? [] : ['valor final']),
-  ...(paymentCondition.value === '' ? ['forma de pagamento'] : []),
-]);
+// PIT-06: "Falta para gerar" names every point of the page, item by item,
+// then who makes the art and the promised delivery. The amount and the
+// payment method are asked in the dialog (PFI-19), never listed here.
+const pendingLabels = computed(() =>
+  missingFieldLabels(missing.value.filter(isPageGap)),
+);
 const readiness = computed(() => {
   if (pendingLabels.value.length > 0) {
-    return `Falta para gerar: ${joinPt(pendingLabels.value)}.`;
+    return `Falta para gerar: ${joinPt(pendingLabels.value)}. ${ASKED_WHEN_GENERATING}`;
   }
   if (sectionOpenElsewhere.value) {
     return 'Salve ou cancele a seção em edição antes de gerar.';
   }
-  return 'Tudo pronto. Gerar confirma o pedido e libera a ficha.';
+  return `Tudo pronto. ${ASKED_WHEN_GENERATING}`;
 });
 
 /** @param {unknown} value */
@@ -97,9 +131,9 @@ function dateBR(value) {
 }
 
 // PCL-07: reopening keeps the amount and the condition already recorded, so
-// the form comes back filled with what was confirmed. Only a change of those
-// two values rewrites the form: saving another section while the items are
-// completed (ADR 016) keeps what the seller already typed here.
+// the dialog comes back filled with what was confirmed. Only a change of
+// those two values rewrites them: saving another section while the dialog is
+// closed (ADR 016) keeps what the seller already typed in it.
 watch(
   [() => props.order.finalAmountCents, () => props.order.paymentCondition],
   ([cents, condition]) => {
@@ -118,7 +152,7 @@ watch(paymentCondition, (value) => {
 /**
  * On leaving the field, a plain number ("4820", "4820,5") is written the way
  * the rule reads it ("4.820,00"); anything else is left as typed and, when it
- * still is not an amount, the message shows now instead of on "Gerar".
+ * still is not an amount, the message shows now instead of on "Confirmar".
  */
 function settleAmount() {
   const text = amountText.value.trim();
@@ -172,15 +206,16 @@ function blockerErrors(fields) {
 }
 
 /**
- * PFI-11: a malformed amount is caught here so the message lands under the
- * field; the server parses the same text again and would answer 422.
- * PFI-16: while a step is missing, "Gerar pedido" leads to it and never sends
- * the confirmation; with a section open it waits for Salvar or Cancelar, as
- * #closing-readiness says.
+ * PFI-16/PFI-19: while a step is missing, "Gerar pedido" leads to it and
+ * never opens the dialog nor sends the confirmation; with a section open it
+ * waits for Salvar or Cancelar, as #closing-readiness says. Once the three
+ * steps are done it opens the dialog "Gerar o pedido", the only place where
+ * the amount and the payment method are typed.
  *
- * @returns {Promise<'busy'|'section'|'step'|'fields'|'dialog'>}
+ * @param {EventTarget|null} [trigger] the button that asked for it
+ * @returns {Promise<'busy'|'section'|'step'|'dialog'>}
  */
-async function requestGenerate() {
+async function requestGenerate(trigger) {
   if (busy.value) return 'busy';
   if (sectionOpenElsewhere.value) return 'section';
   if (nextStep.value) {
@@ -188,50 +223,103 @@ async function requestGenerate() {
     return 'step';
   }
   fieldErrors.value = {};
+  blockerNotes.value = [];
+  dialogMessage.value = '';
   errorMessage.value = '';
   justGenerated.value = false;
-  if (!amountValid.value) {
-    fieldErrors.value = { finalAmount: AMOUNT_FORMAT_MESSAGE };
-    return 'fields';
-  }
-  if (paymentCondition.value === '') {
-    fieldErrors.value = { paymentCondition: BLOCKER_MESSAGES.paymentCondition };
-    return 'fields';
-  }
-  const pageGaps = missing.value.filter(isPageGap);
-  if (pageGaps.length > 0) {
-    fieldErrors.value = blockerErrors(pageGaps);
-    return 'fields';
-  }
+  opener = trigger instanceof globalThis.HTMLElement ? trigger : null;
   confirmOpen.value = true;
   await nextTick();
-  dialog.value?.showModal?.();
+  if (!dialog.value) return 'dialog';
+  if (opener) openDialog(dialog.value, opener);
+  else dialog.value.showModal?.();
+  // The first field of the dialog, whatever the helper focused.
+  amountInput.value?.focus();
   return 'dialog';
 }
 
 /**
  * Mobile first: "Gerar pedido" also lives in the page's fixed footer, far
- * from this form. When something is missing the focus comes here, to the
- * field to fix, instead of leaving the error out of sight.
+ * from this panel. It opens the same dialog and the focus comes back to it.
+ *
+ * @param {EventTarget|null} [trigger]
  */
-async function generateFromFooter() {
-  if ((await requestGenerate()) !== 'fields') return;
-  await nextTick();
-  const errors = fieldErrors.value;
-  /** @type {HTMLElement|null|undefined} */
-  const target = errors.finalAmount
-    ? section.value?.querySelector('#closing-amount')
-    : errors.paymentCondition
-      ? section.value?.querySelector('input[name="payment-condition"]')
-      : closingTitle.value;
-  target?.focus();
+function generateFromFooter(trigger) {
+  return requestGenerate(trigger ?? null);
 }
 
 defineExpose({ generateFromFooter });
 
-function closeDialog() {
-  dialog.value?.close?.();
-  confirmOpen.value = false;
+/**
+ * Closes the dialog without writing anything. Esc and "Voltar" give the
+ * focus back to whoever opened it (the helper does it again on `close`,
+ * harmlessly). The outcomes of the confirmation move the focus themselves,
+ * once the `close` event — and the helper's own return of the focus — has
+ * passed, so the last word on the focus is theirs.
+ *
+ * @param {{restoreFocus?: boolean}} [options]
+ * @returns {Promise<void>}
+ */
+function closeDialog({ restoreFocus = true } = {}) {
+  /** @type {HTMLDialogElement|null} */
+  const element = dialog.value;
+  const closed = element?.open
+    ? new Promise((resolve) => {
+        element.addEventListener('close', () => resolve(undefined), {
+          once: true,
+        });
+      })
+    : Promise.resolve();
+  element?.close?.();
+  if (restoreFocus && opener?.isConnected) opener.focus();
+  opener = null;
+  // The element leaves the page after its `close` event, unless the dialog
+  // was opened again in between.
+  return closed.then(() => {
+    if (!element?.open) confirmOpen.value = false;
+  });
+}
+
+// Esc waits for the answer of a confirmation already sent.
+function cancelDialog() {
+  if (busy.value) return;
+  closeDialog();
+}
+
+/** The first field the seller has to fix, in the order of the dialog. */
+async function focusFirstError() {
+  await nextTick();
+  const errors = fieldErrors.value;
+  /** @type {HTMLElement|null|undefined} */
+  const target = errors.finalAmount
+    ? amountInput.value
+    : errors.paymentCondition
+      ? dialog.value?.querySelector('input[name="payment-condition"]')
+      : null;
+  target?.focus();
+}
+
+/**
+ * PFI-11/PFI-12: a malformed amount ("4,820") or a missing method is caught
+ * here, next to its field, and nothing is sent; the server parses the same
+ * text again and would answer 422. A second Enter while the first is on its
+ * way is ignored.
+ */
+async function submitGenerate() {
+  if (busy.value) return;
+  dialogMessage.value = '';
+  /** @type {Record<string, string>} */
+  const errors = {};
+  if (!amountValid.value) errors.finalAmount = AMOUNT_FORMAT_MESSAGE;
+  if (paymentCondition.value === '') {
+    errors.paymentCondition = BLOCKER_MESSAGES.paymentCondition;
+  }
+  fieldErrors.value = errors;
+  if (Object.keys(errors).length > 0) {
+    await focusFirstError();
+    return;
+  }
+  await generate();
 }
 
 /** PCL-04: the human transition that dates the order and frees the ficha. */
@@ -242,20 +330,45 @@ async function generate() {
     paymentCondition: paymentCondition.value,
   });
   busy.value = false;
-  closeDialog();
   if (result.ok) {
     justGenerated.value = true;
+    await closeDialog({ restoreFocus: false });
+    // The button is gone with the confirmed view; the panel's title keeps
+    // the focus next to the confirmation and the ficha.
+    await nextTick();
+    closingTitle.value?.focus();
     return;
   }
-  if (result.code === 'ORDER_NOT_CONFIRMABLE') {
-    fieldErrors.value = blockerErrors((result.fields ?? []).map(String));
+  const fields = (result.fields ?? []).map(String);
+  if (result.code === 'ORDER_NOT_CONFIRMABLE' && fields.some(isPageGap)) {
+    // PFI-19: a blocker outside the dialog closes it; the rail names every
+    // blocker the server listed, the progress is read again and the focus
+    // goes to the next step. The order stays pending (PCL-05).
+    blockerNotes.value = Object.entries(blockerErrors(fields)).map(
+      ([field, message]) => ({ field, message }),
+    );
+    await closeDialog({ restoreFocus: false });
+    await editing.revisitNextStep();
     return;
   }
-  if (result.code === 'INVALID_AMOUNT') {
-    fieldErrors.value = { finalAmount: AMOUNT_FORMAT_MESSAGE };
-    return;
+  if (
+    result.code === 'ORDER_NOT_CONFIRMABLE' ||
+    result.code === 'INVALID_AMOUNT'
+  ) {
+    fieldErrors.value =
+      result.code === 'INVALID_AMOUNT'
+        ? { finalAmount: AMOUNT_FORMAT_MESSAGE }
+        : blockerErrors(fields);
+    if (Object.keys(fieldErrors.value).length > 0) {
+      await focusFirstError();
+      return;
+    }
   }
-  errorMessage.value = result.message;
+  // 409, 403, the server down or the connection lost: the dialog stays open
+  // with what happened, nothing recorded, and the focus on the message.
+  dialogMessage.value = result.status === 0 ? OFFLINE_MESSAGE : result.message;
+  await nextTick();
+  dialogAlert.value?.focus();
 }
 
 /**
@@ -293,20 +406,10 @@ async function reopen() {
   await nextTick();
   closingTitle.value?.focus();
 }
-
-const blockerNotes = computed(() =>
-  Object.entries(fieldErrors.value)
-    .filter(([field]) => !['finalAmount', 'paymentCondition'].includes(field))
-    .map(([field, message]) => ({ field, message })),
-);
 </script>
 
 <template>
-  <section
-    ref="section"
-    class="op-sheet op-closing"
-    aria-labelledby="order-closing-title"
-  >
+  <section class="op-sheet op-closing" aria-labelledby="order-closing-title">
     <div class="op-sheet-head">
       <h2 id="order-closing-title" ref="closingTitle" tabindex="-1">
         Fechamento e pagamento
@@ -324,110 +427,42 @@ const blockerNotes = computed(() =>
         Pedido confirmado e ficha gerada.
       </p>
 
-      <template v-if="isPending && canCommand">
-        <form
-          class="op-closing-form"
-          novalidate
-          @submit.prevent="requestGenerate"
+      <!-- PFI-19: one editing model. The amount and the payment method are
+           typed only in the dialog; the rail keeps what is missing and the
+           action that opens it. -->
+      <div v-if="isPending && canCommand" class="op-closing-action">
+        <p
+          v-for="note in blockerNotes"
+          :key="note.field"
+          role="alert"
+          class="op-field-error"
         >
-          <div class="op-field">
-            <label for="closing-amount">Valor final</label>
-            <div class="op-amount">
-              <span aria-hidden="true">R$</span>
-              <input
-                id="closing-amount"
-                v-model="amountText"
-                class="op-num"
-                type="text"
-                inputmode="decimal"
-                autocomplete="off"
-                placeholder="0,00"
-                enterkeyhint="done"
-                @blur="settleAmount"
-                :aria-invalid="Boolean(fieldErrors.finalAmount) || undefined"
-                :aria-describedby="
-                  fieldErrors.finalAmount
-                    ? 'closing-amount-error'
-                    : 'closing-amount-hint'
-                "
-              />
-            </div>
-            <p
-              v-if="fieldErrors.finalAmount"
-              id="closing-amount-error"
-              role="alert"
-              class="op-field-error"
-            >
-              {{ fieldErrors.finalAmount }}
-            </p>
-            <p v-else id="closing-amount-hint" class="op-hint">
-              Aprovado pelo cliente. O agente nunca informa preço.
-            </p>
-          </div>
+          {{ note.message }}
+        </p>
 
-          <fieldset class="op-conditions">
-            <legend>Forma de pagamento</legend>
-            <div class="op-condition-chips">
-              <label
-                v-for="option in PAYMENT_CONDITION_OPTIONS"
-                :key="option.value"
-                class="op-condition"
-              >
-                <input
-                  v-model="paymentCondition"
-                  type="radio"
-                  name="payment-condition"
-                  :value="option.value"
-                />
-                <span>{{ option.label }}</span>
-              </label>
-            </div>
-            <p
-              v-if="fieldErrors.paymentCondition"
-              role="alert"
-              class="op-field-error"
-            >
-              {{ fieldErrors.paymentCondition }}
-            </p>
-            <p class="op-hint">
-              Fica no CRM. A ficha impressa não mostra preço e nenhuma cobrança
-              é enviada.
-            </p>
-          </fieldset>
-
-          <p
-            v-for="note in blockerNotes"
-            :key="note.field"
-            role="alert"
-            class="op-field-error"
-          >
-            {{ note.message }}
-          </p>
-
-          <!-- PFI-13: the only primary button of the page once every step is
-               done; until then the next step is (PFI-16). -->
-          <button
-            class="op-generate op-generate--inline"
-            :class="{ primary: nextStep === null }"
-            type="submit"
-            :disabled="busy"
-            :aria-disabled="generateBlocked || undefined"
-            aria-describedby="closing-readiness"
-          >
-            <OrderIcon name="ficha" />Gerar pedido
-          </button>
-          <p
-            id="closing-readiness"
-            role="status"
-            class="op-readiness"
-            :data-ready="
-              (pendingLabels.length === 0 && !sectionOpenElsewhere) || undefined
-            "
-          >
-            {{ readiness }}
-          </p>
-        </form>
-      </template>
+        <!-- PFI-13: the only primary button of the page once every step is
+             done; until then the next step is (PFI-16). -->
+        <button
+          class="op-generate op-generate--inline"
+          :class="{ primary: nextStep === null }"
+          type="button"
+          :aria-disabled="generateBlocked || undefined"
+          aria-describedby="closing-readiness"
+          @click="requestGenerate($event.currentTarget)"
+        >
+          <OrderIcon name="ficha" />Gerar pedido
+        </button>
+        <p
+          id="closing-readiness"
+          role="status"
+          class="op-readiness"
+          :data-ready="
+            (pendingLabels.length === 0 && !sectionOpenElsewhere) || undefined
+          "
+        >
+          {{ readiness }}
+        </p>
+      </div>
 
       <template v-else>
         <dl class="op-deal">
@@ -502,13 +537,16 @@ const blockerNotes = computed(() =>
       </template>
     </div>
 
+    <!-- PFI-19: review what is generated, then the amount and the payment
+         method; one primary action. -->
     <dialog
       v-if="confirmOpen"
       ref="dialog"
-      class="op-dialog"
+      class="op-dialog op-generate-dialog"
+      aria-modal="true"
       aria-labelledby="generate-title"
       aria-describedby="generate-description"
-      @cancel.prevent="closeDialog"
+      @cancel.prevent="cancelDialog"
     >
       <h2 id="generate-title">Gerar o pedido {{ order.number }}?</h2>
       <p id="generate-description">
@@ -532,27 +570,106 @@ const blockerNotes = computed(() =>
           </dd>
         </div>
         <div>
-          <dt>Valor e pagamento</dt>
-          <dd class="op-num">
-            R$ {{ amountText.trim() }} ·
-            {{ paymentConditionLabel(paymentCondition) }}
-          </dd>
+          <dt>Arte do pedido</dt>
+          <dd>{{ artworkHeadline }}</dd>
         </div>
       </dl>
-      <div class="op-dialog-actions">
-        <button type="button" :disabled="busy" @click="closeDialog">
-          Voltar
-        </button>
-        <button
-          type="button"
-          class="primary op-generate"
-          :disabled="busy"
-          @click="generate"
+
+      <form class="op-closing-form" novalidate @submit.prevent="submitGenerate">
+        <p
+          v-if="dialogMessage"
+          ref="dialogAlert"
+          role="alert"
+          tabindex="-1"
+          class="op-alert"
         >
-          <OrderIcon name="ficha" />
-          {{ busy ? 'Gerando…' : 'Confirmar e gerar ficha' }}
-        </button>
-      </div>
+          {{ dialogMessage }}
+        </p>
+
+        <div class="op-field">
+          <label for="closing-amount">Valor final</label>
+          <div class="op-amount">
+            <span aria-hidden="true">R$</span>
+            <input
+              id="closing-amount"
+              ref="amountInput"
+              v-model="amountText"
+              class="op-num"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0,00"
+              enterkeyhint="done"
+              @blur="settleAmount"
+              :aria-invalid="Boolean(fieldErrors.finalAmount) || undefined"
+              :aria-describedby="
+                fieldErrors.finalAmount
+                  ? 'closing-amount-error'
+                  : 'closing-amount-hint'
+              "
+            />
+          </div>
+          <p
+            v-if="fieldErrors.finalAmount"
+            id="closing-amount-error"
+            role="alert"
+            class="op-field-error"
+          >
+            {{ fieldErrors.finalAmount }}
+          </p>
+          <p v-else id="closing-amount-hint" class="op-hint">
+            Aprovado pelo cliente. O agente nunca informa preço.
+          </p>
+        </div>
+
+        <fieldset class="op-conditions">
+          <legend>Forma de pagamento</legend>
+          <div class="op-condition-chips">
+            <label
+              v-for="option in PAYMENT_CONDITION_OPTIONS"
+              :key="option.value"
+              class="op-condition"
+            >
+              <input
+                v-model="paymentCondition"
+                type="radio"
+                name="payment-condition"
+                :value="option.value"
+                :aria-invalid="
+                  Boolean(fieldErrors.paymentCondition) || undefined
+                "
+              />
+              <span>{{ option.label }}</span>
+            </label>
+          </div>
+          <p
+            v-if="fieldErrors.paymentCondition"
+            role="alert"
+            class="op-field-error"
+          >
+            {{ fieldErrors.paymentCondition }}
+          </p>
+          <p class="op-hint">
+            Fica no CRM. A ficha impressa não mostra preço e nenhuma cobrança é
+            enviada.
+          </p>
+        </fieldset>
+
+        <div class="op-dialog-actions">
+          <button type="button" :disabled="busy" @click="closeDialog()">
+            Voltar
+          </button>
+          <button
+            type="submit"
+            class="primary op-generate"
+            :aria-disabled="busy || undefined"
+            :aria-busy="busy || undefined"
+          >
+            <OrderIcon name="ficha" />
+            {{ busy ? 'Gerando…' : 'Confirmar e gerar ficha' }}
+          </button>
+        </div>
+      </form>
     </dialog>
 
     <dialog

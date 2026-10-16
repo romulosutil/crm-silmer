@@ -383,7 +383,7 @@
 /* The print button and the reason it is locked step aside together. */
 .op-head-actions .op-print,
 .op-print-reason,
-.op-closing-form button.op-generate--inline {
+.op-closing-action button.op-generate--inline {
   display: none;
 }
 
@@ -404,7 +404,7 @@
     display: block;
   }
 
-  .op-closing-form button.op-generate--inline {
+  .op-closing-action button.op-generate--inline {
     display: inline-flex;
   }
 }
@@ -1937,11 +1937,27 @@ button.op-extras-toggle:hover {
   border-radius: var(--radius-md);
 }
 
-.op-closing-form {
+/* PFI-19: the rail of a pending order keeps only what is missing and
+   "Gerar pedido"; the amount and the payment method live in the dialog. */
+.op-closing-action {
   display: grid;
   gap: 1.1rem;
   padding-block-start: 1rem;
   border-block-start: 1px solid var(--color-border-subtle);
+}
+
+/* On a phone "Gerar pedido" is the footer's, so no rule sits above the
+   lone readiness line. */
+@media (width < 48rem) {
+  .op-closing-action {
+    padding-block-start: 0;
+    border-block-start: 0;
+  }
+}
+
+.op-closing-form {
+  display: grid;
+  gap: 1.1rem;
 }
 
 .op-amount {
@@ -1958,6 +1974,8 @@ button.op-extras-toggle:hover {
 }
 
 .op-closing-form .op-amount input {
+  inline-size: 100%;
+  min-block-size: var(--target-min);
   padding-inline-start: 2.6rem;
   font-size: var(--text-lg);
   font-weight: 600;
@@ -1979,7 +1997,7 @@ button.op-extras-toggle:hover {
 .op-condition-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: var(--space-2);
 }
 
 .op-condition {
@@ -2001,7 +2019,7 @@ button.op-extras-toggle:hover {
 .op-condition span {
   display: inline-flex;
   align-items: center;
-  min-block-size: 40px;
+  min-block-size: var(--target-min);
   padding: 0 0.9rem;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -2036,14 +2054,10 @@ button.op-generate {
   border-radius: var(--radius-md);
 }
 
-.op-closing-form button.op-generate {
+.op-closing-action button.op-generate {
   inline-size: 100%;
   min-block-size: 52px;
   font-size: var(--text-base);
-}
-
-.op-closing-form button.op-generate:disabled {
-  cursor: not-allowed;
 }
 
 /* PFI-16: unavailable but focusable; #closing-readiness says why. */
@@ -2247,4 +2261,42 @@ button.op-generate {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.6rem;
+}
+
+/*
+ * PFI-19: "Gerar o pedido" reviews the order and asks the amount and the
+ * payment method. Every field, option and button is a 44px target, 8px apart.
+ */
+.op-generate-dialog {
+  max-block-size: calc(100dvh - 2rem);
+  overflow-y: auto;
+}
+
+.op-generate-dialog dl {
+  margin-block: 0.9rem 1.1rem;
+}
+
+.op-generate-dialog .op-dialog-actions {
+  gap: var(--space-2);
+  padding-block-start: 0.25rem;
+}
+
+.op-generate-dialog .op-dialog-actions button {
+  min-block-size: var(--target-min);
+}
+
+@media (width < 48rem) {
+  .op-generate-dialog {
+    padding: var(--space-4);
+  }
+
+  /* Thumb first: both actions full width, the primary last and closest to
+     it, in the same order the keyboard reaches them. */
+  .op-generate-dialog .op-dialog-actions {
+    flex-direction: column;
+  }
+
+  .op-generate-dialog .op-dialog-actions button {
+    inline-size: 100%;
+  }
 }

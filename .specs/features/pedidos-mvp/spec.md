@@ -366,8 +366,9 @@ de `docs/phase0/FICHA-PDF-REVIEW-V3.md`.
 
 Superado por PCX-10 a PCX-12 (RFC 024, ADR 036): o botão "Pedido" e a gaveta
 dão lugar ao link do pedido no cabeçalho e ao resumo em Detalhes › Pedido.
-PCX-06 a PCX-09 ficam abaixo como histórico e valem até a T126 chegar ao
-`master`.
+A T126 foi entregue em `ux/jornadas` (`c1a9023`), que removeu
+`OrderDrawer.vue`; PCX-06 a PCX-09 ficam abaixo como histórico e deixam de
+valer quando `ux/jornadas` chegar ao `master`.
 
 **Aceite:**
 
@@ -601,65 +602,74 @@ geração; reabrir e ver o nome atual.
 ## Rastreabilidade
 
 Verificado no Grupo H (T39) em 13/09/2026. Evidência = teste automatizado
-(arquivo:linha) que falha se o requisito for quebrado.
+que falha se o requisito for quebrado.
 
-| ID     | História | Evidência                                                                                  | Status   |
-| ------ | -------- | ------------------------------------------------------------------------------------------ | -------- |
-| PCL-01 | P1-1     | `test/orders-service-create.test.js:78`                                                    | Verified |
-| PCL-02 | P1-1     | `test/orders-service-create.test.js:132`                                                   | Verified |
-| PCL-03 | P1-1     | `test/orders-service-create.test.js:162`                                                   | Verified |
-| PAG-01 | P1-1     | `test/orders-service-create.test.js:243`; `test/n8n-integration-postgres-live.test.js:116` | Verified |
-| PAG-02 | P1-1     | `test/orders-service-create.test.js:279` (ramo `ignored`)                                  | Verified |
-| PAG-03 | P1-1     | `test/orders-repository-contract.test.js:287`                                              | Verified |
-| PCL-10 | P1-2     | `test/orders-service-create.test.js:198`; `test/e2e/crm-ui.spec.js:1102`                   | Verified |
-| PCL-11 | P1-2     | `test/e2e/crm-ui.spec.js:369,1083`                                                         | Verified |
-| PFI-01 | P1-3     | `test/e2e/orders.spec.js:978`                                                              | Verified |
-| PFI-02 | P1-3     | `test/e2e/orders.spec.js:710`                                                              | Verified |
-| PFI-03 | P1-3     | `test/e2e/orders.spec.js:773`                                                              | Verified |
-| PFI-04 | P1-3     | `test/e2e/orders.spec.js:773,789,814`                                                      | Verified |
-| PFI-05 | P1-3     | `test/e2e/orders.spec.js:905,937`                                                          | Verified |
-| PFI-06 | P1-3     | `test/e2e/orders.spec.js:698,892`                                                          | Verified |
-| PFI-07 | P1-3     | `test/e2e/orders.spec.js:833`                                                              | Verified |
-| PFI-08 | P1-3     | `test/e2e/orders.spec.js:957`                                                              | Verified |
-| PFI-09 | P1-3     | `test/e2e/orders.spec.js:581`; `test/order-format.test.js:103`                             | Verified |
-| PFI-10 | P1-3     | `test/e2e/orders.spec.js:764`                                                              | Verified |
-| PFI-14 | P1-3     | `test/e2e/orders.spec.js:1016`                                                             | Verified |
-| PAU-01 | P1-3     | `test/e2e/orders.spec.js:610`                                                              | Verified |
-| PCL-04 | P1-4     | `test/orders-service-commands.test.js:260` (bloco `confirmed`)                             | Verified |
-| PCL-05 | P1-4     | `test/orders-service-commands.test.js:260,313`                                             | Verified |
-| PCL-06 | P1-4     | `test/orders-service-commands.test.js:173`; `test/e2e/orders.spec.js:1092`                 | Verified |
-| PCL-08 | P1-4     | `test/orders-service-commands.test.js:336`                                                 | Verified |
-| PCL-09 | P1-4     | `test/orders-postgres-live.test.js:457`                                                    | Verified |
-| PFI-11 | P1-4     | `test/orders-service-commands.test.js:260`; `test/order-format.test.js:82`                 | Verified |
-| PFI-12 | P1-4     | `test/orders-service-commands.test.js:260,336`; `modules/orders/src/domain/order.js:107`   | Verified |
-| PFI-13 | P1-4     | `test/e2e/orders.spec.js:1075`                                                             | Verified |
-| PIM-01 | P1-5     | `test/e2e/orders.spec.js:567`; `test/order-format.test.js:170`                             | Verified |
-| PIM-02 | P1-5     | `test/order-routes.test.js:884`; `test/identity-operational-read.test.js` (T75)            | Verified |
-| PIM-03 | P1-5     | `test/order-routes.test.js:917`                                                            | Verified |
-| PIM-04 | P1-5     | `test/order-routes.test.js:889`                                                            | Verified |
-| PIM-05 | P1-5     | `test/e2e/orders.spec.js:1110`                                                             | Verified |
-| PCL-07 | P1-6     | `test/e2e/orders.spec.js:1027`; `test/orders-service-commands.test.js:336`                 | Verified |
-| PCL-12 | P1-6     | `test/order-routes.test.js:753`; `test/orders-domain.test.js:169`                          | Verified |
-| PLI-01 | P1-7     | `test/e2e/foundation.spec.js:338`                                                          | Verified |
-| PLI-02 | P1-7     | `test/e2e/orders.spec.js:430`                                                              | Verified |
-| PLI-03 | P1-7     | `test/e2e/orders.spec.js:368,448`                                                          | Verified |
-| PLI-04 | P1-7     | `test/e2e/orders.spec.js:368`                                                              | Verified |
-| PLI-05 | P1-7     | `test/order-format.test.js:139`                                                            | Verified |
-| PLI-06 | P1-7     | `test/e2e/orders.spec.js:409`                                                              | Verified |
-| PLI-07 | P1-7     | `test/e2e/orders.spec.js:460`                                                              | Verified |
-| PLI-08 | P1-7     | `test/e2e/orders.spec.js:473`; `test/e2e/crm-ui.spec.js:975`                               | Verified |
-| PGE-01 | P1-7     | `test/e2e/foundation.spec.js:338,402`; `test/e2e/orders.spec.js:529`                       | Verified |
-| PCX-01 | P1-8     | `test/e2e/crm-ui.spec.js:830,1131`                                                         | Verified |
-| PCX-02 | P1-8     | `test/e2e/crm-ui.spec.js:848`                                                              | Verified |
-| PCX-03 | P1-8     | `test/e2e/crm-ui.spec.js:74,931,938`                                                       | Verified |
-| PCX-04 | P1-8     | `test/e2e/crm-ui.spec.js:74,923`                                                           | Verified |
-| PCX-05 | P1-8     | `test/e2e/crm-ui.spec.js:839,886`                                                          | Verified |
-| PCX-06 | P1-9     | `test/e2e/crm-ui.spec.js:950`                                                              | Verified |
-| PCX-07 | P1-9     | `test/e2e/crm-ui.spec.js:1005`                                                             | Verified |
-| PCX-08 | P1-9     | `test/e2e/crm-ui.spec.js:1091`                                                             | Verified |
-| PCX-09 | P1-9     | `test/e2e/crm-ui.spec.js:1021,1036,1053`                                                   | Verified |
+Desde a T133 (RFC 024, 15/10/2026), os testes E2E (`test/e2e/`) e os de
+`test/order-format.test.js` são citados pelo arquivo e pelo título do teste,
+que não muda quando o arquivo cresce; os números de linha antigos já não
+batiam depois das fatias do RFC 024 e da separação da lista de Pedidos em
+`orders-list.spec.js` (S3, `6fb9fbb`). Os demais testes unitários continuam
+com o `arquivo:linha` da verificação original.
+
+| ID     | História | Evidência                                                                                                                                                                                                                                                               | Status                |
+| ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| PCL-01 | P1-1     | `test/orders-service-create.test.js:78`                                                                                                                                                                                                                                 | Verified              |
+| PCL-02 | P1-1     | `test/orders-service-create.test.js:132`                                                                                                                                                                                                                                | Verified              |
+| PCL-03 | P1-1     | `test/orders-service-create.test.js:162`                                                                                                                                                                                                                                | Verified              |
+| PAG-01 | P1-1     | `test/orders-service-create.test.js:243`; `test/n8n-integration-postgres-live.test.js:116`                                                                                                                                                                              | Verified              |
+| PAG-02 | P1-1     | `test/orders-service-create.test.js:279` (ramo `ignored`)                                                                                                                                                                                                               | Verified              |
+| PAG-03 | P1-1     | `test/orders-repository-contract.test.js:287`                                                                                                                                                                                                                           | Verified              |
+| PCL-10 | P1-2     | `test/orders-service-create.test.js:198`; `crm-ui.spec.js` “PCX-11: offers "Criar pedido" in the header only to the owner and creates it there”                                                                                                                         | Verified              |
+| PCL-11 | P1-2     | `crm-ui.spec.js` “PCX-11: offers "Criar pedido" in the header only to the owner and creates it there”                                                                                                                                                                   | Verified              |
+| PFI-01 | P1-3     | `orders.spec.js` “keeps the sections in the order of the printed ficha (PFI-01, PLA-01)” e “opens the order page inside Pedidos, with the trail and the sections in order”                                                                                              | Verified              |
+| PFI-02 | P1-3     | `orders.spec.js` “reads the order summary and marks the customer as locked (PFI-02)”                                                                                                                                                                                    | Verified              |
+| PFI-03 | P1-3     | `orders.spec.js` “reads each item with the seven points in order and the extras closed (PFI-03, PIT-01, PIT-02)”                                                                                                                                                        | Verified              |
+| PFI-04 | P1-3     | `orders.spec.js` “edits the grade and recomputes every total from it (PFI-04)” e “refuses a quantity that is not a whole piece, on the line (PFI-04)”                                                                                                                   | Verified              |
+| PFI-05 | P1-3     | `orders.spec.js` “edits the observations and stops at five lines (PFI-05)” e “drops a blank observation instead of storing an empty line”                                                                                                                               | Verified              |
+| PFI-06 | P1-3     | `orders.spec.js` “edits the summary and saves the whole section at once (PFI-06)”, “opens one section at a time (PFI-06)” e “keeps the other "Editar" focusable but unavailable, with the reason, while one section is open (PFI-17, PFI-06)”                           | Verified              |
+| PFI-07 | P1-3     | `orders.spec.js` “accepts "Não aplicável" on sleeves and viés (PFI-07)”                                                                                                                                                                                                 | Verified              |
+| PFI-08 | P1-3     | `orders.spec.js` “leaves production to the printed ficha and shows service data as not printed (PFI-08, PFI-20)”                                                                                                                                                        | Verified              |
+| PFI-09 | P1-3     | `orders.spec.js` “lists exactly what is missing to generate, point by point (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03)”; `order-format.test.js` “names each point missing to generate in plain words (PIT-06)”                                                    | Verified              |
+| PFI-10 | P1-3     | `orders.spec.js` “keeps a confirmed order in reading mode until it is reopened (PFI-10)”                                                                                                                                                                                | Verified              |
+| PFI-14 | P1-3     | `orders.spec.js` “keeps every summary and item field as text typed by hand (PFI-14)”                                                                                                                                                                                    | Verified              |
+| PAU-01 | P1-3     | `orders.spec.js` “shows the order read-only to whoever does not own the conversation (PAU-01)”                                                                                                                                                                          | Verified              |
+| PCL-04 | P1-4     | `test/orders-service-commands.test.js:260` (bloco `confirmed`)                                                                                                                                                                                                          | Verified              |
+| PCL-05 | P1-4     | `test/orders-service-commands.test.js:260,313`                                                                                                                                                                                                                          | Verified              |
+| PCL-06 | P1-4     | `test/orders-service-commands.test.js:173`; `orders.spec.js` “hides Gerar and Reabrir from whoever does not own the conversation”                                                                                                                                       | Verified              |
+| PCL-08 | P1-4     | `test/orders-service-commands.test.js:336`                                                                                                                                                                                                                              | Verified              |
+| PCL-09 | P1-4     | `test/orders-postgres-live.test.js:457`                                                                                                                                                                                                                                 | Verified              |
+| PFI-11 | P1-4     | `test/orders-service-commands.test.js:260`; `order-format.test.js` “parses the typed amount in Brazilian format into integer cents”                                                                                                                                     | Verified              |
+| PFI-12 | P1-4     | `test/orders-service-commands.test.js:260,336`; `modules/orders/src/domain/order.js:107`                                                                                                                                                                                | Verified              |
+| PFI-13 | P1-4     | `orders.spec.js` “keeps "Gerar pedido" as the only primary button of the page (PFI-13)” e “makes the next step the only primary while one is missing (PFI-13, PFI-16)”                                                                                                  | Verified              |
+| PIM-01 | P1-5     | `orders.spec.js` “locks printing while the order is pending and says why (PIM-01)”; `order-format.test.js` “states why printing is locked while the order is pending (PIM-01)”                                                                                          | Verified              |
+| PIM-02 | P1-5     | `test/order-routes.test.js:884`; `test/identity-operational-read.test.js` (T75)                                                                                                                                                                                         | Verified              |
+| PIM-03 | P1-5     | `test/order-routes.test.js:917`                                                                                                                                                                                                                                         | Verified              |
+| PIM-04 | P1-5     | `test/order-routes.test.js:889`                                                                                                                                                                                                                                         | Verified              |
+| PIM-05 | P1-5     | `orders.spec.js` “hides Gerar and Reabrir from whoever does not own the conversation” e “prints a confirmed order from its page”                                                                                                                                        | Verified              |
+| PCL-07 | P1-6     | `orders.spec.js` “confirms the order, frees printing, reopens it and locks printing again”; `test/orders-service-commands.test.js:336`                                                                                                                                  | Verified              |
+| PCL-12 | P1-6     | `test/order-routes.test.js:753`; `test/orders-domain.test.js:169`                                                                                                                                                                                                       | Verified              |
+| PLI-01 | P1-7     | `foundation.spec.js` “keeps Pedidos in the menu after Caixa de Entrada, active across its pages”                                                                                                                                                                        | Verified              |
+| PLI-02 | P1-7     | `orders-list.spec.js` “filters by status and searches by number, customer or phone” e “PLI-09/PLI-10: the "Filtros" sheet works by keyboard and names the filter it applies” (emenda)                                                                                   | Verified              |
+| PLI-03 | P1-7     | `orders-list.spec.js` “groups orders by status with counts, columns and actions” e “puts pending orders and exceptions first, with the delivery deadline”                                                                                                               | Verified              |
+| PLI-04 | P1-7     | `orders-list.spec.js` “groups orders by status with counts, columns and actions”                                                                                                                                                                                        | Verified              |
+| PLI-05 | P1-7     | `order-format.test.js` “summarises what is missing for the Situação column (PLI-05)”                                                                                                                                                                                    | Verified              |
+| PLI-06 | P1-7     | `orders-list.spec.js` “groups orders by status with counts, columns and actions”                                                                                                                                                                                        | Verified              |
+| PLI-07 | P1-7     | `orders-list.spec.js` “pages the list with "Ver mais"”                                                                                                                                                                                                                  | Verified              |
+| PLI-08 | P1-7     | `orders-list.spec.js` “refreshes the list when an order changes elsewhere (PLI-08)”; `crm-ui.spec.js` “PCX-10: updates the order link when the order changes elsewhere”                                                                                                 | Verified              |
+| PGE-01 | P1-7     | `foundation.spec.js` “keeps Pedidos in the menu after Caixa de Entrada, active across its pages”; `orders.spec.js` “opens the order page inside Pedidos, with the trail and the sections in order” e “keeps the trail without an origin when the list opened the order” | Verified              |
+| PCX-01 | P1-8     | `crm-ui.spec.js` “drops the pending AI suggestion block from the conversation” e “PCX-14: filters the Inbox with three shortcuts with totals and the "Filtros" sheet”                                                                                                   | Verified              |
+| PCX-02 | P1-8     | `crm-ui.spec.js` “PCX-14: filters the Inbox with three shortcuts with totals and the "Filtros" sheet” (emendado por PCX-14)                                                                                                                                             | Verified              |
+| PCX-03 | P1-8     | `crm-ui.spec.js` “names the stop reason and waits, oldest first, when the seller is due” e “claims a pending handoff from its conversation in the Caixa de Entrada”                                                                                                     | Verified              |
+| PCX-04 | P1-8     | `crm-ui.spec.js` “names the stop reason and waits, oldest first, when the seller is due”                                                                                                                                                                                | Verified              |
+| PCX-05 | P1-8     | `crm-ui.spec.js` “never offers to hand the conversation back to the AI and keeps the actions on the keyboard” e “labels human and AI service distinctly and only permits transfer after takeover” (emendado por PCX-13 e PCX-14)                                        | Verified              |
+| PCX-06 | P1-9     | Superado por PCX-10 (T126, `c1a9023`); os testes da gaveta saíram com ela                                                                                                                                                                                               | Superado pelo RFC 024 |
+| PCX-07 | P1-9     | Superado por PCX-12 (T126, `c1a9023`)                                                                                                                                                                                                                                   | Superado pelo RFC 024 |
+| PCX-08 | P1-9     | Superado por PCX-11 (T126, `c1a9023`)                                                                                                                                                                                                                                   | Superado pelo RFC 024 |
+| PCX-09 | P1-9     | Superado por PCX-10 e PCX-12 (T126, `c1a9023`)                                                                                                                                                                                                                          | Superado pelo RFC 024 |
 
 **Cobertura:** 52 requisitos · 52 verificados · 0 sem evidência · 0 lacunas.
+Revisão da T133 (15/10/2026): PCX-06 a PCX-09 deixaram de valer com a T126
+(RFC 024); os outros 48 continuam verificados pelos testes acima.
 
 **Gate desta verificação:**
 
@@ -671,24 +681,25 @@ Verificado no Grupo H (T39) em 13/09/2026. Evidência = teste automatizado
 | `npm run test:e2e`                 | ✅ passou — 69 passed, 7 skipped (Playwright)                                                                                                                                                              |
 
 Os 7 testes e2e pulados são cenários de Kanban já aposentados (ADR 004,
-`test/e2e/crm-ui.spec.js:602,1215,1238,1275,1284,1303,1315`) — não pertencem à
+`test/e2e/crm-ui.spec.js:602,1215,1238,1275,1284,1303,1315`, linhas de
+13/09/2026; hoje são os `test.skip` do mesmo arquivo) — não pertencem à
 Pedidos MVP e não contam como lacuna.
 
 ### Lastro de datas (ADR 008)
 
 Verificado em T46, 29/09/2026.
 
-| ID     | História | Evidência                                                                                                                                       | Status                   |
-| ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| PLA-01 | P1-10    | `test/e2e/orders.spec.js:822,1144`; `test/order-format.test.js:201`                                                                             | Verified                 |
-| PLA-02 | P1-10    | `test/orders-service-create.test.js:97`; `test/orders-postgres-live.test.js:334`; `test/migrations-live.test.js:270`                            | Verified                 |
-| PLA-03 | P1-10    | `test/order-format.test.js:201`; `test/e2e/orders.spec.js:822`                                                                                  | Verified                 |
-| PLA-04 | P1-10    | `test/orders-domain.test.js:214`; `test/orders-repository-contract.test.js:341`; `test/order-routes.test.js:778`; `test/e2e/orders.spec.js:842` | Verified                 |
-| PLA-05 | P1-10    | `test/orders-domain.test.js:250`; `test/order-routes.test.js:833`; `test/e2e/orders.spec.js:883,914`                                            | Verified                 |
-| PLA-06 | P1-10    | `test/orders-domain.test.js:214`; `test/order-routes.test.js:799`; `test/e2e/orders.spec.js:842`                                                | Verified                 |
-| PLA-07 | P1-10    | `test/order-routes.test.js:858`; `test/orders-service-commands.test.js:419`; `test/e2e/orders.spec.js:652`                                      | Verified                 |
-| PLA-08 | P1-10    | Ver "Ficha impressa com os sete pontos (ADR 017)" abaixo                                                                                        | Verified · PDF a aprovar |
-| PLA-09 | P1-10    | `test/order-routes.test.js:1059`                                                                                                                | Verified                 |
+| ID     | História | Evidência                                                                                                                                                                                                                                                                         | Status                   |
+| ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| PLA-01 | P1-10    | `orders.spec.js` “keeps the sections in the order of the printed ficha (PFI-01, PLA-01)” e “shows the three trail dates without repeating the summary (PLA-01..03, PLA-08)”; `order-format.test.js` “shows each business date once across summary and trail (PLA-01..03, PLA-08)” | Verified                 |
+| PLA-02 | P1-10    | `test/orders-service-create.test.js:97`; `test/orders-postgres-live.test.js:334`; `test/migrations-live.test.js:270`                                                                                                                                                              | Verified                 |
+| PLA-03 | P1-10    | `order-format.test.js` “shows each business date once across summary and trail (PLA-01..03, PLA-08)”; `orders.spec.js` “shows the three trail dates without repeating the summary (PLA-01..03, PLA-08)”                                                                           | Verified                 |
+| PLA-04 | P1-10    | `test/orders-domain.test.js:214`; `test/orders-repository-contract.test.js:341`; `test/order-routes.test.js:778`; `orders.spec.js` “records payment and delivery on a confirmed order without reopening it (PLA-04, PLA-06)”                                                      | Verified                 |
+| PLA-05 | P1-10    | `test/orders-domain.test.js:250`; `test/order-routes.test.js:833`; `orders.spec.js` “clears a recorded day and refuses a day after today, next to the field (PLA-05)” e “names the day the server refused as invalid”                                                             | Verified                 |
+| PLA-06 | P1-10    | `test/orders-domain.test.js:214`; `test/order-routes.test.js:799`; `orders.spec.js` “records payment and delivery on a confirmed order without reopening it (PLA-04, PLA-06)”                                                                                                     | Verified                 |
+| PLA-07 | P1-10    | `test/order-routes.test.js:858`; `test/orders-service-commands.test.js:419`; `orders.spec.js` “shows the order read-only to whoever does not own the conversation (PAU-01)” e “heads each section with its state in words and "Editar" naming the section (PFI-17)”               | Verified                 |
+| PLA-08 | P1-10    | Ver "Ficha impressa com os sete pontos (ADR 017)" abaixo                                                                                                                                                                                                                          | Verified · PDF a aprovar |
+| PLA-09 | P1-10    | `test/order-routes.test.js:1059`                                                                                                                                                                                                                                                  | Verified                 |
 
 **Cobertura:** 9 requisitos · 9 verificados · PLA-08 sai no papel depois da
 aprovação do PDF da v3 (ADR 017).
@@ -726,20 +737,20 @@ Verificado em T66, 03/10/2026. Os trechos da ADR 016 em PFI-03, PFI-08,
 PFI-09, PFI-12, PCL-04, PCL-05 e PLA-06 têm a evidência de PIT-01, PIT-10,
 PIT-06, PIT-10, PIT-05, PIT-06 e PIT-12.
 
-| ID     | História | Evidência                                                                                                                                              | Status   |
-| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| PIT-01 | P1-11    | `test/e2e/orders.spec.js:1018,1116`; `test/order-format.test.js:191`                                                                                   | Verified |
-| PIT-02 | P1-11    | `test/e2e/orders.spec.js:1018,1077,1116`                                                                                                               | Verified |
-| PIT-03 | P1-11    | `test/orders-ficha.test.js:79,90,105,131`; `test/orders-service-commands.test.js:351`; `test/order-routes.test.js:523`; `test/e2e/orders.spec.js:1116` | Verified |
-| PIT-04 | P1-11    | `test/orders-ficha.test.js:54,147`; `test/orders-service-read.test.js:206`; `test/orders-postgres-live.test.js:783`; `test/order-routes.test.js:523`   | Verified |
-| PIT-05 | P1-11    | `test/orders-domain.test.js:103`; `test/orders-postgres-live.test.js:612`; `test/order-routes.test.js:744`                                             | Verified |
-| PIT-06 | P1-11    | `test/orders-domain.test.js:369`; `test/order-format.test.js:117,157`; `test/e2e/orders.spec.js:639,1544`; `test/e2e/crm-ui.spec.js:1178`              | Verified |
-| PIT-07 | P1-11    | `test/orders-ficha.test.js:267,326,339,368,400,440,496,527`; `test/orders-service-create.test.js:101`                                                  | Verified |
-| PIT-08 | P1-11    | `test/orders-sizes.test.js:11,51,57,102`; `test/orders-ficha.test.js:464`                                                                              | Verified |
-| PIT-09 | P1-11    | `test/order-format.test.js:208`; `test/e2e/orders.spec.js:1166`                                                                                        | Verified |
-| PIT-10 | P1-11    | `test/e2e/orders.spec.js:1208`; `test/e2e/crm-ui.spec.js:1178`                                                                                         | Verified |
-| PIT-11 | P1-11    | `test/orders-postgres-live.test.js:352`                                                                                                                | Verified |
-| PIT-12 | P1-11    | `test/orders-domain.test.js:190`; `test/orders-postgres-live.test.js:612`; `test/order-format.test.js:292,359`; `test/e2e/orders.spec.js:639`          | Verified |
+| ID     | História | Evidência                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Status   |
+| ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| PIT-01 | P1-11    | `orders.spec.js` “reads each item with the seven points in order and the extras closed (PFI-03, PIT-01, PIT-02)” e “edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)”; `order-format.test.js` “heads each item with its type and the pieces of its sizes (PIT-01)”                                                                                                                                                                                       | Verified |
+| PIT-02 | P1-11    | `orders.spec.js` “reads each item with the seven points in order and the extras closed (PFI-03, PIT-01, PIT-02)”, “opens and closes the extras with the keyboard, keeping the focus (PIT-02)” e “edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)”                                                                                                                                                                                                       | Verified |
+| PIT-03 | P1-11    | `test/orders-ficha.test.js:79,90,105,131`; `test/orders-service-commands.test.js:351`; `test/order-routes.test.js:523`; `orders.spec.js` “edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)”                                                                                                                                                                                                                                                              | Verified |
+| PIT-04 | P1-11    | `test/orders-ficha.test.js:54,147`; `test/orders-service-read.test.js:206`; `test/orders-postgres-live.test.js:783`; `test/order-routes.test.js:523`                                                                                                                                                                                                                                                                                                                              | Verified |
+| PIT-05 | P1-11    | `test/orders-domain.test.js:103`; `test/orders-postgres-live.test.js:612`; `test/order-routes.test.js:744`                                                                                                                                                                                                                                                                                                                                                                        | Verified |
+| PIT-06 | P1-11    | `test/orders-domain.test.js:369`; `order-format.test.js` “names each point missing to generate in plain words (PIT-06)” e “names an unmapped missing field instead of hiding it”; `orders.spec.js` “lists exactly what is missing to generate, point by point (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03)” e “names each blocker the server refused the confirmation with”; `crm-ui.spec.js` “PCX-12: summarises the order in Detalhes, opened and closed from the keyboard” | Verified |
+| PIT-07 | P1-11    | `test/orders-ficha.test.js:267,326,339,368,400,440,496,527`; `test/orders-service-create.test.js:101`                                                                                                                                                                                                                                                                                                                                                                             | Verified |
+| PIT-08 | P1-11    | `test/orders-sizes.test.js:11,51,57,102`; `test/orders-ficha.test.js:464`                                                                                                                                                                                                                                                                                                                                                                                                         | Verified |
+| PIT-09 | P1-11    | `order-format.test.js` “compares the sizes with the quantity the customer said, without blocking (PIT-09)”; `orders.spec.js` “warns when the sizes differ from what the customer said, without repeating it beside the total (PIT-09, TEC-06)”                                                                                                                                                                                                                                    | Verified |
+| PIT-10 | P1-11    | `orders.spec.js` “names the fields the way the PO asked (PIT-10)”                                                                                                                                                                                                                                                                                                                                                                                                                 | Verified |
+| PIT-11 | P1-11    | `test/orders-postgres-live.test.js:352`                                                                                                                                                                                                                                                                                                                                                                                                                                           | Verified |
+| PIT-12 | P1-11    | `test/orders-domain.test.js:190`; `test/orders-postgres-live.test.js:612`; `order-format.test.js` “reads days the way the operation does, on São Paulo time” e “names the promised delivery and tells it apart from the amount and payment method”; `orders.spec.js` “lists exactly what is missing to generate, point by point (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03)”                                                                                                 | Verified |
 
 **Cobertura:** 12 requisitos · 12 verificados.
 
@@ -794,6 +805,13 @@ Verificado em T72, 03/10/2026. Nenhuma tela mudou, então não há e2e novo.
 | `test/n8n-integration-postgres-live.test.js` | ✅ passou — 4/4 (PostgreSQL, `crm_silmer_test_cliente`)   |
 
 ## Roteiro de UAT
+
+Desde o RFC 024 (ADR 036), onde o roteiro diz "gaveta" leia o link "Pedido
+NN-CRM" no cabeçalho da conversa e Detalhes › Pedido (PCX-10 a PCX-12); o
+filtro "Estado" → "Aguardando vendedor" é o atalho "Aguardando" da Caixa de
+Entrada (PCX-14); valor e forma de pagamento são digitados no diálogo "Gerar
+o pedido" (PFI-19); e o "Lastro do pedido" da tela se chama "Datas do
+pedido" (PFI-20).
 
 1. Como cliente no workflow DEV, mandar numa conversa nova uma mensagem com um
    ponto da ficha (ADR 014) → pedido pendente `NN-CRM` aparece na gaveta da
@@ -1107,8 +1125,9 @@ LOJ-33, LOJ-34, REV-06, REV-10 e FIN-02.
    campos "Valor final" (PFI-11) e "Forma de pagamento" (PFI-12). O bloco
    sempre aberto de valor final e forma de pagamento SHALL deixar de existir
    no pedido pendente: o diálogo é o único modelo de edição desses campos. O
-   foco inicial SHALL ir para "Valor final"; Esc ou "Cancelar" SHALL fechar
-   sem gravar e devolver o foco a "Gerar pedido". Pedido reaberto SHALL abrir
+   foco inicial SHALL ir para "Valor final"; Esc ou "Voltar" SHALL fechar
+   sem gravar e devolver o foco a "Gerar pedido" (no trilho ou no rodapé do
+   celular, conforme quem abriu). Pedido reaberto SHALL abrir
    o diálogo com o valor e a forma gravados (PCL-07). WHEN o valor é inválido
    ou falta a forma THEN o erro SHALL aparecer junto ao campo e nada SHALL ser
    enviado. WHEN a API responde 422 `ORDER_NOT_CONFIRMABLE` com pendência fora
@@ -1117,7 +1136,9 @@ LOJ-33, LOJ-34, REV-06, REV-10 e FIN-02.
    (PCL-05). WHEN a API responde 409 de versão THEN o diálogo SHALL pedir para
    recarregar, sem gravar. Pedido confirmado e pedido da loja continuam com
    "Fechamento e pagamento" em leitura (LOJ-34). Premissa D2 aprovada pelo PO
-   em 15/10/2026.
+   em 15/10/2026. Emenda da T133: o texto da S4 dizia "Cancelar"; o botão
+   entregue na T125 (`6a56687`) é "Voltar", e este critério foi alinhado a
+   ele.
 6. **PFI-20** A página do pedido SHALL dizer "Arte do pedido" no lugar de
    "Estampa e arquivos" e "Datas do pedido" no lugar de "Lastro do pedido";
    o bloco "Controle de produção" SHALL sair da página. A ficha impressa
@@ -1185,39 +1206,47 @@ LOJ-33, LOJ-34, REV-06, REV-10 e FIN-02.
 
 ### Emendas
 
-| Critério        | Emendado ou superado por | O que muda                                                             |
-| --------------- | ------------------------ | ---------------------------------------------------------------------- |
-| PFI-01          | PFI-18, PFI-20           | "Controle de produção" sai da tela; "Datas do pedido"; acordeão        |
-| PFI-06          | PFI-17                   | "Editar" com objeto e `aria-disabled` com motivo                       |
-| PFI-08          | PFI-18                   | Dados do atendimento dentro do acordeão no celular                     |
-| PFI-09          | PFI-15                   | O banner do topo vira o progresso real                                 |
-| PFI-13          | PFI-16, PFI-19           | A única primária é a do próximo passo ou "Gerar pedido"                |
-| PIT-06          | PFI-15, PFI-19           | "Falta para gerar" nomeia os passos; valor e forma vão para o diálogo  |
-| PLA-01, PLA-07  | PFI-20, PFI-17           | "Datas do pedido" na tela; "Editar datas"                              |
-| TEC-03, ARQ-01  | PFI-20                   | "Arte do pedido" na tela; um só controle de adicionar arquivo por vez  |
-| PCX-02, PCX-05  | PCX-13, PCX-14           | Atalhos com contagem e folha de filtros; "Encerrar conversa" em "Mais" |
-| PCX-06 a PCX-09 | PCX-10 a PCX-12          | Superados: link no cabeçalho e Detalhes › Pedido no lugar da gaveta    |
-| PLI-02          | PLI-09, PLI-10           | Três chips e folha de filtros                                          |
+| Critério        | Emendado ou superado por | O que muda                                                             | Evidência da emenda                                                                                                                                                                                                     |
+| --------------- | ------------------------ | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PFI-01          | PFI-18, PFI-20           | "Controle de produção" sai da tela; "Datas do pedido"; acordeão        | `orders.spec.js` “keeps the sections in the order of the printed ficha (PFI-01, PLA-01)” e “folds the sections into an accordion on a phone, by keyboard, with the state in each head (PFI-18)”                         |
+| PFI-06          | PFI-17                   | "Editar" com objeto e `aria-disabled` com motivo                       | `orders.spec.js` “keeps the other "Editar" focusable but unavailable, with the reason, while one section is open (PFI-17, PFI-06)”                                                                                      |
+| PFI-08          | PFI-18                   | Dados do atendimento dentro do acordeão no celular                     | `orders.spec.js` “leaves production to the printed ficha and shows service data as not printed (PFI-08, PFI-20)” e “folds the sections into an accordion on a phone, by keyboard, with the state in each head (PFI-18)” |
+| PFI-09          | PFI-15                   | O banner do topo vira o progresso real                                 | `orders.spec.js` “lists exactly what is missing to generate, point by point (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03)”                                                                                           |
+| PFI-13          | PFI-16, PFI-19           | A única primária é a do próximo passo ou "Gerar pedido"                | `orders.spec.js` “makes the next step the only primary while one is missing (PFI-13, PFI-16)” e “keeps "Gerar pedido" as the only primary button of the page (PFI-13)”                                                  |
+| PIT-06          | PFI-15, PFI-19           | "Falta para gerar" nomeia os passos; valor e forma vão para o diálogo  | `orders.spec.js` “lists exactly what is missing to generate, point by point (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03)” e “closes the dialog on a blocker outside it and leads to the next step (PFI-19, PCL-05)” |
+| PLA-01, PLA-07  | PFI-20, PFI-17           | "Datas do pedido" na tela; "Editar datas"                              | `orders.spec.js` “keeps the sections in the order of the printed ficha (PFI-01, PLA-01)” e “heads each section with its state in words and "Editar" naming the section (PFI-17)”                                        |
+| TEC-03, ARQ-01  | PFI-20                   | "Arte do pedido" na tela; um só controle de adicionar arquivo por vez  | `orders.spec.js` “records who makes the art next to an empty file area (TEC-03, ARQ-01)” e “says "Arte do pedido" with one control to add files at ${width}px (PFI-20)”, em 390 e 1280 px                               |
+| PCX-02, PCX-05  | PCX-13, PCX-14           | Atalhos com contagem e folha de filtros; "Encerrar conversa" em "Mais" | `crm-ui.spec.js` “PCX-14: filters the Inbox with three shortcuts with totals and the "Filtros" sheet” e “never offers to hand the conversation back to the AI and keeps the actions on the keyboard”                    |
+| PCX-06 a PCX-09 | PCX-10 a PCX-12          | Superados: link no cabeçalho e Detalhes › Pedido no lugar da gaveta    | `crm-ui.spec.js` “PCX-10: links the conversation header to its order, with the status in words” e “PCX-12: summarises the order in Detalhes, opened and closed from the keyboard”                                       |
+| PLI-02          | PLI-09, PLI-10           | Três chips e folha de filtros                                          | `orders-list.spec.js` “PLI-09/PLI-10: the "Filtros" sheet works by keyboard and names the filter it applies” e “filters by status and searches by number, customer or phone”                                            |
 
 ### Rastreabilidade das jornadas
 
-A evidência entra com cada tarefa, no mesmo commit; até lá o requisito não
-conta como verificado.
+Fechada na T133 (15/10/2026), na branch `ux/jornadas`. Cada fatia entregou
+os seus testes no mesmo commit; "Coberto" quer dizer que o teste citado
+existe na branch e falha se o critério for quebrado. O requisito passa a
+"Verified" com o gate completo (`npm run validate` e `npm run test:e2e`) do
+PR de `ux/jornadas` para o `master`. E2E em `test/e2e/`; unitários em
+`test/`.
 
-| ID     | Tarefa | Fatia | Status                                    |
-| ------ | ------ | ----- | ----------------------------------------- |
-| PFI-15 | T121   | A1    | Em andamento (`ux/jornadas`)              |
-| PFI-16 | T121   | A1    | Em andamento (`ux/jornadas`)              |
-| PFI-17 | T122   | A2a   | Em andamento (`ux/jornadas`)              |
-| PFI-20 | T123   | A4    | Em andamento (`ux/jornadas`)              |
-| PFI-18 | T124   | A2b   | Em andamento (`ux/jornadas`)              |
-| PFI-19 | T125   | A3    | Em andamento (`ux/jornadas`); D2 aprovada |
-| PCX-10 | T126   | B1    | Em andamento (`ux/jornadas`)              |
-| PCX-11 | T126   | B1    | Em andamento (`ux/jornadas`)              |
-| PCX-12 | T126   | B1    | Em andamento (`ux/jornadas`)              |
-| PCX-13 | T127   | B2    | Em andamento (`ux/jornadas`)              |
-| PCX-14 | T128   | B3    | Em andamento (`ux/jornadas`)              |
-| PLI-09 | T129   | C1    | Em andamento (`ux/jornadas`)              |
-| PLI-10 | T129   | C1    | Em andamento (`ux/jornadas`)              |
+| ID     | Tarefa | Fatia (commit)  | Evidência                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Status                                |
+| ------ | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| PFI-15 | T121   | A1 (`d78f7ab`)  | `orders.spec.js` “lists exactly what is missing to generate, point by point (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03)”, “shows no progress to generate on a confirmed order or a store order (PFI-15, LOJ-34)”, “reaches and opens the next step by keyboard, and announces the count (PFI-15)”, “counts a blocker the screen does not know as a step that leads to the closing panel (PFI-15)” e “keeps a ready pending order within 1.800 px on a phone (RFC 024)”; `order-format.test.js` “derives the three steps to generate from missingFields only (PFI-15)”, “names what an item step lacks without inventing progress (PFI-15)”, “has no steps for a store order or an order without the list (PFI-15, LOJ-34)” e “turns a blocker the screen does not know into "Revisar pendências", never a false 3 de 3 (PFI-15)” | Coberto em `ux/jornadas`              |
+| PFI-16 | T121   | A1 (`d78f7ab`)  | `orders.spec.js` “makes the next step the only primary while one is missing (PFI-13, PFI-16)”, “lists exactly what is missing to generate, point by point (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03)” e “keeps the main action of the order in a fixed footer on a phone”                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Coberto em `ux/jornadas`              |
+| PFI-17 | T122   | A2a (`ab24ea4`) | `orders.spec.js` “heads each section with its state in words and "Editar" naming the section (PFI-17)”, “keeps the other "Editar" focusable but unavailable, with the reason, while one section is open (PFI-17, PFI-06)”, “opens the items from the next step by keyboard, through the section itself (PFI-15, PFI-17)” e “keeps the section heads readable and their buttons thumb sized, light and dark (PFI-17)”                                                                                                                                                                                                                                                                                                                                                                                                                  | Coberto em `ux/jornadas`              |
+| PFI-20 | T123   | A4 (`a25cba7`)  | `orders.spec.js` “says "Arte do pedido" with one control to add files at ${width}px (PFI-20)” (390 e 1280 px), “no order component writes the company name itself (PFI-20, ADR 035)”, “leaves production to the printed ficha and shows service data as not printed (PFI-08, PFI-20)” e “keeps the sections in the order of the printed ficha (PFI-01, PLA-01)”                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Coberto em `ux/jornadas`              |
+| PFI-18 | T124   | A2b (`5baadf5`) | `orders.spec.js` “folds the sections into an accordion on a phone, by keyboard, with the state in each head (PFI-18)”, “opens the section of the hash and of the next step, and never folds an edit (PFI-18)”, “keeps a confirmed order and a store order coherent in the accordion (PFI-18, PFI-10, LOJ-07)” e “keeps every section open and the heads plain on a wide screen (PFI-18)”                                                                                                                                                                                                                                                                                                                                                                                                                                              | Coberto em `ux/jornadas`              |
+| PFI-19 | T125   | A3 (`6a56687`)  | `orders.spec.js` “reviews and generates the order by keyboard alone, giving the focus back on Esc (PFI-19)”, “asks for the payment method in the dialog, before the request (PFI-12, PFI-19)”, “refuses a malformed amount next to the field, before the request”, “sends one confirmation for a double Enter while it is on its way (PFI-19, PCL-09)”, “closes the dialog on a blocker outside it and leads to the next step (PFI-19, PCL-05)”, “keeps the dialog open with the message when the connection drops (PFI-19)”, “keeps the dialog open and asks to reload when the order changed (PFI-19, PCL-09)”, “keeps the dialog accessible and thumb sized, light and dark (PFI-19)” e “confirms the order, frees printing, reopens it and locks printing again” (pedido reaberto, PCL-07)                                        | Coberto em `ux/jornadas`; D2 aprovada |
+| PCX-10 | T126   | B1 (`c1a9023`)  | `crm-ui.spec.js` “PCX-10: links the conversation header to its order, with the status in words”, “PCX-10: updates the order link when the order changes elsewhere” e “PCX-10: reaches the order page from the header with the keyboard alone”                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Coberto em `ux/jornadas`              |
+| PCX-11 | T126   | B1 (`c1a9023`)  | `crm-ui.spec.js` “PCX-11: offers "Criar pedido" in the header only to the owner and creates it there”                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Coberto em `ux/jornadas`              |
+| PCX-12 | T126   | B1 (`c1a9023`)  | `crm-ui.spec.js` “PCX-12: summarises the order in Detalhes, opened and closed from the keyboard” e “PCX-12: on a phone Detalhes › Pedido opens from "Mais" and Esc hands focus back”                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Coberto em `ux/jornadas`              |
+| PCX-13 | T127   | B2 (`accc1b0`)  | `crm-ui.spec.js` “PCX-13: takes the conversation from the composer by keyboard, once, and lands on the reply”, “claims a pending handoff from its conversation in the Caixa de Entrada” e “never offers to hand the conversation back to the AI and keeps the actions on the keyboard”                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Coberto em `ux/jornadas`              |
+| PCX-14 | T128   | B3 (`f3935a9`)  | `crm-ui.spec.js` “PCX-14: filters the Inbox with three shortcuts with totals and the "Filtros" sheet”, “PCX-14: on a 390 px phone the shortcuts fit, the sheet works by keyboard and the first screen keeps its budget”, “PCX-14: the shortcuts and "Filtros" are 44 px targets with 8 px between them (design.md §4)” (tablet com toque), “PCX-14: the Painel links open the Inbox with their shortcut pressed”, “PCX-14: an empty filter is not an empty Inbox and offers "Limpar filtros"”, “PCX-14: a total that fails to load is left out, never guessed” e “names the stop reason and waits, oldest first, when the seller is due” (PCX-04)                                                                                                                                                                                     | Coberto em `ux/jornadas`              |
+| PLI-09 | T129   | C1 (`aeec878`)  | `orders-list.spec.js` “PLI-09/PLI-10: the "Filtros" sheet works by keyboard and names the filter it applies”, “PLI-09: on a phone the first order sits whole above the bottom bar, and "Filtros" is a bottom sheet” e “PLI-09: on a notebook the "Filtros" sheet keeps 44 px targets, 8 px apart, without scroll”; `store-orders.spec.js` “the list filters "Loja do site" by keyboard and labels the store order”                                                                                                                                                                                                                                                                                                                                                                                                                    | Coberto em `ux/jornadas`              |
+| PLI-10 | T129   | C1 (`aeec878`)  | `orders-list.spec.js` “PLI-09/PLI-10: the "Filtros" sheet works by keyboard and names the filter it applies”, “PLI-10: a Painel filter in the address is named, combines with the search and leaves the address when cleared” e “filters by status and searches by number, customer or phone” (contagem do resultado); vazio por filtro só em “says the production queue is empty when every order was delivered”                                                                                                                                                                                                                                                                                                                                                                                                                     | Coberto em `ux/jornadas`, com lacuna  |
+
+Lacuna conhecida: o vazio por filtro de PLI-10 ("nenhum pedido atende ao
+filtro" com "Limpar filtro") só tem teste para "Prontos para produção"; os
+outros filtros da folha não têm teste do estado vazio.
 
 PNL-01 a PNL-04 têm a rastreabilidade na [spec do CRM MVP](../crm-mvp/spec.md).

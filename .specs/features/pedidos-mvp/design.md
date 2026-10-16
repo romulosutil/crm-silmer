@@ -210,6 +210,25 @@ e `Idempotency-Key`.
 A seção em edição é controlada pela view (`editingSection`), garantindo uma de
 cada vez (PFI-06).
 
+**Removido/superado pelo RFC 024 ([ADR 036](../../../docs/adr/036-padroes-de-jornada.md),
+15/10/2026).** A tabela acima é o desenho original e fica como histórico:
+
+- O bloco "Controle de produção" saiu da página do pedido (PFI-20, T123
+  `a25cba7`); ele só existe na ficha impressa. "Dados do atendimento" continua
+  e, no celular, fica dentro do acordeão (PFI-18).
+- A gaveta (`OrderDrawer.vue`) e o botão "Pedido" saíram (PCX-10 a PCX-12,
+  T126 `c1a9023`): o cabeçalho da conversa mostra o link "Pedido NN-CRM" com
+  o status, o resumo fica em Detalhes › Pedido
+  (`ConversationOrderSummary`) e "Criar pedido" fica no cabeçalho ou em
+  "Mais".
+- O filtro "Estado" virou os atalhos Todas · Aguardando · Minhas e a folha
+  "Filtros" (PCX-14, T128 `f3935a9`).
+- O banner do que falta virou o progresso real "Para gerar o pedido: N de 3"
+  (`OrderProgress`, PFI-15) e valor final e forma de pagamento passaram ao
+  diálogo "Gerar o pedido" (PFI-19, T125 `6a56687`).
+- `screen-styles.css` virou um índice de `@import` dos arquivos de
+  `styles/screens/` (S2, `e19fa2c`).
+
 ---
 
 ## Modelo de dados

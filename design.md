@@ -269,9 +269,10 @@ Cada componente precisa documentar: propósito, anatomia, variantes, estados, co
 ## 9. Padrões por superfície do CRM
 
 > Desde o [ADR 036](docs/adr/036-padroes-de-jornada.md) (RFC 024, 15/10/2026),
-> os padrões de jornada da §16 prevalecem sobre esta seção onde divergirem:
-> filtros e cabeçalho da Caixa de Entrada, gaveta do pedido e ficha de pedido.
-> O texto abaixo é atualizado na T133, quando as fatias estiverem entregues.
+> os padrões de jornada da §16 prevalecem sobre esta seção onde divergirem.
+> O texto abaixo foi alinhado na T133 ao que as fatias entregaram em
+> `ux/jornadas`: filtros e cabeçalho da Caixa de Entrada, link do pedido no
+> lugar da gaveta, "Assumir atendimento" no composer e a página do pedido.
 
 ### Caixa de Entrada
 
@@ -279,37 +280,63 @@ Workspace de altura fixa para a atendente (pesquisa UX de 15/10/2026, achado 1):
 a página ocupa exatamente a altura abaixo da barra superior e nunca rola; cada
 coluna rola por dentro.
 
-- **Colunas:** lista | conversa | contexto. O contexto (pedido, assuntos,
-  cliente) é recolhível pelo botão `Detalhes` do cabeçalho; abre por padrão a
-  partir de 1440 px e a última escolha da pessoa vale naquele navegador. No
-  tablet o contexto cobre a conversa; no celular aparece um painel por vez.
+- **Colunas:** lista | conversa | contexto. O contexto (Detalhes › Pedido,
+  assuntos, cliente) é recolhível pelo botão `Detalhes` do cabeçalho; abre por
+  padrão a partir de 1440 px e a última escolha da pessoa vale naquele
+  navegador. No tablet o contexto cobre a conversa; no celular aparece um
+  painel por vez. Detalhes aberto pelo teclado leva o foco ao título; Esc
+  fecha e devolve o foco a quem abriu.
 - **Celular primeiro (ADR 035):** desenhada para 390×844 e ampliada. Lista e
-  conversa são telas separadas, com voltar; o cabeçalho mantém só a ação
-  primária, `Pedido` e `Mais`, que abre uma folha inferior acima da barra de
-  navegação (Detalhes, Repassar, Arquivar, Encerrar). A resposta fica acima da
-  barra; ao digitar, a barra sai e a resposta encosta no teclado
-  (`interactive-widget=resizes-content`). Alvos de 44 px; nada depende de
-  hover.
+  conversa são telas separadas, com voltar; o cabeçalho mantém só o voltar,
+  o link do pedido quando há pedido, `Criar pedido` quando cabe (ver
+  "Cabeçalho da conversa") e `Mais`, que abre uma folha
+  inferior acima da barra de navegação (Detalhes da conversa, Criar pedido
+  quando não cabe no cabeçalho, Repassar, Arquivar/Desarquivar, Encerrar). A
+  resposta fica acima da barra; ao digitar, a barra sai e a resposta encosta
+  no teclado (`interactive-widget=resizes-content`). Alvos de 44 px; nada
+  depende de hover.
 - **Endereço:** `/inbox/:conversationId` abre a conversa direto (Pedido,
   Clientes e Dashboard linkam assim). A conversa aberta pelo endereço continua
   aberta mesmo fora do filtro, arquivada ou além das 100 carregadas; trocar de
   conversa muda o endereço sem recarregar a lista, a busca ou os filtros. No
   celular o endereço decide entre a lista e a conversa (voltar = `Conversas`).
-- **Filtros:** um único eixo segmentado com totais (`Todas · Aguardando
-  vendedor · Com o agente · Com vendedor · Arquivadas`), seleção neutra e a
-  fila (`Todas · Minhas · Sem responsável`, PCX-05) num seletor ao lado. A busca
-  fica no topo da lista.
+- **Filtros (PCX-14):** a busca no topo da lista, três atalhos com contagem
+  e seleção neutra (`Todas · Aguardando · Minhas`) e o botão `Filtros`, que
+  abre a folha "Filtrar conversas" com Situação
+  (`Todas · Aguardando vendedor · Com o agente · Com vendedor · Arquivadas`)
+  e Responsável (`Todas · Minhas · Sem responsável`). Um par fora dos atalhos aparece no
+  resumo "Filtro:", cada filtro com botão de remover e `Limpar filtros`
+  quando há dois. Os links `?situacao=` e `?fila=` do Painel abrem com o
+  atalho marcado ou com o resumo. Vazio por filtro ("Nenhuma conversa com
+  esse filtro" + `Limpar filtros`) é diferente do vazio inicial. As abas de
+  estado e o seletor "Fila" deixaram de existir.
 - **Lista:** nome, horário curto (hora hoje, dia no ano, data antes; a data
   completa no tooltip), trecho de uma linha, canal, estado, motivo e tempo
   parado. O item aberto usa `--color-selected`, sem borda lateral colorida.
-- **Cabeçalho da conversa:** compacto, nome e uma linha de identidade; no
-  máximo uma ação primária (`Assumir atendimento`), duas visíveis
-  (`Pedido · status`, `Encerrar conversa`) e o resto em `Mais` (Repassar,
-  Arquivar/Desarquivar). `Mais` abre pelo teclado no primeiro item e Esc
-  devolve o foco.
+- **Cabeçalho da conversa:** compacto, nome, o link do pedido e uma linha de
+  identidade; sem ação primária (ela fica no composer). Com pedido, o link
+  "Pedido NN-CRM" com o status em selo de texto abre `/pedidos/:id?conversa=`
+  e acompanha `inbox.order.changed` (PCX-10); sem pedido, nada aparece.
+  `Criar pedido` fica no cabeçalho só para o dono de conversa humana, sem
+  handoff pendente e sem pedido; os outros casos que a API aceita
+  (administrador, agente ainda atendendo, pedido já confirmado) vão para
+  `Mais` (PCX-11). Depois vêm `Mais` (Repassar, Arquivar/Desarquivar,
+  Encerrar conversa em todas as larguras, PCX-13) e o botão `Detalhes`.
+  `Mais` abre pelo teclado no primeiro item e Esc devolve o foco. A gaveta do
+  pedido e o botão "Pedido · status" foram removidos (T126).
+- **Detalhes › Pedido (PCX-12):** número, status, "Falta para gerar",
+  itens, total, valor e `Abrir pedido`, só para leitura, com carregando, erro
+  com `Tentar novamente` e "Sem pedido nesta conversa." uma vez só.
 - **Histórico:** abre na última mensagem e acompanha as novas, salvo quando a
   pessoa rolou para ler algo antigo; conversa curta fica junto da resposta.
-- **Resposta:** sempre visível no rodapé da conversa. Enter envia, Shift+Enter
+- **Assumir no lugar do composer (PCX-13):** enquanto ninguém assumiu e quem
+  abre pode agir, o rodapé mostra o motivo da parada e o tempo parado
+  (PCX-03), ou que o agente está atendendo e não volta depois (ADR 015), com
+  `Assumir atendimento` como única primária da conversa. Depois de assumir,
+  o campo de resposta aparece com `Enviar resposta` como única primária e
+  recebe o foco; o resultado é anunciado em `role="status"`. Quem não pode
+  agir vê o composer desabilitado com o motivo.
+- **Resposta:** visível no rodapé da conversa assim que alguém a assume. Enter envia, Shift+Enter
   quebra a linha; em teclado de toque Enter só quebra a linha. Sem espaço,
   Anexar e Gravar ficam só com ícone (nome acessível mantido) e Enviar continua
   na mesma linha.
@@ -326,7 +353,7 @@ coluna rola por dentro.
 ### Conversa e atuação do Vendedor Silmer
 
 - Mensagens humanas, do cliente e do agente são visualmente distintas, mas permanecem legíveis nos dois temas.
-- A área de composição mantém uma ação principal de envio e torna anexos/ações extras secundários.
+- A área de composição mantém uma ação principal de envio e torna anexos/ações extras secundários; antes de alguém assumir, `Assumir atendimento` ocupa o lugar dela (PCX-13).
 - Mensagens, sugestões e handoffs do agente aparecem em uma linha do tempo auditável, agrupada por etapa.
 - Sugestões como `Transformar em lead` e `Avançar etapa` exigem confirmação humana explícita no MVP; a interface nunca representa a sugestão como ação já executada.
 - A chave pós-MVP `vendedor_silmer_autonomia_comercial` não aparece como controle operacional do MVP.
@@ -335,11 +362,43 @@ coluna rola por dentro.
 
 ### Ficha de Pedido
 
-- Usar um fluxo em seções: Identificação, Produto, Personalização, Grade e Entrega, Fechamento e Revisão.
-- Exibir progresso por completude real, não apenas por visita a uma etapa.
-- Erros aparecem no campo e em um resumo navegável no topo da seção.
-- Revisão final é uma visualização estável, separada da edição.
-- Aprovação e envio são ações distintas; estado, versão, autor, horário e destinatário permanecem visíveis.
+A página do pedido (`/pedidos/:id`) segue a ordem da ficha impressa, com as
+palavras da tela (PFI-01, PFI-20): Resumo do pedido, Datas do pedido, Itens e
+especificações, Arte do pedido, Observações do pedido, Dados do atendimento
+(não impresso) e Fechamento e pagamento. O bloco "Controle de produção" não
+aparece na tela; ele só existe na ficha impressa, que mantém "Lastro do
+pedido" e os mesmos templates e hashes.
+
+- **Progresso real no topo (PFI-15):** "Para gerar o pedido: N de 3", com os
+  passos Entrega prometida, Itens e Arte do pedido, lidos só de
+  `missingFields`; só o próximo passo tem botão, com verbo e objeto
+  ("Informar a entrega prometida", "Completar os itens", "Marcar quem faz a
+  arte"). Uma pendência que a tela não conhece vira o passo "Revisar
+  pendências" e o total passa a 4, nunca um falso "3 de 3". Com os três
+  passos feitos, o progresso vira uma linha só ("Tudo pronto para gerar · 3
+  de 3"), com o mesmo título e o mesmo `role="status"`. Não aparece para
+  quem não edita, para pedido confirmado nem para pedido da loja.
+- **Cabeçalho de seção (PFI-17):** título, estado em texto com ícone
+  ("Entrega 20/11/2026", "Falta: cor do item 1", "1 item · 150 peças", "1 de
+  3 datas") e o botão `Editar resumo`, `Editar datas`, `Editar itens`,
+  `Editar arte` ou `Editar observações`, com 44 px. Com uma seção em edição,
+  os outros ficam com `aria-disabled` e o motivo "Salve ou cancele a edição
+  aberta.".
+- **Acordeão no celular (PFI-18):** até 768 px, uma seção aberta por vez,
+  Dados do atendimento inclusive; acima disso, tudo aberto e empilhado.
+- **Arte do pedido (PFI-20):** quem faz a arte ("A {empresa} cria a arte" com
+  `brand.companyName`), arte final ("A versão aprovada que vai para a
+  produção.") e arquivos da arte ("Referências e rascunhos; não vão para a
+  produção."), com um só controle de adicionar arquivo por vez.
+- **Rodapé e diálogo (PFI-16, PFI-19):** no celular o rodapé fixo leva o
+  próximo passo enquanto houver pendência e `Gerar pedido` só sem pendência;
+  `Gerar pedido` abre o diálogo "Gerar o pedido" com a revisão, `Valor final`
+  e `Forma de pagamento`. O painel "Fechamento e pagamento" do pedido
+  pendente mostra só "Falta para gerar" e `Gerar pedido`.
+- Erros aparecem no campo; a pendência que o servidor recusar fecha o
+  diálogo e leva ao próximo passo.
+- Gerar e imprimir são ações distintas; estado, autor e horário da
+  confirmação permanecem visíveis.
 
 ### Financeiro comercial
 
@@ -434,7 +493,12 @@ alterada e completam a §3 (baixa carga cognitiva) e a §11 (acessibilidade).
   vai para "Mais".
 - Rótulo de botão é verbo + objeto: "Assumir atendimento", "Editar itens",
   "Limpar filtro"; nunca só "Assumir" ou "Editar".
-- Alvos de toque de 44 px ou mais, com 8 px entre eles.
+- Alvos de toque de 44 px ou mais, com 8 px entre eles. Como entregue: nos
+  atalhos e chips das listas, o contrato de 44 px e 8 px vale no celular e em
+  toda tela de toque (`pointer: coarse`, tablet incluído); com mouse no
+  notebook eles seguem a altura de controle (`--control-height`, 40 px). Na
+  folha "Filtros", opções e botões têm 44 px (`--target-min`) em qualquer
+  largura e ponteiro, notebook com mouse inclusive (P1, `fb7e932`).
 - Abas só de 2 a 7, com 1 a 3 palavras cada; mais que isso vira atalho com
   contagem ou filtro em folha.
 
@@ -445,6 +509,12 @@ alterada e completam a §3 (baixa carga cognitiva) e a §11 (acessibilidade).
 - O progresso é honesto: cada passo é uma pendência real lida do domínio
   (`missingFields`), o total não muda no meio e visitar ou abrir uma seção não
   conta como feito. Sem leitura, não há número.
+- Pendência que a tela não conhece vira um passo a mais ("Revisar
+  pendências", total "N de 4") que leva ao painel de fechamento; nunca um
+  falso "3 de 3" com a ação final bloqueada.
+- Com todos os passos feitos, o progresso encolhe para uma linha ("Tudo
+  pronto para gerar · 3 de 3"), com o mesmo título e o mesmo `role="status"`;
+  a lista volta assim que houver pendência (P2, `3351c33`).
 - O rodapé fixo do celular leva a mesma ação primária do próximo passo; a
   ação final ("Gerar pedido") só vira primária quando não há pendência.
 - O preenchimento continua progressivo e não linear (`RULES.md`, regra 4):
@@ -477,8 +547,15 @@ alterada e completam a §3 (baixa carga cognitiva) e a §11 (acessibilidade).
 - O cabeçalho de cada seção é um botão com `aria-expanded` e `aria-controls`
   e mostra o estado em texto ("Completo", "Falta a cor do item 2"), que entra
   no nome acessível.
-- A seção inicial vem do hash da URL ou do primeiro passo pendente; uma seção
-  em edição não fecha até Salvar ou Cancelar.
+- A seção inicial vem do hash da URL (por exemplo `#itens`), senão do
+  primeiro passo pendente, senão do Resumo; uma seção em edição não fecha até
+  Salvar ou Cancelar, e o rascunho sobrevive a redimensionar a tela.
+- Abrir uma seção grava o hash na URL sem navegar (`history.replace` do
+  router), para não remontar a view, que o shell identifica pela `fullPath`,
+  e perder foco e rascunho.
+- O botão "Editar" + seção fica fora do botão do cabeçalho (irmão do `h2`) e
+  só aparece na seção aberta; com uma seção em edição, os outros cabeçalhos
+  ficam com `aria-disabled` e o motivo.
 
 ### Um só modelo de edição
 
@@ -487,7 +564,14 @@ alterada e completam a §3 (baixa carga cognitiva) e a §11 (acessibilidade).
   leitura.
 - O diálogo da ação final (por exemplo, "Gerar o pedido") revisa o que vai
   acontecer, pede só o que falta, foca o primeiro campo e devolve o foco com
-  Esc.
+  Esc ou "Voltar" ao botão que o abriu (no pedido, o do trilho ou o do
+  rodapé do celular).
+- Como entregue no diálogo "Gerar o pedido" (T125): revisão com cliente,
+  itens e peças, entrega prometida e arte do pedido; erro no campo sem enviar
+  nada; envio único mesmo com Enter duplo (`aria-busy`/`aria-disabled`); 422
+  com pendência fora do diálogo fecha, relê o pedido e leva o foco ao próximo
+  passo; 409 e queda de conexão mantêm o diálogo aberto com a mensagem
+  focada; campos, opções e botões com 44 px.
 
 ### Estados desenhados
 
@@ -499,7 +583,9 @@ alterada e completam a §3 (baixa carga cognitiva) e a §11 (acessibilidade).
 ### Metas de controles na primeira tela
 
 Contagem fora da navegação do app, com dados sintéticos, em 390×844 e
-1366×768. A T132 transforma as metas em teste.
+1366×768. A T132 transforma as metas em teste; as medições registradas pelas
+fatias estão no "Resultado" do
+[RFC 024](docs/rfc/024-jornadas-com-menos-botoes.md).
 
 | Tela             | Celular                                                      | Notebook |
 | ---------------- | ------------------------------------------------------------ | -------- |

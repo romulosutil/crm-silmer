@@ -40,6 +40,12 @@ Ordenados por severidade. Cada item cita a persona e a evidência original.
    ancorado na última mensagem; uma ação primária + duas visíveis + menu "Mais";
    rota `/inbox/:conversationId` para links profundos (`OrderView.vue`,
    `ClientsView.vue` hoje levam para a Inbox genérica). Enter envia.
+   _Resolvido pelo [RFC 024](../rfc/024-jornadas-com-menos-botoes.md)
+   (ADR 036, fatias B1–B3):_ o pedido virou link no cabeçalho e o resumo foi
+   para Detalhes › Pedido (PCX-10 a PCX-12); "Assumir atendimento" ocupa o
+   lugar do composer e "Encerrar conversa" foi para "Mais" (PCX-13); abas e
+   seletor "Fila" deram lugar a três atalhos com contagem e à folha
+   "Filtros" (PCX-14).
 2. **Painel por papel (Sílvio, Camila, sev. 4).** Gestor: hoje, a receber,
    atrasados, esperando resposta, saúde do assistente. Atendente: "Minha fila"
    primeiro. Cartões clicáveis que abrem listas filtradas. Exige período e SLA no
@@ -60,6 +66,11 @@ Ordenados por severidade. Cada item cita a persona e a evidência original.
    (sentido de "parado" da Caixa, PCX-03) e "Meus pedidos pendentes"
    (`/pedidos?status=pendente&vendedor=eu`, API `owner=me`) — e depois
    "Entregas".
+   _Resolvido pelo [RFC 024](../rfc/024-jornadas-com-menos-botoes.md)
+   (ADR 036, fatia D1):_ o cartão "Próximo passo" diz o que fazer agora por
+   papel (PNL-01), o período declara "Vale para Vendido" (PNL-02) e a fila em
+   falha mostra "—" com "Tentar novamente" sem sumir (PNL-03). O destino do
+   login por papel (PNL-04) ficou adiado pelo PO.
 3. **Pedidos para produção (Rose, Sílvio, sev. 4).** Pendentes e exceções
    primeiro; coluna "Entrega" com prazo relativo; filtro "Prontos para produção";
    cartões empilhados no celular em vez de tabela com rolagem lateral.
@@ -69,6 +80,10 @@ Ordenados por severidade. Cada item cita a persona e a evidência original.
    próxima. Coluna "Entrega" com prazo relativo, filtro "Prontos para
    produção" (confirmados, sem teste e não entregues) e cartões abaixo de
    768 px. A ordem vale para as páginas já carregadas; a API não mudou.
+   _Resolvido pelo [RFC 024](../rfc/024-jornadas-com-menos-botoes.md)
+   (ADR 036, fatia C1):_ "Prontos para produção" virou um dos três chips, os
+   outros filtros foram para a folha "Filtros" e o primeiro cartão cabe
+   inteiro acima da barra inferior no celular (PLI-09, PLI-10).
 4. **Grade de tamanhos (Rose, sev. 4).** Tamanho e quantidade com o mesmo peso,
    ordem canônica, alerta de tamanho duplicado — na tela e na ficha impressa.
    *Resolvido na tela:* a ordem canônica só reordena a leitura; os dados e a
@@ -79,17 +94,31 @@ Ordenados por severidade. Cada item cita a persona e a evidência original.
    "agente", "Assistente Silmer" e "Vendedor Silmer". Um termo, configurável.
    _Na Caixa de Entrada e nos selos de conversa: "Agente", vindo de
    `brand.assistant` (`src/brand/index.js`); demais telas no próximo ciclo._
+   _Em parte resolvido pelo [RFC 024](../rfc/024-jornadas-com-menos-botoes.md)
+   (fatia A4, PFI-20):_ a página do pedido diz "Arte do pedido" e "Datas do
+   pedido" no lugar de "Estampa e arquivos" e "Lastro do pedido", e "A
+   {empresa} cria a arte" vem de `brand.companyName`. O glossário
+   configurável por empresa continua fora de escopo.
 6. **Ações destrutivas e feedback (Sílvio, sev. 3).** "Desativar" e "Reabrir
    pedido" sem confirmação; sucesso só anunciado para leitor de tela. Toast
    visível com "Desfazer".
    *Resolvido para Reabrir pedido e Desativar vendedor:* confirmação que
    descreve a consequência e toast visível (`AppToast`); "Desfazer" só onde
    a volta é segura (reativar a conta), não na reabertura.
+   _Em parte resolvido pelo [RFC 024](../rfc/024-jornadas-com-menos-botoes.md)
+   (fatias B1 e B2):_ "Encerrar conversa" saiu de perto da ação primária e
+   foi para "Mais" (PCX-13), e criar o pedido pela conversa avisa "Pedido
+   NN-CRM criado." em toast visível e leva o foco ao link (PCX-11).
 7. **Vocabulário de segmento (Marina, sev. 4).** Os sete pontos da ficha,
    catálogo, "FAB", "feito_pela_silmer" e a grade de tamanhos são de confecção.
    Esquema de item por segmento e template de impressão parametrizado (pede ADR).
 8. **Primeira execução (Marina, sev. 3).** Vazio inicial (com CTA) diferente de
    vazio por filtro (com "Limpar filtros"); checklist de primeiros passos.
+   _Resolvido pelo [RFC 024](../rfc/024-jornadas-com-menos-botoes.md) quanto
+   ao vazio (fatias B3 e C1):_ a Caixa de Entrada diz "Nenhuma conversa com
+   esse filtro" com "Limpar filtros", separado do vazio inicial (PCX-14), e
+   Pedidos nomeia o filtro ativo com "Limpar filtro" (PLI-10). A checklist de
+   primeiros passos continua para um próximo ciclo.
 
 ## Referências consultadas
 

@@ -13,7 +13,8 @@ com vínculo a FIN-02 de [crm-mvp](../../.specs/features/crm-mvp/spec.md)
 Evidência: [pesquisa com usuários sintéticos](../product/pesquisa-ux-sintetica-2026-10-15.md).
 Tarefas: T121–T133 em [`tasks.md`](../../.specs/features/pedidos-mvp/tasks.md)
 (T131 adiada).
-Issues e PRs: a vincular quando as fatias forem integradas.
+Branch de integração: `ux/jornadas`. Issues e PRs: a vincular no PR de
+`ux/jornadas` para o `master`.
 
 ## Contexto e evidência
 
@@ -308,7 +309,9 @@ Notas:
   espera e falha. Para ativar de propósito (e ver o motivo), use foco e
   Enter.
 - Não há `orders-list.spec.js`; os testes da lista estão em
-  `orders.spec.js`.
+  `orders.spec.js`. Superado pela S3 (`6fb9fbb`): os testes da lista de
+  Pedidos passaram a `test/e2e/orders-list.spec.js`, e `orders.spec.js`
+  ficou só com a página do pedido.
 
 ## Fora de escopo
 
@@ -356,20 +359,80 @@ em [Pedidos MVP](../../.specs/features/pedidos-mvp/spec.md), PNL-01 a PNL-04
 em [CRM MVP](../../.specs/features/crm-mvp/spec.md), notas nos critérios
 emendados, glossário e [`design.md`](../../design.md) §16.
 
-| Fatia      | Tarefa    | Situação em 15/10/2026                                                     |
-| ---------- | --------- | -------------------------------------------------------------------------- |
-| S1         | —         | Concluída: este RFC                                                        |
-| S2         | —         | Concluída: `screen-styles` separado por tela                               |
-| S3         | —         | Concluída: suporte do E2E e `orders-list.spec.js` separados                |
-| D0         | —         | Concluída: a falha da fila no demo era API defasada no ambiente, não bug   |
-| S4         | —         | Concluída: emendas de requisitos, tarefas T121–T133 e ADR 036              |
-| A1         | T121      | Em andamento em `ux/jornadas`: progresso real e rodapé do próximo passo    |
-| A2a        | T122      | Em andamento em `ux/jornadas`: cabeçalhos com estado e "Editar" com objeto |
-| A4         | T123      | Em andamento em `ux/jornadas`: microcopy da página do pedido               |
-| A2b        | T124      | Em andamento em `ux/jornadas`: acordeão no celular                         |
-| A3         | T125      | Em andamento em `ux/jornadas`: diálogo "Gerar o pedido"                    |
-| B1, B2, B3 | T126–T128 | Em andamento em `ux/jornadas`: link do pedido, Assumir e fila da Caixa     |
-| C1         | T129      | Em andamento em `ux/jornadas`: chips e folha de filtros em Pedidos         |
-| D1         | T130      | Em andamento em `ux/jornadas`: Painel com o próximo passo por papel        |
-| E1         | T131      | Adiada pelo PO (D3)                                                        |
-| F1, F2     | T132–T133 | A fazer: teste de orçamento de controles e fechamento da documentação      |
+Situação das fatias na branch `ux/jornadas`, fechada na T133 (15/10/2026):
+
+| Fatia | Tarefa | Commit    | Situação e entrega                                                                                                                |
+| ----- | ------ | --------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| S1    | —      | `cb430dc` | Concluída: este RFC                                                                                                               |
+| S2    | —      | `e19fa2c` | Concluída: `screen-styles.css` separado por tela em `styles/screens/`, com CSS gerado idêntico                                    |
+| S3    | —      | `6fb9fbb` | Concluída: suporte do E2E em `test/e2e/support/` e lista de Pedidos em `orders-list.spec.js`                                      |
+| D0    | —      | —         | Concluída sem commit: a falha da fila no demo era API defasada no ambiente, não bug do Painel                                     |
+| S4    | —      | `6f3b476` | Concluída: emendas de requisitos, tarefas T121–T133, ADR 036, `design.md` §16 e glossário                                         |
+| D1    | T130   | `069ae76` | Concluída: cartão "Próximo passo" por papel, "Vale para Vendido" e fila em falha com "—" (PNL-01 a PNL-03)                        |
+| A1    | T121   | `d78f7ab` | Concluída: progresso real "Para gerar o pedido: N de 3" e rodapé do próximo passo (PFI-15, PFI-16)                                |
+| C1    | T129   | `aeec878` | Concluída: três chips, folha "Filtros" e filtro nomeado com "Limpar filtro" em Pedidos (PLI-09, PLI-10)                           |
+| B1    | T126   | `c1a9023` | Concluída: link "Pedido NN-CRM" no cabeçalho, "Criar pedido" por papel e Detalhes › Pedido; gaveta removida (PCX-10 a PCX-12)     |
+| B2    | T127   | `accc1b0` | Concluída: "Assumir atendimento" no lugar do composer e "Encerrar conversa" em "Mais" (PCX-13)                                    |
+| A2a   | T122   | `ab24ea4` | Concluída: cabeçalho de seção com estado em texto e "Editar" + seção, com `aria-disabled` e motivo (PFI-17)                       |
+| B3    | T128   | `f3935a9` | Concluída: busca, atalhos Todas · Aguardando · Minhas com contagem e folha "Filtrar conversas" na Caixa de Entrada (PCX-14)       |
+| A4    | T123   | `a25cba7` | Concluída: "Arte do pedido", "Datas do pedido", sem "Controle de produção" na tela e um só controle de adicionar arquivo (PFI-20) |
+| P1    | —      | `fb7e932` | Acabamento: 44 px na folha "Filtros" também a partir de 48rem e título das credenciais vindo de `brand.productName`               |
+| A2b   | T124   | `5baadf5` | Concluída: acordeão no celular com hash na URL, abertura pelo próximo passo e seção em edição que não fecha (PFI-18)              |
+| A3    | T125   | `6a56687` | Concluída: diálogo "Gerar o pedido" com revisão, "Valor final" e "Forma de pagamento" (PFI-19)                                    |
+| P2    | —      | `3351c33` | Acabamento: progresso compacto quando pronto e atalhos da Caixa com 44 px e 8 px em toda tela de toque                            |
+| E1    | T131   | —         | Adiada pelo PO (D3); PNL-04 sem implementação                                                                                     |
+| F1    | T132   | —         | Em andamento: teste de orçamento de controles por região                                                                          |
+| F2    | T133   | —         | Concluída: rastreabilidade das specs, `design.md` §9 e §16, glossário, pesquisa e este "Resultado"                                |
+
+### Medições registradas pelas fatias
+
+Só entram números que constam nas mensagens de commit das fatias ou que os
+testes afirmam. Dados sintéticos; celular 390×844 e notebook 1366×768.
+
+| Tela             | Antes (auditoria de 15/10/2026)           | Depois                                                                                                                                                                                                                                                     | Fonte                                                                                                                |
+| ---------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Caixa de Entrada | Barra com 7 controles; 19 / 32 na 1ª tela | Barra com 5 controles (busca, três atalhos e "Filtros"); 1ª tela dentro de ≤ 15 no celular, também com o resumo de filtro, e ≤ 24 no notebook                                                                                                              | `f3935a9`; `crm-ui.spec.js` “PCX-14: filters the Inbox…” e “PCX-14: on a 390 px phone…”                              |
+| Conversa         | 3 botões antes da mensagem no celular     | Cabeçalho sem primária; com o dono, 3 botões visíveis ("Criar pedido", "Mais ações", "Detalhes"); uma primária na conversa, no composer                                                                                                                    | `accc1b0`; `crm-ui.spec.js` “never offers to hand the conversation back to the AI…”                                  |
+| Pedidos          | 8 chips; barra de filtros com 9 controles | 3 chips; barra com 5 controles; 1º cartão inteiro acima da barra inferior no celular; folha com 44 px, 8 px entre opções e sem rolagem no notebook                                                                                                         | `aeec878`, `fb7e932`; `orders-list.spec.js` “PLI-09: …”                                                              |
+| Pedido aberto    | 17 controles em 3.600–4.800 px no celular | Pendente com 1 item: documento de 2.166 px para 1.862 px e painel de fechamento de 448 px para 145 px (A3); pendente pronto com o Resumo aberto: 1.862 px para 1.642 px (P2), dentro da meta de 1.800 px; 1 controle de adicionar arquivo em 390 e 1280 px | `6a56687`, `3351c33`, `a25cba7`; `orders.spec.js` “keeps a ready pending order within 1.800 px on a phone (RFC 024)” |
+| Painel           | Sem "o que faço agora"                    | Um link de próximo passo; vendedor no celular com 6 controles (5 indicadores e o próximo passo); gestor no notebook com 11 (3 de período, 7 indicadores e o próximo passo)                                                                                 | `069ae76`; `dashboard-next-step.spec.js`                                                                             |
+
+O progresso do pedido é real: conta só `missingFields` agrupado em três
+passos, não avança por visita e trata pendência desconhecida como um quarto
+passo ("Revisar pendências"), nunca um falso "3 de 3" (`d78f7ab`, `ab24ea4`).
+A contagem de controles por região contra as metas de "Metas de controles na
+primeira tela" é a T132 (F1), ainda em andamento.
+
+## Pendências após o RFC 024
+
+Registradas na T133 para decisão ou fatia futura; nenhuma foi resolvida aqui.
+
+1. **"Entrega atrasada" não combina com a busca.** A API recusa `delivery`
+   junto com `q` (`order-service.js`: a lista por entrega não se combina com
+   outros filtros nem pagina), e a tela limpa o filtro de entrega quando
+   alguém digita na busca (`OrdersView.vue`).
+2. **Ícones Baixar e Remover dos arquivos da arte** com 36 px e sem
+   espaçamento entre eles, abaixo dos 44 px com 8 px da §16.
+3. **"Enviar arte final" com 40 px no notebook** e o link "← Pedidos" do
+   rastro pequeno como alvo.
+4. **Cabeçalho da conversa no celular com 3 controles** contando o botão
+   voltar, acima da meta "cabeçalho ≤ 2".
+5. **A URL da Caixa de Entrada e de Pedidos não reflete o filtro** escolhido
+   nos atalhos, chips ou folha; só os links do Painel entram pela URL.
+6. **Hash do acordeão gravado por `router.options.history.replace`**, fora da
+   navegação do Vue Router, porque o `App.vue` usa a `fullPath` como chave da
+   view e remontaria a página (perdendo foco e rascunho). Funciona, mas é um
+   desvio do router a revisar se a chave da view mudar.
+7. **Pedido da loja não usa o acordeão** no celular: nenhum cabeçalho de
+   seção vira botão, e a página longa continua inteira na rolagem.
+8. **Destino do login por papel (E1, PNL-04)** adiado pelo PO (D3).
+9. **"Criar pedido" no "Mais" com pedido já confirmado:** a API aceita e a
+   tela oferece; falta a decisão do PO sobre manter.
+10. **PNL-01 com a fila em falha:** o cartão do gestor pula as condições da
+    fila e mostra a próxima que leu, e o do vendedor diz "A fila não
+    respondeu; tente de novo mais abaixo." sem "Tentar novamente" no próprio
+    cartão; o critério pede que não pule a condição e traga a ação no cartão.
+    Decidir entre emendar o critério ou ajustar o cartão (ver
+    [spec do CRM MVP](../../.specs/features/crm-mvp/spec.md)).
+11. **Lacuna de teste em PLI-10:** o vazio por filtro com "Limpar filtro" só
+    tem teste para "Prontos para produção".

@@ -24,7 +24,7 @@ const EXTRAS_LABEL = 'Adicionais (não obrigatórios)';
 
 // PIT-02 (ADR 016/020): what the seller may add to an item. None of it
 // blocks the order. The print is a reference of what goes where; who makes
-// the art is the order's ("Estampa e arquivos"). The part colours are the
+// the art is the order's ("Arte do pedido"). The part colours are the
 // fabric's, never the art's colour count of the production sheet. Only
 // sleeves and sleeve trim accept "Não aplicável" (PFI-07): a shirt without
 // sleeves still has a front and a back.

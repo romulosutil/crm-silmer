@@ -887,13 +887,15 @@ test('no order component writes the company name itself (PFI-20, ADR 035)', asyn
     new URL('views/OrderView.vue', sources),
   ];
   expect(files.length).toBeGreaterThan(10);
+  // Comments may cite the pilot; code and templates take `brand`. Read line by
+  // line instead of stripping comments, so no markup is ever rewritten.
+  const isCommentLine = (line) => /^\s*(\/\/|\/\*|\*|<!--)/u.test(line);
   for (const file of files) {
-    const code = (await readFile(file, 'utf8'))
-      .replaceAll(/<!--[\s\S]*?-->/gu, '')
-      .replaceAll(/\/\*[\s\S]*?\*\//gu, '')
-      .replaceAll(/(^|[^:])\/\/.*$/gmu, '$1');
-    // Comments may cite the pilot; code and templates take `brand`.
-    expect(code, file.pathname).not.toContain(brand.companyName);
+    const offending = (await readFile(file, 'utf8'))
+      .split('\n')
+      .filter((line) => line.includes(brand.companyName))
+      .filter((line) => !isCommentLine(line));
+    expect(offending, file.pathname).toEqual([]);
   }
 });
 

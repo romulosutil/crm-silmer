@@ -19,6 +19,10 @@ const next = computed(() => nextOrderStep(props.order));
 const doneCount = computed(
   () => steps.value.filter((step) => step.done).length,
 );
+// RFC 024 (≤ 1.800 px on a phone): with every step done the list only
+// repeats "pronto", so the progress folds into one line. It is never shown
+// as ready while the server still lists a blocker (next is null only then).
+const ready = computed(() => steps.value.length > 0 && next.value === null);
 // PFI-06: one section in edit at a time; the step waits for Salvar or
 // Cancelar and says so, instead of disappearing.
 const sectionOpen = computed(() => editing.editingSection.value !== '');
@@ -30,19 +34,34 @@ function goToNext() {
 </script>
 
 <template>
-  <section class="op-progress" aria-labelledby="order-progress-title">
+  <section
+    class="op-progress"
+    aria-labelledby="order-progress-title"
+    :data-ready="ready || undefined"
+  >
     <div class="op-progress-head">
-      <h2 id="order-progress-title">Para gerar o pedido</h2>
+      <!-- Ready: the heading stays for headings navigation; the line says it. -->
+      <h2 id="order-progress-title" :class="{ 'op-visually-hidden': ready }">
+        Para gerar o pedido
+      </h2>
       <p
         role="status"
         class="op-progress-count op-num"
-        :data-ready="next === null || undefined"
+        :data-ready="ready || undefined"
       >
-        {{ doneCount }} de {{ steps.length }} prontos
+        <template v-if="ready">
+          <span class="op-progress-mark" aria-hidden="true"
+            ><OrderIcon name="check"
+          /></span>
+          Tudo pronto para gerar · {{ doneCount }} de {{ steps.length }}
+        </template>
+        <template v-else>
+          {{ doneCount }} de {{ steps.length }} prontos
+        </template>
       </p>
     </div>
 
-    <ol class="op-progress-steps">
+    <ol v-if="!ready" class="op-progress-steps">
       <li
         v-for="(step, index) in steps"
         :key="step.key"
@@ -78,7 +97,7 @@ function goToNext() {
       </li>
     </ol>
 
-    <p class="op-progress-note">
+    <p v-if="!ready" class="op-progress-note">
       Valor e forma de pagamento: você informa ao gerar o pedido.
     </p>
   </section>

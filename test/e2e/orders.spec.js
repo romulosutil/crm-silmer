@@ -217,7 +217,10 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   await expect(artwork.getByLabel('O cliente envia a arte')).toBeFocused();
   await artwork.getByLabel('Sem estampa').check();
   await artwork.getByRole('button', { name: 'Salvar arte' }).click();
-  await expect(count).toHaveText('3 de 3 prontos');
+  // RFC 024: with nothing missing the progress folds into one line, under
+  // the same heading and the same status, without the list of steps.
+  await expect(count).toHaveText('Tudo pronto para gerar · 3 de 3');
+  await expect(progress.getByRole('listitem')).toHaveCount(0);
   await expect(progress.getByRole('button')).toHaveCount(0);
   await expect(readiness).toHaveText(
     'Tudo pronto. Valor e forma de pagamento você informa ao gerar.',
@@ -1810,10 +1813,15 @@ test('keeps the section heads readable and their buttons thumb sized, light and 
   page,
 }) => {
   await mockOrders(page, { orders: [incompleteOrder] });
-  for (const colorScheme of /** @type {const} */ (['light', 'dark'])) {
-    await page.emulateMedia({ colorScheme });
+  for (const theme of /** @type {const} */ (['light', 'dark'])) {
+    // The app ignores the system scheme: the theme is the saved choice that
+    // index.html puts on <html data-theme> before the bundle loads.
+    await page.addInitScript((value) => {
+      globalThis.localStorage.setItem('silmer-theme', value);
+    }, theme);
     await page.setViewportSize({ height: 844, width: 390 });
     await page.goto('/pedidos/order-pendente');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
     // PFI-18: on a phone every head is a thumb-sized button and only the
     // open section shows its "Editar".
     const heads = page.locator('main h2 button[aria-expanded]');
@@ -2720,14 +2728,19 @@ test('keeps the dialog accessible and thumb sized, light and dark (PFI-19)', asy
   page,
 }) => {
   await mockOrders(page);
-  for (const colorScheme of /** @type {const} */ (['light', 'dark'])) {
-    await page.emulateMedia({ colorScheme });
+  for (const theme of /** @type {const} */ (['light', 'dark'])) {
+    // The app ignores the system scheme: the theme is the saved choice that
+    // index.html puts on <html data-theme> before the bundle loads.
+    await page.addInitScript((value) => {
+      globalThis.localStorage.setItem('silmer-theme', value);
+    }, theme);
     for (const [width, height] of [
       [390, 844],
       [1280, 800],
     ]) {
       await page.setViewportSize({ height, width });
       await page.goto('/pedidos/order-pendente');
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
       const opener =
         width < 768
           ? page.locator('.op-mobile-action').getByRole('button', {
@@ -3000,6 +3013,34 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   await items.getByRole('button', { name: /^Itens e especificações/u }).click();
   await items.getByRole('button', { name: 'Editar' }).click();
   await expect(footer).toHaveCount(0);
+});
+
+test('keeps a ready pending order within 1.800 px on a phone (RFC 024)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+  await expect(
+    page.getByRole('heading', { name: 'Pedido 07-CRM' }),
+  ).toBeFocused();
+
+  // Nothing missing: the summary is the open fold (PFI-18) and the progress
+  // is one line under the same heading and status (PFI-15).
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await expect(
+    summary.getByRole('button', { name: /^Resumo do pedido/u }),
+  ).toHaveAttribute('aria-expanded', 'true');
+  const progress = page.getByRole('region', { name: 'Para gerar o pedido' });
+  await expect(progress.getByRole('status')).toHaveText(
+    'Tudo pronto para gerar · 3 de 3',
+  );
+  await expect(progress.getByRole('listitem')).toHaveCount(0);
+  const height = await page.evaluate(
+    () => globalThis.document.documentElement.scrollHeight,
+  );
+  expect(height).toBeLessThanOrEqual(1800);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('prints a confirmed order from the footer without covering the page', async ({

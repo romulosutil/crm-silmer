@@ -177,6 +177,26 @@
   background: var(--status-warning-surface);
 }
 
+/* design.md §4, RFC 024: on any touch screen, a tablet included, each
+   shortcut is a 44 px target with 8 px between them. */
+@media (pointer: coarse) {
+  .inbox-tabs {
+    gap: var(--space-2);
+  }
+
+  .inbox-tabs .inbox-tab {
+    min-block-size: var(--target-min);
+  }
+}
+
+/* On a 390 px phone the 8 px gaps come out of each shortcut's padding, so
+   the three still fit on one line without scrolling. */
+@media (pointer: coarse) and (max-width: 768px) {
+  .inbox-tabs .inbox-tab {
+    padding-inline: var(--space-2);
+  }
+}
+
 .inbox-notice {
   margin: 0;
   padding: var(--space-2) var(--space-3);

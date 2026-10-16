@@ -1697,6 +1697,54 @@ test('PCX-14: on a 390 px phone the shortcuts fit, the sheet works by keyboard a
   expect(await firstScreenControls(page)).toBeLessThanOrEqual(24);
 });
 
+test.describe('on a touch tablet', () => {
+  test.use({ hasTouch: true, viewport: { height: 1180, width: 820 } });
+
+  test('PCX-14: the shortcuts and "Filtros" are 44 px targets with 8 px between them (design.md §4)', async ({
+    page,
+  }) => {
+    await mockCrm(page);
+    await page.goto('/inbox');
+    // The contract is about the pointer, not the width: 820 px is wider
+    // than the phone layout, and the screen is still touched.
+    expect(
+      await page.evaluate(
+        () => globalThis.matchMedia('(pointer: coarse)').matches,
+      ),
+    ).toBe(true);
+    const shortcuts = page.getByRole('group', { name: 'Atalhos da Caixa' });
+    await expect(shortcuts.getByRole('button')).toHaveText([
+      /^Todas\s*1$/u,
+      /^Aguardando\s*1$/u,
+      /^Minhas\s*1$/u,
+    ]);
+    const buttons = await shortcuts.getByRole('button').all();
+    const filters = page.getByRole('button', { name: /^Filtros/u });
+    // Then the same on a touch phone, where the three still fit on one line.
+    for (const viewport of [null, { height: 844, width: 390 }]) {
+      if (viewport) await page.setViewportSize(viewport);
+      for (const control of [...buttons, filters]) {
+        await expect(control).toBeInViewport({ ratio: 1 });
+        expect((await control.boundingBox())?.height).toBeGreaterThanOrEqual(
+          44,
+        );
+      }
+      for (let index = 1; index < buttons.length; index += 1) {
+        const before = await buttons[index - 1].boundingBox();
+        const after = await buttons[index].boundingBox();
+        expect(
+          (after?.x ?? 0) - ((before?.x ?? 0) + (before?.width ?? 0)),
+        ).toBeGreaterThanOrEqual(8);
+      }
+      const rowOverflow = await page
+        .locator('.inbox-tabs')
+        .evaluate((row) => row.scrollWidth - row.clientWidth);
+      expect(rowOverflow).toBeLessThanOrEqual(0);
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    }
+  });
+});
+
 test('PCX-14: the Painel links open the Inbox with their shortcut pressed', async ({
   page,
 }) => {

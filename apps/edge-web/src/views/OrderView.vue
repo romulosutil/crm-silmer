@@ -72,6 +72,8 @@ const editingSection = ref('');
 /** @type {import('vue').Ref<{section: string, at: number}|null>} */
 const editRequest = ref(null);
 const closingSection = ref(null);
+/** @type {import('vue').Ref<HTMLElement|null>} */
+const footerStep = ref(null);
 const route = useRoute();
 const router = useRouter();
 // PFI-18: up to 768 px the sections form an accordion, one open at a time.
@@ -229,8 +231,34 @@ async function runCommand(action, body) {
       fields: /** @type {any} */ (cause)?.problem?.fields ?? [],
       message: describeWriteError(cause),
       ok: false,
+      // 0 when the request never reached the server (connection lost).
+      status: Number(/** @type {any} */ (cause)?.status) || 0,
     };
   }
+}
+
+/**
+ * PFI-19: the server refused "Gerar o pedido" for a blocker outside the
+ * dialog. The order is read again so the progress counts what the server
+ * counts, and the focus goes to the button of the next step — the progress's
+ * on a wide screen, the fixed footer's on a phone. Without a step to show,
+ * the closing panel names the blockers ("Revisar pendências").
+ */
+async function revisitNextStep() {
+  await load(true);
+  await nextTick();
+  const doc = globalThis.document;
+  const target = nextStep.value
+    ? [footerStep.value, doc?.querySelector('.op-progress-go')].find(
+        (button) => button && button.getClientRects().length > 0,
+      )
+    : null;
+  if (!target) {
+    goToSection(ORDER_REVIEW_SECTION);
+    return;
+  }
+  target.scrollIntoView?.({ block: 'center' });
+  target.focus({ preventScroll: true });
 }
 
 /**
@@ -436,6 +464,7 @@ provide('orderEditing', {
   request(section) {
     editRequest.value = { at: Date.now(), section };
   },
+  revisitNextStep,
   save: saveSection,
   saveMilestones,
   /** @param {string} section */
@@ -719,6 +748,7 @@ onBeforeUnmount(() => {
             Passo {{ nextStepNumber }} de {{ steps.length }} para gerar
           </p>
           <button
+            ref="footerStep"
             type="button"
             class="primary"
             aria-describedby="order-next-step-caption"
@@ -727,11 +757,12 @@ onBeforeUnmount(() => {
             {{ nextStep.action }}
           </button>
         </template>
+        <!-- PFI-19: the same dialog as the rail's; the focus comes back here. -->
         <button
           v-else-if="mobileAction === 'generate'"
           type="button"
           class="primary op-generate"
-          @click="closingSection?.generateFromFooter()"
+          @click="closingSection?.generateFromFooter($event.currentTarget)"
         >
           <OrderIcon name="ficha" />Gerar pedido
         </button>

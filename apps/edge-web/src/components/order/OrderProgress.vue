@@ -79,7 +79,7 @@ function goToNext() {
     </ol>
 
     <p class="op-progress-note">
-      Valor e forma de pagamento: no painel Fechamento e pagamento
+      Valor e forma de pagamento: você informa ao gerar o pedido.
     </p>
   </section>
 </template>

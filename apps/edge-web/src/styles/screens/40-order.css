@@ -286,6 +286,24 @@
   color: var(--status-success-text);
 }
 
+/* RFC 024: with the three steps done the progress is one line, so the
+   pending order fits the phone's 1.800 px. */
+.op-progress[data-ready] {
+  padding-block: 0.75rem;
+}
+
+.op-progress-count[data-ready] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.op-progress-count[data-ready] .op-progress-mark {
+  color: var(--status-success-text);
+  background: var(--status-success-surface);
+  box-shadow: none;
+}
+
 .op-progress-steps {
   display: grid;
   gap: 0.5rem;

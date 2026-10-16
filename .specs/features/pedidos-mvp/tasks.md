@@ -1960,7 +1960,7 @@ registro de emendas, ADR 036 e tarefas.
 | T129   | C1    | 1    | S4             | Concluída em `ux/jornadas` (`aeec878`)                |
 | T130   | D1    | 1    | S4             | Concluída em `ux/jornadas` (`069ae76`)                |
 | T131   | E1    | 6    | D3 do PO       | Adiada pelo PO (D3); não implementar                  |
-| T132   | F1    | 7    | T121–T130      | A fazer — fatia F1 em andamento                       |
+| T132   | F1    | 7    | T121–T130      | Concluída em `ux/jornadas` (`c9f1b36`)                |
 | T133   | F2    | 7    | T132           | Concluída em `ux/jornadas` (esta fatia, documentação) |
 
 Acabamento integrado depois das fatias, sem tarefa própria:
@@ -1973,8 +1973,9 @@ Acabamento integrado depois das fatias, sem tarefa própria:
   Entrada com 44 px e 8 px entre eles em qualquer tela de toque, tablet
   incluído.
 
-A T133 foi feita antes de a T132 terminar: o orçamento de controles da T132
-pode pedir uma revisão das metas registradas no RFC 024.
+A T133 foi feita antes de a T132 terminar. A T132 (`c9f1b36`) mediu todos os
+cenários dentro das metas do RFC 024; nenhuma meta registrada precisou de
+revisão.
 
 ### T121: Progresso real e rodapé do próximo passo
 

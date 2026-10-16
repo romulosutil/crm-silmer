@@ -381,7 +381,7 @@ Situação das fatias na branch `ux/jornadas`, fechada na T133 (15/10/2026):
 | A3    | T125   | `6a56687` | Concluída: diálogo "Gerar o pedido" com revisão, "Valor final" e "Forma de pagamento" (PFI-19)                                    |
 | P2    | —      | `3351c33` | Acabamento: progresso compacto quando pronto e atalhos da Caixa com 44 px e 8 px em toda tela de toque                            |
 | E1    | T131   | —         | Adiada pelo PO (D3); PNL-04 sem implementação                                                                                     |
-| F1    | T132   | —         | Em andamento: teste de orçamento de controles por região                                                                          |
+| F1    | T132   | —         | Concluída (`c9f1b36`): teste de orçamento de controles por região                                                                 |
 | F2    | T133   | —         | Concluída: rastreabilidade das specs, `design.md` §9 e §16, glossário, pesquisa e este "Resultado"                                |
 
 ### Medições registradas pelas fatias
@@ -401,7 +401,7 @@ O progresso do pedido é real: conta só `missingFields` agrupado em três
 passos, não avança por visita e trata pendência desconhecida como um quarto
 passo ("Revisar pendências"), nunca um falso "3 de 3" (`d78f7ab`, `ab24ea4`).
 A contagem de controles por região contra as metas de "Metas de controles na
-primeira tela" é a T132 (F1), ainda em andamento.
+primeira tela" é a T132 (F1), concluída em `c9f1b36`: nenhum cenário passou da meta.
 
 ## Pendências após o RFC 024
 

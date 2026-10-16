@@ -81,6 +81,11 @@ confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF
 sintético de aprovação é um artefato de revisão. Assinatura física de Rose
 e Operação continua pendente para produção. Versões v2 a v5 são preservadas.
 
+A [ADR 037](docs/adr/037-gerar-pdf-da-ficha-para-uso-mobile.md) acrescenta
+`GET /api/v1/orders/:orderId/pdf` para baixar a ficha real em PDF e
+compartilhá-la pelo recurso nativo do celular. O PDF usa o mesmo HTML aprovado;
+a rota HTML segue disponível. Não há envio automático pelo WhatsApp.
+
 Arquivos da arte (até 5 de 10 MB e a arte final) são enviados e baixados
 pela página do pedido e ficam no RustFS interno, só pela API
 ([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)). Aviso a Rose e

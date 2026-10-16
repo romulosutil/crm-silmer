@@ -1661,6 +1661,36 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/OrderNotFound' }
         '409': { $ref: '#/components/responses/OrderConflict' }
+  /orders/{orderId}/pdf:
+    get:
+      operationId: downloadOrderPdf
+      summary: Gera a ficha de pedido em PDF para baixar ou compartilhar
+      description: >-
+        ADR 037. Usa order.print e o mesmo template da rota HTML, somente para
+        pedido confirmado. Responde com o anexo privado pedido-NN-CRM.pdf.
+        A geração bem-sucedida da primeira ficha de um pedido da loja registra
+        o primeiro acesso da ADR 031; HEAD, falha e acesso negado não registram.
+        O servidor não armazena o PDF nem envia ao WhatsApp.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Ficha em PDF
+          headers:
+            Cache-Control:
+              { schema: { type: string, const: 'private, no-store' } }
+            Content-Disposition:
+              { schema: { type: string } }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '503': { $ref: '#/components/responses/Unavailable' }
   /orders/{orderId}/files:
     get:
       operationId: listOrderFiles
@@ -3475,11 +3505,11 @@ components:
           type: [string, 'null']
           format: date-time
           description: >-
-            Pedido da loja (ADR 031): quando uma pessoa imprimiu ou baixou a
-            ficha pela primeira vez. Nulo enquanto ninguém imprimiu e em todo
-            pedido do atendimento.
+            Pedido da loja (ADRs 031 e 036): quando uma pessoa imprimiu o HTML
+            ou gerou o PDF da ficha pela primeira vez. Nulo enquanto ninguém
+            acessou a ficha e em todo pedido do atendimento.
         fichaFirstPrintedBy:
-          description: Quem imprimiu a ficha pela primeira vez (ADR 031).
+          description: Quem acessou a ficha pela primeira vez (ADRs 031 e 036).
           oneOf:
             - { $ref: '#/components/schemas/OrderActorRef' }
             - { type: 'null' }

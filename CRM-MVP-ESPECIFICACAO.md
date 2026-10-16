@@ -86,6 +86,10 @@ edição ou impressão (ADR 020, TEC-01..08).
 
 Gerar registra autor, horário, valor e condição, muda para confirmado e libera
 impressão. Reabrir preserva número, registra autor e bloqueia impressão.
+Depois da confirmação, “Gerar PDF” baixa a ficha aprovada no celular ou no
+computador; onde houver compartilhamento nativo de arquivos, “Compartilhar PDF”
+permite escolher o WhatsApp manualmente (ADR 037). A entrega automática à
+operação continua sujeita a homologação separada.
 Pagamento e entrega não mudam status automaticamente. “Pago em” e “Entregue
 em” são datas manuais; receber arquivo não confirma pagamento.
 

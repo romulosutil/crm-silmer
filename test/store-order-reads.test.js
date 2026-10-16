@@ -31,7 +31,7 @@ const writeHeaders = Object.freeze({
   'x-csrf-token': 'csrf-synthetic',
 });
 
-/** @param {{denyRead?: boolean}} [options] */
+/** @param {{denyRead?: boolean, pdfRenderer?: (html: string) => Promise<Buffer>}} [options] */
 function harness(options = {}) {
   const repository = new InMemoryOrderRepository();
   let ids = 0;
@@ -80,7 +80,10 @@ function harness(options = {}) {
     phoneDigestsFor: store.phoneDigestsFor,
     repository,
   });
-  const api = createApi({}, { orders: runtime });
+  const api = createApi(
+    {},
+    { orders: runtime, orderPdfRenderer: options.pdfRenderer },
+  );
   /** @param {(body: any) => void} [change] @param {any} [body] */
   async function notify(change, body = storeOrderBody(change)) {
     const outcome = await store.record({
@@ -313,6 +316,55 @@ test('LOJ-10: "Baixar ficha" sends the same document as pedido-NN-CRM.html', asy
     assert.equal(refused.statusCode, 400, query);
   }
   await api.close();
+});
+
+test('LOJ-27/PIM-13: only a completed PDF generation clears the store notice', async (t) => {
+  let fail = true;
+  const { api, notify, repository } = harness({
+    pdfRenderer: async (html) => {
+      assert.match(html, /PEDIDO DA LOJA/u);
+      if (fail) throw new Error('renderer unavailable');
+      return Buffer.from('%PDF-1.7\nsynthetic PDF');
+    },
+  });
+  t.after(() => api.close());
+  const created = await notify();
+  const url = `/api/v1/orders/${created.id}/pdf`;
+  const head = await api.inject({ headers: readHeaders, method: 'HEAD', url });
+  assert.equal(head.statusCode, 200);
+  const afterHead = await repository.findById(created.id);
+  assert.ok(afterHead);
+  assert.equal(afterHead.fichaFirstPrintedAt, null);
+
+  const failed = await api.inject({ headers: readHeaders, method: 'GET', url });
+  assert.equal(failed.statusCode, 500);
+  const afterFailure = await repository.findById(created.id);
+  assert.ok(afterFailure);
+  assert.equal(afterFailure.fichaFirstPrintedAt, null);
+
+  fail = false;
+  const generated = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url,
+  });
+  assert.equal(generated.statusCode, 200);
+  assert.match(String(generated.headers['content-type']), /^application\/pdf/u);
+  assert.match(
+    String(generated.headers['content-disposition']),
+    /pedido-01-CRM\.pdf/u,
+  );
+  assert.equal(generated.rawPayload.toString(), '%PDF-1.7\nsynthetic PDF');
+  const first = await repository.findById(created.id);
+  assert.ok(first);
+  assert.equal(first.fichaFirstPrintedBy, ADMIN.id);
+  assert.ok(first.fichaFirstPrintedAt);
+
+  const again = await api.inject({ headers: readHeaders, method: 'GET', url });
+  assert.equal(again.statusCode, 200);
+  const after = await repository.findById(created.id);
+  assert.ok(after);
+  assert.equal(after.fichaFirstPrintedAt, first.fichaFirstPrintedAt);
 });
 
 test('LOJ-10: the simplified ficha escapes what the customer typed', () => {

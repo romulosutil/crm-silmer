@@ -2111,3 +2111,14 @@ revisão.
   foi entregue, metas medidas registradas, nenhum link quebrado; o ADR 036
   não é reescrito.
 - **Gate:** `npm run format:check`, links e `git diff --check`.
+
+### T134: Gerar e compartilhar PDF da ficha no celular
+
+- **Requisitos:** PIM-13, PIM-14 e LOJ-38; ADR 037 e RFC 025.
+- **Arquivos:** rota e renderer de PDF da API, imagem runtime, botões de Pedido e
+  lista, contrato OpenAPI, testes e documentação de operação.
+- **Aceite:** Pedido confirmado baixa PDF real do template vigente; celular
+  compatível oferece compartilhamento manual do arquivo; pendente e sem
+  permissão não recebem o PDF; primeira geração da loja registra uma única vez.
+- **Gate:** `npm run validate`, E2E de pedidos e loja, PDF sintético inspecionado,
+  `git diff --check`, commit e push.

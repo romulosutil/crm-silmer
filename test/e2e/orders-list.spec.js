@@ -61,7 +61,7 @@ test('groups orders by status with counts, columns and actions', async ({
 
   // PLI-06: printing belongs to confirmed orders, continuing to pending ones.
   await expect(
-    confirmedRow.getByRole('button', { name: 'Imprimir ficha' }),
+    confirmedRow.getByRole('button', { name: 'Gerar PDF' }),
   ).toBeVisible();
   await expect(
     confirmedRow.getByRole('link', { name: 'Abrir pedido' }),
@@ -70,7 +70,7 @@ test('groups orders by status with counts, columns and actions', async ({
     confirmedRow.getByRole('link', { name: 'Continuar pedido' }),
   ).toHaveCount(0);
   await expect(
-    pendingRow.getByRole('button', { name: 'Imprimir ficha' }),
+    pendingRow.getByRole('button', { name: 'Gerar PDF' }),
   ).toHaveCount(0);
   await expect(
     pendingRow.getByRole('link', { name: 'Abrir pedido' }),
@@ -421,7 +421,7 @@ test('filters the orders ready for production, by the nearest delivery', async (
     'Time Sem Data',
   ]);
   await expect(
-    queue.getByRole('button', { name: 'Imprimir ficha 13-CRM' }),
+    queue.getByRole('button', { name: 'Gerar PDF 13-CRM' }),
   ).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

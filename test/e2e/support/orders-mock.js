@@ -400,6 +400,15 @@ export async function mockOrders(page, options = {}) {
     const url = new URL(request.url());
     const path = url.pathname;
 
+    if (/^\/api\/v1\/orders\/[^/]+\/pdf$/u.test(path)) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/pdf',
+        body: '%PDF-1.4\n% synthetic order ficha\n',
+      });
+      return;
+    }
+
     if (path === '/api/v1/sessions/current') {
       await route.fulfill({
         contentType: 'application/json',

@@ -93,6 +93,7 @@ nulos, aceita somente campos de qualificação e altera apenas esse snapshot at�
 3. **ORD-03:** WHEN o encaminhamento operacional da Ficha é homologado THEN ele SHALL alcançar Rose e registrar evidência de entrega; eventual envio automático é evolução própria, com telefone em secret://crm/order-recipient-phone e sem PII versionada.
 4. **ORD-04:** WHEN o encaminhamento da Ficha falha THEN a operação SHALL preservar o Pedido confirmado e registrar retomada sem criar outro Pedido; automação desse efeito depende do contrato de ORD-03.
 5. **ORD-05:** WHEN Pedido é gerado THEN o sistema SHALL registrar pessoa e horário, fixar nome do cliente, calcular peças pela grade e liberar impressão v5, deixando produção vazia; assinatura física de Rose e Operação SHALL preceder produção.
+6. **ORD-06:** WHEN Pedido confirmado é aberto em celular THEN a pessoa SHALL poder gerar o PDF da ficha e, se o aparelho aceitar compartilhamento de arquivos, escolher manualmente o WhatsApp; a entrega automática a Rose continua dependente de ORD-03.
 
 **Teste independente:** criar Pedido `01-CRM`, completar, gerar por pessoa autorizada, imprimir e reabrir sem duplicar Pedido ou consumir outro número; homologar encaminhamento a Rose separadamente.
 

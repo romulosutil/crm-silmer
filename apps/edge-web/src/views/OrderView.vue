@@ -23,6 +23,13 @@ import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import { usePhone } from '../lib/media-query.js';
 import {
+  canSharePdf,
+  downloadPdf,
+  getOrderPdf,
+  pdfFile,
+  sharePdf,
+} from '../lib/order-pdf.js';
+import {
   fabLabel,
   isStoreOrder,
   nextOrderStep,
@@ -49,8 +56,6 @@ const SECTION_HASHES = Object.freeze({
 });
 
 const LIVE_REFRESH_DELAY_MS = 250;
-// ADR 031: long enough for the print tab's request to reach the API.
-const PRINT_REFRESH_DELAY_MS = 2000;
 
 const props = defineProps({
   fromConversationId: { type: String, default: '' },
@@ -64,6 +69,9 @@ const order = ref(null);
 const loading = ref(true);
 const notFound = ref(false);
 const error = ref('');
+const pdfError = ref('');
+const pdfBusy = ref(false);
+const shareAvailable = canSharePdf();
 // PFI-06: one section in edit at a time, decided here so two open forms can
 // never disagree about the version they are saving over.
 const editingSection = ref('');
@@ -83,7 +91,8 @@ let sectionChosen = false;
 let revealOnLoad = false;
 let controller;
 let refreshTimer = 0;
-let printRefreshTimer = 0;
+let readyPdf = null;
+let readyPdfVersion = null;
 let pendingLiveRefresh = false;
 let headingAnnounced = false;
 
@@ -132,13 +141,13 @@ const showProgress = computed(
 /**
  * Mobile first (PO, 15/10/2026): on a phone the page's main action stays in
  * a fixed footer — the next step while one is missing and "Gerar pedido" once
- * none is (PFI-16), for whoever may confirm a pending order, and "Imprimir
- * ficha" once it is confirmed. It steps aside while a section is being
+ * none is (PFI-16), for whoever may confirm a pending order, and "Gerar PDF"
+ * once it is confirmed. It steps aside while a section is being
  * edited, so the editor's own Salvar and Cancelar stay in reach.
  */
 const mobileAction = computed(() => {
   if (!order.value || editingSection.value !== '') return '';
-  if (!isPending.value) return 'print';
+  if (!isPending.value) return 'pdf';
   if (!canEdit.value || isStore.value) return '';
   return nextStep.value ? 'step' : 'generate';
 });
@@ -290,33 +299,55 @@ async function saveMilestones(value) {
   }
 }
 
-/** LOJ-10: the simplified ficha of a store order, as a file to keep. */
-const downloadUrl = computed(
-  () => `/api/v1/orders/${encodeURIComponent(props.orderId)}/print?download=1`,
-);
-
-/**
- * ADR 031: the first print of a new site order is recorded by the API while
- * the tab opens. One silent re-read a moment later clears "Ficha não
- * impressa" even when the live stream is down; no polling.
- */
-function refreshAfterFirstPrint() {
-  if (!storeFichaPending(order.value)) return;
-  if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
-  printRefreshTimer = globalThis.setTimeout(() => {
-    printRefreshTimer = 0;
-    if (editingSection.value === '') void load(true);
-  }, PRINT_REFRESH_DELAY_MS);
-}
-
-/** PIM-02: the API renders the approved document; the browser prints it. */
-function print() {
-  globalThis.open(
-    `/api/v1/orders/${encodeURIComponent(props.orderId)}/print`,
-    '_blank',
-    'noopener',
-  );
-  refreshAfterFirstPrint();
+/** PIM-13: download the approved ficha as a PDF, or offer the mobile share sheet. */
+async function generatePdf(share = false) {
+  if (pdfBusy.value || isPending.value || !order.value) return;
+  pdfBusy.value = true;
+  pdfError.value = '';
+  const firstStorePdf = storeFichaPending(order.value);
+  try {
+    const fromCache =
+      share && readyPdf && readyPdfVersion === order.value.version;
+    const file = fromCache
+      ? readyPdf
+      : pdfFile(await getOrderPdf(props.orderId), order.value.number);
+    if (!fromCache) {
+      readyPdf = file;
+      readyPdfVersion = order.value.version;
+      if (firstStorePdf && editingSection.value === '') await load(true);
+    }
+    if (share) {
+      // Rendering may outlast the browser's gesture; a second tap shares the prepared file.
+      if (
+        !fromCache &&
+        globalThis.navigator.userActivation?.isActive === false
+      ) {
+        pdfError.value =
+          'PDF pronto. Toque em Compartilhar PDF novamente para escolher o WhatsApp.';
+        return;
+      }
+      try {
+        await sharePdf(file, order.value.number);
+      } catch (cause) {
+        if (cause?.name === 'AbortError') return;
+        if (cause?.name === 'NotAllowedError' && !fromCache) {
+          pdfError.value =
+            'PDF pronto. Toque em Compartilhar PDF novamente para escolher o WhatsApp.';
+          return;
+        }
+        downloadPdf(file);
+        pdfError.value =
+          'O compartilhamento não abriu. O PDF foi baixado para você encaminhar pelo WhatsApp.';
+      }
+    } else downloadPdf(file);
+  } catch (cause) {
+    pdfError.value =
+      Number(cause?.status) === 409
+        ? 'Este pedido foi reaberto. Atualize a página antes de gerar o PDF.'
+        : 'Não foi possível gerar o PDF. Tente novamente.';
+  } finally {
+    pdfBusy.value = false;
+  }
 }
 
 /**
@@ -459,7 +490,7 @@ provide('orderEditing', {
   isPhone,
   isSectionOpen,
   openSection,
-  print,
+  print: () => generatePdf(),
   /** @param {string} section */
   request(section) {
     editRequest.value = { at: Date.now(), section };
@@ -588,7 +619,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   controller?.abort();
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
-  if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
 });
 </script>
 
@@ -646,7 +676,7 @@ onBeforeUnmount(() => {
               v-if="storeFichaPending(order)"
               class="badge"
               data-tone="warning"
-              >Ficha não impressa</span
+              >Ficha ainda sem PDF</span
             >
           </div>
           <p v-if="isStore">{{ customerName }} — {{ orderContext }}</p>
@@ -662,23 +692,25 @@ onBeforeUnmount(() => {
             :to="conversationLink"
             >Abrir conversa</RouterLink
           >
-          <a
-            v-if="isStore"
-            class="button-link"
-            :href="downloadUrl"
-            :download="`pedido-${order.number}.html`"
-            @click="refreshAfterFirstPrint"
-          >
-            <OrderIcon name="download" />Baixar ficha
-          </a>
           <button
             type="button"
             class="op-print"
-            :disabled="isPending"
+            :disabled="isPending || pdfBusy"
             :aria-describedby="isPending ? 'order-print-reason' : undefined"
-            @click="print"
+            @click="generatePdf()"
           >
-            <OrderIcon name="printer" />Imprimir ficha
+            <OrderIcon name="download" />{{
+              pdfBusy ? 'Gerando PDF…' : 'Gerar PDF'
+            }}
+          </button>
+          <button
+            v-if="shareAvailable && !isPending"
+            type="button"
+            class="op-print"
+            :disabled="pdfBusy"
+            @click="generatePdf(true)"
+          >
+            Compartilhar PDF
           </button>
         </div>
       </header>
@@ -687,6 +719,7 @@ onBeforeUnmount(() => {
         {{ PRINT_LOCKED_REASON }}
       </p>
       <p v-if="error" role="alert" class="op-alert">{{ error }}</p>
+      <p v-if="pdfError" role="alert" class="op-alert">{{ pdfError }}</p>
       <button v-if="error" type="button" @click="load(true)">
         Tentar novamente
       </button>
@@ -766,8 +799,25 @@ onBeforeUnmount(() => {
         >
           <OrderIcon name="ficha" />Gerar pedido
         </button>
-        <button v-else type="button" class="primary" @click="print">
-          <OrderIcon name="printer" />Imprimir ficha
+        <button
+          v-else
+          type="button"
+          class="primary"
+          :disabled="pdfBusy"
+          @click="generatePdf()"
+        >
+          <OrderIcon name="download" />{{
+            pdfBusy ? 'Gerando PDF…' : 'Gerar PDF'
+          }}
+        </button>
+        <button
+          v-if="mobileAction === 'pdf' && shareAvailable"
+          type="button"
+          :disabled="pdfBusy"
+          aria-label="Compartilhar PDF"
+          @click="generatePdf(true)"
+        >
+          Compartilhar
         </button>
       </div>
     </template>

@@ -52,6 +52,7 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   handoffs?: any,
  *   operations?: any,
  *   orders?: any,
+ *   orderPdfRenderer?: (html: string) => Promise<Buffer>,
  *   storeOrders?: import('./store-order-runtime.js').StoreOrderRuntime
  *   subjects?: Record<string, any>,
  * }} [runtime]
@@ -301,11 +302,16 @@ export function createApi(options = {}, runtime = {}) {
   }
 
   if (runtime.orders) {
-    registerOrderRoutes(api, runtime.orders, (request) => {
-      const context = requests.get(request);
-      if (!context) throw new Error('Missing request context');
-      return context;
-    });
+    registerOrderRoutes(
+      api,
+      runtime.orders,
+      (request) => {
+        const context = requests.get(request);
+        if (!context) throw new Error('Missing request context');
+        return context;
+      },
+      runtime.orderPdfRenderer,
+    );
   }
 
   // ADR 028: the n8n checkout workflow records the site shop's paid order;

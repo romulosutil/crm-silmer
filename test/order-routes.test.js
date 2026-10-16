@@ -64,7 +64,7 @@ const ORDER_KEYS = [
   'version',
 ];
 
-/** @param {{readActor?: any, writeActor?: any}} [options] */
+/** @param {{readActor?: any, writeActor?: any, pdfRenderer?: (html: string) => Promise<Buffer>}} [options] */
 function orderHarness(options = {}) {
   /** @type {Record<string, string|null>} */
   const assignments = {
@@ -152,7 +152,10 @@ function orderHarness(options = {}) {
     },
     repository,
   });
-  const api = createApi({}, { orders: runtime });
+  const api = createApi(
+    {},
+    { orders: runtime, orderPdfRenderer: options.pdfRenderer },
+  );
   return {
     api,
     assignments,
@@ -1510,6 +1513,100 @@ test('GET /orders/:orderId/print renders the confirmed order on the printed temp
   assert.match(html, /FAB 01/u);
   assert.match(html, /Vendedora Um/u);
   assert.doesNotMatch(html, /Vendedor Dois/u);
+});
+
+test('PIM-13: PDF download uses the approved ficha and the same print permission', async (t) => {
+  /** @type {string[]} */
+  const rendered = [];
+  const { api, guards, runtime } = orderHarness({
+    pdfRenderer: async (html) => {
+      rendered.push(html);
+      return Buffer.from('%PDF-1.7\nsynthetic PDF');
+    },
+  });
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  const pending = await createPending(runtime, 'conversation-2');
+  guards.length = 0;
+
+  const pdf = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${confirmed.id}/pdf`,
+  });
+  assert.equal(pdf.statusCode, 200);
+  assert.match(String(pdf.headers['content-type']), /^application\/pdf/u);
+  assert.equal(pdf.headers['cache-control'], 'private, no-store');
+  assert.match(
+    String(pdf.headers['content-disposition']),
+    /pedido-01-CRM\.pdf/u,
+  );
+  assert.equal(pdf.rawPayload.toString(), '%PDF-1.7\nsynthetic PDF');
+  assert.match(rendered[0], /FICHA DE PEDIDO/u);
+  assert.deepEqual(
+    guards.map(({ input }) => input.action),
+    ['order.print'],
+  );
+
+  const head = await api.inject({
+    headers: readHeaders,
+    method: 'HEAD',
+    url: `/api/v1/orders/${confirmed.id}/pdf`,
+  });
+  assert.equal(head.statusCode, 200);
+  assert.equal(rendered.length, 1);
+
+  const refused = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${pending.id}/pdf`,
+  });
+  assert.equal(refused.statusCode, 409);
+  assert.deepEqual(refused.json(), { error: { code: 'ORDER_NOT_CONFIRMED' } });
+  assert.equal(rendered.length, 1);
+});
+
+test('PIM-13: denied PDF read never reaches the renderer', async (t) => {
+  let calls = 0;
+  const { api, runtime } = orderHarness({
+    readActor: null,
+    pdfRenderer: async () => {
+      calls += 1;
+      return Buffer.from('%PDF');
+    },
+  });
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  const response = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${confirmed.id}/pdf`,
+  });
+  assert.equal(response.statusCode, 403);
+  assert.equal(calls, 0);
+});
+
+test('PIM-14: PDF generation is limited to ten requests per minute', async (t) => {
+  let calls = 0;
+  const { api, runtime } = orderHarness({
+    pdfRenderer: async () => {
+      calls += 1;
+      return Buffer.from('%PDF-1.7\nsynthetic PDF');
+    },
+  });
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  const request = () =>
+    api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url: `/api/v1/orders/${confirmed.id}/pdf`,
+    });
+  for (let count = 0; count < 10; count += 1) {
+    assert.equal((await request()).statusCode, 200);
+  }
+  assert.equal((await request()).statusCode, 429);
+  assert.equal(calls, 10);
 });
 
 test('the client follows a renamed contact while pending and stays on the generated order and its paper (ADR 018)', async (t) => {

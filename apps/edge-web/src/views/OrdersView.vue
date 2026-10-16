@@ -22,6 +22,7 @@ import FilterSheet from '../components/FilterSheet.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import { dateTimeBR, formatPhoneNumber } from '../lib/format.js';
 import { openDialog } from '../lib/ui.js';
+import { downloadPdf, getOrderPdf, pdfFile } from '../lib/order-pdf.js';
 import {
   amountLabel,
   deliveryDue,
@@ -37,8 +38,6 @@ import {
 } from '../lib/order-format.js';
 
 const LIVE_REFRESH_DELAY_MS = 250;
-// ADR 031: long enough for the print tab's request to reach the API.
-const PRINT_REFRESH_DELAY_MS = 2000;
 const SEARCH_DELAY_MS = 300;
 const PAGE_SIZE = 25;
 
@@ -167,13 +166,14 @@ const loadingMore = ref(false);
 const refreshing = ref(false);
 const hasLoaded = ref(false);
 const error = ref('');
+const pdfError = ref('');
+const pdfBusyId = ref('');
 const errorMode = ref('');
 // The clock is refreshed on every load, so the inactivity signal does not freeze at the
 // value the first render happened to compute.
 const now = ref(new Date());
 let controller;
 let refreshTimer = 0;
-let printRefreshTimer = 0;
 let searchTimer = 0;
 let clockTimer = 0;
 
@@ -733,23 +733,23 @@ async function retryInitialLoad() {
   heading.value?.focus();
 }
 
-/** PIM-02: the document is the API's; the browser's own print dialog runs it. */
+/** PIM-13: the same approved ficha, delivered as a PDF file. */
 /** @param {Record<string, any>} order */
-function print(order) {
-  globalThis.open(
-    `/api/v1/orders/${encodeURIComponent(order.id)}/print`,
-    '_blank',
-    'noopener',
-  );
-  // ADR 031: the API records the first print of a new site order while the
-  // tab opens; one silent re-read clears "Ficha não impressa" even without
-  // the live stream. No polling.
-  if (!storeFichaPending(order)) return;
-  if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
-  printRefreshTimer = globalThis.setTimeout(() => {
-    printRefreshTimer = 0;
-    void load(true);
-  }, PRINT_REFRESH_DELAY_MS);
+async function generatePdf(order) {
+  if (pdfBusyId.value) return;
+  pdfBusyId.value = order.id;
+  pdfError.value = '';
+  try {
+    downloadPdf(pdfFile(await getOrderPdf(order.id), order.number));
+    if (storeFichaPending(order)) void load(true);
+  } catch (cause) {
+    pdfError.value =
+      Number(cause?.status) === 409
+        ? 'Este pedido foi reaberto. Atualize a lista antes de gerar o PDF.'
+        : 'Não foi possível gerar o PDF. Tente novamente.';
+  } finally {
+    pdfBusyId.value = '';
+  }
 }
 
 /** @param {string} value */
@@ -840,7 +840,6 @@ onBeforeUnmount(() => {
   if (contactSearchTimer) globalThis.clearTimeout(contactSearchTimer);
   if (newPhoneSearchTimer) globalThis.clearTimeout(newPhoneSearchTimer);
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
-  if (printRefreshTimer) globalThis.clearTimeout(printRefreshTimer);
   if (searchTimer) globalThis.clearTimeout(searchTimer);
   if (clockTimer) globalThis.clearInterval(clockTimer);
 });
@@ -1176,6 +1175,7 @@ onBeforeUnmount(() => {
       </fieldset>
     </FilterSheet>
 
+    <p v-if="pdfError" role="alert" class="op-alert">{{ pdfError }}</p>
     <div v-if="error && hasLoaded" role="alert" class="audit-note">
       <p>{{ error }}</p>
       <button
@@ -1374,7 +1374,7 @@ onBeforeUnmount(() => {
                       v-if="storeFichaPending(order)"
                       class="badge"
                       data-tone="warning"
-                      >Ficha não impressa</span
+                      >Ficha ainda sem PDF</span
                     >
                   </span>
                   <span class="badge order-card-status" data-tone="success">{{
@@ -1410,10 +1410,13 @@ onBeforeUnmount(() => {
                 </td>
                 <td class="order-cell-actions">
                   <div class="row-actions">
-                    <button type="button" @click="print(order)">
-                      Imprimir ficha<span class="sr-only">
-                        {{ order.number }}</span
-                      >
+                    <button
+                      type="button"
+                      :disabled="Boolean(pdfBusyId)"
+                      @click="generatePdf(order)"
+                    >
+                      {{ pdfBusyId === order.id ? 'Gerando PDF…' : 'Gerar PDF'
+                      }}<span class="sr-only"> {{ order.number }}</span>
                     </button>
                     <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
                       >Abrir pedido<span class="sr-only">

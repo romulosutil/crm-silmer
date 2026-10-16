@@ -158,17 +158,26 @@ fora do pedido, que é travado; mudar isso exige decisão nova.
 
 ## Pedido novo do site (ADR 031)
 
-- **O que é**: pedido da loja, que não é teste, cuja ficha ninguém imprimiu.
+Desde a [ADR 037](../adr/037-gerar-pdf-da-ficha-para-uso-mobile.md), o botão
+**Gerar PDF** baixa a ficha como arquivo PDF; no celular compatível,
+**Compartilhar PDF** abre o menu nativo para escolher o WhatsApp. A primeira
+geração bem-sucedida retira o pedido do aviso e registra quem gerou a ficha.
+Se o compartilhamento não abrir, use o PDF baixado. Falha na geração não
+retira o pedido do aviso. A rota HTML antiga segue disponível para
+compatibilidade operacional.
+
+- **O que é**: pedido da loja, que não é teste, cuja ficha ninguém gerou em PDF
+  ou abriu pela rota HTML antiga.
   Chega já **Confirmado**, como um pedido depois de "Gerar pedido".
 - **Onde aparece**: no topo do Dashboard, "N pedidos novos do site", com o
   mais antigo; o aviso inteiro abre Pedidos já em "Loja do site". O menu
-  "Pedidos" mostra o mesmo número. Na lista e na página, o selo "Ficha não
-  impressa".
-- **Como sai do aviso**: imprimindo ("Imprimir ficha", "Abrir ficha") ou
-  baixando ("Baixar ficha") a ficha pela primeira vez. O CRM grava quem e
-  quando ("Ficha impressa por … · …"), uma vez só; imprimir de novo não muda
-  nada. Não há botão de desfazer: uma ficha aberta por engano tira o pedido
-  do aviso, e o pedido continua na lista.
+  "Pedidos" mostra o mesmo número. Na lista e na página, o selo "Ficha ainda
+  sem PDF".
+- **Como sai do aviso**: gerando o PDF pela primeira vez ("Gerar PDF",
+  "Compartilhar PDF" ou "Baixar ficha em PDF") ou abrindo a rota HTML antiga.
+  O CRM grava quem e quando ("PDF gerado por … · …"), uma vez só; gerar de novo
+  não muda nada. Não há botão de desfazer: uma ficha gerada por engano tira o
+  pedido do aviso, e o pedido continua na lista.
 - **Produção**: a ficha da loja tem uma página — Produzir (produto, cor,
   tamanho, 10 peças, prazo da cor, quando o pedido entrou), Cliente (nome e
   WhatsApp) e Pagamento.

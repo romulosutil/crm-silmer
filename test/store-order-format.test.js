@@ -25,12 +25,12 @@ test('LOJ-31: the Dashboard notice counts new site orders in the singular and th
   assert.equal(storeNoticeText(undefined, null), null);
   assert.deepEqual(storeNoticeText(1, '2026-10-08T02:15:55.000Z'), {
     detail:
-      'Confirmado e pago por Pix em 07/10, 23:15. Imprima a ficha para começar a produção.',
+      'Confirmado e pago por Pix em 07/10, 23:15. Gere o PDF da ficha para começar a produção.',
     title: '1 pedido novo do site',
   });
   assert.deepEqual(storeNoticeText(3, '2026-10-08T02:15:55.000Z'), {
     detail:
-      'Confirmados e pagos por Pix, o mais antigo em 07/10, 23:15. Imprima as fichas para começar a produção.',
+      'Confirmados e pagos por Pix, o mais antigo em 07/10, 23:15. Gere os PDFs das fichas para começar a produção.',
     title: '3 pedidos novos do site',
   });
   assert.equal(shortDateTimeLabel('não é data'), '');
@@ -77,7 +77,7 @@ test('LOJ-33/LOJ-34/LOJ-35: a store order reads as confirmed by the site, with i
   assert.equal(storeFichaPending(printed), false);
   assert.equal(
     fichaPrintedLabel(printed),
-    'Ficha impressa por Rose Sintética · 08/10/2026, 09:12',
+    'PDF gerado por Rose Sintética · 08/10/2026, 09:12',
   );
 });
 

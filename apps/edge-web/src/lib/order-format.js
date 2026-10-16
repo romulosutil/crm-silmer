@@ -196,7 +196,7 @@ export function isItemGap(field) {
 /**
  * True for what the seller fills elsewhere on the page — the items, who
  * makes the art and the promised delivery of the summary — as opposed to the
- * amount and the payment method typed next to "Gerar pedido".
+ * amount and the payment method entered in the "Gerar o pedido" dialog.
  *
  * @param {string} field
  */

@@ -641,6 +641,7 @@ H:  T23, T34, T38 ──→ T39
 ### T33: Faixas de produção e dados do atendimento
 
 - **What:** "Controle de produção" (informativo) e "Dados do atendimento" (leitura, não impresso).
+- **Removido/superado por PFI-20 (RFC 024, T123 `a25cba7`):** o bloco "Controle de produção" saiu da página do pedido e só existe na ficha impressa; "Dados do atendimento" continua, dentro do acordeão no celular (PFI-18).
 - **Where:** `apps/edge-web/src/components/order/OrderInfoStrips.vue`, `test/e2e/orders.spec.js`
 - **Depends on:** T32
 - **Requirement:** PFI-01, PFI-08
@@ -670,6 +671,7 @@ H:  T23, T34, T38 ──→ T39
 ### T35: Filtro "Estado" no lugar de "Situação"
 
 - **What:** Remover o menu "Situação" e o bloco "Sugestão pendente da IA"; adicionar "Estado": Todas · Aguardando vendedor · Com o agente · Com vendedor (`pendingHandoff`/`automationState`). Fila, arquivar e repassar intactos.
+- **Superado por PCX-14 (RFC 024, T128 `f3935a9`):** as abas de estado e o seletor "Fila" deram lugar aos atalhos Todas · Aguardando · Minhas e à folha "Filtros" (Situação e Responsável).
 - **Where:** `apps/edge-web/src/views/InboxView.vue`, `apps/edge-web/src/screen-styles.css`, `test/e2e/crm-ui.spec.js`
 - **Depends on:** T20, T26
 - **Requirement:** PCX-01, PCX-02, PCX-05
@@ -694,6 +696,7 @@ H:  T23, T34, T38 ──→ T39
 ### T37: Gaveta do pedido
 
 - **What:** `OrderDrawer` com número, status, o que falta, itens, total, valor, "Abrir pedido" e "Criar pedido"; fecha com Esc/clique fora e devolve foco.
+- **Removido/superado por PCX-10 a PCX-12 (RFC 024, T126 `c1a9023`):** a gaveta e `OrderDrawer.vue` saíram; o resumo fica em Detalhes › Pedido e "Criar pedido" no cabeçalho ou em "Mais".
 - **Where:** `apps/edge-web/src/components/order/OrderDrawer.vue`, `test/e2e/crm-ui.spec.js`
 - **Depends on:** T16, T17, T26
 - **Reuses:** padrões de `dialog` e foco de `lib/ui.js`
@@ -705,6 +708,7 @@ H:  T23, T34, T38 ──→ T39
 ### T38: Botão "Pedido" no cabeçalho da conversa
 
 - **What:** Botão com status (Pendente/Confirmado/Sem pedido) que abre a gaveta; atualiza com `inbox.order.changed`.
+- **Removido/superado por PCX-10 (RFC 024, T126 `c1a9023`):** o botão virou o link "Pedido NN-CRM" com o status em selo, só quando há pedido; continua atualizando com `inbox.order.changed`.
 - **Where:** `apps/edge-web/src/views/InboxView.vue`, `test/e2e/crm-ui.spec.js`
 - **Depends on:** T19, T36, T37
 - **Requirement:** PCX-06, PLI-08
@@ -1943,21 +1947,34 @@ tela), S3 (suporte do E2E e lista de Pedidos em arquivo próprio) e D0 (a falha
 da fila no demo era API defasada no ambiente, não bug do Painel). S4 é este
 registro de emendas, ADR 036 e tarefas.
 
-| Tarefa | Fatia | Onda | Depende de     | Status                          |
-| ------ | ----- | ---- | -------------- | ------------------------------- |
-| T121   | A1    | 1    | S4             | Em andamento em `ux/jornadas`   |
-| T122   | A2a   | 2    | T121           | Em andamento em `ux/jornadas`   |
-| T123   | A4    | 3    | T122           | Em andamento em `ux/jornadas`   |
-| T124   | A2b   | 4    | T123           | Em andamento em `ux/jornadas`   |
-| T125   | A3    | 5    | T124; D2 (sim) | Em andamento em `ux/jornadas`   |
-| T126   | B1    | 1    | S4             | Em andamento em `ux/jornadas`   |
-| T127   | B2    | 2    | T126           | Em andamento em `ux/jornadas`   |
-| T128   | B3    | 3    | T127           | Em andamento em `ux/jornadas`   |
-| T129   | C1    | 1    | S4             | Em andamento em `ux/jornadas`   |
-| T130   | D1    | 1    | S4             | Em andamento em `ux/jornadas`   |
-| T131   | E1    | 6    | D3 do PO       | Adiada pelo PO; não implementar |
-| T132   | F1    | 7    | T121–T130      | A fazer                         |
-| T133   | F2    | 7    | T132           | A fazer                         |
+| Tarefa | Fatia | Onda | Depende de     | Status                                                |
+| ------ | ----- | ---- | -------------- | ----------------------------------------------------- |
+| T121   | A1    | 1    | S4             | Concluída em `ux/jornadas` (`d78f7ab`)                |
+| T122   | A2a   | 2    | T121           | Concluída em `ux/jornadas` (`ab24ea4`)                |
+| T123   | A4    | 3    | T122           | Concluída em `ux/jornadas` (`a25cba7`)                |
+| T124   | A2b   | 4    | T123           | Concluída em `ux/jornadas` (`5baadf5`)                |
+| T125   | A3    | 5    | T124; D2 (sim) | Concluída em `ux/jornadas` (`6a56687`)                |
+| T126   | B1    | 1    | S4             | Concluída em `ux/jornadas` (`c1a9023`)                |
+| T127   | B2    | 2    | T126           | Concluída em `ux/jornadas` (`accc1b0`)                |
+| T128   | B3    | 3    | T127           | Concluída em `ux/jornadas` (`f3935a9`)                |
+| T129   | C1    | 1    | S4             | Concluída em `ux/jornadas` (`aeec878`)                |
+| T130   | D1    | 1    | S4             | Concluída em `ux/jornadas` (`069ae76`)                |
+| T131   | E1    | 6    | D3 do PO       | Adiada pelo PO (D3); não implementar                  |
+| T132   | F1    | 7    | T121–T130      | A fazer — fatia F1 em andamento                       |
+| T133   | F2    | 7    | T132           | Concluída em `ux/jornadas` (esta fatia, documentação) |
+
+Acabamento integrado depois das fatias, sem tarefa própria:
+
+- **P1** (`fb7e932`, T130–T133): opções e botões da folha "Filtros" com
+  44 px também a partir de 48rem, em Pedidos e na Caixa de Entrada, e o
+  título das credenciais em Usuários vindo de `brand.productName`.
+- **P2** (`3351c33`, T121 e T124): progresso compacto ("Tudo pronto para
+  gerar · 3 de 3") quando os três passos estão feitos e atalhos da Caixa de
+  Entrada com 44 px e 8 px entre eles em qualquer tela de toque, tablet
+  incluído.
+
+A T133 foi feita antes de a T132 terminar: o orçamento de controles da T132
+pode pedir uma revisão das metas registradas no RFC 024.
 
 ### T121: Progresso real e rodapé do próximo passo
 

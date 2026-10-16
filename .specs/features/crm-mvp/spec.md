@@ -222,19 +222,44 @@ A ADR 006 retirou cobrança, comprovante e status de pagamento do MVP. PAY-01..0
 
 ## Rastreabilidade
 
-| Grupo              | IDs             | Status                                                                            |
-| ------------------ | --------------- | --------------------------------------------------------------------------------- |
-| Orquestração n8n   | ORC-01 a ORC-09 | WhatsApp implementado; homologação pendente; ORC-09 em CANAL-2                    |
-| Inbox e conversão  | INB-01 a INB-04 | Implementada no contrato n8n v1                                                   |
-| Agente vendedor    | AGT-01 a AGT-08 | Implementado; publicação pendente                                                 |
-| Pedido             | ORD-01 a ORD-05 | Pedido e impressão v5 implementados; encaminhamento e assinatura física pendentes |
-| Mensagens e canais | MSG-01 a MSG-04 | WhatsApp: homologação pendente; Instagram em CANAL-2                              |
-| Financeiro         | FIN-01 a FIN-03 | Confirmados e valor vendido implementados; UAT pendente                           |
-| Privacidade        | PRV-01 a PRV-03 | Coberta no contrato; homologação pendente                                         |
-| PIX e boas-vindas  | PAY-01 a PAY-05 | Diferidos pela ADR 006; datas manuais não implementam cobrança                    |
-| Painel por papel   | PNL-01 a PNL-04 | PNL-01..03 em andamento (T130, `ux/jornadas`); PNL-04 adiado pelo PO (D3, T131)   |
+| Grupo              | IDs             | Status                                                                                   |
+| ------------------ | --------------- | ---------------------------------------------------------------------------------------- |
+| Orquestração n8n   | ORC-01 a ORC-09 | WhatsApp implementado; homologação pendente; ORC-09 em CANAL-2                           |
+| Inbox e conversão  | INB-01 a INB-04 | Implementada no contrato n8n v1                                                          |
+| Agente vendedor    | AGT-01 a AGT-08 | Implementado; publicação pendente                                                        |
+| Pedido             | ORD-01 a ORD-05 | Pedido e impressão v5 implementados; encaminhamento e assinatura física pendentes        |
+| Mensagens e canais | MSG-01 a MSG-04 | WhatsApp: homologação pendente; Instagram em CANAL-2                                     |
+| Financeiro         | FIN-01 a FIN-03 | Confirmados e valor vendido implementados; UAT pendente                                  |
+| Privacidade        | PRV-01 a PRV-03 | Coberta no contrato; homologação pendente                                                |
+| PIX e boas-vindas  | PAY-01 a PAY-05 | Diferidos pela ADR 006; datas manuais não implementam cobrança                           |
+| Painel por papel   | PNL-01 a PNL-04 | PNL-01..03 cobertos em `ux/jornadas` (T130, `069ae76`); PNL-04 adiado pelo PO (D3, T131) |
 
 **Cobertura:** 45 IDs preservados, incluindo 5 PAY diferidos e o PNL-04 adiado; implementação, homologação e aprovação externa têm estados distintos. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.
+
+### Evidência do Painel por papel (RFC 024, T133)
+
+E2E em `test/e2e/dashboard-next-step.spec.js` e unitários em
+`test/dashboard-format.test.js`, citados pelo título. "Coberto" quer dizer
+que o teste existe em `ux/jornadas`; vira "Verified" com o gate completo do
+PR para o `master`.
+
+| ID     | Tarefa | Evidência                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Status                                |
+| ------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| PNL-01 | T130   | `dashboard-next-step.spec.js` “the seller sees one next step on the phone and opens it by keyboard”, “the manager starts from the SLA and the period says it is for Vendido”, “with nothing pending the next step is calm text, without a link” e “the seller queue failure says the step could not be read”; `dashboard-format.test.js` “Painel: the seller next step follows the priority of the queue”, “Painel: the manager next step starts from the SLA”, “Painel: with the queue failing, the next step invents nothing” e “Painel: no next step link is named like an indicator” | Coberto, com divergência (ver abaixo) |
+| PNL-02 | T130   | `dashboard-next-step.spec.js` “the manager starts from the SLA and the period says it is for Vendido”; `dashboard-roles.spec.js` “the manager reads the day first, with the period on the server”                                                                                                                                                                                                                                                                                                                                                                                        | Coberto em `ux/jornadas`              |
+| PNL-03 | T130   | `dashboard-next-step.spec.js` “a failing queue keeps Atendimento with dashes and retries by keyboard” e “the seller queue failure says the step could not be read”                                                                                                                                                                                                                                                                                                                                                                                                                       | Coberto em `ux/jornadas`              |
+| PNL-04 | T131   | Sem implementação: adiado pelo PO (D3)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Adiado                                |
+
+Divergência de PNL-01: com a fila em falha, o cartão do gestor pula as
+condições que dependem da fila e mostra a próxima que conseguiu ler (por
+exemplo, "Conferir 2 entregas atrasadas"), e o do vendedor sem outra
+pendência diz "A fila não respondeu; tente de novo mais abaixo.", com o
+"Tentar novamente" na seção da fila, não no cartão. O critério pede que o
+cartão não pule a condição e traga "Tentar novamente". Nunca diz "Nada
+urgente agora" sem ter lido a fila. Registrado como pendência no
+[RFC 024](../../../docs/rfc/024-jornadas-com-menos-botoes.md#pendências-após-o-rfc-024),
+para decisão do PO: emendar o critério ao comportamento entregue ou ajustar o
+cartão.
 
 ## Critério de passagem
 

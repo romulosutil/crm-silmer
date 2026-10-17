@@ -181,4 +181,3 @@ export function storeProductLabel(produto) {
   if (product) return product.rotulo;
   return typeof produto?.nome === 'string' ? produto.nome.trim() : '';
 }
-

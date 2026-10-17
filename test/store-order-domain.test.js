@@ -146,6 +146,7 @@ test('LOJ-15: reads the record the n8n checkout workflow sends', () => {
   assert.deepEqual(record, {
     amountCents: 18000,
     customer: { name: 'Cliente Sintetico da Loja', phone: '5527900000001' },
+    delivery: null,
     item: { colorId: 'preta', leadTimeDays: 10, quantity: 10, sizeId: 'm' },
     payment: {
       gateway: 'infinitepay',
@@ -207,6 +208,56 @@ test('LOJ-20: an unknown key is UNKNOWN_REQUEST_FIELD; a missing or mistyped one
     () => parsed((body) => (body.schema_version = '1')),
     400,
     'UNSUPPORTED_SCHEMA_VERSION',
+  );
+});
+
+test('LOJ-21: optional shipping CEP becomes a seller instruction in observations', () => {
+  const record = parsed((body) => {
+    body.entrega = { tipo: 'envio', cep: '69301-000' };
+  });
+  assert.deepEqual(record.delivery, { type: 'envio', cep: '69301-000' });
+  const order = buildStoreOrder({
+    fabCode: '01',
+    id: 'order-store-shipping',
+    match: matchStoreCatalog(record, accept),
+    now: STORE_NOW,
+    record,
+  });
+  assert.deepEqual(order.ficha.observations, [
+    'Dados de envio — CEP: 69301-000. Entrar em contato para pegar as informações de entrega.',
+  ]);
+  assert.deepEqual(
+    buildStoreOrder({
+      fabCode: '01',
+      id: 'order-store-pickup',
+      match: matchStoreCatalog(parsed(), accept),
+      now: STORE_NOW,
+      record: parsed(),
+    }).ficha.observations,
+    [],
+  );
+  for (const entrega of [
+    null,
+    {},
+    { tipo: 'retirada', cep: '69301-000' },
+    { tipo: 'envio', cep: '00000-000' },
+    { tipo: 'envio', cep: '69301000' },
+    { tipo: 'envio', cep: '69301-000\nOutra nota' },
+  ]) {
+    refuses(
+      () => parsed((body) => (body.entrega = entrega)),
+      400,
+      'INVALID_REQUEST',
+    );
+  }
+  refuses(
+    () =>
+      parsed(
+        (body) =>
+          (body.entrega = { tipo: 'envio', cep: '69301-000', endereco: 'x' }),
+      ),
+    400,
+    'UNKNOWN_REQUEST_FIELD',
   );
 });
 
@@ -541,6 +592,18 @@ test('LOJ-17: the fingerprint ignores the receipt link and the instant format, a
   ]) {
     assert.notEqual(storeRecordFingerprint(parsed(change)), base);
   }
+  const shipping = parsed((body) => {
+    body.entrega = { tipo: 'envio', cep: '69301-000' };
+  });
+  assert.notEqual(storeRecordFingerprint(shipping), base);
+  assert.notEqual(
+    storeRecordFingerprint(shipping),
+    storeRecordFingerprint(
+      parsed((body) => {
+        body.entrega = { tipo: 'envio', cep: '69302-000' };
+      }),
+    ),
+  );
 });
 
 test('LOJ-35/LOJ-36: the product reads "Camisa dry fit"; the catalog name and slug stay', () => {

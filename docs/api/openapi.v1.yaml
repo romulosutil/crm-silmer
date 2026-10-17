@@ -3937,8 +3937,9 @@ components:
       additionalProperties: false
       description: >-
         ADR 028: o pedido pago que o workflow n8n da loja registra depois do
-        payment_check. Todas as chaves são obrigatórias e nenhuma outra é
-        aceita (UNKNOWN_REQUEST_FIELD).
+        payment_check. Todas as chaves listadas em required são obrigatórias;
+        entrega é opcional para envio. Nenhuma outra chave é aceita
+        (UNKNOWN_REQUEST_FIELD).
       required:
         [
           schema_version,
@@ -3999,6 +4000,16 @@ components:
               type: string
               pattern: '^55[1-9]{2}(?:9[0-9]{8}|[2-5][0-9]{7})$'
               description: E.164 brasileiro sem "+".
+        entrega:
+          type: object
+          additionalProperties: false
+          description: >-
+            Somente para envio. O CRM grava o CEP e a instrução de contato em
+            Observações do pedido. Omitir para retirada na loja.
+          required: [tipo, cep]
+          properties:
+            tipo: { type: string, const: envio }
+            cep: { type: string, pattern: '^(?!00000-000$)[0-9]{5}-[0-9]{3}$' }
         pagamento:
           type: object
           additionalProperties: false

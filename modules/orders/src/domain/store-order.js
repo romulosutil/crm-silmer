@@ -37,6 +37,7 @@ const UUID_V4 =
 // mobile of nine digits starting with 9 or a landline of eight starting with
 // 2 to 5.
 const BRAZILIAN_PHONE = /^55[1-9]{2}(?:9\d{8}|[2-5]\d{7})$/u;
+const BRAZILIAN_CEP = /^(?!00000-000$)\d{5}-\d{3}$/u;
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/u;
 const GATEWAY_ID = /^[\x21-\x7e]{1,128}$/u;
 const CONTROL = /[\u0000-\u001f\u007f]/u;
@@ -46,6 +47,7 @@ const MAX_RECEIPT_URL = 2048;
 
 const SHAPE = Object.freeze({
   cliente: ['nome', 'telefone'],
+  entrega: ['cep', 'tipo'],
   item: ['cor_id', 'prazo_dias', 'quantidade', 'tamanho_id'],
   pagamento: [
     'forma',
@@ -101,6 +103,7 @@ export class StoreOrderDuplicateError extends Error {
  *     leadTimeDays: number},
  *   amountCents: number,
  *   customer: {name: string, phone: string},
+ *   delivery: {type: 'envio', cep: string}|null,
  *   payment: {gateway: string, method: string, transactionNsu: string,
  *     invoiceSlug: string, paidAmountCents: number, paidAt: string,
  *     receiptUrl: string|null},
@@ -130,10 +133,11 @@ function isPlainObject(value) {
  * not an object, INVALID_REQUEST — the same split the other n8n routes use.
  *
  * @param {unknown} value @param {readonly string[]} keys
+ * @param {readonly string[]} [optionalKeys]
  */
-function requireShape(value, keys) {
+function requireShape(value, keys, optionalKeys = []) {
   if (!isPlainObject(value)) throw new StoreOrderError(400, 'INVALID_REQUEST');
-  const known = new Set(keys);
+  const known = new Set([...keys, ...optionalKeys]);
   if (Object.keys(value).some((key) => !known.has(key))) {
     throw new StoreOrderError(400, 'UNKNOWN_REQUEST_FIELD');
   }
@@ -257,7 +261,7 @@ export function storeNumberFor(requestId) {
  * @returns {StoreOrderRecord}
  */
 export function parseStoreOrderRecord(body) {
-  const top = requireShape(body, TOP_KEYS);
+  const top = requireShape(body, TOP_KEYS, ['entrega']);
   if (top.schema_version !== STORE_SCHEMA_VERSION) {
     throw new StoreOrderError(400, 'UNSUPPORTED_SCHEMA_VERSION');
   }
@@ -276,6 +280,18 @@ export function parseStoreOrderRecord(body) {
   const item = requireShape(top.item, SHAPE.item);
   const cliente = requireShape(top.cliente, SHAPE.cliente);
   const pagamento = requireShape(top.pagamento, SHAPE.pagamento);
+  let delivery = null;
+  if (Object.hasOwn(top, 'entrega')) {
+    const entrega = requireShape(top.entrega, SHAPE.entrega);
+    if (
+      entrega.tipo !== 'envio' ||
+      typeof entrega.cep !== 'string' ||
+      !BRAZILIAN_CEP.test(entrega.cep)
+    ) {
+      throw new StoreOrderError(400, 'INVALID_REQUEST');
+    }
+    delivery = { type: /** @type {const} */ ('envio'), cep: entrega.cep };
+  }
   const name =
     typeof cliente.nome === 'string'
       ? cliente.nome.replace(/\s+/gu, ' ').trim()
@@ -292,6 +308,7 @@ export function parseStoreOrderRecord(body) {
   return {
     amountCents: requireInteger(top.valor_centavos, 1, MAX_CENTS),
     customer: { name, phone: cliente.telefone },
+    delivery,
     item: {
       colorId: requireText(item.cor_id),
       leadTimeDays: requireInteger(item.prazo_dias, 0, 365),
@@ -347,6 +364,7 @@ export function storeRecordFingerprint(record) {
         payment.invoiceSlug,
         payment.paidAmountCents,
         payment.paidAt,
+        ...(record.delivery ? [record.delivery.cep] : []),
       ]),
     )
     .digest('hex');
@@ -414,8 +432,8 @@ export function matchStoreCatalog(record, { acceptTest, now }) {
 /**
  * LOJ-21: the store order as it is born — confirmed on the gateway's word
  * at the catalog's price, paid by Pix on the day InfinitePay confirmed, with
- * no conversation. The name, the phone and the receipt link live only in the
- * ficha, which the repository encrypts.
+ * no conversation. The name, phone, delivery CEP and receipt link live only
+ * in the ficha, which the repository encrypts.
  *
  * @param {{
  *   record: StoreOrderRecord,
@@ -464,7 +482,11 @@ export function buildStoreOrder({ fabCode, id, match, now, record }) {
       },
       items: [item],
       loja,
-      observations: [],
+      observations: record.delivery
+        ? [
+            `Dados de envio — CEP: ${record.delivery.cep}. Entrar em contato para pegar as informações de entrega.`,
+          ]
+        : [],
       serviceData: {},
       summary: {
         cliente: record.customer.name,

@@ -385,14 +385,18 @@ export function matchStoreCatalog(record, { acceptTest, now }) {
   if (
     color === null ||
     size === null ||
-    item.quantity !== product.pecasPorKit ||
+    (product.quantidadeMaxima
+      ? item.quantity < 1 || item.quantity > product.quantidadeMaxima
+      : item.quantity !== product.pecasPorKit) ||
     item.leadTimeDays !== color.prazoDiasUteis
   ) {
     throw mismatch();
   }
+  const catalogPrice =
+    product.precoCentavos * (product.quantidadeMaxima ? item.quantity : 1);
   const prices = record.test
-    ? [product.precoCentavos, product.precoTesteCentavos]
-    : [product.precoCentavos];
+    ? [catalogPrice, product.precoTesteCentavos]
+    : [catalogPrice];
   if (!prices.includes(record.amountCents)) throw mismatch();
   if (record.payment.paidAmountCents < record.amountCents) {
     throw new StoreOrderError(422, 'AMOUNT_BELOW_PRICE');
@@ -425,8 +429,9 @@ export function buildStoreOrder({ fabCode, id, match, now, record }) {
   const item = {
     ...blankItem(),
     cor: color.nome,
+    estampa: color.estampa ?? '',
     gola: product.gola,
-    grade: [{ quantidade: product.pecasPorKit, tamanho: size }],
+    grade: [{ quantidade: record.item.quantity, tamanho: size }],
     malhas: [product.malha],
     publico: product.publico,
     tipo: product.tipo,
@@ -453,7 +458,10 @@ export function buildStoreOrder({ fabCode, id, match, now, record }) {
     createdByKind: /** @type {const} */ ('automation'),
     fabCode,
     ficha: {
-      artwork: { ...blankArtwork(), sem_estampa: true },
+      artwork: {
+        ...blankArtwork(),
+        [color.estampa ? 'feito_pela_silmer' : 'sem_estampa']: true,
+      },
       items: [item],
       loja,
       observations: [],
@@ -477,7 +485,7 @@ export function buildStoreOrder({ fabCode, id, match, now, record }) {
     paymentCondition: /** @type {const} */ ('pix'),
     status: /** @type {const} */ ('confirmado'),
     storeNumber: record.storeNumber,
-    totalPieces: product.pecasPorKit,
+    totalPieces: record.item.quantity,
   };
 }
 
@@ -492,3 +500,4 @@ export function requireUnlocked(order) {
     throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
   }
 }
+

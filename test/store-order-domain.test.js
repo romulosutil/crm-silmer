@@ -135,6 +135,7 @@ test('LOJ-18: Bloquinho 22 Colorido aceita as seis cores e limita 1 a 10 peças'
 });
 
 test('LOJ-18: Bloquinho 22 Completa aceita 1 a 10 peças por R$ 45 cada', () => {
+  /** @param {number} quantity @param {number} [price] */
   const record = (quantity, price = 4500 * quantity) =>
     parsed((body) => {
       body.produto.slug = 'bloquinho-22-completa';

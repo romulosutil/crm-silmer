@@ -567,4 +567,3 @@ test('LOJ-07: a store order is locked; any other order is not', () => {
   assert.doesNotThrow(() => requireUnlocked({ origin: 'atendimento' }));
   assert.doesNotThrow(() => requireUnlocked({}));
 });
-

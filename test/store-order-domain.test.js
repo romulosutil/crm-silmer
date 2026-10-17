@@ -33,6 +33,107 @@ function refuses(work, statusCode, code) {
 
 const accept = { acceptTest: true, now: STORE_NOW };
 
+/** @param {string} slug @param {string} colorId @param {number} quantity @param {boolean} [testOrder] */
+function bloquinhoRecord(slug, colorId, quantity, testOrder = false) {
+  return parsed((body) => {
+    body.produto.slug = slug;
+    body.item.cor_id = colorId;
+    body.item.prazo_dias = 1;
+    body.item.quantidade = quantity;
+    body.valor_centavos = testOrder ? 100 : 3000 * quantity;
+    body.pagamento.valor_pago_centavos = body.valor_centavos;
+    body.teste = testOrder;
+  });
+}
+
+test('LOJ-18: Bloquinho 22 branco conserva cada estampa no pedido pago', () => {
+  for (const colorId of [
+    'branca-amarela',
+    'branca-rosa',
+    'branca-azul',
+    'branca-preta',
+    'branca-verde',
+  ]) {
+    const record = bloquinhoRecord('bloquinho-22', colorId, 3);
+    const match = matchStoreCatalog(record, accept);
+    const order = buildStoreOrder({
+      fabCode: 'A123',
+      id: 'synthetic-order-id',
+      match,
+      now: STORE_NOW,
+      record,
+    });
+    assert.equal(order.totalPieces, 3);
+    assert.equal(order.finalAmountCents, 9000);
+    assert.deepEqual(order.ficha.items[0].grade, [
+      { quantidade: 3, tamanho: 'M' },
+    ]);
+    assert.equal(order.ficha.items[0].cor, 'Branco');
+    assert.ok(
+      order.ficha.items[0].estampa.includes(colorId.slice('branca-'.length)),
+    );
+    assert.equal(order.ficha.artwork.feito_pela_silmer, true);
+    assert.equal(order.ficha.artwork.sem_estampa, false);
+  }
+});
+
+test('LOJ-18: Bloquinho 22 Colorido aceita as seis cores e limita 1 a 10 peças', () => {
+  const colors = [
+    'amarela',
+    'azul-clara',
+    'preta',
+    'rosa-clara',
+    'pink',
+    'verde',
+  ];
+  for (const colorId of colors) {
+    for (const quantity of [1, 10]) {
+      const record = bloquinhoRecord(
+        'bloquinho-22-colorido',
+        colorId,
+        quantity,
+      );
+      const match = matchStoreCatalog(record, accept);
+      assert.equal(match.priceCents, 3000 * quantity);
+      assert.equal(match.color.prazoDiasUteis, 1);
+    }
+  }
+  for (const quantity of [11]) {
+    refuses(
+      () =>
+        matchStoreCatalog(
+          bloquinhoRecord('bloquinho-22-colorido', 'amarela', quantity),
+          accept,
+        ),
+      422,
+      'STORE_CATALOG_MISMATCH',
+    );
+  }
+  refuses(
+    () =>
+      matchStoreCatalog(
+        parsed((body) => {
+          body.produto.slug = 'bloquinho-22';
+          body.item.cor_id = 'branca-amarela';
+          body.item.prazo_dias = 1;
+          body.item.quantidade = 2;
+          body.valor_centavos = 3000;
+          body.pagamento.valor_pago_centavos = 3000;
+        }),
+        accept,
+      ),
+    422,
+    'STORE_CATALOG_MISMATCH',
+  );
+  assert.equal(
+    matchStoreCatalog(
+      bloquinhoRecord('bloquinho-22-colorido', 'verde', 10, true),
+      accept,
+    ).priceCents,
+    100,
+  );
+});
+
 /** @param {(body: any) => void} [change] */
 function parsed(change) {
   return parseStoreOrderRecord(storeOrderBody(change));
@@ -466,3 +567,4 @@ test('LOJ-07: a store order is locked; any other order is not', () => {
   assert.doesNotThrow(() => requireUnlocked({ origin: 'atendimento' }));
   assert.doesNotThrow(() => requireUnlocked({}));
 });
+

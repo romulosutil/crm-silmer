@@ -116,6 +116,27 @@ export const STORE_PRODUCTS = Object.freeze({
     tamanhos: STORE_SIZES,
     tipo: 'Camiseta',
   }),
+  'bloquinho-22-completa': Object.freeze({
+    cores: Object.freeze({
+      'verde-amarela': Object.freeze({
+        nome: 'Verde-bandeira/Amarelo',
+        prazoDiasUteis: 1,
+        estampa: 'Bloquinho 22 Completa',
+      }),
+    }),
+    gola: 'Gola redonda',
+    malha: 'Dry fit liso de poliéster',
+    nome: 'Camisa Bloquinho 22 Completa',
+    pecasPorKit: 1,
+    precoCentavos: 4500,
+    precoTesteCentavos: 100,
+    publico: 'masculino',
+    quantidadeMaxima: 10,
+    rotulo: 'Camisa Bloquinho 22 Completa',
+    slug: 'bloquinho-22-completa',
+    tamanhos: STORE_SIZES,
+    tipo: 'Camiseta',
+  }),
   'bloquinho-22-colorido': Object.freeze({
     cores: Object.freeze({
       amarela: Object.freeze({

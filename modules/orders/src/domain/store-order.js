@@ -500,4 +500,3 @@ export function requireUnlocked(order) {
     throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
   }
 }
-

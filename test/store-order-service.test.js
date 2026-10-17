@@ -139,6 +139,32 @@ test('LOJ-17: the same record again answers the same order, with nothing new', a
   assert.equal(repository.audits().length, 1);
 });
 
+test('LOJ-17/LOJ-21: shipping observation survives a retry and a different CEP conflicts', async () => {
+  const { record, repository } = setup();
+  /** @param {string} cep */
+  const shippingBody = (cep) =>
+    storeOrderBody((body) => {
+      body.entrega = { tipo: 'envio', cep };
+    });
+  const first = await record(shippingBody('69301-000'));
+  assert.deepEqual(first.order.ficha.observations, [
+    'Dados de envio — CEP: 69301-000. Entrar em contato para pegar as informações de entrega.',
+  ]);
+  const again = await record(shippingBody('69301-000'));
+  assert.equal(again.created, false);
+  assert.equal(again.order.id, first.order.id);
+  assert.deepEqual(
+    again.order.ficha.observations,
+    first.order.ficha.observations,
+  );
+  await refuses(record(shippingBody('69302-000')), 409, 'STORE_ORDER_CONFLICT');
+  assert.equal(repository.audits().length, 1);
+  assert.equal(
+    JSON.stringify(repository.audits()).includes('69301-000'),
+    false,
+  );
+});
+
 test('LOJ-17: a retry is answered before the catalog, so a later test policy never refuses it', async () => {
   const repository = new InMemoryOrderRepository();
   const first = await setup({ acceptTest: true, repository }).record(

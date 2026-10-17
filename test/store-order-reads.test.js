@@ -98,7 +98,9 @@ function harness(options = {}) {
 
 test('LOJ-21/LOJ-22: a store order reads as locked, paid through InfinitePay, with no seller', async () => {
   const { api, assignmentReads, notify } = harness();
-  const created = await notify();
+  const created = await notify((body) => {
+    body.entrega = { tipo: 'envio', cep: '69301-000' };
+  });
   const response = await api.inject({
     headers: readHeaders,
     method: 'GET',
@@ -129,6 +131,9 @@ test('LOJ-21/LOJ-22: a store order reads as locked, paid through InfinitePay, wi
     transactionNsu: 'nsu-sintetico-0001',
   });
   assert.equal(order.ficha.loja.telefone, '5527900000001');
+  assert.deepEqual(order.ficha.observations, [
+    'Dados de envio — CEP: 69301-000. Entrar em contato para pegar as informações de entrega.',
+  ]);
   assert.equal('paymentDeclaredAt' in order, false);
   // No conversation was looked up for an order that has none.
   assert.deepEqual(assignmentReads, []);

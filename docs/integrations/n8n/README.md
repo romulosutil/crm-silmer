@@ -515,7 +515,7 @@ só como prévia visual; não é o canal homologado para o repasse humano.
 
 ## Pedido pago da loja (ADR 028)
 
-O workflow "Silmer | Loja | Checkout InfinitePay" (id `SbNSW5jwBcXM5Afj`) cria
+O workflow "Silmer | Loja | Checkout InfinitePay" (id `Lu5dpTCA25Fe2Xfh`) cria
 o link do Checkout Integrado da InfinitePay (só Pix), recebe o webhook e
 confirma o pagamento com `payment_check` (pago é `paid` com `amount` maior ou
 igual ao valor do pedido). Só então chama o CRM, servidor a servidor, para
@@ -541,7 +541,8 @@ No cloud-dev, `{CRM}` é
 | `X-Silmer-Workflow-Version` | Rótulo fixo da versão do workflow, até 64 caracteres, como `loja-checkout-1`; troque a cada versão publicada.                                                  |
 | `X-Silmer-Execution-Id`     | `{{ $execution.id }}` (até 128 caracteres).                                                                                                                    |
 
-Corpo (JSON até 16 KB; todas as chaves obrigatórias, nenhuma outra aceita):
+Corpo (JSON até 16 KB; chaves do exemplo obrigatórias, exceto `entrega`;
+nenhuma outra aceita):
 
 ```json
 {
@@ -558,6 +559,7 @@ Corpo (JSON até 16 KB; todas as chaves obrigatórias, nenhuma outra aceita):
   },
   "valor_centavos": 18000,
   "cliente": { "nome": "<nome>", "telefone": "55<DDD><número>" },
+  "entrega": { "tipo": "envio", "cep": "69301-000" },
   "pagamento": {
     "gateway": "infinitepay",
     "forma": "pix",
@@ -579,6 +581,11 @@ Corpo (JSON até 16 KB; todas as chaves obrigatórias, nenhuma outra aceita):
   e até 30 dias atrás. `telefone`: E.164 brasileiro sem `+`.
 - `receipt_url`: `null` ou `https://` em `infinitepay.io`, `*.infinitepay.io`,
   `infinitepay.com.br` ou `*.infinitepay.com.br`, sem porta nem credencial.
+- `entrega`: enviar apenas quando `entrega_tipo` da loja for `envio`, com o
+  CEP coletado no checkout no formato `00000-000`. Omitir para retirada.
+  O CRM grava em Observações do pedido: `Dados de envio — CEP: 69301-000.
+Entrar em contato para pegar as informações de entrega.` O CEP fica na
+  ficha criptografada, sem aparecer no recibo de idempotência ou na auditoria.
 
 Respostas:
 
@@ -615,7 +622,7 @@ paralelo ao webhook `/infinitepay`, e cada execução carimba o próprio
 `pagamento.pago_em`. Duas chamadas do mesmo `pedido_id` que diferem **só**
 nesse instante são o mesmo pedido: `200`, o mesmo `numero`, e o CRM mantém o
 `pago_em` da primeira. Qualquer outra diferença (produto, cor, tamanho,
-valores, cliente, `transaction_nsu`, `invoice_slug`) continua `409
+valores, cliente, `entrega.cep`, `transaction_nsu`, `invoice_slug`) continua `409
 STORE_ORDER_CONFLICT`, que é erro permanente no workflow.
 
 **Código do pedido para o site (`codigo_crm`).** O `numero` da resposta

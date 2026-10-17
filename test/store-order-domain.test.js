@@ -134,6 +134,45 @@ test('LOJ-18: Bloquinho 22 Colorido aceita as seis cores e limita 1 a 10 peças'
   );
 });
 
+test('LOJ-18: Bloquinho 22 Completa aceita 1 a 10 peças por R$ 45 cada', () => {
+  const record = (quantity, price = 4500 * quantity) =>
+    parsed((body) => {
+      body.produto.slug = 'bloquinho-22-completa';
+      body.item.cor_id = 'verde-amarela';
+      body.item.prazo_dias = 1;
+      body.item.quantidade = quantity;
+      body.valor_centavos = price;
+      body.pagamento.valor_pago_centavos = price;
+    });
+
+  for (const quantity of [1, 10]) {
+    const match = matchStoreCatalog(record(quantity), accept);
+    assert.equal(match.priceCents, 4500 * quantity);
+    assert.equal(match.color.nome, 'Verde-bandeira/Amarelo');
+    assert.equal(match.color.prazoDiasUteis, 1);
+    const order = buildStoreOrder({
+      fabCode: 'A123',
+      id: 'synthetic-order-id',
+      match,
+      now: STORE_NOW,
+      record: record(quantity),
+    });
+    assert.equal(order.totalPieces, quantity);
+    assert.equal(order.finalAmountCents, 4500 * quantity);
+    assert.equal(order.ficha.items[0].estampa, 'Bloquinho 22 Completa');
+  }
+  refuses(
+    () => matchStoreCatalog(record(11), accept),
+    422,
+    'STORE_CATALOG_MISMATCH',
+  );
+  refuses(
+    () => matchStoreCatalog(record(1, 3000), accept),
+    422,
+    'STORE_CATALOG_MISMATCH',
+  );
+});
+
 /** @param {(body: any) => void} [change] */
 function parsed(change) {
   return parseStoreOrderRecord(storeOrderBody(change));

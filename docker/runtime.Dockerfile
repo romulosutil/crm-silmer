@@ -1,4 +1,4 @@
-FROM node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS build
+FROM node:26.12.0-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e25d29de656519568913 AS build
 
 WORKDIR /workspace
 COPY package.json package-lock.json ./
@@ -25,7 +25,7 @@ COPY modules modules
 COPY scripts scripts
 RUN npm run build
 
-FROM node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS production-dependencies
+FROM node:26.12.0-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e25d29de656519568913 AS production-dependencies
 
 WORKDIR /workspace
 COPY package.json package-lock.json ./
@@ -48,7 +48,7 @@ COPY modules/orders/package.json modules/orders/package.json
 COPY modules/shared/package.json modules/shared/package.json
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
-FROM node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
+FROM node:26.12.0-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e25d29de656519568913
 
 ENV HOST=0.0.0.0 \
     NODE_ENV=production \

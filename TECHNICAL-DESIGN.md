@@ -345,3 +345,11 @@ Tarefas: [CRM](.specs/features/crm-mvp/tasks.md) e
 [Pedidos](.specs/features/pedidos-mvp/tasks.md). Entrega de 05/10:
 OPS-DOC-01, OPS-CI-01, OPS-CHK-01 e OPS-AI-01. Relatórios distinguem checks
 concluídos de lacunas externas; documentação não autoriza go-live.
+
+## CHAN-WA-01 — Fronteira de atendimento
+
+Conforme ADR 043, o CTA público leva ao WhatsApp sem formulário. O trigger
+antigo do chat encadeia somente resposta fixa, sem CRM/IA/upload. Os nós
+legados ficam sem entrada pública para compatibilidade histórica. Preservar
+o guard publicado, IDs de webhook e credenciais ao implantar. Pedido de
+mochila/bolsa ou dois pedidos explicitamente separados transfere sem patch.

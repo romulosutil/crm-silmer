@@ -62,3 +62,14 @@ ao mesmo Contato, preservando Conversas separadas e a propriedade dos Pedidos.
 Tratar duplicatas, ausência de consentimento, indisponibilidade, falha ou
 resultado incerto de envio, replay e resposta de outro número. O piloto CP-T06
 continua atendendo pelo chat do site até esses gates estarem homologados.
+
+## CP-T09 — Assunto da mensagem só na dúvida do agente
+
+**Requisitos:** CP-12, CP-14, CP-16 e CP-29..31. Migração `0045` com
+revisões por mensagem, vínculo do agente nas entradas do turno, leitura com
+origem do vínculo e mensagens pendentes, pergunta na Inbox só na dúvida e
+testes de serviço, Postgres real, contrato do workflow e e2e com teclado e
+axe. Sem alteração do workflow n8n; ajustes de fala e gatilho do agente ficam
+na [RFC 036](../../../docs/rfc/036-assunto-da-mensagem-so-na-duvida-do-agente.md)
+até decisão do PO. Evidência de UX:
+[estudo de 28/10/2026](../../../docs/product/pesquisa-ux-assuntos-2026-10-28.md).

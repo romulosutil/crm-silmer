@@ -5,6 +5,9 @@
 - [049 — Aprendizados do Vendedor na Inbox real](049-aprendizados-do-vendedor-na-inbox-real.md),
   pergunta do cliente primeiro, modelo livre, bandeira com tamanho, datas
   relativas, empresa, aviso fora do horário e quantidade do item único.
+- [048 — Assunto da mensagem só na dúvida do agente](048-assunto-da-mensagem-so-na-duvida-do-agente.md),
+  o agente liga as mensagens do turno ao Assunto e a Inbox só pergunta nas
+  mensagens que ele não soube atribuir; complementa a ADR 032.
 - [046 — Retomar WAHA para atendimento da nova linha](046-retomar-waha-para-atendimento-da-nova-linha.md),
   pausa WPPConnect sem pareamento e retoma WAHA/WEBJS para a Inbox real,
   com volumes novos e sem reutilizar a conta bloqueada; identidade confirmada,

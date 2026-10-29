@@ -95,3 +95,25 @@ Decisão: [RFC 019](../../../docs/rfc/019-cliente-pedido-manual-e-assuntos.md) /
   continuam separadas por canal, mas o histórico e os Pedidos passam a
   pertencer ao cliente correto no CRM. Antes dessa confirmação, o número
   digitado no site não libera histórico nem altera Pedido anterior.
+
+## Assunto da mensagem na dúvida do agente
+
+Decisão: [ADR 048](../../../docs/adr/048-assunto-da-mensagem-so-na-duvida-do-agente.md).
+
+- **CP-29:** Quando o CRM aceita um evento do agente com Assunto alvo
+  explícito e válido, as mensagens de entrada daquele turno ficam ligadas ao
+  mesmo Assunto como vínculo do agente. Vínculo existente ou decisão humana
+  (inclusive “nenhum pedido”) nunca é sobrescrito; evento rejeitado não grava
+  vínculo e replay só completa a abertura de Pedido que falhou, sem duplicar.
+  Turno transferido por baixa confiança não recebe vínculo do agente.
+- **CP-30:** Quando o agente transfere sem alvo por não saber a qual Assunto
+  a mensagem se refere, as mensagens do turno ficam marcadas para revisão,
+  sem mudar Pedido, ficha ou briefing. A Inbox pergunta “A qual pedido esta
+  mensagem se refere?” só nessas mensagens e só para quem pode gerir os
+  Assuntos; a faixa de assumir diz que o agente parou para não misturar
+  pedidos.
+- **CP-31:** A resposta do vendedor resolve a revisão e é auditada como
+  atribuição humana; não encerra o handoff nem devolve a conversa ao agente.
+  Separar a mensagem em novo Assunto não muda o Assunto que o agente usa.
+  Sem revisão aberta não há controle por mensagem; com dois ou mais Assuntos
+  a mensagem vinculada mostra o pedido, quem ligou e a opção de corrigir.

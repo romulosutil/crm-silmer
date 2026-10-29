@@ -1,5 +1,28 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## INBOX-AUDIO-01 — áudio recebido com player (29/10/2026)
+
+Requisitos AUD-IN-01..04, EVOL-01D, INB-01 e MSG-01..04.
+
+- [x] Diagnosticar mensagem sem bytes: filtro do ramo independente aceitava
+      somente imagem; player e API já suportavam OGG/MP3 privados.
+- [x] Patch offline idempotente de dois parâmetros, com testes de cadeia
+      Evolution, modo humano, MIME, tamanho, hash e replay.
+- [x] Preparar limite estrito de 17 MiB no POST de anexos inbound do edge;
+      implementação e regressão de isolamento de rotas aprovadas.
+- [x] Publicar workflow `15d9ba9a-77e8-429b-bd43-e6dc2349ec5f`, comparando
+      exportações: somente filtro/medição; conexões/settings e demais nós iguais.
+- [x] Gate local: 1.429 testes aprovados, cinco skips, tipos/lint/build;
+      E2E 344 aprovados + dois aprovados na repetição isolada e sete skips;
+      auditoria sem alertas high/critical e `git diff --check`.
+- [ ] Implantar e verificar o limite maior do edge no ambiente remoto.
+- [ ] Observar áudio novo com player e recuperar o áudio anterior afetado.
+- [ ] Enviar pela Inbox e observar recebimento/reprodução no WhatsApp de teste.
+
+A ferramenta interrompeu o controle do navegador antes dos testes reais por
+não conseguir confirmar a URL ativa no Windows. Não houve envio de áudio.
+Evidência e limites no [runbook](../../../docs/runbooks/inbound-audio-inbox.md).
+
 ## INBOX-IMG-EVOL-02 — sintaxe da consulta de mídia (29/10/2026)
 
 Requisitos IMG-01/03/04, EVOL-01D, INB-01 e MSG-01/02.

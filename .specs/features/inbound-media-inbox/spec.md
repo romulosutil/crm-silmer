@@ -59,7 +59,31 @@ fronteiras, build, regressão e E2E de mídia, `git diff --check`. SQL deve ser
 validado em PostgreSQL dedicado com dados sintéticos. Verificador independente
 registra evidências e mutações isoladas em `validation.md`.
 
-## Limites operacionais
+## Complemento autorizado em 29/10/2026 — imagem no pedido
+
+O proprietário solicitou exibir as imagens recebidas e anexá-las no pedido.
+A ponte vigente é Evolution/Baileys (ADR 050); as observações WAHA acima
+registram o diagnóstico anterior, não a configuração atual.
+
+- **IMG-06 / ARQ-02:** uma imagem recebida, disponível e validada oferece
+  ação humana de anexar como referência em um pedido pendente vinculado à
+  conversa. A pessoa escolhe explicitamente o pedido, inclusive quando há
+  apenas um; nunca promover automaticamente nem enviar mensagem ao cliente.
+- **IMG-07 / ARQ-04:** a cópia usa a leitura privada da conversa e o upload
+  autenticado já existente dos arquivos do pedido, com sessão, CSRF e chave
+  idempotente reutilizada após resposta incerta. Sucesso só é anunciado após
+  resposta do upload; erro preserva a possibilidade de tentar novamente.
+- **IMG-08 / PRV-03:** a interface oferece a ação somente ao responsável ou
+  administrador, em conversa aberta e para imagem recebida. Pedido confirmado,
+  mídia indisponível e mensagem enviada não oferecem a ação. A API continua
+  responsável por validar acesso, estado do pedido, formato e limite de arquivos.
+
+Tarefa **INBOX-IMG-ORDER-01**: ação da Inbox, testes da composição real da
+tela e da cadeia completa de persistência Evolution, documentação e evidências.
+Não altera retenção, scanner, infraestrutura ou política do RustFS. Imagens
+antigas sem bytes vinculados continuam dependendo de recuperação operacional.
+
+## Limites operacionais vigentes
 
 Antes da ativação, verificar armazenamento transitório e scanner real da API.
 O socket do clamd pertence ao worker; não presumir que a API consegue usá-lo.

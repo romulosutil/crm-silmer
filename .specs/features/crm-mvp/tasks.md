@@ -1,5 +1,24 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## INBOX-IMG-ORDER-01 — imagem recebida no pedido (29/10/2026)
+
+Requisitos IMG-01/06–08, ARQ-02/04 e PRV-03. Pedido do proprietário:
+exibir imagens recebidas e poder anexá-las ao pedido.
+
+- [x] Ação humana na imagem disponível, escolha explícita do pedido pendente
+      vinculado e upload pelo contrato existente, com CSRF e retry idempotente.
+- [x] Cenários de bytes PNG, erro, retenção, acesso e composição da Inbox;
+      cadeia completa WAHA + patch → Evolution com hash, multipart e replay.
+- [x] Gate local `validate`: 1.425 testes, 1.420 aprovados, cinco skips,
+      nenhuma falha e build; revisão independente sem finding bloqueante.
+- [x] E2E completo: 342 aprovados, sete skips, nenhuma falha; execução
+      local fora do sandbox para permitir Chromium/loopback.
+- [ ] Auditoria npm: acesso ao registro externo recusado pela revisão automática.
+- [ ] Prova publicada de imagem e arquivo do pedido; controle do navegador
+      interrompido pela ferramenta durante a inspeção.
+
+Evidências e limites no [runbook](../../../docs/runbooks/inbound-images-inbox.md).
+
 ## EVOL-01 — ponte Evolution/Baileys e limpeza do n8n
 
 Autorizada em 29/10/2026 na [ADR 050](../../../docs/adr/050-evolution-baileys-como-ponte-do-whatsapp.md),

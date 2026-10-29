@@ -1,5 +1,55 @@
 # Imagens recebidas na Inbox
 
+## Complemento de 29/10/2026 — Evolution e arquivo do pedido
+
+Tarefa INBOX-IMG-ORDER-01; IMG-01/06–08, ARQ-02/04 e PRV-03.
+
+A interface publicada foi consultada em 29/10: quatro mensagens de imagem
+na conversa observada apareciam apenas como texto `Imagem`, sem elemento de
+imagem. O workflow publicado já possui o ramo completo de persistência e
+download Evolution. A configuração atual da API já declara os binds de mídia,
+socket e assinaturas descritos no plano abaixo. Essa leitura de configuração
+não confirma o funcionamento do scanner nem o sucesso do upload. O diagnóstico
+WAHA de 28/10 abaixo permanece histórico.
+
+A Inbox agora oferece **Anexar imagem ao pedido** nas imagens recebidas
+disponíveis. O responsável ou administrador escolhe o pedido pendente vinculado
+à conversa e aciona **Anexar ao pedido**. O navegador lê os bytes pela rota
+privada e envia uma referência pelo upload existente do pedido, que mantém
+as validações e o armazenamento no RustFS. A ação não envia WhatsApp. Após
+sucesso, abrir o pedido e conferir **Arte do pedido → Arquivos da arte**;
+baixar o arquivo deve devolver os bytes originais. Confirmados exigem reabertura
+pelo fluxo comercial existente antes de alterar arquivos.
+
+Uma tentativa com resposta incerta reutiliza o mesmo formulário e chave
+idempotente enquanto a tela permanece aberta. Não há promoção automática nem
+recuperação de imagens sem anexo. O histórico transitório continua sujeito à
+retenção original; a referência copiada passa à retenção própria do pedido.
+
+O teste da cadeia completa usa PNG sintético real, gerador WAHA, os nove nós
+do patch e conversão Evolution. Confere filtro, decodificação, tamanho, SHA256,
+multipart, identidade, replay e modo humano; não reproduziu falha do gerador.
+Os E2E da ação verificam os bytes enviados e falhas/permissões com API simulada.
+Esses testes não comprovam storage remoto ou imagens reais em produção.
+
+Gate `validate` aprovado: 1.425 testes, 1.420 aprovados, cinco skips, zero
+falhas e build. O sandbox Windows recusou hardlinks dos testes de áudio;
+a execução local autorizada fora do sandbox passou. Revisão independente
+do diff não encontrou falha bloqueante. A auditoria npm não foi concluída:
+DNS indisponível no sandbox e revisão automática recusou o acesso externo
+por envio da lista de dependências ao registro npm sem autorização específica.
+
+E2E completo aprovado fora do sandbox: 342 cenários aprovados, sete skips e
+nenhuma falha. Componente: 14/14; composição da Inbox: 18/18. Esses dois
+subconjuntos fazem parte da suíte completa, não são contagens adicionais.
+
+O controle do navegador foi interrompido pela ferramenta durante a inspeção
+remota por impossibilidade de confirmar a URL ativa no Windows. Não foi
+concluída a validação operacional nem publicado workflow por esta inspeção.
+Para fechar: localizar a etapa que falhou, testar scan real e nova imagem
+sintética, anexar a pedido de teste e baixar para conferir SHA256; recuperar
+imagens antigas somente com identidades/horários canônicos e sem repetir a IA.
+
 INBOX-IMG-01: INBOX-2/3, INB-01..05, MSG-01/02 e PRV-03.
 Critérios em [spec](../../.specs/features/inbound-media-inbox/spec.md).
 
@@ -77,14 +127,14 @@ atuais para `inbound-signatures` antes de cobrir `/var/lib/clamav` com o mount;
 o diretório vazio ocultaria as definições da imagem. O processo de atualização
 vigente continua responsável por publicar freshness após confirmar o motor.
 
-| Serviço | Subdiretório da origem base | Destino | Acesso |
-| --- | --- | --- | --- |
-| API | `inbound-media` | `/tmp/crm-silmer-media` | leitura/escrita |
-| worker | `inbound-media` | `/tmp/crm-silmer-media` | leitura/escrita, retenção |
-| API | `inbound-scanner-socket` | `/tmp/crm-clamd` | leitura/escrita; conexão ao socket privado |
-| worker | `inbound-scanner-socket` | `/tmp/crm-clamd` | leitura/escrita |
-| API | `inbound-signatures` | `/var/lib/clamav` | leitura/escrita |
-| worker | `inbound-signatures` | `/var/lib/clamav` | leitura/escrita |
+| Serviço | Subdiretório da origem base | Destino                 | Acesso                                     |
+| ------- | --------------------------- | ----------------------- | ------------------------------------------ |
+| API     | `inbound-media`             | `/tmp/crm-silmer-media` | leitura/escrita                            |
+| worker  | `inbound-media`             | `/tmp/crm-silmer-media` | leitura/escrita, retenção                  |
+| API     | `inbound-scanner-socket`    | `/tmp/crm-clamd`        | leitura/escrita; conexão ao socket privado |
+| worker  | `inbound-scanner-socket`    | `/tmp/crm-clamd`        | leitura/escrita                            |
+| API     | `inbound-signatures`        | `/var/lib/clamav`       | leitura/escrita                            |
+| worker  | `inbound-signatures`        | `/var/lib/clamav`       | leitura/escrita                            |
 
 O EasyPanel 2.38 inspecionado oferece apenas origem e destino para binds,
 sem opção de somente leitura. Além disso, a API já monta a origem completa

@@ -345,6 +345,23 @@ const availableSubjectOrders = computed(() =>
 const canCreateOrder = computed(
   () => isAdmin.value || owner.value?.id === currentUserId.value,
 );
+/** A person explicitly chooses a pending order linked to this conversation. */
+const imageAttachmentOrders = computed(() => {
+  if (!canCreateOrder.value || isTerminal.value) return [];
+  const orders = new Map();
+  if (active.value?.order?.status === 'pendente') {
+    orders.set(active.value.order.id, active.value.order);
+  }
+  for (const subject of subjectState.value.subjects) {
+    if (subject.orderId && subject.orderStatus === 'pendente') {
+      orders.set(subject.orderId, {
+        id: subject.orderId,
+        number: subject.orderNumber,
+      });
+    }
+  }
+  return [...orders.values()];
+});
 /** PCX-10: the order the conversation has, as a link to its page. */
 const orderPath = computed(() =>
   active.value?.order
@@ -2106,7 +2123,13 @@ onBeforeUnmount(() => {
                 >
               </div>
               <p>{{ message.preview }}</p>
-              <MediaMessage v-if="message.media" :media="message.media" />
+              <MediaMessage
+                v-if="message.media"
+                :media="message.media"
+                :orders="
+                  message.direction === 'inbound' ? imageAttachmentOrders : []
+                "
+              />
               <small v-if="message.deliveryMode === 'dev'"
                 >DEV: envio simulado</small
               >

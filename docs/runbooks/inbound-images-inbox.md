@@ -67,9 +67,9 @@ Aceita a URL HTTPS literal ou a expressão constante de duas strings JSON
 concatenadas observada no inbound atual; não executa código da exportação e
 rejeita URLs dependentes de variáveis. A URL do nó antigo permanece intacta.
 
-## Aplicação controlada, pendente
+## Aplicação controlada
 
-Plano de mounts para revisão, sem aplicação: a origem base é o bind privado
+Configuração utilizada em 29/10/2026: a origem base é o bind privado
 já existente, `/etc/easypanel/projects/espectro-mvp/silmer-chat-spool-init/volumes/chat-media-spool`.
 Os subdiretórios abaixo devem nascer pelo worker atual, UID/GID `1000:1000`,
 com modo `0700`, antes de configurar os binds. Copiar as definições ClamAV
@@ -77,14 +77,14 @@ atuais para `inbound-signatures` antes de cobrir `/var/lib/clamav` com o mount;
 o diretório vazio ocultaria as definições da imagem. O processo de atualização
 vigente continua responsável por publicar freshness após confirmar o motor.
 
-| Serviço | Subdiretório da origem base | Destino | Acesso |
-| --- | --- | --- | --- |
-| API | `inbound-media` | `/tmp/crm-silmer-media` | leitura/escrita |
-| worker | `inbound-media` | `/tmp/crm-silmer-media` | leitura/escrita, retenção |
-| API | `inbound-scanner-socket` | `/tmp/crm-clamd` | leitura/escrita; conexão ao socket privado |
-| worker | `inbound-scanner-socket` | `/tmp/crm-clamd` | leitura/escrita |
-| API | `inbound-signatures` | `/var/lib/clamav` | leitura/escrita |
-| worker | `inbound-signatures` | `/var/lib/clamav` | leitura/escrita |
+| Serviço | Subdiretório da origem base | Destino                 | Acesso                                     |
+| ------- | --------------------------- | ----------------------- | ------------------------------------------ |
+| API     | `inbound-media`             | `/tmp/crm-silmer-media` | leitura/escrita                            |
+| worker  | `inbound-media`             | `/tmp/crm-silmer-media` | leitura/escrita, retenção                  |
+| API     | `inbound-scanner-socket`    | `/tmp/crm-clamd`        | leitura/escrita; conexão ao socket privado |
+| worker  | `inbound-scanner-socket`    | `/tmp/crm-clamd`        | leitura/escrita                            |
+| API     | `inbound-signatures`        | `/var/lib/clamav`       | leitura/escrita                            |
+| worker  | `inbound-signatures`        | `/var/lib/clamav`       | leitura/escrita                            |
 
 O EasyPanel 2.38 inspecionado oferece apenas origem e destino para binds,
 sem opção de somente leitura. Além disso, a API já monta a origem completa
@@ -113,7 +113,7 @@ shutdown gracioso. Health/PING sozinho não comprova frescor nem scan.
 Preparar/reiniciar primeiro o worker e confirmar seu health antes de implantar
 a API. Os diretórios são exclusivos desta mídia e não substituem o spool ou
 os buckets existentes. Esse plano precisa de validação operacional antes da
-execução; não é evidência de provisionamento ou de recovery remoto.
+execução; a evidência da aplicação inicial está registrada abaixo.
 
 1. Registrar a revisão atual do CRM e exportar a versão ativa do n8n em
    armazenamento privado. Confirmar que o webhook e as credenciais WAHA
@@ -159,8 +159,41 @@ o texto da mensagem não permite reconstruir a imagem.
 
 Após recuperar, confirmar na conversa original que ambas as imagens carregam
 e verificar que mensagens, revisão comercial e atendimentos não foram
-duplicados. Recuperação e exibição reais continuam sem evidência até executar
-esse procedimento autorizado em produção.
+duplicados. Registrar a execução e a confirmação visual; não inferir
+recuperação a partir de um ensaio local. A aplicação de 29/10 está abaixo.
+
+## Evidência operacional — 29/10/2026
+
+PR #235 aplicado depois de os três jobs do CI `40807820756` passarem.
+Worker e API tiveram mounts, UID/GID, modos e scanner verificados no alvo;
+readiness `200` e scan real de PNG pela API, com `fdpass`, aprovados.
+Autodeploy do worker restaurado; Zero Downtime permanece desmarcado para
+evitar sobreposição de daemons no socket compartilhado.
+
+No n8n 2.43.7, importar arquivo acrescenta nós ao canvas. Foi importado
+somente o ramo novo, depois conectado ao inbound e exportado para revisão:
+110 nós, os 101 anteriores e suas conexões preservados. Versão publicada:
+`Imagens recebidas na Inbox`.
+
+A produção bloqueia `readWriteFile`; não alterar essa política para recovery.
+O helper usou estado temporário do próprio workflow, lido por
+`$getWorkflowStaticData('global')`, após smoke isolado com a mesma versão e
+o mesmo bloqueio. Importar somente o helper inativo, com parâmetros mínimos
+e privados, e nunca o workflow comercial. Desativar dados de sucesso, erro,
+manual e progresso; definir timeout de 180 s. O CLI usou um runner interno
+somente nesse processo, em loopback e porta livre distinta do runner normal.
+
+Resultado: dois anexos aceitos, zero duplicidades e zero envios. Depois,
+limpar `staticData`, conferir por exportação, arquivar o helper e remover
+seus parâmetros e log bruto. A limpeza real foi confirmada, sem diretório
+binário residual do helper. Não registrar conteúdo ou identificadores de
+clientes no repositório.
+
+A conversa manteve 13 mensagens, três envios, revisão 10, epoch 1 e estado
+humano aberto. SQL confirmou dois anexos available/clean e não expirados.
+O navegador carregou duas imagens completas (982×552 e 980×547). Evidência
+detalhada em [execution](../../.specs/features/inbound-media-inbox/execution.md).
+O prazo continua ancorado no recebimento original; recovery não o renova.
 
 ## Rollback
 

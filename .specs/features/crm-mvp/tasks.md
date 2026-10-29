@@ -348,8 +348,9 @@ preservando o atendimento existente. Critérios em
 [spec](../inbound-media-inbox/spec.md), aplicação e recuperação pontual no
 [runbook](../../../docs/runbooks/inbound-images-inbox.md).
 
-Estado: implementação, gates e revisão independente aprovados no escopo
-local; relatório em `../inbound-media-inbox/validation.md`. Nenhuma aplicação,
-ativação, recuperação de dados ou alteração
-operacional em produção concluída. Leitura do ambiente confirmou duas imagens
-sem anexos e recursos do scanner indisponíveis para a API; o worker os possui.
+Estado: concluído em produção em 29/10/2026 após os três gates do PR #235.
+Scanner compartilhado e scan real validados; ramo WAHA publicado preservando
+os 101 nós existentes. Duas imagens anteriores recuperadas e renderizadas;
+13 mensagens, três envios, revisão e epoch do atendimento preservados.
+Evidências em `../inbound-media-inbox/execution.md`; revisão independente
+da implementação em `../inbound-media-inbox/validation.md`.

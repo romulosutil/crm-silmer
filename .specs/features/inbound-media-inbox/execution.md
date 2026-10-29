@@ -1,7 +1,8 @@
-# INBOX-IMG-01 — evidência local
+# INBOX-IMG-01 — execução e evidências
 
-Implementação preparada em branch própria a partir de `dbbb762`, sem mudar
-produção. Requisitos IMG-01..05; arquivos e limites em `spec.md`.
+A implementação foi preparada em branch própria a partir de `dbbb762`.
+Requisitos IMG-01..05; arquivos e limites em `spec.md`. A aplicação posterior
+em produção está registrada ao final, separada dos ensaios locais.
 
 ## Gates
 
@@ -60,7 +61,7 @@ Artefatos sintéticos locais ignorados: `var/waha-inbound-smoke/result.json`
 e log de execução. Não contêm credenciais ou dados de produção e não substituem
 ensaio operacional no ambiente remoto.
 
-## Evidência remota e pendências
+## Inspeção remota inicial — 28/10/2026
 
 Ações remotas foram somente leitura da interface e consultas de existência
 de recursos; SQL usou conexão read-only e devolveu somente contagens. A API
@@ -68,7 +69,7 @@ não tem volume transitório presente nem acesso ao socket e às assinaturas
 que existem no worker. A conversa tem duas imagens e zero anexos vinculados.
 
 Aplicação, revisão dos mounts, scan real, publicação do workflow, recuperação
-pontual e confirmação visual na conversa permanecem pendentes. O procedimento
+pontual e confirmação visual na conversa permaneciam pendentes nessa inspeção. O procedimento
 está em `docs/runbooks/inbound-images-inbox.md`. Não declarar o incidente
 resolvido ou as imagens exibidas em produção com esta evidência local.
 
@@ -132,3 +133,58 @@ portanto aplicar somente os nove nós novos e conectar o ramo ao inbound,
 preservando os 101 nós antigos. Save e Publish são ações distintas. O
 recovery preparado é manual e inativo, sem webhook ou nós de envio; valida
 as duas identidades, horários, hashes e tipos antes de enviar qualquer anexo.
+
+## Aplicação e recuperação reais — 29/10/2026
+
+Execução pelo responsável pela integração, após autorização do operador.
+O CI `40807820756`, no head `e59fd70`, aprovou os três jobs: qualidade,
+build/scan de edge-web e build/scan de runtime. PR #235 integrado por rebase
+em `a754154`. Durante a operação, o PR #225 também foi integrado em
+`e384a9c`, com seus três checks aprovados; não alterava os módulos de mídia
+desta correção. A migration dessa outra entrega foi apenas conferida em
+leitura; não foi aplicada por esta tarefa.
+
+- Filas sem jobs pendentes ou em processamento antes da troca. Autodeploy do
+  worker pausado temporariamente e restaurado ao final; uma réplica e Zero
+  Downtime desmarcado para impedir dois daemons no mesmo socket.
+- Três subdiretórios privados preparados no spool existente, com cópia das
+  assinaturas e conferência de hashes/metadados antes e depois. Worker e API
+  receberam os três binds do runbook, preservando o mount do chat. Comandos
+  de partida verificam UID/GID e restauram `0700` em cada diretório.
+- Novo worker respondeu ao PING; marcador confirmado depois da partida.
+  API: readiness `200`, diretórios `0700`, socket e marcador `0600`.
+  Scan real de PNG sintético pela API, via `fdpass`, retornou clean e
+  `image/png`. O arquivo sintético foi removido. SHA256 do módulo implantado
+  correspondeu ao código aprovado.
+- A exportação imediatamente anterior à alteração do n8n já incorporava
+  atualizações comerciais paralelas. O patch foi regenerado dessa versão.
+  Rascunho exportado: 110 nós, os 101 anteriores intactos e todas as conexões
+  antigas preservadas; a única ligação adicional antiga→nova sai do inbound.
+  Conexões finais coincidiram com o patch esperado. Versão publicada:
+  `Imagens recebidas na Inbox`. O workflow comercial não foi executado.
+- Preflight detectou `readWriteFile` bloqueado na produção. O bloqueio foi
+  mantido. Smoke independente no n8n 2.43.7 validou parâmetros em
+  `$getWorkflowStaticData('global')`, execução inativa e limpeza posterior;
+  o código do histórico não persiste esse campo nas versões dos nós.
+- Recovery manual de 13 nós, sem webhook ou envio, com dados de execução
+  desativados e timeout de 180 s. Runner somente desse processo: interno,
+  loopback `127.0.0.1:15679`, concorrência 1 e modo inseguro desativado;
+  configuração global e runner externo preservados. As duas consultas e a
+  validação de ambas as identidades precederam qualquer upload.
+- Resultado real: `requested=2`, `accepted=2`, `duplicates=0`, `sends=0`.
+  Estado temporário limpo por reimportação e confirmado por exportação:
+  `staticData=null`, workflow inativo. Helper arquivado. Parâmetros em arquivo
+  e log bruto removidos; não havia diretório binário residual desse helper.
+  Apenas resumo sem conteúdo foi preservado em armazenamento privado.
+- Auditoria SQL final read-only: 13 mensagens e três envios, como antes;
+  inbound revision 10, automation epoch 1, estado `requer_atencao` e jornada
+  aberta preservados. Dois anexos para duas mensagens, ambos available/clean
+  e não expirados. Readiness `200` e PING do scanner continuaram aprovados.
+- Navegador autenticado: dois elementos `img` completos com dimensões
+  naturais 982×552 e 980×547. As imagens reais foram exibidas na conversa.
+
+Não houve replay do webhook/inbound, reserva de envio ou mensagem à cliente.
+WAHA/WEBJS e as credenciais vinculadas foram mantidos. A publicação do ramo
+futuro foi conferida estruturalmente; o ensaio de nova entrada permanece
+sintético, sem solicitar mensagem de teste à cliente. Retenção original de
+sete dias ou encerramento da jornada continua aplicável.

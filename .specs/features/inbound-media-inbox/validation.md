@@ -4,8 +4,9 @@
 
 Data: 28/10/2026. Revisão final examinada: `dbbb762..c0cc21e`.
 Verificador: agente independente `/root/verificar_imagens`, sem autoria do patch.
-**O aceite cobre a implementação local e a preparação offline. A aplicação,
-recuperação dos anexos reais e confirmação visual em produção continuam pendentes.**
+**Este aceite independente cobre a implementação local e a preparação offline.
+A aplicação e a recuperação posteriores, verificadas pelo responsável pela
+integração em 29/10, estão registradas em `execution.md` e no runbook.**
 
 ## Achados anteriores encerrados
 
@@ -29,14 +30,14 @@ coordenação durável antes de escalar.
 
 ## Critérios ancorados na especificação
 
-| Critério | Evidência concreta e resultado esperado | Resultado |
-| --- | --- | --- |
-| IMG-01: projeção e bytes privados | `test/inbound-media-postgres-live.test.js:179`: `assert.equal(media.mediaId, mediaId)`; linha 181: `assert.equal(media.state, 'attached')`; linha 189: `assert.deepEqual(list.items[0].lastMessage.media, media)`; linha 192: `assert.deepEqual(response.rawPayload, bytes)`. `test/inbound-media-content.test.js:97`: bytes originais; linhas 99–101: headers privados e tamanho exato. | Coberto |
-| IMG-02: sessão, capacidade, vínculo, retenção, validação e perda | `test/inbound-media-content.test.js:194`: `assert.equal(response.statusCode, status)` para matriz explícita 401/403/404/410/503; linha 195: zero leituras para os bloqueios prévios; linhas 244–248: tamanho igual, status 503 e conteúdo corrompido não entregue. `test/inbound-media-postgres-live.test.js:193`: conversa cruzada 404; linhas 204–205, 221–222, 237–238 e 269–270: estado/URL indisponível ou perdido. | Coberto |
-| IMG-03: preservar atendimento e persistir em modo humano/replay sem enviar | `test/waha-inbound-images-patch.test.js:162`: nós anteriores idênticos; linha 169: conexões anteriores preservadas; linha 181: cada destino alcançável pertence aos nós adicionados; linha 186: nove nós alcançáveis. Linha 219 exige condição verdadeira para combinações de modo humano e duplicate; linha 227 exclui outras mensagens. | Coberto |
-| IMG-04: URL, tamanho, bytes, autenticação, identidade e falha redigida | `test/waha-inbound-images-patch.test.js:252`: URLs adversariais recusadas; linhas 299–304: binário, SHA256, external ID, idempotência, correlação e conversa exatos; linhas 317–318: ID de 255 caracteres inteiro; linhas 326–350: multipart e headers; linha 383: limite exato de 5 MB; linha 408: objeto de falha com código fixo. Linhas 469–471 preservam a expressão original e resolvem o endpoint esperado; linhas 494–506 rejeitam expressões dinâmicas e destinos inválidos. | Coberto |
-| IMG-04/MSG-02: retomar falha transitória sem duplicação ou bypass | `test/inbound-media-postgres-live.test.js:300`: estado recuperado `available`; linhas 301–306: prazo original e um arquivo/anexo. Linhas 354–361: quarentena recupera a mesma storage key, tamanho, prazo e conjunto de arquivos; linhas 379, 388 e 393: rejeitados, descartados e perdidos não voltam ao scanner. Linhas 472–519: concorrência exige `available/clean`, dois fulfilled, duplicate false/true, um arquivo, um anexo, uma auditoria e GET 200. `test/private-media-volume.test.js:254` e linha 259 confirmam estado disponível e nova inspeção da mesma cópia. | Coberto |
-| IMG-05: recuperação preserva prazo e não reexecuta atendimento | `test/inbound-media-retention.test.js:73` e linha 77 exigem os instantes originais; linhas 97–104 rejeitam prazo/jornada vencidos sem inserção ou store. `test/inbound-media-postgres-live.test.js:165` confirma replay; o grafo novo não alcança envio. A recuperação real está expressamente fora do aceite local. | Coberto |
+| Critério                                                                   | Evidência concreta e resultado esperado                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Resultado |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| IMG-01: projeção e bytes privados                                          | `test/inbound-media-postgres-live.test.js:179`: `assert.equal(media.mediaId, mediaId)`; linha 181: `assert.equal(media.state, 'attached')`; linha 189: `assert.deepEqual(list.items[0].lastMessage.media, media)`; linha 192: `assert.deepEqual(response.rawPayload, bytes)`. `test/inbound-media-content.test.js:97`: bytes originais; linhas 99–101: headers privados e tamanho exato.                                                                                                                                                                                      | Coberto   |
+| IMG-02: sessão, capacidade, vínculo, retenção, validação e perda           | `test/inbound-media-content.test.js:194`: `assert.equal(response.statusCode, status)` para matriz explícita 401/403/404/410/503; linha 195: zero leituras para os bloqueios prévios; linhas 244–248: tamanho igual, status 503 e conteúdo corrompido não entregue. `test/inbound-media-postgres-live.test.js:193`: conversa cruzada 404; linhas 204–205, 221–222, 237–238 e 269–270: estado/URL indisponível ou perdido.                                                                                                                                                      | Coberto   |
+| IMG-03: preservar atendimento e persistir em modo humano/replay sem enviar | `test/waha-inbound-images-patch.test.js:162`: nós anteriores idênticos; linha 169: conexões anteriores preservadas; linha 181: cada destino alcançável pertence aos nós adicionados; linha 186: nove nós alcançáveis. Linha 219 exige condição verdadeira para combinações de modo humano e duplicate; linha 227 exclui outras mensagens.                                                                                                                                                                                                                                     | Coberto   |
+| IMG-04: URL, tamanho, bytes, autenticação, identidade e falha redigida     | `test/waha-inbound-images-patch.test.js:252`: URLs adversariais recusadas; linhas 299–304: binário, SHA256, external ID, idempotência, correlação e conversa exatos; linhas 317–318: ID de 255 caracteres inteiro; linhas 326–350: multipart e headers; linha 383: limite exato de 5 MB; linha 408: objeto de falha com código fixo. Linhas 469–471 preservam a expressão original e resolvem o endpoint esperado; linhas 494–506 rejeitam expressões dinâmicas e destinos inválidos.                                                                                         | Coberto   |
+| IMG-04/MSG-02: retomar falha transitória sem duplicação ou bypass          | `test/inbound-media-postgres-live.test.js:300`: estado recuperado `available`; linhas 301–306: prazo original e um arquivo/anexo. Linhas 354–361: quarentena recupera a mesma storage key, tamanho, prazo e conjunto de arquivos; linhas 379, 388 e 393: rejeitados, descartados e perdidos não voltam ao scanner. Linhas 472–519: concorrência exige `available/clean`, dois fulfilled, duplicate false/true, um arquivo, um anexo, uma auditoria e GET 200. `test/private-media-volume.test.js:254` e linha 259 confirmam estado disponível e nova inspeção da mesma cópia. | Coberto   |
+| IMG-05: recuperação preserva prazo e não reexecuta atendimento             | `test/inbound-media-retention.test.js:73` e linha 77 exigem os instantes originais; linhas 97–104 rejeitam prazo/jornada vencidos sem inserção ou store. `test/inbound-media-postgres-live.test.js:165` confirma replay; o grafo novo não alcança envio. A recuperação real está expressamente fora do aceite local.                                                                                                                                                                                                                                                          | Coberto   |
 
 Não houve remoção, enfraquecimento ou novo skip de teste preexistente. Os testes
 novos mapeiam para IMG-01/02 (conteúdo/projeção), IMG-03/04 (patch, contrato,
@@ -51,18 +52,18 @@ Node `24.20.0`. Cópias isoladas no diretório temporário do sistema, sem
 `git stash` ou mutação da árvore real. Baselines: 22 testes de conteúdo,
 uma integração PostgreSQL e dez testes do patch, todos aprovados.
 
-| Mutação isolada | Evidência de comportamento | Resultado |
-| --- | --- | --- |
-| Remover bloqueio no prazo exato | `deadline reached` falha | Morto |
-| Remover bloqueio por término da jornada | `conversation ended` falha | Morto |
-| Remover exigência `validation_status=clean` | `unscanned attachment` falha | Morto |
-| Remover comparação SHA256 | Novo caso de um byte alterado com tamanho igual falha | Morto |
-| Bypassar `access.authorizeRead` | `actor lacks conversation read` falha | Morto |
-| Remover limite de imagem de 5 MB | `image exceeds five MB` falha | Morto |
-| Retirar espera da fila de ingresso | PostgreSQL observa `unavailable`, esperado `available` | Morto |
-| Desabilitar retomada de estados transitórios | PostgreSQL recebe `ATTACHMENT_NOT_RETRYABLE` e falha | Morto |
-| Retirar suporte à expressão URL constante | Caso da expressão implantada falha | Morto |
-| Retirar exigência HTTPS do parser | Caso de URL HTTP recusada deixa de lançar e falha | Morto |
+| Mutação isolada                              | Evidência de comportamento                             | Resultado |
+| -------------------------------------------- | ------------------------------------------------------ | --------- |
+| Remover bloqueio no prazo exato              | `deadline reached` falha                               | Morto     |
+| Remover bloqueio por término da jornada      | `conversation ended` falha                             | Morto     |
+| Remover exigência `validation_status=clean`  | `unscanned attachment` falha                           | Morto     |
+| Remover comparação SHA256                    | Novo caso de um byte alterado com tamanho igual falha  | Morto     |
+| Bypassar `access.authorizeRead`              | `actor lacks conversation read` falha                  | Morto     |
+| Remover limite de imagem de 5 MB             | `image exceeds five MB` falha                          | Morto     |
+| Retirar espera da fila de ingresso           | PostgreSQL observa `unavailable`, esperado `available` | Morto     |
+| Desabilitar retomada de estados transitórios | PostgreSQL recebe `ATTACHMENT_NOT_RETRYABLE` e falha   | Morto     |
+| Retirar suporte à expressão URL constante    | Caso da expressão implantada falha                     | Morto     |
+| Retirar exigência HTTPS do parser            | Caso de URL HTTP recusada deixa de lançar e falha      | Morto     |
 
 Resultado final: **10/10 mutantes mortos, zero sobreviventes**. Os oito
 mutantes do core usaram `c115145`; a inspeção do diff confirmou que o core

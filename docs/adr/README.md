@@ -1,5 +1,11 @@
 # Architecture Decision Records
 
+## Decisão de 29/10/2026
+
+- [050 — Evolution/Baileys como ponte do WhatsApp](050-evolution-baileys-como-ponte-do-whatsapp.md),
+  gateway e banco privados sem Redis, jornada preservada, limpeza WAHA por
+  referências e integração Meta protegida; homologação real em EVOL-01.
+
 ## Decisão de 28/10/2026
 
 - [049 — Aprendizados do Vendedor na Inbox real](049-aprendizados-do-vendedor-na-inbox-real.md),

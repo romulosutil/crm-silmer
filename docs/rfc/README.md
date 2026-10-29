@@ -1,5 +1,10 @@
 # Request for Comments
 
+## Decisão de 29/10/2026
+
+- [039 — Evolution/Baileys como ponte do WhatsApp](039-evolution-baileys-como-ponte-do-whatsapp.md),
+  decidida na ADR 050 para a ponte temporária, limpeza do n8n e preservação Meta.
+
 ## Em revisão
 
 - [038 — Frete e etiqueta pelo Melhor Envio](038-frete-e-etiqueta-pelo-melhor-envio.md),

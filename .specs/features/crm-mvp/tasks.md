@@ -1,5 +1,25 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## INBOX-IMG-EVOL-02 — sintaxe da consulta de mídia (29/10/2026)
+
+Requisitos IMG-01/03/04, EVOL-01D, INB-01 e MSG-01/02.
+
+- [x] Reproduzir `invalid syntax` no HTTP do ramo real do n8n, isolado de IA/envios.
+- [x] Corrigir os dois corpos no gerador e o clone da Inbox, com regressão
+      da fronteira dos delimitadores; download até upload observado no n8n real.
+- [x] Publicar revisão `4581279c-3960-4ee9-af83-9923bc360727`, conferindo
+      três deltas funcionais, credenciais/conexões/settings e ordem dos fanouts.
+- [x] Gate final: tipos, lint, 1.421 testes aprovados, cinco skips, zero
+      falhas, build e `git diff --check`.
+- [x] Recuperar dez imagens autorizadas e conferir renderização; comprovar
+      quatro uploads ao pedido 21-CRM com leitura e hash dos objetos RustFS.
+- [ ] Recuperar oito imagens em duas outras conversas após autorização
+      específica exigida pela revisão automática.
+- [ ] Observar novo evento de imagem do canal após a publicação; replay
+      isolado e histórico recuperado não substituem essa homologação.
+
+Evidência e limites no [runbook](../../../docs/runbooks/inbound-images-inbox.md).
+
 ## INBOX-IMG-ORDER-01 — imagem recebida no pedido (29/10/2026)
 
 Requisitos IMG-01/06–08, ARQ-02/04 e PRV-03. Pedido do proprietário:
@@ -13,9 +33,11 @@ exibir imagens recebidas e poder anexá-las ao pedido.
       nenhuma falha e build; revisão independente sem finding bloqueante.
 - [x] E2E completo: 342 aprovados, sete skips, nenhuma falha; execução
       local fora do sandbox para permitir Chromium/loopback.
-- [ ] Auditoria npm: acesso ao registro externo recusado pela revisão automática.
-- [ ] Prova publicada de imagem e arquivo do pedido; controle do navegador
-      interrompido pela ferramenta durante a inspeção.
+- [x] Auditoria npm autorizada pelo proprietário: `npm audit --audit-level=high`
+      aprovado; três avisos existentes (um baixo, dois moderados), nenhum alto/crítico.
+- [x] Prova publicada de histórico recuperado e upload existente no pedido,
+      com leitura/hash RustFS (INBOX-IMG-EVOL-02).
+- [ ] Implantar e homologar o novo atalho da imagem para o pedido no CRM.
 
 Evidências e limites no [runbook](../../../docs/runbooks/inbound-images-inbox.md).
 

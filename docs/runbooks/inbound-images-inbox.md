@@ -1,5 +1,56 @@
 # Imagens recebidas na Inbox
 
+## INBOX-IMG-EVOL-02 — correção publicada em 29/10/2026
+
+O corpo JSON da consulta de mídia Evolution continha `}}` dentro da
+expressão. O parser do n8n encerrava o trecho nesse ponto e recusava o
+parâmetro com `invalid syntax`, antes da chamada HTTP. O teste anterior
+avaliava o JavaScript removendo somente os delimitadores externos e não
+detectava esse truncamento. A consulta de identidade apresentava o mesmo
+defeito.
+
+O gerador agora usa objetos entre parênteses e espaços entre fechamentos
+internos. O principal publicado recebeu a correção em três `jsonBody`:
+consulta de mídia da IA, consulta da Inbox e resolução de identidade.
+A versão `4581279c-3960-4ee9-af83-9923bc360727` foi publicada como
+**INBOX-IMG-EVOL-02 · Corrigir sintaxe de mídia**. A leitura do export
+confirmou `active=true`, revisão atual igual à publicada e os 110 nós.
+
+Gate final `npm run validate` aprovado: 1.426 testes, 1.421 aprovados,
+cinco skips, zero falhas, tipos, lint e build. A regressão cobre os dois
+corpos antigos inválidos e os três corpos gerados com a fronteira do parser.
+
+A comparação preservou IDs de nós, credenciais, conexões e settings.
+O editor omitiu defaults explícitos (`json`, `runOnceForAllItems` e
+`disabled=false`) e alinhou coordenadas à grade. A comparação normalizada
+confirmou somente os três corpos como delta funcional; a ordem `(y,x)` dos
+destinos de todos os fanouts permaneceu igual. A versão publicada anterior
+`48c1bc53-a57c-4d08-8550-04df116a49dd` continua disponível para rollback.
+
+Um workflow manual isolado, inativo e sem nós de IA ou envio reproduziu
+o erro no HTTP original. Com somente o corpo corrigido, passou por download,
+decodificação, tamanho, hash, multipart e upload, com replay de uma imagem
+já recuperada. Dados de execução manual/sucesso/erro não foram persistidos.
+O diagnóstico permanece inativo; as cópias temporárias de credenciais
+decriptadas foram removidas. Nenhuma credencial do serviço foi alterada.
+
+Recuperação pontual autorizada: dez imagens em duas conversas (quatro e
+seis) foram vinculadas às mensagens originais pelo endpoint de anexos,
+com scanner, hash, retenção original e idempotência. As dez imagens foram
+observadas carregadas na Inbox. Quatro originais foram enviados pelo botão
+existente de arquivos ao pedido 21-CRM; a interface confirmou **4 de 5**, e
+a leitura dos quatro objetos RustFS confirmou existência, tamanho e SHA256.
+Não houve reexecução de IA, confirmação comercial ou envio de WhatsApp.
+
+Oito imagens em duas outras conversas permanecem fora dessa recuperação:
+a revisão automática exigiu autorização específica adicional. O teste de
+POST sem autenticação ao webhook também foi recusado pela revisão automática;
+a verificação de publicação usou somente leitura. Não declarar um novo
+evento de canal homologado com o replay isolado. A próxima imagem recebida
+deve ser observada para concluir esse gate. Não houve deploy do CRM nesta
+operação: o atalho novo da imagem para o pedido continua na branch; o upload
+existente foi o controle usado na comprovação operacional.
+
 ## Complemento de 29/10/2026 — Evolution e arquivo do pedido
 
 Tarefa INBOX-IMG-ORDER-01; IMG-01/06–08, ARQ-02/04 e PRV-03.
@@ -12,7 +63,7 @@ socket e assinaturas descritos no plano abaixo. Essa leitura de configuração
 não confirma o funcionamento do scanner nem o sucesso do upload. O diagnóstico
 WAHA de 28/10 abaixo permanece histórico.
 
-A Inbox agora oferece **Anexar imagem ao pedido** nas imagens recebidas
+A implementação na branch oferece **Anexar imagem ao pedido** nas imagens recebidas
 disponíveis. O responsável ou administrador escolhe o pedido pendente vinculado
 à conversa e aciona **Anexar ao pedido**. O navegador lê os bytes pela rota
 privada e envia uma referência pelo upload existente do pedido, que mantém
@@ -35,9 +86,11 @@ Esses testes não comprovam storage remoto ou imagens reais em produção.
 Gate `validate` aprovado: 1.425 testes, 1.420 aprovados, cinco skips, zero
 falhas e build. O sandbox Windows recusou hardlinks dos testes de áudio;
 a execução local autorizada fora do sandbox passou. Revisão independente
-do diff não encontrou falha bloqueante. A auditoria npm não foi concluída:
-DNS indisponível no sandbox e revisão automática recusou o acesso externo
-por envio da lista de dependências ao registro npm sem autorização específica.
+do diff não encontrou falha bloqueante. Após autorização explícita do
+proprietário para enviar nomes/versões ao registro npm, a auditoria
+`npm audit --audit-level=high` passou: três avisos existentes, um baixo e dois
+moderados, nenhum alto ou crítico. O acesso havia sido recusado antes dessa
+autorização; nenhuma dependência foi alterada por esta verificação.
 
 E2E completo aprovado fora do sandbox: 342 cenários aprovados, sete skips e
 nenhuma falha. Componente: 14/14; composição da Inbox: 18/18. Esses dois

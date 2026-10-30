@@ -83,12 +83,17 @@ const QUEUE_FILTERS = Object.freeze([
 const SHORTCUTS = Object.freeze([
   Object.freeze({ label: 'Todas', queue: 'all', tab: 'all', value: 'all' }),
   Object.freeze({
-    label: 'Aguardando',
+    label: 'Aguardando vendedor',
     queue: 'all',
     tab: 'waiting',
     value: 'waiting',
   }),
-  Object.freeze({ label: 'Minhas', queue: 'mine', tab: 'all', value: 'mine' }),
+  Object.freeze({
+    label: 'Meus atendimentos',
+    queue: 'mine',
+    tab: 'all',
+    value: 'mine',
+  }),
 ]);
 const CONTEXT_STORAGE_KEY = 'crm.inbox.contextOpen';
 const LIST_TIME = new Intl.DateTimeFormat('pt-BR', {
@@ -1358,7 +1363,7 @@ async function confirmTransfer() {
       reason: 'Repasse de atendimento na Caixa de Entrada',
       targetUserId: transferTarget.value,
     },
-    `Atendimento repassado para ${targetName}.`,
+    `Atendimento transferido para ${targetName}.`,
   );
   if (!error.value) transferring.value = false;
 }
@@ -1975,7 +1980,7 @@ onBeforeUnmount(() => {
                     :aria-expanded="contextOpen"
                     @click="openContextFromMore"
                   >
-                    <AppIcon name="panel" />Detalhes da conversa
+                    <AppIcon name="panel" />Detalhes do atendimento
                   </button>
                   <button
                     v-if="createOrderInMore"
@@ -1991,7 +1996,7 @@ onBeforeUnmount(() => {
                     :disabled="busy"
                     @click="openTransfer"
                   >
-                    Repassar atendimento
+                    Transferir atendimento
                   </button>
                   <button
                     v-if="canArchiveActive"
@@ -2027,13 +2032,13 @@ onBeforeUnmount(() => {
                 ref="contextToggle"
                 type="button"
                 class="quiet conv-context-toggle"
-                title="Detalhes da conversa"
+                title="Detalhes do atendimento"
                 aria-controls="inbox-context"
                 :aria-expanded="contextOpen"
                 @click="toggleContext()"
               >
                 <AppIcon name="panel" />
-                <span class="sr-only">Detalhes</span>
+                <span>Detalhes</span>
               </button>
             </div>
           </header>
@@ -2052,7 +2057,9 @@ onBeforeUnmount(() => {
             class="transfer-form"
             @submit.prevent="confirmTransfer"
           >
-            <label :for="`transfer-${active.id}`">Repassar venda para</label>
+            <label :for="`transfer-${active.id}`"
+              >Transferir atendimento para</label
+            >
             <select
               :id="`transfer-${active.id}`"
               ref="transferSelect"
@@ -2072,14 +2079,14 @@ onBeforeUnmount(() => {
                 class="primary"
                 :disabled="busy || !transferTarget"
               >
-                Confirmar repasse
+                Confirmar transferência
               </button>
               <button type="button" :disabled="busy" @click="cancelTransfer">
                 Cancelar
               </button>
             </div>
             <p v-if="!transferOptions.length">
-              Nenhum outro vendedor disponível para receber a venda.
+              Nenhum outro vendedor disponível para receber o atendimento.
             </p>
           </form>
 
@@ -2287,7 +2294,9 @@ onBeforeUnmount(() => {
         @keydown.esc="closeContextOnEscape"
       >
         <div class="inbox-context-head">
-          <h2 id="inbox-context-title" tabindex="-1">Detalhes</h2>
+          <h2 id="inbox-context-title" tabindex="-1">
+            Detalhes do atendimento
+          </h2>
           <button
             type="button"
             class="quiet"
@@ -2307,7 +2316,7 @@ onBeforeUnmount(() => {
 
         <section class="subject-panel" aria-labelledby="subject-panel-title">
           <h3 id="subject-panel-title" ref="subjectHeading" tabindex="-1">
-            Assuntos deste atendimento
+            Assuntos do atendimento
           </h3>
           <p v-if="subjectError" role="alert">{{ subjectError }}</p>
           <p v-if="subjectNotice" role="status">{{ subjectNotice }}</p>
@@ -2319,7 +2328,7 @@ onBeforeUnmount(() => {
             <li v-for="subject in subjectState.subjects" :key="subject.id">
               <span>{{ subjectLabel(subject) }}</span>
               <strong v-if="subject.isCurrent" class="badge" data-tone="info"
-                >Atual</strong
+                >Assunto em foco</strong
               >
               <button
                 v-else-if="canClose"

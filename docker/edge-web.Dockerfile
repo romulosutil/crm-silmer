@@ -12,7 +12,7 @@ COPY modules modules
 COPY scripts scripts
 RUN npm run build
 
-FROM nginx:1.31.4-alpine-slim@sha256:1870de6d59aafee152589b64404556d2535922cdd998e6dac1c4888c938ed8f9
+FROM nginx:1.31.8-alpine-slim@sha256:f45171d36c76a8b2f5ef97108a3a8a2294248a6578a0a180edc2d78f7d2edc26
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build --chown=nginx:nginx /workspace/dist/edge-web/ /usr/share/nginx/html/

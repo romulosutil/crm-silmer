@@ -23,6 +23,6 @@
     "@fastify/multipart": "^10.1.1",
     "@fastify/rate-limit": "11.2.0",
     "fastify": "5.12.5",
-    "playwright": "1.62.1"
+    "playwright": "1.64.1"
   }
 }

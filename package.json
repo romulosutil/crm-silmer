@@ -74,7 +74,7 @@
     "validate": "npm run format:check && npm run typecheck && npm run lint && npm run check:boundaries && npm run check:design-tokens && npm run validate:topology && npm run validate:r2 && npm run validate:external-spikes && npm run validate:media-retention && npm run validate:security-catalog && npm run validate:ficha-pdf-review && npm run validate:phase0-decisions && npm run validate:observability && npm test && npm run build"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
+    "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.62.1",
     "@types/node": "24.13.3",
     "@types/punycode": "2.1.4",

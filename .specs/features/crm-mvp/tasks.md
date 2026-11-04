@@ -1,5 +1,14 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## OLIST-T02 — Prova de capacidades em andamento (04/11/2026)
+
+Status parcial: schema oficial 3.1/OpenAPI 3.0.0 com hashes e captura
+reproduzível; fixtures sintéticas e 11 testes offline aprovados. Conta de testes
+dedicada preferida pelo PO, ainda não disponibilizada/confirmada. Fiscal,
+precisão por linha, permissões e gatilhos reais pendentes. Gate F1 aberto.
+[Evidência e plano](../../../docs/integrations/olist/capabilities.md).
+Zero chamadas autenticadas ou inclusões ERP; não marca T02 concluída.
+
 ## OPS-INBOX-SEND-09 — Mídia reservada após timeout HTTP (05/11/2026)
 
 MSG-02/03, ORC-08, PRV-01 e OPS-ERR-03/06/08/10. Os dois alertas de

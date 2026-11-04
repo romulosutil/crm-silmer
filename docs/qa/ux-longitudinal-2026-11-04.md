@@ -4,6 +4,9 @@ Rastreabilidade: **CP-09, CP-11–18, CP-29–31 / CP-T04 e CP-T09**.
 Estado: **piloto real concluído; campanha de 190 sessões preparada, não executada**.
 Nenhuma regra de produto, workflow principal ou publicação foi alterada.
 
+Continuação: [validação ampliada](ux-order-isolation-validation-2026-11-04.md),
+com alteração indevida de um Pedido formal comprovada em novo ciclo real.
+
 ## Resultado principal
 
 **P1: duas intenções de compra foram combinadas no briefing antes da criação de Pedido.**
@@ -51,10 +54,14 @@ pendentes foram criados pelo fluxo humano normal, com sentinelas distintas:
 | 2: referência a B e depois mensagem ambígua, após o handoff anterior     | Ambos `no_action`; não contam como acerto de associação ativa.                                                                |
 | 3: com A/B vinculados e sem seleção, “Mude para 30 peças.”               | Bloqueio seguro: `subject_ambiguous`, `low_confidence`, sem alvo e sem patch. Snapshots completos de A/B permaneceram iguais. |
 
-**P2: classificação indevida de motivo de transferência.** A referência explícita
+**Reclassificado: limitação deliberada da política e da rotulagem.** A referência explícita
 a A no ciclo 2 gerou `external_context` / `human_requested`, embora o usuário
 não tenha pedido atendimento humano. Isso reduziu a autonomia do fluxo e
 impediu que os próximos turnos avaliassem seleção ativa entre Pedidos.
+A investigação posterior confirmou que a ADR 013 determina esse mapeamento
+e reconhece o rótulo genérico na Inbox. Este comportamento não é contado como
+defeito confirmado; permitir continuação automática de um Pedido conhecido
+exige explicitar a mudança da política vigente.
 
 Em A, a quantidade informada ficou 24 e a grade oficial permaneceu 9 M + 9 G
 (total 18). São campos diferentes; o ensaio não interpreta isso como alteração

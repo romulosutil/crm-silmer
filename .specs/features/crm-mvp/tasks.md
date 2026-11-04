@@ -894,3 +894,15 @@ local; relatório em `../inbound-media-inbox/validation.md`. Nenhuma aplicação
 ativação, recuperação de dados ou alteração
 operacional em produção concluída. Leitura do ambiente confirmou duas imagens
 sem anexos e recursos do scanner indisponíveis para a API; o worker os possui.
+
+## OLIST-PLAN-01 — Preparação da integração Olist (04/11/2026)
+
+- [x] Preparar especificação completa com requisitos OLIST-01–32, seis fases,
+      tarefas OLIST-T01–T18, testes negativos, recuperação e checklists na
+      [RFC 044](../../../docs/rfc/044-geracao-assistida-de-pedidos-no-olist.md).
+- [ ] Resolver D1–D8 e registrar ADR/fontes canônicas antes do código dependente.
+- [ ] Implementar e validar OLIST-T01–T15 conforme gates da RFC.
+- [ ] Autorizar/executar piloto e decidir ampliação em OLIST-T16–T18.
+
+Esta entrega é documental. Decisões técnicas/comerciais permanecem propostas;
+conexão da conta, criação de vendas e ativação em produção continuam pendentes.

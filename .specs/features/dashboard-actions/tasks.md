@@ -17,12 +17,17 @@ Evidências e limitações: [QA de 05/11](../../../docs/qa/dashboard-central-202
 
 ## ACT-T02 — Homologação operacional
 
-- [ ] Implantar migrations/imagens compatíveis antes do workflow novo.
-- [ ] Configurar privadamente os dois destinos, credenciais e flag do checkpoint.
-- [ ] Validar identidade da conta remetente e reconhecimento dos destinatários.
-- [ ] Publicar workflow dedicado; conferir fuso/08h, retenção e reserva.
+- [x] Implantar migrations/imagens compatíveis antes do workflow novo.
+- [x] Configurar privadamente os dois destinos, credenciais e flag do checkpoint.
+- [x] Validar identidade da conta remetente e reconhecimento dos destinatários.
+- [x] Publicar workflow dedicado; conferir fuso/08h, retenção e reserva.
 - [ ] Confirmar entrega real independente aos dois destinos e registrar evidência
       privada, sem mensagens ou dados reais no Git.
+
+Publicação/ativação em 05/11/2026: [evidência operacional](../../../docs/qa/dashboard-release-2026-11-05.md).
+Primeiro envio agendado para 06/11/2026 às 08h em `America/Sao_Paulo`;
+não houve execução manual para antecipar o envio. A comprovação da entrega
+permanece separada da configuração e ativação concluídas.
 
 Essa segunda tarefa distingue código entregue de ativação/homologação; não
 autoriza restauração de banco ou alteração de workflows comerciais existentes.

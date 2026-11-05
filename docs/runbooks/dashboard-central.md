@@ -52,8 +52,31 @@ não dividir essas populações para declarar conversão causal.
    Registrar evidência privada da entrega a cada destino. Resposta de aceitação
    do provedor não é evidência de entrega física no WhatsApp.
 
-Esta entrega de código não comprova publicação do workflow nem envio real.
+Uma entrega de código, por si só, não comprova publicação do workflow nem envio real.
 Não modificar os workflows comerciais existentes para instalar o checkpoint.
+
+### Registro de produção — 05/11/2026
+
+Release da [PR 297](https://github.com/romulosutil/crm-silmer/pull/297),
+commit `06836f73de04bcf72e84fe0ea411b49b63c2c79e`, implantada em API,
+worker e frontend pelo pipeline GitHub/EasyPanel existente. Migrations expand
+0056/0057 aplicadas antes das rotas novas, com checksums conferidos e replay
+sem alterações. Health/readiness aprovados. O
+[CI de master](https://github.com/romulosutil/crm-silmer/actions/runs/42121762291)
+concluiu com sucesso, incluindo os testes PostgreSQL de dashboard/checkpoint.
+
+O workflow dedicado foi publicado com os dois destinos privados conferidos,
+flag habilitada, cron diário `0 8 * * *`, fuso `America/Sao_Paulo` e retenção
+de dados de execução desligada. Primeiro horário previsto: **06/11/2026 às
+08h**. Não houve envio manual; aceite e entrega efetiva aguardam a primeira
+execução agendada. Evidências de versão, imagens, backup e limites estão no
+[registro operacional](../qa/dashboard-release-2026-11-05.md).
+
+Na importação pela UI, os settings não foram preservados. A configuração foi
+corrigida por importação CLI direcionada ao workflow dedicado e conferida por
+nova exportação antes da publicação. Em futuras alterações, conferir os
+settings efetivamente persistidos e a versão publicada; não presumir que a
+importação visual reproduz o arquivo completo.
 
 ## Protocolo e recuperação
 

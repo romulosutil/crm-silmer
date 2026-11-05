@@ -13,6 +13,10 @@
 
 ## Em revisão
 
+- [044 — Performance comercial, checkpoint e central de ações](044-performance-comercial-e-central-de-acoes.md),
+  aberta em 05/11/2026. Métricas dos vendedores humanos, resumo diário aos
+  sócios às 08h e proposta de evolução do Dashboard; apuração e
+  implementação ainda em revisão, sem ativação de envios.
 - [038 — Frete e etiqueta pelo Melhor Envio](038-frete-e-etiqueta-pelo-melhor-envio.md),
   aberta em 29/10/2026. Tem retirada na loja ou Melhor Envio, etiqueta
   pronta ao embalar e menu próprio. As decisões D1–D9 estão em aberto.

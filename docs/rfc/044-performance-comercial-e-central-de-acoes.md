@@ -1,0 +1,214 @@
+# RFC 044 — Performance comercial, checkpoint e central de ações
+
+Data: 05/11/2026. Status: em revisão; não autoriza ativação nem registra
+decisão arquitetural tomada. Responsável: Tech Lead.
+
+## Demanda e decisões já informadas
+
+O proprietário pediu desempenho por vendedor, cruzamento de vendas com
+atendimento e evolução do Dashboard para uma central de ações. Pediu também
+um resumo de vendas do dia anterior para os dois sócios pelo WhatsApp da
+Inbox. Confirmou envio às **08h, todos os dias, America/Sao_Paulo**, e exibição
+separada de atendimentos encerrados e conversas que geraram venda.
+
+Destinatários e telefones foram informados privadamente na conversa de
+trabalho. Devem ficar em configuração privada, fora do repositório, fixtures,
+logs e exemplos. Nenhum envio ou agendamento foi ativado nesta proposta.
+
+O proprietário confirmou que a venda conta para o **vendedor responsável
+pelo pedido**, inclusive quando um administrador executa a confirmação.
+Proposta de implementação: preservar o responsável comercial no momento da
+confirmação e, separadamente, quem executou o comando.
+
+## Evidência do estado atual
+
+O grafo local é de 04/10/2026, commit `c237200a`; a descoberta foi confirmada
+nas fontes atuais, na revisão `5bc36118`:
+
+- [DashboardView.vue](../../apps/edge-web/src/views/DashboardView.vue):
+  composição por perfil, indicadores e próximo passo. Somente Vendido usa
+  o período escolhido. Não há desempenho agregado de vendedores humanos.
+- [Resumo de pedidos](../../modules/orders/src/adapters/postgres-order-repository.js):
+  vendas por `order_date`, status confirmado e exclusão de testes; guarda
+  `confirmed_by`, mas não um crédito comercial imutável separado do executor.
+- [Porta de conversas](../../modules/orders/src/adapters/postgres-order-conversation-port.js):
+  responsável da conversa é lido do estado atual, sujeito a transferências.
+- [Tomada de handoff](../../apps/api/src/conversation-handoff-runtime.js):
+  histórico e evento `handoff.claimed`, com vendedor e instante.
+- [Repositório da Inbox](../../modules/inbox-channels/src/adapters/postgres-inbox-repository.js):
+  mensagens com autor, tomadas diretas e transições auditadas.
+- [Encerramento](../../modules/database/migrations/0036_neutral_conversation_closure.expand.sql):
+  desfecho `concluido` ou `sem_pedido`, autor e instante terminal.
+- [Pedido e Assunto](../adr/032-separar-pedido-conversa-e-assunto.md):
+  um ciclo pode ter vários assuntos/pedidos; encerramento não comprova venda.
+
+Existência desses registros não comprova cobertura histórica completa de
+atribuição, entrega ou conversão. O backfill precisa validar as evidências;
+lacunas aparecem como sem atribuição, nunca inferidas do dono atual.
+
+## Métricas propostas
+
+| Medida                      | Regra proposta                                                                                                                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Valor vendido               | Mesmo universo comercial do Dashboard: pedidos confirmados, não teste, pela data comercial. Mostrar quantidade de pedidos e ticket médio. Não representa recebimento ou lucro.                                            |
+| Atendimentos ativos         | Fotografia atual de conversas abertas atribuídas ao vendedor; separada das métricas de atividade no período.                                                                                                              |
+| Conversas atendidas         | Ciclos distintos em que o vendedor enviou ao menos uma resposta humana no período; envio falho ou desconhecido não conta como atendimento efetivo. Não contar mensagens como conversas.                                   |
+| Conversas assumidas         | Ciclos distintos em que o vendedor assumiu por claim ou tomada direta no período. Transferências recebidas aparecem separadamente. Repetir uma ação não aumenta a contagem.                                               |
+| Atendimentos encerrados     | Ciclos encerrados no período, com autor do encerramento e desfecho. Não tratar `concluido` como venda.                                                                                                                    |
+| Conversas com venda         | Ciclos distintos com ao menos um pedido elegível confirmado no período; três pedidos no mesmo ciclo são três pedidos e uma conversa com venda. Pedido manual sem conversa contribui para receita, não para essa contagem. |
+| Carteira esperando resposta | Quantidade atual e idade da espera, por vendedor; separada de quem enviou a última resposta e do histórico comercial.                                                                                                     |
+
+Uma conversa atendida por duas pessoas pode contar para ambas as atividades;
+o total da empresa deve deduplicar os ciclos, não somar essa coluna. Uma
+venda tem um único crédito principal, para o responsável pelo pedido. Vendas da
+loja ficam em linha própria, sem vendedor humano inventado; registros sem
+atribuição ficam em outra linha. A soma das linhas reconcilia com o total.
+
+Fixar o crédito na confirmação evita que transferência posterior altere
+vendas passadas. `confirmed_by` continua registrando o executor. Reabertura
+retira o pedido do total corrente, conforme FIN-03; reconfirmação não pode
+duplicá-lo. A política de manutenção ou correção do crédito na reconfirmação
+precisa ser explicitada na decisão, com histórico preservado.
+
+## Índices e interpretação
+
+- **Ticket médio:** valor vendido dividido por pedidos confirmados elegíveis.
+- **Conversão de oportunidades:** assuntos elegíveis recebidos pelo vendedor
+  em uma mesma janela, com ao menos uma venda até a data de corte, divididos
+  pelo total desses mesmos assuntos. Unidade, atribuição e janela de observação
+  devem ser fixadas antes da implementação; assunto sem pedido também entra
+  no denominador. Um assunto com vários pedidos conta uma vez no numerador.
+- **Resposta dentro do prazo:** primeiras respostas humanas dentro do prazo
+  acordado divididas pelos atendimentos elegíveis. Definir expediente antes
+  de comparar tempos; fora do expediente não pode ser misturado silenciosamente.
+- **Tempo de primeira resposta e espera para assumir:** apresentar mediana,
+  percentil 90, quantidade de amostras e espera ainda aberta. Não avaliar
+  somente quem já recebeu resposta, omitindo os abandonados na fila.
+
+Divisão por zero ou falta de evidência produz sem amostra, não 0%. Vendas
+de ontem divididas por atendimentos de ontem não são conversão: os pedidos
+podem resultar de negociações anteriores. Para leitura diária, mostrar os
+volumes lado a lado; para conversão, acompanhar as mesmas oportunidades.
+
+Comparação inicial: 7 e 30 dias, com origem, volume e maturidade da amostra.
+Conversas administrativas dos sócios e notificações internas não entram no
+universo comercial. Não propor nota única ou ranking punitivo antes de
+calibrar distribuição de oportunidades, sazonalidade e disponibilidade.
+
+## Checkpoint diário proposto
+
+Fluxo dedicado: Schedule Trigger no n8n → API autorizada de agregados do CRM
+→ composição determinística do texto → reserva de envio por destinatário
+→ transporte WhatsApp já utilizado pela Inbox → registro do resultado.
+
+- Às 08h, apurar o dia civil anterior em São Paulo, da meia-noite inclusive
+  à meia-noite seguinte exclusive. Enviar também em dias sem vendas.
+- A mesma apuração alimenta painel e checkpoint. Não consultar o PostgreSQL
+  diretamente pelo n8n nem usar IA para somar ou escrever os valores.
+- Total vendido, pedidos confirmados, ticket médio e linhas por vendedor;
+  loja e sem atribuição explícitos. Exibir data, corte e link autenticado
+  para conferência. Não incluir clientes, pedidos individuais ou comprovantes.
+- Guardar snapshot do relatório com data, instante de corte e versão da
+  regra. Mudanças posteriores aparecem como ajuste; não editar silenciosamente
+  o texto enviado nem prometer que uma consulta futura será idêntica ao corte.
+- Nova capacidade técnica mínima para ler os agregados e executar a
+  notificação; a credencial atual não recebe acesso irrestrito a relatórios.
+- Reserva persistida no PostgreSQL do CRM, com chave por relatório/data e
+  destinatário privado. A autorização independe de mensagem inbound comercial;
+  não fabricar Conversa, Pedido ou `source_revision` para reutilizar o envio
+  conversacional. Detalhar o contrato dedicado antes de ativar.
+- Resultados independentes para os dois destinos. Não reenviar ao primeiro
+  porque o segundo falhou. Resultado desconhecido exige reconciliação;
+  retry cego do transporte é proibido. Registrar aceitação pelo provider
+  separadamente de entrega confirmada.
+- Configurar destinatários de forma privada e validar identidade e entrega
+  para ambos. A mensagem inicial dos sócios ajuda a validar o canal, sem
+  constituir evidência suficiente de entrega futura ou garantia contra bloqueio.
+- Identificar o tráfego administrativo sem criar atendimento comercial ou
+  resposta automática do vendedor. Respostas dos sócios não podem vazar o
+  relatório nem contam como oportunidades comerciais.
+- Mostrar última execução, resultado de cada envio e atraso do checkpoint
+  aos administradores autorizados. Não ampliar o acesso à central técnica
+  Saúde e erros, restrita pela ADR 055.
+
+Exemplo **inteiramente sintético**:
+
+> Resumo comercial — dia anterior
+>
+> Vendido: R$ 12.000,00 · 8 pedidos · Ticket médio: R$ 1.500,00
+>
+> Vendedor A: R$ 7.000,00 · 4 pedidos
+>
+> Vendedor B: R$ 4.000,00 · 3 pedidos
+>
+> Loja do site: R$ 1.000,00 · 1 pedido
+>
+> Sem atribuição: R$ 0,00 · 0 pedidos
+>
+> Valores de pedidos confirmados; recebimentos não incluídos.
+
+O Schedule Trigger suporta o horário diário e o fuso do workflow; seu
+agendamento depende da publicação. Referência: [documentação oficial](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.scheduletrigger/).
+O tratamento de falhas deve manter o resultado persistido no CRM; um
+[error workflow](https://docs.n8n.io/build/flow-logic/handle-errors-gracefully.md)
+é apoio e não substitui deduplicação e reconciliação.
+
+## Dashboard como central de ações
+
+Preservar shell Vue, marca, tokens, temas e componentes de `design.md`.
+Operação por teclado, foco previsível e celular são critérios de composição.
+
+1. **O que precisa de ação agora:** próximo passo único e fila curta de
+   pendências reais, por prioridade, com objeto, responsável, motivo, idade
+   e destino direto. Exemplos: responder cliente, assumir conversa,
+   revisar sugestão de abertura, completar pendente e conferir entrega.
+   Abertura continua humana; não criar pedido ao abrir uma pendência.
+2. **Onde o gestor precisa intervir:** espera fora do prazo, desequilíbrio de
+   carteira, negociações sem avanço e falhas do assistente. Mostrar uma
+   ação possível na permissão existente. Uma taxa baixa leva a investigar
+   a amostra, sem diagnóstico causal automático sobre a pessoa.
+3. **Resultado e equipe:** vendas no período e resumo por vendedor abaixo
+   das ações. No desktop, tabela; no celular, resumo por pessoa com detalhe
+   progressivo. Administrador compara a equipe; vendedor vê o próprio
+   desempenho, sem exposição adicional da carteira de colegas.
+
+Separar filtros: **operação agora** é uma fotografia atual; **resultado no
+período** tem intervalo explícito. O seletor atual continua valendo apenas
+para Vendido até emenda aprovada a PNL-02. Cada indicador abre registros
+elegíveis no mesmo universo; somas e links não podem discordar.
+
+Começar com regras determinísticas e dados disponíveis. Sugestão de abertura
+não significa pedido pronto para confirmar. Cobrança de retorno ao cliente
+exige compromisso/prazo registrado; não inventar follow-up a partir de silêncio.
+Não criar Kanban, status comercial, tarefas de Negócio ou fechamento em lote.
+Encerrar atendimento e confirmar venda mantêm comandos separados e auditados.
+
+## Rastreabilidade e entregas propostas
+
+Base vigente: [FIN-01–03, PNL-01–04 e PRV-01–03](../../.specs/features/crm-mvp/spec.md),
+[T130/T131](../../.specs/features/pedidos-mvp/tasks.md),
+[OA-01–12](../../.specs/features/order-assistance/spec.md),
+ADRs [032](../adr/032-separar-pedido-conversa-e-assunto.md),
+[036](../adr/036-padroes-de-jornada.md) e
+[055](../adr/055-central-de-erros-restrita-a-conta-operadora.md).
+
+Os IDs abaixo são planejamento desta RFC, ainda não critérios aprovados:
+
+| Tarefa     | Entrega e evidência esperadas                                                                                                                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RFC044-T00 | Análise e proposta deste documento; sem mudança de runtime ou ativação.                                                                                                                                     |
+| PERF-T01   | Aprovar glossário, crédito comercial, reconfirmação, coortes, permissões e corte; publicar spec com IDs PERF-01 em diante e ADR vinculado se houver decisão arquitetural durável.                           |
+| PERF-T02   | Apuração e rastreabilidade na API, crédito histórico e backfill validado; provas de soma, transferência, admin confirmando, reabertura, reconfirmação, loja, teste e ausência de amostra.                   |
+| PERF-T03   | Desempenho da equipe e próprio, com filtros e detalhe; autorização na API, teclado, foco, temas, 320 px e estados de erro.                                                                                  |
+| CHK-T01    | Contrato dedicado, snapshot e envio por destino, workflow n8n e runbook; provar virada do dia, zero vendas, concorrência, execução repetida, falha parcial, timeout desconhecido e retomada sem duplicação. |
+| ACT-T01    | Central de ações baseada no domínio, com contagens e destinos consistentes; emendar requisitos PNL explicitamente, validar prioridades e ações negativas.                                                   |
+
+Ordem recomendada: regras e apuração → checkpoint + resumo da equipe →
+central de ações → conversão por coorte e índices calibrados. O checkpoint
+pode preceder a interface completa depois que atribuição e apuração estiverem
+corretas. Histórico sem evidência não recebe reconstrução inventada.
+
+Issue/PR: ainda não criadas para esta proposta; vincular na entrega respectiva.
+ADR correspondente: ainda não existe; nenhuma decisão pendente foi tratada
+como aprovada. Ativação requer contrato implementado, destinatários privados
+validados e testes de entrega reais, além dos gates normais do projeto.

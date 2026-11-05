@@ -2465,11 +2465,12 @@ onBeforeUnmount(() => {
             <button
               v-if="query"
               type="button"
-              class="quiet"
+              class="quiet inbox-search-clear"
               aria-label="Limpar busca"
+              title="Limpar busca"
               @click="clearSearch"
             >
-              Limpar
+              <AppIcon name="close" />
             </button>
           </div>
 

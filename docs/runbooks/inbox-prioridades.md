@@ -5,6 +5,15 @@ em 03/11/2026: quem atender, maior espera e pedidos disponíveis para revisão f
 
 ## Comportamento
 
+INBOX-UX-07 (PCX-18a/c, UX-FUNC-01): a limpeza da busca usa um ícone X com
+nome acessível "Limpar busca" e alvo de 44 px dentro do campo. O espaço fica
+reservado mesmo sem texto, para que digitar não estreite o campo. Não há
+cancelamento nativo duplicado; limpar apaga o termo e devolve foco à busca.
+O alcance continua restrito às conversas carregadas. Validar telefone
+sintético de onze dígitos e limpeza por teclado em notebook e celular.
+Rollback: reverter somente o commit INBOX-UX-07; não exige migration ou
+alteração de dados, filtros, canal ou credenciais.
+
 INBOX-UX-06 / PCX-18 (05/11/2026): Atender / Fechar pedidos / Todas ficam
 nessa ordem em uma barra horizontal acima do workspace no desktop; a busca
 continua na lista. No celular, a barra aparece na lista, sem consumir espaço

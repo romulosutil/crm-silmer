@@ -74,7 +74,27 @@
 }
 
 .inbox-search input {
+  min-block-size: var(--target-min);
   padding-inline-start: 2.25rem;
+  padding-inline-end: calc(var(--target-min) + var(--space-1));
+}
+
+/* Keep the search width stable when its accessible clear action appears. */
+.inbox-search .inbox-search-clear {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: var(--space-1);
+  display: grid;
+  place-items: center;
+  inline-size: var(--target-min);
+  min-inline-size: var(--target-min);
+  block-size: var(--target-min);
+  margin-block: auto;
+  padding: 0;
+}
+
+.inbox-search input[type='search']::-webkit-search-cancel-button {
+  appearance: none;
 }
 
 /* PCX-14: the rest of the filters, in the "Filtros" sheet. Active filters

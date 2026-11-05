@@ -1,5 +1,29 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## INBOX-UX-07 — Busca com limpeza integrada (05/11/2026)
+
+PCX-18a/c e UX-FUNC-01. Correção autorizada pelo proprietário após crítica
+Impeccable: o botão textual Limpar estreitava o campo durante a digitação.
+
+- [x] Integrar limpeza por ícone nomeado ao campo, com alvo de 44 px e espaço
+      reservado; impedir cancelamento nativo duplicado sem afetar outras buscas.
+- [x] Preservar busca nas conversas carregadas, filtros e retorno de foco.
+- [x] Verificar telefone sintético de onze dígitos, limpeza por teclado,
+      claro/escuro e larguras de notebook/celular; executar gates e revisão QA.
+- [x] Commit e push atômicos na branch `codex/inbox-search-width`.
+
+Evidência: em 1366×768, o campo mantém 207 px antes/depois de digitar, sem
+ocultar onze dígitos; X de 44×44 px em 320/390/768/1366 px. Clique, Enter e
+Espaço limpam e devolvem foco. A centragem por margens preserva o feedback
+ativo dos botões sem deslocar o alvo. Node 24.20.0/npm 11.19.0: validate
+final com 1.717 aprovados/12 skips; E2E completo com 499 aprovados/7 skips e
+regressão final da Inbox com 99 aprovados/7 skips. Detector sem achados e QA
+independente sem pendências. Auditoria sem alta/crítica (uma baixa e cinco
+moderadas preexistentes). A prévia do build corrigido usa 4174, preservando
+o túnel de desenvolvimento em 4173; nenhuma publicação em produção nesta fatia.
+
+Comportamento e rollback no [runbook](../../../docs/runbooks/inbox-prioridades.md).
+
 ## OPS-INBOX-SEND-09 — Mídia reservada após timeout HTTP (05/11/2026)
 
 MSG-02/03, ORC-08, PRV-01 e OPS-ERR-03/06/08/10. Os dois alertas de

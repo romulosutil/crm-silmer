@@ -19,6 +19,10 @@ import { ApiError, request } from './lib/api-client.js';
 import { LiveEventStream } from './lib/event-stream.js';
 import { canReadHealthErrors } from './lib/health-errors.js';
 import { RETURN_QUERY, safeReturnPath } from './lib/return-path.js';
+import {
+  stopSellerAnalytics,
+  syncSellerAnalytics,
+} from './lib/seller-analytics.js';
 
 const router = useRouter();
 const route = useRoute();
@@ -334,8 +338,32 @@ watch(
   },
 );
 
+// Stop before Vue Router changes history or renders another security context.
+const removeAnalyticsGuard = router.beforeEach(() => {
+  stopSellerAnalytics();
+});
+const removeAnalyticsAfter = router.afterEach(() => {
+  void refreshSellerAnalytics();
+});
+function refreshSellerAnalytics() {
+  return syncSellerAnalytics(
+    phase.value === 'authenticated' ? user.value : null,
+  );
+}
+watch([phase, user], refreshSellerAnalytics, { flush: 'sync' });
+// Capture runs before the SDK's popstate listener, including browser Back.
+globalThis.addEventListener('popstate', stopSellerAnalytics, true);
+globalThis.addEventListener('hashchange', stopSellerAnalytics, true);
+globalThis.addEventListener('pagehide', stopSellerAnalytics, true);
+
 void restoreSession();
 onBeforeUnmount(() => {
+  stopSellerAnalytics();
+  removeAnalyticsGuard();
+  removeAnalyticsAfter();
+  globalThis.removeEventListener('popstate', stopSellerAnalytics, true);
+  globalThis.removeEventListener('hashchange', stopSellerAnalytics, true);
+  globalThis.removeEventListener('pagehide', stopSellerAnalytics, true);
   stream.close();
   if (storeCountTimer) globalThis.clearTimeout(storeCountTimer);
   if (financeSessionTimer) globalThis.clearInterval(financeSessionTimer);

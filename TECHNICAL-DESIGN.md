@@ -1,5 +1,25 @@
 # TDD — CRM Silmer MVP
 
+## Clarity — CLAR-T01 (05/11/2026)
+
+[ADR 057](docs/adr/057-clarity-para-uso-dos-vendedores.md), CLAR-01–06:
+`seller-analytics.js` encapsula SDK oficial `clarity-js@0.8.76`, importado
+após elegibilidade de sessão e host. `App.vue` interrompe antes da navegação
+e troca de sessão; callbacks de upload verificam URL, geração e sinais de
+privacidade para descartar reinícios obsoletos. Máscara no body e configuração
+`content:false`/`mask:['body']`, sem unmask; `track:false`, ads/analytics
+negados. Cookie Clarity legado impede início para não herdar consentimento.
+Metadados aceitam páginas finitas/UUIDs e mascaram `conversa`; queries/hashes
+desconhecidos e referrer inseguro bloqueiam coleta. Identificação por tag
+SHA-256 do ID interno, sem nome/e-mail; eventos estáticos nas views após
+sucesso API. Fetch callback omite credenciais/referrer e não processa
+comandos remotos. CSP acrescenta somente `https://www.clarity.ms` a connect-src;
+scripts continuam locais. Não há backend, migration ou nova infraestrutura.
+Filtro do protocolo fixo remove destinos de Click/ContextMenu e eventos
+ScriptError/Log antes do envio; formato/versão/projeto desconhecidos são
+descartados. Atualização da dependência exige revalidar esse contrato.
+Ativação, interpretação e rollback no [runbook](docs/runbooks/clarity-vendedores.md).
+
 ## Melhor Envio — T139 (02/11/2026)
 
 [ADR 054](docs/adr/054-cotacao-na-conversa-vinculada-ao-pedido.md), MEVQ-01–08:

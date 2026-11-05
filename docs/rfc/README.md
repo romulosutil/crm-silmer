@@ -1,5 +1,10 @@
 # Request for Comments
 
+## Decisão de 05/11/2026
+
+- [046 — Clarity para uso dos vendedores](046-clarity-para-uso-dos-vendedores.md),
+  decidida na ADR 057 / CLAR-T01 após solicitação explícita do proprietário.
+
 ## Decisão de 03/11/2026
 
 - [043 — Abertura assistida de pedidos](043-abertura-assistida-de-pedidos.md),

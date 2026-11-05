@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
 import AppIcon from '../AppIcon.vue';
 import { ApiError, commandKey, request } from '../../lib/api-client.js';
+import { captureSellerEvents } from '../../lib/seller-analytics.js';
 import { openDialog } from '../../lib/ui.js';
 
 const props = defineProps({
@@ -316,6 +317,7 @@ async function prepare() {
   }
 }
 async function send() {
+  const trackEvent = captureSellerEvents();
   if (!sendAllowed.value || !context) return;
   sendAttempt ??= {
     key: commandKey(),
@@ -347,6 +349,7 @@ async function send() {
       },
     );
     if (!current(token)) return;
+    trackEvent('seller_media_reply_accepted');
     clear();
     emit('sent', data);
     await nextTick();

@@ -26,6 +26,10 @@ import MessageDeliveryNotice from '../components/inbox/MessageDeliveryNotice.vue
 import MessageTranscript from '../components/inbox/MessageTranscript.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
+  captureSellerEvents,
+  trackSellerEvent,
+} from '../lib/seller-analytics.js';
+import {
   preferredSellerFirstName,
   preferredSellerLabel,
 } from '../lib/assistant-context.js';
@@ -1038,9 +1042,11 @@ async function createOrder(fromMore = false) {
     fromMore,
   };
   openDialog(dialog, trigger);
+  trackSellerEvent('seller_order_create_started');
 }
 
 async function confirmManualOrder() {
+  const trackEvent = captureSellerEvents();
   const confirmation = manualOrderConfirmation.value;
   if (
     !confirmation ||
@@ -1076,6 +1082,7 @@ async function confirmManualOrder() {
     orderCreating.value = false;
   }
   if (created) {
+    trackEvent('seller_order_created_conversation');
     orderConfirmationDialog.value?.close();
     if (activeId.value === conversationId && detail.value) {
       // The link appears at once; the refresh below confirms it.
@@ -1908,6 +1915,7 @@ function subjectLabel(subject) {
 
 /** @param {string} path @param {Record<string, unknown>} body @param {string} successMessage */
 async function runCommand(path, body, successMessage) {
+  const trackEvent = captureSellerEvents();
   if (!active.value || busy.value || mediaSending.value) return;
   const conversationId = active.value.id;
   busy.value = true;
@@ -1922,6 +1930,27 @@ async function runCommand(path, body, successMessage) {
         method: 'POST',
       },
     );
+    // CLAR-03: a successful API command is distinct from provider delivery.
+    switch (path) {
+      case 'takeover':
+        trackEvent('seller_conversation_taken_over');
+        break;
+      case 'messages':
+        trackEvent('seller_reply_accepted');
+        break;
+      case 'transfer':
+        trackEvent('seller_conversation_transferred');
+        break;
+      case 'close':
+        trackEvent('seller_conversation_closed');
+        break;
+      case 'archive':
+        trackEvent('seller_conversation_archived');
+        break;
+      case 'unarchive':
+        trackEvent('seller_conversation_restored');
+        break;
+    }
     if (activeId.value === conversationId) actionMessage.value = successMessage;
     await loadInbox(true);
     return true;
@@ -2027,6 +2056,7 @@ async function confirmTransfer() {
 }
 
 async function claimHandoff() {
+  const trackEvent = captureSellerEvents();
   const conversation = active.value;
   const handoff = conversation?.handoff;
   if (!conversation || handoff?.status !== 'pending' || busy.value) return;
@@ -2043,6 +2073,7 @@ async function claimHandoff() {
       idempotencyKey: commandKey(),
       method: 'POST',
     });
+    trackEvent('seller_handoff_claimed');
     actionMessage.value = `Atendimento de ${conversation.contact.label} assumido.`;
     await loadInbox(true);
     await selectConversation(conversation.id);

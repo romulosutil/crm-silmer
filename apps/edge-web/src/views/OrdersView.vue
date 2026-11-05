@@ -22,6 +22,10 @@ import FilterSheet from '../components/FilterSheet.vue';
 import FilterChip from '../components/FilterChip.vue';
 import AppHint from '../components/AppHint.vue';
 import { commandKey, request } from '../lib/api-client.js';
+import {
+  captureSellerEvents,
+  trackSellerEvent,
+} from '../lib/seller-analytics.js';
 import { dateTimeBR, formatPhoneNumber } from '../lib/format.js';
 import { openDialog } from '../lib/ui.js';
 import { downloadPdf, getOrderPdf, pdfFile } from '../lib/order-pdf.js';
@@ -379,6 +383,7 @@ function openNewOrder(event) {
   detailsUpdateKey = '';
   orderCreateKey = '';
   openDialog(dialog, /** @type {HTMLElement} */ (event.currentTarget));
+  trackSellerEvent('seller_order_create_started');
 }
 
 async function searchContacts() {
@@ -563,6 +568,7 @@ async function searchNewPhone() {
 }
 
 async function createOrder() {
+  const trackEvent = captureSellerEvents();
   if (!canCreateOrder.value || orderCreating.value) return;
   orderCreating.value = true;
   createError.value = '';
@@ -579,6 +585,7 @@ async function createOrder() {
       idempotencyKey: orderCreateKey,
       method: 'POST',
     });
+    trackEvent('seller_order_created_manual');
     newOrderDialog.value?.close();
     orderCreateKey = '';
     await router.push(`/pedidos/${response.data.order.id}`);
@@ -740,11 +747,13 @@ async function retryInitialLoad() {
 /** PIM-13: the same approved ficha, delivered as a PDF file. */
 /** @param {Record<string, any>} order */
 async function generatePdf(order) {
+  const trackEvent = captureSellerEvents();
   if (pdfBusyId.value) return;
   pdfBusyId.value = order.id;
   pdfError.value = '';
   try {
     downloadPdf(pdfFile(await getOrderPdf(order.id), order.number));
+    trackEvent('seller_order_pdf_generated');
     if (storeFichaPending(order)) void load(true);
   } catch (cause) {
     pdfError.value =

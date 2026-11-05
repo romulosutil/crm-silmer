@@ -1,5 +1,14 @@
 # CRM Silmer MVP — Requisitos Rastreáveis
 
+## Clarity — uso dos vendedores (05/11/2026)
+
+A solicitação do proprietário autoriza análise de uso no projeto Clarity
+informado, conforme [CLAR-01–06](../seller-analytics/spec.md), PRV-01–03,
+ADR 057 e tarefa CLAR-T01. Navegação e ações humanas são instrumentadas sem
+conteúdo comercial legível, cookies ou ads; analytics não substitui auditoria
+ou métricas oficiais. Login, Conta e perfis administrativos/Financeiro ficam
+fora da transmissão.
+
 ## Filtros horizontais da Inbox — PCX-18 (05/11/2026)
 
 Tarefa INBOX-UX-06, autorizada pelo proprietário no chat com a captura local

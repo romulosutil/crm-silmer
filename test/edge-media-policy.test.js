@@ -98,7 +98,7 @@ test('T138: missing-index callback must stay a private 404 with inherited securi
   );
 });
 
-test('MED-01/02/03 edge permits local media previews without relaxing scripts or connections', async () => {
+test('MED-01/02/03 and CLAR-04 edge permits local previews and the sole analytics collector', async () => {
   const nginx = await readFile(nginxUrl, 'utf8');
   const policy = /add_header Content-Security-Policy "([^"]+)" always;/u.exec(
     nginx,
@@ -113,7 +113,10 @@ test('MED-01/02/03 edge permits local media previews without relaxing scripts or
   assert.deepEqual(directives.get('img-src'), ["'self'", 'data:', 'blob:']);
   assert.deepEqual(directives.get('media-src'), ["'self'", 'blob:']);
   assert.deepEqual(directives.get('default-src'), ["'self'"]);
-  assert.deepEqual(directives.get('connect-src'), ["'self'"]);
+  assert.deepEqual(directives.get('connect-src'), [
+    "'self'",
+    'https://www.clarity.ms',
+  ]);
   assert.deepEqual(directives.get('script-src'), ["'self'"]);
   assert.deepEqual(directives.get('object-src'), ["'none'"]);
   assert.deepEqual(directives.get('frame-ancestors'), ["'none'"]);

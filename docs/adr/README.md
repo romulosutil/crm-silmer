@@ -1,5 +1,11 @@
 # Architecture Decision Records
 
+## Decisão de 05/11/2026
+
+- [057 — Clarity para uso dos vendedores](057-clarity-para-uso-dos-vendedores.md),
+  RFC 046 / CLAR-T01: navegação e ações humanas com máscara integral,
+  cookies/ads negados, perfil restrito e transporte isolado por contexto.
+
 ## Decisão de 03/11/2026
 
 - [056 — Abertura de pedido com confirmação humana](056-abertura-de-pedido-com-confirmacao-humana.md),

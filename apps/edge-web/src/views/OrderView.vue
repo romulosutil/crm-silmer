@@ -23,6 +23,7 @@ import OrderStoreCorrection from '../components/order/OrderStoreCorrection.vue';
 import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import OrderShippingEstimate from '../components/order/OrderShippingEstimate.vue';
 import { commandKey, request } from '../lib/api-client.js';
+import { captureSellerEvents } from '../lib/seller-analytics.js';
 import { usePhone } from '../lib/media-query.js';
 import {
   canSharePdf,
@@ -193,6 +194,7 @@ function describeWriteError(cause) {
  * @param {string} section @param {unknown} value
  */
 async function saveSection(section, value) {
+  const trackEvent = captureSellerEvents();
   try {
     const response = await request(
       `/api/v1/orders/${encodeURIComponent(props.orderId)}/sections/${section}`,
@@ -203,6 +205,7 @@ async function saveSection(section, value) {
       },
     );
     order.value = response.data.order;
+    trackEvent('seller_order_section_saved');
     return { ok: true };
   } catch (cause) {
     if (Number(cause?.status) === 409) pendingLiveRefresh = true;
@@ -224,6 +227,7 @@ async function saveSection(section, value) {
  * @param {'confirm'|'reopen'} action @param {Record<string, unknown>} body
  */
 async function runCommand(action, body) {
+  const trackEvent = captureSellerEvents();
   try {
     const response = await request(
       `/api/v1/orders/${encodeURIComponent(props.orderId)}/${action}`,
@@ -234,6 +238,8 @@ async function runCommand(action, body) {
       },
     );
     order.value = response.data.order;
+    if (action === 'confirm') trackEvent('seller_order_confirmed');
+    else if (action === 'reopen') trackEvent('seller_order_reopened');
     return { ok: true };
   } catch (cause) {
     if (Number(cause?.status) === 409) scheduleLiveRefresh();
@@ -279,6 +285,7 @@ async function revisitNextStep() {
  * @param {{paidOn: string|null, deliveredOn?: string|null, paymentReviewed?: boolean}} value
  */
 async function saveMilestones(value) {
+  const trackEvent = captureSellerEvents();
   try {
     const response = await request(
       `/api/v1/orders/${encodeURIComponent(props.orderId)}/milestones`,
@@ -289,6 +296,7 @@ async function saveMilestones(value) {
       },
     );
     order.value = response.data.order;
+    trackEvent('seller_order_milestones_saved');
     return { ok: true };
   } catch (cause) {
     if (Number(cause?.status) === 409) scheduleLiveRefresh();
@@ -303,6 +311,7 @@ async function saveMilestones(value) {
 
 /** PIM-13: download the approved ficha as a PDF, or offer the mobile share sheet. */
 async function generatePdf(share = false) {
+  const trackEvent = captureSellerEvents();
   if (pdfBusy.value || isPending.value || !order.value) return;
   pdfBusy.value = true;
   pdfError.value = '';
@@ -314,6 +323,7 @@ async function generatePdf(share = false) {
       ? readyPdf
       : pdfFile(await getOrderPdf(props.orderId), order.value.number);
     if (!fromCache) {
+      trackEvent('seller_order_pdf_generated');
       readyPdf = file;
       readyPdfVersion = order.value.version;
       if (firstStorePdf && editingSection.value === '') await load(true);
@@ -330,6 +340,7 @@ async function generatePdf(share = false) {
       }
       try {
         await sharePdf(file, order.value.number);
+        trackEvent('seller_order_pdf_shared');
       } catch (cause) {
         if (cause?.name === 'AbortError') return;
         if (cause?.name === 'NotAllowedError' && !fromCache) {

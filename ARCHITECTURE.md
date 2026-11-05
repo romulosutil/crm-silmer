@@ -1,5 +1,15 @@
 # Arquitetura — baseline do CRM Silmer
 
+## Clarity — uso dos vendedores (05/11/2026)
+
+A [ADR 057](docs/adr/057-clarity-para-uso-dos-vendedores.md) integra o projeto
+Clarity autorizado ao shell Vue, com SDK oficial fixo e carregamento tardio.
+Somente Vendedor sem capacidade administrativa e em produção transmite;
+conteúdo/imagens são mascarados, cookies/ads negados e eventos finitos usam
+chave pseudonimizada. Transporte por geração bloqueia contexto excluído e
+reinícios internos; não altera auditoria ou domínio. Contrato CLAR-01–06,
+tarefa CLAR-T01 e [runbook](docs/runbooks/clarity-vendedores.md).
+
 ## Abertura assistida de pedidos (03/11/2026)
 
 A [ADR 056](docs/adr/056-abertura-de-pedido-com-confirmacao-humana.md)

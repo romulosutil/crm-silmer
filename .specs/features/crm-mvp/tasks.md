@@ -1,5 +1,32 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## CLAR-T01 — Clarity para uso dos vendedores (05/11/2026)
+
+[CLAR-01–06](../seller-analytics/spec.md), PRV-01–03, RFC 046 / ADR 057.
+Solicitação do proprietário com projeto `z8yldgd1xr`.
+
+- [x] Instrumentar telas e ações explícitas de Vendedor com eventos finitos.
+- [x] Isolar sessão/rota/host, mascarar conteúdo e negar cookies/publicidade;
+      invalidar callbacks obsoletos, inclusive reinícios internos do SDK.
+- [x] Documentar decisão, contrato, interpretação e rollback no
+      [runbook](../../../docs/runbooks/clarity-vendedores.md).
+- [x] Concluir gates locais, revisão QA e commit/push atômicos.
+
+Evidência local: Node 24.20.0/npm 11.19.0, `validate` com 1.735 aprovados e
+12 skips; 18 testes unitários de analytics e 10 cenários de navegador do SDK
+real, com todo tráfego externo interceptado. A suíte E2E completa percorreu
+516 cenários (7 skips); os grupos afetados por reconstrução concorrente de
+`dist` foram repetidos isoladamente (Financeiro/Clarity: 19/19; rascunhos/frete:
+18/18), sem falhas restantes. Auditoria sem alta/crítica (uma baixa e cinco
+moderadas existentes), lockfile verificado por `npm ci --dry-run --offline`,
+revisão QA sem pendências e `git diff --check`. Host canônico confirmado no
+EasyPanel: `crm.silmer.com.br`. Nenhuma publicação operacional nesta entrega.
+
+### CLAR-T02 — Homologação operacional após implantação
+
+- [ ] Conferir ingestão sintética, máscaras, acessos e retenção no painel remoto
+      após implantação; evidência local não comprova estado desse projeto.
+
 ## COB-T00 — Proposta de cobrança InfinitePay (05/11/2026)
 
 PAY-01–05 diferidos, FIN-01–03, FINQ-01–19 e PRV-01–03.

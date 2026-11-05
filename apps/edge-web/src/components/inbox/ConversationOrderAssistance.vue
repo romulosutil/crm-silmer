@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import AppIcon from '../AppIcon.vue';
 import { commandKey, request } from '../../lib/api-client.js';
+import { captureSellerEvents } from '../../lib/seller-analytics.js';
 import { dateTimeBR } from '../../lib/format.js';
 import {
   ORDER_ASSISTANCE_REASONS,
@@ -159,6 +160,7 @@ async function openForm(decision, id = '') {
 
 /** @param {string} decision @param {any} [suggestion] */
 async function decide(decision, suggestion = null) {
+  const trackEvent = captureSellerEvents();
   if (!actionable.value) return;
   if (decision === 'accept' && answer.value?.blockedReason) return;
   const selected =
@@ -218,7 +220,10 @@ async function decide(decision, suggestion = null) {
             ? 'Sugestão adiada. O motivo foi registrado.'
             : 'Decisão registrada. Nenhum pedido foi criado.';
     closeForm();
-    if (response.data?.order) emit('created', response.data.order);
+    if (response.data?.order) {
+      trackEvent('seller_order_created_assisted');
+      emit('created', response.data.order);
+    }
     emit('changed');
     busy.value = false;
     await load();

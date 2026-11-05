@@ -28,6 +28,15 @@ OLIST-PLAN-02 e T01–T26. Não representa código ou schema já publicados.
 Contrato/precisão fiscal e detalhes DDL são gates T02/T03/T23; flags e variáveis
 ainda serão definidas. Sem novo serviço/store/infra; publicação GitHub → EasyPanel.
 
+Preparação local T20a/T21a em 05/11: `modules/orders/src/domain/size-pricing.js`
+implementa IDs de grupo/linha, subtotal positivo em centavos, soma exata e
+invalidação de revisão após mudança de quantidade. Exportado por Orders,
+sem integração HTTP/persistência/UI nem mudança de snapshots. A futura
+aplicação deve autorizar/versionar o comando humano e calcular o total antes
+da gravação; o navegador não fornece revisão ou total autoritativo.
+[Estado e evidências](docs/integrations/olist/implementation-progress.md).
+F1 monetário e as tarefas completas permanecem abertos; nenhuma geração ERP.
+
 ## Melhor Envio — T139 (02/11/2026)
 
 [ADR 054](docs/adr/054-cotacao-na-conversa-vinculada-ao-pedido.md), MEVQ-01–08:

@@ -1,5 +1,15 @@
 # CRM Silmer MVP — Requisitos Rastreáveis
 
+## Emenda Olist — centavos exatos (05/11/2026)
+
+[ADR 059](../../../docs/adr/059-olist-exportacao-com-unitario-exato-em-centavos.md) e
+[RFC 046](../../../docs/rfc/046-olist-escopo-inicial-de-centavos-exatos.md), aprovadas
+pelo PO: exportação automática inicial somente com unitário exato em centavos,
+sem arredondamento. Subtotais não divisíveis pela quantidade continuam válidos
+no CRM e bloqueiam a exportação inteira antes de qualquer inclusão. Identidade
+por linha e conferência exata de valores retornados/totais são obrigatórias;
+F1 restrito depende da prova API e tela. Demais regras de produto preservadas.
+
 ## Olist e melhorias comerciais aprovadas em 04/11/2026
 
 [ADR 057](../../../docs/adr/057-olist-por-habilitacao-subtotal-por-tamanho-e-cancelamento.md)
@@ -425,17 +435,17 @@ tarefa OPS-ERR-T01. Complementa PRV-01 e a observabilidade da issue #11.
    distinguir contagens e datas, inclusive quando a mesma operação aparece
    nas projeções de worker e n8n.
 
-| Grupo              | IDs                     | Status                                                                                   |
-| ------------------ | ----------------------- | ---------------------------------------------------------------------------------------- |
-| Orquestração n8n   | ORC-01 a ORC-09         | WhatsApp implementado; homologação pendente; ORC-09 em CANAL-2                           |
-| Inbox e conversão  | INB-01 a INB-04         | Implementada no contrato n8n v1                                                          |
-| Agente vendedor    | AGT-01 a AGT-10         | Implementado; AGT-09..10 aguardam implantação e publicação do `mvp-simple-20` (ADR 052)  |
-| Pedido             | ORD-01 a ORD-05         | Pedido e impressão v5 implementados; encaminhamento e assinatura física pendentes        |
-| Mensagens e canais | MSG-01 a MSG-04         | WhatsApp: homologação pendente; Instagram em CANAL-2                                     |
-| Financeiro         | FIN-01 a FIN-03         | Confirmados e valor vendido implementados; UAT pendente                                  |
-| Privacidade        | PRV-01 a PRV-03         | Coberta no contrato; homologação pendente                                                |
-| PIX e boas-vindas  | PAY-01 a PAY-05         | Diferidos pela ADR 006; datas manuais não implementam cobrança                           |
-| Painel por papel   | PNL-01 a PNL-04         | PNL-01..03 cobertos em `ux/jornadas` (T130, `069ae76`); PNL-04 adiado pelo PO (D3, T131) |
+| Grupo              | IDs                     | Status                                                                                      |
+| ------------------ | ----------------------- | ------------------------------------------------------------------------------------------- |
+| Orquestração n8n   | ORC-01 a ORC-09         | WhatsApp implementado; homologação pendente; ORC-09 em CANAL-2                              |
+| Inbox e conversão  | INB-01 a INB-04         | Implementada no contrato n8n v1                                                             |
+| Agente vendedor    | AGT-01 a AGT-10         | Implementado; AGT-09..10 aguardam implantação e publicação do `mvp-simple-20` (ADR 052)     |
+| Pedido             | ORD-01 a ORD-05         | Pedido e impressão v5 implementados; encaminhamento e assinatura física pendentes           |
+| Mensagens e canais | MSG-01 a MSG-04         | WhatsApp: homologação pendente; Instagram em CANAL-2                                        |
+| Financeiro         | FIN-01 a FIN-03         | Confirmados e valor vendido implementados; UAT pendente                                     |
+| Privacidade        | PRV-01 a PRV-03         | Coberta no contrato; homologação pendente                                                   |
+| PIX e boas-vindas  | PAY-01 a PAY-05         | Diferidos pela ADR 006; datas manuais não implementam cobrança                              |
+| Painel por papel   | PNL-01 a PNL-04         | PNL-01..03 cobertos em `ux/jornadas` (T130, `069ae76`); PNL-04 adiado pelo PO (D3, T131)    |
 | Saúde e erros      | OPS-ERR-01 a OPS-ERR-09 | Central restrita à conta operadora; implementação e gates em OPS-ERR-T01 e OPS-INBOX-ACK-04 |
 
 **Cobertura:** 45 IDs preservados, incluindo 5 PAY diferidos e o PNL-04 adiado; implementação, homologação e aprovação externa têm estados distintos. Essa cobertura não representa aprovação humana dos gates operacionais. A decomposição em tarefas pertence ao Tech Lead.

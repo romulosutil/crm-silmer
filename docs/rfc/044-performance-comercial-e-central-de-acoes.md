@@ -20,6 +20,12 @@ pelo pedido**, inclusive quando um administrador executa a confirmação.
 Proposta de implementação: preservar o responsável comercial no momento da
 confirmação e, separadamente, quem executou o comando.
 
+O proprietário refinou a intenção do Dashboard: para o vendedor, priorizar
+perguntas acionáveis após o fechamento ("O pedido já foi pago?", "Já foi
+entregue?") e sugestões de retomada ("O cliente não respondeu; chamar de
+novo?"). Pagamento e entrega continuam sendo declarações humanas independentes
+do fechamento comercial; acompanhamento não termina na confirmação do pedido.
+
 ## Evidência do estado atual
 
 O grafo local é de 04/10/2026, commit `c237200a`; a descoberta foi confirmada
@@ -41,6 +47,12 @@ nas fontes atuais, na revisão `5bc36118`:
   desfecho `concluido` ou `sem_pedido`, autor e instante terminal.
 - [Pedido e Assunto](../adr/032-separar-pedido-conversa-e-assunto.md):
   um ciclo pode ter vários assuntos/pedidos; encerramento não comprova venda.
+- [Afazeres de entrega](../../apps/edge-web/src/components/DeliveryTasks.vue)
+  e [serviço de pedidos](../../modules/orders/src/application/order-service.js):
+  já existe a pergunta de entrega, limitada a pedidos manuais sem conversa,
+  confirmados, não teste e do responsável. O comando dedicado não aceita
+  pedidos de conversa. Pagamento é registrado no detalhe do pedido, sem fila
+  equivalente no Dashboard.
 
 Existência desses registros não comprova cobertura histórica completa de
 atribuição, entrega ou conversão. O backfill precisa validar as evidências;
@@ -178,16 +190,80 @@ para Vendido até emenda aprovada a PNL-02. Cada indicador abre registros
 elegíveis no mesmo universo; somas e links não podem discordar.
 
 Começar com regras determinísticas e dados disponíveis. Sugestão de abertura
-não significa pedido pronto para confirmar. Cobrança de retorno ao cliente
-exige compromisso/prazo registrado; não inventar follow-up a partir de silêncio.
+não significa pedido pronto para confirmar. Silêncio pode fundamentar uma
+sugestão explícita de retomada humana, sem inventar compromisso de retorno,
+desistência ou vencimento; detalhamento abaixo.
 Não criar Kanban, status comercial, tarefas de Negócio ou fechamento em lote.
 Encerrar atendimento e confirmar venda mantêm comandos separados e auditados.
+
+## Minha próxima ação: acompanhamento antes e depois da venda
+
+Para o vendedor, a unidade principal é uma providência concreta, ligada a
+pedido ou conversa, com contexto e uma decisão possível. Indicadores e
+comparações ficam abaixo. Um mesmo pedido pode precisar de conferência de
+pagamento e de entrega; agrupar as perguntas sem esconder nenhuma delas.
+
+| Pergunta proposta                                        | Evidência e interação                                                                                                                                                                                                                                                                        |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| O pedido de exemplo já foi pago integralmente?           | Confirmado, não teste, do responsável e sem quitação integral válida registrada. Mostrar data comercial e condição existentes. Oferecer registrar quitação com a data real, abrir pedido/conversa ou lembrar depois. Não usar ausência de registro como prova de inadimplência.              |
+| O pedido de exemplo já foi entregue?                     | Confirmado, não teste, do responsável e sem entrega registrada. Mostrar prazo prometido, quando existir. Oferecer registrar entrega, abrir pedido/conversa ou lembrar depois. Prazo passado significa prazo previsto ultrapassado sem confirmação; não comprova que a mercadoria não chegou. |
+| Sua última mensagem ficou sem resposta; retomar contato? | Mensagem humana enviada, sem resposta posterior do cliente, após intervalo a definir, em atendimento elegível sob responsabilidade do vendedor. Mostrar a mensagem/data que motivou a sugestão. Oferecer preparar mensagem, adiar ou dispensar esta sugestão.                                |
+| Você combinou retornar hoje; abrir conversa?             | Compromisso explícito com data/hora registrado pelo vendedor. Prioridade distinta da sugestão por silêncio. Não inferir compromisso de uma mensagem sem resposta.                                                                                                                            |
+
+As perguntas de pagamento e entrega são conferências internas. Clicar em
+"Registrar pagamento" ou "Registrar entrega" não envia mensagem ao cliente.
+Retomada abre o composer com contexto; qualquer texto sugerido é revisado e
+enviado pela pessoa usando o contrato humano existente, sem automação de
+cobrança, envio em lote ou retorno da conversa ao bot.
+
+Pagamento significa **quitação integral**, conforme FINQ-04/18/19. Sinal ou
+pagamento parcial não deve marcar o pedido como integralmente pago; não
+introduzir saldo a receber ou controle de parcelas nesta fatia. Pedido da
+loja já pago pelo gateway não recebe pergunta redundante de pagamento.
+Revisão de pagamento legado deve ser nomeada como revisão, preservando a
+declaração explícita exigida pelo contrato Financeiro.
+
+A entrega manual atual grava o dia de São Paulo no servidor. A proposta não
+autoriza alterar essa regra nem reutilizar silenciosamente seu comando para
+pedido de conversa: ampliação exige emenda explícita a PLA-10/11, contrato
+autorizado e versionado, preservação de pagamento e auditoria. Conferir
+pagamento não deve sobrescrever uma entrega atualizada por outro operador.
+
+"Ainda não" e "Lembrar depois" não registram pagamento/entrega nem apagam a
+pendência. Adiamento guarda vencimento do lembrete separado da data comercial
+e do prazo prometido. Dispensar uma sugestão de retomada não encerra conversa,
+não declara perda e não elimina obrigações do pedido. O estado mínimo desses
+lembretes precisa de contrato próprio no PostgreSQL existente, sem reutilizar
+Negócio. Revalidar elegibilidade antes da ação; resposta nova do cliente,
+registro do pagamento/entrega ou mudança de responsável atualizam a fila.
+
+Intervalo de silêncio, expediente, limite de sugestões, duração do adiamento
+e elegibilidade após encerramento permanecem decisões abertas. Falha ou
+resultado desconhecido de envio exige resolver o envio, não sugerir cobrança
+de resposta do cliente. Começar com retornos acordados e expor sugestões por
+silêncio somente com motivo explícito e decisão humana, sem criar certeza
+sobre intenção ou interesse do cliente.
+
+Prioridade proposta: cliente esperando resposta e retorno acordado vencido;
+conferências com prazo real ultrapassado; pedido pronto para ação; demais
+conferências e sugestões de retomada. Não classificar pagamento como vencido
+sem prazo registrado. Mostrar poucas providências por vez, com "Ver todas",
+e manter uma ação principal por região. Cada item informa por que apareceu,
+responsável, tempo e objeto; no celular, deve ser resolvido com poucos passos,
+teclado/foco e retorno previsível após sucesso.
+
+Medir impacto por redução de esperas e registros pendentes, retornos feitos
+e vendas posteriores na mesma oportunidade; não por cliques em "Concluído",
+quantidade de cobranças ou dispensas de sugestões. Confirmar pagamento ou
+entrega não cria nova venda nem aumenta a conversão comercial.
 
 ## Rastreabilidade e entregas propostas
 
 Base vigente: [FIN-01–03, PNL-01–04 e PRV-01–03](../../.specs/features/crm-mvp/spec.md),
 [T130/T131](../../.specs/features/pedidos-mvp/tasks.md),
 [OA-01–12](../../.specs/features/order-assistance/spec.md),
+[PLA-04–12](../../.specs/features/pedidos-mvp/spec.md) e
+[FINQ-04/18/19](../../.specs/features/financeiro/spec.md),
 ADRs [032](../adr/032-separar-pedido-conversa-e-assunto.md),
 [036](../adr/036-padroes-de-jornada.md) e
 [055](../adr/055-central-de-erros-restrita-a-conta-operadora.md).
@@ -203,9 +279,16 @@ Os IDs abaixo são planejamento desta RFC, ainda não critérios aprovados:
 | CHK-T01    | Contrato dedicado, snapshot e envio por destino, workflow n8n e runbook; provar virada do dia, zero vendas, concorrência, execução repetida, falha parcial, timeout desconhecido e retomada sem duplicação. |
 | ACT-T01    | Central de ações baseada no domínio, com contagens e destinos consistentes; emendar requisitos PNL explicitamente, validar prioridades e ações negativas.                                                   |
 
-Ordem recomendada: regras e apuração → checkpoint + resumo da equipe →
-central de ações → conversão por coorte e índices calibrados. O checkpoint
-pode preceder a interface completa depois que atribuição e apuração estiverem
+Complemento de ACT-T01: especificar as conferências de pagamento/entrega e
+separar lembrete acordado de sugestão de retomada. Critérios negativos incluem
+sinal sem quitação, prazo ausente, mensagem falha, resposta posterior, pedido
+da loja, adiamento que não resolve obrigação, mudança de responsável e
+concorrência entre os registros de pagamento e entrega.
+
+Ordem recomendada após o refinamento: regras das providências e atribuição →
+central de ações com conferências e apuração comercial → checkpoint + resumo
+da equipe → sugestões de retomada e índices calibrados. O checkpoint pode
+preceder a interface completa depois que atribuição e apuração estiverem
 corretas. Histórico sem evidência não recebe reconstrução inventada.
 
 Issue/PR: ainda não criadas para esta proposta; vincular na entrega respectiva.

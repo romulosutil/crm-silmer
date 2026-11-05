@@ -13,6 +13,10 @@
 
 ## Em revisão
 
+- [045 — Cobranças do pedido com InfinitePay](045-cobrancas-do-pedido-com-infinitepay.md),
+  aberta em 05/11/2026. Condições de 0%, X% e 100%, Pix e cartão,
+  inclusive parcelamento na InfinitePay; propõe sinal/saldo e confirmação
+  no servidor para pedidos existentes. COB-T00 é análise; sem ativação.
 - [044 — Performance comercial, checkpoint e central de ações](044-performance-comercial-e-central-de-acoes.md),
   aberta em 05/11/2026. Métricas dos vendedores humanos, resumo diário aos
   sócios às 08h e proposta de evolução do Dashboard; apuração e

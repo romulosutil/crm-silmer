@@ -1,5 +1,19 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## COB-T00 — Proposta de cobrança InfinitePay (05/11/2026)
+
+PAY-01–05 diferidos, FIN-01–03, FINQ-01–19 e PRV-01–03.
+Demanda: cobranças para pedidos existentes com 0%, X% ou 100%, Pix e cartão,
+incluindo parcelamento pela InfinitePay no pagamento integral.
+
+- [x] Investigar checkout da loja e confirmar fontes atuais após o grafo.
+- [x] Consolidar definições do proprietário e revisão de confiabilidade/QA
+      na [RFC 045](../../../docs/rfc/045-cobrancas-do-pedido-com-infinitepay.md).
+- [ ] Decidir a RFC e publicar contratos/ADR antes da implementação COB-T01–05.
+
+Entrega restrita à análise e proposta; nenhum runtime, credencial, workflow,
+cobrança ou publicação operacional alterados.
+
 ## INBOX-UX-07 — Busca com limpeza integrada (05/11/2026)
 
 PCX-18a/c e UX-FUNC-01. Correção autorizada pelo proprietário após crítica

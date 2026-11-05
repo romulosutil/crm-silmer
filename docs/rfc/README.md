@@ -18,6 +18,9 @@
 
 ## Em revisão
 
+- [047 — Enviar cobrança pela conversa](047-enviar-cobranca-pela-conversa.md),
+  aberta em 05/11/2026 após revisão da jornada: gerar e enviar o link de Pix/cartão
+  na conversa certa, por comando humano, sem copiar/colar; novo protótipo em avaliação.
 - [044 — Performance comercial, checkpoint e central de ações](044-performance-comercial-e-central-de-acoes.md),
   aberta em 05/11/2026. Métricas dos vendedores humanos, resumo diário aos
   sócios às 08h e proposta de evolução do Dashboard; apuração e

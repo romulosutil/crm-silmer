@@ -14,6 +14,15 @@ valor e gera link. 0% salva sem emitir; X% permite sinal e depois saldo;
 Compartilhamento é humano. “Pago parcialmente” não muda o status comercial
 nem qualifica quitação do Financeiro. A interface real não tem simulação.
 
+O runtime atual usa compartilhamento manual. O novo comando **Gerar e enviar
+cobrança** solicitado após a revisão da jornada está proposto na
+[RFC 047](../rfc/047-enviar-cobranca-pela-conversa.md), com protótipo em
+avaliação; ainda não foi integrado ao envio real da Inbox.
+
+Links em revisão, de pedido reaberto, vencidos ou com leitura desatualizada
+não são oferecidos para compartilhamento normal. O acesso ao link anterior
+fica explicitamente na conferência; isso não cancela o link no gateway.
+
 A conta da loja é reaproveitada, mas o workflow e os IDs das cobranças do CRM
 são próprios. Não apontar essa rotina para `store-orders`, reutilizar a Data
 Table da loja ou publicar mudanças no workflow de atendimento.

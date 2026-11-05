@@ -9,6 +9,7 @@ async function setup(page, options = {}) {
     paidOn: null,
     origin: 'atendimento',
     finalAmountCents: options.amount ?? 180000,
+    status: options.orderStatus ?? ownConfirmedOrder.status,
   };
   await mockOrders(page, { orders: [order] });
   await page.route('**/api/v1/orders/order-confirmado', (route) =>
@@ -83,7 +84,7 @@ async function setup(page, options = {}) {
         receiptUrl: null,
         method: null,
         installments: null,
-        validUntil: '2026-11-06T15:00:00.000Z',
+        validUntil: new Date(Date.now() + 86_400_000).toISOString(),
       });
     } else if (path.endsWith('/refund')) {
       const charge = billing.charges[0];
@@ -122,6 +123,9 @@ async function setup(page, options = {}) {
     section,
     billing,
     writes,
+    failNextRead() {
+      failRead = true;
+    },
     pay(method = 'pix', installments = 1) {
       const charge = billing.charges.at(-1);
       charge.status = 'paid';
@@ -307,6 +311,76 @@ test('an uncertain charge cannot be emitted again and exposes explicit provider 
   );
 });
 
+for (const scenario of [
+  { name: 'agreement review', status: 'review', review: true, expired: false },
+  { name: 'expired link', status: 'waiting', review: false, expired: true },
+  {
+    name: 'uncertain result',
+    status: 'unknown',
+    review: false,
+    expired: false,
+  },
+  {
+    name: 'reopened order',
+    status: 'waiting',
+    review: false,
+    expired: false,
+    reopened: true,
+  },
+]) {
+  test(`does not offer to send a financial link after ${scenario.name}`, async ({
+    page,
+  }) => {
+    const { section } = await setup(page, {
+      orderStatus: scenario.reopened ? 'pendente' : 'confirmado',
+      billing: {
+        managed: true,
+        percent: 30,
+        reviewRequired: scenario.review,
+        blockedReason: scenario.review
+          ? 'BILLING_REVIEW_REQUIRED'
+          : 'BILLING_ACTIVE_CHARGE',
+        charges: [
+          {
+            id: 'previous-agreement-charge',
+            kind: 'signal',
+            amountCents: 54000,
+            status: scenario.status,
+            checkoutUrl:
+              'https://checkout.infinitepay.io/synthetic-previous-agreement',
+            validUntil: new Date(
+              Date.now() + (scenario.expired ? -86_400_000 : 86_400_000),
+            ).toISOString(),
+          },
+        ],
+      },
+    });
+    await expect(
+      section.getByRole('button', { name: 'Copiar link', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      section.getByRole('button', { name: 'Preparar mensagem', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      section.getByRole('link', { name: 'Abrir cobrança', exact: true }),
+    ).toHaveCount(0);
+    if (scenario.expired) await expect(section).toContainText('Link vencido');
+    await section
+      .getByText('Conferência e devoluções', { exact: true })
+      .click();
+    await expect(
+      section.getByRole('link', {
+        name: 'Abrir cobrança anterior para conferência',
+        exact: true,
+      }),
+    ).toBeVisible();
+    if (!scenario.reopened)
+      await expect(
+        section.getByRole('button', { name: 'Conferir cobrança', exact: true }),
+      ).toBeVisible();
+  });
+}
+
 test('billing-managed dates cannot be marked manually, while delivery stays editable', async ({
   page,
 }) => {
@@ -350,6 +424,42 @@ test('read-only users see amounts without a checkout link or financial commands'
   await expect(section.getByRole('link')).toHaveCount(0);
   await expect(section.getByRole('radio')).toHaveCount(0);
   expect(writes).toHaveLength(0);
+});
+
+test('a failed refresh preserves amounts but blocks sharing the previous link until recovery', async ({
+  page,
+}) => {
+  const mock = await setup(page);
+  await issue(page, mock.section);
+  const open = mock.section.getByRole('link', {
+    name: 'Abrir cobrança',
+    exact: true,
+  });
+  await expect(open).toBeVisible();
+  mock.failNextRead();
+  await mock.section
+    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
+    .click();
+  await expect(mock.section.getByRole('alert')).toContainText(
+    'Os valores anteriores foram preservados',
+  );
+  await expect(mock.section.locator('.billing-totals')).toContainText(
+    '1.800,00',
+  );
+  await expect(open).toHaveCount(0);
+  await expect(
+    mock.section.getByRole('link', {
+      name: 'Abrir cobrança anterior para conferência',
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    mock.section.getByRole('button', { name: 'Copiar link', exact: true }),
+  ).toHaveCount(0);
+  await mock.section
+    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
+    .click();
+  await expect(open).toBeVisible();
 });
 
 test('read failure recovers without showing a false zero', async ({ page }) => {

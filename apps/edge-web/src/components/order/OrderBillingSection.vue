@@ -17,6 +17,7 @@ const props = defineProps({ order: { type: Object, required: true } });
 const emit = defineEmits(['state', 'changed']);
 const editing = inject('orderEditing', null);
 const billing = ref(null);
+const readAt = ref(Date.now());
 const loading = ref(false);
 const unavailable = ref(false);
 const error = ref('');
@@ -59,6 +60,28 @@ const active = computed(() =>
   ),
 );
 const canManage = computed(() => Boolean(billing.value?.canManage));
+const canInspectPrivate = computed(
+  () =>
+    canManage.value &&
+    !error.value &&
+    !loading.value &&
+    Number(billing.value?.orderVersion) === Number(props.order.version),
+);
+const activeExpired = computed(() => {
+  const until = Date.parse(active.value?.validUntil ?? '');
+  return Number.isFinite(until) && until <= readAt.value;
+});
+const canShareActive = computed(
+  () =>
+    canInspectPrivate.value &&
+    props.order.status === 'confirmado' &&
+    !uncertain.value &&
+    !billing.value?.reviewRequired &&
+    active.value?.status === 'waiting' &&
+    Number.isFinite(Date.parse(active.value?.validUntil ?? '')) &&
+    !activeExpired.value &&
+    Boolean(billingUrl(active.value?.checkoutUrl)),
+);
 const otherEditing = computed(
   () =>
     editing?.editingSection?.value &&
@@ -72,6 +95,8 @@ const statusLabel = computed(() => {
   if (!billing.value) return loading.value ? 'Consultando' : 'Indisponível';
   if (active.value?.status === 'review') return 'Precisa de conferência';
   if (active.value?.status === 'unknown') return 'Resultado a conferir';
+  if (active.value?.status === 'waiting' && activeExpired.value)
+    return 'Link vencido';
   if (paid.value) return 'Quitado';
   return received.value > 0 ? 'Pago parcialmente' : 'A receber';
 });
@@ -133,14 +158,22 @@ function billingSignature(value) {
 }
 function applyBilling(value) {
   const previous = billing.value;
+  const previouslyExpired = activeExpired.value;
+  readAt.value = Date.now();
   billing.value = value;
   if (
     previous &&
     !busy.value &&
-    billingSignature(previous) !== billingSignature(value)
+    (billingSignature(previous) !== billingSignature(value) ||
+      previouslyExpired !== activeExpired.value)
   )
     liveMessage.value = `${statusLabel.value}. Recebido: ${billingMoney(value.receivedAmountCents)}. Falta receber: ${billingMoney(value.balanceAmountCents)}.`;
   currentState();
+  if (modal.value === 'share' && !canShareActive.value) {
+    dialog.value?.close();
+    feedback.value =
+      'A cobrança mudou ou venceu. Confira o estado atual antes de compartilhar.';
+  }
   if (!initialized) {
     const valuePercent = value?.percent;
     plan.value =
@@ -242,6 +275,14 @@ function cancelCondition() {
 }
 async function showDialog(mode, event, charge = null) {
   if (busy.value || otherEditing.value) return;
+  if (mode === 'share') {
+    readAt.value = Date.now();
+    if (!canShareActive.value || charge?.id !== active.value?.id) {
+      feedback.value =
+        'Confira o estado atual da cobrança antes de compartilhar.';
+      return;
+    }
+  }
   if (uncertain.value && mode !== 'share') {
     await resumePending(event);
     return;
@@ -429,6 +470,12 @@ async function submitDialog() {
   }
 }
 async function copyLink(charge) {
+  readAt.value = Date.now();
+  if (!canShareActive.value || charge?.id !== active.value?.id) {
+    feedback.value =
+      'Confira o estado atual da cobrança antes de compartilhar.';
+    return;
+  }
   const link = billingUrl(charge.checkoutUrl);
   if (!link) return;
   try {
@@ -437,6 +484,12 @@ async function copyLink(charge) {
   } catch {
     feedback.value = 'Selecione o link e copie pelo menu do aparelho.';
   }
+}
+function checkActiveLink(event) {
+  readAt.value = Date.now();
+  if (canShareActive.value) return;
+  event.preventDefault();
+  feedback.value = 'Confira o estado atual da cobrança antes de compartilhar.';
 }
 function chargeName(charge) {
   return charge.kind === 'signal'
@@ -548,7 +601,11 @@ onBeforeUnmount(() => {
             ['unknown', 'review'].includes(active.status) || undefined
           "
         >
-          <strong>{{ chargeStatus(active) }}</strong>
+          <strong>{{
+            activeExpired && active.status === 'waiting'
+              ? 'Link vencido'
+              : chargeStatus(active)
+          }}</strong>
           <p v-if="active.status === 'unknown'">
             Precisamos conferir se o link foi criado. Não gere outra cobrança
             para substituir esta emissão.
@@ -560,6 +617,10 @@ onBeforeUnmount(() => {
           <p v-else-if="['queued', 'creating'].includes(active.status)">
             A cobrança está reservada. Aguarde o link; repetir a emissão não
             cria outra cobrança.
+          </p>
+          <p v-else-if="activeExpired">
+            A validade deste link terminou. Não o envie ao cliente. Confira a
+            cobrança antes de encerrar esta emissão ou gerar outra.
           </p>
           <p v-else>
             O recebido só muda depois da confirmação do pagamento pela
@@ -725,12 +786,14 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </template>
-        <div
-          v-if="
-            active?.checkoutUrl && canManage && billingUrl(active.checkoutUrl)
-          "
-          class="billing-link"
-        >
+        <div v-if="canShareActive" class="billing-link">
+          <p>
+            <strong
+              >{{ chargeName(active) }} de
+              {{ billingMoney(active.amountCents) }}</strong
+            >
+          </p>
+          <p class="op-hint">Válido até {{ dateTimeBR(active.validUntil) }}</p>
           <label for="billing-checkout-link">Link da cobrança</label>
           <input
             id="billing-checkout-link"
@@ -746,6 +809,7 @@ onBeforeUnmount(() => {
               target="_blank"
               rel="noopener noreferrer"
               referrerpolicy="no-referrer"
+              @click="checkActiveLink"
               >Abrir cobrança</a
             ><button
               type="button"
@@ -778,7 +842,7 @@ onBeforeUnmount(() => {
                   >Devolução conciliada:
                   {{ billingMoney(charge.refundedAmountCents) }}</small
                 ><a
-                  v-if="canManage && billingUrl(charge.receiptUrl)"
+                  v-if="canInspectPrivate && billingUrl(charge.receiptUrl)"
                   :href="billingUrl(charge.receiptUrl)"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -801,9 +865,23 @@ onBeforeUnmount(() => {
             Use após conferir a cobrança na InfinitePay. Estas ações só
             conciliam o CRM; não cancelam links nem devolvem dinheiro.
           </p>
+          <a
+            v-if="
+              canInspectPrivate &&
+              !canShareActive &&
+              billingUrl(active?.checkoutUrl)
+            "
+            class="button-link billing-open-link"
+            :href="billingUrl(active.checkoutUrl)"
+            target="_blank"
+            rel="noopener noreferrer"
+            referrerpolicy="no-referrer"
+            >Abrir cobrança anterior para conferência</a
+          >
           <button
             v-if="
               ['unknown', 'review'].includes(active?.status) ||
+              activeExpired ||
               billing.blockedReason === 'BILLING_REVIEW_REQUIRED'
             "
             type="button"

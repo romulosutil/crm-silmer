@@ -671,11 +671,23 @@ e replanejados; T19–T26 cobrem as melhorias novas. OLIST-PLAN-02 é só docume
       alocar responsáveis. OLIST-01–50. Dono Tech Lead. Depende PLAN-02.
       Evidência: [revisão T01](../integrations/olist/contract-review.md), matriz dos
       50 requisitos, donos por tarefa e gaps F1-G01–08. Concluída documentalmente
-      em 04/11/2026; T02/F1 continuam abertos.
-- [ ] **OLIST-T02** Provar API/conta: cliente, produto pai/variações/tamanhos,
+      em 04/11/2026; naquele checkpoint T02/F1 ainda estavam abertos.
+- [x] **OLIST-T02** Provar API/conta: cliente, produto pai/variações/tamanhos,
       referências/SKU, cadastro fiscal, permissões, gatilhos e precisão por linha.
       OLIST-03–17, 20, 26, 35–41. Dono Integrações. Leitura/fixtures em paralelo
       com T01; escrita controlada só autorizada no ambiente definido.
+      **Concluída em 05/11/2026 no escopo `exact-cent-v1`.** A redução de escopo
+      aprovada na [ADR 059 / RFC 046](https://github.com/romulosutil/crm-silmer/pull/296)
+      admite somente unitários exatos em centavos. A
+      [prova C05–C07](https://github.com/romulosutil/crm-silmer/blob/c46a661e50c3b250bfc403145c9cc6d036096727/docs/integrations/olist/evidence/exact-cent-proof-result.json)
+      passou por API e tela nativa: três pedidos abertos, 14 GETs, três POSTs,
+      R$ 5,20, identidade por linha conferida pela API e valores/totais
+      conferidos na API e na tela, sem retry. Validaram-se 160 testes de
+      domínio/pedidos e 126 testes Olist; QA sem bloqueante.
+      F1/T02 fechados somente nesse subconjunto; T03 pode iniciar.
+      Frações permanecem válidas no CRM e bloqueadas para exportação, sem
+      arredondar ou compensar entre linhas. Produção/piloto não liberados.
+      Os registros abaixo são históricos, anteriores ao fechamento restrito.
       Evidências: [matriz](../integrations/olist/capabilities.md), schema 3.1/hash,
       [relatório atual](../integrations/olist/phase1-report.md) e
       [resultado sanitizado](../integrations/olist/evidence/phase1-controlled-results.json).
@@ -698,7 +710,8 @@ e replanejados; T19–T26 cobrem as melhorias novas. OLIST-PLAN-02 é só docume
       externa foi executada. Não inferir precisão máxima, idempotência remota ou
       atomicidade composta. Executor atual com 25 testes locais aprovados.
 
-Gate F1: esquema de cliente/produto/variação e dinheiro comprovado; sem dado
+Gate F1 concluído para o escopo inicial `exact-cent-v1` da ADR 059: esquema
+de cliente/produto/variação e dinheiro comprovado nesse subconjunto; sem dado
 fiscal inventado ou suposição de idempotência remota. Plano para ausência de
 sandbox e campos centrais a preencher, sem decisões técnicas disfarçadas de
 regras do PO. Cadastro automático não pode ser substituído por cadastro manual
@@ -980,16 +993,16 @@ total calculado e schema expand. Reconciliar a janela antes de retomar.
 Checklists de tarefas são fonte de status. Registrar evidências abaixo sem
 duplicar checkboxes. Decisão aceita não marca implementação como concluída.
 
-| Entrega/gate             | Responsável designado  | Evidência/resultado                                                                                                                                       | Commit/PR                   | Deploy/aceite                                 |
-| ------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | --------------------------------------------- |
-| OLIST-PLAN-01            | Tech Lead              | Proposta original; substituída nos pontos revistos                                                                                                        | c33b5d34                    | Documental                                    |
-| OLIST-PLAN-02            | Tech Lead              | ADR 057, OLIST-01–50, T01–T26 e emendas canônicas                                                                                                         | Registrar no handoff        | Documental                                    |
-| F1 / T01–T02             | Tech Lead; Integrações | [T01 revisada](../integrations/olist/contract-review.md); [T02 experiências concluídas](../integrations/olist/phase1-report.md), leitura monetária aberta | Ver histórico OLIST-T01/T02 | F1 aberto por F1-G01; casos aprovados criados |
-| F2 / T03–T05/T19         | A designar             | A preencher                                                                                                                                               | A preencher                 | Dados/checkbox/conexão                        |
-| F3 / T06–T10/T20–T24/T26 | A designar             | A preencher                                                                                                                                               | A preencher                 | CRM/cadastros/venda                           |
-| F4 / T11–T13/T25         | A designar             | A preencher                                                                                                                                               | A preencher                 | UI/ficha v7                                   |
-| F5 / T14–T15             | A designar             | A preencher                                                                                                                                               | A preencher                 | QA/operação                                   |
-| F6 / T16–T18             | A designar             | A preencher                                                                                                                                               | A preencher                 | Piloto/ampliação                              |
+| Entrega/gate             | Responsável designado  | Evidência/resultado                                                                                                                                                                          | Commit/PR                                                    | Deploy/aceite                                                           |
+| ------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| OLIST-PLAN-01            | Tech Lead              | Proposta original; substituída nos pontos revistos                                                                                                                                           | c33b5d34                                                     | Documental                                                              |
+| OLIST-PLAN-02            | Tech Lead              | ADR 057, OLIST-01–50, T01–T26 e emendas canônicas                                                                                                                                            | Registrar no handoff                                         | Documental                                                              |
+| F1 / T01–T02             | Tech Lead; Integrações | [T01 revisada](../integrations/olist/contract-review.md); [T02 histórico](../integrations/olist/phase1-report.md); [prova exata C05–C07](https://github.com/romulosutil/crm-silmer/pull/296) | [PR 296](https://github.com/romulosutil/crm-silmer/pull/296) | F1 concluído somente em exact-cent-v1; sem liberação de produção/piloto |
+| F2 / T03–T05/T19         | A designar             | A preencher                                                                                                                                                                                  | A preencher                                                  | Dados/checkbox/conexão                                                  |
+| F3 / T06–T10/T20–T24/T26 | A designar             | A preencher                                                                                                                                                                                  | A preencher                                                  | CRM/cadastros/venda                                                     |
+| F4 / T11–T13/T25         | A designar             | A preencher                                                                                                                                                                                  | A preencher                                                  | UI/ficha v7                                                             |
+| F5 / T14–T15             | A designar             | A preencher                                                                                                                                                                                  | A preencher                                                  | QA/operação                                                             |
+| F6 / T16–T18             | A designar             | A preencher                                                                                                                                                                                  | A preencher                                                  | Piloto/ampliação                                                        |
 
 ### Definition of Ready
 
@@ -1021,6 +1034,6 @@ Deploy/amostra/piloto/aceite:
 Riscos, bloqueios e próximo item desbloqueado:
 ```
 
-Próximos itens: resolver a limitação de leitura monetária F1-G01 documentada no relatório; concluir T02/gate F1 antes da fundação/checkbox/IDs e subtotal. Não liberar
+Próximos itens: iniciar OLIST-T03 após T02/F1 concluídos no escopo exato aprovado. A limitação fracionária permanece bloqueando apenas exportações fora desse escopo. Não liberar
 geração real antes de cadastro automático seguro, precisão por linha, filtros
 de cancelamento e identidade individual do piloto estarem validados.

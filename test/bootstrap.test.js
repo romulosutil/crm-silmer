@@ -72,6 +72,7 @@ test('pins the approved runtime and toolchain versions exactly', async () => {
     '@types/node': '24.13.3',
     '@types/punycode': '2.1.4',
     '@vitejs/plugin-vue': '6.0.8',
+    'clarity-js': '0.8.76',
     eslint: '10.9.1',
     'eslint-plugin-vue': '10.11.0',
     prettier: '3.9.6',

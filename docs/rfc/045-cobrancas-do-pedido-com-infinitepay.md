@@ -1,7 +1,14 @@
 # RFC 045 — Cobranças do pedido com InfinitePay
 
-Data: 05/11/2026. Status: em revisão. Responsável: Tech Lead.
+Data: 05/11/2026. Status: aprovada após protótipo. Responsável: Tech Lead.
 Revisão: Integrações/Confiabilidade e QA, somente leitura.
+
+Decisão: o proprietário avaliou o protótipo navegável e autorizou implementar
+em 05/11/2026: “Gostei, faça”. Registro durável na
+[ADR 058](../adr/058-cobrancas-do-pedido-com-infinitepay.md); contrato aprovado
+[COB-01–16](../../.specs/features/order-billing/spec.md) e execução em
+[COB-DEL-01](../../.specs/features/order-billing/tasks.md). O restante conserva
+o contexto da proposta original, sem representar ativação real.
 
 ## Demanda e definições do proprietário
 

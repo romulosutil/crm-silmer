@@ -21,6 +21,7 @@ import { createConversationHandoffRuntime } from './conversation-handoff-runtime
 import { createConversationApiRuntime } from './conversation-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
 import { createFinanceApiRuntime } from './finance-runtime.js';
+import { createOrderBillingRuntime } from './order-billing-runtime.js';
 import { createHealthErrorsRuntime } from './health-errors-runtime.js';
 import { registerHealthErrorsRoutes } from './health-errors-routes.js';
 import { createShippingApiRuntime } from './shipping-runtime.js';
@@ -62,6 +63,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   orders?: ReturnType<typeof createOrderApiRuntime>,
  *   orderAssistance?: ReturnType<typeof createOrderAssistanceRuntime>,
  *   finance?: ReturnType<typeof createFinanceApiRuntime>,
+ *   billing?: ReturnType<typeof createOrderBillingRuntime>,
  *   healthErrors?: ReturnType<typeof createHealthErrorsRuntime>,
  *   shipping?: ReturnType<typeof createShippingApiRuntime>,
  *   storeOrders?: import('./store-order-runtime.js').StoreOrderRuntime,
@@ -274,11 +276,28 @@ export function createServerApi(runtime = {}) {
           environment,
         })
       : undefined);
+  const billingEnabled = readBooleanFlag(
+    environment.ORDER_BILLING_ENABLED,
+    'ORDER_BILLING_ENABLED',
+  );
+  const billingReceiveEnabled = readBooleanFlag(
+    environment.ORDER_BILLING_RECEIVE_ENABLED,
+    'ORDER_BILLING_RECEIVE_ENABLED',
+  );
+  const billing =
+    runtime.billing ??
+    (runtime.database && operations && (billingEnabled || billingReceiveEnabled)
+      ? createOrderBillingRuntime(runtime.database, {
+          access: operations,
+          environment,
+        })
+      : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
     {
       ...runtime,
       finance,
+      billing,
       shipping,
       automationAuth,
       commercial,

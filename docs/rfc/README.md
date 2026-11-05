@@ -18,10 +18,6 @@
 
 ## Em revisão
 
-- [045 — Cobranças do pedido com InfinitePay](045-cobrancas-do-pedido-com-infinitepay.md),
-  aberta em 05/11/2026. Condições de 0%, X% e 100%, Pix e cartão,
-  inclusive parcelamento na InfinitePay; propõe sinal/saldo e confirmação
-  no servidor para pedidos existentes. COB-T00 é análise; sem ativação.
 - [044 — Performance comercial, checkpoint e central de ações](044-performance-comercial-e-central-de-acoes.md),
   aberta em 05/11/2026. Métricas dos vendedores humanos, resumo diário aos
   sócios às 08h e proposta de evolução do Dashboard; apuração e
@@ -29,6 +25,12 @@
 - [038 — Frete e etiqueta pelo Melhor Envio](038-frete-e-etiqueta-pelo-melhor-envio.md),
   aberta em 29/10/2026. Tem retirada na loja ou Melhor Envio, etiqueta
   pronta ao embalar e menu próprio. As decisões D1–D9 estão em aberto.
+
+## Decisão de 05/11/2026
+
+- [045 — Cobranças do pedido com InfinitePay](045-cobrancas-do-pedido-com-infinitepay.md),
+  aprovada após avaliação do protótipo. ADR 058 / COB-DEL-01: condições
+  0%, X% e 100%, Pix/cartão, sinal/saldo e confirmação no servidor.
 
 ## Decisão de 30/10/2026
 

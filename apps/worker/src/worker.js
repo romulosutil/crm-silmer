@@ -3,6 +3,9 @@ import { clearInterval, setInterval } from 'node:timers';
 
 import { createDatabase } from '@crm-silmer/database';
 import {
+  BILLING_COMMAND_JOB_TYPE,
+  BILLING_COMMAND_QUEUE,
+  createBillingCommandJobHandler,
   ClamAvMediaScanner,
   ClamAvDaemon,
   ClamAvSignatureRefresh,
@@ -462,6 +465,39 @@ export function createWorkerRuntime(options) {
   });
 }
 
+/** @param {{database:any,environment?:Record<string,string|undefined>,queue?:any,logger?:ReturnType<typeof createSafeLogger>,workerId?:string,fetchImpl?:any}} options */
+export function createBillingWorkerRuntime(options) {
+  const environment = options.environment ?? process.env;
+  const timeoutMs = optionalPositiveInteger(
+    environment.ORDER_BILLING_N8N_TIMEOUT_MS,
+    30_000,
+    'ORDER_BILLING_N8N_TIMEOUT_MS',
+  );
+  return new WorkerRuntime({
+    handlers: {
+      [BILLING_COMMAND_JOB_TYPE]: createBillingCommandJobHandler({
+        endpoint: requiredEnvironment(environment, 'ORDER_BILLING_N8N_URL'),
+        clientId: requiredEnvironment(environment, 'N8N_COMMAND_CLIENT_ID'),
+        clientSecret: requiredEnvironment(
+          environment,
+          'N8N_COMMAND_CLIENT_SECRET',
+        ),
+        timeoutMs,
+        allowInsecureLocal:
+          environment.APP_ENV === 'development' &&
+          environment.N8N_COMMAND_ALLOW_INSECURE_LOCAL === 'true',
+        fetchImpl: options.fetchImpl,
+      }),
+    },
+    queue:
+      options.queue ?? new PostgresJobQueue({ database: options.database }),
+    queueName: BILLING_COMMAND_QUEUE,
+    leaseMs: timeoutMs + 15_000,
+    logger: options.logger,
+    workerId: options.workerId,
+  });
+}
+
 /** @param {{database: any, logger?: ReturnType<typeof createSafeLogger>, mediaVolume: {delete: Function}, metrics?: MetricRegistry, queue?: any, repository: any, workerId?: string}} options */
 export function createMediaRetentionWorkerRuntime(options) {
   if (
@@ -527,7 +563,7 @@ export function createChatMediaWorkerRuntime(options) {
 }
 
 /** Starts text delivery without waiting for an external signature CDN.
- * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},chatMediaCleanup?:{start:Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>},scannerDaemon?: {start: () => Promise<void>},stallScheduler?: {start: Function}}} services */
+ * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},chatMediaCleanup?:{start:Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>},scannerDaemon?: {start: () => Promise<void>},stallScheduler?: {start: Function},billingWorker?: {start: Function}}} services */
 export async function startWorkerServices({
   commandWorker,
   mediaWorker,
@@ -537,6 +573,7 @@ export async function startWorkerServices({
   signatureRefresh,
   scannerDaemon,
   stallScheduler,
+  billingWorker,
 }) {
   await commandWorker.start();
   await stallScheduler?.start();
@@ -546,6 +583,7 @@ export async function startWorkerServices({
   await chatMediaCleanup?.start();
   await retentionScheduler.start();
   void signatureRefresh.start();
+  await billingWorker?.start();
 }
 
 /**
@@ -632,6 +670,16 @@ export async function startWorkerFromEnvironment(options = {}) {
       queue,
       workerId: `n8n-${process.pid}`,
     });
+    const billingWorker =
+      environment.ORDER_BILLING_ENABLED === 'true'
+        ? createBillingWorkerRuntime({
+            database,
+            environment,
+            logger,
+            queue,
+            workerId: `billing-${process.pid}`,
+          })
+        : undefined;
     const mediaWorker = createMediaRetentionWorkerRuntime({
       database,
       logger,
@@ -710,6 +758,7 @@ export async function startWorkerFromEnvironment(options = {}) {
       signatureRefresh,
       scannerDaemon,
       stallScheduler,
+      billingWorker,
     });
     return Object.freeze({
       runtime: Object.freeze({
@@ -720,6 +769,7 @@ export async function startWorkerFromEnvironment(options = {}) {
         chatMediaCleanup,
         scannerDaemon,
         stallScheduler,
+        billingWorker,
       }),
       stop: async () => {
         await stallScheduler.stop();
@@ -730,6 +780,7 @@ export async function startWorkerFromEnvironment(options = {}) {
           commandWorker.stop(),
           mediaWorker.stop(),
           chatMediaWorker?.stop(),
+          billingWorker?.stop(),
         ]);
         await scannerDaemon.stop();
         await database.close();

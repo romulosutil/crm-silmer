@@ -2,6 +2,9 @@
 
 ## Decisão de 05/11/2026
 
+- [058 — Cobranças do pedido com InfinitePay](058-cobrancas-do-pedido-com-infinitepay.md),
+  RFC 045 / COB-DEL-01: 0%, X% e 100%, sinal/saldo, Pix/cartão e quitação
+  verificada de pedidos existentes, após aprovação do protótipo.
 - [057 — Clarity para uso dos vendedores](057-clarity-para-uso-dos-vendedores.md),
   RFC 046 / CLAR-T01: navegação e ações humanas com máscara integral,
   cookies/ads negados, perfil restrito e transporte isolado por contexto.

@@ -1,5 +1,12 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## COB-DEL-01 — Cobranças InfinitePay (05/11/2026)
+
+Protótipo aprovado pelo proprietário; execução autorizada após avaliação.
+Contrato [COB-01–16](../order-billing/spec.md), RFC 045 / ADR 058. Entrega
+vertical e gate operacional separados em [tasks](../order-billing/tasks.md).
+Status e evidências de implementação/ativação são mantidos nessa fronteira.
+
 ## CLAR-T01 — Clarity para uso dos vendedores (05/11/2026)
 
 [CLAR-01–06](../seller-analytics/spec.md), PRV-01–03, RFC 046 / ADR 057.
@@ -36,10 +43,10 @@ incluindo parcelamento pela InfinitePay no pagamento integral.
 - [x] Investigar checkout da loja e confirmar fontes atuais após o grafo.
 - [x] Consolidar definições do proprietário e revisão de confiabilidade/QA
       na [RFC 045](../../../docs/rfc/045-cobrancas-do-pedido-com-infinitepay.md).
-- [ ] Decidir a RFC e publicar contratos/ADR antes da implementação COB-T01–05.
+- [x] Decidir a RFC e publicar contratos/ADR antes da implementação COB-T01–05.
 
-Entrega restrita à análise e proposta; nenhum runtime, credencial, workflow,
-cobrança ou publicação operacional alterados.
+Análise concluída e sucedida por COB-DEL-01 acima. Ativação real permanece
+no gate COB-OPS-01.
 
 ## INBOX-UX-07 — Busca com limpeza integrada (05/11/2026)
 

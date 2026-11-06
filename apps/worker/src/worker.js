@@ -1,4 +1,8 @@
 import {
+  createOlistReconciliationRuntime,
+  createOlistReconciliationHandler,
+} from './olist-reconciliation-runtime.js';
+import {
   createOlistJobHandler,
   createOlistDispatchRuntime,
 } from './olist-runtime.js';
@@ -255,6 +259,28 @@ export function createOlistWorkerRuntime(options) {
     logger: options.logger,
     metrics: options.metrics,
     workerId: options.workerId ?? 'olist-' + process.pid,
+    now: options.now,
+  });
+}
+
+/** Administrative reads use their own queue and remain available when creation
+ * dispatch is disabled. Missing OLIST_ENABLED/configuration keeps them off.
+ * @param {{database:any,environment?:Record<string,string|undefined>,dispatcher?:any,queue?:any,fetch?:typeof fetch,clock?:()=>Date,logger?:any,metrics?:any,workerId?:string,now?:()=>number}} options */
+export function createOlistReconciliationWorkerRuntime(options) {
+  if (!olistConfiguration(options.environment ?? process.env).configured)
+    return undefined;
+  const dispatcher =
+    options.dispatcher ?? createOlistReconciliationRuntime(options);
+  return new WorkerRuntime({
+    handlers: {
+      'olist.reconcile': createOlistReconciliationHandler({ dispatcher }),
+    },
+    queueName: 'olist_reconcile',
+    queue:
+      options.queue ?? new PostgresJobQueue({ database: options.database }),
+    logger: options.logger,
+    metrics: options.metrics,
+    workerId: options.workerId ?? 'olist-read-' + process.pid,
     now: options.now,
   });
 }
@@ -556,7 +582,7 @@ export function createChatMediaWorkerRuntime(options) {
 }
 
 /** Starts text delivery without waiting for an external signature CDN.
- * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},chatMediaCleanup?:{start:Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>},scannerDaemon?: {start: () => Promise<void>},stallScheduler?: {start: Function},olistWorker?: {start: Function}}} services */
+ * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},chatMediaCleanup?:{start:Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>},scannerDaemon?: {start: () => Promise<void>},stallScheduler?: {start: Function},olistWorker?: {start: Function},olistReconciliationWorker?: {start: Function}}} services */
 export async function startWorkerServices({
   commandWorker,
   mediaWorker,
@@ -567,6 +593,7 @@ export async function startWorkerServices({
   scannerDaemon,
   stallScheduler,
   olistWorker,
+  olistReconciliationWorker,
 }) {
   await commandWorker.start();
   await stallScheduler?.start();
@@ -576,6 +603,7 @@ export async function startWorkerServices({
   await chatMediaCleanup?.start();
   await retentionScheduler.start();
   await olistWorker?.start();
+  await olistReconciliationWorker?.start();
   void signatureRefresh.start();
 }
 
@@ -739,7 +767,15 @@ export async function startWorkerFromEnvironment(options = {}) {
       logger,
       workerId: 'olist-' + process.pid,
     });
+    const olistReconciliationWorker = createOlistReconciliationWorkerRuntime({
+      database,
+      environment,
+      queue,
+      logger,
+      workerId: 'olist-read-' + process.pid,
+    });
     await startWorkerServices({
+      olistReconciliationWorker,
       olistWorker,
       commandWorker,
       mediaWorker,
@@ -752,6 +788,7 @@ export async function startWorkerFromEnvironment(options = {}) {
     });
     return Object.freeze({
       runtime: Object.freeze({
+        olistReconciliationWorker,
         olistWorker,
         commandWorker,
         mediaWorker,
@@ -771,6 +808,7 @@ export async function startWorkerFromEnvironment(options = {}) {
           mediaWorker.stop(),
           chatMediaWorker?.stop(),
           olistWorker?.stop(),
+          olistReconciliationWorker?.stop(),
         ]);
         await scannerDaemon.stop();
         await database.close();

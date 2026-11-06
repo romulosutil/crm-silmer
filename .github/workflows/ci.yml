@@ -166,7 +166,7 @@ jobs:
       # Keep Ubuntu's signed repository and bound network waits before installs.
       - name: Use the canonical Ubuntu package mirror
         run: |
-          for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list /etc/apt/mirrors/*.list /etc/apt/mirrors/*.sources; do
+          for source in /etc/apt/sources.list /etc/apt/apt-mirrors.txt /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list /etc/apt/mirrors/*.list /etc/apt/mirrors/*.sources; do
             test -f "$source" || continue
             sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' "$source"
           done

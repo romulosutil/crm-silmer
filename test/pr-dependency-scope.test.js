@@ -132,6 +132,77 @@ test('invalid git comparison fails closed', () => {
   assert.doesNotMatch(result.stdout, /required=false/);
 });
 
+test('unrecognized CI changes still require review even for repeated pinned actions', () => {
+  const checkout = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1';
+  const setup = 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020';
+  const other = 'actions/cache@5a3ec84eff668545956fd18022155c47e93e2684';
+  /** @param {...string} actions */
+  const lines = (...actions) =>
+    actions.map((action) => `- uses: ${action}\n`).join('');
+  const old = lines(checkout, setup, other);
+  assert.equal(
+    needsReview([
+      change(workflow, old, lines(checkout, checkout, setup, setup, other)),
+    ]),
+    true,
+  );
+  assert.equal(
+    needsReview([change(workflow, old, lines(checkout, setup, other, other))]),
+    true,
+  );
+  assert.equal(
+    needsReview([
+      change(
+        workflow,
+        lines(checkout, checkout, setup),
+        lines(checkout, setup),
+      ),
+    ]),
+    true,
+  );
+  assert.equal(
+    needsReview([
+      change(
+        workflow,
+        lines(checkout, checkout, setup),
+        lines(checkout, setup, setup),
+      ),
+    ]),
+    true,
+  );
+  assert.equal(
+    needsReview([
+      change(
+        workflow,
+        old,
+        lines(checkout, setup, other, 'actions/checkout@new-pin'),
+      ),
+    ]),
+    true,
+  );
+  assert.equal(
+    needsReview([
+      change(
+        '.github/workflows/other.yml',
+        old,
+        lines(checkout, checkout, setup, other),
+      ),
+    ]),
+    true,
+  );
+  assert.equal(
+    needsReview([change(workflow, '', lines(checkout, checkout), 'A')]),
+    true,
+  );
+  assert.equal(
+    needsReview([
+      change(workflow, old, lines(checkout, checkout, setup, other)),
+      change('package-lock.json', '{}', '{"changed":true}'),
+    ]),
+    true,
+  );
+});
+
 const localManifest = (name = 'shipping') => ({
   name: `@crm-silmer/${name}`,
   version: '0.0.0',

@@ -9,6 +9,7 @@ const workflow = readFileSync(
 );
 const quality = workflow.split('\n  quality:')[1].split('\n  images:')[0];
 const e2e = workflow.split('\n  e2e:')[1].split('\n  quality:')[0];
+const postgres = workflow.split('\n  postgres:')[1].split('\n  e2e:')[0];
 const bash =
   process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : 'bash';
 
@@ -16,6 +17,10 @@ test('the existing quality check requires every independent gate before images',
   assert.match(quality, /name: Lint, tests, E2E and dependencies/u);
   assert.match(quality, /needs: \[checks, postgres, e2e\]/u);
   assert.match(workflow.split('\n  images:')[1], /needs: quality/u);
+  assert.match(postgres, /group: \[identity-inbox, operations\]/u);
+  assert.match(postgres, /if: matrix\.group == 'identity-inbox'/u);
+  assert.match(postgres, /if: matrix\.group == 'operations'/u);
+  assert.equal((postgres.match(/--test-concurrency=1/gu) ?? []).length, 2);
   assert.match(e2e, /shard: \[1, 2, 3, 4, 5, 6\]/u);
   assert.match(
     e2e,

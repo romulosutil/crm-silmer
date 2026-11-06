@@ -16,10 +16,10 @@ test('the existing quality check requires every independent gate before images',
   assert.match(quality, /name: Lint, tests, E2E and dependencies/u);
   assert.match(quality, /needs: \[checks, postgres, e2e\]/u);
   assert.match(workflow.split('\n  images:')[1], /needs: quality/u);
-  assert.match(e2e, /shard: \[1, 2, 3, 4\]/u);
+  assert.match(e2e, /shard: \[1, 2, 3, 4, 5, 6\]/u);
   assert.match(
     e2e,
-    /npm run test:e2e -- --shard=\$\{\{ matrix\.shard \}\}\/4/u,
+    /npm run test:e2e -- --shard=\$\{\{ matrix\.shard \}\}\/6/u,
   );
 });
 

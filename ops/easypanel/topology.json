@@ -88,6 +88,7 @@
           "MELHOR_ENVIO_USER_AGENT",
           "MELHOR_ENVIO_ENVELOPE_KEY",
           "OLIST_ENABLED",
+          "OLIST_DISPATCH_ENABLED",
           "OLIST_CLIENT_ID",
           "OLIST_CLIENT_SECRET",
           "OLIST_REDIRECT_URI",

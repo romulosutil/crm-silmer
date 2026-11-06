@@ -273,7 +273,7 @@ export function needsReview(changes, readManifest = () => '') {
         contentHash(before) ===
           '4044795b27c8ee81703408d2f9ee649ded000e3701910e593b0e5f1a812ea4f9' &&
         contentHash(after) ===
-          '651f4351ca8db0eda245b6085de5ee09c35f1ac4706bda631905fbe38a807ebc' &&
+          '873f98ef74bcd9f1bf613e683dd118898c40085ee9ab40c63fe11a4f0a65149e' &&
         onlyRepeatedCiActionsAdded(oldRefs, newRefs)
       )
         continue;

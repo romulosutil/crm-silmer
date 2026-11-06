@@ -24,7 +24,7 @@ test('the existing quality check requires every independent gate before images',
   assert.match(e2e, /shard: \[1, 2, 3, 4, 5, 6\]/u);
   assert.match(
     e2e,
-    /npm run test:e2e -- --shard=\$\{\{ matrix\.shard \}\}\/6/u,
+    /npm run test:e2e -- --workers=2 --shard=\$\{\{ matrix\.shard \}\}\/6/u,
   );
 });
 

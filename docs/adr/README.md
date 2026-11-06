@@ -1,5 +1,11 @@
 # Architecture Decision Records
 
+## Decisão técnica de 06/11/2026
+
+- [064 — Cancelamento local terminal pré-exportação](064-cancelamento-local-terminal-pre-exportacao.md),
+  RFC 044 / OLIST-T23: marcador separado dos dois status comerciais, motivo
+  cifrado, ACL comercial, disputa com reserva de venda e histórico financeiro preservado.
+
 ## Decisão técnica de 05/11/2026
 
 - [060 — Fontes comerciais suplementares](060-fontes-comerciais-suplementares-sem-reescrever-ficha.md), RFC 047 / T26/T24, preservando ficha, total e pagamentos.

@@ -62,7 +62,7 @@ import {
  *   auditTrail: any,
  *   conversations: OrderConversationPort,
  *   fabCode: string,
- *   idempotencyStore: {execute: (identity: any, operation: (transaction?: unknown) => Promise<unknown>) => Promise<unknown>},
+ *   idempotencyStore: {execute: (identity: any, operation: (transaction?: unknown) => Promise<unknown>, beforeExecute?: (transaction?: unknown) => Promise<unknown>) => Promise<unknown>},
  *   repository: any,
  *   files?: {repository: any, storage: any},
  *   phoneDigestsFor?: (query: string) => string[],
@@ -193,6 +193,7 @@ export function createOrderRuntime(options) {
     for (const order of orders) {
       for (const id of [
         order.confirmedBy,
+        order.cancelledBy,
         order.reopenedBy,
         order.fichaFirstPrintedBy,
         owners.get(order.conversationId),
@@ -209,6 +210,10 @@ export function createOrderRuntime(options) {
       return { id, name: names.get(id) ?? '' };
     };
     return orders.map((order) => ({
+      cancelledAt: order.cancelledAt ?? null,
+      cancelledBy: person(order.cancelledBy),
+      cancellationReason: order.cancellationReason ?? null,
+      effectiveStatus: order.cancelledAt ? 'cancelado' : order.status,
       confirmedAt: order.confirmedAt,
       confirmedBy: person(order.confirmedBy),
       conversationId: order.conversationId,
@@ -240,7 +245,7 @@ export function createOrderRuntime(options) {
       isTest: order.isTest === true,
       lastMessage: latestMessageStates.get(order.conversationId) ?? null,
       leadTimeBusinessDays: order.leadTimeBusinessDays ?? null,
-      locked: order.origin === 'loja',
+      locked: order.origin === 'loja' || Boolean(order.cancelledAt),
       missingFields: order.missingFields,
       number: order.number,
       orderDate: order.orderDate,
@@ -313,9 +318,10 @@ export function createOrderRuntime(options) {
    * @param {OrderCommand} input
    * @param {{action: string, target: {type: string, id: string}, expectedVersion: unknown, command: unknown}} request
    * @param {(transaction?: unknown) => Promise<T>} effect
+   * @param {(transaction?: unknown) => Promise<unknown>} [beforeExecute]
    * @returns {Promise<T>}
    */
-  function run(input, request, effect) {
+  function run(input, request, effect, beforeExecute) {
     return /** @type {Promise<T>} */ (
       execute(
         {
@@ -329,11 +335,43 @@ export function createOrderRuntime(options) {
           version: String(request.expectedVersion),
         },
         effect,
+        beforeExecute,
       )
     );
   }
 
   return Object.freeze({
+    /** @param {OrderCommand & {orderId:string, expectedVersion:number, reason:unknown}} input */
+    async cancel(input) {
+      await service.assertCancellationAccess(input);
+      if (
+        typeof input.reason !== 'string' ||
+        !input.reason.trim() ||
+        input.reason.trim().length > 1000 ||
+        /[\u0000-\u001f\u007f]/u.test(input.reason)
+      )
+        throw new OrderInputError('A cancellation reason is required', [
+          'reason',
+        ]);
+      const command = {
+        ...input,
+        expectedVersion: requireVersion(input.expectedVersion),
+        reason: input.reason.trim(),
+      };
+      return run(
+        command,
+        {
+          action: 'order.cancel',
+          command: { reason: command.reason },
+          expectedVersion: command.expectedVersion,
+          target: { type: 'order', id: command.orderId },
+        },
+        async (transaction) =>
+          presentOne(await service.cancel(command, transaction)),
+        async (transaction) =>
+          options.repository.assertCancellationAccess(command, transaction),
+      );
+    },
     /** @param {OrderCommand & {orderId: string, expectedVersion: number, expectedQuantity: number, expectedAmountCents: number, quantity: number, reason: string}} input */
     async correctStoreOrder(input) {
       if (

@@ -9,6 +9,7 @@ import {
 import {
   createOrderFileService,
   createOrderService,
+  sizePricingSummary,
   createStoreOrderCorrectionService,
   ORDER_FILE_LIMITS,
   OrderConflictError,
@@ -215,6 +216,9 @@ export function createOrderRuntime(options) {
       deliveredOn: order.deliveredOn,
       fabCode: order.fabCode,
       ficha: order.ficha,
+      ...(order.ficha.sizePricing === undefined
+        ? {}
+        : { pricing: sizePricingSummary(order.ficha) }),
       // ADR 031: who printed a store order's ficha first, and when.
       fichaFirstPrintedAt: order.fichaFirstPrintedAt ?? null,
       fichaFirstPrintedBy: person(order.fichaFirstPrintedBy),
@@ -430,7 +434,7 @@ export function createOrderRuntime(options) {
       );
     },
 
-    /** @param {OrderCommand & {orderId: string, amountText: unknown, paymentCondition: unknown, expectedVersion: number}} input */
+    /** @param {OrderCommand & {orderId: string, amountText?: unknown, paymentCondition: unknown, expectedVersion: number}} input */
     async confirm(input) {
       return run(
         input,

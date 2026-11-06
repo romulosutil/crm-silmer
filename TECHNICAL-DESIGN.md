@@ -1,5 +1,16 @@
 # TDD — CRM Silmer MVP
 
+## OLIST-T26 — enriquecimento histórico separado da ficha
+
+[ADR 060](docs/adr/060-fontes-comerciais-suplementares-sem-reescrever-ficha.md)
+/ RFC 047: revisões suplementares cifradas e append-only preservam o envelope,
+o valor e os pagamentos históricos. Comando comercial humano com versão e
+ACL atual, lote por identidade e soma exata ao total, mesma transação de evento,
+auditoria e idempotência. HMAC da fonte invalida composição obsoleta; rebase é
+explícito. Reserva Olist em qualquer conta bloqueia mudanças. Reconfirmação
+legada usa prova fresca sem mesclá-la à ficha. T24/UI/seqüência externa seguem
+pendentes. [Runbook](docs/runbooks/olist-phase3.md).
+
 ## OLIST-T21 — total calculado e confirmação
 
 T20/T21 concluídas no domínio/API: subtotais revisados determinam total/grupos,

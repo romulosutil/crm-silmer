@@ -1,5 +1,9 @@
 # Architecture Decision Records
 
+## Decisão técnica de 05/11/2026
+
+- [060 — Fontes comerciais suplementares](060-fontes-comerciais-suplementares-sem-reescrever-ficha.md), RFC 047 / T26/T24, preservando ficha, total e pagamentos.
+
 ## Decisão de 04/11/2026
 
 - [057 — Olist por habilitação e subtotal por tamanho](057-olist-por-habilitacao-subtotal-por-tamanho-e-cancelamento.md),

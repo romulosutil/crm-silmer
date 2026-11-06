@@ -1,5 +1,9 @@
 # Request for Comments
 
+## Decisão técnica de 05/11/2026
+
+- [047 — Fontes suplementares para Olist](047-fontes-suplementares-para-olist.md), decidida na ADR 060 para T26/T24.
+
 ## Decisão de 04/11/2026
 
 - [044 — Geração assistida de pedidos de venda no Olist](044-geracao-assistida-de-pedidos-no-olist.md),

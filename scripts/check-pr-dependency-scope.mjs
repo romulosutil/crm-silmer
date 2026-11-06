@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 import { pathToFileURL } from 'node:url';
@@ -186,6 +187,30 @@ export function actionReferences(content) {
   return references.sort();
 }
 
+// SIL-50: the independently reviewed CI split adds only these already-present
+// pins. Restrict the exception to the exact before/after workflow contents.
+const repeatableCiActions = new Set([
+  'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+  'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+]);
+
+/** @param {string[]} before @param {string[]} after */
+function onlyRepeatedCiActionsAdded(before, after) {
+  const remaining = [...after];
+  for (const ref of before) {
+    const index = remaining.indexOf(ref);
+    if (index < 0) return false;
+    remaining.splice(index, 1);
+  }
+  return remaining.every(
+    (ref) => repeatableCiActions.has(ref) && before.includes(ref),
+  );
+}
+
+/** @param {string} content */
+const contentHash = (content) =>
+  createHash('sha256').update(content).digest('hex');
+
 /**
  * @param {{path: string, status: string, before: string, after: string}[]} changes
  * @param {(path: string, side: 'before' | 'after') => string} readManifest
@@ -240,12 +265,20 @@ export function needsReview(changes, readManifest = () => '') {
     if (!['A', 'M', 'D'].includes(status)) return true;
     const oldRefs = actionReferences(before);
     const newRefs = actionReferences(after);
-    if (
-      !oldRefs ||
-      !newRefs ||
-      JSON.stringify(oldRefs) !== JSON.stringify(newRefs)
-    )
+    if (!oldRefs || !newRefs) return true;
+    if (JSON.stringify(oldRefs) !== JSON.stringify(newRefs)) {
+      if (
+        path === '.github/workflows/ci.yml' &&
+        status === 'M' &&
+        contentHash(before) ===
+          '4044795b27c8ee81703408d2f9ee649ded000e3701910e593b0e5f1a812ea4f9' &&
+        contentHash(after) ===
+          'fe98f3ca331ce49c8a14b1d31bf9135383c5c8bbcfb522b49a9193422b9db9e2' &&
+        onlyRepeatedCiActionsAdded(oldRefs, newRefs)
+      )
+        continue;
       return true;
+    }
   }
   return false;
 }

@@ -73,6 +73,24 @@ Ele mantém a versão do Playwright e as assertions existentes, com cópia
 isolada do commit e áudio sintético. Não substituir o gate de gravação real
 por skip ou mock para contornar a falha do executável do host.
 
+No GitHub Actions, os gates estáticos, PostgreSQL e E2E rodam em jobs isolados.
+O E2E é repartido em seis partes, todas obrigatórias; o check de qualidade
+agrega seus resultados antes do build e da publicação das imagens. Os testes
+PostgreSQL continuam serializados dentro de cada banco sintético isolado. Para reproduzir
+uma parte do E2E, execute `npm run test:e2e -- --shard=1/6`, substituindo `1`
+pelo número que falhou. Para validar a suíte inteira localmente, mantenha o
+comando sem `--shard`. Ao investigar falhas, consulte o log do job específico,
+inclusive retries, preparação de áudio e instalação dos browsers; compare o
+tempo total e os minutos consumidos no Actions, pois o paralelismo aumenta o
+uso de runners.
+
+Na SIL-50, a comparação de dependências admite somente o par exato de versões
+do workflow revisado para distribuir os gates. A exceção exige hashes dos dois
+arquivos e permite apenas repetições dos pins existentes de `actions/checkout`
+e `actions/setup-node`. Qualquer outro diff segue a política normal. A revisão
+humana do workflow continua necessária para avaliar permissões, segredos e
+opções; o Dependency Review não a substitui.
+
 Mudanças de topologia ou recovery também executam `npm run validate:topology`
 e `npm run test:recovery:mocks`. O plano revisável por uma segunda pessoa é
 gerado por `npm run recovery:plan`; ele é offline e nunca substitui o

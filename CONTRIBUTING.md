@@ -67,6 +67,17 @@ O gate agrega formatação, JSDoc/checkJs, ESLint, fronteiras do monólito, test
 gates separados e obrigatórios. Durante a implementação, os mesmos passos
 podem ser executados separadamente pelos scripts documentados no `README.md`.
 
+No GitHub Actions, os gates estáticos, PostgreSQL e E2E rodam em jobs isolados.
+O E2E é repartido em quatro partes, todas obrigatórias; o check de qualidade
+agrega seus resultados antes do build e da publicação das imagens. Os testes
+PostgreSQL continuam serializados no mesmo banco sintético. Para reproduzir
+uma parte do E2E, execute `npm run test:e2e -- --shard=1/4`, substituindo `1`
+pelo número que falhou. Para validar a suíte inteira localmente, mantenha o
+comando sem `--shard`. Ao investigar falhas, consulte o log do job específico,
+inclusive retries, preparação de áudio e instalação dos browsers; compare o
+tempo total e os minutos consumidos no Actions, pois o paralelismo aumenta o
+uso de runners.
+
 Mudanças de topologia ou recovery também executam `npm run validate:topology`
 e `npm run test:recovery:mocks`. O plano revisável por uma segunda pessoa é
 gerado por `npm run recovery:plan`; ele é offline e nunca substitui o

@@ -1,5 +1,14 @@
 # TDD — CRM Silmer MVP
 
+## OLIST-T20 — composição e edição por identidade
+
+Comandos por identidade completam edição de atributos, grupos e linhas,
+inclusão/remoção, alteração de tamanho e reordenação. Grade e preços viajam na
+mesma escrita cifrada com ACL comercial, versão e idempotência. Mudança real
+exige revisão; reordenação e atualização sem mudança preservam aprovação.
+Legado/loja continuam sem reescrita e a UI pertence à Fase 4. T20 concluída no
+domínio/API, com T21 ainda pendente. [Contrato](docs/runbooks/olist-phase3.md).
+
 ## OLIST-T20b — composição persistida opt-in
 
 OLIST-09, 29, 42–44: `ficha.sizePricing` opcional guarda grupos/linhas com IDs

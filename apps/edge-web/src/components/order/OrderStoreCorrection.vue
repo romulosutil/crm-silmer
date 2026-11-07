@@ -2,7 +2,10 @@
 import { nextTick, ref } from 'vue';
 import { commandKey, request } from '../../lib/api-client.js';
 
-const props = defineProps({ order: { type: Object, required: true } });
+const props = defineProps({
+  order: { type: Object, required: true },
+  blocked: { type: Boolean, default: false },
+});
 const emit = defineEmits(['saved']);
 const quantity = ref(props.order.totalPieces);
 const busy = ref(false);
@@ -16,7 +19,7 @@ const submitButton = ref(null);
 let pending = null;
 
 async function save() {
-  if (busy.value) return;
+  if (busy.value || props.blocked) return;
   error.value = '';
   success.value = '';
   const value = Number(quantity.value);
@@ -96,7 +99,7 @@ async function save() {
             max="10"
             step="1"
             required
-            :disabled="busy"
+            :disabled="busy || blocked"
             aria-describedby="store-correction-help"
           />
         </div>
@@ -109,6 +112,7 @@ async function save() {
           class="op-save"
           type="submit"
           :disabled="busy"
+          :aria-disabled="blocked || undefined"
         >
           {{ busy ? 'Corrigindo…' : 'Registrar correção de quantidade' }}
         </button>

@@ -98,7 +98,8 @@ function goToNext() {
     </ol>
 
     <p v-if="!ready" class="op-progress-note">
-      Valor e forma de pagamento: você informa ao gerar o pedido.
+      O valor vem dos subtotais revisados. Escolha a forma de pagamento ao
+      gerar.
     </p>
   </section>
 </template>

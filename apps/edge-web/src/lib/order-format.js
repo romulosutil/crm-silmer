@@ -173,6 +173,8 @@ export function missingFieldLabels(missingFields) {
 
 /** @param {string} field */
 function missingFieldLabel(field) {
+  if (field === 'sizePricing' || field.startsWith('sizePricing.'))
+    return 'subtotais por tamanho';
   if (field === 'items') return 'nenhum item';
   if (field === 'artwork') return 'quem faz a arte';
   if (field === 'summary.data_entrega_confirmada') return 'entrega prometida';
@@ -196,7 +198,12 @@ function missingFieldLabel(field) {
  * @param {string} field
  */
 export function isItemGap(field) {
-  return field === 'items' || field.startsWith('items[');
+  return (
+    field === 'items' ||
+    field.startsWith('items[') ||
+    field === 'sizePricing' ||
+    field.startsWith('sizePricing.')
+  );
 }
 
 /**
@@ -247,7 +254,7 @@ function stepGapText(key, gaps) {
   if (key === 'delivery') return 'a data combinada';
   if (key === 'artwork') return 'quem faz a arte';
   if (gaps.includes('items')) return 'ao menos um item';
-  const labels = missingFieldLabels(gaps);
+  const labels = [...new Set(missingFieldLabels(gaps))];
   if (labels.length <= 2) return joinPt(labels);
   const more = labels.length - 2;
   return `${labels[0]}, ${labels[1]} e mais ${more} ${more === 1 ? 'ponto' : 'pontos'}`;

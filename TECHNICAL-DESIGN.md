@@ -1,5 +1,23 @@
 # TDD — CRM Silmer MVP
 
+## OLIST-T12 — grade monetária e conferência por Pedido (07/11/2026)
+
+OLIST-01–12, 21–24, 33–35 e 40–44: o detalhe usa os comandos versionados
+de `size-pricing`, IDs emitidos no servidor e subtotais humanos por tamanho.
+Grupo/total são somente leitura; alterar quantidade exige revisar o subtotal.
+A confirmação envia condição/versão e usa o total calculado no backend.
+Legado e loja usam o complemento autorizado existente, sem reescrever ficha,
+checkout ou total histórico.
+
+O painel Olist compartilha projeção/prévia entre detalhe e busca restrita
+por número/ID, inclusive Financeiro habilitado, sem conceder edição/Inbox.
+Prévia expira e perde validade ao mudar fonte/versão/acesso; reload recupera
+somente operação persistida. Edição comercial aguarda projeção bem-sucedida;
+falha de consulta não remove trava conhecida. Datas mantêm autorização própria.
+Sem comando de exportação na UI, flags/migrations novas ou geração real.
+[Contrato e evidências](docs/runbooks/olist-phase4.md#t12--grade-monetária-e-conferência-por-pedido).
+T13/T25 e gates F5/F6 continuam pendentes.
+
 ## OLIST-T11 — interface administrativa Olist (07/11/2026)
 
 OLIST-03–05, 11, 22–25 e 48: `/olist` oferece conexão/reconexão/desconexão,
@@ -13,7 +31,7 @@ e trata conflito sem sobrescrever rascunho; refresh não abre edição obsoleta.
 Respostas tardias não restauram consultas após mudança de conexão ou revogação.
 Sem transporte criador, migration, dependência ou infraestrutura nova; geração
 real permanece desligada. [Contrato, evidências e rollback](docs/runbooks/olist-phase4.md).
-T11 inicia F4; T12/T13/T25 e gates operacionais F5/F6 continuam pendentes.
+T11 inicia F4; continuação T12 acima. T13/T25 e gates F5/F6 continuam pendentes.
 
 ## OLIST-T10 — guardas comerciais e recuperação (06/11/2026)
 

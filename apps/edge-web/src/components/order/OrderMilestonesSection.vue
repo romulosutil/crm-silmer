@@ -28,7 +28,9 @@ const isManual = computed(
 // ADR 008: unlike the ficha sections, the trail stays open after the order
 // is generated — payment and delivery usually come later — and never needs a
 // reopen.
-const canEdit = computed(() => editing.canEdit.value);
+const canEdit = computed(
+  () => (editing.canRecordMilestones ?? editing.canEdit).value,
+);
 const otherSectionOpen = computed(
   () => editing.editingSection.value !== '' && !isEditing.value,
 );

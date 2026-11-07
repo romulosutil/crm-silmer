@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { reviewedTotal } from '../../../apps/edge-web/src/lib/order-money.js';
 
 // Mock da API de Pedidos para os testes de ponta a ponta, com dados
 // sintéticos. Uso: `await mockOrders(page, { orders: [pendingOrder] })`
@@ -139,6 +140,37 @@ export const pendingOrder = {
   version: 2,
 };
 
+// OLIST-T12: explicit negotiated size subtotals, never inferred from an old total.
+export const readyPendingOrder = {
+  ...pendingOrder,
+  finalAmountCents: 482000,
+  missingFields: ['paymentCondition'],
+  ficha: {
+    ...pendingOrder.ficha,
+    sizePricing: [
+      {
+        id: '10000000-0000-4000-8000-000000000001',
+        lines: [
+          {
+            id: '10000000-0000-4000-8000-000000000002',
+            size: 'M',
+            quantity: 100,
+            subtotalCents: 320000,
+            subtotalReviewed: true,
+          },
+          {
+            id: '10000000-0000-4000-8000-000000000003',
+            size: 'G',
+            quantity: 50,
+            subtotalCents: 162000,
+            subtotalReviewed: true,
+          },
+        ],
+      },
+    ],
+  },
+};
+
 // The same confirmed order, owned by the signed-in seller: only the owner (or
 // an admin) sees the edit buttons.
 export const ownConfirmedOrder = {
@@ -211,19 +243,15 @@ function applyCommand(order, action, body) {
   return {
     confirmedAt: '2026-09-13T12:00:00.000Z',
     confirmedBy: { id: session.user.id, name: session.user.name },
-    finalAmountCents: brlToCents(body.amountText),
+    finalAmountCents: order.ficha.sizePricing
+      ? reviewedTotal(order.ficha.sizePricing)
+      : order.finalAmountCents,
     missingFields: [],
     orderDate: '2026-09-13',
     paymentCondition: body.paymentCondition,
     status: 'confirmado',
     version: order.version + 1,
   };
-}
-
-/** @param {string} text */
-function brlToCents(text) {
-  const [reais, cents = '00'] = String(text).split(',');
-  return Number(reais.replaceAll('.', '')) * 100 + Number(cents.padEnd(2, '0'));
 }
 
 // ADR 016/020: the seven points of every item, who makes the art, the
@@ -454,6 +482,22 @@ export async function mockOrders(page, options = {}) {
           items: source,
           nextCursor:
             pages && listCalls < pages.length ? `cursor-${listCalls}` : null,
+        }),
+      });
+      return;
+    }
+    const olist = /^\/api\/v1\/orders\/([^/]+)\/olist$/u.exec(path);
+    if (olist && request.method() === 'GET') {
+      const order = orders.find((candidate) => candidate.id === olist[1]);
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          orderId: order?.id,
+          number: order?.number,
+          status: order?.status,
+          operation: null,
+          creationEnabled: false,
+          pendingFields: [],
         }),
       });
       return;

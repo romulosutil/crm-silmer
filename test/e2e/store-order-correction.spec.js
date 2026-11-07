@@ -129,6 +129,14 @@ async function mockCorrection(page, options = {}) {
       data = { order };
     } else if (path === `/api/v1/orders/${initialOrder.id}`) {
       data = { order };
+    } else if (path === `/api/v1/orders/${initialOrder.id}/olist`) {
+      data = {
+        orderId: order.id,
+        number: order.number,
+        status: order.status,
+        operation: null,
+        creationEnabled: false,
+      };
     } else if (path === '/api/v1/orders/summary') {
       data = {
         storeNewCount: 0,

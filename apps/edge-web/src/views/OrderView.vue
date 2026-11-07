@@ -22,6 +22,8 @@ import OrderStoreDetails from '../components/order/OrderStoreDetails.vue';
 import OrderStoreCorrection from '../components/order/OrderStoreCorrection.vue';
 import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import OrderShippingEstimate from '../components/order/OrderShippingEstimate.vue';
+import OrderOlistPanel from '../components/order/OrderOlistPanel.vue';
+import OrderPriceBreakdown from '../components/order/OrderPriceBreakdown.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import { usePhone } from '../lib/media-query.js';
 import {
@@ -68,6 +70,9 @@ const liveEvent = inject('liveEvent', ref(null));
 const sessionUser = inject('sessionUser', ref({}));
 const heading = ref(null);
 const order = ref(null);
+// Commercial editing waits for a successful ledger projection. A failed read
+// never proves that an earlier reservation has disappeared.
+const olistOperation = ref({ state: 'checking' });
 const loading = ref(true);
 const notFound = ref(false);
 const error = ref('');
@@ -97,6 +102,7 @@ let readyPdf = null;
 let readyPdfVersion = null;
 let pendingLiveRefresh = false;
 let headingAnnounced = false;
+let stepFocusPending = false;
 
 const isPending = computed(() => order.value?.status === 'pendente');
 // ADR 027: a site shop order is born confirmed and locked; the page shows it
@@ -113,7 +119,18 @@ const isAdmin = computed(() =>
 const canEdit = computed(
   () =>
     Boolean(order.value) &&
+    !order.value.locked &&
+    !order.value.cancelledAt &&
     (isAdmin.value || order.value.seller?.id === sessionUser.value?.id),
+);
+const canEditCommercial = computed(
+  () => canEdit.value && !olistOperation.value,
+);
+const canConfirm = computed(
+  () =>
+    canEdit.value &&
+    (!olistOperation.value ||
+      ['confirmed', 'linked'].includes(olistOperation.value.state)),
 );
 const customerName = computed(
   () => order.value?.ficha?.summary?.cliente || 'Cliente não informado',
@@ -136,7 +153,7 @@ const nextStepNumber = computed(
 const showProgress = computed(
   () =>
     isPending.value &&
-    canEdit.value &&
+    canEditCommercial.value &&
     !isStore.value &&
     steps.value.length > 0,
 );
@@ -150,7 +167,7 @@ const showProgress = computed(
 const mobileAction = computed(() => {
   if (!order.value || editingSection.value !== '') return '';
   if (!isPending.value) return 'pdf';
-  if (!canEdit.value || isStore.value) return '';
+  if (!canConfirm.value || isStore.value) return '';
   return nextStep.value ? 'step' : 'generate';
 });
 const itemCount = computed(() => order.value?.ficha?.items?.length ?? 0);
@@ -258,6 +275,15 @@ async function runCommand(action, body) {
 async function revisitNextStep() {
   await load(true);
   await nextTick();
+  if (olistOperation.value?.state === 'checking') {
+    stepFocusPending = true;
+    return;
+  }
+  focusNextStep();
+}
+
+function focusNextStep() {
+  if (controller?.signal.aborted) return;
   const doc = globalThis.document;
   const target = nextStep.value
     ? [footerStep.value, doc?.querySelector('.op-progress-go')].find(
@@ -271,6 +297,15 @@ async function revisitNextStep() {
   target.scrollIntoView?.({ block: 'center' });
   target.focus({ preventScroll: true });
 }
+
+// The next-step button may be hidden while the ledger is being re-read.
+// Focus it only after the new projection has decided commercial availability.
+watch(olistOperation, async (operation) => {
+  if (!stepFocusPending || operation?.state === 'checking') return;
+  stepFocusPending = false;
+  await nextTick();
+  focusNextStep();
+});
 
 /**
  * PLA-04 (ADR 008): paid and delivered travel together over the version the
@@ -484,7 +519,9 @@ watch(editRequest, (next) => {
 });
 
 provide('orderEditing', {
-  canEdit,
+  canEdit: canEditCommercial,
+  canConfirm,
+  canRecordMilestones: canEdit,
   command: runCommand,
   editingSection,
   editRequest,
@@ -729,6 +766,18 @@ onBeforeUnmount(() => {
         <OrderIcon name="lock" />
         Pedido da loja do site: travado, sem edição.
       </p>
+      <p v-else-if="order.cancelledAt || olistOperation" class="op-readonly">
+        <OrderIcon name="lock" />
+        {{
+          order.cancelledAt
+            ? 'Pedido cancelado: edição bloqueada.'
+            : olistOperation.state === 'checking'
+              ? 'Conferindo a disponibilidade de edição comercial.'
+              : olistOperation.state === 'unavailable'
+                ? 'Não foi possível conferir a edição comercial. Atualize o estado Olist.'
+                : 'Pedido com operação Olist: edição comercial bloqueada.'
+        }}
+      </p>
       <p v-else-if="!canEdit" class="op-readonly">
         <OrderIcon name="lock" />
         Somente {{ order.seller?.name || 'o dono da conversa' }} ou um
@@ -743,6 +792,8 @@ onBeforeUnmount(() => {
             v-if="
               isAdmin &&
               !order.isTest &&
+              !order.cancelledAt &&
+              (!olistOperation || olistOperation.state === 'checking') &&
               [
                 'bloquinho-22',
                 'bloquinho-22-colorido',
@@ -750,6 +801,7 @@ onBeforeUnmount(() => {
               ].includes(order.ficha?.loja?.produto?.slug)
             "
             :order="order"
+            :blocked="!!olistOperation"
             @saved="order = $event"
           />
         </div>
@@ -788,6 +840,26 @@ onBeforeUnmount(() => {
           </p>
         </aside>
       </div>
+
+      <OrderPriceBreakdown
+        v-if="
+          order.ficha.sizePricing === undefined &&
+          (isStore || order.confirmedAt)
+        "
+        :order="order"
+        :blocked="editingSection !== '' || !!olistOperation"
+        :commercial-locked="
+          !!olistOperation && olistOperation.state !== 'checking'
+        "
+        @changed="load(true)"
+      />
+      <OrderOlistPanel
+        :order-id="order.id"
+        :revision="order.version"
+        :blocked="editingSection !== ''"
+        read-only-allowed
+        @operation="olistOperation = $event"
+      />
 
       <div
         v-if="mobileAction"

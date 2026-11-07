@@ -14,6 +14,8 @@ import {
 } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
 import OrderSheetHead from './OrderSheetHead.vue';
+import OrderSizePricing from './OrderSizePricing.vue';
+import { reviewedTotal, subtotalLabel } from '../../lib/order-money.js';
 
 const SECTION = 'items';
 // The value the ficha prints when a garment has no sleeve or no viés (PFI-07).
@@ -95,6 +97,15 @@ const items = computed(() =>
   isEditing.value ? draft.value : shownItems.value,
 );
 const shownItems = computed(() => props.order.ficha.items);
+const pricing = computed(() => props.order.ficha.sizePricing);
+
+async function initializePricing() {
+  if (saving.value) return;
+  saving.value = true;
+  const result = await editing.save('size-pricing', { action: 'initialize' });
+  saving.value = false;
+  if (!result.ok) errorMessage.value = result.message;
+}
 // PFI-04: every total is summed from the sizes, in reading and while
 // editing, so the seller sees the number the server will store before saving.
 const draftTotal = computed(() =>
@@ -272,6 +283,8 @@ async function startEditing() {
   // The first field lives inside a v-for; a ref on a repeated element would
   // be a list, so the form itself is asked for its first input.
   form.value?.querySelector('input')?.focus();
+  if (pricing.value !== undefined)
+    sheet.value?.querySelector('.op-price-editor h3')?.focus();
 }
 
 function cancel() {
@@ -470,8 +483,15 @@ async function save() {
 
     <!-- novalidate: the browser would block the submit on its own and show
          its own message; the error belongs on the size line, in Portuguese. -->
+    <OrderSizePricing
+      v-if="isEditing && pricing !== undefined"
+      id="order-items-body"
+      :order="order"
+      :hidden="!open"
+      @done="cancel"
+    />
     <form
-      v-if="isEditing"
+      v-else-if="isEditing"
       id="order-items-body"
       ref="form"
       class="op-form"
@@ -911,6 +931,24 @@ async function save() {
       class="op-sheet-body op-item-list"
       :hidden="!open"
     >
+      <div v-if="pricing === undefined" class="op-hint">
+        <p>
+          Este pedido ainda não tem composição de subtotais por tamanho. O valor
+          histórico não é distribuído automaticamente entre as peças.
+        </p>
+        <button
+          v-if="canEdit && !order.confirmedAt && !order.reopenedAt"
+          type="button"
+          :disabled="saving || otherSectionOpen"
+          @click="initializePricing"
+        >
+          {{ saving ? 'Preparando…' : 'Preparar subtotais por tamanho' }}
+        </button>
+        <p v-else>
+          O complemento da composição histórica é conferido no fluxo Olist, sem
+          alterar a ficha original.
+        </p>
+      </div>
       <div
         v-for="(item, itemIndex) in shownItems"
         :key="itemIndex"
@@ -993,6 +1031,27 @@ async function save() {
             <dt>Gola</dt>
             <dd>{{ shownValue(item.gola || item.vies_gola) }}</dd>
           </div>
+          <div v-if="pricing !== undefined" class="op-point--wide">
+            <dt>Subtotais por tamanho</dt>
+            <dd>
+              <ul class="op-price-read-list">
+                <li
+                  v-for="line in pricing[itemIndex]?.lines ?? []"
+                  :key="line.id"
+                >
+                  {{ line.size }} · {{ line.quantity }} peças ·
+                  {{ subtotalLabel(line.subtotalCents) }}
+                  <span v-if="!line.subtotalReviewed"> · revisão pendente</span>
+                </li>
+              </ul>
+              <p class="op-num">
+                Subtotal do grupo:
+                <strong>{{
+                  subtotalLabel(reviewedTotal([pricing[itemIndex]]))
+                }}</strong>
+              </p>
+            </dd>
+          </div>
         </dl>
         <p v-if="itemQuantityWarning(item)" class="op-quantity-warning">
           <OrderIcon name="alert" />{{ itemQuantityWarning(item) }}
@@ -1044,6 +1103,11 @@ async function save() {
       <p class="op-hint">
         A quantidade de cada item e o total do pedido saem dos tamanhos e nunca
         são digitados.
+      </p>
+      <p v-if="pricing !== undefined" class="op-num">
+        Total do pedido:
+        <strong>{{ subtotalLabel(reviewedTotal(pricing)) }}</strong
+        >, somado dos subtotais revisados.
       </p>
     </div>
   </section>

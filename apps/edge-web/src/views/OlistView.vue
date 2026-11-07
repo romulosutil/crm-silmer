@@ -11,6 +11,7 @@ import {
 import { commandKey, request } from '../lib/api-client.js';
 import { consumeOlistCallback } from '../lib/olist-callback.js';
 import OlistMappingsPanel from '../components/OlistMappingsPanel.vue';
+import OrderOlistPanel from '../components/order/OrderOlistPanel.vue';
 import { olistAdminFailure } from '../lib/olist-admin-feedback.js';
 
 const props = defineProps({
@@ -456,6 +457,11 @@ onBeforeUnmount(() => {
           Existe uma operação Olist em acompanhamento.
         </p>
         <p v-else>Nenhuma venda Olist vinculada.</p>
+        <OrderOlistPanel
+          :key="result.orderId"
+          :order-id="result.orderId"
+          embedded
+        />
       </div>
     </section>
     <p v-else class="surface">

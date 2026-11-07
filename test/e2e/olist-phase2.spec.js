@@ -97,6 +97,14 @@ async function setup(page, options = {}) {
         failure.status,
       );
     if (path === `${base}/status`) return json(current);
+    if (/^\/api\/v1\/orders\/[^/]+\/olist$/u.test(path))
+      return json({
+        orderId: path.split('/')[4],
+        number: '41-CRM',
+        status: 'pendente',
+        operation: null,
+        creationEnabled: false,
+      });
     if (path.startsWith(`${base}/`) && req.method() === 'POST') {
       expect(req.headers()['x-csrf-token']).toBe('olist-test-csrf');
       if (path !== `${base}/complete`)

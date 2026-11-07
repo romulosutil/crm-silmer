@@ -4,36 +4,35 @@ import { brand } from '../../brand/index.js';
 import { dateTimeBR } from '../../lib/format.js';
 import { openDialog } from '../../lib/ui.js';
 import {
-  amountLabel,
   fichaPrintedLabel,
-  formatBrl,
   isItemGap,
   isPageGap,
   isStoreOrder,
   joinPt,
   missingFieldLabels,
   nextOrderStep,
-  parseBrl,
   PAYMENT_CONDITION_OPTIONS,
   paymentConditionLabel,
   storeConfirmationLabel,
 } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
+import { subtotalLabel } from '../../lib/order-money.js';
 
 // PCL-05: what each blocker outside the items means to the seller when the
 // server refuses it; the item points are named one by one (PIT-06).
 const BLOCKER_MESSAGES = Object.freeze({
   artwork: 'Marque quem faz a arte em Arte do pedido.',
-  finalAmount: 'Informe o valor final aprovado pelo cliente.',
+  finalAmount: 'Revise os subtotais por tamanho antes de confirmar.',
   paymentCondition: 'Escolha a forma de pagamento.',
   'summary.data_entrega_confirmada':
     'Informe a entrega prometida no Resumo do pedido.',
 });
-const AMOUNT_FORMAT_MESSAGE = 'Use o formato 4.820,00.';
-// PFI-19 (RFC 024): the amount and the payment method are typed only in the
-// dialog "Gerar o pedido", so the rail says where they are asked.
+const AMOUNT_FORMAT_MESSAGE =
+  'Revise os subtotais por tamanho antes de confirmar.';
+// OLIST-T12: the dialog reviews the calculated total and records only the
+// payment condition. A reserved/exported composition keeps that condition.
 const ASKED_WHEN_GENERATING =
-  'Valor e forma de pagamento você informa ao gerar.';
+  'O valor vem dos subtotais revisados. Escolha a forma de pagamento ao gerar.';
 const OFFLINE_MESSAGE =
   'Sem conexão com o servidor. O pedido não foi gerado; tente de novo.';
 // ADR 020, PFI-20 (ADR 035): who makes the art, in the words of the Arte do
@@ -54,12 +53,10 @@ const props = defineProps({
 const editing = inject('orderEditing');
 const notify = inject('notify', () => {});
 const dialog = ref(null);
-const amountInput = ref(null);
 const dialogAlert = ref(null);
 const reopenDialog = ref(null);
 const reopenOpen = ref(false);
 const closingTitle = ref(null);
-const amountText = ref(formatBrl(props.order.finalAmountCents));
 const paymentCondition = ref(props.order.paymentCondition ?? '');
 const busy = ref(false);
 const confirmOpen = ref(false);
@@ -84,12 +81,21 @@ const isPending = computed(() => props.order.status === 'pendente');
 // generated here, with what the site confirmed and no reopening.
 const isStore = computed(() => isStoreOrder(props.order));
 const fichaPrinted = computed(() => fichaPrintedLabel(props.order));
-const canCommand = computed(() => editing.canEdit.value && !isStore.value);
+const canCommand = computed(
+  () =>
+    (isPending.value
+      ? (editing.canConfirm?.value ?? editing.canEdit.value)
+      : editing.canEdit.value) && !isStore.value,
+);
 const sectionOpenElsewhere = computed(
   () => editing.editingSection.value !== '',
 );
 const missing = computed(() => (props.order.missingFields ?? []).map(String));
-const amountValid = computed(() => parseBrl(amountText.value) !== null);
+const pricingMissing = computed(() =>
+  missing.value.some(
+    (field) => field === 'sizePricing' || field.startsWith('sizePricing.'),
+  ),
+);
 const items = computed(() => props.order.ficha?.items ?? []);
 const itemsHeadline = computed(() => {
   const count = items.value.length;
@@ -106,15 +112,20 @@ const artworkHeadline = computed(() => {
 // it leads to the step instead of opening the dialog.
 const nextStep = computed(() => nextOrderStep(props.order));
 const generateBlocked = computed(
-  () => nextStep.value !== null || sectionOpenElsewhere.value,
+  () =>
+    nextStep.value !== null ||
+    sectionOpenElsewhere.value ||
+    pricingMissing.value,
 );
 // PIT-06: "Falta para gerar" names every point of the page, item by item,
-// then who makes the art and the promised delivery. The amount and the
-// payment method are asked in the dialog (PFI-19), never listed here.
+// then who makes the art and the promised delivery. The payment condition
+// is chosen in the dialog; the total comes from the reviewed subtotals.
 const pendingLabels = computed(() =>
   missingFieldLabels(missing.value.filter(isPageGap)),
 );
 const readiness = computed(() => {
+  if (pricingMissing.value)
+    return 'Revise os subtotais por tamanho em Itens e especificações antes de gerar.';
   if (pendingLabels.value.length > 0) {
     return `Falta para gerar: ${joinPt(pendingLabels.value)}. ${ASKED_WHEN_GENERATING}`;
   }
@@ -130,17 +141,27 @@ function dateBR(value) {
   return match ? `${match[3]}/${match[2]}/${match[1]}` : '—';
 }
 
-// PCL-07: reopening keeps the amount and the condition already recorded, so
-// the dialog comes back filled with what was confirmed. Only a change of
-// those two values rewrites them: saving another section while the dialog is
-// closed (ADR 016) keeps what the seller already typed in it.
 watch(
-  [() => props.order.finalAmountCents, () => props.order.paymentCondition],
-  ([cents, condition]) => {
-    amountText.value = formatBrl(cents);
+  () => props.order.paymentCondition,
+  (condition) => {
     paymentCondition.value = condition ?? '';
   },
 );
+
+watch(
+  () => editing.canEdit.value,
+  (allowed) => {
+    if (!allowed) paymentCondition.value = props.order.paymentCondition ?? '';
+  },
+);
+
+watch(canCommand, async (allowed) => {
+  if (allowed || !confirmOpen.value || !dialog.value?.open || busy.value)
+    return;
+  await closeDialog({ restoreFocus: false });
+  await nextTick();
+  closingTitle.value?.focus();
+});
 
 // A condition picked after the warning clears the warning.
 watch(paymentCondition, (value) => {
@@ -148,32 +169,6 @@ watch(paymentCondition, (value) => {
   const { paymentCondition: _cleared, ...rest } = fieldErrors.value;
   fieldErrors.value = rest;
 });
-
-/**
- * On leaving the field, a plain number ("4820", "4820,5") is written the way
- * the rule reads it ("4.820,00"); anything else is left as typed and, when it
- * still is not an amount, the message shows now instead of on "Confirmar".
- */
-function settleAmount() {
-  const text = amountText.value.trim();
-  const plain = /^(\d+)(?:,(\d{1,2}))?$/u.exec(text);
-  if (plain) {
-    const cents =
-      Number(plain[1]) * 100 + Number((plain[2] ?? '').padEnd(2, '0'));
-    if (Number.isSafeInteger(cents) && cents > 0) {
-      amountText.value = formatBrl(cents);
-    }
-  }
-  if (amountText.value.trim() !== '' && !amountValid.value) {
-    fieldErrors.value = {
-      ...fieldErrors.value,
-      finalAmount: AMOUNT_FORMAT_MESSAGE,
-    };
-    return;
-  }
-  const { finalAmount: _cleared, ...rest } = fieldErrors.value;
-  fieldErrors.value = rest;
-}
 
 /**
  * The item points in one sentence, from the keys the server uses.
@@ -209,15 +204,19 @@ function blockerErrors(fields) {
  * PFI-16/PFI-19: while a step is missing, "Gerar pedido" leads to it and
  * never opens the dialog nor sends the confirmation; with a section open it
  * waits for Salvar or Cancelar, as #closing-readiness says. Once the three
- * steps are done it opens the dialog "Gerar o pedido", the only place where
- * the amount and the payment method are typed.
+ * steps are done it opens the dialog "Gerar o pedido" to review the total
+ * and choose the payment condition.
  *
  * @param {EventTarget|null} [trigger] the button that asked for it
  * @returns {Promise<'busy'|'section'|'step'|'dialog'>}
  */
 async function requestGenerate(trigger) {
-  if (busy.value) return 'busy';
+  if (busy.value || !canCommand.value || !isPending.value) return 'busy';
   if (sectionOpenElsewhere.value) return 'section';
+  if (pricingMissing.value) {
+    void editing.goToSection('items');
+    return 'step';
+  }
   if (nextStep.value) {
     void editing.goToSection(nextStep.value.section);
     return 'step';
@@ -234,7 +233,7 @@ async function requestGenerate(trigger) {
   if (opener) openDialog(dialog.value, opener);
   else dialog.value.showModal?.();
   // The first field of the dialog, whatever the helper focused.
-  amountInput.value?.focus();
+  dialog.value?.querySelector('input[name="payment-condition"]')?.focus();
   return 'dialog';
 }
 
@@ -292,7 +291,7 @@ async function focusFirstError() {
   const errors = fieldErrors.value;
   /** @type {HTMLElement|null|undefined} */
   const target = errors.finalAmount
-    ? amountInput.value
+    ? dialog.value?.querySelector('#closing-amount-error')
     : errors.paymentCondition
       ? dialog.value?.querySelector('input[name="payment-condition"]')
       : null;
@@ -300,17 +299,22 @@ async function focusFirstError() {
 }
 
 /**
- * PFI-11/PFI-12: a malformed amount ("4,820") or a missing method is caught
- * here, next to its field, and nothing is sent; the server parses the same
- * text again and would answer 422. A second Enter while the first is on its
- * way is ignored.
+ * OLIST-T12/PFI-12: an incomplete calculated total or a missing payment
+ * condition stops before the request. A second Enter and a revoked action
+ * cannot submit; the API revalidates the current commercial lock as well.
  */
 async function submitGenerate() {
-  if (busy.value) return;
+  if (busy.value || !canCommand.value || !isPending.value) return;
+  if (!editing.canEdit.value)
+    paymentCondition.value = props.order.paymentCondition ?? '';
   dialogMessage.value = '';
   /** @type {Record<string, string>} */
   const errors = {};
-  if (!amountValid.value) errors.finalAmount = AMOUNT_FORMAT_MESSAGE;
+  if (
+    !Number.isSafeInteger(props.order.finalAmountCents) ||
+    props.order.finalAmountCents <= 0
+  )
+    errors.finalAmount = 'Revise os subtotais por tamanho antes de confirmar.';
   if (paymentCondition.value === '') {
     errors.paymentCondition = BLOCKER_MESSAGES.paymentCondition;
   }
@@ -324,10 +328,12 @@ async function submitGenerate() {
 
 /** PCL-04: the human transition that dates the order and frees the ficha. */
 async function generate() {
+  if (busy.value || !canCommand.value || !isPending.value) return;
   busy.value = true;
   const result = await editing.command('confirm', {
-    amountText: amountText.value.trim(),
-    paymentCondition: paymentCondition.value,
+    paymentCondition: editing.canEdit.value
+      ? paymentCondition.value
+      : (props.order.paymentCondition ?? ''),
   });
   busy.value = false;
   if (result.ok) {
@@ -468,7 +474,7 @@ async function reopen() {
         <dl class="op-deal">
           <div>
             <dt>Valor final</dt>
-            <dd class="op-num">{{ amountLabel(order.finalAmountCents) }}</dd>
+            <dd class="op-num">{{ subtotalLabel(order.finalAmountCents) }}</dd>
           </div>
           <div>
             <dt>Forma de pagamento</dt>
@@ -586,42 +592,27 @@ async function reopen() {
         </p>
 
         <div class="op-field">
-          <label for="closing-amount">Valor final</label>
-          <div class="op-amount">
-            <span aria-hidden="true">R$</span>
-            <input
-              id="closing-amount"
-              ref="amountInput"
-              v-model="amountText"
-              class="op-num"
-              type="text"
-              inputmode="decimal"
-              autocomplete="off"
-              placeholder="0,00"
-              enterkeyhint="done"
-              @blur="settleAmount"
-              :aria-invalid="Boolean(fieldErrors.finalAmount) || undefined"
-              :aria-describedby="
-                fieldErrors.finalAmount
-                  ? 'closing-amount-error'
-                  : 'closing-amount-hint'
-              "
-            />
-          </div>
+          <span class="op-label">Valor final calculado</span>
+          <p class="op-num">{{ subtotalLabel(order.finalAmountCents) }}</p>
           <p
             v-if="fieldErrors.finalAmount"
             id="closing-amount-error"
             role="alert"
+            tabindex="-1"
             class="op-field-error"
           >
             {{ fieldErrors.finalAmount }}
           </p>
           <p v-else id="closing-amount-hint" class="op-hint">
-            Aprovado pelo cliente. O agente nunca informa preço.
+            Soma dos subtotais por tamanho revisados. Para alterar o valor,
+            revise os subtotais nos itens.
           </p>
         </div>
 
-        <fieldset class="op-conditions">
+        <fieldset
+          class="op-conditions"
+          :disabled="busy || !editing.canEdit.value"
+        >
           <legend>Forma de pagamento</legend>
           <div class="op-condition-chips">
             <label
@@ -661,7 +652,7 @@ async function reopen() {
           <button
             type="submit"
             class="primary op-generate"
-            :aria-disabled="busy || undefined"
+            :aria-disabled="busy || !canCommand || !isPending || undefined"
             :aria-busy="busy || undefined"
           >
             <OrderIcon name="ficha" />

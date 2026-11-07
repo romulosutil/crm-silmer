@@ -46,6 +46,29 @@ test('names the two order statuses of ADR 006', () => {
   assert.equal(orderStatusLabel(null), 'Sem pedido');
 });
 
+test('OLIST-T12: pricing blockers lead to items with human labels, without exposing ledger identifiers', () => {
+  const missingFields = [
+    'sizePricing.group-uuid.line-one',
+    'sizePricing.group-uuid.line-two',
+  ];
+  const order = { missingFields };
+  assert.equal(isItemGap('sizePricing'), true);
+  assert.equal(isItemGap(missingFields[0]), true);
+  assert.deepEqual(missingFieldLabels(missingFields), [
+    'subtotais por tamanho',
+    'subtotais por tamanho',
+  ]);
+  assert.equal(orderSteps(order).length, 3);
+  assert.deepEqual(nextOrderStep(order), {
+    key: 'items',
+    label: 'Itens',
+    action: 'Completar itens',
+    section: 'items',
+    done: false,
+    missing: 'falta: subtotais por tamanho',
+  });
+});
+
 test('offers the three payment conditions in the order of the mockup', () => {
   assert.deepEqual(
     PAYMENT_CONDITION_OPTIONS.map((option) => option.value),

@@ -10,6 +10,7 @@ import {
   ONE_PIXEL_PNG,
   ownConfirmedOrder,
   pendingOrder,
+  readyPendingOrder,
   syntheticFile,
 } from './support/orders-mock.js';
 
@@ -74,6 +75,7 @@ test('opens the order page inside Pedidos, with the trail and the sections in or
     'Observações do pedido',
     'Dados do atendimento',
     'Fechamento e pagamento',
+    'Pedido no Olist',
   ]);
 
   const results = await new AxeBuilder({ page }).analyze();
@@ -156,7 +158,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   // PFI-19: the amount and the payment method are asked when generating,
   // never listed as missing nor typed in the panel.
   await expect(readiness).toHaveText(
-    'Falta para gerar: cor do item 1, gola do item 1, quem faz a arte e entrega prometida. Valor e forma de pagamento você informa ao gerar.',
+    'Falta para gerar: cor do item 1, gola do item 1, quem faz a arte e entrega prometida. O valor vem dos subtotais revisados. Escolha a forma de pagamento ao gerar.',
   );
   await expect(page.getByLabel('Valor final')).toHaveCount(0);
   await expect(page.getByRole('radio')).toHaveCount(0);
@@ -176,7 +178,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
     'Informar entrega prometida',
   ]);
   await expect(progress).toContainText(
-    'Valor e forma de pagamento: você informa ao gerar o pedido.',
+    'O valor vem dos subtotais revisados. Escolha a forma de pagamento ao gerar.',
   );
   // PFI-16: what is filled elsewhere keeps "Gerar pedido" unavailable but
   // focusable; activating it leads to the next step and never confirms.
@@ -195,7 +197,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   await summary.getByRole('button', { name: 'Salvar resumo' }).click();
   await expect(count).toHaveText('1 de 3 prontos');
   await expect(readiness).toHaveText(
-    'Falta para gerar: cor do item 1, gola do item 1 e quem faz a arte. Valor e forma de pagamento você informa ao gerar.',
+    'Falta para gerar: cor do item 1, gola do item 1 e quem faz a arte. O valor vem dos subtotais revisados. Escolha a forma de pagamento ao gerar.',
   );
 
   // The next step opens the items editor.
@@ -206,7 +208,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   await items.getByRole('button', { name: 'Salvar itens' }).click();
   await expect(count).toHaveText('2 de 3 prontos');
   await expect(readiness).toHaveText(
-    'Falta para gerar: quem faz a arte. Valor e forma de pagamento você informa ao gerar.',
+    'Falta para gerar: quem faz a arte. O valor vem dos subtotais revisados. Escolha a forma de pagamento ao gerar.',
   );
 
   // ADR 020: the last step sends the seller to who makes the art.
@@ -223,7 +225,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   await expect(progress.getByRole('listitem')).toHaveCount(0);
   await expect(progress.getByRole('button')).toHaveCount(0);
   await expect(readiness).toHaveText(
-    'Tudo pronto. Valor e forma de pagamento você informa ao gerar.',
+    'Tudo pronto. O valor vem dos subtotais revisados. Escolha a forma de pagamento ao gerar.',
   );
   await expect(generate).not.toHaveAttribute('aria-disabled', /./u);
   // The paid day stays empty: generating means paid until the CRM handles
@@ -235,8 +237,8 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
   await expect(dialog).toBeVisible();
   // PFI-19: the amount and the payment method are asked here, empty.
-  await expect(dialog.getByLabel('Valor final')).toBeFocused();
-  await expect(dialog.getByLabel('Valor final')).toHaveValue('');
+  await expect(dialog.getByLabel('Pix')).toBeFocused();
+  await expect(dialog.getByLabel('Valor final')).toHaveCount(0);
   await expect(dialog.getByRole('radio', { checked: true })).toHaveCount(0);
   expect(writes.filter((call) => call.action === 'confirm')).toHaveLength(0);
 });
@@ -1369,7 +1371,7 @@ test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)'
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   // PFI-19: the amount and the method are asked in the dialog, not listed.
   await expect(closing).toContainText(
-    'Falta para gerar: cor do item 2, modelo de malha do item 2, tamanhos do item 2 e gola do item 2. Valor e forma de pagamento você informa ao gerar.',
+    'Falta para gerar: cor do item 2, modelo de malha do item 2, tamanhos do item 2 e gola do item 2. O valor vem dos subtotais revisados. Escolha a forma de pagamento ao gerar.',
   );
 });
 
@@ -2319,6 +2321,7 @@ test('keeps the sections in the order of the printed ficha (PFI-01, PLA-01)', as
     'Observações do pedido',
     'Dados do atendimento',
     'Fechamento e pagamento',
+    'Pedido no Olist',
   ]);
 });
 
@@ -2327,7 +2330,10 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await mockOrders(page, {
+    orders: [readyPendingOrder, confirmedOrder],
+    onWrite: (call) => writes.push(call),
+  });
   await page.goto('/pedidos/order-pendente');
 
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
@@ -2343,7 +2349,7 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
   await expect(review).toContainText('1 item · 150 peças');
   await expect(review).toContainText('24/10/2026');
   await expect(review).toContainText('O cliente envia a arte');
-  await dialog.getByLabel('Valor final').fill('4.820,00');
+
   await dialog.getByLabel('Pix').check();
   await dialog.getByRole('button', { name: 'Confirmar e gerar ficha' }).click();
 
@@ -2361,7 +2367,6 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
   ).toHaveCount(0);
   expect(writes[0].action).toBe('confirm');
   expect(writes[0].body).toEqual({
-    amountText: '4.820,00',
     expectedVersion: 2,
     paymentCondition: 'pix',
   });
@@ -2406,7 +2411,8 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
   // PCL-07: the amount and the condition survive the reopen; the dialog
   // comes back filled, and backing out writes nothing.
   await generate.click();
-  await expect(dialog.getByLabel('Valor final')).toHaveValue('4.820,00');
+  await expect(dialog).toContainText('R$ 4.820,00');
+  await expect(dialog.getByLabel('Valor final')).toHaveCount(0);
   await expect(dialog.getByLabel('Pix')).toBeChecked();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -2414,31 +2420,25 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
   expect(writes).toHaveLength(2);
 });
 
-test('refuses a malformed amount next to the field, before the request', async ({
+test('shows the calculated total without a free amount field (OLIST-T12)', async ({
   page,
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await mockOrders(page, {
+    orders: [readyPendingOrder],
+    onWrite: (call) => writes.push(call),
+  });
   await page.goto('/pedidos/order-pendente');
-
-  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
-  await closing.getByRole('button', { name: 'Gerar pedido' }).click();
-  // PFI-19: the field lives in the dialog, which stays open with the error.
+  await page.getByRole('button', { name: 'Gerar pedido' }).click();
   const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
-  const amount = dialog.getByLabel('Valor final');
-  await dialog.getByLabel('Pix').check();
-  for (const malformed of ['4,820', '4,820.00']) {
-    await amount.fill(malformed);
-    await dialog
-      .getByRole('button', { name: 'Confirmar e gerar ficha' })
-      .click();
-    await expect(dialog).toContainText('Use o formato 4.820,00.');
-    await expect(amount).toHaveAttribute('aria-invalid', 'true');
-    await expect(amount).toHaveAccessibleDescription('Use o formato 4.820,00.');
-    await expect(amount).toBeFocused();
-    await expect(dialog).toBeVisible();
-  }
+  await expect(dialog).toContainText('Valor final calculado');
+  await expect(dialog).toContainText('R$ 4.820,00');
+  await expect(dialog).toContainText(
+    'Soma dos subtotais por tamanho revisados.',
+  );
+  await expect(dialog.locator('input[type="text"]')).toHaveCount(0);
+  await expect(dialog.getByLabel('Pix')).toBeFocused();
   expect(writes).toHaveLength(0);
 });
 
@@ -2447,16 +2447,20 @@ test('asks for the payment method in the dialog, before the request (PFI-12, PFI
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await mockOrders(page, {
+    orders: [readyPendingOrder, confirmedOrder],
+    onWrite: (call) => writes.push(call),
+  });
   await page.goto('/pedidos/order-pendente');
 
   await page.getByRole('button', { name: 'Gerar pedido' }).click();
   const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
-  await dialog.getByLabel('Valor final').fill('4820');
+
   await dialog.getByRole('button', { name: 'Confirmar e gerar ficha' }).click();
   await expect(dialog).toContainText('Escolha a forma de pagamento.');
   // Formatted on leaving the field (PFI-11).
-  await expect(dialog.getByLabel('Valor final')).toHaveValue('4.820,00');
+  await expect(dialog).toContainText('R$ 4.820,00');
+  await expect(dialog.getByLabel('Valor final')).toHaveCount(0);
   await expect(dialog.getByLabel('Pix')).toBeFocused();
   expect(writes).toHaveLength(0);
 
@@ -2467,7 +2471,6 @@ test('asks for the payment method in the dialog, before the request (PFI-12, PFI
   await expect(dialog).toHaveCount(0);
   expect(writes).toHaveLength(1);
   expect(writes[0].body).toEqual({
-    amountText: '4.820,00',
     expectedVersion: 2,
     paymentCondition: 'pix',
   });
@@ -2477,6 +2480,7 @@ test('names each blocker the server refused the confirmation with', async ({
   page,
 }) => {
   await mockOrders(page, {
+    orders: [readyPendingOrder, confirmedOrder],
     writeFailure: {
       body: {
         code: 'ORDER_NOT_CONFIRMABLE',
@@ -2495,7 +2499,7 @@ test('names each blocker the server refused the confirmation with', async ({
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await closing.getByRole('button', { name: 'Gerar pedido' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Valor final').fill('4.820,00');
+
   await dialog.getByLabel('Pix').check();
   await dialog.getByRole('button', { name: 'Confirmar e gerar ficha' }).click();
 
@@ -2515,6 +2519,7 @@ test('says an order needs an item when the server refuses one without items', as
   page,
 }) => {
   await mockOrders(page, {
+    orders: [readyPendingOrder, confirmedOrder],
     writeFailure: {
       body: { code: 'ORDER_NOT_CONFIRMABLE', fields: ['items'] },
       status: 422,
@@ -2525,7 +2530,7 @@ test('says an order needs an item when the server refuses one without items', as
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await closing.getByRole('button', { name: 'Gerar pedido' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Valor final').fill('4.820,00');
+
   await dialog.getByLabel('Pix').check();
   await dialog.getByRole('button', { name: 'Confirmar e gerar ficha' }).click();
   await expect(dialog).toHaveCount(0);
@@ -2537,7 +2542,10 @@ test('reviews and generates the order by keyboard alone, giving the focus back o
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await mockOrders(page, {
+    orders: [readyPendingOrder, confirmedOrder],
+    onWrite: (call) => writes.push(call),
+  });
   await page.goto('/pedidos/order-pendente');
 
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
@@ -2549,15 +2557,10 @@ test('reviews and generates the order by keyboard alone, giving the focus back o
   await expect(dialog).toHaveAccessibleDescription(
     /o PDF da ficha fica disponível/u,
   );
-  const amount = dialog.getByLabel('Valor final');
-  await expect(amount).toBeFocused();
-  await expect(amount).toHaveAttribute('inputmode', 'decimal');
-
-  // Tab walks the dialog in reading order and never leaves it.
-  await page.keyboard.type('4820');
-  await page.keyboard.press('Tab');
   await expect(dialog.getByLabel('Pix')).toBeFocused();
-  await expect(amount).toHaveValue('4.820,00');
+  await expect(dialog).toContainText('R$ 4.820,00');
+
+  // Tab walks the payment controls and actions without leaving the dialog.
   await page.keyboard.press('Space');
   await expect(dialog.getByLabel('Pix')).toBeChecked();
   await page.keyboard.press('Tab');
@@ -2585,10 +2588,11 @@ test('reviews and generates the order by keyboard alone, giving the focus back o
   await expect(generate).toBeFocused();
   expect(writes).toHaveLength(0);
 
-  // Enter in the amount sends the confirmation.
+  // Reopen, retain the selected condition and submit entirely by keyboard.
   await page.keyboard.press('Enter');
-  await expect(amount).toBeFocused();
-  await amount.fill('1.180,00');
+  await expect(dialog.getByLabel('Pix')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
   await page.keyboard.press('Enter');
   await expect(dialog).toHaveCount(0);
   await expect(closing).toContainText('Pedido confirmado e ficha gerada.');
@@ -2599,7 +2603,6 @@ test('reviews and generates the order by keyboard alone, giving the focus back o
   expect(writes[0]).toEqual({
     action: 'confirm',
     body: {
-      amountText: '1.180,00',
       expectedVersion: 2,
       paymentCondition: 'pix',
     },
@@ -2611,7 +2614,10 @@ test('sends one confirmation for a double Enter while it is on its way (PFI-19, 
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await mockOrders(page, {
+    orders: [readyPendingOrder, confirmedOrder],
+    onWrite: (call) => writes.push(call),
+  });
   /** @type {() => void} */
   let release = () => {};
   const held = new Promise((resolve) => {
@@ -2626,7 +2632,7 @@ test('sends one confirmation for a double Enter while it is on its way (PFI-19, 
 
   await page.getByRole('button', { name: 'Gerar pedido' }).click();
   const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
-  await dialog.getByLabel('Valor final').fill('4.820,00');
+
   await dialog.getByLabel('Cartão de débito').check();
   const submit = dialog.getByRole('button', {
     name: 'Confirmar e gerar ficha',
@@ -2655,7 +2661,10 @@ test('closes the dialog on a blocker outside it and leads to the next step (PFI-
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await mockOrders(page, {
+    orders: [readyPendingOrder, confirmedOrder],
+    onWrite: (call) => writes.push(call),
+  });
   let refused = false;
   // The server knows what the page did not: the art was unmarked elsewhere.
   await page.route('**/api/v1/orders/order-pendente/confirm', async (route) => {
@@ -2713,7 +2722,7 @@ test('closes the dialog on a blocker outside it and leads to the next step (PFI-
           .getByRole('button', { name: 'Gerar pedido' });
     await opener.click();
     const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
-    await dialog.getByLabel('Valor final').fill('4.820,00');
+
     await dialog.getByLabel('Pix').check();
     await dialog
       .getByRole('button', { name: 'Confirmar e gerar ficha' })
@@ -2730,7 +2739,7 @@ test('closes the dialog on a blocker outside it and leads to the next step (PFI-
       'Marque quem faz a arte em Arte do pedido.',
     );
     await expect(closing.locator('#closing-readiness')).toHaveText(
-      'Falta para gerar: quem faz a arte. Valor e forma de pagamento você informa ao gerar.',
+      'Falta para gerar: quem faz a arte. O valor vem dos subtotais revisados. Escolha a forma de pagamento ao gerar.',
     );
     // The focus is on the button of the next step: the progress's on a
     // wide screen, the fixed footer's on a phone.
@@ -2743,7 +2752,6 @@ test('closes the dialog on a blocker outside it and leads to the next step (PFI-
   }
   expect(writes.filter((call) => call.action === 'confirm')).toHaveLength(2);
   expect(writes[0].body).toEqual({
-    amountText: '4.820,00',
     expectedVersion: 2,
     paymentCondition: 'pix',
   });
@@ -2752,7 +2760,7 @@ test('closes the dialog on a blocker outside it and leads to the next step (PFI-
 test('keeps the dialog open with the message when the connection drops (PFI-19)', async ({
   page,
 }) => {
-  await mockOrders(page);
+  await mockOrders(page, { orders: [readyPendingOrder, confirmedOrder] });
   let attempts = 0;
   await page.route('**/api/v1/orders/order-pendente/confirm', async (route) => {
     attempts += 1;
@@ -2762,7 +2770,7 @@ test('keeps the dialog open with the message when the connection drops (PFI-19)'
 
   await page.getByRole('button', { name: 'Gerar pedido' }).click();
   const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
-  await dialog.getByLabel('Valor final').fill('4.820,00');
+
   await dialog.getByLabel('Pix').check();
   await dialog.getByRole('button', { name: 'Confirmar e gerar ficha' }).click();
 
@@ -2773,7 +2781,8 @@ test('keeps the dialog open with the message when the connection drops (PFI-19)'
   await expect(alert).toBeFocused();
   await expect(dialog).toBeVisible();
   // What was typed stays for the next try.
-  await expect(dialog.getByLabel('Valor final')).toHaveValue('4.820,00');
+  await expect(dialog).toContainText('R$ 4.820,00');
+  await expect(dialog.getByLabel('Valor final')).toHaveCount(0);
   await expect(dialog.getByLabel('Pix')).toBeChecked();
   await expect(
     page.getByRole('region', { name: 'Fechamento e pagamento' }),
@@ -2785,13 +2794,14 @@ test('keeps the dialog open and asks to reload when the order changed (PFI-19, P
   page,
 }) => {
   await mockOrders(page, {
+    orders: [readyPendingOrder, confirmedOrder],
     writeFailure: { body: { code: 'VERSION_CONFLICT' }, status: 409 },
   });
   await page.goto('/pedidos/order-pendente');
 
   await page.getByRole('button', { name: 'Gerar pedido' }).click();
   const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
-  await dialog.getByLabel('Valor final').fill('4.820,00');
+
   await dialog.getByLabel('Pix').check();
   await dialog.getByRole('button', { name: 'Confirmar e gerar ficha' }).click();
 
@@ -2806,7 +2816,7 @@ test('keeps the dialog open and asks to reload when the order changed (PFI-19, P
 test('keeps the dialog accessible and thumb sized, light and dark (PFI-19)', async ({
   page,
 }) => {
-  await mockOrders(page);
+  await mockOrders(page, { orders: [readyPendingOrder, confirmedOrder] });
   for (const theme of /** @type {const} */ (['light', 'dark'])) {
     // The app ignores the system scheme: the theme is the saved choice that
     // index.html puts on <html data-theme> before the bundle loads.
@@ -2832,7 +2842,7 @@ test('keeps the dialog accessible and thumb sized, light and dark (PFI-19)', asy
       const dialog = page.getByRole('dialog', {
         name: 'Gerar o pedido 07-CRM?',
       });
-      await expect(dialog.getByLabel('Valor final')).toBeFocused();
+      await expect(dialog.getByLabel('Pix')).toBeFocused();
       // The errors too, so their contrast is checked.
       await dialog
         .getByRole('button', { name: 'Confirmar e gerar ficha' })
@@ -2843,11 +2853,10 @@ test('keeps the dialog accessible and thumb sized, light and dark (PFI-19)', asy
       const box = await dialog.boundingBox();
       expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
       const targets = [
-        dialog.getByLabel('Valor final'),
         ...(await dialog.locator('.op-condition').all()),
         ...(await dialog.getByRole('button').all()),
       ];
-      expect(targets).toHaveLength(6);
+      expect(targets).toHaveLength(5);
       for (const target of targets) {
         expect(
           (await target.boundingBox())?.height ?? 0,
@@ -2872,7 +2881,7 @@ test('keeps the dialog accessible and thumb sized, light and dark (PFI-19)', asy
 test('keeps "Gerar pedido" as the only primary button of the page (PFI-13)', async ({
   page,
 }) => {
-  await mockOrders(page);
+  await mockOrders(page, { orders: [readyPendingOrder, confirmedOrder] });
   await page.goto('/pedidos/order-pendente');
 
   // One visible primary per screen size: the closing panel on a wide
@@ -3049,7 +3058,7 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   page,
 }) => {
   await page.setViewportSize({ height: 844, width: 390 });
-  await mockOrders(page);
+  await mockOrders(page, { orders: [readyPendingOrder, confirmedOrder] });
   await page.goto('/pedidos/order-pendente');
 
   const footer = page.locator('.op-mobile-action');
@@ -3069,13 +3078,11 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   // with the focus on the amount; empty fields stop before any request.
   await generate.click();
   const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
-  const amount = dialog.getByLabel('Valor final');
-  await expect(amount).toBeFocused();
+  await expect(dialog.getByLabel('Pix')).toBeFocused();
+  await expect(dialog).toContainText('R$ 4.820,00');
   await dialog.getByRole('button', { name: 'Confirmar e gerar ficha' }).click();
-  await expect(dialog).toContainText('Use o formato 4.820,00.');
   await expect(dialog).toContainText('Escolha a forma de pagamento.');
-  await expect(amount).toBeFocused();
-  await amount.fill('4.820,00');
+  await expect(dialog.getByLabel('Pix')).toBeFocused();
   await dialog.getByLabel('Pix').check();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.keyboard.press('Escape');

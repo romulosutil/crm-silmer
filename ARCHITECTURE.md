@@ -1,5 +1,19 @@
 # Arquitetura — baseline do CRM Silmer
 
+## OLIST-T12 — grade monetária e conferência por Pedido (07/11/2026)
+
+A UI usa os contratos aprovados nas ADRs 057/059: subtotal por tamanho,
+grupo/total calculados, revisão explícita após quantidade e confirmação sem
+preço livre. IDs e versões permanecem sob autoridade da API. Complementos de
+legados/loja preservam ficha e checkout; habilitação Olist não concede edição.
+
+Detalhe e busca restrita compartilham prévia sem efeitos ERP. Tokens ficam
+em memória e são descartados ao mudar versão, acesso ou expiração. Operação
+persistida bloqueia edição comercial conservadoramente, sem bloquear datas
+independentes; erro de projeção não libera trava. Geração real permanece
+desligada, sem mudança de infraestrutura ou template. T13/T25 e F5/F6 seguem
+pendentes. [Contrato e evidências](docs/runbooks/olist-phase4.md#t12--grade-monetária-e-conferência-por-pedido).
+
 ## OLIST-T11 — interface administrativa Olist (07/11/2026)
 
 OLIST-03–05, 11, 22–25 e 48: `/olist` oferece conexão/reconexão/desconexão,
@@ -13,7 +27,7 @@ e trata conflito sem sobrescrever rascunho; refresh não abre edição obsoleta.
 Respostas tardias não restauram consultas após mudança de conexão ou revogação.
 Sem transporte criador, migration, dependência ou infraestrutura nova; geração
 real permanece desligada. [Contrato, evidências e rollback](docs/runbooks/olist-phase4.md).
-T11 inicia F4; T12/T13/T25 e gates operacionais F5/F6 continuam pendentes.
+T11 inicia F4; continuação T12 acima. T13/T25 e gates F5/F6 continuam pendentes.
 
 ## OLIST-T10 — guardas comerciais e recuperação (06/11/2026)
 

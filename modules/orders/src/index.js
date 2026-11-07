@@ -1,5 +1,6 @@
 export { projectOrderSource, orderSourceView } from './domain/order-source.js';
 export { sizePricingSummary } from './domain/size-pricing-composition.js';
+export { readOlistOrderGuards } from './adapters/olist-commercial-lock.js';
 // Orders module (ADR 006): the Pedido aggregate, its ficha and persistence.
 export {
   prepareExactCentExport,

@@ -1,6 +1,7 @@
 import { createOlistAdministration } from './olist-administration.js';
 import { createOlistExportCommand } from './olist-export-command.js';
 import { createOlistPreview } from './olist-preview.js';
+import { readOlistOrderGuards } from '@crm-silmer/orders';
 import {
   PostgresIdempotencyRecordStore,
   fingerprintCommand,
@@ -100,7 +101,7 @@ export function createOlistApiRuntime(database, options) {
         clock(),
       );
       const { rows } = await client.query(
-        'SELECT o.id,o.number,o.status,o.manual_owner_id,c.assigned_user_id FROM crm.orders o LEFT JOIN crm.conversations c ON c.id=o.conversation_id WHERE o.id=$1',
+        'SELECT o.id,o.number,o.status,o.cancelled_at,o.manual_owner_id,c.assigned_user_id FROM crm.orders o LEFT JOIN crm.conversations c ON c.id=o.conversation_id WHERE o.id=$1',
         [input.orderId],
       );
       const order = rows[0];
@@ -117,10 +118,13 @@ export function createOlistApiRuntime(database, options) {
         [config.accountKey, order.id],
       );
       const operation = exports.rows[0];
+      const guards = await readOlistOrderGuards(client, order.id);
       return {
         orderId: order.id,
         number: order.number,
         status: order.status,
+        cancelled: Boolean(order.cancelled_at),
+        ...guards,
         creationEnabled: false,
         pendingFields: [
           {

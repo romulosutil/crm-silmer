@@ -3736,11 +3736,28 @@ components:
       type: object
       additionalProperties: false
       required:
-        [orderId, number, status, creationEnabled, pendingFields, operation]
+        [
+          orderId,
+          number,
+          status,
+          cancelled,
+          commercialLocked,
+          cancellationBlocked,
+          creationEnabled,
+          pendingFields,
+          operation,
+        ]
       properties:
         orderId: { type: string }
         number: { type: string }
         status: { enum: [pendente, confirmado] }
+        cancelled: { type: boolean }
+        commercialLocked:
+          type: boolean
+          description: Existe trava comercial no ledger de qualquer conta; não concede autorização de edição.
+        cancellationBlocked:
+          type: boolean
+          description: Existe efeito de venda que impede cancelar localmente em qualquer conta; não concede autorização comercial.
         creationEnabled: { const: false }
         pendingFields:
           type: array

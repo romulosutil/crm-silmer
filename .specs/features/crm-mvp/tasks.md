@@ -1,5 +1,22 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## OLIST-T13 — acompanhamento e cancelamento local (07/11/2026)
+
+- [x] Etapa persistida e progresso administrativo por cliente/pai/tamanho/venda,
+      histórico de operações/tentativas/consultas e número ERP sem URL inferida.
+- [x] Vínculo somente após conferência, motivo e recibo em memória; reconciliação
+      por alvo/versão via leituras explícitas, sem retry criador ou polling.
+- [x] ACL administrativa separada do checkbox e cancelamento com ACL comercial;
+      perda de acesso/expiração/troca de pedido descartam consultas e recibos.
+- [x] Cancelamento motivado e terminal, conflito/resultado desconhecido com
+      releitura, histórico preservado e filtro aplicado antes de paginar/contar.
+- [x] Projeção segura agrega travas em todas as contas e compartilha predicados
+      com o comando, sem migration, transporte ou infraestrutura nova.
+
+OLIST-16–18, 22–25, 30, 45–47. [Contrato, verificações e rollback](../../../docs/runbooks/olist-phase4.md#t13--progresso-vínculo-histórico-reconciliação-e-cancelamento-local).
+Geração real continua desligada, sem deploy/piloto. T25 e Fases 5–6 pendentes;
+auditoria externa de dependências depende de autorização após bloqueio automático.
+
 ## OLIST-T12 — grade monetária e conferência por Pedido (07/11/2026)
 
 - [x] Subtotal humano por tamanho, soma de grupo/total somente leitura,
@@ -13,7 +30,7 @@
 
 OLIST-01–12, 21–24, 33–35 e 40–44.
 [Contrato, evidências e rollback](../../../docs/runbooks/olist-phase4.md#t12--grade-monetária-e-conferência-por-pedido).
-T11/T12 implementadas localmente; T13/T25 e Fases 5–6 permanecem pendentes.
+T11/T12/T13 implementadas localmente; T25 e Fases 5–6 permanecem pendentes.
 Geração real desligada, sem deploy, conexão real homologada ou piloto.
 
 ## OLIST-T11 — interface administrativa Olist (07/11/2026)
@@ -27,7 +44,7 @@ Geração real desligada, sem deploy, conexão real homologada ou piloto.
 - [x] Teclado/foco/axe, estados negativos e reflow claro/escuro verificados.
 
 OLIST-03–05, 11, 22–25 e 48. [Contrato, evidências e rollback](../../../docs/runbooks/olist-phase4.md).
-T11 inicia a Fase 4; continuação T12 acima. T13/T25 continuam pendentes. Geração real desligada,
+T11 inicia a Fase 4; continuações T12/T13 acima. T25 continua pendente. Geração real desligada,
 sem deploy, habilitação, conexão real homologada ou piloto.
 
 ## OLIST-T10 — guardas comerciais e recuperação (06/11/2026)
@@ -42,7 +59,7 @@ sem deploy, habilitação, conexão real homologada ou piloto.
       regressão de Pedidos/Loja/Financeiro/filas/n8n executadas.
 
 OLIST-02, 06, 16, 19, 21, 27–30, 39, 45–47. [Contrato e evidências](../../../docs/runbooks/olist-phase3.md#t10--guardas-comerciais-e-recuperação).
-F3 concluída localmente; T11/T12 registradas acima. Próximas T13/T25, sem despacho real/deploy/piloto.
+F3 concluída localmente; T11/T12/T13 registradas acima. Próxima T25, sem despacho real/deploy/piloto.
 
 ## OLIST-T23 — cancelamento local pré-exportação (06/11/2026)
 

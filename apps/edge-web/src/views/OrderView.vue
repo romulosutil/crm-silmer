@@ -24,6 +24,7 @@ import OrderSummarySection from '../components/order/OrderSummarySection.vue';
 import OrderShippingEstimate from '../components/order/OrderShippingEstimate.vue';
 import OrderOlistPanel from '../components/order/OrderOlistPanel.vue';
 import OrderPriceBreakdown from '../components/order/OrderPriceBreakdown.vue';
+import OrderCancellation from '../components/order/OrderCancellation.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import { usePhone } from '../lib/media-query.js';
 import {
@@ -73,6 +74,12 @@ const order = ref(null);
 // Commercial editing waits for a successful ledger projection. A failed read
 // never proves that an earlier reservation has disappeared.
 const olistOperation = ref({ state: 'checking' });
+const olistGuards = ref({
+  cancelled: false,
+  commercialLocked: true,
+  cancellationBlocked: true,
+});
+const cancellationOpen = ref(false);
 const loading = ref(true);
 const notFound = ref(false);
 const error = ref('');
@@ -121,16 +128,29 @@ const canEdit = computed(
     Boolean(order.value) &&
     !order.value.locked &&
     !order.value.cancelledAt &&
+    !olistGuards.value.cancelled &&
     (isAdmin.value || order.value.seller?.id === sessionUser.value?.id),
 );
 const canEditCommercial = computed(
-  () => canEdit.value && !olistOperation.value,
+  () =>
+    canEdit.value &&
+    !olistGuards.value.commercialLocked &&
+    !cancellationOpen.value,
 );
 const canConfirm = computed(
   () =>
     canEdit.value &&
-    (!olistOperation.value ||
-      ['confirmed', 'linked'].includes(olistOperation.value.state)),
+    !cancellationOpen.value &&
+    (!olistGuards.value.commercialLocked ||
+      ['confirmed', 'linked'].includes(olistOperation.value?.state)),
+);
+const canCancel = computed(
+  () =>
+    Boolean(order.value) &&
+    !order.value.cancelledAt &&
+    !olistGuards.value.cancelled &&
+    (isAdmin.value ||
+      (!isStore.value && order.value.seller?.id === sessionUser.value?.id)),
 );
 const customerName = computed(
   () => order.value?.ficha?.summary?.cliente || 'Cliente não informado',
@@ -165,7 +185,13 @@ const showProgress = computed(
  * edited, so the editor's own Salvar and Cancelar stay in reach.
  */
 const mobileAction = computed(() => {
-  if (!order.value || editingSection.value !== '') return '';
+  if (
+    !order.value ||
+    editingSection.value !== '' ||
+    cancellationOpen.value ||
+    order.value.cancelledAt
+  )
+    return '';
   if (!isPending.value) return 'pdf';
   if (!canConfirm.value || isStore.value) return '';
   return nextStep.value ? 'step' : 'generate';
@@ -700,9 +726,14 @@ onBeforeUnmount(() => {
           <div class="op-head-title">
             <h1 ref="heading" tabindex="-1">Pedido {{ order.number }}</h1>
             <!-- LOJ-34: a site order is Confirmado, like any generated one. -->
-            <span class="op-status" :data-status="order.status">
+            <span
+              class="op-status"
+              :data-status="order.cancelledAt ? 'cancelado' : order.status"
+            >
               <OrderIcon :name="isPending ? 'clock' : 'check'" />
-              {{ orderStatusLabel(order.status) }}
+              {{
+                order.cancelledAt ? 'Cancelado' : orderStatusLabel(order.status)
+              }}
             </span>
             <!-- ADR 028: the shop's number travels with the CRM number. -->
             <span v-if="isStore" class="badge" data-tone="info">{{
@@ -766,14 +797,17 @@ onBeforeUnmount(() => {
         <OrderIcon name="lock" />
         Pedido da loja do site: travado, sem edição.
       </p>
-      <p v-else-if="order.cancelledAt || olistOperation" class="op-readonly">
+      <p
+        v-else-if="order.cancelledAt || olistGuards.commercialLocked"
+        class="op-readonly"
+      >
         <OrderIcon name="lock" />
         {{
           order.cancelledAt
             ? 'Pedido cancelado: edição bloqueada.'
-            : olistOperation.state === 'checking'
+            : olistOperation?.state === 'checking'
               ? 'Conferindo a disponibilidade de edição comercial.'
-              : olistOperation.state === 'unavailable'
+              : olistOperation?.state === 'unavailable'
                 ? 'Não foi possível conferir a edição comercial. Atualize o estado Olist.'
                 : 'Pedido com operação Olist: edição comercial bloqueada.'
         }}
@@ -793,7 +827,8 @@ onBeforeUnmount(() => {
               isAdmin &&
               !order.isTest &&
               !order.cancelledAt &&
-              (!olistOperation || olistOperation.state === 'checking') &&
+              (!olistGuards.commercialLocked ||
+                olistOperation?.state === 'checking') &&
               [
                 'bloquinho-22',
                 'bloquinho-22-colorido',
@@ -801,7 +836,7 @@ onBeforeUnmount(() => {
               ].includes(order.ficha?.loja?.produto?.slug)
             "
             :order="order"
-            :blocked="!!olistOperation"
+            :blocked="olistGuards.commercialLocked || cancellationOpen"
             @saved="order = $event"
           />
         </div>
@@ -847,19 +882,36 @@ onBeforeUnmount(() => {
           (isStore || order.confirmedAt)
         "
         :order="order"
-        :blocked="editingSection !== '' || !!olistOperation"
+        :blocked="
+          editingSection !== '' ||
+          olistGuards.commercialLocked ||
+          cancellationOpen
+        "
         :commercial-locked="
-          !!olistOperation && olistOperation.state !== 'checking'
+          olistGuards.commercialLocked && olistOperation?.state !== 'checking'
         "
         @changed="load(true)"
       />
       <OrderOlistPanel
         :order-id="order.id"
         :revision="order.version"
-        :blocked="editingSection !== ''"
+        :blocked="editingSection !== '' || cancellationOpen"
+        :cancelled="!!order.cancelledAt"
         read-only-allowed
         @operation="olistOperation = $event"
-      />
+        @guards="olistGuards = $event"
+      >
+        <OrderCancellation
+          v-if="canCancel || order.cancelledAt"
+          :order="order"
+          :allowed="canCancel"
+          :blocked="editingSection !== '' || olistGuards.cancellationBlocked"
+          embedded
+          @busy="cancellationOpen = $event"
+          @saved="order = $event"
+          @refresh="load(true)"
+        />
+      </OrderOlistPanel>
 
       <div
         v-if="mobileAction"

@@ -199,6 +199,9 @@ if (connectionString) {
             const byId = await runtime.lookup({ ...viewer, query: order.id });
             assert.deepEqual(byId, byNumber);
             assert.deepEqual(Object.keys(byNumber).sort(), [
+              'cancellationBlocked',
+              'cancelled',
+              'commercialLocked',
               'creationEnabled',
               'number',
               'operation',
@@ -215,6 +218,9 @@ if (connectionString) {
               },
             ]);
             assert.equal(byNumber.operation, null);
+            assert.equal(byNumber.cancelled, false);
+            assert.equal(byNumber.commercialLocked, false);
+            assert.equal(byNumber.cancellationBlocked, false);
             assert.doesNotMatch(
               JSON.stringify(byNumber),
               /Cliente privado|11999990000|synthetic-private|ficha|contact|conversation|finalAmount/i,
@@ -235,6 +241,215 @@ if (connectionString) {
             runtime.lookup({ ...actors.finance, query: randomUUID() }),
             { code: 'ORDER_NOT_FOUND' },
           );
+        },
+      );
+
+      await t.test(
+        'T13 safe projection distinguishes commercial locks from sale cancellation blockers across every account',
+        async () => {
+          const { actors, runtime, calls } = await fixture();
+          const scenarios = [
+            { state: 'queued', locked: true, blocked: false },
+            { state: 'resolving', locked: true, blocked: false },
+            { state: 'ready', locked: true, blocked: false },
+            { state: 'rejected', locked: false, blocked: false },
+            { state: 'invalidated', locked: false, blocked: false },
+            { state: 'reserved', locked: true, blocked: true },
+            { state: 'uncertain', locked: true, blocked: true },
+            { state: 'confirmed', locked: true, blocked: true },
+            { state: 'linked', locked: true, blocked: true },
+            {
+              state: 'invalidated',
+              observed: true,
+              locked: true,
+              blocked: true,
+            },
+            {
+              state: 'rejected',
+              sale: 'uncertain',
+              locked: true,
+              blocked: true,
+            },
+            {
+              state: 'invalidated',
+              sale: 'reserved',
+              locked: true,
+              blocked: true,
+            },
+            {
+              state: 'rejected',
+              sale: 'confirmed',
+              locked: true,
+              blocked: true,
+            },
+            {
+              state: 'rejected',
+              sale: 'rejected',
+              locked: false,
+              blocked: false,
+            },
+            {
+              state: 'invalidated',
+              resource: 'uncertain',
+              locked: true,
+              blocked: false,
+            },
+            {
+              state: 'rejected',
+              resource: 'confirmed',
+              locked: true,
+              blocked: false,
+            },
+            {
+              state: 'rejected',
+              resource: 'rejected',
+              locked: false,
+              blocked: false,
+            },
+          ];
+          for (const scenario of scenarios) {
+            const order = await seedOrder(actors.seller);
+            // A different, disconnected account must still constrain the order.
+            // Its identity, remote IDs and attempted payload never leave this API.
+            const accountKey = hash(randomUUID());
+            const contextKey = hash(randomUUID());
+            const exportId = randomUUID();
+            await pool.query(
+              'INSERT INTO crm.olist_accounts(account_key) VALUES($1)',
+              [accountKey],
+            );
+            await pool.query(
+              'INSERT INTO crm.olist_connections(context_key,account_key) VALUES($1,$2)',
+              [contextKey, accountKey],
+            );
+            const envelope = JSON.stringify(
+              seal(
+                { private: 'synthetic-guard-payload' },
+                config.envelopeKey,
+                'export-snapshot',
+                accountKey,
+                exportId,
+              ),
+            );
+            await pool.query(
+              `INSERT INTO crm.olist_exports(id,account_key,context_key,connection_generation,
+                order_id,order_version,settings_version,actor_id,authorization_version,
+                reference,state,snapshot_envelope,remote_id,observed_sale_id)
+               VALUES($1,$2,$3,0,$4,1,0,$5,1,$6,$7,$8::jsonb,$9,$10)`,
+              [
+                exportId,
+                accountKey,
+                contextKey,
+                order.id,
+                actors.seller.actor.id,
+                'CRM-' + exportId,
+                scenario.state,
+                envelope,
+                ['confirmed', 'linked'].includes(scenario.state)
+                  ? '91001'
+                  : null,
+                scenario.observed ? '91002' : null,
+              ],
+            );
+            let resourceId = null;
+            if (scenario.resource) {
+              resourceId = randomUUID();
+              await pool.query(
+                `INSERT INTO crm.olist_resources(id,account_key,kind,identity_hash,reference)
+                 VALUES($1,$2,'customer',$3,$4)`,
+                [
+                  resourceId,
+                  accountKey,
+                  hash(randomUUID()),
+                  'CRM-' + resourceId,
+                ],
+              );
+              await pool.query(
+                'INSERT INTO crm.olist_export_resources(export_id,resource_id,account_key) VALUES($1,$2,$3)',
+                [exportId, resourceId, accountKey],
+              );
+            }
+            const outcome = scenario.sale ?? scenario.resource;
+            if (outcome)
+              await pool.query(
+                `INSERT INTO crm.olist_attempts(id,account_key,export_id,resource_id,stage,
+                  fence,generation,outcome,finished_at)
+                 VALUES($1,$2,$3,$4,$5,$6,0,$7,$8)`,
+                [
+                  randomUUID(),
+                  accountKey,
+                  resourceId ? null : exportId,
+                  resourceId,
+                  resourceId ? 'customer' : 'sale',
+                  randomUUID(),
+                  outcome,
+                  outcome === 'reserved' ? null : NOW,
+                ],
+              );
+            for (const viewer of [actors.finance, actors.seller]) {
+              const projection = await runtime.project({
+                ...viewer,
+                orderId: order.id,
+              });
+              assert.equal(projection.operation, null);
+              assert.equal(
+                projection.commercialLocked,
+                scenario.locked,
+                JSON.stringify(scenario),
+              );
+              assert.equal(
+                projection.cancellationBlocked,
+                scenario.blocked,
+                JSON.stringify(scenario),
+              );
+              assert.equal(projection.cancelled, false);
+              assert.equal(projection.creationEnabled, false);
+              assert.doesNotMatch(
+                JSON.stringify(projection),
+                new RegExp(
+                  [
+                    accountKey,
+                    contextKey,
+                    exportId,
+                    '91001',
+                    '91002',
+                    'synthetic-guard-payload',
+                  ].join('|'),
+                  'u',
+                ),
+              );
+            }
+          }
+          const cancelled = await seedOrder(actors.seller);
+          await pool.query(
+            `UPDATE crm.orders SET cancelled_at=$2,cancelled_by=$3,
+              cancellation_reason_envelope=$4::jsonb WHERE id=$1`,
+            [
+              cancelled.id,
+              NOW,
+              actors.seller.actor.id,
+              JSON.stringify(
+                seal(
+                  'synthetic-private-reason',
+                  config.envelopeKey,
+                  'cancellation',
+                  config.accountKey,
+                  cancelled.id,
+                ),
+              ),
+            ],
+          );
+          const projection = await runtime.project({
+            ...actors.finance,
+            orderId: cancelled.id,
+          });
+          assert.equal(projection.cancelled, true);
+          assert.equal(projection.status, 'confirmado');
+          assert.doesNotMatch(
+            JSON.stringify(projection),
+            /synthetic-private-reason/u,
+          );
+          assert.equal(calls.length, 0);
         },
       );
 

@@ -66,7 +66,7 @@ test('opens the order page inside Pedidos, with the trail and the sections in or
 
   // PFI-15: the real progress to generate opens the page. PFI-20: the words
   // of the screen, and no production control (it is only on paper).
-  await expect(page.locator('main h2')).toHaveText([
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText([
     'Para gerar o pedido',
     'Resumo do pedido',
     'Datas do pedido',
@@ -2312,7 +2312,7 @@ test('keeps the sections in the order of the printed ficha (PFI-01, PLA-01)', as
   // PFI-15: the progress to generate comes before the sections of the ficha.
   // PFI-20: the ficha's order, in the words of the screen; the production
   // control stays on the printed ficha only.
-  await expect(page.locator('main h2')).toHaveText([
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText([
     'Para gerar o pedido',
     'Resumo do pedido',
     'Datas do pedido',

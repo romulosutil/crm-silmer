@@ -1,6 +1,117 @@
 # Olist — Fase 4: interfaces administrativas e de pedidos
 
+## T13 — progresso, vínculo, histórico, reconciliação e cancelamento local
+
+OLIST-T13 atende OLIST-16–18, 22–25, 30 e 45–47 da
+[RFC 044](../rfc/044-geracao-assistida-de-pedidos-no-olist.md), sobre os contratos
+T09/T23 existentes. Geração real continua desligada: não há chamada de
+`/olist/export`, mudança de flags, conta, worker, allowlist ou template. T25 e
+Fases 5–6 continuam independentes; não houve deploy, venda ERP ou piloto real.
+
+### Acompanhamento e recuperação
+
+O painel do Pedido e a busca restrita em `/olist` recuperam a operação
+persistida. A etapa atual é declarada sem inventar porcentagem ou conclusão dos
+cadastros anteriores. Admin comercial abre “Progresso, vínculo e histórico
+Olist” para consultar cada cliente, produto pai, tamanho e venda, com estados,
+IDs, versões, ator CRM da operação/consulta e tentativas com horários de São
+Paulo. Histórico limitado informa os limites de 100 tentativas/consultas.
+IDs externos confirmados e número da venda são texto; não se infere URL ERP.
+
+- O checkbox autoriza a projeção/prévia; não concede administração, edição ou
+  cancelamento. Admin sem checkbox pode recuperar pelo detalhe de Pedido sem
+  ganhar geração. Usuários sem capacidade administrativa veem apenas a etapa
+  mínima persistida, respeitando a projeção autorizada existente.
+- Vínculo exige ID numérico da venda, conferência positiva do servidor,
+  recibo de 15 minutos e motivo. O servidor reconsulta comprador, produtos,
+  tamanhos, quantidades e subtotais antes de persistir. Token vive somente na
+  memória: trocar ID, Pedido, versão, acesso, evento ou expirar o descarta.
+- Reconciliação seleciona a venda ou um recurso do diagnóstico e envia a
+  versão observada desse alvo, motivo, sessão/CSRF e chave idempotente. Só
+  solicita leituras ERP; zero/divergência/resultado incerto não liberam nova
+  criação. Resultado é consultado explicitamente, sem polling ou retry criador.
+- Sucesso de comando relê a projeção de segurança e mantém diagnóstico
+  anterior identificado como tal. Falha de escrita exige atualizar o
+  acompanhamento antes de outro comando; não repete automaticamente o comando.
+  Mudança de acesso aborta consultas e remove diagnóstico/recibos. 401/403 no
+  painel pai também desmonta a recuperação, sem aguardar refresh da sessão.
+- Consulta administrativa preserva o contrato atual de conexão configurada e
+  válida. Desconexão/reconexão não autoriza contornar erro nem mostrar resposta
+  tardia. Mensagens de erro são fixas; payload/erro privado não vira texto da UI.
+
+### Cancelamento local e travas
+
+`GET /orders/:id/olist` acrescenta três fatos mínimos: `cancelled`,
+`commercialLocked` e `cancellationBlocked`. Os dois últimos agregam **todas as
+contas**, sem dados privados e sem conceder ACL. O predicado compartilhado em
+Orders também protege o comando de cancelamento após os locks já existentes.
+Não há migration ou transporte novo.
+
+Efeito de cadastro pode bloquear edição comercial e ainda permitir
+cancelamento pré-venda. Reserva/ID/efeito de venda, inclusive observado em
+outra conta ou após estado rejeitado/invalidado, impede cancelar. Projeção
+ausente/falha conserva bloqueio; compatibilidade com projeção antiga é
+conservadora. A API revalida versão, autorização e ledger atomicamente, pois
+qualquer leitura da UI pode perder uma corrida.
+
+Vendedor responsável/Admin usa “Cancelar pedido localmente”, independentemente
+do checkbox; na loja só Admin. O diálogo explica terminalidade, pede motivo e
+envia `expectedVersion` capturada ao abrir. Bloqueia envio duplo, preserva
+motivo no conflito e exige releitura após falha/resultado não confirmado.
+Escape/Voltar devolve foco após a nova projeção; sucesso foca “Pedido cancelado”.
+
+Cancelado mantém o status comercial histórico e ganha rótulo terminal,
+responsável, horário e motivo. Não oferece editar, reabrir, exportar ou cancelar
+novamente. Pagamento, Nota criada e ficha/histórico permanecem; não há estorno,
+cancelamento ERP ou criação automática de substituto. Filtros → Cancelados
+consulta `cancellation=cancelled` no servidor antes de paginação/contagens,
+inclusive na busca privada por telefone. A lista padrão mantém o universo ativo.
+
+### Evidências e rollback
+
+Fixtures inteiramente sintéticas em `test/e2e/olist-recovery.spec.js`,
+`test/e2e/order-cancellation.spec.js` e na matriz de guardas de
+`test/olist-runtime-postgres-live.test.js`. Corridas/constraints existentes
+continuam em `order-cancellation-postgres-live.test.js` e
+`order-olist-guards-postgres-live.test.js`. Capturas/logs locais em
+`var/olist-t13-*` são ignorados e não homologam EasyPanel ou ERP real.
+
+Rollback reverte a entrega de UI/projeção como uma unidade, preservando os
+dados, vínculos, cancelamentos, snapshots e histórico. Não apagar ledger nem
+reativar geração; servidor anterior deve conservar as guardas T10/T23.
+
+### Gates locais T13 — 07/11/2026
+
+Node 24.20.0/npm 11.19.0, dados inteiramente sintéticos:
+
+| Gate                           | Resultado                                                                                                                                                                     |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run validate`             | Aprovado: 2006 testes, 1980 aprovados e 26 skips condicionais; tipos, lint, fronteiras, tokens, validadores e build sem falhas.                                               |
+| E2E integral                   | Aprovado: 555 cenários e 7 skips previstos, zero falhas, 2 workers. Inclui 27 cenários novos T13 e regressões de filtros, ordem e orçamento.                                  |
+| PostgreSQL dedicado            | 39/39, zero skips: runtime/projeção em todas as contas, cancelamento, locks, constraints e corridas comerciais. Banco sintético local encerrado após o gate.                  |
+| Teclado/axe/visual             | Sem finding material ativo; desktop, celular 390 e tema escuro 320. Página compacta medida em 1788 px, dentro do orçamento de 1800 px.                                        |
+| Revisão independente           | Frontend/A11y e QA aprovaram após corrigir foco, revogação, IDs de 19 dígitos, número textual e compactação do cancelamento.                                                  |
+| Detector e whitespace          | Detector sem findings na inspeção executada; `git diff --check` aprovado.                                                                                                     |
+| `npm audit --audit-level=high` | Não executado: revisão automática bloqueou o envio externo de metadados de dependências ao registro npm. Aguarda autorização específica; dependências e lockfile não mudaram. |
+
+Logs finais: `var/olist-t13-validate-verified.log`,
+`var/olist-t13-e2e-verified-final.log` e `var/olist-t13-live.log`. A regressão
+E2E usa a configuração local ignorada de porta 4175, pois 4173 já atendia outro
+preview; as asserções e skips são os do projeto. Builds de validação e E2E
+rodaram em sequência na verificação final. Testes antigos foram atualizados
+para incluir Cancelados e conferir somente títulos visíveis, sem ampliar os
+limites de altura, controles, alvos ou acessibilidade.
+
+O cancelamento fica em disclosure compacto dentro do painel existente,
+preservando o orçamento móvel. Entrega atômica em `codex/olist-phase4-t13`;
+commit/push registrados no fechamento. T25 e gates operacionais seguem
+pendentes, além da autorização da auditoria externa. Nenhum resultado local
+habilita produção, piloto ou geração ERP.
+
 ## T12 — grade monetária e conferência por Pedido
+
+Esta seção registra a entrega T12. Suas limitações de projeção e referências
+à recuperação pendente são supersedidas pela T13 descrita acima.
 
 Tarefa OLIST-T12, requisitos OLIST-01–12, 21–24, 33–35 e 40–44 da
 [RFC 044](../rfc/044-geracao-assistida-de-pedidos-no-olist.md). A geração real

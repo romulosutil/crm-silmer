@@ -12,6 +12,34 @@ const LOCKED = `export.state NOT IN ('invalidated','rejected') OR
     JOIN crm.olist_attempts attempt ON attempt.resource_id=dependency.resource_id
     WHERE dependency.export_id=export.id AND attempt.outcome<>'rejected')`;
 
+// Cancellation is independent of commercial editing: customer/product effects
+// freeze the snapshot, but only a sale effect prevents local cancellation.
+const CANCELLATION_BLOCKED = `export.remote_id IS NOT NULL OR
+  export.observed_sale_id IS NOT NULL OR
+  export.state IN ('reserved','confirmed','linked','uncertain') OR
+  EXISTS (SELECT 1 FROM crm.olist_attempts attempt
+    WHERE attempt.export_id=export.id AND attempt.stage='sale'
+      AND attempt.outcome<>'rejected')`;
+
+/** Safe cross-account facts, not permissions. Mutation callers still hold the
+ * order and export locks and enforce current commercial authorization.
+ * @param {any} tx @param {string} orderId
+ * @returns {Promise<{commercialLocked:boolean,cancellationBlocked:boolean}>} */
+export async function readOlistOrderGuards(tx, orderId) {
+  const { rows } = await tx.query(
+    `SELECT
+      EXISTS (SELECT 1 FROM crm.olist_exports export
+        WHERE export.order_id=$1 AND (${LOCKED})) AS commercial_locked,
+      EXISTS (SELECT 1 FROM crm.olist_exports export
+        WHERE export.order_id=$1 AND (${CANCELLATION_BLOCKED})) AS cancellation_blocked`,
+    [orderId],
+  );
+  return {
+    commercialLocked: rows[0].commercial_locked === true,
+    cancellationBlocked: rows[0].cancellation_blocked === true,
+  };
+}
+
 /** @param {any} tx @param {string[]} orderIds @returns {Promise<{order_id:string,state:string}[]>} */
 export async function readOlistCommercialLocks(tx, orderIds) {
   if (!orderIds.length) return [];

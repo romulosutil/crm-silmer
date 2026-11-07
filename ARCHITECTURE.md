@@ -1,5 +1,20 @@
 # Arquitetura — baseline do CRM Silmer
 
+## OLIST-T13 — acompanhamento e cancelamento local (07/11/2026)
+
+O Pedido reutiliza T09/T23 para progresso por cadastro/venda, vínculo conferido,
+histórico e reconciliação administrativa por leitura, sem herdar o checkbox de
+geração. Cancelamento motivado usa ACL comercial própria, versão observada e
+idempotência; cancelado permanece terminal e consultável em filtro específico.
+
+A projeção mínima informa cancelamento e travas comerciais/de venda em todas
+as contas. Predicados compartilhados com Orders preservam locks e autoridade
+da API, inclusive em corridas e estados rejeitados com efeitos sobreviventes.
+Tokens só em memória, consultas explícitas e respostas tardias descartadas;
+nenhum retry criador, migration ou infraestrutura nova. Geração real segue
+desligada. [Contrato e evidências T13](docs/runbooks/olist-phase4.md#t13--progresso-vínculo-histórico-reconciliação-e-cancelamento-local).
+T25 e gates F5/F6 continuam pendentes.
+
 ## OLIST-T12 — grade monetária e conferência por Pedido (07/11/2026)
 
 A UI usa os contratos aprovados nas ADRs 057/059: subtotal por tamanho,
@@ -11,8 +26,8 @@ Detalhe e busca restrita compartilham prévia sem efeitos ERP. Tokens ficam
 em memória e são descartados ao mudar versão, acesso ou expiração. Operação
 persistida bloqueia edição comercial conservadoramente, sem bloquear datas
 independentes; erro de projeção não libera trava. Geração real permanece
-desligada, sem mudança de infraestrutura ou template. T13/T25 e F5/F6 seguem
-pendentes. [Contrato e evidências](docs/runbooks/olist-phase4.md#t12--grade-monetária-e-conferência-por-pedido).
+desligada, sem mudança de infraestrutura ou template. T13 está registrada
+acima; T25 e F5/F6 seguem pendentes. [Contrato e evidências](docs/runbooks/olist-phase4.md#t12--grade-monetária-e-conferência-por-pedido).
 
 ## OLIST-T11 — interface administrativa Olist (07/11/2026)
 
@@ -27,7 +42,7 @@ e trata conflito sem sobrescrever rascunho; refresh não abre edição obsoleta.
 Respostas tardias não restauram consultas após mudança de conexão ou revogação.
 Sem transporte criador, migration, dependência ou infraestrutura nova; geração
 real permanece desligada. [Contrato, evidências e rollback](docs/runbooks/olist-phase4.md).
-T11 inicia F4; continuação T12 acima. T13/T25 e gates F5/F6 continuam pendentes.
+T11 inicia F4; continuações T12/T13 acima. T25 e gates F5/F6 continuam pendentes.
 
 ## OLIST-T10 — guardas comerciais e recuperação (06/11/2026)
 

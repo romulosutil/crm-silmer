@@ -2,6 +2,12 @@
 import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { commandKey, request } from '../../lib/api-client.js';
 import { amountLabel } from '../../lib/order-format.js';
+import OrderOlistRecovery from './OrderOlistRecovery.vue';
+import AppIcon from '../AppIcon.vue';
+import {
+  olistSaleNumber,
+  olistStageLabel,
+} from '../../lib/olist-recovery-feedback.js';
 import {
   olistIssueLabel,
   olistIssueLocation,
@@ -16,8 +22,9 @@ const props = defineProps({
   blocked: { type: Boolean, default: false },
   readOnlyAllowed: { type: Boolean, default: false },
   embedded: { type: Boolean, default: false },
+  cancelled: { type: Boolean, default: false },
 });
-const emit = defineEmits(['operation']);
+const emit = defineEmits(['operation', 'guards']);
 const user = inject('sessionUser', ref({}));
 const liveEvent = inject('liveEvent', ref(null));
 const allowed = computed(() => user.value?.olistEnabled === true);
@@ -30,6 +37,8 @@ const message = ref('');
 const denied = ref(false);
 const notice = ref(null);
 const reviewHeading = ref(null);
+const recoveryRevision = ref(0);
+const recoveryBusy = ref(false);
 let controller;
 let disposed = false;
 let expiryTimer;
@@ -71,6 +80,8 @@ async function run(kind, moveFocus = true) {
     (kind !== 'read' && !allowed.value) ||
     denied.value ||
     busy.value ||
+    recoveryBusy.value ||
+    (kind !== 'read' && (props.cancelled || projection.value?.cancelled)) ||
     props.blocked
   )
     return;
@@ -87,7 +98,14 @@ async function run(kind, moveFocus = true) {
   error.value = '';
   message.value = '';
   if (kind !== 'check') preview.value = null;
-  if (kind === 'read') emit('operation', { state: 'checking' });
+  if (kind === 'read') {
+    emit('operation', { state: 'checking' });
+    emit('guards', {
+      cancelled: props.cancelled || projection.value?.cancelled === true,
+      commercialLocked: true,
+      cancellationBlocked: true,
+    });
+  }
   const current = () =>
     !disposed &&
     !own.signal.aborted &&
@@ -122,6 +140,16 @@ async function run(kind, moveFocus = true) {
         throw new Error('INVALID_PROJECTION');
       projection.value = response.data;
       emit('operation', response.data.operation);
+      emit('guards', {
+        cancelled: response.data.cancelled === true,
+        commercialLocked:
+          response.data.cancelled === true ||
+          (response.data.commercialLocked ?? !!response.data.operation),
+        cancellationBlocked:
+          response.data.cancelled === true ||
+          (response.data.cancellationBlocked ?? !!response.data.operation),
+      });
+      recoveryRevision.value++;
     } else if (kind === 'preview') {
       preview.value = response.data;
       const remaining = Date.parse(response.data.expiresAt ?? '') - Date.now();
@@ -213,24 +241,39 @@ onBeforeUnmount(() => {
       </p>
       <p v-if="projection && allowed">
         Pedido {{ projection.number }} ·
-        {{ projection.status === 'confirmado' ? 'Confirmado' : 'Pendente' }}
+        {{
+          cancelled || projection.cancelled
+            ? 'Cancelado'
+            : projection.status === 'confirmado'
+              ? 'Confirmado'
+              : 'Pendente'
+        }}
       </p>
       <p v-if="operation">
         {{ olistStateLabel(operation.state)
-        }}<span v-if="operation.number"> · Venda {{ operation.number }}</span>
+        }}<span v-if="operation.number">
+          · Venda {{ olistSaleNumber(operation.number) }}</span
+        >
+      </p>
+      <p v-if="operation" class="field-help">
+        Etapa atual: {{ olistStageLabel(operation.stage) }}. O estado vem da
+        operação persistida; abrir esta tela não avança a geração.
       </p>
       <div class="form-actions">
         <button
           type="button"
-          :disabled="busy || blocked || denied"
+          :disabled="busy || recoveryBusy || blocked || denied"
+          aria-label="Atualizar estado Olist"
+          :title="!allowed ? 'Atualizar estado Olist' : undefined"
           @click="run('read')"
         >
-          Atualizar estado Olist
+          <AppIcon v-if="!allowed" name="reset" />
+          <span v-else>Atualizar estado Olist</span>
         </button>
         <button
-          v-if="allowed && !operation"
+          v-if="allowed && !operation && !cancelled && !projection?.cancelled"
           type="button"
-          :disabled="busy || blocked || denied"
+          :disabled="busy || recoveryBusy || blocked || denied"
           @click="run('preview')"
         >
           {{ busy ? 'Consultando…' : 'Conferir prévia Olist' }}
@@ -325,7 +368,9 @@ onBeforeUnmount(() => {
           <div class="form-actions">
             <button
               type="button"
-              :disabled="busy || blocked || denied || !!operation"
+              :disabled="
+                busy || recoveryBusy || blocked || denied || !!operation
+              "
               @click="run('check')"
             >
               Validar prévia atual
@@ -344,6 +389,17 @@ onBeforeUnmount(() => {
         Geração no Olist indisponível nesta fase. Nenhum clique nesta tela envia
         um comando de criação.
       </p>
+      <OrderOlistRecovery
+        v-if="!denied"
+        :order-id="orderId"
+        :revision="revision"
+        :refresh-key="recoveryRevision"
+        :blocked="blocked || busy || denied"
+        :cancelled="cancelled || !!projection?.cancelled"
+        @busy="recoveryBusy = $event"
+        @changed="run('read', false)"
+      />
+      <slot />
     </div>
   </section>
 </template>
@@ -361,7 +417,20 @@ onBeforeUnmount(() => {
   padding: 0;
 }
 .order-olist--readonly > .op-sheet-body {
-  padding-block: var(--space-3);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  padding-block: var(--space-1);
+}
+.order-olist--readonly > .op-sheet-body > :not(h2, .form-actions) {
+  grid-column: 1 / -1;
+}
+.order-olist--readonly > .op-sheet-body > .form-actions {
+  grid-column: 2;
+  grid-row: 1;
+}
+.order-olist--readonly .form-actions button {
+  min-height: var(--target-min);
 }
 .order-olist h2,
 .order-olist h3,

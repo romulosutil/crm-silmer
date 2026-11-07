@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import {
   assertOlistCommercialWrite,
   readOlistCommercialLocks,
+  readOlistOrderGuards,
 } from './olist-commercial-lock.js';
 
 import {
@@ -1074,24 +1075,11 @@ export class PostgresOrderRepository {
           [order.id],
         )
       ).rows;
-      for (const operation of exports) {
-        const attempts = await tx.query(
-          "SELECT 1 FROM crm.olist_attempts WHERE export_id=$1 AND stage='sale' AND outcome<>'rejected' LIMIT 1",
-          [operation.id],
+      if ((await readOlistOrderGuards(tx, order.id)).cancellationBlocked)
+        throw new OrderConflictError(
+          'Sale effect prevents cancellation',
+          'ORDER_CANCELLATION_BLOCKED',
         );
-        if (
-          operation.remote_id ||
-          operation.observed_sale_id ||
-          ['reserved', 'confirmed', 'linked', 'uncertain'].includes(
-            operation.state,
-          ) ||
-          attempts.rows[0]
-        )
-          throw new OrderConflictError(
-            'Sale effect prevents cancellation',
-            'ORDER_CANCELLATION_BLOCKED',
-          );
-      }
       const updated = await tx.query(
         `UPDATE crm.orders SET cancelled_at=$2,cancelled_by=$3,cancellation_reason_envelope=$4::jsonb,version=version+1,updated_at=$2 WHERE id=$1 RETURNING ${ORDER_COLUMNS}`,
         [

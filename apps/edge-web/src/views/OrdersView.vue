@@ -52,7 +52,7 @@ const PRODUCTION_FILTER = 'producao';
 const MINE_FILTER = 'meus';
 /** @param {string} label @param {string} value */
 const filterOption = (label, value) => Object.freeze({ label, value });
-// RFC 024 (PLI-09): three chips answer the daily questions; the eight filters
+// RFC 024 (PLI-09): three chips answer the daily questions; the nine filters
 // stay, grouped in the "Filtros" sheet. The choice is still a single one, and
 // "Pendentes" and "Confirmados" no longer repeat the groups (PLI-03) up front.
 const QUICK_FILTERS = Object.freeze([
@@ -67,6 +67,7 @@ const FILTER_GROUPS = Object.freeze([
       filterOption('Todos', ''),
       filterOption('Pendentes', 'pendente'),
       filterOption('Confirmados', 'confirmado'),
+      filterOption('Cancelados', 'cancelados'),
     ]),
   }),
   Object.freeze({
@@ -103,6 +104,7 @@ const FILTER_QUERY_KEYS = Object.freeze([
   'origem',
   'status',
   'vendedor',
+  'cancelamento',
 ]);
 // Painel: confirmed orders whose promised day passed, or comes in the next
 // seven days, read in promised order. The API answers one short list.
@@ -143,6 +145,7 @@ let orderCreateKey = '';
 // on "Loja do site"; the Dashboard indicators open `?status=` and `?entrega=`.
 /** @returns {string} */
 function filterFromRoute() {
+  if (route.query.cancelamento === 'cancelados') return 'cancelados';
   if (route.query.origem === STORE_FILTER) return STORE_FILTER;
   if (route.query.vendedor === 'eu') return MINE_FILTER;
   const delivery = String(route.query.entrega ?? '');
@@ -200,12 +203,16 @@ const deliveryFilter = computed(
 );
 const showConfirmed = computed(
   () =>
-    ['', 'confirmado', PRODUCTION_FILTER, STORE_FILTER].includes(
+    ['', 'confirmado', 'cancelados', PRODUCTION_FILTER, STORE_FILTER].includes(
       filter.value,
     ) || Boolean(deliveryFilter.value),
 );
 const confirmedTitle = computed(() =>
-  isProductionQueue.value ? 'Prontos para produção' : 'Confirmados',
+  isProductionQueue.value
+    ? 'Prontos para produção'
+    : filter.value === 'cancelados'
+      ? 'Cancelados · confirmados'
+      : 'Confirmados',
 );
 const confirmedCount = computed(() =>
   isProductionQueue.value
@@ -213,7 +220,7 @@ const confirmedCount = computed(() =>
     : String(counts.value.confirmado),
 );
 const showPending = computed(() =>
-  ['', 'pendente', MINE_FILTER].includes(filter.value),
+  ['', 'pendente', 'cancelados', MINE_FILTER].includes(filter.value),
 );
 // PLI-10: a filter only the sheet offers is named, with a way out.
 const sheetFilterLabel = computed(() =>
@@ -273,6 +280,8 @@ function customerContext(order) {
 /** PLI-05: what is missing and for how long, or who confirmed and when. */
 /** @param {Record<string, any>} order */
 function situation(order) {
+  if (order.cancelledAt)
+    return `Cancelado em ${dateTimeBR(order.cancelledAt)} · histórico preservado`;
   // LOJ-33: a site order reads like any confirmed order, confirmed by the site.
   if (isStoreOrder(order)) return storeConfirmationLabel(order);
   if (order.status === 'confirmado') {
@@ -288,6 +297,7 @@ function situation(order) {
 
 /** A confirmed send without a later reply is evidence of waiting. */
 function clientWaiting(order) {
+  if (order.cancelledAt) return '';
   if (order.status !== 'pendente') return '';
   const message = order.lastMessage;
   if (message?.direction !== 'outbound') return '';
@@ -301,6 +311,7 @@ function clientWaiting(order) {
 }
 
 function priority(order) {
+  if (order.cancelledAt) return '';
   if (order.status !== 'pendente') return '';
   if (clientWaiting(order)) return 'Retomar contato';
   const age = now.value.getTime() - new Date(order.updatedAt).getTime();
@@ -309,6 +320,14 @@ function priority(order) {
 
 /** @param {Record<string, any>} order */
 function due(order) {
+  if (order.cancelledAt)
+    return {
+      date: deliveryDue(order, now.value).date,
+      days: null,
+      overdue: false,
+      relative: '',
+      tone: '',
+    };
   return deliveryDue(order, now.value);
 }
 
@@ -319,6 +338,7 @@ function due(order) {
  * @param {Record<string, any>} order
  */
 function isException(order) {
+  if (order.cancelledAt) return false;
   return (
     due(order).overdue ||
     Boolean(priority(order)) ||
@@ -637,7 +657,9 @@ function listRequest(cursor) {
   else if (filter.value === MINE_FILTER) {
     params.set('status', 'pendente');
     params.set('owner', 'me');
-  } else if (status) params.set('status', status);
+  } else if (filter.value === 'cancelados')
+    params.set('cancellation', 'cancelled');
+  else if (status) params.set('status', status);
   const needle = query.value.trim();
   if ((needle.match(/\d/gu) ?? []).length >= 8) {
     return {
@@ -651,9 +673,11 @@ function listRequest(cursor) {
             ? { origin: STORE_FILTER }
             : filter.value === MINE_FILTER
               ? { owner: 'me', status: 'pendente' }
-              : status
-                ? { status }
-                : {}),
+              : filter.value === 'cancelados'
+                ? { cancellation: 'cancelled' }
+                : status
+                  ? { status }
+                  : {}),
           ...(cursor ? { cursor } : {}),
         },
       },
@@ -1223,10 +1247,18 @@ onBeforeUnmount(() => {
       >
         <div class="panel-head">
           <h2 id="orders-pending-title">
-            Pendentes
+            {{
+              filter === 'cancelados' ? 'Cancelados · pendentes' : 'Pendentes'
+            }}
             <span class="badge" data-tone="warning">{{ counts.pendente }}</span>
           </h2>
-          <p>o vendedor responsável ou administrador pode continuar</p>
+          <p>
+            {{
+              filter === 'cancelados'
+                ? 'Histórico preservado; cancelamento definitivo'
+                : 'o vendedor responsável ou administrador pode continuar'
+            }}
+          </p>
         </div>
         <div
           class="table-wrap list-scroll order-list"
@@ -1257,7 +1289,9 @@ onBeforeUnmount(() => {
                 <td class="order-cell-number">
                   #{{ order.number }}
                   <span class="badge order-card-status" data-tone="warning">{{
-                    orderStatusLabel(order.status)
+                    order.cancelledAt
+                      ? 'Cancelado'
+                      : orderStatusLabel(order.status)
                   }}</span>
                 </td>
                 <td class="order-cell-customer">
@@ -1378,7 +1412,9 @@ onBeforeUnmount(() => {
                     >
                   </span>
                   <span class="badge order-card-status" data-tone="success">{{
-                    orderStatusLabel(order.status)
+                    order.cancelledAt
+                      ? 'Cancelado'
+                      : orderStatusLabel(order.status)
                   }}</span>
                 </td>
                 <td class="order-cell-customer">

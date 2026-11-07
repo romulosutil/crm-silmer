@@ -549,7 +549,10 @@ test('PLI-09/PLI-10: the "Filtros" sheet works by keyboard and names the filter 
     'Entrega',
     'Produção',
   ]);
-  await expect(sheet.getByRole('radio')).toHaveCount(8);
+  await expect(sheet.getByRole('radio')).toHaveCount(9);
+  await expect(
+    sheet.getByRole('radio', { name: 'Cancelados', exact: true }),
+  ).toHaveCount(1);
   await expect(sheet.getByRole('radio', { name: 'Todos' })).toBeFocused();
   await expect(sheet.getByRole('radio', { name: 'Todos' })).toBeChecked();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -569,7 +572,7 @@ test('PLI-09/PLI-10: the "Filtros" sheet works by keyboard and names the filter 
   // Arrows move between the options of every group; Tab reaches the footer.
   await page.keyboard.press('Enter');
   await expect(sheet.getByRole('radio', { name: 'Todos' })).toBeFocused();
-  for (let step = 0; step < 5; step += 1)
+  for (let step = 0; step < 6; step += 1)
     await page.keyboard.press('ArrowDown');
   const late = sheet.getByRole('radio', { name: 'Entrega atrasada' });
   await expect(late).toBeFocused();
@@ -702,7 +705,7 @@ test('PLI-09: on a phone the first order sits whole above the bottom bar, and "F
   const targets = await sheet
     .locator('.filter-sheet-option, button')
     .evaluateAll(rects);
-  expect(targets).toHaveLength(11);
+  expect(targets).toHaveLength(12);
   expect(targets.every((rect) => rect.height >= 44)).toBe(true);
   const options = await sheet
     .locator('.filter-sheet-option')
@@ -734,7 +737,7 @@ test('PLI-09: on a notebook the "Filtros" sheet keeps 44 px targets, 8 px apart,
   const targets = await sheet
     .locator('.filter-sheet-option, button')
     .evaluateAll(rects);
-  expect(targets).toHaveLength(11);
+  expect(targets).toHaveLength(12);
   for (const rect of targets) expect(rect.height).toBeGreaterThanOrEqual(44);
   // Side by side in columns: 8 px between options stacked in one group.
   const options = await sheet

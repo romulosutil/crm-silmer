@@ -1,5 +1,11 @@
 # Request for Comments
 
+## Decisão de 09/11/2026
+
+- [058 — Retirada da página Financeiro](058-retirada-da-pagina-financeiro.md),
+  decidida na [ADR 074](../adr/074-retirada-da-pagina-financeiro.md) / FINQ-T07:
+  retirada só da interface, com perfil, API e dados preservados.
+
 ## Emenda de 09/11/2026
 
 - [055 — Vencimento por pedido e vínculo histórico no Olist](055-vencimento-por-pedido-e-vinculo-historico-no-olist.md),

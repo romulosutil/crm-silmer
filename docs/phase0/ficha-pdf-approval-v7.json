@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "task": "FIP-T01",
+  "requirements": [
+    "FIP-01",
+    "FIP-02",
+    "FIP-04",
+    "FIP-05",
+    "FIP-06",
+    "PIM-10",
+    "OLIST-49",
+    "OLIST-50"
+  ],
+  "syntheticOnly": true,
+  "templateVersion": "ficha-canonical-v7",
+  "sampleSha256": "6dbedacfadbbf3ffe9a65e05433f4535b4dba7b3950e59540bdda0b8d63b4a44",
+  "samples": {
+    "attendance": {
+      "templateVersion": "ficha-canonical-v7",
+      "path": "output/pdf/ficha-informacoes-2026-11-09/attendance.pdf",
+      "sha256": "31d1fffc6807140408064b1c0f14a8c68dd2f3b692dc6cd4546d069665e621d5",
+      "renderedHtmlSha256": "d6e80ddefbd847ac13b20c945d5f0beb2416a8f250ef25a24024a2df5c219b77",
+      "pageCount": 6
+    },
+    "store": {
+      "templateVersion": "ficha-loja-v2",
+      "path": "output/pdf/ficha-informacoes-2026-11-09/store.pdf",
+      "sha256": "c321e8525d27ef8577385db91f0dd17b5b6fe20c74b8385bf166b41dbbd703b4",
+      "renderedHtmlSha256": "a420151ed75eab948f4f2cc4e24504c407c0ffa96d6acb546d696ee1fbcc1bab",
+      "pageCount": 1
+    }
+  },
+  "provisionalApproval": {
+    "status": "pending-po-review",
+    "approved": false,
+    "scope": "development/cloud-dev",
+    "reviewedBy": {
+      "role": "PO",
+      "name": null
+    },
+    "reviewedAt": null,
+    "bundleSha256": "231d34e187f5c67cd93c033896e2dae0c3b9331fda6f4937af22c25649d5c1b1",
+    "decisionRef": "docs/phase0/FICHA-PDF-REVIEW-V7.md"
+  },
+  "approval": {
+    "status": "pending-human-approval",
+    "approved": false,
+    "requiredBefore": "production",
+    "signature": "physical",
+    "reviewedBy": {
+      "rose": null,
+      "operation": null
+    },
+    "reviewedAt": null,
+    "signedPaperKeptAt": null,
+    "evidenceRef": null
+  },
+  "versioning": {
+    "overwriteApprovedVersion": false,
+    "correctionsRequireNewTemplateVersion": true,
+    "supersedesTemplateVersion": "ficha-canonical-v6",
+    "supersedesStoreTemplateVersion": "ficha-loja-v1"
+  }
+}

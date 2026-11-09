@@ -19,6 +19,7 @@ import {
   TEMPLATE_V4,
   TEMPLATE_V5,
   TEMPLATE_V6,
+  TEMPLATE_V7,
   printSnapshot,
 } from '../modules/orders/src/print/print-snapshot.js';
 import { PRINT_TEMPLATE } from '../modules/orders/src/print/index.js';
@@ -34,6 +35,10 @@ import {
   fichaV6ApprovalStages,
   validateFichaReviewV6,
 } from './ficha-pdf-review-v6.mjs';
+import {
+  fichaV7Approved,
+  validateFichaReviewV7,
+} from './ficha-pdf-review-v7.mjs';
 
 const rootUrl = new URL('../', import.meta.url);
 const snapshotUrl = new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl);
@@ -1012,19 +1017,25 @@ export function validateFichaApprovalEvidenceV3(evidence, gate) {
  * ADR 020: v5 likewise needs the PO's provisional approval of its sample,
  * and so does v6 (ADR 025).
  *
- * @param {{gate: any, gateV4?: any, gateV5?: any, gateV6?: any, printTemplate: string}} input
+ * @param {{gate: any, gateV4?: any, gateV5?: any, gateV6?: any, gateV7?: any, printTemplate: string}} input
  */
 export function validateFichaPrintSwitch({
   gate,
   gateV4,
   gateV5,
   gateV6,
+  gateV7,
   printTemplate,
 }) {
   invariant(
-    [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4, TEMPLATE_V5, TEMPLATE_V6].includes(
-      printTemplate,
-    ),
+    [
+      TEMPLATE_V2,
+      TEMPLATE_V3,
+      TEMPLATE_V4,
+      TEMPLATE_V5,
+      TEMPLATE_V6,
+      TEMPLATE_V7,
+    ].includes(printTemplate),
     'PRINT_TEMPLATE must name a known ficha template',
   );
   const stages = fichaV3ApprovalStages(gate);
@@ -1054,6 +1065,10 @@ export function validateFichaPrintSwitch({
       (gateV6?.templateVersion === TEMPLATE_V6 &&
         (v6Stages.provisional || v6Stages.final)),
     'PRINT_TEMPLATE selects ficha-canonical-v6 before its approval is recorded',
+  );
+  invariant(
+    printTemplate !== TEMPLATE_V7 || fichaV7Approved(gateV7),
+    'PRINT_TEMPLATE selects ficha-canonical-v7 before its approval is recorded',
   );
 }
 
@@ -1285,11 +1300,16 @@ async function validateV3() {
   const gateV4 = await validateFichaReviewV4();
   const gateV5 = await validateFichaReviewV5();
   const gateV6 = await validateFichaReviewV6();
+  const gateV7 = await validateFichaReviewV7();
+  console.log(
+    `Ficha v7/loja-v2 package valid; provisional ${gateV7.provisionalApproval.status}; final ${gateV7.approval.status}.`,
+  );
   validateFichaPrintSwitch({
     gate,
     gateV4,
     gateV5,
     gateV6,
+    gateV7,
     printTemplate: PRINT_TEMPLATE,
   });
   const stages = fichaV3ApprovalStages(gate);

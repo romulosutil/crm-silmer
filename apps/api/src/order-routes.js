@@ -39,6 +39,7 @@ const PUBLIC_CODES = new Set([
   'ORDER_NOT_CONFIRMED',
   'ORDER_NOT_FOUND',
   'ORDER_STATUS_CONFLICT',
+  'PRINT_FINANCIAL_TEXT_REVIEW_REQUIRED',
   'VERSION_CONFLICT',
 ]);
 
@@ -189,6 +190,9 @@ export function registerOrderRoutes(
       if (order.status !== 'confirmado') {
         throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
       }
+      // Rendering may reject instructions that require review. A failed
+      // document must not remove a new store order from the Dashboard notice.
+      const html = renderOrderFicha(order);
       if (
         request.method !== 'HEAD' &&
         order.origin === 'loja' &&
@@ -207,10 +211,7 @@ export function registerOrderRoutes(
           attachment('pedido-' + order.number + '.html'),
         );
       }
-      return reply
-        .code(200)
-        .type('text/html; charset=utf-8')
-        .send(renderOrderFicha(order));
+      return reply.code(200).type('text/html; charset=utf-8').send(html);
     }),
   );
 

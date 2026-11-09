@@ -1,0 +1,51 @@
+{
+  "case": "observation with 100 explicit lines; 4000-character unbroken token",
+  "host": "mel",
+  "plannedPages": 8,
+  "actualPages": 8,
+  "chunks": 12,
+  "multilineEndPresent": true,
+  "tokenEndPresent": true,
+  "bounds": [
+    {
+      "page": 1,
+      "orderNumberPresent": true,
+      "outsidePage": 0
+    },
+    {
+      "page": 2,
+      "orderNumberPresent": true,
+      "outsidePage": 0
+    },
+    {
+      "page": 3,
+      "orderNumberPresent": true,
+      "outsidePage": 0
+    },
+    {
+      "page": 4,
+      "orderNumberPresent": true,
+      "outsidePage": 0
+    },
+    {
+      "page": 5,
+      "orderNumberPresent": true,
+      "outsidePage": 0
+    },
+    {
+      "page": 6,
+      "orderNumberPresent": true,
+      "outsidePage": 0
+    },
+    {
+      "page": 7,
+      "orderNumberPresent": true,
+      "outsidePage": 0
+    },
+    {
+      "page": 8,
+      "orderNumberPresent": true,
+      "outsidePage": 0
+    }
+  ]
+}

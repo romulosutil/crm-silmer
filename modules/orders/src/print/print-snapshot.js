@@ -1,10 +1,12 @@
 import { blankProduction } from './ficha-canonical-v2.js';
+import { factoryInstructions } from './factory-instructions.js';
 
 export const TEMPLATE_V2 = 'ficha-canonical-v2';
 export const TEMPLATE_V3 = 'ficha-canonical-v3';
 export const TEMPLATE_V4 = 'ficha-canonical-v4';
 export const TEMPLATE_V5 = 'ficha-canonical-v5';
 export const TEMPLATE_V6 = 'ficha-canonical-v6';
+export const TEMPLATE_V7 = 'ficha-canonical-v7';
 
 /** A field nobody filled prints blank, never "null". @param {unknown} value */
 function printedText(value) {
@@ -67,6 +69,7 @@ function printedTrail(order) {
  * v3 adds the date trail, and v4 to v6 who makes the art. Items travel as
  * stored (v6 prints their audience): each template decides how to print
  * them.
+ * FIP-02/05: v7 adds allowlisted factory instructions and omits payment day.
  *
  * @param {any} order
  * @param {string} [templateVersion]
@@ -77,7 +80,8 @@ export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
     templateVersion !== TEMPLATE_V3 &&
     templateVersion !== TEMPLATE_V4 &&
     templateVersion !== TEMPLATE_V5 &&
-    templateVersion !== TEMPLATE_V6
+    templateVersion !== TEMPLATE_V6 &&
+    templateVersion !== TEMPLATE_V7
   ) {
     throw new Error(`Unknown ficha template: ${templateVersion}`);
   }
@@ -92,17 +96,28 @@ export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
     itens: items,
     nome: printedText(summary.nome),
     numero: printedText(order.number),
-    observacoes: observations,
+    observacoes:
+      templateVersion === TEMPLATE_V7
+        ? factoryInstructions(order.ficha)
+        : observations,
     quantidade_total: order.totalPieces,
     vendedor: printedText(order.confirmedBy?.name),
   };
   if (templateVersion !== TEMPLATE_V2) {
-    pedido.lastro = printedTrail(order);
+    const trail = printedTrail(order);
+    pedido.lastro =
+      templateVersion === TEMPLATE_V7
+        ? {
+            primeiro_contato: trail.primeiro_contato,
+            entrega_realizada: trail.entrega_realizada,
+          }
+        : trail;
   }
   if (
     templateVersion === TEMPLATE_V4 ||
     templateVersion === TEMPLATE_V5 ||
-    templateVersion === TEMPLATE_V6
+    templateVersion === TEMPLATE_V6 ||
+    templateVersion === TEMPLATE_V7
   ) {
     pedido.artwork = order.ficha.artwork ?? {
       feito_pelo_cliente: false,

@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Ficha de Pedido 01-CRM</title>
+  <style>
+    @page { size: A4 landscape; margin: 9mm 9mm 12mm; }
+    * { box-sizing: border-box; }
+    :root { --canvas: #f8f7fc; --surface: #fff; --raised: #f0eef8; --active: #e8e3fa; --text: #160e36; --muted: #625b75; --border: #d8d4e4; --subtle: #e8e5ef; --accent: #ff5b01; --deep: #0c042d; --link: #5b3fd1; }
+    html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: var(--canvas); color: var(--text); font-family: Arial, Helvetica, 'Liberation Sans', Arimo, sans-serif; font-size: 9.5px; margin: 0; }
+    h1, h2, p, dl, dd { margin: 0; }
+    .sheet-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 7px; }
+    .brand { color: var(--link); font-size: 9px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { color: var(--deep); font-size: 21px; letter-spacing: -.03em; line-height: 1; margin-top: 2px; }
+    .order-id { background: var(--deep); border-radius: 6px; color: white; min-width: 90px; padding: 6px 9px; text-align: right; }
+    .order-id span { display: block; font-size: 6px; letter-spacing: .08em; opacity: .75; text-transform: uppercase; }
+    .order-id strong { font-size: 13px; }
+    .header-id { align-items: center; display: flex; gap: 8px; }
+    .page-marker { background: var(--active); border: 1px solid var(--link); border-radius: 999px; color: var(--deep); font-size: 8px; padding: 4px 9px; }
+    .synthetic { background: #fff0e7; border: 1px solid #ffb88f; border-radius: 999px; color: #8b3100; font-size: 7px; font-weight: 800; padding: 4px 8px; text-transform: uppercase; }
+    .section-label { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; margin: 8px 0 5px; text-transform: uppercase; }
+    .summary { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; display: grid; grid-template-columns: 1.35fr 1fr .65fr; overflow: hidden; }
+    .summary > div { border-right: 1px solid var(--subtle); min-height: 48px; padding: 8px 9px; }
+    .summary > div:last-child { border-right: 0; }
+    .label { color: var(--muted); display: block; font-size: 8px; font-weight: 700; letter-spacing: .07em; margin-bottom: 3px; text-transform: uppercase; }
+    .summary strong { color: var(--deep); font-size: 12px; overflow-wrap: anywhere; }
+    .summary .quantity { color: var(--accent); font-size: 20px; line-height: .9; }
+    .supporting { display: grid; gap: 6px; grid-template-columns: 1.5fr 1fr .8fr .5fr; margin: 7px 0 9px; }
+    .supporting > div { background: var(--raised); border-radius: 5px; min-height: 36px; padding: 7px 8px; }
+    .supporting strong { font-size: 9.5px; }
+    .lastro { display: grid; gap: 5px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    .lastro > div { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; min-height: 34px; padding: 6px 8px; }
+    .lastro strong { font-size: 9px; }
+    .artwork-origin { align-items: center; background: var(--active); border: 1px solid var(--border); border-radius: 5px; display: flex; gap: 8px; margin-top: 6px; min-height: 22px; padding: 5px 8px; }
+    .artwork-origin .label { margin: 0; }
+    .artwork-origin strong { font-size: 9px; }
+    .empty { color: var(--muted); }
+    .items { display: grid; gap: 8px; }
+    .item-card { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; break-inside: avoid; display: grid; grid-template-columns: 48px 1fr; overflow: hidden; }
+    .item-number { align-items: center; background: var(--raised); display: flex; flex-direction: column; justify-content: center; text-align: center; }
+    .item-number span { color: var(--link); font-size: 7px; font-weight: 800; text-transform: uppercase; }
+    .item-number strong { font-size: 18px; }
+    .item-number small { color: var(--muted); font-size: 6px; font-weight: 700; }
+    .item-number .audience { background: var(--deep); border-radius: 3px; color: white; font-size: 6.5px; font-style: normal; font-weight: 800; letter-spacing: .02em; margin-top: 3px; padding: 2px 3px; text-transform: uppercase; }
+    .item-points { border-left: 4px solid var(--link); min-width: 0; }
+    .item-row { display: grid; }
+    .top-row { grid-template-columns: 1.4fr 1.15fr .7fr 1.75fr; }
+    .bottom-row { border-top: 1px solid var(--border); grid-template-columns: 1.25fr 1.7fr 1.6fr; }
+    .point { border-right: 1px solid var(--subtle); min-height: 46px; min-width: 0; padding: 6px 8px; overflow-wrap: anywhere; }
+    .point:last-child { border-right: 0; }
+    .point-label { color: var(--muted); display: block; font-size: 7px; font-weight: 800; letter-spacing: .05em; margin-bottom: 3px; text-transform: uppercase; }
+    .point-label b { background: var(--deep); border-radius: 50%; color: white; display: inline-grid; font-size: 7px; height: 13px; place-items: center; width: 13px; }
+    .point-value { font-size: 10px; font-weight: 700; line-height: 1.2; }
+    .point small { display: block; font-size: 7px; font-weight: 500; margin-top: 2px; }
+    .point-quantity .point-value { color: var(--accent); font-size: 17px; }
+    .point-quantity small { color: var(--muted); display: inline; }
+    .grade-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .grade-cell { background: var(--active); border-radius: 5px; min-width: 36px; padding: 4px; text-align: center; }
+    .grade-cell span { color: var(--muted); display: block; font-size: 7px; font-weight: 700; overflow-wrap: anywhere; }
+    .grade-cell strong { font-size: 13px; }
+    .item-additional { align-items: center; background: var(--raised); border-top: 1px solid var(--subtle); display: flex; flex-wrap: wrap; gap: 5px 12px; padding: 5px 8px; }
+    .item-additional span { color: var(--muted); font-size: 7px; font-weight: 800; text-transform: uppercase; }
+    .item-additional strong { color: var(--deep); font-size: 10px; line-height: 1.25; }
+    .page-footer-content { display: grid; gap: 8px; grid-template-columns: 1fr 160px; margin-top: 8px; }
+    .observations { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; min-height: 66px; padding: 8px 9px; }
+    .observations ol { margin: 3px 0 0; padding-left: 16px; }
+    .observations li { line-height: 1.35; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .grand-total { align-items: center; background: var(--deep); border-radius: 6px; color: white; display: flex; justify-content: space-between; padding: 7px 10px; }
+    .grand-total span { font-size: 7px; font-weight: 700; text-transform: uppercase; }
+    .grand-total strong { color: #ffb185; font-size: 22px; }
+    .page-break { break-before: page; }
+    .production-intro { background: #fff0e7; border-left: 4px solid var(--accent); border-radius: 0 6px 6px 0; color: #5b280a; margin-bottom: 8px; padding: 7px 9px; }
+    .production-grid { display: grid; gap: 7px; grid-template-columns: 1fr .72fr 1.25fr; }
+    .production-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; min-height: 400px; padding: 8px; }
+    .panel-number { align-items: center; background: var(--deep); border-radius: 50%; color: white; display: inline-flex; font-size: 8px; font-weight: 800; height: 20px; justify-content: center; margin-right: 5px; width: 20px; }
+    .production-panel h2 { color: var(--deep); display: inline; font-size: 12px; }
+    .panel-description { color: var(--muted); font-size: 7px; margin: 3px 0 8px 27px; }
+    .production-field { border-top: 1px solid var(--subtle); min-height: 54px; padding: 7px 2px 4px; }
+    .production-field.observation { min-height: 77px; }
+    .production-field strong { font-size: 7.5px; }
+    .campo-producao-vazio { border-bottom: 1px solid var(--text); display: block; height: 28px; margin-top: 5px; }
+    .production-field.observation .campo-producao-vazio { height: 49px; }
+    .review-box { align-items: center; background: var(--deep); border-radius: 7px; color: white; display: flex; justify-content: space-between; margin-top: 8px; padding: 8px 10px; }
+    .review-box strong { color: #ffb185; }
+    .review-box span { font-size: 7px; max-width: 590px; }
+    .signatures { display: grid; gap: 18px; grid-template-columns: 2fr 1fr 2fr 1fr; margin-top: 30px; }
+    .signatures span { border-top: 1px solid var(--text); font-size: 8px; font-weight: 700; padding-top: 4px; }
+  </style>
+</head>
+<body>
+  <header class="sheet-header"><div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div><div class="header-id"><span class="synthetic">Amostra sintética — não produzir</span><div class="order-id"><span>Pedido</span><strong>01-CRM</strong></div></div></header>
+  <div class="section-label">Resumo do pedido</div>
+  <section class="summary">
+    <div><span class="label">Cliente</span><strong>AUDITORIA SINTETICA FICHA 0911 - NAO PRODUZIR</strong></div>
+    <div><span class="label">Previsão de entrega</span><strong>20/11/2026</strong></div>
+    <div><span class="label">Total de peças</span><strong class="quantity">97</strong></div>
+  </section>
+  <section class="supporting">
+    <div><span class="label">Nome do pedido</span><strong>PEDIDO SINTETICO NOME0911 - NAO PRODUZIR</strong></div>
+    <div><span class="label">Vendedor</span><strong>Admin Comercial</strong></div>
+    <div><span class="label">Data do pedido</span><strong>09/11/2026</strong></div>
+    <div><span class="label">FAB</span><strong>FAB 01</strong></div>
+  </section>
+  <div class="section-label">Lastro do pedido</div><section class="lastro"><div><span class="label">Primeiro contato</span><strong>09/11/2026</strong></div><div><span class="label">Entregue em</span><strong>09/11/2026</strong></div></section>
+  <section class="artwork-origin"><span class="label">Arte do pedido</span><strong>O cliente envia a arte e A Silmer cria a arte</strong></section>
+  <div class="section-label">Itens: os sete pontos e os adicionais</div>
+  <section class="items"><article class="item-card">
+    <div class="item-number"><span>Item</span><strong>1</strong><em class="audience">Masculino</em><small>parte 1/2</small></div>
+    <div class="item-points">
+      <div class="item-row top-row">
+        <div class="point "><span class="point-label"><b>1</b> Tipo de roupa</span><div class="point-value">CAMISETA DE MANGA LONGA I01TIPO</div></div>
+        <div class="point "><span class="point-label"><b>2</b> Cor</span><div class="point-value">AZUL I01COR</div></div>
+        <div class="point point-quantity"><span class="point-label"><b>3</b> Quantidade</span><div class="point-value">55 <small>peças no item</small></div></div>
+        <div class="point "><span class="point-label"><b>4</b> Aplicação</span><div class="point-value">SILK I01TECNICA</div></div>
+      </div>
+      <div class="item-row bottom-row">
+        <div class="point "><span class="point-label"><b>5</b> Modelo de malha</span><div class="point-value">DRY FIT I01MALHA1 / POLIESTER I01MALHA2</div></div>
+        <div class="point "><span class="point-label"><b>6</b> Tamanhos</span><div class="point-value"><div class="grade-list"><div class="grade-cell"><span>I01TAM01</span><strong>1</strong></div><div class="grade-cell"><span>I01TAM02</span><strong>2</strong></div><div class="grade-cell"><span>I01TAM03</span><strong>3</strong></div><div class="grade-cell"><span>I01TAM04</span><strong>4</strong></div><div class="grade-cell"><span>I01TAM05</span><strong>5</strong></div><div class="grade-cell"><span>I01TAM06</span><strong>6</strong></div><div class="grade-cell"><span>I01TAM07</span><strong>7</strong></div></div></div></div>
+        <div class="point "><span class="point-label"><b>7</b> Gola</span><div class="point-value">REDONDA I01GOLA</div></div>
+      </div>
+      <div class="item-additional"><span>Adicionais</span><span>Quantidade informada <strong>99</strong></span><span>Modelo <strong>MANGA RAGLAN I01MODELO</strong></span><span>Estampa (referência) <strong>LOGO NO PEITO E NAS MANGAS I01ESTAMPA</strong></span><span>Cor do tecido — frente <strong>AZUL I01FRENTE</strong></span><span>Cor do tecido — costas <strong>BRANCO I01COSTAS</strong></span><span>Cor do tecido — manga direita <strong>AMARELO I01MANGADIR</strong></span><span>Cor do tecido — manga esquerda <strong>VERDE I01MANGAESQ</strong></span><span>Viés da gola <strong>LARANJA I01VIESGOLA</strong></span><span>Viés das mangas <strong>VERMELHO I01VIESMANGAS</strong></span></div>
+    </div>
+  </article><article class="item-card">
+    <div class="item-number"><span>Item</span><strong>1</strong><em class="audience">Masculino</em><small>parte 2/2</small></div>
+    <div class="item-points">
+      <div class="item-row top-row">
+        <div class="point "><span class="point-label"><b>1</b> Tipo de roupa</span><div class="point-value">CAMISETA DE MANGA LONGA I01TIPO</div></div>
+        <div class="point "><span class="point-label"><b>2</b> Cor</span><div class="point-value">AZUL I01COR</div></div>
+        <div class="point point-quantity"><span class="point-label"><b>3</b> Quantidade</span><div class="point-value"><small>Total do item na parte 1</small></div></div>
+        <div class="point "><span class="point-label"><b>4</b> Aplicação</span><div class="point-value">SILK I01TECNICA</div></div>
+      </div>
+      <div class="item-row bottom-row">
+        <div class="point "><span class="point-label"><b>5</b> Modelo de malha</span><div class="point-value">DRY FIT I01MALHA1 / POLIESTER I01MALHA2</div></div>
+        <div class="point "><span class="point-label"><b>6</b> Tamanhos</span><div class="point-value"><div class="grade-list"><div class="grade-cell"><span>I01TAM08</span><strong>8</strong></div><div class="grade-cell"><span>I01TAM09</span><strong>9</strong></div><div class="grade-cell"><span>I01TAM10</span><strong>10</strong></div></div></div></div>
+        <div class="point "><span class="point-label"><b>7</b> Gola</span><div class="point-value">REDONDA I01GOLA</div></div>
+      </div>
+      <div class="item-additional"><span>Adicionais</span><span>Quantidade informada <strong>99</strong></span><span>Modelo <strong>MANGA RAGLAN I01MODELO</strong></span><span>Estampa (referência) <strong>LOGO NO PEITO E NAS MANGAS I01ESTAMPA</strong></span><span>Cor do tecido — frente <strong>AZUL I01FRENTE</strong></span><span>Cor do tecido — costas <strong>BRANCO I01COSTAS</strong></span><span>Cor do tecido — manga direita <strong>AMARELO I01MANGADIR</strong></span><span>Cor do tecido — manga esquerda <strong>VERDE I01MANGAESQ</strong></span><span>Viés da gola <strong>LARANJA I01VIESGOLA</strong></span><span>Viés das mangas <strong>VERMELHO I01VIESMANGAS</strong></span></div>
+    </div>
+  </article></section><section class="page-break continuation"><header class="sheet-header"><div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div><div class="header-id"><span class="page-marker">Página 2 · continuação do pedido</span><div class="order-id"><span>Pedido</span><strong>01-CRM</strong></div></div></header><section class="artwork-origin"><span class="label">Arte do pedido</span><strong>O cliente envia a arte e A Silmer cria a arte</strong></section><div class="section-label">Itens: continuação</div><section class="items"><article class="item-card">
+    <div class="item-number"><span>Item</span><strong>2</strong><em class="audience">Feminino</em></div>
+    <div class="item-points">
+      <div class="item-row top-row">
+        <div class="point "><span class="point-label"><b>1</b> Tipo de roupa</span><div class="point-value">CAMISETA DE MANGA LONGA I02TIPO</div></div>
+        <div class="point "><span class="point-label"><b>2</b> Cor</span><div class="point-value">AZUL I02COR</div></div>
+        <div class="point point-quantity"><span class="point-label"><b>3</b> Quantidade</span><div class="point-value">6 <small>peças no item</small></div></div>
+        <div class="point "><span class="point-label"><b>4</b> Aplicação</span><div class="point-value">SILK I02TECNICA</div></div>
+      </div>
+      <div class="item-row bottom-row">
+        <div class="point "><span class="point-label"><b>5</b> Modelo de malha</span><div class="point-value">DRY FIT I02MALHA1 / POLIESTER I02MALHA2</div></div>
+        <div class="point "><span class="point-label"><b>6</b> Tamanhos</span><div class="point-value"><div class="grade-list"><div class="grade-cell"><span>I02TAM01</span><strong>1</strong></div><div class="grade-cell"><span>I02TAM02</span><strong>2</strong></div><div class="grade-cell"><span>I02TAM03</span><strong>3</strong></div></div></div></div>
+        <div class="point "><span class="point-label"><b>7</b> Gola</span><div class="point-value">REDONDA I02GOLA</div></div>
+      </div>
+      <div class="item-additional"><span>Adicionais</span><span>Quantidade informada <strong>100</strong></span><span>Modelo <strong>MANGA RAGLAN I02MODELO</strong></span><span>Estampa (referência) <strong>LOGO NO PEITO E NAS MANGAS I02ESTAMPA</strong></span><span>Cor do tecido — frente <strong>AZUL I02FRENTE</strong></span><span>Cor do tecido — costas <strong>BRANCO I02COSTAS</strong></span><span>Cor do tecido — manga direita <strong>AMARELO I02MANGADIR</strong></span><span>Cor do tecido — manga esquerda <strong>VERDE I02MANGAESQ</strong></span><span>Viés da gola <strong>LARANJA I02VIESGOLA</strong></span><span>Viés das mangas <strong>VERMELHO I02VIESMANGAS</strong></span></div>
+    </div>
+  </article><article class="item-card">
+    <div class="item-number"><span>Item</span><strong>3</strong><em class="audience">Infantil</em></div>
+    <div class="item-points">
+      <div class="item-row top-row">
+        <div class="point "><span class="point-label"><b>1</b> Tipo de roupa</span><div class="point-value">CAMISETA DE MANGA LONGA I03TIPO</div></div>
+        <div class="point "><span class="point-label"><b>2</b> Cor</span><div class="point-value">AZUL I03COR</div></div>
+        <div class="point point-quantity"><span class="point-label"><b>3</b> Quantidade</span><div class="point-value">6 <small>peças no item</small></div></div>
+        <div class="point "><span class="point-label"><b>4</b> Aplicação</span><div class="point-value">SILK I03TECNICA</div></div>
+      </div>
+      <div class="item-row bottom-row">
+        <div class="point "><span class="point-label"><b>5</b> Modelo de malha</span><div class="point-value">DRY FIT I03MALHA1 / POLIESTER I03MALHA2</div></div>
+        <div class="point "><span class="point-label"><b>6</b> Tamanhos</span><div class="point-value"><div class="grade-list"><div class="grade-cell"><span>I03TAM01</span><strong>1</strong></div><div class="grade-cell"><span>I03TAM02</span><strong>2</strong></div><div class="grade-cell"><span>I03TAM03</span><strong>3</strong></div></div></div></div>
+        <div class="point "><span class="point-label"><b>7</b> Gola</span><div class="point-value">REDONDA I03GOLA</div></div>
+      </div>
+      <div class="item-additional"><span>Adicionais</span><span>Quantidade informada <strong>101</strong></span><span>Modelo <strong>MANGA RAGLAN I03MODELO</strong></span><span>Estampa (referência) <strong>LOGO NO PEITO E NAS MANGAS I03ESTAMPA</strong></span><span>Cor do tecido — frente <strong>AZUL I03FRENTE</strong></span><span>Cor do tecido — costas <strong>BRANCO I03COSTAS</strong></span><span>Cor do tecido — manga direita <strong>AMARELO I03MANGADIR</strong></span><span>Cor do tecido — manga esquerda <strong>VERDE I03MANGAESQ</strong></span><span>Viés da gola <strong>LARANJA I03VIESGOLA</strong></span><span>Viés das mangas <strong>VERMELHO I03VIESMANGAS</strong></span></div>
+    </div>
+  </article></section></section><section class="page-break continuation"><header class="sheet-header"><div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div><div class="header-id"><span class="page-marker">Página 3 · continuação do pedido</span><div class="order-id"><span>Pedido</span><strong>01-CRM</strong></div></div></header><section class="artwork-origin"><span class="label">Arte do pedido</span><strong>O cliente envia a arte e A Silmer cria a arte</strong></section><div class="section-label">Itens: continuação</div><section class="items"><article class="item-card">
+    <div class="item-number"><span>Item</span><strong>4</strong><em class="audience">Unissex</em></div>
+    <div class="item-points">
+      <div class="item-row top-row">
+        <div class="point "><span class="point-label"><b>1</b> Tipo de roupa</span><div class="point-value">CAMISETA DE MANGA LONGA I04TIPO</div></div>
+        <div class="point "><span class="point-label"><b>2</b> Cor</span><div class="point-value">AZUL I04COR</div></div>
+        <div class="point point-quantity"><span class="point-label"><b>3</b> Quantidade</span><div class="point-value">6 <small>peças no item</small></div></div>
+        <div class="point "><span class="point-label"><b>4</b> Aplicação</span><div class="point-value">SILK I04TECNICA</div></div>
+      </div>
+      <div class="item-row bottom-row">
+        <div class="point "><span class="point-label"><b>5</b> Modelo de malha</span><div class="point-value">DRY FIT I04MALHA1 / POLIESTER I04MALHA2</div></div>
+        <div class="point "><span class="point-label"><b>6</b> Tamanhos</span><div class="point-value"><div class="grade-list"><div class="grade-cell"><span>I04TAM01</span><strong>1</strong></div><div class="grade-cell"><span>I04TAM02</span><strong>2</strong></div><div class="grade-cell"><span>I04TAM03</span><strong>3</strong></div></div></div></div>
+        <div class="point "><span class="point-label"><b>7</b> Gola</span><div class="point-value">REDONDA I04GOLA</div></div>
+      </div>
+      <div class="item-additional"><span>Adicionais</span><span>Quantidade informada <strong>102</strong></span><span>Modelo <strong>MANGA RAGLAN I04MODELO</strong></span><span>Estampa (referência) <strong>LOGO NO PEITO E NAS MANGAS I04ESTAMPA</strong></span><span>Cor do tecido — frente <strong>AZUL I04FRENTE</strong></span><span>Cor do tecido — costas <strong>BRANCO I04COSTAS</strong></span><span>Cor do tecido — manga direita <strong>AMARELO I04MANGADIR</strong></span><span>Cor do tecido — manga esquerda <strong>VERDE I04MANGAESQ</strong></span><span>Viés da gola <strong>LARANJA I04VIESGOLA</strong></span><span>Viés das mangas <strong>VERMELHO I04VIESMANGAS</strong></span></div>
+    </div>
+  </article><article class="item-card">
+    <div class="item-number"><span>Item</span><strong>5</strong><em class="audience">Masculino</em></div>
+    <div class="item-points">
+      <div class="item-row top-row">
+        <div class="point "><span class="point-label"><b>1</b> Tipo de roupa</span><div class="point-value">CAMISETA DE MANGA LONGA I05TIPO</div></div>
+        <div class="point "><span class="point-label"><b>2</b> Cor</span><div class="point-value">AZUL I05COR</div></div>
+        <div class="point point-quantity"><span class="point-label"><b>3</b> Quantidade</span><div class="point-value">6 <small>peças no item</small></div></div>
+        <div class="point "><span class="point-label"><b>4</b> Aplicação</span><div class="point-value">SILK I05TECNICA</div></div>
+      </div>
+      <div class="item-row bottom-row">
+        <div class="point "><span class="point-label"><b>5</b> Modelo de malha</span><div class="point-value">DRY FIT I05MALHA1 / POLIESTER I05MALHA2</div></div>
+        <div class="point "><span class="point-label"><b>6</b> Tamanhos</span><div class="point-value"><div class="grade-list"><div class="grade-cell"><span>I05TAM01</span><strong>1</strong></div><div class="grade-cell"><span>I05TAM02</span><strong>2</strong></div><div class="grade-cell"><span>I05TAM03</span><strong>3</strong></div></div></div></div>
+        <div class="point "><span class="point-label"><b>7</b> Gola</span><div class="point-value">REDONDA I05GOLA</div></div>
+      </div>
+      <div class="item-additional"><span>Adicionais</span><span>Quantidade informada <strong>103</strong></span><span>Modelo <strong>MANGA RAGLAN I05MODELO</strong></span><span>Estampa (referência) <strong>LOGO NO PEITO E NAS MANGAS I05ESTAMPA</strong></span><span>Cor do tecido — frente <strong>AZUL I05FRENTE</strong></span><span>Cor do tecido — costas <strong>BRANCO I05COSTAS</strong></span><span>Cor do tecido — manga direita <strong>AMARELO I05MANGADIR</strong></span><span>Cor do tecido — manga esquerda <strong>VERDE I05MANGAESQ</strong></span><span>Viés da gola <strong>LARANJA I05VIESGOLA</strong></span><span>Viés das mangas <strong>VERMELHO I05VIESMANGAS</strong></span></div>
+    </div>
+  </article></section></section><section class="page-break continuation"><header class="sheet-header"><div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div><div class="header-id"><span class="page-marker">Página 4 · continuação do pedido</span><div class="order-id"><span>Pedido</span><strong>01-CRM</strong></div></div></header><section class="artwork-origin"><span class="label">Arte do pedido</span><strong>O cliente envia a arte e A Silmer cria a arte</strong></section><div class="section-label">Itens: continuação</div><section class="items"><article class="item-card">
+    <div class="item-number"><span>Item</span><strong>6</strong><em class="audience">Feminino</em></div>
+    <div class="item-points">
+      <div class="item-row top-row">
+        <div class="point "><span class="point-label"><b>1</b> Tipo de roupa</span><div class="point-value">CAMISETA DE MANGA LONGA I06TIPO</div></div>
+        <div class="point "><span class="point-label"><b>2</b> Cor</span><div class="point-value">AZUL I06COR</div></div>
+        <div class="point point-quantity"><span class="point-label"><b>3</b> Quantidade</span><div class="point-value">6 <small>peças no item</small></div></div>
+        <div class="point "><span class="point-label"><b>4</b> Aplicação</span><div class="point-value">SILK I06TECNICA</div></div>
+      </div>
+      <div class="item-row bottom-row">
+        <div class="point "><span class="point-label"><b>5</b> Modelo de malha</span><div class="point-value">DRY FIT I06MALHA1 / POLIESTER I06MALHA2</div></div>
+        <div class="point "><span class="point-label"><b>6</b> Tamanhos</span><div class="point-value"><div class="grade-list"><div class="grade-cell"><span>I06TAM01</span><strong>1</strong></div><div class="grade-cell"><span>I06TAM02</span><strong>2</strong></div><div class="grade-cell"><span>I06TAM03</span><strong>3</strong></div></div></div></div>
+        <div class="point "><span class="point-label"><b>7</b> Gola</span><div class="point-value">REDONDA I06GOLA</div></div>
+      </div>
+      <div class="item-additional"><span>Adicionais</span><span>Quantidade informada <strong>104</strong></span><span>Modelo <strong>MANGA RAGLAN I06MODELO</strong></span><span>Estampa (referência) <strong>LOGO NO PEITO E NAS MANGAS I06ESTAMPA</strong></span><span>Cor do tecido — frente <strong>AZUL I06FRENTE</strong></span><span>Cor do tecido — costas <strong>BRANCO I06COSTAS</strong></span><span>Cor do tecido — manga direita <strong>AMARELO I06MANGADIR</strong></span><span>Cor do tecido — manga esquerda <strong>VERDE I06MANGAESQ</strong></span><span>Viés da gola <strong>LARANJA I06VIESGOLA</strong></span><span>Viés das mangas <strong>VERMELHO I06VIESMANGAS</strong></span></div>
+    </div>
+  </article><article class="item-card">
+    <div class="item-number"><span>Item</span><strong>7</strong><em class="audience">Infantil</em></div>
+    <div class="item-points">
+      <div class="item-row top-row">
+        <div class="point "><span class="point-label"><b>1</b> Tipo de roupa</span><div class="point-value">CAMISETA DE MANGA LONGA I07TIPO</div></div>
+        <div class="point "><span class="point-label"><b>2</b> Cor</span><div class="point-value">AZUL I07COR</div></div>
+        <div class="point point-quantity"><span class="point-label"><b>3</b> Quantidade</span><div class="point-value">6 <small>peças no item</small></div></div>
+        <div class="point "><span class="point-label"><b>4</b> Aplicação</span><div class="point-value">SILK I07TECNICA</div></div>
+      </div>
+      <div class="item-row bottom-row">
+        <div class="point "><span class="point-label"><b>5</b> Modelo de malha</span><div class="point-value">DRY FIT I07MALHA1 / POLIESTER I07MALHA2</div></div>
+        <div class="point "><span class="point-label"><b>6</b> Tamanhos</span><div class="point-value"><div class="grade-list"><div class="grade-cell"><span>I07TAM01</span><strong>1</strong></div><div class="grade-cell"><span>I07TAM02</span><strong>2</strong></div><div class="grade-cell"><span>I07TAM03</span><strong>3</strong></div></div></div></div>
+        <div class="point "><span class="point-label"><b>7</b> Gola</span><div class="point-value">REDONDA I07GOLA</div></div>
+      </div>
+      <div class="item-additional"><span>Adicionais</span><span>Quantidade informada <strong>105</strong></span><span>Modelo <strong>MANGA RAGLAN I07MODELO</strong></span><span>Estampa (referência) <strong>LOGO NO PEITO E NAS MANGAS I07ESTAMPA</strong></span><span>Cor do tecido — frente <strong>AZUL I07FRENTE</strong></span><span>Cor do tecido — costas <strong>BRANCO I07COSTAS</strong></span><span>Cor do tecido — manga direita <strong>AMARELO I07MANGADIR</strong></span><span>Cor do tecido — manga esquerda <strong>VERDE I07MANGAESQ</strong></span><span>Viés da gola <strong>LARANJA I07VIESGOLA</strong></span><span>Viés das mangas <strong>VERMELHO I07VIESMANGAS</strong></span></div>
+    </div>
+  </article></section></section><section class="page-break continuation"><header class="sheet-header"><div><div class="brand">Silmer</div><h1>FICHA DE PEDIDO</h1></div><div class="header-id"><span class="page-marker">Página 5 · continuação do pedido</span><div class="order-id"><span>Pedido</span><strong>01-CRM</strong></div></div></header><section class="artwork-origin"><span class="label">Arte do pedido</span><strong>O cliente envia a arte e A Silmer cria a arte</strong></section><div class="section-label">Itens: continuação</div><section class="items"><article class="item-card">
+    <div class="item-number"><span>Item</span><strong>8</strong><em class="audience">Unissex</em></div>
+    <div class="item-points">
+      <div class="item-row top-row">
+        <div class="point "><span class="point-label"><b>1</b> Tipo de roupa</span><div class="point-value">CAMISETA DE MANGA LONGA I08TIPO</div></div>
+        <div class="point "><span class="point-label"><b>2</b> Cor</span><div class="point-value">AZUL I08COR</div></div>
+        <div class="point point-quantity"><span class="point-label"><b>3</b> Quantidade</span><div class="point-value">6 <small>peças no item</small></div></div>
+        <div class="point "><span class="point-label"><b>4</b> Aplicação</span><div class="point-value">SILK I08TECNICA</div></div>
+      </div>
+      <div class="item-row bottom-row">
+        <div class="point "><span class="point-label"><b>5</b> Modelo de malha</span><div class="point-value">DRY FIT I08MALHA1 / POLIESTER I08MALHA2</div></div>
+        <div class="point "><span class="point-label"><b>6</b> Tamanhos</span><div class="point-value"><div class="grade-list"><div class="grade-cell"><span>I08TAM01</span><strong>1</strong></div><div class="grade-cell"><span>I08TAM02</span><strong>2</strong></div><div class="grade-cell"><span>I08TAM03</span><strong>3</strong></div></div></div></div>
+        <div class="point "><span class="point-label"><b>7</b> Gola</span><div class="point-value">REDONDA I08GOLA</div></div>
+      </div>
+      <div class="item-additional"><span>Adicionais</span><span>Quantidade informada <strong>106</strong></span><span>Modelo <strong>MANGA RAGLAN I08MODELO</strong></span><span>Estampa (referência) <strong>LOGO NO PEITO E NAS MANGAS I08ESTAMPA</strong></span><span>Cor do tecido — frente <strong>AZUL I08FRENTE</strong></span><span>Cor do tecido — costas <strong>BRANCO I08COSTAS</strong></span><span>Cor do tecido — manga direita <strong>AMARELO I08MANGADIR</strong></span><span>Cor do tecido — manga esquerda <strong>VERDE I08MANGAESQ</strong></span><span>Viés da gola <strong>LARANJA I08VIESGOLA</strong></span><span>Viés das mangas <strong>VERMELHO I08VIESMANGAS</strong></span></div>
+    </div>
+  </article></section><section class="page-footer-content"><div class="observations"><span class="label">Observações do pedido e instruções de produção</span><ol start="1"><li>OBS0911LINHA1 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.</li><li>OBS0911LINHA2 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.</li><li>OBS0911LINHA3 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.</li><li>OBS0911LINHA4 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.</li><li>OBS0911LINHA5 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.</li><li>Notas do atendimento — informação complementar do atendimento: NOTAS0911ATENDIMENTO - Fazer manga curta e nao longa; nao produzir.</li><li>Modelo informado no atendimento — informação complementar do atendimento: MODELO0911ATENDIMENTO - manga raglan</li><li>Personalizações — informação complementar do atendimento: PERSON0911 - nomes individuais</li><li>Numeração — informação complementar do atendimento: NUM0911 - 01 a 97</li><li>Patrocinadores — informação complementar do atendimento: PATROC0911 - marca sintetica</li><li>Modalidade de entrega — informação complementar do atendimento: ENTREGA0911 - envio</li><li>Endereço de entrega — informação complementar do atendimento: ENDERECO0911 - Rua sintetica 9109</li><li>Cidade / CEP — informação complementar do atendimento: CEP0911 - 69301-000</li><li>Data desejada pelo cliente (não é previsão confirmada) — informação complementar do atendimento: PRAZO0911 - 19 novembro</li></ol></div><div class="grand-total"><span>Total<br>de peças</span><strong>97</strong></div></section></section>
+  <section class="page-break">
+    <header class="sheet-header"><div><div class="brand">Silmer</div><h1>CONTROLE DE PRODUÇÃO</h1></div><div class="header-id"><span class="synthetic">Amostra sintética — não produzir</span><div class="order-id"><span>Pedido</span><strong>01-CRM</strong></div></div></header>
+    <p class="production-intro">Preenchimento exclusivo da equipe de produção e arte. Os 14 campos abaixo devem chegar vazios a esta etapa.</p>
+    <div class="production-grid"><section class="production-panel"><div><span class="panel-number">1</span><h2>Arremate</h2></div><p class="panel-description">Registro de conferência e execução.</p><div class="production-field"><strong>Conferido para arrematar por:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Data:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Arrematado:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Data:</strong><span class="campo-producao-vazio"></span></div><div class="production-field observation"><strong>OBS:</strong><span class="campo-producao-vazio"></span></div></section><section class="production-panel"><div><span class="panel-number">2</span><h2>Conferência e embalagem</h2></div><p class="panel-description">Fechamento físico do pedido.</p><div class="production-field"><strong>Conferido / Embalado por:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Data:</strong><span class="campo-producao-vazio"></span></div></section><section class="production-panel"><div><span class="panel-number">3</span><h2>Cores da arte</h2></div><p class="panel-description">Número de cores de tinta por parte da peça.</p><div class="production-field"><strong>Nº de cores — frente:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Nº de cores — costas:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Nº de cores — manga direita:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Nº de cores — manga esquerda:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Total das partes:</strong><span class="campo-producao-vazio"></span></div><div class="production-field observation"><strong>OBS:</strong><span class="campo-producao-vazio"></span></div><div class="production-field"><strong>Nº total de cores do pedido:</strong><span class="campo-producao-vazio"></span></div></section></div><div class="review-box"><strong>Revisão pendente</strong><span>Rose e Operação revisam a nova ficha impressa antes da produção.</span></div><div class="signatures"><span>Assinatura de Rose</span><span>Data</span><span>Assinatura de Operação</span><span>Data</span></div>
+  </section>
+</body>
+</html>

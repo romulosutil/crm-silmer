@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Pedido da loja 02-CRM</title>
+  <style>
+    @page { size: A4 portrait; margin: 14mm; }
+    * { box-sizing: border-box; }
+    :root { --surface: #fff; --raised: #f0eef8; --text: #160e36; --muted: #625b75; --border: #d8d4e4; --deep: #0c042d; --link: #5b3fd1; --warn-bg: #fff0e7; --warn: #8b3100; }
+    html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: var(--surface); color: var(--text); font-family: Arial, Helvetica, 'Liberation Sans', Arimo, sans-serif; font-size: 13px; margin: 0; }
+    h1, h2, p, dl, dd { margin: 0; }
+    .sheet-header { align-items: flex-start; border-bottom: 2px solid var(--deep); display: flex; justify-content: space-between; padding-bottom: 10px; }
+    .brand { color: var(--link); font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { color: var(--deep); font-size: 24px; letter-spacing: -.02em; margin-top: 2px; }
+    .origin { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .order-id { background: var(--deep); border-radius: 6px; color: #fff; min-width: 120px; padding: 8px 12px; text-align: right; }
+    .order-id span { display: block; font-size: 12px; letter-spacing: .08em; opacity: .75; text-transform: uppercase; }
+    .order-id strong { font-size: 22px; }
+    .test { background: var(--warn-bg); border: 1px solid #ffb88f; border-radius: 6px; color: var(--warn); font-weight: 800; margin-top: 12px; padding: 8px 10px; text-transform: uppercase; }
+    section { border: 1px solid var(--border); border-radius: 8px; margin-top: 14px; padding: 12px 14px; }
+    section.produce { border: 2px solid var(--deep); }
+    h2 { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .1em; margin-bottom: 10px; text-transform: uppercase; }
+    section.produce h2 { color: var(--deep); }
+    dl { display: grid; gap: 12px 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    dt { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    dd { color: var(--deep); font-size: 16px; font-weight: 700; margin-top: 2px; overflow-wrap: anywhere; }
+    .size dd { font-size: 32px; line-height: 1.1; }
+    .note { color: var(--muted); display: block; font-size: 12px; font-weight: 400; margin-top: 2px; }
+    .instructions p { margin-top: 8px; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .sheet-footer { border-top: 1px solid var(--border); color: var(--muted); display: flex; font-size: 12px; justify-content: space-between; margin-top: 18px; padding-top: 8px; }
+  </style>
+</head>
+<body>
+  <header class="sheet-header"><div><div class="brand">Silmer</div><h1>PEDIDO DA LOJA</h1><p class="origin">Origem: Loja do site · LJ-00CE31A0</p></div><div class="order-id"><span>Pedido</span><strong>02-CRM</strong></div></header>
+  <p class="test">Pedido de teste — não produzir nem entregar</p>
+  <section class="produce"><h2>Produzir</h2><dl><div><dt>Produto</dt><dd>Camisa dry fit</dd></div><div><dt>Cor</dt><dd>Preto</dd></div><div class="size"><dt>Tamanho</dt><dd>M</dd></div><div><dt>Quantidade</dt><dd>10 peças</dd></div><div><dt>Prazo da cor</dt><dd>10 dias úteis</dd></div><div><dt>Pedido em</dt><dd>09/11/2026 às 11:42<span class="note">confirmado pela loja do site</span></dd></div></dl></section>
+  <section><h2>Cliente</h2><dl><div><dt>Nome</dt><dd>LOJA SINTETICA ENVIO0911 - NAO PRODUZIR</dd></div><div><dt>WhatsApp</dt><dd>+55 (27) 90000-9110</dd></div></dl></section>
+  <section class="instructions"><h2>Observações e envio</h2><p>Dados de envio — CEP: 69301-000. Entrar em contato para pegar as informações de entrega.</p></section>
+  <footer class="sheet-footer"><span>Ficha da loja · 02-CRM · LJ-00CE31A0</span><span>Ficha de produção</span></footer>
+</body>
+</html>

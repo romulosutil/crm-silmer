@@ -1,0 +1,24 @@
+{
+  "host": "mel",
+  "generatedAt": "2026-11-09T16:52:33.879Z",
+  "results": [
+    {
+      "sample": "attendance",
+      "plannedPages": 6,
+      "itemFragments": 9,
+      "grades": 31,
+      "observations": 14,
+      "productionFields": 14,
+      "horizontalOverflow": false
+    },
+    {
+      "sample": "store",
+      "plannedPages": 1,
+      "itemFragments": 0,
+      "grades": 0,
+      "observations": 1,
+      "productionFields": 0,
+      "horizontalOverflow": false
+    }
+  ]
+}

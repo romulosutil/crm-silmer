@@ -1,0 +1,127 @@
+{
+  "attendance": {
+    "pageCount": 6,
+    "gradePairsMatched": 31,
+    "expectedGradePairs": 31,
+    "markers": {
+      "I01MODELO": true,
+      "I01VIESGOLA": true,
+      "I01MANGADIR": true,
+      "I01MANGAESQ": true,
+      "I01VIESMANGAS": true,
+      "I02MODELO": true,
+      "I02VIESGOLA": true,
+      "I02MANGADIR": true,
+      "I02MANGAESQ": true,
+      "I02VIESMANGAS": true,
+      "I03MODELO": true,
+      "I03VIESGOLA": true,
+      "I03MANGADIR": true,
+      "I03MANGAESQ": true,
+      "I03VIESMANGAS": true,
+      "I04MODELO": true,
+      "I04VIESGOLA": true,
+      "I04MANGADIR": true,
+      "I04MANGAESQ": true,
+      "I04VIESMANGAS": true,
+      "I05MODELO": true,
+      "I05VIESGOLA": true,
+      "I05MANGADIR": true,
+      "I05MANGAESQ": true,
+      "I05VIESMANGAS": true,
+      "I06MODELO": true,
+      "I06VIESGOLA": true,
+      "I06MANGADIR": true,
+      "I06MANGAESQ": true,
+      "I06VIESMANGAS": true,
+      "I07MODELO": true,
+      "I07VIESGOLA": true,
+      "I07MANGADIR": true,
+      "I07MANGAESQ": true,
+      "I07VIESMANGAS": true,
+      "I08MODELO": true,
+      "I08VIESGOLA": true,
+      "I08MANGADIR": true,
+      "I08MANGAESQ": true,
+      "I08VIESMANGAS": true,
+      "NOTAS0911ATENDIMENTO": true,
+      "MODELO0911ATENDIMENTO": true,
+      "PERSON0911": true,
+      "NUM0911": true,
+      "PATROC0911": true,
+      "ENTREGA0911": true,
+      "ENDERECO0911": true,
+      "CEP0911": true,
+      "PRAZO0911": true,
+      "OBS0911LINHA1": true,
+      "OBS0911LINHA2": true,
+      "OBS0911LINHA3": true,
+      "OBS0911LINHA4": true,
+      "OBS0911LINHA5": true
+    },
+    "financialTextFound": [],
+    "bounds": [
+      {
+        "page": 1,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996,
+        "outsidePage": 0,
+        "orderNumberPresent": true
+      },
+      {
+        "page": 2,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996,
+        "outsidePage": 0,
+        "orderNumberPresent": true
+      },
+      {
+        "page": 3,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996,
+        "outsidePage": 0,
+        "orderNumberPresent": true
+      },
+      {
+        "page": 4,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996,
+        "outsidePage": 0,
+        "orderNumberPresent": true
+      },
+      {
+        "page": 5,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996,
+        "outsidePage": 0,
+        "orderNumberPresent": true
+      },
+      {
+        "page": 6,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996,
+        "outsidePage": 0,
+        "orderNumberPresent": true
+      }
+    ]
+  },
+  "store": {
+    "pageCount": 1,
+    "gradePairsMatched": 0,
+    "expectedGradePairs": 0,
+    "markers": {
+      "69301-000": true,
+      "Entrar em contato": true
+    },
+    "financialTextFound": [],
+    "bounds": [
+      {
+        "page": 1,
+        "widthPt": 594.95996,
+        "heightPt": 841.91998,
+        "outsidePage": 0,
+        "orderNumberPresent": true
+      }
+    ]
+  }
+}

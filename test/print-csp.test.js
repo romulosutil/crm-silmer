@@ -10,6 +10,7 @@ import {
   TEMPLATE_V4,
   TEMPLATE_V5,
   TEMPLATE_V6,
+  TEMPLATE_V7,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 
@@ -39,8 +40,12 @@ test('the print route alone permits the exact styles of supported ficha template
     TEMPLATE_V4,
     TEMPLATE_V5,
     TEMPLATE_V6,
+    TEMPLATE_V7,
   ]) {
-    const html = renderOrderFicha(fixture.order, template);
+    const printableOrder = structuredClone(fixture.order);
+    if (template === TEMPLATE_V7)
+      printableOrder.ficha.observations = ['Amostra sintética de produção.'];
+    const html = renderOrderFicha(printableOrder, template);
     const styles = [...html.matchAll(/<style>([\s\S]*?)<\/style>/gu)];
     assert.equal(styles.length, 1, `${template} has one static style block`);
     assert.doesNotMatch(
@@ -48,7 +53,7 @@ test('the print route alone permits the exact styles of supported ficha template
       /\sstyle=/iu,
       `${template} has no style attributes`,
     );
-    const anotherOrder = structuredClone(fixture.order);
+    const anotherOrder = structuredClone(printableOrder);
     anotherOrder.number = '26-CRM';
     anotherOrder.ficha.summary.cliente = 'Outra cliente sintética';
     const otherStyles = [
@@ -70,9 +75,14 @@ test('the print route alone permits the exact styles of supported ficha template
     );
   }
   assert.ok(
-    [TEMPLATE_V2, TEMPLATE_V3, TEMPLATE_V4, TEMPLATE_V5, TEMPLATE_V6].includes(
-      PRINT_TEMPLATE,
-    ),
+    [
+      TEMPLATE_V2,
+      TEMPLATE_V3,
+      TEMPLATE_V4,
+      TEMPLATE_V5,
+      TEMPLATE_V6,
+      TEMPLATE_V7,
+    ].includes(PRINT_TEMPLATE),
     'the active template must be included in the permitted set',
   );
   // ADR 027: the site shop's simplified ficha, picked by the order origin.
@@ -107,6 +117,15 @@ test('the print route alone permits the exact styles of supported ficha template
     permittedHashes.has(`'sha256-${storeHash}'`),
     'ficha-loja-v1 must have its current CSS hash in the print CSP',
   );
+  const storeV2 = renderOrderFicha(storeOrder, TEMPLATE_V7);
+  const storeV2Styles = [...storeV2.matchAll(/<style>([\s\S]*?)<\/style>/gu)];
+  assert.equal(storeV2Styles.length, 1);
+  assert.doesNotMatch(storeV2, /\sstyle=/iu);
+  assert.ok(
+    permittedHashes.has(
+      `'sha256-${createHash('sha256').update(storeV2Styles[0][1], 'utf8').digest('base64')}'`,
+    ),
+  );
   // ADR 031: for one release the print CSP also keeps the previous
   // ficha-loja-v1 stylesheet, because nginx (edge-web image) and the API
   // (runtime image) deploy separately. The next release removes it.
@@ -118,7 +137,7 @@ test('the print route alone permits the exact styles of supported ficha template
   );
   assert.equal(
     permittedHashes.size,
-    7,
+    9,
     'no other inline stylesheet is allowed',
   );
 });

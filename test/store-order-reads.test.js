@@ -7,6 +7,7 @@ import { InMemoryIdempotencyRecordStore } from '../modules/integration-reliabili
 import { InMemoryOrderRepository } from '../modules/orders/src/adapters/in-memory-order-repository.js';
 import { createStoreOrderService } from '../modules/orders/src/application/store-order-service.js';
 import { renderOrderFicha } from '../modules/orders/src/print/index.js';
+import { OrderValidationError } from '../modules/orders/src/domain/errors.js';
 import { orderContextsFrom } from './fixtures/order-contexts.js';
 import {
   STORE_NOW,
@@ -370,6 +371,51 @@ test('LOJ-27/PIM-13: only a completed PDF generation clears the store notice', a
   const after = await repository.findById(created.id);
   assert.ok(after);
   assert.equal(after.fichaFirstPrintedAt, first.fichaFirstPrintedAt);
+});
+
+test('FIP-05/LOJ-27: a rendering-time review refusal never records a first HTML print', async (t) => {
+  let recorded = 0;
+  // Inject a rendering-time validation failure without activating a pending
+  // template. The getter is accessed by the renderer, after order authorization.
+  const order = {
+    status: 'confirmado',
+    origin: 'loja',
+    number: '01-CRM',
+    fichaFirstPrintedAt: null,
+    get ficha() {
+      throw new OrderValidationError(
+        'Review required',
+        'PRINT_FINANCIAL_TEXT_REVIEW_REQUIRED',
+        ['ficha'],
+      );
+    },
+  };
+  const api = createApi(
+    {},
+    {
+      orders: {
+        authorizeRead: async () => ({ actor: ADMIN }),
+        get: async () => ({ order }),
+        recordFirstPrint: async () => {
+          recorded += 1;
+        },
+      },
+    },
+  );
+  t.after(() => api.close());
+  for (const suffix of ['', '?download=1']) {
+    const response = await api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url: `/api/v1/orders/order-synthetic/print${suffix}`,
+    });
+    assert.equal(response.statusCode, 422);
+    assert.equal(
+      response.json().error.code,
+      'PRINT_FINANCIAL_TEXT_REVIEW_REQUIRED',
+    );
+    assert.equal(recorded, 0);
+  }
 });
 
 test('LOJ-10: the simplified ficha escapes what the customer typed', () => {

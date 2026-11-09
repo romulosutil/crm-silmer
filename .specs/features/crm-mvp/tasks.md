@@ -1,5 +1,25 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## OLIST-T15 — runbook operacional e ensaio sintético (09/11/2026)
+
+- [x] Runbook por etapa (cliente, produto/variações, venda), gatilhos e quotas,
+      reconexão OAuth, retenção, restore, rollback, telemetria e preparação do alvo
+      com criação desligada: [olist-operacao.md](../../../docs/runbooks/olist-operacao.md).
+- [x] Ensaio sintético de falha por etapa e de restore em PostgreSQL 17 local, com
+      ERP fake e criação desligada (69 cenários; mutações provadas); registra o que
+      prova e o que não prova.
+- [ ] Abertos (PO/DevOps, escritos no runbook §13): parâmetros e gatilhos reais da
+      conta, identidade da operadora piloto (hoje só placeholder), amostra e período,
+      retenção definitiva, quota real (30/min é suposição de desenho), alvo no
+      EasyPanel, backup externo, aprovação da amostra v7.
+- [ ] Lacunas de implementação reveladas: allowlist por ID privado, comando auditado
+      para `creation_enabled`/`recovery_required`, interface lendo a flag da conta,
+      expurgo/recifragem sancionados, telemetria Olist.
+
+OLIST-03–05, 11, 16–17, 25–31 e 48–50. Docker/PostgreSQL local não é EasyPanel nem
+RustFS remoto. Geração real desligada, sem deploy, credencial ou dado real. Fase 6
+(T16–T18) não está coberta; gate F5 aberto.
+
 ## INBOX-VEZ-08 — Responder por mensagem mais recente (08/11/2026)
 
 [RFC 053](../../../docs/rfc/053-responder-por-mensagem-mais-recente.md) /
@@ -223,7 +243,7 @@ Fases 2–4 e T14 parcial reaplicadas, com histórico linear, sobre a `origin/ma
 
 OLIST-16–18, 22–25, 30 e 45–47. [Contrato, gates e limites](../../../docs/runbooks/olist-phase4.md#t13--progresso-recuperação-e-cancelamento-local-08112026).
 Sem alteração de backend, flag, migration, credencial, conta ou deploy; geração
-real desligada. Fase 5 (T14/T15) e Fase 6 permanecem pendentes; os dois altos de
+real desligada. Fase 5 (T14/T15, ver OLIST-T15) e Fase 6 permanecem pendentes; os dois altos de
 liveness da T14 foram tratados em OLIST-T27/T28 (09/11/2026).
 
 ## OLIST-T12 — composição e prévia por Pedido (08/11/2026)

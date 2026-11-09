@@ -944,12 +944,21 @@ preço unitário como entrada. Seleção v7 só após amostra aprovada e gates v
       sem deploy nem piloto. Limite real da conta piloto desconhecido.
       [ADR 070](../adr/070-olist-quota-com-espera-de-leitura-e-folga.md) e
       [runbook](../runbooks/olist-phase5.md#invalidação-administrativa-e-quota).
-- [ ] **OLIST-T15** Runbook por etapa, retenção, parâmetros reais/gatilhos,
+- [x] **OLIST-T15** Runbook por etapa, retenção, parâmetros reais/gatilhos,
       identidade privada piloto, quotas, telemetria, reconnect/restore/rollback;
       preparar alvo com criação desligada. OLIST-03–05, 11, 16–17, 25–31, 48–50.
       Dono DevOps/Integrações/Privacidade. Depende T14.
       Evidência: ensaio sintético de falhas/restore, digest/migrações/health no alvo,
       amostra/período/suporte definidos; não confundir Docker local com EasyPanel.
+      Entregues em 09/11/2026: o [runbook operacional](../runbooks/olist-operacao.md)
+      e o ensaio sintético de falha e restore
+      (`test/olist-recovery-rehearsal-postgres-live.test.js`, PostgreSQL 17 local,
+      ERP fake, criação desligada). **Seguem abertos e dependem de valores reais ou
+      do PO** (pendências em [olist-operacao.md §13](../runbooks/olist-operacao.md)):
+      parâmetros e gatilhos da conta, identidade da operadora piloto, amostra e
+      período, retenção definitiva, quota real, alvo no EasyPanel (digest,
+      migrações, health), backup externo e aprovação da amostra v7. O ensaio não
+      prova EasyPanel, RustFS remoto, RPO/RTO nem o comportamento do ERP real.
 
 Gate F5: sem findings críticos/altos, PII ou comportamento ambíguo nos
 contratos. Operadora/conta/parâmetros confirmados, cadastros/fiscal/precisão
@@ -1127,7 +1136,7 @@ duplicar checkboxes. Decisão aceita não marca implementação como concluída.
 | F2 / T03–T05/T19         | Tech Lead + Backend/Integrações/Frontend/A11y/QA | [Implementação e gates locais concluídos](../integrations/olist/phase2-implementation.md); 36 SQL e 485 E2E aprovados                                 | [6a79cc8a](https://github.com/romulosutil/crm-silmer/commit/6a79cc8aecc3111dbfad5b8b14220f3b3df860aa), push em codex/olist-phase2 | F2 local concluída; geração desligada, sem deploy/piloto                  |
 | F3 / T06–T10/T20–T24/T26 | Tech Lead + Backend/Integrações/QA               | T20/T21/T26/T24/T06/T22/T07/T08/T09/T23/T10 concluídas; [guardas e gates locais](../runbooks/olist-phase3.md#t10--guardas-comerciais-e-recuperação)   | Branch codex/olist-phase3, entrega OLIST-T10 e integração do commit T23 68aff226                                                  | F3 local concluída; sem geração/deploy/piloto                             |
 | F4 / T11–T13/T25         | Tech Lead + Frontend/A11y + QA                   | T11/T12/T25/T13 implementadas e validadas localmente; [contrato e evidências](../runbooks/olist-phase4.md)                                            | Branch codex/olist-phase4-t11, entregas OLIST-T11/T12/T25/T13                                                                     | Sem geração real/deploy/piloto; F4 aberto                                 |
-| F5 / T14–T15, T27–T28    | A designar                                       | T27/T28 implementadas localmente (ADR 069/070); T14/T15 e gates integrados a preencher                                                                | A preencher                                                                                                                       | QA/operação                                                               |
+| F5 / T14–T15, T27–T28    | A designar                                       | T27/T28 implementadas localmente (ADR 069/070); T15 entregue (runbook e ensaio sintético; valores reais e alvo pendentes do PO); gate F5 aberto       | A preencher                                                                                                                       | QA/operação                                                               |
 | F6 / T16–T18             | A designar                                       | A preencher                                                                                                                                           | A preencher                                                                                                                       | Piloto/ampliação                                                          |
 
 ### Definition of Ready
